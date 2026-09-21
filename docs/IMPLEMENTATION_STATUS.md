@@ -9590,3 +9590,87 @@ from the settings-file branch; by the time it merged, the group-address
 notation branch had independently taken §123 as well, so it became §124 at
 merge. Two branches picking the same free number is what happens when both are
 honest about a file that only ever grows.
+## 2026-09-21 — T29: the 867 `MalformedRefId` were a shape the reader did not know (branch `t29-malformed-refid`)
+
+**The problem, as T06 left it.** Importing the ETS 6.3.0 reference project
+(schema 23) produced **867** `MapProblem::Value(MalformedRefId(..))` over
+**310** distinct ids, `report.has_losses()` was `true`, and no document in
+`docs/` contained the word. Every one of its 867 communication objects was
+mapped to object number `0`, because `values.rs::split_object_tail` returned
+an error and the caller substituted a zero.
+
+**Measured before anything was written, which is what decided the task.**
+The brief left both a fix and a documented-loss entry open and asked which
+the numbers supported. They supported the fix, unanimously:
+
+- All 867 ids come from `GroupObjectTree/@GroupObjectInstances`, not from
+  `ComObjectInstanceRef/@RefId` — 33 `GroupObjectTree` elements holding 867
+  ids, 310 distinct. (The brief's hypothesis, that 691 refs each passed the
+  splitter more than once, was wrong; 691 is the `ComObjectInstanceRef`
+  count, and all 691 are covered by a `GroupObjectTree` id on their own
+  device, 0 orphans.) `map_device_v21` enumerates objects from the tree
+  (ADR-0014), so the tree's count is the error count.
+- All 867 match `^O-\d+_R-\d+$` exactly. Segment-count histogram: `{2: 867}`.
+- Resolving each id against its own device
+  (`DeviceInstance/@Hardware2ProgramRefId` → the container's
+  `M-<n>/Hardware.xml` → `Hardware2Program`'s single
+  `ApplicationProgramRef/@RefId`) and prefixing it names an existing
+  `ComObjectRef/@Id` in that program's file **867 of 867**, with **no**
+  id matching more than one candidate and **none** unresolvable. 310 of 310
+  distinct ids resolve.
+- The `ComObject/@Number` behind each resolved ref equals the `O-<n>` digits
+  already present in the id, 867 times out of 867. Across all 1250
+  `ComObject` elements with an `O-` suffix in that project's manufacturer
+  files, suffix and `@Number` never disagree.
+
+Zero ambiguity meant no heuristic was needed and none was written. The
+object number needs no cross-file lookup at all — it is in the id.
+
+**Two halves, because the defect had two.** `values::device_local_com_object_number`
+reads the two-segment form and `map_com_object_v21` tries it after the
+module and fully-qualified forms; that removes the 867 map errors and gives
+every object its real number. Separately,
+`knx_productdb::com_object_lookup_id` now reattaches the device's own
+resolved program id to a device-local ref before querying: that project used
+to enrich **0 of 867** communication objects and report **867**
+`ComObjectRefMissing`, and now enriches **867 of 867** and reports **none**.
+The second half was invisible from the import report alone and was found by
+measuring, not by reading the brief.
+
+**Nothing is guessed and nothing crosses a device.** Both readers are strict
+— exactly one underscore, `O-` then digits, `R-` then digits — so a
+schema-11 parameter ref (`…_UP-411_R-411`), a module id, or any other shape
+still falls through to a reported `MalformedRefId`. The program prefix is
+always the one `enrich()` resolved for that same device, so a wrong id
+produces a reported `ComObjectRefMissing`, never another device's object
+attached to this one (`KNOWN_LIMITATIONS.md` §34's ruling, on the read
+side). `ComObjectInstance::source::ets_id` still holds the file's own bytes;
+the fully-qualified form exists only for the duration of a lookup.
+
+**Corpus regression, all three projects.** ETS4 (schema 11): 907
+communication objects, 0 import errors — unchanged. KV demo (schema 21): 75
+objects, 1 pre-existing `UnresolvedReference`, 75 enriched, 0 enrichment
+issues — unchanged. ETS 6.3.0 (schema 23): 867 objects, **867 → 0** map
+errors, **0 → 867** enriched, **867 → 0** `ComObjectRefMissing`.
+
+**What is still lost on that project, and how a user learns it.**
+`report.has_losses()` remains `true`, now for 9 unknown constructs — five
+attributes in `0.xml`, four in `Project.xml` — each reported with its xpath,
+name, occurrence count and a sample, and each retained. Enrichment reports
+107 `AmbiguousDpt` issues, the deliberate refusal to pick one datapoint type
+out of a stated list (RESEARCH §4.2), which only became visible once the
+lookups started hitting. Both are in `KNOWN_LIMITATIONS.md` §125 with their
+numbers.
+
+**Tests.** `crates/knx-etsproj/tests/device_local_com_object_refs.rs` (new,
+3 tests) and `crates/knx-app/tests/ets6_device_local_enrichment.rs` (new, 2
+tests), both corpus-gated; each was run against the pre-change source and
+fails there — 867 malformed ids and 0 enriched respectively. Unit tests:
+`values::tests::a_device_local_ref_id_yields_its_object_number`,
+`values::tests::the_device_local_path_refuses_every_shape_that_is_not_one`
+(11 rejected shapes), `enrich::tests::the_lookup_id_prefixes_only_the_device_local_shape`.
+
+**Docs.** `KNOWN_LIMITATIONS.md` §125 (new), `IMPORT_EXPORT.md` §9.2 (new —
+the three `RefId` shapes, which schema writes which, and where the
+reconstruction does and does not happen). `LIMITATION_TRIAGE.md` untouched,
+per instruction.

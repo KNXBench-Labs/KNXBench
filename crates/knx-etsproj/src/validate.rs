@@ -6,15 +6,75 @@
 //! can use but that is suspicious (two devices sharing one individual
 //! address, a group address outside the range that contains it).
 //!
-//! Every check here stays inside the `SourceDocument` itself — no
-//! manufacturer/application-program database exists yet (Session 4), so a
-//! `ProductRefId` or a `ParameterInstanceRef/ComObjectInstanceRef`'s
-//! `RefId` cannot be resolved here and is not checked. `BuildingPart`
-//! device references and `Installation/@DefaultLine` are likewise left
-//! unchecked for now: unlike group-address links, no measured case in the
-//! reference project or a written test yet motivates the added surface —
-//! add them when one does, per CLAUDE.md's "prefer documented evidence
-//! over assumptions."
+//! There is no authoritative XSD to conform to (KNOWN_LIMITATIONS §2), so
+//! this is a hand-built set of structural checks, and its scope is
+//! deliberately bounded by what the installed corpus can attest. Every
+//! check below is either a violation the corpus contains or a coverage
+//! hole measured in the corpus; the list of checks *not* implemented, with
+//! the measurement that argues against each, is just as load-bearing and
+//! is kept below rather than left as a silence.
+//!
+//! # What is checked, and why the corpus says so
+//!
+//! Counts are from the three installed corpus projects — "Unser Zuhause"
+//! at schema 11 (ETS 4.1.8) and schema 23 (ETS 6.3), and the KNX
+//! Association "KV v2.5" demo at schema 21 — measured 2026-09-21.
+//!
+//! - **Duplicate `Id`.** Walks `Area`, `Line`, `DeviceInstance`,
+//!   `BinaryData`, `GroupRange`, `GroupAddress` and `BuildingPart`. The
+//!   `BuildingPart` arm is not decoration: `map.rs`'s `allocate_ids` pass
+//!   inserts every part into one `BTreeMap<String, BuildingPartId>`, so a
+//!   repeated `@Id` overwrites the earlier entry and both parts end up
+//!   sharing one `BuildingPartId` — two rooms silently collapsed into one
+//!   identity, with the first one's `DeviceInstanceRef`s landing on the
+//!   second. 45 `BuildingPart/@Id`s across the corpus went entirely
+//!   unwalked before this check existed (22 + 22 + 1).
+//! - **Dangling `GroupAddressRefId`.** Covers both spellings. Schema 11
+//!   writes `Connectors/Send|Receive/@GroupAddressRefId` (596 links in the
+//!   corpus, all in the ETS4 project); schema ≥21 replaced it with a flat
+//!   space-separated `Links` attribute (622 links, 26 in the KV project
+//!   and 596 in the ETS6 one). Only the first spelling was walked before,
+//!   which meant stage 4 validated 596 of the corpus's 1,218
+//!   communication-object links and left the schema-≥21 half — i.e. every
+//!   project a current ETS writes — with no referential check at all.
+//! - **Duplicate individual address**, **duplicate group address**,
+//!   **group address outside its enclosing range**: unchanged, all three
+//!   warnings.
+//!
+//! # What is deliberately *not* checked
+//!
+//! - **`ModuleInstance/@Id` uniqueness.** Measured and rejected: the KV
+//!   schema-21 project carries 32 `ModuleInstance/@Id`s of which only 16
+//!   are distinct, because three of its four devices run the same
+//!   application program and therefore repeat `MD-1_M-1_MI-1` and its
+//!   siblings verbatim. The id is device-scoped, not project-unique, so
+//!   feeding it to `check_duplicate_ids` would invent 16 errors on a
+//!   valid project. This is why the id walk enumerates element kinds
+//!   rather than taking every `@Id` it can reach.
+//! - **`Installation/@DefaultLine`, `BuildingPart/@DefaultLine`,
+//!   `BuildingPart`'s `DeviceInstanceRef`.** The corpus *does* now attest
+//!   the first one — the KV project writes `DefaultLine=""`, which
+//!   resolves to nothing — so the older "no measured case" reason has
+//!   expired. It is still not checked here, for a different and better
+//!   reason: `map.rs`'s `resolve_optional`/`resolve_many` already report
+//!   all three as `MapProblemDetail::UnresolvedReference`, and a second
+//!   channel for one class of problem is worse than a late one. If that
+//!   reporting ever moves out of the mapper, this is where it comes.
+//! - **Anything needing the manufacturer/application-program database**
+//!   (`ProductRefId`, a `ParameterInstanceRef`/`ComObjectInstanceRef`
+//!   `RefId` resolved against its program). Session 4 has happened and
+//!   `knx-productdb` exists, so "there is no database yet" is no longer
+//!   the reason. The reason now is structural: `knx-etsproj` does not
+//!   depend on `knx-productdb` and must not start — stage 4 is a pure
+//!   function of one `SourceDocument`, and the database is not an input to
+//!   it (manufacturer files are not even collected until stage 7). Product
+//!   resolution is also not a property of the file: the same `.knxproj` is
+//!   resolvable or not depending on what happens to be installed, and a
+//!   stage that classifies a *document* cannot own a verdict that depends
+//!   on the machine. `knx_productdb::enrich` keeps it, and stays the only
+//!   channel that reports it.
+//!
+//! # Scoping
 //!
 //! Two `Installation`s are independent bus/address spaces — the domain
 //! model already supports more than one (`Project::installations:
@@ -22,14 +82,27 @@
 //! individual address or group address is normal, not a conflict. The two
 //! checks that compare raw address *values* (not ETS id strings) are
 //! therefore scoped per installation ([`DeviceAddress::installation`]/
-//! [`GroupAddressOccurrence::installation`]). `check_duplicate_ids` and
-//! `check_dangling_group_address_refs` stay global on purpose: they
-//! compare ETS id *strings*, which already embed the owning installation's
-//! number as part of the id itself (e.g. `P-0512-0_GA-1`), so a genuine
-//! cross-installation string collision would be a real anomaly worth
-//! flagging, not a false positive the way a bare address number is.
+//! [`GroupAddressOccurrence::installation`]). `check_duplicate_ids` stays
+//! global on purpose: it compares ETS id *strings*, which already embed
+//! the owning installation's number as part of the id itself (e.g.
+//! `P-0512-0_GA-1`), so a genuine cross-installation string collision
+//! would be a real anomaly worth flagging, not a false positive the way a
+//! bare address number is.
+//!
+//! `check_dangling_group_address_refs` applies that same rule to each of
+//! its two spellings and lands in different places, which is the point of
+//! stating the rule rather than the outcome. A schema-11
+//! `@GroupAddressRefId` is fully qualified and embeds the installation, so
+//! it resolves globally. Schema ≥21's `Links` targets are *short* ids
+//! (`"GA-3"`) and embed nothing, so they resolve per installation.
+//! `map.rs`'s `short_group_address_ids` builds its lookup table globally
+//! instead; for a one-installation project — all three corpus projects —
+//! the two agree exactly, and for a multi-installation one this stage will
+//! report a cross-installation `Links` target the mapper quietly resolves
+//! to the wrong installation's group address. No corpus sample has two
+//! installations, so that divergence is reasoned, not measured.
 
-use crate::source::{SourceDocument, SourceGroupRange};
+use crate::source::{SourceBuildingPart, SourceDocument, SourceGroupRange};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ValidationOutput {
@@ -85,13 +158,30 @@ struct IdOccurrence {
     xpath: String,
 }
 
+/// How a link spells its target, which decides what it is resolved
+/// against — see the module header's scoping section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LinkSpelling {
+    /// Schema 11's `Connectors/Send|Receive/@GroupAddressRefId`: a fully
+    /// qualified `GroupAddress/@Id` such as `P-0512-0_GA-1`.
+    Qualified,
+    /// Schema ≥21's flat `Links` attribute: a short id such as `GA-3`,
+    /// carrying no installation of its own.
+    Short,
+}
+
 /// One communication object's group-address links, gathered while walking
 /// devices, for the dangling-reference pass.
 struct GroupAddressLink {
+    /// Which `Installation` the linking device belongs to. Only consulted
+    /// for [`LinkSpelling::Short`], whose target says nothing about it.
+    installation: usize,
     /// The `ComObjectInstance/@RefId` the link belongs to.
     from: String,
-    /// The `GroupAddressRefId` value itself — the (possibly dangling) link target.
+    /// The `GroupAddressRefId`/`Links` value itself — the (possibly
+    /// dangling) link target.
     to: String,
+    spelling: LinkSpelling,
     xpath: String,
 }
 
@@ -130,8 +220,18 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
     let mut device_addresses = Vec::new();
     let mut group_addresses = Vec::new();
 
+    // Schema 11 nests the building tree as `Buildings/BuildingPart`,
+    // schema ≥21 as `Locations/Space` — the same entity under two names,
+    // so only the path spelling changes, never the walk.
+    let (buildings_container, buildings_element) = if document.schema_version >= 21 {
+        ("Locations", "Space")
+    } else {
+        ("Buildings", "BuildingPart")
+    };
+
     for (inst_idx, installation) in document.installations.iter().enumerate() {
         let inst_path = format!("/KNX/Project/Installations/Installation[{inst_idx}]");
+        let buildings_path = format!("{inst_path}/{buildings_container}");
 
         for area in &installation.areas {
             let area_path = format!("{inst_path}/Topology/Area[@Id='{}']", area.id);
@@ -176,6 +276,10 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
                 &mut links,
                 &mut device_addresses,
             );
+        }
+
+        for part in &installation.buildings {
+            walk_building_part(part, &buildings_path, buildings_element, &mut ids);
         }
 
         for range in &installation.group_ranges {
@@ -243,11 +347,55 @@ fn walk_device(
         );
         for target in com_object.sends.iter().chain(com_object.receives.iter()) {
             links.push(GroupAddressLink {
+                installation,
                 from: com_object.ref_id.clone(),
                 to: target.clone(),
+                spelling: LinkSpelling::Qualified,
                 xpath: com_path.clone(),
             });
         }
+        // Schema ≥21's replacement for the two `Connectors` lists above.
+        // A document never uses both: the schema-11 parser leaves `links`
+        // empty and the schema-≥21 parser leaves `sends`/`receives` empty,
+        // so this loop and the one above are alternatives in practice, not
+        // a double count.
+        for target in &com_object.links {
+            links.push(GroupAddressLink {
+                installation,
+                from: com_object.ref_id.clone(),
+                to: target.clone(),
+                spelling: LinkSpelling::Short,
+                xpath: com_path.clone(),
+            });
+        }
+    }
+}
+
+/// Collects `BuildingPart/@Id` for the duplicate-id pass, recursing into
+/// nested parts. Nothing else on a `BuildingPart` is validated here — its
+/// `@DefaultLine` and `DeviceInstanceRef`s are the mapper's to report (see
+/// the module header).
+///
+/// `element` is the tree's name at this schema version: `BuildingPart`
+/// under `Buildings` at schema 11, `Space` under `Locations` at schema
+/// ≥21 (`xpath.rs`'s `building_part` draws the same distinction). The
+/// `kind` recorded on the occurrence stays `"BuildingPart"` at both, since
+/// it names the entity the duplicate-id check groups by, not the tag the
+/// file happened to spell it with.
+fn walk_building_part(
+    part: &SourceBuildingPart,
+    parent_path: &str,
+    element: &'static str,
+    ids: &mut Vec<IdOccurrence>,
+) {
+    let part_path = format!("{parent_path}/{element}[@Id='{}']", part.id);
+    ids.push(IdOccurrence {
+        kind: "BuildingPart",
+        id: part.id.clone(),
+        xpath: part_path.clone(),
+    });
+    for child in &part.children {
+        walk_building_part(child, &part_path, element, ids);
     }
 }
 
@@ -307,19 +455,48 @@ fn check_duplicate_ids(ids: &[IdOccurrence], errors: &mut Vec<SourceProblem>) {
     }
 }
 
+/// The short form of a fully qualified group-address id, e.g.
+/// `"P-03DE-0_GA-3"` → `"GA-3"` — the spelling schema ≥21's `Links`
+/// attribute uses. Mirrors `map.rs`'s `short_group_address_ids` exactly,
+/// including its refusal to shorten an id whose trailing segment is not a
+/// `GA-…`: an id shaped some other way simply has no short form, and a
+/// `Links` target naming it is dangling, which is the same conclusion the
+/// mapper reaches.
+fn short_group_address_id(full: &str) -> Option<&str> {
+    full.rsplit_once('_')
+        .map(|(_, short)| short)
+        .filter(|short| short.starts_with("GA-"))
+}
+
 fn check_dangling_group_address_refs(
     links: &[GroupAddressLink],
     group_addresses: &[GroupAddressOccurrence],
     errors: &mut Vec<SourceProblem>,
 ) {
     use std::collections::HashSet;
-    let known: HashSet<&str> = group_addresses.iter().map(|g| g.id.as_str()).collect();
+    let qualified: HashSet<&str> = group_addresses.iter().map(|g| g.id.as_str()).collect();
+    // Short ids carry no installation of their own, so the installation is
+    // part of the key rather than assumed away — see the module header.
+    let short: HashSet<(usize, &str)> = group_addresses
+        .iter()
+        .filter_map(|g| Some((g.installation, short_group_address_id(&g.id)?)))
+        .collect();
+
     for link in links {
-        if !known.contains(link.to.as_str()) {
+        let resolved = match link.spelling {
+            LinkSpelling::Qualified => qualified.contains(link.to.as_str()),
+            LinkSpelling::Short => short.contains(&(link.installation, link.to.as_str())),
+        };
+        if !resolved {
             errors.push(SourceProblem {
                 xpath: link.xpath.clone(),
                 id: Some(link.from.clone()),
                 detail: ProblemDetail::DanglingReference {
+                    // One `kind` for both spellings: the attribute is
+                    // named `GroupAddressRefId` at schema 11 and `Links`
+                    // at schema ≥21, but the broken thing is the same
+                    // link, and a reader of the report should not have to
+                    // know which schema wrote the file to search for it.
                     kind: "GroupAddressRefId",
                     from: link.from.clone(),
                     to: link.to.clone(),
@@ -427,7 +604,9 @@ fn check_group_addresses_outside_their_range(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::{minimal_source_document, reference_source_document};
+    use crate::testutil::{
+        minimal_source_document, reference_kv_source_document, reference_source_document,
+    };
 
     #[test]
     fn the_reference_project_validates_clean() {
@@ -436,6 +615,25 @@ mod tests {
             return;
         }
         let doc = reference_source_document();
+        let out = validate(&doc);
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    /// The other half of the corpus, and the half the dangling-link check
+    /// was blind to until this task: the KV schema-21 project's 26
+    /// `Links` targets and its 32 `ModuleInstance/@Id`s — of which only
+    /// 16 are distinct, because three of its four devices run the same
+    /// application program. If this ever reports anything, either the
+    /// short-id resolution has drifted from the mapper's, or somebody has
+    /// fed `ModuleInstance/@Id` to the project-wide duplicate-id check.
+    #[test]
+    fn the_schema_21_reference_project_validates_clean() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
+        let doc = reference_kv_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);
         assert_eq!(out.warnings, vec![]);
@@ -516,6 +714,184 @@ mod tests {
         second.group_ranges[0].children[0].addresses[0].id = "P-0001-1_GA-1".into();
         second.areas[0].lines[0].devices[0].com_objects[0].sends = vec!["P-0001-1_GA-1".into()];
         doc.installations.push(second);
+
+        let out = validate(&doc);
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    /// The schema-≥21 shape of [`minimal_source_document`]: the same
+    /// document with its `Connectors` lists emptied and the single link
+    /// respelled the way a current ETS writes it — a flat, space-separated
+    /// `Links` attribute of short ids. Built by mutation rather than by a
+    /// second XML fixture so the two differ in exactly the one thing under
+    /// test.
+    fn minimal_v21_source_document() -> SourceDocument {
+        let mut doc = minimal_source_document();
+        doc.schema_version = 21;
+        let com = &mut doc.installations[0].areas[0].lines[0].devices[0].com_objects[0];
+        com.sends.clear();
+        com.receives.clear();
+        com.links = vec!["GA-1".into()];
+        doc
+    }
+
+    #[test]
+    fn a_resolvable_schema_21_short_link_is_not_reported() {
+        let out = validate(&minimal_v21_source_document());
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    #[test]
+    fn a_dangling_schema_21_short_link_is_an_error() {
+        let mut doc = minimal_v21_source_document();
+        doc.installations[0].areas[0].lines[0].devices[0].com_objects[0].links =
+            vec!["GA-999".into()];
+        let out = validate(&doc);
+        assert_eq!(out.errors.len(), 1);
+        assert!(matches!(
+            &out.errors[0].detail,
+            ProblemDetail::DanglingReference {
+                kind: "GroupAddressRefId",
+                to,
+                ..
+            } if to == "GA-999"
+        ));
+    }
+
+    /// Malformed input: `Links` is a free-text attribute, so anything at
+    /// all can turn up in it. None of these resolves, every one of them is
+    /// reported, and nothing panics — the stage's founding invariant is
+    /// that a file that parses still imports.
+    #[test]
+    fn malformed_schema_21_link_targets_are_reported_not_panicked_on() {
+        let mut doc = minimal_v21_source_document();
+        doc.installations[0].areas[0].lines[0].devices[0].com_objects[0].links = vec![
+            "GA-".into(),
+            "GA-not-a-number".into(),
+            "-".into(),
+            "_".into(),
+            "💡".into(),
+            // A *qualified* id in an attribute that takes short ones: the
+            // right group address, spelled the schema-11 way. It does not
+            // resolve, and saying so is the point of the check.
+            "P-0001-0_GA-1".into(),
+        ];
+        let out = validate(&doc);
+        assert_eq!(out.errors.len(), 6);
+        assert!(out
+            .errors
+            .iter()
+            .all(|e| matches!(e.detail, ProblemDetail::DanglingReference { .. })));
+    }
+
+    /// Short ids carry no installation, so two installations that each own
+    /// their own `GA-1` must not lend it to one another. The module header
+    /// notes that `map.rs` resolves short links globally and would.
+    #[test]
+    fn a_short_link_does_not_resolve_across_installations() {
+        let mut doc = minimal_v21_source_document();
+        let mut second = doc.installations[0].clone();
+        second.areas[0].id = "P-0001-1_A-1".into();
+        second.areas[0].lines[0].id = "P-0001-1_L-2".into();
+        second.areas[0].lines[0].devices[0].id = "P-0001-1_DI-1".into();
+        second.group_ranges[0].id = "P-0001-1_GR-1".into();
+        second.group_ranges[0].children[0].id = "P-0001-1_GR-2".into();
+        // The second installation's only group address is GA-2, not GA-1,
+        // while its device still links GA-1 — which exists, but in the
+        // first installation.
+        second.group_ranges[0].children[0].addresses[0].id = "P-0001-1_GA-2".into();
+        second.group_ranges[0].children[0].addresses[0].address = Some("2".into());
+        doc.installations.push(second);
+
+        let out = validate(&doc);
+        assert_eq!(out.errors.len(), 1);
+        assert!(matches!(
+            &out.errors[0].detail,
+            ProblemDetail::DanglingReference { to, .. } if to == "GA-1"
+        ));
+    }
+
+    /// Two building parts sharing one `@Id`. `map.rs`'s `allocate_ids`
+    /// pass keys parts by that string, so the second insert overwrites the
+    /// first and both rooms end up as one `BuildingPartId` — the first
+    /// one's devices silently land on the second. `xpath.rs`'s header
+    /// names this stage as the place to catch it.
+    #[test]
+    fn a_duplicate_building_part_id_is_an_error() {
+        let mut doc = minimal_source_document();
+        let room = crate::source::SourceBuildingPart {
+            id: "P-0001-0_BP-1".into(),
+            name: Some("Wohnzimmer".into()),
+            kind: Some("Room".into()),
+            ..Default::default()
+        };
+        let twin = crate::source::SourceBuildingPart {
+            name: Some("Küche".into()),
+            ..room.clone()
+        };
+        doc.installations[0].buildings = vec![crate::source::SourceBuildingPart {
+            id: "P-0001-0_BP-0".into(),
+            name: Some("Haus".into()),
+            kind: Some("Building".into()),
+            children: vec![room, twin],
+            ..Default::default()
+        }];
+
+        let out = validate(&doc);
+        assert_eq!(out.errors.len(), 1);
+        assert!(matches!(
+            &out.errors[0].detail,
+            ProblemDetail::DuplicateId {
+                kind: "BuildingPart",
+                id,
+            } if id == "P-0001-0_BP-1"
+        ));
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    /// Distinct ids in the same tree stay silent, nesting included.
+    #[test]
+    fn a_nested_building_tree_with_distinct_ids_validates_clean() {
+        let mut doc = minimal_source_document();
+        doc.installations[0].buildings = vec![crate::source::SourceBuildingPart {
+            id: "P-0001-0_BP-0".into(),
+            children: vec![crate::source::SourceBuildingPart {
+                id: "P-0001-0_BP-1".into(),
+                children: vec![crate::source::SourceBuildingPart {
+                    id: "P-0001-0_BP-2".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }];
+        let out = validate(&doc);
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    /// The corpus measurement that argues *against* a check, kept as a
+    /// test so the next reader cannot re-add it by accident: the KV
+    /// schema-21 project repeats `MD-1_M-1_MI-1` across three devices
+    /// running one application program, so `ModuleInstance/@Id` is
+    /// device-scoped, not project-unique.
+    #[test]
+    fn repeated_module_instance_ids_across_devices_are_not_a_duplicate() {
+        let mut doc = minimal_v21_source_document();
+        let module = crate::source::SourceModuleInstance {
+            id: "MD-1_M-1_MI-1".into(),
+            ref_id: "MD-1_M-1".into(),
+            ..Default::default()
+        };
+        let line = &mut doc.installations[0].areas[0].lines[0];
+        line.devices[0].module_instances = vec![module.clone()];
+        let mut twin = line.devices[0].clone();
+        twin.id = "P-0001-0_DI-2".into();
+        twin.address = Some("2".into());
+        twin.module_instances = vec![module];
+        line.devices.push(twin);
 
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);

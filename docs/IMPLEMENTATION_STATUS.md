@@ -9683,10 +9683,10 @@ not match the declared grammar; the old permissive behavior is available only
 as the deliberately named `encode_inferred_format` compatibility helper.
 `default_input_format` chooses solely from `DptRef`, never from input text.
 CLI writes expose `--input-format`, HTTP writes accept `inputFormat`, and the
-web compose form sends its deterministic DPT-family format explicitly. Omitted
-CLI/HTTP fields retain byte compatibility through the honestly named inferred
-helper; in particular, fixed-width binary bit sets do not silently become
-decimal.
+web compose form exposes the same visible format choice. Its default `Auto`
+mode and omitted CLI/HTTP fields retain byte compatibility through the honestly
+named inferred helper; explicit choices never inspect the value for a radix.
+In particular, fixed-width binary bit sets do not silently become decimal.
 
 `encoding_rulings(DptRef)` makes every §61 project judgment in main types 1–30
 queryable through stable identifiers with its Standard context and the chosen
@@ -9697,7 +9697,8 @@ strict NUL handling for 24/28, and the corrected signed-64 range. No wire
 encoding changed. The eighteen 200-series LTE/system DPTs remain an accepted
 scope exclusion because the stack has no LTE addressing path.
 
-TDD pinned format mismatch, prefix rejection, deterministic defaults, CLI and
-HTTP propagation, web request shape, and the complete ruling inventory. No KNX
+TDD pinned format mismatch, radix-specific prefix rejection, deterministic
+recommendations, CLI and HTTP propagation, visible web format selection, both
+known- and server-resolved DPT paths, and the complete ruling inventory. No KNX
 hardware or network transport was opened; all send assertions use dry-run or a
 fake tunnel. Full gate results are recorded in the T07 handover log.

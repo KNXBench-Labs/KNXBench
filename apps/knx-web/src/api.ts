@@ -1080,21 +1080,6 @@ export interface BusWriteResponse {
 
 export type DptInputFormat = "canonical" | "decimal" | "hexadecimal" | "binary" | "text";
 
-/** Mirrors `knx_core::default_input_format`; value contents never select it. */
-export function defaultDptInputFormat(dpt: string): DptInputFormat {
-  const match = /^(?:DPST-|DPT-)(\d+)(?:-(\d+))?$/.exec(dpt);
-  const main = Number(match?.[1]);
-  const sub = match?.[2] === undefined ? null : Number(match[2]);
-  if ([4, 16, 24, 28].includes(main)) return "text";
-  if (
-    [1, 2, 3, 10, 11, 15, 18, 19, 25, 26].includes(main) ||
-    (main === 6 && sub === 20)
-  ) {
-    return "canonical";
-  }
-  return "decimal";
-}
-
 // `DiscoveredInterfaceDto`/`DiscoverResponse` (bus_routes.rs, T25). One
 // entry per KNX-compatible interface that answered the multicast
 // `SEARCH_REQUEST`. `controlEndpoint` is already in the `host:port` shape

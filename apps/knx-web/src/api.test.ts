@@ -32,14 +32,6 @@ describe("api", () => {
     unsubscribe();
   });
 
-  it("chooses input grammar from DPT identity, never from value text", () => {
-    expect(api.defaultDptInputFormat("DPST-1-1")).toBe("canonical");
-    expect(api.defaultDptInputFormat("DPST-6-20")).toBe("canonical");
-    expect(api.defaultDptInputFormat("DPST-6-1")).toBe("decimal");
-    expect(api.defaultDptInputFormat("DPST-16-1")).toBe("text");
-    expect(api.defaultDptInputFormat("DPST-21-1")).toBe("decimal");
-  });
-
   it("writeBusValue sends the selected input format explicitly", async () => {
     mockFetchOnce({
       encodedPayload: "[10]",

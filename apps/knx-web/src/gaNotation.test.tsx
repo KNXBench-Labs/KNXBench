@@ -11,7 +11,6 @@ const apiMock = vi.hoisted(() => ({
 
 vi.mock("./api", () => ({
   ...apiMock,
-  defaultDptInputFormat: () => "canonical",
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
@@ -273,7 +272,7 @@ it("sends the canonical address whichever notation is selected or typed", async 
         "1/2/3",
         "DPST-1-1",
         "off",
-        "canonical",
+        null,
       );
     }
   }

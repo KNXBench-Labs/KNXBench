@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import * as api from "./api";
-import type { BusWriteResponse } from "./api";
+import type { BusWriteResponse, DptInputFormat } from "./api";
 import { useTranslate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 
@@ -100,6 +100,7 @@ export default function BusComposeForm({
   const [destination, setDestination] = useState(initialDestination);
   const [dpt, setDpt] = useState(initialResolution.kind === "single" ? initialResolution.dpt : "");
   const [value, setValue] = useState("");
+  const [inputFormat, setInputFormat] = useState<DptInputFormat | null>(null);
   // The resolution this form still trusts for `destination` — starts as
   // whatever the parent prefilled, but is invalidated the moment the user
   // edits `destination` themselves (see `onDestinationChange`).
@@ -179,7 +180,7 @@ export default function BusComposeForm({
         canonicalGroupAddress(destination),
         dptToSend,
         value,
-        dptToSend === null ? null : api.defaultDptInputFormat(dptToSend),
+        inputFormat,
       );
       setSent(response);
     } catch (e) {
@@ -261,6 +262,25 @@ export default function BusComposeForm({
             disabled={sessionClosed || contextStale}
             aria-describedby={disabledReason}
           />
+        </label>
+        <label>
+          {t("busCompose.inputFormatLabel")}
+          <select
+            className="bus-compose-input-format"
+            value={inputFormat ?? ""}
+            onChange={(e) =>
+              setInputFormat(e.target.value === "" ? null : (e.target.value as DptInputFormat))
+            }
+            disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
+          >
+            <option value="">{t("busCompose.inputFormatAuto")}</option>
+            <option value="canonical">{t("busCompose.inputFormatCanonical")}</option>
+            <option value="decimal">{t("busCompose.inputFormatDecimal")}</option>
+            <option value="hexadecimal">{t("busCompose.inputFormatHexadecimal")}</option>
+            <option value="binary">{t("busCompose.inputFormatBinary")}</option>
+            <option value="text">{t("busCompose.inputFormatText")}</option>
+          </select>
         </label>
         <button
           onClick={() => void send()}

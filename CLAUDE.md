@@ -352,6 +352,8 @@ Do not mix unrelated changes.
 
 Commit messages should be concise and describe the actual change.
 
+Those messages could use a bit of fun - keep them interessing
+
 Do not add:
 
 ```text

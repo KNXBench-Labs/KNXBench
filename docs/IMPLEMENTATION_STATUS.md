@@ -9684,7 +9684,9 @@ as the deliberately named `encode_inferred_format` compatibility helper.
 `default_input_format` chooses solely from `DptRef`, never from input text.
 CLI writes expose `--input-format`, HTTP writes accept `inputFormat`, and the
 web compose form sends its deterministic DPT-family format explicitly. Omitted
-CLI/HTTP fields retain compatibility through the same per-DPT default.
+CLI/HTTP fields retain byte compatibility through the honestly named inferred
+helper; in particular, fixed-width binary bit sets do not silently become
+decimal.
 
 `encoding_rulings(DptRef)` makes every §61 project judgment in main types 1–30
 queryable through stable identifiers with its Standard context and the chosen

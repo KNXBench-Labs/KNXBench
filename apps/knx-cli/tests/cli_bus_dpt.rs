@@ -174,6 +174,39 @@ fn dry_run_with_explicit_dpt_prints_the_expected_payload_and_exits_0() {
 }
 
 #[test]
+fn omitted_format_keeps_the_legacy_fixed_width_binary_bit_set() {
+    let dpt = DptRef::parse("DPST-21-1").unwrap();
+    let expected = knx_core::encode_inferred_format(dpt, "00000010").unwrap();
+    assert_eq!(expected, GroupValue::Bytes(vec![0x02]));
+
+    let out = run_cli(&[
+        "bus",
+        "write",
+        "--gateway",
+        "127.0.0.1:3671",
+        "--dpt",
+        "DPST-21-1",
+        "--dry-run",
+        "1/2/3",
+        "00000010",
+    ]);
+
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(out.stdout).unwrap(),
+        format!(
+            "1/2/3 DPST-21-1 00000010 -> {}\n",
+            payload_string(&expected)
+        )
+    );
+}
+
+#[test]
 fn dry_run_with_a_project_resolving_to_a_single_dpt_encodes_using_it() {
     let dir = tempfile::tempdir().unwrap();
     let store = dir.path().join("project.knxdb");

@@ -405,7 +405,18 @@ published, and the version number is not a promise that anything is finished.
 - **Consequence:** anyone at the machine has the project. The protection is
   the machine's own.
 
-### The Linux backend depends on archived GTK3 bindings
+### The Linux backend still uses GTK3
+
+- **Affected:** the desktop build's platform lifecycle.
+- **Current state (2026-09-22):** `gtk3-rs` is maintained again and RustSec
+  withdrew its ten former warnings. Tauri 2 still uses GTK3; Tauri 3 and the
+  normal Wry GTK4 migration are not stable yet.
+- **Consequence:** there is no current GTK3 maintenance advisory to work
+  around. KNXBench will revisit the backend after the Wry GTK4 path ships
+  stably instead of moving this alpha to an experimental runtime.
+- **Details:** [§16 Tauri Linux backend](../KNOWN_LIMITATIONS.md#16-tauri-v2-remains-on-gtk3-former-maintenance-advisories-are-resolved)
+
+#### Historical note (superseded in 2026)
 
 - **Affected:** the desktop build's long-term maintenance.
 - **Limitation:** Tauri v2's Linux backend uses Rust GTK3 bindings whose

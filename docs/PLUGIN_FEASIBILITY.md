@@ -222,9 +222,10 @@ ignores them and looks foreign in every theme.
 [V] And there is no native surface underneath: `apps/knx-desktop/src-tauri/src/` is 105
 lines total with **zero** `#[tauri::command]` attributes — its header calls it a "thin
 native wrapper" that spawns `knx-server`'s router and points a WebView at it. [V] That
-shell also sits on the archived GTK3 stack recorded as
+shell also sits on Tauri 2's GTK3 stack recorded as
 [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §16; building a plugin surface onto it means
-building onto a dependency the project is already waiting to migrate off.
+building onto a platform layer that will change when Tauri's Wry GTK4 path is
+stable. The former `gtk3-rs` maintenance advisories were withdrawn in 2026.
 
 ### 1.6 The surfaces that are already extensible
 

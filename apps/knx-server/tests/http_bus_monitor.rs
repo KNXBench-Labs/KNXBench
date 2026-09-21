@@ -185,7 +185,7 @@ async fn start_opens_a_session_and_returns_session_id_and_assigned_address() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     assert_eq!(response.status(), StatusCode::OK);
@@ -224,7 +224,7 @@ async fn a_connector_transport_failure_is_reported_as_a_bad_gateway() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
@@ -254,7 +254,7 @@ async fn a_second_start_while_active_is_a_conflict_naming_the_existing_session()
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     assert_eq!(first.status(), StatusCode::OK);
@@ -263,7 +263,7 @@ async fn a_second_start_while_active_is_a_conflict_naming_the_existing_session()
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "10.0.0.5:3671" })),
+        Some(json!({ "gateway": "203.0.113.5:3671" })),
     )
     .await;
     assert_eq!(second.status(), StatusCode::CONFLICT);
@@ -274,7 +274,7 @@ async fn a_second_start_while_active_is_a_conflict_naming_the_existing_session()
         "expected the existing session's id (1) named: {message}"
     );
     assert!(
-        message.contains("192.168.1.10:3671"),
+        message.contains("192.0.2.10:3671"),
         "expected the existing session's gateway named: {message}"
     );
 
@@ -304,7 +304,7 @@ async fn polling_returns_telegrams_decoded_against_the_open_project() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     assert_eq!(start.status(), StatusCode::OK);
@@ -389,7 +389,7 @@ async fn a_forced_lag_is_reported_as_a_nonzero_dropped_before() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
 
@@ -447,7 +447,7 @@ async fn a_since_value_below_the_buffer_floor_is_not_an_error() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     handle
@@ -482,7 +482,7 @@ async fn a_gateway_close_transitions_status_to_closed_but_stays_readable() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     handle
@@ -524,7 +524,7 @@ async fn stop_awaits_the_drain_task_and_reports_the_final_tally() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     handle
@@ -569,7 +569,7 @@ async fn stop_surfaces_a_panicked_drain_task_as_a_warning_not_a_clean_stop() {
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     handle
@@ -646,7 +646,7 @@ async fn a_session_over_a_real_imported_project_does_not_panic_while_decoding() 
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
 

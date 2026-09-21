@@ -457,7 +457,7 @@ exactly: `#[serde(rename_all = "camelCase")]` DTOs, `Result<Json<T>,
 ApiError>` returns.
 
 **`POST /api/bus/monitor/start`**
-- Request: `{ "gateway": "192.168.1.10:3671" }` — `gateway: String`,
+- Request: `{ "gateway": "192.0.2.10:3671" }` — `gateway: String`,
   parsed as `SocketAddrV4`; unparsable → `400`.
 - Response `200`: `{ "sessionId": 1, "assignedAddress": "1.1.5" }`
   (`assignedAddress` from `TunnelClient::assigned_address()`, formatted

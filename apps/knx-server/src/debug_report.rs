@@ -122,7 +122,7 @@ fn hostname() -> Option<String> {
 
 /// One decided replacement: the byte range *inside* the candidate run that
 /// really is a literal, and what takes its place. The range matters because
-/// a run is greedy — a sentence-final `10.0.0.5.` arrives with the full stop
+/// a run is greedy — a sentence-final `203.0.113.5.` arrives with the full stop
 /// attached, and only the part in front of it is an address.
 struct Hit {
     start: usize,
@@ -156,9 +156,9 @@ fn boundary_ok(bytes: &[u8], start: usize, end: usize) -> bool {
 /// only where the whole run happens to be exactly one.
 ///
 /// A run is greedy over `.`, so a sentence-final address arrives as
-/// `10.0.0.5.` (five groups), one after an ellipsis as `...10.0.0.5` (also
+/// `203.0.113.5.` (five groups), one after an ellipsis as `...203.0.113.5` (also
 /// five, three of them empty), and a typo'd fifth octet or a glued VLAN tag
-/// as `192.168.1.1.5` or `5.192.168.1.1` (also five, all non-empty). A test
+/// as `192.0.2.1.5` or `5.192.0.2.1` (also five, all non-empty). A test
 /// that requires the run to split into *exactly* four groups says "not an
 /// address" about every one of those and leaks the real one. Instead this
 /// slides a four-group window across the run's dot-separated groups,
@@ -592,15 +592,15 @@ mod tests {
     fn an_ipv4_address_is_redacted_in_prose_in_a_path_and_in_a_json_value() {
         let r = plain();
         assert_eq!(
-            r.apply("tunnel to 172.22.9.4:3671 failed"),
+            r.apply("tunnel to 203.0.113.4:3671 failed"),
             format!("tunnel to {IPV4_PLACEHOLDER}:3671 failed")
         );
         assert_eq!(
-            r.apply("/var/log/10.0.0.7/session.log"),
+            r.apply("/var/log/203.0.113.7/session.log"),
             format!("/var/log/{IPV4_PLACEHOLDER}/session.log")
         );
         assert_eq!(
-            r.apply("{\"gateway\":\"192.168.1.20\"}"),
+            r.apply("{\"gateway\":\"192.0.2.20\"}"),
             format!("{{\"gateway\":\"{IPV4_PLACEHOLDER}\"}}")
         );
     }
@@ -681,13 +681,16 @@ mod tests {
         // a four-group test says "not an address" about the address.
         let r = plain();
         let probes = [
-            ("gateway is 192.168.1.1.", "gateway is {P}."),
-            ("at 10.0.0.5. It failed", "at {P}. It failed"),
-            ("...192.168.1.1", "...{P}"),
-            ("{\"note\":\"host 10.1.2.3.\"}", "{\"note\":\"host {P}.\"}"),
+            ("gateway is 192.0.2.1.", "gateway is {P}."),
+            ("at 203.0.113.5. It failed", "at {P}. It failed"),
+            ("...192.0.2.1", "...{P}"),
+            (
+                "{\"note\":\"host 203.0.113.3.\"}",
+                "{\"note\":\"host {P}.\"}",
+            ),
             // The control: parentheses were never in the scan class, so this
             // one worked all along and must keep working.
-            ("(192.168.1.1)", "({P})"),
+            ("(192.0.2.1)", "({P})"),
         ];
         // Every probe is checked before anything is asserted, so a
         // regression reports all the shapes it broke, not merely the first.
@@ -715,7 +718,7 @@ mod tests {
         // than the ones that are actually an address — so the bound needs
         // a test of its own, not just the range check's.
         let r = plain();
-        assert_eq!(r.apply("0255.192.168.1.1"), "0255.[redacted-ipv4]");
+        assert_eq!(r.apply("0255.192.0.2.1"), "0255.[redacted-ipv4]");
     }
 
     #[test]
@@ -732,10 +735,10 @@ mod tests {
             // valid address in its own right, leaving `.1` over. Which
             // four-group window is chosen is not the point — that the real
             // address never survives intact is checked separately below.
-            ("5.192.168.1.1", "{P}.1"),
-            ("addr=192.168.1.1.5", "addr={P}.5"),
+            ("5.192.0.2.1", "{P}.1"),
+            ("addr=192.0.2.1.5", "addr={P}.5"),
             (
-                "gateway 192.168.1.1.2 unreachable",
+                "gateway 192.0.2.1.2 unreachable",
                 "gateway {P}.2 unreachable",
             ),
         ];
@@ -748,10 +751,10 @@ mod tests {
 
         // The literal address must not survive anywhere in the output, not
         // merely differ from a hand-picked expectation.
-        for input in ["5.192.168.1.1", "addr=192.168.1.1.5"] {
+        for input in ["5.192.0.2.1", "addr=192.0.2.1.5"] {
             let redacted = r.apply(input);
             assert!(
-                !redacted.contains("192.168.1.1"),
+                !redacted.contains("192.0.2.1"),
                 "{input:?} -> {redacted:?} still leaks the address"
             );
         }
@@ -1060,10 +1063,10 @@ mod tests {
     #[test]
     fn the_report_and_the_log_are_redacted_but_the_telegrams_are_not() {
         let all = BundleInput {
-            description: "gateway 172.22.9.4 dropped us".into(),
-            log: Some(serde_json::json!([{ "message": "tunnel 172.22.9.4 closed" }])),
+            description: "gateway 203.0.113.4 dropped us".into(),
+            log: Some(serde_json::json!([{ "message": "tunnel 203.0.113.4 closed" }])),
             bus_telegrams: Some(
-                serde_json::json!([{ "source": "1.1.5", "gateway": "172.22.9.4" }]),
+                serde_json::json!([{ "source": "1.1.5", "gateway": "203.0.113.4" }]),
             ),
             ..input()
         };
@@ -1080,18 +1083,18 @@ mod tests {
             )
             .unwrap()
         };
-        assert!(!text(REPORT_MD).contains("172.22.9.4"));
-        assert!(!text(LOG_JSON).contains("172.22.9.4"));
+        assert!(!text(REPORT_MD).contains("203.0.113.4"));
+        assert!(!text(LOG_JSON).contains("203.0.113.4"));
         assert!(text(LOG_JSON).contains(IPV4_PLACEHOLDER));
         // The whole point of the opt-in: this file keeps its addresses.
-        assert!(text(BUS_TELEGRAMS_JSON).contains("172.22.9.4"));
+        assert!(text(BUS_TELEGRAMS_JSON).contains("203.0.113.4"));
         assert!(text(BUS_TELEGRAMS_JSON).contains("1.1.5"));
     }
 
     #[test]
     fn redacted_json_is_still_json() {
         let all = BundleInput {
-            log: Some(serde_json::json!([{ "message": "at 10.0.0.7" }])),
+            log: Some(serde_json::json!([{ "message": "at 203.0.113.7" }])),
             ..input()
         };
         let bundle = build_bundle(&all, &plain());

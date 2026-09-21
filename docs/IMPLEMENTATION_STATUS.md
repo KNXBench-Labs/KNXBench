@@ -9033,3 +9033,107 @@ rules require. The export-only limitation entries — §4, §5, §21, §34, and
 §117's amendment — are closed with the reason "export withdrawn 2026-09-20"
 and kept, unedited, underneath that closure. A superseded record is still a
 record.
+
+## 2026-09-21 — T28: preferences move out of the browser and into a versioned file (branch `t28-settings-file`, ADR-0029)
+
+**The problem.** Eight preferences lived in eight `localStorage` keys under
+the `knx-desktop:` prefix. The web application and the Tauri desktop shell
+talk to the same server and do not share `localStorage`, so the same user had
+two unrelated sets of preferences. Nothing had a schema version, so
+`theme.ts`'s `"light"`/`"dark"` mapping was a migration performed on every
+read, forever, with no moment at which it could finish. And a preference in a
+browser profile is not in the data directory, not in a debug report, and gone
+with the browser.
+
+**The record is now `settings.json` in the server's data directory**
+(`apps/knx-server/src/settings.rs`), read and written over three guarded
+routes in `settings_routes.rs`: `GET /api/settings`, `PUT /api/settings` (a
+patch, not a replacement) and `POST /api/settings/adopt`. The file is
+`{"schemaVersion": 1, "settings": {…}}`, with the eight preferences under
+camelCase keys — `theme`, `accent`, `density`, `motionLevel`, `motionStyle`,
+`uiLanguage`, `uiLanguagePacks`, `productLanguage`. Path handling stays in
+`paths.rs`; no route accepts a path from a client, and no response names one
+(a quarantined file is reported by bare file name).
+
+**Version 0 is "the browser era."** `MIGRATIONS[n]` migrates version `n` to
+`n + 1`, so the chain's length *is* `CURRENT_SCHEMA_VERSION` and a unit test
+asserts exactly that. The one step that exists normalizes the browser's
+legacy `"light"`/`"dark"` theme ids to `porcelain`/`graphite` — a real
+migration over a real older shape, exercised by a test whose older file the
+production writer produced, rather than a placeholder invented to have a
+chain.
+
+**Three failure cases, none of which deletes anything.** An older file is
+migrated in place and the migration is reported. A file from a newer build is
+refused: the session runs on defaults, the file is left byte-for-byte alone,
+and every write for the rest of that session is refused with 409 — downgrading
+a build must not cost the preferences the newer one recorded. A damaged file
+(unparseable JSON, a missing or non-integer `schemaVersion`, a non-object
+`settings`) is renamed to `settings.damaged-<UTC timestamp>.json`, with a
+counter for a second failure in the same second, and the session starts from
+defaults. Each non-quiet outcome is pushed into the session log with
+`source: "settings"`, so the Log panel says so without the frontend inventing
+an entry.
+
+**Unknown keys survive a read-modify-write.** Preferences are an opaque
+`serde_json::Map`; the server validates the document's structure and nothing
+about the values, so the theme/accent/motion vocabularies stay in the frontend
+registries that already own them instead of rotting in a second copy. A `PUT`
+names the keys it changes and leaves every other key alone, including one this
+build has never heard of. A `null` removes a key. `AppState::settings_lock`
+serializes the read-modify-write so two windows cannot lose each other's keys.
+
+**The browser keeps one cache key, and it cannot be mistaken for the record.**
+`apps/knx-web/src/settingsStore.ts` mirrors the whole document into
+`knx-desktop:settings-cache` — one opaque key holding one document, not eight
+hand-editable ones — because `index.html`'s pre-mount bootstrap and the first
+React render both need a theme before a round trip can finish. `initSettings()`
+overwrites the cache wholesale with whatever the server says, including
+"nothing". The five preference modules keep their shape: the pure
+`loadX(storage)`/`saveX(storage)` functions are unchanged apart from their key
+constants, which now name document keys, and they are handed a `Storage`-shaped
+`settingsStorage` adapter instead of `window.localStorage`. The hooks that had
+seeded a `useState` once now re-read on `useSettingsRevision()`, so the record
+arriving after mount corrects the view instead of being ignored until a reload.
+`languagePack.ts` stores its packs as a real nested object rather than an
+escaped string — a settings file full of escaped JSON is unreadable by the
+person it is sitting on disk for — and keeps its quota transaction through a
+`setSettingOrThrow` that rolls back and rethrows where `setSetting` shrugs.
+
+**Adoption happens once, and only into an empty file.** Someone with
+preferences in `localStorage` today is not reset: the frontend posts them at
+schema version 0, the server migrates them on the way in, and the frontend
+then deletes exactly the keys it handed over. The server refuses to adopt into
+an existing file (409), so a second browser profile cannot stamp its defaults
+over a record somebody has been curating. `index.html`'s bootstrap falls back
+to the old loose keys for the one load where they are still all there is.
+
+**Deliberately still in `localStorage`:** `busContext.ts`'s
+`project-context`, `bus-session-context` and `context-changed`. They are
+per-window session state, not preferences; a shared record would make two
+windows fight over one value.
+
+**What one more preference costs.** A key, chosen by the module that owns the
+preference. No central registry, no server change, no new route, no migration
+— an unset preference reads as absent and falls back to its default, which is
+what every `loadX` already does for an unrecognised value. Nothing goes into
+`BROWSER_ERA_KEYS`: that table is a closed historical record of what the
+browser stored, not a registry. A migration is needed only when the *meaning*
+of an existing key changes, and then it is one function on `MIGRATIONS` plus a
+bump of `CURRENT_SCHEMA_VERSION`.
+
+**Tests: 1,895 passed, 0 failed, 88 binaries** (+26 and +1 binary over this
+branch's base: 17 unit tests in `settings.rs`, 9 in the new
+`tests/http_settings.rs`). Frontend: **787 passed across 56 files** (+19: 18 in
+the new `settingsStore.test.ts`, 1 in `appearance.test.tsx` for a hook
+following the record that lands after it mounted). Sixteen existing test files
+were re-pointed at the store; `DiagnosticsCompanion.test.tsx`'s pinned import
+graph gained `settingsStore.ts` with a note that its `PUT` carries preferences
+and is not a project mutation.
+
+**Not done.** No settings *screen* — `SettingsPanel.tsx` is where preferences
+are edited and it is unchanged; where a preference is kept is a separate
+question from where it is edited. No per-user settings (one file per data
+directory; multi-user is parked). No live synchronization between two open
+windows: a second window reads the record when it loads and does not learn
+about the first window's change until it reloads.

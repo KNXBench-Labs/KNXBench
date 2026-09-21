@@ -111,6 +111,7 @@ describe("SettingsPanel", () => {
 
     expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Theme"]')).not.toBeNull();
+    expect(host!.querySelector('select[aria-label="Group address notation"]')).toBeNull();
     expect(host!.querySelector('select[aria-label="Motion style"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Motion level"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Product data language"]')).not.toBeNull();

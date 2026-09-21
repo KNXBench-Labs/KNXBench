@@ -23,6 +23,7 @@
 //! avoid.
 
 use std::net::SocketAddrV4;
+use std::time::Duration;
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -30,13 +31,15 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
-use knx_core::{GroupAddress, GroupAddressDpt, GroupAddressStyle};
-use knx_net::{ApplicationService, Destination};
+use knx_core::scan::{ScanPlan, ScanPlanBuilder};
+use knx_core::{GroupAddress, GroupAddressDpt, GroupAddressStyle, IndividualAddress};
+use knx_net::{ApplicationService, Destination, ProbeOutcome, ProbePolicy, ScanEstimate};
 
 use crate::bus::{
     self, decode_single, BusSession, BusSessionError, DecodedValue, GroupAddressContext,
     SessionStatus, TelegramRow,
 };
+use crate::bus_scan::{LineScanResult, LineScanSession, LineScanStatus};
 use crate::errors::ApiError;
 use crate::SharedState;
 
@@ -47,6 +50,269 @@ pub fn bus_routes() -> Router<SharedState> {
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
         .route("/api/bus/write", post(write_value))
         .route("/api/bus/discover", post(discover_interfaces))
+        .route("/api/bus/scan/estimate", post(estimate_scan))
+        .route("/api/bus/scan/start", post(start_scan))
+        .route("/api/bus/scan/results", get(poll_scan))
+        .route("/api/bus/scan/cancel", post(cancel_scan))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanRequest {
+    gateway: Option<String>,
+    area: u8,
+    line: u8,
+    first_device: u8,
+    last_device: u8,
+    #[serde(default)]
+    excluded: Vec<String>,
+    response_timeout_ms: u64,
+    inter_probe_pause_ms: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanEstimateResponse {
+    candidate_count: usize,
+    omitted_addresses: Vec<String>,
+    response_timeout_ms: u64,
+    vacant_confirmations: u8,
+    inter_probe_pause_ms: u64,
+    worst_case_ms: u64,
+}
+
+fn build_scan(body: &ScanRequest) -> Result<(ScanPlan, ProbePolicy, ScanEstimate), ApiError> {
+    if body.response_timeout_ms == 0 {
+        return Err(ApiError::bad_request(
+            "responseTimeoutMs must be greater than zero",
+        ));
+    }
+    if body.first_device == 0 || body.last_device == 0 {
+        return Err(ApiError::bad_request(
+            "device 0 is the line coupler address, not a device probe target",
+        ));
+    }
+    let first = IndividualAddress::new(body.area, body.line, body.first_device)
+        .map_err(|error| ApiError::bad_request(error.to_string()))?;
+    let last = IndividualAddress::new(body.area, body.line, body.last_device)
+        .map_err(|error| ApiError::bad_request(error.to_string()))?;
+    let mut builder = ScanPlanBuilder::new();
+    for value in &body.excluded {
+        let address = value.parse::<IndividualAddress>().map_err(|error| {
+            ApiError::bad_request(format!("invalid excluded address {value:?}: {error}"))
+        })?;
+        builder = builder.exclude(address);
+    }
+    let plan = builder
+        .range(first, last)
+        .map_err(|error| ApiError::bad_request(error.to_string()))?;
+    let policy = ProbePolicy::new(
+        Duration::from_millis(body.response_timeout_ms),
+        ProbePolicy::default().vacant_confirmations(),
+        Duration::from_millis(body.inter_probe_pause_ms),
+    )
+    .map_err(|error| ApiError::bad_request(error.to_string()))?;
+    let estimate = ScanEstimate::new(&plan, &policy);
+    Ok((plan, policy, estimate))
+}
+
+fn estimate_response(
+    plan: &ScanPlan,
+    policy: &ProbePolicy,
+    estimate: ScanEstimate,
+) -> ScanEstimateResponse {
+    ScanEstimateResponse {
+        candidate_count: estimate.candidate_count(),
+        omitted_addresses: plan.omitted().iter().map(ToString::to_string).collect(),
+        response_timeout_ms: policy.response_timeout().as_millis() as u64,
+        vacant_confirmations: policy.vacant_confirmations(),
+        inter_probe_pause_ms: policy.inter_probe_pause().as_millis() as u64,
+        worst_case_ms: estimate.worst_case().as_millis() as u64,
+    }
+}
+
+async fn estimate_scan(
+    Json(body): Json<ScanRequest>,
+) -> Result<Json<ScanEstimateResponse>, ApiError> {
+    let (plan, policy, estimate) = build_scan(&body)?;
+    Ok(Json(estimate_response(&plan, &policy, estimate)))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanStartResponse {
+    session_id: u64,
+    estimate: ScanEstimateResponse,
+}
+
+async fn start_scan(
+    State(state): State<SharedState>,
+    Json(body): Json<ScanRequest>,
+) -> Result<Json<ScanStartResponse>, ApiError> {
+    let gateway = body
+        .gateway
+        .as_deref()
+        .ok_or_else(|| ApiError::bad_request("gateway is required"))?
+        .parse::<SocketAddrV4>()
+        .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
+    let (plan, policy, estimate) = build_scan(&body)?;
+    let response_estimate = estimate_response(&plan, &policy, estimate);
+    let mut guard = state.line_scan_session.lock().await;
+    if let Some(existing) = guard.as_mut() {
+        if existing.status() == LineScanStatus::Running {
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                format!("line scan session {} is already running", existing.id()),
+            ));
+        }
+        existing.cancel().await;
+    }
+    let id = state
+        .next_line_scan_session_id
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let session = LineScanSession::start(id, gateway, state.connector.as_ref(), plan, policy)
+        .await
+        .map_err(session_error_to_api_error)?;
+    *guard = Some(session);
+    Ok(Json(ScanStartResponse {
+        session_id: id,
+        estimate: response_estimate,
+    }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanPollQuery {
+    #[serde(default)]
+    since: usize,
+    session_id: Option<u64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanSessionQuery {
+    session_id: u64,
+}
+
+#[derive(Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+enum ScanOutcomeDto {
+    Occupied { mask_version: Option<u16> },
+    OccupiedBusy,
+    OccupiedSilent,
+    Vacant,
+    Indeterminate,
+    SelfAddress,
+}
+
+impl From<ProbeOutcome> for ScanOutcomeDto {
+    fn from(value: ProbeOutcome) -> Self {
+        match value {
+            ProbeOutcome::Occupied { mask_version } => Self::Occupied { mask_version },
+            ProbeOutcome::OccupiedBusy => Self::OccupiedBusy,
+            ProbeOutcome::OccupiedSilent => Self::OccupiedSilent,
+            ProbeOutcome::Vacant => Self::Vacant,
+            ProbeOutcome::Indeterminate => Self::Indeterminate,
+            ProbeOutcome::SelfAddress => Self::SelfAddress,
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanResultDto {
+    address: String,
+    outcome: ScanOutcomeDto,
+}
+
+impl From<LineScanResult> for ScanResultDto {
+    fn from(value: LineScanResult) -> Self {
+        Self {
+            address: value.address.to_string(),
+            outcome: value.outcome.into(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanResultsResponse {
+    session_id: u64,
+    status: &'static str,
+    error: Option<String>,
+    next_since: usize,
+    completed_count: usize,
+    total_count: usize,
+    omitted_addresses: Vec<String>,
+    excluded_addresses: Vec<String>,
+    results: Vec<ScanResultDto>,
+}
+
+fn scan_status(status: LineScanStatus) -> (&'static str, Option<String>) {
+    match status {
+        LineScanStatus::Running => ("running", None),
+        LineScanStatus::Completed => ("completed", None),
+        LineScanStatus::Cancelled => ("cancelled", None),
+        LineScanStatus::Failed(error) => ("failed", Some(error)),
+    }
+}
+
+fn scan_response(session: &LineScanSession, since: usize) -> ScanResultsResponse {
+    let (snapshot_status, next_since, results) = session.snapshot_since(since);
+    let (status, error) = scan_status(snapshot_status);
+    ScanResultsResponse {
+        session_id: session.id(),
+        status,
+        error,
+        next_since,
+        completed_count: next_since,
+        total_count: session.total_count(),
+        omitted_addresses: session.omitted().iter().map(ToString::to_string).collect(),
+        excluded_addresses: session.excluded().iter().map(ToString::to_string).collect(),
+        results: results.into_iter().map(Into::into).collect(),
+    }
+}
+
+async fn poll_scan(
+    State(state): State<SharedState>,
+    Query(query): Query<ScanPollQuery>,
+) -> Result<Json<ScanResultsResponse>, ApiError> {
+    let guard = state.line_scan_session.lock().await;
+    let session = guard.as_ref().ok_or_else(|| {
+        ApiError::with_status(StatusCode::NOT_FOUND, "no line scan session exists")
+    })?;
+    if query.session_id.is_some_and(|id| id != session.id()) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!(
+                "line scan session {} is no longer active",
+                query.session_id.unwrap()
+            ),
+        ));
+    }
+    Ok(Json(scan_response(session, query.since)))
+}
+
+async fn cancel_scan(
+    State(state): State<SharedState>,
+    Query(query): Query<ScanSessionQuery>,
+) -> Result<Json<ScanResultsResponse>, ApiError> {
+    let mut guard = state.line_scan_session.lock().await;
+    let session = guard.as_mut().ok_or_else(|| {
+        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
+    })?;
+    if query.session_id != session.id() {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!("line scan session {} is no longer active", query.session_id),
+        ));
+    }
+    session.cancel().await;
+    Ok(Json(scan_response(session, 0)))
 }
 
 /// Maps a [`BusSessionError`] to its HTTP status for the three mutating

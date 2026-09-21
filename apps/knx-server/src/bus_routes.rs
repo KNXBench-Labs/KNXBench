@@ -1,12 +1,12 @@
 // apps/knx-server/src/bus_routes.rs
 //! `/api/bus/*` — T15 task 3: the HTTP layer over `bus.rs`'s session/buffer/
 //! drain-task machinery (design spec `docs/superpowers/specs/
-//! 2026-09-11-group-monitor-design.md` §4.3). Four routes, registered by
-//! [`bus_routes`] and merged into `app()` in `lib.rs` next to
-//! `routes::project_routes()`/`fs_routes::fs_routes()`.
+//! 2026-09-11-group-monitor-design.md` §4.3), plus T25's interface search.
+//! Five routes, registered by [`bus_routes`] and merged into `app()` in
+//! `lib.rs` next to `routes::project_routes()`/`fs_routes::fs_routes()`.
 //!
 //! A new module, not a section of `routes.rs`: `routes.rs` is already large
-//! (1500+ lines) and entirely project/device/catalog-shaped; these four
+//! (1500+ lines) and entirely project/device/catalog-shaped; these
 //! routes share nothing with it except the same `#[serde(rename_all =
 //! "camelCase")]` DTO / `Result<Json<T>, ApiError>` idiom, which this module
 //! follows exactly rather than inventing a variant of it. The design spec's
@@ -46,6 +46,7 @@ pub fn bus_routes() -> Router<SharedState> {
         .route("/api/bus/monitor/stop", post(stop_monitor))
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
         .route("/api/bus/write", post(write_value))
+        .route("/api/bus/discover", post(discover_interfaces))
 }
 
 /// Maps a [`BusSessionError`] to its HTTP status for the three mutating
@@ -452,5 +453,88 @@ async fn write_value(
         encoded_payload: bus::format_group_value_payload(&value),
         service: "GroupValueWrite",
         decoded_echo: DecodedValueDto::from(&decode_single(dpt, &value)),
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/bus/discover
+// ---------------------------------------------------------------------------
+
+/// One entry per KNX-compatible interface that answered the multicast
+/// `SEARCH_REQUEST` — exactly the four fields `knx_net::DiscoveredGateway`
+/// carries, rendered as strings, with nothing invented on top.
+///
+/// The `SEARCH_RESPONSE` decoder reads more than this out of the Device
+/// Info DIB (serial number, MAC address, the gateway's routing multicast
+/// group, the medium and status octets, the project-installation id —
+/// `knx_net::core::dib::DeviceInfo`), but `DiscoveredGateway` already
+/// drops those on the way out of `knx-net`, and widening that struct is a
+/// protocol-crate change this route has no business making on its own. So
+/// nothing is dropped *here*; what a user would recognise — the address to
+/// connect to, the name on the label, the interface's own individual
+/// address and whether it offers tunnelling at all — is all present. The
+/// gap is recorded in `docs/KNOWN_LIMITATIONS.md`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiscoveredInterfaceDto {
+    /// `"<ip>:<port>"` — the same `host:port` shape
+    /// `POST /api/bus/monitor/start` parses back out of its `gateway`
+    /// field, so a found interface can be handed straight to Connect
+    /// without the client reassembling anything.
+    control_endpoint: String,
+    individual_address: String,
+    friendly_name: String,
+    /// From the Supported Service Families DIB, when the interface sends
+    /// one. `false` means "it did not say it supports tunnelling" — which
+    /// covers both a routing-only interface and one that sent no families
+    /// DIB at all; `knx-net` collapses those two cases before this route
+    /// sees them.
+    supports_tunnelling: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiscoverResponse {
+    interfaces: Vec<DiscoveredInterfaceDto>,
+}
+
+/// `POST`, not `GET`, even though a search changes nothing on this server
+/// and nothing on any device. A `GET` is fair game for prefetching,
+/// speculative revalidation and link-preview crawlers; every one of those
+/// would put an unasked-for multicast datagram on somebody's installation
+/// network. `POST` is the shape that says "only when a human asked".
+///
+/// An empty `interfaces` array is a `200`. It is the ordinary answer on a
+/// network with no KNX-compatible interface, and the ordinary answer on a
+/// host whose multicast never leaves its container — neither is a failure
+/// this server can distinguish from the other, and neither is something
+/// the caller can fix by retrying differently. Only a search that could
+/// not be *performed* is an error, and it maps through
+/// [`session_error_to_api_error`] like every other transport failure on
+/// this API: `502`.
+///
+/// Read-only, and this is the boundary that lets it exist at all: one
+/// multicast `SEARCH_REQUEST` out, `SEARCH_RESPONSE`s in. No connection is
+/// opened, no individual address is addressed, nothing is written to any
+/// device.
+async fn discover_interfaces(
+    State(state): State<SharedState>,
+) -> Result<Json<DiscoverResponse>, ApiError> {
+    let gateways = state
+        .connector
+        .discover()
+        .await
+        .map_err(session_error_to_api_error)?;
+
+    Ok(Json(DiscoverResponse {
+        interfaces: gateways
+            .into_iter()
+            .map(|g| DiscoveredInterfaceDto {
+                control_endpoint: g.control_endpoint.to_string(),
+                individual_address: g.individual_address.to_string(),
+                friendly_name: g.friendly_name,
+                supports_tunnelling: g.supports_tunnelling,
+            })
+            .collect(),
     }))
 }

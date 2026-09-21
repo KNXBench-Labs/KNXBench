@@ -3,6 +3,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
+  BusDiscoverResponse,
+  BusDiscoveredInterface,
   BusMonitorStartResponse,
   BusMonitorStopResponse,
   BusMonitorTelegramsResponse,
@@ -14,6 +16,9 @@ const apiMock = vi.hoisted(() => ({
   stopBusMonitor: vi.fn(),
   pollBusTelegrams: vi.fn(),
   writeBusValue: vi.fn(),
+  // T25: the panel searches for interfaces on mount, so every test in
+  // this file reaches this one whether it cares about discovery or not.
+  discoverBusInterfaces: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -34,6 +39,12 @@ import BusMonitorPanel from "./BusMonitorPanel";
 // happy-dom implements for real, so a mock would only prove that the mock
 // agrees with itself.
 import { publishProjectContext, recordSessionContext } from "./busContext";
+// Not mocked either: the discovery store is module state the panel reads
+// through `useSyncExternalStore`, and a mock of it would only prove the
+// mock agrees with itself. It does need resetting between tests — see
+// `resetBusDiscoveryForTests`'s own comment on why module state outlives
+// a component.
+import { resetBusDiscoveryForTests } from "./busDiscovery";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
@@ -176,6 +187,11 @@ beforeEach(() => {
   // (`mockResolvedValueOnce`, so only the mount-time call is affected)
   // before calling `renderPanel()`.
   apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
+  // T25 default: a search that finds nothing. The common case on a
+  // developer laptop, and the answer that keeps the connect form the
+  // only thing every other test in this file has to look at.
+  resetBusDiscoveryForTests();
+  apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
   apiMock.stopBusMonitor.mockResolvedValue({
     sessionId: 1,
     telegramCount: 0,
@@ -184,6 +200,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetBusDiscoveryForTests();
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
@@ -644,5 +661,149 @@ describe("BusMonitorPanel and the shared session's context", () => {
     expect(host!.querySelector(".bus-monitor-connect")).not.toBeNull();
     // And it did not try to clean up a session that is already gone.
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+  // T25: the interface search. Every address here is RFC 5737
+  // documentation space, and the search itself is the one KNXnet/IP
+  // exchange that writes nothing to any device — these tests talk to a
+  // mocked `POST /api/bus/discover` and to nothing else.
+  describe("interface discovery", () => {
+    const hallway: BusDiscoveredInterface = {
+      controlEndpoint: "192.0.2.11:3671",
+      individualAddress: "1.1.0",
+      friendlyName: "Hallway interface",
+      supportsTunnelling: true,
+    };
+    const workshop: BusDiscoveredInterface = {
+      controlEndpoint: "192.0.2.12:3671",
+      individualAddress: "1.1.1",
+      friendlyName: "Workshop router",
+      supportsTunnelling: false,
+    };
+
+    function options() {
+      return Array.from(host!.querySelectorAll<HTMLButtonElement>(".bus-discovery-option"));
+    }
+
+    function searchButton() {
+      return host!.querySelector<HTMLButtonElement>(".bus-discovery-search")!;
+    }
+
+    function gatewayField() {
+      return host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!;
+    }
+
+    async function click(button: HTMLButtonElement) {
+      await act(async () => {
+        button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    }
+
+    it("searches without being asked and offers what answered", async () => {
+      apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [hallway, workshop] });
+      await renderPanel();
+      await flushReattach();
+
+      expect(apiMock.discoverBusInterfaces).toHaveBeenCalledTimes(1);
+      const found = options();
+      expect(found).toHaveLength(2);
+      // The friendly name, not just the address — the whole point of
+      // asking the interfaces who they are.
+      expect(found[0]!.textContent).toContain("Hallway interface");
+      expect(found[0]!.textContent).toContain("192.0.2.11:3671");
+      expect(found[0]!.textContent).toContain("1.1.0");
+      expect(found[0]!.textContent).toContain("Tunnelling");
+      expect(found[1]!.textContent).toContain("Workshop router");
+      expect(found[1]!.textContent).not.toContain("Tunnelling");
+      expect(host!.querySelector(".bus-discovery-status")!.textContent).toBe("2 interfaces answered.");
+      // An offer, not a decision: nothing connected, nothing typed.
+      expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+      expect(gatewayField().value).toBe("");
+    });
+
+    it("says nothing answered without turning that into a failure", async () => {
+      await renderPanel();
+      await flushReattach();
+
+      expect(options()).toHaveLength(0);
+      expect(host!.querySelector(".bus-discovery-status")!.textContent).toBe("No interfaces answered.");
+      // The reason it might be empty, in the CLI hint's own words.
+      expect(host!.querySelector(".bus-discovery-hint")!.textContent).toContain("host networking");
+      // And the field the user actually needs is untouched.
+      const input = gatewayField();
+      expect(input.disabled).toBe(false);
+      await act(async () => {
+        setInputValue(".bus-monitor-connect input", "192.0.2.50:3671");
+      });
+      expect(gatewayField().value).toBe("192.0.2.50:3671");
+      const connectButton = Array.from(host!.querySelectorAll("button")).find(
+        (b) => b.textContent === "Connect",
+      )!;
+      expect(connectButton.disabled).toBe(false);
+    });
+
+    it("disables the search button while a search is pending", async () => {
+      await renderPanel();
+      await flushReattach();
+      expect(searchButton().disabled).toBe(false);
+
+      let release: (response: BusDiscoverResponse) => void = () => {};
+      apiMock.discoverBusInterfaces.mockReturnValueOnce(
+        new Promise<BusDiscoverResponse>((resolve) => {
+          release = resolve;
+        }),
+      );
+      await click(searchButton());
+
+      expect(searchButton().disabled).toBe(true);
+      expect(searchButton().getAttribute("aria-busy")).toBe("true");
+      expect(searchButton().textContent).toBe("Searching…");
+      // A second click during the fixed search window buys a second
+      // timeout, not a faster answer — so it buys nothing at all.
+      await click(searchButton());
+      expect(apiMock.discoverBusInterfaces).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        release({ interfaces: [hallway] });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(searchButton().disabled).toBe(false);
+      expect(options()).toHaveLength(1);
+    });
+
+    it("keeps a failed search out of the user's way", async () => {
+      apiMock.discoverBusInterfaces.mockRejectedValue(new Error("multicast went nowhere"));
+      await renderPanel();
+      await flushReattach();
+
+      // No error wall: no alert, no field error, nothing blocking.
+      expect(host!.querySelector("[role='alert']")).toBeNull();
+      expect(host!.querySelector(".field-error")).toBeNull();
+      const status = host!.querySelector(".bus-discovery-status")!;
+      expect(status.getAttribute("role")).toBe("status");
+      expect(status.textContent).toContain("could not be run");
+      // The server's own words survive, quietly.
+      expect(host!.querySelector(".bus-discovery-detail")!.textContent).toBe("multicast went nowhere");
+      expect(gatewayField().disabled).toBe(false);
+    });
+
+    it("fills the gateway field from a found interface and keeps taking free text", async () => {
+      apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [hallway, workshop] });
+      await renderPanel();
+      await flushReattach();
+
+      await click(options()[1]!);
+      expect(gatewayField().value).toBe("192.0.2.12:3671");
+      // Selecting fills the field. It does not connect.
+      expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+
+      // And the field is still a field: an address nothing answered from
+      // is still allowed, because multicast not reaching a subnet says
+      // nothing about whether a unicast address works.
+      await act(async () => {
+        setInputValue(".bus-monitor-connect input", "203.0.113.7:3671");
+      });
+      expect(gatewayField().value).toBe("203.0.113.7:3671");
+    });
   });
 });

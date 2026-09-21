@@ -8,8 +8,14 @@
 //! That means `knx-server` cannot inject a fake by pointing a
 //! `Box<dyn BusConnection>` at test code. So this module defines its own,
 //! narrower trait pair — [`GatewayConnector`]/[`BusTunnel`] — exposing only
-//! the tunnel operations a monitor session actually needs (D7: tunnelling
-//! only, no discovery, no routing). [`RealConnector`]/[`RealTunnel`]
+//! the operations the server actually needs: the tunnel operations a
+//! monitor session uses, plus (T25) the one read-only multicast search
+//! `POST /api/bus/discover` needs. Still no routing. The original D7
+//! wording said "tunnelling only, no discovery" because nothing above this
+//! seam asked for discovery yet; `bus_routes.rs`'s discover route does,
+//! and routing a search around the seam instead of through it would leave
+//! one of the two `knx-net` entry points untestable.
+//! [`RealConnector`]/[`RealTunnel`]
 //! delegate to `knx-net`; [`fake::FakeConnector`]/[`fake::FakeTunnel`] (see
 //! that module's own doc comment) stand in for tests, with no gateway and
 //! no socket anywhere.
@@ -36,7 +42,9 @@ use std::sync::{Arc, Mutex};
 use knx_core::{
     DptRef, GroupAddress, GroupAddressDpt, GroupAddressStyle, GroupValue, IndividualAddress,
 };
-use knx_net::{ApplicationService, BusConnection, BusError, Destination, KnxNetIpClient};
+use knx_net::{
+    ApplicationService, BusConnection, BusError, Destination, DiscoveredGateway, KnxNetIpClient,
+};
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
 
@@ -55,6 +63,22 @@ pub trait GatewayConnector: Send + Sync {
         &self,
         gateway: SocketAddrV4,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>;
+
+    /// One multicast `SEARCH_REQUEST` and whatever `SEARCH_RESPONSE`s come
+    /// back inside `knx-net`'s search window (Core v01.06.02 AS §4.2 /
+    /// §7.4.1). Read-only in the strongest sense this codebase has: it
+    /// opens no connection, sends nothing to any individual address and
+    /// changes nothing on any device — the whole reason a discovery route
+    /// can exist while writing to real hardware stays out of scope.
+    ///
+    /// An empty `Vec` is a success, not an error: a network with no
+    /// KNX-compatible interface on it, and a host whose multicast never
+    /// leaves its container, both answer with silence, and neither is a
+    /// fault the caller can act on differently.
+    #[allow(clippy::type_complexity)]
+    fn discover(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<DiscoveredGateway>, BusSessionError>> + Send + '_>>;
 }
 
 /// What a monitor session needs from an open tunnel. Mirrors
@@ -160,6 +184,19 @@ impl GatewayConnector for RealConnector {
             Ok(Box::new(RealTunnel(tunnel)) as Box<dyn BusTunnel>)
         })
     }
+
+    #[allow(clippy::type_complexity)]
+    fn discover(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<DiscoveredGateway>, BusSessionError>> + Send + '_>>
+    {
+        Box::pin(async move {
+            self.client
+                .discover()
+                .await
+                .map_err(BusSessionError::Transport)
+        })
+    }
 }
 
 /// Production [`BusTunnel`]: delegates every method to a real
@@ -221,8 +258,8 @@ pub mod fake {
     use std::sync::{Arc, Mutex};
 
     use super::{
-        ApplicationService, BusError, BusSessionError, BusTunnel, Destination, Future,
-        GatewayConnector, IndividualAddress, Pin, SocketAddrV4, TunnelEvent,
+        ApplicationService, BusError, BusSessionError, BusTunnel, Destination, DiscoveredGateway,
+        Future, GatewayConnector, IndividualAddress, Pin, SocketAddrV4, TunnelEvent,
     };
     use tokio::sync::broadcast;
 
@@ -422,6 +459,28 @@ pub mod fake {
     pub struct FakeConnector {
         outcome: Mutex<Option<Result<FakeTunnel, BusSessionError>>>,
         calls: AtomicUsize,
+        /// The scripted answer to `discover()`, and how often it was asked
+        /// (T25). Separate from `outcome` rather than folded into it: a
+        /// discovery test opens no tunnel and a monitor test runs no
+        /// search, so one shared slot would force every test to script an
+        /// outcome for a method it never calls. Unlike `outcome` this one
+        /// is *not* consumed by the call — the discovery route is
+        /// deliberately repeatable (the UI's Search button exists to run
+        /// it again), so a test can assert that two searches return the
+        /// same list without scripting it twice.
+        discovery: Mutex<Result<Vec<DiscoveredGateway>, BusSessionError>>,
+        discovery_calls: AtomicUsize,
+    }
+
+    /// `BusSessionError` does not implement `Clone` (its `Transport`
+    /// variant can hold a `std::io::Error`), so a repeatable scripted
+    /// failure cannot hand out copies of one error value. Every failing
+    /// `discover()` therefore reports `BusError::Timeout` — one fixed,
+    /// easily recognised variant, the same simplification
+    /// `FakeTunnelHandle::fail_next_send` already makes for the same
+    /// reason.
+    fn fresh_discovery_failure() -> BusSessionError {
+        BusSessionError::Transport(BusError::Timeout)
     }
 
     impl FakeConnector {
@@ -429,6 +488,8 @@ pub mod fake {
             Self {
                 outcome: Mutex::new(Some(Ok(tunnel))),
                 calls: AtomicUsize::new(0),
+                discovery: Mutex::new(Ok(Vec::new())),
+                discovery_calls: AtomicUsize::new(0),
             }
         }
 
@@ -436,6 +497,37 @@ pub mod fake {
             Self {
                 outcome: Mutex::new(Some(Err(error))),
                 calls: AtomicUsize::new(0),
+                discovery: Mutex::new(Ok(Vec::new())),
+                discovery_calls: AtomicUsize::new(0),
+            }
+        }
+
+        /// A connector whose `discover()` answers with `gateways` —
+        /// possibly none, which is the ordinary "nothing on this network
+        /// answered" outcome and not an error. Its `connect_tunnel` is
+        /// unscripted and panics if called, exactly like `succeeding`'s
+        /// second `connect_tunnel` would: a discovery test that opens a
+        /// tunnel has stopped testing discovery.
+        pub fn discovering(gateways: Vec<DiscoveredGateway>) -> Self {
+            Self {
+                outcome: Mutex::new(None),
+                calls: AtomicUsize::new(0),
+                discovery: Mutex::new(Ok(gateways)),
+                discovery_calls: AtomicUsize::new(0),
+            }
+        }
+
+        /// A connector whose `discover()` fails — the search itself broke
+        /// (no route to the multicast group, a socket that could not be
+        /// bound), as opposed to succeeding with nothing found. See
+        /// [`fresh_discovery_failure`] for why the error is always the
+        /// same variant.
+        pub fn discovery_failing() -> Self {
+            Self {
+                outcome: Mutex::new(None),
+                calls: AtomicUsize::new(0),
+                discovery: Mutex::new(Err(fresh_discovery_failure())),
+                discovery_calls: AtomicUsize::new(0),
             }
         }
 
@@ -444,6 +536,11 @@ pub mod fake {
         /// a second `start` before it ever reaches the connector.
         pub fn call_count(&self) -> usize {
             self.calls.load(Ordering::SeqCst)
+        }
+
+        /// How many times `discover` has actually been called.
+        pub fn discovery_call_count(&self) -> usize {
+            self.discovery_calls.load(Ordering::SeqCst)
         }
     }
 
@@ -465,6 +562,20 @@ pub mod fake {
                      script exactly as many outcomes as the test calls connect_tunnel",
                 );
             Box::pin(async move { outcome.map(|tunnel| Box::new(tunnel) as Box<dyn BusTunnel>) })
+        }
+
+        #[allow(clippy::type_complexity)]
+        fn discover(
+            &self,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<Vec<DiscoveredGateway>, BusSessionError>> + Send + '_>,
+        > {
+            self.discovery_calls.fetch_add(1, Ordering::SeqCst);
+            let answer = match &*self.discovery.lock().expect("fake mutex poisoned") {
+                Ok(gateways) => Ok(gateways.clone()),
+                Err(_) => Err(fresh_discovery_failure()),
+            };
+            Box::pin(async move { answer })
         }
     }
 }
@@ -1929,5 +2040,45 @@ mod tests {
             }
             other => panic!("expected Error, got {other:?}"),
         }
+    }
+
+    /// The fake connector's scripted search is repeatable — every call
+    /// answers, none consumes the script. `bus_routes.rs`'s discover route
+    /// is stateless and the UI's Search button exists to run it again, so
+    /// a test double that answered once and then panicked would model the
+    /// wrong thing. No socket, no datagram, no gateway.
+    #[tokio::test]
+    async fn fake_connector_answers_every_discover_call() {
+        let found = DiscoveredGateway {
+            control_endpoint: "192.0.2.11:3671".parse().expect("valid test endpoint"),
+            individual_address: addr(0),
+            friendly_name: "Hallway interface".into(),
+            supports_tunnelling: true,
+        };
+        let connector = FakeConnector::discovering(vec![found.clone()]);
+        assert_eq!(connector.discovery_call_count(), 0);
+
+        let first = connector.discover().await.expect("scripted success");
+        let second = connector.discover().await.expect("scripted success");
+
+        assert_eq!(first, vec![found.clone()]);
+        assert_eq!(second, vec![found]);
+        assert_eq!(connector.discovery_call_count(), 2);
+    }
+
+    /// The other scripted outcome: the search could not run at all. Also
+    /// repeatable, and always the same recognisable variant — see
+    /// `fresh_discovery_failure`.
+    #[tokio::test]
+    async fn fake_connector_can_fail_every_discover_call() {
+        let connector = FakeConnector::discovery_failing();
+        for _ in 0..2 {
+            let error = connector.discover().await.expect_err("scripted failure");
+            assert!(matches!(
+                error,
+                BusSessionError::Transport(BusError::Timeout)
+            ));
+        }
+        assert_eq!(connector.discovery_call_count(), 2);
     }
 }

@@ -24,7 +24,7 @@ read:
   `area.line.device` and have no second spelling. A string of three dotted
   numbers is, on its own, ambiguous. This is a real cost, not a bug to be
   fixed later, and the user asked for the feature knowing the notation
-  exists **[V]**.
+  exists.
 
 ## Decision
 

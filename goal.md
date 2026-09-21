@@ -195,6 +195,15 @@ project as a diff the user can act on. This was explicitly out of scope for
 T17 and is the natural second half. Read-only against the bus, a normal
 undoable `Command` against the project.
 
+**Closed 2026-09-21 (T09).** Completed scan evidence is compared with the
+current project in three explicit groups. Nothing is selected by default;
+excluded and scanner-self addresses stay non-actionable. Only chosen
+unexpected/missing findings enter one undoable batch, and no product or
+application data is inferred from a bus response. Placement resolves matching
+lines across all installations; a removal is refused while dependent project
+data still references the device. Project-tree changes refresh the comparison
+and clear any stale UI selection.
+
 ### 3.3 D8 — settings beyond theme, motion and language
 
 The settings panel covers appearance and language. Everything else ETS-shaped

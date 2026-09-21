@@ -132,6 +132,10 @@ pub fn sync_after_command(
             // (out of scope for this plan's Task 1, which only added the
             // `Command` variants and in-memory `apply` logic).
         }
+        Command::RestoreDevice { .. } => {
+            // Internal undo form of device creation/deletion; persistence is
+            // covered by the same future incremental-sync work as above.
+        }
         Command::CreateArea { .. } => {
             // Area persistence layer not yet implemented (Task 2 scope).
         }
@@ -146,6 +150,9 @@ pub fn sync_after_command(
         }
         Command::MoveDeviceToLine { .. } => {
             // Line/device-membership persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::SetIdAllocators { .. } => {
+            // Allocators are reconstructed from persisted entity ids on load.
         }
         Command::CreateGroupRange { .. } => {
             // Group-range persistence layer not yet implemented (Task 5 scope).

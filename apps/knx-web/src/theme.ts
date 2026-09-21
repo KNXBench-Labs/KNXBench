@@ -1,5 +1,6 @@
 /** The registry of selectable themes, and where the choice is persisted and read back. */
 import { useEffect, useState } from "react";
+import { settingsStorage, useSettingsRevision } from "./settingsStore";
 
 /** `hasAccentVariations` is whether styles.css declares any
  * `[data-accent="…"]` variation for this theme (ADR-0022: three of five
@@ -40,7 +41,14 @@ export const THEMES: readonly ThemeDef[] = [
   { id: "system", name: "System", hasAccentVariations: systemHasAccentVariations },
   ...PALETTE_THEMES,
 ];
-const STORAGE_KEY = "knx-desktop:theme";
+/**
+ * The key inside the settings document (`settings.json`), not a
+ * `localStorage` key: `settingsStorage` resolves it against the record
+ * the server keeps. The migration of the pre-file `"light"`/`"dark"` ids
+ * below still matters — the server's v0 step normalizes what it adopts,
+ * but a hand-written file can still say either.
+ */
+const STORAGE_KEY = "theme";
 
 /** Preserve explicit old preferences; unknown preferences follow the OS. */
 export function loadThemeId(storage: Pick<Storage, "getItem">): string {
@@ -57,12 +65,18 @@ export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void
   try { storage.setItem(STORAGE_KEY, id); } catch { /* Session preference still works. */ }
 }
 export function useThemeId(): [string, (id: string) => void] {
-  const [id, setId] = useState(() => loadThemeId(window.localStorage));
+  const revision = useSettingsRevision();
+  const [id, setId] = useState(() => loadThemeId(settingsStorage));
+  // The settings file arrives after the first paint, so the cached theme
+  // this mounted with may not be the recorded one. Re-reading on every
+  // revision is safe rather than circular: the save below writes nothing
+  // when the value has not changed.
+  useEffect(() => { setId(loadThemeId(settingsStorage)); }, [revision]);
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => { document.documentElement.dataset.theme = resolveThemeId(id, query.matches); };
     apply();
-    saveThemeId(window.localStorage, id);
+    saveThemeId(settingsStorage, id);
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
   }, [id]);

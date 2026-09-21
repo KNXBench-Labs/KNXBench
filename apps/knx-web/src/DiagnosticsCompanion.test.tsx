@@ -34,6 +34,7 @@ vi.mock("./api", () => ({
 }));
 
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
+import { resetSettingsForTests } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -142,6 +143,7 @@ async function renderCompanion() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetSettingsForTests();
   apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
   apiMock.getSessionLog.mockResolvedValue([]);
 });
@@ -210,6 +212,15 @@ describe("one editing workspace", () => {
     // upload are `pickOpenPath`/`pickSavePath`, which this window never
     // calls.
     //
+    // T28 adds `settingsStore.ts`, reached through `uiLanguage.ts` and
+    // `languagePack.ts`: the companion renders translated strings, so it
+    // reads the same settings document the editor does. It writes there
+    // too — `PUT /api/settings` — and that write is deliberate and not a
+    // project mutation: it carries preferences, one key at a time, into a
+    // file that holds nothing but preferences. It does not appear in
+    // `mutatingFetchesIn` below because that regex only sees a string
+    // literal as `fetch`'s first argument, and this one passes a variable.
+    //
     // T01b adds `session.ts`: `api.ts` publishes "the server answered 401"
     // from inside its shared `request()` helper, and that notifier lives
     // there. It holds a `Set` of callbacks and nothing else — no fetch, no
@@ -234,6 +245,7 @@ describe("one editing workspace", () => {
       "messages/de.ts",
       "messages/en.ts",
       "session.ts",
+      "settingsStore.ts",
       "uiLanguage.ts",
     ]);
 

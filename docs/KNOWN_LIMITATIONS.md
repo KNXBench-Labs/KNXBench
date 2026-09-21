@@ -7095,3 +7095,64 @@ file it happened to. A German user gets an English line in the Log panel.
 machine-readable status code with its parameters, and `messages/de.ts`
 gets the keys. Doing it here instead would mean inventing a wire shape for
 one string that T10 would immediately rework **[A]**.
+
+## 123. With dots selected, a group address and an individual address are spelled alike
+
+**Limitation.** The group-address notation preference (ADR-0030) lets a user
+read group addresses as `1.2.3` instead of `1/2/3`. An individual address is
+already written `area.line.device` and has no second spelling, so with dots
+selected a three-part address is ambiguous on its own: nothing in the string
+itself says which kind it is **[V]**.
+
+**Why it is here anyway.** The separator carries no information, and the
+request was for exactly this notation. Refusing it, or refusing it in the one
+place both kinds appear together, would be the dishonest fix — the ambiguity
+is inherent to the notation, not introduced by the implementation.
+
+**What carries the distinction instead.** Structure, which is on screen
+already and does not depend on punctuation: the bus monitor labels its two
+columns `Source` and `Destination` and only `Destination` is a group address;
+the Project Explorer puts group addresses under their own branch; the
+Inspector heads each kind with its own section; the search overlay groups hits
+by kind. The supplementary cue is typographic — group addresses carry a
+`.ga-address` class taking `--knx-accent-tertiary`, individual addresses keep
+the body colour (`apps/knx-web/src/styles.css`, a theme token per ADR-0022).
+
+**Residue a user can still hit.**
+
+- Colour alone is not an accessible distinction, and the structural cues are
+  the accessible ones. A screen-reader user hears `1.2.3` with whatever the
+  surrounding label says and nothing more; where the label is the only cue,
+  the label is doing all the work.
+- Copied out of the application into a text file, a chat message or a
+  spreadsheet, a dotted group address loses every cue it had. The application
+  reads it back correctly — input accepts both notations — but a human, or
+  another tool, cannot tell it from an individual address.
+- Text a user types themselves is not classified: the bus compose form's
+  destination field accepts `1.2.3` and sends `1/2/3`, which is right for a
+  group address and would be wrong for an individual address, but that field
+  only ever addressed group addresses, so nothing is mis-sent. **[V]**
+- No cue is applied to addresses inside free text — an error message from the
+  server, a log line, a flavour string. Those are sentences, not fields, and
+  the renderer deliberately does not walk them.
+
+**Not affected.** Nothing persisted, exported or transmitted changes: the
+canonical `/` is what `knx-core` formats, what every DTO carries and what
+every write goes out as, whichever notation is displayed **[V]**.
+
+**Interaction with [§91](#91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started).**
+Neither worse nor harder to fix. §91 is about the *level* style a bus session
+snapshots at `/start`, and the notation preference never changes a level
+count — the conversion maps `n` levels to `n` levels or declines. §91's safety
+argument, that a string written in one style is refused rather than parsed as
+a different address because the field counts differ, therefore survives
+unchanged. The mismatch §91 describes still looks the same under dots: a
+`Free`-style address has no separator for the preference to act on, and a
+two- or three-level one keeps its field count. The fix §91 waits for is
+server-side and does not meet this code.
+
+**Lifted when.** There is a reason to go further than labelling. An icon or a
+prefix glyph on every address, or a wire-level distinction that lets the
+frontend classify a string rather than trusting its call site, would both
+work; neither is worth doing before someone reports being confused by the
+one this replaces.

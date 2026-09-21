@@ -36,7 +36,8 @@ pub use commissioning::{
 };
 pub use management::ManagementTransport;
 pub use scan::{
-    probe_address, scan_line, ProbeOutcome, ProbePolicy, ProbePolicyError, ScanError, ScanTransport,
+    probe_address, scan_line, ProbeOutcome, ProbePolicy, ProbePolicyError, ScanError, ScanEstimate,
+    ScanTransport,
 };
 // `GroupValue` is a KNX domain concept (the payload of a group telegram),
 // not an IP-transport one — it lives in `knx-core` (spec E4-D2) and is

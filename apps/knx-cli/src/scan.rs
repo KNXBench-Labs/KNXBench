@@ -71,7 +71,7 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
                 // the set of addresses this scan refuses to probe" are the
                 // same operation for this one flag. A second `--exclude`
                 // must add to the set, never replace it — the whole point
-                // of the flag (see the 1.1.220 rule) is that a name once
+                // of the flag is that a protected address named once
                 // given never quietly falls out of it.
                 exclude.push(crate::take_value(args, i + 1, "--exclude")?);
                 i += 2;
@@ -155,7 +155,7 @@ fn parse_line(spec: &str) -> Result<(u8, u8), String> {
 /// exclusion set for Task 1. Refuses the whole argument on the first
 /// malformed token rather than dropping it — see the module doc on
 /// `--exclude` in the task brief: a typo an exclusion list silently drops
-/// is exactly the failure the 1.1.220 rule exists to prevent. Every
+/// is exactly the failure protected exclusions exist to prevent. Every
 /// occurrence contributes to the same set; none of them replace an
 /// earlier one (see `parse_scan_args`'s `--exclude` arm).
 fn parse_exclusions(specs: &[String]) -> Result<HashSet<IndividualAddress>, String> {
@@ -583,7 +583,7 @@ mod tests {
             "--range",
             "1.1.2-1.1.9",
             "--exclude",
-            "1.1.220",
+            "2.3.40",
             "--timeout-ms",
             "500",
             "--pause-ms",
@@ -596,7 +596,7 @@ mod tests {
         assert_eq!(parsed.gateway, "192.0.2.1:3671");
         assert_eq!(parsed.line, "1.1");
         assert_eq!(parsed.range.as_deref(), Some("1.1.2-1.1.9"));
-        assert_eq!(parsed.exclude, vec!["1.1.220".to_string()]);
+        assert_eq!(parsed.exclude, vec!["2.3.40".to_string()]);
         assert_eq!(parsed.timeout_ms.as_deref(), Some("500"));
         assert_eq!(parsed.pause_ms.as_deref(), Some("50"));
         assert_eq!(parsed.project.as_deref(), Some("proj.knxdb"));
@@ -636,20 +636,20 @@ mod tests {
             "--line",
             "1.1",
             "--exclude",
-            "1.1.220",
+            "2.3.40",
             "--exclude",
-            "1.1.221",
+            "2.3.41",
         ]))
         .unwrap();
         assert_eq!(
             parsed.exclude,
-            vec!["1.1.220".to_string(), "1.1.221".to_string()]
+            vec!["2.3.40".to_string(), "2.3.41".to_string()]
         );
-        let (plan, _, excluded) = build_scan_plan("1.1", None, &parsed.exclude).unwrap();
-        assert!(!plan.addresses().contains(&addr(1, 1, 220)));
-        assert!(!plan.addresses().contains(&addr(1, 1, 221)));
-        assert!(excluded.contains(&addr(1, 1, 220)));
-        assert!(excluded.contains(&addr(1, 1, 221)));
+        let (plan, _, excluded) = build_scan_plan("2.3", None, &parsed.exclude).unwrap();
+        assert!(!plan.addresses().contains(&addr(2, 3, 40)));
+        assert!(!plan.addresses().contains(&addr(2, 3, 41)));
+        assert!(excluded.contains(&addr(2, 3, 40)));
+        assert!(excluded.contains(&addr(2, 3, 41)));
     }
 
     // --- build_scan_plan ---
@@ -657,8 +657,7 @@ mod tests {
     #[test]
     fn full_line_with_no_range_or_exclude_covers_every_device() {
         let (plan, range, excluded) = build_scan_plan("1.1", None, &[]).unwrap();
-        // 255 minus the one address the project exclusion list removes.
-        assert_eq!(plan.addresses().len(), 254);
+        assert_eq!(plan.addresses().len(), 255);
         assert_eq!(
             range,
             ScannedRange {
@@ -668,8 +667,8 @@ mod tests {
                 last_device: 255
             }
         );
-        assert_eq!(excluded, HashSet::from([addr(1, 1, 220)]));
-        assert_eq!(plan.omitted(), [addr(1, 1, 220)]);
+        assert!(excluded.is_empty());
+        assert!(plan.omitted().is_empty());
     }
 
     #[test]
@@ -718,11 +717,11 @@ mod tests {
     }
 
     #[test]
-    fn the_alarm_panel_example_address_is_never_a_scan_candidate_once_excluded() {
-        let (plan, range, excluded) = build_scan_plan("1.1", None, &args(&["1.1.220"])).unwrap();
-        assert!(!plan.addresses().contains(&addr(1, 1, 220)));
+    fn a_configured_address_is_never_a_scan_candidate_once_excluded() {
+        let (plan, range, excluded) = build_scan_plan("2.3", None, &args(&["2.3.40"])).unwrap();
+        assert!(!plan.addresses().contains(&addr(2, 3, 40)));
         assert_eq!(plan.addresses().len(), 254);
-        assert!(excluded.contains(&addr(1, 1, 220)));
+        assert!(excluded.contains(&addr(2, 3, 40)));
         assert_eq!(range.first_device, 1);
         assert_eq!(range.last_device, 255);
     }
@@ -742,14 +741,11 @@ mod tests {
         assert!(text.contains("6 candidate address(es)"));
         assert!(text.contains("first 1.1.2"));
         assert!(text.contains("last 1.1.9"));
-        // Two from the command line plus the project exclusion list, which
-        // no command line can shorten.
-        assert!(text.contains("excluded (3):"), "{text}");
+        // Both explicitly configured exclusions are reported.
+        assert!(text.contains("excluded (2):"), "{text}");
         assert!(text.contains("1.1.4"));
         assert!(text.contains("1.1.5"));
-        assert!(text.contains("1.1.220"));
-        // The two that fell inside the span are named as dropped; the
-        // project's own entry lies outside it and so is not.
+        // Both fall inside the requested span and are named as omitted.
         assert!(text.contains("omitted from this span (2):"), "{text}");
     }
 
@@ -757,9 +753,8 @@ mod tests {
     fn dry_run_with_no_exclusions_still_names_the_zero_count() {
         let (plan, _, excluded) = build_scan_plan("1.1", Some("1.1.2-1.1.3"), &[]).unwrap();
         let text = format_dry_run(&plan, &excluded);
-        // Never zero: the project exclusion list is always in force, and a
-        // report that said "excluded (0)" would be a lie about the guard.
-        assert!(text.contains("excluded (1):"), "{text}");
+        // With no configured exclusions, the report says so explicitly.
+        assert!(text.contains("excluded (0):"), "{text}");
     }
 
     // --- build_probe_policy ---

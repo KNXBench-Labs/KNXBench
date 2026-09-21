@@ -1096,6 +1096,55 @@ export interface BusDiscoverResponse {
   interfaces: BusDiscoveredInterface[];
 }
 
+export interface LineScanRequest {
+  gateway: string;
+  area: number;
+  line: number;
+  firstDevice: number;
+  lastDevice: number;
+  excluded: string[];
+  responseTimeoutMs: number;
+  interProbePauseMs: number;
+}
+
+export interface LineScanEstimate {
+  candidateCount: number;
+  omittedAddresses: string[];
+  responseTimeoutMs: number;
+  vacantConfirmations: number;
+  interProbePauseMs: number;
+  worstCaseMs: number;
+}
+
+export type LineScanOutcome =
+  | { kind: "occupied"; maskVersion: number | null }
+  | { kind: "occupiedBusy" }
+  | { kind: "occupiedSilent" }
+  | { kind: "vacant" }
+  | { kind: "indeterminate" }
+  | { kind: "selfAddress" };
+
+export interface LineScanResult {
+  address: string;
+  outcome: LineScanOutcome;
+}
+
+export interface LineScanStartResponse {
+  sessionId: number;
+  estimate: LineScanEstimate;
+}
+
+export interface LineScanResultsResponse {
+  sessionId: number;
+  status: "running" | "completed" | "cancelled" | "failed";
+  error: string | null;
+  nextSince: number;
+  completedCount: number;
+  totalCount: number;
+  omittedAddresses: string[];
+  results: LineScanResult[];
+}
+
 export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
   return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
 }
@@ -1117,6 +1166,28 @@ export function pollBusTelegrams(since: number): Promise<BusMonitorTelegramsResp
 // success, never an error — see `busDiscovery.ts`.
 export function discoverBusInterfaces(): Promise<BusDiscoverResponse> {
   return request("/api/bus/discover", { method: "POST" });
+}
+
+export function estimateLineScan(requestBody: LineScanRequest): Promise<LineScanEstimate> {
+  return request("/api/bus/scan/estimate", {
+    method: "POST",
+    body: JSON.stringify(requestBody),
+  });
+}
+
+export function startLineScan(requestBody: LineScanRequest): Promise<LineScanStartResponse> {
+  return request("/api/bus/scan/start", {
+    method: "POST",
+    body: JSON.stringify(requestBody),
+  });
+}
+
+export function pollLineScan(since: number): Promise<LineScanResultsResponse> {
+  return request(`/api/bus/scan/results?since=${since}`);
+}
+
+export function cancelLineScan(): Promise<LineScanResultsResponse> {
+  return request("/api/bus/scan/cancel", { method: "POST" });
 }
 
 export function writeBusValue(

@@ -44,6 +44,7 @@ use knx_core::{
 };
 use knx_net::{
     ApplicationService, BusConnection, BusError, Destination, DiscoveredGateway, KnxNetIpClient,
+    Tpci,
 };
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
@@ -93,6 +94,12 @@ pub trait BusTunnel: Send + Sync {
         destination: Destination,
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send + '_>>;
+    fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>>;
     /// Takes `self: Box<Self>`, not `&mut self` — `&mut self` would
     /// silently weaken the real `TunnelClient::disconnect(self)` contract
     /// that the tunnel is gone afterwards. `Box<dyn BusTunnel>` cannot
@@ -227,6 +234,15 @@ impl BusTunnel for RealTunnel {
         })
     }
 
+    fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
+        Box::pin(async move { self.0.send_frame(destination, transport, service).await })
+    }
+
     fn disconnect(
         self: Box<Self>,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send>> {
@@ -259,7 +275,7 @@ pub mod fake {
 
     use super::{
         ApplicationService, BusError, BusSessionError, BusTunnel, Destination, DiscoveredGateway,
-        Future, GatewayConnector, IndividualAddress, Pin, SocketAddrV4, TunnelEvent,
+        Future, GatewayConnector, IndividualAddress, Pin, SocketAddrV4, Tpci, TunnelEvent,
     };
     use tokio::sync::broadcast;
 
@@ -267,6 +283,7 @@ pub mod fake {
         address: IndividualAddress,
         tx: broadcast::Sender<TunnelEvent>,
         sent: Mutex<Vec<(Destination, ApplicationService)>>,
+        sent_frames: Mutex<Vec<(Destination, Tpci, ApplicationService)>>,
         disconnected: Mutex<bool>,
         /// Set by [`FakeTunnelHandle::panic_on_disconnect`] — the Task 3
         /// regression test for the carried `bus.rs:941` finding needs a
@@ -319,6 +336,7 @@ pub mod fake {
                 address,
                 tx,
                 sent: Mutex::new(Vec::new()),
+                sent_frames: Mutex::new(Vec::new()),
                 disconnected: Mutex::new(false),
                 panic_on_disconnect: Mutex::new(false),
                 fail_next_send: Mutex::new(false),
@@ -347,6 +365,15 @@ pub mod fake {
         pub fn sent_calls(&self) -> Vec<(Destination, ApplicationService)> {
             self.shared
                 .sent
+                .lock()
+                .expect("fake mutex poisoned")
+                .clone()
+        }
+
+        /// Every transport-level frame sent by a line scan, in call order.
+        pub fn sent_frames(&self) -> Vec<(Destination, Tpci, ApplicationService)> {
+            self.shared
+                .sent_frames
                 .lock()
                 .expect("fake mutex poisoned")
                 .clone()
@@ -420,6 +447,22 @@ pub mod fake {
                     .lock()
                     .expect("fake mutex poisoned")
                     .push((destination, service));
+                Ok(())
+            })
+        }
+
+        fn send_frame(
+            &self,
+            destination: Destination,
+            transport: Tpci,
+            service: ApplicationService,
+        ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
+            Box::pin(async move {
+                self.shared
+                    .sent_frames
+                    .lock()
+                    .expect("fake mutex poisoned")
+                    .push((destination, transport, service));
                 Ok(())
             })
         }

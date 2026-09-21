@@ -24,6 +24,7 @@ mod bus;
 pub use bus::*;
 
 mod bus_routes;
+mod bus_scan;
 mod debug_report;
 mod debug_report_routes;
 mod domain;

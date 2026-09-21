@@ -6964,3 +6964,24 @@ definition not the one the user is changing preferences in.
 would still leave the browser-versus-desktop case open, which is the case
 worth solving; both wait for a server-side change feed, which nothing else
 needs yet.
+
+## 122. Settings-file notices reach the user in English only
+
+**Limitation.** The sentence a user reads when the settings file was
+migrated, refused as too new, or moved aside is English whatever the UI
+language says **[V]**.
+
+**Cause.** `SettingsDto::notice` (`apps/knx-server/src/settings_routes.rs`)
+is a finished English sentence built server-side, and both places that show
+it — `console.warn` in `settingsStore.ts` and the Log panel, which renders
+`SessionLogEntry.message` verbatim — pass it through untouched **[V]**.
+There is no code plus parameters for a catalogue to translate against.
+
+**Impact.** Small and rare: three statuses, none of them reachable on a
+healthy installation, and the English still says what happened and which
+file it happened to. A German user gets an English line in the Log panel.
+
+**Lifted when.** The settings surface (T10) gives these notices a
+machine-readable status code with its parameters, and `messages/de.ts`
+gets the keys. Doing it here instead would mean inventing a wire shape for
+one string that T10 would immediately rework **[A]**.

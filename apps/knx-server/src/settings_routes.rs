@@ -70,8 +70,14 @@ struct SettingsDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     moved_to: Option<String>,
     /// Plain English for the user, set for every status but `ok` and
-    /// `absent`. English on purpose: it quotes a server-side event, and
-    /// the frontend's catalogues translate the sentence around it.
+    /// `absent`. Untranslated: the string is built here, and the frontend
+    /// shows it as it stands — `console.warn` in `settingsStore.ts`, and
+    /// the Log panel renders `message` verbatim. A German user therefore
+    /// reads an English sentence. Recorded as a gap in
+    /// `docs/KNOWN_LIMITATIONS.md` §122; the settings surface (T10) owns
+    /// the fix, because translating this needs a machine-readable code
+    /// plus catalogue keys, and that shape belongs with the panel that
+    /// will display it rather than beside it.
     #[serde(skip_serializing_if = "Option::is_none")]
     notice: Option<String>,
 }
@@ -163,7 +169,14 @@ fn write(state: &SharedState, document: &SettingsDocument) -> Result<(), ApiErro
 /// every case a user can find themselves in — no file yet, a file from the
 /// future, a file a disk ate — because a preferences read that 500s would
 /// take the whole first paint down with it.
+///
+/// Takes the same lock as the two writing routes, because this read is not
+/// one: [`settings::load`] writes back a migrated document and renames a
+/// damaged one aside. Without the lock, a GET that migrates could land its
+/// pre-patch document *after* a concurrent PUT and silently undo it.
 async fn read_settings(State(state): State<SharedState>) -> Result<Json<SettingsDto>, ApiError> {
+    let _guard = state.settings_lock.lock().expect("state mutex poisoned");
+
     let load = read(&state)?;
     let dto = SettingsDto::from_load(&load);
     dto.log(&state, "settings");
@@ -240,11 +253,28 @@ async fn adopt_settings(
 
     let _guard = state.settings_lock.lock().expect("state mutex poisoned");
     let load = read(&state)?;
-    if !matches!(load, SettingsLoad::Absent) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            "a settings file already exists; there is nothing to adopt into",
-        ));
+    match load {
+        SettingsLoad::Absent => {}
+        // `read` has just moved the damaged file aside, so saying "a file
+        // already exists" would be false by the time it was read. The
+        // retry is genuinely all that is needed: the next read is
+        // `Absent`.
+        SettingsLoad::Quarantined { .. } => {
+            let dto = SettingsDto::from_load(&load);
+            dto.log(&state, "settings");
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                dto.notice.unwrap_or_else(|| {
+                    "the settings file could not be read and was moved aside".to_string()
+                }),
+            ));
+        }
+        _ => {
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                "a settings file already exists; there is nothing to adopt into",
+            ))
+        }
     }
 
     let document = settings::migrated_document(request.settings, request.schema_version);

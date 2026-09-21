@@ -60,6 +60,18 @@ docker run -d --name knxbench -p 8484:8080 \
 curl -sf http://127.0.0.1:8484/healthz
 ```
 
+This published-port form supports project work and manually entered gateway
+addresses. It does not support KNXnet/IP gateway discovery: Docker's default
+bridge does not carry the required multicast onto the LAN. On Linux, use host
+networking when the web UI's **Discover gateways** action is needed:
+
+```bash
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
+  -e KNX_AUTH_PASSWORD='pick something long and boring' \
+  -v "$(pwd)/data:/data" knxbench-server
+```
+
 Open `http://127.0.0.1:8484` once the health check passes, and sign in with
 that password. The `data/` directory on the host is mounted into the container
 at `/data`, so your projects survive container restarts and rebuilds.
@@ -71,16 +83,18 @@ credential set it binds loopback only, and inside a container that is the
 credential and it binds `0.0.0.0`, the published port works, and the browser
 asks you for the password before it shows anything.
 
-If you only want a quick local look and no password at all, run it on the
-host's own loopback instead — Linux only, since `--network host` is a Linux
-feature:
+If you only want a quick local look and no password at all on Linux Docker
+Engine, run it on the host's own loopback instead:
 
 ```bash
 docker run -d --name knxbench --network host \
   -e KNX_PORT=8484 -v "$(pwd)/data:/data" knxbench-server
 ```
 
-That form is reachable from that machine and nowhere else.
+That form is reachable from that machine and nowhere else. Docker Desktop
+4.34 and later also offers opt-in host networking, but KNXBench has not
+verified multicast discovery or loopback-only exposure through that layer;
+keep authentication enabled there.
 
 The image reads these environment variables:
 

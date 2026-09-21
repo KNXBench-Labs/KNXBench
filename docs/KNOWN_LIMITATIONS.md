@@ -1332,35 +1332,45 @@ the asymmetry is deliberate, documented, and reported at import time.
 
 ## 16. Tauri v2 remains on GTK3; former maintenance advisories are resolved
 
-**Resolved premise (verified 2026-09-22).** The desktop shell still uses
-`tauri` 2.11 and GTK3, but those bindings are no longer archived. RustSec
+**Resolved premise (verified 2026-09-22).** The locked desktop shell uses
+`tauri` 2.11.5 and GTK3, but those bindings are no longer archived. RustSec
 withdrew RUSTSEC-2024-0411 through RUSTSEC-2024-0420 on 2026-08-14 after the
 `gtk3-rs` repository was unarchived and development resumed. **[D]** The
 withdrawal and reason are recorded in each advisory, for example
 [RUSTSEC-2024-0415](https://rustsec.org/advisories/RUSTSEC-2024-0415.html).
-On the locked dependency graph, `cargo deny check advisories` exits 0 and
-reports the ten old ignore entries as unmatched. **[V]** They have therefore
-been removed from `deny.toml`; keeping withdrawn suppressions would conceal
-future policy drift rather than reduce risk.
+Before this edit, `cargo deny check advisories` exited 0 but reported the ten
+old ignore entries as unmatched. After their removal it exits 0 with
+`advisories ok`. **[V]** Keeping withdrawn suppressions would conceal future
+policy drift rather than reduce risk.
 
 **Remaining exposure.** Six unrelated transitive maintenance notices remain:
 RUSTSEC-2024-0370 for `proc-macro-error`, plus RUSTSEC-2025-0075, -0080,
 -0081, -0098 and -0100 for `unic-*` crates pulled through
 `urlpattern`/`tauri-utils`. They are not reported vulnerabilities, have no
 patched release, and each acceptance in `deny.toml` carries its review date
-and dependency reason. **[V]** A hostile input does not gain a known exploit
-from these notices; the concrete cost is relying on code whose maintainers no
-longer promise fixes.
+and dependency reason. **[V]** `proc-macro-error` is reached through
+`glib-macros` while compiling the desktop, so exploiting an unknown defect
+there would require influence over the build or macro input; it is not linked
+as a runtime request handler. The five `unic-*` crates are reached through
+`urlpattern` in Tauri's remote-URL matching for capability/IPC permissions.
+Exercising an unknown defect there would first require attacker-controlled
+remote-URL or capability pattern data;
+KNXBench's desktop opens its own local server and exposes no plugin or
+arbitrary-site surface. **[V]** These are boundaries, not proof that an
+unknown defect cannot exist. The concrete accepted cost is code whose
+maintainers no longer promise fixes, not a known exploit chain.
 
 **Decision.** Keep Tauri 2 for this alpha. Tauri 3.0.0-alpha.2 was published
 on 2026-09-21, while Tauri's normal Wry Linux GTK4/WebKitGTK 6 migration
 ([tauri#14684](https://github.com/tauri-apps/tauri/pull/14684)) and Wry's own
 migration ([wry#1767](https://github.com/tauri-apps/wry/pull/1767)) remain open
-as of 2026-09-22. **[D]** The separate experimental CEF runtime uses GTK4,
-but adopting a new runtime and Chromium distribution would be a platform
-migration, not a maintenance-warning fix. **[A]** Re-evaluate after the Wry
-GTK4 work ships in a stable Tauri release; every Tauri dependency bump still
-runs `cargo deny check`, so a changed advisory set fails visibly.
+as of 2026-09-22. **[D]** The separate experimental CEF runtime's
+[3.0.0-alpha.2 release](https://github.com/tauri-apps/tauri/releases/tag/tauri-runtime-cef-v3.0.0-alpha.2)
+lists its GTK4 dependencies. **[D]** Adopting that runtime and distributing
+Chromium would be a platform migration, not a maintenance-warning fix. **[A]**
+Re-evaluate after the Wry GTK4 work ships in a stable Tauri release. New,
+unaccepted advisories block `cargo deny`; obsolete ignore entries are reported
+as warnings and must be removed during the dependency review.
 
 <details>
 <summary>Historical finding before the RustSec withdrawals</summary>
@@ -1717,10 +1727,9 @@ endpoint to `connect_tunnel` for monitoring/actuation by group address
 over a tunnel. Live-hardware verification of the full discover-then-connect
 flow was left for the user to run, same as Cycle 2's `send` — this sandbox has no real KNXnet/IP gateway to discover. KNX IP Secure
 remains unreachable regardless; routing (unencrypted multicast) is
-reachable as of Cycle 4. Discovery does not work unmodified inside the
-`knx-server` Docker container (needs
-`--network host`) — untouched by this cycle, since `knx-server` doesn't
-call `discover` yet.
+reachable as of Cycle 4. Discovery inside the `knx-server` Docker container
+needs `--network host`: the server and web UI now call `discover`, so §79
+applies to the shipped image.
 
 **Lifted when.** Shelved indefinitely as of 2026-09-06 — no fixed
 session or cycle owns it. Plain tunnelling/routing covers the common
@@ -4738,7 +4747,16 @@ default route to that LAN would still need its own routing fixed
 regardless of Docker. **[A]**, not verified against a real multi-homed
 host.
 
-**Impact.** `apps/knx-server`'s HTTP API has no discovery route today —
+**Impact (updated 2026-09-22).** The shipped server exposes
+`POST /api/bus/discover`, and the web bus monitor calls it. **[V]**
+The documented Docker image therefore reaches this multicast code path: on
+the default bridge its **Discover gateways** action can return an empty result
+even when gateways exist. Project work and tunnelling to a manually entered
+unicast endpoint remain usable through the bridge. The Dockerfile, README and
+manual direct Linux users who need discovery to `--network host`.
+
+**Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
+API had no discovery route —
 `grep -rn discover apps/knx-server/src/` finds none — so the shipped
 `apps/knx-server/Dockerfile` image (which does not build or ship the
 `knx` CLI either, only `knx-server`) cannot reach this code path at all
@@ -4756,11 +4774,10 @@ free of false negatives on an ordinary host with its own multicast
 routing/firewall problem.
 
 **Lifted when.** Not something to "lift" — this is a property of Docker's
-default network driver, not a bug in this project. Stays true unless the
-image starts shipping discovery and a deployer chooses `--network host`
-(or an equivalent Docker documents) at `docker run` time; documented, not
-solved, per the 2026-09-05/06 deployment-target and Session 6 planning
-calls (ROADMAP.md).
+default network driver, not a bug in this project. `--network host` removes
+this container-network boundary; discovery still needs a suitable host route,
+firewall policy and responding gateway. Bridge mode remains supported without
+discovery.
 
 ## 80. A project can be created from scratch in the UI — RESOLVED (2026-09-16, Goal Task 17)
 

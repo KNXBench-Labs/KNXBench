@@ -194,9 +194,10 @@ identical to "no gateway found."
 
 **Do this:** if you're running `knx bus discover` inside a container of your own on
 Linux, add `--network host` and try again — that puts the request on the real network
-interface, the same as running the CLI outside a container. This only applies to the
-`knx` CLI; the `knxbench-server` Docker image itself has no discovery route in its HTTP
-API, so its ordinary bridge networking is unaffected. See
+interface, the same as running the CLI outside a container. This applies both
+to the `knx` CLI and to the **Discover gateways** action in the
+`knxbench-server` web UI, because both use the same multicast discovery
+implementation. See
 [Linux setup §Multicast and `knx bus discover`](../getting-started/05-linux-setup.md#multicast-and-knx-bus-discover)
 for the full explanation.
 

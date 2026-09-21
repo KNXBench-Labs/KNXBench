@@ -114,15 +114,17 @@ and no commit.
 
 ### Networking
 
-The container's default bridge network is fine for everything the server does today.
-The one KNX feature that needs more is discovery, which depends on IP multicast
-reaching your network segment — and the HTTP API has no discovery route, so the
-question does not arise. If you run `knx bus discover` from inside a container, it will
-find nothing until you give it host networking. See
-[The command line](10-command-line.md).
+The container's default bridge network supports project work, ordinary HTTP,
+and tunnelling to a manually entered gateway. Discovery is different: the CLI
+invokes the shared `KnxNetIpClient` directly, while the web UI's
+**Discover gateways** action reaches it through the server. Both send IP
+multicast from their process. Docker's bridge does not carry that request onto
+the LAN, so either call returns an empty result when its process is inside the
+bridge. See [The command line](10-command-line.md) and
+[KNOWN_LIMITATIONS.md §79](../../KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
 
-Tunneling, which is what the browser bus monitor uses, is ordinary unicast UDP and
-works through the bridge.
+On Linux, start the server with `--network host` and set `KNX_PORT` to the
+host port you want; `-p` has no effect in host mode.
 
 ## Authentication
 

@@ -24,6 +24,7 @@ const USAGE: &str =
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      \x20         (with --project, decodes against each address's resolved DPT)\n\
      \x20     knx bus write --gateway <host:port> [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
+     \x20                  [--input-format <canonical|decimal|hexadecimal|binary|text>]\n\
      \x20                  [--dry-run] <main/middle/sub> <value>\n\
      \x20         (--dpt encodes <value> as that type; --project resolves it from the\n\
      \x20         linked communication objects; neither given falls back to raw\n\
@@ -1493,6 +1494,7 @@ struct BusWriteArgs {
     gateway: String,
     project: Option<String>,
     dpt: Option<String>,
+    input_format: Option<knx_core::DptInputFormat>,
     dry_run: bool,
     group_address: String,
     value: String,
@@ -1502,6 +1504,7 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
     let mut gateway = None;
     let mut project = None;
     let mut dpt = None;
+    let mut input_format = None;
     let mut dry_run = false;
     let mut positional = Vec::new();
     let mut i = 0;
@@ -1517,6 +1520,17 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
             }
             "--dpt" => {
                 dpt = Some(take_value(args, i + 1, "--dpt")?);
+                i += 2;
+            }
+            "--input-format" => {
+                let value = take_value(args, i + 1, "--input-format")?;
+                input_format = Some(knx_core::DptInputFormat::parse_name(&value).ok_or_else(
+                    || {
+                        format!(
+                            "unknown input format {value:?}; expected canonical, decimal, hexadecimal, binary, or text"
+                        )
+                    },
+                )?);
                 i += 2;
             }
             "--dry-run" => {
@@ -1536,6 +1550,7 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
         gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
         project,
         dpt,
+        input_format,
         dry_run,
         group_address: group_address.clone(),
         value: value.clone(),
@@ -1586,7 +1601,11 @@ fn resolve_write_value(
 ) -> Result<(String, knx_net::GroupValue), String> {
     if let Some(dpt_str) = &parsed.dpt {
         let dpt = knx_core::DptRef::parse(dpt_str).map_err(|e| e.to_string())?;
-        let value = knx_core::encode(dpt, &parsed.value).map_err(|e| e.to_string())?;
+        let format = parsed
+            .input_format
+            .or_else(|| knx_core::default_input_format(dpt))
+            .ok_or_else(|| format!("unsupported datapoint type: {dpt}"))?;
+        let value = knx_core::encode(dpt, &parsed.value, format).map_err(|e| e.to_string())?;
         return Ok((dpt.to_string(), value));
     }
     if let Some(project_path) = &parsed.project {
@@ -1608,7 +1627,12 @@ fn resolve_write_value(
                 ))
             }
             Some(knx_core::GroupAddressDpt::Single(dpt)) => {
-                let value = knx_core::encode(*dpt, &parsed.value).map_err(|e| e.to_string())?;
+                let format = parsed
+                    .input_format
+                    .or_else(|| knx_core::default_input_format(*dpt))
+                    .ok_or_else(|| format!("unsupported datapoint type: {dpt}"))?;
+                let value =
+                    knx_core::encode(*dpt, &parsed.value, format).map_err(|e| e.to_string())?;
                 Ok((dpt.to_string(), value))
             }
             // `load_group_address_dpts` never stores `None` — a missing key
@@ -1617,6 +1641,9 @@ fn resolve_write_value(
                 "no datapoint type resolved for group address {formatted}; pass --dpt"
             )),
         };
+    }
+    if parsed.input_format.is_some() {
+        return Err("--input-format requires --dpt or --project".to_string());
     }
     let value = parse_group_value(&parsed.value)?;
     Ok(("raw".to_string(), value))

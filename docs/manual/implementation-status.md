@@ -122,7 +122,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Encoding and decoding main types 1 to 30, every subtype | ✅ Implemented | [Datapoint types](knx-basics/04-datapoint-types.md) |
 | The 200-series LTE/system types | ❌ Not implemented | Out of scope for this version |
 | Resolving a group address's type from its linked objects, reporting conflicts instead of guessing | ✅ Implemented | — |
-| Reading the format of a typed value from the type rather than inferring it | 🟡 Partial or experimental | The codec infers, and several encodings follow a documented project ruling — [§61](../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
+| Explicitly declaring a typed value's input grammar | ✅ Implemented | CLI, HTTP, and web callers pass the format explicitly; deterministic compatibility defaults never inspect the value text. Project-judgment encodings are queryable metadata — [§61](../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) |
 
 ## Documentation export
 

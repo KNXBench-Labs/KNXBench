@@ -1601,11 +1601,11 @@ fn resolve_write_value(
 ) -> Result<(String, knx_net::GroupValue), String> {
     if let Some(dpt_str) = &parsed.dpt {
         let dpt = knx_core::DptRef::parse(dpt_str).map_err(|e| e.to_string())?;
-        let format = parsed
-            .input_format
-            .or_else(|| knx_core::default_input_format(dpt))
-            .ok_or_else(|| format!("unsupported datapoint type: {dpt}"))?;
-        let value = knx_core::encode(dpt, &parsed.value, format).map_err(|e| e.to_string())?;
+        let value = match parsed.input_format {
+            Some(format) => knx_core::encode(dpt, &parsed.value, format),
+            None => knx_core::encode_inferred_format(dpt, &parsed.value),
+        }
+        .map_err(|e| e.to_string())?;
         return Ok((dpt.to_string(), value));
     }
     if let Some(project_path) = &parsed.project {
@@ -1627,12 +1627,11 @@ fn resolve_write_value(
                 ))
             }
             Some(knx_core::GroupAddressDpt::Single(dpt)) => {
-                let format = parsed
-                    .input_format
-                    .or_else(|| knx_core::default_input_format(*dpt))
-                    .ok_or_else(|| format!("unsupported datapoint type: {dpt}"))?;
-                let value =
-                    knx_core::encode(*dpt, &parsed.value, format).map_err(|e| e.to_string())?;
+                let value = match parsed.input_format {
+                    Some(format) => knx_core::encode(*dpt, &parsed.value, format),
+                    None => knx_core::encode_inferred_format(*dpt, &parsed.value),
+                }
+                .map_err(|e| e.to_string())?;
                 Ok((dpt.to_string(), value))
             }
             // `load_group_address_dpts` never stores `None` — a missing key

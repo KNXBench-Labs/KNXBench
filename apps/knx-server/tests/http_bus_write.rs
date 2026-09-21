@@ -285,6 +285,35 @@ async fn declared_hexadecimal_input_is_encoded_without_inspecting_a_prefix() {
 }
 
 #[tokio::test]
+async fn omitted_format_keeps_the_legacy_fixed_width_binary_bit_set() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_write_dpt_outcomes(),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({
+            "destination": "0/0/1",
+            "dpt": "DPST-21-1",
+            "value": "00000010"
+        })),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(matches!(
+        &handle.sent_calls()[0].1,
+        ApplicationService::GroupValueWrite(GroupValue::Bytes(bytes)) if bytes == &[0x02]
+    ));
+}
+
+#[tokio::test]
 async fn declared_canonical_input_rejects_a_decimal_bit_set_without_sending() {
     let (tunnel, handle) = fake_tunnel();
     let state = state_with_project_and_connector(

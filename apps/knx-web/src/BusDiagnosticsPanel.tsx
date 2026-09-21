@@ -4,8 +4,15 @@ import { useState } from "react";
 import BusMonitorPanel from "./BusMonitorPanel";
 import LineScanPanel from "./LineScanPanel";
 import { useTranslate } from "./i18n";
+import type { ProjectTree } from "./bindings/ProjectTree";
 
-export default function BusDiagnosticsPanel({ projectOpen }: { projectOpen: boolean }) {
+export default function BusDiagnosticsPanel({
+  project,
+  onTreeUpdate,
+}: {
+  project: ProjectTree | null;
+  onTreeUpdate: (tree: ProjectTree) => void | Promise<void>;
+}) {
   const t = useTranslate();
   const [tab, setTab] = useState<"monitor" | "scan">("monitor");
   return (
@@ -14,7 +21,7 @@ export default function BusDiagnosticsPanel({ projectOpen }: { projectOpen: bool
         <button aria-current={tab === "monitor" ? "page" : undefined} onClick={() => setTab("monitor")}>{t("toolbar.busMonitor")}</button>
         <button aria-current={tab === "scan" ? "page" : undefined} onClick={() => setTab("scan")}>{t("lineScan.title")}</button>
       </nav>
-      {tab === "monitor" ? <BusMonitorPanel projectOpen={projectOpen} /> : <LineScanPanel />}
+      {tab === "monitor" ? <BusMonitorPanel projectOpen={project !== null} /> : <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
     </section>
   );
 }

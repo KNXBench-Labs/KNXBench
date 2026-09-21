@@ -14,6 +14,7 @@ use std::time::Duration;
 
 use knx_core::scan::{ScanPlan, ScanPlanBuilder};
 use knx_core::IndividualAddress;
+pub use knx_net::{compare_with_project, ProjectComparison, ScannedRange};
 use knx_net::{ProbeOutcome, ProbePolicy};
 
 /// Raw `knx bus scan` arguments, one field per flag, unvalidated. Kept
@@ -107,34 +108,7 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
     })
 }
 
-/// The device-address span a scan was asked to cover, before exclusions:
-/// `--line`'s area/line, narrowed by `--range` if one was given. Used to
-/// decide which excluded and which project addresses are actually in
-/// scope for this scan's summary and comparison — a `ScanPlan` itself
-/// exposes neither its excluded set nor its original (pre-exclusion)
-/// bounds, by design (Task 1: nothing outside `verify()` gets to see the
-/// exclusion set).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ScannedRange {
-    pub area: u8,
-    pub line: u8,
-    pub first_device: u8,
-    pub last_device: u8,
-}
-
-impl ScannedRange {
-    /// Whether `addr` falls on this scan's line, within its device bounds
-    /// — regardless of whether it was actually probed (an excluded address
-    /// is "in range" for this purpose; it is simply not in `ScanPlan::addresses()`).
-    pub fn contains(&self, addr: IndividualAddress) -> bool {
-        addr.area() == self.area
-            && addr.line() == self.line
-            && addr.device() >= self.first_device
-            && addr.device() <= self.last_device
-    }
-}
-
-/// Parses `--line <area.line>`, e.g. `"1.1"`.
+/// Parses `--line <area.line>`, for example `1.1`.
 fn parse_line(spec: &str) -> Result<(u8, u8), String> {
     let parts: Vec<&str> = spec.split('.').collect();
     let [area, line] = parts[..] else {
@@ -454,85 +428,6 @@ pub fn format_summary(summary: &ScanSummary, elapsed: Duration, policy: &ProbePo
         policy.vacant_confirmations(),
         policy.inter_probe_pause().as_millis(),
     )
-}
-
-/// What `--project` is actually for (E2): addresses the bus answered that
-/// the project does not list, and addresses the project lists that did
-/// not answer — plus a third bucket this task's brief does not name but
-/// Global Constraint 3 requires anyway: a project device sitting on an
-/// address `--exclude` removed from the scan never got a chance to
-/// answer, so counting it as "did not answer" would misreport a skip as a
-/// negative result.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ProjectComparison {
-    /// The bus answered (occupied, occupied-silent or busy); the project
-    /// does not list a device at this address.
-    pub unexpected: Vec<IndividualAddress>,
-    /// The project lists a device at this address, in scan range, not
-    /// excluded; the bus did not confirm it present (vacant or
-    /// indeterminate).
-    pub missing: Vec<IndividualAddress>,
-    /// The project lists a device at this address, but `--exclude`
-    /// removed it from the scan before a single frame was sent.
-    pub excluded_in_project: Vec<IndividualAddress>,
-}
-
-/// Compares a scan's results against a stored project's device addresses,
-/// restricted to `range` (a project may hold devices on lines this scan
-/// never touched; those are out of scope for this comparison, not silently
-/// "missing"). Never writes anything back — this task discovers, it does
-/// not reconcile.
-pub fn compare_with_project(
-    range: &ScannedRange,
-    results: &[(IndividualAddress, ProbeOutcome)],
-    excluded: &HashSet<IndividualAddress>,
-    project_addresses: &[IndividualAddress],
-) -> ProjectComparison {
-    let present: HashSet<IndividualAddress> = results
-        .iter()
-        .filter(|(_, outcome)| {
-            matches!(
-                outcome,
-                ProbeOutcome::Occupied { .. }
-                    | ProbeOutcome::OccupiedSilent
-                    | ProbeOutcome::OccupiedBusy
-            )
-        })
-        .map(|(addr, _)| *addr)
-        .collect();
-
-    let in_range_project: HashSet<IndividualAddress> = project_addresses
-        .iter()
-        .copied()
-        .filter(|addr| range.contains(*addr))
-        .collect();
-
-    let mut unexpected: Vec<IndividualAddress> = present
-        .iter()
-        .copied()
-        .filter(|addr| !in_range_project.contains(addr))
-        .collect();
-    unexpected.sort_by_key(|a| a.raw());
-
-    let mut excluded_in_project: Vec<IndividualAddress> = in_range_project
-        .iter()
-        .copied()
-        .filter(|addr| excluded.contains(addr))
-        .collect();
-    excluded_in_project.sort_by_key(|a| a.raw());
-
-    let mut missing: Vec<IndividualAddress> = in_range_project
-        .iter()
-        .copied()
-        .filter(|addr| !present.contains(addr) && !excluded.contains(addr))
-        .collect();
-    missing.sort_by_key(|a| a.raw());
-
-    ProjectComparison {
-        unexpected,
-        missing,
-        excluded_in_project,
-    }
 }
 
 /// Renders a [`ProjectComparison`] as counts plus a per-bucket address

@@ -1134,6 +1134,52 @@ main {
   grid-column: 1 / -1;
 }
 
+.line-scan-reconciliation {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  background: var(--knx-surface);
+}
+
+.line-scan-reconciliation h3,
+.line-scan-reconciliation h4,
+.line-scan-reconciliation p {
+  margin: 0;
+}
+
+.line-scan-reconciliation-group {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-left: 3px solid var(--knx-accent);
+  background: color-mix(in srgb, var(--knx-accent) 6%, transparent);
+}
+
+.line-scan-reconciliation-group > p {
+  color: var(--knx-muted);
+}
+
+.line-scan-reconciliation-group ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line-scan-reconciliation-group label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.line-scan-reconciliation-excluded {
+  border-left-color: var(--knx-muted);
+  background: color-mix(in srgb, var(--knx-muted) 6%, transparent);
+}
+
 .line-scan-progress progress {
   width: 100%;
   accent-color: var(--knx-accent);

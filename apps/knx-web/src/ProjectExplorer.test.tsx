@@ -26,6 +26,7 @@ vi.mock("./api", () => ({
 import ProjectExplorer from "./ProjectExplorer";
 import BulkActionToolbar from "./BulkActionToolbar";
 import { useMultiSelection } from "./multiSelection";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -33,7 +34,7 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -322,7 +323,7 @@ describe("ProjectExplorer multi-select", () => {
 
 describe("ProjectExplorer — building-part kind: translated label vs. untouched discriminant", () => {
   it("renders a translated kind word in the building's label while the same node's raw kind stays the wire value", async () => {
-    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, "de");
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     const tree = baseTree();
     tree.installations[0].buildings = [building(501, "Erdgeschoss", "Room")];
     const { root } = await renderExplorer(tree);

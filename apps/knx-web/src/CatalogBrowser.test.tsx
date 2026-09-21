@@ -23,6 +23,7 @@ vi.mock("./api", () => ({
 }));
 
 import CatalogBrowser from "./CatalogBrowser";
+import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -32,9 +33,8 @@ afterEach(() => {
   vi.clearAllMocks();
   apiMock.catalogManufacturers.mockResolvedValue([]);
   apiMock.catalogItems.mockResolvedValue([]);
-  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetProductLanguageForTests();
-  window.localStorage.removeItem("knx-desktop:ui-language");
   resetUiLanguageForTests();
 });
 
@@ -195,7 +195,7 @@ describe("CatalogBrowser", () => {
       diagnostics: [{ kind: "ambiguousDpt"; refId: string; alternatives: string[]; detail: string }];
     }>();
     apiMock.createDevice.mockReturnValue(create.promise);
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const { root } = await renderBrowser();
 
@@ -313,7 +313,7 @@ describe("CatalogBrowser", () => {
   // tsx`'s "sends the active product language" tests already prove for the
   // parameter panel's own fetch.
   it("sends the active product language when fetching catalog items", async () => {
-    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
     apiMock.catalogItems.mockResolvedValue([]);
     const { root } = await renderBrowser();
 

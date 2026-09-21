@@ -17,6 +17,7 @@ import {
 } from "./busContext";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import { resetSettingsForTests } from "./settingsStore";
 
 function address(overrides: Partial<GroupAddressNode> = {}): GroupAddressNode {
   return {
@@ -54,6 +55,7 @@ function tree(addresses: GroupAddressNode[]): ProjectTree {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetSettingsForTests();
 });
 
 describe("fingerprintProjectContext", () => {
@@ -257,7 +259,7 @@ describe("subscribeContextChanges", () => {
     });
     window.dispatchEvent(new StorageEvent("storage", { key: PROJECT_CONTEXT_KEY }));
     window.dispatchEvent(new StorageEvent("storage", { key: SESSION_CONTEXT_KEY }));
-    window.dispatchEvent(new StorageEvent("storage", { key: "knx-desktop:theme" }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "knx-desktop:settings-cache" }));
     expect(calls).toBe(2);
     unsubscribe();
   });

@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   exportDocumentation: vi.fn(),
@@ -22,6 +22,7 @@ vi.mock("./api", () => ({
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
 
 import DocumentationExportButton from "./DocumentationExportButton";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -29,7 +30,7 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -152,7 +153,7 @@ describe("DocumentationExportButton", () => {
   // the `saveUiLanguage`/`resetUiLanguageForTests` pattern already used in
   // `CatalogBrowser.test.tsx`/`CommandPalette.test.tsx`/`ProjectDiffPanel.test.tsx`.
   it("passes the German filter name when the UI language is German", async () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     filePickerMock.pickSavePath.mockResolvedValueOnce("/data/project.html");
     apiMock.exportDocumentation.mockResolvedValueOnce({ warnings: [] });

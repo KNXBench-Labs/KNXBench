@@ -7131,10 +7131,35 @@ the body colour (`apps/knx-web/src/styles.css`, a theme token per ADR-0022).
 - Text a user types themselves is not classified: the bus compose form's
   destination field accepts `1.2.3` and sends `1/2/3`, which is right for a
   group address and would be wrong for an individual address, but that field
-  only ever addressed group addresses, so nothing is mis-sent. **[V]**
-- No cue is applied to addresses inside free text — an error message from the
-  server, a log line, a flavour string. Those are sentences, not fields, and
-  the renderer deliberately does not walk them.
+  only ever addressed group addresses, so nothing is mis-sent. The same
+  acceptance also sits in two fields that are not telegrams: the
+  new-group-address and new-group-range rows in `ProjectExplorer.tsx`
+  (`:330`, create address; `:402`–`:403`, create range) run the typed text
+  through the same `canonicalGroupAddress` conversion before writing it into
+  the project. Before this notation preference existed, typing `1.1.13`
+  there was rejected outright — `GroupAddress::parse` only recognises `/`
+  (`crates/knx-core/src/address.rs:113,135`), while the `.`-splitting belongs
+  to `IndividualAddress::from_str` (`:69`) — so a string shaped like an
+  individual address could not enter the group-address model at all. Now it
+  can: typing `1.1.13` into either field creates a real group address the
+  user may have meant as someone's individual address, and the project keeps
+  it. That is the correct trade, not a defect — the brief requires both
+  notations at every input seam a user types into, and a create field is
+  exactly such a seam — but it is a sharper cost than "nothing is mis-sent"
+  covers, since these two fields write project data rather than one
+  telegram. **[V]**
+- No cue, and no *notation*, is applied to addresses inside free text — an
+  error message from the server, a log line, a flavour string. Those are
+  sentences, not fields, and the renderer deliberately does not walk them
+  (ADR-0030). The clearest place to watch this is the Log panel
+  (`LogPanel.tsx`): CSV diagnostics format the address themselves, in the
+  canonical `/` notation, before the detail string ever leaves the server
+  (`crates/knx-csv/src/plan.rs:79-82`, `crates/knx-csv/src/write.rs:63-68`),
+  so a session with dots selected can show the same address as `1.2.3` in a
+  table and `1/2/3` in a log entry about that same table, in the same
+  window. ADR-0030's refusal to have the renderer parse sentences is still
+  the right call; this is what that refusal costs, spelled out rather than
+  left as a general disclaimer.
 
 **Not affected.** Nothing persisted, exported or transmitted changes: the
 canonical `/` is what `knx-core` formats, what every DTO carries and what

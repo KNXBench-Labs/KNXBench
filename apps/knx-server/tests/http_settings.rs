@@ -285,3 +285,35 @@ async fn a_migration_is_reported_in_the_session_log() {
         "{log}"
     );
 }
+
+#[tokio::test]
+async fn adopting_over_a_damaged_file_says_it_was_moved_aside_not_that_it_exists() {
+    let (state, dir) = state();
+    std::fs::write(settings_file(&dir), "{ half a settings file").unwrap();
+
+    // The read inside adoption quarantines the wreck, so "a file already
+    // exists" would be a lie by the time it reached the browser.
+    let (status, body) = send(
+        &state,
+        "POST",
+        "/api/settings/adopt",
+        json!({ "schemaVersion": 0, "settings": { "theme": "dark" } }),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::CONFLICT);
+    let error = body["error"].as_str().unwrap();
+    assert!(error.contains("moved to"), "{error}");
+    assert!(!error.contains("nothing to adopt into"), "{error}");
+
+    // And the retry the message implies actually works.
+    let (status, body) = send(
+        &state,
+        "POST",
+        "/api/settings/adopt",
+        json!({ "schemaVersion": 0, "settings": { "theme": "dark" } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["settings"]["theme"], "graphite");
+}

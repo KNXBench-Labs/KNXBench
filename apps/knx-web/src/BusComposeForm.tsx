@@ -179,6 +179,7 @@ export default function BusComposeForm({
         canonicalGroupAddress(destination),
         dptToSend,
         value,
+        dptToSend === null ? null : api.defaultDptInputFormat(dptToSend),
       );
       setSent(response);
     } catch (e) {

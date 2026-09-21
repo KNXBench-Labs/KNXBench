@@ -3113,7 +3113,9 @@ alone — only counts per table, per installation.
 **Lifted when.** Open. A richer visual diff view is a real, larger
 feature a future task could propose; not built speculatively now.
 
-## 61. The DPT codec covers thirty main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
+<a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
+
+## 61. The DPT codec covers thirty main types with explicit input formats and disclosed encoding rulings
 
 **Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29;
 extended 2026-09-13 and 2026-09-14, E4, twice) can decode and encode main types **1
@@ -3122,7 +3124,32 @@ through 30 inclusive, with no gaps** — thirty main types, counted from
 (`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs`
 → `30`). Main type 31 and everything above it returns
 `DptCodecError::UnsupportedDpt` unconditionally; nothing about those is
-guessed.
+guessed. The eighteen 200-series LTE/system types are an **accepted scope
+decision**, not an open codec backlog: neither `knx-core` nor `knx-net`
+implements LTE addressing, so standalone value codecs would not form a usable
+system.
+
+**2026-09-21 (T07): the bus-facing encoder no longer infers the input
+grammar.** `encode(dpt, input, DptInputFormat)` requires the caller to declare
+`Canonical`, `Decimal`, `Hexadecimal`, `Binary`, or `Text`. Radix prefixes are
+not format declarations and are rejected by this path. CLI callers can pass
+`--input-format`; HTTP callers can send `inputFormat`; the web client sends a
+deterministic DPT-family choice. If an older CLI or HTTP caller omits the field,
+that boundary selects `default_input_format(dpt)`, which depends only on DPT
+identity and never on the value text. The former permissive parser remains
+available only under the honest compatibility name `encode_inferred_format`.
+
+The public `encoding_rulings(dpt)` API returns stable identifiers, the exact
+Standard context, and KNXBench's decision for every affected encoding below.
+That makes the distinction observable before a write instead of burying it in
+this document. The inventory is: `scaled-angle-linear-mapping` (5.003),
+`status-mode-format-range` (6.020), `invalid-sentinel-precedence` (8.010 and
+9.*), `scene-number-is-wire-value` (17.*, 18.*, 26.*),
+`datetime-src-is-reserved` and `datetime-invalid-fields-keep-width-only`
+(19.*), `format-level-validation-only` (20.*, 21.*, 22.*, 23.*, 25.*, 27.*,
+30.*), `strict-null-termination` (24.*, 28.*), and
+`signed64-range-typo-corrected` (29.*). This is metadata only: T07 changed no
+wire encoding.
 
 Against the ETS master data that number reads differently, and the
 difference is worth stating plainly because it has been misread before.
@@ -3377,7 +3404,9 @@ with.** `bus monitor` decodes only when given `--project <path>` — the DPT
 comes from resolving the project's linked communication objects, and there
 is nowhere else to get it from; without the flag, the monitor prints
 exactly what it printed before this slice. `bus write` needs either
-`--project` (to resolve one) or an explicit `--dpt <DPST-m-s>`.
+`--project` (to resolve one) or an explicit `--dpt <DPST-m-s>`. Its input
+grammar is explicit through `--input-format`; omission selects the documented
+per-DPT default, never a parser chosen from the value's spelling.
 
 **Subtype wording and units beyond the scaled subtypes are not modelled.**
 The codec does not consult `knx_master.xml`'s DPT catalogue, so it has no
@@ -3394,7 +3423,8 @@ against a telegram a real KNX device actually produced. That is a narrower
 claim than "matches what real devices send," and this entry exists so the
 difference is not lost.
 
-**Cause.** Scope decision for this slice (design spec
+**Cause.** The remaining limitations are scope decisions and documented
+Standard ambiguities (design spec
 `docs/superpowers/specs/2026-09-11-dpt-codec-design.md`, decisions E4-D1
 through E4-D9): implement main types the Standard extraction documents
 unambiguously and the reference corpus needs, leave the rest
@@ -3406,13 +3436,15 @@ the thirty implemented main types, or whose linked communication objects
 disagree, or who has none at all, sees `bus monitor` fall back to the
 pre-T29 raw output for that address. A user relying on `8.010`'s printed
 327.67% maximum, or AN188's 670760.96 figure for main type 9, will see this
-codec's numbers differ by one step, deliberately.
+codec's numbers differ by one step, deliberately. Code preparing a write can
+query `encoding_rulings` and present the relevant judgment before sending.
 
-**Lifted when.** A future slice adds more main types (see `docs/GAP_ANALYSIS_ETS.md`
-row E4 for what is still open), consults `knx_master.xml` for units and
-enumeration wording, or reads `GroupAddress/@DatapointType` directly for
-schema ≥ 21 projects instead of inferring from linked communication
-objects alone.
+**Lifted when.** The accepted LTE/system scope changes, a future slice consults
+`knx_master.xml` for units and enumeration wording, or reads
+`GroupAddress/@DatapointType` directly for schema ≥ 21 projects instead of
+inferring from linked communication objects alone. The input-format inference
+part is lifted by T07; the explicitly named compatibility helper remains
+opt-in.
 
 ## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence
 

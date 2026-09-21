@@ -32,6 +32,31 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("chooses input grammar from DPT identity, never from value text", () => {
+    expect(api.defaultDptInputFormat("DPST-1-1")).toBe("canonical");
+    expect(api.defaultDptInputFormat("DPST-6-20")).toBe("canonical");
+    expect(api.defaultDptInputFormat("DPST-6-1")).toBe("decimal");
+    expect(api.defaultDptInputFormat("DPST-16-1")).toBe("text");
+    expect(api.defaultDptInputFormat("DPST-21-1")).toBe("decimal");
+  });
+
+  it("writeBusValue sends the selected input format explicitly", async () => {
+    mockFetchOnce({
+      encodedPayload: "[10]",
+      service: "GroupValueWrite",
+      decodedEcho: { kind: "value", dpt: "DPST-21-1", text: "00010000" },
+    });
+    await api.writeBusValue("1/2/3", "DPST-21-1", "10", "hexadecimal");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/bus/write");
+    expect(JSON.parse(init.body as string)).toEqual({
+      destination: "1/2/3",
+      dpt: "DPST-21-1",
+      inputFormat: "hexadecimal",
+      value: "10",
+    });
+  });
+
   it("importProject posts the path and client token, and returns the parsed tree", async () => {
     mockFetchOnce({ installations: [] });
     const tree = await api.importProject("/x.knxproj", "a-client-token");

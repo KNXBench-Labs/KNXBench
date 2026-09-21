@@ -278,6 +278,7 @@ describe("one editing workspace", () => {
     //   grep -cE '^export (async )?function ' api.ts
     //   grep -cE 'method: "(POST|PUT|DELETE|PATCH)"' api.ts
     expect(apiCallsIn(graph).sort()).toEqual([
+      "defaultDptInputFormat",
       "discoverBusInterfaces",
       "errorMessage",
       "errorStatus",

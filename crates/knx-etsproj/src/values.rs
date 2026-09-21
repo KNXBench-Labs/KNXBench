@@ -157,6 +157,61 @@ pub fn application_program_ref(ref_id: &str) -> Result<&str, ValueError> {
     split_object_tail(ref_id).map(|(program_ref, _)| program_ref)
 }
 
+/// The `O-<n>` object number of a **device-local** `RefId` — the
+/// two-segment `O-<n>_R-<m>` form ETS 6 writes, with no application-program
+/// prefix in front of it.
+///
+/// Schema 11 spells a communication object's `RefId` fully qualified
+/// (`M-006A_A-0001-22-26C0-O0079_O-0_R-10001`), which is why
+/// [`com_object_number`] insists on three underscore-delimited segments.
+/// The ETS 6.3.0 reference project (schema 23) does not: every one of its
+/// 867 `GroupObjectTree/@GroupObjectInstances` ids and all 691 of its
+/// `ComObjectInstanceRef/@RefId`s are two-segment, and a segment-count
+/// histogram over that file returns `{2: 867}` and `{2: 691}` — not a
+/// truncation, a scoping convention. The id is device-local: the device
+/// element that carries it names its own `Hardware2ProgramRefId`, and the
+/// container's own `M-<n>/Hardware.xml` resolves that to exactly one
+/// `ApplicationProgramRef`, so the "missing" prefix is recoverable rather
+/// than absent.
+///
+/// Measured before it was believed: prefixing each of the 867 ids with its
+/// own device's resolved program id names an existing `ComObjectRef/@Id`
+/// in that program's file **867 times out of 867**, never more than one,
+/// and the `ComObject/@Number` behind each one equals the `O-<n>` digits
+/// already present in the id in all 867 cases (across all 310 distinct
+/// ids). The number therefore needs no cross-file lookup at all — it is
+/// carried in the id — which is what this function returns.
+///
+/// Deliberately strict, and deliberately *not* a loosening of
+/// [`com_object_number`]: exactly one underscore, `O-` then digits before
+/// it, `R-` then digits after. A schema-11 parameter ref (`..._UP-411_R-411`)
+/// or any other shape is still a [`ValueError::MalformedRefId`], reported
+/// rather than guessed at.
+pub fn device_local_com_object_number(ref_id: &str) -> Result<u16, ValueError> {
+    let malformed = || ValueError::MalformedRefId(ref_id.to_string());
+    let (head, tail) = ref_id.split_once('_').ok_or_else(malformed)?;
+    if tail.contains('_') {
+        return Err(malformed());
+    }
+    let r_digits = tail.strip_prefix("R-").ok_or_else(malformed)?;
+    if r_digits.is_empty() || !r_digits.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(malformed());
+    }
+    let o_digits = head.strip_prefix("O-").ok_or_else(malformed)?;
+    if o_digits.is_empty() || !o_digits.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(malformed());
+    }
+    o_digits.parse().map_err(|_| malformed())
+}
+
+/// True for the two-segment, device-local `RefId` shape
+/// [`device_local_com_object_number`] accepts. Exists so a caller that
+/// needs to *rebuild* the fully-qualified id (rather than read its object
+/// number) asks the same question in the same place.
+pub fn is_device_local_ref_id(ref_id: &str) -> bool {
+    device_local_com_object_number(ref_id).is_ok()
+}
+
 /// Splits a module-based `RefId` (schema ≥21,
 /// `MD-<n>_M-<m>_MI-<k>_O-<a>-<b>_R-<c>`) into the `MD-<n>_O-<a>-<b>_R-<c>`
 /// form that, once prefixed with the resolved application program id,
@@ -265,6 +320,48 @@ mod tests {
         ));
         // A parameter RefId is not a communication object RefId.
         assert!(com_object_number("M-0083_A-0026-15-7565_UP-411_R-411").is_err());
+    }
+
+    #[test]
+    fn a_device_local_ref_id_yields_its_object_number() {
+        // The shape ETS 6 actually writes, verbatim from the schema-23
+        // reference project's `GroupObjectTree/@GroupObjectInstances`.
+        assert_eq!(device_local_com_object_number("O-3_R-10005").unwrap(), 3);
+        assert_eq!(device_local_com_object_number("O-0_R-10001").unwrap(), 0);
+        assert_eq!(
+            device_local_com_object_number("O-218_R-10134").unwrap(),
+            218
+        );
+        assert!(is_device_local_ref_id("O-10_R-10016"));
+    }
+
+    #[test]
+    fn the_device_local_path_refuses_every_shape_that_is_not_one() {
+        // A fully-qualified schema-11 id is `com_object_number`'s job, not
+        // this one's — three segments, so it is rejected here rather than
+        // being half-read.
+        for not_device_local in [
+            "M-006A_A-0001-22-26C0-O0079_O-0_R-10001",
+            "M-0083_A-0026-15-7565_UP-411_R-411",
+            "MD-2_M-1_MI-1_O-2-0_R-4",
+            "O-3",
+            "O-_R-1",
+            "O-3_R-",
+            "O-3_R-10005_extra",
+            "P-3_R-10005",
+            "O-3_X-10005",
+            "O-3a_R-10005",
+            "",
+        ] {
+            assert!(
+                matches!(
+                    device_local_com_object_number(not_device_local),
+                    Err(ValueError::MalformedRefId(_))
+                ),
+                "{not_device_local} should not parse as a device-local RefId"
+            );
+            assert!(!is_device_local_ref_id(not_device_local));
+        }
     }
 
     #[test]

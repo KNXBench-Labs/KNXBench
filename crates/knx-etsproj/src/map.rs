@@ -58,8 +58,9 @@ use crate::source::{
     SourceGroupRange, SourceInstallation,
 };
 use crate::values::{
-    com_object_number, module_com_object_ref, parse_bool, parse_building_part_type,
-    parse_completion_status, parse_timestamp, parse_u16, parse_u8, ValueError,
+    com_object_number, device_local_com_object_number, module_com_object_ref, parse_bool,
+    parse_building_part_type, parse_completion_status, parse_timestamp, parse_u16, parse_u8,
+    ValueError,
 };
 
 pub struct MapOutput {
@@ -1271,18 +1272,38 @@ fn map_com_object_v21(
             (number, module_instance_ids.get(module_key).copied())
         }
         Err(_) => {
-            // Not a module-based id: either schema-11-shaped (shouldn't
-            // occur under a schema-≥21 device, but a genuinely malformed id
-            // must not abort the whole device) or malformed.
+            // Not a module-based id. Three possibilities, in the order
+            // they are tried:
+            //
+            // 1. Schema-11-shaped, fully qualified (`<program>_O-<n>_R-<m>`)
+            //    — shouldn't occur under a schema-≥21 device, but handled.
+            // 2. Device-local (`O-<n>_R-<m>`), which is what ETS 6 actually
+            //    writes: all 867 `GroupObjectTree` ids in the ETS 6.3.0
+            //    reference project take this form, and until this branch
+            //    learned to read it, all 867 were reported as
+            //    `MalformedRefId` and mapped to object number 0. They are
+            //    not malformed — the application-program prefix is implied
+            //    by the device rather than missing, and the object number
+            //    is in the id (see `device_local_com_object_number`, whose
+            //    doc comment carries the 867-of-867 measurement).
+            // 3. Genuinely malformed — reported, never guessed at, and it
+            //    must not abort the rest of the device.
+            //
+            // `module_instance` stays `None` in all three cases: only a
+            // `MD-…` id names a module instance, and the ETS 6 reference
+            // project spells no `ModuleInstance` element at all.
             match com_object_number(ref_id) {
                 Ok(n) => (n, None),
-                Err(e) => {
-                    problems.push(MapProblem {
-                        xpath: xpath.clone(),
-                        detail: MapProblemDetail::Value(e),
-                    });
-                    (0, None)
-                }
+                Err(e) => match device_local_com_object_number(ref_id) {
+                    Ok(n) => (n, None),
+                    Err(_) => {
+                        problems.push(MapProblem {
+                            xpath: xpath.clone(),
+                            detail: MapProblemDetail::Value(e),
+                        });
+                        (0, None)
+                    }
+                },
             }
         }
     };

@@ -7,7 +7,11 @@ use axum::http::{Request, StatusCode};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
-use knx_net::Destination;
+use knx_core::{
+    Area, CommissioningState, CompletionStatus, DeviceId, DeviceInstance, Installation,
+    InstallationId, Language, Line, Project, SourceRef, Topology,
+};
+use knx_net::{ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci, TunnelEvent};
 use knx_server::fake::{FakeConnector, FakeTunnel, FakeTunnelHandle};
 
 fn addr(device: u8) -> knx_core::IndividualAddress {
@@ -23,6 +27,78 @@ fn state_with(tunnel: FakeTunnel) -> knx_server::AppState {
         connector: Box::new(FakeConnector::succeeding(tunnel)),
         ..Default::default()
     }
+}
+
+fn source(tag: &str) -> SourceRef {
+    SourceRef {
+        path: tag.into(),
+        ets_id: tag.into(),
+    }
+}
+
+fn project_device(id: DeviceId, address: knx_core::IndividualAddress) -> DeviceInstance {
+    DeviceInstance {
+        id,
+        source: source("test-device"),
+        name: format!("Device {address}"),
+        description: None,
+        address: Some(address),
+        product_ref: String::new(),
+        program_ref: String::new(),
+        commissioning: CommissioningState::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    }
+}
+
+fn state_with_project(tunnel: FakeTunnel) -> knx_server::AppState {
+    let mut project = Project::new(Language("en".into()));
+    let area_id = project.ids.next_area_id();
+    let line_id = project.ids.next_line_id();
+    let missing_id = project.ids.next_device_id();
+    let excluded_id = project.ids.next_device_id();
+    project.devices.insert(project_device(missing_id, addr(2)));
+    project.devices.insert(project_device(excluded_id, addr(3)));
+    project.installations.push(Installation {
+        id: InstallationId(0),
+        name: "Installation".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![Area {
+                id: area_id,
+                source: source("test-area"),
+                name: "Area".into(),
+                address: 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![line_id],
+            }],
+            lines: vec![Line {
+                id: line_id,
+                source: source("test-line"),
+                name: "Line".into(),
+                address: 1,
+                medium_ref: String::new(),
+                domain_address: None,
+                domain_address_is_checked: None,
+                ip_routing_multicast_address: None,
+                multicast_ttl: None,
+                completion: CompletionStatus::FinishedDesign,
+                devices: vec![missing_id, excluded_id],
+            }],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![],
+        parameters: vec![],
+    });
+
+    let state = state_with(tunnel);
+    *state.project.lock().unwrap() = Some(project);
+    state
 }
 
 async fn call(
@@ -240,4 +316,266 @@ async fn poll_and_cancel_reject_a_different_scan_session() {
     )
     .await;
     assert_eq!(cleanup.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn completed_scan_comparison_keeps_all_three_evidence_groups_separate() {
+    let (tunnel, handle) = fake_tunnel();
+    let handle = Arc::new(handle);
+    let app = knx_server::app(Arc::new(state_with_project(tunnel)), None);
+
+    let response_handle = Arc::clone(&handle);
+    let responder = tokio::spawn(async move {
+        for _ in 0..1_000 {
+            let descriptor_was_requested =
+                response_handle
+                    .sent_frames()
+                    .iter()
+                    .any(|(destination, _, service)| {
+                        *destination == Destination::Individual(addr(4))
+                            && matches!(
+                                service,
+                                ApplicationService::DeviceDescriptorRead { descriptor_type: 0 }
+                            )
+                    });
+            if descriptor_was_requested {
+                let _ = response_handle
+                    .sender()
+                    .send(TunnelEvent::Telegram(LDataFrame {
+                        kind: LDataMessageKind::Indication,
+                        source: addr(4),
+                        destination: Destination::Individual(addr(9)),
+                        transport: Tpci::NumberedData { seq: 0 },
+                        service: ApplicationService::DeviceDescriptorResponse {
+                            descriptor_type: 0,
+                            data: vec![0x07, 0x01],
+                        },
+                    }));
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
+        panic!("descriptor probe for the synthetic responder was never sent");
+    });
+
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 4, &["1.1.3"], 20)),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    let terminal = poll_until_terminal(&app).await;
+    assert_eq!(terminal["status"], "completed");
+    responder.await.unwrap();
+
+    let comparison = call(
+        &app,
+        "GET",
+        &format!("/api/bus/scan/comparison?sessionId={session_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(comparison.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(comparison).await,
+        json!({
+            "unexpected": ["1.1.4"],
+            "missing": ["1.1.2"],
+            "excludedInProject": ["1.1.3"]
+        })
+    );
+}
+
+#[tokio::test]
+async fn selected_scan_findings_apply_as_one_batch_and_undo_byte_identically() {
+    let (tunnel, handle) = fake_tunnel();
+    let handle = Arc::new(handle);
+    let state = Arc::new(state_with_project(tunnel));
+    let original = format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap());
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let response_handle = Arc::clone(&handle);
+    let responder = tokio::spawn(async move {
+        for _ in 0..1_000 {
+            if response_handle
+                .sent_frames()
+                .iter()
+                .any(|(destination, _, service)| {
+                    *destination == Destination::Individual(addr(4))
+                        && matches!(service, ApplicationService::DeviceDescriptorRead { .. })
+                })
+            {
+                let _ = response_handle
+                    .sender()
+                    .send(TunnelEvent::Telegram(LDataFrame {
+                        kind: LDataMessageKind::Indication,
+                        source: addr(4),
+                        destination: Destination::Individual(addr(9)),
+                        transport: Tpci::NumberedData { seq: 0 },
+                        service: ApplicationService::DeviceDescriptorResponse {
+                            descriptor_type: 0,
+                            data: vec![0x07, 0x01],
+                        },
+                    }));
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
+        panic!("descriptor probe for the synthetic responder was never sent");
+    });
+
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 4, &["1.1.3"], 20)),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    assert_eq!(poll_until_terminal(&app).await["status"], "completed");
+    responder.await.unwrap();
+    let frames_before_reconcile = handle.sent_frames();
+
+    let reconcile = call(
+        &app,
+        "POST",
+        "/api/bus/scan/reconcile",
+        Some(json!({
+            "sessionId": session_id,
+            "unexpected": ["1.1.4"],
+            "missing": ["1.1.2"]
+        })),
+    )
+    .await;
+    assert_eq!(reconcile.status(), StatusCode::OK);
+    assert_eq!(body_json(reconcile).await["can_undo"], true);
+    assert_eq!(handle.sent_frames(), frames_before_reconcile);
+
+    {
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().unwrap();
+        assert!(project
+            .devices
+            .iter()
+            .all(|device| device.address != Some(addr(2))));
+        let added = project
+            .devices
+            .iter()
+            .find(|device| device.address == Some(addr(4)))
+            .expect("selected unexpected address creates one minimal device");
+        assert!(added.product_ref.is_empty());
+        assert!(added.program_ref.is_empty());
+        assert!(added.com_objects.is_empty());
+        assert!(project
+            .devices
+            .iter()
+            .any(|device| device.address == Some(addr(3))));
+        assert!(project.installations[0].topology.lines[0]
+            .devices
+            .contains(&added.id));
+    }
+
+    let undo = call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(undo.status(), StatusCode::OK);
+    assert_eq!(
+        format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap()),
+        original
+    );
+}
+
+#[tokio::test]
+async fn empty_reconciliation_is_a_true_no_op_and_excluded_evidence_is_not_actionable() {
+    let (tunnel, _handle) = fake_tunnel();
+    let state = Arc::new(state_with_project(tunnel));
+    let original = format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap());
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 3, &["1.1.3"], 1)),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    assert_eq!(poll_until_terminal(&app).await["status"], "completed");
+
+    let excluded_attempt = call(
+        &app,
+        "POST",
+        "/api/bus/scan/reconcile",
+        Some(json!({
+            "sessionId": session_id,
+            "unexpected": [],
+            "missing": ["1.1.3"]
+        })),
+    )
+    .await;
+    assert_eq!(excluded_attempt.status(), StatusCode::BAD_REQUEST);
+
+    let no_op = call(
+        &app,
+        "POST",
+        "/api/bus/scan/reconcile",
+        Some(json!({
+            "sessionId": session_id,
+            "unexpected": [],
+            "missing": []
+        })),
+    )
+    .await;
+    assert_eq!(no_op.status(), StatusCode::OK);
+    assert_eq!(body_json(no_op).await["can_undo"], false);
+    assert!(!state.command_stack.lock().unwrap().can_undo());
+    assert_eq!(
+        format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap()),
+        original
+    );
+}
+
+#[tokio::test]
+async fn running_and_cancelled_scans_cannot_be_reconciled() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = Arc::new(state_with_project(tunnel));
+    let app = knx_server::app(Arc::clone(&state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 2, &[], 60_000)),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    for _ in 0..200 {
+        if !handle.sent_frames().is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+    }
+
+    let body = json!({
+        "sessionId": session_id,
+        "unexpected": [],
+        "missing": []
+    });
+    let running = call(&app, "POST", "/api/bus/scan/reconcile", Some(body.clone())).await;
+    assert_eq!(running.status(), StatusCode::CONFLICT);
+
+    let cancel = call(
+        &app,
+        "POST",
+        &format!("/api/bus/scan/cancel?sessionId={session_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(cancel.status(), StatusCode::OK);
+    let cancelled = call(&app, "POST", "/api/bus/scan/reconcile", Some(body)).await;
+    assert_eq!(cancelled.status(), StatusCode::CONFLICT);
+    assert!(!state.command_stack.lock().unwrap().can_undo());
 }

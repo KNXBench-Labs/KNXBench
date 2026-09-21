@@ -7332,3 +7332,29 @@ failures. These counts are covered by
 corpus and its `GroupObjectTree` ids are counted the same way. This is the
 same evidence `COMPATIBILITY.md` already wants for schema 23's module
 handling, and one sample would settle both.
+
+## 126. line-scan reconciliation acts on occupancy evidence, not device identity
+
+**Boundary.** A completed line scan can establish that an address answered,
+did not answer within the selected policy, or was not examined. It does not
+identify a manufacturer, product, application program, serial number, or the
+reason for silence. T09 therefore creates an explicitly product/program-less
+device for a selected unexpected response and never enriches it by inference.
+Likewise, a missing project device is deleted only after the user explicitly
+selects it; the UI states that silence is not proof of absence.
+
+Excluded project addresses and the scanner's own address are shown as
+unexamined and have no action. The
+server recomputes the comparison against the current project before applying
+anything, requires a completed matching scan session, and refuses a missing
+address that does not resolve to exactly one project device. It also refuses
+removal while building placement, parameter, or module-instance data still
+references the device. Unexpected devices use a matching line across all
+installations, falling back to the first installation's unassigned list. One
+batch and one undo cover all selected findings; an empty selection changes
+neither project nor undo history. Project-tree updates invalidate stale UI
+selections. No reconciliation action sends KNX traffic **[V]**.
+
+**Lifted when.** Identity may be attached only when a separately verified
+protocol procedure or explicit user selection supplies it. A scan response by
+itself never becomes product evidence.

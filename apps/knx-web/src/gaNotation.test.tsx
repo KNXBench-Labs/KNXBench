@@ -1,4 +1,4 @@
-/** Tests the group-address notation preference: rendering, input, search, and exclusions. */
+/** Tests fixed group-address notation plus compatible input and search spellings. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -19,19 +19,15 @@ import GroupAddressTable from "./GroupAddressTable";
 import {
   canonicalGroupAddress,
   formatGroupAddress,
-  GA_NOTATION_KEY,
   groupAddressLevels,
   groupAddressMatches,
   groupAddressSpellings,
-  loadGaNotation,
-  setGaNotation,
-  useGaNotation,
 } from "./gaNotation";
 import { matchEntries } from "./searchMatch";
 import type { SearchEntry } from "./treeUtils";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { InstallationNode } from "./bindings/InstallationNode";
-import { resetSettingsForTests, settingsStorage } from "./settingsStore";
+import { resetSettingsForTests } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -61,30 +57,27 @@ function mount(node: React.ReactNode): HTMLDivElement {
 // The renderer and the reader.
 // ---------------------------------------------------------------------
 
-it("renders one address in both notations and leaves everything else alone", () => {
-  expect(formatGroupAddress("1/2/3", "slash")).toBe("1/2/3");
-  expect(formatGroupAddress("1/2/3", "dot")).toBe("1.2.3");
-  expect(formatGroupAddress("4/100", "dot")).toBe("4.100");
-  expect(formatGroupAddress("4/100", "slash")).toBe("4/100");
+it("renders group addresses in fixed slash notation and leaves everything else alone", () => {
+  expect(formatGroupAddress("1/2/3")).toBe("1/2/3");
+  expect(formatGroupAddress("1.2.3")).toBe("1/2/3");
+  expect(formatGroupAddress("4.100")).toBe("4/100");
+  expect(formatGroupAddress("4/100")).toBe("4/100");
 
   // A `Free`-style address is a plain decimal with no separator at all.
-  // Neither setting has anything to change about it.
-  expect(formatGroupAddress("2307", "dot")).toBe("2307");
-  expect(formatGroupAddress("2307", "slash")).toBe("2307");
+  // Fixed notation has nothing to change about it.
+  expect(formatGroupAddress("2307")).toBe("2307");
   expect(groupAddressLevels("2307")).toBeNull();
 
   // Not a blind `replace`: a name, a path, a DPT id and a mixed-separator
-  // string all come back untouched under either setting.
-  for (const notation of ["slash", "dot"] as const) {
-    expect(formatGroupAddress("Kitchen / Ceiling", notation)).toBe("Kitchen / Ceiling");
-    expect(formatGroupAddress("/home/knx/projects/example.knxdb", notation)).toBe(
-      "/home/knx/projects/example.knxdb",
-    );
-    expect(formatGroupAddress("DPST-1-1", notation)).toBe("DPST-1-1");
-    expect(formatGroupAddress("1/2.3", notation)).toBe("1/2.3");
-    expect(formatGroupAddress("1/2/3/4", notation)).toBe("1/2/3/4");
-    expect(formatGroupAddress("", notation)).toBe("");
-  }
+  // string all come back untouched.
+  expect(formatGroupAddress("Kitchen / Ceiling")).toBe("Kitchen / Ceiling");
+  expect(formatGroupAddress("/home/knx/projects/example.knxdb")).toBe(
+    "/home/knx/projects/example.knxdb",
+  );
+  expect(formatGroupAddress("DPST-1-1")).toBe("DPST-1-1");
+  expect(formatGroupAddress("1/2.3")).toBe("1/2.3");
+  expect(formatGroupAddress("1/2/3/4")).toBe("1/2/3/4");
+  expect(formatGroupAddress("")).toBe("");
 });
 
 it("reads either notation back to the canonical form the API expects", () => {
@@ -98,36 +91,8 @@ it("reads either notation back to the canonical form the API expects", () => {
   expect(canonicalGroupAddress("not an address")).toBe("not an address");
 });
 
-it("keeps the preference across a reload and falls back for anything unrecognised", () => {
-  expect(loadGaNotation(settingsStorage)).toBe("slash");
-
-  setGaNotation("dot");
-  expect(loadGaNotation(settingsStorage)).toBe("dot");
-
-  // A reload is a fresh module state reading the same persisted record —
-  // which is what `resetSettingsForTests()` plus the untouched
-  // `localStorage` cache reproduces here.
-  const cache = localStorage.getItem("knx-desktop:settings-cache");
-  resetSettingsForTests();
-  localStorage.setItem("knx-desktop:settings-cache", cache!);
-  expect(loadGaNotation(settingsStorage)).toBe("dot");
-
-  settingsStorage.setItem(GA_NOTATION_KEY, "semicolons");
-  expect(loadGaNotation(settingsStorage)).toBe("slash");
-});
-
-it("re-renders every reader when the preference changes", () => {
-  function Reader() {
-    return <span className="probe">{formatGroupAddress("1/2/3", useGaNotation())}</span>;
-  }
-  const host = mount(<Reader />);
-  expect(host.querySelector(".probe")!.textContent).toBe("1/2/3");
-  act(() => setGaNotation("dot"));
-  expect(host.querySelector(".probe")!.textContent).toBe("1.2.3");
-});
-
 // ---------------------------------------------------------------------
-// Search and filter, in both notations, under either setting.
+// Search and filter accept both notations while displaying slashes.
 // ---------------------------------------------------------------------
 
 it("matches an address in either notation whichever one is displayed", () => {
@@ -203,15 +168,14 @@ function addressCells(host: HTMLDivElement): string[] {
   return [...host.querySelectorAll("td.ga-address button")].map((b) => b.textContent ?? "");
 }
 
-it("renders the table in the chosen notation without touching the data behind it", () => {
+it("renders the table in slash notation without touching the data behind it", () => {
   const before = JSON.stringify(installation());
 
   let host = renderTable();
   expect(addressCells(host)).toEqual(["1/2/3", "2307"]);
 
-  setGaNotation("dot");
   host = renderTable();
-  expect(addressCells(host)).toEqual(["1.2.3", "2307"]);
+  expect(addressCells(host)).toEqual(["1/2/3", "2307"]);
 
   // The projection the server sent is a display input, never rewritten in
   // place — the closest seam the frontend has to "what gets persisted does
@@ -220,14 +184,13 @@ it("renders the table in the chosen notation without touching the data behind it
   expect(addresses[0]!.address).toBe("1/2/3");
 });
 
-it("filters the table by either notation with the dotted one displayed", () => {
-  setGaNotation("dot");
+it("filters the table by either notation while slash notation is displayed", () => {
   const host = renderTable();
 
   for (const [needle, expected] of [
-    ["1/2/3", ["1.2.3"]],
-    ["1.2.3", ["1.2.3"]],
-    ["1/2", ["1.2.3"]],
+    ["1/2/3", ["1/2/3"]],
+    ["1.2.3", ["1/2/3"]],
+    ["1/2", ["1/2/3"]],
     ["9/9", []],
   ] as const) {
     act(() => typeInto(host, "input.address-filter", needle));
@@ -263,17 +226,14 @@ async function sendFrom(destination: string): Promise<void> {
   });
 }
 
-it("sends the canonical address whichever notation is selected or typed", async () => {
-  for (const notation of ["slash", "dot"] as const) {
-    for (const typed of ["1/2/3", "1.2.3"]) {
-      setGaNotation(notation);
-      await sendFrom(typed);
-      expect(apiMock.writeBusValue).toHaveBeenLastCalledWith(
-        "1/2/3",
-        "DPST-1-1",
-        "off",
-        null,
-      );
-    }
+it("sends the canonical address for either accepted input spelling", async () => {
+  for (const typed of ["1/2/3", "1.2.3"]) {
+    await sendFrom(typed);
+    expect(apiMock.writeBusValue).toHaveBeenLastCalledWith(
+      "1/2/3",
+      "DPST-1-1",
+      "off",
+      null,
+    );
   }
 });

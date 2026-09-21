@@ -7132,13 +7132,17 @@ machine-readable status code with its parameters, and `messages/de.ts`
 gets the keys. Doing it here instead would mean inventing a wire shape for
 one string that T10 would immediately rework **[A]**.
 
-## 123. With dots selected, a group address and an individual address are spelled alike
+## 123. Resolved: group addresses no longer use dotted display notation
 
-**Limitation.** The group-address notation preference (ADR-0030) lets a user
-read group addresses as `1.2.3` instead of `1/2/3`. An individual address is
-already written `area.line.device` and has no second spelling, so with dots
-selected a three-part address is ambiguous on its own: nothing in the string
-itself says which kind it is **[V]**.
+**Resolved 2026-09-21.** ADR-0030 was amended: group addresses now always
+render with slashes and the notation selector was removed. Dotted text remains
+accepted only at explicit group-address input and search boundaries, then is
+canonicalised immediately. The display ambiguity described below therefore no
+longer exists **[V]**.
+
+**Historical record (superseded).** The remainder of this section records the
+trade-off of the short-lived selectable-notation implementation; it is not a
+current limitation.
 
 **Why it is here anyway.** The separator carries no information, and the
 request was for exactly this notation. Refusing it, or refusing it in the one

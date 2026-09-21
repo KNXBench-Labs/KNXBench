@@ -5,9 +5,8 @@ import type { ThemeDef } from "./theme";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";
 import type { ProductLanguage } from "./api";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
-import { GA_NOTATIONS, setGaNotation, useGaNotation, type GaNotation } from "./gaNotation";
 import { useTranslate } from "./i18n";
-import type { MessageKey, Translate } from "./i18n";
+import type { Translate } from "./i18n";
 import Overlay from "./Overlay";
 import {
   exportEnglishTemplate,
@@ -31,18 +30,6 @@ function isShadowedByBuiltIn(tag: string): boolean {
 /** Ties the accent select to the sentence explaining why it is disabled.
  * The panel is a singleton overlay, so a constant id is safe. */
 const ACCENT_HINT_ID = "settings-accent-unavailable-hint";
-
-/** Ties the notation select to the sentence spelling out what it does and
- * does not change. Same singleton-overlay reasoning as `ACCENT_HINT_ID`. */
-const GA_NOTATION_HINT_ID = "settings-ga-notation-hint";
-
-/** One catalogue key per notation, rather than a template literal: the
- * catalogue type is a closed union, and a computed key would not be
- * checked against it. */
-const GA_NOTATION_LABEL_KEYS: Record<GaNotation, MessageKey> = {
-  slash: "appearance.gaNotation.slash",
-  dot: "appearance.gaNotation.dot",
-};
 
 /** `LanguagePackRejectionReason` plus the one rejection that never reaches
  * `languagePack.ts` at all — the uploaded file failing `JSON.parse` before
@@ -241,7 +228,6 @@ export default function SettingsPanel(props: {
   } = props;
 
   const [uiLanguage, setUiLanguage] = useUiLanguage();
-  const gaNotation = useGaNotation();
   const t = useTranslate();
 
   const packs = useLanguagePacks();
@@ -362,30 +348,6 @@ export default function SettingsPanel(props: {
           </select>
         </label>
       </>}
-      {/* Beside its appearance siblings rather than in a panel of its own:
-          T10 is building the consolidated settings surface and will find
-          this where it finds accent, density and motion. Same
-          `aria-describedby`-to-a-hint shape the accent field uses, because
-          the sentence below it states a real boundary — what this changes
-          and, more importantly, what it does not. */}
-      <label className="settings-field">
-        <span className="settings-field-label">{t("appearance.groupAddressNotation")}</span>
-        <select
-          aria-label={t("appearance.groupAddressNotation")}
-          aria-describedby={GA_NOTATION_HINT_ID}
-          value={gaNotation}
-          onChange={(e) => setGaNotation(e.target.value as GaNotation)}
-        >
-          {GA_NOTATIONS.map((notation) => (
-            <option key={notation} value={notation}>
-              {t(GA_NOTATION_LABEL_KEYS[notation])}
-            </option>
-          ))}
-        </select>
-        <span className="settings-field-hint" id={GA_NOTATION_HINT_ID}>
-          {t("appearance.groupAddressNotationHint")}
-        </span>
-      </label>
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.motionStyle")}</span>
         <select

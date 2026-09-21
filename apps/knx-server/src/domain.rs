@@ -22,6 +22,7 @@ use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
 use crate::bus::{BusSession, GatewayConnector, RealConnector};
+use crate::bus_scan::LineScanSession;
 use crate::load_progress::{LoadHandle, LoadOperations, LoadPhase};
 use crate::session_log::{self, LogEntry, SessionLog, Severity};
 
@@ -98,6 +99,10 @@ pub struct AppState {
     /// `start`, before a `BusSession` exists to guard it, and this counter
     /// has no other state to stay consistent with.
     pub next_bus_session_id: std::sync::atomic::AtomicU64,
+    /// At most one line scan, retained after completion so the final batch
+    /// remains pollable until a later scan replaces it.
+    pub line_scan_session: tokio::sync::Mutex<Option<LineScanSession>>,
+    pub next_line_scan_session_id: std::sync::atomic::AtomicU64,
     /// The single project load this server run may have in flight, and
     /// the snapshot `GET /api/project/load-progress` answers with
     /// (ADR-0023). `Arc`, not a plain field: a [`LoadHandle`] outlives the
@@ -136,6 +141,8 @@ impl AppState {
             connector: Box::new(RealConnector::default()),
             bus_session: tokio::sync::Mutex::new(None),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
+            line_scan_session: tokio::sync::Mutex::new(None),
+            next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),

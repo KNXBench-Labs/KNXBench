@@ -150,7 +150,7 @@ project's unsaved state with it. For an application whose priority order
 begins Correctness → Data Integrity, that is close to disqualifying before
 the licence question is even reached. (`libloading` is already in
 `Cargo.lock`, but only transitively via `libappindicator-sys` in the
-archived GTK3 tray stack of KNOWN_LIMITATIONS.md §16; `cargo tree -i
+Tauri 2 GTK3 tray stack of KNOWN_LIMITATIONS.md §16; `cargo tree -i
 libloading --target all` reports nothing reachable. It is not a head
 start.)
 
@@ -208,7 +208,9 @@ out; and ADR-0022's theme token boundary means a third-party panel either
 builds against an internal contract that moves or looks foreign in every
 theme. There is also no native surface beneath it —
 `apps/knx-desktop/src-tauri/src/` is 105 lines with zero `#[tauri::command]`
-attributes, on the archived GTK3 stack of §16.
+attributes, on Tauri 2's GTK3 stack from §16. The former maintenance
+advisories for that stack were withdrawn in 2026; the native-surface argument
+remains unchanged.
 
 **Doing nothing and leaving the question open.** Rejected because the
 question keeps being asked, and an unanswered "should we have plugins?"

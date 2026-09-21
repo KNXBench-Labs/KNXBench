@@ -327,7 +327,8 @@ repository-wide “clean architecture” rewrite.
 
 ### P2. Track desktop dependency risk without destabilizing the alpha
 
-**Finding.** Tauri 2 currently brings archived GTK3 Rust bindings and requires
+**Finding (superseded 2026-09-22).** Tauri 2 brought GTK3 Rust bindings that
+were archived at the time and required
 documented advisory exceptions (`docs/KNOWN_LIMITATIONS.md:1150-1168`). There
 is no drop-in GTK4 migration in the current stack.
 

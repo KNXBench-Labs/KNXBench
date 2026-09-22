@@ -9778,3 +9778,36 @@ use a matching line in any installation when one exists. Removal is refused
 while building membership, parameters, or module instances still reference the
 device, rather than orphaning that data. Tests use only synthetic in-process
 transport and assert that reconciliation itself sends no bus frame.
+
+## 2026-09-22 — T10: settings surface uses every preference it exposes
+
+`SettingsPanel` now groups existing controls under Appearance, Language &
+data, and Bus & diagnostics. The last group owns one optional
+`preferredGateway` seed and the same protected line-scan exclusion editor
+used by `LineScanPanel`; no second exclusion key or parser exists. Group
+addresses remain fixed slash notation and have no selector. Individual
+line-scan exclusions remain dotted physical addresses.
+
+`preferredGateway` seeds a freshly mounted Bus Monitor or Line Scan field.
+The first authoritative settings response may replace the cache seed only
+while the field is untouched and no workflow has begun. Typing, choosing a
+discovered interface, or starting a session transfers ownership to that
+workflow; later settings changes do not rewrite it. Reading or saving the
+preference does not discover, connect, scan, or produce any network traffic.
+Invalid non-blank seeds remain storable metadata, while the existing
+bus-request boundary retains endpoint validation.
+
+Settings hydration journals pre-hydration patches, including deletions,
+then overlays and coalesces them after GET or adoption so an in-flight server
+response cannot erase a local edit. Existing server keys remain intact.
+Legacy exclusion strings are preserved byte-for-byte and in order; invalid
+ones are visible and removable but block estimate and scan until resolved.
+An active scan keeps its frozen exclusion snapshot.
+
+Settings migration, browser-era adoption, newer-file refusal, and quarantine
+reasons now cross both settings and session-log APIs as typed diagnostics.
+One frontend formatter localizes recognized variants in Settings and Log
+panels in English or German and safely falls back to the server message for
+unknown events. This resolves `KNOWN_LIMITATIONS.md` §122. Multi-window live
+synchronization remains deliberately open as §121. Project/entity defaults,
+path settings, scan timing defaults, and per-user settings remain non-goals.

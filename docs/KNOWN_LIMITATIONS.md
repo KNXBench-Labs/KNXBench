@@ -7165,7 +7165,22 @@ would still leave the browser-versus-desktop case open, which is the case
 worth solving; both wait for a server-side change feed, which nothing else
 needs yet.
 
-## 122. Settings-file notices reach the user in English only
+<a id="122-settings-file-notices-reach-the-user-in-english-only"></a>
+
+## 122. Resolved: settings-file diagnostics follow the UI language
+
+**Resolved 2026-09-22.** `SettingsDto` and the matching settings session-log
+entry carry the same tagged `SettingsDiagnostic`: migration, browser-era
+adoption, newer-file refusal, or quarantine with stable reason and relevant
+parameters. `settingsDiagnostic.ts` maps these once into the English and
+German catalogues for both Settings and Log panels **[V]**. The server keeps
+an English fallback for older or unknown diagnostics and debug output.
+Regression tests cover every variant in both languages and the fallback.
+This does not change [§121](#121-two-open-windows-do-not-see-each-others-preference-changes-until-one-reloads),
+which remains open.
+
+**Historical record (resolved).** The remainder describes the former
+English-only behavior and its planned lift condition.
 
 **Limitation.** The sentence a user reads when the settings file was
 migrated, refused as too new, or moved aside is English whatever the UI

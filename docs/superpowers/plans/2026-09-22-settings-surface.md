@@ -370,11 +370,11 @@
 - Records `preferredGateway` as unencrypted installation-network metadata in `settings.json`.
 - Leaves §121's multi-window last-writer limitation open.
 
-- [ ] **Step 1: Reconcile documentation**
+- [x] **Step 1: Reconcile documentation**
 
   Amend ADR-0029 with the gateway metadata and backup consequence. Record implemented consumers and explicit non-goals in `IMPLEMENTATION_STATUS.md`. Mark §122 resolved with typed-diagnostic evidence. Leave §121 open; do not edit `LIMITATION_TRIAGE.md`.
 
-- [ ] **Step 2: Run focused source audits**
+- [x] **Step 2: Run focused source audits**
 
   ```bash
   rg -n "groupAddressNotation|Group address notation" apps/knx-web/src/SettingsPanel.tsx apps/knx-web/src/messages || true
@@ -384,7 +384,7 @@
 
   Expected: no notation control, no private-LAN literal in added lines, and no whitespace error. Documentation-range examples remain allowed.
 
-- [ ] **Step 3: Run every repository gate**
+- [x] **Step 3: Run every repository gate**
 
   ```bash
   export CARGO_TARGET_DIR=/tmp/knxbench-t10-target
@@ -405,7 +405,7 @@
 
   Expected: every command exits 0. If stale artifacts are suspected, clean only `/tmp/knxbench-t10-target` and rerun the missing gate.
 
-- [ ] **Step 4: Write handover evidence**
+- [x] **Step 4: Write handover evidence**
 
   Record exact commands, test counts, no-network proof, rulings, and open §121 in the dated `.ai` log. Prepend `.ai/CURRENT_STATE.md` with the final commit range and next goal task.
 

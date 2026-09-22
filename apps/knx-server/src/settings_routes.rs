@@ -22,12 +22,26 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::ApiError;
-use crate::session_log::{self, LogEntry, Severity};
+use crate::session_log::{
+    self, LogEntry, SettingsDiagnostic, SettingsQuarantineReasonDto, Severity,
+};
 use crate::settings::{
-    self, Preferences, SettingsDocument, SettingsLoad, BROWSER_ERA_SCHEMA_VERSION,
-    CURRENT_SCHEMA_VERSION,
+    self, Preferences, SettingsDocument, SettingsLoad, SettingsQuarantineReason,
+    BROWSER_ERA_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION,
 };
 use crate::SharedState;
+
+impl From<SettingsQuarantineReason> for SettingsQuarantineReasonDto {
+    fn from(value: SettingsQuarantineReason) -> Self {
+        match value {
+            SettingsQuarantineReason::Unreadable => Self::Unreadable,
+            SettingsQuarantineReason::InvalidJson => Self::InvalidJson,
+            SettingsQuarantineReason::NotObject => Self::NotObject,
+            SettingsQuarantineReason::MissingSchemaVersion => Self::MissingSchemaVersion,
+            SettingsQuarantineReason::SettingsNotObject => Self::SettingsNotObject,
+        }
+    }
+}
 
 pub fn settings_routes() -> Router<SharedState> {
     Router::new()
@@ -79,7 +93,9 @@ struct SettingsDto {
     /// plus catalogue keys, and that shape belongs with the panel that
     /// will display it rather than beside it.
     #[serde(skip_serializing_if = "Option::is_none")]
-    notice: Option<String>,
+    diagnostic: Option<SettingsDiagnostic>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
 }
 
 impl SettingsDto {
@@ -91,7 +107,8 @@ impl SettingsDto {
             status: SettingsStatus::Ok,
             file_schema_version: None,
             moved_to: None,
-            notice: None,
+            diagnostic: None,
+            message: None,
         };
         match load {
             SettingsLoad::Current(_) => {}
@@ -99,27 +116,43 @@ impl SettingsDto {
             SettingsLoad::Migrated { from, .. } => {
                 dto.status = SettingsStatus::Migrated;
                 dto.file_schema_version = Some(*from);
-                dto.notice = Some(format!(
+                dto.diagnostic = Some(SettingsDiagnostic::Migrated {
+                    from_version: *from,
+                    to_version: CURRENT_SCHEMA_VERSION,
+                });
+                dto.message = Some(format!(
                     "Settings were migrated from schema version {from} to {CURRENT_SCHEMA_VERSION}."
                 ));
             }
             SettingsLoad::RefusedNewer { file_version } => {
                 dto.status = SettingsStatus::RefusedNewer;
                 dto.file_schema_version = Some(*file_version);
-                dto.notice = Some(format!(
+                dto.diagnostic = Some(SettingsDiagnostic::RefusedNewer {
+                    file_version: *file_version,
+                    current_version: CURRENT_SCHEMA_VERSION,
+                });
+                dto.message = Some(format!(
                     "The settings file is schema version {file_version}, which this build \
                      (version {CURRENT_SCHEMA_VERSION}) cannot read. It was left untouched and \
                      this session is running on defaults."
                 ));
             }
-            SettingsLoad::Quarantined { moved_to, reason } => {
+            SettingsLoad::Quarantined {
+                moved_to,
+                reason,
+                detail,
+            } => {
                 let name = moved_to
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
                 dto.status = SettingsStatus::Quarantined;
-                dto.notice = Some(format!(
-                    "The settings file {reason}. It was moved to \"{name}\" in the data \
+                dto.diagnostic = Some(SettingsDiagnostic::Quarantined {
+                    reason: (*reason).into(),
+                    moved_to: name.clone(),
+                });
+                dto.message = Some(format!(
+                    "The settings file {detail}. It was moved to \"{name}\" in the data \
                      directory and this session is running on defaults."
                 ));
                 dto.moved_to = Some(name);
@@ -132,7 +165,7 @@ impl SettingsDto {
     /// log panel without the frontend having to invent an entry, and so a
     /// developer reading a debug report sees it too.
     fn log(&self, state: &SharedState, source: &str) {
-        let Some(notice) = self.notice.clone() else {
+        let Some(message) = self.message.clone() else {
             return;
         };
         let severity = match self.status {
@@ -147,9 +180,10 @@ impl SettingsDto {
                 timestamp: session_log::now(),
                 severity,
                 source: source.to_string(),
-                message: notice,
+                message,
                 location: None,
                 detail: None,
+                diagnostic: self.diagnostic.clone(),
             });
     }
 }
@@ -207,7 +241,7 @@ async fn patch_settings(
         dto.log(&state, "settings");
         return Err(ApiError::with_status(
             StatusCode::CONFLICT,
-            dto.notice
+            dto.message
                 .unwrap_or_else(|| "the settings file was written by a newer build".to_string()),
         ));
     }
@@ -264,7 +298,7 @@ async fn adopt_settings(
             dto.log(&state, "settings");
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
-                dto.notice.unwrap_or_else(|| {
+                dto.message.unwrap_or_else(|| {
                     "the settings file could not be read and was moved aside".to_string()
                 }),
             ));
@@ -285,7 +319,11 @@ async fn adopt_settings(
     if migrated_from_browser {
         dto.status = SettingsStatus::Migrated;
         dto.file_schema_version = Some(BROWSER_ERA_SCHEMA_VERSION);
-        dto.notice = Some(
+        dto.diagnostic = Some(SettingsDiagnostic::Adopted {
+            from_version: BROWSER_ERA_SCHEMA_VERSION,
+            to_version: CURRENT_SCHEMA_VERSION,
+        });
+        dto.message = Some(
             "Preferences that were stored in this browser have been adopted into the \
              application settings file."
                 .to_string(),

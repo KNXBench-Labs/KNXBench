@@ -3,7 +3,7 @@
 //! build (no native OS picker in a browser). Mounted imperatively by
 //! filePicker.ts's openMountPicker/saveMountPicker so callers can
 //! `await` it exactly like @tauri-apps/plugin-dialog's open()/save().
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { noteRefusal } from "./api";
 import { useTranslate } from "./i18n";
@@ -24,6 +24,10 @@ function matchesFilter(name: string, filters: Filter[]): boolean {
   if (filters.length === 0) return true;
   const ext = name.split(".").pop()?.toLowerCase();
   return filters.some((f) => f.extensions.some((e) => e.toLowerCase() === ext));
+}
+
+function hasDroppedFiles(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).includes("Files");
 }
 
 // Both helpers below hold their own `fetch` — one needs a query string it
@@ -53,6 +57,15 @@ async function uploadFile(file: File): Promise<string> {
   return (await res.json()).path as string;
 }
 
+// A closed picker may still have one request on the wire. Share only that
+// request's lifetime across roots so reopening cannot start overlapping POSTs.
+let uploadTail: Promise<unknown> = Promise.resolve();
+function uploadWhileCurrent(file: File, current: () => boolean): Promise<string | null> {
+  const result = uploadTail.then(() => current() ? uploadFile(file) : null);
+  uploadTail = result.catch(() => {});
+  return result;
+}
+
 function Modal(props: {
   mode: "open" | "save";
   filters: Filter[];
@@ -65,12 +78,69 @@ function Modal(props: {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [name, setName] = useState(defaultName ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [dropReady, setDropReady] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
+  const listingGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    const generation = ++listingGenerationRef.current;
+    let current = true;
     listDir(dir)
-      .then(setEntries)
-      .catch((e) => setError(String(e)));
-  }, [dir]);
+      .then((nextEntries) => {
+        if (current && generation === listingGenerationRef.current) setEntries(nextEntries);
+      })
+      .catch((e) => {
+        if (current && generation === listingGenerationRef.current) setError(String(e));
+      });
+    return () => { current = false; };
+  }, [dir, refreshKey]);
+
+  async function uploadFiles(files: readonly File[]): Promise<void> {
+    if (files.length === 0 || uploadingRef.current) return;
+    uploadingRef.current = true;
+    setUploading(true);
+    setError(null);
+    setStatus(null);
+    let uploaded = 0;
+
+    try {
+      for (const file of files) {
+        if (!mountedRef.current) return;
+        await uploadWhileCurrent(file, () => mountedRef.current);
+        if (!mountedRef.current) return;
+        uploaded += 1;
+      }
+
+      setDir("uploads");
+      setRefreshKey((key) => key + 1);
+      setStatus(t("fsPicker.uploaded", { count: uploaded }));
+    } catch (err) {
+      if (!mountedRef.current) return;
+      if (uploaded > 0) {
+        setDir("uploads");
+        setRefreshKey((key) => key + 1);
+      }
+      const failedFile = files[uploaded];
+      setError(t("fsPicker.uploadFailed", {
+        uploaded,
+        count: files.length,
+        file: failedFile?.name ?? "",
+        error: err instanceof Error ? err.message : String(err),
+      }));
+    } finally {
+      uploadingRef.current = false;
+      if (mountedRef.current) setUploading(false);
+    }
+  }
 
   return (
     <Overlay className="fs-picker" label={mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} onClose={() => onResolve(null)}>
@@ -78,6 +148,7 @@ function Modal(props: {
           {mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} — /{dir}
         </h3>
         {error && <p className="field-error">{error}</p>}
+        {status && <p role="status">{status}</p>}
         <ul className="fs-picker-list">
           {dir && <li><button onClick={() => setDir(dir.split("/").slice(0, -1).join("/"))}>..</button></li>}
           {entries
@@ -101,20 +172,39 @@ function Modal(props: {
         )}
         <div className="fs-picker-actions">
           {mode === "open" && (
-            <label className="fs-picker-upload">
+            <label
+              className="fs-picker-upload"
+              data-drop-ready={dropReady ? "true" : undefined}
+              onDragOver={(event) => {
+                if (!hasDroppedFiles(event.dataTransfer)) {
+                  setDropReady(false);
+                  return;
+                }
+                event.preventDefault();
+                if (uploadingRef.current) {
+                  event.dataTransfer.dropEffect = "none";
+                  setDropReady(false);
+                  return;
+                }
+                event.dataTransfer.dropEffect = "copy";
+                setDropReady(true);
+              }}
+              onDragLeave={() => setDropReady(false)}
+              onDrop={(event) => {
+                setDropReady(false);
+                if (!hasDroppedFiles(event.dataTransfer)) return;
+                event.preventDefault();
+                if (uploadingRef.current) return;
+                void uploadFiles(Array.from(event.dataTransfer.files));
+              }}
+            >
               {t("fsPicker.upload")}
               <input
                 type="file"
                 className="fs-picker-upload-input"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    onResolve(await uploadFile(file));
-                  } catch (err) {
-                    setError(String(err));
-                  }
-                }}
+                multiple
+                disabled={uploading}
+                onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))}
               />
             </label>
           )}

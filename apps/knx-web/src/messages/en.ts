@@ -44,6 +44,7 @@ export const messages = {
   "toolbar.openNativeProject": "Open (.knxdb)…",
   "toolbar.save": "Save",
   "toolbar.saveAs": "Save As…",
+  "toolbar.downloadProject": "Download project",
   "toolbar.undo": "Undo",
   "toolbar.redo": "Redo",
   "toolbar.search": "Search… (Ctrl+K)",
@@ -811,6 +812,9 @@ export const messages = {
   "fsPicker.saveAs": "Save as",
   "fsPicker.filenamePlaceholder": "filename",
   "fsPicker.upload": "Upload…",
+  "fsPicker.uploaded.one": "Uploaded {count} file. Choose one to open.",
+  "fsPicker.uploaded.other": "Uploaded {count} files. Choose one to open.",
+  "fsPicker.uploadFailed": "Uploaded {uploaded} of {count} files; {file} failed: {error}",
   "fsPicker.save": "Save",
   "fsPicker.cancel": "Cancel",
 
@@ -995,6 +999,8 @@ export const messages = {
   // name rather than as a soothing generic label.
   "loadProgress.importing": "Importing {source}…",
   "loadProgress.opening": "Opening {source}…",
+  "loadProgress.succeeded": "Loaded {source}.",
+  "loadProgress.recovered": "Recovered the current project.",
   "loadProgress.failed": "Could not load {source}",
   "loadProgress.failedDuring": "Failed during: {phase}",
   "loadProgress.barLabel": "Load progress",

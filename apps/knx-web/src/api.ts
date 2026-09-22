@@ -83,6 +83,10 @@ export function openProject(path: string, clientToken: string): Promise<ProjectT
   });
 }
 
+export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {
+  return request("/api/project");
+}
+
 /**
  * What the server is doing inside the one `importProject`/`openProject`
  * call that is still in flight — `GET /api/project/load-progress`, the

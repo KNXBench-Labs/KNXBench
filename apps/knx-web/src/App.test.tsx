@@ -33,6 +33,7 @@ const apiMock = vi.hoisted(() => ({
   // this through `NewProjectDialog`; every other test here renders that
   // dialog not at all, so an unconfigured `vi.fn()` is enough for them.
   newProject: vi.fn(),
+  saveProject: vi.fn().mockResolvedValue(undefined),
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
@@ -58,6 +59,7 @@ const apiMock = vi.hoisted(() => ({
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
+  currentProject: vi.fn(),
   // `CatalogBrowser` fires both of these on mount. The help tests below
   // open it for real (it is the third dialog F1 has to replace), and an
   // unconfigured `vi.fn()` returns `undefined`, on which the component
@@ -129,6 +131,7 @@ afterEach(() => {
   // would otherwise leak to whoever runs next.
   apiMock.loadProgress.mockReset();
   apiMock.loadProgress.mockResolvedValue(null);
+  apiMock.currentProject.mockReset();
   resetSettingsForTests();
   resetProductLanguageForTests();
   document.documentElement.removeAttribute("lang");
@@ -303,8 +306,8 @@ describe("App — drag-and-drop announcement", () => {
 
     await dragTreeLabel("Device A", "Line 1: Line A");
 
-    expect(host!.querySelector('[role="status"]')?.textContent)
-      .toContain("Device A moved to line Line 1: Line A.");
+    expect([...host!.querySelectorAll('[role="status"]')]
+      .some((toast) => toast.textContent?.includes("Device A moved to line Line 1: Line A."))).toBe(true);
     await act(async () => root.unmount());
   });
 
@@ -315,8 +318,8 @@ describe("App — drag-and-drop announcement", () => {
 
     await dragTreeLabel("Device A", "Room A (Raum)");
 
-    expect(host!.querySelector('[role="status"]')?.textContent)
-      .toContain("Device A wurde nach Room A verschoben.");
+    expect([...host!.querySelectorAll('[role="status"]')]
+      .some((toast) => toast.textContent?.includes("Device A wurde nach Room A verschoben."))).toBe(true);
     await act(async () => root.unmount());
   });
 
@@ -442,6 +445,72 @@ describe("App — diagnostic panels survive a collapsed navigation pane", () => 
     await collapseNavigationAndOpen("Settings");
     expect(host!.querySelector(".settings-panel")).not.toBeNull();
     root.unmount();
+  });
+});
+
+describe("App — search reveal request", () => {
+  // A tree click must remain a local navigation decision: only the external
+  // search pick is allowed to reopen a branch the user has just collapsed.
+  it("reveals a search selection but leaves an ordinary explorer selection without a new reveal", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/search.knxproj");
+    apiMock.importProject.mockResolvedValue(treeWithDevice());
+    apiMock.deviceDetail.mockResolvedValueOnce(deviceDetailFixture());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    const unassignedToggle = () => host!.querySelector<HTMLButtonElement>(
+      '.tree-toggle[aria-label="Unassigned"]',
+    )!;
+    await act(async () => unassignedToggle().click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    // Selecting Project is an ordinary explorer selection and must not
+    // countermand the manual collapse.
+    await act(async () => treeLabel("Project").click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "k", ctrlKey: true, bubbles: true, cancelable: true,
+      }));
+    });
+    const input = host!.querySelector<HTMLInputElement>(".search-panel input")!;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => {
+      setter.call(input, "Device D");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const result = Array.from(host!.querySelectorAll<HTMLElement>('[role="option"]'))
+      .find((option) => option.textContent === "Device D")!;
+    await act(async () => result.click());
+    expect(treeLabel("Device D")).toBeTruthy();
+
+    await act(async () => unassignedToggle().click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+    await act(async () => treeLabel("Project").click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    // The request has completed at the selected row, so remounting the
+    // navigator starts at its ordinary default-open state but cannot replay
+    // the old scroll. (The row being present alone is not evidence here.)
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    await act(async () => findButton("Navigation").click());
+    expect(host!.querySelector(".project-explorer")).toBeNull();
+    await act(async () => findButton("Navigation").click());
+    expect(treeLabel("Device D")).toBeTruthy();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    await act(async () => root.unmount());
+    if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+    else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 });
 
@@ -839,6 +908,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Open project…",
       "Open (.knxdb)…",
       "Save As…",
+      "Download project",
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",
@@ -898,6 +968,45 @@ describe("App — the File menu by keyboard alone", () => {
     expect(document.activeElement).toBe(summary);
 
     await act(async () => root.unmount());
+  });
+});
+
+describe("App — browser project download", () => {
+  it("shows a localized download command, disables it without a project, and uses native navigation", async () => {
+    let anchor: HTMLAnchorElement | undefined;
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      anchor = this;
+    });
+    const root = await renderApp();
+    const download = findButton("Download project");
+
+    expect(download.disabled).toBe(true);
+
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(download.disabled).toBe(false);
+
+    await act(async () => {
+      download.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(anchor?.href).toMatch(/\/api\/project\/download$/);
+    expect(anchor?.download).toBe("project.knxdb");
+
+    click.mockRestore();
+    await act(async () => root.unmount());
+  });
+
+  it("omits the browser download command inside the Tauri shell", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    const root = await renderApp();
+
+    expect(host!.textContent).not.toContain("Download project");
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
   });
 });
 
@@ -1037,6 +1146,9 @@ describe("App — project load progress", () => {
       finish(baseTree());
     });
     expect(host!.querySelector(".load-progress")).toBeNull();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Loaded villa.knxproj.");
 
     await act(async () => root.unmount());
   });
@@ -1045,17 +1157,21 @@ describe("App — project load progress", () => {
   // must call `api.openProject` — a mutation swapping it for
   // `api.importProject` (the ETS-import path `pickProject` uses) passed
   // every other gate, because nothing here ever clicked this button.
-  it("opens a .knxdb file through api.openProject, not api.importProject", async () => {
+  it("opens a .knxdb file through api.openProject and announces it in the active locale", async () => {
+    setSetting("uiLanguage", "de");
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxdb");
     apiMock.openProject.mockResolvedValue(baseTree());
     const root = await renderApp();
 
     await act(async () => {
-      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      findButton("Öffnen (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(apiMock.openProject).toHaveBeenCalledTimes(1);
     expect(apiMock.importProject).not.toHaveBeenCalled();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("villa.knxdb wurde geladen.");
 
     await act(async () => root.unmount());
   });
@@ -1100,6 +1216,7 @@ describe("App — a failed load never renders a running banner", () => {
     expect(banner.getAttribute("data-failed")).toBe("true");
     expect(banner.querySelector('[role="progressbar"]')).toBeNull();
     expect(banner.querySelector('[data-indeterminate="true"]')).toBeNull();
+    expect(host!.querySelector('.toast--fun[role="status"]')).toBeNull();
     expect(banner.textContent).toContain("Could not load villa.knxproj");
     for (const phrase of foreignPhrases) {
       expect(banner.textContent, `banner must not borrow "${phrase}"`).not.toContain(phrase);
@@ -1129,6 +1246,7 @@ describe("App — a failed load never renders a running banner", () => {
 
     expectFailedBanner(["Building the project tree", "older.knxdb"]);
     expect(host!.querySelector(".load-progress")!.textContent).toContain("path is outside the data directory");
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
@@ -1167,7 +1285,7 @@ describe("App — a failed load never renders a running banner", () => {
     await act(async () => root.unmount());
   });
 
-  it("a lost response to a load that succeeded still reports a failure (§96)", async () => {
+  it("recovers an owned successful load whose response was lost (§96)", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     apiMock.loadProgress.mockResolvedValueOnce({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
@@ -1178,6 +1296,7 @@ describe("App — a failed load never renders a running banner", () => {
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
       completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: false });
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
     const root = await renderApp();
@@ -1189,13 +1308,98 @@ describe("App — a failed load never renders a running banner", () => {
       fail(new Error("connection closed"));
     });
 
-    // Our own operation, and it says `succeeded` — but this client never
-    // received the project, so a running or finished banner would both be
-    // lies. It reports the failure, on the last phase it actually saw.
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(host!.textContent).toContain("Device D");
+    expect(host!.querySelector(".load-progress")).toBeNull();
+    expect(host!.querySelector('[role="alert"]')).toBeNull();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Recovered the current project.");
+    await act(async () => root.unmount());
+  });
+
+  it("recovers an owned successful native open with its stored path intact (§96)", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxdb");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 2, kind: "open", source: "villa.knxdb", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: true });
+    apiMock.openProject.mockRejectedValueOnce(new Error("connection closed"));
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it.each([true, false])("recovery uses current save metadata when another project replaces the owned load (saved=%s)", async (saved) => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/old.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 3, kind: saved ? "import" : "open", source: "old.knxproj",
+      phase: "buildProjectTree", completed: null, total: null,
+      status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    let recover!: (value: unknown) => void;
+    apiMock.currentProject.mockReturnValue(new Promise((resolve) => { recover = resolve; }));
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    filePickerMock.pickSavePath.mockResolvedValue(null);
+    const root = await renderApp();
+    await clickOpen();
+    // The GET completes after another client has replaced the project. Its
+    // save state is deliberately opposite to the completed operation's kind.
+    await act(async () => { recover({ ...treeWithDevice(), has_store_path: saved }); });
+    expect(host!.querySelector(".load-progress")).toBeNull();
+    const status = host!.querySelector('.toast--fun[role="status"]');
+    expect(status?.textContent).toContain("Recovered the current project.");
+    expect(status?.textContent).not.toContain("old.knxproj");
+    await act(async () => { findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(saved ? 1 : 0);
+    expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(saved ? 0 : 1);
+    await act(async () => root.unmount());
+  });
+
+  it("does not recover a succeeded snapshot with an empty ownership token", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: null,
+    });
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    const root = await renderApp();
+
+    await clickOpen();
+
     expectFailedBanner([]);
-    const banner = host!.querySelector(".load-progress")!;
-    expect(banner.textContent).toContain("Parsing the topology");
-    expect(banner.textContent).toContain("connection closed");
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("connection closed");
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the recovery GET failure when an owned successful load cannot be retrieved", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    apiMock.currentProject.mockRejectedValue(new Error("current project unavailable"));
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    expectFailedBanner([]);
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("current project unavailable");
+    expect(host!.querySelector(".load-progress")?.textContent).toContain("current project unavailable");
     await act(async () => root.unmount());
   });
 

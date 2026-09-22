@@ -1,7 +1,7 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
-import { pickOpenPath, pickSavePath } from "./filePicker";
+import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -153,6 +153,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // position into the next one. Nothing reads it but React's `key`.
   const [loadKey, setLoadKey] = useState(0);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [revealRequest, setRevealRequest] = useState<{
+    selection: Selection;
+    generation: number;
+  } | null>(null);
+  const revealGenerationRef = useRef(0);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -304,10 +309,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
-  // The editing window is the only place that ever sees a `ProjectTree`
-  // (there is no `GET` route that returns one — a tree only ever arrives as
-  // the response to a mutation, import or open), so it is the only place
-  // that can tell a companion window what the project looks like now.
+  // The editing window owns the displayed `ProjectTree`, including recovery
+  // through GET /api/project, and publishes it to companion windows.
   // Publishing on the `tree` state itself, rather than at each of the
   // half-dozen call sites that set it, means no edit path that *lands in
   // `tree`* can forget to — and a stale fingerprint is exactly the failure
@@ -441,6 +444,20 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
   }
 
+  function selectSearchResult(sel: Selection): void {
+    setRevealRequest({ selection: sel, generation: ++revealGenerationRef.current });
+    void selectEntity(sel);
+  }
+
+  function completeSearchReveal(generation: number): void {
+    setRevealRequest((request) => request?.generation === generation ? null : request);
+  }
+
+  function toggleNavigation(): void {
+    if (navigationOpen) setRevealRequest(null);
+    setNavigationOpen((open) => !open);
+  }
+
   // After any command/undo/redo: the tree refreshes unconditionally (an
   // address edit changes its label), and — if a device is currently
   // selected — its detail refreshes alongside it (its own fields, or
@@ -553,6 +570,14 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Both ways a project enters the application, in one place: the same
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
+  function finishLoadedProject(loadedTree: ProjectTree, path: string | null, storePath: boolean) {
+    resetTree(loadedTree);
+    setHasStorePath(storePath);
+    setLoadSource(null);
+    setLoadSnapshot(null);
+    pushFun(path === null ? t("loadProgress.recovered") : t("loadProgress.succeeded", { source: fileNameOf(path) }));
+  }
+
   async function runLoad(
     path: string,
     load: (p: string, clientToken: string) => Promise<ProjectTree>,
@@ -571,25 +596,28 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     loadClientTokenRef.current = crypto.randomUUID();
     setLoading(true);
     try {
-      resetTree(await load(path, loadClientTokenRef.current));
-      setHasStorePath(storePath);
-      setLoadSource(null);
-      setLoadSnapshot(null);
+      finishLoadedProject(await load(path, loadClientTokenRef.current), path, storePath);
     } catch (e) {
-      reportError(e);
-      // The rejection is already on screen as a toast; the snapshot adds
-      // the one thing it cannot, which phase was running when it failed.
-      // Fetched once, after the fact — the poll below has stopped by now.
-      //
-      // Accepted only when it is *our* operation and it says `failed`.
-      // Anything else — a stranger's operation behind a `409`, the
-      // previous load's snapshot behind a pre-flight rejection, no
-      // snapshot at all behind an unreachable server, or our own
-      // operation reporting `succeeded` after its response was lost — is
-      // replaced by a local failure carrying the error the POST actually
-      // threw. A load that is over must never leave a bar moving.
-      const message = api.errorMessage(e);
+      // The transport rejection is not necessarily a load failure: the
+      // server may have committed our operation before its response was
+      // lost. Only an exact-token succeeded snapshot earns a read of the
+      // current server tree. Foreign, missing and failed snapshots retain
+      // the ordinary local-failure path, and a failed recovery reports the
+      // recovery error instead of the superseded transport error.
+      let failure = e;
       const final = await api.loadProgress().catch(() => null);
+      if (final?.status === "succeeded"
+        && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
+        try {
+          const current = await api.currentProject();
+          finishLoadedProject(current, null, current.has_store_path);
+          return;
+        } catch (recoveryError) {
+          failure = recoveryError;
+        }
+      }
+      reportError(failure);
+      const message = api.errorMessage(failure);
       const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
@@ -669,6 +697,13 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     } catch (e) {
       reportError(e);
     }
+  }
+
+  function downloadProject() {
+    const anchor = document.createElement("a");
+    anchor.href = "/api/project/download";
+    anchor.download = "project.knxdb";
+    anchor.click();
   }
 
   async function undo() {
@@ -755,6 +790,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
       </button>
+      {!isTauri() && (
+        <button onClick={downloadProject} disabled={!tree}>{t("toolbar.downloadProject")}</button>
+      )}
       <GroupAddressCsvButtons
         tree={tree}
         onTreeUpdate={handleTreeUpdate}
@@ -798,7 +836,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
-        <button aria-expanded={navigationOpen} onClick={() => setNavigationOpen(!navigationOpen)}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
+        <button aria-expanded={navigationOpen} onClick={toggleNavigation}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
         {tree && multiSelection && multiSelection.ids.size > 0 && (
           <BulkActionToolbar
             multiSelection={multiSelection}
@@ -822,7 +860,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
@@ -851,7 +889,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
       {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}
       {tree && searchOpen && (
-        <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
+        <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}

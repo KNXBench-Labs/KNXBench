@@ -1,5 +1,16 @@
 # UI Residue Batch A Design
 
+**Final-review correction (2026-09-22):** The approved current-server-truth
+policy requires recovery save metadata to describe the returned tree, not the
+earlier operation. `GET /api/project` therefore adds `has_store_path` to its
+existing tree fields, captured under the project lock. Recovery uses that
+boolean and a localized current-project notice; direct responses retain their
+filename notice. This supersedes the snapshot-kind and recovered-basename
+requirements below. Upload collisions return an explicit 409 without replacing
+bytes; picker unmount cancels queued files, and reopened pickers wait for any
+already-running request. No operation-history cache or transport rollback is
+introduced.
+
 **Date:** 2026-09-22
 **Status:** Approved by the standing user instruction that comparable designs, specifications, and implementation plans are pre-approved
 **Scope:** Goal task T12, `KNOWN_LIMITATIONS.md` §§19, 23, 24, 30, 96, and 118

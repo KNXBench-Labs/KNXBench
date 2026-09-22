@@ -73,6 +73,17 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxdb", clientToken: "a-client-token" });
   });
 
+  it("currentProject gets the current tree from /api/project", async () => {
+    mockFetchOnce({ installations: [], has_store_path: true });
+
+    const tree = await api.currentProject();
+
+    expect(tree).toEqual({ installations: [], has_store_path: true });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project");
+    expect(init?.method ?? "GET").toBe("GET");
+  });
+
   it("newProject posts the camelCase creation body, discardChanges spelled out", async () => {
     mockFetchOnce({ installations: [] });
     await api.newProject({

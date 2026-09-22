@@ -16,6 +16,7 @@ name = "knx_server"
 path = "src/lib.rs"
 
 [dependencies]
+http-body = "1"
 knx-app.workspace = true
 knx-core.workspace = true
 knx-csv.workspace = true
@@ -48,4 +49,5 @@ tempfile.workspace = true
 zip.workspace = true
 
 [dev-dependencies]
+http-body-util = "0.1"
 knx-testsupport.workspace = true

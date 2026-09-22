@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { loadPreferredGateway } from "./gatewayPreference";
 import { type Translate, useTranslate } from "./i18n";
-import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
+import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
+import {
+  hasInvalidLineScanExclusions,
+  useLineScanExclusions,
+} from "./lineScanExclusions";
+import { useSettingsState } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
-const EXCLUSIONS_KEY = "lineScanExclusions";
 const POLL_INTERVAL_MS = 1000;
-
-function configuredExclusions(): string[] {
-  const value = getSetting(EXCLUSIONS_KEY);
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
 
 function seconds(milliseconds: number): string {
   return `${(milliseconds / 1000).toFixed(1)} s`;
@@ -60,9 +60,11 @@ export default function LineScanPanel({
   onTreeUpdate,
 }: LineScanPanelProps = {}) {
   const t = useTranslate();
-  useSettingsRevision();
-  const exclusions = configuredExclusions();
-  const [gateway, setGateway] = useState("");
+  const exclusions = useLineScanExclusions();
+  const settingsState = useSettingsState();
+  const [gateway, setGateway] = useState(loadPreferredGateway);
+  const gatewayTouchedRef = useRef(false);
+  const gatewaySeedResolvedRef = useRef(settingsState.hydration === "hydrated");
   const [area, setArea] = useState(1);
   const [line, setLine] = useState(1);
   const [firstDevice, setFirstDevice] = useState(1);
@@ -76,8 +78,6 @@ export default function LineScanPanel({
   const [response, setResponse] = useState<api.LineScanResultsResponse | null>(null);
   const [results, setResults] = useState<api.LineScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [confirmRemoval, setConfirmRemoval] = useState<string | null>(null);
-  const [newExclusion, setNewExclusion] = useState("");
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [activeExclusions, setActiveExclusions] = useState<string[]>([]);
@@ -91,6 +91,13 @@ export default function LineScanPanel({
   const pollGenerationRef = useRef(0);
   const pollInFlightRef = useRef(false);
   const sessionIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
+    if (!gatewayTouchedRef.current && sessionIdRef.current === null && estimate === null) {
+      setGateway(loadPreferredGateway());
+    }
+    gatewaySeedResolvedRef.current = true;
+  }, [settingsState.hydration, estimate]);
 
   const request = useMemo<api.LineScanRequest>(
     () => ({
@@ -109,7 +116,7 @@ export default function LineScanPanel({
   const requestFingerprintRef = useRef(requestFingerprint);
   requestFingerprintRef.current = requestFingerprint;
   const controlsLocked = starting || cancelling || response?.status === "running";
-  const displayedExclusions = controlsLocked ? activeExclusions : exclusions;
+  const hasInvalidExclusions = hasInvalidLineScanExclusions(exclusions);
 
   function changeNumber(setter: (value: number) => void, value: string) {
     setter(Number(value));
@@ -119,6 +126,7 @@ export default function LineScanPanel({
   function apply(next: api.LineScanResultsResponse, expectedSessionId: number | null) {
     if (expectedSessionId !== null && next.sessionId !== expectedSessionId) return;
     sessionIdRef.current = next.sessionId;
+    gatewaySeedResolvedRef.current = true;
     sinceRef.current = next.nextSince;
     setResponse(next);
     setActiveExclusions(next.excludedAddresses);
@@ -183,6 +191,7 @@ export default function LineScanPanel({
   }, [response?.status, response?.sessionId, projectOpen, projectRevision, comparisonRevision]);
 
   async function preview() {
+    gatewaySeedResolvedRef.current = true;
     setError(null);
     const fingerprint = requestFingerprint;
     try {
@@ -197,6 +206,7 @@ export default function LineScanPanel({
 
   async function start() {
     if (!estimate || estimate.requestFingerprint !== requestFingerprint) return;
+    gatewaySeedResolvedRef.current = true;
     pollGenerationRef.current += 1;
     setStarting(true);
     setActiveExclusions(request.excluded);
@@ -247,24 +257,6 @@ export default function LineScanPanel({
     }
   }
 
-  function removeExclusion(address: string) {
-    if (confirmRemoval !== address) {
-      setConfirmRemoval(address);
-      return;
-    }
-    setSetting(EXCLUSIONS_KEY, exclusions.filter((item) => item !== address));
-    setConfirmRemoval(null);
-    setEstimate(null);
-  }
-
-  function addExclusion() {
-    const address = newExclusion.trim();
-    if (!/^\d{1,2}\.\d{1,2}\.\d{1,3}$/.test(address) || exclusions.includes(address)) return;
-    setSetting(EXCLUSIONS_KEY, [...exclusions, address]);
-    setNewExclusion("");
-    setEstimate(null);
-  }
-
   function toggleSelection(
     address: string,
     selected: string[],
@@ -309,7 +301,7 @@ export default function LineScanPanel({
 
       <div className="line-scan-layout">
         <form className="line-scan-config" onSubmit={(event) => event.preventDefault()}>
-          <label>{t("lineScan.gateway")}<input value={gateway} onChange={(event) => { setGateway(event.target.value); setEstimate(null); }} placeholder="192.0.2.10:3671" /></label>
+        <label>{t("lineScan.gateway")}<input value={gateway} onChange={(event) => { gatewayTouchedRef.current = true; gatewaySeedResolvedRef.current = true; setGateway(event.target.value); setEstimate(null); }} placeholder="192.0.2.10:3671" /></label>
           <label>{t("lineScan.area")}<input type="number" min="0" max="15" value={area} onChange={(event) => changeNumber(setArea, event.target.value)} /></label>
           <label>{t("lineScan.line")}<input type="number" min="0" max="15" value={line} onChange={(event) => changeNumber(setLine, event.target.value)} /></label>
           <label>{t("lineScan.firstDevice")}<input type="number" min="1" max="255" value={firstDevice} onChange={(event) => changeNumber(setFirstDevice, event.target.value)} /></label>
@@ -317,18 +309,16 @@ export default function LineScanPanel({
           <label>{t("lineScan.timeout")}<input type="number" min="1" value={responseTimeoutMs} onChange={(event) => changeNumber(setResponseTimeoutMs, event.target.value)} /></label>
           <label>{t("lineScan.pause")}<input type="number" min="0" value={interProbePauseMs} onChange={(event) => changeNumber(setInterProbePauseMs, event.target.value)} /></label>
           <div className="line-scan-actions">
-            <button onClick={() => void preview()}>{t("lineScan.estimate")}</button>
-        <button className="line-scan-start primary-action" disabled={!estimate || estimate.requestFingerprint !== requestFingerprint || controlsLocked || gateway.trim() === ""} onClick={() => void start()}>{t("lineScan.start")}</button>
+            <button disabled={hasInvalidExclusions} onClick={() => void preview()}>{t("lineScan.estimate")}</button>
+        <button className="line-scan-start primary-action" disabled={!estimate || estimate.requestFingerprint !== requestFingerprint || controlsLocked || gateway.trim() === "" || hasInvalidExclusions} onClick={() => void start()}>{t("lineScan.start")}</button>
         {response?.status === "running" && <button disabled={cancelling} onClick={() => void cancel()}>{t("lineScan.cancel")}</button>}
           </div>
         </form>
 
-        <aside className="line-scan-exclusions">
-          <h3>{t("lineScan.exclusions")}</h3>
-      {displayedExclusions.length === 0 ? <p>{t("lineScan.noExclusions")}</p> : <ul>{displayedExclusions.map((address) => <li key={address}><code>{address}</code><span>{t("lineScan.protected")}</span><button disabled={controlsLocked} onClick={() => removeExclusion(address)}>{confirmRemoval === address ? t("lineScan.confirmRemoval") : t("lineScan.remove")}</button></li>)}</ul>}
-      <div className="line-scan-add-exclusion"><input disabled={controlsLocked} aria-label={t("lineScan.exclusionAddress")} value={newExclusion} onChange={(event) => setNewExclusion(event.target.value)} placeholder="2.3.42" /><button disabled={controlsLocked} onClick={addExclusion}>{t("lineScan.addExclusion")}</button></div>
-        </aside>
+        <LineScanExclusionsEditor disabled={controlsLocked} values={controlsLocked ? activeExclusions : undefined} />
       </div>
+
+      {hasInvalidExclusions && <p className="form-error" role="alert">{t("lineScan.invalidExclusionsBlock")}</p>}
 
       {estimate && <section className="line-scan-estimate" aria-live="polite"><h3>{t("lineScan.estimateTitle")}</h3><p>{t("lineScan.candidates", { count: estimate.value.candidateCount })}</p><p>{t("lineScan.basis", { count: estimate.value.vacantConfirmations, timeout: estimate.value.responseTimeoutMs, confirmations: estimate.value.vacantConfirmations, pause: estimate.value.interProbePauseMs })}</p><strong>{t("lineScan.worstCase", { duration: seconds(estimate.value.worstCaseMs) })}</strong></section>}
       {error && <p className="form-error" role="alert">{error}</p>}

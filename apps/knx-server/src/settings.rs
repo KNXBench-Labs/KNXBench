@@ -73,6 +73,16 @@ pub struct SettingsDocument {
     pub preferences: Preferences,
 }
 
+/// Stable reason a damaged settings document was quarantined.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsQuarantineReason {
+    Unreadable,
+    InvalidJson,
+    NotObject,
+    MissingSchemaVersion,
+    SettingsNotObject,
+}
+
 impl SettingsDocument {
     /// A document at the current version with nothing in it — what a
     /// session runs on when there is no usable file.
@@ -103,7 +113,11 @@ pub enum SettingsLoad {
     /// A file this build is too old to understand. Left untouched.
     RefusedNewer { file_version: u32 },
     /// An unreadable or malformed file, moved aside to `moved_to`.
-    Quarantined { moved_to: PathBuf, reason: String },
+    Quarantined {
+        moved_to: PathBuf,
+        reason: SettingsQuarantineReason,
+        detail: String,
+    },
 }
 
 impl SettingsLoad {
@@ -204,19 +218,37 @@ pub fn load(data_dir: &Path) -> std::io::Result<SettingsLoad> {
         // mode nobody can read. Renaming it needs permission on the
         // *directory*, not on the file, so quarantine is usually still
         // available; if it is not, the error surfaces from `quarantine`.
-        Err(e) => return quarantine(data_dir, &path, &format!("could not be read: {e}")),
+        Err(e) => {
+            return quarantine(
+                data_dir,
+                &path,
+                SettingsQuarantineReason::Unreadable,
+                &format!("could not be read: {e}"),
+            )
+        }
     };
 
     let Ok(parsed) = serde_json::from_str::<Value>(&raw) else {
-        return quarantine(data_dir, &path, "is not valid JSON");
+        return quarantine(
+            data_dir,
+            &path,
+            SettingsQuarantineReason::InvalidJson,
+            "is not valid JSON",
+        );
     };
     let Value::Object(mut root) = parsed else {
-        return quarantine(data_dir, &path, "is not a JSON object");
+        return quarantine(
+            data_dir,
+            &path,
+            SettingsQuarantineReason::NotObject,
+            "is not a JSON object",
+        );
     };
     let Some(version) = root.get(SCHEMA_VERSION_FIELD).and_then(schema_version) else {
         return quarantine(
             data_dir,
             &path,
+            SettingsQuarantineReason::MissingSchemaVersion,
             "has no readable \"schemaVersion\" (a whole number is required)",
         );
     };
@@ -230,6 +262,7 @@ pub fn load(data_dir: &Path) -> std::io::Result<SettingsLoad> {
             return quarantine(
                 data_dir,
                 &path,
+                SettingsQuarantineReason::SettingsNotObject,
                 "has a \"settings\" member that is not an object",
             )
         }
@@ -312,9 +345,14 @@ pub fn store(data_dir: &Path, document: &SettingsDocument) -> std::io::Result<()
 /// Never a delete — the file may be the only copy of preferences a user
 /// spent an evening arranging, and "this build could not parse it" is a
 /// long way from "nobody can".
-fn quarantine(data_dir: &Path, path: &Path, reason: &str) -> std::io::Result<SettingsLoad> {
+fn quarantine(
+    data_dir: &Path,
+    path: &Path,
+    reason: SettingsQuarantineReason,
+    detail: &str,
+) -> std::io::Result<SettingsLoad> {
     let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
-    quarantine_at(data_dir, path, reason, &stamp)
+    quarantine_at(data_dir, path, reason, detail, &stamp)
 }
 
 /// The body of [`quarantine`] with the clock handed in, so the
@@ -323,7 +361,8 @@ fn quarantine(data_dir: &Path, path: &Path, reason: &str) -> std::io::Result<Set
 fn quarantine_at(
     data_dir: &Path,
     path: &Path,
-    reason: &str,
+    reason: SettingsQuarantineReason,
+    detail: &str,
     stamp: &str,
 ) -> std::io::Result<SettingsLoad> {
     let mut moved_to = data_dir.join(format!("settings.damaged-{stamp}.json"));
@@ -338,7 +377,8 @@ fn quarantine_at(
     std::fs::rename(path, &moved_to)?;
     Ok(SettingsLoad::Quarantined {
         moved_to,
-        reason: format!("{SETTINGS_FILE_NAME} {reason}"),
+        reason,
+        detail: format!("{SETTINGS_FILE_NAME} {detail}"),
     })
 }
 
@@ -477,10 +517,16 @@ mod tests {
         let path = settings_path(dir.path());
         std::fs::write(&path, "{ this was a text editor's fault").unwrap();
 
-        let SettingsLoad::Quarantined { moved_to, reason } = load(dir.path()).unwrap() else {
+        let SettingsLoad::Quarantined {
+            moved_to,
+            reason,
+            detail,
+        } = load(dir.path()).unwrap()
+        else {
             panic!("expected a quarantine");
         };
-        assert!(reason.contains("not valid JSON"), "{reason}");
+        assert_eq!(reason, SettingsQuarantineReason::InvalidJson);
+        assert!(detail.contains("not valid JSON"), "{detail}");
         assert!(!path.exists(), "the damaged file should have been moved");
         assert_eq!(
             std::fs::read_to_string(&moved_to).unwrap(),
@@ -531,14 +577,28 @@ mod tests {
         std::fs::write(&path, "first wreck").unwrap();
         let SettingsLoad::Quarantined {
             moved_to: first, ..
-        } = quarantine_at(dir.path(), &path, "is not JSON", stamp).unwrap()
+        } = quarantine_at(
+            dir.path(),
+            &path,
+            SettingsQuarantineReason::InvalidJson,
+            "is not JSON",
+            stamp,
+        )
+        .unwrap()
         else {
             panic!("expected a quarantine");
         };
         std::fs::write(&path, "second wreck").unwrap();
         let SettingsLoad::Quarantined {
             moved_to: second, ..
-        } = quarantine_at(dir.path(), &path, "is not JSON", stamp).unwrap()
+        } = quarantine_at(
+            dir.path(),
+            &path,
+            SettingsQuarantineReason::InvalidJson,
+            "is not JSON",
+            stamp,
+        )
+        .unwrap()
         else {
             panic!("expected a quarantine");
         };

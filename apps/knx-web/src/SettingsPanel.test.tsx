@@ -16,7 +16,7 @@ import { useTranslate } from "./i18n";
 import type { ProductLanguage } from "./api";
 import { exportEnglishTemplate, importLanguagePack, resetLanguagePacksForTests } from "./languagePack";
 import type { LanguagePack } from "./languagePack";
-import { getSetting } from "./settingsStore";
+import { getSetting, initSettings } from "./settingsStore";
 import { resetSettingsForTests } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
@@ -32,6 +32,7 @@ afterEach(() => {
   resetProductLanguageForTests();
   resetUiLanguageForTests();
   resetLanguagePacksForTests();
+  vi.unstubAllGlobals();
 });
 
 function dutchPack(overrides: Partial<LanguagePack> = {}): LanguagePack {
@@ -106,6 +107,42 @@ async function renderPanel(onClose = vi.fn(), productLanguages?: readonly Produc
 }
 
 describe("SettingsPanel", () => {
+  it("groups appearance, language/data, and consumed bus preferences", async () => {
+    const { root } = await renderPanel();
+    const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(
+      (heading) => heading.textContent,
+    );
+    expect(headings).toEqual(["Appearance", "Language & data", "Bus & diagnostics"]);
+    const gateway = host!.querySelector<HTMLInputElement>(
+      '.settings-section-bus input[placeholder="192.0.2.10:3671"]',
+    )!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(
+        gateway,
+        "192.0.2.10:3671",
+      );
+      gateway.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
+    expect(host!.querySelector(".settings-section-bus .line-scan-exclusions")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("shows the server fallback when no typed settings diagnostic is present", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      status: "loaded",
+      schemaVersion: 1,
+      settings: {},
+      message: "A future settings event occurred.",
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    await act(async () => initSettings());
+
+    const { root } = await renderPanel();
+    expect(host!.querySelector(".settings-diagnostic")!.textContent)
+      .toBe("A future settings event occurred.");
+    root.unmount();
+  });
+
   it("opens from the gear button (rendered by App.tsx) and shows its five labelled selects", async () => {
     const { root } = await renderPanel();
 

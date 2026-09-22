@@ -167,6 +167,56 @@ fn post(uri: &str, body: Value) -> Request<Body> {
         .unwrap()
 }
 
+fn get(uri: &str) -> Request<Body> {
+    Request::builder().uri(uri).body(Body::empty()).unwrap()
+}
+
+#[tokio::test]
+async fn current_project_returns_the_live_tree_and_requires_an_open_project() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state.clone(), None);
+
+    let missing = app.clone().oneshot(get("/api/project")).await.unwrap();
+    assert_eq!(missing.status(), StatusCode::BAD_REQUEST);
+
+    let created = app
+        .clone()
+        .oneshot(post("/api/project/new", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+
+    for (name, address) in [("Area A", 1), ("Area B", 2)] {
+        let response = app
+            .clone()
+            .oneshot(post(
+                "/api/areas",
+                json!({ "name": name, "address": address }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+    let undone = app
+        .clone()
+        .oneshot(post("/api/undo", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    *state.import_counts.lock().unwrap() = (2, 3);
+
+    let response = app.oneshot(get("/api/project")).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let tree = body_json(response).await;
+    assert_eq!(tree["errors"], 2);
+    assert_eq!(tree["warnings"], 3);
+    assert_eq!(tree["can_undo"], true);
+    assert_eq!(tree["can_redo"], true);
+    let topology = tree["installations"][0]["topology"].as_array().unwrap();
+    assert_eq!(topology.len(), 1);
+    assert_eq!(topology[0]["name"], "Area A");
+}
+
 #[tokio::test]
 async fn a_new_project_is_seeded_with_exactly_one_empty_installation() {
     let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);

@@ -595,20 +595,28 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       setLoadSource(null);
       setLoadSnapshot(null);
     } catch (e) {
-      reportError(e);
-      // The rejection is already on screen as a toast; the snapshot adds
-      // the one thing it cannot, which phase was running when it failed.
-      // Fetched once, after the fact — the poll below has stopped by now.
-      //
-      // Accepted only when it is *our* operation and it says `failed`.
-      // Anything else — a stranger's operation behind a `409`, the
-      // previous load's snapshot behind a pre-flight rejection, no
-      // snapshot at all behind an unreachable server, or our own
-      // operation reporting `succeeded` after its response was lost — is
-      // replaced by a local failure carrying the error the POST actually
-      // threw. A load that is over must never leave a bar moving.
-      const message = api.errorMessage(e);
+      // The transport rejection is not necessarily a load failure: the
+      // server may have committed our operation before its response was
+      // lost. Only an exact-token succeeded snapshot earns a read of the
+      // current server tree. Foreign, missing and failed snapshots retain
+      // the ordinary local-failure path, and a failed recovery reports the
+      // recovery error instead of the superseded transport error.
+      let failure = e;
       const final = await api.loadProgress().catch(() => null);
+      if (final?.status === "succeeded"
+        && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
+        try {
+          resetTree(await api.currentProject());
+          setHasStorePath(final.kind === "open");
+          setLoadSource(null);
+          setLoadSnapshot(null);
+          return;
+        } catch (recoveryError) {
+          failure = recoveryError;
+        }
+      }
+      reportError(failure);
+      const message = api.errorMessage(failure);
       const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {

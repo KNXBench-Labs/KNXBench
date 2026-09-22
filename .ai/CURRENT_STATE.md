@@ -1,5 +1,24 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Verified Complete:** Goal task T17 was already merged on current `main` in
+  the required two independent commits: `cc9e1d3` records the resolved GTK3
+  advisory premise and the dated Tauri-2 decision; `f1d9118` verifies and
+  documents Docker host networking for the shipped discovery route. Both are
+  ancestors of HEAD and use the required author plus explanatory bodies.
+- **Current proof:** `cargo deny check` exits 0 (`advisories`, `bans`,
+  `licenses`, `sources` all OK); `xtask check-anchors`, `check-layering`, and
+  `check-headers` exit 0. README/manual/Dockerfile agree that bridge mode keeps
+  project work and manual unicast gateways, while Linux host networking plus
+  `KNX_PORT` is required for multicast discovery. `/api/bus/discover` still
+  calls the existing connector discovery path. No multicast or KNX traffic was
+  generated during verification.
+- **Pending/Next Steps:** No T17 edit is needed. T10 and T22 architectural
+  approval gates remain unchanged.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** Final `goal.md` §7 research item, “Who talks to whom?”,
   committed and pushed as `226ab98`. `docs/RESEARCH.md` §16 chooses an
   evidence-labelled selected-telegram flow inspector before animation. KNX

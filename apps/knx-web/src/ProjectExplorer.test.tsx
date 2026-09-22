@@ -113,6 +113,25 @@ function treeWithBuildingTargets(): ProjectTree {
   return tree;
 }
 
+function treeWithRevealTargets(): ProjectTree {
+  const tree = baseTree();
+  const installation = tree.installations[0];
+  const topologyDevice = installation.topology[0].lines[0].devices[0];
+  topologyDevice.address = "1.1.1";
+  installation.buildings = [{
+    ...building(501, "Building A", "Building"),
+    children: [building(502, "Floor A", "Floor")],
+    // A device intentionally has two visible occurrences. Search must use
+    // the topology one, the canonical occurrence, for its reveal scroll.
+    devices: [{ ...topologyDevice }],
+  }];
+  installation.group_ranges = [
+    { id: 701, name: "Main range", start: "1/0/0", end: "1/7/255", parent: null },
+    { id: 702, name: "Middle range", start: "1/1/0", end: "1/1/255", parent: 701 },
+  ];
+  return tree;
+}
+
 class TestDataTransfer {
   private readonly values = new Map<string, string>();
   private protectedMode = false;
@@ -153,6 +172,7 @@ function ExplorerHarness(props: {
   onTreeUpdate: (tree: ProjectTree) => void;
   onSummary: (message: string) => void;
   onError: (error: unknown) => void;
+  revealRequest?: { selection: Selection; generation: number } | null;
 }) {
   const { multiSelection, onItemClick, clear } = useMultiSelection(props.tree, props.onSelect);
   return (
@@ -167,13 +187,14 @@ function ExplorerHarness(props: {
       )}
       <ProjectExplorer
         tree={props.tree}
-        selection={null}
+        selection={props.revealRequest?.selection ?? null}
         onSelect={props.onSelect}
         onTreeUpdate={props.onTreeUpdate}
         multiSelection={multiSelection}
         onItemClick={onItemClick}
         onSummary={props.onSummary}
         onError={props.onError}
+        revealRequest={props.revealRequest}
       />
     </>
   );
@@ -185,22 +206,26 @@ async function renderExplorer(
   onTreeUpdate = vi.fn(),
   onSummary = vi.fn(),
   onError = vi.fn(),
+  revealRequest: { selection: Selection; generation: number } | null = null,
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
     root.render(
-      <ExplorerHarness
-        tree={tree}
-        onSelect={onSelect}
-        onTreeUpdate={onTreeUpdate}
-        onSummary={onSummary}
-        onError={onError}
-      />,
+      <ExplorerHarness tree={tree} onSelect={onSelect} onTreeUpdate={onTreeUpdate}
+        onSummary={onSummary} onError={onError} revealRequest={revealRequest} />,
     );
   });
-  return { root, onSelect, onTreeUpdate, onSummary, onError };
+  async function rerender(nextRevealRequest: { selection: Selection; generation: number } | null) {
+    await act(async () => {
+      root.render(
+        <ExplorerHarness tree={tree} onSelect={onSelect} onTreeUpdate={onTreeUpdate}
+          onSummary={onSummary} onError={onError} revealRequest={nextRevealRequest} />,
+      );
+    });
+  }
+  return { root, rerender, onSelect, onTreeUpdate, onSummary, onError };
 }
 
 function labelFor(text: string): HTMLElement {
@@ -217,6 +242,22 @@ async function click(el: HTMLElement, opts: { ctrlKey?: boolean; shiftKey?: bool
       new MouseEvent("click", { bubbles: true, cancelable: true, ...opts }),
     );
   });
+}
+
+function toggleFor(label: string): HTMLButtonElement {
+  const toggle = host!.querySelector<HTMLButtonElement>(`.tree-toggle[aria-label="${label}"]`);
+  if (!toggle) throw new Error(`no toggle for "${label}"`);
+  return toggle;
+}
+
+function hasTreeLabel(text: string): boolean {
+  return Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
+    .some((label) => label.textContent === text);
+}
+
+function treeLabelCount(text: string): number {
+  return Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
+    .filter((label) => label.textContent === text).length;
 }
 
 async function dispatchDrag(
@@ -458,6 +499,75 @@ describe("ProjectExplorer — Project node", () => {
 
     await click(projectLabel);
     expect(onSelect).toHaveBeenCalledWith({ kind: "project", id: 0 } satisfies Selection);
+
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer — external selection reveal", () => {
+  // Removing reveal-generation propagation leaves the collapsed row absent;
+  // removing the canonical target marker makes this scroll both rendered
+  // device copies. The assertions therefore cover the behavior, not the
+  // internal path used to derive it.
+  it("reopens collapsed topology ancestors for repeated device reveals and scrolls its canonical row once", async () => {
+    const tree = treeWithRevealTargets();
+    const request = { selection: { kind: "device", id: 1 } satisfies Selection, generation: 1 };
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const { root, rerender } = await renderExplorer(tree, vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
+
+      await click(toggleFor("Topology"));
+      expect(treeLabelCount("1.1.1 Device A")).toBe(1);
+
+      scrollIntoView.mockClear();
+      await rerender({ ...request, generation: 2 });
+      expect(treeLabelCount("1.1.1 Device A")).toBe(2);
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+
+      await click(toggleFor("Topology"));
+      expect(treeLabelCount("1.1.1 Device A")).toBe(1);
+
+      scrollIntoView.mockClear();
+      await rerender({ ...request, generation: 3 });
+      expect(treeLabelCount("1.1.1 Device A")).toBe(2);
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+
+      await unmount(root);
+    } finally {
+      if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it("reopens collapsed building ancestors for a selected nested building part", async () => {
+    const request = { selection: { kind: "building_part", id: 502 } satisfies Selection, generation: 1 };
+    const { root, rerender } = await renderExplorer(treeWithRevealTargets(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
+
+    await click(toggleFor("Buildings"));
+    expect(hasTreeLabel("Floor A (Floor)")).toBe(false);
+
+    await rerender({ ...request, generation: 2 });
+    expect(hasTreeLabel("Floor A (Floor)")).toBe(true);
+
+    await unmount(root);
+  });
+
+  it("reopens collapsed group-range ancestors for a selected nested range", async () => {
+    const request = { selection: { kind: "group_range", id: 702 } satisfies Selection, generation: 1 };
+    const { root, rerender } = await renderExplorer(treeWithRevealTargets(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
+
+    await click(toggleFor("Group Ranges"));
+    expect(hasTreeLabel("1/1/0–1/1/255 Middle range")).toBe(false);
+
+    await rerender({ ...request, generation: 2 });
+    expect(hasTreeLabel("1/1/0–1/1/255 Middle range")).toBe(true);
 
     await unmount(root);
   });

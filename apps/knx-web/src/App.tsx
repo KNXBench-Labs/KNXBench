@@ -153,6 +153,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // position into the next one. Nothing reads it but React's `key`.
   const [loadKey, setLoadKey] = useState(0);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [revealRequest, setRevealRequest] = useState<{
+    selection: Selection;
+    generation: number;
+  } | null>(null);
+  const revealGenerationRef = useRef(0);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -439,6 +444,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         setDeviceDetail(null);
       }
     }
+  }
+
+  function selectSearchResult(sel: Selection): void {
+    setRevealRequest({ selection: sel, generation: ++revealGenerationRef.current });
+    void selectEntity(sel);
   }
 
   // After any command/undo/redo: the tree refreshes unconditionally (an
@@ -822,7 +832,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
@@ -851,7 +861,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
       {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}
       {tree && searchOpen && (
-        <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
+        <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}

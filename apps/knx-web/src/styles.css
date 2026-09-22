@@ -1130,6 +1130,11 @@ main {
   font-size: 11px;
 }
 
+.line-scan-exclusions li[data-invalid="true"] {
+  border-left: 3px solid var(--knx-error-color);
+  padding-left: 8px;
+}
+
 .line-scan-exclusions li button {
   grid-column: 1 / -1;
 }

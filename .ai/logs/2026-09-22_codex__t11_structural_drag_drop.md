@@ -74,5 +74,23 @@ and mismatched active payloads, duplicate device renderings, cancellation, and
 completed cleanup are covered. The same commit removes the whitespace issue.
 
 The read-only follow-up review found all three findings closed, no remaining
-Critical/Important/Minor issue, and returned a merge verdict of yes. Merged-result
-gates remain the next mandatory step.
+Critical/Important/Minor issue, and returned a merge verdict of yes. The required
+merged-result gates are recorded below.
+
+## Integration
+
+The reviewed branch was merged non-fast-forward into `main` as `02237eb`. The
+only conflict was the append-only `.ai/CURRENT_STATE.md` handover; the newer T11
+state retains the user's permanent automatic-plan-approval rule. No product file
+required conflict resolution.
+
+Full gates repeated on the merge commit:
+
+- Rust: 1,948 passed, 5 ignored across 92 result blocks.
+- Frontend: 883 passed across 63 files; TypeScript passed.
+- `cargo fmt --all --check`, workspace Clippy with warnings denied, layering,
+  headers (194/162, ceiling 162), anchors (389/180), and cargo-deny passed.
+- No KNX, multicast, LAN, gateway, or hardware operation occurred.
+
+T11 is complete. Group address → communication object remains intentionally
+outside this delivery until an explicit link-direction interaction is designed.

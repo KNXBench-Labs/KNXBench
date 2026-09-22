@@ -14,6 +14,7 @@ use crate::SharedState;
 
 pub fn project_routes() -> Router<SharedState> {
     Router::new()
+        .route("/api/project", get(current_project))
         .route("/api/project/import", post(import_project))
         .route("/api/project/load-progress", get(load_progress))
         .route("/api/project/new", post(new_project))
@@ -473,6 +474,14 @@ impl From<crate::LoadSnapshot> for LoadProgressDto {
 /// for the length of a field assignment.
 async fn load_progress(State(state): State<SharedState>) -> Json<Option<LoadProgressDto>> {
     Json(state.load_operations.snapshot().map(LoadProgressDto::from))
+}
+
+async fn current_project(
+    State(state): State<SharedState>,
+) -> Result<Json<domain::CurrentProject>, ApiError> {
+    domain::current_project_tree(&state)
+        .map(Json)
+        .map_err(ApiError::bad_request)
 }
 
 /// Refusing a second load while one runs: a state conflict the caller can

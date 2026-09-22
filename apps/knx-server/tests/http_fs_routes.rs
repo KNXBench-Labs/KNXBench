@@ -175,6 +175,60 @@ async fn uploading_with_no_file_field_is_a_400() {
 }
 
 #[tokio::test]
+async fn duplicate_uploads_preserve_the_first_file_and_report_conflict() {
+    let (state, dir) = state_with_data_dir();
+    let app = knx_server::app(Arc::new(state), None);
+    for (content, status) in [
+        (b"first".as_slice(), StatusCode::OK),
+        (b"second".as_slice(), StatusCode::CONFLICT),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(multipart_request(
+                "/api/fs/upload",
+                multipart_file_body("file", "same.knxproj", content),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+    }
+    assert_eq!(
+        std::fs::read(dir.path().join("uploads/same.knxproj")).unwrap(),
+        b"first"
+    );
+    assert_eq!(
+        std::fs::read_dir(dir.path().join("uploads"))
+            .unwrap()
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn upload_preserves_a_preexisting_destination() {
+    let (state, dir) = state_with_data_dir();
+    std::fs::create_dir(dir.path().join("uploads")).unwrap();
+    std::fs::write(dir.path().join("uploads/same.knxproj"), b"existing").unwrap();
+    let app = knx_server::app(Arc::new(state), None);
+    let response = app
+        .oneshot(multipart_request(
+            "/api/fs/upload",
+            multipart_file_body("file", "same.knxproj", b"replacement"),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    assert!(body_json(response).await["error"]
+        .as_str()
+        .unwrap()
+        .contains("already exists"));
+    assert_eq!(
+        std::fs::read(dir.path().join("uploads/same.knxproj")).unwrap(),
+        b"existing"
+    );
+}
+
+#[tokio::test]
 async fn downloading_with_no_project_open_is_a_400() {
     let (state, _dir) = state_with_data_dir();
     let app = knx_server::app(Arc::new(state), None);
@@ -190,4 +244,82 @@ async fn downloading_with_no_project_open_is_a_400() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn downloading_an_unsaved_project_returns_a_readable_current_store() {
+    let (state, dir) = state_with_data_dir();
+    let state = Arc::new(state);
+    let app = knx_server::app(state.clone(), None);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/new")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"name":"Unsaved download","installationName":"Current installation"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(state.store_path.lock().unwrap().is_none());
+    state.project.lock().unwrap().as_mut().unwrap().info.name = "Latest unsaved edit".into();
+    let opaque = knx_store::StoredOpaqueEntry {
+        source_path: "P-Test/0.xml".into(),
+        xpath: "/Unknown".into(),
+        kind: "element".into(),
+        name: "Unknown".into(),
+        bytes: b"<Unknown keep=\"yes\"/>".to_vec(),
+        sha256: "fixture opaque hash".into(),
+    };
+    let manufacturer_ref = knx_store::ManufacturerRef {
+        source_path: "M-Test/Hardware.xml".into(),
+        sha256: "fixture manufacturer hash".into(),
+        len: 42,
+        kind: "hardware".into(),
+    };
+    state.opaque.lock().unwrap().push(opaque.clone());
+    state
+        .manufacturer_refs
+        .lock()
+        .unwrap()
+        .push(manufacturer_ref.clone());
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/project/download")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers()["content-type"],
+        "application/octet-stream"
+    );
+    assert_eq!(
+        response.headers()["content-disposition"],
+        "attachment; filename=\"project.knxdb\""
+    );
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let path = dir.path().join("download.knxdb");
+    std::fs::write(&path, bytes).unwrap();
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    let project = knx_store::load_project(&conn).unwrap();
+    assert_eq!(project.info.name, "Latest unsaved edit");
+    assert_eq!(project.installations.len(), 1);
+    assert_eq!(project.installations[0].name, "Current installation");
+    assert_eq!(knx_store::load_opaque(&conn).unwrap(), vec![opaque]);
+    assert_eq!(
+        knx_store::load_manufacturer_refs(&conn).unwrap(),
+        vec![manufacturer_ref]
+    );
 }

@@ -1457,22 +1457,22 @@ above (`store_path` itself can point at the wrong file) is unchanged.
 
 ## 19. A search result inside a collapsed tree branch is not revealed
 
-**Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-web/
-src/Search.tsx`) selects the matching device, group address, or building
-part and shows it in the Inspector, but if the Project Explorer tree has
-the ancestor branch containing it manually collapsed, the tree itself does
-not expand or scroll to reveal the row — only the Inspector reflects the
-new selection.
+Picking a `Ctrl+K` result now records a monotonic external-selection reveal
+generation before preserving `App`'s existing canonical selection path. The
+Project Explorer opens only the topology, building-part, group-address, or
+group-range ancestors that contain that requested selection, then scrolls the
+selected row with `scrollIntoView({ block: "nearest" })`. Another search pick
+of the same result has a new generation, so it reveals again after a user has
+collapsed the branch manually. Ordinary explorer selections never create a
+generation and therefore preserve ordinary manual collapse.
 
-**Cause.** An explicit, approved scope decision recorded in
-[the search design spec](superpowers/specs/2026-09-04-search-design.md),
-not an oversight: tree auto-expand/scroll-into-view needs its own
-expand/collapse/reveal logic, which the spec deliberately kept out of this
-cycle's surface to keep search and tree-navigation state disjoint.
-
-**Lifted when.** A future cycle adds tree auto-expand and scroll-into-view
-for a selection that originates outside the tree itself (search today,
-potentially a future command palette too).
+Devices rendered in both a building branch and their canonical topology (or
+unassigned) occurrence scroll exactly once at that canonical occurrence; the
+building copy is not a second competing destination. A device that genuinely
+has neither canonical occurrence instead reveals and scrolls its first
+depth-first building occurrence exactly once. Component and App tests cover
+nested topology, building, and group-range paths, repeated reveals, both
+device cases, and manual-selection preservation. **[V]**
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 
@@ -1645,48 +1645,47 @@ over a transport you have secured yourself.
 
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
-**Limitation.** The route that lets the web UI save a project as a
-downloaded `.knxdb` file reads the entire file into memory before writing
-the HTTP response body, rather than streaming it.
+**Resolution.** The route freshly serializes the current in-memory project,
+including unsaved edits, opaque entries, and manufacturer references, into
+one temporary SQLite file. `tower_http::services::ServeFile` streams that
+file in bounded 64 KiB chunks instead of copying it into a whole-file
+`Vec<u8>`. Content type and attachment filename remain unchanged.
 
-**Cause.** Simplicity for the common case: `axum`'s streaming-response
-plumbing (a `Body` backed by an async byte stream over a file handle)
-is more code for a project file that, for every project measured so far
-(including the reference project), is small enough that buffering it
-costs nothing observable.
+The response body owns the temporary path until it is dropped, including
+after the HTTP response is split into its headers and body. Both completed
+and abandoned bodies remove their temporary file; response extensions alone
+would not guarantee this lifetime.
 
-**Impact.** None for typical project sizes. A very large `.knxdb` file
-would hold its full byte size in server memory for the duration of one
-download request — a real cost only if project sizes grow well past what
-this repository's reference project or any tested project represents.
-
-**Lifted when.** A demonstrated need arises from a project large enough to
-make buffering measurably costly; real streaming is a contained change
-local to this one route, not an architectural one.
+**Proof.** Unit tests consume a file larger than three small test chunks,
+require multiple non-empty frames bounded by the configured chunk size,
+compare every byte, and verify cleanup after completed and abandoned
+downloads. The HTTP regression downloads an unsaved project and opens the
+result as a KNX store, preserving its latest edit, installation, opaque
+entries, and manufacturer references. Serialization still creates one
+temporary SQLite file before streaming begins.
 
 ## 24. `FsPicker` has no drag-and-drop or multi-select
 
-**Limitation.** `apps/knx-web/src/FsPicker.tsx` — the mount-directory
-listing/upload UI shown in the web build when `window.__TAURI__` is
-absent — supports browsing directories and picking or uploading one file
-at a time. It has no drag-and-drop file upload zone and no multi-select
-for batch operations.
+**Final-review hardening, 2026-09-22.** Duplicate basenames are explicit 409
+conflicts, including pre-existing upload files; no destination is overwritten.
+The earlier successful count and filename/error remain visible on partial
+failure. Closing/selecting/unmounting stops the remaining queue. A reopened
+picker waits for the previous in-flight request, which may still finish on the
+server; closing is not a rollback of that request.
 
-**Cause.** YAGNI for this iteration: the design's stated goal was parity
-with the desktop's native-dialog UX for opening and saving one project at
-a time, not a general-purpose file manager. Neither capability was needed
-to meet that goal.
+**Resolution, 2026-09-22.** The browser picker still returns one
+`Promise<string | null>` path because project open/import remains a singular
+human choice. Its local file input now accepts multiple files, and its upload
+label accepts native file drops. A shared routine sends each file to the
+existing one-file `/api/fs/upload` route sequentially, refreshes the
+`uploads` listing after successful requests, and announces a completed batch
+as a polite status. It never auto-selects an uploaded project.
 
-**Impact.** A web user uploads files one at a time through a standard
-file-input control rather than dragging one in, and cannot batch-upload
-or batch-delete multiple files from the mount listing. No functional gap
-for the single-project workflow the server is built around.
-
-**Lifted when.** A demonstrated need arises — e.g. a workflow that
-regularly moves several files into the mount at once — at which point
-drag-and-drop and multi-select can be added to `FsPicker.tsx` without
-touching the underlying `/api/fs/*` routes, which already accept one file
-per request by design.
+**Failure handling.** The first failed request stops that batch, keeps earlier
+successful uploads intact, and names the failed file plus server error and
+completed count. It does not announce batch success. During protected-mode
+dragover the picker inspects only `DataTransfer.types`; it reads dropped files
+only at drop time.
 
 ## 25. Resolved: the web package and Docker frontend stage use Node 22
 
@@ -1839,29 +1838,19 @@ item 13 for the full account.
 
 ## 30. `/api/project/download` has no frontend caller
 
-**Limitation.** `apps/knx-server`'s `/api/project/download` route is
-implemented and covered by server-side tests (`tests/http_fs_routes.rs`),
-but no code under `apps/knx-web/src` calls it — `FsPicker.tsx` wires up
-directory listing and upload only. A web user has no UI path to download
-a `.knxdb` file to their local machine; "Save As…" in the web build
-writes to the server's mounted `data_dir` (via `saveMountPicker` in
-`filePicker.ts`), not to the browser's downloads folder.
+**Resolved (2026-09-22, T12 task 4).** In the plain web build, the File menu
+now offers localized **Download project** whenever a project is open. It
+creates a native browser anchor for `/api/project/download` with
+`download="project.knxdb"`; the browser consumes the server's streaming
+response directly, without a frontend `Blob`, object URL, or full-file buffer.
+The command is disabled while no project is open and absent inside Tauri.
 
-**Cause.** Out of scope for the web/Docker deployment plan as specified:
-the plan's goal was serving the same editing UI over HTTP with the
-mounted volume as the file store, not a download-to-browser workflow.
-The route was added and tested ahead of a UI because the desktop build's
-`save_project_as` needed the same underlying logic either way.
-
-**Impact.** None for the mounted-volume workflow the deployment targets
-(files already land on the server's disk, which is what's backed up/
-mounted). It matters only if a user wants a local copy of a project that
-lives solely on the server's `data_dir` — today they'd need direct
-filesystem or `docker cp` access to the volume instead.
-
-**Lifted when.** A demonstrated need arises for browser-side downloads;
-wiring a "Download" button to the existing, already-tested route is a
-small, contained `apps/knx-web` change.
+This deliberately differs from **Save As…** in a browser: Save As continues to
+write to the server's mounted `data_dir` through `saveMountPicker`, whereas
+Download saves a local browser download. Tauri keeps its native Save As flow
+and therefore does not show the browser-only command. `App.test.tsx` covers
+the web/Tauri boundary, disabled state, endpoint, filename, and File-menu
+keyboard/close behavior.
 
 ## 31. KNXnet/IP routing has no custom multicast address override — resolved (routing half)
 
@@ -5849,7 +5838,8 @@ list item names which one no longer applies.
 
 ## 96. A browser that loses the import response cannot get the project back without reloading
 
-**Limitation.** ADR-0023 makes a project load an operation the server owns:
+**Historical baseline (superseded 2026-09-22).** ADR-0023 made a project load
+an operation the server owns:
 `POST /api/project/import` (or `/open`) runs on a blocking task that
 finishes whether or not the client is still listening, and
 `GET /api/project/load-progress` reports what it is doing. A client that
@@ -5860,16 +5850,16 @@ load *succeeded*, and still has no `ProjectTree` to render. There is no
 recovery is to reload the page, which re-renders from a server whose
 project is already the new one.
 
-**Cause.** The `ProjectTree` is returned by the POST and nowhere else. That
-was harmless while the request *was* the operation; making the operation
-outlive the request is what created the gap. Adding a read route for the
+**Historical cause.** The `ProjectTree` was returned by the POST and nowhere
+else. That was harmless while the request *was* the operation; making the
+operation outlive the request is what created the gap. Adding a read route for the
 open project is a small change and a deliberate non-goal of T37, which
 changed no existing response shape.
 
-**Consequence.** A user who closes the tab mid-import does not lose the
-import — the project is loaded server-side — but does have to reload to see
-it. Nothing is silently discarded, and the snapshot says plainly which
-operation finished and whether it failed.
+**Historical consequence.** A user who closed the tab mid-import did not lose
+the import — the project was loaded server-side — but had to reload to see it.
+Nothing was silently discarded, and the snapshot said plainly whether the
+operation finished or failed.
 
 **Narrowed, 2026-09-19 (T37 fix round 1).** The client now owns its
 operation id (ADR-0023, "the client half of the id"), so a lost response
@@ -5916,8 +5906,18 @@ a moving shuttle, for the rest of the session. A generation counter bumped
 in `finally` and compared by every poll across its own fetch closes it. The
 limitation itself is still unchanged: no route hands out the current tree.
 
-**Lifted when.** A `GET /api/project` exists and the frontend falls back to
-it when a poll reports an operation it did not see finish.
+**Resolved, 2026-09-22 (T12 Task 5).** Authenticated `GET /api/project` now
+builds a fresh `ProjectTree` from the project currently held by the server,
+including the current command-stack undo/redo state and import error/warning
+counts; no open project is a `400 Bad Request`. When a load POST loses its
+response, the browser defers its error toast until it has read the final load
+snapshot. Only exact `clientToken` ownership plus `status: "succeeded"` may
+recover: the client fetches the current server tree, resets its projection,
+reads stored-path state from the same current-tree response, and clears the load
+banner without an alert. The read is deliberately current-server truth, not a
+cached copy of the lost POST response. A foreign or missing token never earns
+that read, so another client's success cannot replace this client's failure.
+If the recovery GET itself fails, its error becomes the visible local failure.
 
 ## 97. Progress is a phase label far more often than it is a percentage
 
@@ -7002,39 +7002,26 @@ stated value) is exactly what made the sixth field a one-line addition.
 
 ## 118. A succeeded project load announces nothing to a screen reader
 
-**Limitation.** `apps/knx-web`'s `LoadProgressBanner.tsx` is a
-`role="status" aria-live="polite"` region, mounted for the duration of a
-project load and removed once the load finishes. `App.tsx`'s load-handling
-path (`setLoadSource(null); setLoadSnapshot(null);` on success) simply
-unmounts it; there is no success toast and nothing else takes its place.
-Removing a live region announces nothing — assistive technology has no
-text to read once the element it was watching is gone. The failure path is
-different: `reportError(e)` raises a toast (which is itself announced) and
-the banner stays mounted showing its `failed: true` terminal state, which
-`LoadProgressBanner.tsx` does mark for announcement. So a screen-reader
-user hears about a load that fails and hears nothing at all about one that
-succeeds, other than whatever the now-populated Project Explorer happens to
-expose to a subsequent read.
+**Final-review correction, 2026-09-22.** Direct loads retain the filename notice
+described below. Recovery announces the current project using the EN/DE
+`loadProgress.recovered` message, because another client may have replaced the
+earlier load before the recovery GET. Its tree and `has_store_path` metadata
+are coherent; the old operation's kind and filename are never used to label
+that current project. The Task 6 description below records the initial behavior.
 
-**Cause.** The banner's `aria-live="off"` on its own progress bar, count
-and flavour-message sub-elements is deliberate — ADR-0023 and this
-project's own history record over-announcing a fast-moving progress bar as
-a worse experience than under-announcing it — but that design decision
-covers the loading phase only. Nobody designed the success case
-separately; it inherited "say nothing" from the sub-elements' own
-`aria-live="off"` by falling through the same unmount path rather than by
-an explicit choice.
+**Resolved (T12 task 6).** `App.tsx` now completes direct loads and the
+exact-token §96 recovered-load path through one local success tail. It
+updates the current tree and stored-path state, clears the progress banner,
+then adds the localized source filename to the existing `ToastStack` non-error
+toast. That toast is the durable `role="status"` / polite live region; it
+remains after the banner unmounts, unlike the banner's deliberately quiet
+progress sub-elements.
 
-**Impact.** A sighted user sees the Project Explorer populate and reads
-that as success implicitly. A screen-reader user gets no equivalent
-signal — success and "I haven't started loading yet" are indistinguishable
-by ear.
-
-**Lifted when.** A one-line success announcement — a toast, or a final
-`aria-live="polite"` update on the banner before it unmounts — is added
-for the succeeded terminal state, mirroring the `failed` state's existing
-treatment. Small, UI-only, and not attempted here: this is a documentation
-task, and the finding is recorded rather than fixed.
+`App.test.tsx` covers direct ETS import, direct native `.knxdb` open in the
+active German locale, and owned recovered success. Each asserts exactly one
+`.toast--fun[role="status"]` success notice with the basename; recovery also
+asserts that it does not produce an error alert. The two catalogues provide
+`loadProgress.succeeded`, so no user-facing success string bypasses i18n.
 
 ## 119. On this machine's `ntfs3` mount, cargo has rebuilt from a stale fingerprint — a green gate is not evidence by itself
 

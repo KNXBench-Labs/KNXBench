@@ -28,6 +28,10 @@ use crate::session_log::{self, LogEntry, SessionLog, Severity};
 
 pub struct AppState {
     pub project: Mutex<Option<knx_core::Project>>,
+    /// Last project state established by a successful open, import, new, or
+    /// save operation. This session-only snapshot is compared with `project`
+    /// and is never written as separate `.knxdb` metadata.
+    pub clean_project: Mutex<Option<knx_core::Project>>,
     /// The `.knxdb` file the in-memory project was last saved to or loaded
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
@@ -131,6 +135,7 @@ impl AppState {
             .map(Mutex::new);
         Self {
             project: Mutex::new(None),
+            clean_project: Mutex::new(None),
             store_path: Mutex::new(None),
             opaque: Mutex::new(Vec::new()),
             manufacturer_refs: Mutex::new(Vec::new()),
@@ -477,11 +482,10 @@ pub struct UnsavedChanges;
 /// so every existing caller behaves exactly as before; the route above
 /// refuses an unrecognised one rather than guessing.
 ///
-/// Refuses with [`UnsavedChanges`] when a project is open and its command
-/// stack has anything to undo, unless `discard_changes` is set. There is no
-/// dirty flag anywhere in `AppState` — `can_undo()` is the only signal that
-/// the user changed something — so this over-refuses after a save, which is
-/// the direction CLAUDE.md's "data integrity over convenience" points.
+/// Refuses with [`UnsavedChanges`] when the open project differs from its
+/// clean snapshot, unless `discard_changes` is set. This uses the same
+/// normalized content predicate published on [`ProjectTree`], independently
+/// of whether the command stack currently has an undo entry.
 pub fn new_project_impl(
     state: &AppState,
     name: Option<String>,
@@ -491,17 +495,12 @@ pub fn new_project_impl(
     discard_changes: bool,
 ) -> Result<ProjectTree, UnsavedChanges> {
     if !discard_changes {
-        let occupied = state
-            .project
-            .lock()
-            .expect("state mutex poisoned")
-            .is_some();
-        let edited = state
-            .command_stack
-            .lock()
-            .expect("state mutex poisoned")
-            .can_undo();
-        if occupied && edited {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+        let modified = project
+            .as_ref()
+            .is_some_and(|project| project_is_modified(project, clean_project.as_ref()));
+        if modified {
             state
                 .session_log
                 .lock()
@@ -641,6 +640,7 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
             .expect("state mutex poisoned");
         save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
         *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
+        *state.clean_project.lock().expect("state mutex poisoned") = Some(project.clone());
         Ok(())
     })();
     log_outcome(
@@ -668,7 +668,9 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
             .manufacturer_refs
             .lock()
             .expect("state mutex poisoned");
-        save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
+        save_project_as_impl(&path, project, &opaque, &manufacturer_refs)?;
+        *state.clean_project.lock().expect("state mutex poisoned") = Some(project.clone());
+        Ok(())
     })();
     log_outcome(state, "save", "saved".to_string(), None, &result);
     result
@@ -878,7 +880,8 @@ pub fn import_group_addresses_csv_impl(
                 let project = project.as_ref().ok_or("no project open")?;
                 let stack = state.command_stack.lock().expect("state mutex poisoned");
                 let counts = *state.import_counts.lock().expect("state mutex poisoned");
-                tree_with_state(project, &stack, counts)
+                let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+                tree_with_state(project, clean_project.as_ref(), &stack, counts)
             }
         };
         Ok((tree, plan.report))
@@ -1140,6 +1143,7 @@ pub fn device_detail(
 /// that `build_project_tree` alone cannot know about.
 fn tree_with_state(
     project: &knx_core::Project,
+    clean_project: Option<&knx_core::Project>,
     stack: &knx_core::CommandStack,
     import_counts: (usize, usize),
 ) -> knx_projection::ProjectTree {
@@ -1148,7 +1152,15 @@ fn tree_with_state(
     tree.warnings = import_counts.1;
     tree.can_undo = stack.can_undo();
     tree.can_redo = stack.can_redo();
+    tree.is_modified = project_is_modified(project, clean_project);
     tree
+}
+
+fn project_is_modified(
+    project: &knx_core::Project,
+    clean_project: Option<&knx_core::Project>,
+) -> bool {
+    clean_project.is_none_or(|clean| !project.same_user_content_as(clean))
 }
 
 fn replace_project_state(
@@ -1157,15 +1169,21 @@ fn replace_project_state(
     replacement_import_counts: (usize, usize),
     replacement_store_path: Option<PathBuf>,
 ) {
+    // Publication and readers use this one order: project -> command stack
+    // -> import counts -> store path -> clean project. Holding `project`
+    // first prevents observers from seeing any partially replaced state.
     let mut project = state.project.lock().expect("state mutex poisoned");
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let mut import_counts = state.import_counts.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
+    let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
 
+    let clean_replacement = replacement.clone();
     *project = Some(replacement);
     *stack = knx_core::CommandStack::new();
     *import_counts = replacement_import_counts;
     *store_path = replacement_store_path;
+    *clean_project = Some(clean_replacement);
 }
 
 /// Current save metadata and tree are read under the same project lock.
@@ -1187,8 +1205,9 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
         .lock()
         .expect("state mutex poisoned")
         .is_some();
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     Ok(CurrentProject {
-        tree: tree_with_state(project, &stack, import_counts),
+        tree: tree_with_state(project, clean_project.as_ref(), &stack, import_counts),
         has_store_path,
     })
 }
@@ -1204,7 +1223,8 @@ fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::Pro
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, &stack, import_counts);
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
 
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
 
@@ -1985,8 +2005,9 @@ pub fn create_device_impl(
     diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     Ok(CreateDeviceResponse {
-        tree: tree_with_state(project, &stack, import_counts),
+        tree: tree_with_state(project, clean_project.as_ref(), &stack, import_counts),
         diagnostics,
     })
 }
@@ -2040,7 +2061,13 @@ pub fn reconcile_scan_impl(
     let stack = &mut *state.command_stack.lock().expect("state mutex poisoned");
     if selected_unexpected.is_empty() && selected_missing.is_empty() {
         let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-        return Ok(tree_with_state(project, stack, import_counts));
+        let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+        return Ok(tree_with_state(
+            project,
+            clean_project.as_ref(),
+            stack,
+            import_counts,
+        ));
     }
 
     let mut commands = Vec::new();
@@ -2122,7 +2149,8 @@ pub fn reconcile_scan_impl(
         .do_command(project, command)
         .map_err(|error| error.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, stack, import_counts);
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, clean_project.as_ref(), stack, import_counts);
     log_outcome(
         state,
         "Batch",
@@ -2233,7 +2261,8 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let result = stack.undo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, &stack, import_counts);
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
     log_outcome(state, "undo", "undo".to_string(), None, &result);
     result.map(|()| tree)
 }
@@ -2244,7 +2273,8 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let result = stack.redo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, &stack, import_counts);
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
     log_outcome(state, "redo", "redo".to_string(), None, &result);
     result.map(|()| tree)
 }
@@ -3406,6 +3436,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn modified_state_treats_an_edit_undone_to_the_baseline_as_clean() {
+        let state = AppState::default();
+        new_project_impl(&state, None, None, None, None, true).unwrap();
+
+        create_area_impl(&state, "Temporary area".into(), 1).unwrap();
+        let tree = undo_impl(&state).unwrap();
+
+        assert!(tree.can_redo);
+        assert!(!tree.is_modified);
+    }
+
+    #[test]
+    fn modified_state_detects_direct_mutation_outside_the_command_stack() {
+        let state = AppState::default();
+        new_project_impl(&state, None, None, None, None, true).unwrap();
+        state.project.lock().unwrap().as_mut().unwrap().info.name = "direct".into();
+
+        let tree = current_project_tree(&state).unwrap().tree;
+
+        assert!(!tree.can_undo);
+        assert!(tree.is_modified);
+        assert!(matches!(
+            new_project_impl(&state, None, None, None, None, false),
+            Err(UnsavedChanges)
+        ));
+    }
+
+    #[test]
     fn current_project_tree_waits_for_an_entire_replacement() {
         use std::sync::{mpsc, Arc, TryLockError};
         use std::time::{Duration, Instant};
@@ -3504,6 +3562,7 @@ mod tests {
         assert_eq!((tree.errors, tree.warnings), (0, 0));
         assert!(!tree.can_undo);
         assert!(!tree.can_redo);
+        assert!(!tree.is_modified);
     }
 
     fn reference_project_path() -> PathBuf {

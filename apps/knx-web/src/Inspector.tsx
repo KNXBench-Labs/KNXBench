@@ -752,7 +752,7 @@ export function DeviceWorkspace(props: {
           own freshly rebuilt `ProjectTree` (T3 fix round 1, item 6) — the one
           `apply(state, cmd)` already built from the genuine post-write
           `CommandStack`, not a hand-built `{ ...tree, can_undo: true,
-          can_redo: false }` overlay assembled from a tree this component
+          can_redo: false, is_modified: true }` overlay assembled from a tree this component
           happened to be holding. `onApplied` takes exactly that shape, so
           it wires straight through, the same as every field above it. */}
       <ParameterPanel deviceId={detail.id} onValueApplied={onApplied} />

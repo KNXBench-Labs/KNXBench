@@ -23,7 +23,7 @@ pub struct LocalizedString(pub TranslationKey);
 
 /// Maps `(TranslationKey, Language)` to display text. Display resolves
 /// against the active language and falls back to `default_language`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StringTable {
     default_language: Language,
     entries: HashMap<(TranslationKey, Language), String>,

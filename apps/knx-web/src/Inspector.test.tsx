@@ -79,6 +79,7 @@ function twoInstallationTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [first, second],
   };
@@ -121,6 +122,7 @@ function deviceMoveTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [{
       id: 1,

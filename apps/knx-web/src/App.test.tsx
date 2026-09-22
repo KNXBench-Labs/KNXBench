@@ -146,6 +146,7 @@ function baseTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [],
   };
@@ -2199,10 +2200,11 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
   it("asks before quitting with unsaved work, and closes the window once it is told to", async () => {
     filePickerMock.isTauri.mockReturnValue(true);
-    // `can_undo` is the only dirty signal the server offers (see
-    // `domain.rs`'s `new_project_impl`), and it is the one the
-    // unsaved-changes guard on the welcome screen already uses.
-    const root = await openProject({ ...baseTree(), can_undo: true });
+    const root = await openProject({
+      ...baseTree(),
+      can_undo: false,
+      is_modified: true,
+    });
     await openMenu();
 
     await act(async () => {
@@ -2223,7 +2225,11 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
   it("quits straight away when there is nothing to lose", async () => {
     filePickerMock.isTauri.mockReturnValue(true);
-    const root = await openProject();
+    const root = await openProject({
+      ...baseTree(),
+      can_undo: true,
+      is_modified: false,
+    });
     await openMenu();
 
     await act(async () => {

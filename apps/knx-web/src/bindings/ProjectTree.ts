@@ -36,6 +36,13 @@ can_undo: boolean,
  */
 can_redo: boolean, 
 /**
+ * Always `false` straight out of [`build_project_tree`] because this
+ * pure projection has no clean baseline. The application layer overlays
+ * whether the live project differs from its last successful open,
+ * import, creation, or save snapshot.
+ */
+is_modified: boolean,
+/**
  * The project-wide rendering choice every `GroupAddressNode`,
  * `GroupRangeNode` and `GroupLinkNode` address string in this tree was
  * already formatted with — carried through so the inspector can show

@@ -677,13 +677,23 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     await runLoad(path, api.openProject, true);
   }
 
+  async function refreshSavedProject() {
+    const current = await api.currentProject();
+    setTree(current);
+    setHasStorePath(current.has_store_path);
+  }
+
   async function saveProjectAs() {
     const path = await pickSavePath(knxdbFilter, "project.knxdb");
     if (!path) return;
     clearErrors();
     try {
       await api.saveProjectAs(path);
+      // The POST establishes the server's store path even if the following
+      // authoritative tree refresh fails. Keep the existing safety behavior
+      // for the next Save, but never guess the clean/dirty tree locally.
       setHasStorePath(true);
+      await refreshSavedProject();
     } catch (e) {
       reportError(e);
     }
@@ -694,6 +704,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     clearErrors();
     try {
       await api.saveProject();
+      await refreshSavedProject();
     } catch (e) {
       reportError(e);
     }

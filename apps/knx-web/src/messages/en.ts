@@ -44,6 +44,7 @@ export const messages = {
   "toolbar.openNativeProject": "Open (.knxdb)…",
   "toolbar.save": "Save",
   "toolbar.saveAs": "Save As…",
+  "toolbar.downloadProject": "Download project",
   "toolbar.undo": "Undo",
   "toolbar.redo": "Redo",
   "toolbar.search": "Search… (Ctrl+K)",

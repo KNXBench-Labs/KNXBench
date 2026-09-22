@@ -1829,31 +1829,21 @@ ride along with a feature branch. See
 [§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
-## 30. `/api/project/download` has no frontend caller
+## 30. Browser project download is available alongside Save As
 
-**Limitation.** `apps/knx-server`'s `/api/project/download` route is
-implemented and covered by server-side tests (`tests/http_fs_routes.rs`),
-but no code under `apps/knx-web/src` calls it — `FsPicker.tsx` wires up
-directory listing and upload only. A web user has no UI path to download
-a `.knxdb` file to their local machine; "Save As…" in the web build
-writes to the server's mounted `data_dir` (via `saveMountPicker` in
-`filePicker.ts`), not to the browser's downloads folder.
+**Resolved (2026-09-22, T12 task 4).** In the plain web build, the File menu
+now offers localized **Download project** whenever a project is open. It
+creates a native browser anchor for `/api/project/download` with
+`download="project.knxdb"`; the browser consumes the server's streaming
+response directly, without a frontend `Blob`, object URL, or full-file buffer.
+The command is disabled while no project is open and absent inside Tauri.
 
-**Cause.** Out of scope for the web/Docker deployment plan as specified:
-the plan's goal was serving the same editing UI over HTTP with the
-mounted volume as the file store, not a download-to-browser workflow.
-The route was added and tested ahead of a UI because the desktop build's
-`save_project_as` needed the same underlying logic either way.
-
-**Impact.** None for the mounted-volume workflow the deployment targets
-(files already land on the server's disk, which is what's backed up/
-mounted). It matters only if a user wants a local copy of a project that
-lives solely on the server's `data_dir` — today they'd need direct
-filesystem or `docker cp` access to the volume instead.
-
-**Lifted when.** A demonstrated need arises for browser-side downloads;
-wiring a "Download" button to the existing, already-tested route is a
-small, contained `apps/knx-web` change.
+This deliberately differs from **Save As…** in a browser: Save As continues to
+write to the server's mounted `data_dir` through `saveMountPicker`, whereas
+Download saves a local browser download. Tauri keeps its native Save As flow
+and therefore does not show the browser-only command. `App.test.tsx` covers
+the web/Tauri boundary, disabled state, endpoint, filename, and File-menu
+keyboard/close behavior.
 
 ## 31. KNXnet/IP routing has no custom multicast address override — resolved (routing half)
 

@@ -769,7 +769,6 @@ struct SetGroupAddressStyleBody {
 }
 
 struct GroupAddressStylePublication {
-    revision: u64,
     tree: knx_projection::ProjectTree,
     ctx: GroupAddressContext,
 }
@@ -779,38 +778,19 @@ fn prepare_group_address_style_publication(
     style: knx_core::GroupAddressStyle,
 ) -> Result<GroupAddressStylePublication, ApiError> {
     let tree = domain::set_group_address_style_impl(state, style).map_err(ApiError::bad_request)?;
-    // The revision is assigned before the snapshot: a snapshot can only be
-    // older than another accepted mutation when its revision is lower.
-    let revision = state
-        .group_address_style_revision
-        .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-        + 1;
     let ctx = {
         let project = state.project.lock().expect("project mutex poisoned");
         GroupAddressContext::from_project(project.as_ref())
     };
-    Ok(GroupAddressStylePublication {
-        revision,
-        tree,
-        ctx,
-    })
+    Ok(GroupAddressStylePublication { tree, ctx })
 }
 
 async fn publish_group_address_style(
     state: &SharedState,
     publication: GroupAddressStylePublication,
 ) -> Json<knx_projection::ProjectTree> {
-    let session = state.bus_session.lock().await;
-    // A newer accepted mutation may have published first while this request
-    // awaited the bus lock. Never let the delayed older snapshot replace it.
-    if publication.revision
-        == state
-            .group_address_style_revision
-            .load(std::sync::atomic::Ordering::SeqCst)
-    {
-        if let Some(session) = session.as_ref() {
-            session.update_group_address_context(publication.ctx);
-        }
+    if let Some(session) = state.bus_session.lock().await.as_ref() {
+        session.update_group_address_context(publication.ctx);
     }
     Json(publication.tree)
 }
@@ -826,6 +806,7 @@ async fn set_group_address_style(
     Json(body): Json<SetGroupAddressStyleBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let style = parse_group_address_style(&body.group_address_style)?;
+    let _transaction = state.group_address_style_publication.lock().await;
     let publication = prepare_group_address_style_publication(&state, style)?;
     Ok(publish_group_address_style(&state, publication).await)
 }
@@ -2210,9 +2191,15 @@ mod tests {
     use std::net::{Ipv4Addr, SocketAddrV4};
     use std::sync::Arc;
 
+    use axum::extract::State;
+    use axum::Json;
     use knx_core::{GroupAddressStyle, IndividualAddress, Language, Project};
+    use tokio::sync::oneshot;
 
-    use super::{prepare_group_address_style_publication, publish_group_address_style};
+    use super::{
+        prepare_group_address_style_publication, publish_group_address_style,
+        set_group_address_style, SetGroupAddressStyleBody,
+    };
     use crate::bus::fake::{FakeConnector, FakeTunnel};
     use crate::bus::{BusSession, GroupAddressContext};
     use crate::AppState;
@@ -2237,14 +2224,45 @@ mod tests {
         .expect("fake connector always succeeds");
         *state.bus_session.lock().await = Some(session);
 
-        // A pauses after its successful project mutation and snapshot. B then
-        // completes fully before A resumes its delayed session publication.
+        let transaction_a = state.group_address_style_publication.lock().await;
+        // A pauses after its successful project mutation and snapshot while
+        // retaining ownership of the complete route transaction.
         let publication_a =
             prepare_group_address_style_publication(&state, GroupAddressStyle::Free).unwrap();
-        let publication_b =
-            prepare_group_address_style_publication(&state, GroupAddressStyle::TwoLevel).unwrap();
-        let _ = publish_group_address_style(&state, publication_b).await;
+
+        let (started_tx, started_rx) = oneshot::channel();
+        let state_b = Arc::clone(&state);
+        let request_b = tokio::spawn(async move {
+            let _ = started_tx.send(());
+            set_group_address_style(
+                State(state_b),
+                Json(SetGroupAddressStyleBody {
+                    group_address_style: "TwoLevel".to_string(),
+                }),
+            )
+            .await
+        });
+        started_rx.await.expect("B reaches the route transaction");
+
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .expect("project mutex poisoned")
+                .as_ref()
+                .expect("test project remains open")
+                .info
+                .group_address_style,
+            GroupAddressStyle::Free,
+            "B must not mutate the project while A owns the route transaction"
+        );
+
         let _ = publish_group_address_style(&state, publication_a).await;
+        drop(transaction_a);
+        let _ = request_b
+            .await
+            .expect("B task completes")
+            .expect("B restyle succeeds");
 
         assert_eq!(
             state

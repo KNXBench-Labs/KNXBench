@@ -103,10 +103,11 @@ an explicit selection, expanded into a previewed, revision-bound and atomic
 `Command::Batch` with one-step undo. Raw command recording, partial mutation,
 a script engine and bus-facing macros are not the plan.
 
-**A live "who talks to whom" view.** Animated connections between group
-addresses and the devices that use them — ideally fed by live telegrams from
-the bus monitor rather than drawn statically from the stored links. An idea,
-and one that needs the interface underneath it to stop moving first.
+**A live "who talks to whom" view.** Research now narrows this to an
+evidence-labelled flow for one selected bus-monitor telegram, not a topology
+canvas that pretends configured recipients were observed. See
+[RESEARCH §16](../RESEARCH.md#16-who-talks-to-whom-flow-view-decision-2026-09-22).
+It is designed neither implemented nor scheduled.
 
 **A mobile application.** Possible in principle over a KNX IP interface. It
 is an entirely new platform, which makes it a much larger project than it

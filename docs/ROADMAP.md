@@ -841,9 +841,11 @@ commissioning deliverable is simulator-verified only.
 Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP
 capabilities and automation of repetitive tasks both need a mature,
 near-complete `Command` layer as their foundation — premature before
-Session 7. A live "who talks to whom" group-address/device animation is
-more valuable once Session 6's bus monitor can feed it real telegrams
-rather than only static group links. A mobile app and non-Linux desktop
+Session 7. A live "who talks to whom" view now has a research decision in
+[RESEARCH.md §16](RESEARCH.md#16-who-talks-to-whom-flow-view-decision-2026-09-22):
+start with evidence for one selected live telegram, label receivers as
+configured rather than observed, and do not invent a topology canvas. It is
+designed neither implemented nor scheduled. A mobile app and non-Linux desktop
 support are new-platform work, out of scope while the Linux-first desktop
 (CLAUDE.md) is still incomplete. An in-app project documentation/notes
 feature is a new domain concept absent from

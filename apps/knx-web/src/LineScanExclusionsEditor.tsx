@@ -7,6 +7,21 @@ import {
   validateIndividualAddress,
 } from "./lineScanExclusions";
 
+type RemovalConfirmation = {
+  index: number;
+  snapshot: readonly string[];
+};
+
+function confirmsCurrentOccurrence(
+  confirmation: RemovalConfirmation | null,
+  index: number,
+  exclusions: readonly string[],
+): boolean {
+  return confirmation?.index === index
+    && confirmation.snapshot.length === exclusions.length
+    && confirmation.snapshot.every((value, current) => value === exclusions[current]);
+}
+
 export default function LineScanExclusionsEditor({
   disabled,
   values,
@@ -18,7 +33,7 @@ export default function LineScanExclusionsEditor({
   const storedExclusions = useLineScanExclusions();
   const exclusions = values ?? storedExclusions;
   const [candidate, setCandidate] = useState("");
-  const [confirmRemoval, setConfirmRemoval] = useState<number | null>(null);
+  const [confirmRemoval, setConfirmRemoval] = useState<RemovalConfirmation | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
   function invalidAt(value: string, index: number): boolean {
@@ -40,8 +55,8 @@ export default function LineScanExclusionsEditor({
   }
 
   function remove(index: number) {
-    if (confirmRemoval !== index) {
-      setConfirmRemoval(index);
+    if (!confirmsCurrentOccurrence(confirmRemoval, index, exclusions)) {
+      setConfirmRemoval({ index, snapshot: [...exclusions] });
       return;
     }
     saveLineScanExclusions(exclusions.filter((_, current) => current !== index));
@@ -58,7 +73,9 @@ export default function LineScanExclusionsEditor({
             <code>{address}</code>
             <span>{invalid ? t("lineScan.invalidLegacyExclusion") : t("lineScan.protected")}</span>
             <button type="button" disabled={disabled} onClick={() => remove(index)}>
-              {confirmRemoval === index ? t("lineScan.confirmRemoval") : t("lineScan.remove")}
+              {confirmsCurrentOccurrence(confirmRemoval, index, exclusions)
+                ? t("lineScan.confirmRemoval")
+                : t("lineScan.remove")}
             </button>
           </li>;
         })}</ul>

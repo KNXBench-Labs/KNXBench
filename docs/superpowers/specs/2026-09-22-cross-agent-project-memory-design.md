@@ -144,11 +144,12 @@ python3 tools/agent_memory_sync.py uninstall-timer
 ```
 
 The timer runs `apply` every five minutes and after login. Installation writes
-only two units under `~/.config/systemd/user/`; uninstall removes only those
-known unit files. The service is single-shot and uses a file lock under
-`.agent-memory/` to prevent overlapping writers. Timer failure leaves the last
-complete index intact and is visible through `systemctl --user status` and the
-tool's report.
+two units under `~/.config/systemd/user/` and a stable copy of the synchronizer
+under `~/.local/lib/knxbench-memory-sync/`; uninstall removes only those known
+installed files. The units must not point into a disposable Git worktree. The
+service is single-shot and uses a file lock under `.agent-memory/` to prevent
+overlapping writers. Timer failure leaves the last complete index intact and
+is visible through `systemctl --user status` and the tool's report.
 
 The timer does not invoke an LLM and therefore adds no model cost. Manual
 `preview`, `apply`, and `check` remain fully usable when systemd is unavailable.
@@ -159,15 +160,17 @@ Local agent instruction files will point to the same generated index:
 
 - Codex's root `MEMORY.md` points to `.agent-memory/PROJECT_MEMORY.md` and
   `docs/PROJECT_CONTEXT.md`.
-- Claude's local `CLAUDE.md` instructs main sessions to read the shared index
-  after repository documentation.
+- The already-versioned project `CLAUDE.md` instructs Claude main sessions to
+  read the shared index after repository documentation.
 - The Hermes `knxbench` profile instruction file gives the same rule.
 
-These local edits are part of installation state, not repository product
-history. The tool exposes `install-agent-links` and `uninstall-agent-links`
-commands that update only bounded, marker-delimited blocks and preserve the
-surrounding user-authored files. Installation creates timestamped backups;
-uninstall removes the marked blocks and restores no unrelated content.
+The `CLAUDE.md` instruction is committed project configuration. Codex's ignored
+root `MEMORY.md` and `AGENTS.md`, plus the Hermes profile instruction, are local
+installation state. The tool exposes `install-agent-links` and
+`uninstall-agent-links` commands that update only bounded, marker-delimited
+blocks in those local files and preserve surrounding user-authored content.
+Installation creates timestamped backups; uninstall removes the marked blocks
+and restores no unrelated content.
 
 Hermes continues to own its `memories/MEMORY.md`; it is an input, not a symlink
 to generated output. This avoids a feedback loop and prevents Hermes' memory

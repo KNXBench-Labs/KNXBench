@@ -1,7 +1,7 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
-import { pickOpenPath, pickSavePath } from "./filePicker";
+import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -690,6 +690,13 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
   }
 
+  function downloadProject() {
+    const anchor = document.createElement("a");
+    anchor.href = "/api/project/download";
+    anchor.download = "project.knxdb";
+    anchor.click();
+  }
+
   async function undo() {
     clearErrors();
     try {
@@ -774,6 +781,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
       </button>
+      {!isTauri() && (
+        <button onClick={downloadProject} disabled={!tree}>{t("toolbar.downloadProject")}</button>
+      )}
       <GroupAddressCsvButtons
         tree={tree}
         onTreeUpdate={handleTreeUpdate}

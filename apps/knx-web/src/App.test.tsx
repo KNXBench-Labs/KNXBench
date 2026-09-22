@@ -905,6 +905,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Open project…",
       "Open (.knxdb)…",
       "Save As…",
+      "Download project",
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",
@@ -964,6 +965,45 @@ describe("App — the File menu by keyboard alone", () => {
     expect(document.activeElement).toBe(summary);
 
     await act(async () => root.unmount());
+  });
+});
+
+describe("App — browser project download", () => {
+  it("shows a localized download command, disables it without a project, and uses native navigation", async () => {
+    let anchor: HTMLAnchorElement | undefined;
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      anchor = this;
+    });
+    const root = await renderApp();
+    const download = findButton("Download project");
+
+    expect(download.disabled).toBe(true);
+
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(download.disabled).toBe(false);
+
+    await act(async () => {
+      download.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(anchor?.href).toMatch(/\/api\/project\/download$/);
+    expect(anchor?.download).toBe("project.knxdb");
+
+    click.mockRestore();
+    await act(async () => root.unmount());
+  });
+
+  it("omits the browser download command inside the Tauri shell", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    const root = await renderApp();
+
+    expect(host!.textContent).not.toContain("Download project");
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
   });
 });
 

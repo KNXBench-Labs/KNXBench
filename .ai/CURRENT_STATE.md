@@ -492,3 +492,9 @@ dokumentiert ist. Vollständiger Stand liegt im Statusarchiv unter
 - **Pending/Next Steps:** Continue the overall goal with T12 from `.superpowers/sdd/goal/task-12-brief.md`. The idle crash-diagnosis terminal may be closed separately; do not treat its model-refresh error as a KNXBench failure.
 - **Notes Claude:** Weekly limit last bounded read-only check remains 36%, below the 60% pause threshold. Future app-server checks must use a bounded subprocess and terminate it in `finally`.
 ---
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T13 Task 2 resolves `KNOWN_LIMITATIONS.md` §91. `BusSession` now shares one atomically replaceable `GroupAddressContext` between monitor drain and write paths; successful public project restyle rebuilds the whole context under the project lock, releases it, then updates the active session under the async bus lock. No reconnect, restart, disconnect or bus send occurs. Route-level fake regression proves next telegram formatting and displayed-address write use the new style while session ID/tunnel stay unchanged. Detail: `.ai/logs/2026-09-22_codex__t13_active_session_context.md`; task evidence: `.superpowers/sdd/2026-09-22-ui-residue-batch-b/task-2-report.md`.
+- **Verification:** RED was `"0/0/1"` versus expected `"1"`; GREEN 11/11 bus unit, 14/14 write integration, 17/17 edit-route, full `knx-server`, warning-denied all-target server Clippy, fmt, anchors 389/184, and `git diff --check`, using `/var/tmp/knxbench-t13-target` low-debug settings. No KNX/LAN/multicast/gateway/hardware traffic.
+- **Pending/Next Steps:** Controller review/integration of focused Task 2 commit; continue T13 Task 3 only after review. Fixed slash group-address display/no selector remains binding.
+- **Notes Claude:** Task 1 commits `82d8a77` and `7e927a4` remain intact. Commit author KNXBench `<github@knxbench.com>`, no co-author, no push.

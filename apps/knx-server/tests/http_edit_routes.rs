@@ -1007,7 +1007,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
 /// in `knx-core/src/address.rs`, always finds it fits, so this is also the
 /// route's ordinary, expected-to-succeed path, not a corner case.
 #[tokio::test]
-async fn restyling_a_project_with_a_group_address_round_trips_and_undoes() {
+async fn group_address_style_restyles_a_project_and_round_trips_through_undo() {
     let mut project = Project::new(Language("en".into()));
     project.installations.push(Installation {
         id: InstallationId(0),

@@ -728,10 +728,10 @@ async fn poll_telegrams(
 // POST /api/bus/write
 // ---------------------------------------------------------------------------
 
-/// `destination` is parsed using the active session's own cached
-/// `GroupAddressStyle` (design spec §4.4's snapshot; see
+/// `destination` is parsed using the active session's current shared
+/// `GroupAddressStyle` (see
 /// [`BusSession::group_address_style`]) — Free, TwoLevel or ThreeLevel,
-/// whichever the project open at session-start time was actually configured
+/// whichever the open project currently configures
 /// with — falling back to [`GroupAddressStyle::ThreeLevel`] only when no
 /// session is active yet, or a session is active but no project was open
 /// when it started.
@@ -807,7 +807,7 @@ async fn write_value(
     // comment.
     let guard = state.bus_session.lock().await;
 
-    // The active session's own cached style (Free/TwoLevel/ThreeLevel), or
+    // The active session's current shared style (Free/TwoLevel/ThreeLevel), or
     // the three-level fallback if no session is active yet or its project
     // snapshot has none — see `WriteRequest`'s doc comment for why this
     // must match what `/telegrams` rendered.

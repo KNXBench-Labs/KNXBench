@@ -74,11 +74,11 @@ describe("api", () => {
   });
 
   it("currentProject gets the current tree from /api/project", async () => {
-    mockFetchOnce({ installations: [] });
+    mockFetchOnce({ installations: [], has_store_path: true });
 
     const tree = await api.currentProject();
 
-    expect(tree).toEqual({ installations: [] });
+    expect(tree).toEqual({ installations: [], has_store_path: true });
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/project");
     expect(init?.method ?? "GET").toBe("GET");

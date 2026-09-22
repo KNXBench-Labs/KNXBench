@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-22 — T12 final review: ghosts leave the upload queue
+
+Upload destinations are published without replacement; duplicate basenames
+within a batch or against existing uploads return 409 and retain the earlier
+bytes. The picker reports the actual completed count and stops at the conflict.
+Cancel, Escape, file selection and session-expiry unmount stop queued uploads;
+reopened pickers wait for the prior in-flight request before sending another.
+The already-running request may still finish on the server.
+
+`GET /api/project` adds `has_store_path` to the existing tree JSON, with project,
+command stack, import counts and save metadata read/published coherently. Native
+open supplies its path; new projects and ETS imports clear it. Save As publishes
+its path while still holding the project lock. Exact-token recovery uses that
+current metadata and announces the current project, avoiding an older load's
+filename/kind. Direct loads keep their filename notice. The earlier T12 summary
+below describes the initial implementation; this correction supersedes its
+recovered-basename wording. Durable evidence: `.ai/logs/2026-09-22_codex__t12_ui_residue_batch_a.md`.
+
 Last updated: 2026-09-14 (T13: product-database schema v10 — `function_type`, `function_point` and `space_usage`, the three tables the master-scope `FT-*`/`FP-*`/`SU-*` translations had been waiting for a join partner to exist; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product

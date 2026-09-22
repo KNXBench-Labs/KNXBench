@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 1 fix round 1 closes reviewer findings: selected canonical row explicitly completes and clears only its matching reveal generation, manual navigation hide clears a pending request, and a device that exists only in building structure falls back to one depth-first building occurrence. Nested topology, building, and group-range regression tests now collapse every ancestor. This fix-round commit is present in this worktree; Task 1 report carries RED/GREEN/full-suite evidence.
+- **Verification:** Focused RED: 2 intended failures/98 pass. GREEN: 100/100 plus TypeScript. Full frontend: 888/888 across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** Controller may integrate this fix-round commit with task 1's two prior commits.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T12 task 1 on `t12-ui-residue`: search picks now issue a monotonic external reveal request while `App` remains the canonical selection owner. The Project Explorer reopens only containing topology, building, group-address, or group-range ancestors; selected rows use nearest scrolling. A duplicated device scrolls only in canonical topology/unassigned placement; ordinary tree clicks preserve manual collapse. Committed as `3c706f3` (`feat(search): branches reluctantly reveal answers`); report: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-1-report.md`.
 - **Verification:** Initial focused RED recorded; focused GREEN: 99/99 tests plus TypeScript. Full frontend: 887/887 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
 - **Pending/Next Steps:** Controller may integrate this isolated task commit; remaining T12 tasks stay independent.

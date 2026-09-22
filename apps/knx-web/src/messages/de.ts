@@ -20,6 +20,7 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.openNativeProject": "Öffnen (.knxdb)…",
   "toolbar.save": "Speichern",
   "toolbar.saveAs": "Speichern unter…",
+  "toolbar.downloadProject": "Projekt herunterladen",
   "toolbar.undo": "Rückgängig",
   "toolbar.redo": "Wiederholen",
   "toolbar.search": "Suchen… (Strg+K)",

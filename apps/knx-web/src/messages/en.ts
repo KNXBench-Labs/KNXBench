@@ -1000,6 +1000,7 @@ export const messages = {
   "loadProgress.importing": "Importing {source}…",
   "loadProgress.opening": "Opening {source}…",
   "loadProgress.succeeded": "Loaded {source}.",
+  "loadProgress.recovered": "Recovered the current project.",
   "loadProgress.failed": "Could not load {source}",
   "loadProgress.failedDuring": "Failed during: {phase}",
   "loadProgress.barLabel": "Load progress",

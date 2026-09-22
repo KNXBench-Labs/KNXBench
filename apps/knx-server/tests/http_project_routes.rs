@@ -172,6 +172,41 @@ fn get(uri: &str) -> Request<Body> {
 }
 
 #[tokio::test]
+async fn current_project_save_metadata_tracks_save_open_and_replacement() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state, None);
+    for (route, body, saved) in [
+        (
+            "/api/project/new",
+            json!({ "name": "First", "force": true }),
+            false,
+        ),
+        (
+            "/api/project/save-as",
+            json!({ "path": "first.knxdb" }),
+            true,
+        ),
+        (
+            "/api/project/new",
+            json!({ "name": "Second", "force": true }),
+            false,
+        ),
+        ("/api/project/open", json!({ "path": "first.knxdb" }), true),
+    ] {
+        let response = app.clone().oneshot(post(route, body)).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{route}");
+        let response = app.clone().oneshot(get("/api/project")).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            body_json(response).await["has_store_path"],
+            saved,
+            "{route}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn current_project_returns_the_live_tree_and_requires_an_open_project() {
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state.clone(), None);
@@ -207,7 +242,9 @@ async fn current_project_returns_the_live_tree_and_requires_an_open_project() {
 
     let response = app.oneshot(get("/api/project")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
-    let tree = body_json(response).await;
+    let snapshot = body_json(response).await;
+    assert_eq!(snapshot["has_store_path"], false);
+    let tree = &snapshot;
     assert_eq!(tree["errors"], 2);
     assert_eq!(tree["warnings"], 3);
     assert_eq!(tree["can_undo"], true);

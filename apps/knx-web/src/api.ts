@@ -83,7 +83,7 @@ export function openProject(path: string, clientToken: string): Promise<ProjectT
   });
 }
 
-export function currentProject(): Promise<ProjectTree> {
+export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {
   return request("/api/project");
 }
 

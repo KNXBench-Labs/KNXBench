@@ -478,7 +478,7 @@ async fn load_progress(State(state): State<SharedState>) -> Json<Option<LoadProg
 
 async fn current_project(
     State(state): State<SharedState>,
-) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+) -> Result<Json<domain::CurrentProject>, ApiError> {
     domain::current_project_tree(&state)
         .map(Json)
         .map_err(ApiError::bad_request)

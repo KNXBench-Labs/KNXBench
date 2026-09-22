@@ -860,6 +860,7 @@ export const messages: Record<MessageKey, string> = {
   "loadProgress.importing": "{source} wird importiert…",
   "loadProgress.opening": "{source} wird geöffnet…",
   "loadProgress.succeeded": "{source} wurde geladen.",
+  "loadProgress.recovered": "Das aktuelle Projekt wurde wiederhergestellt.",
   "loadProgress.failed": "{source} konnte nicht geladen werden",
   "loadProgress.failedDuring": "Fehlgeschlagen bei: {phase}",
   "loadProgress.barLabel": "Ladefortschritt",

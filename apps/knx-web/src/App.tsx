@@ -309,10 +309,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
-  // The editing window is the only place that ever sees a `ProjectTree`
-  // (there is no `GET` route that returns one — a tree only ever arrives as
-  // the response to a mutation, import or open), so it is the only place
-  // that can tell a companion window what the project looks like now.
+  // The editing window owns the displayed `ProjectTree`, including recovery
+  // through GET /api/project, and publishes it to companion windows.
   // Publishing on the `tree` state itself, rather than at each of the
   // half-dozen call sites that set it, means no edit path that *lands in
   // `tree`* can forget to — and a stale fingerprint is exactly the failure
@@ -572,12 +570,12 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Both ways a project enters the application, in one place: the same
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
-  function finishLoadedProject(loadedTree: ProjectTree, path: string, storePath: boolean) {
+  function finishLoadedProject(loadedTree: ProjectTree, path: string | null, storePath: boolean) {
     resetTree(loadedTree);
     setHasStorePath(storePath);
     setLoadSource(null);
     setLoadSnapshot(null);
-    pushFun(t("loadProgress.succeeded", { source: fileNameOf(path) }));
+    pushFun(path === null ? t("loadProgress.recovered") : t("loadProgress.succeeded", { source: fileNameOf(path) }));
   }
 
   async function runLoad(
@@ -611,7 +609,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       if (final?.status === "succeeded"
         && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
         try {
-          finishLoadedProject(await api.currentProject(), path, final.kind === "open");
+          const current = await api.currentProject();
+          finishLoadedProject(current, null, current.has_store_path);
           return;
         } catch (recoveryError) {
           failure = recoveryError;

@@ -115,6 +115,7 @@ function treeWithBuildingTargets(): ProjectTree {
 
 class TestDataTransfer {
   private readonly values = new Map<string, string>();
+  private protectedMode = false;
   dropEffect: DataTransfer["dropEffect"] = "none";
   effectAllowed: DataTransfer["effectAllowed"] = "uninitialized";
 
@@ -127,7 +128,16 @@ class TestDataTransfer {
   }
 
   getData(format: string): string {
+    if (this.protectedMode) return "";
     return this.values.get(format) ?? "";
+  }
+
+  clearData(): void {
+    this.values.clear();
+  }
+
+  setProtectedMode(protectedMode: boolean): void {
+    this.protectedMode = protectedMode;
   }
 }
 
@@ -223,8 +233,10 @@ async function dispatchDrag(
 async function dragAndDrop(source: HTMLElement, target: HTMLElement): Promise<TestDataTransfer> {
   const transfer = new TestDataTransfer();
   await dispatchDrag(source, "dragstart", transfer);
-  await dispatchDrag(target, "dragover", transfer);
-  await dispatchDrag(target, "drop", transfer);
+  transfer.setProtectedMode(true);
+  const dragover = await dispatchDrag(target, "dragover", transfer);
+  transfer.setProtectedMode(false);
+  if (dragover.defaultPrevented) await dispatchDrag(target, "drop", transfer);
   return transfer;
 }
 
@@ -479,12 +491,12 @@ describe("ProjectExplorer structural drag source", () => {
     async (payload) => {
       const { root } = await renderExplorer(baseTree());
       const transfer = new TestDataTransfer();
+      await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
       transfer.setData("application/x-knxbench-device-id", payload);
 
       await dispatchDrag(labelFor("Line 1: Line 1"), "drop", transfer);
 
       expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
-      expect(labelFor("Line 1: Line 1").getAttribute("data-drop-ready")).toBeNull();
       await unmount(root);
     },
   );
@@ -492,12 +504,44 @@ describe("ProjectExplorer structural drag source", () => {
   it("foreign drag MIME never advertises line acceptance", async () => {
     const { root } = await renderExplorer(baseTree());
     const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+    transfer.clearData();
     transfer.setData("text/plain", "1");
 
     const event = await dispatchDrag(labelFor("Line 1: Line 1"), "dragover", transfer);
 
     expect(event.defaultPrevented).toBe(false);
     expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+
+  it("rejects a drop payload that does not match the active device", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+    transfer.setData("application/x-knxbench-device-id", "2");
+
+    await dispatchDrag(labelFor("Line 1: Line 1"), "drop", transfer);
+
+    expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+
+  it("shares drag state across duplicate device renderings and clears it on cancel", async () => {
+    const tree = treeWithBuildingTargets();
+    tree.installations[0].buildings[0].devices = [device(1, "Device A")];
+    const { root } = await renderExplorer(tree);
+    const labels = Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
+      .filter((label) => label.textContent === "Device A");
+    expect(labels).toHaveLength(2);
+    const transfer = new TestDataTransfer();
+
+    await dispatchDrag(labels[1], "dragstart", transfer);
+    expect(labels.every((label) => label.getAttribute("data-dragging") === "true")).toBe(true);
+
+    await dispatchDrag(labels[1], "dragend", transfer);
+    expect(labels.every((label) => label.getAttribute("data-dragging") === null)).toBe(true);
+    expect(labelFor("Line 1: Line 1").getAttribute("data-drop-ready")).toBeNull();
     await unmount(root);
   });
 });
@@ -514,6 +558,8 @@ describe("ProjectExplorer line drop", () => {
     expect(apiMock.moveDeviceToLine).toHaveBeenCalledWith(1, 1);
     expect(onTreeUpdate).toHaveBeenCalledWith(nextTree);
     expect(onSummary).toHaveBeenCalledWith("Device A moved to line Line 1: Line 1.");
+    expect(labelFor("Device A").getAttribute("data-dragging")).toBeNull();
+    expect(labelFor("Line 1: Line 1").getAttribute("data-drop-ready")).toBeNull();
     await unmount(root);
   });
 

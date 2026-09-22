@@ -1,5 +1,13 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** User reconfirmed that comparable design/specification/implementation plans are permanently approved; never stop to request plan approval. T11 plan is committed and pushed at `9723316`; isolated branch/worktree `t11-structural-drag-drop` is active and Task 1 source-drag TDD is partially implemented.
+- **Pending/Next Steps:** Continue Task 1 in `.worktrees/t11-structural-drag-drop`: finish source eligibility/payload wiring, make focused source tests green, then write RED line-drop tests before implementing validated device→line drops. Commit/push each completed block.
+- **Notes Claude:** User authorizes Codex to choose inline versus subagent execution. Pause after the running task if weekly usage reaches 60%; last read-only app-server report was 33%. KNX specification questions use only the configured KNX v3.0.0 PDFs.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T11 written spec approved by user. Detailed implementation plan written at `docs/superpowers/plans/2026-09-22-structural-drag-drop.md`: Task 1 device→line, Task 2 device→building part, Task 3 toast/keyboard/theme integration, Task 4 docs/full gates/review/merge. Plan self-review corrected first-installation eligibility to include line and unassigned devices and specified the happy-dom DataTransfer fake. Native inline execution is recommended because the gestures share one local event contract; fresh whole-branch review remains mandatory.
 - **Verification:** Plan self-review covered every spec section, found no placeholder, reconciled all produced/consumed types, and added each likely failure class to Review Focus with an owning test. `git diff --check` and `cargo run -q -p xtask -- check-anchors` passed (389 links, 186 Markdown files). Product code remains untouched. Local Codex app-server read-only `account/rateLimits/read` reported weekly `codex` usage 33%, ordinary usage allowed, reset 2026-09-28 19:08:52 CEST; no reset credit consumed.
 - **Pending/Next Steps:** Commit/push the self-reviewed implementation plan, then obtain its required user approval. After approval create isolated T11 worktree and execute natively under `superpowers:executing-plans`, TDD, per-task commit/push, final fresh review, merged-result gates. Pause after a running task if weekly usage reaches 60%.

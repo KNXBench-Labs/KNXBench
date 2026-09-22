@@ -1,5 +1,5 @@
 /** Navigation tree for the project's installations, buildings, devices, and group addresses. */
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
@@ -57,6 +57,8 @@ function buildingPartKindLabel(t: Translate, kind: string): string {
   return key ? t(key) : kind;
 }
 
+const RevealCompletionContext = createContext<((generation: number) => void) | undefined>(undefined);
+
 function TreeNode(props: {
   label: string;
   children?: React.ReactNode;
@@ -74,14 +76,16 @@ function TreeNode(props: {
 }) {
   const [open, setOpen] = useState(true);
   const labelRef = useRef<HTMLButtonElement>(null);
+  const onRevealComplete = useContext(RevealCompletionContext);
   useEffect(() => {
     if (props.revealGeneration !== undefined) setOpen(true);
   }, [props.revealGeneration]);
   useEffect(() => {
     if (props.scrollOnReveal && props.revealGeneration !== undefined) {
       labelRef.current?.scrollIntoView({ block: "nearest" });
+      onRevealComplete?.(props.revealGeneration);
     }
-  }, [props.revealGeneration, props.scrollOnReveal]);
+  }, [onRevealComplete, props.revealGeneration, props.scrollOnReveal]);
   const hasChildren = props.children !== undefined;
   const labelClasses = ["tree-label"];
   if (props.selected) labelClasses.push("selected");
@@ -159,9 +163,30 @@ function areaContainsSelection(area: AreaNode, request: RevealRequest | null | u
   return selectionIs(request, "area", area.id) || area.lines.some((line) => lineContainsSelection(line, request));
 }
 
-function buildingContainsSelection(building: BuildingNode, request: RevealRequest | null | undefined): boolean {
+type BuildingDeviceRevealTarget = { buildingId: number; deviceId: number };
+
+function findBuildingDevice(
+  buildings: BuildingNode[],
+  deviceId: number,
+): BuildingDeviceRevealTarget | undefined {
+  for (const building of buildings) {
+    if (building.devices.some((device) => device.id === deviceId)) {
+      return { buildingId: building.id, deviceId };
+    }
+    const found = findBuildingDevice(building.children, deviceId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function buildingContainsSelection(
+  building: BuildingNode,
+  request: RevealRequest | null | undefined,
+  deviceTarget?: BuildingDeviceRevealTarget,
+): boolean {
   return selectionIs(request, "building_part", building.id)
-    || building.children.some((child) => buildingContainsSelection(child, request));
+    || deviceTarget?.buildingId === building.id
+    || building.children.some((child) => buildingContainsSelection(child, request, deviceTarget));
 }
 
 function groupRangeContainsSelection(
@@ -687,11 +712,16 @@ function BuildingItem(
     building: BuildingNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
+    buildingDeviceRevealTarget?: BuildingDeviceRevealTarget;
   } & SelectionProps & DeviceDragProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
   const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
-  const buildingReveals = buildingContainsSelection(building, props.revealRequest);
+  const buildingReveals = buildingContainsSelection(
+    building,
+    props.revealRequest,
+    props.buildingDeviceRevealTarget,
+  );
   return (
     <TreeNode
       label={t("explorer.buildingLabel", { name: building.name, kind: buildingPartKindLabel(t, building.kind) })}
@@ -730,6 +760,7 @@ function BuildingItem(
           onDeviceDragEnd={props.onDeviceDragEnd}
           onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
           revealRequest={props.revealRequest}
+          buildingDeviceRevealTarget={props.buildingDeviceRevealTarget}
         />
       ))}
       {building.devices.map((d) => (
@@ -744,8 +775,15 @@ function BuildingItem(
           dragSource={props.dragSource}
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
-          // Device search deliberately ignores this duplicate occurrence;
-          // its topology or unassigned row owns the single reveal scroll.
+          // Topology/unassigned owns duplicates. A building-only device gets
+          // exactly its depth-first first building occurrence as fallback.
+          revealGeneration={revealGeneration(
+            props.revealRequest,
+            props.buildingDeviceRevealTarget?.buildingId === building.id
+              && props.buildingDeviceRevealTarget.deviceId === d.id,
+          )}
+          scrollOnReveal={props.buildingDeviceRevealTarget?.buildingId === building.id
+            && props.buildingDeviceRevealTarget.deviceId === d.id}
         />
       ))}
       {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
@@ -815,9 +853,18 @@ function InstallationItem(
   const t = useTranslate();
   const requestedSelection = props.revealRequest?.selection;
   const topologyReveals = installation.topology.some((area) => areaContainsSelection(area, props.revealRequest));
-  const buildingsReveal = installation.buildings.some((building) => buildingContainsSelection(building, props.revealRequest));
   const unassignedReveal = requestedSelection?.kind === "device"
     && installation.unassigned.some((device) => device.id === requestedSelection.id);
+  const buildingDeviceRevealTarget = requestedSelection?.kind === "device"
+    && !topologyReveals
+    && !unassignedReveal
+    ? findBuildingDevice(installation.buildings, requestedSelection.id)
+    : undefined;
+  const buildingsReveal = installation.buildings.some((building) => buildingContainsSelection(
+    building,
+    props.revealRequest,
+    buildingDeviceRevealTarget,
+  ));
   const groupAddressesReveal = requestedSelection?.kind === "group_address"
     && installation.group_addresses.some((address) => address.id === requestedSelection.id);
   const groupRangesReveal = requestedSelection?.kind === "group_range"
@@ -865,6 +912,7 @@ function InstallationItem(
             onDeviceDragEnd={props.onDeviceDragEnd}
             onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
             revealRequest={props.revealRequest}
+            buildingDeviceRevealTarget={buildingDeviceRevealTarget}
           />
         ))}
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
@@ -933,6 +981,7 @@ export default function ProjectExplorer(
     onTreeUpdate: (tree: ProjectTree) => void;
     onSummary: (message: string) => void;
     onError: (error: unknown) => void;
+    onRevealComplete?: (generation: number) => void;
   } & SelectionProps & { revealRequest?: RevealRequest | null },
 ) {
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
@@ -1017,6 +1066,7 @@ export default function ProjectExplorer(
   }
 
   return (
+    <RevealCompletionContext.Provider value={props.onRevealComplete}>
     <div className="project-explorer" onKeyDown={(e) => {
       if (!(e.target instanceof HTMLButtonElement) || !e.target.matches(".tree-label, .tree-toggle")) return;
       const current = e.target;
@@ -1080,5 +1130,6 @@ export default function ProjectExplorer(
         </footer>
       )}
     </div>
+    </RevealCompletionContext.Provider>
   );
 }

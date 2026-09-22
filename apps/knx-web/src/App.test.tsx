@@ -490,7 +490,24 @@ describe("App — search reveal request", () => {
     await act(async () => treeLabel("Project").click());
     expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
 
+    // The request has completed at the selected row, so remounting the
+    // navigator starts at its ordinary default-open state but cannot replay
+    // the old scroll. (The row being present alone is not evidence here.)
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    await act(async () => findButton("Navigation").click());
+    expect(host!.querySelector(".project-explorer")).toBeNull();
+    await act(async () => findButton("Navigation").click());
+    expect(treeLabel("Device D")).toBeTruthy();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
     await act(async () => root.unmount());
+    if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+    else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 });
 

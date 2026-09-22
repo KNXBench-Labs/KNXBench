@@ -132,6 +132,18 @@ function treeWithRevealTargets(): ProjectTree {
   return tree;
 }
 
+function treeWithBuildingOnlyDevice(): ProjectTree {
+  const tree = baseTree();
+  tree.installations[0].buildings = [{
+    ...building(501, "Building A", "Building"),
+    children: [{
+      ...building(502, "Floor A", "Floor"),
+      devices: [device(5, "Building-only device")],
+    }],
+  }];
+  return tree;
+}
+
 class TestDataTransfer {
   private readonly values = new Map<string, string>();
   private protectedMode = false;
@@ -522,6 +534,8 @@ describe("ProjectExplorer — external selection reveal", () => {
     try {
       const { root, rerender } = await renderExplorer(tree, vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
 
+      await click(toggleFor("Line 1: Line 1"));
+      await click(toggleFor("Area 1: Area 1"));
       await click(toggleFor("Topology"));
       expect(treeLabelCount("1.1.1 Device A")).toBe(1);
 
@@ -531,6 +545,8 @@ describe("ProjectExplorer — external selection reveal", () => {
       expect(scrollIntoView).toHaveBeenCalledOnce();
       expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
 
+      await click(toggleFor("Line 1: Line 1"));
+      await click(toggleFor("Area 1: Area 1"));
       await click(toggleFor("Topology"));
       expect(treeLabelCount("1.1.1 Device A")).toBe(1);
 
@@ -550,6 +566,7 @@ describe("ProjectExplorer — external selection reveal", () => {
     const request = { selection: { kind: "building_part", id: 502 } satisfies Selection, generation: 1 };
     const { root, rerender } = await renderExplorer(treeWithRevealTargets(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
 
+    await click(toggleFor("Building A (Building)"));
     await click(toggleFor("Buildings"));
     expect(hasTreeLabel("Floor A (Floor)")).toBe(false);
 
@@ -563,6 +580,7 @@ describe("ProjectExplorer — external selection reveal", () => {
     const request = { selection: { kind: "group_range", id: 702 } satisfies Selection, generation: 1 };
     const { root, rerender } = await renderExplorer(treeWithRevealTargets(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), request);
 
+    await click(toggleFor("1/0/0–1/7/255 Main range"));
     await click(toggleFor("Group Ranges"));
     expect(hasTreeLabel("1/1/0–1/1/255 Middle range")).toBe(false);
 
@@ -570,6 +588,35 @@ describe("ProjectExplorer — external selection reveal", () => {
     expect(hasTreeLabel("1/1/0–1/1/255 Middle range")).toBe(true);
 
     await unmount(root);
+  });
+
+  it("uses one building occurrence when a device has no topology or unassigned occurrence", async () => {
+    const request = { selection: { kind: "device", id: 5 } satisfies Selection, generation: 1 };
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const { root, rerender } = await renderExplorer(
+        treeWithBuildingOnlyDevice(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), request,
+      );
+      await click(toggleFor("Building A (Building)"));
+      await click(toggleFor("Buildings"));
+      expect(hasTreeLabel("Building-only device")).toBe(false);
+
+      scrollIntoView.mockClear();
+      await rerender({ ...request, generation: 2 });
+      expect(treeLabelCount("Building-only device")).toBe(1);
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+
+      await unmount(root);
+    } finally {
+      if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 });
 

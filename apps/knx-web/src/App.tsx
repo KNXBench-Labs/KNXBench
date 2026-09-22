@@ -451,6 +451,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     void selectEntity(sel);
   }
 
+  function completeSearchReveal(generation: number): void {
+    setRevealRequest((request) => request?.generation === generation ? null : request);
+  }
+
+  function toggleNavigation(): void {
+    if (navigationOpen) setRevealRequest(null);
+    setNavigationOpen((open) => !open);
+  }
+
   // After any command/undo/redo: the tree refreshes unconditionally (an
   // address edit changes its label), and — if a device is currently
   // selected — its detail refreshes alongside it (its own fields, or
@@ -808,7 +817,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
-        <button aria-expanded={navigationOpen} onClick={() => setNavigationOpen(!navigationOpen)}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
+        <button aria-expanded={navigationOpen} onClick={toggleNavigation}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
         {tree && multiSelection && multiSelection.ids.size > 0 && (
           <BulkActionToolbar
             multiSelection={multiSelection}
@@ -832,7 +841,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} />}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>

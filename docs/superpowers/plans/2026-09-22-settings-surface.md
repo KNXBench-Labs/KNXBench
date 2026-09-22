@@ -51,7 +51,7 @@
 - `SettingsDto` replaces `notice` with optional `diagnostic` and optional English `message`.
 - `LogEntry` gains `diagnostic: Option<SettingsDiagnostic>`; unrelated records use `None`.
 
-- [ ] **Step 1: Write failing HTTP contract tests**
+- [x] **Step 1: Write failing HTTP contract tests**
 
   Exercise migration, adoption, refusal, and all five quarantine inputs through real routes. Assert exact diagnostic fields, an English fallback `message`, and no `notice`.
 
@@ -62,7 +62,7 @@
   assert!(body.get("notice").is_none());
   ```
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   CARGO_TARGET_DIR=/tmp/knxbench-t10-target cargo test -p knx-server --test http_settings --no-fail-fast
@@ -70,11 +70,11 @@
 
   Expected: FAIL because `notice` is still the only diagnostic field.
 
-- [ ] **Step 3: Type quarantine causes without losing details**
+- [x] **Step 3: Type quarantine causes without losing details**
 
   Change `SettingsLoad::Quarantined` to carry `reason`, `detail: String`, and `moved_to`. Pass stable reason codes through `quarantine` while retaining today's dynamic OS error in `detail`. Keep collision-safe rename behavior unchanged.
 
-- [ ] **Step 4: Define the transport diagnostic**
+- [x] **Step 4: Define the transport diagnostic**
 
   Define the following in `session_log.rs`, plus a five-variant `SettingsQuarantineReasonDto`:
 
@@ -89,15 +89,15 @@
   }
   ```
 
-- [ ] **Step 5: Replace `notice` with typed fields**
+- [x] **Step 5: Replace `notice` with typed fields**
 
   Build `diagnostic` directly from `SettingsLoad`, and build `message` from the same outcome plus retained `detail`. Successful browser adoption emits `Adopted { from_version: 0, to_version: 1 }`, never `Migrated`.
 
-- [ ] **Step 6: Carry diagnostics through the log**
+- [x] **Step 6: Carry diagnostics through the log**
 
   Add the optional field to `LogEntry`. Settings records receive `Some`; every unrelated literal in `session_log.rs`, `domain.rs`, and `http_debug_report.rs` receives `None`. Extend `http_log_route.rs` to prove `/api/log` returns both diagnostic and fallback message.
 
-- [ ] **Step 7: Verify the server slice**
+- [x] **Step 7: Verify the server slice**
 
   ```bash
   CARGO_TARGET_DIR=/tmp/knxbench-t10-target cargo test -p knx-server --test http_settings --test http_log_route --test http_debug_report --no-fail-fast
@@ -106,7 +106,7 @@
 
   Expected: PASS; all outcomes remain distinct, unreadable detail survives, and unrelated log constructors compile.
 
-- [ ] **Step 8: Commit the contract**
+- [x] **Step 8: Commit the contract**
 
   ```bash
   git add apps/knx-server/src/settings.rs apps/knx-server/src/settings_routes.rs apps/knx-server/src/session_log.rs apps/knx-server/src/domain.rs apps/knx-server/tests/http_settings.rs apps/knx-server/tests/http_log_route.rs apps/knx-server/tests/http_debug_report.rs

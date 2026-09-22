@@ -257,6 +257,7 @@ async fn an_address_that_reached_the_session_log_does_not_reach_the_bundle() {
             source: "bus".into(),
             message: "tunnel to 203.0.113.4 refused".into(),
             location: None,
+            diagnostic: None,
             detail: Some("peer fe80::1234 gave up".into()),
         });
     }

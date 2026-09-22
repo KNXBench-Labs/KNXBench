@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 2 fix round 1 closes review findings in `FsPicker`: an immediate `uploadingRef` serializes input/drop batches across the first async boundary while the picker disables its input, directory listing refresh happens exactly once after a successful batch and once at most for a partial batch, and foreign dragover/drop clears file-ready feedback. Existing protected-mode behavior, one-file sequential POSTs, singular picker resolution, and partial-failure honesty are retained. Evidence appended to `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-2-report.md`.
+- **Verification:** RED: 4 intended failures/4 pass. GREEN: 31/31 picker, motion, and i18n tests plus TypeScript. Full frontend: 892/892 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** Controller may integrate the Task 2 fix-round commit with Task 2 and the remaining independent T12 work.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T12 task 2 closes `KNOWN_LIMITATIONS.md` §24 on `t12-ui-residue`: browser `FsPicker` supports native `Files` drag/drop and multi-file local uploads through the existing one-file `/api/fs/upload` endpoint, sequentially. Protected-mode dragover reads only `DataTransfer.types`, accepted drops advertise `copy`, successful batches refresh `uploads` and announce a localized count, while a first failure stops the batch and names the file/error plus completed count without a false success notice. The public picker result remains `Promise<string | null>` and never auto-selects an uploaded project. Detailed evidence: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-2-report.md`.
 - **Verification:** RED recorded 3 intended failures/4 passes. GREEN: 30/30 across picker, motion, and i18n tests plus TypeScript. Full frontend: 891/891 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
 - **Pending/Next Steps:** Controller may integrate the focused Task 2 commit with the remaining independent T12 tasks.

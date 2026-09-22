@@ -83,3 +83,63 @@ Duration  3.85s
 None found in the scoped review. The UI deliberately does not add a multipart
 batch endpoint or infer which uploaded project should open; both would widen
 the established singular-selection contract.
+
+## Fix round 1 — review findings
+
+### Root cause and RED
+
+The review correctly traced three independent symptoms to one local event
+flow: fire-and-forget input/drop handlers had no synchronous batch ownership
+guard; the per-file loop advanced `refreshKey`; and the foreign-data type
+guards returned before clearing `dropReady`.
+
+Before changing production code, the expanded picker test ran:
+
+```text
+cd apps/knx-web && npx vitest run src/FsPicker.test.tsx
+
+❯ src/FsPicker.test.tsx (8 tests | 4 failed) 58ms
+× uploads each selected local file sequentially, then shows the uploaded directory without selecting one
+× does not start a second input or drop batch while an upload is in flight
+× accepts only file drags in protected mode and consumes their files only at drop
+× reports a failed filename without claiming a partially uploaded batch succeeded
+
+Test Files  1 failed (1)
+     Tests  4 failed | 4 passed (8)
+```
+
+The exact observable failures were: an `uploads` listing began after the first
+success (`expected 0, got 1`), a second batch sent a second POST while the
+first awaited (`expected 1, got 2`), a foreign drag retained
+`data-drop-ready="true"`, and a two-success partial batch made two uploads
+listing requests where the regression requires one.
+
+### GREEN and full gate
+
+`uploadingRef` now takes immediate ownership before the first await; the input
+is disabled while its batch is active. The loop sets directory/refresh once
+after complete success, or once after a partial failure with prior successes.
+Foreign dragover and every drop clear readiness before their type guard.
+
+```text
+cd apps/knx-web && npx vitest run src/FsPicker.test.tsx src/motionGuard.test.ts src/i18n.test.tsx && npx tsc --noEmit
+
+Test Files  3 passed (3)
+     Tests  31 passed (31)
+Duration  450ms
+```
+
+`npx tsc --noEmit` exited 0 with no output.
+
+```text
+cd apps/knx-web && npm test
+
+Test Files  63 passed (63)
+     Tests  892 passed (892)
+Duration  3.75s
+```
+
+`git diff --check` exited 0. Self-review confirms the ref is checked before
+any asynchronous boundary, batches remain sequential one-file requests,
+partial success has no success status, and ready-state feedback remains
+token-only and motion-free.

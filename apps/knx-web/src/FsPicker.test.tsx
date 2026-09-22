@@ -127,13 +127,17 @@ function fileDragTransfer(files: File[], protectedMode = false): DataTransfer {
 
 it("uploads each selected local file sequentially, then shows the uploaded directory without selecting one", async () => {
   let finishFirstUpload!: () => void;
+  let finishSecondUpload!: () => void;
   const firstUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
     finishFirstUpload = () => resolve({ ok: true, json: async () => ({ path: "uploads/first.knxproj" }) });
+  });
+  const secondUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
+    finishSecondUpload = () => resolve({ ok: true, json: async () => ({ path: "uploads/second.knxproj" }) });
   });
   const fetchMock = vi.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => [] })
     .mockImplementationOnce(() => firstUpload)
-    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/second.knxproj" }) })
+    .mockImplementationOnce(() => secondUpload)
     .mockResolvedValue({ ok: true, json: async () => [
       { name: "first.knxproj", is_dir: false },
       { name: "second.knxproj", is_dir: false },
@@ -167,11 +171,54 @@ it("uploads each selected local file sequentially, then shows the uploaded direc
   const uploads = fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload");
   expect(uploads).toHaveLength(2);
   expect(uploads.map(([, init]) => (init as RequestInit).method)).toEqual(["POST", "POST"]);
-  expect(fetchMock.mock.calls.some(([url]) => url === "/api/fs/list?path=uploads")).toBe(true);
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/list?path=uploads")).toHaveLength(0);
+  await act(async () => {
+    finishSecondUpload();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/list?path=uploads")).toHaveLength(1);
   expect(document.querySelector('[role="status"]')?.textContent).toBe("Uploaded 2 files. Choose one to open.");
   expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   expect(await result).toBeNull();
+  vi.unstubAllGlobals();
+});
+
+it("does not start a second input or drop batch while an upload is in flight", async () => {
+  let finishFirstUpload!: () => void;
+  const firstUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
+    finishFirstUpload = () => resolve({ ok: true, json: async () => ({ path: "uploads/first.knxproj" }) });
+  });
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockImplementationOnce(() => firstUpload)
+    .mockResolvedValue({ ok: true, json: async () => [] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await act(async () => { openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["first"], "first.knxproj")],
+  });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+  });
+  const label = document.querySelector<HTMLElement>(".fs-picker-upload")!;
+  const secondBatch = Object.assign(new Event("drop", { bubbles: true, cancelable: true }), {
+    dataTransfer: fileDragTransfer([new File(["second"], "second.knxproj")]),
+  });
+  await act(async () => label.dispatchEvent(secondBatch));
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(1);
+
+  await act(async () => {
+    finishFirstUpload();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(1);
   vi.unstubAllGlobals();
 });
 
@@ -196,8 +243,17 @@ it("accepts only file drags in protected mode and consumes their files only at d
   });
   await act(async () => label.dispatchEvent(rejection));
   expect(rejection.defaultPrevented).toBe(false);
-  expect(label.dataset.dropReady).toBe("true");
+  expect(label.dataset.dropReady).toBeUndefined();
   await act(async () => label.dispatchEvent(new Event("dragleave", { bubbles: true })));
+  expect(label.dataset.dropReady).toBeUndefined();
+
+  await act(async () => label.dispatchEvent(dragOver));
+  expect(label.dataset.dropReady).toBe("true");
+  const foreignDrop = Object.assign(new Event("drop", { bubbles: true, cancelable: true }), {
+    dataTransfer: { types: ["text/plain"], dropEffect: "none" } as unknown as DataTransfer,
+  });
+  await act(async () => label.dispatchEvent(foreignDrop));
+  expect(foreignDrop.defaultPrevented).toBe(false);
   expect(label.dataset.dropReady).toBeUndefined();
 
   const dropped = new File(["dropped"], "dropped.knxproj");
@@ -216,9 +272,14 @@ it("accepts only file drags in protected mode and consumes their files only at d
 });
 
 it("reports a failed filename without claiming a partially uploaded batch succeeded", async () => {
+  let finishSecondUpload!: () => void;
+  const secondUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
+    finishSecondUpload = () => resolve({ ok: true, json: async () => ({ path: "uploads/also-kept.knxproj" }) });
+  });
   const fetchMock = vi.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => [] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/kept.knxproj" }) })
+    .mockImplementationOnce(() => secondUpload)
     .mockResolvedValueOnce({ ok: false, status: 422, statusText: "Unprocessable", json: async () => ({ error: "not a project" }) })
     .mockResolvedValue({ ok: true, json: async () => [{ name: "kept.knxproj", is_dir: false }] });
   vi.stubGlobal("fetch", fetchMock);
@@ -227,14 +288,27 @@ it("reports a failed filename without claiming a partially uploaded batch succee
   const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
   Object.defineProperty(input, "files", {
     configurable: true,
-    value: [new File(["kept"], "kept.knxproj"), new File(["bad"], "bad.txt")],
+    value: [
+      new File(["kept"], "kept.knxproj"),
+      new File(["also-kept"], "also-kept.knxproj"),
+      new File(["bad"], "bad.txt"),
+    ],
   });
-  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+  });
+  await act(async () => {
+    finishSecondUpload();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
-  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(2);
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(3);
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/list?path=uploads")).toHaveLength(1);
   expect(document.querySelector('[role="status"]')).toBeNull();
   expect(document.querySelector(".field-error")?.textContent).toContain("bad.txt");
-  expect(document.querySelector(".field-error")?.textContent).toContain("1 of 2");
+  expect(document.querySelector(".field-error")?.textContent).toContain("2 of 3");
   await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   vi.unstubAllGlobals();
 });

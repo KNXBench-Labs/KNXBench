@@ -3,7 +3,7 @@
 //! build (no native OS picker in a browser). Mounted imperatively by
 //! filePicker.ts's openMountPicker/saveMountPicker so callers can
 //! `await` it exactly like @tauri-apps/plugin-dialog's open()/save().
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { noteRefusal } from "./api";
 import { useTranslate } from "./i18n";
@@ -72,6 +72,8 @@ function Modal(props: {
   const [status, setStatus] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [dropReady, setDropReady] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
 
   useEffect(() => {
     listDir(dir)
@@ -80,29 +82,38 @@ function Modal(props: {
   }, [dir, refreshKey]);
 
   async function uploadFiles(files: readonly File[]): Promise<void> {
-    if (files.length === 0) return;
+    if (files.length === 0 || uploadingRef.current) return;
+    uploadingRef.current = true;
+    setUploading(true);
     setError(null);
     setStatus(null);
     let uploaded = 0;
 
-    for (const file of files) {
-      try {
+    try {
+      for (const file of files) {
         await uploadFile(file);
         uploaded += 1;
+      }
+
+      setDir("uploads");
+      setRefreshKey((key) => key + 1);
+      setStatus(t("fsPicker.uploaded", { count: uploaded }));
+    } catch (err) {
+      if (uploaded > 0) {
         setDir("uploads");
         setRefreshKey((key) => key + 1);
-      } catch (err) {
-        setError(t("fsPicker.uploadFailed", {
-          uploaded,
-          count: files.length,
-          file: file.name,
-          error: err instanceof Error ? err.message : String(err),
-        }));
-        return;
       }
+      const failedFile = files[uploaded];
+      setError(t("fsPicker.uploadFailed", {
+        uploaded,
+        count: files.length,
+        file: failedFile?.name ?? "",
+        error: err instanceof Error ? err.message : String(err),
+      }));
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
     }
-
-    setStatus(t("fsPicker.uploaded", { count: uploaded }));
   }
 
   return (
@@ -139,16 +150,25 @@ function Modal(props: {
               className="fs-picker-upload"
               data-drop-ready={dropReady ? "true" : undefined}
               onDragOver={(event) => {
-                if (!hasDroppedFiles(event.dataTransfer)) return;
+                if (!hasDroppedFiles(event.dataTransfer)) {
+                  setDropReady(false);
+                  return;
+                }
                 event.preventDefault();
+                if (uploadingRef.current) {
+                  event.dataTransfer.dropEffect = "none";
+                  setDropReady(false);
+                  return;
+                }
                 event.dataTransfer.dropEffect = "copy";
                 setDropReady(true);
               }}
               onDragLeave={() => setDropReady(false)}
               onDrop={(event) => {
+                setDropReady(false);
                 if (!hasDroppedFiles(event.dataTransfer)) return;
                 event.preventDefault();
-                setDropReady(false);
+                if (uploadingRef.current) return;
                 void uploadFiles(Array.from(event.dataTransfer.files));
               }}
             >
@@ -157,6 +177,7 @@ function Modal(props: {
                 type="file"
                 className="fs-picker-upload-input"
                 multiple
+                disabled={uploading}
                 onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))}
               />
             </label>

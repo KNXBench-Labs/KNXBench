@@ -74,11 +74,19 @@ function Modal(props: {
   const [dropReady, setDropReady] = useState(false);
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
+  const listingGenerationRef = useRef(0);
 
   useEffect(() => {
+    const generation = ++listingGenerationRef.current;
+    let current = true;
     listDir(dir)
-      .then(setEntries)
-      .catch((e) => setError(String(e)));
+      .then((nextEntries) => {
+        if (current && generation === listingGenerationRef.current) setEntries(nextEntries);
+      })
+      .catch((e) => {
+        if (current && generation === listingGenerationRef.current) setError(String(e));
+      });
+    return () => { current = false; };
   }, [dir, refreshKey]);
 
   async function uploadFiles(files: readonly File[]): Promise<void> {

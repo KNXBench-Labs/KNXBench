@@ -185,6 +185,79 @@ it("uploads each selected local file sequentially, then shows the uploaded direc
   vi.unstubAllGlobals();
 });
 
+it("keeps the newer uploads listing when the original root response arrives late", async () => {
+  let finishRootListing!: () => void;
+  const rootListing = new Promise<{ ok: boolean; json: () => Promise<{ name: string; is_dir: boolean }[]> }>((resolve) => {
+    finishRootListing = () => resolve({ ok: true, json: async () => [{ name: "stale-root.knxproj", is_dir: false }] });
+  });
+  const fetchMock = vi.fn()
+    .mockImplementationOnce(() => rootListing)
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/fresh.knxproj" }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => [{ name: "fresh.knxproj", is_dir: false }] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await act(async () => { openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["fresh"], "fresh.knxproj")],
+  });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(document.querySelector(".fs-picker-list")?.textContent).toContain("fresh.knxproj");
+  await act(async () => {
+    finishRootListing();
+    await Promise.resolve();
+  });
+  expect(document.querySelector(".fs-picker-list")?.textContent).toContain("fresh.knxproj");
+  expect(document.querySelector(".fs-picker-list")?.textContent).not.toContain("stale-root.knxproj");
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});
+
+it("ignores an older rejected listing after a newer uploads listing succeeds", async () => {
+  let rejectRootListing!: () => void;
+  const rootListing = new Promise<{ ok: boolean; status: number; statusText: string; json: () => Promise<{ error: string }> }>((resolve) => {
+    rejectRootListing = () => resolve({
+      ok: false,
+      status: 403,
+      statusText: "Forbidden",
+      json: async () => ({ error: "stale root refusal" }),
+    });
+  });
+  const fetchMock = vi.fn()
+    .mockImplementationOnce(() => rootListing)
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/fresh.knxproj" }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => [{ name: "fresh.knxproj", is_dir: false }] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await act(async () => { openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["fresh"], "fresh.knxproj")],
+  });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  expect(document.querySelector(".fs-picker-list")?.textContent).toContain("fresh.knxproj");
+  await act(async () => {
+    rejectRootListing();
+    await Promise.resolve();
+  });
+  expect(document.querySelector(".fs-picker-list")?.textContent).toContain("fresh.knxproj");
+  expect(document.querySelector(".field-error")).toBeNull();
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});
+
 it("does not start a second input or drop batch while an upload is in flight", async () => {
   let finishFirstUpload!: () => void;
   const firstUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
@@ -219,6 +292,7 @@ it("does not start a second input or drop batch while an upload is in flight", a
     await Promise.resolve();
   });
   expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(1);
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   vi.unstubAllGlobals();
 });
 

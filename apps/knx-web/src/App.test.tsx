@@ -33,6 +33,7 @@ const apiMock = vi.hoisted(() => ({
   // this through `NewProjectDialog`; every other test here renders that
   // dialog not at all, so an unconfigured `vi.fn()` is enough for them.
   newProject: vi.fn(),
+  saveProject: vi.fn().mockResolvedValue(undefined),
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
@@ -1215,6 +1216,7 @@ describe("App — a failed load never renders a running banner", () => {
     expect(banner.getAttribute("data-failed")).toBe("true");
     expect(banner.querySelector('[role="progressbar"]')).toBeNull();
     expect(banner.querySelector('[data-indeterminate="true"]')).toBeNull();
+    expect(host!.querySelector('.toast--fun[role="status"]')).toBeNull();
     expect(banner.textContent).toContain("Could not load villa.knxproj");
     for (const phrase of foreignPhrases) {
       expect(banner.textContent, `banner must not borrow "${phrase}"`).not.toContain(phrase);
@@ -1313,6 +1315,29 @@ describe("App — a failed load never renders a running banner", () => {
     const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
     expect(toasts).toHaveLength(1);
     expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Loaded villa.knxproj.");
+    await act(async () => root.unmount());
+  });
+
+  it("recovers an owned successful native open with its stored path intact (§96)", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxdb");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 2, kind: "open", source: "villa.knxdb", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    apiMock.currentProject.mockResolvedValue(treeWithDevice());
+    apiMock.openProject.mockRejectedValueOnce(new Error("connection closed"));
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 

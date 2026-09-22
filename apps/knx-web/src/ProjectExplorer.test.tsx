@@ -106,6 +106,13 @@ function treeWithSecondInstallation(): ProjectTree {
   return tree;
 }
 
+function treeWithBuildingTargets(): ProjectTree {
+  const tree = treeWithSecondInstallation();
+  tree.installations[0].buildings = [building(501, "Room A", "Room")];
+  tree.installations[1].buildings = [building(601, "Other room", "Room")];
+  return tree;
+}
+
 class TestDataTransfer {
   private readonly values = new Map<string, string>();
   dropEffect: DataTransfer["dropEffect"] = "none";
@@ -565,6 +572,51 @@ describe("ProjectExplorer line drop", () => {
     expect(onTreeUpdate).not.toHaveBeenCalled();
     expect(onSummary).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer building-part drop", () => {
+  it("moves a current first-installation device through the building-part command", async () => {
+    const nextTree = treeWithBuildingTargets();
+    nextTree.installations[0].buildings[0].devices = [device(1, "Device A")];
+    apiMock.moveDeviceToBuildingPart.mockResolvedValueOnce(nextTree);
+    const { root, onTreeUpdate, onSummary } = await renderExplorer(treeWithBuildingTargets());
+
+    await dragAndDrop(labelFor("Device A"), labelFor("Room A (Room)"));
+
+    expect(apiMock.moveDeviceToBuildingPart).toHaveBeenCalledWith(1, 501);
+    expect(onTreeUpdate).toHaveBeenCalledWith(nextTree);
+    expect(onSummary).toHaveBeenCalledWith("Device A moved to Room A.");
+    await unmount(root);
+  });
+
+  it("reports a rejected building-part drop without mutating the projection", async () => {
+    const error = new Error("building move refused");
+    apiMock.moveDeviceToBuildingPart.mockRejectedValueOnce(error);
+    const { root, onTreeUpdate, onSummary, onError } =
+      await renderExplorer(treeWithBuildingTargets());
+
+    await dragAndDrop(labelFor("Device A"), labelFor("Room A (Room)"));
+
+    expect(onTreeUpdate).not.toHaveBeenCalled();
+    expect(onSummary).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(error);
+    await unmount(root);
+  });
+
+  it("never accepts a building part in a second installation", async () => {
+    const { root } = await renderExplorer(treeWithBuildingTargets());
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+
+    const target = labelFor("Other room (Room)");
+    const event = await dispatchDrag(target, "dragover", transfer);
+    await dispatchDrag(target, "drop", transfer);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(target.getAttribute("data-drop-ready")).toBeNull();
+    expect(apiMock.moveDeviceToBuildingPart).not.toHaveBeenCalled();
     await unmount(root);
   });
 });

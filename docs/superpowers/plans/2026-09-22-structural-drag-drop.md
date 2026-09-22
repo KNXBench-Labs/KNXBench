@@ -1,8 +1,8 @@
 # Structural Drag-and-Drop Implementation Plan
 
-**Execution status (2026-09-22):** Tasks 1–3 and the first full branch gate are
-complete on `t11-structural-drag-drop`; fresh whole-branch review and merged-result
-verification remain.
+**Execution status (2026-09-22):** Tasks 1–3, the first full branch gate, and fresh
+whole-branch review plus its single RED→GREEN fix round are complete on
+`t11-structural-drag-drop`; merged-result verification remains.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:subagent-driven-development` or `superpowers:executing-plans`

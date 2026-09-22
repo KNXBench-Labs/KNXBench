@@ -127,11 +127,11 @@
 - Produces `getSettingsState()`, `subscribeToSettingsState()`, and `useSettingsState()` returning `{ hydration, diagnostic, fallbackMessage }`.
 - Preserves synchronous `getSetting`, `settingsStorage`, serialized PUTs, one bootstrap sequence, and the closed adoption map.
 
-- [ ] **Step 1: Write failing bootstrap-journal tests**
+- [x] **Step 1: Write failing bootstrap-journal tests**
 
   Against a deferred GET, write `preferredGateway` and overwrite cached `theme`; then resolve the GET with another theme plus untouched `density`. Assert local edits win, density survives, and one coalesced PUT carries the journal. Add cases for `null` deletion, GET failure, and adoption-409/re-read. Assert typed state and fallback transport without matching English contents.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -140,15 +140,15 @@
 
   Expected: FAIL because authoritative apply currently erases in-flight local edits.
 
-- [ ] **Step 3: Implement the per-key journal**
+- [x] **Step 3: Implement the per-key journal**
 
   Add `pendingBeforeHydration = new Map<string, unknown>()`. Before synchronization, record each final patch value, including `null`, after cache mutation. On successful GET/adoption, merge server settings first and journal second; then mark hydrated and enqueue exactly one journal patch through the existing PUT queue. Clear only after enqueue. Failed GET retains cache and journal.
 
-- [ ] **Step 4: Publish hydration and diagnostic state**
+- [x] **Step 4: Publish hydration and diagnostic state**
 
   Replace `SettingsResponse.notice` with the Task 1 union and `message`. Notify state subscribers on `hydrated` and `failed`. Reset all new state in `resetSettingsForTests()`.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
   ```bash
   cd apps/knx-web

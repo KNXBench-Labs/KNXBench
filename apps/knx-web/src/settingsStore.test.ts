@@ -5,6 +5,7 @@ import {
   SETTINGS_ADOPTED_KEY,
   SETTINGS_CACHE_KEY,
   getSetting,
+  getSettingsState,
   initSettings,
   resetSettingsForTests,
   setSetting,
@@ -108,7 +109,7 @@ describe("reading the record", () => {
         {
           status,
           settings: {},
-          notice: status === "absent" ? undefined : "something",
+          message: status === "absent" ? undefined : "something",
         },
       ]);
 
@@ -343,5 +344,120 @@ describe("writing", () => {
 
     expect(calls).toEqual([]);
     expect(getSetting("theme")).toBe("graphite");
+  });
+});
+
+describe("hydrating around local edits", () => {
+  it("merges untouched server keys and sends one final local journal", async () => {
+    window.localStorage.setItem(
+      SETTINGS_CACHE_KEY,
+      JSON.stringify({ schemaVersion: 1, settings: { theme: "graphite", productLanguage: "de-DE" } }),
+    );
+    let resolveGet!: (response: Response) => void;
+    const pendingGet = new Promise<Response>((resolve) => {
+      resolveGet = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((path: string, init?: RequestInit) => {
+        calls.push([
+          path,
+          init?.method ?? "GET",
+          init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+        ]);
+        if ((init?.method ?? "GET") === "GET") return pendingGet;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ schemaVersion: 1, settings: {}, status: "ok" }),
+        } as Response);
+      }),
+    );
+
+    const hydration = initSettings();
+    setSetting("preferredGateway", "192.0.2.10:3671");
+    setSetting("theme", "porcelain");
+    setSetting("productLanguage", null);
+    resolveGet({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        schemaVersion: 1,
+        settings: { theme: "cupertino", density: "comfortable", productLanguage: "fr-FR" },
+        status: "ok",
+      }),
+    } as Response);
+
+    await hydration;
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    expect(getSetting("theme")).toBe("porcelain");
+    expect(getSetting("density")).toBe("comfortable");
+    expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
+    expect(getSetting("productLanguage")).toBeUndefined();
+    expect(calls[1]).toEqual([
+      "/api/settings",
+      "PUT",
+      {
+        settings: {
+          preferredGateway: "192.0.2.10:3671",
+          theme: "porcelain",
+          productLanguage: null,
+        },
+      },
+    ]);
+  });
+
+  it("retains local cache and marks a failed GET", async () => {
+    respond([new Error("offline")]);
+    setSetting("theme", "graphite");
+    await initSettings();
+    expect(getSetting("theme")).toBe("graphite");
+    expect(getSettingsState()).toEqual({
+      hydration: "failed",
+      diagnostic: undefined,
+      fallbackMessage: undefined,
+    });
+  });
+
+  it("keeps the same journal when adoption conflicts and re-reads", async () => {
+    window.localStorage.setItem("knx-desktop:theme", "dark");
+    respond([
+      { status: "absent", settings: {} },
+      new Error("409 conflict"),
+      { status: "ok", settings: { density: "compact" } },
+      { status: "ok", settings: {} },
+    ]);
+
+    const hydration = initSettings();
+    setSetting("preferredGateway", "192.0.2.10:3671");
+    await hydration;
+    await vi.waitFor(() => expect(calls).toHaveLength(4));
+
+    expect(getSetting("density")).toBe("compact");
+    expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
+    expect(calls[3]).toEqual([
+      "/api/settings",
+      "PUT",
+      { settings: { preferredGateway: "192.0.2.10:3671" } },
+    ]);
+  });
+
+  it("retains the typed diagnostic and fallback after hydration", async () => {
+    respond([
+      {
+        status: "migrated",
+        settings: {},
+        message: "debug fallback",
+        diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 },
+      },
+    ]);
+
+    await initSettings();
+
+    expect(getSettingsState()).toEqual({
+      hydration: "hydrated",
+      diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 },
+      fallbackMessage: "debug fallback",
+    });
   });
 });

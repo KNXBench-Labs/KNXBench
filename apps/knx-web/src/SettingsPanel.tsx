@@ -495,7 +495,7 @@ export default function SettingsPanel(props: {
           <span className="settings-field-hint">{t("settings.preferredGatewayHint")}</span>
         </label>
         <LineScanExclusionsEditor disabled={false} />
-        {settingsState.diagnostic && (
+        {(settingsState.diagnostic || settingsState.fallbackMessage) && (
           <p className="settings-diagnostic" role="status">
             {formatSettingsDiagnostic(
               t,

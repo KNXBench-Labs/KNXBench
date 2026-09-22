@@ -30,6 +30,41 @@ pub enum Severity {
     Info,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SettingsQuarantineReasonDto {
+    Unreadable,
+    InvalidJson,
+    NotObject,
+    MissingSchemaVersion,
+    SettingsNotObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum SettingsDiagnostic {
+    Migrated {
+        from_version: u32,
+        to_version: u32,
+    },
+    Adopted {
+        from_version: u32,
+        to_version: u32,
+    },
+    RefusedNewer {
+        file_version: u32,
+        current_version: u32,
+    },
+    Quarantined {
+        reason: SettingsQuarantineReasonDto,
+        moved_to: String,
+    },
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LogEntry {
@@ -43,6 +78,8 @@ pub struct LogEntry {
     /// xpath, when the origin has one.
     pub location: Option<String>,
     pub detail: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<SettingsDiagnostic>,
 }
 
 /// Maximum number of [`LogEntry`] items [`SessionLog`] ever holds at once,
@@ -114,6 +151,7 @@ impl SessionLog {
                 self.dropped
             ),
             location: None,
+            diagnostic: None,
             detail: None,
         }
     }
@@ -152,6 +190,7 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             source: format!("import:{}", error.stage),
             message: error.detail.clone(),
             location: Some(error.xpath.clone()),
+            diagnostic: None,
             detail: None,
         });
     }
@@ -166,6 +205,7 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
                 unknown.kind, unknown.name, unknown.occurrences, unknown.source_path
             ),
             location: Some(unknown.xpath.clone()),
+            diagnostic: None,
             detail: unknown.sample.clone(),
         });
     }
@@ -177,6 +217,7 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             source: "import:opaque".to_string(),
             message: format!("{} preserved opaque: {}", opaque.kind, opaque.reason),
             location: Some(opaque.source_path.clone()),
+            diagnostic: None,
             detail: Some(format!("{} bytes, sha256 {}", opaque.size, opaque.sha256)),
         });
     }
@@ -192,6 +233,7 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
                 conflict.candidates.len()
             ),
             location: None,
+            diagnostic: None,
             detail: None,
         });
     }
@@ -203,6 +245,7 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             source: "import:unsupported".to_string(),
             message: format!("{}: {}", unsupported.what, unsupported.consequence),
             location: None,
+            diagnostic: None,
             detail: None,
         });
     }
@@ -241,6 +284,7 @@ pub fn from_csv_import_report(report: &knx_csv::CsvImportReport) -> Vec<LogEntry
             source: format!("csv-import:{kind}"),
             message: problem.detail.clone(),
             location: problem.row.map(|row| format!("row {row}")),
+            diagnostic: None,
             detail: None,
         });
     }
@@ -256,6 +300,7 @@ pub fn from_csv_import_report(report: &knx_csv::CsvImportReport) -> Vec<LogEntry
             source: "csv-import:ignored-column".to_string(),
             message: format!("column '{}' ignored ({reason})", ignored.name),
             location: None,
+            diagnostic: None,
             detail: None,
         });
     }
@@ -390,6 +435,7 @@ mod tests {
             source: "test".into(),
             message: "m1".into(),
             location: None,
+            diagnostic: None,
             detail: None,
         });
         log.push(LogEntry {
@@ -398,6 +444,7 @@ mod tests {
             source: "test".into(),
             message: "m2".into(),
             location: None,
+            diagnostic: None,
             detail: None,
         });
         assert_eq!(log.entries().len(), 2);
@@ -412,6 +459,7 @@ mod tests {
             source: "test".into(),
             message: format!("entry {n}"),
             location: None,
+            diagnostic: None,
             detail: None,
         }
     }
@@ -552,6 +600,7 @@ mod tests {
             source: "import:unknown".into(),
             message: "m".into(),
             location: Some("/x".into()),
+            diagnostic: None,
             detail: None,
         };
         let json = serde_json::to_value(&entry).unwrap();

@@ -51,7 +51,7 @@
 - `SettingsDto` replaces `notice` with optional `diagnostic` and optional English `message`.
 - `LogEntry` gains `diagnostic: Option<SettingsDiagnostic>`; unrelated records use `None`.
 
-- [ ] **Step 1: Write failing HTTP contract tests**
+- [x] **Step 1: Write failing HTTP contract tests**
 
   Exercise migration, adoption, refusal, and all five quarantine inputs through real routes. Assert exact diagnostic fields, an English fallback `message`, and no `notice`.
 
@@ -62,7 +62,7 @@
   assert!(body.get("notice").is_none());
   ```
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   CARGO_TARGET_DIR=/tmp/knxbench-t10-target cargo test -p knx-server --test http_settings --no-fail-fast
@@ -70,11 +70,11 @@
 
   Expected: FAIL because `notice` is still the only diagnostic field.
 
-- [ ] **Step 3: Type quarantine causes without losing details**
+- [x] **Step 3: Type quarantine causes without losing details**
 
   Change `SettingsLoad::Quarantined` to carry `reason`, `detail: String`, and `moved_to`. Pass stable reason codes through `quarantine` while retaining today's dynamic OS error in `detail`. Keep collision-safe rename behavior unchanged.
 
-- [ ] **Step 4: Define the transport diagnostic**
+- [x] **Step 4: Define the transport diagnostic**
 
   Define the following in `session_log.rs`, plus a five-variant `SettingsQuarantineReasonDto`:
 
@@ -89,15 +89,15 @@
   }
   ```
 
-- [ ] **Step 5: Replace `notice` with typed fields**
+- [x] **Step 5: Replace `notice` with typed fields**
 
   Build `diagnostic` directly from `SettingsLoad`, and build `message` from the same outcome plus retained `detail`. Successful browser adoption emits `Adopted { from_version: 0, to_version: 1 }`, never `Migrated`.
 
-- [ ] **Step 6: Carry diagnostics through the log**
+- [x] **Step 6: Carry diagnostics through the log**
 
   Add the optional field to `LogEntry`. Settings records receive `Some`; every unrelated literal in `session_log.rs`, `domain.rs`, and `http_debug_report.rs` receives `None`. Extend `http_log_route.rs` to prove `/api/log` returns both diagnostic and fallback message.
 
-- [ ] **Step 7: Verify the server slice**
+- [x] **Step 7: Verify the server slice**
 
   ```bash
   CARGO_TARGET_DIR=/tmp/knxbench-t10-target cargo test -p knx-server --test http_settings --test http_log_route --test http_debug_report --no-fail-fast
@@ -106,7 +106,7 @@
 
   Expected: PASS; all outcomes remain distinct, unreadable detail survives, and unrelated log constructors compile.
 
-- [ ] **Step 8: Commit the contract**
+- [x] **Step 8: Commit the contract**
 
   ```bash
   git add apps/knx-server/src/settings.rs apps/knx-server/src/settings_routes.rs apps/knx-server/src/session_log.rs apps/knx-server/src/domain.rs apps/knx-server/tests/http_settings.rs apps/knx-server/tests/http_log_route.rs apps/knx-server/tests/http_debug_report.rs
@@ -127,11 +127,11 @@
 - Produces `getSettingsState()`, `subscribeToSettingsState()`, and `useSettingsState()` returning `{ hydration, diagnostic, fallbackMessage }`.
 - Preserves synchronous `getSetting`, `settingsStorage`, serialized PUTs, one bootstrap sequence, and the closed adoption map.
 
-- [ ] **Step 1: Write failing bootstrap-journal tests**
+- [x] **Step 1: Write failing bootstrap-journal tests**
 
   Against a deferred GET, write `preferredGateway` and overwrite cached `theme`; then resolve the GET with another theme plus untouched `density`. Assert local edits win, density survives, and one coalesced PUT carries the journal. Add cases for `null` deletion, GET failure, and adoption-409/re-read. Assert typed state and fallback transport without matching English contents.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -140,15 +140,15 @@
 
   Expected: FAIL because authoritative apply currently erases in-flight local edits.
 
-- [ ] **Step 3: Implement the per-key journal**
+- [x] **Step 3: Implement the per-key journal**
 
   Add `pendingBeforeHydration = new Map<string, unknown>()`. Before synchronization, record each final patch value, including `null`, after cache mutation. On successful GET/adoption, merge server settings first and journal second; then mark hydrated and enqueue exactly one journal patch through the existing PUT queue. Clear only after enqueue. Failed GET retains cache and journal.
 
-- [ ] **Step 4: Publish hydration and diagnostic state**
+- [x] **Step 4: Publish hydration and diagnostic state**
 
   Replace `SettingsResponse.notice` with the Task 1 union and `message`. Notify state subscribers on `hydrated` and `failed`. Reset all new state in `resetSettingsForTests()`.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
   ```bash
   cd apps/knx-web
@@ -177,11 +177,11 @@
 - Produces `PREFERRED_GATEWAY_KEY`, `loadPreferredGateway()`, `savePreferredGateway(value)`, and `usePreferredGateway()`.
 - Leaves endpoint validation at the existing server trust boundary. Discovery never persists the preference.
 
-- [ ] **Step 1: Write failing preference tests**
+- [x] **Step 1: Write failing preference tests**
 
   Cover absent/blank values as `""`, trimming on read/save, persistence, explicit unset, and storage inside the single settings-cache document rather than a loose localStorage key.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -190,19 +190,19 @@
 
   Expected: FAIL because the module does not exist.
 
-- [ ] **Step 3: Implement the preference owner**
+- [x] **Step 3: Implement the preference owner**
 
   Use `settingsStorage` and `useSettingsRevision()` like existing preference modules. Blank saves call `removeItem`. Do not parse endpoints or call fetch/discovery/network code.
 
-- [ ] **Step 4: Write failing Bus Monitor seed tests**
+- [x] **Step 4: Write failing Bus Monitor seed tests**
 
   Cover cached first render, delayed authoritative replacement while untouched, typing before hydration, discovery before hydration, later preference changes, and a successfully attached/started session. Add a normal 404 reattach-before-hydration case proving no-session does not freeze seeding. Assert typing and discovery never write the preference.
 
-- [ ] **Step 5: Write failing Line Scan seed tests**
+- [x] **Step 5: Write failing Line Scan seed tests**
 
   Cover the same cache, authoritative, and manual rules. Add a 404 initial-poll case. Prove a successful existing scan, user-requested estimate, or started scan resolves ownership and blocks later reseeding.
 
-- [ ] **Step 6: Confirm panel RED**
+- [x] **Step 6: Confirm panel RED**
 
   ```bash
   cd apps/knx-web
@@ -211,11 +211,11 @@
 
   Expected: FAIL because both gateway fields always start empty.
 
-- [ ] **Step 7: Implement one-time seeding**
+- [x] **Step 7: Implement one-time seeding**
 
   Initialize local fields from `loadPreferredGateway()`. Track touched/resolved refs. First authoritative hydration may replace the cached seed only while untouched and unused. Typing, discovery, and user-initiated connect/estimate/start resolve immediately. Background reattach/poll resolves only after a successful existing-session/scan response, never on 404. Workflow panels never call `savePreferredGateway`.
 
-- [ ] **Step 8: Verify and commit**
+- [x] **Step 8: Verify and commit**
 
   ```bash
   cd apps/knx-web
@@ -244,11 +244,11 @@
 - Produces `<LineScanExclusionsEditor disabled={boolean} />` over that shared key.
 - Preserves the frozen `activeExclusions` request snapshot.
 
-- [ ] **Step 1: Write failing losslessness tests**
+- [x] **Step 1: Write failing losslessness tests**
 
   Seed ordered valid text, two equal occurrences, whitespace-bearing text, out-of-range octets, and arbitrary text. Assert the loader returns every string byte-for-byte in order. Assert new-value validation accepts only complete `0..15.0..15.0..255` dotted addresses and rejects a duplicate.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -257,23 +257,23 @@
 
   Expected: FAIL because the owner module does not exist.
 
-- [ ] **Step 3: Implement lossless storage and validation**
+- [x] **Step 3: Implement lossless storage and validation**
 
   Keep every array string unchanged; never filter, trim, deduplicate, or rewrite legacy data. Return validity separately. Save the complete array through `setSetting`. Keep dotted individual-address grammar separate from group-address parsing.
 
-- [ ] **Step 4: Write failing editor tests**
+- [x] **Step 4: Write failing editor tests**
 
   Prove invalid legacy entries are visibly marked and removable; invalid/duplicate additions are rejected; removal needs two clicks; disabled blocks mutation; and two mounted editors synchronize. Identify rows by occurrence index or stable occurrence id, never value alone. Prove removing one equal occurrence preserves the other exactly.
 
-- [ ] **Step 5: Extract the editor**
+- [x] **Step 5: Extract the editor**
 
   Move the heading, list, confirmation, input, and handlers out of `LineScanPanel.tsx`. Preserve accessible names and translate invalid-state copy. Do not use raw value alone as React key or removal identity.
 
-- [ ] **Step 6: Block unsafe scan work**
+- [x] **Step 6: Block unsafe scan work**
 
   Derive `hasInvalidExclusions`; disable estimate and start while true and render the translated reason. On start, copy the exact valid configured list into `activeExclusions`. Keep request-fingerprint and cancellation behavior unchanged.
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
   ```bash
   cd apps/knx-web
@@ -307,11 +307,11 @@
 - Produces `formatSettingsDiagnostic(t, diagnostic, fallback)`, the only frontend mapping.
 - Unknown/missing diagnostic variants display the server fallback; ordinary log entries remain unchanged.
 
-- [ ] **Step 1: Write failing formatter tests**
+- [x] **Step 1: Write failing formatter tests**
 
   Cover all four kinds and all five quarantine reasons in English and German without using server prose as expected output. Unknown-kind and absent-diagnostic cases return fallback unchanged.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -320,23 +320,23 @@
 
   Expected: FAIL because the formatter does not exist.
 
-- [ ] **Step 3: Implement frontend contracts and formatter**
+- [x] **Step 3: Implement frontend contracts and formatter**
 
   Export the discriminated union from `settingsStore.ts`; reuse it for `api.ts`'s optional `LogEntry.diagnostic`. Map known cases to typed catalogue keys. Keep fallback handling outside key selection so future server variants remain readable.
 
-- [ ] **Step 4: Write failing Settings composition tests**
+- [x] **Step 4: Write failing Settings composition tests**
 
   Assert translated Appearance, Language & data, and Bus & diagnostics headings; gateway persistence/unset; shared exclusions; and retained hydration diagnostic in German. Preserve all current appearance/language tests.
 
-- [ ] **Step 5: Write failing Log translation tests**
+- [x] **Step 5: Write failing Log translation tests**
 
   Give a known typed diagnostic an unrelated English fallback and assert German catalogue output. Give an unknown diagnostic and assert fallback. Keep ordinary disclosure behavior.
 
-- [ ] **Step 6: Build and style the grouped panel**
+- [x] **Step 6: Build and style the grouped panel**
 
   Group existing controls semantically. Add the gateway control via `usePreferredGateway()` and the shared editor. Render the latest diagnostic with `role="status"`. Add no Save button, registry, or second overlay. Style with existing tokens; if motion is added, guard it and update `motionGuard.test.ts`.
 
-- [ ] **Step 7: Verify the frontend**
+- [x] **Step 7: Verify the frontend**
 
   ```bash
   cd apps/knx-web
@@ -347,7 +347,7 @@
 
   Expected: PASS with all visible new copy in both catalogues.
 
-- [ ] **Step 8: Commit the surface**
+- [x] **Step 8: Commit the surface**
 
   ```bash
   git add src/settingsDiagnostic.ts src/settingsDiagnostic.test.ts src/SettingsPanel.tsx src/SettingsPanel.test.tsx src/LogPanel.tsx src/LogPanel.test.tsx src/api.ts src/messages/en.ts src/messages/de.ts src/styles.css src/motionGuard.test.ts
@@ -370,11 +370,11 @@
 - Records `preferredGateway` as unencrypted installation-network metadata in `settings.json`.
 - Leaves §121's multi-window last-writer limitation open.
 
-- [ ] **Step 1: Reconcile documentation**
+- [x] **Step 1: Reconcile documentation**
 
   Amend ADR-0029 with the gateway metadata and backup consequence. Record implemented consumers and explicit non-goals in `IMPLEMENTATION_STATUS.md`. Mark §122 resolved with typed-diagnostic evidence. Leave §121 open; do not edit `LIMITATION_TRIAGE.md`.
 
-- [ ] **Step 2: Run focused source audits**
+- [x] **Step 2: Run focused source audits**
 
   ```bash
   rg -n "groupAddressNotation|Group address notation" apps/knx-web/src/SettingsPanel.tsx apps/knx-web/src/messages || true
@@ -384,7 +384,7 @@
 
   Expected: no notation control, no private-LAN literal in added lines, and no whitespace error. Documentation-range examples remain allowed.
 
-- [ ] **Step 3: Run every repository gate**
+- [x] **Step 3: Run every repository gate**
 
   ```bash
   export CARGO_TARGET_DIR=/tmp/knxbench-t10-target
@@ -405,11 +405,11 @@
 
   Expected: every command exits 0. If stale artifacts are suspected, clean only `/tmp/knxbench-t10-target` and rerun the missing gate.
 
-- [ ] **Step 4: Write handover evidence**
+- [x] **Step 4: Write handover evidence**
 
   Record exact commands, test counts, no-network proof, rulings, and open §121 in the dated `.ai` log. Prepend `.ai/CURRENT_STATE.md` with the final commit range and next goal task.
 
-- [ ] **Step 5: Commit documentation**
+- [x] **Step 5: Commit documentation**
 
   ```bash
   git add docs/adr/0029-application-settings-file.md docs/IMPLEMENTATION_STATUS.md docs/KNOWN_LIMITATIONS.md .ai/logs/2026-09-22_codex__t10_settings_implementation.md .ai/CURRENT_STATE.md

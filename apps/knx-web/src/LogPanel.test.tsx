@@ -53,6 +53,20 @@ async function renderPanel(tree: ProjectTree, refreshKey = 0) {
 }
 
 describe("LogPanel", () => {
+  it("renders known settings diagnostics from the catalogue instead of fallback prose", async () => {
+    apiMock.getSessionLog.mockResolvedValue([
+      entry({
+        source: "settings",
+        message: "UNRELATED SERVER FALLBACK",
+        diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 },
+      }),
+    ]);
+    const root = await renderPanel(baseTree());
+    expect(host!.textContent).toContain("Settings migrated from schema 0 to 1.");
+    expect(host!.textContent).not.toContain("UNRELATED SERVER FALLBACK");
+    root.unmount();
+  });
+
   it("shows the empty state when there are no entries", async () => {
     const root = await renderPanel(baseTree());
     expect(host!.textContent).toContain("No log entries yet.");

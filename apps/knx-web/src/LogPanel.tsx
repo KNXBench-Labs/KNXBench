@@ -6,6 +6,7 @@ import type { LogEntry } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
+import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 
 type Severity = LogEntry["severity"];
 
@@ -109,7 +110,9 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
             <li key={`${entry.timestamp}-${index}`} className={`log-entry log-entry-${entry.severity}`}>
               <span className="log-entry-severity">{t(SEVERITY_LABEL_KEYS[entry.severity])}</span>
               <span className="log-entry-source">{entry.source}</span>
-              <span className="log-entry-message">{entry.message}</span>
+              <span className="log-entry-message">
+                {formatSettingsDiagnostic(t, entry.diagnostic, entry.message)}
+              </span>
               {entry.location && <span className="log-entry-location">{entry.location}</span>}
               {entry.detail && <span className="log-entry-detail">{entry.detail}</span>}
             </li>

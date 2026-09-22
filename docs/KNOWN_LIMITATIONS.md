@@ -1468,9 +1468,11 @@ generation and therefore preserve ordinary manual collapse.
 
 Devices rendered in both a building branch and their canonical topology (or
 unassigned) occurrence scroll exactly once at that canonical occurrence; the
-building copy is not a second competing destination. Component and App tests
-cover nested topology, building, and group-range paths, repeated reveals, the
-single device scroll, and manual-selection preservation. **[V]**
+building copy is not a second competing destination. A device that genuinely
+has neither canonical occurrence instead reveals and scrolls its first
+depth-first building occurrence exactly once. Component and App tests cover
+nested topology, building, and group-range paths, repeated reveals, both
+device cases, and manual-selection preservation. **[V]**
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 

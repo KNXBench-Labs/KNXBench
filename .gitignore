@@ -14,6 +14,7 @@ OriginalData/
 OriginalData
 node_modules/
 AGENTS.md
+AGENTS.md.bak.*
 .claude/.headroom_wrap_settings.lock
 .serena/project.yml
 CLAUDE.md
@@ -24,6 +25,7 @@ SOUL.md
 USER.md
 IDENTITY.md
 MEMORY.md
+MEMORY.md.bak.*
 .claude/
 memory/
 .agent-memory/

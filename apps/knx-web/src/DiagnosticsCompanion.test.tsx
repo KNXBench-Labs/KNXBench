@@ -243,6 +243,11 @@ describe("one editing workspace", () => {
     // is the search itself — a multicast question and a read of the
     // answers, which changes nothing on any device and nothing in any
     // project.
+    //
+    // T10 adds `gatewayPreference.ts`: both diagnostics workflows read one
+    // passive string through the already-allowed settings store. It imports
+    // no API and cannot discover, connect, scan, or mutate a project; the
+    // exact API-call assertion below keeps that boundary explicit.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -257,6 +262,7 @@ describe("one editing workspace", () => {
       "diagnosticsWindow.ts",
       "filePicker.ts",
       "gaNotation.ts",
+      "gatewayPreference.ts",
       "help.ts",
       "i18n.ts",
       "languagePack.ts",

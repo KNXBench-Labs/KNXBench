@@ -47,6 +47,8 @@ record. Everything else is a cache.**
     "motionStyle": "apple",
     "uiLanguage": "de",
     "productLanguage": "de-DE",
+    "preferredGateway": "192.0.2.10:3671",
+    "lineScanExclusions": ["1.1.220"],
     "uiLanguagePacks": { "nl-NL": { "formatVersion": 1, "tag": "nl-NL", "…": "…" } }
   }
 }
@@ -93,9 +95,12 @@ the keys it changes and leaves every other key exactly where it was,
 including one this build has never heard of. A `null` value removes a
 key; that is the only way to unset a preference.
 
-Each of the three non-quiet outcomes is reported to the user through the
-existing session log (`source: "settings"`), which the Log panel already
-renders, and repeated in the response as a plain-English `notice`.
+Each non-quiet outcome is reported through a typed diagnostic on both the
+settings response and the existing session log (`source: "settings"`). Its
+tag and parameters distinguish migration, browser-era adoption, a newer-file
+refusal, and each quarantine reason. The server retains an English fallback
+message for older clients and debug reports; the web Settings and Log panels
+translate recognized diagnostics without matching that prose.
 
 **The browser keeps one cache key, and it cannot be mistaken for the
 record.** `index.html`'s pre-mount bootstrap and the first React render
@@ -158,5 +163,12 @@ What this does not do:
   migrates or quarantines writes too), so the two cannot lose each
   other's *keys* — only the second window's view of a key the first one
   changed goes stale.
-* It does not encrypt anything. These are preferences; the file holds no
-  credentials and no bus addresses.
+* It does not encrypt anything. The file holds no credentials. It can contain
+  `preferredGateway` and protected line-scan exclusions, which are
+  installation-network metadata rather than secrets. Data-directory backups
+  therefore include them and need the same access control as the rest of the
+  application's installation data.
+* Reading, writing, or backing up `settings.json` causes no KNX, multicast, or
+  LAN traffic. `preferredGateway` only seeds a newly mounted Bus Monitor or
+  Line Scan field; starting discovery, monitoring, or scanning remains a
+  separate explicit operation.

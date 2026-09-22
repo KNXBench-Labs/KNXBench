@@ -675,12 +675,34 @@ main {
 }
 
 .settings-panel {
-  width: min(22rem, 90vw);
+  width: min(32rem, 90vw);
 }
 
 .settings-panel-title {
   margin: 0 0 0.75rem;
   font-size: 1rem;
+}
+
+.settings-section {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--knx-border);
+}
+
+.settings-section h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.settings-section .line-scan-exclusions {
+  margin-top: 0.25rem;
+}
+
+.settings-diagnostic {
+  margin: 0;
+  color: var(--knx-warning-color);
 }
 
 .settings-field {

@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import { notifySessionExpired } from "./session";
 
@@ -680,6 +681,7 @@ export interface LogEntry {
   message: string;
   location: string | null;
   detail: string | null;
+  diagnostic?: SettingsDiagnostic;
 }
 
 export function getSessionLog(): Promise<LogEntry[]> {

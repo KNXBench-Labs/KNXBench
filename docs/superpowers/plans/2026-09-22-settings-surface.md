@@ -307,11 +307,11 @@
 - Produces `formatSettingsDiagnostic(t, diagnostic, fallback)`, the only frontend mapping.
 - Unknown/missing diagnostic variants display the server fallback; ordinary log entries remain unchanged.
 
-- [ ] **Step 1: Write failing formatter tests**
+- [x] **Step 1: Write failing formatter tests**
 
   Cover all four kinds and all five quarantine reasons in English and German without using server prose as expected output. Unknown-kind and absent-diagnostic cases return fallback unchanged.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -320,23 +320,23 @@
 
   Expected: FAIL because the formatter does not exist.
 
-- [ ] **Step 3: Implement frontend contracts and formatter**
+- [x] **Step 3: Implement frontend contracts and formatter**
 
   Export the discriminated union from `settingsStore.ts`; reuse it for `api.ts`'s optional `LogEntry.diagnostic`. Map known cases to typed catalogue keys. Keep fallback handling outside key selection so future server variants remain readable.
 
-- [ ] **Step 4: Write failing Settings composition tests**
+- [x] **Step 4: Write failing Settings composition tests**
 
   Assert translated Appearance, Language & data, and Bus & diagnostics headings; gateway persistence/unset; shared exclusions; and retained hydration diagnostic in German. Preserve all current appearance/language tests.
 
-- [ ] **Step 5: Write failing Log translation tests**
+- [x] **Step 5: Write failing Log translation tests**
 
   Give a known typed diagnostic an unrelated English fallback and assert German catalogue output. Give an unknown diagnostic and assert fallback. Keep ordinary disclosure behavior.
 
-- [ ] **Step 6: Build and style the grouped panel**
+- [x] **Step 6: Build and style the grouped panel**
 
   Group existing controls semantically. Add the gateway control via `usePreferredGateway()` and the shared editor. Render the latest diagnostic with `role="status"`. Add no Save button, registry, or second overlay. Style with existing tokens; if motion is added, guard it and update `motionGuard.test.ts`.
 
-- [ ] **Step 7: Verify the frontend**
+- [x] **Step 7: Verify the frontend**
 
   ```bash
   cd apps/knx-web
@@ -347,7 +347,7 @@
 
   Expected: PASS with all visible new copy in both catalogues.
 
-- [ ] **Step 8: Commit the surface**
+- [x] **Step 8: Commit the surface**
 
   ```bash
   git add src/settingsDiagnostic.ts src/settingsDiagnostic.test.ts src/SettingsPanel.tsx src/SettingsPanel.test.tsx src/LogPanel.tsx src/LogPanel.test.tsx src/api.ts src/messages/en.ts src/messages/de.ts src/styles.css src/motionGuard.test.ts

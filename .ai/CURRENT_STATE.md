@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 2 closes `KNOWN_LIMITATIONS.md` §24 on `t12-ui-residue`: browser `FsPicker` supports native `Files` drag/drop and multi-file local uploads through the existing one-file `/api/fs/upload` endpoint, sequentially. Protected-mode dragover reads only `DataTransfer.types`, accepted drops advertise `copy`, successful batches refresh `uploads` and announce a localized count, while a first failure stops the batch and names the file/error plus completed count without a false success notice. The public picker result remains `Promise<string | null>` and never auto-selects an uploaded project. Detailed evidence: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-2-report.md`.
+- **Verification:** RED recorded 3 intended failures/4 passes. GREEN: 30/30 across picker, motion, and i18n tests plus TypeScript. Full frontend: 891/891 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** Controller may integrate the focused Task 2 commit with the remaining independent T12 tasks.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T12 task 1 fix round 1 closes reviewer findings: selected canonical row explicitly completes and clears only its matching reveal generation, manual navigation hide clears a pending request, and a device that exists only in building structure falls back to one depth-first building occurrence. Nested topology, building, and group-range regression tests now collapse every ancestor. This fix-round commit is present in this worktree; Task 1 report carries RED/GREEN/full-suite evidence.
 - **Verification:** Focused RED: 2 intended failures/98 pass. GREEN: 100/100 plus TypeScript. Full frontend: 888/888 across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
 - **Pending/Next Steps:** Controller may integrate this fix-round commit with task 1's two prior commits.

@@ -1,5 +1,13 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** Read-only T23 acceptance audit against `.superpowers/sdd/goal/task-23-brief.md`. The existing manual is substantial (32 Markdown files, 5,946 current lines after counting) and `xtask check-anchors` passes with 388 links, but T23 is **not accepted**: it lives under `docs/manual/` although ADR-0024/the brief separate user documentation from maintainer `docs/`; it ships 21 screenshots although the brief prohibits screenshots; and no required claim-by-claim source-verification report exists. Current content also contains post-delivery drift, including browser-`localStorage` settings claims after ADR-0029's server `settings.json`, and a four-route bus-surface claim predating discovery and line-scan routes. No manual/product edit was committed because T23 is explicitly the last build block and T10-T16 remain unfinished. A temporary `t23-manual-repair` worktree was created during the audit, its premature migration draft was restored exactly to `HEAD`, then the clean worktree and uncommitted branch were removed. No KNX, multicast, LAN or hardware traffic occurred.
+- **Verification:** `cargo run -q -p xtask -- check-anchors` on current `main` exited 0 (388 links, 182 Markdown files). RFC-1918/forbidden-address scan over the manual found no prohibited literal. A fresh full Rust baseline could not complete: the worktree target hit `ENOSPC`; the isolated `/tmp/knxbench-t23-target` retry hit the environment's disk quota during linking. Both owned targets were cleaned; this is an unavailable baseline, not a test failure.
+- **Pending/Next Steps:** T23 stays last. Before it can close, move the user manual out of `docs/`, remove screenshot dependencies/assets, re-verify every user-facing claim against the final T10-T16 product state, create the required verification report, and reconcile D12. The immediate implementation gates remain explicit user approval of the committed T10 spec, the bounded T11 design, or the surveyed T14 direction. T22 also still requires its separate architecture approval. Commit messages remain short/lightly funny subjects plus explanatory bodies.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Verified Complete:** Goal task T17 was already merged on current `main` in
   the required two independent commits: `cc9e1d3` records the resolved GTK3
   advisory premise and the dated Tauri-2 decision; `f1d9118` verifies and

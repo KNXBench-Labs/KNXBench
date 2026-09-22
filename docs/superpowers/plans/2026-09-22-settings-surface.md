@@ -244,11 +244,11 @@
 - Produces `<LineScanExclusionsEditor disabled={boolean} />` over that shared key.
 - Preserves the frozen `activeExclusions` request snapshot.
 
-- [ ] **Step 1: Write failing losslessness tests**
+- [x] **Step 1: Write failing losslessness tests**
 
   Seed ordered valid text, two equal occurrences, whitespace-bearing text, out-of-range octets, and arbitrary text. Assert the loader returns every string byte-for-byte in order. Assert new-value validation accepts only complete `0..15.0..15.0..255` dotted addresses and rejects a duplicate.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -257,23 +257,23 @@
 
   Expected: FAIL because the owner module does not exist.
 
-- [ ] **Step 3: Implement lossless storage and validation**
+- [x] **Step 3: Implement lossless storage and validation**
 
   Keep every array string unchanged; never filter, trim, deduplicate, or rewrite legacy data. Return validity separately. Save the complete array through `setSetting`. Keep dotted individual-address grammar separate from group-address parsing.
 
-- [ ] **Step 4: Write failing editor tests**
+- [x] **Step 4: Write failing editor tests**
 
   Prove invalid legacy entries are visibly marked and removable; invalid/duplicate additions are rejected; removal needs two clicks; disabled blocks mutation; and two mounted editors synchronize. Identify rows by occurrence index or stable occurrence id, never value alone. Prove removing one equal occurrence preserves the other exactly.
 
-- [ ] **Step 5: Extract the editor**
+- [x] **Step 5: Extract the editor**
 
   Move the heading, list, confirmation, input, and handlers out of `LineScanPanel.tsx`. Preserve accessible names and translate invalid-state copy. Do not use raw value alone as React key or removal identity.
 
-- [ ] **Step 6: Block unsafe scan work**
+- [x] **Step 6: Block unsafe scan work**
 
   Derive `hasInvalidExclusions`; disable estimate and start while true and render the translated reason. On start, copy the exact valid configured list into `activeExclusions`. Keep request-fingerprint and cancellation behavior unchanged.
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
   ```bash
   cd apps/knx-web

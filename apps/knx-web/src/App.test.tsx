@@ -58,6 +58,7 @@ const apiMock = vi.hoisted(() => ({
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
+  currentProject: vi.fn(),
   // `CatalogBrowser` fires both of these on mount. The help tests below
   // open it for real (it is the third dialog F1 has to replace), and an
   // unconfigured `vi.fn()` returns `undefined`, on which the component
@@ -129,6 +130,7 @@ afterEach(() => {
   // would otherwise leak to whoever runs next.
   apiMock.loadProgress.mockReset();
   apiMock.loadProgress.mockResolvedValue(null);
+  apiMock.currentProject.mockReset();
   resetSettingsForTests();
   resetProductLanguageForTests();
   document.documentElement.removeAttribute("lang");
@@ -1235,6 +1237,7 @@ describe("App — a failed load never renders a running banner", () => {
 
     expectFailedBanner(["Building the project tree", "older.knxdb"]);
     expect(host!.querySelector(".load-progress")!.textContent).toContain("path is outside the data directory");
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
@@ -1273,7 +1276,7 @@ describe("App — a failed load never renders a running banner", () => {
     await act(async () => root.unmount());
   });
 
-  it("a lost response to a load that succeeded still reports a failure (§96)", async () => {
+  it("recovers an owned successful load whose response was lost (§96)", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     apiMock.loadProgress.mockResolvedValueOnce({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
@@ -1284,6 +1287,7 @@ describe("App — a failed load never renders a running banner", () => {
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
       completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
+    apiMock.currentProject.mockResolvedValue(treeWithDevice());
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
     const root = await renderApp();
@@ -1295,13 +1299,46 @@ describe("App — a failed load never renders a running banner", () => {
       fail(new Error("connection closed"));
     });
 
-    // Our own operation, and it says `succeeded` — but this client never
-    // received the project, so a running or finished banner would both be
-    // lies. It reports the failure, on the last phase it actually saw.
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(host!.textContent).toContain("Device D");
+    expect(host!.querySelector(".load-progress")).toBeNull();
+    expect(host!.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("does not recover a succeeded snapshot with an empty ownership token", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: null,
+    });
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    const root = await renderApp();
+
+    await clickOpen();
+
     expectFailedBanner([]);
-    const banner = host!.querySelector(".load-progress")!;
-    expect(banner.textContent).toContain("Parsing the topology");
-    expect(banner.textContent).toContain("connection closed");
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("connection closed");
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the recovery GET failure when an owned successful load cannot be retrieved", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    apiMock.currentProject.mockRejectedValue(new Error("current project unavailable"));
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    expectFailedBanner([]);
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("current project unavailable");
+    expect(host!.querySelector(".load-progress")?.textContent).toContain("current project unavailable");
     await act(async () => root.unmount());
   });
 

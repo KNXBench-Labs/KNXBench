@@ -617,13 +617,25 @@ def _snapshot_is_complete(snapshot: Path, generation: Generation) -> bool:
         )
     except (OSError, json.JSONDecodeError):
         return False
+    expected_manifest = json.loads(generation.manifest_json)
+    if not isinstance(manifest, dict) or not isinstance(expected_manifest, dict):
+        return False
+    manifest.pop("generated_at", None)
+    expected_manifest.pop("generated_at", None)
     return (
         index == generation.index
         and report == generation.report
-        and isinstance(manifest, dict)
+        and manifest == expected_manifest
         and manifest.get("schema_version") == 1
         and manifest.get("output_sha256") == generation.output_sha256
     )
+
+
+def _is_active_snapshot(paths: SyncPaths, snapshot: Path) -> bool:
+    if not paths.current.is_symlink():
+        return False
+    target = paths.output_root / os.readlink(paths.current)
+    return target.resolve() == snapshot.resolve()
 
 
 def publish(
@@ -653,6 +665,8 @@ def publish(
             pass
         elif snapshot.is_symlink() or not snapshot.is_dir():
             raise PublishError(f"refusing to replace invalid snapshot path: {snapshot}")
+        elif _is_active_snapshot(paths, snapshot):
+            raise PublishError(f"active snapshot is incomplete or inconsistent: {snapshot}")
         else:
             shutil.rmtree(snapshot)
     if not snapshot.exists():

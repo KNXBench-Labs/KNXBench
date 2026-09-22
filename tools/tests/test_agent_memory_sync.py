@@ -477,6 +477,25 @@ class PublicationTests(unittest.TestCase):
                 generation.report,
             )
 
+    def test_publish_rejects_inconsistent_active_snapshot(self) -> None:
+        with temporary_project_with_note() as fixture:
+            generation = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source),),
+                datetime(2026, 9, 22, tzinfo=timezone.utc),
+            )
+            publish(fixture.paths, generation)
+            current_before = os.readlink(fixture.paths.current)
+            manifest_path = fixture.output / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["source_files"] = []
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            with self.assertRaises(PublishError):
+                publish(fixture.paths, generation)
+
+            self.assertEqual(os.readlink(fixture.paths.current), current_before)
+
     def test_check_reports_stale_and_conflicted_states(self) -> None:
         with temporary_project_with_note() as fixture:
             self.assertEqual(main(fixture.cli_args("apply")), EXIT_OK)

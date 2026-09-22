@@ -280,6 +280,7 @@ class InstallerTests(unittest.TestCase):
             self.assertIn(str(stable), service)
             self.assertNotIn(str(Path(__file__).parents[1]), service)
             self.assertIn("--project-root /project", service)
+            self.assertIn("SuccessExitStatus=3", service)
             self.assertEqual(
                 calls[-1],
                 ["systemctl", "--user", "enable", "--now", "knxbench-memory-sync.timer"],

@@ -703,6 +703,7 @@ def install_timer(
                 "",
                 "[Service]",
                 "Type=oneshot",
+                f"SuccessExitStatus={EXIT_CONFLICT}",
                 f"ExecStart={stable} apply --project-root {project_root} --home {home}",
                 "",
             )

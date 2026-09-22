@@ -1,6 +1,59 @@
 # T12 UI residue batch A — final reconciliation
 
 Date: 2026-09-22
+
+## Final-review fix wave
+
+All three Important and both Minor findings are addressed together. The
+original reconciliation evidence below is historical; this section supersedes
+its operation-kind save-state and recovered-basename descriptions.
+
+- Uploads stage bytes in the destination directory and publish with
+  `persist_noclobber`. A same-batch or pre-existing basename receives 409;
+  earlier bytes survive, the browser's source remains untouched, and the
+  picker reports the actual completed count and stops. Staging ownership also
+  removes incomplete/conflicting temporary files. One file per POST remains.
+- Each picker has a mounted lifetime guard. Cancel, Escape, file selection and
+  session expiry terminate its queued work. A module-local promise tail owns
+  only outstanding upload requests across modal roots, keeping a reopened
+  picker behind the old in-flight request. That request may still complete;
+  closing is not a rollback. No transport-abort claim is made.
+- The current-project response retains the existing tree JSON and adds
+  `has_store_path`. Replacement publication extends the existing
+  project → command stack → import counts locking order with store path.
+  Native open publishes its path; new/import clear it. Save As publishes its
+  path before releasing the project lock. Recovery consumes the returned
+  metadata and the EN/DE current-project notice, never stale operation kind or
+  filename. Exact-token gating remains unchanged, with no history cache.
+- The tracked Task 2 scratch report was removed; its historical evidence is
+  retained in Git and summarized here. Handover pointers now target this log.
+  The obsolete App publication comment was corrected.
+
+RED evidence: duplicate/pre-existing upload tests returned 200 instead of 409;
+four picker-lifetime regressions sent a reopened request before the existing
+one completed; both recovery replacement cases announced the old filename;
+the atomic publication test observed cleared save metadata before replacement
+publication; the current-project route lacked the save metadata field.
+GREEN evidence: TypeScript; frontend 907/907 in 63 files; Rust workspace
+1,956 passed / 0 failed / 5 ignored in 92 result blocks. Rustfmt, workspace
+Clippy with warnings denied, layering, headers, anchors and cargo-deny passed.
+The Rust workspace log explicitly records recompiling `knx-server`, guarding
+against the filesystem freshness issue. Cargo used the same low-debug
+environment documented below and `/var/tmp/knxbench-t12-target`.
+
+Verification commands: `npx tsc --noEmit`; `npm test -- --configLoader runner`;
+`cargo test --workspace --no-fail-fast`; `cargo fmt --all --check`;
+`cargo clippy --workspace --all-targets -- -D warnings`;
+`cargo run -q -p xtask -- check-layering`; `cargo run -q -p xtask -- check-headers`;
+`cargo run -q -p xtask -- check-anchors`; `cargo deny check`; `git diff --check`.
+Transient command evidence is under `/var/tmp/knxbench-t12-final-fix-*.log`;
+the controller report is `.superpowers/sdd/2026-09-22-ui-residue-batch-a/final-fix-report.md`.
+No KNX/LAN/multicast/gateway/hardware traffic or private-LAN/forbidden-fixture
+additions; no change to `docs/LIMITATION_TRIAGE.md`, theme/motion behavior,
+slash-only group addresses, or streaming-download body ownership.
+
+## Original reconciliation
+
 Branch: `t12-ui-residue`
 Base: `5ac0732` (`origin/main` at batch start)
 

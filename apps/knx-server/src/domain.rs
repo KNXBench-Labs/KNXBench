@@ -291,7 +291,7 @@ pub fn open_project(
             return Err(e);
         }
     };
-    replace_project_state(state, project, (tree.errors, tree.warnings));
+    replace_project_state(state, project, (tree.errors, tree.warnings), None);
     *state.opaque.lock().expect("state mutex poisoned") = opaque;
     *state
         .manufacturer_refs
@@ -412,8 +412,7 @@ pub fn open_native_project(
             return Err(e);
         }
     };
-    *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
-    replace_project_state(state, project, (0, 0));
+    replace_project_state(state, project, (0, 0), Some(path.to_path_buf()));
     *state.opaque.lock().expect("state mutex poisoned") = opaque;
     *state
         .manufacturer_refs
@@ -546,8 +545,7 @@ pub fn new_project_impl(
     });
 
     let tree = knx_projection::build_project_tree(&project);
-    *state.store_path.lock().expect("state mutex poisoned") = None;
-    replace_project_state(state, project, (0, 0));
+    replace_project_state(state, project, (0, 0), None);
     *state.opaque.lock().expect("state mutex poisoned") = Vec::new();
     *state
         .manufacturer_refs
@@ -641,7 +639,9 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
             .manufacturer_refs
             .lock()
             .expect("state mutex poisoned");
-        save_project_as_impl(path, project, &opaque, &manufacturer_refs)
+        save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
+        *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
+        Ok(())
     })();
     log_outcome(
         state,
@@ -650,9 +650,7 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
         None,
         &result,
     );
-    result?;
-    *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
-    Ok(())
+    result
 }
 
 pub fn save_project(state: &AppState) -> Result<(), String> {
@@ -1157,23 +1155,42 @@ fn replace_project_state(
     state: &AppState,
     replacement: knx_core::Project,
     replacement_import_counts: (usize, usize),
+    replacement_store_path: Option<PathBuf>,
 ) {
     let mut project = state.project.lock().expect("state mutex poisoned");
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let mut import_counts = state.import_counts.lock().expect("state mutex poisoned");
+    let mut store_path = state.store_path.lock().expect("state mutex poisoned");
 
     *project = Some(replacement);
     *stack = knx_core::CommandStack::new();
     *import_counts = replacement_import_counts;
+    *store_path = replacement_store_path;
+}
+
+/// Current save metadata and tree are read under the same project lock.
+#[derive(serde::Serialize)]
+pub struct CurrentProject {
+    #[serde(flatten)]
+    pub tree: knx_projection::ProjectTree,
+    pub has_store_path: bool,
 }
 
 /// Rebuilds the open project's public tree from the server's current state.
-pub fn current_project_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
+pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> {
     let project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_ref().ok_or("no project open")?;
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    Ok(tree_with_state(project, &stack, import_counts))
+    let has_store_path = state
+        .store_path
+        .lock()
+        .expect("state mutex poisoned")
+        .is_some();
+    Ok(CurrentProject {
+        tree: tree_with_state(project, &stack, import_counts),
+        has_store_path,
+    })
 }
 
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
@@ -3405,6 +3422,7 @@ mod tests {
         .unwrap();
         create_area_impl(&state, "Old area".into(), 1).unwrap();
         *state.import_counts.lock().unwrap() = (7, 9);
+        *state.store_path.lock().unwrap() = Some(PathBuf::from("old.knxdb"));
 
         // Stop a replacement at the second lock. A correct publication
         // keeps the first (`project`) lock until stack and counts are also
@@ -3451,6 +3469,7 @@ mod tests {
         };
 
         let (reader_tx, reader_rx) = mpsc::channel();
+        let old_store_path_retained = state.store_path.lock().unwrap().is_some();
         let reader_state = Arc::clone(&state);
         let reader = std::thread::spawn(move || {
             reader_tx.send(current_project_tree(&reader_state)).unwrap();
@@ -3466,6 +3485,10 @@ mod tests {
         drop(stack_guard);
         writer.join().unwrap().unwrap();
         reader.join().unwrap();
+        assert!(
+            old_store_path_retained,
+            "save metadata changed before project publication"
+        );
         let tree = reader_rx
             .recv_timeout(Duration::from_secs(1))
             .unwrap()
@@ -3475,6 +3498,8 @@ mod tests {
             project_lock_is_retained,
             "replacement project became visible before stack/count publication"
         );
+        assert!(!tree.has_store_path);
+        let tree = tree.tree;
         assert_eq!(tree.installations[0].name, "Replacement installation");
         assert_eq!((tree.errors, tree.warnings), (0, 0));
         assert!(!tree.can_undo);

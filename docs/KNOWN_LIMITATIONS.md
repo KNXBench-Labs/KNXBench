@@ -1666,6 +1666,13 @@ temporary SQLite file before streaming begins.
 
 ## 24. `FsPicker` has no drag-and-drop or multi-select
 
+**Final-review hardening, 2026-09-22.** Duplicate basenames are explicit 409
+conflicts, including pre-existing upload files; no destination is overwritten.
+The earlier successful count and filename/error remain visible on partial
+failure. Closing/selecting/unmounting stops the remaining queue. A reopened
+picker waits for the previous in-flight request, which may still finish on the
+server; closing is not a rollback of that request.
+
 **Resolution, 2026-09-22.** The browser picker still returns one
 `Promise<string | null>` path because project open/import remains a singular
 human choice. Its local file input now accepts multiple files, and its upload
@@ -5906,7 +5913,7 @@ counts; no open project is a `400 Bad Request`. When a load POST loses its
 response, the browser defers its error toast until it has read the final load
 snapshot. Only exact `clientToken` ownership plus `status: "succeeded"` may
 recover: the client fetches the current server tree, resets its projection,
-derives stored-path state from the snapshot's `kind`, and clears the load
+reads stored-path state from the same current-tree response, and clears the load
 banner without an alert. The read is deliberately current-server truth, not a
 cached copy of the lost POST response. A foreign or missing token never earns
 that read, so another client's success cannot replace this client's failure.
@@ -6994,6 +7001,13 @@ the ADR's reasoning (one `Override` per attribute, absence distinct from a
 stated value) is exactly what made the sixth field a one-line addition.
 
 ## 118. A succeeded project load announces nothing to a screen reader
+
+**Final-review correction, 2026-09-22.** Direct loads retain the filename notice
+described below. Recovery announces the current project using the EN/DE
+`loadProgress.recovered` message, because another client may have replaced the
+earlier load before the recovery GET. Its tree and `has_store_path` metadata
+are coherent; the old operation's kind and filename are never used to label
+that current project. The Task 6 description below records the initial behavior.
 
 **Resolved (T12 task 6).** `App.tsx` now completes direct loads and the
 exact-token §96 recovered-load path through one local success tail. It

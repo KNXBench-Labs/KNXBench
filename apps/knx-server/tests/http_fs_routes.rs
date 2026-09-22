@@ -175,6 +175,60 @@ async fn uploading_with_no_file_field_is_a_400() {
 }
 
 #[tokio::test]
+async fn duplicate_uploads_preserve_the_first_file_and_report_conflict() {
+    let (state, dir) = state_with_data_dir();
+    let app = knx_server::app(Arc::new(state), None);
+    for (content, status) in [
+        (b"first".as_slice(), StatusCode::OK),
+        (b"second".as_slice(), StatusCode::CONFLICT),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(multipart_request(
+                "/api/fs/upload",
+                multipart_file_body("file", "same.knxproj", content),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+    }
+    assert_eq!(
+        std::fs::read(dir.path().join("uploads/same.knxproj")).unwrap(),
+        b"first"
+    );
+    assert_eq!(
+        std::fs::read_dir(dir.path().join("uploads"))
+            .unwrap()
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn upload_preserves_a_preexisting_destination() {
+    let (state, dir) = state_with_data_dir();
+    std::fs::create_dir(dir.path().join("uploads")).unwrap();
+    std::fs::write(dir.path().join("uploads/same.knxproj"), b"existing").unwrap();
+    let app = knx_server::app(Arc::new(state), None);
+    let response = app
+        .oneshot(multipart_request(
+            "/api/fs/upload",
+            multipart_file_body("file", "same.knxproj", b"replacement"),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    assert!(body_json(response).await["error"]
+        .as_str()
+        .unwrap()
+        .contains("already exists"));
+    assert_eq!(
+        std::fs::read(dir.path().join("uploads/same.knxproj")).unwrap(),
+        b"existing"
+    );
+}
+
+#[tokio::test]
 async fn downloading_with_no_project_open_is_a_400() {
     let (state, _dir) = state_with_data_dir();
     let app = knx_server::app(Arc::new(state), None);

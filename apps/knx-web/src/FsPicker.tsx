@@ -57,6 +57,15 @@ async function uploadFile(file: File): Promise<string> {
   return (await res.json()).path as string;
 }
 
+// A closed picker may still have one request on the wire. Share only that
+// request's lifetime across roots so reopening cannot start overlapping POSTs.
+let uploadTail: Promise<unknown> = Promise.resolve();
+function uploadWhileCurrent(file: File, current: () => boolean): Promise<string | null> {
+  const result = uploadTail.then(() => current() ? uploadFile(file) : null);
+  uploadTail = result.catch(() => {});
+  return result;
+}
+
 function Modal(props: {
   mode: "open" | "save";
   filters: Filter[];
@@ -75,6 +84,12 @@ function Modal(props: {
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const listingGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     const generation = ++listingGenerationRef.current;
@@ -99,7 +114,9 @@ function Modal(props: {
 
     try {
       for (const file of files) {
-        await uploadFile(file);
+        if (!mountedRef.current) return;
+        await uploadWhileCurrent(file, () => mountedRef.current);
+        if (!mountedRef.current) return;
         uploaded += 1;
       }
 
@@ -107,6 +124,7 @@ function Modal(props: {
       setRefreshKey((key) => key + 1);
       setStatus(t("fsPicker.uploaded", { count: uploaded }));
     } catch (err) {
+      if (!mountedRef.current) return;
       if (uploaded > 0) {
         setDir("uploads");
         setRefreshKey((key) => key + 1);
@@ -120,7 +138,7 @@ function Modal(props: {
       }));
     } finally {
       uploadingRef.current = false;
-      setUploading(false);
+      if (mountedRef.current) setUploading(false);
     }
   }
 

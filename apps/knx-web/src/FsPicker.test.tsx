@@ -6,8 +6,63 @@ import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { openMountPicker } from "./FsPicker";
+import { noteRefusal } from "./api";
 import { resetSessionListenersForTests, subscribeSessionExpired } from "./session";
 afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ""; resetSessionListenersForTests(); });
+
+it.each(["Escape", "Cancel", "selection", "session expiry"])("stops queued files after %s and serializes a reopened picker", async (closeVia) => {
+  let finishFirst!: (value: unknown) => void;
+  const uploadedNames: string[] = [];
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url !== "/api/fs/upload") return { ok: true, json: async () => [{ name: "existing.knxproj", is_dir: false }] };
+    uploadedNames.push(((init!.body as FormData).get("file") as File).name);
+    if (uploadedNames.length === 1) return new Promise((resolve) => { finishFirst = resolve; });
+    return { ok: true, json: async () => ({ path: "uploads/new.knxproj" }) };
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  let first!: Promise<string | null>;
+  await act(async () => { first = openMountPicker([]); });
+  async function choose(files: File[]) {
+    const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+    Object.defineProperty(input, "files", { configurable: true, value: files });
+    await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+  }
+  await choose([new File(["first"], "first.knxproj"), new File(["hidden"], "hidden.knxproj")]);
+  await act(async () => {
+    if (closeVia === "session expiry") noteRefusal("/api/fs/list", 401);
+    else if (closeVia === "Escape") document.querySelector('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    else Array.from(document.querySelectorAll("button")).find((button) => button.textContent === (closeVia === "Cancel" ? "Cancel" : "existing.knxproj"))!.click();
+  });
+  expect(await first).toBe(closeVia === "selection" ? "existing.knxproj" : null);
+  await act(async () => { openMountPicker([]); });
+  await choose([new File(["new"], "new.knxproj")]);
+  const beforeCompletion = [...uploadedNames];
+  await act(async () => { finishFirst({ ok: true, json: async () => ({ path: "uploads/first.knxproj" }) }); });
+  expect(beforeCompletion).toEqual(["first.knxproj"]);
+  expect(uploadedNames).toEqual(["first.knxproj", "new.knxproj"]);
+  expect(document.querySelector('[role="status"]')?.textContent).toContain("1");
+  await act(async () => document.querySelector('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});
+it("reports a duplicate basename conflict without claiming two uploads survived", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/same.knxproj" }) })
+    .mockResolvedValueOnce({ ok: false, status: 409, statusText: "Conflict", json: async () => ({ error: "upload filename already exists" }) })
+    .mockResolvedValue({ ok: true, json: async () => [{ name: "same.knxproj", is_dir: false }] });
+  vi.stubGlobal("fetch", fetchMock);
+  await act(async () => { openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  Object.defineProperty(input, "files", { value: [new File(["first"], "same.knxproj"), new File(["second"], "same.knxproj"), new File(["later"], "later.knxproj")] });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(2);
+  expect(document.querySelector('[role="status"]')).toBeNull();
+  expect(document.querySelector(".field-error")?.textContent).toContain("Uploaded 1 of 3 files; same.knxproj failed: upload filename already exists");
+  expect(document.querySelector(".fs-picker-list")?.textContent).toContain("same.knxproj");
+  await act(async () => document.querySelector('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});
+
 it("provides a keyboard file choice and Escape returns focus to its opener", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok:true,json:async()=>[{name:"Example.knxproj",is_dir:false}]}));
   const opener=document.createElement("button"); document.body.append(opener); opener.focus();

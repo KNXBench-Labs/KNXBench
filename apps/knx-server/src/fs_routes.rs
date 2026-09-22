@@ -2,6 +2,7 @@
 //! strategies for the web build (server-mount and upload/download; the
 //! Tauri build skips these entirely in favor of native OS dialogs, see
 //! `apps/knx-web/src/filePicker.ts`).
+use std::io::Write;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -109,7 +110,23 @@ async fn upload(
             .ok_or_else(|| ApiError::bad_request("empty filename"))?;
         let dest = uploads_dir.join(safe_name);
         let bytes = field.bytes().await.map_err(multipart_error)?;
-        std::fs::write(&dest, &bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        // Publish a fully written file without replacing an earlier upload,
+        // including a concurrent request with the same basename.
+        let mut staged = tempfile::NamedTempFile::new_in(&uploads_dir)
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        staged
+            .write_all(&bytes)
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        staged.persist_noclobber(&dest).map_err(|e| {
+            if e.error.kind() == std::io::ErrorKind::AlreadyExists {
+                ApiError::with_status(
+                    axum::http::StatusCode::CONFLICT,
+                    "upload filename already exists; rename the local file and retry",
+                )
+            } else {
+                ApiError::internal(e.to_string())
+            }
+        })?;
         let relative = dest.strip_prefix(&state.data_dir).unwrap_or(&dest);
         return Ok(Json(UploadResponse {
             path: relative.to_string_lossy().into_owned(),

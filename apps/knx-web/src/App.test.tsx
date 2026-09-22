@@ -1296,7 +1296,7 @@ describe("App — a failed load never renders a running banner", () => {
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
       completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
-    apiMock.currentProject.mockResolvedValue(treeWithDevice());
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: false });
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
     const root = await renderApp();
@@ -1314,7 +1314,7 @@ describe("App — a failed load never renders a running banner", () => {
     expect(host!.querySelector('[role="alert"]')).toBeNull();
     const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
     expect(toasts).toHaveLength(1);
-    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Loaded villa.knxproj.");
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Recovered the current project.");
     await act(async () => root.unmount());
   });
 
@@ -1324,7 +1324,7 @@ describe("App — a failed load never renders a running banner", () => {
       operationId: 2, kind: "open", source: "villa.knxdb", phase: "buildProjectTree",
       completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
-    apiMock.currentProject.mockResolvedValue(treeWithDevice());
+    apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), has_store_path: true });
     apiMock.openProject.mockRejectedValueOnce(new Error("connection closed"));
     const root = await renderApp();
 
@@ -1338,6 +1338,32 @@ describe("App — a failed load never renders a running banner", () => {
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
     expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
     expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it.each([true, false])("recovery uses current save metadata when another project replaces the owned load (saved=%s)", async (saved) => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/old.knxproj");
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 3, kind: saved ? "import" : "open", source: "old.knxproj",
+      phase: "buildProjectTree", completed: null, total: null,
+      status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
+    });
+    let recover!: (value: unknown) => void;
+    apiMock.currentProject.mockReturnValue(new Promise((resolve) => { recover = resolve; }));
+    apiMock.importProject.mockRejectedValue(new Error("connection closed"));
+    filePickerMock.pickSavePath.mockResolvedValue(null);
+    const root = await renderApp();
+    await clickOpen();
+    // The GET completes after another client has replaced the project. Its
+    // save state is deliberately opposite to the completed operation's kind.
+    await act(async () => { recover({ ...treeWithDevice(), has_store_path: saved }); });
+    expect(host!.querySelector(".load-progress")).toBeNull();
+    const status = host!.querySelector('.toast--fun[role="status"]');
+    expect(status?.textContent).toContain("Recovered the current project.");
+    expect(status?.textContent).not.toContain("old.knxproj");
+    await act(async () => { findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(saved ? 1 : 0);
+    expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(saved ? 0 : 1);
     await act(async () => root.unmount());
   });
 

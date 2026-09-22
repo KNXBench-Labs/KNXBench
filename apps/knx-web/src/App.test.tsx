@@ -445,6 +445,55 @@ describe("App — diagnostic panels survive a collapsed navigation pane", () => 
   });
 });
 
+describe("App — search reveal request", () => {
+  // A tree click must remain a local navigation decision: only the external
+  // search pick is allowed to reopen a branch the user has just collapsed.
+  it("reveals a search selection but leaves an ordinary explorer selection without a new reveal", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/search.knxproj");
+    apiMock.importProject.mockResolvedValue(treeWithDevice());
+    apiMock.deviceDetail.mockResolvedValueOnce(deviceDetailFixture());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    const unassignedToggle = () => host!.querySelector<HTMLButtonElement>(
+      '.tree-toggle[aria-label="Unassigned"]',
+    )!;
+    await act(async () => unassignedToggle().click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    // Selecting Project is an ordinary explorer selection and must not
+    // countermand the manual collapse.
+    await act(async () => treeLabel("Project").click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "k", ctrlKey: true, bubbles: true, cancelable: true,
+      }));
+    });
+    const input = host!.querySelector<HTMLInputElement>(".search-panel input")!;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => {
+      setter.call(input, "Device D");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const result = Array.from(host!.querySelectorAll<HTMLElement>('[role="option"]'))
+      .find((option) => option.textContent === "Device D")!;
+    await act(async () => result.click());
+    expect(treeLabel("Device D")).toBeTruthy();
+
+    await act(async () => unassignedToggle().click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+    await act(async () => treeLabel("Project").click());
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
+
+    await act(async () => root.unmount());
+  });
+});
+
 // T33 Task 3: the Inspector's device-detail fetch forwards the active
 // product language, exactly the way `ParameterPanel.test.tsx`'s "sends the
 // active product language" tests already prove for the parameter panel's

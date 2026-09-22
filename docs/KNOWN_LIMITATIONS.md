@@ -1455,24 +1455,22 @@ in-memory copies) instead of re-opening the file — see
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
 
-## 19. A search result inside a collapsed tree branch is not revealed
+## 19. Search selections now reveal their collapsed Project Explorer branch — RESOLVED (2026-09-22, T12)
 
-**Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-web/
-src/Search.tsx`) selects the matching device, group address, or building
-part and shows it in the Inspector, but if the Project Explorer tree has
-the ancestor branch containing it manually collapsed, the tree itself does
-not expand or scroll to reveal the row — only the Inspector reflects the
-new selection.
+Picking a `Ctrl+K` result now records a monotonic external-selection reveal
+generation before preserving `App`'s existing canonical selection path. The
+Project Explorer opens only the topology, building-part, group-address, or
+group-range ancestors that contain that requested selection, then scrolls the
+selected row with `scrollIntoView({ block: "nearest" })`. Another search pick
+of the same result has a new generation, so it reveals again after a user has
+collapsed the branch manually. Ordinary explorer selections never create a
+generation and therefore preserve ordinary manual collapse.
 
-**Cause.** An explicit, approved scope decision recorded in
-[the search design spec](superpowers/specs/2026-09-04-search-design.md),
-not an oversight: tree auto-expand/scroll-into-view needs its own
-expand/collapse/reveal logic, which the spec deliberately kept out of this
-cycle's surface to keep search and tree-navigation state disjoint.
-
-**Lifted when.** A future cycle adds tree auto-expand and scroll-into-view
-for a selection that originates outside the tree itself (search today,
-potentially a future command palette too).
+Devices rendered in both a building branch and their canonical topology (or
+unassigned) occurrence scroll exactly once at that canonical occurrence; the
+building copy is not a second competing destination. Component and App tests
+cover nested topology, building, and group-range paths, repeated reveals, the
+single device scroll, and manual-selection preservation. **[V]**
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 

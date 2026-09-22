@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 1 on `t12-ui-residue`: search picks now issue a monotonic external reveal request while `App` remains the canonical selection owner. The Project Explorer reopens only containing topology, building, group-address, or group-range ancestors; selected rows use nearest scrolling. A duplicated device scrolls only in canonical topology/unassigned placement; ordinary tree clicks preserve manual collapse. Commit pending in this worktree; report: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-1-report.md`.
+- **Verification:** Initial focused RED recorded; focused GREEN: 99/99 tests plus TypeScript. Full frontend: 887/887 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** Controller may integrate this isolated task commit; remaining T12 tasks stay independent.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T11 structural drag-and-drop merged non-fast-forward into `main` as `02237eb`. Exactly device→line and device→building-part ship through existing validated commands, with protected-mode native browser compatibility, first-installation boundaries, stale/malformed/mismatched rejection, localized live-region outcomes, keyboard-equivalent Inspector selects, and token-only motion-free feedback. Fresh review ended 0 findings after one RED→GREEN fix. Full merged gates: Rust 1,948 passed/5 ignored in 92 result blocks; frontend 883/63; TypeScript, fmt, workspace Clippy, layering, headers 194/162, anchors 389/180, cargo-deny. No KNX/LAN/hardware traffic. Detail: `.ai/logs/2026-09-22_codex__t11_structural_drag_drop.md`.
 - **Pending/Next Steps:** Commit/push final T11 evidence, fetch and prove clean `HEAD == origin/main`, then continue the next documented overall-goal task. Group-address→communication-object drag remains deliberately omitted until an explicit `Send`/`Receive` direction interaction is designed.
 - **Notes Claude:** Comparable designs/specifications/plans are permanently pre-approved; never pause to request approval. Weekly limit read-only check is 36%, below the 60% pause threshold. Commit/push every completed block with KNXBench author, light humor and explanatory body.

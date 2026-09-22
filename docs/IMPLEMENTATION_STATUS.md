@@ -9811,3 +9811,25 @@ panels in English or German and safely falls back to the server message for
 unknown events. This resolves `KNOWN_LIMITATIONS.md` §122. Multi-window live
 synchronization remains deliberately open as §121. Project/entity defaults,
 path settings, scan timing defaults, and per-user settings remain non-goals.
+
+## 2026-09-22 — T11: bounded structural drag-and-drop
+
+The project explorer now supports exactly two native structural gestures:
+device → topology line and device → building part. Both dispatch the existing
+validated, undoable `moveDeviceToLine` or `moveDeviceToBuildingPart` command path;
+the explorer never mutates its projected `ProjectTree` optimistically. Drag sources
+are limited to devices currently reachable from the first installation's lines or
+unassigned bucket, and targets are limited to that installation's lines and
+building parts. The typed `DataTransfer` payload uses one private MIME type and is
+accepted only as a complete safe positive decimal id that still matches the active
+source and current tree at drop time.
+
+Successful drops update from the returned server projection and announce through
+the existing localized status-toast live region; rejected commands use the
+existing alert path and retain the old projection. The Inspector's native line and
+building-part selects remain the keyboard-equivalent controls and call the same
+commands. Workbench-scoped drag and target feedback uses existing theme tokens and
+introduces no animation. Group address → communication-object dragging remains
+deliberately omitted: `LinkComObject` requires an explicit `Send` or `Receive`
+direction, so no silent default is technically honest. This closes only the two
+specified B10 gestures, not general drag-and-drop support.

@@ -1,5 +1,15 @@
 # Import and export
 
+**Space types (T13, 2026-09-22).** Import preserves `Stairway`, `RoomPart`,
+`Area`, `Ground` and `Segment` alongside the six previously supported types.
+Schema23 §1.1.2.3 omits `RoomPart`, while §1.2.6.4 lists both `RoomPart` and
+`Segment`; see [DATA_MODEL §5](DATA_MODEL.md#5-two-orthogonal-hierarchies).
+Synthetic schema-23 tests prove mapping, not real-project compatibility for
+these five values. Unknown ETS values remain reported mapping errors.
+Native schema-v9 save/load/re-save preserves exact kinds; unknown stored kinds
+fail with `StoreError::UnknownBuildingPartType`, preventing silent rewriting.
+There is no ETS project exporter (ADR-0028).
+
 The contract Session 3 implements. Evidence markers follow
 [RESEARCH.md](RESEARCH.md): **[V]** verified against the reference project or
 against source code, **[D]** documented elsewhere but not verified here, **[A]**

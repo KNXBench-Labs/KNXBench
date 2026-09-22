@@ -582,6 +582,34 @@ async fn creating_a_nested_group_range_then_renaming_and_deleting_it() {
 }
 
 #[tokio::test]
+async fn building_part_creation_preserves_all_documented_space_types() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+    for token in ["Stairway", "RoomPart", "Area", "Ground", "Segment"] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/building-parts")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({"name": token, "kind": token}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{token}");
+        let tree = body_json(response).await;
+        let parts = tree["installations"][0]["buildings"].as_array().unwrap();
+        assert!(parts
+            .iter()
+            .any(|part| part["name"] == token && part["kind"] == token));
+    }
+}
+
+#[tokio::test]
 async fn creating_a_nested_building_part_then_renaming_and_deleting_it() {
     let state = Arc::new(state_with_one_installation());
     let app = knx_server::app(state, None);

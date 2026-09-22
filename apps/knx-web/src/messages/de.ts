@@ -300,6 +300,11 @@ export const messages: Record<MessageKey, string> = {
   "buildingPartKind.corridor": "Flur",
   "buildingPartKind.distributionBoard": "Verteiler",
   "buildingPartKind.buildingPart": "Gebäudeteil",
+  "buildingPartKind.stairway": "Treppenhaus",
+  "buildingPartKind.roomPart": "Raumteil",
+  "buildingPartKind.area": "Bereich",
+  "buildingPartKind.ground": "Grundstück",
+  "buildingPartKind.segment": "Segment",
 
   "parameters.deviceScope": "Gerät",
   "parameters.moduleNumber": "Modul #{number}",

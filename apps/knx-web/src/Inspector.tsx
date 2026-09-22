@@ -52,6 +52,11 @@ const BUILDING_PART_KIND_KEYS: Record<string, MessageKey> = {
   Corridor: "buildingPartKind.corridor",
   DistributionBoard: "buildingPartKind.distributionBoard",
   BuildingPart: "buildingPartKind.buildingPart",
+  Stairway: "buildingPartKind.stairway",
+  RoomPart: "buildingPartKind.roomPart",
+  Area: "buildingPartKind.area",
+  Ground: "buildingPartKind.ground",
+  Segment: "buildingPartKind.segment",
 };
 
 function buildingPartKindLabel(t: Translate, kind: string): string {

@@ -18,18 +18,29 @@ fn kind_to_str(k: BuildingPartType) -> &'static str {
         BuildingPartType::Corridor => "Corridor",
         BuildingPartType::DistributionBoard => "DistributionBoard",
         BuildingPartType::BuildingPart => "BuildingPart",
+        BuildingPartType::Stairway => "Stairway",
+        BuildingPartType::RoomPart => "RoomPart",
+        BuildingPartType::Area => "Area",
+        BuildingPartType::Ground => "Ground",
+        BuildingPartType::Segment => "Segment",
     }
 }
 
-fn kind_from_str(s: &str) -> BuildingPartType {
-    match s {
+fn kind_from_str(s: &str) -> Result<BuildingPartType, StoreError> {
+    Ok(match s {
+        "Building" => BuildingPartType::Building,
         "Floor" => BuildingPartType::Floor,
         "Room" => BuildingPartType::Room,
         "Corridor" => BuildingPartType::Corridor,
         "DistributionBoard" => BuildingPartType::DistributionBoard,
         "BuildingPart" => BuildingPartType::BuildingPart,
-        _ => BuildingPartType::Building,
-    }
+        "Stairway" => BuildingPartType::Stairway,
+        "RoomPart" => BuildingPartType::RoomPart,
+        "Area" => BuildingPartType::Area,
+        "Ground" => BuildingPartType::Ground,
+        "Segment" => BuildingPartType::Segment,
+        _ => return Err(StoreError::UnknownBuildingPartType(s.to_owned())),
+    })
 }
 
 pub fn upsert_building_part(
@@ -147,7 +158,7 @@ pub fn load_buildings(
                     },
                     name,
                     number,
-                    kind: kind_from_str(&kind),
+                    kind: kind_from_str(&kind)?,
                     default_line: default_line_id.map(LineId),
                     completion: completion_from_str(&completion),
                     children,

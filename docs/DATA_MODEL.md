@@ -294,13 +294,17 @@ neither placement owns it.
 
 Observed `BuildingPart/@Type` values: `Building` (1), `Floor` (3), `Room` (14),
 `Corridor` (2), `DistributionBoard` (1), `BuildingPart` (1). `BuildingPart`
-nests recursively and carries `DefaultLine`. Those six observed values are
-also the six `BuildingPartType` variants, which is fewer than the schema
-documents: *Project Schema23 v01.00.00* §1.1.2.3 enumerates ten and §1.2.6.4
-names eleven, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
-coarsened to `BuildingPart` on import, with a reported `MapProblem` rather
-than silently
-([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)).
+nests recursively and carries `DefaultLine`. Beyond those six observed values,
+`BuildingPartType` supports the complete documented Space vocabulary.
+*Project Schema23 v01.00.00* §1.1.2.3 enumerates ten and §1.2.6.4
+names eleven, including both `RoomPart` and `Segment`: only `RoomPart` is
+absent from the enumeration. `Stairway`, `RoomPart`, `Area`, `Ground` and
+`Segment` retain exact types through import, native save/load/re-save,
+projection, API creation and localized UI. Synthetic tests verify these five;
+the local reference projects do not contain them. Unknown ETS types still
+produce a `MapProblem`; unknown native types cause a typed load error.
+The unconstrained `kind TEXT NOT NULL` column needs no migration: schema v9
+is unchanged. ETS project export remains absent (ADR-0028).
 
 **A device without a line is valid** and lives in `Topology::unassigned`. The
 reference project contains exactly one, and it is precisely the device

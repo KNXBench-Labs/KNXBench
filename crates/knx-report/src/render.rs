@@ -870,6 +870,30 @@ mod tests {
     }
 
     #[test]
+    fn building_report_distinguishes_documented_space_kinds_from_building_part() {
+        let mut project = sample_project();
+        for (kind, token) in [
+            (BuildingPartType::Stairway, "Stairway"),
+            (BuildingPartType::RoomPart, "RoomPart"),
+            (BuildingPartType::Area, "Area"),
+            (BuildingPartType::Ground, "Ground"),
+            (BuildingPartType::Segment, "Segment"),
+        ] {
+            project.installations[0].buildings = vec![building_part(1, "Test", kind, None, &[])];
+            let report = render_html(
+                &project,
+                &ReportOptions {
+                    generated_at: fixed_time(),
+                },
+            );
+            assert!(report
+                .html
+                .contains(&format!("<strong>Test</strong> ({token})")));
+            assert!(!report.html.contains("<strong>Test</strong> (BuildingPart)"));
+        }
+    }
+
+    #[test]
     fn rendering_the_same_project_twice_with_the_same_timestamp_is_byte_identical() {
         let project = sample_project();
         let options = ReportOptions {

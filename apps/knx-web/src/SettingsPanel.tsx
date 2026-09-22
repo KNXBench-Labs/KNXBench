@@ -8,6 +8,10 @@ import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
 import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
 import Overlay from "./Overlay";
+import { usePreferredGateway } from "./gatewayPreference";
+import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
+import { formatSettingsDiagnostic } from "./settingsDiagnostic";
+import { useSettingsState } from "./settingsStore";
 import {
   exportEnglishTemplate,
   exportLanguagePack,
@@ -229,6 +233,8 @@ export default function SettingsPanel(props: {
 
   const [uiLanguage, setUiLanguage] = useUiLanguage();
   const t = useTranslate();
+  const [preferredGateway, setPreferredGateway] = usePreferredGateway();
+  const settingsState = useSettingsState();
 
   const packs = useLanguagePacks();
   const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null);
@@ -305,6 +311,8 @@ export default function SettingsPanel(props: {
       <h2 className="settings-panel-title" id="settings-panel-title">
         {t("settings.title")}
       </h2>
+      <section className="settings-section">
+        <h3>{t("settings.section.appearance")}</h3>
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.theme")}</span>
         <select
@@ -376,6 +384,9 @@ export default function SettingsPanel(props: {
           ))}
         </select>
       </label>
+      </section>
+      <section className="settings-section">
+        <h3>{t("settings.section.languageData")}</h3>
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.productDataLanguage")}</span>
         {productLanguages.length === 0 ? (
@@ -471,6 +482,29 @@ export default function SettingsPanel(props: {
           </ul>
         )}
       </div>
+      </section>
+      <section className="settings-section settings-section-bus">
+        <h3>{t("settings.section.busDiagnostics")}</h3>
+        <label className="settings-field">
+          <span className="settings-field-label">{t("settings.preferredGateway")}</span>
+          <input
+            value={preferredGateway}
+            onChange={(event) => setPreferredGateway(event.target.value)}
+            placeholder="192.0.2.10:3671"
+          />
+          <span className="settings-field-hint">{t("settings.preferredGatewayHint")}</span>
+        </label>
+        <LineScanExclusionsEditor disabled={false} />
+        {(settingsState.diagnostic || settingsState.fallbackMessage) && (
+          <p className="settings-diagnostic" role="status">
+            {formatSettingsDiagnostic(
+              t,
+              settingsState.diagnostic,
+              settingsState.fallbackMessage ?? "",
+            )}
+          </p>
+        )}
+      </section>
     </Overlay>
   );
 }

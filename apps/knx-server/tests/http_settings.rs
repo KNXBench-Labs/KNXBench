@@ -156,6 +156,17 @@ async fn a_file_from_a_newer_build_is_refused_without_being_rewritten() {
     let (status, body) = get(&state).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["status"], "refusedNewer");
+    assert_eq!(body["diagnostic"]["kind"], "refusedNewer");
+    assert_eq!(
+        body["diagnostic"]["fileVersion"],
+        knx_server::CURRENT_SCHEMA_VERSION + 4
+    );
+    assert_eq!(
+        body["diagnostic"]["currentVersion"],
+        knx_server::CURRENT_SCHEMA_VERSION
+    );
+    assert!(body["message"].as_str().is_some());
+    assert!(body.get("notice").is_none());
     assert_eq!(body["settings"], json!({}));
     assert_eq!(
         body["fileSchemaVersion"],
@@ -187,6 +198,10 @@ async fn a_damaged_file_is_moved_aside_and_the_session_starts_from_defaults() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["status"], "quarantined");
+    assert_eq!(body["diagnostic"]["kind"], "quarantined");
+    assert_eq!(body["diagnostic"]["reason"], "invalidJson");
+    assert!(body["message"].as_str().is_some());
+    assert!(body.get("notice").is_none());
     assert_eq!(body["settings"], json!({}));
     let moved_to = body["movedTo"].as_str().unwrap();
     assert!(moved_to.starts_with("settings.damaged-"), "{moved_to}");
@@ -195,6 +210,47 @@ async fn a_damaged_file_is_moved_aside_and_the_session_starts_from_defaults() {
         "{ not json, not even close"
     );
     assert!(!settings_file(&dir).exists());
+}
+
+async fn assert_quarantine_reason(raw: &str, expected: &str) {
+    let (state, dir) = state();
+    std::fs::write(settings_file(&dir), raw).unwrap();
+    let (status, body) = get(&state).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["diagnostic"]["kind"], "quarantined");
+    assert_eq!(body["diagnostic"]["reason"], expected);
+    assert!(body["diagnostic"]["movedTo"].as_str().is_some());
+    assert!(body["message"].as_str().is_some());
+    assert!(body.get("notice").is_none());
+}
+
+#[tokio::test]
+async fn quarantine_reasons_distinguish_wrong_root_missing_version_and_wrong_settings() {
+    assert_quarantine_reason("[]", "notObject").await;
+    assert_quarantine_reason(r#"{"settings": {}}"#, "missingSchemaVersion").await;
+    assert_quarantine_reason(
+        &format!(
+            r#"{{"schemaVersion": {}, "settings": []}}"#,
+            knx_server::CURRENT_SCHEMA_VERSION
+        ),
+        "settingsNotObject",
+    )
+    .await;
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn quarantine_reason_distinguishes_an_unreadable_settings_path() {
+    let (state, dir) = state();
+    std::fs::create_dir(settings_file(&dir)).unwrap();
+    let (status, body) = get(&state).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["diagnostic"]["kind"], "quarantined");
+    assert_eq!(body["diagnostic"]["reason"], "unreadable");
+    assert!(body["message"]
+        .as_str()
+        .unwrap()
+        .contains("could not be read"));
 }
 
 #[tokio::test]
@@ -213,6 +269,14 @@ async fn browser_preferences_are_adopted_once_and_migrated_on_the_way_in() {
     .await;
 
     assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["diagnostic"]["kind"], "adopted");
+    assert_eq!(body["diagnostic"]["fromVersion"], 0);
+    assert_eq!(
+        body["diagnostic"]["toVersion"],
+        knx_server::CURRENT_SCHEMA_VERSION
+    );
+    assert!(body["message"].as_str().is_some());
+    assert!(body.get("notice").is_none());
     // The browser era's "dark" is this era's "graphite".
     assert_eq!(body["settings"]["theme"], "graphite");
     assert_eq!(body["settings"]["accent"], "mint");
@@ -264,6 +328,14 @@ async fn a_migration_is_reported_in_the_session_log() {
     assert_eq!(body["status"], "migrated");
     assert_eq!(body["settings"]["theme"], "porcelain");
     assert_eq!(body["fileSchemaVersion"], 0);
+    assert_eq!(body["diagnostic"]["kind"], "migrated");
+    assert_eq!(body["diagnostic"]["fromVersion"], 0);
+    assert_eq!(
+        body["diagnostic"]["toVersion"],
+        knx_server::CURRENT_SCHEMA_VERSION
+    );
+    assert!(body["message"].as_str().is_some());
+    assert!(body.get("notice").is_none());
 
     let app = knx_server::app(state.clone(), None);
     let response = app
@@ -277,12 +349,15 @@ async fn a_migration_is_reported_in_the_session_log() {
         .unwrap();
     let log = body_json(response).await;
     let entries = log.as_array().unwrap();
-    assert!(
-        entries
-            .iter()
-            .any(|e| e["source"] == "settings"
-                && e["message"].as_str().unwrap().contains("migrated")),
-        "{log}"
+    let entry = entries
+        .iter()
+        .find(|e| e["source"] == "settings" && e["message"].as_str().unwrap().contains("migrated"))
+        .unwrap_or_else(|| panic!("missing settings migration entry: {log}"));
+    assert_eq!(entry["diagnostic"]["kind"], "migrated");
+    assert_eq!(entry["diagnostic"]["fromVersion"], 0);
+    assert_eq!(
+        entry["diagnostic"]["toVersion"],
+        knx_server::CURRENT_SCHEMA_VERSION
     );
 }
 

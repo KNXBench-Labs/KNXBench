@@ -10,8 +10,8 @@
 // network round trip is not now. The cache is therefore deliberately
 // shaped so it cannot be mistaken for the record — one opaque key holding
 // a whole document, not the eight hand-editable `knx-desktop:` keys this
-// replaced — and `initSettings()` overwrites it wholesale with whatever
-// the server says, including when the server says "nothing".
+// replaced. `initSettings()` hydrates it from the server while preserving
+// explicit edits made after that authoritative read started.
 //
 // Three `knx-desktop:` keys stay in `localStorage` and are none of this
 // module's business: `busContext.ts`'s `project-context`,
@@ -19,9 +19,10 @@
 // state, not preferences. Moving them here would make two windows fight
 // over one record.
 //
-// Nothing is sent to the server before `initSettings()` has run. A change
-// made before then (there is no such moment in the real application —
-// `main.tsx` calls it at mount) updates the cache and stops there.
+// Mount-time preference effects run before the parent bootstrap effect and
+// only restate cache-derived defaults. They update the cache but do not
+// outrank the server. Writes after `initSettings()` starts are journalled
+// per key and flushed once hydration completes.
 
 import { useSyncExternalStore } from "react";
 
@@ -77,7 +78,29 @@ export interface SettingsResponse {
   status: "ok" | "absent" | "migrated" | "refusedNewer" | "quarantined";
   fileSchemaVersion?: number;
   movedTo?: string;
-  notice?: string;
+  diagnostic?: SettingsDiagnostic;
+  message?: string;
+}
+
+export type SettingsQuarantineReason =
+  | "unreadable"
+  | "invalidJson"
+  | "notObject"
+  | "missingSchemaVersion"
+  | "settingsNotObject";
+
+export type SettingsDiagnostic =
+  | { kind: "migrated"; fromVersion: number; toVersion: number }
+  | { kind: "adopted"; fromVersion: number; toVersion: number }
+  | { kind: "refusedNewer"; fileVersion: number; currentVersion: number }
+  | { kind: "quarantined"; reason: SettingsQuarantineReason; movedTo: string };
+
+export type SettingsHydrationState = "cached" | "hydrated" | "failed";
+
+export interface SettingsState {
+  hydration: SettingsHydrationState;
+  diagnostic: SettingsDiagnostic | undefined;
+  fallbackMessage: string | undefined;
 }
 
 interface CachedDocument {
@@ -87,8 +110,15 @@ interface CachedDocument {
 
 let document_: CachedDocument | undefined;
 let synchronized = false;
+let pendingBeforeHydration = new Map<string, unknown>();
 let revision = 0;
 const subscribers = new Set<() => void>();
+const stateSubscribers = new Set<() => void>();
+let state_: SettingsState = {
+  hydration: "cached",
+  diagnostic: undefined,
+  fallbackMessage: undefined,
+};
 
 /** Writes are serialized through one promise chain, so two preferences
  * changed in the same tick reach the server in the order they were made
@@ -186,6 +216,14 @@ function write(key: string, value: unknown, strict: boolean): void {
   }
 
   notify();
+  // Hooks persist their cache-derived defaults during their first effect,
+  // before the parent bootstrap effect starts. Those are initialization,
+  // not user edits, and must not outrank the server record. Once bootstrap
+  // has started, however, any write happened while the authoritative read
+  // was in flight and must survive it.
+  if (!synchronized && started !== undefined) {
+    pendingBeforeHydration.set(key, value === undefined ? null : value);
+  }
   // `null`, not "absent": the server reads a null in a patch as "remove
   // this key", which is the only way to unset a preference remotely.
   push({ [key]: value === undefined ? null : value });
@@ -244,6 +282,24 @@ export function useSettingsRevision(): number {
   return useSyncExternalStore(subscribeToSettings, settingsRevision, settingsRevision);
 }
 
+export function getSettingsState(): SettingsState {
+  return state_;
+}
+
+export function subscribeToSettingsState(onStoreChange: () => void): () => void {
+  stateSubscribers.add(onStoreChange);
+  return () => stateSubscribers.delete(onStoreChange);
+}
+
+export function useSettingsState(): SettingsState {
+  return useSyncExternalStore(subscribeToSettingsState, getSettingsState, getSettingsState);
+}
+
+function setSettingsState(next: SettingsState): void {
+  state_ = next;
+  for (const onStoreChange of stateSubscribers) onStoreChange();
+}
+
 /** Clears the in-memory document and the cache, and disarms server
  * synchronization again. Tests need this for the same reason every other
  * module-level store here has a reset: clearing `localStorage` does not
@@ -251,6 +307,8 @@ export function useSettingsRevision(): number {
 export function resetSettingsForTests(): void {
   document_ = undefined;
   synchronized = false;
+  pendingBeforeHydration = new Map();
+  state_ = { hydration: "cached", diagnostic: undefined, fallbackMessage: undefined };
   started = undefined;
   queue = Promise.resolve();
   try {
@@ -331,7 +389,12 @@ function forgetBrowserEraKeys(adopted: Record<string, unknown>): void {
 }
 
 function apply(response: SettingsResponse): void {
-  document_ = { schemaVersion: response.schemaVersion, settings: { ...response.settings } };
+  const settings = { ...response.settings };
+  for (const [key, value] of pendingBeforeHydration) {
+    if (value === null || value === undefined) delete settings[key];
+    else settings[key] = value;
+  }
+  document_ = { schemaVersion: response.schemaVersion, settings };
   writeCache();
   notify();
 }
@@ -363,6 +426,7 @@ async function loadFromServer(): Promise<void> {
     response = await requestJson<SettingsResponse>("/api/settings");
   } catch (error) {
     console.warn("KNXBench: settings could not be read from the server", error);
+    setSettingsState({ hydration: "failed", diagnostic: undefined, fallbackMessage: undefined });
     return;
   }
 
@@ -387,6 +451,11 @@ async function loadFromServer(): Promise<void> {
         try {
           response = await requestJson<SettingsResponse>("/api/settings");
         } catch {
+          setSettingsState({
+            hydration: "failed",
+            diagnostic: undefined,
+            fallbackMessage: undefined,
+          });
           return;
         }
         // A record exists, so somebody adopted; this browser has nothing
@@ -403,12 +472,22 @@ async function loadFromServer(): Promise<void> {
     }
   }
 
-  if (response.notice) {
+  if (response.message) {
     // Also in the session log, server-side, where the Log panel shows it.
-    console.warn(`KNXBench: ${response.notice}`);
+    console.warn(`KNXBench: ${response.message}`);
   }
   apply(response);
   synchronized = true;
+  setSettingsState({
+    hydration: "hydrated",
+    diagnostic: response.diagnostic,
+    fallbackMessage: response.message,
+  });
+  if (pendingBeforeHydration.size > 0) {
+    const patch = Object.fromEntries(pendingBeforeHydration);
+    push(patch);
+    pendingBeforeHydration.clear();
+  }
 }
 
 function hasAdopted(): boolean {

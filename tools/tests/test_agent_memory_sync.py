@@ -393,6 +393,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Repository authority", context)
         self.assertIn(".agent-memory/PROJECT_MEMORY.md", claude)
         self.assertIn(".agent-memory/", gitignore.splitlines())
+        self.assertIn("AGENTS.md.bak.*", gitignore.splitlines())
+        self.assertIn("MEMORY.md.bak.*", gitignore.splitlines())
 
 
 class PublicationTests(unittest.TestCase):

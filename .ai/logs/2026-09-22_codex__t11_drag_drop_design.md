@@ -39,3 +39,19 @@ Self-review found no placeholder, contradictory scope, or unresolved public
 choice. `git diff --check` and `xtask check-anchors` exited 0; anchor check
 covered 389 links across 185 Markdown files. Product implementation has not
 started and awaits the required written-spec approval.
+
+## Implementation planning
+
+The user approved the written specification. The implementation plan is
+`docs/superpowers/plans/2026-09-22-structural-drag-drop.md`, split into one
+complete gesture per task, accessible App/Inspector integration, then durable
+verification and review. Self-review corrected source eligibility to include
+both first-installation lines and `unassigned`, exactly matching the existing
+Inspector helper, and made the happy-dom `DataTransfer` fake explicit. Native
+inline execution is the preferred method because both gestures share one
+component-local state and the second task directly consumes the first one's
+event contract; one fresh whole-branch reviewer remains mandatory.
+
+The local Codex app server's read-only `account/rateLimits/read` response at
+planning time reported the seven-day `codex` window at 33% used, reset
+2026-09-28 19:08:52 CEST, ordinary usage allowed. No reset credit was consumed.

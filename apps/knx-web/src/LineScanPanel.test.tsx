@@ -24,7 +24,8 @@ vi.mock("./api", () => ({
 }));
 
 import LineScanPanel from "./LineScanPanel";
-import { getSetting, resetSettingsForTests, setSetting } from "./settingsStore";
+import { savePreferredGateway } from "./gatewayPreference";
+import { getSetting, initSettings, resetSettingsForTests, setSetting } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -122,6 +123,97 @@ function scanResponse(status: "running" | "completed" | "cancelled" | "failed", 
 }
 
 describe("LineScanPanel", () => {
+  it("seeds a fresh gateway field from the cached preference without estimating", async () => {
+    savePreferredGateway("192.0.2.10:3671");
+    await renderPanel();
+    expect(
+      host!.querySelector<HTMLInputElement>(
+        '.line-scan-config input[placeholder="192.0.2.10:3671"]',
+      )!.value,
+    ).toBe("192.0.2.10:3671");
+    expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
+    expect(apiMock.estimateLineScan).not.toHaveBeenCalled();
+  });
+
+  it("adopts the authoritative gateway after an initial 404 poll", async () => {
+    savePreferredGateway("192.0.2.10:3671");
+    let resolveGet!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+    const hydration = initSettings();
+    await renderPanel();
+    resolveGet({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        schemaVersion: 1,
+        status: "ok",
+        settings: { preferredGateway: "192.0.2.20:3671" },
+      }),
+    } as Response);
+    await act(async () => { await hydration; });
+    expect(
+      host!.querySelector<HTMLInputElement>(
+        '.line-scan-config input[placeholder="192.0.2.10:3671"]',
+      )!.value,
+    ).toBe("192.0.2.20:3671");
+  });
+
+  it("keeps manual gateway input typed before authoritative hydration", async () => {
+    let resolveGet!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+    const hydration = initSettings();
+    await renderPanel();
+    await act(async () => {
+      setInput('.line-scan-config input[placeholder="192.0.2.10:3671"]', "192.0.2.30:3671");
+    });
+    resolveGet({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        schemaVersion: 1,
+        status: "ok",
+        settings: { preferredGateway: "192.0.2.20:3671" },
+      }),
+    } as Response);
+    await act(async () => { await hydration; });
+    expect(
+      host!.querySelector<HTMLInputElement>(
+        '.line-scan-config input[placeholder="192.0.2.10:3671"]',
+      )!.value,
+    ).toBe("192.0.2.30:3671");
+    expect(getSetting("preferredGateway")).toBe("192.0.2.20:3671");
+  });
+
+  it("keeps the cached gateway once an estimate starts before hydration", async () => {
+    savePreferredGateway("192.0.2.10:3671");
+    let resolveGet!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+    const hydration = initSettings();
+    await renderPanel();
+    await act(async () => {
+      click("Estimate cost");
+      await Promise.resolve();
+    });
+    expect(apiMock.estimateLineScan).toHaveBeenCalledWith(
+      expect.objectContaining({ gateway: "192.0.2.10:3671" }),
+    );
+    resolveGet({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        schemaVersion: 1,
+        status: "ok",
+        settings: { preferredGateway: "192.0.2.20:3671" },
+      }),
+    } as Response);
+    await act(async () => { await hydration; });
+    expect(
+      host!.querySelector<HTMLInputElement>(
+        '.line-scan-config input[placeholder="192.0.2.10:3671"]',
+      )!.value,
+    ).toBe("192.0.2.10:3671");
+  });
+
   it("shows an inspectable cost estimate before enabling start", async () => {
     await renderPanel();
     expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);

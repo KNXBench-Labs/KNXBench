@@ -14,7 +14,9 @@ import {
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
+import { loadPreferredGateway } from "./gatewayPreference";
 import HelpTip from "./HelpTip";
+import { useSettingsState } from "./settingsStore";
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -119,7 +121,10 @@ let nextComposeSeedKey = 1;
 export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
-  const [gatewayInput, setGatewayInput] = useState("");
+  const settingsState = useSettingsState();
+  const [gatewayInput, setGatewayInput] = useState(loadPreferredGateway);
+  const gatewayTouchedRef = useRef(false);
+  const gatewaySeedResolvedRef = useRef(settingsState.hydration === "hydrated");
   // T25. The search itself lives in a module-level store, not here: it is
   // started once at application start (`App.tsx`) and its result belongs
   // to the window, not to whichever mount of this panel happens to be
@@ -230,6 +235,14 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // redundant reattach request against the session just started.
   const sessionRef = useRef<AttachedSession | null>(null);
 
+  useEffect(() => {
+    if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
+    if (!gatewayTouchedRef.current && sessionRef.current === null) {
+      setGatewayInput(loadPreferredGateway());
+    }
+    gatewaySeedResolvedRef.current = true;
+  }, [settingsState.hydration]);
+
   function attachTo(next: AttachedSession | null) {
     sessionRef.current = next;
     setSession(next);
@@ -250,6 +263,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       setReplacedBy(null);
       setContextLock(readContextLock(response.sessionId));
       skipNextImmediatePollRef.current = true;
+      gatewaySeedResolvedRef.current = true;
       attachTo({ sessionId: response.sessionId, assignedAddress: null });
     } catch (e) {
       if (isCancelled()) return;
@@ -407,6 +421,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   }, [session]);
 
   async function connect() {
+    gatewaySeedResolvedRef.current = true;
     setConnectError(null);
     try {
       const started = await api.startBusMonitor(gatewayInput);
@@ -524,7 +539,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
             placeholder="192.0.2.1:3671"
             aria-label={t("busMonitor.gatewayLabel")}
             value={gatewayInput}
-            onChange={(e) => setGatewayInput(e.target.value)}
+              onChange={(e) => {
+                gatewayTouchedRef.current = true;
+                gatewaySeedResolvedRef.current = true;
+                setGatewayInput(e.target.value);
+              }}
             disabled={!!session}
             title={session ? t("busMonitor.gatewayLocked") : undefined}
           />
@@ -620,7 +639,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                     <button
                       type="button"
                       className="bus-discovery-option"
-                      onClick={() => setGatewayInput(iface.controlEndpoint)}
+                    onClick={() => {
+                      gatewayTouchedRef.current = true;
+                      gatewaySeedResolvedRef.current = true;
+                      setGatewayInput(iface.controlEndpoint);
+                    }}
                     >
                       <span className="bus-discovery-name">{iface.friendlyName}</span>
                       <span className="bus-discovery-endpoint mono">{iface.controlEndpoint}</span>

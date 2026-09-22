@@ -45,6 +45,8 @@ import { publishProjectContext, recordSessionContext } from "./busContext";
 // `resetBusDiscoveryForTests`'s own comment on why module state outlives
 // a component.
 import { resetBusDiscoveryForTests } from "./busDiscovery";
+import { savePreferredGateway } from "./gatewayPreference";
+import { getSetting, initSettings, resetSettingsForTests } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
@@ -204,7 +206,95 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
+  resetSettingsForTests();
+});
+
+it("seeds a fresh gateway field from the cached preference without writing it back", async () => {
+  savePreferredGateway("192.0.2.10:3671");
+  await renderPanel();
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
+    "192.0.2.10:3671",
+  );
+  expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
+  expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+});
+
+it("adopts the authoritative gateway after a normal 404 reattach", async () => {
+  savePreferredGateway("192.0.2.10:3671");
+  let resolveGet!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+  const hydration = initSettings();
+  await renderPanel();
+  await flushReattach();
+  resolveGet({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      schemaVersion: 1,
+      status: "ok",
+      settings: { preferredGateway: "192.0.2.20:3671" },
+    }),
+  } as Response);
+  await act(async () => { await hydration; });
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
+    "192.0.2.20:3671",
+  );
+});
+
+it("keeps manual gateway input typed before authoritative hydration", async () => {
+  let resolveGet!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+  const hydration = initSettings();
+  await renderPanel();
+  await act(async () => setInputValue(".bus-monitor-connect input", "192.0.2.30:3671"));
+  resolveGet({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      schemaVersion: 1,
+      status: "ok",
+      settings: { preferredGateway: "192.0.2.20:3671" },
+    }),
+  } as Response);
+  await act(async () => { await hydration; });
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
+    "192.0.2.30:3671",
+  );
+  expect(getSetting("preferredGateway")).toBe("192.0.2.20:3671");
+});
+
+it("keeps a discovered gateway selected before authoritative hydration", async () => {
+  apiMock.discoverBusInterfaces.mockResolvedValue({
+    interfaces: [{
+      controlEndpoint: "192.0.2.40:3671",
+      individualAddress: "1.1.1",
+      friendlyName: "Test interface",
+      supportsTunnelling: true,
+    }],
+  } satisfies BusDiscoverResponse);
+  let resolveGet!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
+  const hydration = initSettings();
+  await renderPanel();
+  await flushReattach();
+  const option = host!.querySelector<HTMLButtonElement>(".bus-discovery-option")!;
+  await act(async () => option.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  resolveGet({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      schemaVersion: 1,
+      status: "ok",
+      settings: { preferredGateway: "192.0.2.20:3671" },
+    }),
+  } as Response);
+  await act(async () => { await hydration; });
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
+    "192.0.2.40:3671",
+  );
+  expect(getSetting("preferredGateway")).toBe("192.0.2.20:3671");
 });
 
 describe("BusMonitorPanel", () => {

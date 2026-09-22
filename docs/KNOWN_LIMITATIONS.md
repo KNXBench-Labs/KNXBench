@@ -6995,39 +6995,19 @@ stated value) is exactly what made the sixth field a one-line addition.
 
 ## 118. A succeeded project load announces nothing to a screen reader
 
-**Limitation.** `apps/knx-web`'s `LoadProgressBanner.tsx` is a
-`role="status" aria-live="polite"` region, mounted for the duration of a
-project load and removed once the load finishes. `App.tsx`'s load-handling
-path (`setLoadSource(null); setLoadSnapshot(null);` on success) simply
-unmounts it; there is no success toast and nothing else takes its place.
-Removing a live region announces nothing — assistive technology has no
-text to read once the element it was watching is gone. The failure path is
-different: `reportError(e)` raises a toast (which is itself announced) and
-the banner stays mounted showing its `failed: true` terminal state, which
-`LoadProgressBanner.tsx` does mark for announcement. So a screen-reader
-user hears about a load that fails and hears nothing at all about one that
-succeeds, other than whatever the now-populated Project Explorer happens to
-expose to a subsequent read.
+**Resolved (T12 task 6).** `App.tsx` now completes direct loads and the
+exact-token §96 recovered-load path through one local success tail. It
+updates the current tree and stored-path state, clears the progress banner,
+then adds the localized source filename to the existing `ToastStack` non-error
+toast. That toast is the durable `role="status"` / polite live region; it
+remains after the banner unmounts, unlike the banner's deliberately quiet
+progress sub-elements.
 
-**Cause.** The banner's `aria-live="off"` on its own progress bar, count
-and flavour-message sub-elements is deliberate — ADR-0023 and this
-project's own history record over-announcing a fast-moving progress bar as
-a worse experience than under-announcing it — but that design decision
-covers the loading phase only. Nobody designed the success case
-separately; it inherited "say nothing" from the sub-elements' own
-`aria-live="off"` by falling through the same unmount path rather than by
-an explicit choice.
-
-**Impact.** A sighted user sees the Project Explorer populate and reads
-that as success implicitly. A screen-reader user gets no equivalent
-signal — success and "I haven't started loading yet" are indistinguishable
-by ear.
-
-**Lifted when.** A one-line success announcement — a toast, or a final
-`aria-live="polite"` update on the banner before it unmounts — is added
-for the succeeded terminal state, mirroring the `failed` state's existing
-treatment. Small, UI-only, and not attempted here: this is a documentation
-task, and the finding is recorded rather than fixed.
+`App.test.tsx` covers direct ETS import, direct native `.knxdb` open in the
+active German locale, and owned recovered success. Each asserts exactly one
+`.toast--fun[role="status"]` success notice with the basename; recovery also
+asserts that it does not produce an error alert. The two catalogues provide
+`loadProgress.succeeded`, so no user-facing success string bypasses i18n.
 
 ## 119. On this machine's `ntfs3` mount, cargo has rebuilt from a stale fingerprint — a green gate is not evidence by itself
 

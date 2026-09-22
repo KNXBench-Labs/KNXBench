@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 6 resolves `KNOWN_LIMITATIONS.md` §118 on `t12-ui-residue`: direct project loads and exact-token-owned §96 recoveries use one `App.tsx` success tail that resets the current tree, updates stored-path state, clears the progress banner, and announces the localized basename through the existing non-error `ToastStack` polite status live region. English/German `loadProgress.succeeded` catalogues and direct/import/native/recovery regressions cover it; recovery remains alert-free.
+- **Verification:** RED: focused App test recorded 3 intended absent-status-toast failures. GREEN: focused App/Toast/i18n 91/91 plus TypeScript. Full frontend: 899/899 across 63 files plus TypeScript and `git diff --check`. No KNX/LAN/multicast/gateway/hardware traffic.
+- **Pending/Next Steps:** Controller review/integration only. Detailed untracked evidence: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-6-report.md`.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T12 task 5 fix round 1 closes the torn current-project snapshot finding. All three whole-project replacement paths now publish `project`, a reset `command_stack`, and `import_counts` while holding those locks together in the established project → stack → counts order, so `current_project_tree` can observe only the complete old or complete replacement state. Regression evidence lives in `domain::tests::current_project_tree_waits_for_an_entire_replacement`; the Task 5 report contains the full RED/GREEN record.
 - **Verification:** RED: the new regression failed 0/1 with `replacement project became visible before stack/count publication`. GREEN: focused regression 1/1; all `knx-server` tests 397/397 across 35 result blocks; full Rust workspace 1,953 passed / 0 failed / 5 ignored across 92 result blocks. Rustfmt, focused server Clippy with warnings denied, and `git diff --check` passed. No KNX/LAN/multicast/gateway/hardware traffic.
 - **Pending/Next Steps:** Controller review/integration only; the three deferred Minor review findings remain untouched for Task 7/final triage.

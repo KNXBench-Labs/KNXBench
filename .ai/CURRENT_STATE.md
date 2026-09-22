@@ -1,6 +1,6 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
-- **Completed:** T12 task 1 on `t12-ui-residue`: search picks now issue a monotonic external reveal request while `App` remains the canonical selection owner. The Project Explorer reopens only containing topology, building, group-address, or group-range ancestors; selected rows use nearest scrolling. A duplicated device scrolls only in canonical topology/unassigned placement; ordinary tree clicks preserve manual collapse. Commit pending in this worktree; report: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-1-report.md`.
+- **Completed:** T12 task 1 on `t12-ui-residue`: search picks now issue a monotonic external reveal request while `App` remains the canonical selection owner. The Project Explorer reopens only containing topology, building, group-address, or group-range ancestors; selected rows use nearest scrolling. A duplicated device scrolls only in canonical topology/unassigned placement; ordinary tree clicks preserve manual collapse. Committed as `3c706f3` (`feat(search): branches reluctantly reveal answers`); report: `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-1-report.md`.
 - **Verification:** Initial focused RED recorded; focused GREEN: 99/99 tests plus TypeScript. Full frontend: 887/887 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
 - **Pending/Next Steps:** Controller may integrate this isolated task commit; remaining T12 tasks stay independent.
 

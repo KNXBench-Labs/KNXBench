@@ -20,6 +20,7 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.openNativeProject": "Öffnen (.knxdb)…",
   "toolbar.save": "Speichern",
   "toolbar.saveAs": "Speichern unter…",
+  "toolbar.downloadProject": "Projekt herunterladen",
   "toolbar.undo": "Rückgängig",
   "toolbar.redo": "Wiederholen",
   "toolbar.search": "Suchen… (Strg+K)",
@@ -700,6 +701,9 @@ export const messages: Record<MessageKey, string> = {
   "fsPicker.saveAs": "Speichern unter",
   "fsPicker.filenamePlaceholder": "Dateiname",
   "fsPicker.upload": "Hochladen…",
+  "fsPicker.uploaded.one": "{count} Datei hochgeladen. Zum Öffnen eine Datei auswählen.",
+  "fsPicker.uploaded.other": "{count} Dateien hochgeladen. Zum Öffnen eine Datei auswählen.",
+  "fsPicker.uploadFailed": "{uploaded} von {count} Dateien hochgeladen; {file} fehlgeschlagen: {error}",
   "fsPicker.save": "Speichern",
   "fsPicker.cancel": "Abbrechen",
 
@@ -855,6 +859,8 @@ export const messages: Record<MessageKey, string> = {
   // wirklich ausführt.
   "loadProgress.importing": "{source} wird importiert…",
   "loadProgress.opening": "{source} wird geöffnet…",
+  "loadProgress.succeeded": "{source} wurde geladen.",
+  "loadProgress.recovered": "Das aktuelle Projekt wurde wiederhergestellt.",
   "loadProgress.failed": "{source} konnte nicht geladen werden",
   "loadProgress.failedDuring": "Fehlgeschlagen bei: {phase}",
   "loadProgress.barLabel": "Ladefortschritt",

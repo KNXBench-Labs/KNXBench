@@ -2,13 +2,21 @@
 //! strategies for the web build (server-mount and upload/download; the
 //! Tauri build skips these entirely in favor of native OS dialogs, see
 //! `apps/knx-web/src/filePicker.ts`).
+use std::io::Write;
 use std::path::Path;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
 
+use axum::body::{Body, Bytes, HttpBody};
 use axum::extract::{DefaultBodyLimit, Multipart, Query, State};
-use axum::response::{IntoResponse, Response};
+use axum::http::{header, HeaderValue, Request};
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use tower::ServiceExt;
+use tower_http::services::ServeFile;
 
 use crate::domain;
 use crate::errors::ApiError;
@@ -23,6 +31,7 @@ use crate::SharedState;
 /// request can make the server buffer, since `upload` reads the field
 /// fully into memory before writing it.
 const MAX_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
+const DOWNLOAD_CHUNK_BYTES: usize = 64 * 1024;
 
 pub fn fs_routes() -> Router<SharedState> {
     Router::new()
@@ -101,7 +110,23 @@ async fn upload(
             .ok_or_else(|| ApiError::bad_request("empty filename"))?;
         let dest = uploads_dir.join(safe_name);
         let bytes = field.bytes().await.map_err(multipart_error)?;
-        std::fs::write(&dest, &bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        // Publish a fully written file without replacing an earlier upload,
+        // including a concurrent request with the same basename.
+        let mut staged = tempfile::NamedTempFile::new_in(&uploads_dir)
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        staged
+            .write_all(&bytes)
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        staged.persist_noclobber(&dest).map_err(|e| {
+            if e.error.kind() == std::io::ErrorKind::AlreadyExists {
+                ApiError::with_status(
+                    axum::http::StatusCode::CONFLICT,
+                    "upload filename already exists; rename the local file and retry",
+                )
+            } else {
+                ApiError::internal(e.to_string())
+            }
+        })?;
         let relative = dest.strip_prefix(&state.data_dir).unwrap_or(&dest);
         return Ok(Json(UploadResponse {
             path: relative.to_string_lossy().into_owned(),
@@ -114,30 +139,138 @@ async fn upload(
 /// `.knxdb` and streams that — regardless of whether it was ever saved to
 /// `store_path` before, so "download" always reflects the latest edits.
 async fn download(State(state): State<SharedState>) -> Result<Response, ApiError> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    let project = project
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("no project open"))?;
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let manufacturer_refs = state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned");
+    let tmp = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("no project open"))?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let manufacturer_refs = state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned");
 
-    let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
-    domain::save_project_as_impl(tmp.path(), project, &opaque, &manufacturer_refs)
-        .map_err(ApiError::internal)?;
-    let bytes = std::fs::read(tmp.path()).map_err(|e| ApiError::internal(e.to_string()))?;
+        let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
+        domain::save_project_as_impl(tmp.path(), project, &opaque, &manufacturer_refs)
+            .map_err(ApiError::internal)?;
+        tmp.into_temp_path()
+    };
+    stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await
+}
 
-    Ok((
-        [
-            (axum::http::header::CONTENT_TYPE, "application/octet-stream"),
-            (
-                axum::http::header::CONTENT_DISPOSITION,
-                "attachment; filename=\"project.knxdb\"",
-            ),
-        ],
-        bytes,
-    )
-        .into_response())
+/// Own the path in the body itself: HTTP may discard response extensions
+/// before it finishes sending the body. Dropping an interrupted body also
+/// closes the file and removes the temporary path.
+struct TemporaryFileBody {
+    body: Body,
+    _temp_path: Arc<tempfile::TempPath>,
+}
+
+impl HttpBody for TemporaryFileBody {
+    type Data = Bytes;
+    type Error = axum::Error;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        Pin::new(&mut self.body).poll_frame(cx)
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.body.is_end_stream()
+    }
+
+    fn size_hint(&self) -> http_body::SizeHint {
+        self.body.size_hint()
+    }
+}
+
+async fn stream_temp_file(
+    tmp: tempfile::TempPath,
+    chunk_bytes: usize,
+) -> Result<Response, ApiError> {
+    let temp_path = Arc::new(tmp);
+    let response = ServeFile::new(&*temp_path)
+        .with_buf_chunk_size(chunk_bytes)
+        .oneshot(Request::new(Body::empty()))
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let mut response = response.map(|body| {
+        Body::new(TemporaryFileBody {
+            body: Body::new(body),
+            _temp_path: temp_path,
+        })
+    });
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/octet-stream"),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"project.knxdb\""),
+    );
+    Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use http_body_util::BodyExt;
+
+    #[tokio::test]
+    async fn temporary_download_streams_bounded_frames_and_cleans_up_after_body_drop() {
+        const CHUNK_BYTES: usize = 256;
+        let expected: Vec<u8> = (0..CHUNK_BYTES * 3 + 17).map(|n| n as u8).collect();
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), &expected).unwrap();
+        let path = tmp.path().to_path_buf();
+
+        let response = stream_temp_file(tmp.into_temp_path(), CHUNK_BYTES)
+            .await
+            .unwrap();
+        let mut body = response.into_body();
+
+        let mut actual = Vec::new();
+        let mut data_frames = 0;
+        while let Some(frame) = body.frame().await {
+            if let Ok(data) = frame.unwrap().into_data() {
+                if !data.is_empty() {
+                    data_frames += 1;
+                    assert!(
+                        data.len() <= CHUNK_BYTES,
+                        "oversized body frame: {}",
+                        data.len()
+                    );
+                    actual.extend_from_slice(&data);
+                }
+            }
+        }
+        assert!(data_frames >= 2, "a whole-file buffer is not streaming");
+        assert_eq!(actual, expected);
+        assert!(path.exists(), "the body must own its temporary path");
+        drop(body);
+        assert!(
+            !path.exists(),
+            "completed downloads must remove their temporary file"
+        );
+    }
+
+    #[tokio::test]
+    async fn dropping_an_unconsumed_download_body_removes_its_temporary_file() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), b"abandoned download").unwrap();
+        let path = tmp.path().to_path_buf();
+        let response = stream_temp_file(tmp.into_temp_path(), 256).await.unwrap();
+        let body = response.into_body();
+        assert!(
+            path.exists(),
+            "response extraction must not remove the temporary file"
+        );
+        drop(body);
+        assert!(
+            !path.exists(),
+            "abandoned downloads must remove their temporary file"
+        );
+    }
 }

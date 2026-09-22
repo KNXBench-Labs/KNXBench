@@ -90,6 +90,9 @@ TypeScript, header, and whitespace checks also exited 0.
 
 ## Next
 
-Complete the fresh whole-branch review and merged-result gates, then continue
-with goal task T11 (bounded native drag-and-drop gestures through existing
-validated commands, each with a keyboard equivalent).
+The reviewed branch was merged into `main` with merge commit `7a874b8`.
+The complete merged-result gate repeated successfully: Rust 1,948 passed
+across 92 result blocks, frontend 862 passed across 63 files, TypeScript,
+format, workspace Clippy, layering, headers, anchors, and dependency audit all
+exited 0. Continue with goal task T11 (bounded native drag-and-drop gestures
+through existing validated commands, each with a keyboard equivalent).

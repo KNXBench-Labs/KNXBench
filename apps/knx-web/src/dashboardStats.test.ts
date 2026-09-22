@@ -21,6 +21,7 @@ function emptyTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [],
   };

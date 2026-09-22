@@ -4793,26 +4793,25 @@ made for those later actions.
 
 ## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
 
-**Limitation.** `POST /api/project/new` refuses with `409 Conflict` when a
-project is open and its command stack has anything to undo, unless the caller
-sends `discardChanges: true`. It will refuse even when every one of those
-edits was already written to disk by `POST /api/project/save` **[D]**
-(`apps/knx-server/src/domain.rs`, `new_project_impl`).
+**Resolved.** `AppState.clean_project` keeps a transient snapshot of the last
+project state established by successful native open, ETS import, new project
+creation, Save, or Save As. `new_project_impl` compares the live project with
+that snapshot; a failed save leaves the previous snapshot untouched. The
+snapshot is process state, not `.knxdb` data, so native store schema version 9
+is unchanged.
 
-**Cause.** `AppState` has no dirty flag and `knx_core::CommandStack` exposes
-no saved-at marker — `can_undo()` is the only signal available that the user
-changed anything. Adding a real dirty flag means threading a save-point
-through the command stack, which is a change to `knx-core`'s public surface
-and belongs to its own slice.
+`Project::same_user_content_as` clones both projects, replaces both synthetic
+`IdAllocators` high-water marks with defaults, and then uses structural
+equality. An edit followed by undo is therefore clean even though allocation
+counters advanced, while every other existing and future `Project` field
+participates without a hand-maintained field list.
 
-**Impact.** A caller who saved and then asks for a new project gets a refusal
-it did not deserve, and has to repeat the request with `discardChanges`. The
-error message says exactly that. The failure direction is deliberate:
-CLAUDE.md ranks data integrity above convenience, and the opposite mistake —
-silently discarding unsaved work — is unrecoverable.
-
-**Lifted when.** `CommandStack` records the position last saved, and
-`new_project_impl` compares against it instead of calling `can_undo()`.
+**Verification.** Server regressions cover both disagreement directions:
+edit then undo yields `can_redo == true` and `is_modified == false`; direct
+mutation outside the command stack yields `can_undo == false` and
+`is_modified == true` and is refused by the new-project guard. HTTP tests
+prove successful Save and Save As replace the snapshot while a failed Save
+retains dirty state.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
@@ -6141,29 +6140,17 @@ Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
 ## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag
 
-**Limitation.** The File menu's Quit entry (T28/F4, desktop shell only) guards
-itself with an unsaved-changes check before it lets the window close.
-KNXBench has no dirty flag, so "there is unsaved work" is read off
-`ProjectTree.can_undo`, which stays `true` after a save.
+**Resolved.** `ProjectTree.is_modified` publishes the server-owned snapshot
+comparison beside, but independently from, `can_undo` and `can_redo`. Pure
+`knx-projection` output defaults it to `false`; the application overlay derives
+the live value while holding the same project-led lock order used for project,
+command-stack, import-count, store-path, and clean-snapshot publication.
 
-**Cause.** `can_undo` is the only mutation signal the server publishes, it is
-already what the welcome screen's unsaved-changes guard uses, and
-`domain.rs`'s `new_project_impl` documents the over-refusal as deliberate.
-Adding a real dirty flag means a server-side change to every mutating route,
-which is a task of its own and not a UI finding's business.
-
-**Consequence.** Anyone who saves and then quits is asked about unsaved
-changes that no longer exist — a false alarm, in the safe direction. The
-dialog offers Cancel and "Quit without saving" only, with no "Save and quit":
-`saveProject` swallows its own failures into a toast and returns nothing, so
-a save-then-quit path could close the window over a save that silently
-failed, which is the exact accident this dialog exists to stop.
-
-**Not a data-loss risk.** The imprecision errs towards keeping the user's
-work: an extra question gets asked, nothing is discarded.
-
-**Lifted when.** The server grows a real dirty flag; then the guard becomes
-exact. Not scheduled.
+The desktop Quit guard consumes only `is_modified`. Undo and redo buttons
+continue to consume history availability. Frontend regressions prove both
+important disagreements: `can_undo == true` with `is_modified == false` quits
+without a prompt, while `can_undo == false` with `is_modified == true` opens
+the confirmation dialog.
 
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 

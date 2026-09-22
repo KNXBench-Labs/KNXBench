@@ -43,6 +43,11 @@ pub struct ProjectTree {
     pub can_undo: bool,
     /// See `can_undo`.
     pub can_redo: bool,
+    /// Always `false` straight out of [`build_project_tree`] because this
+    /// pure projection has no clean baseline. The application layer overlays
+    /// whether the live project differs from its last successful open,
+    /// import, creation, or save snapshot.
+    pub is_modified: bool,
     /// The project-wide rendering choice every `GroupAddressNode`,
     /// `GroupRangeNode` and `GroupLinkNode` address string in this tree was
     /// already formatted with — carried through so the inspector can show
@@ -206,6 +211,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         warnings: 0,
         can_undo: false,
         can_redo: false,
+        is_modified: false,
         group_address_style: group_address_style_str(project.info.group_address_style).to_string(),
         installations: project
             .installations
@@ -820,6 +826,7 @@ mod tests {
         assert_eq!(tree.schema_version, project.schema_version);
         assert_eq!(tree.errors, 0);
         assert_eq!(tree.warnings, 0);
+        assert!(!tree.is_modified);
         assert!(tree.installations.is_empty());
     }
 

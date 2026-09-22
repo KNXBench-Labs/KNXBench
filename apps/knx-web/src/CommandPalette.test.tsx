@@ -104,7 +104,7 @@ describe("CommandPalette", () => {
     // skip on its way from save-as (index 4) to search (index 7). Every
     // index here moved by one when "new-project" took the head of
     // `COMMANDS`; the walk is the same walk.
-    const tree = { can_undo: false, can_redo: false } as unknown as ProjectTree;
+    const tree = { can_undo: false, can_redo: false, is_modified: false } as unknown as ProjectTree;
     const { root } = await renderPalette(noopCtx({ tree }));
 
     const input = host!.querySelector("input")!;

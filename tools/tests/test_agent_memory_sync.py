@@ -129,6 +129,18 @@ class ScanSourcesTests(unittest.TestCase):
             self.assertEqual(result.notes, ())
             self.assertEqual(result.skipped[0].reason, "file exceeds 32 bytes")
 
+    def test_discovery_skips_credential_named_file(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "credentials.md").write_text(
+                "# Deployment login\n\nSee the password manager.\n", encoding="utf-8"
+            )
+
+            result = scan_sources([SourceRoot("hermes", root)])
+
+            self.assertEqual(result.notes, ())
+            self.assertEqual(result.skipped[0].reason, "credential-like filename")
+
     def test_missing_optional_root_is_warning(self) -> None:
         with TemporaryDirectory() as tmp:
             missing = Path(tmp) / "missing"
@@ -210,7 +222,7 @@ class ReconciliationTests(unittest.TestCase):
 
     def test_secret_like_summary_is_skipped_without_value_leak(self) -> None:
         secret = make_note(
-            "hermes", "credentials.md", "# Login\n\nOPENAI_API_KEY=sk-example-value"
+            "hermes", "deployment.md", "# Login\n\nOPENAI_API_KEY=sk-example-value"
         )
 
         result = reconcile(make_scan(secret))
@@ -253,6 +265,10 @@ class ReconciliationTests(unittest.TestCase):
         self.assertEqual(manifest["schema_version"], 1)
         self.assertEqual(len(manifest["output_sha256"]), 64)
         self.assertEqual(
+            [item["digest"] for item in manifest["source_files"]],
+            [alpha.digest, zeta.digest],
+        )
+        self.assertEqual(
             manifest["output_sha256"],
             __import__("hashlib")
             .sha256((first_index + "\0" + first_report).encode())
@@ -285,6 +301,22 @@ class InstallerTests(unittest.TestCase):
                 calls[-1],
                 ["systemctl", "--user", "enable", "--now", "knxbench-memory-sync.timer"],
             )
+
+    def test_timer_service_quotes_paths_with_spaces(self) -> None:
+        with TemporaryDirectory(prefix="memory sync ") as tmp:
+            home = Path(tmp)
+            install_timer(
+                project_root=Path("/project with spaces"),
+                home=home,
+                script_path=Path(__file__).parents[1] / "agent_memory_sync.py",
+                runner=lambda argv: None,
+            )
+
+            service = home.joinpath(
+                ".config/systemd/user/knxbench-memory-sync.service"
+            ).read_text(encoding="utf-8")
+            self.assertIn("--project-root '/project with spaces'", service)
+            self.assertIn(f"--home '{home}'", service)
 
     def test_timer_install_and_uninstall_are_idempotent(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -401,6 +433,48 @@ class PublicationTests(unittest.TestCase):
             self.assertEqual(
                 (fixture.output / "PROJECT_MEMORY.md").read_text(encoding="utf-8"),
                 first.index,
+            )
+
+    def test_publish_preserves_complete_history_and_removes_only_incomplete(self) -> None:
+        with temporary_project_with_note() as fixture:
+            first = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source),),
+                datetime(2026, 9, 22, tzinfo=timezone.utc),
+            )
+            first_snapshot = publish(fixture.paths, first)
+            incomplete = fixture.paths.snapshots / ".interrupted.tmp"
+            incomplete.mkdir()
+            fixture.note.write_text("# Topic\n\nnew value\n", encoding="utf-8")
+            second = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source),),
+                datetime(2026, 9, 22, 1, tzinfo=timezone.utc),
+            )
+
+            publish(fixture.paths, second)
+
+            self.assertTrue(first_snapshot.is_dir())
+            self.assertFalse(incomplete.exists())
+
+    def test_publish_replaces_incomplete_existing_digest_snapshot(self) -> None:
+        with temporary_project_with_note() as fixture:
+            generation = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source),),
+                datetime(2026, 9, 22, tzinfo=timezone.utc),
+            )
+            incomplete = fixture.paths.snapshots / generation.output_sha256
+            incomplete.mkdir(parents=True)
+            (incomplete / "PROJECT_MEMORY.md").write_text(
+                generation.index, encoding="utf-8"
+            )
+
+            publish(fixture.paths, generation)
+
+            self.assertEqual(
+                (fixture.output / "REPORT.md").read_text(encoding="utf-8"),
+                generation.report,
             )
 
     def test_check_reports_stale_and_conflicted_states(self) -> None:

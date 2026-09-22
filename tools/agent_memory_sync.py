@@ -10,6 +10,7 @@ import itertools
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -40,6 +41,23 @@ _PRIVATE_KEY_RE = re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----
 _SECRET_ASSIGNMENT_RE = re.compile(
     r"(?:^|\s)[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|ACCESS_KEY)\s*[:=]",
     re.I,
+)
+_CREDENTIAL_STEMS = frozenset(
+    {
+        "api-key",
+        "api-keys",
+        "credential",
+        "credentials",
+        "id-ed25519",
+        "id-rsa",
+        "password",
+        "passwords",
+        "private-key",
+        "secret",
+        "secrets",
+        "token",
+        "tokens",
+    }
 )
 
 
@@ -246,6 +264,11 @@ def scan_one_root(
         return
 
     for candidate in candidates:
+        if _topic_key(candidate.stem) in _CREDENTIAL_STEMS:
+            skipped.append(
+                SkippedSource(source.owner, candidate, "credential-like filename")
+            )
+            continue
         try:
             candidate.lstat()
             resolved_candidate = candidate.resolve(strict=True)
@@ -455,6 +478,10 @@ def build_manifest(
     index = render_index(result)
     report = render_report(result)
     output_sha256 = hashlib.sha256((index + "\0" + report).encode()).hexdigest()
+    source_files = sorted(
+        (note for entry in result.entries for note in entry.notes),
+        key=lambda note: (note.owner, note.relative_path.as_posix(), note.digest),
+    )
     return {
         "schema_version": 1,
         "generated_at": generated_at.astimezone(timezone.utc).isoformat(),
@@ -467,6 +494,16 @@ def build_manifest(
             for source in sorted(
                 source_roots, key=lambda item: (item.owner, str(item.path))
             )
+        ],
+        "source_files": [
+            {
+                "owner": note.owner,
+                "path": str(note.source_path),
+                "relative_path": note.relative_path.as_posix(),
+                "digest": note.digest,
+                "mtime_ns": note.mtime_ns,
+            }
+            for note in source_files
         ],
         "entries": len(result.entries),
         "conflicts": list(result.conflicts),
@@ -559,12 +596,34 @@ def _ensure_owned_view(view: Path, filename: str) -> None:
     view.symlink_to(expected)
 
 
-def _cleanup_unreferenced_snapshots(paths: SyncPaths, keep: Path) -> None:
+def _cleanup_incomplete_snapshots(paths: SyncPaths) -> None:
     for candidate in paths.snapshots.iterdir():
-        if candidate == keep or candidate.is_symlink():
+        if candidate.is_symlink():
             continue
-        if candidate.is_dir():
+        if candidate.is_dir() and candidate.name.startswith(".") and candidate.name.endswith(
+            ".tmp"
+        ):
             shutil.rmtree(candidate)
+
+
+def _snapshot_is_complete(snapshot: Path, generation: Generation) -> bool:
+    if snapshot.is_symlink() or not snapshot.is_dir():
+        return False
+    try:
+        index = (snapshot / "PROJECT_MEMORY.md").read_text(encoding="utf-8")
+        report = (snapshot / "REPORT.md").read_text(encoding="utf-8")
+        manifest = json.loads(
+            (snapshot / "manifest.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        index == generation.index
+        and report == generation.report
+        and isinstance(manifest, dict)
+        and manifest.get("schema_version") == 1
+        and manifest.get("output_sha256") == generation.output_sha256
+    )
 
 
 def publish(
@@ -585,11 +644,17 @@ def publish(
         (paths.manifest_view, "manifest.json"),
     )
     for view, filename in views:
-        if view.exists() or view.is_symlink():
-            _ensure_owned_view(view, filename)
+        _ensure_owned_view(view, filename)
 
     snapshot = paths.snapshots / generation.output_sha256
     staging = paths.snapshots / f".{generation.output_sha256}.{os.getpid()}.tmp"
+    if snapshot.exists() or snapshot.is_symlink():
+        if _snapshot_is_complete(snapshot, generation):
+            pass
+        elif snapshot.is_symlink() or not snapshot.is_dir():
+            raise PublishError(f"refusing to replace invalid snapshot path: {snapshot}")
+        else:
+            shutil.rmtree(snapshot)
     if not snapshot.exists():
         try:
             staging.mkdir(mode=0o700)
@@ -607,6 +672,8 @@ def publish(
                 shutil.rmtree(staging)
             raise PublishError(f"could not create snapshot: {exc}") from exc
 
+    _cleanup_incomplete_snapshots(paths)
+
     next_link = paths.output_root / "current.next"
     if next_link.exists() or next_link.is_symlink():
         next_link.unlink()
@@ -620,7 +687,6 @@ def publish(
     for view, filename in views:
         _ensure_owned_view(view, filename)
     _fsync_directory(paths.output_root)
-    _cleanup_unreferenced_snapshots(paths, snapshot)
     return snapshot
 
 
@@ -704,7 +770,18 @@ def install_timer(
                 "[Service]",
                 "Type=oneshot",
                 f"SuccessExitStatus={EXIT_CONFLICT}",
-                f"ExecStart={stable} apply --project-root {project_root} --home {home}",
+                "ExecStart="
+                + " ".join(
+                    shlex.quote(str(item))
+                    for item in (
+                        stable,
+                        "apply",
+                        "--project-root",
+                        project_root,
+                        "--home",
+                        home,
+                    )
+                ),
                 "",
             )
         ),

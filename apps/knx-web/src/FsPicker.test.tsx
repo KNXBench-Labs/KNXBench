@@ -113,3 +113,128 @@ it("treats an ordinary failure as an ordinary failure", async () => {
   expect(await result).toBeNull();
   vi.unstubAllGlobals();
 });
+
+function fileDragTransfer(files: File[], protectedMode = false): DataTransfer {
+  return {
+    types: ["Files"],
+    get files() {
+      if (protectedMode) throw new Error("dragover must not read dropped files");
+      return files;
+    },
+    dropEffect: "none",
+  } as unknown as DataTransfer;
+}
+
+it("uploads each selected local file sequentially, then shows the uploaded directory without selecting one", async () => {
+  let finishFirstUpload!: () => void;
+  const firstUpload = new Promise<{ ok: boolean; json: () => Promise<{ path: string }> }>((resolve) => {
+    finishFirstUpload = () => resolve({ ok: true, json: async () => ({ path: "uploads/first.knxproj" }) });
+  });
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockImplementationOnce(() => firstUpload)
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/second.knxproj" }) })
+    .mockResolvedValue({ ok: true, json: async () => [
+      { name: "first.knxproj", is_dir: false },
+      { name: "second.knxproj", is_dir: false },
+    ] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  let result!: Promise<string | null>;
+  await act(async () => { result = openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  expect(input.multiple).toBe(true);
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [
+      new File(["first"], "first.knxproj"),
+      new File(["second"], "second.knxproj"),
+    ],
+  });
+
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(1);
+  await act(async () => {
+    finishFirstUpload();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const uploads = fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload");
+  expect(uploads).toHaveLength(2);
+  expect(uploads.map(([, init]) => (init as RequestInit).method)).toEqual(["POST", "POST"]);
+  expect(fetchMock.mock.calls.some(([url]) => url === "/api/fs/list?path=uploads")).toBe(true);
+  expect(document.querySelector('[role="status"]')?.textContent).toBe("Uploaded 2 files. Choose one to open.");
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(await result).toBeNull();
+  vi.unstubAllGlobals();
+});
+
+it("accepts only file drags in protected mode and consumes their files only at drop", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/dropped.knxproj" }) })
+    .mockResolvedValue({ ok: true, json: async () => [{ name: "dropped.knxproj", is_dir: false }] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await act(async () => { openMountPicker([]); });
+  const label = document.querySelector<HTMLElement>(".fs-picker-upload")!;
+  const protectedTransfer = fileDragTransfer([], true);
+  const dragOver = Object.assign(new Event("dragover", { bubbles: true, cancelable: true }), { dataTransfer: protectedTransfer });
+  await act(async () => label.dispatchEvent(dragOver));
+  expect(dragOver.defaultPrevented).toBe(true);
+  expect(protectedTransfer.dropEffect).toBe("copy");
+  expect(label.dataset.dropReady).toBe("true");
+
+  const rejection = Object.assign(new Event("dragover", { bubbles: true, cancelable: true }), {
+    dataTransfer: { types: ["text/plain"], dropEffect: "none" } as unknown as DataTransfer,
+  });
+  await act(async () => label.dispatchEvent(rejection));
+  expect(rejection.defaultPrevented).toBe(false);
+  expect(label.dataset.dropReady).toBe("true");
+  await act(async () => label.dispatchEvent(new Event("dragleave", { bubbles: true })));
+  expect(label.dataset.dropReady).toBeUndefined();
+
+  const dropped = new File(["dropped"], "dropped.knxproj");
+  const drop = Object.assign(new Event("drop", { bubbles: true, cancelable: true }), {
+    dataTransfer: fileDragTransfer([dropped]),
+  });
+  await act(async () => {
+    label.dispatchEvent(drop);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(drop.defaultPrevented).toBe(true);
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(1);
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});
+
+it("reports a failed filename without claiming a partially uploaded batch succeeded", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "uploads/kept.knxproj" }) })
+    .mockResolvedValueOnce({ ok: false, status: 422, statusText: "Unprocessable", json: async () => ({ error: "not a project" }) })
+    .mockResolvedValue({ ok: true, json: async () => [{ name: "kept.knxproj", is_dir: false }] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await act(async () => { openMountPicker([]); });
+  const input = document.querySelector<HTMLInputElement>(".fs-picker-upload-input")!;
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["kept"], "kept.knxproj"), new File(["bad"], "bad.txt")],
+  });
+  await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+
+  expect(fetchMock.mock.calls.filter(([url]) => url === "/api/fs/upload")).toHaveLength(2);
+  expect(document.querySelector('[role="status"]')).toBeNull();
+  expect(document.querySelector(".field-error")?.textContent).toContain("bad.txt");
+  expect(document.querySelector(".field-error")?.textContent).toContain("1 of 2");
+  await act(async () => document.querySelector<HTMLElement>('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  vi.unstubAllGlobals();
+});

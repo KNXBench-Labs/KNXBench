@@ -1856,6 +1856,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workbench .tree-label.selected { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); color: var(--knx-accent) !important; }
 .fs-picker-list button { display: block; width: 100%; background: transparent; color: var(--knx-foreground) !important; text-align: left; box-shadow: none; border: 0; }
 .fs-picker-upload-input { display: block; max-width: 100%; }
+.fs-picker-upload[data-drop-ready="true"] { border-color: var(--knx-accent); background: var(--knx-surface); }
 /* The narrow-viewport `min-width: 0` that used to sit here is gone with
    T28/F2: the rule above no longer sets a `min-width` for it to undo, and
    the width it does set already scales down on its own. */

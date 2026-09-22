@@ -26,6 +26,10 @@ function matchesFilter(name: string, filters: Filter[]): boolean {
   return filters.some((f) => f.extensions.some((e) => e.toLowerCase() === ext));
 }
 
+function hasDroppedFiles(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).includes("Files");
+}
+
 // Both helpers below hold their own `fetch` — one needs a query string it
 // builds itself, the other a `FormData` body `request()` would JSON-encode
 // — so both must report a refusal by hand. `/api/fs/*` is behind the same
@@ -65,12 +69,41 @@ function Modal(props: {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [name, setName] = useState(defaultName ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [dropReady, setDropReady] = useState(false);
 
   useEffect(() => {
     listDir(dir)
       .then(setEntries)
       .catch((e) => setError(String(e)));
-  }, [dir]);
+  }, [dir, refreshKey]);
+
+  async function uploadFiles(files: readonly File[]): Promise<void> {
+    if (files.length === 0) return;
+    setError(null);
+    setStatus(null);
+    let uploaded = 0;
+
+    for (const file of files) {
+      try {
+        await uploadFile(file);
+        uploaded += 1;
+        setDir("uploads");
+        setRefreshKey((key) => key + 1);
+      } catch (err) {
+        setError(t("fsPicker.uploadFailed", {
+          uploaded,
+          count: files.length,
+          file: file.name,
+          error: err instanceof Error ? err.message : String(err),
+        }));
+        return;
+      }
+    }
+
+    setStatus(t("fsPicker.uploaded", { count: uploaded }));
+  }
 
   return (
     <Overlay className="fs-picker" label={mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} onClose={() => onResolve(null)}>
@@ -78,6 +111,7 @@ function Modal(props: {
           {mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} — /{dir}
         </h3>
         {error && <p className="field-error">{error}</p>}
+        {status && <p role="status">{status}</p>}
         <ul className="fs-picker-list">
           {dir && <li><button onClick={() => setDir(dir.split("/").slice(0, -1).join("/"))}>..</button></li>}
           {entries
@@ -101,20 +135,29 @@ function Modal(props: {
         )}
         <div className="fs-picker-actions">
           {mode === "open" && (
-            <label className="fs-picker-upload">
+            <label
+              className="fs-picker-upload"
+              data-drop-ready={dropReady ? "true" : undefined}
+              onDragOver={(event) => {
+                if (!hasDroppedFiles(event.dataTransfer)) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+                setDropReady(true);
+              }}
+              onDragLeave={() => setDropReady(false)}
+              onDrop={(event) => {
+                if (!hasDroppedFiles(event.dataTransfer)) return;
+                event.preventDefault();
+                setDropReady(false);
+                void uploadFiles(Array.from(event.dataTransfer.files));
+              }}
+            >
               {t("fsPicker.upload")}
               <input
                 type="file"
                 className="fs-picker-upload-input"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    onResolve(await uploadFile(file));
-                  } catch (err) {
-                    setError(String(err));
-                  }
-                }}
+                multiple
+                onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))}
               />
             </label>
           )}

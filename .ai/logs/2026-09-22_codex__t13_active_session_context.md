@@ -13,3 +13,16 @@ The route-level fake-session regression observed the intended RED
 denied server Clippy, formatting, 389 anchor links, and whitespace validation.
 The full `knx-server` suite also passed. No KNX, LAN, multicast, gateway, or
 hardware traffic occurred.
+
+## Fix round 1
+
+Review found concurrent restyle requests could snapshot in accepted order but
+publish in async bus-lock order, allowing delayed A to overwrite newer B. The
+route sequence is now split into prepare/publish phases with a monotonic
+application-state revision assigned before snapshotting; publication under the
+bus-session lock proceeds only for the latest accepted revision. A deterministic
+test prepares A/Free, fully publishes B/TwoLevel, then resumes A and proves both
+project and session remain TwoLevel, with one fake connection and no sends or
+disconnect. RED was session `Some(Free)` versus `Some(TwoLevel)`; GREEN 1/1.
+Full server, 11 bus unit, 14 write-route, 17 edit-route, Clippy and fmt gates
+passed using `/var/tmp/knxbench-t13-target`. No hardware or network traffic.

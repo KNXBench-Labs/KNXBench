@@ -700,6 +700,9 @@ export const messages: Record<MessageKey, string> = {
   "fsPicker.saveAs": "Speichern unter",
   "fsPicker.filenamePlaceholder": "Dateiname",
   "fsPicker.upload": "Hochladen…",
+  "fsPicker.uploaded.one": "{count} Datei hochgeladen. Zum Öffnen eine Datei auswählen.",
+  "fsPicker.uploaded.other": "{count} Dateien hochgeladen. Zum Öffnen eine Datei auswählen.",
+  "fsPicker.uploadFailed": "{uploaded} von {count} Dateien hochgeladen; {file} fehlgeschlagen: {error}",
   "fsPicker.save": "Speichern",
   "fsPicker.cancel": "Abbrechen",
 

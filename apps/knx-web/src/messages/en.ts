@@ -811,6 +811,9 @@ export const messages = {
   "fsPicker.saveAs": "Save as",
   "fsPicker.filenamePlaceholder": "filename",
   "fsPicker.upload": "Upload…",
+  "fsPicker.uploaded.one": "Uploaded {count} file. Choose one to open.",
+  "fsPicker.uploaded.other": "Uploaded {count} files. Choose one to open.",
+  "fsPicker.uploadFailed": "Uploaded {uploaded} of {count} files; {file} failed: {error}",
   "fsPicker.save": "Save",
   "fsPicker.cancel": "Cancel",
 

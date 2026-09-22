@@ -1664,29 +1664,21 @@ this repository's reference project or any tested project represents.
 make buffering measurably costly; real streaming is a contained change
 local to this one route, not an architectural one.
 
-## 24. `FsPicker` has no drag-and-drop or multi-select
+## 24. Resolved: `FsPicker` drag-and-drop and multi-file local uploads
 
-**Limitation.** `apps/knx-web/src/FsPicker.tsx` — the mount-directory
-listing/upload UI shown in the web build when `window.__TAURI__` is
-absent — supports browsing directories and picking or uploading one file
-at a time. It has no drag-and-drop file upload zone and no multi-select
-for batch operations.
+**Resolution, 2026-09-22.** The browser picker still returns one
+`Promise<string | null>` path because project open/import remains a singular
+human choice. Its local file input now accepts multiple files, and its upload
+label accepts native file drops. A shared routine sends each file to the
+existing one-file `/api/fs/upload` route sequentially, refreshes the
+`uploads` listing after successful requests, and announces a completed batch
+as a polite status. It never auto-selects an uploaded project.
 
-**Cause.** YAGNI for this iteration: the design's stated goal was parity
-with the desktop's native-dialog UX for opening and saving one project at
-a time, not a general-purpose file manager. Neither capability was needed
-to meet that goal.
-
-**Impact.** A web user uploads files one at a time through a standard
-file-input control rather than dragging one in, and cannot batch-upload
-or batch-delete multiple files from the mount listing. No functional gap
-for the single-project workflow the server is built around.
-
-**Lifted when.** A demonstrated need arises — e.g. a workflow that
-regularly moves several files into the mount at once — at which point
-drag-and-drop and multi-select can be added to `FsPicker.tsx` without
-touching the underlying `/api/fs/*` routes, which already accept one file
-per request by design.
+**Failure handling.** The first failed request stops that batch, keeps earlier
+successful uploads intact, and names the failed file plus server error and
+completed count. It does not announce batch success. During protected-mode
+dragover the picker inspects only `DataTransfer.types`; it reads dropped files
+only at drop time.
 
 ## 25. Resolved: the web package and Docker frontend stage use Node 22
 

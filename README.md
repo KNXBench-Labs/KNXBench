@@ -100,6 +100,32 @@ variable table, is in
 
 ## Documentation
 
+### Shared local agent memory
+
+Claude, Codex, and the Hermes `knxbench` profile can use the same local topic
+index without merging their private stores. Preview, publish, or validate it:
+
+```bash
+python3 tools/agent_memory_sync.py preview --project-root "$(pwd)"
+python3 tools/agent_memory_sync.py apply --project-root "$(pwd)"
+python3 tools/agent_memory_sync.py check --project-root "$(pwd)"
+```
+
+Optional local integration installs a stable user-systemd copy and bounded
+instruction blocks. Both are reversible:
+
+```bash
+python3 tools/agent_memory_sync.py install-agent-links --project-root "$(pwd)"
+python3 tools/agent_memory_sync.py install-timer --project-root "$(pwd)"
+
+python3 tools/agent_memory_sync.py uninstall-timer
+python3 tools/agent_memory_sync.py uninstall-agent-links --project-root "$(pwd)"
+```
+
+Generated snapshots stay ignored under `.agent-memory/`. See
+[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) for the authority order and
+promotion rules.
+
 The manual is the place to start. It explains KNX itself where that is needed, and does not
 assume you have used ETS.
 

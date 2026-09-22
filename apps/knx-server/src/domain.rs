@@ -285,6 +285,7 @@ pub fn open_project(
                     source: "import".to_string(),
                     message: e.clone(),
                     location: None,
+                    diagnostic: None,
                     detail: None,
                 });
             return Err(e);
@@ -317,6 +318,7 @@ pub fn open_project(
         source: "import".to_string(),
         message: format!("imported {} ({counts_summary})", report.source.file_name),
         location: None,
+        diagnostic: None,
         detail: None,
     });
     drop(log);
@@ -406,6 +408,7 @@ pub fn open_native_project(
                     source: "open".to_string(),
                     message: e.clone(),
                     location: None,
+                    diagnostic: None,
                     detail: None,
                 });
             return Err(e);
@@ -429,6 +432,7 @@ pub fn open_native_project(
         source: "open".to_string(),
         message: format!("opened {}", path.display()),
         location: None,
+        diagnostic: None,
         detail: None,
     });
     drop(log);
@@ -514,6 +518,7 @@ pub fn new_project_impl(
                     message: "refused to create a new project: the open one has unsaved edits"
                         .to_string(),
                     location: None,
+                    diagnostic: None,
                     detail: None,
                 });
             return Err(UnsavedChanges);
@@ -563,6 +568,7 @@ pub fn new_project_impl(
         source: "new".to_string(),
         message: "created a new project with one empty installation".to_string(),
         location: None,
+        diagnostic: None,
         detail: None,
     });
     drop(log);
@@ -611,6 +617,7 @@ fn log_outcome<T>(
             message,
             location: None,
             detail,
+            diagnostic: None,
         });
 }
 
@@ -704,6 +711,7 @@ pub fn export_group_addresses_csv_impl(
                 source: "csv-export".to_string(),
                 message: warning.detail.clone(),
                 location: warning.row.map(|row| format!("row {row}")),
+                diagnostic: None,
                 detail: None,
             });
         }
@@ -765,6 +773,7 @@ pub fn export_documentation_impl(
                 source: "doc-export".to_string(),
                 message: warning.detail.clone(),
                 location: Some(warning.location.clone()),
+                diagnostic: None,
                 detail: None,
             });
         }
@@ -4017,6 +4026,7 @@ mod tests {
             source: "sentinel".into(),
             message: "pre-existing entry".into(),
             location: None,
+            diagnostic: None,
             detail: None,
         });
     }

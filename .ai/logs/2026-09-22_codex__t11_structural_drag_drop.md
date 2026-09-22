@@ -61,5 +61,18 @@ changes are UI projection/event wiring, tests, styles, and documentation.
 - `6e60113` — device → building part.
 - `202fa50` — live-region, keyboard-parity, and static feedback coverage.
 
-Fresh whole-branch review and merged-result gates remain the next mandatory
-steps.
+## Fresh review
+
+A fresh `gpt-6-astra` reviewer inspected `9723316..de8c34d` and found no
+Critical issue, one Important browser-compatibility issue, and two Minor test /
+whitespace issues. Native `dragover` exposes MIME types but protects payload
+data, so reading `getData()` there prevented both real drops. Commit `f7b84c9`
+fixes this RED→GREEN: dragover checks the visible MIME type and active current
+source, while drop retains full safe-integer and identity validation. Tests now
+model protected mode and gate drop delivery on an accepted dragover; malformed
+and mismatched active payloads, duplicate device renderings, cancellation, and
+completed cleanup are covered. The same commit removes the whitespace issue.
+
+The read-only follow-up review found all three findings closed, no remaining
+Critical/Important/Minor issue, and returned a merge verdict of yes. Merged-result
+gates remain the next mandatory step.

@@ -11,7 +11,9 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
+import time
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -24,6 +26,13 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_STALE = 2
 EXIT_CONFLICT = 3
+MARKER_START = "<!-- BEGIN KNXBENCH SHARED MEMORY -->"
+MARKER_END = "<!-- END KNXBENCH SHARED MEMORY -->"
+_AGENT_LINK_BLOCK = f"""{MARKER_START}
+Read `docs/PROJECT_CONTEXT.md` first, then `.agent-memory/PROJECT_MEMORY.md`.
+Open only linked source notes relevant to the current task. Generated memory files
+are read-only discovery aids; repository documentation wins every conflict.
+{MARKER_END}"""
 _HEADING_RE = re.compile(r"^#\s+(.+?)\s*$")
 _BULLET_RE = re.compile(r"^(?:[-*+]\s+|\d+[.)]\s+)(.+)$")
 _NON_TOPIC_RE = re.compile(r"[^a-z0-9]+")
@@ -648,6 +657,161 @@ def _is_stale(paths: SyncPaths, generation: Generation) -> bool:
     )
 
 
+def _atomic_write(path: Path, content: str | bytes, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        if isinstance(content, bytes):
+            with temporary.open("xb") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+        else:
+            with temporary.open("x", encoding="utf-8") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+        _fsync_directory(path.parent)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _default_runner(argv: list[str]) -> None:
+    subprocess.run(argv, check=True)
+
+
+def install_timer(
+    *,
+    project_root: Path,
+    home: Path,
+    script_path: Path,
+    runner=_default_runner,
+) -> None:
+    stable = home / ".local/lib/knxbench-memory-sync/agent_memory_sync.py"
+    service = home / ".config/systemd/user/knxbench-memory-sync.service"
+    timer = home / ".config/systemd/user/knxbench-memory-sync.timer"
+    _atomic_write(stable, script_path.read_bytes(), 0o700)
+    _atomic_write(
+        service,
+        "\n".join(
+            (
+                "[Unit]",
+                "Description=Refresh KNXBench shared agent memory",
+                "",
+                "[Service]",
+                "Type=oneshot",
+                f"ExecStart={stable} apply --project-root {project_root} --home {home}",
+                "",
+            )
+        ),
+        0o600,
+    )
+    _atomic_write(
+        timer,
+        """[Unit]
+Description=Refresh KNXBench shared agent memory periodically
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=knxbench-memory-sync.service
+
+[Install]
+WantedBy=timers.target
+""",
+        0o600,
+    )
+    runner(["systemctl", "--user", "daemon-reload"])
+    runner(["systemctl", "--user", "enable", "--now", "knxbench-memory-sync.timer"])
+
+
+def uninstall_timer(*, home: Path, runner=_default_runner) -> None:
+    runner(["systemctl", "--user", "disable", "--now", "knxbench-memory-sync.timer"])
+    known_paths = (
+        home / ".config/systemd/user/knxbench-memory-sync.service",
+        home / ".config/systemd/user/knxbench-memory-sync.timer",
+        home / ".local/lib/knxbench-memory-sync/agent_memory_sync.py",
+    )
+    for path in known_paths:
+        if path.is_file() or path.is_symlink():
+            path.unlink()
+    install_directory = home / ".local/lib/knxbench-memory-sync"
+    if install_directory.is_dir() and not any(install_directory.iterdir()):
+        install_directory.rmdir()
+    runner(["systemctl", "--user", "daemon-reload"])
+
+
+def _backup(path: Path) -> None:
+    backup = path.with_name(f"{path.name}.bak.{time.time_ns()}")
+    shutil.copy2(path, backup)
+
+
+def upsert_marked_block(path: Path, block: str = _AGENT_LINK_BLOCK) -> bool:
+    original = path.read_text(encoding="utf-8") if path.exists() else ""
+    start = original.find(MARKER_START)
+    end = original.find(MARKER_END)
+    if (start == -1) != (end == -1) or (start != -1 and end < start):
+        raise ValueError(f"malformed KNXBench memory marker block: {path}")
+    if start != -1:
+        end += len(MARKER_END)
+        updated = original[:start] + block + original[end:]
+    else:
+        separator = "" if not original else ("\n" if original.endswith("\n") else "\n\n")
+        updated = original + separator + block + "\n"
+    if updated == original:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        _backup(path)
+    _atomic_write(path, updated, 0o600)
+    return True
+
+
+def remove_marked_block(path: Path) -> bool:
+    if not path.exists():
+        return False
+    original = path.read_text(encoding="utf-8")
+    start = original.find(MARKER_START)
+    end = original.find(MARKER_END)
+    if start == -1 and end == -1:
+        return False
+    if start == -1 or end < start:
+        raise ValueError(f"malformed KNXBench memory marker block: {path}")
+    end += len(MARKER_END)
+    prefix = original[:start]
+    suffix = original[end:]
+    if prefix.endswith("\n") and suffix.startswith("\n"):
+        suffix = suffix[1:]
+    if not suffix and prefix.endswith("\n\n"):
+        prefix = prefix[:-1]
+    updated = prefix + suffix
+    _backup(path)
+    _atomic_write(path, updated, 0o600)
+    return True
+
+
+def _agent_link_targets(project_root: Path, hermes_home: Path) -> tuple[Path, ...]:
+    return (
+        project_root / "AGENTS.md",
+        project_root / "MEMORY.md",
+        hermes_home / "SOUL.md",
+    )
+
+
+def install_agent_links(*, project_root: Path, hermes_home: Path) -> None:
+    for target in _agent_link_targets(project_root, hermes_home):
+        upsert_marked_block(target)
+
+
+def uninstall_agent_links(*, project_root: Path, hermes_home: Path) -> None:
+    for target in _agent_link_targets(project_root, hermes_home):
+        remove_marked_block(target)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -656,11 +820,45 @@ def _build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument("--project-root", type=Path, default=Path.cwd())
         command_parser.add_argument("--home", type=Path, default=Path.home())
         command_parser.add_argument("--source", action="append", type=_parse_source)
+    install_timer_parser = subparsers.add_parser("install-timer")
+    install_timer_parser.add_argument("--project-root", type=Path, default=Path.cwd())
+    install_timer_parser.add_argument("--home", type=Path, default=Path.home())
+    uninstall_timer_parser = subparsers.add_parser("uninstall-timer")
+    uninstall_timer_parser.add_argument("--home", type=Path, default=Path.home())
+    for command in ("install-agent-links", "uninstall-agent-links"):
+        command_parser = subparsers.add_parser(command)
+        command_parser.add_argument("--project-root", type=Path, default=Path.cwd())
+        command_parser.add_argument(
+            "--hermes-home",
+            type=Path,
+            default=Path.home() / ".hermes" / "profiles" / "knxbench",
+        )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    if args.command == "install-timer":
+        install_timer(
+            project_root=args.project_root.resolve(),
+            home=args.home.resolve(),
+            script_path=Path(__file__).resolve(),
+        )
+        return EXIT_OK
+    if args.command == "uninstall-timer":
+        uninstall_timer(home=args.home.resolve())
+        return EXIT_OK
+    if args.command == "install-agent-links":
+        install_agent_links(
+            project_root=args.project_root.resolve(), hermes_home=args.hermes_home
+        )
+        return EXIT_OK
+    if args.command == "uninstall-agent-links":
+        uninstall_agent_links(
+            project_root=args.project_root.resolve(), hermes_home=args.hermes_home
+        )
+        return EXIT_OK
+
     project_root = args.project_root.resolve()
     sources = tuple(args.source or default_source_roots(project_root, args.home))
     generation = generate(project_root, sources, datetime.now(timezone.utc))

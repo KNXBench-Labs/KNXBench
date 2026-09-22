@@ -416,6 +416,6 @@
   git commit -m "docs(settings): explain what the knobs remember" -m "Record the settings surface, gateway metadata, localized diagnostics, verification, and open multi-window limitation."
   ```
 
-- [ ] **Step 6: Review, integrate, and push**
+- [x] **Step 6: Review, integrate, and push**
 
   Run a fresh whole-branch review. Fix every Critical/Important finding with RED→GREEN proof, rerun affected gates, merge into `main`, rerun full gates on the merge commit, push, and verify `HEAD` equals `origin/main`.

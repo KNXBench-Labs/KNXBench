@@ -746,14 +746,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     if (menu) menu.open = false;
   }
 
-  // F4. `can_undo` is the dirty signal, and it is the server's own: there
-  // is no dirty flag in `AppState` either, so `new_project_impl` refuses a
-  // new project on exactly this condition (see its doc comment). It
-  // over-reports after a save — the stack still has history — and that is
-  // the direction to err in when the alternative is a project that goes
-  // quietly into the bin.
+  // F4. The server owns the clean project snapshot. Undo availability stays
+  // a toolbar concern; only the server's normalized content comparison may
+  // decide whether closing would discard user-visible changes.
   function quitRequested() {
-    if (tree?.can_undo) {
+    if (tree?.is_modified) {
       setQuitConfirmOpen(true);
       return;
     }

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
+import { loadPreferredGateway } from "./gatewayPreference";
 import { type Translate, useTranslate } from "./i18n";
-import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
+import { getSetting, setSetting, useSettingsRevision, useSettingsState } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 const EXCLUSIONS_KEY = "lineScanExclusions";
@@ -62,7 +63,10 @@ export default function LineScanPanel({
   const t = useTranslate();
   useSettingsRevision();
   const exclusions = configuredExclusions();
-  const [gateway, setGateway] = useState("");
+  const settingsState = useSettingsState();
+  const [gateway, setGateway] = useState(loadPreferredGateway);
+  const gatewayTouchedRef = useRef(false);
+  const gatewaySeedResolvedRef = useRef(settingsState.hydration === "hydrated");
   const [area, setArea] = useState(1);
   const [line, setLine] = useState(1);
   const [firstDevice, setFirstDevice] = useState(1);
@@ -91,6 +95,13 @@ export default function LineScanPanel({
   const pollGenerationRef = useRef(0);
   const pollInFlightRef = useRef(false);
   const sessionIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
+    if (!gatewayTouchedRef.current && sessionIdRef.current === null && estimate === null) {
+      setGateway(loadPreferredGateway());
+    }
+    gatewaySeedResolvedRef.current = true;
+  }, [settingsState.hydration, estimate]);
 
   const request = useMemo<api.LineScanRequest>(
     () => ({
@@ -119,6 +130,7 @@ export default function LineScanPanel({
   function apply(next: api.LineScanResultsResponse, expectedSessionId: number | null) {
     if (expectedSessionId !== null && next.sessionId !== expectedSessionId) return;
     sessionIdRef.current = next.sessionId;
+    gatewaySeedResolvedRef.current = true;
     sinceRef.current = next.nextSince;
     setResponse(next);
     setActiveExclusions(next.excludedAddresses);
@@ -183,6 +195,7 @@ export default function LineScanPanel({
   }, [response?.status, response?.sessionId, projectOpen, projectRevision, comparisonRevision]);
 
   async function preview() {
+    gatewaySeedResolvedRef.current = true;
     setError(null);
     const fingerprint = requestFingerprint;
     try {
@@ -197,6 +210,7 @@ export default function LineScanPanel({
 
   async function start() {
     if (!estimate || estimate.requestFingerprint !== requestFingerprint) return;
+    gatewaySeedResolvedRef.current = true;
     pollGenerationRef.current += 1;
     setStarting(true);
     setActiveExclusions(request.excluded);
@@ -309,7 +323,7 @@ export default function LineScanPanel({
 
       <div className="line-scan-layout">
         <form className="line-scan-config" onSubmit={(event) => event.preventDefault()}>
-          <label>{t("lineScan.gateway")}<input value={gateway} onChange={(event) => { setGateway(event.target.value); setEstimate(null); }} placeholder="192.0.2.10:3671" /></label>
+        <label>{t("lineScan.gateway")}<input value={gateway} onChange={(event) => { gatewayTouchedRef.current = true; gatewaySeedResolvedRef.current = true; setGateway(event.target.value); setEstimate(null); }} placeholder="192.0.2.10:3671" /></label>
           <label>{t("lineScan.area")}<input type="number" min="0" max="15" value={area} onChange={(event) => changeNumber(setArea, event.target.value)} /></label>
           <label>{t("lineScan.line")}<input type="number" min="0" max="15" value={line} onChange={(event) => changeNumber(setLine, event.target.value)} /></label>
           <label>{t("lineScan.firstDevice")}<input type="number" min="1" max="255" value={firstDevice} onChange={(event) => changeNumber(setFirstDevice, event.target.value)} /></label>

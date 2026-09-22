@@ -177,11 +177,11 @@
 - Produces `PREFERRED_GATEWAY_KEY`, `loadPreferredGateway()`, `savePreferredGateway(value)`, and `usePreferredGateway()`.
 - Leaves endpoint validation at the existing server trust boundary. Discovery never persists the preference.
 
-- [ ] **Step 1: Write failing preference tests**
+- [x] **Step 1: Write failing preference tests**
 
   Cover absent/blank values as `""`, trimming on read/save, persistence, explicit unset, and storage inside the single settings-cache document rather than a loose localStorage key.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
   ```bash
   cd apps/knx-web
@@ -190,19 +190,19 @@
 
   Expected: FAIL because the module does not exist.
 
-- [ ] **Step 3: Implement the preference owner**
+- [x] **Step 3: Implement the preference owner**
 
   Use `settingsStorage` and `useSettingsRevision()` like existing preference modules. Blank saves call `removeItem`. Do not parse endpoints or call fetch/discovery/network code.
 
-- [ ] **Step 4: Write failing Bus Monitor seed tests**
+- [x] **Step 4: Write failing Bus Monitor seed tests**
 
   Cover cached first render, delayed authoritative replacement while untouched, typing before hydration, discovery before hydration, later preference changes, and a successfully attached/started session. Add a normal 404 reattach-before-hydration case proving no-session does not freeze seeding. Assert typing and discovery never write the preference.
 
-- [ ] **Step 5: Write failing Line Scan seed tests**
+- [x] **Step 5: Write failing Line Scan seed tests**
 
   Cover the same cache, authoritative, and manual rules. Add a 404 initial-poll case. Prove a successful existing scan, user-requested estimate, or started scan resolves ownership and blocks later reseeding.
 
-- [ ] **Step 6: Confirm panel RED**
+- [x] **Step 6: Confirm panel RED**
 
   ```bash
   cd apps/knx-web
@@ -211,11 +211,11 @@
 
   Expected: FAIL because both gateway fields always start empty.
 
-- [ ] **Step 7: Implement one-time seeding**
+- [x] **Step 7: Implement one-time seeding**
 
   Initialize local fields from `loadPreferredGateway()`. Track touched/resolved refs. First authoritative hydration may replace the cached seed only while untouched and unused. Typing, discovery, and user-initiated connect/estimate/start resolve immediately. Background reattach/poll resolves only after a successful existing-session/scan response, never on 404. Workflow panels never call `savePreferredGateway`.
 
-- [ ] **Step 8: Verify and commit**
+- [x] **Step 8: Verify and commit**
 
   ```bash
   cd apps/knx-web

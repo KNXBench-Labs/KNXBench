@@ -398,3 +398,9 @@ dokumentiert ist. Vollständiger Stand liegt im Statusarchiv unter
 - **Notes Claude:** T19 changes documentation only and adds `.ai/logs/2026-09-22_codex__t19_llm_mcp_research.md`; no manifest changed. The correct enum count is 33 (26 public-facing edit variants plus five `Restore*`, `SetIdAllocators` and `Batch`). Durable user rule reconfirmed: every commit needs both a short, lightly funny subject and a concise explanatory body; no co-author, author email `github@knxbench.com`.
 
 ---
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** Investigated the reported Codex app-server task error without changing product code. It is emitted by the separate, already-completed Omarchy `rust-lld` crash-diagnosis TUI (PID 418786): its periodic model refresh requests `http://127.0.0.1:8787/chatgpt/models` and receives `404`. The active KNXBench Codex session uses the project-scoped gateway path `/p/KNXBench/v1/models` and receives `200`; no KNXBench task, repository state, rate-limit check, or current session is blocked. No helper `codex app-server` process remains.
+- **Pending/Next Steps:** Continue the overall goal with T12 from `.superpowers/sdd/goal/task-12-brief.md`. The idle crash-diagnosis terminal may be closed separately; do not treat its model-refresh error as a KNXBench failure.
+- **Notes Claude:** Weekly limit last bounded read-only check remains 36%, below the 60% pause threshold. Future app-server checks must use a bounded subprocess and terminate it in `finally`.
+---

@@ -768,6 +768,53 @@ struct SetGroupAddressStyleBody {
     group_address_style: String,
 }
 
+struct GroupAddressStylePublication {
+    revision: u64,
+    tree: knx_projection::ProjectTree,
+    ctx: GroupAddressContext,
+}
+
+fn prepare_group_address_style_publication(
+    state: &SharedState,
+    style: knx_core::GroupAddressStyle,
+) -> Result<GroupAddressStylePublication, ApiError> {
+    let tree = domain::set_group_address_style_impl(state, style).map_err(ApiError::bad_request)?;
+    // The revision is assigned before the snapshot: a snapshot can only be
+    // older than another accepted mutation when its revision is lower.
+    let revision = state
+        .group_address_style_revision
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+        + 1;
+    let ctx = {
+        let project = state.project.lock().expect("project mutex poisoned");
+        GroupAddressContext::from_project(project.as_ref())
+    };
+    Ok(GroupAddressStylePublication {
+        revision,
+        tree,
+        ctx,
+    })
+}
+
+async fn publish_group_address_style(
+    state: &SharedState,
+    publication: GroupAddressStylePublication,
+) -> Json<knx_projection::ProjectTree> {
+    let session = state.bus_session.lock().await;
+    // A newer accepted mutation may have published first while this request
+    // awaited the bus lock. Never let the delayed older snapshot replace it.
+    if publication.revision
+        == state
+            .group_address_style_revision
+            .load(std::sync::atomic::Ordering::SeqCst)
+    {
+        if let Some(session) = session.as_ref() {
+            session.update_group_address_context(publication.ctx);
+        }
+    }
+    Json(publication.tree)
+}
+
 /// Restyles an already-open project. `400`, not `409`: unlike
 /// `POST /api/project/new`'s unsaved-changes conflict, there is no state
 /// here the caller could resolve by saving first — either every existing
@@ -779,18 +826,8 @@ async fn set_group_address_style(
     Json(body): Json<SetGroupAddressStyleBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let style = parse_group_address_style(&body.group_address_style)?;
-    let tree =
-        domain::set_group_address_style_impl(&state, style).map_err(ApiError::bad_request)?;
-
-    let ctx = {
-        let project = state.project.lock().expect("project mutex poisoned");
-        GroupAddressContext::from_project(project.as_ref())
-    };
-    if let Some(session) = state.bus_session.lock().await.as_ref() {
-        session.update_group_address_context(ctx);
-    }
-
-    Ok(Json(tree))
+    let publication = prepare_group_address_style_publication(&state, style)?;
+    Ok(publish_group_address_style(&state, publication).await)
 }
 
 #[derive(Deserialize)]
@@ -2166,4 +2203,72 @@ async fn log(State(state): State<SharedState>) -> Json<Vec<crate::session_log::L
             .entries()
             .to_vec(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::{Ipv4Addr, SocketAddrV4};
+    use std::sync::Arc;
+
+    use knx_core::{GroupAddressStyle, IndividualAddress, Language, Project};
+
+    use super::{prepare_group_address_style_publication, publish_group_address_style};
+    use crate::bus::fake::{FakeConnector, FakeTunnel};
+    use crate::bus::{BusSession, GroupAddressContext};
+    use crate::AppState;
+
+    #[tokio::test]
+    async fn concurrent_group_address_style_publications_keep_the_latest_accepted_context() {
+        let state = Arc::new(AppState::default());
+        let project = Project::new(Language("en".into()));
+        let initial_ctx = GroupAddressContext::from_project(Some(&project));
+        *state.project.lock().expect("project mutex poisoned") = Some(project);
+
+        let assigned_address = IndividualAddress::new(1, 1, 5).expect("valid test address");
+        let (tunnel, handle) = FakeTunnel::new(assigned_address, 4);
+        let connector = FakeConnector::succeeding(tunnel);
+        let session = BusSession::start(
+            1,
+            SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0),
+            &connector,
+            initial_ctx,
+        )
+        .await
+        .expect("fake connector always succeeds");
+        *state.bus_session.lock().await = Some(session);
+
+        // A pauses after its successful project mutation and snapshot. B then
+        // completes fully before A resumes its delayed session publication.
+        let publication_a =
+            prepare_group_address_style_publication(&state, GroupAddressStyle::Free).unwrap();
+        let publication_b =
+            prepare_group_address_style_publication(&state, GroupAddressStyle::TwoLevel).unwrap();
+        let _ = publish_group_address_style(&state, publication_b).await;
+        let _ = publish_group_address_style(&state, publication_a).await;
+
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .expect("project mutex poisoned")
+                .as_ref()
+                .expect("test project remains open")
+                .info
+                .group_address_style,
+            GroupAddressStyle::TwoLevel
+        );
+        assert_eq!(
+            state
+                .bus_session
+                .lock()
+                .await
+                .as_ref()
+                .expect("test session remains active")
+                .group_address_style(),
+            Some(GroupAddressStyle::TwoLevel)
+        );
+        assert_eq!(connector.call_count(), 1);
+        assert!(handle.sent_calls().is_empty());
+        assert!(!handle.disconnected());
+    }
 }

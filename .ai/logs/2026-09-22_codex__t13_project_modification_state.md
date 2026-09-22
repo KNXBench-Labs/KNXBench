@@ -36,3 +36,19 @@ info disabled and two build jobs. No KNX/LAN/multicast/gateway/hardware
 traffic occurred. No private-LAN literal, prohibited fixture,
 `docs/LIMITATION_TRIAGE.md`, group-address notation, theme, or reduced-motion
 change was introduced.
+
+## Task-review fix round 1
+
+The original server baseline became clean after Save/Save As, but those
+`Promise<void>` calls left React holding its pre-save dirty `ProjectTree`.
+Both save flows now consume the established `GET /api/project` seam and
+replace the whole tree plus store-path metadata. There is no client-side dirty
+patch or duplicated comparison. Save As preserves its already-confirmed store
+path if the follow-up GET fails; either refresh failure is reported and leaves
+the previous dirty tree in force, so Quit remains conservative.
+
+TDD RED: focused App run had 3 intended failures / 76 passes: Save and Save As
+made no current-project request, and a refresh failure had no error to report.
+The existing save-POST failure preservation case already passed. GREEN:
+App/api 136/136, full frontend 911/911 across 63 files, server project routes
+13/13, TypeScript, and `git diff --check` pass.

@@ -34,6 +34,7 @@ const apiMock = vi.hoisted(() => ({
   // dialog not at all, so an unconfigured `vi.fn()` is enough for them.
   newProject: vi.fn(),
   saveProject: vi.fn().mockResolvedValue(undefined),
+  saveProjectAs: vi.fn().mockResolvedValue(undefined),
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
@@ -1336,7 +1337,9 @@ describe("App — a failed load never renders a running banner", () => {
       findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    // Once to recover the lost open response, then once more to consume the
+    // authoritative clean tree established by Save.
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(2);
     expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
     expect(filePickerMock.pickSavePath).not.toHaveBeenCalled();
     await act(async () => root.unmount());
@@ -2237,6 +2240,128 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     });
     expect(host!.querySelector(".quit-confirm")).toBeNull();
     expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("uses the authoritative clean tree after Save before deciding whether Quit needs a prompt", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxdb");
+    const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+    apiMock.openProject.mockResolvedValue(dirty);
+    apiMock.currentProject.mockResolvedValue({
+      ...dirty,
+      is_modified: false,
+      has_store_path: true,
+    });
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"])
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).toBeNull();
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("uses the authoritative clean tree after Save As before deciding whether Quit needs a prompt", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    filePickerMock.pickSavePath.mockResolvedValue("/tmp/project.knxdb");
+    const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+    apiMock.currentProject.mockResolvedValue({
+      ...dirty,
+      is_modified: false,
+      has_store_path: true,
+    });
+    const root = await openProject(dirty);
+
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.saveAs"])
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.saveProjectAs).toHaveBeenCalledWith("/tmp/project.knxdb");
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"])
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).toBeNull();
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("keeps the dirty tree and reports an authoritative refresh failure after Save", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxdb");
+    const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+    apiMock.openProject.mockResolvedValue(dirty);
+    apiMock.currentProject.mockRejectedValue(new Error("current project unavailable"));
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector('[role="alert"]')?.textContent)
+      .toContain("current project unavailable");
+
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"])
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+    expect(tauriWindowMock.close).not.toHaveBeenCalled();
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("does not refresh or clear dirty state when Save itself fails", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxdb");
+    const dirty = { ...baseTree(), can_undo: true, is_modified: true };
+    apiMock.openProject.mockResolvedValue(dirty);
+    apiMock.saveProject.mockRejectedValueOnce(new Error("disk full"));
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.currentProject).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("disk full");
+
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"])
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+    expect(tauriWindowMock.close).not.toHaveBeenCalled();
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);

@@ -6150,7 +6150,10 @@ The desktop Quit guard consumes only `is_modified`. Undo and redo buttons
 continue to consume history availability. Frontend regressions prove both
 important disagreements: `can_undo == true` with `is_modified == false` quits
 without a prompt, while `can_undo == false` with `is_modified == true` opens
-the confirmation dialog.
+the confirmation dialog. Successful Save and Save As operations then consume
+a fresh `GET /api/project` tree rather than patching the dirty bit locally;
+if that authoritative refresh fails, the error is reported and the prior
+dirty tree remains in force.
 
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 

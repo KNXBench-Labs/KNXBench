@@ -1,5 +1,12 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T13 Task 1 fix round 1 closes the save-publication review finding. After successful Save or Save As, `App` consumes authoritative `GET /api/project` state and replaces the whole tree/store metadata; it never locally patches `is_modified`. Refresh failure is reported and retains the prior dirty tree, while a failed save performs no refresh. Detail appended `.ai/logs/2026-09-22_codex__t13_project_modification_state.md` and Task 1 report.
+- **Verification:** RED 3 intended App failures / 76 passes; GREEN App/api 136/136, full frontend 911/911 across 63 files, server project routes 13/13, TypeScript and `git diff --check` using `/var/tmp/knxbench-t13-target`. No KNX/LAN/multicast/gateway/hardware traffic.
+- **Pending/Next Steps:** Controller re-review/integration for T13 Task 1; deferred Minor import test deliberately untouched.
+- **Notes Claude:** Successful save refreshes the complete current tree. Save-refresh errors preserve the conservative quit prompt. No server DTO/schema change was needed.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T13 Task 1 on `t13-ui-residue-b` publishes honest project modification state for §§81/103. `Project::same_user_content_as` normalizes only allocator high-water marks; transient `AppState.clean_project` follows successful new/open/import/save/save-as and failed saves preserve the old baseline. T12's project → stack → import-count → store-path publication now ends with the clean snapshot. `ProjectTree.is_modified` drives new-project refusal and desktop Quit independently of undo/redo. Store schema remains 9. Detail: `.ai/logs/2026-09-22_codex__t13_project_modification_state.md`.
 - **Verification:** Strict RED/GREEN recorded. Fresh final: core 1/1, projection 37/37, server modified-state 2/2, HTTP project routes 13/13, atomic replacement 1/1, App 75/75; TypeScript, rustfmt, focused warning-denied Clippy, `git diff --check` pass using `/var/tmp/knxbench-t13-target`. No KNX/LAN/multicast/gateway/hardware traffic.
 - **Pending/Next Steps:** Controller review/integration for T13 Task 1; remaining T13 slices are independent.

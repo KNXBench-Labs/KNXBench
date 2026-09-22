@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T12 task 2 fix round 2 closes the stale `FsPicker` directory-list race: every effect request receives a generation plus cleanup liveness guard, and only the current generation may update entries or error state. A delayed root success/refusal therefore cannot overwrite a newer `uploads` listing after local upload. Existing batch serialization, single-file sequential POSTs, protected-mode behavior, and the singular picker result stay unchanged. Evidence appended to `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-2-report.md`.
+- **Verification:** RED: 2 intended failures/8 pass. GREEN: 33/33 picker, motion, and i18n tests plus TypeScript. Full frontend: 894/894 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** Controller may integrate the Task 2 round-two commit with Task 2 and remaining independent T12 work.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T12 task 2 fix round 1 closes review findings in `FsPicker`: an immediate `uploadingRef` serializes input/drop batches across the first async boundary while the picker disables its input, directory listing refresh happens exactly once after a successful batch and once at most for a partial batch, and foreign dragover/drop clears file-ready feedback. Existing protected-mode behavior, one-file sequential POSTs, singular picker resolution, and partial-failure honesty are retained. Evidence appended to `.superpowers/sdd/2026-09-22-ui-residue-batch-a/task-2-report.md`.
 - **Verification:** RED: 4 intended failures/4 pass. GREEN: 31/31 picker, motion, and i18n tests plus TypeScript. Full frontend: 892/892 tests across 63 files. `git diff --check` passed. No KNX/LAN/hardware traffic.
 - **Pending/Next Steps:** Controller may integrate the Task 2 fix-round commit with Task 2 and the remaining independent T12 work.

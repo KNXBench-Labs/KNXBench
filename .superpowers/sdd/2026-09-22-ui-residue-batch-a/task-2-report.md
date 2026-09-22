@@ -143,3 +143,55 @@ Duration  3.75s
 any asynchronous boundary, batches remain sequential one-file requests,
 partial success has no success status, and ready-state feedback remains
 token-only and motion-free.
+
+## Fix round 2 — stale listing responses
+
+### RED
+
+The listing effect applied every completion unconditionally. A pending root
+request could therefore finish after a newer `uploads` request and overwrite
+the current entries or error state.
+
+```text
+cd apps/knx-web && npx vitest run src/FsPicker.test.tsx
+
+❯ src/FsPicker.test.tsx (10 tests | 2 failed) 68ms
+× keeps the newer uploads listing when the original root response arrives late
+× ignores an older rejected listing after a newer uploads listing succeeds
+
+Test Files  1 failed (1)
+     Tests  2 failed | 8 passed (10)
+```
+
+The delayed root success replaced `fresh.knxproj` with `stale-root.knxproj`;
+the delayed root refusal rendered `Error: stale root refusal` after the newer
+uploads listing had succeeded.
+
+### GREEN and full gate
+
+The effect assigns each list request a monotonically increasing generation
+and an effect-local cleanup flag. Its success and failure continuations update
+state only while both remain current, so superseded requests cannot overwrite
+entries or errors and unmounted pickers also ignore late completions.
+
+```text
+cd apps/knx-web && npx vitest run src/FsPicker.test.tsx src/motionGuard.test.ts src/i18n.test.tsx && npx tsc --noEmit
+
+Test Files  3 passed (3)
+     Tests  33 passed (33)
+Duration  465ms
+```
+
+`npx tsc --noEmit` exited 0 with no output.
+
+```text
+cd apps/knx-web && npm test
+
+Test Files  63 passed (63)
+     Tests  894 passed (894)
+Duration  3.74s
+```
+
+`git diff --check` exited 0. Self-review confirms that the guard covers both
+the `then` and `catch` paths, preserves the newest request's normal success
+and error behavior, and does not alter the sequential upload contract.

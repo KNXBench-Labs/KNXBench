@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** Alte Branches und Worktrees bereinigt. Vor dem Löschen waren `t10-settings-surface`, `t11-structural-drag-drop`, `t12-ui-residue` und `t17-platform-truth` vollständig in `origin/main` enthalten und hatten jeweils null einzigartige Commits. Lokal und auf `origin` bleiben nur `main` sowie der aktive Branch `t13-ui-residue-b`; dessen Worktree wurde bewusst erhalten.
+- **Verification:** `git fetch --prune`; Merge-Ancestry und `origin/main..<branch>` jeweils geprüft; abschließend `git branch -a`, `git worktree list --porcelain` und beide Worktree-Status geprüft. Beide verbliebenen Branches sind sauber und mit ihren Remotes synchron.
+- **Pending/Next Steps:** Produktarbeit bleibt gemäß Nutzeranweisung pausiert, bis eine ausdrückliche Freigabe vorliegt und das Wochenlimit wieder unter 60 % liegt. Danach T13 ab Task 4 fortsetzen.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** Read-only product-summary task. Reconciled the requested final KNXBench feature picture against the current handover, README, roadmap, architecture, implementation status, compatibility inventory, known limitations and ETS gap analysis. No source, documentation, protocol, network or hardware changes were made.
 - **Verification:** Documentation-only inspection; no build or tests were necessary. The answer distinguishes the intended product scope from durable non-goals: one-way `.knxproj` import into `.knxdb`, no claimed full ETS compatibility, no manufacturer plug-in host, and KNX Secure/real-hardware commissioning only when verifiably supported.
 - **Pending/Next Steps:** Push the already verified `main` state described by the preceding T12 handover when development resumes; this summary task adds no implementation work.

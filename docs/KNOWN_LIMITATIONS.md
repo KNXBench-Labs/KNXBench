@@ -5623,9 +5623,10 @@ rules.
 The project mutex is held only while building that new context and is released
 before the async bus-session mutex is acquired. Refreshing interpretation
 metadata neither reconnects nor restarts the tunnel and sends no bus frame.
-A monotonic publication revision also prevents a delayed older restyle request
-from overwriting the context of a newer accepted mutation after async lock
-acquisition reorders them.
+One application-layer transaction mutex is acquired before the domain command
+and held through fresh snapshot and session publication, so concurrent restyles
+cannot mutate or publish out of order. The project and bus locks remain
+separate phases inside that serialized transaction.
 `style_change_refreshes_the_active_session_without_reconnecting` verifies
 through the public route that the next monitored telegram uses the new style,
 its displayed address round-trips through `/api/bus/write`, the session ID is

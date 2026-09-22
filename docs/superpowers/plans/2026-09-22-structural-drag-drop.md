@@ -1,5 +1,9 @@
 # Structural Drag-and-Drop Implementation Plan
 
+**Execution status (2026-09-22):** Tasks 1–3, the first full branch gate, and fresh
+whole-branch review plus its single RED→GREEN fix round are complete on
+`t11-structural-drag-drop`; merged-result verification remains.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:subagent-driven-development` or `superpowers:executing-plans`
 > to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.

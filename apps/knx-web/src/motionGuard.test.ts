@@ -164,4 +164,26 @@ describe("styles.css", () => {
       `styles.css has ${findings.length} unguarded motion declaration(s):\n${details}`,
     ).toEqual([]);
   });
+
+  it("keeps structural drag feedback workbench-scoped, token-only, and motion-free", () => {
+    const stylesheetPath = join(dirname(fileURLToPath(import.meta.url)), "styles.css");
+    const rules = parseRules(readFileSync(stylesheetPath, "utf-8"));
+    const expected = new Map([
+      ['.workbench .tree-label[draggable="true"]', "cursor: grab"],
+      ['.workbench .tree-label[data-dragging="true"]', "opacity: 0.72"],
+      ['.workbench .tree-label[data-drop-ready="true"]', "var(--knx-accent)"],
+    ]);
+
+    for (const [selector, declaration] of expected) {
+      const rule = rules.find((candidate) => candidate.selector === selector);
+      expect(rule, `${selector} must exist`).toBeTruthy();
+      const body = rule!.declarations
+        .map(({ property, value }) => `${property}: ${value}`)
+        .join("; ");
+      expect(body).toContain(declaration);
+      expect(body).not.toMatch(/(?:transition|animation)\s*:/);
+      expect(body).not.toMatch(/#[0-9a-f]{3,8}\b|\brgba?\s*\(/i);
+      expect(selector.startsWith(".workbench ")).toBe(true);
+    }
+  });
 });

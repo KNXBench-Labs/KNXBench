@@ -7,6 +7,7 @@ use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 
+use crate::bus::GroupAddressContext;
 use crate::domain;
 use crate::errors::ApiError;
 use crate::paths::{resolve_new_project_path, resolve_project_path};
@@ -778,9 +779,18 @@ async fn set_group_address_style(
     Json(body): Json<SetGroupAddressStyleBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let style = parse_group_address_style(&body.group_address_style)?;
-    domain::set_group_address_style_impl(&state, style)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    let tree =
+        domain::set_group_address_style_impl(&state, style).map_err(ApiError::bad_request)?;
+
+    let ctx = {
+        let project = state.project.lock().expect("project mutex poisoned");
+        GroupAddressContext::from_project(project.as_ref())
+    };
+    if let Some(session) = state.bus_session.lock().await.as_ref() {
+        session.update_group_address_context(ctx);
+    }
+
+    Ok(Json(tree))
 }
 
 #[derive(Deserialize)]

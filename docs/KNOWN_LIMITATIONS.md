@@ -5612,52 +5612,26 @@ exists so the number stops being re-derived. If a future brief asks for
 of you.
 ## 91. A running bus session keeps rendering group addresses in the style the project had when it started
 
-**What.** `GroupAddressContext` (`apps/knx-server/src/bus.rs`) is a snapshot
-taken once, by `from_project`, at `POST /api/bus/start` time: the project's
-group address style, its group address names, and its resolved DPTs. Nothing
-refreshes it for the life of the session. Before T4 that could not matter — a
-project's style was chosen at creation and never changed, so the snapshot and
-the project agreed by construction. T4 made the style editable
-(`POST /api/project/group-address-style`), and the snapshot is now the one
-place in the server that can disagree with the project it came from.
+**Resolved.** `BusSession` now owns one atomically replaceable
+`GroupAddressContext` shared by the incoming-telegram drain task and outgoing
+write path. After `POST /api/project/group-address-style` successfully applies
+the domain command, the handler rebuilds the complete context from the current
+project and replaces it in an active session. Style, names and resolved DPTs
+therefore stay one coherent snapshot rather than acquiring separate refresh
+rules.
 
-Restyle a project while a bus session is open and two routes keep speaking the
-old style: `GET /api/bus/telegrams` renders every destination through
-`format_destination`, and `POST /api/bus/write` parses the incoming
-`destination` with the same cached style (`bus_routes.rs`, the
-`unwrap_or(GroupAddressStyle::ThreeLevel)` fallback applying only when no
-session is active or its snapshot carried no project). Meanwhile the Project
-Explorer, the Inspector, the projection and every exporter read the style from
-the live project and show the new one.
+The project mutex is held only while building that new context and is released
+before the async bus-session mutex is acquired. Refreshing interpretation
+metadata neither reconnects nor restarts the tunnel and sends no bus frame.
+`style_change_refreshes_the_active_session_without_reconnecting` verifies
+through the public route that the next monitored telegram uses the new style,
+its displayed address round-trips through `/api/bus/write`, the session ID is
+unchanged and the fake tunnel remains connected **[V]**.
 
-**Why this is a display and ergonomics defect, not an addressing one.** No
-telegram is ever sent to the wrong address because of it. The three styles have
-different field counts — `Free` is one decimal number, `TwoLevel` is `main/sub`,
-`ThreeLevel` is `main/middle/sub` — and `GroupAddress::parse` requires the exact
-field count for the style it is given, so a string written in one style never
-parses as a *different* address in another: it is refused. A user who copies
-`4242` out of the restyled Explorer and posts it to `/write` on a session that
-started in `ThreeLevel` gets a `400` with a malformed-address message, not a
-telegram to `4/2/42`. **[V]** Verified by reading both code paths on
-`243a4d7`, not inferred from the type signatures.
-
-**Why it is left as it is.** The snapshot is deliberate and load-bearing for a
-different reason: the `/start` handler must build it from `AppState.project`
-*before* calling `BusSession::start`, so the project mutex is never held across
-that call's `.await` (see `BusSession::start`'s own doc comment, and the
-commissioning design spec §4.4, which specifies the snapshot). Refreshing it on
-restyle means reaching into a live session from the project-mutation path and
-re-acquiring locks in the opposite order — exactly the deadlock shape the
-snapshot exists to avoid. That is a bus-session-lifetime change, not a group
-address style change, and T4's scope is the style.
-
-**Workaround.** Stop and restart the bus session after restyling a project. The
-new session snapshots the new style.
-
-**Lifted when.** A bus session gains a supported way to be told its project
-changed — most plausibly a channel the session task owns, so the refresh
-happens on the session's side of the lock rather than the mutator's. Until
-then, restarting the session is the honest answer and this section says so.
+**Notation boundary.** This resolution concerns the project's address level:
+`Free`, `TwoLevel` or `ThreeLevel`. User-facing group addresses remain in the
+fixed slash-based representation for the chosen level; no slash/dot notation
+selector was added.
 
 
 ## 92. Commissioning phase 2 is verified against a simulator this project wrote, and has never addressed a device

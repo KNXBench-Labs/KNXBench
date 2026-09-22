@@ -606,6 +606,61 @@ async fn a_non_three_level_projects_telegram_destination_round_trips_through_wri
     }
 }
 
+/// A project restyle must replace the running session's whole address
+/// context. The next received telegram therefore uses the new display style,
+/// and that exact displayed address must parse on the existing tunnel without
+/// disconnecting or starting a replacement session.
+#[tokio::test]
+async fn style_change_refreshes_the_active_session_without_reconnecting() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_style_and_single_dpt(GroupAddressStyle::ThreeLevel),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+
+    let restyled = call(
+        &app,
+        "POST",
+        "/api/project/group-address-style",
+        Some(json!({ "groupAddressStyle": "Free" })),
+    )
+    .await;
+    assert_eq!(restyled.status(), StatusCode::OK);
+
+    handle
+        .sender()
+        .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
+            kind: knx_net::LDataMessageKind::Indication,
+            source: addr(9),
+            destination: Destination::Group(GroupAddress::from_raw(1)),
+            transport: knx_net::Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+        }))
+        .unwrap();
+
+    let destination = poll_until_first_destination(&app).await;
+    assert_eq!(destination, "1");
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({ "destination": destination, "value": "on" })),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let sent = handle.sent_calls();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].0, Destination::Group(GroupAddress::from_raw(1)));
+    assert!(!handle.disconnected());
+
+    let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await["sessionId"], 1);
+}
+
 // ---------------------------------------------------------------------------
 // 502 — the tunnel's own `send` fails.
 // ---------------------------------------------------------------------------

@@ -26,6 +26,7 @@ IDENTITY.md
 MEMORY.md
 .claude/
 memory/
+.agent-memory/
 
 # Lokale Projekt-Exporte (Privatinstallation, nichts fuer die Nachwelt)
 devices.md

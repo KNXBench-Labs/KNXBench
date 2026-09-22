@@ -350,6 +350,18 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(target.read_text(encoding="utf-8"), "before\nafter\n")
 
 
+class RepositoryContractTests(unittest.TestCase):
+    def test_project_files_define_shared_memory_contract(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        context = (root / "docs/PROJECT_CONTEXT.md").read_text(encoding="utf-8")
+        claude = (root / "CLAUDE.md").read_text(encoding="utf-8")
+        gitignore = (root / ".gitignore").read_text(encoding="utf-8")
+
+        self.assertIn("Repository authority", context)
+        self.assertIn(".agent-memory/PROJECT_MEMORY.md", claude)
+        self.assertIn(".agent-memory/", gitignore.splitlines())
+
+
 class PublicationTests(unittest.TestCase):
     def test_apply_publishes_three_views_from_one_snapshot(self) -> None:
         with temporary_project_with_note() as fixture:

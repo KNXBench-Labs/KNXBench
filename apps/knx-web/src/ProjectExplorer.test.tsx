@@ -16,6 +16,8 @@ const apiMock = vi.hoisted(() => ({
   batchDeleteGroupAddresses: vi.fn(),
   batchMoveDevicesToLine: vi.fn(),
   batchMoveDevicesToBuildingPart: vi.fn(),
+  moveDeviceToLine: vi.fn(),
+  moveDeviceToBuildingPart: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -85,6 +87,43 @@ function baseTree(): ProjectTree {
   };
 }
 
+function treeWithSecondInstallation(): ProjectTree {
+  const tree = baseTree();
+  tree.installations.push({
+    id: 2,
+    name: "Second installation",
+    topology: [{
+      id: 2,
+      name: "Area 2",
+      address: 2,
+      lines: [{ id: 22, name: "Line 2", address: 2, devices: [device(9, "Second device")] }],
+    }],
+    buildings: [],
+    unassigned: [],
+    group_addresses: [],
+    group_ranges: [],
+  });
+  return tree;
+}
+
+class TestDataTransfer {
+  private readonly values = new Map<string, string>();
+  dropEffect: DataTransfer["dropEffect"] = "none";
+  effectAllowed: DataTransfer["effectAllowed"] = "uninitialized";
+
+  get types(): string[] {
+    return [...this.values.keys()];
+  }
+
+  setData(format: string, data: string): void {
+    this.values.set(format, data);
+  }
+
+  getData(format: string): string {
+    return this.values.get(format) ?? "";
+  }
+}
+
 // The multi-selection state machine lives in `multiSelection.ts` and the
 // single `BulkActionToolbar` is rendered by `App` (stage 4: one owner, so
 // the tree and the group-address table cannot disagree about what is
@@ -95,6 +134,8 @@ function ExplorerHarness(props: {
   tree: ProjectTree;
   onSelect: (sel: Selection) => void;
   onTreeUpdate: (tree: ProjectTree) => void;
+  onSummary: (message: string) => void;
+  onError: (error: unknown) => void;
 }) {
   const { multiSelection, onItemClick, clear } = useMultiSelection(props.tree, props.onSelect);
   return (
@@ -114,19 +155,35 @@ function ExplorerHarness(props: {
         onTreeUpdate={props.onTreeUpdate}
         multiSelection={multiSelection}
         onItemClick={onItemClick}
+        onSummary={props.onSummary}
+        onError={props.onError}
       />
     </>
   );
 }
 
-async function renderExplorer(tree: ProjectTree, onSelect = vi.fn(), onTreeUpdate = vi.fn()) {
+async function renderExplorer(
+  tree: ProjectTree,
+  onSelect = vi.fn(),
+  onTreeUpdate = vi.fn(),
+  onSummary = vi.fn(),
+  onError = vi.fn(),
+) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<ExplorerHarness tree={tree} onSelect={onSelect} onTreeUpdate={onTreeUpdate} />);
+    root.render(
+      <ExplorerHarness
+        tree={tree}
+        onSelect={onSelect}
+        onTreeUpdate={onTreeUpdate}
+        onSummary={onSummary}
+        onError={onError}
+      />,
+    );
   });
-  return { root, onSelect, onTreeUpdate };
+  return { root, onSelect, onTreeUpdate, onSummary, onError };
 }
 
 function labelFor(text: string): HTMLElement {
@@ -143,6 +200,25 @@ async function click(el: HTMLElement, opts: { ctrlKey?: boolean; shiftKey?: bool
       new MouseEvent("click", { bubbles: true, cancelable: true, ...opts }),
     );
   });
+}
+
+async function dispatchDrag(
+  target: HTMLElement,
+  type: "dragstart" | "dragover" | "drop" | "dragend",
+  transfer: TestDataTransfer,
+): Promise<Event> {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: transfer });
+  await act(async () => target.dispatchEvent(event));
+  return event;
+}
+
+async function dragAndDrop(source: HTMLElement, target: HTMLElement): Promise<TestDataTransfer> {
+  const transfer = new TestDataTransfer();
+  await dispatchDrag(source, "dragstart", transfer);
+  await dispatchDrag(target, "dragover", transfer);
+  await dispatchDrag(target, "drop", transfer);
+  return transfer;
 }
 
 async function unmount(root: Root) {
@@ -364,6 +440,131 @@ describe("ProjectExplorer — Project node", () => {
     await click(projectLabel);
     expect(onSelect).toHaveBeenCalledWith({ kind: "project", id: 0 } satisfies Selection);
 
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer structural drag source", () => {
+  it("exposes only first-installation topology devices as drag sources", async () => {
+    const { root } = await renderExplorer(treeWithSecondInstallation());
+
+    expect(labelFor("Device A").getAttribute("draggable")).toBe("true");
+    expect(labelFor("Device D").getAttribute("draggable")).toBe("true");
+    expect(labelFor("Second device").getAttribute("draggable")).not.toBe("true");
+
+    await unmount(root);
+  });
+
+  it("drag source writes only the typed decimal device id", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const transfer = new TestDataTransfer();
+
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+
+    expect(transfer.types).toEqual(["application/x-knxbench-device-id"]);
+    expect(transfer.getData("application/x-knxbench-device-id")).toBe("1");
+    expect(transfer.effectAllowed).toBe("move");
+    await unmount(root);
+  });
+
+  it.each(["1x", "0", "-1", "9007199254740992"])(
+    "foreign drag payload %s never calls the line move API",
+    async (payload) => {
+      const { root } = await renderExplorer(baseTree());
+      const transfer = new TestDataTransfer();
+      transfer.setData("application/x-knxbench-device-id", payload);
+
+      await dispatchDrag(labelFor("Line 1: Line 1"), "drop", transfer);
+
+      expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+      expect(labelFor("Line 1: Line 1").getAttribute("data-drop-ready")).toBeNull();
+      await unmount(root);
+    },
+  );
+
+  it("foreign drag MIME never advertises line acceptance", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const transfer = new TestDataTransfer();
+    transfer.setData("text/plain", "1");
+
+    const event = await dispatchDrag(labelFor("Line 1: Line 1"), "dragover", transfer);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer line drop", () => {
+  it("moves a current first-installation device through the line command", async () => {
+    const nextTree = baseTree();
+    nextTree.installations[0].topology[0].lines[0].name = "Updated line";
+    apiMock.moveDeviceToLine.mockResolvedValueOnce(nextTree);
+    const { root, onTreeUpdate, onSummary } = await renderExplorer(baseTree());
+
+    await dragAndDrop(labelFor("Device A"), labelFor("Line 1: Line 1"));
+
+    expect(apiMock.moveDeviceToLine).toHaveBeenCalledWith(1, 1);
+    expect(onTreeUpdate).toHaveBeenCalledWith(nextTree);
+    expect(onSummary).toHaveBeenCalledWith("Device A moved to line Line 1: Line 1.");
+    await unmount(root);
+  });
+
+  it("reports a rejected line drop without mutating the projection", async () => {
+    const error = new Error("move refused");
+    apiMock.moveDeviceToLine.mockRejectedValueOnce(error);
+    const { root, onTreeUpdate, onSummary, onError } = await renderExplorer(baseTree());
+
+    await dragAndDrop(labelFor("Device A"), labelFor("Line 1: Line 1"));
+
+    expect(onTreeUpdate).not.toHaveBeenCalled();
+    expect(onSummary).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(error);
+    await unmount(root);
+  });
+
+  it("never accepts a line in a second installation", async () => {
+    const { root } = await renderExplorer(treeWithSecondInstallation());
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+
+    const target = labelFor("Line 2: Line 2");
+    const event = await dispatchDrag(target, "dragover", transfer);
+    await dispatchDrag(target, "drop", transfer);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(target.getAttribute("data-drop-ready")).toBeNull();
+    expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+
+  it("ignores a stale drag source removed before the line drop", async () => {
+    const tree = baseTree();
+    const { root, onSelect, onTreeUpdate, onSummary, onError } = await renderExplorer(tree);
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Device A"), "dragstart", transfer);
+
+    const withoutSource = baseTree();
+    withoutSource.installations[0].topology[0].lines[0].devices =
+      withoutSource.installations[0].topology[0].lines[0].devices.filter(({ id }) => id !== 1);
+    await act(async () => {
+      root.render(
+        <ExplorerHarness
+          tree={withoutSource}
+          onSelect={onSelect}
+          onTreeUpdate={onTreeUpdate}
+          onSummary={onSummary}
+          onError={onError}
+        />,
+      );
+    });
+
+    await dispatchDrag(labelFor("Line 1: Line 1"), "drop", transfer);
+
+    expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    expect(onTreeUpdate).not.toHaveBeenCalled();
+    expect(onSummary).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
     await unmount(root);
   });
 });

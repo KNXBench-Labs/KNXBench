@@ -359,6 +359,7 @@ export const messages: Record<MessageKey, string> = {
 
   "explorer.addDevice": "+ Gerät hinzufügen",
   "explorer.lineLabel": "Linie {address}: {name}",
+  "dragDrop.movedToLine": "{device} wurde in Linie {line} verschoben.",
   "explorer.areaLabel": "Bereich {address}: {name}",
   "explorer.newLinePlaceholder": "Neue Linie",
   "explorer.newAreaPlaceholder": "Neuer Bereich",

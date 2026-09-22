@@ -381,6 +381,7 @@ export const messages = {
   // `ProjectExplorer.tsx`.
   "explorer.addDevice": "+ Add device",
   "explorer.lineLabel": "Line {address}: {name}",
+  "dragDrop.movedToLine": "{device} moved to line {line}.",
   "explorer.areaLabel": "Area {address}: {name}",
   "explorer.newLinePlaceholder": "New line",
   "explorer.newAreaPlaceholder": "New area",

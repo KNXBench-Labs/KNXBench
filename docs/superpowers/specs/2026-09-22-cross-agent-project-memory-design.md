@@ -124,11 +124,16 @@ python3 tools/agent_memory_sync.py check
 ```
 
 - `preview` prints the proposed index/report and writes nothing.
-- `apply` writes temporary files beside their destinations, flushes them, then
-  replaces `PROJECT_MEMORY.md`, `REPORT.md`, and `manifest.json` atomically.
+- `apply` writes and flushes all three files into a new immutable directory
+  under `.agent-memory/snapshots/`, then atomically replaces one `current`
+  symlink. Stable top-level symlinks expose `PROJECT_MEMORY.md`, `REPORT.md`,
+  and `manifest.json` through `current`, so readers observe one complete old or
+  new snapshot, never a mixed generation.
 - `check` compares generated content with disk and returns non-zero for stale
   output, unsafe content, unreadable configured sources, or topic conflicts.
-- If generation fails, the prior complete output remains untouched.
+- If generation or publication fails before the `current` swap, the prior
+  complete output remains active. An unreferenced incomplete snapshot is safe
+  to remove on the next successful run.
 
 `manifest.json` stores schema version, source roots, source hashes, generation
 time, and output hash. It contains no memory text.

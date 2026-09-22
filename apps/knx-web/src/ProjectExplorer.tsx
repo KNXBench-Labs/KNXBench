@@ -16,6 +16,18 @@ import CatalogBrowser from "./CatalogBrowser";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 
+const DEVICE_DRAG_MIME = "application/x-knxbench-device-id";
+
+type DragSource = { deviceId: number };
+
+function parseDraggedDevice(dataTransfer: DataTransfer): number | null {
+  if (!Array.from(dataTransfer.types).includes(DEVICE_DRAG_MIME)) return null;
+  const raw = dataTransfer.getData(DEVICE_DRAG_MIME);
+  if (!/^[1-9]\d*$/.test(raw)) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 // The same discriminant-vs-label lookup `Inspector.tsx`'s
 // `buildingPartKindLabel` uses, duplicated rather than shared — both files
 // stay in their own edit scope (task 4 brief) and the table is four lines.
@@ -40,6 +52,13 @@ function TreeNode(props: {
   children?: React.ReactNode;
   selected?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
+  draggable?: boolean;
+  dragging?: boolean;
+  onDragStart?: React.DragEventHandler<HTMLButtonElement>;
+  onDragEnd?: React.DragEventHandler<HTMLButtonElement>;
+  dropReady?: boolean;
+  onDragOver?: React.DragEventHandler<HTMLButtonElement>;
+  onDrop?: React.DragEventHandler<HTMLButtonElement>;
 }) {
   const [open, setOpen] = useState(true);
   const hasChildren = props.children !== undefined;
@@ -59,7 +78,20 @@ function TreeNode(props: {
             {open ? "▾" : "▸"}
           </button>
         )}
-        <button type="button" className={labelClasses.join(" ")} onClick={labelClick} aria-pressed={props.onSelect ? !!props.selected : undefined} aria-expanded={!props.onSelect && hasChildren ? open : undefined}>
+        <button
+          type="button"
+          className={labelClasses.join(" ")}
+          onClick={labelClick}
+          aria-pressed={props.onSelect ? !!props.selected : undefined}
+          aria-expanded={!props.onSelect && hasChildren ? open : undefined}
+          draggable={props.draggable || undefined}
+          data-dragging={props.dragging ? "true" : undefined}
+          data-drop-ready={props.dropReady ? "true" : undefined}
+          onDragStart={props.onDragStart}
+          onDragEnd={props.onDragEnd}
+          onDragOver={props.onDragOver}
+          onDrop={props.onDrop}
+        >
           {props.label}
         </button>
       </span>
@@ -83,8 +115,23 @@ type SelectionProps = {
   onItemClick: ItemClickHandler;
 };
 
-function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
+type DeviceDragProps = {
+  eligibleDeviceIds: ReadonlySet<number>;
+  dragSource: DragSource | null;
+  onDeviceDragStart: (device: DeviceNode, event: React.DragEvent<HTMLButtonElement>) => void;
+  onDeviceDragEnd: () => void;
+};
+
+type LineDropProps = {
+  onDeviceDropOnLine: (
+    line: LineNode,
+    event: React.DragEvent<HTMLButtonElement>,
+  ) => void;
+};
+
+function DeviceItem(props: { device: DeviceNode } & SelectionProps & DeviceDragProps) {
   const { device, selection, multiSelection, onItemClick } = props;
+  const draggable = props.eligibleDeviceIds.has(device.id);
   const label = device.address ? `${device.address} ${device.name}` : device.name;
   const sel: Selection = { kind: "device", id: device.id };
   return (
@@ -95,6 +142,10 @@ function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
         (multiSelection?.kind === "device" && multiSelection.ids.has(device.id))
       }
       onSelect={(e) => onItemClick(e, "device", device.id, sel)}
+      draggable={draggable}
+      dragging={props.dragSource?.deviceId === device.id}
+      onDragStart={draggable ? (event) => props.onDeviceDragStart(device, event) : undefined}
+      onDragEnd={draggable ? props.onDeviceDragEnd : undefined}
     />
   );
 }
@@ -221,7 +272,10 @@ function AddDeviceRow(props: { onAdd: () => void }) {
 }
 
 function LineItem(
-  props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void } & SelectionProps,
+  props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void }
+    & SelectionProps
+    & DeviceDragProps
+    & LineDropProps,
 ) {
   const { line, isFirst, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
@@ -230,6 +284,16 @@ function LineItem(
       label={t("explorer.lineLabel", { address: line.address, name: line.name })}
       selected={selection?.kind === "line" && selection.id === line.id}
       onSelect={() => onSelect({ kind: "line", id: line.id })}
+      dropReady={isFirst && props.dragSource !== null
+        && props.eligibleDeviceIds.has(props.dragSource.deviceId)}
+      onDragOver={isFirst ? (event) => {
+        const deviceId = parseDraggedDevice(event.dataTransfer);
+        if (deviceId === null || deviceId !== props.dragSource?.deviceId
+          || !props.eligibleDeviceIds.has(deviceId)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      } : undefined}
+      onDrop={isFirst ? (event) => props.onDeviceDropOnLine(line, event) : undefined}
     >
       {line.devices.map((d) => (
         <DeviceItem
@@ -239,6 +303,10 @@ function LineItem(
           onSelect={onSelect}
           multiSelection={multiSelection}
           onItemClick={onItemClick}
+          eligibleDeviceIds={props.eligibleDeviceIds}
+          dragSource={props.dragSource}
+          onDeviceDragStart={props.onDeviceDragStart}
+          onDeviceDragEnd={props.onDeviceDragEnd}
         />
       ))}
       {isFirst && <AddDeviceRow onAdd={() => onAddDevice(line.id)} />}
@@ -252,7 +320,7 @@ function AreaItem(
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number) => void;
-  } & SelectionProps,
+  } & SelectionProps & DeviceDragProps & LineDropProps,
 ) {
   const { area, isFirst, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
     props;
@@ -273,6 +341,11 @@ function AreaItem(
           onSelect={onSelect}
           multiSelection={multiSelection}
           onItemClick={onItemClick}
+          eligibleDeviceIds={props.eligibleDeviceIds}
+          dragSource={props.dragSource}
+          onDeviceDragStart={props.onDeviceDragStart}
+          onDeviceDragEnd={props.onDeviceDragEnd}
+          onDeviceDropOnLine={props.onDeviceDropOnLine}
         />
       ))}
       {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
@@ -524,7 +597,7 @@ function BuildingItem(
     building: BuildingNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
-  } & SelectionProps,
+  } & SelectionProps & DeviceDragProps,
 ) {
   const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
@@ -544,6 +617,10 @@ function BuildingItem(
           onSelect={onSelect}
           multiSelection={multiSelection}
           onItemClick={onItemClick}
+          eligibleDeviceIds={props.eligibleDeviceIds}
+          dragSource={props.dragSource}
+          onDeviceDragStart={props.onDeviceDragStart}
+          onDeviceDragEnd={props.onDeviceDragEnd}
         />
       ))}
       {building.devices.map((d) => (
@@ -554,6 +631,10 @@ function BuildingItem(
           onSelect={onSelect}
           multiSelection={multiSelection}
           onItemClick={onItemClick}
+          eligibleDeviceIds={props.eligibleDeviceIds}
+          dragSource={props.dragSource}
+          onDeviceDragStart={props.onDeviceDragStart}
+          onDeviceDragEnd={props.onDeviceDragEnd}
         />
       ))}
       {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
@@ -604,7 +685,7 @@ function InstallationItem(
     isFirst: boolean;
     onTreeUpdate: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number | null) => void;
-  } & SelectionProps,
+  } & SelectionProps & DeviceDragProps & LineDropProps,
 ) {
   const {
     installation,
@@ -631,6 +712,11 @@ function InstallationItem(
             onSelect={onSelect}
             multiSelection={multiSelection}
             onItemClick={onItemClick}
+            eligibleDeviceIds={props.eligibleDeviceIds}
+            dragSource={props.dragSource}
+            onDeviceDragStart={props.onDeviceDragStart}
+            onDeviceDragEnd={props.onDeviceDragEnd}
+            onDeviceDropOnLine={props.onDeviceDropOnLine}
           />
         ))}
         {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
@@ -646,6 +732,10 @@ function InstallationItem(
             onSelect={onSelect}
             multiSelection={multiSelection}
             onItemClick={onItemClick}
+            eligibleDeviceIds={props.eligibleDeviceIds}
+            dragSource={props.dragSource}
+            onDeviceDragStart={props.onDeviceDragStart}
+            onDeviceDragEnd={props.onDeviceDragEnd}
           />
         ))}
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
@@ -660,6 +750,10 @@ function InstallationItem(
               onSelect={onSelect}
               multiSelection={multiSelection}
               onItemClick={onItemClick}
+              eligibleDeviceIds={props.eligibleDeviceIds}
+              dragSource={props.dragSource}
+              onDeviceDragStart={props.onDeviceDragStart}
+              onDeviceDragEnd={props.onDeviceDragEnd}
             />
           ))}
           {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
@@ -701,6 +795,8 @@ export default function ProjectExplorer(
   props: {
     tree: ProjectTree;
     onTreeUpdate: (tree: ProjectTree) => void;
+    onSummary: (message: string) => void;
+    onError: (error: unknown) => void;
   } & SelectionProps,
 ) {
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
@@ -710,6 +806,52 @@ export default function ProjectExplorer(
   // from the first installation, same restriction every other create
   // affordance here already carries.
   const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
+  const [dragSource, setDragSource] = useState<DragSource | null>(null);
+  const firstInstallation = tree.installations[0];
+  const eligibleDeviceIds = new Set([
+    ...(firstInstallation?.topology.flatMap((area) =>
+      area.lines.flatMap((line) => line.devices.map((device) => device.id)),
+    ) ?? []),
+    ...(firstInstallation?.unassigned.map((device) => device.id) ?? []),
+  ]);
+
+  function onDeviceDragStart(
+    device: DeviceNode,
+    event: React.DragEvent<HTMLButtonElement>,
+  ): void {
+    if (!eligibleDeviceIds.has(device.id)) return;
+    event.dataTransfer.setData(DEVICE_DRAG_MIME, String(device.id));
+    event.dataTransfer.effectAllowed = "move";
+    setDragSource({ deviceId: device.id });
+  }
+
+  async function onDeviceDropOnLine(
+    line: LineNode,
+    event: React.DragEvent<HTMLButtonElement>,
+  ): Promise<void> {
+    const deviceId = parseDraggedDevice(event.dataTransfer);
+    if (deviceId === null || deviceId !== dragSource?.deviceId) return;
+    const device = firstInstallation?.topology
+      .flatMap((area) => area.lines)
+      .flatMap((candidate) => candidate.devices)
+      .find((candidate) => candidate.id === deviceId)
+      ?? firstInstallation?.unassigned.find((candidate) => candidate.id === deviceId);
+    if (!device) return;
+
+    event.preventDefault();
+    try {
+      const next = await api.moveDeviceToLine(deviceId, line.id);
+      onTreeUpdate(next);
+      props.onSummary(t("dragDrop.movedToLine", {
+        device: device.name,
+        line: t("explorer.lineLabel", { address: line.address, name: line.name }),
+      }));
+    } catch (error) {
+      props.onError(error);
+    } finally {
+      setDragSource(null);
+    }
+  }
 
   return (
     <div className="project-explorer" onKeyDown={(e) => {
@@ -743,6 +885,11 @@ export default function ProjectExplorer(
             onSelect={onSelect}
             multiSelection={multiSelection}
             onItemClick={onItemClick}
+            eligibleDeviceIds={eligibleDeviceIds}
+            dragSource={dragSource}
+            onDeviceDragStart={onDeviceDragStart}
+            onDeviceDragEnd={() => setDragSource(null)}
+            onDeviceDropOnLine={onDeviceDropOnLine}
           />
         ))}
       </ul>

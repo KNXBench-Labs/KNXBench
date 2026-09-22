@@ -92,12 +92,12 @@ pub struct AppState {
     /// through this same lock is the correct behaviour, not a cost to
     /// avoid.
     pub bus_session: tokio::sync::Mutex<Option<BusSession>>,
-    /// Orders project-style context publications independently from async
-    /// bus-lock acquisition. A later accepted style mutation increments this
-    /// before taking its project snapshot, so an older request that reaches
-    /// `bus_session` last can detect that it is stale and decline to publish.
+    /// Serializes the complete project-style mutation, fresh context snapshot
+    /// and active-session publication. It is deliberately distinct from both
+    /// `project` and `bus_session`: those two locks are acquired in separate
+    /// phases and are never held together.
     #[doc(hidden)]
-    pub group_address_style_revision: std::sync::atomic::AtomicU64,
+    pub group_address_style_publication: tokio::sync::Mutex<()>,
     /// Monotonic source of [`BusSession`] ids (T15 task 3, design spec
     /// §4.1's "session identity": "a `Uuid`-or-incrementing `id`... though
     /// this slice only ever has one [at a time]"). Starts at 1, incremented
@@ -151,7 +151,7 @@ impl AppState {
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
             bus_session: tokio::sync::Mutex::new(None),
-            group_address_style_revision: std::sync::atomic::AtomicU64::new(0),
+            group_address_style_publication: tokio::sync::Mutex::new(()),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
             line_scan_session: tokio::sync::Mutex::new(None),
             next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),

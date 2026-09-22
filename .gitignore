@@ -1,4 +1,5 @@
 .venv/
+__pycache__/
 bus_traffic.jsonl
 .superpowers/
 /target/

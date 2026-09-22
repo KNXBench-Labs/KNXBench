@@ -859,6 +859,7 @@ export const messages: Record<MessageKey, string> = {
   // wirklich ausführt.
   "loadProgress.importing": "{source} wird importiert…",
   "loadProgress.opening": "{source} wird geöffnet…",
+  "loadProgress.succeeded": "{source} wurde geladen.",
   "loadProgress.failed": "{source} konnte nicht geladen werden",
   "loadProgress.failedDuring": "Fehlgeschlagen bei: {phase}",
   "loadProgress.barLabel": "Ladefortschritt",

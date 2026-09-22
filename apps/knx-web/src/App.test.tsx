@@ -305,8 +305,8 @@ describe("App — drag-and-drop announcement", () => {
 
     await dragTreeLabel("Device A", "Line 1: Line A");
 
-    expect(host!.querySelector('[role="status"]')?.textContent)
-      .toContain("Device A moved to line Line 1: Line A.");
+    expect([...host!.querySelectorAll('[role="status"]')]
+      .some((toast) => toast.textContent?.includes("Device A moved to line Line 1: Line A."))).toBe(true);
     await act(async () => root.unmount());
   });
 
@@ -317,8 +317,8 @@ describe("App — drag-and-drop announcement", () => {
 
     await dragTreeLabel("Device A", "Room A (Raum)");
 
-    expect(host!.querySelector('[role="status"]')?.textContent)
-      .toContain("Device A wurde nach Room A verschoben.");
+    expect([...host!.querySelectorAll('[role="status"]')]
+      .some((toast) => toast.textContent?.includes("Device A wurde nach Room A verschoben."))).toBe(true);
     await act(async () => root.unmount());
   });
 
@@ -1145,6 +1145,9 @@ describe("App — project load progress", () => {
       finish(baseTree());
     });
     expect(host!.querySelector(".load-progress")).toBeNull();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Loaded villa.knxproj.");
 
     await act(async () => root.unmount());
   });
@@ -1153,17 +1156,21 @@ describe("App — project load progress", () => {
   // must call `api.openProject` — a mutation swapping it for
   // `api.importProject` (the ETS-import path `pickProject` uses) passed
   // every other gate, because nothing here ever clicked this button.
-  it("opens a .knxdb file through api.openProject, not api.importProject", async () => {
+  it("opens a .knxdb file through api.openProject and announces it in the active locale", async () => {
+    setSetting("uiLanguage", "de");
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxdb");
     apiMock.openProject.mockResolvedValue(baseTree());
     const root = await renderApp();
 
     await act(async () => {
-      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      findButton("Öffnen (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(apiMock.openProject).toHaveBeenCalledTimes(1);
     expect(apiMock.importProject).not.toHaveBeenCalled();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("villa.knxdb wurde geladen.");
 
     await act(async () => root.unmount());
   });
@@ -1303,6 +1310,9 @@ describe("App — a failed load never renders a running banner", () => {
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".load-progress")).toBeNull();
     expect(host!.querySelector('[role="alert"]')).toBeNull();
+    const toasts = host!.querySelectorAll<HTMLElement>(".toast--fun[role=\"status\"]");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].querySelector(".toast-body")?.textContent).toBe("Loaded villa.knxproj.");
     await act(async () => root.unmount());
   });
 

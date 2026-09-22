@@ -28,6 +28,17 @@ function parseDraggedDevice(dataTransfer: DataTransfer): number | null {
   return Number.isSafeInteger(id) ? id : null;
 }
 
+function acceptsDraggedDevice(
+  dataTransfer: DataTransfer,
+  dragSource: DragSource | null,
+  eligibleDeviceIds: ReadonlySet<number>,
+): boolean {
+  const deviceId = parseDraggedDevice(dataTransfer);
+  return deviceId !== null
+    && deviceId === dragSource?.deviceId
+    && eligibleDeviceIds.has(deviceId);
+}
+
 // The same discriminant-vs-label lookup `Inspector.tsx`'s
 // `buildingPartKindLabel` uses, duplicated rather than shared — both files
 // stay in their own edit scope (task 4 brief) and the table is four lines.
@@ -125,6 +136,13 @@ type DeviceDragProps = {
 type LineDropProps = {
   onDeviceDropOnLine: (
     line: LineNode,
+    event: React.DragEvent<HTMLButtonElement>,
+  ) => void;
+};
+
+type BuildingDropProps = {
+  onDeviceDropOnBuildingPart: (
+    building: BuildingNode,
     event: React.DragEvent<HTMLButtonElement>,
   ) => void;
 };
@@ -287,9 +305,11 @@ function LineItem(
       dropReady={isFirst && props.dragSource !== null
         && props.eligibleDeviceIds.has(props.dragSource.deviceId)}
       onDragOver={isFirst ? (event) => {
-        const deviceId = parseDraggedDevice(event.dataTransfer);
-        if (deviceId === null || deviceId !== props.dragSource?.deviceId
-          || !props.eligibleDeviceIds.has(deviceId)) return;
+        if (!acceptsDraggedDevice(
+          event.dataTransfer,
+          props.dragSource,
+          props.eligibleDeviceIds,
+        )) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
       } : undefined}
@@ -597,7 +617,7 @@ function BuildingItem(
     building: BuildingNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
-  } & SelectionProps & DeviceDragProps,
+  } & SelectionProps & DeviceDragProps & BuildingDropProps,
 ) {
   const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
@@ -606,6 +626,20 @@ function BuildingItem(
       label={t("explorer.buildingLabel", { name: building.name, kind: buildingPartKindLabel(t, building.kind) })}
       selected={selection?.kind === "building_part" && selection.id === building.id}
       onSelect={() => onSelect({ kind: "building_part", id: building.id })}
+      dropReady={isFirst && props.dragSource !== null
+        && props.eligibleDeviceIds.has(props.dragSource.deviceId)}
+      onDragOver={isFirst ? (event) => {
+        if (!acceptsDraggedDevice(
+          event.dataTransfer,
+          props.dragSource,
+          props.eligibleDeviceIds,
+        )) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      } : undefined}
+      onDrop={isFirst
+        ? (event) => props.onDeviceDropOnBuildingPart(building, event)
+        : undefined}
     >
       {building.children.map((c) => (
         <BuildingItem
@@ -621,6 +655,7 @@ function BuildingItem(
           dragSource={props.dragSource}
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
+          onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
         />
       ))}
       {building.devices.map((d) => (
@@ -685,7 +720,7 @@ function InstallationItem(
     isFirst: boolean;
     onTreeUpdate: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number | null) => void;
-  } & SelectionProps & DeviceDragProps & LineDropProps,
+  } & SelectionProps & DeviceDragProps & LineDropProps & BuildingDropProps,
 ) {
   const {
     installation,
@@ -736,6 +771,7 @@ function InstallationItem(
             dragSource={props.dragSource}
             onDeviceDragStart={props.onDeviceDragStart}
             onDeviceDragEnd={props.onDeviceDragEnd}
+            onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
           />
         ))}
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
@@ -825,26 +861,53 @@ export default function ProjectExplorer(
     setDragSource({ deviceId: device.id });
   }
 
+  function currentDraggedDevice(dataTransfer: DataTransfer): DeviceNode | null {
+    const deviceId = parseDraggedDevice(dataTransfer);
+    if (deviceId === null || deviceId !== dragSource?.deviceId) return null;
+    return firstInstallation?.topology
+      .flatMap((area) => area.lines)
+      .flatMap((candidate) => candidate.devices)
+      .find((candidate) => candidate.id === deviceId)
+      ?? firstInstallation?.unassigned.find((candidate) => candidate.id === deviceId)
+      ?? null;
+  }
+
   async function onDeviceDropOnLine(
     line: LineNode,
     event: React.DragEvent<HTMLButtonElement>,
   ): Promise<void> {
-    const deviceId = parseDraggedDevice(event.dataTransfer);
-    if (deviceId === null || deviceId !== dragSource?.deviceId) return;
-    const device = firstInstallation?.topology
-      .flatMap((area) => area.lines)
-      .flatMap((candidate) => candidate.devices)
-      .find((candidate) => candidate.id === deviceId)
-      ?? firstInstallation?.unassigned.find((candidate) => candidate.id === deviceId);
+    const device = currentDraggedDevice(event.dataTransfer);
     if (!device) return;
 
     event.preventDefault();
     try {
-      const next = await api.moveDeviceToLine(deviceId, line.id);
+      const next = await api.moveDeviceToLine(device.id, line.id);
       onTreeUpdate(next);
       props.onSummary(t("dragDrop.movedToLine", {
         device: device.name,
         line: t("explorer.lineLabel", { address: line.address, name: line.name }),
+      }));
+    } catch (error) {
+      props.onError(error);
+    } finally {
+      setDragSource(null);
+    }
+  }
+
+  async function onDeviceDropOnBuildingPart(
+    building: BuildingNode,
+    event: React.DragEvent<HTMLButtonElement>,
+  ): Promise<void> {
+    const device = currentDraggedDevice(event.dataTransfer);
+    if (!device) return;
+
+    event.preventDefault();
+    try {
+      const next = await api.moveDeviceToBuildingPart(device.id, building.id);
+      onTreeUpdate(next);
+      props.onSummary(t("dragDrop.movedToBuildingPart", {
+        device: device.name,
+        buildingPart: building.name,
       }));
     } catch (error) {
       props.onError(error);
@@ -890,6 +953,7 @@ export default function ProjectExplorer(
             onDeviceDragStart={onDeviceDragStart}
             onDeviceDragEnd={() => setDragSource(null)}
             onDeviceDropOnLine={onDeviceDropOnLine}
+            onDeviceDropOnBuildingPart={onDeviceDropOnBuildingPart}
           />
         ))}
       </ul>

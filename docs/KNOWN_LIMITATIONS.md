@@ -5831,7 +5831,8 @@ list item names which one no longer applies.
 
 ## 96. A browser that loses the import response cannot get the project back without reloading
 
-**Limitation.** ADR-0023 makes a project load an operation the server owns:
+**Historical baseline (superseded 2026-09-22).** ADR-0023 made a project load
+an operation the server owns:
 `POST /api/project/import` (or `/open`) runs on a blocking task that
 finishes whether or not the client is still listening, and
 `GET /api/project/load-progress` reports what it is doing. A client that
@@ -5842,9 +5843,9 @@ load *succeeded*, and still has no `ProjectTree` to render. There is no
 recovery is to reload the page, which re-renders from a server whose
 project is already the new one.
 
-**Cause.** The `ProjectTree` is returned by the POST and nowhere else. That
-was harmless while the request *was* the operation; making the operation
-outlive the request is what created the gap. Adding a read route for the
+**Historical cause.** The `ProjectTree` was returned by the POST and nowhere
+else. That was harmless while the request *was* the operation; making the
+operation outlive the request is what created the gap. Adding a read route for the
 open project is a small change and a deliberate non-goal of T37, which
 changed no existing response shape.
 
@@ -5898,8 +5899,18 @@ a moving shuttle, for the rest of the session. A generation counter bumped
 in `finally` and compared by every poll across its own fetch closes it. The
 limitation itself is still unchanged: no route hands out the current tree.
 
-**Lifted when.** A `GET /api/project` exists and the frontend falls back to
-it when a poll reports an operation it did not see finish.
+**Resolved, 2026-09-22 (T12 Task 5).** Authenticated `GET /api/project` now
+builds a fresh `ProjectTree` from the project currently held by the server,
+including the current command-stack undo/redo state and import error/warning
+counts; no open project is a `400 Bad Request`. When a load POST loses its
+response, the browser defers its error toast until it has read the final load
+snapshot. Only exact `clientToken` ownership plus `status: "succeeded"` may
+recover: the client fetches the current server tree, resets its projection,
+derives stored-path state from the snapshot's `kind`, and clears the load
+banner without an alert. The read is deliberately current-server truth, not a
+cached copy of the lost POST response. A foreign or missing token never earns
+that read, so another client's success cannot replace this client's failure.
+If the recovery GET itself fails, its error becomes the visible local failure.
 
 ## 97. Progress is a phase label far more often than it is a percentage
 

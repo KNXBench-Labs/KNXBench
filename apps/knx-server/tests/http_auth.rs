@@ -97,6 +97,7 @@ async fn json_body(response: Response<Body>) -> serde_json::Value {
 /// the one route that answers with no project open, and it is still not an
 /// exception.
 const GUARDED_ROUTES: &[(&str, &str)] = &[
+    ("GET", "/api/project"),
     ("GET", "/api/project/load-progress"),
     ("GET", "/api/fs/list"),
     ("GET", "/api/bus/monitor/telegrams"),

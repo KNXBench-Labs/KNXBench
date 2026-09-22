@@ -1159,6 +1159,15 @@ fn tree_with_state(
     tree
 }
 
+/// Rebuilds the open project's public tree from the server's current state.
+pub fn current_project_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(project, &stack, import_counts))
+}
+
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
     // Captured before `do_command` consumes `cmd` below: `cmd_desc` is the
     // full `Debug` dump, kept for `detail`; `cmd_name` is the short variant

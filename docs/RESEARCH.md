@@ -4153,6 +4153,123 @@ corresponding published schema decides their support later.
 
 ---
 
+## 16. “Who talks to whom?” flow-view decision (2026-09-22)
+
+This section answers the last research-before-design item in `goal.md` §7.
+Statements about the repository are **[V]** verified; future-product decisions
+are **[A]** architectural recommendations. It specifies no implementation.
+
+### 16.1 Verdict: explain one observed telegram before animating a network
+
+**The useful first feature is a selected-telegram flow inspector inside the
+existing bus monitor, not a persistent animated topology canvas.** **[A]** It
+shows the observed source, destination group address, candidate sending
+communication object, and configured receiving communication objects together
+with the evidence level for each relationship. It must say “configured
+recipient”, never claim that a receiving device acted on the telegram.
+
+The data prerequisites now exist. `GroupAddressNode.links` already projects
+the reverse of every `GroupLink`, including device ID/name/individual address,
+communication-object ID/number/name and `Send`/`Receive` direction
+(`crates/knx-projection/src/lib.rs`). `BusTelegramRow` already carries the
+observed source individual address, group destination, resolved destination
+name, service, payload and decoded value; `BusMonitorPanel` already lets the
+user select one row and inspect it (`apps/knx-web/src/api.ts`,
+`BusMonitorPanel.tsx`). **[V]** No new domain entity, store migration, bus
+operation or spatial coordinate belongs in this feature. **[A]**
+
+### 16.2 What a captured group telegram proves
+
+The local KNX Standard v3.0.0 PDFs settle the boundary:
+
+- *03_03_03 Network Layer v02.01.01 AS* §2.2.2 defines the group service as
+  point-to-multipoint and its confirmation as local; it does not return a list
+  of remote application consumers.
+- *03_03_07 Application Layer v02.01.01 AS* §3.1.3 says a group-value write is
+  not remotely confirmed by the application processes. Its group members
+  receive the group PDU, but the sender gets no per-member application result.
+- *03_07_01 Interworking Model v02.01.01* §3.2.3.1 describes Group Objects as
+  n-to-m relationships and unacknowledged.
+- *03_03_02 Data Link Layer General v01.03.02 AS* §2.2.1 permits media-level
+  acknowledgements for multicast, but its confirmation is either that
+  acknowledgement or merely transmission on the medium. It is not evidence
+  that every configured application object accepted or acted on the value.
+
+Therefore a monitor row proves that the captured frame names one source
+individual address and one destination group address. **[V]** For a
+`GroupValueWrite` or `GroupValueResponse`, matching that source to a project
+device and a `Send` link can identify a candidate sending communication
+object. One match is “configured sender”; zero is “not resolved in this
+project”; more than one remains explicitly ambiguous. The `Receive` links name
+configured recipients, not observed effects. **[A]**
+
+A `GroupValueRead` is different: its source is the requester, while any later
+responses are separate telegrams. The current projected link direction alone
+does not prove which object will answer a read. The first view must show the
+request and its configured group participants without inventing a responder.
+Time-window correlation between a read and a later response is rejected as
+proof: unrelated traffic can use the same group address, and the protocol has
+already supplied the response as its own row. **[A]**
+
+“Why” is limited to facts already in the project: group-address name, object
+name and number, direction, DPT evidence, service and decoded value. A blank or
+conflicting DPT stays blank or conflicting. The future `Function` domain
+concept from §15 may add useful labels, but is not a prerequisite and must not
+be guessed from names. Group addresses remain rendered in KNXBench's fixed
+slash notation. **[A]**
+
+### 16.3 Snapshot ownership and UI boundary
+
+The bus session already freezes group-address display, name and DPT at start;
+the browser's context fingerprint tracks exactly those facts and marks a
+session stale when one changes. It deliberately does **not** fingerprint device
+names/addresses, communication objects or links, because none currently affect
+telegram decoding (`apps/knx-web/src/busContext.ts`). **[V]** Those additional
+facts do affect a flow explanation, so the present stale lock is not sufficient
+for this feature.
+
+The future implementation should extend the server's session-start resolution
+snapshot with the minimal device/object/link facts needed for flow evidence and
+attach the resolved result to each row. Its project-context fingerprint (or a
+stronger authoritative revision token) must cover the same flow facts, with a
+regression proving that a flow-relevant device or link edit makes the active
+session stale. The browser then renders captured evidence; it does not
+reinterpret an old telegram against a newer project. **[A]**
+
+The selected-row detail is the first surface: observed source, destination,
+candidate sender(s), configured recipients and explicit
+exact/ambiguous/unresolved labels. The existing group-address table remains
+the static project view. A brief highlight may later connect an arriving row
+to its evidence list, respecting reduced-motion settings, but animation is a
+presentation layer after semantic tests pass—not the feature's data model.
+There is no topology canvas: ADR-0019 deliberately records no coordinates, and
+invented positions would add spectacle rather than information. **[A]**
+
+Rows and derived flow evidence keep the current bus-session lifetime. They are
+not written into the project or a new history database. Debug-report inclusion
+remains explicit opt-in because addresses, names and telegram values are
+installation data. The feature is read-only and introduces no KNX write.
+**[A]**
+
+### 16.4 Rejected first slices and design gate
+
+**A static all-project link graph** is rejected as the first slice: the group-
+address table already lists senders and receivers, and a dense graph adds no
+observed event. **An animated topology canvas** is rejected because it would
+need invented layout and would visually overstate configured recipients as
+confirmed ones. **A heuristic conversation timeline** is rejected because
+time proximity cannot establish causality or remote application success.
+
+Before implementation, one bounded UI/API design must define and test at
+least: one exact sender, multiple candidate senders, unknown source, no
+configured recipient, multiple recipients, dangling project links,
+`GroupValueRead`, `GroupValueResponse`, DPT conflict, project-changed stale
+rows, companion-window attachment, keyboard/screen-reader reading order and
+reduced motion. Only after those cases have explicit copy and wire fields may
+animation be considered. **[A]**
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

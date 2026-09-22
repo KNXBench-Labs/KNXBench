@@ -572,6 +572,14 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Both ways a project enters the application, in one place: the same
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
+  function finishLoadedProject(loadedTree: ProjectTree, path: string, storePath: boolean) {
+    resetTree(loadedTree);
+    setHasStorePath(storePath);
+    setLoadSource(null);
+    setLoadSnapshot(null);
+    pushFun(t("loadProgress.succeeded", { source: fileNameOf(path) }));
+  }
+
   async function runLoad(
     path: string,
     load: (p: string, clientToken: string) => Promise<ProjectTree>,
@@ -590,10 +598,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     loadClientTokenRef.current = crypto.randomUUID();
     setLoading(true);
     try {
-      resetTree(await load(path, loadClientTokenRef.current));
-      setHasStorePath(storePath);
-      setLoadSource(null);
-      setLoadSnapshot(null);
+      finishLoadedProject(await load(path, loadClientTokenRef.current), path, storePath);
     } catch (e) {
       // The transport rejection is not necessarily a load failure: the
       // server may have committed our operation before its response was
@@ -606,10 +611,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       if (final?.status === "succeeded"
         && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
         try {
-          resetTree(await api.currentProject());
-          setHasStorePath(final.kind === "open");
-          setLoadSource(null);
-          setLoadSnapshot(null);
+          finishLoadedProject(await api.currentProject(), path, final.kind === "open");
           return;
         } catch (recoveryError) {
           failure = recoveryError;

@@ -1,10 +1,30 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from tools.agent_memory_sync import SourceRoot, scan_sources
+from tools.agent_memory_sync import (
+    ScanResult,
+    SourceRoot,
+    build_manifest,
+    reconcile,
+    render_index,
+    render_report,
+    scan_sources,
+)
+
+
+def make_note(owner: str, filename: str, text: str):
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / filename).write_text(text, encoding="utf-8")
+        return scan_sources([SourceRoot(owner, root)]).notes[0]
+
+
+def make_scan(*notes) -> ScanResult:
+    return ScanResult(tuple(notes), (), (), ())
 
 
 class ScanSourcesTests(unittest.TestCase):
@@ -109,6 +129,83 @@ class ScanSourcesTests(unittest.TestCase):
                 [note.relative_path.as_posix() for note in result.notes],
                 ["alpha.md", "zeta.md"],
             )
+
+
+class ReconciliationTests(unittest.TestCase):
+    def test_reconcile_collapses_normalized_exact_duplicates(self) -> None:
+        first = make_note("claude", "safety.md", "# Safety\n\nNo bus writes.")
+        second = make_note(
+            "codex", "safety-copy.md", "# SAFETY\n\nNo   bus writes."
+        )
+
+        result = reconcile(make_scan(first, second))
+
+        self.assertEqual(len(result.entries), 1)
+        self.assertEqual(len(result.entries[0].notes), 2)
+        self.assertFalse(result.entries[0].conflict)
+        self.assertEqual(result.duplicate_groups, 1)
+
+    def test_reconcile_preserves_same_topic_conflict(self) -> None:
+        first = make_note("claude", "gateway.md", "# Gateway\n\nUse address A.")
+        second = make_note("codex", "gateway.md", "# Gateway\n\nUse address B.")
+
+        result = reconcile(make_scan(first, second))
+
+        self.assertEqual(len(result.entries[0].notes), 2)
+        self.assertTrue(result.entries[0].conflict)
+        self.assertEqual(result.conflicts, ("gateway",))
+        self.assertIn("CONFLICT", render_index(result))
+
+    def test_secret_like_summary_is_skipped_without_value_leak(self) -> None:
+        secret = make_note(
+            "hermes", "credentials.md", "# Login\n\nOPENAI_API_KEY=sk-example-value"
+        )
+
+        result = reconcile(make_scan(secret))
+        report = render_report(result)
+
+        self.assertEqual(result.entries, ())
+        self.assertIn("secret-like content", report)
+        self.assertNotIn("sk-example-value", report)
+
+    def test_private_key_marker_is_filtered(self) -> None:
+        secret = make_note(
+            "claude",
+            "key.md",
+            "# Key\n\n-----BEGIN OPENSSH PRIVATE KEY-----",
+        )
+
+        result = reconcile(make_scan(secret))
+
+        self.assertEqual(result.entries, ())
+        self.assertEqual(result.skipped[0].reason, "secret-like content")
+
+    def test_rendering_and_manifest_are_deterministic(self) -> None:
+        zeta = make_note("codex", "zeta.md", "# Zeta\n\nlast")
+        alpha = make_note("claude", "alpha.md", "# Alpha\n\nfirst")
+        sources = (
+            SourceRoot("codex", Path("/codex")),
+            SourceRoot("claude", Path("/claude")),
+        )
+        generated_at = datetime(2026, 9, 22, tzinfo=timezone.utc)
+
+        first = reconcile(make_scan(zeta, alpha))
+        second = reconcile(make_scan(alpha, zeta))
+        first_index = render_index(first)
+        second_index = render_index(second)
+        first_report = render_report(first)
+
+        self.assertEqual(first_index, second_index)
+        self.assertLess(first_index.index("## Alpha"), first_index.index("## Zeta"))
+        manifest = build_manifest(first, sources, generated_at)
+        self.assertEqual(manifest["schema_version"], 1)
+        self.assertEqual(len(manifest["output_sha256"]), 64)
+        self.assertEqual(
+            manifest["output_sha256"],
+            __import__("hashlib")
+            .sha256((first_index + "\0" + first_report).encode())
+            .hexdigest(),
+        )
 
 
 if __name__ == "__main__":

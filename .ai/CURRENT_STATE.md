@@ -1,5 +1,28 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** Final `goal.md` §7 research item, “Who talks to whom?”,
+  committed and pushed as `226ab98`. `docs/RESEARCH.md` §16 chooses an
+  evidence-labelled selected-telegram flow inspector before animation. KNX
+  Standard v3.0.0 PDFs establish that configured group recipients are not
+  per-recipient observed application effects. Current reverse GroupLinks and
+  monitor rows are sufficient foundations; future flow evidence must extend
+  the server session snapshot and stale fingerprint to device/object/link
+  facts. No code, schema, endpoint, UI, network, or bus operation changed.
+- **Verification:** `git diff --check`; `xtask check-anchors` (388 links, none
+  dead); independent review plus focused re-review after two Important fixes:
+  0 Critical / 0 Important.
+- **Pending/Next Steps:** T22 still waits for explicit user approval of the
+  already-presented design. T10 still waits for explicit review of its written
+  settings spec. Continue other independent read-only planning/research if no
+  approval arrives; do not cross either architectural implementation gate.
+- **Notes Claude:** Detail log:
+  `.ai/logs/2026-09-22_codex__who_talks_to_whom_research.md`. The ignored local
+  `ideas.md` entry was updated but intentionally not force-added.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **In Progress:** T22 read-only mutation audit complete. Outside `knx-core`,
   22 production field-root mutation sites were classified: 12 legitimate
   construction/import sites, two shared enrichment implementation sites, and

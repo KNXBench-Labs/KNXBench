@@ -27,6 +27,8 @@ vi.mock("./api", () => ({
 }));
 
 import Inspector from "./Inspector";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 let root: Root | undefined;
@@ -39,6 +41,19 @@ afterEach(async () => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  resetSettingsForTests();
+  resetUiLanguageForTests();
+});
+
+it.each([
+  ["Stairway", "Treppenhaus"], ["RoomPart", "Raumteil"], ["Area", "Bereich"],
+  ["Ground", "Grundstück"], ["Segment", "Segment"],
+])("localizes the %s building kind in the Inspector", async (kind, label) => {
+  setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+  const tree = twoInstallationTree();
+  tree.installations[0].buildings = [{ id: 501, name: "Test", kind, children: [], devices: [] }];
+  await renderInspector({ kind: "building_part", id: 501 }, tree);
+  expect(host!.querySelector(".inspector-description")?.textContent).toBe(label);
 });
 
 function ga(id: number, name: string, address: string): GroupAddressNode {

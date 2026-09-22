@@ -1566,8 +1566,13 @@ fn parse_building_part_kind(kind: &str) -> Result<knx_core::BuildingPartType, St
         "Corridor" => Ok(knx_core::BuildingPartType::Corridor),
         "DistributionBoard" => Ok(knx_core::BuildingPartType::DistributionBoard),
         "BuildingPart" => Ok(knx_core::BuildingPartType::BuildingPart),
+        "Stairway" => Ok(knx_core::BuildingPartType::Stairway),
+        "RoomPart" => Ok(knx_core::BuildingPartType::RoomPart),
+        "Area" => Ok(knx_core::BuildingPartType::Area),
+        "Ground" => Ok(knx_core::BuildingPartType::Ground),
+        "Segment" => Ok(knx_core::BuildingPartType::Segment),
         other => Err(format!(
-            "unknown building-part kind '{other}', expected one of Building/Floor/Room/Corridor/DistributionBoard/BuildingPart"
+            "unknown building-part kind '{other}', expected one of Building/Floor/Room/Corridor/DistributionBoard/BuildingPart/Stairway/RoomPart/Area/Ground/Segment"
         )),
     }
 }

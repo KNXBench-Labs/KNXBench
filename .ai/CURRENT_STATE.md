@@ -1,5 +1,11 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T13 Task 3 resolves §89: Stairway, RoomPart, Area, Ground and Segment remain exact across importer/report, native save/load/re-save, projection/API creation and EN/DE tree/create/Inspector UI. Unknown native kinds return typed errors; schema v9 is unchanged. Personally checked Schema23 PDF §§1.1.2.3/1.2.6.3–4: the attribute table names both RoomPart and Segment, and only RoomPart is absent from the enumeration. Corrected the approved design and compatibility docs. Older six-kind native readers remain lossy for these additions.
+- **Verification:** Full Rust workspace 1,969 passed / 0 failed / 5 ignored across 92 result blocks; frontend 926/926 across 63 files; focused UI 67/67, TypeScript, Rustfmt, warning-denied Clippy for six changed Rust crates, and diff check passed. No KNX/LAN/multicast/gateway/hardware traffic.
+- **Pending/Next Steps:** Controller review/integration. Evidence: .ai/logs/2026-09-22_codex__t13_space_types.md; detailed task report under .superpowers/sdd/2026-09-22-ui-residue-batch-b/task-3-report.md. Tasks 1/2 preserved; limitation triage and themes untouched.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T13 Task 1 fix round 1 closes the save-publication review finding. After successful Save or Save As, `App` consumes authoritative `GET /api/project` state and replaces the whole tree/store metadata; it never locally patches `is_modified`. Refresh failure is reported and retains the prior dirty tree, while a failed save performs no refresh. Detail appended `.ai/logs/2026-09-22_codex__t13_project_modification_state.md` and Task 1 report.
 - **Verification:** RED 3 intended App failures / 76 passes; GREEN App/api 136/136, full frontend 911/911 across 63 files, server project routes 13/13, TypeScript and `git diff --check` using `/var/tmp/knxbench-t13-target`. No KNX/LAN/multicast/gateway/hardware traffic.
 - **Pending/Next Steps:** Controller re-review/integration for T13 Task 1; deferred Minor import test deliberately untouched.

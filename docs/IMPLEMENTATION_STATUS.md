@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-22 — T13 Task 3: spaces keep their identities
+
+Section 89 is resolved: the five documented kinds `Stairway`, `RoomPart`,
+`Area`, `Ground`, and `Segment` survive import, native save/load/re-save,
+projection/API creation and localized EN/DE UI. Unknown native kinds now
+produce `StoreError::UnknownBuildingPartType`; no migration or schema bump
+was needed (v9). Unknown ETS types remain explicitly reported.
+
+The locally rechecked Schema23 §1.2.6.4 names both `RoomPart` and `Segment`;
+only `RoomPart` is absent from §1.1.2.3. The approved design's contrary
+transcription was corrected. No local fixture contains the added types;
+coverage is synthetic. Older six-kind native readers can coarsen these values.
+ETS project export remains absent after ADR-0028.
+
+Verification: full Rust workspace 1,969 passed / 0 failed / 5 ignored;
+frontend 926/926 across 63 files; TypeScript, Rustfmt, focused warning-denied
+Clippy and diff checks passed. Evidence and RED/GREEN details:
+[Task 3 log](../.ai/logs/2026-09-22_codex__t13_space_types.md).
+
 ## 2026-09-22 — T12 final review: ghosts leave the upload queue
 
 Upload destinations are published without replacement; duplicate basenames

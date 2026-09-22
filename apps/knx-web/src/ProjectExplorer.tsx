@@ -33,10 +33,9 @@ function acceptsDraggedDevice(
   dragSource: DragSource | null,
   eligibleDeviceIds: ReadonlySet<number>,
 ): boolean {
-  const deviceId = parseDraggedDevice(dataTransfer);
-  return deviceId !== null
-    && deviceId === dragSource?.deviceId
-    && eligibleDeviceIds.has(deviceId);
+  return Array.from(dataTransfer.types).includes(DEVICE_DRAG_MIME)
+    && dragSource !== null
+    && eligibleDeviceIds.has(dragSource.deviceId);
 }
 
 // The same discriminant-vs-label lookup `Inspector.tsx`'s

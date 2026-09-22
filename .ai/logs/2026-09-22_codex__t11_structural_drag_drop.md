@@ -1,7 +1,7 @@
 # T11 structural drag-and-drop implementation
 
-Date: 2026-09-22  
-Branch: `t11-structural-drag-drop`  
+Date: 2026-09-22
+Branch: `t11-structural-drag-drop`
 Base: `9723316`
 
 ## Delivered scope

@@ -3,16 +3,27 @@
 
 from __future__ import annotations
 
+import argparse
+import fcntl
 import hashlib
 import itertools
+import json
+import os
 import re
+import shutil
+import sys
 import unicodedata
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import Iterator, Sequence
 
 MAX_FILE_BYTES = 262_144
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_STALE = 2
+EXIT_CONFLICT = 3
 _HEADING_RE = re.compile(r"^#\s+(.+?)\s*$")
 _BULLET_RE = re.compile(r"^(?:[-*+]\s+|\d+[.)]\s+)(.+)$")
 _NON_TOPIC_RE = re.compile(r"[^a-z0-9]+")
@@ -74,6 +85,44 @@ class Reconciliation:
     skipped: tuple[SkippedSource, ...]
     errors: tuple[str, ...]
     scanned_count: int
+
+
+@dataclass(frozen=True)
+class SyncPaths:
+    output_root: Path
+    snapshots: Path
+    current: Path
+    index_view: Path
+    report_view: Path
+    manifest_view: Path
+    lock_file: Path
+
+    @classmethod
+    def for_project(cls, project_root: Path) -> "SyncPaths":
+        output_root = project_root / ".agent-memory"
+        return cls(
+            output_root=output_root,
+            snapshots=output_root / "snapshots",
+            current=output_root / "current",
+            index_view=output_root / "PROJECT_MEMORY.md",
+            report_view=output_root / "REPORT.md",
+            manifest_view=output_root / "manifest.json",
+            lock_file=output_root / ".sync.lock",
+        )
+
+
+@dataclass(frozen=True)
+class Generation:
+    index: str
+    report: str
+    manifest_json: str
+    output_sha256: str
+    conflicts: tuple[str, ...]
+    errors: tuple[str, ...]
+
+
+class PublishError(RuntimeError):
+    """Publication cannot safely preserve the snapshot contract."""
 
 
 def _collapse(value: str) -> str:
@@ -417,3 +466,229 @@ def build_manifest(
         "errors": len(result.errors),
         "output_sha256": output_sha256,
     }
+
+
+@contextmanager
+def exclusive_lock(lock_path: Path) -> Iterator[None]:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def default_source_roots(project_root: Path, home: Path) -> tuple[SourceRoot, ...]:
+    resolved_project = project_root.resolve()
+    claude_slug = "-" + str(resolved_project).lstrip("/").replace("/", "-")
+    return (
+        SourceRoot(
+            "claude", home / ".claude" / "projects" / claude_slug / "memory"
+        ),
+        SourceRoot("codex", resolved_project / "ai" / "codex" / "memory"),
+        SourceRoot("hermes", home / ".hermes" / "profiles" / "knxbench" / "memories"),
+    )
+
+
+def generate(
+    project_root: Path,
+    source_roots: Sequence[SourceRoot],
+    generated_at: datetime,
+) -> Generation:
+    del project_root
+    result = reconcile(scan_sources(source_roots))
+    index = render_index(result)
+    report = render_report(result)
+    manifest = build_manifest(result, source_roots, generated_at)
+    return Generation(
+        index=index,
+        report=report,
+        manifest_json=json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        output_sha256=str(manifest["output_sha256"]),
+        conflicts=result.conflicts,
+        errors=result.errors,
+    )
+
+
+def _read_current_manifest(paths: SyncPaths) -> dict[str, object] | None:
+    if not paths.current.exists():
+        return None
+    try:
+        manifest = json.loads(paths.manifest_view.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PublishError(f"cannot read active manifest: {exc}") from exc
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
+        raise PublishError("unsupported active manifest schema")
+    return manifest
+
+
+def _write_durable(path: Path, content: str) -> None:
+    with path.open("x", encoding="utf-8") as handle:
+        os.chmod(path, 0o600)
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _ensure_owned_view(view: Path, filename: str) -> None:
+    expected = Path("current") / filename
+    if view.is_symlink():
+        if Path(os.readlink(view)) != expected:
+            raise PublishError(f"refusing to replace non-tool symlink: {view}")
+        return
+    if view.exists():
+        raise PublishError(f"refusing to replace existing path: {view}")
+    view.symlink_to(expected)
+
+
+def _cleanup_unreferenced_snapshots(paths: SyncPaths, keep: Path) -> None:
+    for candidate in paths.snapshots.iterdir():
+        if candidate == keep or candidate.is_symlink():
+            continue
+        if candidate.is_dir():
+            shutil.rmtree(candidate)
+
+
+def publish(
+    paths: SyncPaths,
+    generation: Generation,
+    *,
+    fail_before_swap: bool = False,
+) -> Path:
+    paths.output_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(paths.output_root, 0o700)
+    paths.snapshots.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(paths.snapshots, 0o700)
+    _read_current_manifest(paths)
+
+    views = (
+        (paths.index_view, "PROJECT_MEMORY.md"),
+        (paths.report_view, "REPORT.md"),
+        (paths.manifest_view, "manifest.json"),
+    )
+    for view, filename in views:
+        if view.exists() or view.is_symlink():
+            _ensure_owned_view(view, filename)
+
+    snapshot = paths.snapshots / generation.output_sha256
+    staging = paths.snapshots / f".{generation.output_sha256}.{os.getpid()}.tmp"
+    if not snapshot.exists():
+        try:
+            staging.mkdir(mode=0o700)
+            _write_durable(staging / "PROJECT_MEMORY.md", generation.index)
+            _write_durable(staging / "REPORT.md", generation.report)
+            _write_durable(staging / "manifest.json", generation.manifest_json)
+            _fsync_directory(staging)
+            try:
+                staging.rename(snapshot)
+            except FileExistsError:
+                shutil.rmtree(staging)
+            _fsync_directory(paths.snapshots)
+        except Exception as exc:
+            if staging.exists() and not staging.is_symlink():
+                shutil.rmtree(staging)
+            raise PublishError(f"could not create snapshot: {exc}") from exc
+
+    next_link = paths.output_root / "current.next"
+    if next_link.exists() or next_link.is_symlink():
+        next_link.unlink()
+    next_link.symlink_to(snapshot.relative_to(paths.output_root))
+    if fail_before_swap:
+        next_link.unlink()
+        raise PublishError("injected failure before current swap")
+    os.replace(next_link, paths.current)
+    _fsync_directory(paths.output_root)
+
+    for view, filename in views:
+        _ensure_owned_view(view, filename)
+    _fsync_directory(paths.output_root)
+    _cleanup_unreferenced_snapshots(paths, snapshot)
+    return snapshot
+
+
+def _parse_source(value: str) -> SourceRoot:
+    owner, separator, raw_path = value.partition("=")
+    if not separator or not owner or not raw_path:
+        raise argparse.ArgumentTypeError("source must be OWNER=PATH")
+    return SourceRoot(owner, Path(raw_path).expanduser(), required=True)
+
+
+def _status(generation: Generation, *, stale: bool = False) -> int:
+    if generation.errors:
+        return EXIT_ERROR
+    if generation.conflicts:
+        return EXIT_CONFLICT
+    if stale:
+        return EXIT_STALE
+    return EXIT_OK
+
+
+def _is_stale(paths: SyncPaths, generation: Generation) -> bool:
+    manifest = _read_current_manifest(paths)
+    if manifest is None:
+        return True
+    try:
+        index = paths.index_view.read_text(encoding="utf-8")
+        report = paths.report_view.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PublishError(f"cannot read active snapshot: {exc}") from exc
+    active_hash = hashlib.sha256((index + "\0" + report).encode()).hexdigest()
+    return (
+        manifest.get("output_sha256") != generation.output_sha256
+        or active_hash != manifest.get("output_sha256")
+    )
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    for command in ("preview", "apply", "check"):
+        command_parser = subparsers.add_parser(command)
+        command_parser.add_argument("--project-root", type=Path, default=Path.cwd())
+        command_parser.add_argument("--home", type=Path, default=Path.home())
+        command_parser.add_argument("--source", action="append", type=_parse_source)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    project_root = args.project_root.resolve()
+    sources = tuple(args.source or default_source_roots(project_root, args.home))
+    generation = generate(project_root, sources, datetime.now(timezone.utc))
+    paths = SyncPaths.for_project(project_root)
+
+    if args.command == "preview":
+        sys.stdout.write(generation.index)
+        sys.stdout.write(generation.report)
+        return _status(generation)
+
+    if args.command == "check":
+        try:
+            stale = _is_stale(paths, generation)
+        except PublishError as exc:
+            print(f"memory sync error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        return _status(generation, stale=stale)
+
+    if generation.errors:
+        return EXIT_ERROR
+    try:
+        with exclusive_lock(paths.lock_file):
+            publish(paths, generation)
+    except PublishError as exc:
+        print(f"memory sync error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    return _status(generation)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

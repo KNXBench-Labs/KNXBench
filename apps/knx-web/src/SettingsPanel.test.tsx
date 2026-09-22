@@ -16,7 +16,7 @@ import { useTranslate } from "./i18n";
 import type { ProductLanguage } from "./api";
 import { exportEnglishTemplate, importLanguagePack, resetLanguagePacksForTests } from "./languagePack";
 import type { LanguagePack } from "./languagePack";
-import { getSetting } from "./settingsStore";
+import { getSetting, initSettings } from "./settingsStore";
 import { resetSettingsForTests } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
@@ -32,6 +32,7 @@ afterEach(() => {
   resetProductLanguageForTests();
   resetUiLanguageForTests();
   resetLanguagePacksForTests();
+  vi.unstubAllGlobals();
 });
 
 function dutchPack(overrides: Partial<LanguagePack> = {}): LanguagePack {
@@ -124,6 +125,21 @@ describe("SettingsPanel", () => {
     });
     expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
     expect(host!.querySelector(".settings-section-bus .line-scan-exclusions")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("shows the server fallback when no typed settings diagnostic is present", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      status: "loaded",
+      schemaVersion: 1,
+      settings: {},
+      message: "A future settings event occurred.",
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    await act(async () => initSettings());
+
+    const { root } = await renderPanel();
+    expect(host!.querySelector(".settings-diagnostic")!.textContent)
+      .toBe("A future settings event occurred.");
     root.unmount();
   });
 

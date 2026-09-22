@@ -59,8 +59,8 @@ cd apps/knx-web && npx vitest run
 git diff --check
 ```
 
-Observed totals: Rust 1,948 passed across 92 result blocks with zero failing
-blocks; frontend 859 passed across 63 files. Header check reported 194 files
+Observed totals before review: Rust 1,948 passed across 92 result blocks with
+zero failing blocks; frontend 859 passed across 63 files. Header check reported 194 files
 with headers and 162 without, at the ceiling of 162. Anchor check reported 389
 links across 178 Markdown files and none dead. Dependency audit completed with
 the repository's accepted duplicate-version warnings and exit status 0.
@@ -69,6 +69,24 @@ Focused audits found no group-address-notation control, no private-LAN literal
 in product additions, and no whitespace errors. All protocol-facing tests used
 in-process fakes; no real KNX, multicast, LAN, gateway, or hardware operation
 was run.
+
+## Fresh review and fix round
+
+Fresh-context review of `9227042..343c716` found no Critical issue, one
+Important issue, and two Minor issues. The Important finding was reproduced:
+a two-click exclusion-removal confirmation stored only an array index, so a
+sibling editor or hydration update could move the armed confirmation onto a
+different protected address. The fix binds confirmation to the complete list
+snapshot and occurrence index; a changed snapshot requires a fresh first
+click. RED failed with `Confirm removal` transferred to the remaining address;
+GREEN passed after the fix.
+
+Both Minor findings were also closed. Settings now renders a fallback-only
+server message when no typed diagnostic exists, and the editor test now
+actually submits invalid and duplicate additions rather than inferring their
+rejection from disabled controls. The focused run passed 38 tests across two
+files. The fresh whole frontend run passed 862 tests across 63 files;
+TypeScript, header, and whitespace checks also exited 0.
 
 ## Next
 

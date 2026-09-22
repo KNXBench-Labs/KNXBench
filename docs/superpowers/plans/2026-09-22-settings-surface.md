@@ -409,7 +409,7 @@
 
   Record exact commands, test counts, no-network proof, rulings, and open §121 in the dated `.ai` log. Prepend `.ai/CURRENT_STATE.md` with the final commit range and next goal task.
 
-- [ ] **Step 5: Commit documentation**
+- [x] **Step 5: Commit documentation**
 
   ```bash
   git add docs/adr/0029-application-settings-file.md docs/IMPLEMENTATION_STATUS.md docs/KNOWN_LIMITATIONS.md .ai/logs/2026-09-22_codex__t10_settings_implementation.md .ai/CURRENT_STATE.md

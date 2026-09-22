@@ -1992,6 +1992,8 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "getrandom 0.4.3",
+ "http-body",
+ "http-body-util",
  "knx-app",
  "knx-core",
  "knx-csv",

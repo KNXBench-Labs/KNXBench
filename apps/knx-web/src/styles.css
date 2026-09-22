@@ -1701,6 +1701,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workbench .project-explorer ul { padding-left: 14px; }
 .workbench .tree-row { display: flex; align-items: center; min-height: var(--knx-control-height); }
 .workbench .tree-label { padding: 4px; flex: 1; }
+.workbench .tree-label[draggable="true"] { cursor: grab; }
+.workbench .tree-label[data-dragging="true"] { opacity: 0.72; }
+.workbench .tree-label[data-drop-ready="true"] {
+  outline: 2px solid var(--knx-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--knx-accent) 16%, transparent);
+}
 .workbench .tree-new-row { flex-wrap: wrap; }
 .workbench .tree-new-row input, .workbench .tree-new-row select { min-width: 50px; max-width: 100%; }
 .workbench .inspector { padding: 16px; min-width: 0; }

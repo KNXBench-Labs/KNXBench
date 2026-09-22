@@ -1455,7 +1455,7 @@ in-memory copies) instead of re-opening the file — see
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
 
-## 19. Search selections now reveal their collapsed Project Explorer branch — RESOLVED (2026-09-22, T12)
+## 19. A search result inside a collapsed tree branch is not revealed
 
 Picking a `Ctrl+K` result now records a monotonic external-selection reveal
 generation before preserving `App`'s existing canonical selection path. The
@@ -1643,7 +1643,7 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 to the internet. It is safe to expose to a network you have thought about,
 over a transport you have secured yourself.
 
-## 23. Resolved: `/api/project/download` streams the temporary `.knxdb`
+## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
 **Resolution.** The route freshly serializes the current in-memory project,
 including unsaved edits, opaque entries, and manufacturer references, into
@@ -1664,7 +1664,7 @@ result as a KNX store, preserving its latest edit, installation, opaque
 entries, and manufacturer references. Serialization still creates one
 temporary SQLite file before streaming begins.
 
-## 24. Resolved: `FsPicker` drag-and-drop and multi-file local uploads
+## 24. `FsPicker` has no drag-and-drop or multi-select
 
 **Resolution, 2026-09-22.** The browser picker still returns one
 `Promise<string | null>` path because project open/import remains a singular
@@ -1829,7 +1829,7 @@ ride along with a feature branch. See
 [§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
-## 30. Browser project download is available alongside Save As
+## 30. `/api/project/download` has no frontend caller
 
 **Resolved (2026-09-22, T12 task 4).** In the plain web build, the File menu
 now offers localized **Download project** whenever a project is open. It
@@ -5849,10 +5849,10 @@ operation outlive the request is what created the gap. Adding a read route for t
 open project is a small change and a deliberate non-goal of T37, which
 changed no existing response shape.
 
-**Consequence.** A user who closes the tab mid-import does not lose the
-import — the project is loaded server-side — but does have to reload to see
-it. Nothing is silently discarded, and the snapshot says plainly which
-operation finished and whether it failed.
+**Historical consequence.** A user who closed the tab mid-import did not lose
+the import — the project was loaded server-side — but had to reload to see it.
+Nothing was silently discarded, and the snapshot said plainly whether the
+operation finished or failed.
 
 **Narrowed, 2026-09-19 (T37 fix round 1).** The client now owns its
 operation id (ADR-0023, "the client half of the id"), so a lost response

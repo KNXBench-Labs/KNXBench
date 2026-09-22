@@ -23,6 +23,17 @@ afterEach(() => {
 });
 
 describe("translateFor", () => {
+  it.each([
+    ["buildingPartKind.stairway", "Stairway", "Treppenhaus"],
+    ["buildingPartKind.roomPart", "Room Part", "Raumteil"],
+    ["buildingPartKind.area", "Area", "Bereich"],
+    ["buildingPartKind.ground", "Ground", "Grundstück"],
+    ["buildingPartKind.segment", "Segment", "Segment"],
+  ] as const)("translates %s in both shipped languages", (key, english, german) => {
+    expect(translateFor("en", key)).toBe(english);
+    expect(translateFor("de", key)).toBe(german);
+  });
+
   it("looks up the active language's string", () => {
     expect(translateFor("en", "toolbar.save")).toBe("Save");
     expect(translateFor("de", "toolbar.save")).toBe("Speichern");

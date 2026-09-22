@@ -113,7 +113,9 @@ authority:
   `Stairway`, `Room`, `Corridor`, `DistributionBoard`, `Area`, `Ground`, and
   `Segment`.
 - §§1.2.6.3–1.2.6.4 describe `Space` and name `BuildingPart`, `RoomPart`, and
-  `DistributionBoard`; this prose names `RoomPart` but omits `Segment`.
+  `DistributionBoard`; the attribute table names both `RoomPart` and `Segment`.
+  Only `RoomPart` is absent from the §1.1.2.3 enumeration (PDF rechecked during
+  implementation; this corrects the design's original transcription).
 
 The document is internally inconsistent. KNXBench therefore supports both
 literal documented tokens and states the limitation honestly. It does not claim

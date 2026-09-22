@@ -729,6 +729,11 @@ fn building_kind_str(kind: BuildingPartType) -> &'static str {
         BuildingPartType::Corridor => "Corridor",
         BuildingPartType::DistributionBoard => "DistributionBoard",
         BuildingPartType::BuildingPart => "BuildingPart",
+        BuildingPartType::Stairway => "Stairway",
+        BuildingPartType::RoomPart => "RoomPart",
+        BuildingPartType::Area => "Area",
+        BuildingPartType::Ground => "Ground",
+        BuildingPartType::Segment => "Segment",
     }
 }
 
@@ -775,6 +780,26 @@ mod tests {
             visibility_calculated: true,
             com_objects: vec![],
             binary_data: vec![],
+        }
+    }
+
+    #[test]
+    fn building_projection_preserves_all_documented_space_kinds() {
+        for (kind, token) in [
+            (BuildingPartType::Stairway, "Stairway"),
+            (BuildingPartType::RoomPart, "RoomPart"),
+            (BuildingPartType::Area, "Area"),
+            (BuildingPartType::Ground, "Ground"),
+            (BuildingPartType::Segment, "Segment"),
+        ] {
+            let mut project = Project::new(Language("en".into()));
+            let mut inst = empty_installation();
+            inst.buildings = vec![building(1, "Test", kind, None, vec![], vec![])];
+            project.installations.push(inst);
+            assert_eq!(
+                build_project_tree(&project).installations[0].buildings[0].kind,
+                token
+            );
         }
     }
 

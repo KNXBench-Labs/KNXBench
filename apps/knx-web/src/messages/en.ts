@@ -33,7 +33,7 @@
 // Task 4 (T25) added everything from `inspector.*` down: `Inspector.tsx`,
 // `ParameterPanel.tsx` and `ProjectExplorer.tsx`. `buildingPartKind.*` is
 // the one namespace that breaks the per-surface convention on purpose — it
-// is the same six-value `BuildingPartType` label shown both in
+// is the same `BuildingPartType` label shown both in
 // `Inspector.tsx`'s `BuildingPartInspector` and in `ProjectExplorer.tsx`'s
 // `BuildingItem`/`NewBuildingPartRow`, and translating the same domain word
 // two different ways in two files is a bug waiting to happen, not a
@@ -315,6 +315,11 @@ export const messages = {
   "buildingPartKind.corridor": "Corridor",
   "buildingPartKind.distributionBoard": "Distribution Board",
   "buildingPartKind.buildingPart": "Building Part",
+  "buildingPartKind.stairway": "Stairway",
+  "buildingPartKind.roomPart": "Room Part",
+  "buildingPartKind.area": "Area",
+  "buildingPartKind.ground": "Ground",
+  "buildingPartKind.segment": "Segment",
 
   // `ParameterPanel.tsx`.
   "parameters.deviceScope": "Device",

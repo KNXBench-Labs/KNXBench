@@ -1,8 +1,16 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
-- **Completed:** User reconfirmed that comparable design/specification/implementation plans are permanently approved; never stop to request plan approval. T11 plan is committed and pushed at `9723316`; isolated branch/worktree `t11-structural-drag-drop` is active and Task 1 source-drag TDD is partially implemented.
-- **Pending/Next Steps:** Continue Task 1 in `.worktrees/t11-structural-drag-drop`: finish source eligibility/payload wiring, make focused source tests green, then write RED line-drop tests before implementing validated device→line drops. Commit/push each completed block.
-- **Notes Claude:** User authorizes Codex to choose inline versus subagent execution. Pause after the running task if weekly usage reaches 60%; last read-only app-server report was 33%. KNX specification questions use only the configured KNX v3.0.0 PDFs.
+- **Completed:** T11 fresh whole-branch review completed. Initial result 0 Critical / 1 Important / 2 Minor; protected-mode native dragover blocker and both minors closed in pushed `f7b84c9` RED→GREEN. Follow-up found 0 remaining findings and approved merge. Frontend after fix: 883/63 plus TypeScript; complete-range whitespace, group-link, and private-network audits clean.
+- **Pending/Next Steps:** Commit/push review evidence, non-fast-forward merge `t11-structural-drag-drop` into current `main`, resolve only handover overlap while preserving both entries, repeat full merged-result gates, mark plan complete, update handover, push, fetch, prove clean `HEAD == origin/main`, then continue next goal task.
+- **Notes Claude:** Review blocker was browser `DataTransfer` protected mode: dragover may inspect `types`, not payload; full payload parsing remains at drop. Weekly limit read-only check now 36%, below 60%; bounded app-server helper exited cleanly.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T11 branch `t11-structural-drag-drop` implements exactly device→line and device→building-part native drops through existing validated commands. First-installation source/target boundaries, safe typed payload revalidation, stale-source rejection, localized live-region outcomes, existing Inspector keyboard equivalents, and token-only motion-free feedback are covered. Commits `7778c92`, `6e60113`, `202fa50` are pushed. Branch gates are green: Rust 1,948 passed/5 ignored across 92 result blocks; frontend 881 across 63 files; TypeScript, fmt, workspace Clippy, layering, headers 194/162, anchors 389/180, cargo-deny, focused group-link/private-network/whitespace audits. No KNX/LAN/hardware traffic occurred. Detail: `.ai/logs/2026-09-22_codex__t11_structural_drag_drop.md`.
+- **Pending/Next Steps:** Commit/push T11 documentation, run one fresh whole-branch review against base `9723316`, fix every Critical/Important finding RED→GREEN, then non-fast-forward merge to `main`, repeat merged-result gates, mark plan complete, update handover, push and prove `HEAD == origin/main`. Group-address→communication-object drag remains deliberately omitted because `LinkComObject` requires explicit direction.
+- **Notes Claude:** User permanently pre-approves comparable plans; do not pause for approval. Weekly usage last read-only app-server report was 33%, below 60%; the stale helper process that showed an error was stopped. `/tmp` user quota blocked Rust linking twice, so the successful clean gate used `/var/tmp/knxbench-t11-target`; unrelated old build caches were not removed.
 
 ---
 

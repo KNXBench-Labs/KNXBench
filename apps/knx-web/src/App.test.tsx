@@ -73,6 +73,8 @@ const apiMock = vi.hoisted(() => ({
   // installation on its network, and it keeps the search out of every
   // test here that is about something else.
   discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
+  moveDeviceToLine: vi.fn(),
+  moveDeviceToBuildingPart: vi.fn(),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -171,6 +173,36 @@ function treeWithDevice(): ProjectTree {
   };
 }
 
+function treeWithDragTargets(): ProjectTree {
+  const device = { ...deviceNode(), id: 1, name: "Device A" };
+  return {
+    ...baseTree(),
+    installations: [{
+      id: 1,
+      name: "Installation",
+      topology: [{
+        id: 10,
+        name: "Area A",
+        address: 1,
+        lines: [{ id: 11, name: "Line A", address: 1, devices: [device] }],
+      }],
+      buildings: [{ id: 501, name: "Room A", kind: "Room", children: [], devices: [] }],
+      unassigned: [],
+      group_addresses: [],
+      group_ranges: [],
+    }],
+  };
+}
+
+class TestDataTransfer {
+  private readonly values = new Map<string, string>();
+  dropEffect: DataTransfer["dropEffect"] = "none";
+  effectAllowed: DataTransfer["effectAllowed"] = "uninitialized";
+  get types(): string[] { return [...this.values.keys()]; }
+  setData(format: string, data: string): void { this.values.set(format, data); }
+  getData(format: string): string { return this.values.get(format) ?? ""; }
+}
+
 function deviceDetailFixture(): DeviceDetail {
   return { id: 42, name: "Device D", description: null, address: null, com_objects: [],
     product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } };
@@ -232,6 +264,73 @@ function findButton(text: string): HTMLButtonElement {
   if (!button) throw new Error(`button "${text}" not found`);
   return button;
 }
+
+function treeLabel(text: string): HTMLElement {
+  const label = Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
+    .find((candidate) => candidate.textContent === text);
+  if (!label) throw new Error(`tree label "${text}" not found`);
+  return label;
+}
+
+async function dragTreeLabel(sourceText: string, targetText: string): Promise<void> {
+  const transfer = new TestDataTransfer();
+  for (const [text, type] of [
+    [sourceText, "dragstart"],
+    [targetText, "dragover"],
+    [targetText, "drop"],
+  ] as const) {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: transfer });
+    await act(async () => treeLabel(text).dispatchEvent(event));
+  }
+}
+
+async function openDragProject(): Promise<ReturnType<typeof createRoot>> {
+  filePickerMock.pickOpenPath.mockResolvedValue("/tmp/drag.knxproj");
+  apiMock.importProject.mockResolvedValue(treeWithDragTargets());
+  const root = await renderApp();
+  await act(async () => {
+    findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await act(async () => {});
+  return root;
+}
+
+describe("App — drag-and-drop announcement", () => {
+  it("announces a successful line drop through the existing status toast", async () => {
+    apiMock.moveDeviceToLine.mockResolvedValueOnce(treeWithDragTargets());
+    const root = await openDragProject();
+
+    await dragTreeLabel("Device A", "Line 1: Line A");
+
+    expect(host!.querySelector('[role="status"]')?.textContent)
+      .toContain("Device A moved to line Line 1: Line A.");
+    await act(async () => root.unmount());
+  });
+
+  it("announces a successful building-part drop in the active German UI", async () => {
+    apiMock.moveDeviceToBuildingPart.mockResolvedValueOnce(treeWithDragTargets());
+    const root = await openDragProject();
+    await act(async () => setSetting("uiLanguage", "de"));
+
+    await dragTreeLabel("Device A", "Room A (Raum)");
+
+    expect(host!.querySelector('[role="status"]')?.textContent)
+      .toContain("Device A wurde nach Room A verschoben.");
+    await act(async () => root.unmount());
+  });
+
+  it("reports a rejected drop as an alert and keeps the old tree visible", async () => {
+    apiMock.moveDeviceToLine.mockRejectedValueOnce(new Error("move refused"));
+    const root = await openDragProject();
+
+    await dragTreeLabel("Device A", "Line 1: Line A");
+
+    expect(host!.querySelector('[role="alert"]')?.textContent).toContain("move refused");
+    expect(treeLabel("Device A")).toBeTruthy();
+    await act(async () => root.unmount());
+  });
+});
 
 describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () => {
   it("is reachable with no project open: the Log button is enabled and clicking it renders the panel", async () => {

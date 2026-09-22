@@ -1,5 +1,5 @@
 /** Navigation tree for the project's installations, buildings, devices, and group addresses. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
@@ -69,8 +69,19 @@ function TreeNode(props: {
   dropReady?: boolean;
   onDragOver?: React.DragEventHandler<HTMLButtonElement>;
   onDrop?: React.DragEventHandler<HTMLButtonElement>;
+  revealGeneration?: number;
+  scrollOnReveal?: boolean;
 }) {
   const [open, setOpen] = useState(true);
+  const labelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (props.revealGeneration !== undefined) setOpen(true);
+  }, [props.revealGeneration]);
+  useEffect(() => {
+    if (props.scrollOnReveal && props.revealGeneration !== undefined) {
+      labelRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [props.revealGeneration, props.scrollOnReveal]);
   const hasChildren = props.children !== undefined;
   const labelClasses = ["tree-label"];
   if (props.selected) labelClasses.push("selected");
@@ -89,6 +100,7 @@ function TreeNode(props: {
           </button>
         )}
         <button
+          ref={labelRef}
           type="button"
           className={labelClasses.join(" ")}
           onClick={labelClick}
@@ -125,6 +137,41 @@ type SelectionProps = {
   onItemClick: ItemClickHandler;
 };
 
+type RevealRequest = { selection: Selection; generation: number };
+
+function selectionIs(request: RevealRequest | null | undefined, kind: Selection["kind"], id: number): boolean {
+  return request?.selection.kind === kind && request.selection.id === id;
+}
+
+function revealGeneration(
+  request: RevealRequest | null | undefined,
+  containsSelection: boolean,
+): number | undefined {
+  return containsSelection ? request?.generation : undefined;
+}
+
+function lineContainsSelection(line: LineNode, request: RevealRequest | null | undefined): boolean {
+  return selectionIs(request, "line", line.id)
+    || (request?.selection.kind === "device" && line.devices.some((device) => device.id === request.selection.id));
+}
+
+function areaContainsSelection(area: AreaNode, request: RevealRequest | null | undefined): boolean {
+  return selectionIs(request, "area", area.id) || area.lines.some((line) => lineContainsSelection(line, request));
+}
+
+function buildingContainsSelection(building: BuildingNode, request: RevealRequest | null | undefined): boolean {
+  return selectionIs(request, "building_part", building.id)
+    || building.children.some((child) => buildingContainsSelection(child, request));
+}
+
+function groupRangeContainsSelection(
+  node: GroupRangeTreeNode,
+  request: RevealRequest | null | undefined,
+): boolean {
+  return selectionIs(request, "group_range", node.range.id)
+    || node.children.some((child) => groupRangeContainsSelection(child, request));
+}
+
 type DeviceDragProps = {
   eligibleDeviceIds: ReadonlySet<number>;
   dragSource: DragSource | null;
@@ -146,7 +193,11 @@ type BuildingDropProps = {
   ) => void;
 };
 
-function DeviceItem(props: { device: DeviceNode } & SelectionProps & DeviceDragProps) {
+function DeviceItem(props: {
+  device: DeviceNode;
+  revealGeneration?: number;
+  scrollOnReveal?: boolean;
+} & SelectionProps & DeviceDragProps) {
   const { device, selection, multiSelection, onItemClick } = props;
   const draggable = props.eligibleDeviceIds.has(device.id);
   const label = device.address ? `${device.address} ${device.name}` : device.name;
@@ -161,6 +212,8 @@ function DeviceItem(props: { device: DeviceNode } & SelectionProps & DeviceDragP
       onSelect={(e) => onItemClick(e, "device", device.id, sel)}
       draggable={draggable}
       dragging={props.dragSource?.deviceId === device.id}
+      revealGeneration={props.revealGeneration}
+      scrollOnReveal={props.scrollOnReveal}
       onDragStart={draggable ? (event) => props.onDeviceDragStart(device, event) : undefined}
       onDragEnd={draggable ? props.onDeviceDragEnd : undefined}
     />
@@ -292,10 +345,12 @@ function LineItem(
   props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void }
     & SelectionProps
     & DeviceDragProps
-    & LineDropProps,
+    & LineDropProps
+    & { revealRequest?: RevealRequest | null },
 ) {
   const { line, isFirst, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
+  const lineReveals = lineContainsSelection(line, props.revealRequest);
   return (
     <TreeNode
       label={t("explorer.lineLabel", { address: line.address, name: line.name })}
@@ -313,6 +368,8 @@ function LineItem(
         event.dataTransfer.dropEffect = "move";
       } : undefined}
       onDrop={isFirst ? (event) => props.onDeviceDropOnLine(line, event) : undefined}
+      revealGeneration={revealGeneration(props.revealRequest, lineReveals)}
+      scrollOnReveal={selectionIs(props.revealRequest, "line", line.id)}
     >
       {line.devices.map((d) => (
         <DeviceItem
@@ -326,6 +383,11 @@ function LineItem(
           dragSource={props.dragSource}
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
+          revealGeneration={revealGeneration(
+            props.revealRequest,
+            selectionIs(props.revealRequest, "device", d.id),
+          )}
+          scrollOnReveal={selectionIs(props.revealRequest, "device", d.id)}
         />
       ))}
       {isFirst && <AddDeviceRow onAdd={() => onAddDevice(line.id)} />}
@@ -339,16 +401,19 @@ function AreaItem(
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number) => void;
-  } & SelectionProps & DeviceDragProps & LineDropProps,
+  } & SelectionProps & DeviceDragProps & LineDropProps & { revealRequest?: RevealRequest | null },
 ) {
   const { area, isFirst, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
     props;
   const t = useTranslate();
+  const areaReveals = areaContainsSelection(area, props.revealRequest);
   return (
     <TreeNode
       label={t("explorer.areaLabel", { address: area.address, name: area.name })}
       selected={selection?.kind === "area" && selection.id === area.id}
       onSelect={() => onSelect({ kind: "area", id: area.id })}
+      revealGeneration={revealGeneration(props.revealRequest, areaReveals)}
+      scrollOnReveal={selectionIs(props.revealRequest, "area", area.id)}
     >
       {area.lines.map((l) => (
         <LineItem
@@ -365,6 +430,7 @@ function AreaItem(
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
           onDeviceDropOnLine={props.onDeviceDropOnLine}
+          revealRequest={props.revealRequest}
         />
       ))}
       {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
@@ -372,7 +438,7 @@ function AreaItem(
   );
 }
 
-function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
+function GroupAddressItem(props: { ga: GroupAddressNode; revealRequest?: RevealRequest | null } & SelectionProps) {
   const { ga, selection, multiSelection, onItemClick } = props;
   const formatGa = useGroupAddressFormat();
   const sel: Selection = { kind: "group_address", id: ga.id };
@@ -384,6 +450,11 @@ function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
         (multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id))
       }
       onSelect={(e) => onItemClick(e, "group_address", ga.id, sel)}
+      revealGeneration={revealGeneration(
+        props.revealRequest,
+        selectionIs(props.revealRequest, "group_address", ga.id),
+      )}
+      scrollOnReveal={selectionIs(props.revealRequest, "group_address", ga.id)}
     />
   );
 }
@@ -616,10 +687,11 @@ function BuildingItem(
     building: BuildingNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
-  } & SelectionProps & DeviceDragProps & BuildingDropProps,
+  } & SelectionProps & DeviceDragProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
   const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
+  const buildingReveals = buildingContainsSelection(building, props.revealRequest);
   return (
     <TreeNode
       label={t("explorer.buildingLabel", { name: building.name, kind: buildingPartKindLabel(t, building.kind) })}
@@ -639,6 +711,8 @@ function BuildingItem(
       onDrop={isFirst
         ? (event) => props.onDeviceDropOnBuildingPart(building, event)
         : undefined}
+      revealGeneration={revealGeneration(props.revealRequest, buildingReveals)}
+      scrollOnReveal={selectionIs(props.revealRequest, "building_part", building.id)}
     >
       {building.children.map((c) => (
         <BuildingItem
@@ -655,6 +729,7 @@ function BuildingItem(
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
           onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
+          revealRequest={props.revealRequest}
         />
       ))}
       {building.devices.map((d) => (
@@ -669,6 +744,8 @@ function BuildingItem(
           dragSource={props.dragSource}
           onDeviceDragStart={props.onDeviceDragStart}
           onDeviceDragEnd={props.onDeviceDragEnd}
+          // Device search deliberately ignores this duplicate occurrence;
+          // its topology or unassigned row owns the single reveal scroll.
         />
       ))}
       {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
@@ -685,16 +762,19 @@ function GroupRangeItem(
     node: GroupRangeTreeNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
-  } & Pick<SelectionProps, "selection" | "onSelect">,
+  } & Pick<SelectionProps, "selection" | "onSelect"> & { revealRequest?: RevealRequest | null },
 ) {
   const { node, isFirst, onCreated, selection, onSelect } = props;
   const formatGa = useGroupAddressFormat();
   const { range, children } = node;
+  const rangeReveals = groupRangeContainsSelection(node, props.revealRequest);
   return (
     <TreeNode
       label={`${formatGa(range.start)}–${formatGa(range.end)} ${range.name}`}
       selected={selection?.kind === "group_range" && selection.id === range.id}
       onSelect={() => onSelect({ kind: "group_range", id: range.id })}
+      revealGeneration={revealGeneration(props.revealRequest, rangeReveals)}
+      scrollOnReveal={selectionIs(props.revealRequest, "group_range", range.id)}
     >
       {children.map((c) => (
         <GroupRangeItem
@@ -704,6 +784,7 @@ function GroupRangeItem(
           onCreated={onCreated}
           selection={selection}
           onSelect={onSelect}
+          revealRequest={props.revealRequest}
         />
       ))}
       {isFirst && range.parent === null && (
@@ -719,7 +800,7 @@ function InstallationItem(
     isFirst: boolean;
     onTreeUpdate: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number | null) => void;
-  } & SelectionProps & DeviceDragProps & LineDropProps & BuildingDropProps,
+  } & SelectionProps & DeviceDragProps & LineDropProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
   const {
     installation,
@@ -732,9 +813,20 @@ function InstallationItem(
     onItemClick,
   } = props;
   const t = useTranslate();
+  const requestedSelection = props.revealRequest?.selection;
+  const topologyReveals = installation.topology.some((area) => areaContainsSelection(area, props.revealRequest));
+  const buildingsReveal = installation.buildings.some((building) => buildingContainsSelection(building, props.revealRequest));
+  const unassignedReveal = requestedSelection?.kind === "device"
+    && installation.unassigned.some((device) => device.id === requestedSelection.id);
+  const groupAddressesReveal = requestedSelection?.kind === "group_address"
+    && installation.group_addresses.some((address) => address.id === requestedSelection.id);
+  const groupRangesReveal = requestedSelection?.kind === "group_range"
+    && installation.group_ranges.some((range) => range.id === requestedSelection.id);
+  const installationReveals = topologyReveals || buildingsReveal || unassignedReveal
+    || groupAddressesReveal || groupRangesReveal;
   return (
-    <TreeNode label={installation.name}>
-      <TreeNode label={t("explorer.topology")}>
+    <TreeNode label={installation.name} revealGeneration={revealGeneration(props.revealRequest, installationReveals)}>
+      <TreeNode label={t("explorer.topology")} revealGeneration={revealGeneration(props.revealRequest, topologyReveals)}>
         {installation.topology.map((a) => (
           <AreaItem
             key={a.id}
@@ -751,11 +843,12 @@ function InstallationItem(
             onDeviceDragStart={props.onDeviceDragStart}
             onDeviceDragEnd={props.onDeviceDragEnd}
             onDeviceDropOnLine={props.onDeviceDropOnLine}
+            revealRequest={props.revealRequest}
           />
         ))}
         {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
       </TreeNode>
-      <TreeNode label={t("explorer.buildings")}>
+      <TreeNode label={t("explorer.buildings")} revealGeneration={revealGeneration(props.revealRequest, buildingsReveal)}>
         {installation.buildings.map((b) => (
           <BuildingItem
             key={b.id}
@@ -771,12 +864,13 @@ function InstallationItem(
             onDeviceDragStart={props.onDeviceDragStart}
             onDeviceDragEnd={props.onDeviceDragEnd}
             onDeviceDropOnBuildingPart={props.onDeviceDropOnBuildingPart}
+            revealRequest={props.revealRequest}
           />
         ))}
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
       </TreeNode>
       {(installation.unassigned.length > 0 || isFirst) && (
-        <TreeNode label={t("explorer.unassigned")}>
+        <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}>
           {installation.unassigned.map((d) => (
             <DeviceItem
               key={d.id}
@@ -789,12 +883,17 @@ function InstallationItem(
               dragSource={props.dragSource}
               onDeviceDragStart={props.onDeviceDragStart}
               onDeviceDragEnd={props.onDeviceDragEnd}
+              revealGeneration={revealGeneration(
+                props.revealRequest,
+                selectionIs(props.revealRequest, "device", d.id),
+              )}
+              scrollOnReveal={selectionIs(props.revealRequest, "device", d.id)}
             />
           ))}
           {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
         </TreeNode>
       )}
-      <TreeNode label={t("explorer.groupAddresses")}>
+      <TreeNode label={t("explorer.groupAddresses")} revealGeneration={revealGeneration(props.revealRequest, groupAddressesReveal)}>
         {installation.group_addresses.map((ga) => (
           <GroupAddressItem
             key={ga.id}
@@ -803,13 +902,14 @@ function InstallationItem(
             onSelect={onSelect}
             multiSelection={multiSelection}
             onItemClick={onItemClick}
+            revealRequest={props.revealRequest}
           />
         ))}
         {isFirst && (
           <NewGroupAddressRow ranges={installation.group_ranges} onCreated={onTreeUpdate} />
         )}
       </TreeNode>
-      <TreeNode label={t("explorer.groupRanges")}>
+      <TreeNode label={t("explorer.groupRanges")} revealGeneration={revealGeneration(props.revealRequest, groupRangesReveal)}>
         {nestGroupRanges(installation.group_ranges).map((node) => (
           <GroupRangeItem
             key={node.range.id}
@@ -818,6 +918,7 @@ function InstallationItem(
             onCreated={onTreeUpdate}
             selection={selection}
             onSelect={onSelect}
+            revealRequest={props.revealRequest}
           />
         ))}
         {isFirst && <NewGroupRangeRow onCreated={onTreeUpdate} />}
@@ -832,7 +933,7 @@ export default function ProjectExplorer(
     onTreeUpdate: (tree: ProjectTree) => void;
     onSummary: (message: string) => void;
     onError: (error: unknown) => void;
-  } & SelectionProps,
+  } & SelectionProps & { revealRequest?: RevealRequest | null },
 ) {
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
@@ -953,6 +1054,7 @@ export default function ProjectExplorer(
             onDeviceDragEnd={() => setDragSource(null)}
             onDeviceDropOnLine={onDeviceDropOnLine}
             onDeviceDropOnBuildingPart={onDeviceDropOnBuildingPart}
+            revealRequest={props.revealRequest}
           />
         ))}
       </ul>

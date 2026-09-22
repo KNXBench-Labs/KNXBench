@@ -16,16 +16,21 @@ from tools.agent_memory_sync import (
     EXIT_ERROR,
     EXIT_OK,
     EXIT_STALE,
+    MARKER_START,
     PublishError,
     SyncPaths,
     build_manifest,
     exclusive_lock,
     generate,
+    install_agent_links,
+    install_timer,
     main,
     publish,
     reconcile,
     render_index,
     render_report,
+    uninstall_agent_links,
+    uninstall_timer,
     scan_sources,
 )
 
@@ -253,6 +258,96 @@ class ReconciliationTests(unittest.TestCase):
             .sha256((first_index + "\0" + first_report).encode())
             .hexdigest(),
         )
+
+
+class InstallerTests(unittest.TestCase):
+    def test_timer_service_targets_stable_copy(self) -> None:
+        with TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            calls: list[list[str]] = []
+            install_timer(
+                project_root=Path("/project"),
+                home=home,
+                script_path=Path(__file__).parents[1] / "agent_memory_sync.py",
+                runner=lambda argv: calls.append(argv),
+            )
+
+            service = (
+                home / ".config/systemd/user/knxbench-memory-sync.service"
+            ).read_text(encoding="utf-8")
+            stable = home / ".local/lib/knxbench-memory-sync/agent_memory_sync.py"
+            self.assertTrue(stable.is_file())
+            self.assertIn(str(stable), service)
+            self.assertNotIn(str(Path(__file__).parents[1]), service)
+            self.assertIn("--project-root /project", service)
+            self.assertEqual(
+                calls[-1],
+                ["systemctl", "--user", "enable", "--now", "knxbench-memory-sync.timer"],
+            )
+
+    def test_timer_install_and_uninstall_are_idempotent(self) -> None:
+        with TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            calls: list[list[str]] = []
+            kwargs = {
+                "project_root": Path("/project"),
+                "home": home,
+                "script_path": Path(__file__).parents[1] / "agent_memory_sync.py",
+                "runner": lambda argv: calls.append(argv),
+            }
+            install_timer(**kwargs)
+            install_timer(**kwargs)
+            uninstall_timer(home=home, runner=lambda argv: calls.append(argv))
+            uninstall_timer(home=home, runner=lambda argv: calls.append(argv))
+
+            self.assertFalse(home.joinpath(".local/lib/knxbench-memory-sync").exists())
+            self.assertFalse(
+                home.joinpath(".config/systemd/user/knxbench-memory-sync.service").exists()
+            )
+            self.assertIn(
+                ["systemctl", "--user", "disable", "--now", "knxbench-memory-sync.timer"],
+                calls,
+            )
+
+    def test_agent_link_install_is_idempotent_and_preserves_surroundings(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "AGENTS.md"
+            path.write_text("before\nafter\n", encoding="utf-8")
+
+            install_agent_links(project_root=Path(tmp), hermes_home=Path(tmp) / "h")
+            first = path.read_text(encoding="utf-8")
+            backups = tuple(Path(tmp).glob("AGENTS.md.bak.*"))
+            install_agent_links(project_root=Path(tmp), hermes_home=Path(tmp) / "h")
+
+            self.assertEqual(path.read_text(encoding="utf-8"), first)
+            self.assertIn("before", first)
+            self.assertIn("after", first)
+            self.assertEqual(first.count(MARKER_START), 1)
+            self.assertEqual(tuple(Path(tmp).glob("AGENTS.md.bak.*")), backups)
+
+    def test_agent_link_install_creates_backup_before_first_change(self) -> None:
+        with TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            target = project / "MEMORY.md"
+            original = "local instructions\n"
+            target.write_text(original, encoding="utf-8")
+
+            install_agent_links(project_root=project, hermes_home=project / "hermes")
+
+            backups = tuple(project.glob("MEMORY.md.bak.*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(encoding="utf-8"), original)
+
+    def test_agent_link_uninstall_removes_only_marked_block(self) -> None:
+        with TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            target = project / "AGENTS.md"
+            target.write_text("before\nafter\n", encoding="utf-8")
+            install_agent_links(project_root=project, hermes_home=project / "hermes")
+
+            uninstall_agent_links(project_root=project, hermes_home=project / "hermes")
+
+            self.assertEqual(target.read_text(encoding="utf-8"), "before\nafter\n")
 
 
 class PublicationTests(unittest.TestCase):

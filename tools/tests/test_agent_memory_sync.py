@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import unittest
+import json
+import multiprocessing
+import os
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,7 +12,17 @@ from tempfile import TemporaryDirectory
 from tools.agent_memory_sync import (
     ScanResult,
     SourceRoot,
+    EXIT_CONFLICT,
+    EXIT_ERROR,
+    EXIT_OK,
+    EXIT_STALE,
+    PublishError,
+    SyncPaths,
     build_manifest,
+    exclusive_lock,
+    generate,
+    main,
+    publish,
     reconcile,
     render_index,
     render_report,
@@ -25,6 +39,39 @@ def make_note(owner: str, filename: str, text: str):
 
 def make_scan(*notes) -> ScanResult:
     return ScanResult(tuple(notes), (), (), ())
+
+
+class MemoryFixture:
+    def __init__(self, base: Path):
+        self.project = base / "project"
+        self.project.mkdir()
+        self.source = base / "source"
+        self.source.mkdir()
+        self.note = self.source / "topic.md"
+        self.note.write_text("# Topic\n\nfirst value\n", encoding="utf-8")
+        self.output = self.project / ".agent-memory"
+        self.paths = SyncPaths.for_project(self.project)
+
+    def cli_args(self, command: str) -> list[str]:
+        return [
+            command,
+            "--project-root",
+            str(self.project),
+            "--source",
+            f"codex={self.source}",
+        ]
+
+
+@contextmanager
+def temporary_project_with_note():
+    with TemporaryDirectory() as tmp:
+        yield MemoryFixture(Path(tmp))
+
+
+def _lock_worker(lock_path: str, acquired, release) -> None:
+    with exclusive_lock(Path(lock_path)):
+        acquired.set()
+        release.wait(2)
 
 
 class ScanSourcesTests(unittest.TestCase):
@@ -206,6 +253,95 @@ class ReconciliationTests(unittest.TestCase):
             .sha256((first_index + "\0" + first_report).encode())
             .hexdigest(),
         )
+
+
+class PublicationTests(unittest.TestCase):
+    def test_apply_publishes_three_views_from_one_snapshot(self) -> None:
+        with temporary_project_with_note() as fixture:
+            exit_code = main(fixture.cli_args("apply"))
+
+            self.assertEqual(exit_code, EXIT_OK)
+            current = (fixture.output / "current").resolve()
+            self.assertEqual(
+                (fixture.output / "PROJECT_MEMORY.md").resolve().parent, current
+            )
+            self.assertEqual((fixture.output / "REPORT.md").resolve().parent, current)
+            self.assertEqual(
+                (fixture.output / "manifest.json").resolve().parent, current
+            )
+
+    def test_publish_failure_preserves_current_snapshot(self) -> None:
+        with temporary_project_with_note() as fixture:
+            first = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source, required=True),),
+                datetime(2026, 9, 22, tzinfo=timezone.utc),
+            )
+            publish(fixture.paths, first)
+            current_before = os.readlink(fixture.output / "current")
+            fixture.note.write_text("# Topic\n\nnew title\n", encoding="utf-8")
+            generation = generate(
+                fixture.project,
+                (SourceRoot("codex", fixture.source, required=True),),
+                datetime(2026, 9, 22, 1, tzinfo=timezone.utc),
+            )
+
+            with self.assertRaises(PublishError):
+                publish(fixture.paths, generation, fail_before_swap=True)
+
+            self.assertEqual(os.readlink(fixture.output / "current"), current_before)
+            self.assertEqual(
+                (fixture.output / "PROJECT_MEMORY.md").read_text(encoding="utf-8"),
+                first.index,
+            )
+
+    def test_check_reports_stale_and_conflicted_states(self) -> None:
+        with temporary_project_with_note() as fixture:
+            self.assertEqual(main(fixture.cli_args("apply")), EXIT_OK)
+            fixture.note.write_text("# Topic\n\nchanged value\n", encoding="utf-8")
+            self.assertEqual(main(fixture.cli_args("check")), EXIT_STALE)
+            nested = fixture.source / "nested"
+            nested.mkdir()
+            (nested / "topic.md").write_text(
+                "# Topic\n\nother value\n", encoding="utf-8"
+            )
+            self.assertEqual(main(fixture.cli_args("check")), EXIT_CONFLICT)
+
+    def test_preview_writes_nothing(self) -> None:
+        with temporary_project_with_note() as fixture:
+            self.assertEqual(main(fixture.cli_args("preview")), EXIT_OK)
+            self.assertFalse(fixture.output.exists())
+
+    def test_exclusive_lock_blocks_second_writer_until_release(self) -> None:
+        with TemporaryDirectory() as tmp:
+            lock_path = Path(tmp) / "sync.lock"
+            context = multiprocessing.get_context("fork")
+            acquired = context.Event()
+            release = context.Event()
+            process = context.Process(
+                target=_lock_worker,
+                args=(str(lock_path), acquired, release),
+            )
+            with exclusive_lock(lock_path):
+                process.start()
+                self.assertFalse(acquired.wait(0.2))
+            self.assertTrue(acquired.wait(2))
+            release.set()
+            process.join(2)
+            self.assertEqual(process.exitcode, 0)
+
+    def test_unknown_manifest_schema_fails_closed_without_publication(self) -> None:
+        with temporary_project_with_note() as fixture:
+            self.assertEqual(main(fixture.cli_args("apply")), EXIT_OK)
+            current_before = os.readlink(fixture.output / "current")
+            manifest_path = fixture.output / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["schema_version"] = 999
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            fixture.note.write_text("# Topic\n\nchanged\n", encoding="utf-8")
+
+            self.assertEqual(main(fixture.cli_args("apply")), EXIT_ERROR)
+            self.assertEqual(os.readlink(fixture.output / "current"), current_before)
 
 
 if __name__ == "__main__":

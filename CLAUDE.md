@@ -54,6 +54,13 @@ Keep these documents up to date when architecture, compatibility, limitations or
 
 Never rely on previous chat sessions as project memory.
 
+### Shared agent memory
+
+For project context, read `docs/PROJECT_CONTEXT.md` and then the local
+`.agent-memory/PROJECT_MEMORY.md` index when it exists. Open only linked source
+notes relevant to the current task; generated memory is read-only and repository
+documentation wins conflicts.
+
 ---
 
 ## Architecture

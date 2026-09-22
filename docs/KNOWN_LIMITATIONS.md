@@ -1643,26 +1643,26 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 to the internet. It is safe to expose to a network you have thought about,
 over a transport you have secured yourself.
 
-## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
+## 23. Resolved: `/api/project/download` streams the temporary `.knxdb`
 
-**Limitation.** The route that lets the web UI save a project as a
-downloaded `.knxdb` file reads the entire file into memory before writing
-the HTTP response body, rather than streaming it.
+**Resolution.** The route freshly serializes the current in-memory project,
+including unsaved edits, opaque entries, and manufacturer references, into
+one temporary SQLite file. `tower_http::services::ServeFile` streams that
+file in bounded 64 KiB chunks instead of copying it into a whole-file
+`Vec<u8>`. Content type and attachment filename remain unchanged.
 
-**Cause.** Simplicity for the common case: `axum`'s streaming-response
-plumbing (a `Body` backed by an async byte stream over a file handle)
-is more code for a project file that, for every project measured so far
-(including the reference project), is small enough that buffering it
-costs nothing observable.
+The response body owns the temporary path until it is dropped, including
+after the HTTP response is split into its headers and body. Both completed
+and abandoned bodies remove their temporary file; response extensions alone
+would not guarantee this lifetime.
 
-**Impact.** None for typical project sizes. A very large `.knxdb` file
-would hold its full byte size in server memory for the duration of one
-download request — a real cost only if project sizes grow well past what
-this repository's reference project or any tested project represents.
-
-**Lifted when.** A demonstrated need arises from a project large enough to
-make buffering measurably costly; real streaming is a contained change
-local to this one route, not an architectural one.
+**Proof.** Unit tests consume a file larger than three small test chunks,
+require multiple non-empty frames bounded by the configured chunk size,
+compare every byte, and verify cleanup after completed and abandoned
+downloads. The HTTP regression downloads an unsaved project and opens the
+result as a KNX store, preserving its latest edit, installation, opaque
+entries, and manufacturer references. Serialization still creates one
+temporary SQLite file before streaming begins.
 
 ## 24. Resolved: `FsPicker` drag-and-drop and multi-file local uploads
 

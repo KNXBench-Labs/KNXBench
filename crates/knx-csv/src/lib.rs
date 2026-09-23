@@ -9,8 +9,8 @@
 //! §1 for the full accounting. Never describe this format as "ETS CSV" or
 //! imply interoperability with it in code, comments, or UI text.
 //!
-//! `knx-csv` is pure: text in, typed rows out (and, eventually, typed rows
-//! in, text out). It knows nothing of the filesystem, SQLite, HTTP, or
+//! `knx-csv` is pure: text in, typed rows/plans out, and project data in,
+//! text out. It knows nothing of the filesystem, SQLite, HTTP, or
 //! `AppState` — orchestration lives in the callers (`apps/knx-server`,
 //! `apps/knx-cli`).
 
@@ -20,9 +20,12 @@ mod read;
 mod testutil;
 mod write;
 
-pub use plan::{plan_import, CsvImportReport, ImportPlan};
+pub use plan::{
+    plan_import, CsvAffectedLink, CsvDestructiveAction, CsvDestructiveChange, CsvImportReport,
+    ImportPlan,
+};
 pub use read::{
-    parse_group_addresses, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason, ParsedCsv,
-    Severity,
+    parse_group_addresses, CsvAction, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason,
+    ParsedCsv, Severity,
 };
 pub use write::{export_group_addresses, CsvExport};

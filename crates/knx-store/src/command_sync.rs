@@ -114,10 +114,18 @@ pub fn sync_after_command(
                 )?;
             upsert_group_address(&tx, installation_id, position, entry)?;
         }
+        Command::RestoreGroupAddress { entry, position } => {
+            let installation_id = project
+                .installations
+                .first()
+                .expect("Command::apply already proved this project has an installation")
+                .id;
+            upsert_group_address(&tx, installation_id, *position as i64, entry)?;
+        }
         Command::DeleteGroupAddress { id } => {
             delete_group_address(&tx, *id)?;
         }
-        Command::UpdateGroupAddress { .. } => {
+        Command::UpdateGroupAddress { .. } | Command::ReaddressGroupAddress { .. } => {
             // Group-address update persistence layer not yet implemented
             // (out of scope for this plan's Task 2, which only added the
             // `Command` variant and in-memory `apply` logic).

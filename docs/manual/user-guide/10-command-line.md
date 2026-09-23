@@ -108,13 +108,28 @@ is the one line worth checking in a script:
 
 ```text
 imported group-addresses.csv
-  212 row(s) read, 4 created, 9 updated, 199 unchanged
+  212 row(s) read, 4 created, 9 updated, 0 readdressed, 0 deleted, 199 unchanged
 store written: yes
 ```
 
 That last line is one of `store written: yes`, `no (rejected)`, `no (dry run)`,
-`no (error)` or `no (nothing to do)`. Ignored columns and per-row problems are printed
-above it.
+`no (error)`, `no (nothing to do)`, `no (destructive confirmation required)` or
+`no (stale confirmation)`. Ignored columns and per-row problems are printed above it.
+
+An explicit CSV `readdress` or `delete` never writes on its first invocation. The
+preview lists every operation and affected communication-object id/direction and prints a token:
+
+```text
+confirmation token: <opaque token>
+store written: no (destructive confirmation required)
+```
+
+Review the plan, then repeat the exact command with `--confirm <opaque token>`. The token
+binds the CSV and loaded project content; editing either one invalidates it, so you
+must preview again. KNXBench performs the comparison and save under the same SQLite
+write lock, so another writer cannot slip between them. This protects scripted use from
+approving yesterday's plan against today's project — the spreadsheet equivalent of
+checking the label before flipping the breaker.
 
 ### `knx doc-export` — the HTML document
 

@@ -5,7 +5,7 @@
 
 use std::collections::BTreeSet;
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Transaction, TransactionBehavior};
 
 use knx_core::address::GroupAddressStyle;
 use knx_core::ids::{ComObjectInstanceId, DeviceId};
@@ -93,7 +93,27 @@ const DELETE_ALL_TABLES: &[&str] = &[
 
 pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreError> {
     let tx = conn.unchecked_transaction()?;
+    save_project_transaction(tx, project)
+}
 
+/// Saves `replacement` only if the persisted semantic project still equals
+/// `expected`. `BEGIN IMMEDIATE` obtains SQLite's write lock before the
+/// comparison and holds it through commit, closing the check/write race that
+/// a caller-side reload would leave open.
+pub fn save_project_if_unchanged(
+    conn: &Connection,
+    expected: &Project,
+    replacement: &Project,
+) -> Result<(), StoreError> {
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
+    let current = load_project(&tx)?;
+    if &current != expected {
+        return Err(StoreError::ConcurrentModification);
+    }
+    save_project_transaction(tx, replacement)
+}
+
+fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<(), StoreError> {
     // Defer every foreign-key check to `COMMIT`, for two reasons that both
     // come from `building_part`/`group_range` self-referencing via
     // `parent_id`:
@@ -575,6 +595,40 @@ mod tests {
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         assert_eq!(loaded, project);
+    }
+
+    #[test]
+    fn compare_and_save_rejects_a_project_changed_after_preview() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut expected = Project::new(Language("en".into()));
+        expected.info.name = "previewed".into();
+        save_project(&conn, &expected).unwrap();
+
+        let mut concurrent = expected.clone();
+        concurrent.info.name = "concurrent edit".into();
+        save_project(&conn, &concurrent).unwrap();
+        let mut replacement = expected.clone();
+        replacement.info.name = "csv edit".into();
+
+        let error = save_project_if_unchanged(&conn, &expected, &replacement)
+            .expect_err("stale preview must not overwrite the newer project");
+
+        assert!(matches!(error, StoreError::ConcurrentModification));
+        assert_eq!(load_project(&conn).unwrap(), concurrent);
+    }
+
+    #[test]
+    fn compare_and_save_commits_when_the_preview_still_matches() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut expected = Project::new(Language("en".into()));
+        expected.info.name = "previewed".into();
+        save_project(&conn, &expected).unwrap();
+        let mut replacement = expected.clone();
+        replacement.info.name = "csv edit".into();
+
+        save_project_if_unchanged(&conn, &expected, &replacement).unwrap();
+
+        assert_eq!(load_project(&conn).unwrap(), replacement);
     }
 
     /// `Project::new` defaults to `ThreeLevel` (see `ProjectInfo::default`),

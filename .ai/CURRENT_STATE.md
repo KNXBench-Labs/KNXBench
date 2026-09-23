@@ -1,9 +1,8 @@
-
 - **Last Agent:** codex
-- **Timestamp:** 2026-09-23 14:32 CEST
-- **Completed:** Targeted lifetime correction and independent pinned Sol-high re-review finished: APPROVE, 0 Critical / 0 Important / 0 Minor. All eleven branch gates passed: Rust 1,977 passed / 0 failed / 5 ignored, frontend 977/977, TypeScript/build/fmt/Clippy/layering/headers/anchors/deny/diff. The actual busContext.ts restart probe now accepts B/1 after A/100, rejects retired A/101 and refuses reused-session verification. Native schema remains 9; no hardware activity.
-- **Pending/Next Steps:** Commit verified T13, merge main, repeat all merged-result gates, push and verify remote. Then STOP before T14; the standing Hermes goal is already paused (5/20), verified through the active-profile GoalManager. Preserve main's unrelated local handover change, backed up in active-profile scratch.
-- **Notes for Claude:** Final source diff SHA256 6beabcc7183b92545d9f07a76a6c6eb8bcdc399e02acad493c2f2457bbd41734; review evidence t13-incarnation-review-result.md, all gates t13-incarnation-final-gates/results.json. Retirement metadata is browser-local, not multi-server consensus. Strongest-model whole-goal review remains reserved until all goal tasks are complete. T14 is NOT authorized.
+- **Timestamp:** 2026-09-23 14:36 CEST
+- **Completed:** T13 correction fef0e52 integrated into main as 7f9c8c4. Independent pinned Sol-high re-review approved with zero findings. All eleven gates passed on both branch and merged main: Rust 1,977 passed / zero failed / five ignored; frontend 977/977; TypeScript/build/fmt/Clippy/layering/headers/anchors/deny/diff. Merged anchors: 381 links in 195 Markdown files. Product source matches the approved branch exactly. Documentation-only conflicts preserve both histories and main's newer manual facts. Native schema remains 9; no hardware activity.
+- **Pending/Next Steps:** STOP: goal paused before T14. Resume only on a new explicit user instruction. No whole-goal completion claim or strongest-model closing review. Publishing this verified evidence and checking remote equality are the controller's final exit checks, not authorization for more product work.
+- **Notes for Claude:** Hermes GoalManager verified paused (5/20), not active. Review: active-profile scratch/t13-incarnation-review-result.md; branch/main evidence: t13-incarnation-final-gates/results.json and t13-merged-main-gates/results.json. Original main handover additions are deliberately retained as local/uncommitted data with t13-premerge-main-handover.patch as backup. Retained T13 worktree contains historical local reports; do not discard untracked evidence casually.
 
 ---
 

@@ -7,6 +7,8 @@ creation alone starts no run.
 open T13 through verified merge, then a pause. T14 and every subsequent task
 remain unstarted; the read-only T14 survey is not implementation approval.
 Do not resume the standing goal without a new explicit user instruction.
+T13 is now merged as `7f9c8c4`; all eleven merged-main gates passed. The standing
+Hermes goal remains paused, not completed.
 
 Drive KNXBench toward a trustworthy v1 on every front **except** commissioning.
 Work autonomously and persist across turns until every item below is either

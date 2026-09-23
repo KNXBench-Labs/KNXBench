@@ -8,6 +8,14 @@ can read in a browser, print on paper, or save as PDF through the browser's own
 print dialog — topology, buildings, group addresses and devices, in a layout
 built for reading rather than for round-tripping.
 
+**T14 addendum (2026-09-23).** The original fixed-English/all-sections scope in
+§§5-9 is superseded for the crate/API layer. `ReportOptions` now carries an
+English/German language, five selectable content sections and caller-resolved
+device data. `knx-app` owns product-database composition; `knx-report` remains
+pure. The server exposes a read-only documentation-preview endpoint. Native
+PDF and ETS parity remain out of scope, and the frontend preview/selection
+controls remain deferred to T12.
+
 ---
 
 ## 1. The honesty problem, stated first

@@ -5,7 +5,7 @@
 //! (no ETS-produced sample exists in this repository) — it exports "project
 //! documentation", nothing more, nothing less.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -162,8 +162,7 @@ async fn exporting_writes_a_self_contained_html_document_naming_the_project_and_
 }
 
 #[tokio::test]
-async fn a_device_in_no_line_is_reported_as_a_warning_and_appends_one_log_entry_per_warning_without_clearing(
-) {
+async fn each_device_warning_appends_one_log_entry_without_clearing() {
     let state = Arc::new(state_with_a_device_in_no_line());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();
@@ -186,19 +185,23 @@ async fn a_device_in_no_line_is_reported_as_a_warning_and_appends_one_log_entry_
     assert_eq!(response.status(), StatusCode::OK);
     let report = body_json(response).await;
     let warnings = report["warnings"].as_array().unwrap();
-    assert_eq!(warnings.len(), 1, "{report}");
+    assert_eq!(warnings.len(), 2, "{report}");
     assert!(
-        warnings[0]["location"]
-            .as_str()
-            .unwrap()
-            .contains("device 1"),
+        warnings.iter().any(|warning| {
+            warning["location"] == "device 1"
+                && warning["detail"]
+                    .as_str()
+                    .is_some_and(|detail| detail.contains("unassigned"))
+        }),
         "{report}"
     );
     assert!(
-        warnings[0]["detail"]
-            .as_str()
-            .unwrap()
-            .contains("unassigned"),
+        warnings.iter().any(|warning| {
+            warning["location"] == "device 1"
+                && warning["detail"]
+                    .as_str()
+                    .is_some_and(|detail| detail.contains("product database"))
+        }),
         "{report}"
     );
 
@@ -215,11 +218,7 @@ async fn a_device_in_no_line_is_reported_as_a_warning_and_appends_one_log_entry_
         .iter()
         .filter(|e| e["source"] == "doc-export" && e["location"] == "device 1")
         .collect();
-    assert_eq!(
-        doc_export_warnings.len(),
-        1,
-        "expected exactly one log entry for the one warning: {entries:?}"
-    );
+    assert_eq!(doc_export_warnings.len(), 2, "{entries:?}");
 }
 
 #[tokio::test]
@@ -255,4 +254,116 @@ async fn calling_it_with_no_project_open_is_a_400_not_a_500() {
     let response = export_documentation(&app, &html_path).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn preview_returns_localized_selected_html_without_writing_a_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut state = state_with_one_group_address();
+    state.data_dir = dir.path().to_path_buf();
+    let state = Arc::new(state);
+    let app = knx_server::app(state, None);
+
+    let seed = call(
+        &app,
+        "POST",
+        "/api/group-addresses",
+        Some(json!({ "name": "Seed Light", "address": "1/1/5", "rangeId": 1 })),
+    )
+    .await;
+    assert_eq!(seed.status(), StatusCode::OK);
+    let log_before = body_json(call(&app, "GET", "/api/log", None).await).await;
+    let files_before: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/project/documentation-preview",
+        Some(json!({ "language": "de", "sections": ["devices"] })),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let report = body_json(response).await;
+    let html = report["html"].as_str().unwrap();
+    assert!(html.contains("<html lang=\"de\">"), "{html}");
+    assert!(html.contains("<section id=\"devices\""), "{html}");
+    assert!(!html.contains("<section id=\"topology\""), "{html}");
+
+    let files_after: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    assert_eq!(files_after, files_before, "preview must not create a file");
+    let log_after = body_json(call(&app, "GET", "/api/log", None).await).await;
+    assert_eq!(
+        log_after, log_before,
+        "preview must not mutate the session log"
+    );
+}
+
+#[tokio::test]
+async fn preview_rejects_an_unsupported_report_language() {
+    let state = Arc::new(state_with_one_group_address());
+    let app = knx_server::app(state, None);
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/project/documentation-preview",
+        Some(json!({ "language": "fr", "sections": ["devices"] })),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn preview_rejects_an_unknown_section_instead_of_silently_omitting_it() {
+    let state = Arc::new(state_with_one_group_address());
+    let app = knx_server::app(state, None);
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/project/documentation-preview",
+        Some(json!({ "sections": ["devices", "invented"] })),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn preview_resolves_product_identity_in_the_requested_language_seam() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    products.execute_batch(
+        "INSERT INTO manufacturer VALUES ('M', 'Acme Controls');
+         INSERT INTO hardware VALUES ('HW', 'M', 'Hardware', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'x');
+         INSERT INTO product VALUES ('P', 'M', 'HW', 'Room Controller', NULL, NULL, NULL, NULL, NULL, NULL, 'x');
+         INSERT INTO application_program VALUES ('APP', 'M', 'Lighting 2.1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'x');
+         INSERT INTO hardware2program VALUES ('H', 'M', 'HW', 'APP', NULL, NULL, NULL, NULL, NULL, 'x');",
+    ).unwrap();
+    let mut state = state_with_a_device_in_no_line();
+    state.product_db = Some(Mutex::new(products));
+    let app = knx_server::app(Arc::new(state), None);
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/project/documentation-preview",
+        Some(json!({ "language": "en", "sections": ["devices"] })),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let report = body_json(response).await;
+    let html = report["html"].as_str().unwrap();
+    assert!(html.contains("Acme Controls"), "{html}");
+    assert!(html.contains("Room Controller"), "{html}");
+    assert!(html.contains("Lighting 2.1"), "{html}");
 }

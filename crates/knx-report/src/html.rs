@@ -116,9 +116,10 @@ pub const DOCUMENT_STYLE: &str = r#"<style>
 /// Opens the document: doctype, `<html lang>`, the UTF-8 `<meta charset>`,
 /// an escaped `<title>`, and [`DOCUMENT_STYLE`]. Callers write the `<body>`
 /// content and close with [`document_tail`].
-pub fn document_head(title: &str) -> String {
+pub fn document_head(title: &str, language: &str) -> String {
     format!(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n{}\n</head>\n<body>\n",
+        "<!DOCTYPE html>\n<html lang=\"{}\">\n<head>\n<meta charset=\"utf-8\">\n<title>{}</title>\n{}\n</head>\n<body>\n",
+        escape_attr(language),
         escape_text(title),
         DOCUMENT_STYLE
     )
@@ -186,27 +187,27 @@ mod tests {
 
     #[test]
     fn document_head_emits_doctype_and_lang() {
-        let head = document_head("Project");
+        let head = document_head("Project", "en");
         assert!(head.starts_with("<!DOCTYPE html>"));
         assert!(head.contains("<html lang="));
     }
 
     #[test]
     fn document_head_emits_utf8_meta_charset() {
-        let head = document_head("Project");
+        let head = document_head("Project", "en");
         assert!(head.contains(r#"<meta charset="utf-8">"#));
     }
 
     #[test]
     fn document_head_title_is_escaped() {
-        let head = document_head("Licht & Steckdose <Süd>");
+        let head = document_head("Licht & Steckdose <Süd>", "de");
         assert!(head.contains("<title>Licht &amp; Steckdose &lt;S\u{fc}d&gt;</title>"));
         assert!(!head.contains("<title>Licht & Steckdose <Süd></title>"));
     }
 
     #[test]
     fn document_head_contains_the_style_block() {
-        let head = document_head("Project");
+        let head = document_head("Project", "en");
         assert!(head.contains(DOCUMENT_STYLE));
     }
 
@@ -217,20 +218,20 @@ mod tests {
 
     #[test]
     fn head_and_tail_contain_no_script_tag() {
-        let doc = format!("{}{}", document_head("Project"), document_tail());
+        let doc = format!("{}{}", document_head("Project", "en"), document_tail());
         assert!(!doc.contains("<script"));
     }
 
     #[test]
     fn head_and_tail_contain_no_external_urls() {
-        let doc = format!("{}{}", document_head("Project"), document_tail());
+        let doc = format!("{}{}", document_head("Project", "en"), document_tail());
         assert!(!doc.contains("http://"));
         assert!(!doc.contains("https://"));
     }
 
     #[test]
     fn head_and_tail_contain_no_animation_or_transition() {
-        let doc = format!("{}{}", document_head("Project"), document_tail());
+        let doc = format!("{}{}", document_head("Project", "en"), document_tail());
         assert!(!doc.contains("transition"));
         assert!(!doc.contains("animation"));
     }

@@ -426,11 +426,14 @@ published, and the version number is not a promise that anything is finished.
 ### Documentation export is HTML, and less than ETS's
 
 - **Affected:** the project documentation export.
-- **Limitation:** HTML only — no native PDF, no print preview, no section
-  selection, one language per export. It does not resolve manufacturer,
-  product or program names, and does not list parameter values or module
-  instance arguments. No parity with ETS's reports has been measured, and
-  with no ETS installation here it cannot be.
+- **Limitation:** HTML only — no native PDF and no frontend preview or section
+  controls. The API can preview and select sections, and one export can be
+  English or German. Installed product data can add manufacturer/product/
+  program names, parameter enum labels and module-argument names, but only for
+  a hardware-consistent product/program pair. Missing or blank names,
+  unformatted parameter kinds and unsupported module semantics remain raw and
+  explicitly warned. No parity with ETS's reports has been measured, and with
+  no ETS installation here it cannot be.
 - **Consequence:** useful as a record, not as a substitute for an ETS report.
 - **Workaround:** print the HTML from a browser for PDF.
 - **Details:** [§44](../KNOWN_LIMITATIONS.md#44-project-documentation-export-t13-has-no-ets-report-parity-and-none-can-currently-be-measured),

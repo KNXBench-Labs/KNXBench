@@ -12,7 +12,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 const inert = { multiSelection: null, onItemClick: () => {}, onTreeUpdate: () => {} } as const;
 
 const device = { id: 9, name: "Example actuator", address: "1.2.9", description: null, com_object_count: 3 };
-const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, group_address_style: "ThreeLevel",
+const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel",
   installations: [{ id: 1, name: "Example installation", topology: [{ id: 2, name: "Area", address: 1, lines: [{ id: 3, name: "Line", address: 2, devices: [device] }] }],
     buildings: [{ id: 4, name: "Floor", kind: "Floor", devices: [], children: [{ id: 5, name: "Room", kind: "Room", children: [], devices: [device] }] }], unassigned: [], group_addresses: [], group_ranges: [] }] };
 

@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ pr
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
 
-const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, group_address_style: "ThreeLevel", installations: [] };
+const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", installations: [] };
 
 const NO_REFERENCE: DeviceProductNode = { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" };
 
@@ -73,7 +73,7 @@ it("keeps communication editing and parameters reachable in the central device t
 // `serverTree` below differs from `tree` in fields an overlay could never
 // touch (`errors`/`warnings`), so a passing assertion against it proves
 // the server's own tree is what gets published, not a caller-side guess.
-const serverTree: ProjectTree = { ...tree, errors: 5, warnings: 2, can_undo: true, can_redo: false };
+const serverTree: ProjectTree = { ...tree, errors: 5, warnings: 2, can_undo: true, can_redo: false, is_modified: true };
 
 function committableField() {
   return {

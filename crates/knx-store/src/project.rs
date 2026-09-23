@@ -516,6 +516,59 @@ mod tests {
     }
 
     #[test]
+    fn building_documented_kinds_survive_native_load_and_resave() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut root = part(1, None, BuildingPartType::Building);
+        root.children = (2..=6).map(BuildingPartId).collect();
+        let mut parts = vec![root];
+        for (index, token) in ["Stairway", "RoomPart", "Area", "Ground", "Segment"]
+            .iter()
+            .enumerate()
+        {
+            parts.push(part(
+                index as u32 + 2,
+                Some(1),
+                knx_etsproj::values::parse_building_part_type(token).unwrap(),
+            ));
+        }
+        let project = project_with_hierarchy(parts, vec![], vec![]);
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded, project);
+        let kinds: Vec<String> = conn
+            .prepare("SELECT kind FROM building_part ORDER BY id")
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(
+            kinds,
+            ["Building", "Stairway", "RoomPart", "Area", "Ground", "Segment"]
+        );
+        save_project(&conn, &loaded).unwrap();
+        assert_eq!(load_project(&conn).unwrap(), project);
+    }
+
+    #[test]
+    fn building_unknown_persisted_kind_is_refused() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let project = project_with_hierarchy(
+            vec![part(1, None, BuildingPartType::Building)],
+            vec![],
+            vec![],
+        );
+        save_project(&conn, &project).unwrap();
+        conn.execute("UPDATE building_part SET kind = 'FutureSpace'", [])
+            .unwrap();
+        let error = load_project(&conn).expect_err("unknown stored kind must not become Building");
+        assert!(error.to_string().contains("FutureSpace"));
+        assert!(
+            matches!(error, StoreError::UnknownBuildingPartType(value) if value == "FutureSpace")
+        );
+    }
+
+    #[test]
     fn an_empty_project_round_trips() {
         let conn = open_and_migrate_in_memory().unwrap();
         let project = Project::new(Language("en".into()));

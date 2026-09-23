@@ -18,6 +18,7 @@ const apiMock = vi.hoisted(() => ({
   batchMoveDevicesToBuildingPart: vi.fn(),
   moveDeviceToLine: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
+  createBuildingPart: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -82,6 +83,7 @@ function baseTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    is_modified: false,
     group_address_style: "ThreeLevel",
     installations: [installation],
   };
@@ -470,6 +472,33 @@ describe("ProjectExplorer multi-select", () => {
 });
 
 describe("ProjectExplorer — building-part kind: translated label vs. untouched discriminant", () => {
+  it.each([
+    ["Stairway", "Treppenhaus"], ["RoomPart", "Raumteil"], ["Area", "Bereich"],
+    ["Ground", "Grundstück"], ["Segment", "Segment"],
+  ])("offers %s with its localized label and exact creation value", async (kind, label) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    const tree = baseTree();
+    tree.installations[0].buildings = [building(501, "Test", kind)];
+    const { root } = await renderExplorer(tree);
+    expect(host!.textContent).toContain(`Test (${label})`);
+    const option = Array.from(host!.querySelectorAll<HTMLOptionElement>("select option"))
+      .find((option) => option.textContent === label);
+    expect(option?.value).toBe(kind);
+    const row = option!.closest("li")!;
+    const select = row.querySelector("select")!;
+    const input = row.querySelector("input")!;
+    apiMock.createBuildingPart.mockResolvedValueOnce(tree);
+    await act(async () => {
+      select.value = kind;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Created space");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await click(row.querySelector("button")!);
+    expect(apiMock.createBuildingPart).toHaveBeenCalledWith("Created space", kind, 501);
+    await unmount(root);
+  });
+
   it("renders a translated kind word in the building's label while the same node's raw kind stays the wire value", async () => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     const tree = baseTree();

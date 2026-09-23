@@ -97,6 +97,7 @@ it("opens full telegram details from the keyboard without sending a value", asyn
 function telegramsResponse(overrides: Partial<BusMonitorTelegramsResponse>): BusMonitorTelegramsResponse {
   return {
     sessionId: 1,
+    serverIncarnation: "process-a",
     status: "active",
     nextSince: 1,
     droppedBefore: 0,
@@ -181,6 +182,7 @@ beforeEach(() => {
   window.localStorage.clear();
   apiMock.startBusMonitor.mockResolvedValue({
     sessionId: 1,
+    serverIncarnation: "process-a",
     assignedAddress: "1.1.5",
   } satisfies BusMonitorStartResponse);
   // Default: no session exists yet when the panel mounts, same as every
@@ -196,6 +198,7 @@ beforeEach(() => {
   apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
   apiMock.stopBusMonitor.mockResolvedValue({
     sessionId: 1,
+    serverIncarnation: "process-a",
     telegramCount: 0,
     droppedCount: 0,
   } satisfies BusMonitorStopResponse);
@@ -598,6 +601,7 @@ describe("BusMonitorPanel", () => {
   it("surfaces a stop-time drain-task warning instead of swallowing it", async () => {
     apiMock.stopBusMonitor.mockResolvedValue({
       sessionId: 1,
+      serverIncarnation: "process-a",
       telegramCount: 12,
       droppedCount: 0,
       warning: "drain task panicked during teardown",
@@ -638,6 +642,9 @@ describe("BusMonitorPanel and the shared session's context", () => {
       warnings: 0,
       can_undo: false,
       can_redo: false,
+      is_modified: false,
+      server_incarnation: "process-a",
+      snapshot_revision: 1,
       group_address_style: "ThreeLevel",
       installations: [
         {
@@ -705,12 +712,30 @@ describe("BusMonitorPanel and the shared session's context", () => {
 
   it("stays quiet when another window recorded the very session it attached to", async () => {
     publishProjectContext(projectTree("Kitchen ceiling"));
-    recordSessionContext(5); // what the other window wrote when it connected
+    recordSessionContext(5, "process-a"); // what the other window wrote when it connected
     apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1 }));
     await renderPanel();
     await flushReattach();
 
     expect(host!.querySelector(".bus-monitor-unverified-lock")).toBeNull();
+    expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
+  });
+
+  it("does not verify a reused numeric session id from a restarted server", async () => {
+    publishProjectContext({
+      ...projectTree("Kitchen ceiling"),
+      server_incarnation: "process-b",
+    });
+    recordSessionContext(5, "process-a");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
+      sessionId: 5,
+      serverIncarnation: "process-b",
+      nextSince: 1,
+    }));
+    await renderPanel();
+    await flushReattach();
+
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
     expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
   });
 
@@ -733,6 +758,29 @@ describe("BusMonitorPanel and the shared session's context", () => {
     expect(notice.getAttribute("role")).toBe("alert");
     expect(notice.textContent).toContain("session 2");
     expect(host!.querySelectorAll("tbody tr")).toHaveLength(0);
+  });
+
+  it("treats the same numeric id from a new server process as a replacement", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(
+      telegramsResponse({ sessionId: 1, telegrams: [row({ seq: 0 })], nextSince: 1 }),
+    );
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
+      sessionId: 1,
+      serverIncarnation: "process-b",
+      telegrams: [],
+      nextSince: 0,
+    }));
+    await tick();
+
+    expect(host!.querySelectorAll("tbody tr")).toHaveLength(0);
+    expect(host!.querySelector(".bus-monitor-replaced-notice")).not.toBeNull();
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
   });
 
   it("returns to the Connect form and says the session ended elsewhere on a mid-session 404", async () => {

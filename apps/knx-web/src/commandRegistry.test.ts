@@ -23,7 +23,7 @@ const RESOLVED_COMMANDS: ResolvedPaletteCommand[] = COMMANDS.map(({ labelKey, ..
 }));
 
 function fakeTree(can_undo: boolean, can_redo: boolean): ProjectTree {
-  return { can_undo, can_redo } as unknown as ProjectTree;
+  return { can_undo, can_redo, is_modified: can_undo } as unknown as ProjectTree;
 }
 
 function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {

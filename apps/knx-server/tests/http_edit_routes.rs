@@ -582,6 +582,34 @@ async fn creating_a_nested_group_range_then_renaming_and_deleting_it() {
 }
 
 #[tokio::test]
+async fn building_part_creation_preserves_all_documented_space_types() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+    for token in ["Stairway", "RoomPart", "Area", "Ground", "Segment"] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/building-parts")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({"name": token, "kind": token}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{token}");
+        let tree = body_json(response).await;
+        let parts = tree["installations"][0]["buildings"].as_array().unwrap();
+        assert!(parts
+            .iter()
+            .any(|part| part["name"] == token && part["kind"] == token));
+    }
+}
+
+#[tokio::test]
 async fn creating_a_nested_building_part_then_renaming_and_deleting_it() {
     let state = Arc::new(state_with_one_installation());
     let app = knx_server::app(state, None);
@@ -1007,7 +1035,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
 /// in `knx-core/src/address.rs`, always finds it fits, so this is also the
 /// route's ordinary, expected-to-succeed path, not a corner case.
 #[tokio::test]
-async fn restyling_a_project_with_a_group_address_round_trips_and_undoes() {
+async fn group_address_style_restyles_a_project_and_round_trips_through_undo() {
     let mut project = Project::new(Language("en".into()));
     project.installations.push(Installation {
         id: InstallationId(0),

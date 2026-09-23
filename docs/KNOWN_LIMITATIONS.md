@@ -4800,6 +4800,13 @@ that snapshot; a failed save leaves the previous snapshot untouched. The
 snapshot is process state, not `.knxdb` data, so native store schema version 9
 is unchanged.
 
+The dirty predicate and New's replacement now share one project-led
+transaction. Save chooses its path after acquiring that leading lock and
+keeps the path, project, opaque passthrough and manufacturer manifest coherent
+through clean-baseline publication. Open/import/new replace those collections
+under the same boundary; an intervening accepted edit cannot disappear in a
+gap between New's check and replacement.
+
 `Project::same_user_content_as` clones both projects, replaces both synthetic
 `IdAllocators` high-water marks with defaults, and then uses structural
 equality. An edit followed by undo is therefore clean even though allocation
@@ -4824,12 +4831,13 @@ it cannot see, and what each one costs:
 
 1. **Another client edits the project.** A second browser, a private
    window, another machine, or `curl` against the same server changes a
-   group address's name, DPT or style. No record in this profile's
-   `localStorage` moves, so the companion keeps reporting `synced` while
-   the running session's frozen `GroupAddressContext`
-   (`apps/knx-server/src/bus.rs:601-618`) — and therefore every decoded
-   value and every write DPT resolution — describes a project that no
-   longer exists.
+   group address's name or DPT without changing its style. No record in
+   this profile's `localStorage` moves, so the companion can keep reporting
+   `synced` while the running session's `GroupAddressContext`
+   (`apps/knx-server/src/bus.rs`) describes an older project. T13 is the
+   explicit exception: a successful style change, including Undo/Redo that
+   changes the style, refreshes the complete server-side context. That does
+   not introduce general cross-client project synchronization.
 2. **The project record outlives the server.** `localStorage` survives a
    server restart; the server's in-memory project does not. The companion
    can therefore believe a project is open (`projectContextKnown()`) when
@@ -4852,17 +4860,13 @@ it cannot see, and what each one costs:
    deliberate (nothing observed says the snapshot is wrong), but it is
    weaker than a real answer.
 
-**Cause.** There is no channel through which a client can be told the
-project changed, and no route that returns the project tree without
-mutating it. [§63 point 3](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
-establishes the first: no `WebSocket`, no `EventSource`, and the only
-polling loop in the frontend polls bus telegrams. The second is visible in
-`apps/knx-server/src/routes.rs`, whose only `GET` routes are
-`/api/device/{id}`, `/api/catalog/manufacturers`, `/api/catalog/items`,
-`/api/product-languages` and `/api/log` — every route that returns a
-`ProjectTree` is a `POST` that changes something first. A companion window
-therefore has no way to *ask* what the project looks like; it can only be
-told by a sibling window that already knows. **[V]**
+**Cause.** There is no project-change push channel and the companion does
+not poll current project state. [§63 point 3](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
+documents the missing cross-client synchronization. Since T12,
+`GET /api/project` does return the current authoritative tree without a
+mutation; it is used for explicit recovery and save refresh, not continuous
+companion synchronization. The older claim that no such GET exists is
+obsolete. The companion still relies on its sibling window's local record.
 
 **Impact.** The lock is a guard against the common case — one user, one
 browser, editing in one window while watching in another — not a
@@ -4872,12 +4876,10 @@ one the feature exists to prevent: a decoded column, and a write's
 resolved DPT, describing a project the server has since changed. Writes
 land on real hardware and project Undo cannot reverse them (`busCompose.liveAction`).
 
-**Lifted when.** The server can tell a client that the project changed —
-the same push channel §63 needs for concurrent editing. A cheaper partial
-step would be a read-only `GET` returning the current tree's fingerprint,
-which would turn cases 1-3 into ordinary poll-detected staleness without
-requiring any push infrastructure; it was not built here because it is a
-server-side API addition and this stage's scope was the UI.
+**Lifted when.** A verified push or polling contract compares current
+project state with the actual session context across clients and restarts.
+The existing read-only project GET is a prerequisite, not proof that this
+contract exists; no continuous companion refresh is implemented by T13.
 
 **Platform note.** Both platforms were exercised on 2026-09-13: the
 companion route renders in headless Chromium against the Vite dev server,
@@ -5613,13 +5615,20 @@ The project mutex is held only while building that new context and is released
 before the async bus-session mutex is acquired. Refreshing interpretation
 metadata neither reconnects nor restarts the tunnel and sends no bus frame.
 One application-layer transaction mutex is acquired before the domain command
-and held through fresh snapshot and session publication, so concurrent restyles
-cannot mutate or publish out of order. The project and bus locks remain
+and held through fresh snapshot and session publication. Direct restyles and
+Undo/Redo share this boundary, so history cannot overtake a pending publication.
+History refreshes the session when it changes the project style; unrelated
+history operations do not rebuild the context. The project and bus locks remain
 separate phases inside that serialized transaction.
 `style_change_refreshes_the_active_session_without_reconnecting` verifies
 through the public route that the next monitored telegram uses the new style,
 its displayed address round-trips through `/api/bus/write`, the session ID is
 unchanged and the fake tunnel remains connected **[V]**.
+
+Additional fake-session regressions cover Undo and Redo monitor formatting and
+write parsing, plus deterministic ordering between a pending style publication
+and Undo. The controller observed the stale-style/order failures before the fix
+and all corresponding cases passed afterwards. No physical bus was used.
 
 **Notation boundary.** This resolution concerns the project's address level:
 `Free`, `TwoLevel` or `ThreeLevel`. User-facing group addresses remain in the
@@ -6111,7 +6120,8 @@ does not already guarantee some other way.
 comparison beside, but independently from, `can_undo` and `can_redo`. Pure
 `knx-projection` output defaults it to `false`; the application overlay derives
 the live value while holding the same project-led lock order used for project,
-command-stack, import-count, store-path, and clean-snapshot publication.
+command-stack, import-count, store-path, clean-snapshot, opaque and manufacturer
+manifest publication.
 
 The desktop Quit guard consumes only `is_modified`. Undo and redo buttons
 continue to consume history availability. Frontend regressions prove both
@@ -6121,6 +6131,22 @@ the confirmation dialog. Successful Save and Save As operations then consume
 a fresh `GET /api/project` tree rather than patching the dirty bit locally;
 if that authoritative refresh fails, the error is reported and the prior
 dirty tree remains in force.
+
+Public snapshots carry application-owned `server_incarnation` and
+`snapshot_revision` metadata. Every publication path rejects superseded trees
+before changing selection or save metadata, covering delayed Save→Edit,
+Edit→Save and Load→Edit responses. A new process's low revision is accepted;
+responses from a retired incarnation cannot switch the UI back. These guards
+control response ownership, not the server's dirty-state value. Pure/offline
+projections omit runtime metadata; no native schema migration is involved.
+
+Browser context records retain incarnation retirement across reloads and
+same-profile windows. Bus session matching additionally requires the server
+incarnation, so a reused numeric session ID cannot verify/rebase an old
+record. Missing legacy identity remains `unverified`, and legacy tree metadata
+cannot replace an accepted modern incarnation. This is not cross-client push
+or optimistic write-conflict detection; §82's browser-profile visibility
+boundary remains. See [ADR-0032](adr/0032-application-snapshot-ordering.md).
 
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 
@@ -7008,10 +7034,12 @@ general — only that the combination has, repeatedly, produced a stale
 freshness decision here.
 
 **Impact.** Every gate run on this machine needs an independent check that
-the binary under test is the current one. For `knx-net` the cheap one is
-the test count: **252 lib tests** as of B1 fix round 1, 250 for the B1
-branch before it, 247 for anything older. A run reporting 247 is executing
-pre-branch code and will transmit on the LAN. `touch` the source, or
+the binary under test is the current one. For `knx-net` the cheap first check
+is the test count, re-enumerated from current source rather than frozen in a
+handover. **2026-09-23: 253 lib tests**, verified against 253 source test
+attributes and a fresh `cargo clean -p knx-net` rebuild. The older 252-test
+checkpoint predates the scan-comparison regression; a mismatch must stop the
+run for investigation, not be accepted as proof of freshness. `touch` the source, or
 `cargo clean -p <crate>`, and rebuild rather than trusting mtime; do not
 trust a file's mtime or checksum as proof that a *build output* is current,
 because the output's own mtime was equally unreliable in the measured case.
@@ -7028,55 +7056,42 @@ and the workaround, and the choice is the maintainer's.
 
 ## 120. Nothing checks that a theme is legible
 
-**Limitation.** `apps/knx-web/src/styles.css` ships five palettes, and
-[ADR-0022](adr/0022-theme-token-boundary.md) holds every one of them to a
-derived token boundary: `themeTokens.test.ts` fails the suite if a theme
-misses a token, sets one a user setting owns, declares a plain property
-other than `color-scheme`, defines itself by negation, nests itself inside
-a media query, shares a block with another theme through a comma, or
-writes a literal colour into the component layer. It
-checks that a palette is *complete*. It checks nothing about whether a
-palette can be read. No test computes a contrast ratio, so a sixth theme
-could declare all 27 tokens, pass every check in the file, and render grey
-text on a grey background.
+**Limitation.** `themeTokens.test.ts` now enforces the three ADR-0022 role pairs
+for every registered palette and accent variation: foreground on background,
+foreground on surface, and on-accent on accent. Each pair must meet the exact
+WCAG AA normal-text threshold of 4.5:1. The gate supports the concrete opaque
+hex and `rgb()`/`rgba(..., 1)` forms used by these roles and recursive
+`var(--knx-...)` references. Unsupported notation, unresolved or cyclic
+references, and non-opaque alpha are named failures containing the theme, pair,
+and offending value rather than being skipped.
 
-The literal-colour half of that guard has a blind spot of its own, in the
-same direction. The CSS system colour keywords are colour values and are
-not in its named-colour list, so `color: Canvas`, `color: AccentColor` and
-`border: 1px solid ButtonBorder` pass — and they are exactly as
-theme-blind as `#ff00aa`, because they resolve from the operating system
-rather than from any `--knx-*` token. Recorded rather than fixed: the
-keyword list is long, overlaps nothing in the stylesheet today, and adding
-it is a change to one `Set` on the day someone writes the first one.
+Duplicate theme/accent blocks are rejected, and variation tests inspect the
+actual block rather than the first matching name. RGB channels, including both
+numeric helper inputs, must be finite and within `[0,255]`. The luminance
+calculation uses WCAG's current `0.04045` sRGB breakpoint, with fractional
+reference tests as well as the shipped integer palette values.
 
-**Cause.** Contrast is a property of a *pair* of tokens, and the boundary
-is a property of one token at a time. Enforcing it needs three things the
-project does not have: a CSS colour parser covering every notation a theme
-block may use (`#rrggbb`, `color-mix()`, the `oklch()` a future palette
-would want), a relative-luminance implementation, and — the hard part — a
-declaration of which foreground/background pairs actually meet on screen,
-which is a fact about the component layer's rules, not about the theme
-blocks. The five current palettes were measured by hand in a real browser
-during T37: every foreground/background and on-accent/accent pair is at or
-above 4.5:1 (IMPLEMENTATION_STATUS.md, T37). That is a measurement of a
-moment, not an invariant.
+This remains a bounded role-pair invariant, not a claim that every arbitrary
+component composition, browser rendering difference, or assistive technology
+has been audited. The literal-colour guard also still does not model CSS system
+colour keywords such as `Canvas`, `AccentColor`, and `ButtonBorder` in
+component rules; those remain outside the shipped stylesheet and outside this
+contrast gate.
 
-**Impact.** Nobody is harmed today — the shipped palettes were measured and
-pass. The cost is borne by the next theme: its author gets a precise,
-automatic answer about token completeness and no answer at all about
-legibility, which is the property a user actually notices. ADR-0022's own
-Context section opens with exactly this failure having already happened
-once: `bitcoin-defi` hard-coded `color: #ffffff` on a `#f7931a` button, a
-ratio of about 2.3:1, and shipped.
+**Cause.** Contrast is a property of a foreground/background pair, so token
+completeness alone was insufficient. The gate now resolves the named role pairs
+from each theme block, overlays a variation's accent pair on its base theme,
+computes relative luminance, and rejects any value it cannot evaluate safely.
 
-**Lifted when.** A test computes the contrast ratio of each theme block's
-foreground/background and on-accent/accent pairs and fails below 4.5:1.
-`themeTokens.ts` already parses everything such a test would read — the
-missing pieces are a colour parser and the pair list. ADR-0022 names this
-as the obvious next tightening; it is recorded here rather than attempted,
-because a half-built contrast check that silently skips the notations it
-cannot parse is worse than none: it would report a clean run over palettes
-it never examined.
+**Impact.** New or changed registered palettes and accent variations receive a
+precise build-time diagnostic naming the theme, role pair, and offending value.
+The gate does not claim to cover roles outside the three pairs named by
+ADR-0022, nor does it add runtime or browser dependencies.
+
+**Lifted when.** The role-pair contrast gate is the enforced build-time
+invariant for this limitation. It would be broader only if the application
+formally declares additional semantic pairs and extends the evaluator for their
+color notations in the same change.
 
 ## 121. Two open windows do not see each other's preference changes until one reloads
 

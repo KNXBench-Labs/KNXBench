@@ -16,8 +16,11 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
+use base64::Engine as _;
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
@@ -57,6 +60,14 @@ pub struct AppState {
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
     pub import_counts: Mutex<(usize, usize)>,
+    /// Opaque identity for this `AppState` lifetime. It scopes snapshot
+    /// revisions and bus-session counters across server restarts, but is not
+    /// an authentication token and is never derived from credentials.
+    pub server_incarnation: String,
+    /// Monotone ordering for UI-facing snapshots. Incremented only while
+    /// `project` is held, whenever project-owned state or its clean/save
+    /// metadata changes; never serialized into a project file.
+    pub project_revision: AtomicU64,
     /// The shared product database, opened once at startup from
     /// `knx_productdb::default_path()`. `None` if no path could be
     /// derived, the file doesn't exist yet, or it failed to open/migrate
@@ -147,6 +158,8 @@ impl AppState {
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             import_counts: Mutex::new((0, 0)),
+            server_incarnation: new_server_incarnation(),
+            project_revision: AtomicU64::new(0),
             product_db,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
@@ -160,6 +173,12 @@ impl AppState {
             settings_lock: Mutex::new(()),
         }
     }
+}
+
+fn new_server_incarnation() -> String {
+    let mut bytes = [0_u8; 16];
+    getrandom::fill(&mut bytes).expect("OS randomness unavailable for server incarnation");
+    B64URL.encode(bytes)
 }
 
 impl Default for AppState {
@@ -303,12 +322,14 @@ pub fn open_project(
             return Err(e);
         }
     };
-    replace_project_state(state, project, (tree.errors, tree.warnings), None);
-    *state.opaque.lock().expect("state mutex poisoned") = opaque;
-    *state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned") = manufacturer_refs;
+    let tree = replace_project_state(
+        state,
+        project,
+        (tree.errors, tree.warnings),
+        None,
+        opaque,
+        manufacturer_refs,
+    );
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -405,7 +426,7 @@ pub fn open_native_project(
     progress: &LoadHandle,
 ) -> Result<ProjectTree, String> {
     let loaded = load_native(path, progress);
-    let (tree, project, (opaque, manufacturer_refs)) = match loaded {
+    let (_tree, project, (opaque, manufacturer_refs)) = match loaded {
         Ok(v) => v,
         Err(e) => {
             state
@@ -424,12 +445,14 @@ pub fn open_native_project(
             return Err(e);
         }
     };
-    replace_project_state(state, project, (0, 0), Some(path.to_path_buf()));
-    *state.opaque.lock().expect("state mutex poisoned") = opaque;
-    *state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned") = manufacturer_refs;
+    let tree = replace_project_state(
+        state,
+        project,
+        (0, 0),
+        Some(path.to_path_buf()),
+        opaque,
+        manufacturer_refs,
+    );
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -501,39 +524,34 @@ pub fn new_project_impl(
     group_address_style: Option<knx_core::GroupAddressStyle>,
     discard_changes: bool,
 ) -> Result<ProjectTree, UnsavedChanges> {
-    if !discard_changes {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-        let modified = project
-            .as_ref()
-            .is_some_and(|project| project_is_modified(project, clean_project.as_ref()));
-        if modified {
-            state
-                .session_log
-                .lock()
-                .expect("state mutex poisoned")
-                .push(LogEntry {
-                    timestamp: session_log::now(),
-                    severity: Severity::Warning,
-                    source: "new".to_string(),
-                    message: "refused to create a new project: the open one has unsaved edits"
-                        .to_string(),
-                    location: None,
-                    diagnostic: None,
-                    detail: None,
-                });
-            return Err(UnsavedChanges);
-        }
-    }
+    new_project_impl_with_pause(
+        state,
+        name,
+        installation_name,
+        language,
+        group_address_style,
+        discard_changes,
+        || {},
+    )
+}
 
+fn new_project_impl_with_pause(
+    state: &AppState,
+    name: Option<String>,
+    installation_name: Option<String>,
+    language: Option<String>,
+    group_address_style: Option<knx_core::GroupAddressStyle>,
+    discard_changes: bool,
+    after_guard: impl FnOnce(),
+) -> Result<ProjectTree, UnsavedChanges> {
     let language = language.unwrap_or_else(|| DEFAULT_NEW_PROJECT_LANGUAGE.to_string());
-    let mut project = knx_core::Project::new(knx_core::Language(language));
-    project.info.project_id = NEW_PROJECT_ID.to_string();
-    project.info.name = name.unwrap_or_default();
+    let mut replacement = knx_core::Project::new(knx_core::Language(language));
+    replacement.info.project_id = NEW_PROJECT_ID.to_string();
+    replacement.info.name = name.unwrap_or_default();
     if let Some(style) = group_address_style {
-        project.info.group_address_style = style;
+        replacement.info.group_address_style = style;
     }
-    project.installations.push(knx_core::Installation {
+    replacement.installations.push(knx_core::Installation {
         id: knx_core::InstallationId(0),
         name: installation_name.unwrap_or_default(),
         default_line: None,
@@ -550,13 +568,42 @@ pub fn new_project_impl(
         parameters: Vec::new(),
     });
 
-    let tree = knx_projection::build_project_tree(&project);
-    replace_project_state(state, project, (0, 0), None);
-    *state.opaque.lock().expect("state mutex poisoned") = Vec::new();
-    *state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned") = Vec::new();
+    // The clean predicate and complete replacement share the same helper and
+    // project lock. Any concurrent command waits there and is then applied to
+    // the new project; no accepted edit can enter after the guard and vanish.
+    let tree = replace_project_state_transaction(
+        state,
+        replacement,
+        (0, 0),
+        None,
+        Vec::new(),
+        Vec::new(),
+        |project, clean_project| {
+            discard_changes
+                || !project.is_some_and(|project| project_is_modified(project, clean_project))
+        },
+        after_guard,
+    );
+    let tree = match tree {
+        Ok(tree) => tree,
+        Err(UnsavedChanges) => {
+            state
+                .session_log
+                .lock()
+                .expect("state mutex poisoned")
+                .push(LogEntry {
+                    timestamp: session_log::now(),
+                    severity: Severity::Warning,
+                    source: "new".to_string(),
+                    message: "refused to create a new project: the open one has unsaved edits"
+                        .to_string(),
+                    location: None,
+                    diagnostic: None,
+                    detail: None,
+                });
+            return Err(UnsavedChanges);
+        }
+    };
 
     let mut log = state.session_log.lock().expect("state mutex poisoned");
     log.reset();
@@ -640,14 +687,17 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
     let result = (|| {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
+        let mut store_path = state.store_path.lock().expect("state mutex poisoned");
+        let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
         let opaque = state.opaque.lock().expect("state mutex poisoned");
         let manufacturer_refs = state
             .manufacturer_refs
             .lock()
             .expect("state mutex poisoned");
         save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
-        *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
-        *state.clean_project.lock().expect("state mutex poisoned") = Some(project.clone());
+        *store_path = Some(path.to_path_buf());
+        *clean_project = Some(project.clone());
+        next_project_revision(state);
         Ok(())
     })();
     log_outcome(
@@ -660,25 +710,41 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
     result
 }
 
+fn save_project_with(
+    state: &AppState,
+    write: impl FnOnce(
+        &Path,
+        &knx_core::Project,
+        &[knx_store::StoredOpaqueEntry],
+        &[knx_store::ManufacturerRef],
+    ) -> Result<(), String>,
+) -> Result<(), String> {
+    // Save, Save As and whole-project replacement share the project-led
+    // order documented by `replace_project_state`: project -> store path ->
+    // clean baseline -> opaque -> manufacturer refs (replacement also takes
+    // command stack/import counts before store path). The file path and every
+    // byte written therefore belong to one project snapshot, and replacement
+    // cannot land before that exact snapshot becomes the clean baseline.
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let store_path = state.store_path.lock().expect("state mutex poisoned");
+    let path = store_path
+        .as_deref()
+        .ok_or("no save location yet — use Save As")?;
+    let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned");
+    write(path, project, &opaque, &manufacturer_refs)?;
+    *clean_project = Some(project.clone());
+    next_project_revision(state);
+    Ok(())
+}
+
 pub fn save_project(state: &AppState) -> Result<(), String> {
-    let result = (|| {
-        let path = state
-            .store_path
-            .lock()
-            .expect("state mutex poisoned")
-            .clone()
-            .ok_or("no save location yet — use Save As")?;
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
-        let opaque = state.opaque.lock().expect("state mutex poisoned");
-        let manufacturer_refs = state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned");
-        save_project_as_impl(&path, project, &opaque, &manufacturer_refs)?;
-        *state.clean_project.lock().expect("state mutex poisoned") = Some(project.clone());
-        Ok(())
-    })();
+    let result = save_project_with(state, save_project_as_impl);
     log_outcome(state, "save", "saved".to_string(), None, &result);
     result
 }
@@ -888,7 +954,14 @@ pub fn import_group_addresses_csv_impl(
                 let stack = state.command_stack.lock().expect("state mutex poisoned");
                 let counts = *state.import_counts.lock().expect("state mutex poisoned");
                 let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-                tree_with_state(project, clean_project.as_ref(), &stack, counts)
+                tree_with_state(
+                    project,
+                    clean_project.as_ref(),
+                    &stack,
+                    counts,
+                    current_project_revision(state),
+                    &state.server_incarnation,
+                )
             }
         };
         Ok((tree, plan.report))
@@ -1153,6 +1226,8 @@ fn tree_with_state(
     clean_project: Option<&knx_core::Project>,
     stack: &knx_core::CommandStack,
     import_counts: (usize, usize),
+    snapshot_revision: u64,
+    server_incarnation: &str,
 ) -> knx_projection::ProjectTree {
     let mut tree = knx_projection::build_project_tree(project);
     tree.errors = import_counts.0;
@@ -1160,7 +1235,19 @@ fn tree_with_state(
     tree.can_undo = stack.can_undo();
     tree.can_redo = stack.can_redo();
     tree.is_modified = project_is_modified(project, clean_project);
+    tree.server_incarnation = Some(server_incarnation.to_owned());
+    tree.snapshot_revision = Some(snapshot_revision);
     tree
+}
+
+fn current_project_revision(state: &AppState) -> u64 {
+    state.project_revision.load(Ordering::Relaxed)
+}
+
+/// Called only while `state.project` is held, so the number is ordered with
+/// the project mutation/baseline publication it identifies.
+fn next_project_revision(state: &AppState) -> u64 {
+    state.project_revision.fetch_add(1, Ordering::Relaxed) + 1
 }
 
 fn project_is_modified(
@@ -1175,15 +1262,72 @@ fn replace_project_state(
     replacement: knx_core::Project,
     replacement_import_counts: (usize, usize),
     replacement_store_path: Option<PathBuf>,
-) {
+    replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
+    replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
+) -> ProjectTree {
+    replace_project_state_with_pause(
+        state,
+        replacement,
+        replacement_import_counts,
+        replacement_store_path,
+        replacement_opaque,
+        replacement_manufacturer_refs,
+        || {},
+    )
+}
+
+fn replace_project_state_with_pause(
+    state: &AppState,
+    replacement: knx_core::Project,
+    replacement_import_counts: (usize, usize),
+    replacement_store_path: Option<PathBuf>,
+    replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
+    replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
+    while_locked_before_publication: impl FnOnce(),
+) -> ProjectTree {
+    replace_project_state_transaction(
+        state,
+        replacement,
+        replacement_import_counts,
+        replacement_store_path,
+        replacement_opaque,
+        replacement_manufacturer_refs,
+        |_, _| true,
+        while_locked_before_publication,
+    )
+    .expect("unconditional project replacement cannot be refused")
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replace_project_state_transaction(
+    state: &AppState,
+    replacement: knx_core::Project,
+    replacement_import_counts: (usize, usize),
+    replacement_store_path: Option<PathBuf>,
+    replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
+    replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
+    can_replace: impl FnOnce(Option<&knx_core::Project>, Option<&knx_core::Project>) -> bool,
+    after_guard: impl FnOnce(),
+) -> Result<ProjectTree, UnsavedChanges> {
     // Publication and readers use this one order: project -> command stack
-    // -> import counts -> store path -> clean project. Holding `project`
-    // first prevents observers from seeing any partially replaced state.
+    // -> import counts -> store path -> clean project -> opaque ->
+    // manufacturer refs. Holding `project` first prevents observers, Save,
+    // Save As and download from seeing any partially replaced state.
     let mut project = state.project.lock().expect("state mutex poisoned");
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let mut import_counts = state.import_counts.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
     let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let mut opaque = state.opaque.lock().expect("state mutex poisoned");
+    let mut manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned");
+
+    if !can_replace(project.as_ref(), clean_project.as_ref()) {
+        return Err(UnsavedChanges);
+    }
+    after_guard();
 
     let clean_replacement = replacement.clone();
     *project = Some(replacement);
@@ -1191,6 +1335,16 @@ fn replace_project_state(
     *import_counts = replacement_import_counts;
     *store_path = replacement_store_path;
     *clean_project = Some(clean_replacement);
+    *opaque = replacement_opaque;
+    *manufacturer_refs = replacement_manufacturer_refs;
+    Ok(tree_with_state(
+        project.as_ref().expect("replacement project is present"),
+        clean_project.as_ref(),
+        &stack,
+        *import_counts,
+        next_project_revision(state),
+        &state.server_incarnation,
+    ))
 }
 
 /// Current save metadata and tree are read under the same project lock.
@@ -1214,9 +1368,40 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
         .is_some();
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     Ok(CurrentProject {
-        tree: tree_with_state(project, clean_project.as_ref(), &stack, import_counts),
+        tree: tree_with_state(
+            project,
+            clean_project.as_ref(),
+            &stack,
+            import_counts,
+            current_project_revision(state),
+            &state.server_incarnation,
+        ),
         has_store_path,
     })
+}
+
+/// Takes the public tree and the bus decoder/write context from the same
+/// project-locked revision. Style publication uses this after its mutation so
+/// an unrelated edit that completed in between is either included in both
+/// snapshots or in neither, never only in the running session context.
+pub(crate) fn current_project_tree_and_group_address_context(
+    state: &AppState,
+) -> Result<(ProjectTree, crate::bus::GroupAddressContext), String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(
+        project,
+        clean_project.as_ref(),
+        &stack,
+        import_counts,
+        current_project_revision(state),
+        &state.server_incarnation,
+    );
+    let context = crate::bus::GroupAddressContext::from_project(Some(project));
+    Ok((tree, context))
 }
 
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
@@ -1231,7 +1416,19 @@ fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::Pro
     let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
+    let revision = if result.is_ok() {
+        next_project_revision(state)
+    } else {
+        current_project_revision(state)
+    };
+    let tree = tree_with_state(
+        project,
+        clean_project.as_ref(),
+        &stack,
+        import_counts,
+        revision,
+        &state.server_incarnation,
+    );
 
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
 
@@ -2019,7 +2216,14 @@ pub fn create_device_impl(
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     Ok(CreateDeviceResponse {
-        tree: tree_with_state(project, clean_project.as_ref(), &stack, import_counts),
+        tree: tree_with_state(
+            project,
+            clean_project.as_ref(),
+            &stack,
+            import_counts,
+            next_project_revision(state),
+            &state.server_incarnation,
+        ),
         diagnostics,
     })
 }
@@ -2079,6 +2283,8 @@ pub fn reconcile_scan_impl(
             clean_project.as_ref(),
             stack,
             import_counts,
+            current_project_revision(state),
+            &state.server_incarnation,
         ));
     }
 
@@ -2162,7 +2368,19 @@ pub fn reconcile_scan_impl(
         .map_err(|error| error.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, clean_project.as_ref(), stack, import_counts);
+    let revision = if result.is_ok() {
+        next_project_revision(state)
+    } else {
+        current_project_revision(state)
+    };
+    let tree = tree_with_state(
+        project,
+        clean_project.as_ref(),
+        stack,
+        import_counts,
+        revision,
+        &state.server_incarnation,
+    );
     log_outcome(
         state,
         "Batch",
@@ -2274,7 +2492,19 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.undo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
+    let revision = if result.is_ok() {
+        next_project_revision(state)
+    } else {
+        current_project_revision(state)
+    };
+    let tree = tree_with_state(
+        project,
+        clean_project.as_ref(),
+        &stack,
+        import_counts,
+        revision,
+        &state.server_incarnation,
+    );
     log_outcome(state, "undo", "undo".to_string(), None, &result);
     result.map(|()| tree)
 }
@@ -2286,7 +2516,19 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.redo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, clean_project.as_ref(), &stack, import_counts);
+    let revision = if result.is_ok() {
+        next_project_revision(state)
+    } else {
+        current_project_revision(state)
+    };
+    let tree = tree_with_state(
+        project,
+        clean_project.as_ref(),
+        &stack,
+        import_counts,
+        revision,
+        &state.server_incarnation,
+    );
     log_outcome(state, "redo", "redo".to_string(), None, &result);
     result.map(|()| tree)
 }
@@ -3446,6 +3688,273 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn save_locks_project_before_waiting_for_its_destination_path() {
+        use std::sync::{Arc, TryLockError};
+        use std::time::{Duration, Instant};
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(&state, None, None, None, None, true).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let mut path = state.store_path.lock().unwrap();
+        *path = Some(dir.path().join("project.knxdb"));
+
+        // Hold the second lock, then observe the leading lock through the
+        // real Save entry point. The old path-first implementation cannot
+        // acquire `project` at all until this test releases `store_path`.
+        let saving_state = Arc::clone(&state);
+        let saving = std::thread::spawn(move || save_project(&saving_state));
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let project_locked = loop {
+            if matches!(state.project.try_lock(), Err(TryLockError::WouldBlock)) {
+                break true;
+            }
+            if Instant::now() >= deadline {
+                break false;
+            }
+            std::thread::yield_now();
+        };
+        // Release and join even on failure; no blocked worker survives the
+        // assertion, and no ordering assumption depends on a fixed sleep.
+        drop(path);
+        saving.join().unwrap().unwrap();
+        assert!(
+            project_locked,
+            "Save chose its path before locking its project"
+        );
+    }
+
+    #[test]
+    fn save_keeps_path_and_project_together_until_the_clean_snapshot_is_published() {
+        use std::sync::{mpsc, Arc};
+        use std::time::Duration;
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(
+            &state,
+            Some("Project A".into()),
+            Some("Installation A".into()),
+            None,
+            None,
+            true,
+        )
+        .unwrap();
+        *state.store_path.lock().unwrap() = Some(PathBuf::from("a.knxdb"));
+
+        let (snapshot_tx, snapshot_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let save_state = Arc::clone(&state);
+        let save = std::thread::spawn(move || {
+            save_project_with(&save_state, |path, project, _, _| {
+                snapshot_tx
+                    .send((path.to_path_buf(), project.info.name.clone()))
+                    .unwrap();
+                release_rx.recv().unwrap();
+                Ok(())
+            })
+        });
+
+        assert_eq!(
+            snapshot_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+            (PathBuf::from("a.knxdb"), "Project A".to_string())
+        );
+
+        let (replacement_tx, replacement_rx) = mpsc::channel();
+        let replacement_state = Arc::clone(&state);
+        let replacement = std::thread::spawn(move || {
+            let result = new_project_impl(
+                &replacement_state,
+                Some("Project B".into()),
+                Some("Installation B".into()),
+                None,
+                None,
+                true,
+            );
+            replacement_tx.send(result).unwrap();
+        });
+        assert!(
+            matches!(
+                replacement_rx.recv_timeout(Duration::from_millis(50)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ),
+            "replacement escaped while Save had not published its clean snapshot"
+        );
+
+        release_tx.send(()).unwrap();
+        save.join().unwrap().unwrap();
+        replacement.join().unwrap();
+        replacement_rx
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap()
+            .unwrap();
+
+        let current = state.project.lock().unwrap();
+        assert_eq!(current.as_ref().unwrap().info.name, "Project B");
+        assert_eq!(*state.store_path.lock().unwrap(), None);
+    }
+
+    #[test]
+    fn new_project_serializes_the_dirty_guard_replacement_and_intervening_edit() {
+        use std::sync::{mpsc, Arc};
+        use std::time::Duration;
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(
+            &state,
+            Some("Old project".into()),
+            Some("Old installation".into()),
+            None,
+            None,
+            true,
+        )
+        .unwrap();
+
+        let (guarded_tx, guarded_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let replacement_state = Arc::clone(&state);
+        let replacement = std::thread::spawn(move || {
+            new_project_impl_with_pause(
+                &replacement_state,
+                Some("New project".into()),
+                Some("New installation".into()),
+                None,
+                None,
+                false,
+                || {
+                    guarded_tx.send(()).unwrap();
+                    release_rx.recv().unwrap();
+                },
+            )
+        });
+        guarded_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+        let (edited_tx, edited_rx) = mpsc::channel();
+        let edit_state = Arc::clone(&state);
+        let edit = std::thread::spawn(move || {
+            let result = create_area_impl(&edit_state, "Accepted area".into(), 1);
+            edited_tx.send(result).unwrap();
+        });
+        assert!(
+            matches!(
+                edited_rx.recv_timeout(Duration::from_millis(50)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ),
+            "an edit entered between the clean guard and project replacement"
+        );
+
+        release_tx.send(()).unwrap();
+        replacement.join().unwrap().unwrap();
+        edit.join().unwrap();
+        edited_rx
+            .recv_timeout(Duration::from_secs(1))
+            .unwrap()
+            .unwrap();
+
+        let current = current_project_tree(&state).unwrap().tree;
+        assert_eq!(current.installations[0].name, "New installation");
+        assert_eq!(current.installations[0].topology[0].name, "Accepted area");
+        assert!(current.is_modified);
+    }
+
+    #[test]
+    fn replacement_publishes_project_path_opaque_and_manifest_as_one_snapshot() {
+        use std::sync::{mpsc, Arc};
+        use std::time::Duration;
+
+        fn opaque(label: &str) -> knx_store::StoredOpaqueEntry {
+            knx_store::StoredOpaqueEntry {
+                source_path: format!("{label}/0.xml"),
+                xpath: format!("/{label}"),
+                kind: "element".into(),
+                name: label.into(),
+                bytes: label.as_bytes().to_vec(),
+                sha256: format!("{label}-opaque-hash"),
+            }
+        }
+
+        fn manufacturer(label: &str) -> knx_store::ManufacturerRef {
+            knx_store::ManufacturerRef {
+                source_path: format!("{label}/Hardware.xml"),
+                sha256: format!("{label}-manufacturer-hash"),
+                len: label.len() as i64,
+                kind: label.into(),
+            }
+        }
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(
+            &state,
+            Some("Project A".into()),
+            Some("Installation A".into()),
+            None,
+            None,
+            true,
+        )
+        .unwrap();
+        *state.store_path.lock().unwrap() = Some(PathBuf::from("a.knxdb"));
+        *state.opaque.lock().unwrap() = vec![opaque("A")];
+        *state.manufacturer_refs.lock().unwrap() = vec![manufacturer("A")];
+
+        let mut project_b = knx_core::Project::new(knx_core::Language("en".into()));
+        project_b.info.name = "Project B".into();
+        let opaque_b = vec![opaque("B")];
+        let manufacturer_b = vec![manufacturer("B")];
+        let expected_opaque = opaque_b.clone();
+        let expected_manufacturer = manufacturer_b.clone();
+
+        let (published_tx, published_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let replacement_state = Arc::clone(&state);
+        let replacement = std::thread::spawn(move || {
+            replace_project_state_with_pause(
+                &replacement_state,
+                project_b,
+                (0, 0),
+                Some(PathBuf::from("b.knxdb")),
+                opaque_b,
+                manufacturer_b,
+                || {
+                    published_tx.send(()).unwrap();
+                    release_rx.recv().unwrap();
+                },
+            )
+        });
+        published_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+        let (saved_tx, saved_rx) = mpsc::channel();
+        let save_state = Arc::clone(&state);
+        let save = std::thread::spawn(move || {
+            save_project_with(&save_state, |path, project, opaque, manufacturer_refs| {
+                saved_tx
+                    .send((
+                        path.to_path_buf(),
+                        project.info.name.clone(),
+                        opaque.to_vec(),
+                        manufacturer_refs.to_vec(),
+                    ))
+                    .unwrap();
+                Ok(())
+            })
+        });
+        assert!(
+            matches!(
+                saved_rx.recv_timeout(Duration::from_millis(50)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ),
+            "Save observed a replacement before its passthrough state was complete"
+        );
+
+        release_tx.send(()).unwrap();
+        replacement.join().unwrap();
+        save.join().unwrap().unwrap();
+        let (path, name, saved_opaque, saved_manufacturer) =
+            saved_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(path, PathBuf::from("b.knxdb"));
+        assert_eq!(name, "Project B");
+        assert_eq!(saved_opaque, expected_opaque);
+        assert_eq!(saved_manufacturer, expected_manufacturer);
+    }
 
     #[test]
     fn modified_state_treats_an_edit_undone_to_the_baseline_as_clean() {

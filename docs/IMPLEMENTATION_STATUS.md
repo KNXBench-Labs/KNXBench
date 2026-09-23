@@ -1,5 +1,43 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-23 — T13 review corrections: final verification
+
+The batch-B branch adds a build-time contrast gate for foreground/background,
+foreground/surface and on-accent/accent, across registered palettes and accent
+variations. The gate uses an exact 4.5:1 threshold; unsupported colors and
+unresolved/cyclic references fail instead of being skipped. It does not claim
+whole-application accessibility certification or cover every component pairing.
+The second correction wave also makes save/replacement publication project-led,
+adds application-owned snapshot ordering and identifies confirmed bus-context
+publications for the matching client session. See
+[ADR-0032](adr/0032-application-snapshot-ordering.md). Independent Sol-high
+re-review approved the corrected branch; integration verification follows.
+
+The additionally authorized lifetime correction pairs each snapshot revision
+and bus-session identity with a non-secret server incarnation. Browser records
+retire old incarnations, allowing a fresh process's low revisions while refusing
+late responses from its predecessor. A controller execution of the actual
+`busContext.ts` now passes the formerly failing restart scenario, including
+retired-response rejection and reused-session-ID verification refusal. The
+independent scoped Sol-high re-review approved with 0 Critical, 0 Important
+and 0 Minor findings; fresh full gates passed.
+
+The deferred import-baseline regression now exercises the existing synthetic
+`.knxproj` fixture without a private-corpus skip: a dirty old project is replaced
+by a clean import, both the import response and authoritative current-project
+GET report clean state, and a subsequent edit/undo returns to that baseline.
+No production behavior was changed for this extra regression.
+
+Fresh controller verification after the lifetime correction: Rust workspace
+1,977 passed / 0 failed / 5 ignored in 92 result blocks; frontend 977/977
+across 63 files;
+TypeScript, production build, fmt, warning-denied workspace Clippy, layering,
+headers, anchors, cargo-deny and diff checks passed. The additional controller
+restart/retired-response/reused-session probe also passed. The `knx-net`
+freshness check is 253 source and fresh-built lib tests,
+not the old 252-test checkpoint. Native store schema remains 9; §60 and report
+preview/selection remain deferred to their separately owned prerequisites.
+
 ## 2026-09-22 — T13 Task 3: spaces keep their identities
 
 Section 89 is resolved: the five documented kinds `Stairway`, `RoomPart`,

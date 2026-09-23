@@ -295,12 +295,12 @@ published, and the version number is not a promise that anything is finished.
 
 ### A running monitor keeps the group-address style it started with
 
-- **Affected:** a bus session left open while the project changes.
-- **Limitation:** telegram rows are rendered in the style the project had when
-  the session started.
-- **Consequence:** the monitor and the tree can disagree about how an address
-  is written.
-- **Workaround:** restart the session.
+- **Resolved in T13:** changing the open project's group-address style refreshes
+  the running session's interpretation context without reconnecting. Undo and
+  Redo of that style change refresh it as well.
+- **Scope:** subsequent monitor rows and write parsing use the refreshed style;
+  already recorded rows are not retrospectively reformatted. This is not a new
+  slash/dot notation preference.
 - **Details:** [§91 a running bus session keeps its style](../KNOWN_LIMITATIONS.md#91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started)
 
 ## Web and Docker

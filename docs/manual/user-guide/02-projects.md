@@ -160,12 +160,12 @@ There is no autosave. Nothing is written until you ask for it.
 
 ### What "unsaved changes" means right now
 
-KNXBench decides whether you have unsaved work by asking whether there is anything to
-undo. That is a blunt instrument, and it errs in the safe direction: after a save, the
-undo history still exists, so the application may still think there is unsaved work
-when there is not.
+KNXBench compares the current project contents with a clean baseline established by
+opening, importing, creating, or successfully saving a project. Undo history is
+separate: saving keeps that history but clears the modified state; undoing edits back
+to the baseline is also clean. A failed save does not clear the modified state.
 
-In the desktop build, quitting with a non-empty undo history asks first, and offers
+In the desktop build, quitting with a modified project asks first, and offers
 **Cancel** or **Quit without saving**. In the web build there is no Quit item — a
 browser tab cannot close itself — so nothing intercepts a closed tab.
 

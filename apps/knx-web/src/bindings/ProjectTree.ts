@@ -43,6 +43,25 @@ can_redo: boolean,
  */
 is_modified: boolean,
 /**
+ * Opaque identity of the running server process that owns
+ * `snapshot_revision`. Pure/offline projections omit it together with the
+ * revision; it is transient application metadata, not project data.
+ */
+server_incarnation?: string,
+/**
+ * Application-owned response ordering. Pure/offline projections omit it;
+ * the server stamps every UI-facing snapshot while holding its project
+ * lock. This is transient metadata and is never persisted in a KNX or
+ * native project format.
+ */
+snapshot_revision?: number,
+/**
+ * Present only when this response also republished the complete group-
+ * address context into the named active bus session. The frontend may
+ * rebase that exact session's fingerprint after accepting the snapshot.
+ */
+group_address_context_session_id?: number,
+/**
  * The project-wide rendering choice every `GroupAddressNode`,
  * `GroupRangeNode` and `GroupLinkNode` address string in this tree was
  * already formatted with — carried through so the inspector can show

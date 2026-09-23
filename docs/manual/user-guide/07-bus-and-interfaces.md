@@ -91,11 +91,13 @@ KNXBench takes a snapshot of that project's group addresses and their datapoint 
 and decodes each telegram against it. A raw `0x01` becomes something you can read. See
 [Datapoint types](../knx-basics/04-datapoint-types.md) for what those types are.
 
-That snapshot is frozen at connect time and never re-resolved, and KNXBench says so
-rather than quietly lying to you. Edit the project while a session runs and a notice
-appears: *"The project changed after this session started. Decoded values below come
-from the snapshot taken at connect time, and sending is locked. Reconnect to decode
-against the current project."*
+Changing the group-address style refreshes the running session's complete address
+and decoding context, including a style change made through Undo or Redo. It does
+not rewrite telegram rows already collected. Other group-address name or datapoint
+type edits do not independently refresh that context. When the editing window
+detects such a mismatch, sending is locked and a notice asks you to reconnect
+against the current project. This browser-profile-local check cannot detect every
+edit from another browser or client; see the [known limitations](../known-issues.md).
 
 A filter box above the table narrows rows by destination or name. If telegrams arrive
 faster than the buffer can keep them, KNXBench reports how many were lost instead of

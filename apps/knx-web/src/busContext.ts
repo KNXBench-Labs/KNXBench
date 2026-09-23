@@ -4,22 +4,18 @@
 // Why this module exists at all.
 //
 // `apps/knx-server/src/bus.rs:601-618` states it plainly: a
-// `GroupAddressContext` "computes once, at start, from the project open in
-// `AppState` at that moment", and is "never re-resolved mid-session". The
-// snapshot is taken in `bus_routes.rs:120-123`, stored on the session
-// (`bus.rs:1020`), and used for two separate things — decoding every
+// `GroupAddressContext` starts from the project open in `AppState` at that
+// moment. The snapshot is stored on the session and used for two separate
+// things — decoding every
 // incoming telegram (`drain_task`'s clone) and resolving the DPT of every
-// outgoing write (`BusSession::resolve_write_dpt`, `bus.rs:1135-1141`).
+// outgoing write. A confirmed group-address-style Set/Undo/Redo publication
+// replaces that whole server snapshot in place; other project edits do not.
 //
 // So the moment the project's group addresses, their names or their DPTs
-// change after a session started, every decoded value and every
-// DPT-resolved send in that session describes a project that no longer
-// exists. The server does not notice, and it has no way to tell a client:
-// there is no `WebSocket` and no `EventSource` anywhere in this frontend
-// (`docs/KNOWN_LIMITATIONS.md` §63, point 3), and no `GET` route that
-// returns the project tree at all — a `ProjectTree` only ever arrives as
-// the *response* to a mutation. A second window therefore cannot ask the
-// server what the project looks like now.
+// change after a session started without one of those style publications,
+// the running context is stale. There is no WebSocket/EventSource push; a
+// window can fetch the current project with `GET /api/project`, but a second
+// window is not automatically told to do so when another window edits it.
 //
 // What it can do is read what the editing window last saw. Both windows
 // are same-origin (the desktop shell loads an ordinary `http://` URL —
@@ -52,15 +48,26 @@ export interface ProjectContextRecord {
   /// `Date.now()` at publication. Used only to order a project record
   /// against a session record, never displayed.
   at: number;
+  /// Server-owned ordering. Absent legacy records are revision zero.
+  snapshotRevision?: number;
+  /// Opaque server-process lifetime that owns `snapshotRevision`. Missing
+  /// means a legacy record and cannot supersede a modern one.
+  serverIncarnation?: string;
+  /// Process lifetimes this browser has already replaced. Keeping their
+  /// opaque ids makes a delayed old response distinguishable from a third,
+  /// genuinely new server lifetime.
+  retiredServerIncarnations?: string[];
 }
 
 export interface SessionContextRecord {
   sessionId: number;
-  /// The project fingerprint current when this session started, or `null`
-  /// when no project record existed then — which is not the same as "no
-  /// project": a freshly reloaded window holds no tree yet even though the
-  /// server may still have one open. `contextLock` treats the two cases
-  /// differently on purpose.
+  /// Binds a reusable numeric id to the server process that issued it.
+  /// Missing legacy records are deliberately never treated as verified.
+  serverIncarnation?: string;
+  /// Fingerprint from the session's last confirmed whole-context
+  /// publication. Initially this is the matching project publication at
+  /// connect time, or `null` when none existed; confirmed style
+  /// Set/Undo/Redo responses may replace it later.
   fingerprint: string | null;
   at: number;
 }
@@ -165,7 +172,14 @@ function writeRecord(storage: Pick<Storage, "setItem">, key: string, value: unkn
 
 export function readProjectContext(storage: Pick<Storage, "getItem">): ProjectContextRecord | null {
   const record = readRecord<ProjectContextRecord>(storage, PROJECT_CONTEXT_KEY);
-  return record && typeof record.fingerprint === "string" && typeof record.at === "number"
+  return record &&
+    typeof record.fingerprint === "string" &&
+    typeof record.at === "number" &&
+    (record.snapshotRevision === undefined || typeof record.snapshotRevision === "number") &&
+    (record.serverIncarnation === undefined || typeof record.serverIncarnation === "string") &&
+    (record.retiredServerIncarnations === undefined ||
+      (Array.isArray(record.retiredServerIncarnations) &&
+        record.retiredServerIncarnations.every((value) => typeof value === "string")))
     ? record
     : null;
 }
@@ -174,23 +188,58 @@ export function readSessionContext(storage: Pick<Storage, "getItem">): SessionCo
   const record = readRecord<SessionContextRecord>(storage, SESSION_CONTEXT_KEY);
   return record &&
     typeof record.sessionId === "number" &&
+    (record.serverIncarnation === undefined || typeof record.serverIncarnation === "string") &&
     (record.fingerprint === null || typeof record.fingerprint === "string") &&
     typeof record.at === "number"
     ? record
     : null;
 }
 
-export function writeProjectContext(storage: Pick<Storage, "setItem">, tree: ProjectTree): void {
+export function writeProjectContext(
+  storage: Pick<Storage, "getItem" | "setItem">,
+  tree: ProjectTree,
+): boolean {
+  const revision = tree.snapshot_revision ?? 0;
+  const incarnation = tree.server_incarnation;
+  const current = readProjectContext(storage);
+  let retired = current?.retiredServerIncarnations ?? [];
+  if (incarnation === undefined) {
+    // A legacy response has no lifetime evidence. It can still participate
+    // in the old revision-only ordering while the stored record is also
+    // legacy, but it may not replace a modern process identity.
+    if (current?.serverIncarnation !== undefined) return false;
+    if (revision < (current?.snapshotRevision ?? 0)) return false;
+  } else if (current?.serverIncarnation === incarnation) {
+    if (revision < (current.snapshotRevision ?? 0)) return false;
+  } else if (current?.serverIncarnation !== undefined) {
+    if (retired.includes(incarnation)) return false;
+    retired = [...new Set([...retired, current.serverIncarnation])];
+  } else {
+    // A modern response establishes the first trustworthy lifetime after a
+    // missing or legacy record. Unknown legacy provenance is not retired by
+    // name because it had no name to compare later.
+    retired = [];
+  }
   writeRecord(storage, PROJECT_CONTEXT_KEY, {
     fingerprint: fingerprintProjectContext(tree),
     at: Date.now(),
+    snapshotRevision: revision,
+    serverIncarnation: incarnation,
+    retiredServerIncarnations: retired,
   } satisfies ProjectContextRecord);
+  return true;
 }
 
-export function writeSessionContext(storage: Pick<Storage, "getItem" | "setItem">, sessionId: number): void {
+export function writeSessionContext(
+  storage: Pick<Storage, "getItem" | "setItem">,
+  sessionId: number,
+  serverIncarnation: string,
+): void {
+  const project = readProjectContext(storage);
   writeRecord(storage, SESSION_CONTEXT_KEY, {
     sessionId,
-    fingerprint: readProjectContext(storage)?.fingerprint ?? null,
+    serverIncarnation,
+    fingerprint: project?.serverIncarnation === serverIncarnation ? project.fingerprint : null,
     at: Date.now(),
   } satisfies SessionContextRecord);
 }
@@ -203,7 +252,7 @@ export function clearSessionContext(storage: Pick<Storage, "removeItem">): void 
   }
 }
 
-/// The whole decision, as a pure function of three inputs, so it can be
+/// The whole decision, as a pure function of four inputs, so it can be
 /// tested without a DOM, a session or a server.
 ///
 /// `activeSessionId` is the session the caller is *currently attached to*
@@ -212,12 +261,21 @@ export function contextLock(
   project: ProjectContextRecord | null,
   session: SessionContextRecord | null,
   activeSessionId: number | null,
+  activeServerIncarnation?: string,
 ): ContextLock {
   if (activeSessionId === null) return "synced";
+  if (activeServerIncarnation === undefined) return "unverified";
   // Either no window recorded a session start, or the recorded one is not
   // this one — somebody else's browser profile started it, or it was
   // started before this build shipped. Nothing to compare against.
-  if (session === null || session.sessionId !== activeSessionId) return "unverified";
+  if (
+    session === null ||
+    session.sessionId !== activeSessionId ||
+    session.serverIncarnation !== activeServerIncarnation
+  ) return "unverified";
+  if (project !== null && project.serverIncarnation !== activeServerIncarnation) {
+    return "unverified";
+  }
   if (session.fingerprint === null) {
     // No project record existed when the session started. If none exists
     // now either, nothing has moved. If one appeared since, a project was
@@ -241,17 +299,50 @@ function notifyContextChanged(): void {
 /// have the same project open as before, so publishing `"none"` there would
 /// invent a project change that never happened and lock a perfectly valid
 /// session.
-export function publishProjectContext(tree: ProjectTree): void {
+export function publishProjectContext(tree: ProjectTree): boolean {
+  if (typeof window === "undefined") return true;
+  const accepted = writeProjectContext(window.localStorage, tree);
+  if (accepted) notifyContextChanged();
+  return accepted;
+}
+
+/// Rebases only the exact active session named by an accepted server tree.
+/// The marker is emitted only after the server replaced that session's whole
+/// `GroupAddressContext`; ordinary name/DPT edits carry no marker and remain
+/// fail-closed. A project record with a newer revision also blocks a delayed
+/// publication from making a stale tree look synchronized.
+export function rebasePublishedSessionContext(tree: ProjectTree): void {
   if (typeof window === "undefined") return;
-  writeProjectContext(window.localStorage, tree);
+  const sessionId = tree.group_address_context_session_id;
+  const serverIncarnation = tree.server_incarnation;
+  if (sessionId === undefined || serverIncarnation === undefined) return;
+  const session = readSessionContext(window.localStorage);
+  if (
+    session?.sessionId !== sessionId ||
+    session.serverIncarnation !== serverIncarnation
+  ) return;
+  const project = readProjectContext(window.localStorage);
+  const revision = tree.snapshot_revision ?? 0;
+  if (project?.serverIncarnation !== serverIncarnation) return;
+  if ((project?.snapshotRevision ?? 0) > revision) return;
+  if (
+    project?.snapshotRevision === revision
+    && project.fingerprint !== fingerprintProjectContext(tree)
+  ) return;
+  writeRecord(window.localStorage, SESSION_CONTEXT_KEY, {
+    sessionId,
+    serverIncarnation,
+    fingerprint: fingerprintProjectContext(tree),
+    at: Date.now(),
+  } satisfies SessionContextRecord);
   notifyContextChanged();
 }
 
 /// Records which project fingerprint was current when `sessionId` started.
 /// Called by whichever window pressed Connect; the other window reads it.
-export function recordSessionContext(sessionId: number): void {
+export function recordSessionContext(sessionId: number, serverIncarnation: string): void {
   if (typeof window === "undefined") return;
-  writeSessionContext(window.localStorage, sessionId);
+  writeSessionContext(window.localStorage, sessionId, serverIncarnation);
   notifyContextChanged();
 }
 
@@ -265,18 +356,21 @@ export function forgetSessionContext(): void {
 }
 
 /// The lock for `activeSessionId`, read from this window's `localStorage`.
-export function readContextLock(activeSessionId: number | null): ContextLock {
+export function readContextLock(
+  activeSessionId: number | null,
+  activeServerIncarnation?: string,
+): ContextLock {
   if (typeof window === "undefined") return "unverified";
   return contextLock(
     readProjectContext(window.localStorage),
     readSessionContext(window.localStorage),
     activeSessionId,
+    activeServerIncarnation,
   );
 }
 
-/// Whether any window has published a project. This is the only signal a
-/// companion window has for "a project is open" — it has no tree of its own
-/// and, as the module comment says, no route to ask for one.
+/// Whether any window has published a project. Companion views use this
+/// synchronous hint instead of issuing a current-project GET on every render.
 export function projectContextKnown(): boolean {
   if (typeof window === "undefined") return false;
   const record = readProjectContext(window.localStorage);

@@ -271,10 +271,16 @@ export function themeBlocks(rules: readonly CssRule[]): ThemeBlock[] {
 
 export function themeVariationBlocks(rules: readonly CssRule[]): ThemeVariationBlock[] {
   const blocks: ThemeVariationBlock[] = [];
+  const seen = new Set<string>();
   for (const rule of rules) {
     const sole = rule.depth === 0 ? soleThemeSelector(rule.selector) : null;
     const match = sole === null ? null : THEME_VARIATION_SELECTOR.exec(sole);
-    if (match) blocks.push({ id: match[1], accent: match[2], rule });
+    if (match) {
+      const key = `${match[1]}/${match[2]}`;
+      if (seen.has(key)) throw new Error(`duplicate theme accent variation ${key}`);
+      seen.add(key);
+      blocks.push({ id: match[1], accent: match[2], rule });
+    }
   }
   return blocks;
 }
@@ -546,4 +552,118 @@ export function componentColourLiterals(rules: readonly CssRule[]): ColourLitera
     }
   }
   return findings;
+}
+
+/** An opaque sRGB colour used by the build-time contrast gate. */
+export interface ThemeColor { r: number; g: number; b: number }
+
+/** A named failure from the strict theme-role contrast gate. */
+export interface ContrastViolation {
+  theme: string;
+  accent?: string;
+  pair: string;
+  value: string;
+  reason: "unsupported" | "unresolved" | "cycle" | "alpha" | "contrast";
+  ratio?: number;
+}
+
+const CONTRAST_PAIRS = [
+  ["--knx-foreground", "--knx-bg", "foreground on bg"],
+  ["--knx-foreground", "--knx-surface", "foreground on surface"],
+  ["--knx-on-accent", "--knx-accent", "on-accent on accent"],
+] as const;
+
+class ThemeColorError extends Error {
+  constructor(
+    readonly reason: Exclude<ContrastViolation["reason"], "contrast">,
+    readonly value: string,
+  ) {
+    super(`${reason}: ${value}`);
+  }
+}
+
+function parseThemeColor(value: string): ThemeColor {
+  const hex = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(value);
+  if (hex) {
+    const digits = hex[1];
+    const expanded = digits.length <= 4 ? [...digits].map((digit) => digit + digit).join("") : digits;
+    if (expanded.length === 8 && Number.parseInt(expanded.slice(6), 16) !== 255) throw new ThemeColorError("alpha", value);
+    const rgb = expanded.slice(0, 6);
+    return { r: Number.parseInt(rgb.slice(0, 2), 16), g: Number.parseInt(rgb.slice(2, 4), 16), b: Number.parseInt(rgb.slice(4, 6), 16) };
+  }
+  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i.exec(value);
+  if (rgb) {
+    if (rgb.slice(1, 4).some((component) => !Number.isFinite(Number(component)) || Number(component) > 255)) {
+      throw new ThemeColorError("unsupported", value);
+    }
+    if (rgb[4] !== undefined && Number(rgb[4]) !== 1) throw new ThemeColorError("alpha", value);
+    return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) };
+  }
+  throw new ThemeColorError("unsupported", value);
+}
+
+function channel(value: number): number {
+  const sRGB = value / 255;
+  return sRGB <= 0.04045 ? sRGB / 12.92 : ((sRGB + 0.055) / 1.055) ** 2.4;
+}
+
+function validateThemeColor(color: ThemeColor): ThemeColor {
+  const components = [color.r, color.g, color.b];
+  if (components.some((component) => !Number.isFinite(component) || component < 0 || component > 255)) {
+    throw new ThemeColorError("unsupported", `rgb(${components.join(", ")})`);
+  }
+  return color;
+}
+
+/** WCAG 2 relative luminance contrast ratio, without rounded acceptance. */
+export function contrastRatio(foreground: string | ThemeColor, background: string | ThemeColor): number {
+  const fg = typeof foreground === "string" ? parseThemeColor(foreground) : validateThemeColor(foreground);
+  const bg = typeof background === "string" ? parseThemeColor(background) : validateThemeColor(background);
+  const luminance = (color: ThemeColor) => 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+  const light = Math.max(luminance(fg), luminance(bg));
+  const dark = Math.min(luminance(fg), luminance(bg));
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function themeDeclarations(rule: CssRule, variation?: ThemeVariationBlock): Map<string, string> {
+  const values = new Map(rule.declarations.filter((declaration) => declaration.property.startsWith("--knx-")).map((declaration) => [declaration.property, declaration.value]));
+  for (const declaration of variation?.rule.declarations ?? []) {
+    if (declaration.property === "--knx-accent" || declaration.property === "--knx-on-accent") values.set(declaration.property, declaration.value);
+  }
+  return values;
+}
+
+/** Resolves a concrete theme colour, following only custom-property references. */
+export function resolveThemeColor(value: string, rule: CssRule, variation?: ThemeVariationBlock): ThemeColor {
+  const values = themeDeclarations(rule, variation);
+  const resolve = (current: string, stack: Set<string>): ThemeColor => {
+    const reference = /^var\(\s*(--knx-[a-z0-9-]+)\s*\)$/.exec(current);
+    if (!reference) return parseThemeColor(current.trim());
+    const token = reference[1];
+    if (stack.has(token)) throw new ThemeColorError("cycle", current);
+    const next = values.get(token);
+    if (next === undefined) throw new ThemeColorError("unresolved", current);
+    const nextStack = new Set(stack);
+    nextStack.add(token);
+    return resolve(next.trim(), nextStack);
+  };
+  return resolve(value.trim(), new Set());
+}
+
+/** Evaluates every ADR-0022 role pair; malformed values are violations, never skips. */
+export function evaluateThemeContrast(theme: ThemeBlock, variation?: ThemeVariationBlock): ContrastViolation[] {
+  const violations: ContrastViolation[] = [];
+  for (const [foreground, background, pair] of CONTRAST_PAIRS) {
+    const values = themeDeclarations(theme.rule, variation);
+    const foregroundValue = values.get(foreground) ?? foreground;
+    const backgroundValue = values.get(background) ?? background;
+    try {
+      const ratio = contrastRatio(resolveThemeColor(foregroundValue, theme.rule, variation), resolveThemeColor(backgroundValue, theme.rule, variation));
+      if (ratio < 4.5) violations.push({ theme: theme.id, accent: variation?.accent, pair, value: `${foregroundValue} on ${backgroundValue}`, reason: "contrast", ratio });
+    } catch (error) {
+      if (!(error instanceof ThemeColorError)) throw error;
+      violations.push({ theme: theme.id, accent: variation?.accent, pair, value: error.value, reason: error.reason });
+    }
+  }
+  return violations;
 }

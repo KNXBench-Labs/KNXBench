@@ -7,10 +7,12 @@
 use std::collections::HashMap;
 
 use knx_core::{
-    Command, GroupAddress, GroupAddressEntry, GroupRange, GroupRangeId, Project, SourceRef,
+    ComObjectInstanceId, Command, Direction, GroupAddress, GroupAddressEntry, GroupAddressId,
+    GroupRange, GroupRangeId, Project, SourceRef,
 };
 
-use crate::read::{CsvProblem, CsvRow, IgnoredColumn, ParsedCsv, Severity};
+use crate::read::{CsvAction, CsvProblem, CsvRow, IgnoredColumn, ParsedCsv, Severity};
+use crate::write::{containing_range_names, derive_dpt};
 
 /// The outcome of planning a CSV import: the single command that would
 /// apply every create/update in one undo step, and the report describing
@@ -37,9 +39,36 @@ pub struct CsvImportReport {
     pub rows_read: usize,
     pub created: usize,
     pub updated: usize,
+    pub readdressed: usize,
+    pub deleted: usize,
     pub unchanged: usize,
+    pub destructive_changes: Vec<CsvDestructiveChange>,
     pub ignored_columns: Vec<IgnoredColumn>,
     pub problems: Vec<CsvProblem>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CsvDestructiveAction {
+    Readdress,
+    Delete,
+}
+
+/// One explicitly requested destructive mutation and the stable-id links it
+/// would affect. Blocked operations remain here for an honest preview.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CsvDestructiveChange {
+    pub row: usize,
+    pub action: CsvDestructiveAction,
+    pub id: GroupAddressId,
+    pub source_address: GroupAddress,
+    pub target_address: Option<GroupAddress>,
+    pub affected_links: Vec<CsvAffectedLink>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CsvAffectedLink {
+    pub com_object: ComObjectInstanceId,
+    pub direction: Direction,
 }
 
 /// Plans applying `parsed` against `project`.
@@ -62,7 +91,10 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
     let mut commands = Vec::new();
     let mut created = 0usize;
     let mut updated = 0usize;
+    let mut readdressed = 0usize;
+    let mut deleted = 0usize;
     let mut unchanged = 0usize;
+    let mut destructive_changes = Vec::new();
 
     let mut ids = project.ids.clone();
     // Tracks the first line each address was seen on, so a repeat can be
@@ -70,6 +102,7 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
     // reporting *an* outcome for a duplicated address would just be a
     // coin flip between its rows.
     let mut first_seen: HashMap<GroupAddress, usize> = HashMap::new();
+    let mut first_target: HashMap<GroupAddress, usize> = HashMap::new();
 
     for row in &parsed.rows {
         if let Some(&first_line) = first_seen.get(&row.address) {
@@ -85,19 +118,122 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
         }
         first_seen.insert(row.address, row.line);
 
-        match existing_addresses.iter().find(|e| e.address == row.address) {
-            None => {
+        let target = match row.action {
+            CsvAction::Upsert => Some(row.address),
+            CsvAction::Readdress => row.new_address,
+            CsvAction::Delete => None,
+        };
+        if let Some(target) = target {
+            if let Some(&first_line) = first_target.get(&target) {
+                problems.push(CsvProblem {
+                    row: Some(row.line),
+                    severity: Severity::Error,
+                    detail: format!(
+                        "target address {} is already claimed by line {first_line}",
+                        target.format(project.info.group_address_style)
+                    ),
+                });
+                continue;
+            }
+            first_target.insert(target, row.line);
+        }
+
+        let existing = existing_addresses
+            .iter()
+            .find(|entry| entry.address == row.address);
+        validate_read_only_cells(project, installation, row, existing, &mut problems);
+
+        match (row.action, existing) {
+            (CsvAction::Upsert, None) => {
                 plan_create(row, existing_ranges, &mut ids, &mut commands, &mut problems);
                 created += 1;
             }
-            Some(existing) => {
+            (CsvAction::Upsert, Some(existing)) => {
                 if plan_update(row, existing, &mut commands) {
                     updated += 1;
                 } else {
                     unchanged += 1;
                 }
             }
+            (CsvAction::Readdress, None) | (CsvAction::Delete, None) => {
+                problems.push(CsvProblem {
+                    row: Some(row.line),
+                    severity: Severity::Error,
+                    detail: "destructive action requires an existing source address".to_string(),
+                });
+            }
+            (CsvAction::Readdress, Some(existing)) => {
+                let target = row
+                    .new_address
+                    .expect("reader requires NewAddress for readdress");
+                destructive_changes.push(CsvDestructiveChange {
+                    row: row.line,
+                    action: CsvDestructiveAction::Readdress,
+                    id: existing.id,
+                    source_address: row.address,
+                    target_address: Some(target),
+                    affected_links: affected_links(project, existing.id),
+                });
+                readdressed += 1;
+                if existing_addresses
+                    .iter()
+                    .any(|candidate| candidate.address == target && candidate.id != existing.id)
+                {
+                    problems.push(CsvProblem {
+                        row: Some(row.line),
+                        severity: Severity::Error,
+                        detail: format!(
+                            "NewAddress {} already exists",
+                            target.format(project.info.group_address_style)
+                        ),
+                    });
+                    continue;
+                }
+                let range = innermost_containing_range(existing_ranges, target);
+                if range.is_none() {
+                    problems.push(CsvProblem {
+                        row: Some(row.line),
+                        severity: Severity::Warning,
+                        detail: "no existing group range contains NewAddress; moved without one"
+                            .to_string(),
+                    });
+                }
+                commands.push(Command::ReaddressGroupAddress {
+                    id: existing.id,
+                    address: target,
+                    range,
+                });
+                plan_update(row, existing, &mut commands);
+            }
+            (CsvAction::Delete, Some(existing)) => {
+                let affected_links = affected_links(project, existing.id);
+                destructive_changes.push(CsvDestructiveChange {
+                    row: row.line,
+                    action: CsvDestructiveAction::Delete,
+                    id: existing.id,
+                    source_address: row.address,
+                    target_address: None,
+                    affected_links: affected_links.clone(),
+                });
+                deleted += 1;
+                if affected_links.is_empty() {
+                    commands.push(Command::DeleteGroupAddress { id: existing.id });
+                } else {
+                    problems.push(CsvProblem {
+                        row: Some(row.line),
+                        severity: Severity::Error,
+                        detail: format!(
+                            "cannot delete: {} communication-object link(s) still reference this address",
+                            affected_links.len()
+                        ),
+                    });
+                }
+            }
         }
+    }
+
+    if created > 0 {
+        commands.push(Command::SetIdAllocators { ids });
     }
 
     let has_errors = problems.iter().any(|p| p.severity == Severity::Error);
@@ -114,11 +250,91 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
             rows_read: parsed.rows.len(),
             created,
             updated,
+            readdressed,
+            deleted,
             unchanged,
+            destructive_changes,
             ignored_columns: parsed.ignored_columns.clone(),
             problems,
         },
     }
+}
+
+fn affected_links(project: &Project, id: GroupAddressId) -> Vec<CsvAffectedLink> {
+    project
+        .devices
+        .com_objects()
+        .flat_map(|object| {
+            object
+                .links
+                .iter()
+                .filter(move |link| link.ga == id)
+                .map(move |link| CsvAffectedLink {
+                    com_object: object.id,
+                    direction: link.direction,
+                })
+        })
+        .collect()
+}
+
+fn validate_read_only_cells(
+    project: &Project,
+    installation: Option<&knx_core::Installation>,
+    row: &CsvRow,
+    existing: Option<&GroupAddressEntry>,
+    problems: &mut Vec<CsvProblem>,
+) {
+    let expected_dpt = existing
+        .and_then(|entry| derive_dpt(project, entry.id).0)
+        .map(|dpt| dpt.to_string())
+        .unwrap_or_default();
+    let (expected_main, expected_middle) = installation
+        .map(|installation| containing_range_names(installation, row.address))
+        .unwrap_or_default();
+
+    validate_read_only_cell(
+        row,
+        "DatapointType",
+        row.datapoint_type.as_deref(),
+        &expected_dpt,
+        problems,
+    );
+    validate_read_only_cell(
+        row,
+        "MainGroup",
+        row.main_group.as_deref(),
+        expected_main.as_deref().unwrap_or(""),
+        problems,
+    );
+    validate_read_only_cell(
+        row,
+        "MiddleGroup",
+        row.middle_group.as_deref(),
+        expected_middle.as_deref().unwrap_or(""),
+        problems,
+    );
+}
+
+fn validate_read_only_cell(
+    row: &CsvRow,
+    column: &str,
+    supplied: Option<&str>,
+    expected: &str,
+    problems: &mut Vec<CsvProblem>,
+) {
+    let Some(supplied) = supplied else {
+        return;
+    };
+    if supplied == expected {
+        return;
+    }
+    problems.push(CsvProblem {
+        row: Some(row.line),
+        severity: Severity::Error,
+        detail: format!(
+            "column \"{column}\" is read-only: file has {supplied:?}, project derives {expected:?}"
+        ),
+    });
 }
 
 /// Plans a `Command::CreateGroupAddress` for `row`, whose address matched no
@@ -203,8 +419,8 @@ fn innermost_containing_range(
 mod tests {
     use super::*;
     use crate::read::parse_group_addresses;
-    use crate::testutil::{empty_project, entry, entry_with_flags, range};
-    use knx_core::{GroupAddressId, GroupAddressStyle};
+    use crate::testutil::{empty_project, entry, entry_with_flags, linked_com_object, range};
+    use knx_core::{DptRef, GroupAddressId, GroupAddressStyle, GroupLink};
 
     fn parsed(text: &str) -> ParsedCsv {
         parse_group_addresses(text, GroupAddressStyle::Free)
@@ -234,7 +450,7 @@ mod tests {
         let Some(Command::Batch(cmds)) = plan.command else {
             panic!("expected a Batch command, got {:?}", plan.command);
         };
-        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds.len(), 2);
         let Command::CreateGroupAddress { entry } = &cmds[0] else {
             panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
         };
@@ -242,6 +458,24 @@ mod tests {
         assert_eq!(entry.address, GroupAddress::from_raw(100));
         assert_eq!(entry.source.path, format!("KB-GA-{}", entry.id.0));
         assert_eq!(entry.source.ets_id, format!("KB-GA-{}", entry.id.0));
+        assert!(matches!(cmds[1], Command::SetIdAllocators { .. }));
+    }
+
+    #[test]
+    fn successive_create_imports_advance_ids_and_never_reuse_a_stable_id() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        let first = plan_import(&project, &parsed("Address,Name\n100,A\n"));
+        first.command.unwrap().apply(&mut project).unwrap();
+        let second = plan_import(&project, &parsed("Address,Name\n200,B\n"));
+        second.command.unwrap().apply(&mut project).unwrap();
+
+        let ids: Vec<_> = project.installations[0]
+            .group_addresses
+            .iter()
+            .map(|entry| entry.id)
+            .collect();
+        assert_eq!(ids, vec![GroupAddressId(1), GroupAddressId(2)]);
+        assert_eq!(project.ids.peek_group_address(), 2);
     }
 
     #[test]
@@ -487,12 +721,191 @@ mod tests {
     }
 
     #[test]
-    fn export_only_columns_are_carried_into_the_report_as_ignored() {
+    fn read_only_columns_are_carried_into_the_report_and_edits_are_rejected() {
         let project = empty_project(GroupAddressStyle::Free);
         let text = "Address,Name,DatapointType\n100,Kitchen Light,DPST-1-1\n";
         let plan = plan_import(&project, &parsed(text));
 
         assert_eq!(plan.report.ignored_columns.len(), 1);
         assert_eq!(plan.report.ignored_columns[0].name, "DatapointType");
+        assert_eq!(plan.command, None);
+        assert!(plan.report.problems.iter().any(|problem| {
+            problem.severity == Severity::Error
+                && problem.detail.contains("DatapointType")
+                && problem.detail.contains("read-only")
+        }));
+    }
+
+    #[test]
+    fn exporting_then_importing_an_unchanged_project_is_a_no_op() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_ranges
+            .push(range(1, "Lighting", 1, 200, None));
+        project.installations[0]
+            .group_ranges
+            .push(range(2, "Ground Floor", 1, 100, Some(1)));
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 50, "Kitchen Light"));
+        project.devices.insert_com_object(linked_com_object(
+            1,
+            1,
+            1,
+            Some(DptRef::parse("DPST-1-1").unwrap()),
+        ));
+
+        let export = crate::export_group_addresses(&project);
+        let parsed = parse_group_addresses(&export.text, GroupAddressStyle::Free);
+        let plan = plan_import(&project, &parsed);
+
+        assert!(
+            plan.report.problems.is_empty(),
+            "{:?}",
+            plan.report.problems
+        );
+        assert_eq!(plan.report.unchanged, 1);
+        assert_eq!(plan.command, None);
+    }
+
+    #[test]
+    fn explicit_readdress_preserves_id_and_reports_affected_links() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 100, "Kitchen Light"));
+        let mut object = linked_com_object(7, 1, 1, None);
+        object.links.push(GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Receive,
+        });
+        project.devices.insert_com_object(object);
+        let parsed = parsed("Address,Action,NewAddress,Name\n100,readdress,200,Kitchen Light\n");
+
+        let plan = plan_import(&project, &parsed);
+
+        assert_eq!(plan.report.readdressed, 1);
+        assert_eq!(plan.report.destructive_changes.len(), 1);
+        assert_eq!(
+            plan.report.destructive_changes[0].affected_links,
+            vec![
+                CsvAffectedLink {
+                    com_object: ComObjectInstanceId(7),
+                    direction: Direction::Send,
+                },
+                CsvAffectedLink {
+                    com_object: ComObjectInstanceId(7),
+                    direction: Direction::Receive,
+                },
+            ]
+        );
+        let mut project_after = project.clone();
+        plan.command
+            .expect("readdress should be applicable")
+            .apply(&mut project_after)
+            .unwrap();
+        assert_eq!(project_after.installations[0].group_addresses[0].id.0, 1);
+        assert_eq!(
+            project_after.installations[0].group_addresses[0]
+                .address
+                .raw(),
+            200
+        );
+        assert_eq!(
+            project_after
+                .devices
+                .com_object(ComObjectInstanceId(7))
+                .unwrap()
+                .links[0]
+                .ga
+                .0,
+            1
+        );
+    }
+
+    #[test]
+    fn readdress_to_an_existing_target_is_blocked_before_mutation() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 100, "A"));
+        project.installations[0]
+            .group_addresses
+            .push(entry(2, 200, "B"));
+
+        let plan = plan_import(
+            &project,
+            &parsed("Address,Action,NewAddress,Name\n100,readdress,200,A\n"),
+        );
+
+        assert!(plan.command.is_none());
+        assert!(plan
+            .report
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("already exists")));
+    }
+
+    #[test]
+    fn two_rows_cannot_claim_the_same_new_target() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 100, "A"));
+        project.installations[0]
+            .group_addresses
+            .push(entry(2, 200, "B"));
+
+        let plan = plan_import(
+            &project,
+            &parsed("Address,Action,NewAddress,Name\n100,readdress,300,A\n200,readdress,300,B\n"),
+        );
+
+        assert!(plan.command.is_none());
+        assert!(plan
+            .report
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("already claimed by line 2")));
+    }
+
+    #[test]
+    fn delete_with_remaining_links_is_blocked_and_names_the_reference_count() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 100, "A"));
+        project
+            .devices
+            .insert_com_object(linked_com_object(7, 1, 1, None));
+
+        let plan = plan_import(
+            &project,
+            &parsed("Address,Action,NewAddress,Name\n100,delete,,A\n"),
+        );
+
+        assert!(plan.command.is_none());
+        assert_eq!(plan.report.deleted, 1);
+        assert!(plan
+            .report
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("1 communication-object link")));
+    }
+
+    #[test]
+    fn unreferenced_explicit_delete_plans_a_reversible_core_command() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry(1, 100, "A"));
+
+        let plan = plan_import(
+            &project,
+            &parsed("Address,Action,NewAddress,Name\n100,delete,,A\n"),
+        );
+
+        assert_eq!(plan.report.deleted, 1);
+        assert!(matches!(plan.command, Some(Command::Batch(_))));
     }
 }

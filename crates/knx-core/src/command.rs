@@ -28,7 +28,7 @@ use crate::validation::{
     check_no_duplicate_individual_address, check_no_duplicate_line_address,
     check_no_overlapping_group_range, ValidationError,
 };
-use crate::IndividualAddress;
+use crate::{GroupAddress, IndividualAddress};
 
 /// A single reversible mutation. `apply` performs the mutation on
 /// `installations[0]` — the model supports multiple installations, but no
@@ -148,6 +148,12 @@ pub enum Command {
     DeleteGroupAddress {
         id: GroupAddressId,
     },
+    /// Internal inverse of [`Command::DeleteGroupAddress`]. Restores the
+    /// exact list position so undo/redo cannot reorder CSV exports.
+    RestoreGroupAddress {
+        entry: GroupAddressEntry,
+        position: usize,
+    },
     /// Overwrites `name`, `central`, and `unfiltered` on an existing group
     /// address — `address` and `range` are untouched, matching
     /// `MoveDeviceToLine`'s split of "which value" from "where it lives".
@@ -160,6 +166,16 @@ pub enum Command {
         name: String,
         central: bool,
         unfiltered: bool,
+    },
+    /// Changes an existing group address's numeric address while preserving
+    /// its stable id, and therefore every communication-object link that
+    /// targets that id. `range` is selected explicitly by the caller for the
+    /// new address and validated before mutation. The inverse carries the
+    /// previous address and range.
+    ReaddressGroupAddress {
+        id: GroupAddressId,
+        address: GroupAddress,
+        range: Option<GroupRangeId>,
     },
     /// `area.id` is pre-allocated by the caller via
     /// `Project::ids::next_area_id`.
@@ -842,7 +858,29 @@ impl Command {
                     .position(|e| e.id == id)
                     .ok_or(CommandError::GroupAddressNotFound(id))?;
                 let entry = installation.group_addresses.remove(pos);
-                Ok(Command::CreateGroupAddress { entry })
+                Ok(Command::RestoreGroupAddress {
+                    entry,
+                    position: pos,
+                })
+            }
+            Command::RestoreGroupAddress { entry, position } => {
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                check_no_duplicate_group_address(installation, entry.id, entry.address)?;
+                if let Some(range_id) = entry.range {
+                    let range = installation
+                        .group_ranges
+                        .iter()
+                        .find(|range| range.id == range_id)
+                        .ok_or(CommandError::GroupRangeNotFound(range_id))?;
+                    check_group_address_in_range(range, entry.address)?;
+                }
+                let position = (*position).min(installation.group_addresses.len());
+                let id = entry.id;
+                installation.group_addresses.insert(position, entry.clone());
+                Ok(Command::DeleteGroupAddress { id })
             }
             Command::CreateArea { area } => {
                 let installation = project
@@ -1353,6 +1391,36 @@ impl Command {
                     unfiltered: previous_unfiltered,
                 })
             }
+            Command::ReaddressGroupAddress { id, address, range } => {
+                let id = *id;
+                let address = *address;
+                let range = *range;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                check_no_duplicate_group_address(installation, id, address)?;
+                if let Some(range_id) = range {
+                    let target_range = installation
+                        .group_ranges
+                        .iter()
+                        .find(|candidate| candidate.id == range_id)
+                        .ok_or(CommandError::GroupRangeNotFound(range_id))?;
+                    check_group_address_in_range(target_range, address)?;
+                }
+                let entry = installation
+                    .group_addresses
+                    .iter_mut()
+                    .find(|entry| entry.id == id)
+                    .ok_or(CommandError::GroupAddressNotFound(id))?;
+                let previous_address = std::mem::replace(&mut entry.address, address);
+                let previous_range = std::mem::replace(&mut entry.range, range);
+                Ok(Command::ReaddressGroupAddress {
+                    id,
+                    address: previous_address,
+                    range: previous_range,
+                })
+            }
             Command::LinkComObject {
                 com_object,
                 ga,
@@ -1672,6 +1740,44 @@ mod tests {
         assert_eq!(project.installations[0].group_addresses.len(), 1);
         stack.undo(&mut project).unwrap(); // undoes the create -> empty again
         assert!(project.installations[0].group_addresses.is_empty());
+    }
+
+    #[test]
+    fn deleting_and_undoing_a_middle_group_address_restores_exact_order() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].group_addresses = vec![
+            test_group_address_entry(GroupAddressId(1), 100),
+            test_group_address_entry(GroupAddressId(2), 200),
+            test_group_address_entry(GroupAddressId(3), 300),
+        ];
+        let mut stack = CommandStack::new();
+
+        stack
+            .do_command(
+                &mut project,
+                Command::DeleteGroupAddress {
+                    id: GroupAddressId(2),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+
+        let ids: Vec<_> = project.installations[0]
+            .group_addresses
+            .iter()
+            .map(|entry| entry.id)
+            .collect();
+        assert_eq!(
+            ids,
+            vec![GroupAddressId(1), GroupAddressId(2), GroupAddressId(3)]
+        );
+        stack.redo(&mut project).unwrap();
+        let ids: Vec<_> = project.installations[0]
+            .group_addresses
+            .iter()
+            .map(|entry| entry.id)
+            .collect();
+        assert_eq!(ids, vec![GroupAddressId(1), GroupAddressId(3)]);
     }
 
     #[test]
@@ -4091,6 +4197,64 @@ mod tests {
         assert_eq!(
             err.to_string(),
             "group range 9 (boundary raw value 99) does not fit style ThreeLevel, refusing the whole restyle"
+        );
+    }
+
+    #[test]
+    fn readdress_group_address_preserves_identity_and_is_reversible() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(test_group_address_entry(GroupAddressId(1), 100));
+        let mut stack = CommandStack::new();
+
+        stack
+            .do_command(
+                &mut project,
+                Command::ReaddressGroupAddress {
+                    id: GroupAddressId(1),
+                    address: GroupAddress::from_raw(200),
+                    range: None,
+                },
+            )
+            .unwrap();
+
+        let entry = &project.installations[0].group_addresses[0];
+        assert_eq!(entry.id, GroupAddressId(1));
+        assert_eq!(entry.address, GroupAddress::from_raw(200));
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0].group_addresses[0].address,
+            GroupAddress::from_raw(100)
+        );
+    }
+
+    #[test]
+    fn readdress_group_address_rejects_a_duplicate_target() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(test_group_address_entry(GroupAddressId(1), 100));
+        project.installations[0]
+            .group_addresses
+            .push(test_group_address_entry(GroupAddressId(2), 200));
+
+        let result = Command::ReaddressGroupAddress {
+            id: GroupAddressId(1),
+            address: GroupAddress::from_raw(200),
+            range: None,
+        }
+        .apply(&mut project);
+
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(
+                ValidationError::DuplicateGroupAddress { .. }
+            ))
+        ));
+        assert_eq!(
+            project.installations[0].group_addresses[0].address,
+            GroupAddress::from_raw(100)
         );
     }
 }

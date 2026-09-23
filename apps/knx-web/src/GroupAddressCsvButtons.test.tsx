@@ -207,7 +207,7 @@ describe("GroupAddressCsvButtons", () => {
     expect(onTreeUpdate).toHaveBeenCalledTimes(1);
     expect(onTreeUpdate).toHaveBeenCalledWith(nextTree);
     expect(onSummary).toHaveBeenCalledWith(
-      "Group addresses imported from CSV: 2 created, 1 updated, 3 unchanged.",
+      "Group addresses imported from CSV: 2 created, 1 updated, 0 readdressed, 0 deleted, 3 unchanged.",
     );
     expect(onError).not.toHaveBeenCalled();
     root.unmount();
@@ -236,17 +236,73 @@ describe("GroupAddressCsvButtons", () => {
     // counts were silently dropped from the message, so it must check the
     // exact string — not just that *a* summary fired.
     expect(onSummary).toHaveBeenCalledWith(
-      "Group addresses imported from CSV: 1 created, 0 updated, 2 unchanged, 1 warning, " +
+      "Group addresses imported from CSV: 1 created, 0 updated, 0 readdressed, 0 deleted, 2 unchanged, 1 warning, " +
         "1 column ignored — see Log.",
     );
     expect(onError).not.toHaveBeenCalled();
     root.unmount();
   });
 
+  it("shows a destructive preview and only applies after explicit confirmation", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/readdress.csv");
+    const confirm = vi.fn(() => true);
+    Object.defineProperty(window, "confirm", { configurable: true, value: confirm });
+    const report = {
+      separator: ",",
+      rowsRead: 1,
+      created: 0,
+      updated: 0,
+      readdressed: 1,
+      deleted: 0,
+      unchanged: 0,
+      destructiveChanges: [
+        {
+          row: 2,
+          action: "readdress",
+          id: 7,
+          sourceAddress: 100,
+          targetAddress: 200,
+          affectedLinks: [{ comObject: 9, direction: "send" }],
+        },
+      ],
+      ignoredColumns: [],
+      problems: [],
+    };
+    const unchangedTree = { installations: [{ id: 1 }] } as unknown as ProjectTree;
+    const changedTree = { installations: [{ id: 2 }] } as unknown as ProjectTree;
+    apiMock.importGroupAddressesCsv
+      .mockResolvedValueOnce({
+        tree: unchangedTree,
+        report,
+        applied: false,
+        confirmationToken: "preview-token",
+      })
+      .mockResolvedValueOnce({
+        tree: changedTree,
+        report,
+        applied: true,
+        confirmationToken: null,
+      });
+
+    const { root, onTreeUpdate } = await renderButtons();
+    await click(importButton());
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("1 communication-object links"));
+    expect(apiMock.importGroupAddressesCsv).toHaveBeenNthCalledWith(1, "/data/readdress.csv");
+    expect(apiMock.importGroupAddressesCsv).toHaveBeenNthCalledWith(
+      2,
+      "/data/readdress.csv",
+      "preview-token",
+    );
+    expect(onTreeUpdate).toHaveBeenCalledTimes(1);
+    expect(onTreeUpdate).toHaveBeenCalledWith(changedTree);
+    root.unmount();
+  });
+
   it("rejects a bad import (400) without ever touching the open project's tree", async () => {
     filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/bad.csv");
     apiMock.importGroupAddressesCsv.mockRejectedValueOnce(
-      new Error("1 row(s) rejected, nothing applied: row 4: unknown group address style"),
+      new Error("1 error(s), nothing applied: row 4: unknown group address style"),
     );
     const { root, onTreeUpdate, onSummary, onError } = await renderButtons();
     await click(importButton());

@@ -130,12 +130,14 @@ whitespace ignored), and their order does not matter.
 | Column | Export | Import |
 | --- | --- | --- |
 | `Address` | The address in the project's style | Required. This is the row's identity. |
+| `Action` | `upsert` | Empty/`upsert`, `readdress`, or `delete` |
+| `NewAddress` | Empty | Required only for `readdress` |
 | `Name` | The name | Required, must not be empty |
 | `Central` | `true` / `false` | Optional: `true`/`false`/`1`/`0`/`yes`/`no` |
 | `Unfiltered` | `true` / `false` | Same as `Central` |
-| `DatapointType` | Derived from the linked objects, empty if they disagree | Read, counted, never applied |
-| `MainGroup` | The containing main range's name | Read, counted, never applied |
-| `MiddleGroup` | The containing middle range's name | Read, counted, never applied |
+| `DatapointType (read-only)` | Derived from the linked objects, empty if they disagree | Validated, never applied; editing it rejects the row |
+| `MainGroup (read-only)` | The containing main range's name | Validated, never applied |
+| `MiddleGroup (read-only)` | The containing middle range's name | Validated, never applied |
 
 The file is written as UTF-8 with a byte-order mark and CRLF line endings, so
 spreadsheets open it without mangling umlauts, and it is read back with or without a
@@ -144,8 +146,9 @@ spreadsheet produced. Unknown columns are reported by name, never silently ignor
 
 ### What import does, and what it refuses to do
 
-Each row ends as one of four outcomes: **created**, **updated**, **unchanged**, or
-**error**. A row is an error when the address is missing, unparseable, out of range for
+Each row ends as **created**, **updated**, **readdressed**, **deleted**,
+**unchanged**, or **error**. A row is an error when the address is missing,
+unparseable, out of range for
 the project's style, or `0`; when the name is missing; when a boolean cell is spelled
 in a way the reader does not recognize; or when the same address appears twice in one
 file.
@@ -156,13 +159,22 @@ half-applied import is not a thing that can happen here.
 
 A successful import is a single undo step, however many rows it touched.
 
-Three things import deliberately never does:
+Readdress and delete are deliberately two-step operations. Set `Action` to
+`readdress`, keep the old `Address`, and put the destination in `NewAddress`; or set
+`Action` to `delete`. KNXBench first shows every requested operation, raw source and
+target address, and every affected communication-object id with its send/receive
+direction. Nothing has changed yet.
+Only after you confirm that exact preview does the import run. If the CSV or project
+changes between preview and confirmation, confirmation is rejected. A readdress keeps
+the stable internal id and therefore keeps its links; deletion is refused while links
+remain.
 
-- **It never deletes.** An address that exists in the project but not in the file is
-  left alone. The CSV is an edit, not a replacement.
-- **It never re-addresses.** The address is the match key, so changing an address in
-  the spreadsheet creates a second entry rather than moving the first. Delete and
-  recreate instead.
+Three boundaries remain:
+
+- **Absence never deletes.** An address that exists in the project but not in the file
+  is left alone. Deletion must be explicit.
+- **Changing only `Address` never means move.** Without `Action=readdress` and
+  `NewAddress`, it remains an ordinary upsert.
 - **It never creates group ranges.** A new address is placed in the innermost existing
   range that already contains it; if no range does, the address is created without one
   and the report says so.
@@ -170,9 +182,9 @@ Three things import deliberately never does:
 There are no description or comment columns in either direction, because the domain
 model does not carry those fields for a group address yet.
 
-After an import, a summary appears as a toast: how many were created, updated and
-unchanged, plus the number of warnings and ignored columns, and a pointer to the Log,
-which holds the detail. If the file was rejected outright, the project is untouched.
+After an import, a summary appears as a toast with every outcome count, plus warnings
+and ignored columns and a pointer to the Log. If the file was rejected or the preview
+was cancelled, the project is untouched.
 
 The same exchange exists on the command line, including a dry run that prints the
 identical report without writing anything — see

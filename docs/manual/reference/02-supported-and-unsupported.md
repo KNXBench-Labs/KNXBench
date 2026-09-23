@@ -103,7 +103,8 @@ KNXBench names them.
 | --- | --- | --- |
 | Exporting "KNXBench group-address CSV v1" and re-importing it, unchanged | ✅ Implemented | Every group address in the reference project round-trips as `unchanged`, including names with commas, quotes and umlauts — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Interoperability with ETS's own CSV/Excel group-address export, or `.esf` | ❌ Not implemented | No sample of either format exists to build against; KNXBench's format is its own, documented, and never presented as ETS-compatible — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
-| Re-addressing, deleting, or managing group ranges through CSV import | ❌ Not implemented | The importer only updates fields on group addresses that already exist — see [KNOWN_LIMITATIONS.md §39](../../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
+|| Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids retain directional links on moves; linked deletes are refused; confirmation is bound to CSV/project state |
+|| Creating or restructuring group ranges through CSV | ❌ Not implemented | Existing ranges are selected by final address bounds — see [KNOWN_LIMITATIONS.md §39](../../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
 
 See [Working with group addresses](../user-guide/04-group-addresses.md) for the CSV
 workflow itself.

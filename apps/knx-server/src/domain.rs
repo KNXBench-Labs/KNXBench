@@ -23,6 +23,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
 use base64::Engine as _;
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
+use sha2::{Digest, Sha256};
 
 use crate::bus::{BusSession, GatewayConnector, RealConnector};
 use crate::bus_scan::LineScanSession;
@@ -945,17 +946,30 @@ pub fn diff_project_impl(state: &AppState, path: &Path) -> Result<knx_diff::Proj
 /// untouched. `Err` carries every offending row's number and detail, for
 /// the route to surface as a `400` (never a `500`: a CSV a user hand-edited
 /// wrong is their mistake to fix, not this server's fault).
+pub struct CsvImportOutcome {
+    pub tree: knx_projection::ProjectTree,
+    pub report: knx_csv::CsvImportReport,
+    pub applied: bool,
+    /// Opaque token binding the exact CSV bytes to the current project
+    /// revision. Present only when destructive operations need confirmation.
+    pub confirmation_token: Option<String>,
+}
+
 pub fn import_group_addresses_csv_impl(
     state: &AppState,
     path: &Path,
-) -> Result<(knx_projection::ProjectTree, knx_csv::CsvImportReport), String> {
-    let result = (|| -> Result<(knx_projection::ProjectTree, knx_csv::CsvImportReport), String> {
+    confirmation_token: Option<&str>,
+) -> Result<CsvImportOutcome, String> {
+    let result = (|| -> Result<CsvImportOutcome, String> {
         let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let plan = {
+        let (plan, planned_revision) = {
             let project = state.project.lock().expect("state mutex poisoned");
             let project = project.as_ref().ok_or("no project open")?;
             let parsed = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
-            knx_csv::plan_import(project, &parsed)
+            (
+                knx_csv::plan_import(project, &parsed),
+                current_project_revision(state),
+            )
         };
 
         {
@@ -977,46 +991,68 @@ pub fn import_group_addresses_csv_impl(
             .collect();
         if !error_rows.is_empty() {
             return Err(format!(
-                "{} row(s) rejected, nothing applied: {}",
+                "{} error(s), nothing applied: {}",
                 error_rows.len(),
                 error_rows.join("; ")
             ));
         }
 
-        let tree = match plan.command {
-            Some(cmd) => apply(state, cmd)?,
+        let destructive = !plan.report.destructive_changes.is_empty();
+        let expected_token = destructive.then(|| {
+            let mut hasher = Sha256::new();
+            hasher.update(state.server_incarnation.as_bytes());
+            hasher.update(planned_revision.to_le_bytes());
+            hasher.update(text.as_bytes());
+            format!("{:x}", hasher.finalize())
+        });
+        if destructive && confirmation_token != expected_token.as_deref() {
+            if confirmation_token.is_some() {
+                return Err(
+                    "CSV confirmation is stale or the file/project changed; preview again"
+                        .to_string(),
+                );
+            }
+            return Ok(CsvImportOutcome {
+                tree: current_tree(state)?,
+                report: plan.report,
+                applied: false,
+                confirmation_token: expected_token,
+            });
+        }
+
+        let (tree, applied) = match plan.command {
+            Some(cmd) if destructive => (apply_at_revision(state, planned_revision, cmd)?, true),
+            Some(cmd) => (apply(state, cmd)?, true),
             // Every row was `unchanged` (or the file was empty of data
             // rows) — nothing to apply, but still a successful import that
             // needs a current tree in the response.
-            None => {
-                let project = state.project.lock().expect("state mutex poisoned");
-                let project = project.as_ref().ok_or("no project open")?;
-                let stack = state.command_stack.lock().expect("state mutex poisoned");
-                let counts = *state.import_counts.lock().expect("state mutex poisoned");
-                let clean_project = state.clean_project.lock().expect("state mutex poisoned");
-                tree_with_state(
-                    project,
-                    clean_project.as_ref(),
-                    &stack,
-                    counts,
-                    current_project_revision(state),
-                    &state.server_incarnation,
-                )
-            }
+            None => (current_tree(state)?, false),
         };
-        Ok((tree, plan.report))
+        Ok(CsvImportOutcome {
+            tree,
+            report: plan.report,
+            applied,
+            confirmation_token: None,
+        })
     })();
 
     log_outcome(
         state,
         "csv-import",
         match &result {
-            Ok((_, report)) => format!(
-                "imported {} (created {}, updated {}, unchanged {})",
+            Ok(outcome) => format!(
+                "{} {} (created {}, updated {}, readdressed {}, deleted {}, unchanged {})",
+                if outcome.applied {
+                    "imported"
+                } else {
+                    "previewed"
+                },
                 path.display(),
-                report.created,
-                report.updated,
-                report.unchanged
+                outcome.report.created,
+                outcome.report.updated,
+                outcome.report.readdressed,
+                outcome.report.deleted,
+                outcome.report.unchanged
             ),
             Err(_) => String::new(),
         },
@@ -1444,7 +1480,39 @@ pub(crate) fn current_project_tree_and_group_address_context(
     Ok((tree, context))
 }
 
+fn current_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(
+        project,
+        clean_project.as_ref(),
+        &stack,
+        counts,
+        current_project_revision(state),
+        &state.server_incarnation,
+    ))
+}
+
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
+    apply_with_expected_revision(state, None, cmd)
+}
+
+fn apply_at_revision(
+    state: &AppState,
+    expected_revision: u64,
+    cmd: knx_core::Command,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply_with_expected_revision(state, Some(expected_revision), cmd)
+}
+
+fn apply_with_expected_revision(
+    state: &AppState,
+    expected_revision: Option<u64>,
+    cmd: knx_core::Command,
+) -> Result<knx_projection::ProjectTree, String> {
     // Captured before `do_command` consumes `cmd` below: `cmd_desc` is the
     // full `Debug` dump, kept for `detail`; `cmd_name` is the short variant
     // name, used for `source`/`message` (see `command_name`'s doc comment).
@@ -1452,6 +1520,14 @@ fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::Pro
     let cmd_name = command_name(&cmd);
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
+    if let Some(expected) = expected_revision {
+        let current = current_project_revision(state);
+        if current != expected {
+            return Err(format!(
+                "CSV confirmation is stale: expected project revision {expected}, current revision is {current}; preview again"
+            ));
+        }
+    }
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");

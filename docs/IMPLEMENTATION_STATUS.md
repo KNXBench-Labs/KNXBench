@@ -1891,6 +1891,40 @@ the doc/reality gap easier to notice, not the cause of it — see
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 
+**T16, data-integrity-safe group-address CSV editing (2026-09-23).** The
+owned "KNXBench group-address CSV v1" contract now exports explicit
+`Action`/`NewAddress` columns and labels all three derived columns
+`(read-only)`. Empty/`upsert` remains backward compatible; readdressing and
+deletion require explicit action values and are never inferred from an
+edited or absent row. Legacy derived headers remain readable, but every
+supplied derived cell is validated against the project and a changed value
+rejects the whole import instead of being silently ignored.
+
+`Command::ReaddressGroupAddress` changes address/range while retaining the
+stable `GroupAddressId`, so communication-object links stay attached and
+undo restores the previous address/range. Delete undo restores the exact list
+position, and create batches advance `IdAllocators` reversibly so later edits
+cannot reuse a CSV-created stable id. Planning rejects duplicate source
+rows, duplicate target claims, occupied targets, malformed action/target
+shapes and deletes with remaining links. `CsvImportReport` lists each move
+or delete and every affected communication-object id/direction pair before mutation.
+
+Destructive server/web imports are two-phase: the first request returns an
+unapplied preview and SHA-256 confirmation token bound to the CSV bytes,
+server incarnation and project revision; the second applies only that exact
+plan, under a revision check. The web asks for confirmation before making
+that second request. CLI likewise previews first and requires
+`--confirm <token>`, with the token bound to CSV/project content and an atomic
+`save_project_if_unchanged` transaction that obtains SQLite's write lock before
+reloading/comparing/saving (including WAL changes). Both are all-or-nothing;
+server application remains one undo
+step. Group-range creation/renaming remains deliberately out of this row
+contract and is documented in `KNOWN_LIMITATIONS.md` §39. §40 now records
+read-only validation rather than silent non-application; §41 distinguishes
+tested German `;` separator/BOM/quoting behavior from still-unverified
+spreadsheet transformations. No compatibility with ETS group-address exports
+is claimed.
+
 **T13, project documentation export, HTML only (2026-09-10).** A new
 `crates/knx-report` crate — pure, depending only on `knx-core`,
 `knx-projection`, and `chrono`, with a matching `xtask check-layering`

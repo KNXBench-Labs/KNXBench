@@ -8,6 +8,15 @@ edit that file in a spreadsheet, and import it back to create new addresses and
 rename existing ones — a bulk-authoring workflow that does not require a full
 `.knxproj` round trip.
 
+> **T16 amendment (2026-09-23).** Sections 3–5 below preserve the original T12
+> design history. Their statements that derived columns are merely ignored and
+> that import never readdresses/deletes are superseded by
+> [ADR-0033](../../adr/0033-destructive-csv-imports-require-bound-confirmation.md)
+> and the current contract in [IMPORT_EXPORT §11](../../IMPORT_EXPORT.md#11-group-address-csv-exchange):
+> derived columns are explicitly read-only and validated, while explicit
+> `Action`/`NewAddress` operations use a preview plus state-bound confirmation.
+> Absence still never implies deletion, and this remains KNXBench's own format.
+
 ---
 
 ## 1. The honesty problem, stated first

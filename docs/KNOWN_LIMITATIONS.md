@@ -2973,9 +2973,14 @@ never-silently-discard/never-guess posture rules out.
 address-less device can be reported as one device removed and a
 different device added, obscuring what was actually a single edit.
 
+**Measured 2026-09-23 (T15).** All three local corpus projects contain
+zero devices lacking both an address and an ETS id. The matcher regression
+also establishes that two empty ETS ids are *not* an id match: they remain
+unrelated unless a real natural key resolves them.
+
 **Lifted when.** Open. No stronger per-device identity exists in the
-domain model today; recorded as a boundary of the natural-key approach,
-not a bug awaiting a fix.
+domain model today. The zero corpus count ranks this below observed gaps;
+it does not justify inventing a fallback or claiming the case impossible.
 
 ## 53. Project diff can collide two same-named sibling building parts
 
@@ -2996,8 +3001,14 @@ stable identity once their `ets_id`s also fail to correlate.
 building parts between two saves can render as an ambiguous add/remove
 pair instead of a clean field change.
 
+**Measured 2026-09-23 (T15).** Across the ETS4, ETS6, and independent
+Schema-21 corpus projects, there are zero duplicate `(parent, name)` sibling
+groups. This remains a supported ambiguity path, not evidence that the
+shape cannot occur in another project.
+
 **Lifted when.** Open. Recorded as a boundary of the path-based key, not
-a bug awaiting a fix.
+a bug awaiting a fix; the available corpus gives it no implementation
+priority over observed comparison problems.
 
 ## 54. Project diff does not detect an ETS re-import's regenerated `RefId`s as "the same project"
 
@@ -3014,7 +3025,10 @@ the *same* `.knxproj`, by this repository's own importer, produce an
 empty diff, because this importer's own `RefId` mapping is stable
 run-to-run. Whether ETS's own `RefId` regeneration would break that
 stability is untested — no such case has been observed in this
-repository's corpus.
+repository's corpus. T15 additionally compared the ETS4 and ETS6 re-exports:
+among unique device-address, building-path, and group-address natural keys,
+zero shared keys carried changed ETS ids. That measures the available
+re-export pair but still provides no regenerated-id case to design against.
 
 **Impact.** A `.knxdb` re-created from a re-exported `.knxproj` whose
 `RefId`s changed may compare as a large, misleading set of adds/removes
@@ -3030,104 +3044,93 @@ case to design against; neither exists yet.
 not turn a `ProjectDiff` back into a `Command` sequence that could replay
 one project's changes onto another.
 
-**Cause.** Design spec §9: a materially larger feature — every
-field-level change would need an inverse `Command`, and some fields (a
-device's `product_ref`/`program_ref`) have none today — not asked for by
-the T14 backlog line.
+**Cause.** Applying a two-way observation is a merge engine, not a renderer
+extension. It needs conflict semantics, revision checks, inverse commands
+for every applicable field, and a policy for additions/removals and
+ambiguities. Some fields (including `product_ref`/`program_ref`) have no
+command today. A partial implementation could silently corrupt project
+data, so T15 deliberately does not build one.
 
 **Impact.** Reviewing a diff and then manually re-applying the same
 edits to another project remains a manual, error-prone step; there is no
 "apply this change" control anywhere in the diff panel.
 
-**Lifted when.** Open. No task currently proposes it.
+**Lifted when.** Open. Requires a separately designed, atomic merge plan
+with complete conflict and undo semantics; no task currently supplies one.
 
 ## 56. Project diff does not do a three-way comparison
 
 **Limitation.** `diff_projects` takes exactly two projects. There is no
 common-ancestor-aware three-way comparison the way a VCS merge does one.
 
-**Cause.** Design spec §9: nothing in this codebase tracks project
-ancestry or a common base to diff against.
+**Cause.** Nothing in this codebase tracks project ancestry or a common
+base. Three-way display could be added independently, but any useful merge
+action also depends on §55's unresolved conflict/atomic-apply machinery.
 
 **Impact.** Reconciling two independently edited copies of the same
 original project has no tool support beyond running the two-way diff
 twice, once against each candidate.
 
-**Lifted when.** Open. Would need a project-ancestry or version-history
-concept that does not exist today.
+**Lifted when.** Open. Requires an explicit base-project contract first;
+merge behavior additionally waits for §55. T15 does not pretend that
+running two unrelated two-way comparisons creates a three-way result.
 
 ## 57. Project diff cannot compare against a raw `.knxproj`
 
-**Limitation.** Both sides of a comparison must already be `.knxdb`
-files. `knx diff <a.knxdb> <b.knxdb>` on the CLI takes two `.knxdb`
-paths; `POST /api/project/diff {path}` compares the server's open,
-in-memory project against one `.knxdb` file at `path`. Neither accepts a
-`.knxproj` on either side.
+**Limitation.** `knx diff` accepts `.knxdb` and `.knxproj` on either side,
+but `POST /api/project/diff {path}` and the web file picker still compare
+the open project only against a `.knxdb` path.
 
-**Cause.** Design spec §7, §9: `knx-diff` must not depend on
-`knx-etsproj`, and importing a `.knxproj` first would need the surface
-layer to do it, doubling the failure modes a comparison route has to
-explain (a bad `.knxproj` fails for import reasons; a bad `.knxdb` fails
-for store reasons) for a use case the T14 backlog line does not ask for —
-"what changed between these two **saves**" is a `.knxdb` question, not a
-`.knxproj` one.
+**Cause.** `knx-diff` correctly remains independent of formats. T15 added
+a `knx-app` loader that normalizes either format and preserves the full ETS
+import report; the CLI can present that report without changing the HTTP
+route's current mounted-path contract. Extending the browser picker/API is
+owned by the later UI slice.
 
-**Impact.** Comparing an ETS-exported `.knxproj` directly against a
-KNXBench `.knxdb` save — or two `.knxproj` files against each other —
-requires importing each one into a `.knxdb` first (`knx import`), outside
-the diff feature itself.
+**Impact.** Scripts and terminal users can compare raw ETS exports directly
+and see every import diagnostic on stderr. Application users must still
+import the archive or use the CLI.
 
-**Lifted when.** Open. No task currently proposes accepting a raw
-`.knxproj` as a comparison side.
+**Lifted when.** The project-diff HTTP request and picker gain an explicit
+input-kind/upload contract and expose the same import report; silently
+normalizing a browser path without those diagnostics is not acceptable.
 
-## 58. Project diff has no CI-friendly "exit nonzero on any difference" flag
+## 58. Project diff has no CI-friendly exit-nonzero-on-any-difference flag
 
-**Limitation.** `knx diff` always exits `0` when it successfully produces
-a comparison, whether or not the two projects differ. There is no flag
-to make a nonempty diff a nonzero exit code.
+**Limitation.** Ordinary `knx diff` still exits `0` whenever it successfully
+produces output, even when the projects differ. CI callers must opt into
+`knx diff --exit-code`.
 
-**Cause.** Design spec §9: mirrors `knx doc-export`'s own reasoning
-(`apps/knx-cli/src/main.rs`) — a diff with changes is not a failed diff.
+**Contract.** With `--exit-code`, 0 means equal; 1 means any reported
+difference, including ambiguity; and 2 means argument, file, native-store,
+or ETS-import failure. Without the flag, the backward-compatible success/
+failure behavior remains.
 
-**Impact.** A script cannot currently gate on "these two `.knxdb` files
-differ" using `knx diff`'s exit code alone; it would need to parse the
-printed text instead.
+**Impact.** Scripts can gate without parsing prose. Existing interactive
+scripts are not broken by a newly nonzero result they did not request.
 
-**Lifted when.** A real feature request for scripted gating arrives; a
-small, well-scoped addition at that point, not built speculatively now.
+**Lifted when.** Resolved for the CLI. The exit-code table is also in
+`knx --help` output and the user manual.
 
-## 59. Project diff's text and web renderers show which fields changed, not their before/after values, for most entity types
+## 59. Project diff's text and web renderers show which fields changed, not their before/after values for most entity types
 
-**Limitation.** For every entity table below the project/installation
-level (areas, lines, devices, group ranges, group addresses, building
-parts, communication objects, parameters), both `knx diff`'s plain text
-and the web diff panel print only the *names* of the fields that changed
-(`changed_fields`, e.g. `name, commissioning`) — never the old and new
-values themselves. Project-level (`ProjectDiff.info_changes`) and
-installation-level (`InstallationDiff.field_changes`) changes are the
-exception: both render as `FieldChange { field, left, right }`, so those
-two levels *do* show both values.
+**Limitation.** `knx diff` now prints one ordered line per changed field
+with its old and new display values. The HTTP response adds `fieldChanges`
+to every generic/device change while retaining `changedFields`, `left`,
+and `right`. The current web panel still renders grouped counts only.
 
-**Cause.** A rendering-only scope decision, not a data-loss one:
-`knx_diff::EntityChange<K, F>` and `knx_diff::DeviceChange` retain the
-full matched pair (`left: F`, `right: F`) alongside `changed_fields` —
-nothing is discarded computing the diff (CLAUDE.md: never silently
-discard information). Neither the CLI's plain-text renderer
-(`apps/knx-cli/src/main.rs`) nor the web panel
-(`apps/knx-web/src/ProjectDiffPanel.tsx`) currently walks `left`/`right`
-field by field to print a value pair for these tables; only the summary
-list is rendered.
+**Cause.** T15 added one pure `FieldDiff` projection in `knx-diff`, so CLI
+and HTTP cannot disagree about value formatting. Plain `String` and
+`Option<String>` values are never `Debug`-quoted; structured values use
+an explicit debug fallback. The frontend rendering itself belongs to the
+separate UI task and was not quietly expanded here.
 
-**Impact.** Seeing what a changed device's `name` actually changed *to*
-means reading the JSON response from `POST /api/project/diff` directly,
-or extending the renderer — the CLI and web panel today answer "what
-changed" at the field-name level, not "what changed to what," for
-anything below project/installation scope.
+**Impact.** CLI/API consumers can see "what changed to what" without
+reconstructing values from snapshots. A web user still sees only counts.
 
-**Lifted when.** A renderer change (CLI and/or web) walks
-`EntityChange`/`DeviceChange`'s retained `left`/`right` and prints both
-values per changed field; the data to do so already exists in
-`knx-diff`'s own types today.
+**Lifted when.** Fully resolved when the web panel renders the supplied
+entity keys and `fieldChanges` values accessibly; crate, CLI, and API work
+are complete.
 
 ## 60. Project diff's web panel shows grouped counts only
 
@@ -3147,6 +3150,15 @@ alone — only counts per table, per installation.
 
 **Lifted when.** Open. A richer visual diff view is a real, larger
 feature a future task could propose; not built speculatively now.
+
+**T15 handoff.** The response already supplies ordered `fieldChanges`
+(`field`, `left`, `right`) on every generic and device change, plus full
+typed `left`/`right` snapshots, entity keys, match kind, nested object/
+parameter tables, and ambiguity counts. The UI task should provide an
+expandable, keyboard-accessible per-installation/entity tree, identify
+added/removed/ambiguous entries individually, and show each before/after
+pair without requiring color alone. It must not invent a match or an
+apply/merge action.
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 

@@ -181,15 +181,6 @@ fn diff_of_two_identical_stores_reports_no_changes() {
     );
 }
 
-// `knx-diff`'s generic entity tables render a `changed` row as its
-// formatted key plus a `changed_fields` *name* summary, never the old/new
-// values themselves (design spec §5: "one changed_fields summary per
-// changed line"; `knx-diff::diff.rs`'s `EntityChange::changed_fields` is
-// `Vec<&'static str>`, field names only — the values live in
-// `EntityChange::left`/`right`, which this renderer does not walk field by
-// field for a generic entity). So this asserts the group address's
-// formatted address, the changed field's name, and the `~` prefix — not
-// the old/new name text, which this render level never prints.
 #[test]
 fn diff_of_two_stores_with_one_changed_group_address_name_prints_it() {
     let dir = tempfile::tempdir().unwrap();
@@ -210,11 +201,71 @@ fn diff_of_two_stores_with_one_changed_group_address_name_prints_it() {
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert!(stdout.contains("1/1/1"), "{stdout}");
     assert!(
-        stdout
-            .lines()
-            .any(|line| line.trim_start() == "~ group address 1/1/1: name"),
+        stdout.lines().any(|line| line.trim_start()
+            == "~ group address 1/1/1: name: Living Room Light -> Living Room Light V2"),
         "{stdout}"
     );
+}
+
+#[test]
+fn diff_exit_code_mode_returns_zero_for_equal_one_for_different_and_two_for_input_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    let store_a = dir.path().join("a.knxdb");
+    let store_b = dir.path().join("b.knxdb");
+    write_store(&store_a, &project_with_ga_name("A"));
+    write_store(&store_b, &project_with_ga_name("A"));
+
+    let equal = run_cli(&[
+        "diff",
+        "--exit-code",
+        store_a.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(equal.status.code(), Some(0));
+
+    write_store(&store_b, &project_with_ga_name("B"));
+    let different = run_cli(&[
+        "diff",
+        "--exit-code",
+        store_a.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(different.status.code(), Some(1));
+
+    let missing = dir.path().join("missing.knxdb");
+    let invalid = run_cli(&[
+        "diff",
+        "--exit-code",
+        missing.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(invalid.status.code(), Some(2));
+}
+
+#[test]
+fn diff_accepts_raw_knxproj_inputs_and_exposes_their_import_reports() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = knx_testsupport::write_minimal_knxproj(dir.path());
+
+    let output = run_cli(&[
+        "diff",
+        "--exit-code",
+        project.to_str().unwrap(),
+        project.to_str().unwrap(),
+    ]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("comparison import report"),
+        "raw ETS normalization must not hide its compatibility report"
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("no differences found"));
 }
 
 #[test]

@@ -775,6 +775,7 @@ export interface EntityChange<K, F> {
   left: F;
   right: F;
   changedFields: string[];
+  fieldChanges: FieldChange[];
 }
 
 // `AmbiguityNoteDto<K>` — mirrors `knx_diff::AmbiguityNote<K>`: a key
@@ -952,6 +953,7 @@ export interface DeviceChange {
   left: DeviceFields;
   right: DeviceFields;
   changedFields: string[];
+  fieldChanges: FieldChange[];
   comObjects: EntityTable<ComObjectKey, ComObjectFields>;
   parameters: EntityTable<ParameterKey, ParameterFields>;
 }

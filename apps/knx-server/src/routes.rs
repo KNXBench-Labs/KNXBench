@@ -1097,6 +1097,7 @@ struct EntityChangeDto<K: serde::Serialize, F: serde::Serialize> {
     left: F,
     right: F,
     changed_fields: Vec<&'static str>,
+    field_changes: Vec<FieldChangeDto>,
 }
 
 #[derive(serde::Serialize)]
@@ -1160,6 +1161,7 @@ impl From<&knx_diff::EntityStatus> for EntityStatusDto {
 /// `knx-diff` itself was built to avoid.
 fn convert_table<K, F, KD, FD>(table: &knx_diff::EntityTable<K, F>) -> EntityTableDto<KD, FD>
 where
+    F: knx_diff::FieldDiff,
     KD: serde::Serialize + for<'a> From<&'a K>,
     FD: serde::Serialize + for<'a> From<&'a F>,
 {
@@ -1183,6 +1185,7 @@ where
                 left: FD::from(&c.left),
                 right: FD::from(&c.right),
                 changed_fields: c.changed_fields.clone(),
+                field_changes: c.field_changes().iter().map(FieldChangeDto::from).collect(),
             })
             .collect(),
         ambiguous: table
@@ -1447,6 +1450,7 @@ struct DeviceChangeDto {
     left: DeviceFieldsDto,
     right: DeviceFieldsDto,
     changed_fields: Vec<&'static str>,
+    field_changes: Vec<FieldChangeDto>,
     com_objects: ComObjectTableDto,
     parameters: ParameterTableDto,
 }
@@ -1459,6 +1463,11 @@ impl From<&knx_diff::DeviceChange> for DeviceChangeDto {
             left: DeviceFieldsDto::from(&change.left),
             right: DeviceFieldsDto::from(&change.right),
             changed_fields: change.changed_fields.clone(),
+            field_changes: change
+                .field_changes()
+                .iter()
+                .map(FieldChangeDto::from)
+                .collect(),
             com_objects: convert_table(&change.com_objects),
             parameters: convert_table(&change.parameters),
         }

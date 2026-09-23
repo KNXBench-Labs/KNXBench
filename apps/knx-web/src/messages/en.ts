@@ -514,12 +514,11 @@ export const messages = {
   "busMonitor.column.service": "Service",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
-  // Task 4 (the diagnostic companion). The bus session freezes the
-  // project's group-address names and DPTs when it starts and never
-  // re-resolves them; these three say so out loud rather than letting a
-  // decoded column quietly describe a project that has since changed.
+  // The diagnostic companion compares the project with the bus session's
+  // last confirmed whole-context publication; these messages expose a
+  // mismatch instead of quietly presenting stale decoding as current.
   "busMonitor.contextStale":
-    "The project changed after this session started. Decoded values below come from the snapshot taken at connect time, and sending is locked. Reconnect to decode against the current project.",
+    "The project changed after this session's last confirmed context publication. Decoded values below use that earlier context, and sending is locked. Reconnect to decode against the current project.",
   "busMonitor.contextUnverified":
     "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
   "busMonitor.sessionReplaced":
@@ -795,7 +794,7 @@ export const messages = {
   "busCompose.sent": "Sent {service}: {payload}",
   "busCompose.sentDecoded": "Decoded: {text}",
   "busCompose.contextStaleMessage":
-    "The project changed after this bus session started — the DPT would be resolved against the old snapshot, so sending is locked. Reconnect first.",
+    "The project changed after this bus session's last confirmed context publication — the DPT would be resolved against that earlier context, so sending is locked. Reconnect first.",
 
   // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
   "companion.open": "Diagnostics window",

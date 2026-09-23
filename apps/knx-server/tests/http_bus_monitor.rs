@@ -192,6 +192,16 @@ async fn start_opens_a_session_and_returns_session_id_and_assigned_address() {
     let body = body_json(response).await;
     assert_eq!(body["sessionId"], 1);
     assert_eq!(body["assignedAddress"], addr(5).to_string());
+    let incarnation = body["serverIncarnation"]
+        .as_str()
+        .expect("start response carries its server process identity");
+    assert!(!incarnation.is_empty());
+
+    let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["sessionId"], 1);
+    assert_eq!(body["serverIncarnation"], incarnation);
 }
 
 #[tokio::test]
@@ -520,13 +530,14 @@ async fn stop_awaits_the_drain_task_and_reports_the_final_tally() {
     let state = state_with_connector(FakeConnector::succeeding(tunnel));
     let app = knx_server::app(Arc::new(state), None);
 
-    call(
+    let started = call(
         &app,
         "POST",
         "/api/bus/monitor/start",
         Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
+    let started = body_json(started).await;
     handle
         .sender()
         .send(group_value_write(1, GroupValue::Short(1)))
@@ -537,6 +548,7 @@ async fn stop_awaits_the_drain_task_and_reports_the_final_tally() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = body_json(response).await;
     assert_eq!(body["sessionId"], 1);
+    assert_eq!(body["serverIncarnation"], started["serverIncarnation"]);
     assert_eq!(body["telegramCount"], 1);
     assert_eq!(body["droppedCount"], 0);
     assert!(body.get("warning").is_none());

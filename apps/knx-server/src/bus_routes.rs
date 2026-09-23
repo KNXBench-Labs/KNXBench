@@ -493,6 +493,7 @@ struct StartRequest {
 #[serde(rename_all = "camelCase")]
 struct StartResponse {
     session_id: u64,
+    server_incarnation: String,
     assigned_address: String,
 }
 
@@ -549,6 +550,7 @@ async fn start_monitor(
 
     Ok(Json(StartResponse {
         session_id: id,
+        server_incarnation: state.server_incarnation.clone(),
         assigned_address,
     }))
 }
@@ -561,14 +563,15 @@ async fn start_monitor(
 #[serde(rename_all = "camelCase")]
 struct StopResponse {
     session_id: u64,
+    server_incarnation: String,
     telegram_count: usize,
     dropped_count: u64,
     /// `Some(message)` only if the drain task's own `JoinHandle` reported a
     /// panic (`BusSessionSummary::drain_panic`, carried Task 2 review
     /// finding) — omitted from the wire entirely in the ordinary case
-    /// (`skip_serializing_if`), so an ordinary stop's JSON shape is exactly
-    /// design spec §4.3's `{ sessionId, telegramCount, droppedCount }`, byte
-    /// for byte. `200`, not `500`: the stop itself genuinely succeeded (the
+    /// (`skip_serializing_if`). The additive `serverIncarnation` binds the
+    /// reusable numeric id to this process lifetime. `200`, not `500`: the
+    /// stop itself genuinely succeeded (the
     /// session is gone, the tally is accurate) — only the teardown that
     /// followed misbehaved. See `BusSession::stop`'s doc comment for the
     /// full reasoning and the task report for why `500` was rejected.
@@ -588,6 +591,7 @@ async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopRespo
     let summary = session.stop().await;
     Ok(Json(StopResponse {
         session_id,
+        server_incarnation: state.server_incarnation.clone(),
         telegram_count: summary.telegram_count,
         dropped_count: summary.dropped_count,
         warning: summary.drain_panic,
@@ -677,6 +681,7 @@ impl From<&TelegramRow> for TelegramRowDto {
 #[serde(rename_all = "camelCase")]
 struct TelegramsResponse {
     session_id: u64,
+    server_incarnation: String,
     status: &'static str,
     next_since: u64,
     dropped_before: u64,
@@ -712,6 +717,7 @@ async fn poll_telegrams(
     };
     let response = TelegramsResponse {
         session_id,
+        server_incarnation: state.server_incarnation.clone(),
         status,
         next_since: buffer.next_seq(),
         dropped_before: buffer.dropped_before(),

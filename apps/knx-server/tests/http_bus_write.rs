@@ -628,6 +628,10 @@ async fn style_change_refreshes_the_active_session_without_reconnecting() {
     )
     .await;
     assert_eq!(restyled.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(restyled).await["group_address_context_session_id"],
+        1
+    );
 
     handle
         .sender()
@@ -659,6 +663,122 @@ async fn style_change_refreshes_the_active_session_without_reconnecting() {
     let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(body_json(response).await["sessionId"], 1);
+}
+
+#[tokio::test]
+async fn undoing_a_style_change_refreshes_monitor_formatting_and_write_parsing() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_style_and_single_dpt(GroupAddressStyle::ThreeLevel),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+
+    let restyled = call(
+        &app,
+        "POST",
+        "/api/project/group-address-style",
+        Some(json!({ "groupAddressStyle": "Free" })),
+    )
+    .await;
+    assert_eq!(restyled.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(restyled).await["group_address_context_session_id"],
+        1
+    );
+    let undone = call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(undone).await["group_address_context_session_id"],
+        1
+    );
+
+    handle
+        .sender()
+        .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
+            kind: knx_net::LDataMessageKind::Indication,
+            source: addr(9),
+            destination: Destination::Group(GroupAddress::from_raw(1)),
+            transport: knx_net::Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+        }))
+        .unwrap();
+    let destination = poll_until_first_destination(&app).await;
+    let write = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({ "destination": "0/0/1", "value": "on" })),
+    )
+    .await;
+
+    assert_eq!(destination, "0/0/1");
+    assert_eq!(write.status(), StatusCode::OK);
+    assert_eq!(
+        handle.sent_calls()[0].0,
+        Destination::Group(GroupAddress::from_raw(1))
+    );
+    assert!(!handle.disconnected());
+    let poll = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
+    assert_eq!(body_json(poll).await["sessionId"], 1);
+}
+
+#[tokio::test]
+async fn redoing_a_style_change_refreshes_monitor_formatting_and_write_parsing() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_style_and_single_dpt(GroupAddressStyle::ThreeLevel),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+
+    let restyled = call(
+        &app,
+        "POST",
+        "/api/project/group-address-style",
+        Some(json!({ "groupAddressStyle": "Free" })),
+    )
+    .await;
+    assert_eq!(restyled.status(), StatusCode::OK);
+    let undone = call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(undone.status(), StatusCode::OK);
+    start_session(&app).await;
+
+    let redone = call(&app, "POST", "/api/redo", None).await;
+    assert_eq!(redone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(redone).await["group_address_context_session_id"],
+        1
+    );
+    handle
+        .sender()
+        .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
+            kind: knx_net::LDataMessageKind::Indication,
+            source: addr(9),
+            destination: Destination::Group(GroupAddress::from_raw(1)),
+            transport: knx_net::Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+        }))
+        .unwrap();
+    let destination = poll_until_first_destination(&app).await;
+    let write = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({ "destination": "1", "value": "on" })),
+    )
+    .await;
+
+    assert_eq!(destination, "1");
+    assert_eq!(write.status(), StatusCode::OK);
+    assert_eq!(
+        handle.sent_calls()[0].0,
+        Destination::Group(GroupAddress::from_raw(1))
+    );
+    assert!(!handle.disconnected());
+    let poll = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
+    assert_eq!(body_json(poll).await["sessionId"], 1);
 }
 
 // ---------------------------------------------------------------------------

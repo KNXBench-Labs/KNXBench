@@ -81,7 +81,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Areas, lines and individual addresses: read and edit | ✅ Implemented | [Buildings and topology](user-guide/03-buildings-and-topology.md) |
 | Buildings, floors, rooms and building parts: read and edit | ✅ Implemented | 22 building parts in the reference project |
 | Creating a project from scratch in the interface | ✅ Implemented | Browser-verified — [§83](../KNOWN_LIMITATIONS.md#83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17) |
-| Five documented `SpaceType` values kept distinct on import | ❌ Not implemented | Coarsened to a generic building part — [§89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import) |
+| Five additional documented space types kept distinct on import | ✅ Implemented | `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` survive import and native save/load; synthetic coverage, with the Schema23 vocabulary inconsistency documented in [§89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import) |
 | Moving structure by drag and drop | ❌ Not implemented | Nowhere in the interface — [`docs/GAP_ANALYSIS_ETS.md`](../GAP_ANALYSIS_ETS.md), row B10 |
 
 ## Group addresses

@@ -48,6 +48,25 @@ pub struct ProjectTree {
     /// whether the live project differs from its last successful open,
     /// import, creation, or save snapshot.
     pub is_modified: bool,
+    /// Opaque identity of the running server process that owns
+    /// `snapshot_revision`. Pure/offline projections omit it together with
+    /// the revision; it is transient application metadata, not project data.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub server_incarnation: Option<String>,
+    /// Application-owned response ordering. Pure/offline projections omit it;
+    /// the server stamps every UI-facing snapshot while holding its project
+    /// lock. This is transient metadata and is never persisted in a KNX or
+    /// native project format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub snapshot_revision: Option<u64>,
+    /// Present only when this response also republished the complete group-
+    /// address context into the named active bus session. The frontend may
+    /// rebase that exact session's fingerprint after accepting the snapshot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub group_address_context_session_id: Option<u64>,
     /// The project-wide rendering choice every `GroupAddressNode`,
     /// `GroupRangeNode` and `GroupLinkNode` address string in this tree was
     /// already formatted with — carried through so the inspector can show
@@ -212,6 +231,9 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         can_undo: false,
         can_redo: false,
         is_modified: false,
+        server_incarnation: None,
+        snapshot_revision: None,
+        group_address_context_session_id: None,
         group_address_style: group_address_style_str(project.info.group_address_style).to_string(),
         installations: project
             .installations
@@ -852,6 +874,9 @@ mod tests {
         assert_eq!(tree.errors, 0);
         assert_eq!(tree.warnings, 0);
         assert!(!tree.is_modified);
+        assert!(tree.server_incarnation.is_none());
+        assert!(tree.snapshot_revision.is_none());
+        assert!(tree.group_address_context_session_id.is_none());
         assert!(tree.installations.is_empty());
     }
 

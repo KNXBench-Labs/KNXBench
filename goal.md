@@ -3,6 +3,11 @@
 Written 2026-09-20. Use this file as the instruction passed to `/goal`. Its
 creation alone starts no run.
 
+**Execution boundary (2026-09-23):** User requested completion of the already
+open T13 through verified merge, then a pause. T14 and every subsequent task
+remain unstarted; the read-only T14 survey is not implementation approval.
+Do not resume the standing goal without a new explicit user instruction.
+
 Drive KNXBench toward a trustworthy v1 on every front **except** commissioning.
 Work autonomously and persist across turns until every item below is either
 resolved with evidence, or explicitly accepted out of scope by the user.
@@ -81,7 +86,7 @@ T17 diagnostics UI, group-monitor regressions):**
    `cargo run -p xtask -- check-headers`, `cargo run -p xtask -- check-anchors`,
    `cargo deny check`, plus `npx tsc --noEmit` and `npx vitest run` in
    `apps/knx-web` when any file under it was touched.
-   `ABSENT_CEILING` is 167 with zero slack — a new headerless file fails the
+   `ABSENT_CEILING` is 162 with zero slack (verified 2026-09-23) — a new headerless file fails the
    gate. Markdown is not counted at all.
 7. **This `ntfs3` mount has served a stale binary from a current fingerprint
    once** (`KNOWN_LIMITATIONS.md` §119). A green gate alone is not proof:
@@ -99,6 +104,26 @@ T17 diagnostics UI, group-monitor regressions):**
 12. A sweep for one known literal is not a sweep. Grep by pattern class (RFC
     1918 ranges, not one remembered address). The repository's history was
     already rewritten twice for this; do not put it back.
+13. **Weekly usage pause threshold: 95%** (user amendment 2026-09-23,
+    replacing 60%). Check usage read-only before starting a task; at or above
+    95%, finish the running task safely and pause before starting another.
+    Do not consume reset credits merely to check usage. All hardware and
+    verification constraints remain unchanged.
+14. **Review model policy (user amendment 2026-09-23):** ordinary task,
+    branch, pre-merge and follow-up reviews use `gpt-5.6-sol` with `medium`
+    or `high` effort, chosen by risk. Reserve the strongest available model
+    exclusively for the very last whole-goal review after all goal tasks have
+    been achieved and all other completion prerequisites pass. This supersedes
+    the earlier Opus branch rule and temporary Astra exception; historical
+    review evidence remains valid. Pin and verify the actual model and effort,
+    not merely the model name in a prompt. Review scope and quality gates stay.
+15. **Current execution boundary (user amendment 2026-09-23):** finish the
+    already-open T13 task, including review fixes, Sol re-review, verification
+    and merge. Then stop the goal before T14 or any new task. This limited
+    resumption does not authorize the final whole-goal review.
+    After the second correction/re-review cycle, the user explicitly authorized
+    another targeted restart-lifetime correction round on 2026-09-23; the
+    same verification, merge and subsequent pause boundary still applies.
 
 ---
 
@@ -490,23 +515,31 @@ the coordinator's default. Cheapest tier that carries the item's risk:
 
 | Work type | Model | Effort |
 | --- | --- | --- |
-| Mechanical, fully specified 1-2-file edit; focused test or re-review | `claude-haiku-4-5` | low |
-| Multi-file implementation, integration, ordinary debugging, code review | `claude-sonnet-5` | medium |
+| Mechanical, fully specified 1-2-file edit; focused test | `claude-haiku-4-5` | low |
+| Multi-file implementation, integration, ordinary debugging | `claude-sonnet-5` | medium |
 | Architecture/domain decisions, data-integrity or bus-facing work, UI and design work, difficult debugging | `claude-opus-5` | high |
+| Task, branch, pre-merge and follow-up reviews | `gpt-5.6-sol` | medium or high by risk |
 
-Escalate one tier after a repeated blocker or a failed fix round. Design and UI
-work is never dispatched below Opus.
+The implementation tiers above do not override the review policy. For ordinary
+reviews use medium effort for bounded routine changes and high effort for
+cross-layer, concurrency, data-integrity or other high-risk changes. A failed
+review/fix round may increase Sol effort from medium to high, but never consumes
+the strongest model reserved for the final whole-goal review. Implementation
+escalation and design/UI implementation tiers otherwise remain unchanged.
 
-Two closing reviews, and they do not share a model:
+Two distinct review scopes:
 
-- **Per branch, before merging: a whole-branch review on `claude-opus-5`.**
-  Every branch, every time. This review has earned its place empirically — it
-  has caught a leaked address a targeted sweep walked past, and documentation
-  claims that did not survive checking.
-- **Once, at the very end: one review over the whole goal on
-  `claude-fable-5-1`.** Exactly one Fable run in the entire effort, dispatched
-  only when the completion condition below is believed met and every branch has
-  had its Opus review. Nothing else uses Fable.
+- **Per branch, before merging: a whole-branch review on `gpt-5.6-sol` with
+  medium or high effort.** Every branch still requires independent review;
+  follow-up reviews use the same model policy. Fix and verify findings before
+  integration. A branch's closing review is not the final whole-goal review.
+- **Only at the very end: one review over the finished whole goal using the
+  strongest available model.** Select and verify that model when this final
+  stage is reached, not by inheriting the coordinator's default. Dispatch only
+  after all goal tasks are achieved (or explicitly accepted out of scope), all
+  branches have been reviewed, and every other completion prerequisite passes.
+  No individual task or branch review uses this reserved strongest-model slot.
+  Findings prevent completion; verification/follow-up uses Sol medium/high.
 
 Before integration, the coordinator reviews each subagent's diff, test
 evidence, documentation and report. Do not take a subagent's summary at face
@@ -527,7 +560,7 @@ Finish only when:
 - all nine gates pass, with the `ntfs3` freshness check from rule 7 done;
 - every remaining exception carries the user's explicit out-of-scope
   acceptance;
-- and the single Fable review has run over the finished whole and its findings
+- and the final strongest-model review has run over the finished whole and its findings
   are resolved. It is the last thing that happens, not a formality on the way
   out — if it opens something, the goal is not done.
 

@@ -262,6 +262,15 @@ alone has 514 group addresses and 907 communication object instances (RESEARCH
 UI workarounds for domain problems are not acceptable. The fix belongs in the
 layer that owns the problem. See ADR-0009.
 
+T13 snapshot ordering and replacement coherence follow
+[ADR-0032](adr/0032-application-snapshot-ordering.md). The application owns
+transient ordering metadata, stamped while the project lock is held; the UI
+rejects superseded snapshots instead of inferring server order from response
+arrival. Save paths, clean baselines, opaque passthrough and manufacturer
+manifests share the project-led publication boundary. None of this metadata
+enters the KNX domain or native project schema, and it is not a multi-user
+conflict-resolution protocol.
+
 ## 8. KNXnet/IP
 
 An own implementation against ISO 22510, not a port of an existing stack.

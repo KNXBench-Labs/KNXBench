@@ -770,29 +770,72 @@ struct SetGroupAddressStyleBody {
 
 struct GroupAddressStylePublication {
     tree: knx_projection::ProjectTree,
-    ctx: GroupAddressContext,
+    ctx: Option<GroupAddressContext>,
 }
 
-fn prepare_group_address_style_publication(
+fn prepare_group_address_context_publication(
     state: &SharedState,
-    style: knx_core::GroupAddressStyle,
+    refresh_when_style_is_unchanged: bool,
+    mutation: impl FnOnce(&crate::AppState) -> Result<knx_projection::ProjectTree, String>,
 ) -> Result<GroupAddressStylePublication, ApiError> {
-    let tree = domain::set_group_address_style_impl(state, style).map_err(ApiError::bad_request)?;
-    let ctx = {
-        let project = state.project.lock().expect("project mutex poisoned");
-        GroupAddressContext::from_project(project.as_ref())
+    let previous_style = state
+        .project
+        .lock()
+        .expect("project mutex poisoned")
+        .as_ref()
+        .map(|project| project.info.group_address_style);
+    let mutation_tree = mutation(state.as_ref()).map_err(ApiError::bad_request)?;
+    let current_style = match mutation_tree.group_address_style.as_str() {
+        "Free" => Some(knx_core::GroupAddressStyle::Free),
+        "TwoLevel" => Some(knx_core::GroupAddressStyle::TwoLevel),
+        "ThreeLevel" => Some(knx_core::GroupAddressStyle::ThreeLevel),
+        _ => None,
+    };
+    let (tree, ctx) = if refresh_when_style_is_unchanged || current_style != previous_style {
+        let (tree, ctx) = domain::current_project_tree_and_group_address_context(state)
+            .map_err(ApiError::bad_request)?;
+        (tree, Some(ctx))
+    } else {
+        (mutation_tree, None)
     };
     Ok(GroupAddressStylePublication { tree, ctx })
 }
 
+#[cfg(test)]
+fn prepare_group_address_style_publication(
+    state: &SharedState,
+    style: knx_core::GroupAddressStyle,
+) -> Result<GroupAddressStylePublication, ApiError> {
+    prepare_group_address_context_publication(state, true, |state| {
+        domain::set_group_address_style_impl(state, style)
+    })
+}
+
 async fn publish_group_address_style(
     state: &SharedState,
-    publication: GroupAddressStylePublication,
+    mut publication: GroupAddressStylePublication,
 ) -> Json<knx_projection::ProjectTree> {
-    if let Some(session) = state.bus_session.lock().await.as_ref() {
-        session.update_group_address_context(publication.ctx);
+    if let Some(ctx) = publication.ctx {
+        if let Some(session) = state.bus_session.lock().await.as_ref() {
+            session.update_group_address_context(ctx);
+            publication.tree.group_address_context_session_id = Some(session.id());
+        }
     }
     Json(publication.tree)
+}
+
+async fn mutate_and_publish_group_address_context(
+    state: &SharedState,
+    refresh_when_style_is_unchanged: bool,
+    mutation: impl FnOnce(&crate::AppState) -> Result<knx_projection::ProjectTree, String>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let _transaction = state.group_address_style_publication.lock().await;
+    let publication = prepare_group_address_context_publication(
+        state,
+        refresh_when_style_is_unchanged,
+        mutation,
+    )?;
+    Ok(publish_group_address_style(state, publication).await)
 }
 
 /// Restyles an already-open project. `400`, not `409`: unlike
@@ -806,9 +849,10 @@ async fn set_group_address_style(
     Json(body): Json<SetGroupAddressStyleBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let style = parse_group_address_style(&body.group_address_style)?;
-    let _transaction = state.group_address_style_publication.lock().await;
-    let publication = prepare_group_address_style_publication(&state, style)?;
-    Ok(publish_group_address_style(&state, publication).await)
+    mutate_and_publish_group_address_context(&state, true, |state| {
+        domain::set_group_address_style_impl(state, style)
+    })
+    .await
 }
 
 #[derive(Deserialize)]
@@ -2160,17 +2204,13 @@ async fn batch_move_devices_to_building_part(
 async fn undo(
     State(state): State<SharedState>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::undo_impl(&state)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    mutate_and_publish_group_address_context(&state, false, domain::undo_impl).await
 }
 
 async fn redo(
     State(state): State<SharedState>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::redo_impl(&state)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    mutate_and_publish_group_address_context(&state, false, domain::redo_impl).await
 }
 
 /// No error case: an empty/absent log is just `[]`, not a 404 — there need
@@ -2198,7 +2238,7 @@ mod tests {
 
     use super::{
         prepare_group_address_style_publication, publish_group_address_style,
-        set_group_address_style, SetGroupAddressStyleBody,
+        set_group_address_style, undo, SetGroupAddressStyleBody,
     };
     use crate::bus::fake::{FakeConnector, FakeTunnel};
     use crate::bus::{BusSession, GroupAddressContext};
@@ -2284,6 +2324,75 @@ mod tests {
                 .expect("test session remains active")
                 .group_address_style(),
             Some(GroupAddressStyle::TwoLevel)
+        );
+        assert_eq!(connector.call_count(), 1);
+        assert!(handle.sent_calls().is_empty());
+        assert!(!handle.disconnected());
+    }
+
+    #[tokio::test]
+    async fn concurrent_style_publication_and_undo_keep_the_latest_history_context() {
+        let state = Arc::new(AppState::default());
+        let project = Project::new(Language("en".into()));
+        let initial_ctx = GroupAddressContext::from_project(Some(&project));
+        *state.project.lock().expect("project mutex poisoned") = Some(project);
+
+        let assigned_address = IndividualAddress::new(1, 1, 5).expect("valid test address");
+        let (tunnel, handle) = FakeTunnel::new(assigned_address, 4);
+        let connector = FakeConnector::succeeding(tunnel);
+        let session = BusSession::start(
+            1,
+            SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0),
+            &connector,
+            initial_ctx,
+        )
+        .await
+        .expect("fake connector always succeeds");
+        *state.bus_session.lock().await = Some(session);
+
+        let transaction = state.group_address_style_publication.lock().await;
+        let publication =
+            prepare_group_address_style_publication(&state, GroupAddressStyle::Free).unwrap();
+
+        let (started_tx, started_rx) = oneshot::channel();
+        let undo_state = Arc::clone(&state);
+        let undo_request = tokio::spawn(async move {
+            let _ = started_tx.send(());
+            undo(State(undo_state)).await
+        });
+        started_rx
+            .await
+            .expect("undo reaches the route transaction");
+
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .expect("project mutex poisoned")
+                .as_ref()
+                .expect("test project remains open")
+                .info
+                .group_address_style,
+            GroupAddressStyle::Free,
+            "undo must not overtake an accepted style publication"
+        );
+
+        let _ = publish_group_address_style(&state, publication).await;
+        drop(transaction);
+        let _ = undo_request
+            .await
+            .expect("undo task completes")
+            .expect("undo succeeds");
+
+        assert_eq!(
+            state
+                .bus_session
+                .lock()
+                .await
+                .as_ref()
+                .expect("test session remains active")
+                .group_address_style(),
+            Some(GroupAddressStyle::ThreeLevel)
         );
         assert_eq!(connector.call_count(), 1);
         assert!(handle.sent_calls().is_empty());

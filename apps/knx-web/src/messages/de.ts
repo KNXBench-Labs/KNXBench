@@ -482,7 +482,7 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.column.payload": "Nutzdaten",
   "busMonitor.column.decoded": "Dekodiert",
   "busMonitor.contextStale":
-    "Das Projekt hat sich nach dem Start dieser Sitzung geändert. Die Dekodierung unten stammt aus dem Stand vom Verbindungsaufbau, Senden ist gesperrt. Für die Dekodierung gegen das aktuelle Projekt neu verbinden.",
+    "Das Projekt hat sich nach der letzten bestätigten Kontextveröffentlichung dieser Sitzung geändert. Die Dekodierung unten verwendet diesen früheren Kontext, Senden ist gesperrt. Für die Dekodierung gegen das aktuelle Projekt neu verbinden.",
   "busMonitor.contextUnverified":
     "Dieses Fenster hat die Sitzung nicht gestartet und kann daher nicht bestätigen, dass die Dekodierung zum aktuell geöffneten Projekt passt.",
   "busMonitor.sessionReplaced":
@@ -687,7 +687,7 @@ export const messages: Record<MessageKey, string> = {
   "busCompose.sent": "Gesendet {service}: {payload}",
   "busCompose.sentDecoded": "Dekodiert: {text}",
   "busCompose.contextStaleMessage":
-    "Das Projekt hat sich nach dem Start dieser Bus-Sitzung geändert — der DPT würde gegen den alten Stand aufgelöst, deshalb ist Senden gesperrt. Zuerst neu verbinden.",
+    "Das Projekt hat sich nach der letzten bestätigten Kontextveröffentlichung dieser Bus-Sitzung geändert — der DPT würde gegen diesen früheren Kontext aufgelöst, deshalb ist Senden gesperrt. Zuerst neu verbinden.",
 
   // `DiagnosticsCompanion.tsx` und der Knopf in `App.tsx`, der es öffnet.
   "companion.open": "Diagnosefenster",

@@ -57,11 +57,10 @@ type CompanionTab = "monitor" | "log";
 export default function DiagnosticsCompanion() {
   const t = useTranslate();
   const [tab, setTab] = useState<CompanionTab>("monitor");
-  // Whether any window has published an open project. The companion has no
-  // tree and no route to ask for one (`busContext.ts`'s module comment), so
-  // this is the honest available answer, and it is only used to decide
-  // whether the compose form explains that DPTs will not resolve
-  // automatically.
+  // Whether any window has published an open project. The companion keeps
+  // no tree of its own; this synchronous, cross-window record is the last
+  // confirmed context publication and is used only to decide whether the
+  // compose form explains that DPTs will not resolve automatically.
   const [projectOpen, setProjectOpen] = useState(projectContextKnown);
   const [canReturn, setCanReturn] = useState(false);
 

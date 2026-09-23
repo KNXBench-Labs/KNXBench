@@ -567,16 +567,15 @@ fn parse_diff_args(args: &[String]) -> Result<DiffArgs, String> {
             other => return Err(format!("unexpected extra argument: {other}")),
         }
     }
-    let a = a.ok_or_else(|| "missing <a.knxdb>".to_string())?;
-    let b = b.ok_or_else(|| "missing <b.knxdb>".to_string())?;
+    let a = a.ok_or_else(|| "missing <a.knxdb|a.knxproj>".to_string())?;
+    let b = b.ok_or_else(|| "missing <b.knxdb|b.knxproj>".to_string())?;
     Ok(DiffArgs { a, b, exit_code })
 }
 
-/// `knx diff` — computes and prints "what changed" between two `.knxdb`
-/// files (design spec §5, §7). Unlike the server's `POST /api/project/diff`,
-/// *both* sides here are files: `knx_store::open_and_migrate` + one
-/// `knx_store::load_project` call each, exactly `run_doc_export`'s own two
-/// calls, made twice.
+/// `knx diff` — computes and prints "what changed" between two native stores,
+/// two raw ETS archives, or one of each. Unlike the server's
+/// `POST /api/project/diff`, both sides here are files and are normalized by
+/// `knx_app::comparison` before the pure diff receives them.
 ///
 /// Both paths are checked with `Path::exists` *before* either store is
 /// opened — this command's own new call site for the gotcha design spec §7
@@ -641,6 +640,19 @@ fn run_diff(args: &[String]) -> ExitCode {
             parsed.b,
             report.to_json()
         );
+    }
+
+    let import_error_count = input_a
+        .import_report
+        .iter()
+        .chain(input_b.import_report.iter())
+        .map(error_count)
+        .sum::<usize>();
+    if import_error_count > 0 {
+        eprintln!(
+            "comparison aborted: {import_error_count} error diagnostics across the normalized ETS input(s)"
+        );
+        return input_error();
     }
 
     let diff = knx_diff::diff_projects(&input_a.project, &input_b.project);

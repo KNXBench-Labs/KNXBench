@@ -8,6 +8,7 @@
 
 use std::path::Path;
 use std::process::{Command, Output};
+use std::{fs, io};
 
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId,
@@ -153,6 +154,38 @@ fn run_cli(args: &[&str]) -> Output {
         .expect("failed to run the knx binary")
 }
 
+fn write_knxproj_with_recoverable_duplicate_id(dir: &Path) -> std::path::PathBuf {
+    use io::{Cursor, Read, Write};
+
+    let source = knx_testsupport::minimal_knxproj_bytes();
+    let mut archive = zip::ZipArchive::new(Cursor::new(source)).unwrap();
+    let target = dir.join("duplicate-id.knxproj");
+    let file = fs::File::create(&target).unwrap();
+    let mut writer = zip::ZipWriter::new(file);
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).unwrap();
+        let name = entry.name().to_string();
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).unwrap();
+        if name == "P-0001/0.xml" {
+            let xml = String::from_utf8(bytes).unwrap();
+            bytes = xml
+                .replace(
+                    "<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"1\" Name=\"GA\" />",
+                    "<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"1\" Name=\"GA\" />\n<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"2\" Name=\"Duplicate\" />",
+                )
+                .into_bytes();
+        }
+        writer.start_file(name, options).unwrap();
+        writer.write_all(&bytes).unwrap();
+    }
+    writer.finish().unwrap();
+    target
+}
+
 #[test]
 fn diff_of_two_identical_stores_reports_no_changes() {
     let dir = tempfile::tempdir().unwrap();
@@ -266,6 +299,30 @@ fn diff_accepts_raw_knxproj_inputs_and_exposes_their_import_reports() {
         "raw ETS normalization must not hide its compatibility report"
     );
     assert!(String::from_utf8_lossy(&output.stdout).contains("no differences found"));
+}
+
+#[test]
+fn diff_exit_code_mode_rejects_a_partial_import_with_error_diagnostics() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = write_knxproj_with_recoverable_duplicate_id(dir.path());
+
+    let output = run_cli(&[
+        "diff",
+        "--exit-code",
+        project.to_str().unwrap(),
+        project.to_str().unwrap(),
+    ]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("comparison import report"), "{stderr}");
+    assert!(stderr.contains("error diagnostics"), "{stderr}");
 }
 
 #[test]

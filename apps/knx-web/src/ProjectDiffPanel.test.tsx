@@ -113,6 +113,7 @@ const changesReport: ProjectDiffReport = {
             left: { name: "Old name", central: false, unfiltered: false, range: null },
             right: { name: "New name", central: false, unfiltered: false, range: null },
             changedFields: ["name"],
+            fieldChanges: [{ field: "name", left: "Old name", right: "New name" }],
           },
           {
             key: { etsId: "ga2", address: "1/1/2" },
@@ -120,6 +121,7 @@ const changesReport: ProjectDiffReport = {
             left: { name: "A", central: false, unfiltered: false, range: null },
             right: { name: "B", central: false, unfiltered: false, range: null },
             changedFields: ["name"],
+            fieldChanges: [{ field: "name", left: "A", right: "B" }],
           },
         ],
         ambiguous: [],

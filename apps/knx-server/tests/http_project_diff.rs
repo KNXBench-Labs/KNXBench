@@ -203,6 +203,15 @@ async fn a_changed_device_description_is_named_in_the_response() {
         "{body}"
     );
     assert_eq!(
+        changed[0]["fieldChanges"],
+        json!([{
+            "field": "description",
+            "left": "Changed description",
+            "right": "Original description"
+        }]),
+        "{body}"
+    );
+    assert_eq!(
         changed[0]["left"]["description"], "Changed description",
         "{body}"
     );

@@ -139,6 +139,7 @@ fn reexport_metrics(left: &Project, right: &Project) -> ReexportMetrics {
 }
 
 #[test]
+#[ignore = "requires the gitignored local OriginalData corpus; run explicitly"]
 fn measures_the_three_documented_correlation_gaps_without_guessing() {
     if !knx_testsupport::corpus_available() {
         eprintln!("skip: OriginalData corpus not present (gitignored, local-only)");

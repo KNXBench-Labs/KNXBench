@@ -12,7 +12,9 @@ installation, every entity/nested table, and ambiguity output.
 The CLI prints one before/after line per changed field. `knx diff --exit-code`
 returns 0 for equal, 1 for any difference including ambiguity, and 2 for
 arguments/input/import/store failure; ordinary `knx diff` retains its previous
-0-on-success behavior. Either CLI side may now be `.knxdb` or `.knxproj`.
+0-on-success behavior for a valid comparison. A recoverable ETS import whose report
+contains error-level diagnostics exits 2 in CI mode (1 otherwise) instead of comparing
+partially interpreted data as if it were complete. Either CLI side may now be `.knxdb` or `.knxproj`.
 Raw ETS input is normalized in `knx-app` and its complete import report is
 written to stderr; native stores use the normal forward migration path.
 
@@ -27,7 +29,11 @@ found zero devices lacking both address and ETS id, zero duplicate sibling-name
 groups, and zero changed ETS ids for unique device-address, building-path, or
 group-address keys between the ETS4/ETS6 re-exports. These are measurements of
 the available corpus, not proof that the documented correlation boundaries do
-not occur elsewhere; the matcher still reports ambiguity instead of guessing.
+do not occur elsewhere; the matcher still reports ambiguity instead of guessing.
+The corpus measurement is an explicitly ignored, local-only integration test; run
+`cargo test -p knx-app --test diff_correlation_measurement -- --ignored --nocapture`
+from a checkout containing `OriginalData/`. Ordinary CI reports it as ignored rather
+than claiming that a measurement ran without the private corpus.
 
 ## 2026-09-23 — T14 fix round 1: reports stop borrowing another product's program
 

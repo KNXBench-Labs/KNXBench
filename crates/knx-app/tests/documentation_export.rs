@@ -97,14 +97,16 @@ fn rendering_the_reference_project_produces_a_complete_self_contained_document()
         );
     }
 
-    // <table>/</table> and <tr>/</tr> counts balance.
+    // <table>/</table> and <tr ...>/</tr> counts balance. Rows may carry
+    // classes, so counting only the literal `<tr>` spelling would mistake
+    // valid attributed rows for missing opening tags.
     let table_open = report.html.matches("<table").count();
     let table_close = report.html.matches("</table>").count();
     assert_eq!(
         table_open, table_close,
         "expected <table> and </table> counts to match"
     );
-    let tr_open = report.html.matches("<tr>").count();
+    let tr_open = report.html.matches("<tr").count();
     let tr_close = report.html.matches("</tr>").count();
     assert_eq!(tr_open, tr_close, "expected <tr> and </tr> counts to match");
     assert!(table_open > 0 && tr_open > 0, "expected at least one table");

@@ -163,11 +163,12 @@ fn doc_export_prints_every_warning_individually_not_just_a_count() {
     );
 
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert!(stdout.contains("1 warning(s)"), "{stdout}");
+    assert!(stdout.contains("2 warning(s)"), "{stdout}");
     assert!(
         stdout.contains("device 1"),
-        "the one warning's location must be printed individually: {stdout}"
+        "each warning's location must be printed individually: {stdout}"
     );
+    assert!(stdout.contains("product database"), "{stdout}");
 }
 
 #[test]

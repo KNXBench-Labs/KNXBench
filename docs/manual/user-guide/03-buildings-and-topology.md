@@ -115,7 +115,12 @@ a move-to-line select, a move-to-building-part select, and a delete button.
 > moving a device to a different line, check whether its address still says what you
 > mean.
 
-There is no drag and drop. Moving is done with the selects and the bulk bar.
+In the Project Explorer you can also drag an eligible **single device** onto a
+line or building part in the first installation. The drop uses the same
+validated, undoable move as the Inspector selects; it does not change the
+individual address. The Inspector selects remain the keyboard-accessible way
+to perform either move. Group-address links need an explicit send/receive
+direction and cannot be created by dragging.
 
 ## Deleting
 

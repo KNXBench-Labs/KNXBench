@@ -34,11 +34,11 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Native `.knxdb` project file (SQLite, schema version 7) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
+| Native `.knxdb` project file (SQLite, store schema version 9) | ✅ Implemented | Open, save, save as — [Projects](user-guide/02-projects.md) |
 | Schema migration of an older project file, with a refusal rather than a guess when the file is newer than the build | ✅ Implemented | Migration tests per version step — [`docs/DATA_MODEL.md`](../DATA_MODEL.md) |
 | Undo and redo across every project edit | ✅ Implemented | One shared undo stack per open project |
 | Provenance: every attribute knows which layer it came from, and an override is distinguishable from an inherited value | ✅ Implemented | [`docs/DATA_MODEL.md`](../DATA_MODEL.md), [ADR-0010](../adr/0010-per-attribute-override-representation.md) |
-| Downloading the project file through the browser | ❌ Not implemented | The route exists; nothing in the frontend calls it — [§30](../KNOWN_LIMITATIONS.md#30-apiprojectdownload-has-no-frontend-caller) |
+| Downloading the open project through the browser | ✅ Implemented | File → Download project streams a newly serialized `.knxdb`; Save As still writes to the server's directory — [Projects](user-guide/02-projects.md) |
 | Automatic backup or version history | ❌ Not implemented | Copy the `.knxdb` file yourself |
 
 ## ETS project import
@@ -82,7 +82,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Buildings, floors, rooms and building parts: read and edit | ✅ Implemented | 22 building parts in the reference project |
 | Creating a project from scratch in the interface | ✅ Implemented | Browser-verified — [§83](../KNOWN_LIMITATIONS.md#83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17) |
 | Five documented `SpaceType` values kept distinct on import | ❌ Not implemented | Coarsened to a generic building part — [§89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import) |
-| Moving structure by drag and drop | ❌ Not implemented | Nowhere in the interface — [`docs/GAP_ANALYSIS_ETS.md`](../GAP_ANALYSIS_ETS.md), row B10 |
+| Moving a device by drag and drop | 🟡 Partial or experimental | Single device → line/building part in the first installation; other structural gestures remain unavailable — [Buildings and topology](user-guide/03-buildings-and-topology.md) |
 
 ## Group addresses
 
@@ -212,8 +212,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | Any other interface language | ❌ Not implemented | — |
 | Using the translations that come with product data | ❌ Not implemented | Stored on import, never read for the interface — [§37](../KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12) |
 | Keyboard operation with documented shortcuts | ✅ Implemented | [Keyboard shortcuts](reference/01-keyboard-shortcuts.md) |
-| Respecting the system's reduced-motion preference | ✅ Implemented | No in-application switch — [§43](../KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference) |
-| Screen-reader support | 🟡 Partial or experimental | Gaps remain and the application has not been validated end to end with assistive technology — [§118](../KNOWN_LIMITATIONS.md#118-a-succeeded-project-load-announces-nothing-to-a-screen-reader) |
+| Respecting the system's reduced-motion preference | ✅ Implemented | Settings also offers motion style and level; the OS reduced-motion preference takes precedence — [Settings and appearance](user-guide/09-settings-and-appearance.md) |
+| Screen-reader support | 🟡 Partial or experimental | Successful project loads now announce a localized status; end-to-end assistive-technology validation is still missing — [Known issues](known-issues.md) |
 
 ---
 

@@ -1,3 +1,11 @@
+- **Last Agent:** Hermes Agent
+- **Timestamp:** 2026-09-23 07:40 CEST
+- **Completed:** English user manual updated against current source for server-owned settings, browser upload/download, search reveal, device drag/drop, bus discovery and scan routes, load accessibility status, and store schema version 9. Removed the obsolete File-menu screenshot depicting `.knxproj` export; updated manual status and known issues. No product code or KNX/LAN/hardware access.
+- **Verification:** `cargo run -q -p xtask -- check-anchors` passed (382 links in 194 Markdown files); `git diff --check` passed. Claims checked against SettingsPanel/settingsStore, FsPicker, App, bus_routes and store migration. No product tests for documentation-only edits.
+- **Pending/Next Steps:** Focused corrections only, not T23 acceptance: `docs/manual/` location, remaining historical screenshots and the full claim-by-claim verification report still need work. Product work remains paused under the prior handover unless separately authorized.
+
+---
+
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** Alte Branches und Worktrees bereinigt. Vor dem Löschen waren `t10-settings-surface`, `t11-structural-drag-drop`, `t12-ui-residue` und `t17-platform-truth` vollständig in `origin/main` enthalten und hatten jeweils null einzigartige Commits. Lokal und auf `origin` bleiben nur `main` sowie der aktive Branch `t13-ui-residue-b`; dessen Worktree wurde bewusst erhalten.

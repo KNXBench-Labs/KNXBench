@@ -61,6 +61,11 @@ through `knx bus route-monitor` and `knx bus route-send`, both described in
 Open **Bus monitor** from the navigation sidebar. Type your interface's address into
 the **Gateway address** field as `host:port` and press **Connect**.
 
+If you saved a preferred gateway in Settings, a newly opened monitor starts with
+that address. You can replace it without changing the saved preference. **Discover
+gateways** lets you select a discovered endpoint; the selection does not connect
+until you press Connect.
+
 ![The KNXBench bus monitor before a session starts, with the gateway address field and the Connect button](../../assets/screenshots/porcelain-bus-monitor.png)
 
 Notice the eyebrow above the title: *KNXnet/IP · Tunnelling*. That is the panel
@@ -186,8 +191,11 @@ commission an installation, you need a tool that does commissioning; this is not
   address aborts the command before a single frame is sent.
 - Both `knx bus write` and `knx bus scan` accept `--dry-run`, which encodes and prints
   exactly what would go out without opening a connection.
-- The HTTP server exposes four bus routes and no more: start a monitor, stop it, poll
-  telegrams, write a group value.
+- The HTTP API also exposes explicit gateway discovery and line-scan operations,
+  including estimate, start, results, cancel, comparison and reconciliation.
+  These are separate from commissioning and do not program devices. Scanning
+  sends management traffic; reconciling changes the *project* through the
+  normal undoable edit path, not the physical devices.
 
 For the longer catalogue of what is missing and why, see
 [Supported and unsupported KNX/ETS functionality](../reference/02-supported-and-unsupported.md)

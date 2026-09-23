@@ -14,8 +14,10 @@ One self-contained HTML file. Not a PDF, not a Word document, not a folder of as
 a single `.html` file with its stylesheet inlined, which opens in any browser and can
 be emailed, printed to PDF from the browser, or committed next to the project.
 
-The document has a fixed structure, and every section is linked from a table of
-contents at the top:
+The document always includes its header, contents, and limits/warnings. Five
+content sections can be selected through the server API; the current application
+export still requests all five because its preview and selection controls have
+not landed yet. Every included section is linked from the table of contents:
 
 | Section | What it holds |
 | --- | --- |
@@ -25,8 +27,8 @@ contents at the top:
 | Topology | Each installation's areas, lines and devices, plus a separate list of devices in no line |
 | Buildings | The building structure, plus a list of building parts whose parent could not be resolved |
 | Group addresses | The group range tree with each address under it, plus a list of addresses in no range |
-| Devices | One block per device: individual address, description, commissioning state, unresolved product and program references, and a table of its communication objects |
-| What this report does not contain | The document's own honest list of its limits |
+| Devices | One block per device: individual address, description, commissioning state, raw references, hardware-consistent resolved product data when installed, stored parameter values, module-argument bindings, and a table of its communication objects |
+| Limits and warnings | The document's own honest list of its limits and every anomaly found while generating it |
 
 A device's communication object table carries the number, name, description, DPT, an
 active flag, the five KNX flags (**R**ead, **W**rite, **T**ransmit, **U**pdate,
@@ -39,13 +41,20 @@ be worse than admitting they are odd.
 The last section of every generated document says so in the document itself, so the
 caveats travel with the file:
 
-- Manufacturer, product and application-program names are not resolved. The product
-  database is a separate store that the generator does not read, so the raw reference
-  identifiers are printed instead.
-- Parameter values are stored uninterpreted and are not listed.
-- Module instance arguments on newer-schema devices are retained but not decoded.
+- Product data is composed before the pure renderer runs. When the installed
+  product database proves a hardware-consistent product/program pair, the report
+  adds manufacturer, product and application-program names. Otherwise it retains
+  both raw references and warns; it never borrows a program from other hardware.
+- Stored parameter values are listed. Declared restriction values gain their
+  display labels; unknown restrictions and parameter kinds without a formatter
+  remain raw and warn instead of becoming blank cells.
+- Module-instance argument bindings are listed with resolved names when available.
+  `AllocatorRef`, unknown argument kinds, allocation metadata and repeat semantics
+  remain uninterpreted, visible and warned.
 - Binary data attached to devices is referenced by name and id only.
-- Text is rendered in the project's default language only.
+- The API can request English or German report chrome and product data. Some detail
+  tables, communication-object text, and diagnostics remain in their existing
+  language, so the report is only partially localized.
 - This is not an ETS report and has not been compared to one.
 
 Below that list, the document prints **Anomalies found while generating this
@@ -64,7 +73,9 @@ is only in one place.
 
 Open the **File** menu and choose **Export documentation…**. KNXBench asks where to
 save — the file dialog filters on *HTML document* and suggests
-`project-documentation.html` — and writes the file.
+`project-documentation.html` — and writes the file. The application currently
+exports all five content sections; the API's preview, section, and language options
+do not yet have frontend controls.
 
 When it is done you get one of two messages: *"Project documentation exported, no
 warnings."* or *"Project documentation exported, 3 warnings — see Log."* The warnings

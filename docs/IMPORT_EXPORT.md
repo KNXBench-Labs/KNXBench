@@ -700,7 +700,9 @@ manufacturer/product/program names, stored parameters and module arguments,
 each device's
 communication objects with number, name, description, DPT, the resolved
 layer, the six flags, active state and links, plus any orphaned
-communication object) — "What this report does not contain".
+communication object) — "Limits and warnings". Header, contents, and this
+last section remain mandatory even when an API caller selects only a subset
+of the five content sections.
 
 **A group address has no datapoint type of its own.** The DPT belongs to
 its linked communication objects, which may disagree, so the document

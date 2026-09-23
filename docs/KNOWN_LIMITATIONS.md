@@ -2368,11 +2368,13 @@ product database's untranslated column. `view.function_text` is
 computed and then discarded at that call site: `ComObjectNode`
 (`crates/knx-projection/src/lib.rs`) has no field to hold it, `enrich()`'s
 `apply()` (`crates/knx-productdb/src/enrich.rs`) never stores it into a
-project either, and `knx-report`'s documentation exporter
-(`crates/knx-report/src/render.rs`) renders `ComObjectNode::name`/
+project either. `knx-report` now accepts an English/German report language
+and caller-composed product data, but its communication-object path
+(`crates/knx-report/src/render.rs`) still renders `ComObjectNode::name`/
 `description` straight through `build_device_detail`, which takes no
-language at all — the generated report is not language-aware in any
-respect, translated or not. `FunctionText` is therefore unread at every
+report language. Communication-object text and description therefore remain
+language-insensitive even though report chrome and selected product data are
+language-aware. `FunctionText` is still unread at every
 surface, the same honest status this section already gives `SuffixText`
 below. `Layer::Instance`, `Layer::Inferred` and `Layer::UserEdit` are
 project-authored (the first and third are exported to `.knxproj`) and

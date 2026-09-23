@@ -2820,10 +2820,13 @@ recorded here as a boundary of the feature, not a gap awaiting a fix.
 **Current state.** Server and CLI callers now resolve manufacturer, product and
 application-program names through `knx_productdb::query::device_product` and
 pass only display data into pure `knx-report`. Raw `product_ref` and
-`program_ref` remain beside the names as provenance. When the database is
-absent, a reference does not resolve, or a joined name is missing, the raw
-reference and an inline `unresolved` marker remain visible and the renderer
-returns a `ReportWarning`; the cell is never blank.
+`program_ref` remain beside the names as provenance. The query accepts a
+program link only when its `hardware_id` equals the product's hardware; a
+mismatch cannot contribute another product's program name or parameters and is
+reported with both raw references. When the database is absent, a reference
+does not resolve, or a joined name is absent or whitespace-only, the available
+raw reference is used as the cell value and the renderer returns a
+`ReportWarning`; the cell is never silently blank.
 
 **Cause.** `crates/knx-report` depends only on `knx-core`, `knx-projection`,
 and `chrono` (`xtask check-layering` enforces this, the same rule
@@ -2844,7 +2847,8 @@ is now an explicit per-device report condition.
 **Current state.** The Devices section lists stored parameter values and
 module-instance arguments in deterministic project order. With matching
 product data, parameter names, translated enum display text and module argument
-names are added. Raw identifiers and raw values are always printed.
+names are added. Raw identifiers and raw values are always printed. Blank
+parameter/module-argument names fall back to those identifiers and warn.
 
 **Cause.** Both remain raw in `knx-core`; the outer `knx-app` composition
 layer now joins what `knx-productdb` can prove and passes display-only rows
@@ -2853,8 +2857,11 @@ into `knx-report`. This preserves the renderer's dependency boundary.
 **Remaining limitation.** A module-qualified parameter whose stored identifier
 cannot be matched to a declaration, or a parameter kind without a meaningful
 display formatter, is shown raw with both an inline explanation and a
-`ReportWarning`. Raw module argument values are not semantically interpreted;
-`AllocatorRef` remains unattested and unsupported.
+`ReportWarning`. A restriction value missing from its declared enumeration is
+handled the same way. Raw module argument values are not semantically
+interpreted; `AllocatorRef` and unknown argument kinds remain unsupported, as
+do allocation metadata and repeat semantics. The generated document's
+mandatory limits section states this boundary.
 
 **Lifted when.** Additional verified parameter/module semantics exist for the
 remaining warned cases. T14 deliberately does not invent them.
@@ -3993,7 +4000,8 @@ simply absent — `knx 0.1.0-alpha.1` — unless `KNX_BUILD_SHA` is passed
 in. Absence is the intended failure direction; a false number is the one
 this section, and the ADR, exist to rule out.
 
-## 66. Server-composed prose and the documentation export are not translated by any UI language or pack — PARTIALLY RESOLVED (2026-09-14, T14)
+<a id="66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14"></a>
+## 66. Server-composed prose and documentation are only partly localized — PARTIALLY RESOLVED (2026-09-23, T14)
 
 **Resolved, one surface.** `ParameterDiagnostic.message` — the parameter
 panel's own diagnostic headline — now follows the `CreationDiagnostic`
@@ -4104,76 +4112,39 @@ arbitrary/unbounded — and why (still open, not scheduled):**
   own text, in English."`) renders under the wrapper sentence, `{msg}`
   and all. Disclosure only; the substituted text itself is unchanged.
 
-**Ruled out under the third bucket — user-facing and enumerable, but
-the component cannot reach a catalogue — and why (still open, not
-scheduled):**
+**The documentation-export case changed on 2026-09-23, but remains open.**
+`ReportOptions::language` now injects an English/German choice and localizes
+the document title, primary navigation, selected headings and mandatory
+limits; `knx-app` requests product strings in the same locale. Detailed table
+labels, debug/enum values and several diagnostic sentences remain English.
+The report has its own small built-in language choice, not access to the web
+message catalogue or imported packs, so a pack cannot add a third report
+language. Completing this requires extending the renderer's injected prose
+catalogue while retaining its enforced independence from `knx-productdb` and
+frontend code. See
+[§48](#48-project-documentation-export-renders-in-one-language-only).
 
-- `crates/knx-report`'s static chrome — roughly 60 literal strings
-  hand-written into `render.rs` (an approximate count of the file's
-  fixed section headings, table labels and short sentences; the exact
-  figure moves with every future edit to the file, so this document
-  names the shape of the set, not a number to keep in sync): section
-  headings (`"Header"`,
-  `"Contents"`, `"Summary"`, `"Topology"`, `"Buildings"`, `"Group
-  addresses"`, `"Devices"`, `"What this report does not contain"`),
-  table-row labels (`"Project number"`, `"Group address style"`, and
-  the rest of the Header/Devices tables), and a handful of fixed
-  sentences (the "does not contain" bullets, "No areas.", "None."). Run
-  the boundary rule above over this text and it says translate: it is
-  read by a user during normal use of the export, and it is a closed,
-  hand-enumerable set, not an arbitrary or unbounded one — the same
-  shape as `ParameterDiagnostic.message`, not the same shape as
-  `.detail` or the toast strings above. It is ruled out anyway, under
-  the third bucket, because `crates/knx-report` cannot reach a
-  catalogue at all today: [§46](#46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names)
-  restricts the crate's dependencies to `knx-core`, `knx-projection`,
-  and `chrono` (`xtask check-layering` enforces it), and — independently
-  of that dependency limit — `render_html`/`build_device_detail` simply
-  take no language parameter on their signature at all, UI or product
-  data alike ([§48](#48-project-documentation-export-renders-in-one-language-only)).
-  A catalogue for the crate's own chrome would not need `knx-productdb`
-  (§46's constraint is about resolving manufacturer/product *names*,
-  a different problem), only a small injected lookup table analogous to
-  `messages/en.ts` — but nothing today calls `render`/`render_html` with
-  one, or with a language to pick it by. **Ruling (controller, T14 fix
-  round 1): the export stays English in this task.** Injecting a
-  catalogue into `knx-report` is a design change with its own API
-  surface — a language parameter threaded from `apps/knx-server`/
-  `apps/knx-cli` down through `render_html` to every one of `render.rs`'s
-  call sites, plus a decision about what a requested language the
-  catalogue doesn't cover should fall back to — and this branch, whose
-  brief was §66/§67, is not the place to make that call. It stays
-  English until a follow-up task gives it a catalogue to inject; the
-  project *data* inside the export (device names, parameter text in
-  whatever language the project stores them in) is the unrelated, still
-  fully open problem [§48](#48-project-documentation-export-renders-in-one-language-only)
-  already tracks, and closing one does not imply closing the other.
-
-**Cause (original, still true for everything above except
-`ParameterDiagnostic.message`).** These strings are composed by Rust
-crates (`knx-productdb`, `knx-server`, `knx-report`) that have no notion
-of `apps/knx-web`'s UI language at all, and are sent across the HTTP
-boundary as opaque text, not as a message key plus parameters. A
-frontend catalogue can only translate a key it was given; a language
-pack can only override a key this build already defines. Neither
-mechanism has anywhere to attach to a string it never sees structured.
+**Cause (original, still true except for `ParameterDiagnostic.message` and
+the report's built-in primary EN/DE chrome).** The remaining strings are
+composed by Rust crates and cross the HTTP boundary as opaque text, not as a
+message key plus parameters. A frontend catalogue can only translate a key it
+was given; a language pack can only override a key this build already defines.
+Neither mechanism has anywhere to attach to a string it never sees structured.
 
 **Impact.** A user running any UI language — German, an imported pack,
 or an invented one — now sees a translated parameter-diagnostic
 headline, but still sees English `.detail` text (by design), English log
-entries (by design), English error-toast bodies (inside an
-otherwise-translated wrapper sentence), and an entirely English
-generated documentation file. The remaining gap is smaller than before
-this task, not closed.
+entries (by design), and English error-toast bodies inside translated
+wrappers. A report explicitly requested in German has German primary chrome
+and product strings but still contains the detailed English text above; an
+imported pack cannot add a report language. The gap is smaller, not closed.
 
 **Lifted when.** Partially done, 2026-09-14 (T14): the
 `ParameterDiagnostic.message` surface closed, using the exact mechanism
-this section previously said would be needed. The remaining four
-surfaces above are ruled out for the stated reasons — two by design
-(`.detail`, the session log), one as too large for one task (the toast/
-API error strings), one architecturally blocked and needing its own
-follow-up task (`knx-report`'s chrome, third bucket) — rather than
-merely deferred by omission; none is scheduled.
+this section previously said would be needed. On 2026-09-23 the report gained
+an injected EN/DE choice and localized primary chrome, but not a complete
+catalogue or language-pack integration. The remaining surfaces above stay
+open for the stated reasons; none is scheduled.
 
 ## 67. A rejected language pack's own reason was shown untranslated, inside a translated sentence — RESOLVED (2026-09-14, T14)
 

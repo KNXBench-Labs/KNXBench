@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-23 — T14 fix round 1: reports stop borrowing another product's program
+
+Documentation composition now accepts a product/program pair only when the
+`hardware2program` row names the product's own hardware. A mismatch retains
+both raw references, contributes no foreign program/parameter metadata, and
+appears inline plus as a `ReportWarning`. Blank manufacturer, product,
+application-program, parameter and module-argument names are treated as
+unresolved and fall back to raw identifiers instead of empty cells.
+
+Parameter declarations now use their stored kind: an unknown restriction
+value and every kind without a report formatter retain the raw value and emit
+an explicit warning. `AllocatorRef` and other unsupported module-argument
+kinds do the same, and the mandatory limits section names the remaining
+allocation/repeat semantics. The CLI reports an actual default-product-DB
+open/migration error instead of silently converting it into ordinary missing
+data. Preview regression coverage now compares the output directory and
+session-log JSON before and after the request.
+
 ## 2026-09-23 — T14: documentation reports gain useful data and a preview contract
 
 The pure `knx-report` API now accepts a deterministic `BTreeMap` of

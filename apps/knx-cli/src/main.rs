@@ -500,7 +500,16 @@ fn run_doc_export(args: &[String]) -> ExitCode {
     // same thing on the HTTP side).
     let products = knx_productdb::default_path()
         .filter(|path| path.exists())
-        .and_then(|path| knx_productdb::open_and_migrate(&path).ok());
+        .and_then(|path| match knx_productdb::open_and_migrate(&path) {
+            Ok(products) => Some(products),
+            Err(error) => {
+                eprintln!(
+                    "warning: failed to open product database at {}: {error}",
+                    path.display()
+                );
+                None
+            }
+        });
     let options = knx_app::documentation::report_options(
         &project,
         products.as_ref(),

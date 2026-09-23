@@ -28,6 +28,7 @@ import { useSettingsState } from "./settingsStore";
 // itself," not "the tunnel has no address."
 interface AttachedSession {
   sessionId: number;
+  serverIncarnation: string;
   assignedAddress: string | null;
 }
 
@@ -261,10 +262,14 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       setStatus(response.status);
       setEndedElsewhere(false);
       setReplacedBy(null);
-      setContextLock(readContextLock(response.sessionId));
+      setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
       skipNextImmediatePollRef.current = true;
       gatewaySeedResolvedRef.current = true;
-      attachTo({ sessionId: response.sessionId, assignedAddress: null });
+      attachTo({
+        sessionId: response.sessionId,
+        serverIncarnation: response.serverIncarnation,
+        assignedAddress: null,
+      });
     } catch (e) {
       if (isCancelled()) return;
       if (api.errorStatus(e) === 404) return; // no session — Connect form, as before.
@@ -328,7 +333,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         void reattach(() => false);
         return;
       }
-      setContextLock(readContextLock(current.sessionId));
+      setContextLock(readContextLock(current.sessionId, current.serverIncarnation));
     }
     const unsubscribe = subscribeContextChanges(onSignal);
     window.addEventListener("focus", onSignal);
@@ -358,9 +363,12 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         // column, and keeping the old cursor would index the new session's
         // buffer with the old one's position. Both are dropped, the change
         // is announced, and the effect re-runs against the new identity —
-        // which re-reads the lock, because the new session froze its own
-        // `GroupAddressContext` at its own moment.
-        if (response.sessionId !== attached.sessionId) {
+        // which re-reads the lock against the new process/session identity
+        // and that session's last confirmed `GroupAddressContext` publication.
+        if (
+          response.sessionId !== attached.sessionId ||
+          response.serverIncarnation !== attached.serverIncarnation
+        ) {
           sinceRef.current = 0;
           setRows([]);
           setSelectedSequence(null);
@@ -368,9 +376,13 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           setDroppedBefore(0);
           setPollError(null);
           setReplacedBy(response.sessionId);
-          setContextLock(readContextLock(response.sessionId));
+          setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
           setStatus(response.status);
-          attachTo({ sessionId: response.sessionId, assignedAddress: null });
+          attachTo({
+            sessionId: response.sessionId,
+            serverIncarnation: response.serverIncarnation,
+            assignedAddress: null,
+          });
           return;
         }
         sinceRef.current = response.nextSince;
@@ -388,7 +400,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         // Cheap (one synchronous `localStorage` read) and unconditional, so
         // the verdict never depends on a cross-window event this platform
         // may or may not deliver.
-        setContextLock(readContextLock(response.sessionId));
+        setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
       } catch (e) {
         if (cancelled) return;
         if (api.errorStatus(e) === 404) {
@@ -435,19 +447,22 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       setPollError(null);
       setEndedElsewhere(false);
       setReplacedBy(null);
-      // Recorded *before* the session is adopted, so the first poll tick
-      // already has something to compare against. This is the only moment
-      // at which the project fingerprint the server froze can be captured
-      // — `bus_routes.rs:120-123` takes its snapshot inside this very
-      // request, and never mentions it again.
-      const attached = { sessionId: started.sessionId, assignedAddress: started.assignedAddress };
+      // Record the exact process/session identity returned by the server.
+      // The fingerprint is the last confirmed project-context publication
+      // for that same process; later confirmed style publications may rebase
+      // it, while a reused numeric id from another process cannot match.
+      const attached = {
+        sessionId: started.sessionId,
+        serverIncarnation: started.serverIncarnation,
+        assignedAddress: started.assignedAddress,
+      };
       // The ref first, and before the record is published. Publishing
       // notifies this window's own listener synchronously; a listener that
       // still read `null` here would conclude this panel holds no session
       // and fire a reattach request against the session just started.
       sessionRef.current = attached;
-      recordSessionContext(started.sessionId);
-      setContextLock(readContextLock(started.sessionId));
+      recordSessionContext(started.sessionId, started.serverIncarnation);
+      setContextLock(readContextLock(started.sessionId, started.serverIncarnation));
       attachTo(attached);
     } catch (e) {
       setConnectError(api.errorMessage(e));
@@ -694,7 +709,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       )}
       {/* The explicit stale lock. Not a hint, not a tooltip: a banner that
           names what moved and says plainly that the decoded column below is
-          the old snapshot's answer. `role="alert"` because a user reading
+          the earlier confirmed context's answer. `role="alert"` because a user reading
           telegrams is looking at the table, not at the chrome. */}
       {session && contextLock === "stale" && (
         <p className="bus-monitor-stale-lock" role="alert">
@@ -730,8 +745,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           // adopting one that was already closed — so no separate tracking
           // is needed here.
           sessionClosed={status === "closed"}
-          // Task 4: a write resolves its DPT from the same frozen snapshot
-          // the decoded column is read through (`bus.rs:1135-1141`). If
+          // A write resolves its DPT from the same last confirmed context
+          // publication the decoded column reads through. If
           // that snapshot no longer describes the project, the DPT the
           // server would pick is the old project's answer — so the send
           // path locks on exactly the same condition the table does.

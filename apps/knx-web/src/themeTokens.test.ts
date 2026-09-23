@@ -12,7 +12,10 @@ import {
   blockPlainProperties,
   blockTokens,
   componentColourLiterals,
+  contrastRatio,
   declaredTokens,
+  evaluateThemeContrast,
+  resolveThemeColor,
   illegalTokenNames,
   isThemeLayerRule,
   parseRules,
@@ -397,6 +400,96 @@ describe("blockPlainProperties", () => {
   });
 });
 
+describe("theme contrast evaluation", () => {
+  it("rejects a duplicate theme/accent key even when the later CSS block is unreadable", () => {
+    const duplicate = parseRules(
+      ':root[data-theme="x"][data-accent="mint"] { --knx-accent: #000; --knx-on-accent: #fff; }\n' +
+      ':root[data-theme="x"][data-accent="mint"] { --knx-accent: #fff; --knx-on-accent: #fff; }',
+    );
+    expect(() => themeVariationBlocks(duplicate)).toThrow("x/mint");
+  });
+
+  it("uses the current WCAG sRGB linear breakpoint", () => {
+    expect(contrastRatio({ r: 10.2, g: 10.2, b: 10.2 }, "#000"))
+      .toBeCloseTo(1.061919504643963, 12);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 256])("rejects invalid numeric color channels: %s", (r) => {
+    expect(() => contrastRatio({ r, g: 0, b: 0 }, "#fff")).toThrow("unsupported");
+  });
+
+  it.each([
+    ["foreground green", { r: 0, g: Number.NaN, b: 0 }, "#fff"],
+    ["foreground blue", { r: 0, g: 0, b: 256 }, "#fff"],
+    ["background green", "#000", { r: 0, g: -1, b: 0 }],
+    ["background blue", "#000", { r: 0, g: 0, b: Number.POSITIVE_INFINITY }],
+  ] as const)("rejects an invalid %s channel", (_label, foreground, background) => {
+    expect(() => contrastRatio(foreground, background)).toThrow("unsupported");
+  });
+
+  it.each(["#000f", "#000000ff", "rgb(0,0,0)", "rgba(0,0,0,1)"])("accepts opaque forms without changing the ratio: %s", (black) => {
+    expect(contrastRatio(black, "#fff")).toBe(21);
+  });
+
+  it.each(["#0008", "#00000080"])("rejects non-opaque hex: %s", (color) => {
+    expect(() => contrastRatio(color, "#fff")).toThrow("alpha");
+  });
+
+  it.each(["rgb(999,999,999)", `rgb(${"9".repeat(400)},0,0)`])("rejects out-of-range RGB instead of accepting false contrast: %s", (value) => {
+    const block = themeBlocks(parseRules(
+      `:root[data-theme="overflow"] { --knx-foreground: ${value}; --knx-bg: #fff; --knx-surface: #fff; --knx-on-accent: #000; --knx-accent: #fff; }`,
+    ))[0];
+    expect(evaluateThemeContrast(block)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ theme: "overflow", pair: "foreground on bg", reason: "unsupported", value: expect.stringContaining(value) }),
+    ]));
+  });
+
+  it("names the terminal unsupported color behind a token reference", () => {
+    const block = themeBlocks(parseRules(
+      ':root[data-theme="alias"] { --knx-foreground: var(--knx-ink); --knx-ink: oklch(60% 0.2 30); --knx-bg: #fff; --knx-surface: #fff; --knx-on-accent: #000; --knx-accent: #fff; }',
+    ))[0];
+    expect(evaluateThemeContrast(block)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ theme: "alias", pair: "foreground on bg", reason: "unsupported", value: expect.stringContaining("oklch(60% 0.2 30)") }),
+    ]));
+  });
+
+  it("computes exact WCAG ratios for black, white, equal colors, and the AA boundary", () => {
+    expect(contrastRatio("#000", "#fff")).toBe(21);
+    expect(contrastRatio("#ffffff", "#ffffff")).toBe(1);
+    expect(contrastRatio("#767676", "#fff")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#777777", "#fff")).toBeLessThan(4.5);
+  });
+
+  it("resolves recursive token references", () => {
+    const block = themeBlocks(parseRules(
+      ':root[data-theme="x"] { --knx-foreground: var(--knx-ink); --knx-ink: #000; --knx-bg: #fff; --knx-surface: #fff; --knx-on-accent: #000; --knx-accent: #fff; }',
+    ))[0];
+    expect(resolveThemeColor("var(--knx-foreground)", block.rule)).toEqual({ r: 0, g: 0, b: 0 });
+  });
+
+  it.each([
+    ["alpha", "rgba(0, 0, 0, 0.5)", "alpha"],
+    ["unknown notation", "oklch(60% 0.2 30)", "unsupported"],
+    ["missing token", "var(--knx-missing)", "unresolved"],
+    ["reference cycle", "var(--knx-cycle-a)", "cycle"],
+  ])("reports %s with theme, pair, and offending value", (_label, value, reason) => {
+    const block = themeBlocks(parseRules(
+      `:root[data-theme="x"] { --knx-foreground: ${value}; --knx-cycle-a: var(--knx-cycle-b); --knx-cycle-b: var(--knx-cycle-a); --knx-bg: #fff; --knx-surface: #fff; --knx-on-accent: #000; --knx-accent: #fff; }`,
+    ))[0];
+    const violations = evaluateThemeContrast(block);
+    expect(violations.some((violation) => violation.reason === reason && violation.theme === "x" && violation.pair === "foreground on bg" && violation.value.includes(value))).toBe(true);
+  });
+
+  it("does not skip a deliberately illegible or unsupported palette", () => {
+    const block = themeBlocks(parseRules(
+      ':root[data-theme="broken"] { --knx-foreground: #777; --knx-bg: #777; --knx-surface: oklch(60% 0.2 30); --knx-on-accent: #000; --knx-accent: #fff; }',
+    ))[0];
+    const violations = evaluateThemeContrast(block);
+    expect(violations.map((violation) => violation.pair)).toEqual(
+      expect.arrayContaining(["foreground on bg", "foreground on surface"]),
+    );
+  });
+});
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(HERE, "..");
 
@@ -533,10 +626,20 @@ describe("the theme layer of styles.css", () => {
     const dead = declaredTokens(rules).filter((token) => !read.has(token));
     expect(dead, `declared but never read through var(): ${dead.join(", ")}`).toEqual([]);
   });
+  it.each(paletteThemeIds)("theme %s passes the strict role contrast gate", (id) => {
+    expect(evaluateThemeContrast(requireBlock(id)), id).toEqual([]);
+  });
 });
 
 describe("accent variations", () => {
   const variations = themeVariationBlocks(rules);
+
+  it.each(variations.map((variation) => [`${variation.id}/${variation.accent}`, variation] as const))(
+    "variation %s passes the strict role contrast gate",
+    (name, variation) => {
+      expect(evaluateThemeContrast(requireBlock(variation.id), variation), name).toEqual([]);
+    },
+  );
 
   it("belong to a registered theme and a registered accent", () => {
     for (const variation of variations) {

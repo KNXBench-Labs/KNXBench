@@ -106,6 +106,11 @@ pub fn parse_building_part_type(s: &str) -> Result<BuildingPartType, ValueError>
         "Corridor" => Ok(BuildingPartType::Corridor),
         "DistributionBoard" => Ok(BuildingPartType::DistributionBoard),
         "BuildingPart" => Ok(BuildingPartType::BuildingPart),
+        "Stairway" => Ok(BuildingPartType::Stairway),
+        "RoomPart" => Ok(BuildingPartType::RoomPart),
+        "Area" => Ok(BuildingPartType::Area),
+        "Ground" => Ok(BuildingPartType::Ground),
+        "Segment" => Ok(BuildingPartType::Segment),
         _ => Err(ValueError::UnknownEnumValue {
             kind: "BuildingPart/@Type",
             value: s.to_string(),
@@ -362,6 +367,17 @@ mod tests {
             );
             assert!(!is_device_local_ref_id(not_device_local));
         }
+    }
+
+    #[test]
+    fn building_part_type_preserves_documented_space_tokens() {
+        for token in ["Stairway", "RoomPart", "Area", "Ground", "Segment"] {
+            let kind = parse_building_part_type(token).unwrap();
+            assert_eq!(format!("{kind:?}"), token);
+        }
+        assert!(
+            matches!(parse_building_part_type("FutureSpace"), Err(ValueError::UnknownEnumValue { value, .. }) if value == "FutureSpace")
+        );
     }
 
     #[test]

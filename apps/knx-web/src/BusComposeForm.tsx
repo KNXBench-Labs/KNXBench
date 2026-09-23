@@ -67,15 +67,15 @@ interface BusComposeFormProps {
   /// than silently disabling itself" rule as `projectOpen` above — the form
   /// disables and explains, it does not just grey out.
   sessionClosed: boolean;
-  /// Whether the project state the session froze at `/start` no longer
-  /// matches the project as it is now (`busContext.ts`). Same shape as
+  /// Whether the session's last confirmed project-context publication no
+  /// longer matches the project as it is now (`busContext.ts`). Same shape as
   /// `sessionClosed` above and for the same reason: the send path must be
   /// shut before the request, not after a puzzling reply. The difference is
   /// what would go wrong — a closed session bounces off a `409`, whereas a
   /// stale context succeeds, on the bus, with the previous project's DPT.
-  /// `BusSession::resolve_write_dpt` reads the snapshot taken when the
-  /// session started (`bus.rs:1015-1020`, `bus.rs:1135-1141`); nothing
-  /// re-resolves it, and nothing tells the server the project moved. A
+  /// `BusSession::resolve_write_dpt` reads that shared server snapshot;
+  /// confirmed style Set/Undo/Redo publications replace it as a whole, while
+  /// ordinary name/DPT edits do not. A
   /// telegram sent with the wrong DPT is not an error message, it is an
   /// actuator doing the wrong thing, and Undo does not reach the bus.
   contextStale: boolean;

@@ -180,7 +180,7 @@ impl Default for ProjectInfo {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Project {
     pub schema_version: u32,
     pub strings: StringTable,
@@ -200,6 +200,18 @@ impl Project {
             devices: Devices::new(),
             ids: IdAllocators::default(),
         }
+    }
+
+    /// Compares all persisted and user-visible project content while
+    /// disregarding synthetic ID allocator high-water marks. Allocators can
+    /// advance during an edit that is later undone without changing what the
+    /// user can save or inspect.
+    pub fn same_user_content_as(&self, other: &Self) -> bool {
+        let mut left = self.clone();
+        let mut right = other.clone();
+        left.ids = IdAllocators::default();
+        right.ids = IdAllocators::default();
+        left == right
     }
 }
 
@@ -228,5 +240,18 @@ mod tests {
         assert_eq!(p.info.group_address_style, GroupAddressStyle::ThreeLevel);
         assert!(p.info.project_id.is_empty());
         assert!(p.info.name.is_empty());
+    }
+
+    #[test]
+    fn same_user_content_ignores_allocator_high_water_marks_but_not_project_fields() {
+        let baseline = Project::new(Language("en".into()));
+        let mut allocator_advanced = baseline.clone();
+        allocator_advanced.ids.next_device_id();
+
+        assert!(baseline.same_user_content_as(&allocator_advanced));
+
+        let mut renamed = baseline.clone();
+        renamed.info.name = "Renamed".into();
+        assert!(!baseline.same_user_content_as(&renamed));
     }
 }

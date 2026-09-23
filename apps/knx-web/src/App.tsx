@@ -23,7 +23,7 @@ import SettingsPanel from "./SettingsPanel";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
-import { publishProjectContext } from "./busContext";
+import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
 import { openCompanionWindow } from "./diagnosticsWindow";
 import { useAppearance } from "./appearance";
@@ -78,6 +78,42 @@ type AppProps = {
   session?: SessionControls;
 };
 
+interface SnapshotLifetime {
+  initialized: boolean;
+  serverIncarnation: string | null;
+  revision: number;
+  retiredServerIncarnations: Set<string>;
+}
+
+function acceptedSnapshotLifetime(
+  current: SnapshotLifetime,
+  tree: ProjectTree,
+): SnapshotLifetime | null {
+  const revision = tree.snapshot_revision ?? 0;
+  const serverIncarnation = tree.server_incarnation ?? null;
+  if (!current.initialized) {
+    return {
+      initialized: true,
+      serverIncarnation,
+      revision,
+      retiredServerIncarnations: new Set(),
+    };
+  }
+  if (serverIncarnation === null) {
+    if (current.serverIncarnation !== null || revision < current.revision) return null;
+    return { ...current, revision };
+  }
+  if (serverIncarnation === current.serverIncarnation) {
+    return revision < current.revision ? null : { ...current, revision };
+  }
+  if (current.retiredServerIncarnations.has(serverIncarnation)) return null;
+  const retiredServerIncarnations = new Set(current.retiredServerIncarnations);
+  if (current.serverIncarnation !== null) {
+    retiredServerIncarnations.add(current.serverIncarnation);
+  }
+  return { initialized: true, serverIncarnation, revision, retiredServerIncarnations };
+}
+
 function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
@@ -96,6 +132,16 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
+  // Modern responses are ordered within an opaque server lifetime. The set
+  // of retired lifetimes prevents a delayed reply from switching the UI back
+  // after a restarted server has been accepted. Legacy responses remain in
+  // one revision-only lifetime and cannot replace a modern one.
+  const snapshotLifetimeRef = useRef<SnapshotLifetime>({
+    initialized: false,
+    serverIncarnation: null,
+    revision: 0,
+    retiredServerIncarnations: new Set(),
+  });
   const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
   // Bumped on every error path below, threaded into `LogPanel` as a second
   // effect dependency alongside `tree`. `tree` only changes on a
@@ -109,14 +155,10 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     setLogVersion((v) => v + 1);
     pushError(api.errorMessage(e));
   }
-  // Whether the backend's `AppState.store_path` is set — mirrored here so
-  // "Save" knows whether it can skip the dialog. Safety here rests on this
-  // flag staying in lockstep with the backend's own `store_path`: the
-  // backend does NOT check which project is loaded against `store_path`
-  // before writing — `save_project` just writes wherever `store_path`
-  // points. See docs/KNOWN_LIMITATIONS.md for the tracked gap (importing a
-  // fresh `.knxproj` while `store_path` still points at a different
-  // `.knxdb` would let a subsequent Save overwrite the wrong file).
+  // Whether the backend's atomically published `AppState.store_path` is set,
+  // mirrored only so "Save" knows whether it can skip the dialog. Accepted
+  // server snapshots update this flag with their owning project; stale or
+  // retired responses cannot change either one.
   const [hasStorePath, setHasStorePath] = useState(false);
   // The one project load that can be in flight, ADR-0023's whole client
   // side. `loadSource` doubles as the banner's visibility: it is set the
@@ -309,51 +351,6 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
-  // The editing window owns the displayed `ProjectTree`, including recovery
-  // through GET /api/project, and publishes it to companion windows.
-  // Publishing on the `tree` state itself, rather than at each of the
-  // half-dozen call sites that set it, means no edit path that *lands in
-  // `tree`* can forget to — and a stale fingerprint is exactly the failure
-  // the diagnostic companion's stale lock exists to prevent
-  // (`busContext.ts`).
-  //
-  // This comment used to say "no future edit path can forget to", full
-  // stop. That was false for a while: `api.setParameterValue` mutates the
-  // project server-side — `domain.rs`'s `set_parameter_value_impl` runs
-  // `apply(state, cmd)`, a real undoable `Command::SetParameterValue`,
-  // before it returns — but answers with a `ParameterPanelDto`, never a
-  // `ProjectTree`, and `ParameterPanel` had no channel back to `tree` at
-  // all.
-  //
-  // Closed (T3, 2026-09-13; tree-sourcing corrected in T3 fix round 1,
-  // 2026-09-14): `set_parameter_value_impl` now attaches its own freshly
-  // rebuilt `ProjectTree` — the same one `apply(state, cmd)` already
-  // produced — to a successful write's `ParameterPanelDto`.
-  // `ParameterPanel` hands that tree straight to `onValueApplied`, and
-  // `DeviceWorkspace` (`Inspector.tsx`) forwards it to `onApplied`
-  // unchanged; no caller builds a `{...tree, can_undo, can_redo}` guess
-  // anymore. So `setTree` does run, and this effect does fire, on every
-  // parameter edit, with the server's own genuine `can_undo`/`can_redo`.
-  //
-  // What still does not move is the *fingerprint* itself:
-  // `fingerprintProjectContext` (`busContext.ts`) deliberately excludes
-  // parameters, so a parameter edit republishes the same fingerprint value
-  // under a fresh `at` — exactly how every edit that leaves group
-  // addresses untouched already behaves, not a leftover gap. The
-  // remaining risk is unchanged from before this fix: the day a parameter
-  // can influence a com object's DPT, links or activity, the fingerprint
-  // would need to start covering it too, or this becomes a silent false
-  // `"synced"`. `resolve_group_address_dpt`'s doc comment carries that
-  // warning; `KNOWN_LIMITATIONS.md` §82 item 5 carries the entry.
-  //
-  // Never published for `tree === null`: a freshly reloaded window has no
-  // tree while the server may still hold the same project open, and
-  // publishing "no project" there would invent a change that never
-  // happened and lock a valid session.
-  useEffect(() => {
-    if (tree) publishProjectContext(tree);
-  }, [tree]);
-
   const startupToastShown = useRef(false);
   useEffect(() => {
     if (startupToastShown.current) return; // StrictMode double-invoke guard
@@ -387,8 +384,21 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     else if (result === "failed") pushError(t("companion.failed"), { serverText: false });
   }
 
-  function resetTree(newTree: ProjectTree) {
+  function publishTree(newTree: ProjectTree): boolean {
+    const nextLifetime = acceptedSnapshotLifetime(snapshotLifetimeRef.current, newTree);
+    if (nextLifetime === null) return false;
+    // Publish before adopting the tree so another window's already accepted
+    // lifetime can veto a delayed local reply. The same record must exist
+    // before a confirmed style response can rebase its exact bus session.
+    if (!publishProjectContext(newTree)) return false;
+    snapshotLifetimeRef.current = nextLifetime;
+    rebasePublishedSessionContext(newTree);
     setTree(newTree);
+    return true;
+  }
+
+  function resetTree(newTree: ProjectTree): boolean {
+    if (!publishTree(newTree)) return false;
     setBuildingScope(null);
     setAddressScope(null);
     // Ids from the previous project mean nothing in this one, and a stale
@@ -398,6 +408,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     selectionRef.current = null;
     setSelection(null);
     setDeviceDetail(null);
+    return true;
   }
 
   async function selectEntity(sel: Selection) {
@@ -470,7 +481,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // the stale result is discarded instead of overwriting the newly
   // selected device's detail.
   async function handleTreeUpdate(newTree: ProjectTree) {
-    setTree(newTree);
+    if (!publishTree(newTree)) return;
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
     const requestId = ++deviceDetailRequestIdRef.current;
@@ -553,7 +564,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // over whatever file the previous one came from. The backend clears its
   // own `store_path` for exactly the same reason (`new_project_impl`).
   function newProjectCreated(newTree: ProjectTree) {
-    resetTree(newTree);
+    if (!resetTree(newTree)) return;
     setHasStorePath(false);
     // The banner outlives a failed load on purpose, but only until that
     // load stops being the last thing that happened (fix round 6, F-D):
@@ -571,7 +582,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
   function finishLoadedProject(loadedTree: ProjectTree, path: string | null, storePath: boolean) {
-    resetTree(loadedTree);
+    if (!resetTree(loadedTree)) return;
     setHasStorePath(storePath);
     setLoadSource(null);
     setLoadSnapshot(null);
@@ -677,13 +688,28 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     await runLoad(path, api.openProject, true);
   }
 
+  async function refreshSavedProject() {
+    const current = await api.currentProject();
+    if (!publishTree(current)) return;
+    setHasStorePath(current.has_store_path);
+  }
+
   async function saveProjectAs() {
+    const projectSnapshot = {
+      serverIncarnation: snapshotLifetimeRef.current.serverIncarnation,
+      revision: snapshotLifetimeRef.current.revision,
+    };
     const path = await pickSavePath(knxdbFilter, "project.knxdb");
-    if (!path) return;
+    const latestSnapshot = snapshotLifetimeRef.current;
+    if (
+      !path ||
+      projectSnapshot.serverIncarnation !== latestSnapshot.serverIncarnation ||
+      projectSnapshot.revision !== latestSnapshot.revision
+    ) return;
     clearErrors();
     try {
       await api.saveProjectAs(path);
-      setHasStorePath(true);
+      await refreshSavedProject();
     } catch (e) {
       reportError(e);
     }
@@ -694,6 +720,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     clearErrors();
     try {
       await api.saveProject();
+      await refreshSavedProject();
     } catch (e) {
       reportError(e);
     }
@@ -746,14 +773,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     if (menu) menu.open = false;
   }
 
-  // F4. `can_undo` is the dirty signal, and it is the server's own: there
-  // is no dirty flag in `AppState` either, so `new_project_impl` refuses a
-  // new project on exactly this condition (see its doc comment). It
-  // over-reports after a save — the stack still has history — and that is
-  // the direction to err in when the alternative is a project that goes
-  // quietly into the bin.
+  // F4. The server owns the clean project snapshot. Undo availability stays
+  // a toolbar concern; only the server's normalized content comparison may
+  // decide whether closing would discard user-visible changes.
   function quitRequested() {
-    if (tree?.can_undo) {
+    if (tree?.is_modified) {
       setQuitConfirmOpen(true);
       return;
     }

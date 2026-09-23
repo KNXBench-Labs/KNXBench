@@ -57,6 +57,8 @@ pub enum StoreError {
     /// rather than silently read back as `ThreeLevel`: a persisted style
     /// that cannot round-trip is data loss (KNOWN_LIMITATIONS.md §84).
     UnknownGroupAddressStyle(String),
+    /// Unknown persisted space kind must not be silently rewritten as Building.
+    UnknownBuildingPartType(String),
 }
 
 impl std::error::Error for StoreError {}
@@ -65,6 +67,10 @@ impl fmt::Display for StoreError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StoreError::Sqlite(e) => write!(f, "{e}"),
+            StoreError::UnknownBuildingPartType(kind) => write!(
+                f,
+                "building_part.kind {kind:?} is not a supported building-space type"
+            ),
             StoreError::NotSaved => write!(f, "no project has been saved to this database yet"),
             StoreError::UnreachableDevices(ids) => write!(
                 f,

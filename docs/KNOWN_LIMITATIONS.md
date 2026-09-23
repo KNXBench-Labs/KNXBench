@@ -4793,26 +4793,32 @@ made for those later actions.
 
 ## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
 
-**Limitation.** `POST /api/project/new` refuses with `409 Conflict` when a
-project is open and its command stack has anything to undo, unless the caller
-sends `discardChanges: true`. It will refuse even when every one of those
-edits was already written to disk by `POST /api/project/save` **[D]**
-(`apps/knx-server/src/domain.rs`, `new_project_impl`).
+**Resolved.** `AppState.clean_project` keeps a transient snapshot of the last
+project state established by successful native open, ETS import, new project
+creation, Save, or Save As. `new_project_impl` compares the live project with
+that snapshot; a failed save leaves the previous snapshot untouched. The
+snapshot is process state, not `.knxdb` data, so native store schema version 9
+is unchanged.
 
-**Cause.** `AppState` has no dirty flag and `knx_core::CommandStack` exposes
-no saved-at marker — `can_undo()` is the only signal available that the user
-changed anything. Adding a real dirty flag means threading a save-point
-through the command stack, which is a change to `knx-core`'s public surface
-and belongs to its own slice.
+The dirty predicate and New's replacement now share one project-led
+transaction. Save chooses its path after acquiring that leading lock and
+keeps the path, project, opaque passthrough and manufacturer manifest coherent
+through clean-baseline publication. Open/import/new replace those collections
+under the same boundary; an intervening accepted edit cannot disappear in a
+gap between New's check and replacement.
 
-**Impact.** A caller who saved and then asks for a new project gets a refusal
-it did not deserve, and has to repeat the request with `discardChanges`. The
-error message says exactly that. The failure direction is deliberate:
-CLAUDE.md ranks data integrity above convenience, and the opposite mistake —
-silently discarding unsaved work — is unrecoverable.
+`Project::same_user_content_as` clones both projects, replaces both synthetic
+`IdAllocators` high-water marks with defaults, and then uses structural
+equality. An edit followed by undo is therefore clean even though allocation
+counters advanced, while every other existing and future `Project` field
+participates without a hand-maintained field list.
 
-**Lifted when.** `CommandStack` records the position last saved, and
-`new_project_impl` compares against it instead of calling `can_undo()`.
+**Verification.** Server regressions cover both disagreement directions:
+edit then undo yields `can_redo == true` and `is_modified == false`; direct
+mutation outside the command stack yields `can_undo == false` and
+`is_modified == true` and is refused by the new-project guard. HTTP tests
+prove successful Save and Save As replace the snapshot while a failed Save
+retains dirty state.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
@@ -4825,12 +4831,13 @@ it cannot see, and what each one costs:
 
 1. **Another client edits the project.** A second browser, a private
    window, another machine, or `curl` against the same server changes a
-   group address's name, DPT or style. No record in this profile's
-   `localStorage` moves, so the companion keeps reporting `synced` while
-   the running session's frozen `GroupAddressContext`
-   (`apps/knx-server/src/bus.rs:601-618`) — and therefore every decoded
-   value and every write DPT resolution — describes a project that no
-   longer exists.
+   group address's name or DPT without changing its style. No record in
+   this profile's `localStorage` moves, so the companion can keep reporting
+   `synced` while the running session's `GroupAddressContext`
+   (`apps/knx-server/src/bus.rs`) describes an older project. T13 is the
+   explicit exception: a successful style change, including Undo/Redo that
+   changes the style, refreshes the complete server-side context. That does
+   not introduce general cross-client project synchronization.
 2. **The project record outlives the server.** `localStorage` survives a
    server restart; the server's in-memory project does not. The companion
    can therefore believe a project is open (`projectContextKnown()`) when
@@ -4853,17 +4860,13 @@ it cannot see, and what each one costs:
    deliberate (nothing observed says the snapshot is wrong), but it is
    weaker than a real answer.
 
-**Cause.** There is no channel through which a client can be told the
-project changed, and no route that returns the project tree without
-mutating it. [§63 point 3](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
-establishes the first: no `WebSocket`, no `EventSource`, and the only
-polling loop in the frontend polls bus telegrams. The second is visible in
-`apps/knx-server/src/routes.rs`, whose only `GET` routes are
-`/api/device/{id}`, `/api/catalog/manufacturers`, `/api/catalog/items`,
-`/api/product-languages` and `/api/log` — every route that returns a
-`ProjectTree` is a `POST` that changes something first. A companion window
-therefore has no way to *ask* what the project looks like; it can only be
-told by a sibling window that already knows. **[V]**
+**Cause.** There is no project-change push channel and the companion does
+not poll current project state. [§63 point 3](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
+documents the missing cross-client synchronization. Since T12,
+`GET /api/project` does return the current authoritative tree without a
+mutation; it is used for explicit recovery and save refresh, not continuous
+companion synchronization. The older claim that no such GET exists is
+obsolete. The companion still relies on its sibling window's local record.
 
 **Impact.** The lock is a guard against the common case — one user, one
 browser, editing in one window while watching in another — not a
@@ -4873,12 +4876,10 @@ one the feature exists to prevent: a decoded column, and a write's
 resolved DPT, describing a project the server has since changed. Writes
 land on real hardware and project Undo cannot reverse them (`busCompose.liveAction`).
 
-**Lifted when.** The server can tell a client that the project changed —
-the same push channel §63 needs for concurrent editing. A cheaper partial
-step would be a read-only `GET` returning the current tree's fingerprint,
-which would turn cases 1-3 into ordinary poll-detected staleness without
-requiring any push infrastructure; it was not built here because it is a
-server-side API addition and this stage's scope was the UI.
+**Lifted when.** A verified push or polling contract compares current
+project state with the actual session context across clients and restarts.
+The existing read-only project GET is a prerequisite, not proof that this
+contract exists; no continuous companion refresh is implemented by T13.
 
 **Platform note.** Both platforms were exercised on 2026-09-13: the
 companion route renders in headless Chromium against the Vite dev server,
@@ -5502,45 +5503,34 @@ measurable rather than asserted.
 
 ## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 
-**Limitation.** `knx_core::BuildingPartType` has six variants — `Building`,
-`Floor`, `Room`, `Corridor`, `DistributionBoard`, `BuildingPart` — which are
-exactly the six values *observed* in the reference projects
-([DATA_MODEL.md §5](DATA_MODEL.md)). The published schema documents eleven.
-*Project Schema23 v01.00.00* §1.1.2.3, `simpleType SpaceType_t`, "This
-enumeration contains the different types of available spaces in the ETS6",
-lists ten: `Building`, `BuildingPart`, `Floor`, `Stairway`, `Room`,
-`Corridor`, `DistributionBoard`, `Area`, `Ground`, `Segment` **[D]**.
-§1.2.6.4, `complexType Space_t`, gives the same attribute a different ten:
-**[D]** *"One of: "Building", "BuildingPart", "Floor", "Room", "RoomPart",
-"DistributionBoard", “Stairway”, “Corridor”, “Area”, “Ground”"* — `RoomPart`
-where the enumeration has `Segment`. So the document is internally inconsistent
-about **two** values, their union is eleven, and neither list is implemented in
-full: `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` have no variant
-here **[V]**.
+**Resolved (T13, 2026-09-22).** `BuildingPartType` now preserves `Stairway`,
+`RoomPart`, `Area`, `Ground` and `Segment` in addition to the six observed
+legacy values. Parser/mapper, native storage, projection, creation API,
+localized EN/DE creation and Inspector labels, and report rendering retain
+each exact kind. Unknown ETS values still produce a mapping error and the
+reported `BuildingPart` fallback; unknown persisted kinds instead refuse load
+with `StoreError::UnknownBuildingPartType`, including the offending value.
 
-**Cause.** `parse_building_part_type` (`crates/knx-etsproj/src/values.rs`)
-matches the six known strings and returns `ValueError::UnknownEnumValue` for
-anything else; `map_building_part` (`crates/knx-etsproj/src/map.rs:1428`)
-records that as a `MapProblem` whose message reads `BuildingPart/@Type:
-unknown value "<value>"` in the import report, and substitutes
-`BuildingPartType::BuildingPart`. Nothing is silently dropped — the problem
-reaches the import report — but the substitution is lossy, and re-export
-writes `Type="BuildingPart"` (`building_part_type_str`, called from both
-`export/schema11.rs:778` and `export/schema21.rs:700`), so a round trip of
-such a project changes the attribute.
+**Evidence boundary.** The locally checked *Project Schema23 v01.00.00.pdf*
+§1.1.2.3 (PDF page 7) enumerates ten values including `Segment` but excluding
+`RoomPart`. §§1.2.6.3–1.2.6.4 (PDF pages 54–55) describe the space hierarchy;
+the §1.2.6.4 Type attribute table names eleven values, including **both**
+`RoomPart` and `Segment`. The earlier claim that the table omitted `Segment`
+was a transcription error: the continuation “and Segment” is present.
+Only `RoomPart` differs between the enumeration and attribute prose.
+The implementation accepts both documented literals without claiming that
+`RoomPart` belongs to the enumerated XSD type.
 
-**Impact.** None on the three reference projects: no sample contains any of
-the five. A real schema-21 or schema-23 project with a stairway, an outdoor
-`Ground` space or a `RoomPart` imports with one reported problem per space
-and a flattened type, which costs the user the distinction in the building
-tree and costs an ETS-bound export the original value.
-
-**Lifted when.** `BuildingPartType` gains the five variants, with import,
-export and the store's type mapping extended together. Deliberately not done
-while discovering it, on 2026-09-13, during
-[ADR-0019](adr/0019-building-model-stays-topological.md)'s evidence sweep:
-that ADR decided the *coordinate* question and adding domain variants is a
-separate change with its own migration surface, not a drive-by.
+**Verification and remaining limits.** Synthetic schema-23 mapping tests cover
+all five additions plus a genuinely unknown token. Native save/load/re-save
+retains every kind and hierarchy; the unconstrained `kind TEXT NOT NULL`
+column requires no migration or schema bump (still v9). Older six-kind readers
+cannot faithfully reopen native files using the additions: their unknown-kind
+fallback substitutes `Building`. The three local
+reference projects contain none of the five added values, so real-project
+evidence for them remains absent. There is no ETS project exporter after
+[ADR-0028](adr/0028-no-knxproj-export.md); round-trip proof concerns native
+`.knxdb` files only.
 
 ## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file
 
@@ -5613,52 +5603,37 @@ exists so the number stops being re-derived. If a future brief asks for
 of you.
 ## 91. A running bus session keeps rendering group addresses in the style the project had when it started
 
-**What.** `GroupAddressContext` (`apps/knx-server/src/bus.rs`) is a snapshot
-taken once, by `from_project`, at `POST /api/bus/start` time: the project's
-group address style, its group address names, and its resolved DPTs. Nothing
-refreshes it for the life of the session. Before T4 that could not matter — a
-project's style was chosen at creation and never changed, so the snapshot and
-the project agreed by construction. T4 made the style editable
-(`POST /api/project/group-address-style`), and the snapshot is now the one
-place in the server that can disagree with the project it came from.
+**Resolved.** `BusSession` now owns one atomically replaceable
+`GroupAddressContext` shared by the incoming-telegram drain task and outgoing
+write path. After `POST /api/project/group-address-style` successfully applies
+the domain command, the handler rebuilds the complete context from the current
+project and replaces it in an active session. Style, names and resolved DPTs
+therefore stay one coherent snapshot rather than acquiring separate refresh
+rules.
 
-Restyle a project while a bus session is open and two routes keep speaking the
-old style: `GET /api/bus/telegrams` renders every destination through
-`format_destination`, and `POST /api/bus/write` parses the incoming
-`destination` with the same cached style (`bus_routes.rs`, the
-`unwrap_or(GroupAddressStyle::ThreeLevel)` fallback applying only when no
-session is active or its snapshot carried no project). Meanwhile the Project
-Explorer, the Inspector, the projection and every exporter read the style from
-the live project and show the new one.
+The project mutex is held only while building that new context and is released
+before the async bus-session mutex is acquired. Refreshing interpretation
+metadata neither reconnects nor restarts the tunnel and sends no bus frame.
+One application-layer transaction mutex is acquired before the domain command
+and held through fresh snapshot and session publication. Direct restyles and
+Undo/Redo share this boundary, so history cannot overtake a pending publication.
+History refreshes the session when it changes the project style; unrelated
+history operations do not rebuild the context. The project and bus locks remain
+separate phases inside that serialized transaction.
+`style_change_refreshes_the_active_session_without_reconnecting` verifies
+through the public route that the next monitored telegram uses the new style,
+its displayed address round-trips through `/api/bus/write`, the session ID is
+unchanged and the fake tunnel remains connected **[V]**.
 
-**Why this is a display and ergonomics defect, not an addressing one.** No
-telegram is ever sent to the wrong address because of it. The three styles have
-different field counts — `Free` is one decimal number, `TwoLevel` is `main/sub`,
-`ThreeLevel` is `main/middle/sub` — and `GroupAddress::parse` requires the exact
-field count for the style it is given, so a string written in one style never
-parses as a *different* address in another: it is refused. A user who copies
-`4242` out of the restyled Explorer and posts it to `/write` on a session that
-started in `ThreeLevel` gets a `400` with a malformed-address message, not a
-telegram to `4/2/42`. **[V]** Verified by reading both code paths on
-`243a4d7`, not inferred from the type signatures.
+Additional fake-session regressions cover Undo and Redo monitor formatting and
+write parsing, plus deterministic ordering between a pending style publication
+and Undo. The controller observed the stale-style/order failures before the fix
+and all corresponding cases passed afterwards. No physical bus was used.
 
-**Why it is left as it is.** The snapshot is deliberate and load-bearing for a
-different reason: the `/start` handler must build it from `AppState.project`
-*before* calling `BusSession::start`, so the project mutex is never held across
-that call's `.await` (see `BusSession::start`'s own doc comment, and the
-commissioning design spec §4.4, which specifies the snapshot). Refreshing it on
-restyle means reaching into a live session from the project-mutation path and
-re-acquiring locks in the opposite order — exactly the deadlock shape the
-snapshot exists to avoid. That is a bus-session-lifetime change, not a group
-address style change, and T4's scope is the style.
-
-**Workaround.** Stop and restart the bus session after restyling a project. The
-new session snapshots the new style.
-
-**Lifted when.** A bus session gains a supported way to be told its project
-changed — most plausibly a channel the session task owns, so the refresh
-happens on the session's side of the lock rather than the mutator's. Until
-then, restarting the session is the honest answer and this section says so.
+**Notation boundary.** This resolution concerns the project's address level:
+`Free`, `TwoLevel` or `ThreeLevel`. User-facing group addresses remain in the
+fixed slash-based representation for the chosen level; no slash/dot notation
+selector was added.
 
 
 ## 92. Commissioning phase 2 is verified against a simulator this project wrote, and has never addressed a device
@@ -6141,29 +6116,37 @@ Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
 ## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag
 
-**Limitation.** The File menu's Quit entry (T28/F4, desktop shell only) guards
-itself with an unsaved-changes check before it lets the window close.
-KNXBench has no dirty flag, so "there is unsaved work" is read off
-`ProjectTree.can_undo`, which stays `true` after a save.
+**Resolved.** `ProjectTree.is_modified` publishes the server-owned snapshot
+comparison beside, but independently from, `can_undo` and `can_redo`. Pure
+`knx-projection` output defaults it to `false`; the application overlay derives
+the live value while holding the same project-led lock order used for project,
+command-stack, import-count, store-path, clean-snapshot, opaque and manufacturer
+manifest publication.
 
-**Cause.** `can_undo` is the only mutation signal the server publishes, it is
-already what the welcome screen's unsaved-changes guard uses, and
-`domain.rs`'s `new_project_impl` documents the over-refusal as deliberate.
-Adding a real dirty flag means a server-side change to every mutating route,
-which is a task of its own and not a UI finding's business.
+The desktop Quit guard consumes only `is_modified`. Undo and redo buttons
+continue to consume history availability. Frontend regressions prove both
+important disagreements: `can_undo == true` with `is_modified == false` quits
+without a prompt, while `can_undo == false` with `is_modified == true` opens
+the confirmation dialog. Successful Save and Save As operations then consume
+a fresh `GET /api/project` tree rather than patching the dirty bit locally;
+if that authoritative refresh fails, the error is reported and the prior
+dirty tree remains in force.
 
-**Consequence.** Anyone who saves and then quits is asked about unsaved
-changes that no longer exist — a false alarm, in the safe direction. The
-dialog offers Cancel and "Quit without saving" only, with no "Save and quit":
-`saveProject` swallows its own failures into a toast and returns nothing, so
-a save-then-quit path could close the window over a save that silently
-failed, which is the exact accident this dialog exists to stop.
+Public snapshots carry application-owned `server_incarnation` and
+`snapshot_revision` metadata. Every publication path rejects superseded trees
+before changing selection or save metadata, covering delayed Save→Edit,
+Edit→Save and Load→Edit responses. A new process's low revision is accepted;
+responses from a retired incarnation cannot switch the UI back. These guards
+control response ownership, not the server's dirty-state value. Pure/offline
+projections omit runtime metadata; no native schema migration is involved.
 
-**Not a data-loss risk.** The imprecision errs towards keeping the user's
-work: an extra question gets asked, nothing is discarded.
-
-**Lifted when.** The server grows a real dirty flag; then the guard becomes
-exact. Not scheduled.
+Browser context records retain incarnation retirement across reloads and
+same-profile windows. Bus session matching additionally requires the server
+incarnation, so a reused numeric session ID cannot verify/rebase an old
+record. Missing legacy identity remains `unverified`, and legacy tree metadata
+cannot replace an accepted modern incarnation. This is not cross-client push
+or optimistic write-conflict detection; §82's browser-profile visibility
+boundary remains. See [ADR-0032](adr/0032-application-snapshot-ordering.md).
 
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 
@@ -7051,10 +7034,12 @@ general — only that the combination has, repeatedly, produced a stale
 freshness decision here.
 
 **Impact.** Every gate run on this machine needs an independent check that
-the binary under test is the current one. For `knx-net` the cheap one is
-the test count: **252 lib tests** as of B1 fix round 1, 250 for the B1
-branch before it, 247 for anything older. A run reporting 247 is executing
-pre-branch code and will transmit on the LAN. `touch` the source, or
+the binary under test is the current one. For `knx-net` the cheap first check
+is the test count, re-enumerated from current source rather than frozen in a
+handover. **2026-09-23: 253 lib tests**, verified against 253 source test
+attributes and a fresh `cargo clean -p knx-net` rebuild. The older 252-test
+checkpoint predates the scan-comparison regression; a mismatch must stop the
+run for investigation, not be accepted as proof of freshness. `touch` the source, or
 `cargo clean -p <crate>`, and rebuild rather than trusting mtime; do not
 trust a file's mtime or checksum as proof that a *build output* is current,
 because the output's own mtime was equally unreliable in the measured case.
@@ -7071,55 +7056,42 @@ and the workaround, and the choice is the maintainer's.
 
 ## 120. Nothing checks that a theme is legible
 
-**Limitation.** `apps/knx-web/src/styles.css` ships five palettes, and
-[ADR-0022](adr/0022-theme-token-boundary.md) holds every one of them to a
-derived token boundary: `themeTokens.test.ts` fails the suite if a theme
-misses a token, sets one a user setting owns, declares a plain property
-other than `color-scheme`, defines itself by negation, nests itself inside
-a media query, shares a block with another theme through a comma, or
-writes a literal colour into the component layer. It
-checks that a palette is *complete*. It checks nothing about whether a
-palette can be read. No test computes a contrast ratio, so a sixth theme
-could declare all 27 tokens, pass every check in the file, and render grey
-text on a grey background.
+**Limitation.** `themeTokens.test.ts` now enforces the three ADR-0022 role pairs
+for every registered palette and accent variation: foreground on background,
+foreground on surface, and on-accent on accent. Each pair must meet the exact
+WCAG AA normal-text threshold of 4.5:1. The gate supports the concrete opaque
+hex and `rgb()`/`rgba(..., 1)` forms used by these roles and recursive
+`var(--knx-...)` references. Unsupported notation, unresolved or cyclic
+references, and non-opaque alpha are named failures containing the theme, pair,
+and offending value rather than being skipped.
 
-The literal-colour half of that guard has a blind spot of its own, in the
-same direction. The CSS system colour keywords are colour values and are
-not in its named-colour list, so `color: Canvas`, `color: AccentColor` and
-`border: 1px solid ButtonBorder` pass — and they are exactly as
-theme-blind as `#ff00aa`, because they resolve from the operating system
-rather than from any `--knx-*` token. Recorded rather than fixed: the
-keyword list is long, overlaps nothing in the stylesheet today, and adding
-it is a change to one `Set` on the day someone writes the first one.
+Duplicate theme/accent blocks are rejected, and variation tests inspect the
+actual block rather than the first matching name. RGB channels, including both
+numeric helper inputs, must be finite and within `[0,255]`. The luminance
+calculation uses WCAG's current `0.04045` sRGB breakpoint, with fractional
+reference tests as well as the shipped integer palette values.
 
-**Cause.** Contrast is a property of a *pair* of tokens, and the boundary
-is a property of one token at a time. Enforcing it needs three things the
-project does not have: a CSS colour parser covering every notation a theme
-block may use (`#rrggbb`, `color-mix()`, the `oklch()` a future palette
-would want), a relative-luminance implementation, and — the hard part — a
-declaration of which foreground/background pairs actually meet on screen,
-which is a fact about the component layer's rules, not about the theme
-blocks. The five current palettes were measured by hand in a real browser
-during T37: every foreground/background and on-accent/accent pair is at or
-above 4.5:1 (IMPLEMENTATION_STATUS.md, T37). That is a measurement of a
-moment, not an invariant.
+This remains a bounded role-pair invariant, not a claim that every arbitrary
+component composition, browser rendering difference, or assistive technology
+has been audited. The literal-colour guard also still does not model CSS system
+colour keywords such as `Canvas`, `AccentColor`, and `ButtonBorder` in
+component rules; those remain outside the shipped stylesheet and outside this
+contrast gate.
 
-**Impact.** Nobody is harmed today — the shipped palettes were measured and
-pass. The cost is borne by the next theme: its author gets a precise,
-automatic answer about token completeness and no answer at all about
-legibility, which is the property a user actually notices. ADR-0022's own
-Context section opens with exactly this failure having already happened
-once: `bitcoin-defi` hard-coded `color: #ffffff` on a `#f7931a` button, a
-ratio of about 2.3:1, and shipped.
+**Cause.** Contrast is a property of a foreground/background pair, so token
+completeness alone was insufficient. The gate now resolves the named role pairs
+from each theme block, overlays a variation's accent pair on its base theme,
+computes relative luminance, and rejects any value it cannot evaluate safely.
 
-**Lifted when.** A test computes the contrast ratio of each theme block's
-foreground/background and on-accent/accent pairs and fails below 4.5:1.
-`themeTokens.ts` already parses everything such a test would read — the
-missing pieces are a colour parser and the pair list. ADR-0022 names this
-as the obvious next tightening; it is recorded here rather than attempted,
-because a half-built contrast check that silently skips the notations it
-cannot parse is worse than none: it would report a clean run over palettes
-it never examined.
+**Impact.** New or changed registered palettes and accent variations receive a
+precise build-time diagnostic naming the theme, role pair, and offending value.
+The gate does not claim to cover roles outside the three pairs named by
+ADR-0022, nor does it add runtime or browser dependencies.
+
+**Lifted when.** The role-pair contrast gate is the enforced build-time
+invariant for this limitation. It would be broader only if the application
+formally declares additional semantic pairs and extends the evaluator for their
+color notations in the same change.
 
 ## 121. Two open windows do not see each other's preference changes until one reloads
 

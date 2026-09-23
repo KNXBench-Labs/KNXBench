@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-23 — T14: documentation reports gain useful data and a preview contract
+
+The pure `knx-report` API now accepts a deterministic `BTreeMap` of
+caller-resolved device data, an English/German report language, and an ordered
+set of five selectable content sections. Header, filtered contents, and the
+limits/warnings section always remain. `knx-app` is the integration owner: it
+uses the existing language-aware product/parameter queries and module argument
+declarations, then hands display-only rows to the renderer. There is still no
+`knx-report -> knx-productdb` edge.
+
+Device documentation keeps raw product/program references, parameter values,
+and module arguments visible. Resolved manufacturer/product/program names,
+parameter labels, enum display values and module argument names appear when
+the installed database can prove them. Missing identity or unrenderable fields
+produce both an inline explanation and a `ReportWarning`; no cell silently
+becomes blank. The CLI uses the same composition seam and degrades to raw data
+plus warnings when its default product database is unavailable.
+
+`POST /api/project/documentation-preview` returns self-contained HTML and
+warning DTOs without writing a file or changing the session log. The existing
+export endpoint accepts the same optional `language` and `sections` members;
+omitting them remains English/all-sections compatible. Supported section names
+are `summary`, `topology`, `buildings`, `groupAddresses`, and `devices`.
+Unknown language/section values are rejected. The embedded print stylesheet
+remains the PDF/print mechanism; no native PDF dependency or ETS-parity claim
+was added.
+
+TDD RED was captured before implementation: `knx-report` failed to compile on
+the six new API expectations, and the focused server preview test received
+404. GREEN raised `knx-report` from 44 to 48 tests and the documentation HTTP
+suite from four to eight tests. The frontend preview, print action, language
+control and section checkboxes remain T12 work; no frontend file changed.
+
 ## 2026-09-23 — T13 merged and verified; goal paused before T14
 
 Integrated as merge `7f9c8c4`, including correction commit `fef0e52`.

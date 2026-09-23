@@ -498,9 +498,16 @@ fn run_doc_export(args: &[String]) -> ExitCode {
     // reads only `ReportOptions`, which is what keeps its own tests
     // deterministic (see `knx-report`'s doc comment; `knx-server` does the
     // same thing on the HTTP side).
-    let options = knx_report::ReportOptions {
-        generated_at: chrono::Utc::now(),
-    };
+    let products = knx_productdb::default_path()
+        .filter(|path| path.exists())
+        .and_then(|path| knx_productdb::open_and_migrate(&path).ok());
+    let options = knx_app::documentation::report_options(
+        &project,
+        products.as_ref(),
+        chrono::Utc::now(),
+        knx_report::ReportLanguage::English,
+        knx_report::ReportSection::ALL.into_iter().collect(),
+    );
     let report = knx_report::render_html(&project, &options);
 
     if let Err(e) = std::fs::write(&parsed.output, report.html.as_bytes()) {

@@ -22,6 +22,7 @@ knx-productdb.workspace = true
 knx-report.workspace = true
 knx-store.workspace = true
 chrono.workspace = true
+sha2.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "signal"] }
 

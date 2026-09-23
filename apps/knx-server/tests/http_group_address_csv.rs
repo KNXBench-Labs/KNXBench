@@ -121,11 +121,22 @@ async fn export_csv(app: &axum::Router, path: &std::path::Path) -> axum::respons
 }
 
 async fn import_csv(app: &axum::Router, path: &std::path::Path) -> axum::response::Response {
+    import_csv_with_confirmation(app, path, None).await
+}
+
+async fn import_csv_with_confirmation(
+    app: &axum::Router,
+    path: &std::path::Path,
+    confirmation_token: Option<&str>,
+) -> axum::response::Response {
     call(
         app,
         "POST",
         "/api/group-addresses/csv-import",
-        Some(json!({ "path": path.to_string_lossy() })),
+        Some(json!({
+            "path": path.to_string_lossy(),
+            "confirmationToken": confirmation_token,
+        })),
     )
     .await
 }
@@ -153,10 +164,10 @@ async fn exporting_writes_a_csv_file_whose_first_data_row_matches_the_project() 
     let lines: Vec<&str> = text.trim_end_matches("\r\n").split("\r\n").collect();
     assert_eq!(
         lines[0],
-        "Address,Name,Central,Unfiltered,DatapointType,MainGroup,MiddleGroup"
+        "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
     );
-    assert_eq!(lines[1], "1/1/1,Living Room Light,false,false,,,");
-    assert_eq!(lines[2], "1/1/2,Kitchen Light,false,false,,,");
+    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,");
+    assert_eq!(lines[2], "1/1/2,upsert,,Kitchen Light,false,false,,,");
 }
 
 #[tokio::test]
@@ -255,6 +266,67 @@ async fn importing_a_file_with_a_bad_row_is_a_400_naming_the_row_and_leaves_the_
         before_bytes, after_bytes,
         "a rejected import must leave the project exactly as it was"
     );
+}
+
+#[tokio::test]
+async fn readdress_requires_preview_then_exact_confirmation() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("readdress.csv");
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/3,Living Room Light\n",
+    )
+    .unwrap();
+
+    let preview = import_csv(&app, &csv_path).await;
+    assert_eq!(preview.status(), StatusCode::OK);
+    let preview = body_json(preview).await;
+    assert_eq!(preview["applied"], false, "{preview}");
+    assert_eq!(preview["report"]["readdressed"], 1, "{preview}");
+    let token = preview["confirmationToken"].as_str().unwrap();
+
+    let confirmed = import_csv_with_confirmation(&app, &csv_path, Some(token)).await;
+    assert_eq!(confirmed.status(), StatusCode::OK);
+    let confirmed = body_json(confirmed).await;
+    assert_eq!(confirmed["applied"], true, "{confirmed}");
+
+    let exported = dir.path().join("after.csv");
+    assert_eq!(export_csv(&app, &exported).await.status(), StatusCode::OK);
+    let text = std::fs::read_to_string(exported).unwrap();
+    assert!(text.contains("1/1/3,upsert,,Living Room Light"), "{text}");
+    assert!(!text.contains("1/1/1,upsert,,Living Room Light"), "{text}");
+}
+
+#[tokio::test]
+async fn confirmation_is_rejected_when_the_csv_changes_after_preview() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("readdress.csv");
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/3,Living Room Light\n",
+    )
+    .unwrap();
+    let preview = body_json(import_csv(&app, &csv_path).await).await;
+    let token = preview["confirmationToken"].as_str().unwrap().to_string();
+
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/4,Living Room Light\n",
+    )
+    .unwrap();
+    let response = import_csv_with_confirmation(&app, &csv_path, Some(&token)).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(response).await;
+    assert!(body["error"].as_str().unwrap().contains("stale"), "{body}");
+    let exported = dir.path().join("unchanged.csv");
+    assert_eq!(export_csv(&app, &exported).await.status(), StatusCode::OK);
+    let text = std::fs::read_to_string(exported).unwrap();
+    assert!(text.contains("1/1/1,upsert,,Living Room Light"), "{text}");
 }
 
 #[tokio::test]

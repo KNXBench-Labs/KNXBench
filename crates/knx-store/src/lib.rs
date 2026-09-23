@@ -21,7 +21,7 @@ pub use migration::{
     open_and_migrate, open_and_migrate_in_memory, MigrationError, CURRENT_SCHEMA_VERSION,
 };
 pub use opaque::{insert_opaque, load_opaque, StoredOpaqueEntry};
-pub use project::{load_project, save_project};
+pub use project::{load_project, save_project, save_project_if_unchanged};
 /// Re-exported so `knx-app` names the connection type through the storage
 /// crate rather than depending on `rusqlite` directly.
 pub use rusqlite::{Connection, Error as SqlError};
@@ -38,6 +38,10 @@ pub enum StoreError {
     /// project (`Project::new`), which is a valid in-memory value that has
     /// simply not been persisted yet.
     NotSaved,
+    /// A compare-and-save operation found a different semantic project after
+    /// obtaining SQLite's write lock. The caller must rebuild and re-confirm
+    /// its plan rather than overwriting the newer project.
+    ConcurrentModification,
     /// `save_project` found devices in `Project::devices` that no
     /// `Line::devices` or `Topology::unassigned` list names. `save_project`
     /// writes devices by walking the topology, so such a device has no
@@ -72,6 +76,9 @@ impl fmt::Display for StoreError {
                 "building_part.kind {kind:?} is not a supported building-space type"
             ),
             StoreError::NotSaved => write!(f, "no project has been saved to this database yet"),
+            StoreError::ConcurrentModification => {
+                write!(f, "project changed after preview; preview again")
+            }
             StoreError::UnreachableDevices(ids) => write!(
                 f,
                 "{} device(s) exist in the project but are named by no line and by no \

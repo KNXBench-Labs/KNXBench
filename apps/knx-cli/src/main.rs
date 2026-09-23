@@ -13,7 +13,7 @@ const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
      \x20     knx ga-export <store.knxdb> <out.csv>\n\
-     \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
+     \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
@@ -859,15 +859,22 @@ struct GaImportArgs {
     store: String,
     input: String,
     dry_run: bool,
+    confirmation_token: Option<String>,
 }
 
 fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
     let mut store = None;
     let mut input = None;
     let mut dry_run = false;
-    for arg in args {
-        match arg.as_str() {
+    let mut confirmation_token = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
             "--dry-run" => dry_run = true,
+            "--confirm" => {
+                i += 1;
+                confirmation_token = Some(take_value(args, i, "--confirm")?);
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag: {other}"));
             }
@@ -875,6 +882,7 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
             other if input.is_none() => input = Some(other.to_string()),
             other => return Err(format!("unexpected extra argument: {other}")),
         }
+        i += 1;
     }
     let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
     let input = input.ok_or_else(|| "missing <in.csv>".to_string())?;
@@ -882,6 +890,7 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
         store,
         input,
         dry_run,
+        confirmation_token,
     })
 }
 
@@ -923,6 +932,12 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
+    // A semantic snapshot catches changes committed through SQLite WAL as
+    // well as main-file changes, and ignores SQLite bookkeeping bytes that
+    // do not alter the project the user previewed.
+    let expected_project = project.clone();
+    let project_snapshot = format!("{project:?}");
+
     let text = match std::fs::read_to_string(&parsed.input) {
         Ok(text) => text,
         Err(e) => {
@@ -950,6 +965,20 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         return ExitCode::from(EXIT_IMPORTED_WITH_ERRORS);
     }
 
+    if !plan.report.destructive_changes.is_empty() {
+        let token = ga_import_confirmation_token(project_snapshot.as_bytes(), text.as_bytes());
+        println!("confirmation token: {token}");
+        if parsed.dry_run || parsed.confirmation_token.is_none() {
+            println!("store written: no (destructive confirmation required)");
+            return ExitCode::SUCCESS;
+        }
+        if parsed.confirmation_token.as_deref() != Some(token.as_str()) {
+            eprintln!("confirmation token is stale or does not match this project and CSV");
+            println!("store written: no (stale confirmation)");
+            return ExitCode::FAILURE;
+        }
+    }
+
     if parsed.dry_run {
         println!("store written: no (dry run)");
         return ExitCode::SUCCESS;
@@ -962,9 +991,15 @@ fn run_ga_import(args: &[String]) -> ExitCode {
                 println!("store written: no (error)");
                 return ExitCode::FAILURE;
             }
-            if let Err(e) = knx_store::save_project(&conn, &project) {
+            if let Err(e) = knx_store::save_project_if_unchanged(&conn, &expected_project, &project)
+            {
                 eprintln!("failed to save project to store: {e}");
-                println!("store written: no (error)");
+                let status = if matches!(e, knx_store::StoreError::ConcurrentModification) {
+                    "stale confirmation"
+                } else {
+                    "error"
+                };
+                println!("store written: no ({status})");
                 return ExitCode::FAILURE;
             }
             println!("store written: yes");
@@ -980,21 +1015,55 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn ga_import_confirmation_token(project: &[u8], csv: &[u8]) -> String {
+    use sha2::{Digest as _, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"knxbench-ga-import-v1\0");
+    hasher.update((project.len() as u64).to_le_bytes());
+    hasher.update(project);
+    hasher.update(csv);
+    format!("{:x}", hasher.finalize())
+}
+
 /// Prints an import report as human-readable lines (design §7). Shared
 /// verbatim between a real import and `--dry-run` — see `run_ga_import` —
 /// so the two can never drift apart.
 fn print_import_report(input: &str, report: &knx_csv::CsvImportReport) {
     println!("imported {input}");
     println!(
-        "  {} row(s) read, {} created, {} updated, {} unchanged",
-        report.rows_read, report.created, report.updated, report.unchanged
+        "  {} row(s) read, {} created, {} updated, {} readdressed, {} deleted, {} unchanged",
+        report.rows_read,
+        report.created,
+        report.updated,
+        report.readdressed,
+        report.deleted,
+        report.unchanged
     );
-    if report.created == 0 && report.updated == 0 {
+    if report.created == 0 && report.updated == 0 && report.readdressed == 0 && report.deleted == 0
+    {
         println!("  nothing to do");
+    }
+    for change in &report.destructive_changes {
+        let target = change
+            .target_address
+            .map(|address| format!(" -> {}", address.raw()))
+            .unwrap_or_default();
+        println!(
+            "  {:?} row {}: {}{} (stable id {}, {} affected link(s))",
+            change.action,
+            change.row,
+            change.source_address.raw(),
+            target,
+            change.id.0,
+            change.affected_links.len()
+        );
     }
     for ignored in &report.ignored_columns {
         let reason = match ignored.reason {
-            knx_csv::IgnoredColumnReason::ExportOnly => "export-only column, not applied on import",
+            knx_csv::IgnoredColumnReason::ReadOnly => {
+                "read-only validation column, never applied on import"
+            }
             knx_csv::IgnoredColumnReason::Unknown => "unrecognized column",
         };
         println!("  ignored column '{}' ({reason})", ignored.name);

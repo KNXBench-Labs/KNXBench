@@ -48,6 +48,8 @@ function importSummary(t: Translate, report: api.CsvImportReport): string {
   const base = t("groupAddressCsv.importSummaryBase", {
     created: report.created,
     updated: report.updated,
+    readdressed: report.readdressed ?? 0,
+    deleted: report.deleted ?? 0,
     unchanged: report.unchanged,
   });
   const warningCount = report.problems.filter((p) => p.severity === "warning").length;
@@ -100,9 +102,53 @@ export default function GroupAddressCsvButtons(props: {
     if (!path) return;
     onClearErrors();
     try {
-      const { tree: nextTree, report } = await api.importGroupAddressesCsv(path);
-      onTreeUpdate(nextTree);
-      onSummary(importSummary(t, report));
+      let response = await api.importGroupAddressesCsv(path);
+      if (!response.applied && response.confirmationToken) {
+        const affectedLinks = response.report.destructiveChanges.reduce(
+          (count, change) => count + change.affectedLinks.length,
+          0,
+        );
+        const detail = response.report.destructiveChanges
+          .map((change) =>
+            t("groupAddressCsv.confirmDestructiveDetail", {
+              action: t(
+                change.action === "readdress"
+                  ? "groupAddressCsv.actionReaddress"
+                  : "groupAddressCsv.actionDelete",
+              ),
+              source: change.sourceAddress,
+              target: change.targetAddress ?? "—",
+              links:
+                change.affectedLinks.length > 0
+                  ? change.affectedLinks
+                      .map(
+                        (link) =>
+                          `${link.comObject} (${t(
+                            link.direction === "send"
+                              ? "groupAddressCsv.directionSend"
+                              : "groupAddressCsv.directionReceive",
+                          )})`,
+                      )
+                      .join(", ")
+                  : "—",
+            }),
+          )
+          .join("\n");
+        const confirmed = window.confirm(
+          `${t("groupAddressCsv.confirmDestructive", {
+              readdressed: response.report.readdressed,
+              deleted: response.report.deleted,
+              affectedLinks,
+            })}\n\n${detail}`,
+        );
+        if (!confirmed) {
+          onSummary(t("groupAddressCsv.confirmCancelled"));
+          return;
+        }
+        response = await api.importGroupAddressesCsv(path, response.confirmationToken);
+      }
+      onTreeUpdate(response.tree);
+      onSummary(importSummary(t, response.report));
     } catch (e) {
       // A rejected import (400 — a row-level problem) never reaches the
       // `.then` above: `onTreeUpdate` is not called, and the project the

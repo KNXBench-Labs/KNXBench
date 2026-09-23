@@ -174,15 +174,18 @@ published, and the version number is not a promise that anything is finished.
   [§69](../KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance),
   [§71](../KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with)
 
-### There is no drag and drop anywhere
+### Drag and drop covers only two structural moves
 
-- **Affected:** the whole user interface.
-- **Limitation:** no tree item, device or group address can be moved by
-  dragging, and the file picker takes no dropped files.
-- **Consequence:** every structural move is done through menus, buttons and
-  inline editing.
-- **Details:** [§24 `FsPicker` has no drag and drop](../KNOWN_LIMITATIONS.md#24-fspicker-has-no-drag-and-drop-or-multi-select),
-  [`docs/GAP_ANALYSIS_ETS.md`](../GAP_ANALYSIS_ETS.md), row B10
+- **Affected:** the Project Explorer.
+- **Limitation:** one eligible device can be dragged onto a line or building
+  part in the first installation. Other structural gestures, especially
+  group-address-to-object linking, are not available by drag and drop;
+  linking requires an explicit send/receive direction. The web file picker
+  separately accepts dropped files and sequential multi-file uploads.
+- **Workaround:** use the Inspector selects or bulk controls for other moves,
+  and the explicit link/unlink action for group addresses.
+- **Details:** [Buildings and topology](user-guide/03-buildings-and-topology.md),
+  [Projects](user-guide/02-projects.md)
 
 ## Group addresses
 
@@ -267,8 +270,8 @@ published, and the version number is not a promise that anything is finished.
 ### The group monitor is tunnelling only, one session at a time
 
 - **Affected:** the bus monitor in the user interface.
-- **Limitation:** tunnelling connections only — no routing, no discovery from
-  the monitor — a single session, and filters applied in the browser rather
+- **Limitation:** tunnelling connections only — no routing in the monitor —
+  a single session, and filters applied in the browser rather
   than at the source. Only the passive receive path has evidence from a real
   gateway.
 - **Consequence:** you cannot watch two gateways at once, and a filtered view
@@ -368,22 +371,14 @@ published, and the version number is not a promise that anything is finished.
   nothing enforces it.
 - **Details:** [§63 no multi-user support](../KNOWN_LIMITATIONS.md#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
 
-### The project file cannot be downloaded through the browser
+### Browser Save As is not a local download
 
-- **Affected:** getting a `.knxdb` off a remote server.
-- **Limitation:** the server has a download route; nothing in the frontend
-  calls it. "Save as" writes into the server's own data directory.
-- **Consequence:** your project lives where the server lives. Copy it off with
-  the tools you use for that machine.
-- **Details:** [§30 `/api/project/download` has no frontend caller](../KNOWN_LIMITATIONS.md#30-apiprojectdownload-has-no-frontend-caller)
-
-### A browser that loses the import response has to reload
-
-- **Affected:** importing a large project.
-- **Limitation:** if the response that carries the imported project is lost —
-  a closed tab, a dropped connection — the project cannot be re-fetched.
-- **Workaround:** reload the page; the project was stored server-side.
-- **Details:** [§96 a browser that loses the import response](../KNOWN_LIMITATIONS.md#96-a-browser-that-loses-the-import-response-cannot-get-the-project-back-without-reloading)
+- **Affected:** saving a `.knxdb` from the web build.
+- **Limitation:** Save As targets the server's permitted directory, not the
+  browser's Downloads folder.
+- **Workaround:** use File → Download project for a local copy of the open
+  in-memory project. Save separately if you want the server-side file updated.
+- **Details:** [Projects](user-guide/02-projects.md)
 
 ## Desktop
 
@@ -479,20 +474,20 @@ published, and the version number is not a promise that anything is finished.
 ### Screen reader support is incomplete
 
 - **Affected:** use with assistive technology.
-- **Limitation:** accessibility work has closed some gaps and left others. A
-  project load that succeeds announces nothing to a screen reader, and the
-  command palette and search share an overlay with a remaining gap.
+- **Limitation:** accessibility work has closed some gaps and left others.
+  Successful project loads now announce a localized status through a polite
+  live region, but this is not end-to-end assistive-technology validation.
 - **Consequence:** the application has not been validated with assistive
   technology end to end. It is not claimed to be accessible.
 - **Details:** [§20 command palette and search overlay](../KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap--partially-resolved),
-  [§118 a succeeded project load announces nothing](../KNOWN_LIMITATIONS.md#118-a-succeeded-project-load-announces-nothing-to-a-screen-reader)
+  [§118 successful load announcement](../KNOWN_LIMITATIONS.md#118-a-succeeded-project-load-announces-nothing-to-a-screen-reader)
 
-### Animations follow the operating system, with no in-application switch
+### Motion settings do not override reduced motion
 
 - **Affected:** motion in the interface.
-- **Limitation:** the reduced-motion preference of the operating system is
-  respected; there is no setting inside the application.
-- **Details:** [§43 animations have no in-app switch](../KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference)
+- **Behavior:** Settings offers motion style and level, including Off. The
+  operating system's reduced-motion preference still takes precedence.
+- **Details:** [Settings and appearance](user-guide/09-settings-and-appearance.md)
 
 ## Documentation defects
 

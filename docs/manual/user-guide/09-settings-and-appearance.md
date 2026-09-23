@@ -2,9 +2,8 @@
 
 # Settings, themes and languages
 
-KNXBench's settings are short on purpose. There is no preferences tree with forty
-pages of checkboxes — there are seven controls and a language-pack manager, and every
-one of them applies the moment you change it. No Save button, no restart.
+KNXBench's settings are grouped into **Appearance**, **Language & data**, and
+**Bus & diagnostics**. Changes apply without a Save button or restart.
 
 ## Opening Settings
 
@@ -12,10 +11,10 @@ Click the gear button at the right end of the toolbar, or open the command palet
 `Ctrl+Shift+P` and run **Settings**. The panel opens over the workspace; Escape closes
 it.
 
-![The KNXBench Settings panel showing the theme, accent color, density, motion style, motion level, product data language and UI language controls](../../assets/screenshots/porcelain-settings.png)
-
-The fields appear in the order used below. The panel in the screenshot is scrolled to
-the top; the language-pack manager sits just under the last field.
+The first group contains theme, accent, density and motion. Language & data
+contains product-data language, UI language and the language-pack manager. Bus &
+diagnostics contains the optional gateway preference and protected line-scan
+exclusions.
 
 ## Theme
 
@@ -24,7 +23,7 @@ Six entries, five of them real palettes:
 | Entry | What it is |
 | --- | --- |
 | System | Follows your operating system's light/dark preference |
-| Porcelain | Light. The theme every screenshot in this manual uses |
+| Porcelain | Light |
 | Graphite | Dark |
 | Cupertino | A light theme with its own fixed accent |
 | Neon Grid | A dark theme with its own fixed accent |
@@ -36,8 +35,7 @@ live — change your desktop's setting while KNXBench is open and the window fol
 
 ## Accent color
 
-Five accents: Violet, Mint, Blue, Amber and Rose. Violet is the default, and the one
-in the screenshots.
+Five accents: Violet, Mint, Blue, Amber and Rose. Violet is the default.
 
 The accent tints interactive elements only. Status colors — the red of an error, the
 amber of a warning — never depend on it, because a color that means something must not
@@ -145,34 +143,47 @@ interface that changes the style of an existing project.
 > the choice you make in that dialog as the one you will live with for now, and see
 > [Group addresses](../knx-basics/03-group-addresses.md) for what the three styles mean.
 
-**Anything about the bus.** Gateway addresses are typed into the bus monitor itself and
-are not remembered between sessions. See
-[Bus monitor and KNXnet/IP](07-bus-and-interfaces.md).
-
 **Anything about the server.** Ports, data directories and static file locations are
 environment variables, not settings — see
 [Web and Docker deployment](11-web-and-docker.md).
 
+## Bus & diagnostics
+
+**Preferred KNXnet/IP gateway** is an optional start value for a newly opened bus
+monitor or line scan. Changing it does not connect to a gateway or start a scan.
+A gateway typed or selected in an active monitor or scan stays under your control;
+discovery does not change the saved preference.
+
+**Protected line-scan exclusions** can be edited here or in the Line Scan panel.
+Both use the same preference. Review the exclusion list before starting a scan:
+a scan sends management traffic to the remaining candidates. See
+[Bus monitor and KNXnet/IP](07-bus-and-interfaces.md).
+
+Settings also shows translated diagnostics when an older settings record was
+migrated or adopted, a newer file was refused, or a damaged file was set aside.
+
 ## Where settings are stored
 
-Every setting on this panel is stored locally by the web frontend, under keys beginning
-`knx-desktop:` — `theme`, `accent`, `density`, `motion-level`, `motion-style`,
-`product-language`, `ui-language`, and `ui-language-packs` for imported packs.
+The authoritative preferences record is a versioned `settings.json` in the
+server's data directory, shared by the browser and desktop shell connected to
+that server. The browser keeps a single `knx-desktop:settings-cache` copy for
+the first paint; it is not the record. Older per-setting browser keys are
+adopted once, only if the server has no settings file yet.
 
 Consequences worth knowing:
 
-- **They survive a restart.** Close KNXBench, open it again, and your theme, density,
-  motion and languages are as you left them.
-- **They are per browser and per origin.** In the web build, opening the same KNXBench
-  server from a different browser, a different machine, or a private window gives you
-  the defaults again. The desktop shell runs the same frontend inside its own embedded
-  web view, so its settings are stored separately from any browser's.
+- **They survive a restart.** The same server data directory supplies its
+  preferences to the next session and to another browser on that server.
 - **They are not part of your project.** Sending someone a `.knxdb` file does not send
   them your theme, and deleting a project does not reset your preferences.
-- **They are not on the server.** The server stores projects; it does not store who
-  likes Graphite.
-- **An unreadable or unknown value falls back to the default** rather than failing.
-  If storage is unavailable entirely — some private browsing modes — the settings still
-  work for the current session and simply do not persist.
+- **There are no user-specific profiles.** One server data directory has one
+  settings file; a second open window does not automatically see changes made
+  in the first until it reloads.
+- **A newer settings file is left untouched** if an older build cannot read it;
+  writes are refused for that session. A damaged file is moved aside rather
+  than deleted. Unknown setting keys survive updates.
+- **Back up the data directory deliberately.** It can contain the saved gateway
+  preference and protected addresses as well as your other settings. Neither
+  saving settings nor making a backup sends bus traffic.
 
 [Manual index](../README.md) · Next: [The command line](10-command-line.md) →

@@ -4,9 +4,11 @@
 use crate::ids::{BuildingPartId, DeviceId, LineId, SourceRef};
 use crate::CompletionStatus;
 
-/// `BuildingPart/@Type`. Observed values in the reference project:
+/// Building-space kind. Observed values in the reference project:
 /// `Building` (1), `Floor` (3), `Room` (14), `Corridor` (2),
 /// `DistributionBoard` (1), `BuildingPart` (1).
+/// Additional documented Space types are supported without local fixture
+/// evidence; see DATA_MODEL §5 for the Schema23 vocabulary discrepancy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuildingPartType {
     Building,
@@ -15,6 +17,11 @@ pub enum BuildingPartType {
     Corridor,
     DistributionBoard,
     BuildingPart,
+    Stairway,
+    RoomPart,
+    Area,
+    Ground,
+    Segment,
 }
 
 /// A node in the building hierarchy. Nests via `children`, not containment

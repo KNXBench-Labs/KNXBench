@@ -11,6 +11,86 @@ use std::path::PathBuf;
 use knx_core::{BuildingPartType, Direction, Override};
 use knx_etsproj::import_knxproj;
 
+#[test]
+fn space_type_schema_23_preserves_documented_tokens_and_reports_unknown() {
+    use knx_etsproj::known_schema;
+    use knx_etsproj::map::{map, MapProblemDetail};
+    use knx_etsproj::parse::parse_installation_v21;
+    use knx_etsproj::values::ValueError;
+    use std::io::{Cursor, Write};
+
+    for token in [
+        "Stairway",
+        "RoomPart",
+        "Area",
+        "Ground",
+        "Segment",
+        "FutureSpace",
+    ] {
+        let xml = format!(
+            r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations><Installation InstallationId="0" Name="Test"><Locations><Space Id="P-0001-0_BP-1" Name="Test space" Type="{token}" Puid="1" /></Locations></Installation></Installations></Project></KNX>"#
+        );
+        let parsed =
+            parse_installation_v21(xml.as_bytes(), "P-0001/0.xml", known_schema(23).unwrap())
+                .unwrap();
+        let mapped = map(&parsed.document, "P-0001/0.xml");
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for (path, bytes) in [
+            ("P-0001.signature", b"x".as_slice()),
+            ("P-0001/0.xml", xml.as_bytes()),
+            ("P-0001/Project.xml", br#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Test" GroupAddressStyle="ThreeLevel" /></Project></KNX>"#.as_slice()),
+        ] {
+            zip.start_file(path, zip::write::SimpleFileOptions::default()).unwrap();
+            zip.write_all(bytes).unwrap();
+        }
+        let imported =
+            knx_etsproj::import_knxproj_bytes(zip.finish().unwrap().into_inner(), "spaces.knxproj")
+                .unwrap();
+        let reported_type_errors: Vec<_> = imported
+            .report
+            .errors
+            .iter()
+            .filter(|error| error.stage == "map" && error.detail.contains("BuildingPart/@Type"))
+            .collect();
+        assert_eq!(
+            reported_type_errors.len(),
+            usize::from(token == "FutureSpace")
+        );
+        if token == "FutureSpace" {
+            assert!(reported_type_errors[0].detail.contains(token));
+        }
+        let type_problems: Vec<_> = mapped
+            .problems
+            .iter()
+            .filter(|problem| {
+                matches!(
+                    &problem.detail,
+                    MapProblemDetail::Value(ValueError::UnknownEnumValue {
+                        kind: "BuildingPart/@Type",
+                        ..
+                    })
+                )
+            })
+            .collect();
+        if token == "FutureSpace" {
+            assert_eq!(type_problems.len(), 1);
+            assert!(
+                matches!(&type_problems[0].detail, MapProblemDetail::Value(ValueError::UnknownEnumValue { value, .. }) if value == token)
+            );
+            assert_eq!(
+                mapped.project.installations[0].buildings[0].kind,
+                BuildingPartType::BuildingPart
+            );
+        } else {
+            assert!(type_problems.is_empty(), "{token}: {type_problems:?}");
+            assert_eq!(
+                format!("{:?}", mapped.project.installations[0].buildings[0].kind),
+                token
+            );
+        }
+    }
+}
+
 fn reference_ets4_path() -> PathBuf {
     knx_testsupport::reference_ets4_path()
 }

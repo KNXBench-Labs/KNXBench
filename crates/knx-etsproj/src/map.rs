@@ -1537,6 +1537,8 @@ fn map_building_part(
             });
             BuildingPartType::BuildingPart
         }
+        // Includes documented Space types; genuinely unknown tokens still
+        // surface as a mapping problem rather than silent normalization.
         Some(s) => parse_building_part_type(s).unwrap_or_else(|e| {
             problems.push(MapProblem {
                 xpath: xpath.clone(),

@@ -37,7 +37,7 @@ use std::fmt;
 use std::future::Future;
 use std::net::SocketAddrV4;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use knx_core::{
     DptRef, GroupAddress, GroupAddressDpt, GroupAddressStyle, GroupValue, IndividualAddress,
@@ -670,17 +670,15 @@ pub struct TelegramRow {
     /// `LDataFrame.source`, `Display`-formatted (e.g. `"1.1.5"`) — mirrors
     /// `apps/knx-cli/src/main.rs`'s `format_telegram`.
     pub source: String,
-    /// The destination group address, formatted per the session's cached
-    /// `GroupAddressStyle` (raw `u16` as a string if no project was open at
-    /// session start — see [`GroupAddressContext`]). A frame addressed to
+    /// The destination group address, formatted per the session's current
+    /// shared `GroupAddressStyle` (raw `u16` if no project context is
+    /// available — see [`GroupAddressContext`]). A frame addressed to
     /// an `IndividualAddress` never reaches this struct at all: see
     /// [`TelegramBuffer::push_telegram`]'s doc comment for why.
     pub destination: String,
-    /// The destination's name from the project open at session start, or
-    /// `None` if no project was open or the address has no matching entry.
-    /// A session-start snapshot (see [`GroupAddressContext`]) — editing the
-    /// project's group-address names mid-session does not change this for
-    /// rows already pushed, nor for rows pushed later in the same session.
+    /// The destination's name from the session's current shared project
+    /// context, or `None` if no project context or matching entry exists.
+    /// Rows already pushed stay immutable when that context is refreshed.
     pub destination_name: Option<String>,
     /// `ApplicationService`'s own variant name — `"GroupValueRead"`,
     /// `"GroupValueResponse"`, `"GroupValueWrite"`, `"DeviceDescriptorRead"`,
@@ -752,34 +750,20 @@ pub enum DecodedValue {
     Error { text: String, error: String },
 }
 
-/// The DPT-resolution and group-address-name maps a session computes once,
-/// at start, from the project open in `AppState` at that moment (design
-/// spec §4.4, D4) — never re-resolved mid-session. `None` project (nothing
+/// One coherent project-derived group-address style, DPT-resolution map and
+/// name map. A `None` project (nothing
 /// open when the session started) collapses `style` to `None` too, which
 /// [`GroupAddressContext::format_destination`] reads as "show the raw
 /// `u16`", per the design's explicit "no project open: raw `u16`, names
-/// `null`" rule. Deliberately private — nothing outside a session's own
-/// start-up needs this, and it holds no reference to `AppState` or its
-/// mutex, only an owned snapshot, which is the whole point: the project
-/// can change (or vanish) after this is built and the session's rows keep
-/// using what was true when it started.
+/// `null`" rule. Deliberately private: it holds no reference to `AppState`
+/// or its mutex. [`BusSession`] shares the owned value behind one `RwLock`
+/// so the drain and write paths observe complete old or new snapshots when
+/// the project style route refreshes it.
 ///
-/// `Clone`: [`BusSession`] keeps its own copy alongside the one moved into
-/// `drain_task` — both need to resolve against the same session-start
-/// snapshot (the task for incoming rows, the session itself for
-/// [`BusSession::resolve_write_dpt`]), and an owned snapshot is cheap
-/// enough (two small maps) that sharing it behind another `Arc` would be
-/// more machinery than the duplication it avoids.
-///
-/// `pub(crate)` (Task 3 addition, was module-private through Task 2): the
-/// `/start` route handler in `bus_routes.rs` must build one of these from
-/// `AppState.project` *before* calling [`BusSession::start`], so the
-/// project mutex is never held across that call's `.await` — see
-/// `BusSession::start`'s doc comment for why. Still opaque outside this
-/// module: only [`GroupAddressContext::from_project`] is constructible
-/// from `bus_routes.rs`, and the value it returns is only ever handed
-/// straight to `BusSession::start`, never inspected field-by-field there.
-#[derive(Clone)]
+/// `pub(crate)` lets the `/start` route build the initial value and the
+/// project-style route build a replacement. Both construct it synchronously
+/// from `AppState.project`, release that mutex, and only then enter an async
+/// bus operation; neither route inspects its fields directly.
 pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
@@ -1198,12 +1182,11 @@ pub struct BusSession {
     /// `Closed`/`Lagged`-driven exit and a write request that arrives just
     /// after it; see that method's doc comment).
     tunnel: Arc<tokio::sync::Mutex<Option<Box<dyn BusTunnel>>>>,
-    /// This session's own copy of the DPT/name snapshot — see
-    /// [`GroupAddressContext`]'s doc comment on why it is `Clone` rather
-    /// than shared behind another `Arc`. Used by
-    /// [`BusSession::resolve_write_dpt`]; `drain_task` keeps its own clone
-    /// for decoding incoming rows.
-    ctx: GroupAddressContext,
+    /// One atomically replaceable DPT/name/style snapshot shared by the
+    /// write path and drain task. Readers hold the lock only while resolving
+    /// one address; a project restyle replaces the complete context so its
+    /// related maps can never be observed half-refreshed.
+    ctx: Arc<RwLock<GroupAddressContext>>,
     /// `Some` until [`BusSession::stop`] consumes it (or the drain task's
     /// own exit makes it moot) — sending on this is how `stop` asks the
     /// task to leave its `tokio::select!` loop. Kept as an `Option` even
@@ -1217,8 +1200,8 @@ pub struct BusSession {
 
 impl BusSession {
     /// Opens a tunnel via `connector` and spawns the drain task around
-    /// `ctx`, an already-built session-start snapshot (design spec §4.4 —
-    /// never re-resolved once a session is running).
+    /// `ctx`, an already-built initial snapshot. The project restyle route
+    /// can later replace that snapshot without reconnecting this tunnel.
     ///
     /// Takes `ctx: GroupAddressContext`, not `project: Option<&Project>` —
     /// the earlier shape this had through Task 2. The `/start` route
@@ -1247,7 +1230,8 @@ impl BusSession {
         let task_buffer = Arc::clone(&buffer);
         let tunnel = Arc::new(tokio::sync::Mutex::new(Some(tunnel)));
         let task_tunnel = Arc::clone(&tunnel);
-        let task_ctx = ctx.clone();
+        let ctx = Arc::new(RwLock::new(ctx));
+        let task_ctx = Arc::clone(&ctx);
         let join_handle = tokio::spawn(drain_task(
             task_tunnel,
             receiver,
@@ -1288,24 +1272,25 @@ impl BusSession {
             .status()
     }
 
-    /// The open project's configured `GroupAddressStyle` at session-start
-    /// time (design spec §4.4's snapshot), or `None` if no project was open
-    /// when this session started. Since T4 made the style editable, this
-    /// snapshot can go stale mid-session: a restyle does not reach in here,
-    /// so `/telegrams` keeps rendering and `/write` keeps parsing in the
-    /// style this session started with. Documented as
-    /// `docs/KNOWN_LIMITATIONS.md` §91 — no address is ever mis-parsed,
-    /// because the three styles have different field counts and `parse`
-    /// refuses a mismatch rather than reinterpreting it. Task 5 fix: `POST /api/bus/write`
-    /// (`bus_routes.rs`) uses this to parse an incoming `destination` string
-    /// in the same style `GET /telegrams` used to *render* it — before this
-    /// accessor existed, `/write` hardcoded `GroupAddressStyle::ThreeLevel`
-    /// regardless of the session's actual project, so a Free- or
-    /// TwoLevel-style project's own `/telegrams` output could not be sent
-    /// back through `/write` at all. See that route's doc comment for the
-    /// full defect.
+    /// The open project's current configured `GroupAddressStyle`, or `None`
+    /// if no project was open when the session started. The project restyle
+    /// route replaces the whole shared context, keeping this write-side
+    /// parser aligned with the drain task's destination formatter.
     pub fn group_address_style(&self) -> Option<GroupAddressStyle> {
-        self.ctx.style
+        self.ctx
+            .read()
+            .expect("bus session group-address context poisoned")
+            .style
+    }
+
+    /// Atomically replaces the context used by both incoming telegrams and
+    /// outgoing writes. This updates only in-memory interpretation metadata;
+    /// it does not touch, reconnect, or send through the tunnel.
+    pub(crate) fn update_group_address_context(&self, ctx: GroupAddressContext) {
+        *self
+            .ctx
+            .write()
+            .expect("bus session group-address context poisoned") = ctx;
     }
 
     /// A cloned handle to the shared buffer — what a poll handler (Task 3)
@@ -1317,7 +1302,7 @@ impl BusSession {
 
     /// `POST /api/bus/write`'s DPT resolution (design spec §4.4/§6, mirrors
     /// `apps/knx-cli/src/main.rs`'s `resolve_write_value`'s `--project`
-    /// path): the session-start snapshot's answer for `ga`, or
+    /// path): the current shared snapshot's answer for `ga`, or
     /// `GroupAddressDpt::None` if the map has no entry at all — the same
     /// thing `resolve_project_group_address_dpts` means by an absent key
     /// (it never stores `None` itself, see that function's doc comment),
@@ -1326,6 +1311,8 @@ impl BusSession {
     /// to handle identically anyway.
     pub fn resolve_write_dpt(&self, ga: GroupAddress) -> GroupAddressDpt {
         self.ctx
+            .read()
+            .expect("bus session group-address context poisoned")
             .dpts
             .get(&ga.raw())
             .cloned()
@@ -1450,7 +1437,7 @@ async fn drain_task(
     tunnel: Arc<tokio::sync::Mutex<Option<Box<dyn BusTunnel>>>>,
     mut receiver: broadcast::Receiver<TunnelEvent>,
     buffer: Arc<Mutex<TelegramBuffer>>,
-    ctx: GroupAddressContext,
+    ctx: Arc<RwLock<GroupAddressContext>>,
     mut stop_rx: oneshot::Receiver<()>,
 ) {
     loop {
@@ -1460,10 +1447,11 @@ async fn drain_task(
             }
             event = receiver.recv() => match event {
                 Ok(TunnelEvent::Telegram(frame)) => {
-                    buffer
-                        .lock()
-                        .expect("bus session buffer poisoned")
-                        .push_telegram(frame, &ctx);
+                    let mut buffer = buffer.lock().expect("bus session buffer poisoned");
+                    let ctx = ctx
+                        .read()
+                        .expect("bus session group-address context poisoned");
+                    buffer.push_telegram(frame, &ctx);
                 }
                 Ok(TunnelEvent::Closed) => {
                     let mut buffer = buffer.lock().expect("bus session buffer poisoned");

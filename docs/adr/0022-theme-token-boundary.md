@@ -172,9 +172,29 @@ those new guards could not see rather than in what they claimed:
   four functions now ask one question, over the whole selector, with the
   attribute name folded to lowercase and the theme id left alone.
 
-Not covered: nothing checks that a palette is *legible*. Contrast ratios were
-chosen by hand and no automated check enforces them. A contrast test over the
-theme layer is the obvious next tightening, and `themeTokens.ts` already
-parses everything such a test would need. Recorded, with the system colour
-keywords the literal-colour guard also lets past, as
-[KNOWN_LIMITATIONS.md §120](../KNOWN_LIMITATIONS.md#120-nothing-checks-that-a-theme-is-legible).
+## Contrast enforcement (T13)
+
+The build-time gate now enforces the three role pairs already implied by the
+component layer:
+
+- `--knx-foreground` on `--knx-bg`;
+- `--knx-foreground` on `--knx-surface`;
+- `--knx-on-accent` on `--knx-accent`.
+
+Every registered palette and every registered accent variation is evaluated.
+Variations overlay only their accent pair on the base theme before evaluation.
+The evaluator supports the concrete opaque hex and `rgb()`/`rgba(..., 1)` forms
+used by these roles, plus recursive `var(--knx-...)` references. Unsupported
+notation, unresolved references, cycles, and non-opaque alpha are named
+violations containing the theme, pair, and offending value; they are never
+skipped. The exact WCAG AA threshold is 4.5:1, with no rounded acceptance.
+
+Duplicate `(theme, accent)` blocks fail rather than hiding a later CSS override
+behind a first-match lookup; each variation test receives its actual block.
+RGB channels must be finite and inside `[0,255]`, including numerical helper
+inputs (valid fractional values remain supported). Relative luminance uses the
+current WCAG sRGB breakpoint `0.04045`. An alias error retains the terminal
+offending value, not only the name of the referring token.
+
+This is a role-pair invariant, not an audit of every possible component
+composition, browser rendering difference, or assistive technology.

@@ -1,5 +1,17 @@
 # Compatibility
 
+**Building-space vocabulary (T13, 2026-09-22).** All eleven types documented
+across Schema23 §§1.1.2.3 and 1.2.6.4 are represented end-to-end. The added
+`Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are covered by
+synthetic import, native save/load/re-save and API/UI tests; none occurs in the
+three local reference projects. §1.2.6.4 includes both `RoomPart` and `Segment`;
+only `RoomPart` is missing from §1.1.2.3's enumeration. This discrepancy limits
+claims about XSD acceptance. Native schema remains v9 with strict unknown-kind
+load errors. Older binaries with the six-kind decoder cannot faithfully reopen
+native files containing these new kinds: that decoder substitutes `Building`
+for unknown stored values. No ETS project export compatibility is claimed
+(ADR-0028).
+
 What this application can read, write and talk to — and, in every case, on what
 evidence.
 

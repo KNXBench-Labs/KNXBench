@@ -33,7 +33,7 @@
 // Task 4 (T25) added everything from `inspector.*` down: `Inspector.tsx`,
 // `ParameterPanel.tsx` and `ProjectExplorer.tsx`. `buildingPartKind.*` is
 // the one namespace that breaks the per-surface convention on purpose — it
-// is the same six-value `BuildingPartType` label shown both in
+// is the same `BuildingPartType` label shown both in
 // `Inspector.tsx`'s `BuildingPartInspector` and in `ProjectExplorer.tsx`'s
 // `BuildingItem`/`NewBuildingPartRow`, and translating the same domain word
 // two different ways in two files is a bug waiting to happen, not a
@@ -315,6 +315,11 @@ export const messages = {
   "buildingPartKind.corridor": "Corridor",
   "buildingPartKind.distributionBoard": "Distribution Board",
   "buildingPartKind.buildingPart": "Building Part",
+  "buildingPartKind.stairway": "Stairway",
+  "buildingPartKind.roomPart": "Room Part",
+  "buildingPartKind.area": "Area",
+  "buildingPartKind.ground": "Ground",
+  "buildingPartKind.segment": "Segment",
 
   // `ParameterPanel.tsx`.
   "parameters.deviceScope": "Device",
@@ -509,12 +514,11 @@ export const messages = {
   "busMonitor.column.service": "Service",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
-  // Task 4 (the diagnostic companion). The bus session freezes the
-  // project's group-address names and DPTs when it starts and never
-  // re-resolves them; these three say so out loud rather than letting a
-  // decoded column quietly describe a project that has since changed.
+  // The diagnostic companion compares the project with the bus session's
+  // last confirmed whole-context publication; these messages expose a
+  // mismatch instead of quietly presenting stale decoding as current.
   "busMonitor.contextStale":
-    "The project changed after this session started. Decoded values below come from the snapshot taken at connect time, and sending is locked. Reconnect to decode against the current project.",
+    "The project changed after this session's last confirmed context publication. Decoded values below use that earlier context, and sending is locked. Reconnect to decode against the current project.",
   "busMonitor.contextUnverified":
     "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
   "busMonitor.sessionReplaced":
@@ -790,7 +794,7 @@ export const messages = {
   "busCompose.sent": "Sent {service}: {payload}",
   "busCompose.sentDecoded": "Decoded: {text}",
   "busCompose.contextStaleMessage":
-    "The project changed after this bus session started — the DPT would be resolved against the old snapshot, so sending is locked. Reconnect first.",
+    "The project changed after this bus session's last confirmed context publication — the DPT would be resolved against that earlier context, so sending is locked. Reconnect first.",
 
   // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
   "companion.open": "Diagnostics window",

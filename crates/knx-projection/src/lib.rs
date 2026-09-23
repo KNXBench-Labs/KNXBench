@@ -43,6 +43,30 @@ pub struct ProjectTree {
     pub can_undo: bool,
     /// See `can_undo`.
     pub can_redo: bool,
+    /// Always `false` straight out of [`build_project_tree`] because this
+    /// pure projection has no clean baseline. The application layer overlays
+    /// whether the live project differs from its last successful open,
+    /// import, creation, or save snapshot.
+    pub is_modified: bool,
+    /// Opaque identity of the running server process that owns
+    /// `snapshot_revision`. Pure/offline projections omit it together with
+    /// the revision; it is transient application metadata, not project data.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub server_incarnation: Option<String>,
+    /// Application-owned response ordering. Pure/offline projections omit it;
+    /// the server stamps every UI-facing snapshot while holding its project
+    /// lock. This is transient metadata and is never persisted in a KNX or
+    /// native project format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub snapshot_revision: Option<u64>,
+    /// Present only when this response also republished the complete group-
+    /// address context into the named active bus session. The frontend may
+    /// rebase that exact session's fingerprint after accepting the snapshot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub group_address_context_session_id: Option<u64>,
     /// The project-wide rendering choice every `GroupAddressNode`,
     /// `GroupRangeNode` and `GroupLinkNode` address string in this tree was
     /// already formatted with — carried through so the inspector can show
@@ -206,6 +230,10 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         warnings: 0,
         can_undo: false,
         can_redo: false,
+        is_modified: false,
+        server_incarnation: None,
+        snapshot_revision: None,
+        group_address_context_session_id: None,
         group_address_style: group_address_style_str(project.info.group_address_style).to_string(),
         installations: project
             .installations
@@ -723,6 +751,11 @@ fn building_kind_str(kind: BuildingPartType) -> &'static str {
         BuildingPartType::Corridor => "Corridor",
         BuildingPartType::DistributionBoard => "DistributionBoard",
         BuildingPartType::BuildingPart => "BuildingPart",
+        BuildingPartType::Stairway => "Stairway",
+        BuildingPartType::RoomPart => "RoomPart",
+        BuildingPartType::Area => "Area",
+        BuildingPartType::Ground => "Ground",
+        BuildingPartType::Segment => "Segment",
     }
 }
 
@@ -769,6 +802,26 @@ mod tests {
             visibility_calculated: true,
             com_objects: vec![],
             binary_data: vec![],
+        }
+    }
+
+    #[test]
+    fn building_projection_preserves_all_documented_space_kinds() {
+        for (kind, token) in [
+            (BuildingPartType::Stairway, "Stairway"),
+            (BuildingPartType::RoomPart, "RoomPart"),
+            (BuildingPartType::Area, "Area"),
+            (BuildingPartType::Ground, "Ground"),
+            (BuildingPartType::Segment, "Segment"),
+        ] {
+            let mut project = Project::new(Language("en".into()));
+            let mut inst = empty_installation();
+            inst.buildings = vec![building(1, "Test", kind, None, vec![], vec![])];
+            project.installations.push(inst);
+            assert_eq!(
+                build_project_tree(&project).installations[0].buildings[0].kind,
+                token
+            );
         }
     }
 
@@ -820,6 +873,10 @@ mod tests {
         assert_eq!(tree.schema_version, project.schema_version);
         assert_eq!(tree.errors, 0);
         assert_eq!(tree.warnings, 0);
+        assert!(!tree.is_modified);
+        assert!(tree.server_incarnation.is_none());
+        assert!(tree.snapshot_revision.is_none());
+        assert!(tree.group_address_context_session_id.is_none());
         assert!(tree.installations.is_empty());
     }
 

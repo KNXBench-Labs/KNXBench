@@ -50,8 +50,10 @@ future `Project` field participates by default.
   transient session state like undo history, not serialized into `.knxdb`, so
   the native store schema remains version 9.
 - Project replacement publishes project, clean baseline, command stack, import
-  counts, and store-path metadata under one documented lock order. A tree read
-  observes one complete state, never a mixed replacement.
+  counts, store-path metadata, opaque passthrough and manufacturer manifest
+  under one project-led lock order. Tree reads and saves observe one complete
+  state, never a mixed replacement. New's dirty predicate and replacement are
+  one transaction; Save chooses its path only after locking the project.
 - `ProjectTree` adds `is_modified: bool`; pure projection defaults it to
   `false`, and the server overlay supplies the live value beside `can_undo` and
   `can_redo`.
@@ -72,6 +74,22 @@ command stack and returns to clean after undoing to the baseline.
 - Native open, import, and new project establish clean state.
 - Quit confirmation follows `is_modified`, including disagreement with
   `can_undo` in both directions.
+- Delayed Save/Save As responses cannot replace a newer accepted tree or the
+  save-path metadata of a different project. Response ownership guards freshness;
+  the server remains the sole authority for the modified-state value.
+- The reverse order is equally protected: a delayed edit cannot overwrite a
+  newer saved snapshot, and a delayed load cannot overwrite an edit accepted
+  after replacement. Snapshot ordering is transient application metadata,
+  never a persisted KNX schema/version or a browser-maintained dirty flag.
+- Ordering also carries a non-secret server incarnation: a fresh process's
+  revision 1 can follow an old process's revision 100. Retired-process replies
+  cannot switch the active incarnation back. Browser-persisted context records
+  and bus-session identity use the same boundary; a reused numeric session ID
+  alone is not evidence of a matching session. Legacy/unversioned snapshots
+  cannot overwrite an already accepted modern incarnation.
+- Concurrent replacement/save tests distinguish the old and new projects'
+  destination paths, opaque payloads and manufacturer manifests. Dirty-guard
+  tests prove an accepted intervening edit cannot be discarded silently.
 
 ## 3. Live group-address session context (§91)
 
@@ -90,6 +108,20 @@ After `SetGroupAddressStyle` succeeds, the HTTP application layer builds a fresh
 then updates an active session under the bus-session mutex. Project and async bus
 locks are never held together. The operation performs no KNX traffic and does
 not restart or reconnect the tunnel.
+
+Direct restyles and history operations that can restore a different style must
+share one serialized mutation–snapshot–publication boundary. Undo/Redo cannot
+overtake a pending publication or leave monitor formatting and write parsing
+on a style different from the restored project. Regression proof uses only fake
+sessions, including deterministic concurrent restyle/history ordering.
+
+The frontend must consume confirmed style publications without leaving its
+session-fingerprint lock stale. This is not permission to rebase arbitrary
+name/DPT edits or an unrelated/unverified session. Stale tree responses cannot
+refresh the fingerprint, and no cross-client synchronization is claimed.
+Restart regression coverage includes a persisted context record, an App that
+stays mounted, delayed replies from a retired process, and a reused session ID
+whose server incarnation differs. All tests use synthetic/fake contexts.
 
 The acceptance regression starts a fake session, changes project style through
 the public route, then proves subsequent monitor rows and write parsing use the
@@ -113,7 +145,9 @@ authority:
   `Stairway`, `Room`, `Corridor`, `DistributionBoard`, `Area`, `Ground`, and
   `Segment`.
 - §§1.2.6.3–1.2.6.4 describe `Space` and name `BuildingPart`, `RoomPart`, and
-  `DistributionBoard`; this prose names `RoomPart` but omits `Segment`.
+  `DistributionBoard`; the attribute table names both `RoomPart` and `Segment`.
+  Only `RoomPart` is absent from the §1.1.2.3 enumeration (PDF rechecked during
+  implementation; this corrects the design's original transcription).
 
 The document is internally inconsistent. KNXBench therefore supports both
 literal documented tokens and states the limitation honestly. It does not claim
@@ -176,6 +210,12 @@ variations, unsupported syntax, unresolved/cyclic references, and a deliberately
 illegible palette that fails for the expected pair. Status and muted role pairs
 remain outside this narrow closure because §120's lifted-when contract names the
 foreground/background and on-accent/accent relationships.
+
+The gate must reject duplicate `(theme, accent)` blocks and evaluate the actual
+variation objects rather than looking up the first block by name. Both parsed
+colors and numerical helper inputs require finite channels in `[0,255]`; valid
+fractional helper inputs remain supported. Relative luminance uses WCAG's
+current sRGB breakpoint `0.04045` and never rounds a failing ratio into acceptance.
 
 ## 6. Cross-cutting constraints
 

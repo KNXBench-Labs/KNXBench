@@ -198,12 +198,168 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
         assert_eq!(response.status(), StatusCode::OK, "{route}");
         let response = app.clone().oneshot(get("/api/project")).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            body_json(response).await["has_store_path"],
-            saved,
-            "{route}"
-        );
+        let tree = body_json(response).await;
+        assert_eq!(tree["has_store_path"], saved, "{route}");
+        assert_eq!(tree["is_modified"], false, "{route}");
     }
+}
+
+#[tokio::test]
+async fn modified_state_clears_only_after_successful_save_or_save_as() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state.clone(), None);
+    let db_path = dir.path().join("project.knxdb");
+
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let edited = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Area A", "address": 1 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(body_json(edited).await["is_modified"], true);
+
+    assert_eq!(
+        app.clone()
+            .oneshot(post(
+                "/api/project/save-as",
+                json!({ "path": db_path.to_string_lossy() }),
+            ))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await["is_modified"],
+        false
+    );
+
+    let edited_again = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Area B", "address": 2 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(body_json(edited_again).await["is_modified"], true);
+
+    *state.store_path.lock().unwrap() = Some(dir.path().join("missing/project.knxdb"));
+    let failed = app
+        .clone()
+        .oneshot(post("/api/project/save", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(failed.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await["is_modified"],
+        true
+    );
+
+    *state.store_path.lock().unwrap() = Some(db_path);
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/save", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        body_json(app.oneshot(get("/api/project")).await.unwrap()).await["is_modified"],
+        false
+    );
+}
+
+#[tokio::test]
+async fn importing_replaces_a_dirty_project_with_a_clean_baseline() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = knx_testsupport::write_minimal_knxproj(dir.path());
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state, None);
+
+    let created = app
+        .clone()
+        .oneshot(post("/api/project/new", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let created = body_json(created).await;
+    let edited = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Unsaved area", "address": 2 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(edited.status(), StatusCode::OK);
+    let edited = body_json(edited).await;
+    assert_eq!(edited["is_modified"], true);
+    assert!(edited["snapshot_revision"].as_u64() > created["snapshot_revision"].as_u64());
+    assert!(created["server_incarnation"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty()));
+    assert_eq!(edited["server_incarnation"], created["server_incarnation"]);
+
+    let imported = app
+        .clone()
+        .oneshot(post(
+            "/api/project/import",
+            json!({ "path": path.to_string_lossy() }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(imported.status(), StatusCode::OK);
+    let imported = body_json(imported).await;
+    assert_eq!(imported["is_modified"], false);
+    assert!(imported["snapshot_revision"].as_u64() > edited["snapshot_revision"].as_u64());
+    assert_eq!(
+        imported["server_incarnation"],
+        created["server_incarnation"]
+    );
+
+    // The import response is application-stamped; a fresh GET additionally
+    // proves that the clean baseline remains the same published revision.
+    let current = app.clone().oneshot(get("/api/project")).await.unwrap();
+    assert_eq!(current.status(), StatusCode::OK);
+    let tree = body_json(current).await;
+    assert_eq!(tree["is_modified"], false);
+    assert_eq!(tree["can_undo"], false);
+    assert_eq!(tree["can_redo"], false);
+    assert_eq!(tree["has_store_path"], false);
+    assert_eq!(tree["snapshot_revision"], imported["snapshot_revision"]);
+    assert_eq!(tree["server_incarnation"], imported["server_incarnation"]);
+
+    let edited = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Temporary area", "address": 2 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(edited.status(), StatusCode::OK);
+    let edited = body_json(edited).await;
+    assert_eq!(edited["is_modified"], true);
+    assert!(edited["snapshot_revision"].as_u64() > tree["snapshot_revision"].as_u64());
+    let undone = app.oneshot(post("/api/undo", json!({}))).await.unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    let tree = body_json(undone).await;
+    assert_eq!(tree["is_modified"], false);
+    assert_eq!(tree["can_redo"], true);
+    assert!(tree["snapshot_revision"].as_u64() > edited["snapshot_revision"].as_u64());
 }
 
 #[tokio::test]

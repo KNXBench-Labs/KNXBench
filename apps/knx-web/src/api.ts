@@ -1037,10 +1037,12 @@ export interface BusTelegramRow {
 // `StartResponse` (bus_routes.rs).
 export interface BusMonitorStartResponse {
   sessionId: number;
+  serverIncarnation: string;
   assignedAddress: string;
 }
 
-// `StopResponse` (bus_routes.rs). `warning` is `skip_serializing_if`
+// `StopResponse` (bus_routes.rs). `serverIncarnation` scopes the reusable
+// numeric id, as it does on start/poll. `warning` is `skip_serializing_if`
 // there, hence optional here — present only when the drain task's own
 // teardown panicked after an otherwise-successful stop (its doc comment:
 // "a panic surfaced by the server and then swallowed by the UI is worse
@@ -1049,6 +1051,7 @@ export interface BusMonitorStartResponse {
 // 3 and is real on the wire.
 export interface BusMonitorStopResponse {
   sessionId: number;
+  serverIncarnation: string;
   telegramCount: number;
   droppedCount: number;
   warning?: string;
@@ -1060,6 +1063,7 @@ export interface BusMonitorStopResponse {
 // `BusMonitorPanel.tsx`).
 export interface BusMonitorTelegramsResponse {
   sessionId: number;
+  serverIncarnation: string;
   status: "active" | "closed";
   nextSince: number;
   droppedBefore: number;

@@ -461,10 +461,15 @@ describe("api", () => {
         rowsRead: 1,
         created: 1,
         updated: 0,
+        readdressed: 0,
+        deleted: 0,
         unchanged: 0,
+        destructiveChanges: [],
         ignoredColumns: [],
         problems: [],
       },
+      applied: true,
+      confirmationToken: null,
     });
     const response = await api.importGroupAddressesCsv("/data/in.csv");
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -475,14 +480,26 @@ describe("api", () => {
     expect(response.tree.installations).toEqual([]);
   });
 
+  it("importGroupAddressesCsv sends the exact destructive confirmation token", async () => {
+    mockFetchOnce({ applied: true, confirmationToken: null });
+
+    await api.importGroupAddressesCsv("/data/in.csv", "opaque-preview-token");
+
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      path: "/data/in.csv",
+      confirmationToken: "opaque-preview-token",
+    });
+  });
+
   it("importGroupAddressesCsv surfaces the server's row-naming error message on a 400", async () => {
     mockFetchOnce(
-      { error: "1 row(s) rejected, nothing applied: row 4: unknown group address style" },
+      { error: "1 error(s), nothing applied: row 4: unknown group address style" },
       false,
       400,
     );
     await expect(api.importGroupAddressesCsv("/data/bad.csv")).rejects.toThrow(
-      "1 row(s) rejected, nothing applied: row 4: unknown group address style",
+      "1 error(s), nothing applied: row 4: unknown group address style",
     );
   });
 

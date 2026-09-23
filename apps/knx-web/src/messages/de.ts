@@ -720,7 +720,16 @@ export const messages: Record<MessageKey, string> = {
   "groupAddressCsv.exportSummaryWithWarnings.other":
     "Gruppenadressen als CSV exportiert, {count} Warnungen — siehe Log.",
   "groupAddressCsv.importSummaryBase":
-    "Gruppenadressen aus CSV importiert: {created} erstellt, {updated} aktualisiert, {unchanged} unverändert",
+    "Gruppenadressen aus CSV importiert: {created} erstellt, {updated} aktualisiert, {readdressed} umadressiert, {deleted} gelöscht, {unchanged} unverändert",
+  "groupAddressCsv.confirmDestructive":
+    "Diesen CSV-Plan anwenden? Er adressiert {readdressed} Gruppenadressen um und löscht {deleted}; {affectedLinks} Kommunikationsobjekt-Verknüpfungen sind betroffen. Diese Vorschau wird abgelehnt, falls sich Projekt oder CSV ändern.",
+  "groupAddressCsv.confirmDestructiveDetail":
+    "{action}: Rohadresse {source} → {target}; Kommunikationsobjekt-IDs: {links}",
+  "groupAddressCsv.actionReaddress": "Umadressieren",
+  "groupAddressCsv.actionDelete": "Löschen",
+  "groupAddressCsv.directionSend": "senden",
+  "groupAddressCsv.directionReceive": "empfangen",
+  "groupAddressCsv.confirmCancelled": "CSV-Import abgebrochen; es wurden keine Änderungen angewendet.",
   "groupAddressCsv.importSummaryWarnings.one": "{count} Warnung",
   "groupAddressCsv.importSummaryWarnings.other": "{count} Warnungen",
   "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} Spalte ignoriert",

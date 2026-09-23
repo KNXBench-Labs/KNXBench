@@ -101,6 +101,57 @@ fn split_trailing_status_line(stdout: &str) -> (&str, &str) {
 }
 
 #[test]
+fn ga_import_readdress_requires_the_exact_preview_token() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let csv_path = dir.path().join("readdress.csv");
+    write_store(&store);
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/3,Living Room Light\n",
+    )
+    .unwrap();
+
+    let preview = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        csv_path.to_str().unwrap(),
+    ]);
+    assert_eq!(preview.status.code(), Some(0));
+    let stdout = String::from_utf8(preview.stdout).unwrap();
+    assert!(
+        stdout.contains("destructive confirmation required"),
+        "{stdout}"
+    );
+    assert_eq!(
+        store_addresses(&store),
+        vec![("1/1/1".to_string(), "Living Room Light".to_string())]
+    );
+    let token = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("confirmation token: "))
+        .expect("preview token");
+
+    let confirmed = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        csv_path.to_str().unwrap(),
+        "--confirm",
+        token,
+    ]);
+    assert_eq!(
+        confirmed.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&confirmed.stderr)
+    );
+    assert_eq!(
+        store_addresses(&store),
+        vec![("1/1/3".to_string(), "Living Room Light".to_string())]
+    );
+}
+
+#[test]
 fn ga_export_writes_the_header_and_one_data_row() {
     let dir = tempfile::tempdir().unwrap();
     let store = dir.path().join("project.knxdb");
@@ -125,9 +176,9 @@ fn ga_export_writes_the_header_and_one_data_row() {
     let lines: Vec<&str> = text.trim_end_matches("\r\n").split("\r\n").collect();
     assert_eq!(
         lines[0],
-        "Address,Name,Central,Unfiltered,DatapointType,MainGroup,MiddleGroup"
+        "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
     );
-    assert_eq!(lines[1], "1/1/1,Living Room Light,false,false,,,");
+    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,");
     assert_eq!(lines.len(), 2, "{lines:?}");
 }
 
@@ -158,7 +209,8 @@ fn ga_import_of_a_freshly_exported_file_reports_nothing_to_do() {
     );
     let stdout = String::from_utf8(import_out.stdout).unwrap();
     assert!(
-        stdout.contains("1 row(s) read, 0 created, 0 updated, 1 unchanged"),
+        stdout
+            .contains("1 row(s) read, 0 created, 0 updated, 0 readdressed, 0 deleted, 1 unchanged"),
         "{stdout}"
     );
     assert!(stdout.contains("nothing to do"), "{stdout}");

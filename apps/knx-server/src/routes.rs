@@ -1757,14 +1757,14 @@ async fn diff_project(
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 enum IgnoredColumnReasonDto {
-    ExportOnly,
+    ReadOnly,
     Unknown,
 }
 
 impl From<knx_csv::IgnoredColumnReason> for IgnoredColumnReasonDto {
     fn from(reason: knx_csv::IgnoredColumnReason) -> Self {
         match reason {
-            knx_csv::IgnoredColumnReason::ExportOnly => Self::ExportOnly,
+            knx_csv::IgnoredColumnReason::ReadOnly => Self::ReadOnly,
             knx_csv::IgnoredColumnReason::Unknown => Self::Unknown,
         }
     }
@@ -1793,9 +1793,56 @@ struct CsvImportReportDto {
     rows_read: usize,
     created: usize,
     updated: usize,
+    readdressed: usize,
+    deleted: usize,
     unchanged: usize,
+    destructive_changes: Vec<CsvDestructiveChangeDto>,
     ignored_columns: Vec<IgnoredColumnDto>,
     problems: Vec<CsvProblemDto>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvDestructiveChangeDto {
+    row: usize,
+    action: &'static str,
+    id: u32,
+    source_address: u16,
+    target_address: Option<u16>,
+    affected_links: Vec<CsvAffectedLinkDto>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvAffectedLinkDto {
+    com_object: u32,
+    direction: &'static str,
+}
+
+impl From<&knx_csv::CsvDestructiveChange> for CsvDestructiveChangeDto {
+    fn from(change: &knx_csv::CsvDestructiveChange) -> Self {
+        Self {
+            row: change.row,
+            action: match change.action {
+                knx_csv::CsvDestructiveAction::Readdress => "readdress",
+                knx_csv::CsvDestructiveAction::Delete => "delete",
+            },
+            id: change.id.0,
+            source_address: change.source_address.raw(),
+            target_address: change.target_address.map(|address| address.raw()),
+            affected_links: change
+                .affected_links
+                .iter()
+                .map(|link| CsvAffectedLinkDto {
+                    com_object: link.com_object.0,
+                    direction: match link.direction {
+                        knx_core::Direction::Send => "send",
+                        knx_core::Direction::Receive => "receive",
+                    },
+                })
+                .collect(),
+        }
+    }
 }
 
 impl From<&knx_csv::CsvImportReport> for CsvImportReportDto {
@@ -1805,7 +1852,10 @@ impl From<&knx_csv::CsvImportReport> for CsvImportReportDto {
             rows_read: report.rows_read,
             created: report.created,
             updated: report.updated,
+            readdressed: report.readdressed,
+            deleted: report.deleted,
             unchanged: report.unchanged,
+            destructive_changes: report.destructive_changes.iter().map(Into::into).collect(),
             ignored_columns: report.ignored_columns.iter().map(Into::into).collect(),
             problems: report.problems.iter().map(Into::into).collect(),
         }
@@ -1817,6 +1867,15 @@ impl From<&knx_csv::CsvImportReport> for CsvImportReportDto {
 struct CsvImportResponseDto {
     tree: knx_projection::ProjectTree,
     report: CsvImportReportDto,
+    applied: bool,
+    confirmation_token: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvImportBody {
+    path: String,
+    confirmation_token: Option<String>,
 }
 
 /// Reads `body.path` as "KNXBench group-address CSV v1" and plans/applies
@@ -1828,13 +1887,15 @@ struct CsvImportResponseDto {
 /// `/api/project/import`'s.
 async fn import_group_addresses_csv(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
+    Json(body): Json<CsvImportBody>,
 ) -> Result<Json<CsvImportResponseDto>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::import_group_addresses_csv_impl(&state, &path)
-        .map(|(tree, report)| CsvImportResponseDto {
-            tree,
-            report: CsvImportReportDto::from(&report),
+    domain::import_group_addresses_csv_impl(&state, &path, body.confirmation_token.as_deref())
+        .map(|outcome| CsvImportResponseDto {
+            tree: outcome.tree,
+            report: CsvImportReportDto::from(&outcome.report),
+            applied: outcome.applied,
+            confirmation_token: outcome.confirmation_token,
         })
         .map(Json)
         .map_err(ApiError::bad_request)

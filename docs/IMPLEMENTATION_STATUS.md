@@ -1,6 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-09-23 — T13 review corrections: final verification
+## 2026-09-23 — T13 merged and verified; goal paused before T14
+
+Integrated as merge `7f9c8c4`, including correction commit `fef0e52`.
+All eleven gates were repeated on merged `main` and passed: Rust 1,977 passed,
+zero failed, five ignored; frontend 977/977 in 63 files; TypeScript, production
+build, fmt, warning-denied workspace Clippy, layering, headers, anchors,
+cargo-deny and whitespace. The merged anchor check verified 381 links in 195
+Markdown files. Product source is identical to the independently approved
+branch; merge conflicts were documentation-only and preserve main's newer
+manual corrections. User-directed pause now applies before T14.
 
 The batch-B branch adds a build-time contrast gate for foreground/background,
 foreground/surface and on-accent/accent, across registered palettes and accent
@@ -11,7 +20,7 @@ The second correction wave also makes save/replacement publication project-led,
 adds application-owned snapshot ordering and identifies confirmed bus-context
 publications for the matching client session. See
 [ADR-0032](adr/0032-application-snapshot-ordering.md). Independent Sol-high
-re-review approved the corrected branch; integration verification follows.
+re-review approved the corrected branch; merged-result verification also passed.
 
 The additionally authorized lifetime correction pairs each snapshot revision
 and bus-session identity with a non-secret server incarnation. Browser records

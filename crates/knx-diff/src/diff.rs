@@ -45,6 +45,15 @@ pub struct ProjectDiff {
     pub installations: Vec<InstallationDiff>,
 }
 
+impl ProjectDiff {
+    /// True only when no project, installation, entity, nested entity, or
+    /// ambiguity differs. Ambiguity is observable diff output and therefore
+    /// never counts as equal.
+    pub fn is_empty(&self) -> bool {
+        self.info_changes.is_empty() && self.installations.iter().all(installation_is_empty)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstallationDiff {
     pub id: u8,
@@ -86,6 +95,18 @@ pub struct DeviceChange {
     pub changed_fields: Vec<&'static str>,
     pub com_objects: EntityTable<ComObjectKey, ComObjectFields>,
     pub parameters: EntityTable<ParameterKey, ParameterFields>,
+}
+
+impl DeviceChange {
+    pub fn field_changes(&self) -> Vec<FieldChange> {
+        self.left.field_changes(&self.right)
+    }
+}
+
+impl<K, F: FieldDiff> EntityChange<K, F> {
+    pub fn field_changes(&self) -> Vec<FieldChange> {
+        self.left.field_changes(&self.right)
+    }
 }
 
 /// Computes what changed between `left` and `right`. Pure: no clock, no
@@ -640,6 +661,24 @@ fn table_is_empty<K, F>(table: &EntityTable<K, F>) -> bool {
         && table.ambiguous.is_empty()
 }
 
+fn device_table_is_empty(table: &DeviceTable) -> bool {
+    table.added.is_empty()
+        && table.removed.is_empty()
+        && table.changed.is_empty()
+        && table.ambiguous.is_empty()
+}
+
+fn installation_is_empty(installation: &InstallationDiff) -> bool {
+    installation.status == EntityStatus::Matched
+        && installation.field_changes.is_empty()
+        && table_is_empty(&installation.areas)
+        && table_is_empty(&installation.lines)
+        && device_table_is_empty(&installation.devices)
+        && table_is_empty(&installation.group_ranges)
+        && table_is_empty(&installation.group_addresses)
+        && table_is_empty(&installation.buildings)
+}
+
 fn diff_devices(
     project_left: &Project,
     inst_left: &Installation,
@@ -894,6 +933,7 @@ mod tests {
 
         let diff = diff_projects(&project, &project);
 
+        assert!(diff.is_empty());
         assert!(diff.info_changes.is_empty());
         assert_eq!(diff.installations.len(), 1);
         let inst = &diff.installations[0];
@@ -905,6 +945,21 @@ mod tests {
         assert_table_empty(&inst.group_ranges);
         assert_table_empty(&inst.group_addresses);
         assert_table_empty(&inst.buildings);
+    }
+
+    #[test]
+    fn project_diff_is_not_empty_for_an_ambiguity_even_without_a_changed_pair() {
+        let mut left = project();
+        let left_a = add_device(&mut left, 1, None);
+        left.devices.get_mut(left_a).unwrap().address = Some(individual_address(1, 1, 1));
+        let left_b = add_device(&mut left, 2, None);
+        left.devices.get_mut(left_b).unwrap().address = Some(individual_address(1, 1, 1));
+
+        let mut right = project();
+        let right_a = add_device(&mut right, 11, None);
+        right.devices.get_mut(right_a).unwrap().address = Some(individual_address(1, 1, 1));
+
+        assert!(!diff_projects(&left, &right).is_empty());
     }
 
     #[test]
@@ -1318,6 +1373,14 @@ mod tests {
             .find(|c| c.key == key_b)
             .expect("device_b present in devices.changed");
         assert_eq!(change_b.changed_fields, vec!["product_ref"]);
+        assert_eq!(
+            change_b.field_changes(),
+            vec![FieldChange {
+                field: "product_ref",
+                left: "P-0".into(),
+                right: "P-new".into(),
+            }]
+        );
         assert_table_empty(&change_b.com_objects);
         assert_table_empty(&change_b.parameters);
     }

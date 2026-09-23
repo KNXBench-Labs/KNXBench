@@ -61,7 +61,10 @@ jobs:
       - name: ts-rs bindings up to date
         run: |
           TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p knx-projection
-          git diff --exit-code -- apps/knx-web/src/bindings
+          # ts-rs emits trailing spaces on some newly added fields. Keep the
+          # generated API contract strict while ignoring only that irrelevant
+          # line-ending whitespace; all token/comment changes still fail.
+          git diff --exit-code --ignore-space-at-eol -- apps/knx-web/src/bindings
 
       - name: Layering gate
         run: cargo run -p xtask -- check-layering

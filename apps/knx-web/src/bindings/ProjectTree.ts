@@ -44,8 +44,8 @@ can_redo: boolean,
 is_modified: boolean,
 /**
  * Opaque identity of the running server process that owns
- * `snapshot_revision`. Pure/offline projections omit it together with the
- * revision; it is transient application metadata, not project data.
+ * `snapshot_revision`. Pure/offline projections omit it together with
+ * the revision; it is transient application metadata, not project data.
  */
 server_incarnation?: string,
 /**

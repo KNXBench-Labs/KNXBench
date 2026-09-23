@@ -109,9 +109,13 @@ impl ReportSection {
 /// identifiers remain in the document independently of this projection.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ReportDeviceData {
+    /// Raw manufacturer id used when its display name is absent or blank.
+    pub manufacturer_reference: Option<String>,
     pub manufacturer: Option<String>,
     pub product: Option<String>,
     pub application_program: Option<String>,
+    /// Product/program relationship problems found by the composing layer.
+    pub problems: Vec<String>,
     pub parameters: Vec<ReportField>,
     pub module_arguments: Vec<ReportField>,
 }

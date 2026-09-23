@@ -7,6 +7,7 @@
 //! the one crate that sees both `knx-etsproj` and `knx-store` — see
 //! `import`'s own doc comment for why that matters.
 
+pub mod comparison;
 pub mod documentation;
 pub mod import;
 pub mod progress;

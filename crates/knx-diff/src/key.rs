@@ -109,11 +109,17 @@ pub fn match_entities<'a, E, NK: Ord + Clone>(
     // that quietly.
     let mut left_by_id: BTreeMap<&str, Vec<&'a E>> = BTreeMap::new();
     for e in left {
-        left_by_id.entry(ets_id(e)).or_default().push(e);
+        let id = ets_id(e);
+        if !id.is_empty() {
+            left_by_id.entry(id).or_default().push(e);
+        }
     }
     let mut right_by_id: BTreeMap<&str, Vec<&'a E>> = BTreeMap::new();
     for e in right {
-        right_by_id.entry(ets_id(e)).or_default().push(e);
+        let id = ets_id(e);
+        if !id.is_empty() {
+            right_by_id.entry(id).or_default().push(e);
+        }
     }
 
     // Iterate `left` itself, not either map, so match order is the input's
@@ -124,6 +130,9 @@ pub fn match_entities<'a, E, NK: Ord + Clone>(
     let mut matched_ets_ids: BTreeSet<&str> = BTreeSet::new();
     for e in left {
         let id = ets_id(e);
+        if id.is_empty() {
+            continue;
+        }
         if matched_ets_ids.contains(id) {
             continue;
         }
@@ -141,11 +150,11 @@ pub fn match_entities<'a, E, NK: Ord + Clone>(
 
     let left_leftover1: Vec<&'a E> = left
         .iter()
-        .filter(|e| !matched_ets_ids.contains(ets_id(e)))
+        .filter(|e| ets_id(e).is_empty() || !matched_ets_ids.contains(ets_id(e)))
         .collect();
     let right_leftover1: Vec<&'a E> = right
         .iter()
-        .filter(|e| !matched_ets_ids.contains(ets_id(e)))
+        .filter(|e| ets_id(e).is_empty() || !matched_ets_ids.contains(ets_id(e)))
         .collect();
 
     // Pass 2: natural key, over pass-1 leftovers only.
@@ -387,6 +396,25 @@ mod tests {
         assert!(outcome.ambiguous.is_empty());
         assert_eq!(outcome.left_leftover.len(), 1);
         assert_eq!(outcome.right_leftover.len(), 1);
+    }
+
+    #[test]
+    fn empty_ets_ids_are_absent_identity_not_a_match() {
+        let left = [Item {
+            ets_id: "",
+            code: None,
+        }];
+        let right = [Item {
+            ets_id: "",
+            code: None,
+        }];
+
+        let outcome = match_entities(&left, &right, id, key);
+
+        assert!(outcome.matched.is_empty());
+        assert_eq!(outcome.left_leftover.len(), 1);
+        assert_eq!(outcome.right_leftover.len(), 1);
+        assert!(outcome.ambiguous.is_empty());
     }
 
     #[test]

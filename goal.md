@@ -106,9 +106,10 @@ T17 diagnostics UI, group-monitor regressions):**
 12. A sweep for one known literal is not a sweep. Grep by pattern class (RFC
     1918 ranges, not one remembered address). The repository's history was
     already rewritten twice for this; do not put it back.
-13. **Weekly usage pause threshold: 95%** (user amendment 2026-09-23,
-    replacing 60%). Check usage read-only before starting a task; at or above
-    95%, finish the running task safely and pause before starting another.
+13. **Weekly usage pause threshold: 60%** (user amendment 2026-09-23,
+    restored after the weekly allowance reset and replacing the temporary 95%
+    threshold). Check usage read-only before starting a task; at or above 60%,
+    finish the running task safely and pause before starting another.
     Do not consume reset credits merely to check usage. All hardware and
     verification constraints remain unchanged.
 14. **Review model policy (user amendment 2026-09-23):** ordinary task,

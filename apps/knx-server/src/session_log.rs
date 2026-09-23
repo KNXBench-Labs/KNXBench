@@ -291,7 +291,9 @@ pub fn from_csv_import_report(report: &knx_csv::CsvImportReport) -> Vec<LogEntry
 
     for ignored in &report.ignored_columns {
         let reason = match ignored.reason {
-            knx_csv::IgnoredColumnReason::ExportOnly => "export-only column, not applied on import",
+            knx_csv::IgnoredColumnReason::ReadOnly => {
+                "read-only validation column, never applied on import"
+            }
             knx_csv::IgnoredColumnReason::Unknown => "unrecognized column",
         };
         entries.push(LogEntry {
@@ -619,10 +621,13 @@ mod tests {
             rows_read: 2,
             created: 1,
             updated: 0,
+            readdressed: 0,
+            deleted: 0,
             unchanged: 1,
+            destructive_changes: Vec::new(),
             ignored_columns: vec![knx_csv::IgnoredColumn {
                 name: "DatapointType".into(),
-                reason: knx_csv::IgnoredColumnReason::ExportOnly,
+                reason: knx_csv::IgnoredColumnReason::ReadOnly,
             }],
             problems: vec![
                 knx_csv::CsvProblem {

@@ -623,7 +623,16 @@ export function exportGroupAddressesCsv(path: string): Promise<CsvExportReport> 
 
 export interface IgnoredColumn {
   name: string;
-  reason: "exportOnly" | "unknown";
+  reason: "readOnly" | "unknown";
+}
+
+export interface CsvDestructiveChange {
+  row: number;
+  action: "readdress" | "delete";
+  id: number;
+  sourceAddress: number;
+  targetAddress: number | null;
+  affectedLinks: Array<{ comObject: number; direction: "send" | "receive" }>;
 }
 
 export interface CsvImportReport {
@@ -631,7 +640,10 @@ export interface CsvImportReport {
   rowsRead: number;
   created: number;
   updated: number;
+  readdressed: number;
+  deleted: number;
   unchanged: number;
+  destructiveChanges: CsvDestructiveChange[];
   ignoredColumns: IgnoredColumn[];
   problems: CsvProblem[];
 }
@@ -639,16 +651,21 @@ export interface CsvImportReport {
 export interface CsvImportResponse {
   tree: ProjectTree;
   report: CsvImportReport;
+  applied: boolean;
+  confirmationToken: string | null;
 }
 
 // A file that parses but contains a row-level error rejects with a 400
 // (`request()` throws, `tree` never reaches the caller) and leaves the
 // open project untouched — see `import_group_addresses_csv` in
 // apps/knx-server/src/routes.rs.
-export function importGroupAddressesCsv(path: string): Promise<CsvImportResponse> {
+export function importGroupAddressesCsv(
+  path: string,
+  confirmationToken?: string,
+): Promise<CsvImportResponse> {
   return request("/api/group-addresses/csv-import", {
     method: "POST",
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}) }),
   });
 }
 

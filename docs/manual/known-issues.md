@@ -201,16 +201,15 @@ published, and the version number is not a promise that anything is finished.
 - **Workaround:** choose deliberately at creation time. There is no way back
   through the interface.
 
-### CSV import never re-addresses, deletes, or manages ranges
+### CSV import does not manage group ranges
 
 - **Affected:** the group-address CSV import.
-- **Limitation:** import adds and updates; it does not move an address,
-  delete one, or create or restructure group ranges. Export-only columns are
-  ignored on the way back in, and there are no description or comment
-  columns.
-- **Consequence:** CSV is a bulk-entry tool, not a synchronisation tool.
-  Round-tripping a file through a spreadsheet will not reproduce everything
-  the export showed.
+- **Limitation:** explicit, preview-confirmed readdress/delete is supported,
+  but import does not create or restructure group ranges. Derived columns are
+  validated read-only, and there are no description or comment columns.
+- **Consequence:** CSV can perform safe bulk address edits, but it is not a
+  range-hierarchy or replacement/synchronisation format. Missing rows never
+  imply deletion.
 - **Details:** [§39](../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges),
   [§40](../KNOWN_LIMITATIONS.md#40-csv-export-only-columns-are-never-applied-on-import-and-there-are-no-descriptioncomment-columns)
 

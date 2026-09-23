@@ -31,16 +31,17 @@ pub struct CsvProblem {
 /// Why a header column was not used to build [`CsvRow`]s.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IgnoredColumnReason {
-    /// A column this format defines (`DatapointType`, `MainGroup`,
-    /// `MiddleGroup`) but that is derived on export and never applied on
-    /// import — see design §3.
-    ExportOnly,
+    /// A column this format derives on export and validates on import, but
+    /// never applies. Its cell is retained in [`CsvRow`] so editing a
+    /// read-only value is reported instead of silently ignored.
+    ReadOnly,
     /// A column this reader does not recognize at all.
     Unknown,
 }
 
-/// A header column the reader did not turn into row data, kept so nothing
-/// about the input file is silently dropped.
+/// A header column the importer never applies. Read-only values are still
+/// retained in each row for validation; unknown columns are named here so
+/// nothing about the input file is silently dropped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IgnoredColumn {
     pub name: String,
@@ -54,9 +55,26 @@ pub struct IgnoredColumn {
 pub struct CsvRow {
     pub line: usize,
     pub address: GroupAddress,
+    pub action: CsvAction,
+    pub new_address: Option<GroupAddress>,
     pub name: String,
     pub central: Option<bool>,
     pub unfiltered: Option<bool>,
+    /// `None` means the column was absent. `Some("")` means it was present
+    /// with an empty cell, which is still an explicit read-only value to
+    /// validate against the project.
+    pub datapoint_type: Option<String>,
+    pub main_group: Option<String>,
+    pub middle_group: Option<String>,
+}
+
+/// Explicit row intent. Destructive meaning is never inferred from a row
+/// being absent or from a changed primary address cell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CsvAction {
+    Upsert,
+    Readdress,
+    Delete,
 }
 
 /// The result of reading a "KNXBench group-address CSV v1" file: every row
@@ -74,9 +92,14 @@ pub struct ParsedCsv {
 #[derive(Debug, Default)]
 struct HeaderMap {
     address: Option<usize>,
+    action: Option<usize>,
+    new_address: Option<usize>,
     name: Option<usize>,
     central: Option<usize>,
     unfiltered: Option<usize>,
+    datapoint_type: Option<usize>,
+    main_group: Option<usize>,
+    middle_group: Option<usize>,
 }
 
 /// Reads "KNXBench group-address CSV v1" `text` and produces typed rows.
@@ -127,9 +150,7 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         }
     };
 
-    let (columns, ignored_columns) = map_headers(&headers);
-
-    let mut problems = Vec::new();
+    let (columns, ignored_columns, mut problems) = map_headers(&headers);
     if columns.address.is_none() {
         problems.push(CsvProblem {
             row: None,
@@ -271,6 +292,92 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
             &mut row_ok,
         );
 
+        let action_raw = columns
+            .action
+            .and_then(|index| record.get(index))
+            .unwrap_or("")
+            .trim();
+        let new_address_raw = columns
+            .new_address
+            .and_then(|index| record.get(index))
+            .unwrap_or("")
+            .trim();
+        let action = match action_raw.to_ascii_lowercase().as_str() {
+            "" | "upsert" => Some(CsvAction::Upsert),
+            "readdress" => Some(CsvAction::Readdress),
+            "delete" => Some(CsvAction::Delete),
+            _ => {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Error,
+                    detail: format!("unknown Action {action_raw:?}"),
+                });
+                row_ok = false;
+                None
+            }
+        };
+        let new_address = if new_address_raw.is_empty() {
+            None
+        } else {
+            match GroupAddress::parse(new_address_raw, style) {
+                Ok(value) if value.raw() != 0 => Some(value),
+                Ok(_) => {
+                    problems.push(CsvProblem {
+                        row: Some(line),
+                        severity: Severity::Error,
+                        detail: "NewAddress 0 is reserved for broadcast and cannot be used"
+                            .to_string(),
+                    });
+                    row_ok = false;
+                    None
+                }
+                Err(error) => {
+                    problems.push(CsvProblem {
+                        row: Some(line),
+                        severity: Severity::Error,
+                        detail: format!("invalid NewAddress: {error}"),
+                    });
+                    row_ok = false;
+                    None
+                }
+            }
+        };
+        match action {
+            Some(CsvAction::Readdress) if new_address.is_none() => {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Error,
+                    detail: "readdress requires NewAddress".to_string(),
+                });
+                row_ok = false;
+            }
+            Some(CsvAction::Readdress) if new_address == address => {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Error,
+                    detail: "readdress NewAddress must differ from Address".to_string(),
+                });
+                row_ok = false;
+            }
+            Some(CsvAction::Delete) if new_address.is_some() => {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Error,
+                    detail: "delete must not specify NewAddress".to_string(),
+                });
+                row_ok = false;
+            }
+            Some(CsvAction::Upsert) if new_address.is_some() => {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Error,
+                    detail: "upsert must not specify NewAddress".to_string(),
+                });
+                row_ok = false;
+            }
+            _ => {}
+        }
+
         if !row_ok {
             continue;
         }
@@ -278,9 +385,14 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         rows.push(CsvRow {
             line,
             address: address.expect("row_ok implies address parsed and was nonzero"),
+            action: action.expect("row_ok implies action was recognized"),
+            new_address,
             name: name_raw.to_string(),
             central,
             unfiltered,
+            datapoint_type: read_optional_cell(&record, columns.datapoint_type),
+            main_group: read_optional_cell(&record, columns.main_group),
+            middle_group: read_optional_cell(&record, columns.middle_group),
         });
     }
 
@@ -290,6 +402,10 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         ignored_columns,
         problems,
     }
+}
+
+fn read_optional_cell(record: &csv::StringRecord, column: Option<usize>) -> Option<String> {
+    column.map(|index| record.get(index).unwrap_or("").trim().to_string())
 }
 
 /// Reads and validates one optional boolean column, pushing a row-level
@@ -327,21 +443,61 @@ fn read_bool_column(
 /// Maps header cells to known columns, case-insensitively and trimmed of
 /// surrounding whitespace, independent of column order. Everything else is
 /// collected as an [`IgnoredColumn`] rather than silently dropped.
-fn map_headers(header: &csv::StringRecord) -> (HeaderMap, Vec<IgnoredColumn>) {
+fn map_headers(header: &csv::StringRecord) -> (HeaderMap, Vec<IgnoredColumn>, Vec<CsvProblem>) {
     let mut columns = HeaderMap::default();
     let mut ignored = Vec::new();
+    let mut problems = Vec::new();
 
     for (i, cell) in header.iter().enumerate() {
         let trimmed = cell.trim();
         match trimmed.to_ascii_lowercase().as_str() {
-            "address" => columns.address = Some(i),
-            "name" => columns.name = Some(i),
-            "central" => columns.central = Some(i),
-            "unfiltered" => columns.unfiltered = Some(i),
-            "datapointtype" | "maingroup" | "middlegroup" => ignored.push(IgnoredColumn {
-                name: trimmed.to_string(),
-                reason: IgnoredColumnReason::ExportOnly,
-            }),
+            "address" => {
+                set_known_header(&mut columns.address, i, "Address", &mut problems);
+            }
+            "action" => {
+                set_known_header(&mut columns.action, i, "Action", &mut problems);
+            }
+            "newaddress" => {
+                set_known_header(&mut columns.new_address, i, "NewAddress", &mut problems);
+            }
+            "name" => {
+                set_known_header(&mut columns.name, i, "Name", &mut problems);
+            }
+            "central" => {
+                set_known_header(&mut columns.central, i, "Central", &mut problems);
+            }
+            "unfiltered" => {
+                set_known_header(&mut columns.unfiltered, i, "Unfiltered", &mut problems);
+            }
+            "datapointtype" | "datapointtype (read-only)" => {
+                if set_known_header(
+                    &mut columns.datapoint_type,
+                    i,
+                    "DatapointType",
+                    &mut problems,
+                ) {
+                    ignored.push(IgnoredColumn {
+                        name: trimmed.to_string(),
+                        reason: IgnoredColumnReason::ReadOnly,
+                    });
+                }
+            }
+            "maingroup" | "maingroup (read-only)" => {
+                if set_known_header(&mut columns.main_group, i, "MainGroup", &mut problems) {
+                    ignored.push(IgnoredColumn {
+                        name: trimmed.to_string(),
+                        reason: IgnoredColumnReason::ReadOnly,
+                    });
+                }
+            }
+            "middlegroup" | "middlegroup (read-only)" => {
+                if set_known_header(&mut columns.middle_group, i, "MiddleGroup", &mut problems) {
+                    ignored.push(IgnoredColumn {
+                        name: trimmed.to_string(),
+                        reason: IgnoredColumnReason::ReadOnly,
+                    });
+                }
+            }
             _ => ignored.push(IgnoredColumn {
                 name: trimmed.to_string(),
                 reason: IgnoredColumnReason::Unknown,
@@ -349,7 +505,26 @@ fn map_headers(header: &csv::StringRecord) -> (HeaderMap, Vec<IgnoredColumn>) {
         }
     }
 
-    (columns, ignored)
+    (columns, ignored, problems)
+}
+
+fn set_known_header(
+    slot: &mut Option<usize>,
+    index: usize,
+    name: &str,
+    problems: &mut Vec<CsvProblem>,
+) -> bool {
+    if slot.is_some() {
+        problems.push(CsvProblem {
+            row: None,
+            severity: Severity::Error,
+            detail: format!("duplicate recognized column \"{name}\""),
+        });
+        false
+    } else {
+        *slot = Some(index);
+        true
+    }
 }
 
 /// Strips a leading UTF-8 BOM, if present. Excel writes one so it opens the
@@ -517,15 +692,15 @@ mod tests {
     }
 
     #[test]
-    fn collects_the_export_only_columns_as_recognized_but_ignored() {
-        let text = "Address,Name,DatapointType,MainGroup,MiddleGroup\n\
+    fn collects_read_only_columns_and_retains_their_cells_for_validation() {
+        let text = "Address,Name,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)\n\
                      100,Kitchen Light,DPST-1-1,Lighting,Ground Floor\n";
         let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
 
         assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
         assert_eq!(parsed.ignored_columns.len(), 3);
         for col in &parsed.ignored_columns {
-            assert_eq!(col.reason, IgnoredColumnReason::ExportOnly);
+            assert_eq!(col.reason, IgnoredColumnReason::ReadOnly);
         }
         let mut names: Vec<&str> = parsed
             .ignored_columns
@@ -533,8 +708,18 @@ mod tests {
             .map(|c| c.name.as_str())
             .collect();
         names.sort();
-        assert_eq!(names, vec!["DatapointType", "MainGroup", "MiddleGroup"]);
+        assert_eq!(
+            names,
+            vec![
+                "DatapointType (read-only)",
+                "MainGroup (read-only)",
+                "MiddleGroup (read-only)"
+            ]
+        );
         assert_eq!(parsed.rows.len(), 1);
+        assert_eq!(parsed.rows[0].datapoint_type.as_deref(), Some("DPST-1-1"));
+        assert_eq!(parsed.rows[0].main_group.as_deref(), Some("Lighting"));
+        assert_eq!(parsed.rows[0].middle_group.as_deref(), Some("Ground Floor"));
     }
 
     #[test]
@@ -785,5 +970,71 @@ mod tests {
         // Empty cell means "unchanged" (None), never Some(false).
         assert_eq!(parsed.rows[3].central, None);
         assert_eq!(parsed.rows[3].unfiltered, None);
+    }
+
+    #[test]
+    fn parses_explicit_readdress_and_delete_actions_without_guessing_from_absence() {
+        let text = "Address,Action,NewAddress,Name\n\
+                    100,readdress,200,Moved\n\
+                    300,delete,,Removed\n\
+                    400,,,Ordinary upsert\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
+        assert_eq!(parsed.rows[0].action, CsvAction::Readdress);
+        assert_eq!(
+            parsed.rows[0].new_address.map(|value| value.raw()),
+            Some(200)
+        );
+        assert_eq!(parsed.rows[1].action, CsvAction::Delete);
+        assert_eq!(parsed.rows[1].new_address, None);
+        assert_eq!(parsed.rows[2].action, CsvAction::Upsert);
+    }
+
+    #[test]
+    fn destructive_action_shape_errors_are_explicit() {
+        let text = "Address,Action,NewAddress,Name\n\
+                    100,readdress,,Missing target\n\
+                    200,delete,201,Delete with target\n\
+                    300,mystery,,Unknown action\n\
+                    400,readdress,400,Same target\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert!(parsed.rows.is_empty());
+        assert_eq!(parsed.problems.len(), 4);
+        assert!(parsed
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("readdress requires NewAddress")));
+        assert!(parsed.problems.iter().any(|problem| problem
+            .detail
+            .contains("delete must not specify NewAddress")));
+        assert!(parsed
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("unknown Action")));
+        assert!(parsed
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("must differ")));
+    }
+
+    #[test]
+    fn duplicate_recognized_headers_are_errors_and_the_first_value_wins() {
+        let text = "Address,Name,Action,action,DatapointType,DatapointType (read-only)\n\
+                    100,A,upsert,delete,,DPST-1-1\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert_eq!(parsed.rows.len(), 1);
+        assert_eq!(parsed.rows[0].action, CsvAction::Upsert);
+        assert_eq!(parsed.problems.len(), 2);
+        assert!(parsed
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("column \"Action\"")));
+        assert!(parsed
+            .problems
+            .iter()
+            .any(|problem| problem.detail.contains("column \"DatapointType\"")));
     }
 }

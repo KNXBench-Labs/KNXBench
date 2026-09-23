@@ -21,6 +21,51 @@ use knx_core::{
     ParameterInstance, StringTable, Text, Topology,
 };
 
+use crate::diff::FieldChange;
+
+/// Projects one typed field snapshot into ordered display values. String
+/// fields use their plain contents; `Debug` is reserved for enums and
+/// structured values without a stable textual representation.
+pub trait FieldDiff {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange>;
+}
+
+fn fmt_plain<T: std::fmt::Display>(value: &T) -> String {
+    value.to_string()
+}
+
+fn fmt_plain_string_opt(value: &Option<String>) -> String {
+    value.clone().unwrap_or_else(|| "-".to_string())
+}
+
+fn fmt_display_opt<T: std::fmt::Display>(value: &Option<T>) -> String {
+    value
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "-".to_string())
+}
+
+fn fmt_debug<T: std::fmt::Debug>(value: &T) -> String {
+    format!("{value:?}")
+}
+
+macro_rules! field_changes {
+    ($left:expr, $right:expr, [$($field:ident => $format:expr),+ $(,)?]) => {{
+        let mut changes = Vec::new();
+        $(
+            if $left.$field != $right.$field {
+                let format = $format;
+                changes.push(FieldChange {
+                    field: stringify!($field),
+                    left: format(&$left.$field),
+                    right: format(&$right.$field),
+                });
+            }
+        )+
+        changes
+    }};
+}
+
 /// Compares `left`/`right` field by field, in the exact order given, and
 /// returns the names of the fields that differ — the same order every time
 /// (design spec §4), so nothing downstream needs its own sort step.
@@ -66,6 +111,12 @@ pub fn area_fields(area: &Area) -> AreaFields {
 
 pub fn area_changed_fields(left: &AreaFields, right: &AreaFields) -> Vec<&'static str> {
     changed_fields!(left, right, [name, completion])
+}
+
+impl FieldDiff for AreaFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(self, right, [name => fmt_plain, completion => fmt_debug])
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -567,6 +618,108 @@ pub fn parameter_changed_fields(
     right: &ParameterFields,
 ) -> Vec<&'static str> {
     changed_fields!(left, right, [raw])
+}
+
+impl FieldDiff for LineFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [
+                name => fmt_plain,
+                medium_ref => fmt_plain,
+                domain_address => fmt_plain_string_opt,
+                domain_address_is_checked => fmt_display_opt,
+                ip_routing_multicast_address => fmt_display_opt,
+                multicast_ttl => fmt_display_opt,
+                completion => fmt_debug,
+                area => fmt_debug,
+            ]
+        )
+    }
+}
+
+impl FieldDiff for BuildingPartFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [
+                name => fmt_plain,
+                number => fmt_plain_string_opt,
+                kind => fmt_debug,
+                completion => fmt_debug,
+                default_line => fmt_debug,
+            ]
+        )
+    }
+}
+
+impl FieldDiff for DeviceFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [
+                name => fmt_plain,
+                description => fmt_plain_string_opt,
+                address => fmt_plain_string_opt,
+                product_ref => fmt_plain,
+                program_ref => fmt_plain,
+                commissioning => fmt_debug,
+                line => fmt_debug,
+                building => fmt_debug,
+            ]
+        )
+    }
+}
+
+impl FieldDiff for GroupRangeFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [name => fmt_plain, start => fmt_plain, end => fmt_plain, parent => fmt_debug]
+        )
+    }
+}
+
+impl FieldDiff for GroupAddressFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [name => fmt_plain, central => fmt_plain, unfiltered => fmt_plain, range => fmt_debug]
+        )
+    }
+}
+
+impl FieldDiff for ComObjectFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(
+            self,
+            right,
+            [
+                text => fmt_plain_string_opt,
+                description => fmt_plain_string_opt,
+                dpt => fmt_plain_string_opt,
+                read => fmt_display_opt,
+                write => fmt_display_opt,
+                transmit => fmt_display_opt,
+                update => fmt_display_opt,
+                communication => fmt_display_opt,
+                read_on_init => fmt_display_opt,
+                links => fmt_debug,
+                module_instance => fmt_plain_string_opt,
+            ]
+        )
+    }
+}
+
+impl FieldDiff for ParameterFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        field_changes!(self, right, [raw => fmt_plain])
+    }
 }
 
 #[cfg(test)]

@@ -165,21 +165,39 @@ released; it never becomes the open project.
 
 ```bash
 knx diff old.knxdb new.knxdb
+knx diff export.knxproj current.knxdb
 ```
+
+Either side may be a native `.knxdb` or a raw `.knxproj`. Raw ETS archives are
+normalized through the regular importer, and their complete import reports are written
+to standard error so compatibility losses are not hidden. Opening an older `.knxdb` may
+run the normal forward-only native-store migration.
 
 The output is a plain text tree using four markers:
 
 ```text
-+ device 1.1.7 Presence detector
-- device 1.1.9 Old dimmer
-~ device 1.1.5 Hallway switch: name, description
++ device 1.1.7
+- device 1.1.9
+~ device 1.1.5: name: Hallway switch -> Hall switch
+~ device 1.1.5: description: - -> Main entrance
 ? group address 1/2/3: 2 left candidate(s), 1 right candidate(s)
 ```
 
-`+` is added, `-` is removed, `~` is changed with the differing fields named after the
-colon, and `?` is ambiguous with the candidate counts on each side. Field-level changes
-are printed as `~ name: Hallway switch: Hall switch -> Hallway switch`. When the two
-projects are the same, it prints `no differences found`.
+`+` is added, `-` is removed, `~` is one changed field with its before/after values,
+and `?` is ambiguous with the candidate counts on each side. When the two projects are
+the same, it prints `no differences found`.
+
+For CI, add `--exit-code`:
+
+```bash
+knx diff --exit-code expected.knxdb actual.knxdb
+```
+
+In that mode, exit code `0` means equal, `1` means different (an ambiguity also counts
+as different), and `2` means arguments, file access, native-store loading, a failed ETS
+import, or an ETS import report containing error-level diagnostics. Without
+`--exit-code`, a successfully produced non-empty diff remains exit `0`; an import report
+with errors remains a failure so partially interpreted data cannot pass unnoticed.
 
 ### What comparison is good for, and where it stops
 
@@ -190,8 +208,8 @@ already had.
 
 The limits are worth knowing before you rely on it:
 
-- Both sides must be KNXBench `.knxdb` projects. You cannot compare a `.knxproj` ETS
-  archive directly; import it first.
+- The application panel still accepts only `.knxdb`; raw `.knxproj` comparison is a CLI
+  capability and always discloses its normalization report.
 - It compares the typed domain model. Anything KNXBench stores as opaque preserved data
   rather than as typed fields is not compared field by field.
 - Parameters are compared by their raw stored value, because KNXBench does not

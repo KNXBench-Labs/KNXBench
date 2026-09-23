@@ -15,7 +15,7 @@ const USAGE: &str =
      \x20     knx ga-export <store.knxdb> <out.csv>\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
-     \x20     knx diff <a.knxdb> <b.knxdb>\n\
+     \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
@@ -50,7 +50,8 @@ const USAGE: &str =
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
      2 = import/ga-import only: a project was produced but the report contains\n\
-     errors. No other subcommand, including every `bus` one, ever returns 2.";
+     errors. For `diff --exit-code`: 0 = equal, 1 = different (including\n\
+     ambiguity), 2 = arguments, input, import, or store failure.";
 
 /// Exit code for "the import produced a project, but the report contains
 /// `Severity::Error` entries" — data the mapper could not use, such as a
@@ -548,13 +549,16 @@ fn print_doc_export_report(output: &str, report: &knx_report::HtmlReport) {
 struct DiffArgs {
     a: String,
     b: String,
+    exit_code: bool,
 }
 
 fn parse_diff_args(args: &[String]) -> Result<DiffArgs, String> {
     let mut a = None;
     let mut b = None;
+    let mut exit_code = false;
     for arg in args {
         match arg.as_str() {
+            "--exit-code" => exit_code = true,
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag: {other}"));
             }
@@ -563,16 +567,15 @@ fn parse_diff_args(args: &[String]) -> Result<DiffArgs, String> {
             other => return Err(format!("unexpected extra argument: {other}")),
         }
     }
-    let a = a.ok_or_else(|| "missing <a.knxdb>".to_string())?;
-    let b = b.ok_or_else(|| "missing <b.knxdb>".to_string())?;
-    Ok(DiffArgs { a, b })
+    let a = a.ok_or_else(|| "missing <a.knxdb|a.knxproj>".to_string())?;
+    let b = b.ok_or_else(|| "missing <b.knxdb|b.knxproj>".to_string())?;
+    Ok(DiffArgs { a, b, exit_code })
 }
 
-/// `knx diff` — computes and prints "what changed" between two `.knxdb`
-/// files (design spec §5, §7). Unlike the server's `POST /api/project/diff`,
-/// *both* sides here are files: `knx_store::open_and_migrate` + one
-/// `knx_store::load_project` call each, exactly `run_doc_export`'s own two
-/// calls, made twice.
+/// `knx diff` — computes and prints "what changed" between two native stores,
+/// two raw ETS archives, or one of each. Unlike the server's
+/// `POST /api/project/diff`, both sides here are files and are normalized by
+/// `knx_app::comparison` before the pure diff receives them.
 ///
 /// Both paths are checked with `Path::exists` *before* either store is
 /// opened — this command's own new call site for the gotcha design spec §7
@@ -585,81 +588,80 @@ fn run_diff(args: &[String]) -> ExitCode {
         Ok(parsed) => parsed,
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
-            return ExitCode::FAILURE;
+            return if args.iter().any(|arg| arg == "--exit-code") {
+                ExitCode::from(2)
+            } else {
+                ExitCode::FAILURE
+            };
+        }
+    };
+    let input_error = || {
+        if parsed.exit_code {
+            ExitCode::from(2)
+        } else {
+            ExitCode::FAILURE
         }
     };
 
     if !Path::new(&parsed.a).exists() {
         eprintln!("store not found: {}", parsed.a);
-        return ExitCode::FAILURE;
+        return input_error();
     }
     if !Path::new(&parsed.b).exists() {
         eprintln!("store not found: {}", parsed.b);
-        return ExitCode::FAILURE;
+        return input_error();
     }
 
-    let conn_a = match knx_store::open_and_migrate(&PathBuf::from(&parsed.a)) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("failed to open store at {}: {e}", parsed.a);
-            return ExitCode::FAILURE;
+    let input_a = match knx_app::comparison::load_comparison_input(Path::new(&parsed.a)) {
+        Ok(input) => input,
+        Err(error) => {
+            eprintln!("{error}");
+            return input_error();
         }
     };
-    let project_a = match knx_store::load_project(&conn_a) {
-        Ok(project) => project,
-        Err(e) => {
-            eprintln!("failed to load project from store {}: {e}", parsed.a);
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let conn_b = match knx_store::open_and_migrate(&PathBuf::from(&parsed.b)) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("failed to open store at {}: {e}", parsed.b);
-            return ExitCode::FAILURE;
-        }
-    };
-    let project_b = match knx_store::load_project(&conn_b) {
-        Ok(project) => project,
-        Err(e) => {
-            eprintln!("failed to load project from store {}: {e}", parsed.b);
-            return ExitCode::FAILURE;
+    let input_b = match knx_app::comparison::load_comparison_input(Path::new(&parsed.b)) {
+        Ok(input) => input,
+        Err(error) => {
+            eprintln!("{error}");
+            return input_error();
         }
     };
 
-    let diff = knx_diff::diff_projects(&project_a, &project_b);
+    if let Some(report) = &input_a.import_report {
+        eprintln!(
+            "comparison import report for {}: {}",
+            parsed.a,
+            report.to_json()
+        );
+    }
+    if let Some(report) = &input_b.import_report {
+        eprintln!(
+            "comparison import report for {}: {}",
+            parsed.b,
+            report.to_json()
+        );
+    }
+
+    let import_error_count = input_a
+        .import_report
+        .iter()
+        .chain(input_b.import_report.iter())
+        .map(error_count)
+        .sum::<usize>();
+    if import_error_count > 0 {
+        eprintln!(
+            "comparison aborted: {import_error_count} error diagnostics across the normalized ETS input(s)"
+        );
+        return input_error();
+    }
+
+    let diff = knx_diff::diff_projects(&input_a.project, &input_b.project);
     print_diff_report(&diff);
-    ExitCode::SUCCESS
-}
-
-/// True when `table` carries no addition, removal, change or ambiguity —
-/// generic over every `knx_diff::EntityTable<K, F>` instantiation, so it
-/// serves areas, lines, group ranges, group addresses, building parts, and
-/// (nested, per device) communication objects and parameters alike.
-fn table_is_empty<K, F>(table: &knx_diff::EntityTable<K, F>) -> bool {
-    table.added.is_empty()
-        && table.removed.is_empty()
-        && table.changed.is_empty()
-        && table.ambiguous.is_empty()
-}
-
-fn device_table_is_empty(table: &knx_diff::DeviceTable) -> bool {
-    table.added.is_empty()
-        && table.removed.is_empty()
-        && table.changed.is_empty()
-        && table.ambiguous.is_empty()
-}
-
-fn installation_is_unchanged(installation: &knx_diff::InstallationDiff) -> bool {
-    installation.status == knx_diff::EntityStatus::Matched
-        && installation.field_changes.is_empty()
-        && table_is_empty(&installation.areas)
-        && table_is_empty(&installation.lines)
-        && device_table_is_empty(&installation.devices)
-        && table_is_empty(&installation.group_ranges)
-        && table_is_empty(&installation.group_addresses)
-        && table_is_empty(&installation.buildings)
+    if parsed.exit_code && !diff.is_empty() {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -713,7 +715,7 @@ fn parameter_key_display(key: &knx_diff::ParameterKey) -> String {
 /// "four-line shape" every entity kind but devices shares. `indent` is `""`
 /// at the top level, `"  "` for a device's nested `com_objects`/
 /// `parameters` tables.
-fn print_entity_table<K, F>(
+fn print_entity_table<K, F: knx_diff::FieldDiff>(
     table: &knx_diff::EntityTable<K, F>,
     label: &str,
     indent: &str,
@@ -726,11 +728,15 @@ fn print_entity_table<K, F>(
         println!("{indent}- {label} {}", key_display(key));
     }
     for change in &table.changed {
-        println!(
-            "{indent}~ {label} {}: {}",
-            key_display(&change.key),
-            change.changed_fields.join(", ")
-        );
+        for field in change.field_changes() {
+            println!(
+                "{indent}~ {label} {}: {}: {} -> {}",
+                key_display(&change.key),
+                field.field,
+                field.left,
+                field.right
+            );
+        }
     }
     for note in &table.ambiguous {
         println!(
@@ -756,17 +762,22 @@ fn print_device_table(table: &knx_diff::DeviceTable) {
         println!("- device {}", device_key_display(key));
     }
     for change in &table.changed {
-        if change.changed_fields.is_empty() {
+        let own_field_changes = change.field_changes();
+        if own_field_changes.is_empty() {
             println!(
                 "~ device {}: (own fields unchanged)",
                 device_key_display(&change.key)
             );
         } else {
-            println!(
-                "~ device {}: {}",
-                device_key_display(&change.key),
-                change.changed_fields.join(", ")
-            );
+            for field in own_field_changes {
+                println!(
+                    "~ device {}: {}: {} -> {}",
+                    device_key_display(&change.key),
+                    field.field,
+                    field.left,
+                    field.right
+                );
+            }
         }
         print_entity_table(
             &change.com_objects,
@@ -830,7 +841,7 @@ fn print_installation_diff(installation: &knx_diff::InstallationDiff) {
 /// found"` when nothing differs anywhere, otherwise `info_changes`, then
 /// each installation's own status/field changes and entity tables in turn.
 fn print_diff_report(diff: &knx_diff::ProjectDiff) {
-    if diff.info_changes.is_empty() && diff.installations.iter().all(installation_is_unchanged) {
+    if diff.is_empty() {
         println!("no differences found");
         return;
     }

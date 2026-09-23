@@ -8,6 +8,7 @@
 
 use std::path::Path;
 use std::process::{Command, Output};
+use std::{fs, io};
 
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId,
@@ -153,6 +154,38 @@ fn run_cli(args: &[&str]) -> Output {
         .expect("failed to run the knx binary")
 }
 
+fn write_knxproj_with_recoverable_duplicate_id(dir: &Path) -> std::path::PathBuf {
+    use io::{Cursor, Read, Write};
+
+    let source = knx_testsupport::minimal_knxproj_bytes();
+    let mut archive = zip::ZipArchive::new(Cursor::new(source)).unwrap();
+    let target = dir.join("duplicate-id.knxproj");
+    let file = fs::File::create(&target).unwrap();
+    let mut writer = zip::ZipWriter::new(file);
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).unwrap();
+        let name = entry.name().to_string();
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).unwrap();
+        if name == "P-0001/0.xml" {
+            let xml = String::from_utf8(bytes).unwrap();
+            bytes = xml
+                .replace(
+                    "<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"1\" Name=\"GA\" />",
+                    "<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"1\" Name=\"GA\" />\n<GroupAddress Id=\"P-0001-0_GA-1\" Address=\"2\" Name=\"Duplicate\" />",
+                )
+                .into_bytes();
+        }
+        writer.start_file(name, options).unwrap();
+        writer.write_all(&bytes).unwrap();
+    }
+    writer.finish().unwrap();
+    target
+}
+
 #[test]
 fn diff_of_two_identical_stores_reports_no_changes() {
     let dir = tempfile::tempdir().unwrap();
@@ -181,15 +214,6 @@ fn diff_of_two_identical_stores_reports_no_changes() {
     );
 }
 
-// `knx-diff`'s generic entity tables render a `changed` row as its
-// formatted key plus a `changed_fields` *name* summary, never the old/new
-// values themselves (design spec §5: "one changed_fields summary per
-// changed line"; `knx-diff::diff.rs`'s `EntityChange::changed_fields` is
-// `Vec<&'static str>`, field names only — the values live in
-// `EntityChange::left`/`right`, which this renderer does not walk field by
-// field for a generic entity). So this asserts the group address's
-// formatted address, the changed field's name, and the `~` prefix — not
-// the old/new name text, which this render level never prints.
 #[test]
 fn diff_of_two_stores_with_one_changed_group_address_name_prints_it() {
     let dir = tempfile::tempdir().unwrap();
@@ -210,11 +234,95 @@ fn diff_of_two_stores_with_one_changed_group_address_name_prints_it() {
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert!(stdout.contains("1/1/1"), "{stdout}");
     assert!(
-        stdout
-            .lines()
-            .any(|line| line.trim_start() == "~ group address 1/1/1: name"),
+        stdout.lines().any(|line| line.trim_start()
+            == "~ group address 1/1/1: name: Living Room Light -> Living Room Light V2"),
         "{stdout}"
     );
+}
+
+#[test]
+fn diff_exit_code_mode_returns_zero_for_equal_one_for_different_and_two_for_input_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    let store_a = dir.path().join("a.knxdb");
+    let store_b = dir.path().join("b.knxdb");
+    write_store(&store_a, &project_with_ga_name("A"));
+    write_store(&store_b, &project_with_ga_name("A"));
+
+    let equal = run_cli(&[
+        "diff",
+        "--exit-code",
+        store_a.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(equal.status.code(), Some(0));
+
+    write_store(&store_b, &project_with_ga_name("B"));
+    let different = run_cli(&[
+        "diff",
+        "--exit-code",
+        store_a.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(different.status.code(), Some(1));
+
+    let missing = dir.path().join("missing.knxdb");
+    let invalid = run_cli(&[
+        "diff",
+        "--exit-code",
+        missing.to_str().unwrap(),
+        store_b.to_str().unwrap(),
+    ]);
+    assert_eq!(invalid.status.code(), Some(2));
+}
+
+#[test]
+fn diff_accepts_raw_knxproj_inputs_and_exposes_their_import_reports() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = knx_testsupport::write_minimal_knxproj(dir.path());
+
+    let output = run_cli(&[
+        "diff",
+        "--exit-code",
+        project.to_str().unwrap(),
+        project.to_str().unwrap(),
+    ]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("comparison import report"),
+        "raw ETS normalization must not hide its compatibility report"
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("no differences found"));
+}
+
+#[test]
+fn diff_exit_code_mode_rejects_a_partial_import_with_error_diagnostics() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = write_knxproj_with_recoverable_duplicate_id(dir.path());
+
+    let output = run_cli(&[
+        "diff",
+        "--exit-code",
+        project.to_str().unwrap(),
+        project.to_str().unwrap(),
+    ]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("comparison import report"), "{stderr}");
+    assert!(stderr.contains("error diagnostics"), "{stderr}");
 }
 
 #[test]

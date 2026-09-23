@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-23 — T15: project comparison exposes values and becomes scriptable
+
+`knx-diff` now projects every matched entity snapshot into deterministic,
+ordered `FieldChange { field, left, right }` values while retaining the full
+typed left/right snapshots and existing field-name list. Plain string and
+optional-string values are never `Debug`-quoted; structured values use the
+existing explicit debug fallback. `ProjectDiff::is_empty()` covers project,
+installation, every entity/nested table, and ambiguity output.
+
+The CLI prints one before/after line per changed field. `knx diff --exit-code`
+returns 0 for equal, 1 for any difference including ambiguity, and 2 for
+arguments/input/import/store failure; ordinary `knx diff` retains its previous
+0-on-success behavior for a valid comparison. A recoverable ETS import whose report
+contains error-level diagnostics exits 2 in CI mode (1 otherwise) instead of comparing
+partially interpreted data as if it were complete. Either CLI side may now be `.knxdb` or `.knxproj`.
+Raw ETS input is normalized in `knx-app` and its complete import report is
+written to stderr; native stores use the normal forward migration path.
+
+The project-diff HTTP DTO adds `fieldChanges` to generic and device changes,
+without removing `changedFields`, `left`, or `right`. This is the API handoff
+for the deferred richer web panel: it can render entities and old/new values
+without reimplementing Rust field projection. The current web panel remains a
+grouped-count view.
+
+Corpus measurement over the ETS4, ETS6, and independent Schema-21 projects
+found zero devices lacking both address and ETS id, zero duplicate sibling-name
+groups, and zero changed ETS ids for unique device-address, building-path, or
+group-address keys between the ETS4/ETS6 re-exports. These are measurements of
+the available corpus, not proof that the documented correlation boundaries do
+do not occur elsewhere; the matcher still reports ambiguity instead of guessing.
+The corpus measurement is an explicitly ignored, local-only integration test; run
+`cargo test -p knx-app --test diff_correlation_measurement -- --ignored --nocapture`
+from a checkout containing `OriginalData/`. Ordinary CI reports it as ignored rather
+than claiming that a measurement ran without the private corpus.
+
 ## 2026-09-23 — T14 fix round 1: reports stop borrowing another product's program
 
 Documentation composition now accepts a product/program pair only when the

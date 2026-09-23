@@ -20,8 +20,8 @@ does not change shape when a project arrives, it only fills up.
 The top row, left to right:
 
 - **KNXBench** — the brand, and also a button: it takes you back to the Overview.
-- **File** — a drop-down menu with everything that reads or writes a file. It is
-  covered in [Projects](02-projects.md); the screenshot below shows the full list.
+- **File** — a drop-down menu with project and export actions. It is
+  covered in [Projects](02-projects.md).
 - **Undo** and **Redo** — two arrow buttons. They are gray when there is nothing to
   undo or redo. Every edit in KNXBench goes through the same command stack, so undo
   works the same way for a renamed room as for a bulk delete.
@@ -33,20 +33,9 @@ The top row, left to right:
 - **The gear** — opens Settings. See
   [Settings, themes and languages](09-settings-and-appearance.md).
 
-![The open File menu listing New project, Open project, Open (.knxdb), Save As, Export
-to .knxproj, the two group-address CSV entries, Export documentation, Compare with,
-Debug report and About KNXBench](../../assets/screenshots/porcelain-file-menu.png)
-
-The File menu in the web build. The desktop build adds one more item at the bottom,
-**Quit** — a browser tab cannot close itself, so that entry only exists where it can
-actually work.
-
-> **Note**
->
-> The screenshot above was taken before 2026-09-20 and still shows an **Export to
-> .knxproj…** item. That item has been removed
-> ([ADR-0028](../../adr/0028-no-knxproj-export.md)); the menu you see has one entry
-> fewer. The image will be retaken the next time the screenshot set is refreshed.
+The web File menu includes **Download project** for a local `.knxdb` copy of
+the open project. The desktop build instead has native file dialogs and adds
+**Quit**; a browser tab cannot close itself. Neither build exports `.knxproj`.
 
 ## The strip below the header
 
@@ -152,7 +141,8 @@ Six things open on top of the window instead of inside it. All of them close wit
 
 **Search** (`Ctrl+K`) searches the open project — devices, group addresses and
 building parts, grouped by kind. It matches as you type, arrow keys move through the
-hits, Enter selects one and takes you to it.
+hits, Enter selects one and takes you to it, reopening the containing Project
+Explorer branches when necessary.
 
 ![The search overlay with the query "dimming" and five matching group addresses listed
 under a "Group addresses" heading](../../assets/screenshots/porcelain-search.png)

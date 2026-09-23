@@ -64,6 +64,11 @@ that are on your machine rather than on the server's. See
 [Web and Docker deployment](11-web-and-docker.md) for what the server can and cannot
 reach.
 
+The web picker's upload area also accepts dropped files or a multi-file choice.
+It uploads them one at a time, stops at the first failure and reports which file
+failed; an upload does not automatically select or open a project. After an
+upload, select the file from the server-side list to open it.
+
 ## Importing an ETS project
 
 **Open project…** imports a `.knxproj` file. The file is read; it is never written
@@ -155,6 +160,13 @@ case for every newly created and every freshly imported project — Save asks wh
 put it, exactly as Save As does. The suggested name is `project.knxdb`.
 
 **Save As…** always asks.
+
+In the browser, Save As writes to the server's permitted directory, not to your
+computer's Downloads folder. To obtain a copy locally, choose **Download
+project** from the File menu after opening a project. This downloads a freshly
+serialized `.knxdb` from the current in-memory project; it is not a substitute
+for saving changes on the server. The native desktop build uses its own file
+dialog for Save As and does not show the browser-only Download project item.
 
 There is no autosave. Nothing is written until you ask for it.
 

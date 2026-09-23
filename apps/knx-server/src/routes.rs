@@ -49,6 +49,10 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/project/documentation-export",
             post(export_documentation),
         )
+        .route(
+            "/api/project/documentation-preview",
+            post(preview_documentation),
+        )
         .route("/api/project/diff", post(diff_project))
         .route(
             "/api/group-addresses/csv-import",
@@ -956,6 +960,76 @@ struct DocumentationExportReportDto {
     warnings: Vec<DocumentationWarningDto>,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentationPreviewReportDto {
+    html: String,
+    warnings: Vec<DocumentationWarningDto>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentationOptionsBody {
+    #[serde(default)]
+    language: Option<String>,
+    #[serde(default)]
+    sections: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentationExportBody {
+    path: String,
+    #[serde(default)]
+    language: Option<String>,
+    #[serde(default)]
+    sections: Option<Vec<String>>,
+}
+
+fn documentation_options(
+    language: Option<&str>,
+    sections: Option<&[String]>,
+) -> Result<
+    (
+        knx_report::ReportLanguage,
+        std::collections::BTreeSet<knx_report::ReportSection>,
+    ),
+    ApiError,
+> {
+    let language = match language.unwrap_or("en") {
+        "en" | "en-US" => knx_report::ReportLanguage::English,
+        "de" | "de-DE" => knx_report::ReportLanguage::German,
+        other => {
+            return Err(ApiError::bad_request(format!(
+                "unsupported report language: {other}"
+            )))
+        }
+    };
+    let sections = match sections {
+        None => knx_report::ReportSection::ALL.into_iter().collect(),
+        Some(values) => {
+            let mut selected = std::collections::BTreeSet::new();
+            for value in values {
+                let section = match value.as_str() {
+                    "summary" => knx_report::ReportSection::Summary,
+                    "topology" => knx_report::ReportSection::Topology,
+                    "buildings" => knx_report::ReportSection::Buildings,
+                    "groupAddresses" => knx_report::ReportSection::GroupAddresses,
+                    "devices" => knx_report::ReportSection::Devices,
+                    other => {
+                        return Err(ApiError::bad_request(format!(
+                            "unsupported report section: {other}"
+                        )))
+                    }
+                };
+                selected.insert(section);
+            }
+            selected
+        }
+    };
+    Ok((language, sections))
+}
+
 /// Writes the live project as one self-contained "project documentation"
 /// HTML file to `body.path` (`crates/knx-report`) — never called an "ETS
 /// report" anywhere, because no ETS-produced sample exists in this
@@ -964,10 +1038,12 @@ struct DocumentationExportReportDto {
 /// `/api/group-addresses/csv-export`'s.
 async fn export_documentation(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
+    Json(body): Json<DocumentationExportBody>,
 ) -> Result<Json<DocumentationExportReportDto>, ApiError> {
+    let (language, sections) =
+        documentation_options(body.language.as_deref(), body.sections.as_deref())?;
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::export_documentation_impl(&state, &path)
+    domain::export_documentation_impl(&state, &path, language, sections)
         .map(|report| DocumentationExportReportDto {
             warnings: report
                 .warnings
@@ -976,6 +1052,26 @@ async fn export_documentation(
                 .collect(),
         })
         .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn preview_documentation(
+    State(state): State<SharedState>,
+    Json(body): Json<DocumentationOptionsBody>,
+) -> Result<Json<DocumentationPreviewReportDto>, ApiError> {
+    let (language, sections) =
+        documentation_options(body.language.as_deref(), body.sections.as_deref())?;
+    domain::preview_documentation_impl(&state, language, sections)
+        .map(|report| {
+            Json(DocumentationPreviewReportDto {
+                warnings: report
+                    .warnings
+                    .iter()
+                    .map(DocumentationWarningDto::from)
+                    .collect(),
+                html: report.html,
+            })
+        })
         .map_err(ApiError::bad_request)
 }
 

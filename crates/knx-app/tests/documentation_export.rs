@@ -64,9 +64,7 @@ fn rendering_the_reference_project_produces_a_complete_self_contained_document()
          {com_object_count} communication objects, {group_address_count} group addresses"
     );
 
-    let options = ReportOptions {
-        generated_at: Utc.with_ymd_and_hms(2026, 9, 10, 12, 0, 0).unwrap(),
-    };
+    let options = ReportOptions::new(Utc.with_ymd_and_hms(2026, 9, 10, 12, 0, 0).unwrap());
     let report = render_html(&project, &options);
     eprintln!(
         "documentation_export corpus test: rendered {} bytes of HTML, {} structural warnings",

@@ -816,17 +816,57 @@ pub fn export_group_addresses_csv_impl(
 /// object, a dangling group link, a malformed override) is pushed into
 /// the session log individually, not just returned in the response body —
 /// same reasoning as `export_group_addresses_csv_impl` above.
+fn documentation_options(
+    state: &AppState,
+    project: &knx_core::Project,
+    generated_at: chrono::DateTime<chrono::Utc>,
+    language: knx_report::ReportLanguage,
+    sections: std::collections::BTreeSet<knx_report::ReportSection>,
+) -> knx_report::ReportOptions {
+    let products = state
+        .product_db
+        .as_ref()
+        .map(|products| products.lock().expect("state mutex poisoned"));
+    knx_app::documentation::report_options(
+        project,
+        products.as_deref(),
+        generated_at,
+        language,
+        sections,
+    )
+}
+
+pub fn preview_documentation_impl(
+    state: &AppState,
+    language: knx_report::ReportLanguage,
+    sections: std::collections::BTreeSet<knx_report::ReportSection>,
+) -> Result<knx_report::HtmlReport, String> {
+    let project = state
+        .project
+        .lock()
+        .expect("state mutex poisoned")
+        .clone()
+        .ok_or("no project open")?;
+    let options = documentation_options(state, &project, chrono::Utc::now(), language, sections);
+    Ok(knx_report::render_html(&project, &options))
+}
+
 pub fn export_documentation_impl(
     state: &AppState,
     path: &Path,
+    language: knx_report::ReportLanguage,
+    sections: std::collections::BTreeSet<knx_report::ReportSection>,
 ) -> Result<knx_report::HtmlReport, String> {
     let result = (|| -> Result<knx_report::HtmlReport, String> {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
-        let options = knx_report::ReportOptions {
-            generated_at: chrono::Utc::now(),
-        };
-        let report = knx_report::render_html(project, &options);
+        let project = state
+            .project
+            .lock()
+            .expect("state mutex poisoned")
+            .clone()
+            .ok_or("no project open")?;
+        let options =
+            documentation_options(state, &project, chrono::Utc::now(), language, sections);
+        let report = knx_report::render_html(&project, &options);
         std::fs::write(path, report.html.as_bytes()).map_err(|e| e.to_string())?;
         Ok(report)
     })();

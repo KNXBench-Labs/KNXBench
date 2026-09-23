@@ -723,39 +723,72 @@ fn render_devices(
             escape_text(&device.program_ref)
         )
         .unwrap();
-        for (label, value) in [
+        let identity_fields = [
             (
                 "Manufacturer",
+                "manufacturer name",
                 resolved.and_then(|data| data.manufacturer.as_deref()),
+                resolved.and_then(|data| data.manufacturer_reference.as_deref()),
             ),
-            ("Product", resolved.and_then(|data| data.product.as_deref())),
+            (
+                "Product",
+                "product name",
+                resolved.and_then(|data| data.product.as_deref()),
+                Some(device.product_ref.as_str()),
+            ),
             (
                 "Application program",
+                "application-program name",
                 resolved.and_then(|data| data.application_program.as_deref()),
+                Some(device.program_ref.as_str()),
             ),
-        ] {
+        ];
+        let mut identity_problems = Vec::new();
+        for (label, description, value, raw_reference) in identity_fields {
+            let value = value.filter(|value| !value.trim().is_empty());
+            let fallback = raw_reference.filter(|value| !value.trim().is_empty());
             write!(
                 out,
                 "<tr><th>{label}</th><td>{}</td></tr>",
                 value
                     .map(escape_text)
+                    .or_else(|| fallback.map(escape_text))
                     .unwrap_or_else(|| "unresolved".to_string())
             )
             .unwrap();
+            if resolved.is_some() && value.is_none() {
+                identity_problems.push(format!(
+                    "product database did not resolve {description}; {}",
+                    fallback
+                        .map(|reference| format!("raw reference {reference} shown"))
+                        .unwrap_or_else(|| "no raw reference is available".to_string())
+                ));
+            }
         }
         out.push_str("</table>");
 
-        if resolved.is_none_or(|data| {
-            data.manufacturer.is_none()
-                || data.product.is_none()
-                || data.application_program.is_none()
-        }) {
+        let identity_row_resolved = resolved
+            .and_then(|data| data.manufacturer_reference.as_ref())
+            .is_some();
+        if !identity_row_resolved {
             let detail = "product database did not resolve all manufacturer, product, and application-program names; raw references are shown";
             write!(out, "<p class=\"warning\">{}</p>", escape_text(detail)).unwrap();
             warnings.push(ReportWarning {
                 location: format!("device {}", device.id),
                 detail: detail.to_string(),
             });
+        } else {
+            for detail in identity_problems.into_iter().chain(
+                resolved
+                    .into_iter()
+                    .flat_map(|data| data.problems.iter().cloned()),
+            ) {
+                write!(out, "<p class=\"warning\">{}</p>", escape_text(&detail)).unwrap();
+                warnings.push(ReportWarning {
+                    location: format!("device {}", device.id),
+                    detail,
+                });
+            }
         }
 
         if let Some(data) = resolved {
@@ -872,26 +905,25 @@ fn render_report_fields(
         "<table><tr><th>Reference</th><th>Name</th><th>Raw value</th><th>Display value</th></tr>",
     );
     for field in fields {
-        let problem = field.problem.as_deref().or_else(|| {
-            field
-                .name
-                .is_none()
-                .then_some("field name could not be resolved; raw identifier shown")
-        });
+        let name = field.name.as_deref().filter(|name| !name.trim().is_empty());
+        let mut problems = Vec::new();
+        if name.is_none() {
+            problems.push("field name could not be resolved; raw identifier shown".to_string());
+        }
+        if let Some(problem) = &field.problem {
+            problems.push(problem.clone());
+        }
         write!(
             out,
             "<tr{}><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
-            if problem.is_some() {
-                " class=\"warning\""
-            } else {
+            if problems.is_empty() {
                 ""
+            } else {
+                " class=\"warning\""
             },
             escape_text(&field.reference),
-            field
-                .name
-                .as_deref()
-                .map(escape_text)
-                .unwrap_or_else(|| "unresolved".into()),
+            name.map(escape_text)
+                .unwrap_or_else(|| escape_text(&field.reference)),
             escape_text(&field.raw_value),
             field
                 .display_value
@@ -900,16 +932,16 @@ fn render_report_fields(
                 .unwrap_or_else(|| "—".into()),
         )
         .unwrap();
-        if let Some(problem) = problem {
+        for problem in problems {
             write!(
                 out,
                 "<tr class=\"warning\"><td colspan=\"4\">{}</td></tr>",
-                escape_text(problem)
+                escape_text(&problem)
             )
             .unwrap();
             warnings.push(ReportWarning {
                 location: format!("device {device_id}, {}", field.reference),
-                detail: problem.to_string(),
+                detail: problem,
             });
         }
     }
@@ -1017,6 +1049,10 @@ fn render_limits(out: &mut String, warnings: &[ReportWarning], language: ReportL
     write!(out, "<li>{}</li>", language.text(
         "Names and display values come from caller-supplied product data; unresolved values keep their raw identifiers and appear as warnings.",
         "Namen und Anzeigewerte stammen aus den vom Aufrufer gelieferten Produktdaten; nicht aufgelöste Werte behalten ihre Rohkennungen und erscheinen als Warnungen.",
+    )).unwrap();
+    write!(out, "<li>{}</li>", language.text(
+        "Module arguments are shown as raw bindings; AllocatorRef and unknown module argument kinds, allocation metadata, and repeat semantics are not interpreted.",
+        "Modulargumente werden als Rohbindungen gezeigt; AllocatorRef und unbekannte Modulargumenttypen, Allokationsmetadaten und Wiederholungssemantik werden nicht interpretiert.",
     )).unwrap();
     write!(
         out,
@@ -1386,9 +1422,11 @@ mod tests {
         options.device_data.insert(
             DeviceId(1),
             ReportDeviceData {
+                manufacturer_reference: Some("M-acme".into()),
                 manufacturer: Some("Acme Controls".into()),
                 product: Some("Room Controller 8".into()),
                 application_program: Some("Lighting 2.1".into()),
+                problems: vec![],
                 parameters: vec![ReportField {
                     reference: "P-1_R-1".into(),
                     name: Some("Operating mode".into()),

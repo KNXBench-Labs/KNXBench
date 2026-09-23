@@ -258,8 +258,25 @@ async fn calling_it_with_no_project_open_is_a_400_not_a_500() {
 
 #[tokio::test]
 async fn preview_returns_localized_selected_html_without_writing_a_file() {
-    let state = Arc::new(state_with_one_group_address());
+    let dir = tempfile::tempdir().unwrap();
+    let mut state = state_with_one_group_address();
+    state.data_dir = dir.path().to_path_buf();
+    let state = Arc::new(state);
     let app = knx_server::app(state, None);
+
+    let seed = call(
+        &app,
+        "POST",
+        "/api/group-addresses",
+        Some(json!({ "name": "Seed Light", "address": "1/1/5", "rangeId": 1 })),
+    )
+    .await;
+    assert_eq!(seed.status(), StatusCode::OK);
+    let log_before = body_json(call(&app, "GET", "/api/log", None).await).await;
+    let files_before: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
 
     let response = call(
         &app,
@@ -275,6 +292,17 @@ async fn preview_returns_localized_selected_html_without_writing_a_file() {
     assert!(html.contains("<html lang=\"de\">"), "{html}");
     assert!(html.contains("<section id=\"devices\""), "{html}");
     assert!(!html.contains("<section id=\"topology\""), "{html}");
+
+    let files_after: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    assert_eq!(files_after, files_before, "preview must not create a file");
+    let log_after = body_json(call(&app, "GET", "/api/log", None).await).await;
+    assert_eq!(
+        log_after, log_before,
+        "preview must not mutate the session log"
+    );
 }
 
 #[tokio::test]

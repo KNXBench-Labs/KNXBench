@@ -668,10 +668,11 @@ render to byte-identical HTML. `HtmlReport` carries the rendered `html`
 oddity the walk finds (a device in no line, a group address in no range, a
 building part with a dangling parent, an orphaned communication object, a
 link to a group address that does not exist, or a malformed
-`Override::Malformed` field). `render_html` cannot fail: a non-empty
-`warnings` list describes problems in the *project*, never an error in
-rendering, and every warning is rendered inline in the document itself as
-well as returned to the caller — CLAUDE.md's "never silently discard
+`Override::Malformed` field) and per caller-supplied product projection that
+cannot be rendered faithfully. `render_html` cannot fail: a non-empty
+`warnings` list describes source/project/product-data limitations, never an
+I/O error in rendering, and every warning is rendered inline in the document
+itself as well as returned to the caller — CLAUDE.md's "never silently discard
 information" applied to an artifact that must carry its own caveats even
 if a caller discards `warnings`.
 
@@ -693,8 +694,10 @@ plus any part whose parent does not resolve) — Group addresses (ranges
 nested main → middle, each address with its formatted form, name,
 `Central`/`Unfiltered`, and every linked communication object's device,
 object number, name, DPT and direction; plus addresses inside no range) —
-Devices (name, individual address, description, commissioning state, and
-the raw `product_ref`/`program_ref` identifiers, each device's
+Devices (name, individual address, description, commissioning state, raw
+`product_ref`/`program_ref` identifiers, hardware-consistent resolved
+manufacturer/product/program names, stored parameters and module arguments,
+each device's
 communication objects with number, name, description, DPT, the resolved
 layer, the six flags, active state and links, plus any orphaned
 communication object) — "What this report does not contain".
@@ -707,17 +710,16 @@ consensus value — a deliberately different computation from `knx-csv`'s
 between the two crates.
 
 **The document states its own limits**, in its own last section, not only
-in this file: manufacturer, product and application-program names are not
-resolved (the identifiers are printed verbatim — resolving them needs
-`knx-productdb`, which this crate must not reach); parameter values and
-module-instance arguments are counted but not listed (they remain
-uninterpreted raw data here — the `@test` value grammar that would let a
-reader evaluate them is documented, RESEARCH §4.3/R3, and `knx-productdb`
-now evaluates it headlessly (T18 slice 1), but `knx-report` does not reach
-that crate either); binary data is referenced by name and id
-only; text renders in the project's default language only; and the
-document says plainly that it is not an ETS report and has not been
-compared to one.
+in this file. `knx-app` resolves display-only product data outside the pure
+renderer. A product/program pair must share hardware; mismatches retain both
+raw references, attach no foreign program metadata, and warn. Missing or
+whitespace-only identity/field names fall back to raw identifiers and warn.
+Restriction enum labels are formatted when declared; unknown restriction
+values and every parameter kind without a report formatter remain raw and
+warn. Module arguments remain raw bindings: `AllocatorRef`, unknown kinds,
+allocation metadata and repeat semantics are not interpreted. Binary data is
+referenced by name and id only, and the document says plainly that it is not
+an ETS report and has not been compared to one.
 
 **PDF is produced by the browser's own print dialog**, not by KNXBench —
 the document ships `@media print` rules (no page breaks inside a table
@@ -725,11 +727,15 @@ row, each top-level section starts a new page) for exactly that. There is
 no Rust PDF renderer in this workspace and none is planned; a browser
 already has one.
 
-**Surfaces.** Server: `POST /api/project/documentation-export {path}` →
-`{warnings}` (`apps/knx-server/src/routes.rs`), writing through the same
+**Surfaces.** Server: `POST /api/project/documentation-export` accepts `path`
+plus optional `language` and `sections`, returning `{warnings}`
+(`apps/knx-server/src/routes.rs`), writing through the same
 `resolve_new_project_path` helper the CSV export uses, and
 logging one T11 session-log entry per warning under `source: "doc-export"`
-without resetting the log. CLI: `knx doc-export <store.knxdb> <out.html>`
+without resetting the log. `POST /api/project/documentation-preview` accepts
+the same language/section selection and returns `{html, warnings}` without
+creating a file or changing the session log. CLI:
+`knx doc-export <store.knxdb> <out.html>`
 (`apps/knx-cli`), printing a summary and every warning, exiting `1` only
 when no file could be produced at all (a report with warnings is still a
 complete, correct report, so there is no separate warning exit code). Web:
@@ -737,9 +743,10 @@ an "Export documentation…" button (`DocumentationExportButton.tsx`) in the
 same toolbar row as the CSV export controls.
 
 Not implemented, and recorded here rather than only in
-`KNOWN_LIMITATIONS.md`: PDF generation without a browser; an in-application
-print preview; section selection or filtering; multiple languages in one
-document; manufacturer/product/program name resolution; parameter and
-module-argument listings.
+`KNOWN_LIMITATIONS.md`: PDF generation without a browser; a frontend
+preview/print action or section/language controls; multiple languages in one
+document; a third/report-pack language; formatters for non-restriction
+parameter kinds; and interpretation of the unsupported module semantics named
+above.
 
 Design record: `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.

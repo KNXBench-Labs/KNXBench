@@ -129,9 +129,9 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | HTML project documentation | ✅ Implemented | [Reports and comparison](user-guide/08-reports-and-diff.md) |
-| Native PDF, print preview, section selection | ❌ Not implemented | Print the HTML from a browser — [§45](../KNOWN_LIMITATIONS.md#45-project-documentation-export-has-no-native-pdf-output), [§49](../KNOWN_LIMITATIONS.md#49-project-documentation-export-has-no-in-application-print-preview), [§50](../KNOWN_LIMITATIONS.md#50-project-documentation-export-has-no-section-selection) |
-| Manufacturer, product and program names in the report | ❌ Not implemented | Identifiers only — [§46](../KNOWN_LIMITATIONS.md#46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names) |
-| Parameter values and module arguments in the report | ❌ Not implemented | [§47](../KNOWN_LIMITATIONS.md#47-project-documentation-export-does-not-list-parameter-values-or-module-instance-arguments) |
+| Native PDF, print preview, section selection | 🟡 Partial or experimental | No native PDF or frontend controls; the API supports side-effect-free HTML preview and section selection — [§45](../KNOWN_LIMITATIONS.md#45-project-documentation-export-has-no-native-pdf-output), [§49](../KNOWN_LIMITATIONS.md#49-project-documentation-export-has-no-in-application-print-preview), [§50](../KNOWN_LIMITATIONS.md#50-project-documentation-export-has-no-section-selection) |
+| Manufacturer, product and program names in the report | 🟡 Partial or experimental | Resolved only from a matching installed product/program pair; raw identifiers and warnings remain the fallback — [§46](../KNOWN_LIMITATIONS.md#46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names) |
+| Parameter values and module arguments in the report | 🟡 Partial or experimental | Raw values are listed; enum labels and names resolve when supported, while unformatted kinds and unsupported module semantics warn — [§47](../KNOWN_LIMITATIONS.md#47-project-documentation-export-does-not-list-parameter-values-or-module-instance-arguments) |
 | Parity with an ETS report | ❌ Not implemented | And not measurable here, with no ETS to compare against — [§44](../KNOWN_LIMITATIONS.md#44-project-documentation-export-t13-has-no-ets-report-parity-and-none-can-currently-be-measured) |
 
 ## Project comparison

@@ -196,6 +196,52 @@ fn doc_export_of_a_missing_store_exits_1_and_writes_no_file() {
 }
 
 #[test]
+fn doc_export_reports_the_actual_default_product_database_open_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let html_path = dir.path().join("documentation.html");
+    let data_home = dir.path().join("data");
+    let products_path = data_home.join("knx/products.sqlite");
+    write_store(&store, &tiny_project());
+    let products = knx_productdb::open_and_migrate(&products_path).unwrap();
+    products
+        .pragma_update(
+            None,
+            "user_version",
+            knx_productdb::CURRENT_PRODUCTDB_VERSION + 1,
+        )
+        .unwrap();
+    drop(products);
+
+    let out = Command::new(env!("CARGO_BIN_EXE_knx"))
+        .args([
+            "doc-export",
+            store.to_str().unwrap(),
+            html_path.to_str().unwrap(),
+        ])
+        .env("XDG_DATA_HOME", &data_home)
+        .env_remove("HOME")
+        .output()
+        .expect("failed to run the knx binary");
+
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert!(
+        html_path.exists(),
+        "the report still degrades to raw references"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("failed to open product database"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("product database is version 12"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("this build supports up to 11"), "{stderr}");
+}
+
+#[test]
 fn doc_export_with_wrong_argument_count_prints_usage_and_exits_1() {
     let out = run_cli(&["doc-export", "only-one-argument"]);
     assert_eq!(

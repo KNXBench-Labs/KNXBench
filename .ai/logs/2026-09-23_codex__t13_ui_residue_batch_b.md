@@ -315,3 +315,22 @@ Source diff SHA256 is
 Evidence is in active-profile scratch `t13-incarnation-review-result.md` and
 `t13-incarnation-final-gates/results.json`. Merged-main verification remains
 separate; no T14 implementation or strongest-model whole-goal review occurred.
+
+## Integration — 2026-09-23 14:36 CEST
+
+Correction commit `fef0e52` was merged into main as `7f9c8c4`, with KNXBench's required author/committer email and no co-author trailer. Only handover
+and manual-status text conflicted: both histories, main's device-drag status,
+and T13's five-space-type status were retained. Product source matches the
+approved branch byte-for-byte through Git's empty apps/crates diff.
+
+All eleven gates were repeated on merged main and exited zero. Rust: 1,977
+passed / zero failed / five ignored in 92 blocks, knx-net 253; frontend:
+977/977 in 63 files; TypeScript and production build; fmt, warning-denied
+workspace Clippy, layering, headers, cargo-deny and whitespace. Anchors:
+381 links in 195 Markdown files, none dead. The tracked dist/.gitkeep removed
+by Vite was restored. Evidence: active-profile scratch/t13-merged-main-gates/.
+
+The standing Hermes goal was independently read as paused, five turns used
+of twenty. T14 remains unimplemented and no continuation is authorized.
+The user's pre-existing local handover patch is kept out of these commits and
+will be restored after the evidence commit, with its exact added bytes checked.

@@ -176,8 +176,8 @@ run the normal forward-only native-store migration.
 The output is a plain text tree using four markers:
 
 ```text
-+ device 1.1.7 Presence detector
-- device 1.1.9 Old dimmer
++ device 1.1.7
+- device 1.1.9
 ~ device 1.1.5: name: Hallway switch -> Hall switch
 ~ device 1.1.5: description: - -> Main entrance
 ? group address 1/2/3: 2 left candidate(s), 1 right candidate(s)
@@ -194,8 +194,10 @@ knx diff --exit-code expected.knxdb actual.knxdb
 ```
 
 In that mode, exit code `0` means equal, `1` means different (an ambiguity also counts
-as different), and `2` means arguments, file access, native-store loading, or ETS import
-failed. Without `--exit-code`, a successfully produced non-empty diff remains exit `0`.
+as different), and `2` means arguments, file access, native-store loading, a failed ETS
+import, or an ETS import report containing error-level diagnostics. Without
+`--exit-code`, a successfully produced non-empty diff remains exit `0`; an import report
+with errors remains a failure so partially interpreted data cannot pass unnoticed.
 
 ### What comparison is good for, and where it stops
 

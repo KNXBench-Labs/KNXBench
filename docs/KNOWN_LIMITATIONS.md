@@ -2978,6 +2978,10 @@ zero devices lacking both an address and an ETS id. The matcher regression
 also establishes that two empty ETS ids are *not* an id match: they remain
 unrelated unless a real natural key resolves them.
 
+The aggregate-only local measurement is intentionally ignored in ordinary CI.
+With the gitignored `OriginalData/` corpus present, reproduce it with
+`cargo test -p knx-app --test diff_correlation_measurement -- --ignored --nocapture`.
+
 **Lifted when.** Open. No stronger per-device identity exists in the
 domain model today. The zero corpus count ranks this below observed gaps;
 it does not justify inventing a fallback or claiming the case impossible.
@@ -3075,7 +3079,8 @@ twice, once against each candidate.
 merge behavior additionally waits for §55. T15 does not pretend that
 running two unrelated two-way comparisons creates a three-way result.
 
-## 57. Project diff cannot compare against a raw `.knxproj`
+<a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a>
+## 57. Raw `.knxproj` comparison is available on the CLI, not the web route
 
 **Limitation.** `knx diff` accepts `.knxdb` and `.knxproj` on either side,
 but `POST /api/project/diff {path}` and the web file picker still compare
@@ -3095,7 +3100,8 @@ import the archive or use the CLI.
 input-kind/upload contract and expose the same import report; silently
 normalizing a browser path without those diagnostics is not acceptable.
 
-## 58. Project diff has no CI-friendly exit-nonzero-on-any-difference flag
+<a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a>
+## 58. Project diff has an opt-in CI exit-code contract
 
 **Limitation.** Ordinary `knx diff` still exits `0` whenever it successfully
 produces output, even when the projects differ. CI callers must opt into
@@ -3103,8 +3109,10 @@ produces output, even when the projects differ. CI callers must opt into
 
 **Contract.** With `--exit-code`, 0 means equal; 1 means any reported
 difference, including ambiguity; and 2 means argument, file, native-store,
-or ETS-import failure. Without the flag, the backward-compatible success/
-failure behavior remains.
+or ETS-import failure, including a recoverable import whose report contains
+error-level diagnostics. Without the flag, the backward-compatible success/
+failure behavior remains; such an error-bearing partial import is still a
+failure rather than a valid comparison.
 
 **Impact.** Scripts can gate without parsing prose. Existing interactive
 scripts are not broken by a newly nonzero result they did not request.
@@ -3112,7 +3120,8 @@ scripts are not broken by a newly nonzero result they did not request.
 **Lifted when.** Resolved for the CLI. The exit-code table is also in
 `knx --help` output and the user manual.
 
-## 59. Project diff's text and web renderers show which fields changed, not their before/after values for most entity types
+<a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a>
+## 59. Project diff exposes before/after values, but the web panel does not render them yet
 
 **Limitation.** `knx diff` now prints one ordered line per changed field
 with its old and new display values. The HTTP response adds `fieldChanges`

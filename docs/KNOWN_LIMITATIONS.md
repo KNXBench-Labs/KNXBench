@@ -2801,20 +2801,29 @@ PDF renderer anywhere in this workspace, and none is planned.
 would be a large addition serving a button the operating system already
 provides. CLAUDE.md: avoid unnecessary dependencies.
 
-**Impact.** Producing a PDF requires opening the exported `.html` file in
-a browser and using its print-to-PDF path. There is no `knx doc-export
-... --pdf` or equivalent, and no headless/server-side PDF generation for
-automation that cannot drive a browser.
+**Current state (2026-09-23, T14).** The self-contained document retains its
+print-specific stylesheet and the server now exposes the exact HTML through
+`POST /api/project/documentation-preview`, so a browser can preview and invoke
+its native print/PDF path without a second renderer. The Rust crate still does
+not generate PDF bytes.
+
+**Impact.** Headless automation that cannot drive a browser still has no
+`knx doc-export ... --pdf` path. Native PDF remains deliberately omitted; the
+browser print path is the supported route.
 
 **Lifted when.** Open. No task currently proposes a native PDF renderer —
 recorded here as a boundary of the feature, not a gap awaiting a fix.
 
-## 46. Project documentation export does not resolve manufacturer, product, or program names
+<a id="46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names"></a>
+## 46. Project documentation export resolves names only with installed product data — partially resolved 2026-09-23 (T14)
 
-**Limitation.** The Devices section of the exported document prints
-`product_ref` and `program_ref` as the raw, opaque identifiers stored on
-each `DeviceInstance` (`device.rs:27-31`) — never a resolved manufacturer
-or product name.
+**Current state.** Server and CLI callers now resolve manufacturer, product and
+application-program names through `knx_productdb::query::device_product` and
+pass only display data into pure `knx-report`. Raw `product_ref` and
+`program_ref` remain beside the names as provenance. When the database is
+absent, a reference does not resolve, or a joined name is missing, the raw
+reference and an inline `unresolved` marker remain visible and the renderer
+returns a `ReportWarning`; the cell is never blank.
 
 **Cause.** `crates/knx-report` depends only on `knx-core`, `knx-projection`,
 and `chrono` (`xtask check-layering` enforces this, the same rule
@@ -2822,108 +2831,90 @@ and `chrono` (`xtask check-layering` enforces this, the same rule
 name requires querying `knx-productdb`, a separate, independently
 versioned database this crate must not reach.
 
-**Impact.** A reader has to cross-reference `product_ref`/`program_ref`
-against the product database (or the `CatalogBrowser` UI) by hand to learn
-what a device actually is beyond its own name/description.
+**Impact.** Reports made without the matching installed product package cannot
+invent human-readable names. They remain complete but carry explicit warnings.
 
-**Lifted when.** Open. A future task could pass an already-resolved
-lookup table into `ReportOptions` from a caller that *does* have
-`knx-productdb` access (`apps/knx-server`, `apps/knx-cli`), without
-`knx-report` itself gaining the dependency.
+**Lifted when.** The data-dependent part cannot be lifted globally: product
+packages are optional. The architectural gap is closed; missing external data
+is now an explicit per-device report condition.
 
-## 47. Project documentation export does not list parameter values or module-instance arguments
+<a id="47-project-documentation-export-does-not-list-parameter-values-or-module-instance-arguments"></a>
+## 47. Project documentation export lists parameter values and module-instance arguments — partially resolved 2026-09-23 (T14)
 
-**Limitation.** Parameter values and module-instance arguments are
-counted in the Summary section's totals but never listed individually
-anywhere in the document.
+**Current state.** The Devices section lists stored parameter values and
+module-instance arguments in deterministic project order. With matching
+product data, parameter names, translated enum display text and module argument
+names are added. Raw identifiers and raw values are always printed.
 
-**Cause.** Both are stored uninterpreted in this domain model — parameter
-values as raw strings (RESEARCH R3; the `@test` value grammar is
-documented, RESEARCH §4.3, and a headless `when`/`choose` evaluator now
-exists in `knx-productdb`, but `crates/knx-report` neither depends on that
-crate nor calls it,
-[§3](#3-device-parameters-are-preserved-but-not-interpreted));
-module-instance arguments as opaque data. Printing raw `RefId`/value pairs
-by the hundreds or thousands would be volume without meaning until T18's
-parameter interpretation work exists to give them one.
+**Cause.** Both remain raw in `knx-core`; the outer `knx-app` composition
+layer now joins what `knx-productdb` can prove and passes display-only rows
+into `knx-report`. This preserves the renderer's dependency boundary.
 
-**Impact.** The document cannot answer "what is this device configured
-to do" beyond its communication objects' flags and DPTs — the same
-limitation the rest of the application has toward parameters, now visible
-in the exported document's own text (its "What this report does not
-contain" section states this explicitly).
+**Remaining limitation.** A module-qualified parameter whose stored identifier
+cannot be matched to a declaration, or a parameter kind without a meaningful
+display formatter, is shown raw with both an inline explanation and a
+`ReportWarning`. Raw module argument values are not semantically interpreted;
+`AllocatorRef` remains unattested and unsupported.
 
-**Lifted when.** T18 (parameter interpretation and editor,
-`GAP_ANALYSIS_ETS.md` Tier 5) exists and a follow-up task extends
-`knx-report` to use it. Not scheduled.
+**Lifted when.** Additional verified parameter/module semantics exist for the
+remaining warned cases. T14 deliberately does not invent them.
 
-## 48. Project documentation export renders in one language only
+<a id="48-project-documentation-export-renders-in-one-language-only"></a>
+## 48. Project documentation export has English/German chrome but not a complete prose catalogue — partially resolved 2026-09-23 (T14)
 
-**Limitation.** The document renders text in the project's default
-language only — there is no language selector and no per-string
-translation lookup.
+**Current state.** `ReportOptions::language` selects English or German, sets
+the HTML `lang` attribute, localizes the document title and primary navigation
+and asks product-database queries for the same locale. The HTTP preview/export
+API accepts `en`, `en-US`, `de`, or `de-DE`.
 
-**Cause.** [§37](#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)
-now has one reader — the device parameter panel, via
-`knx_productdb::query::parameter_views` — but this document cannot use
-it: `knx-report` in particular must not reach `knx-productdb` at all
-(see §46).
+**Cause.** Product strings can reuse the existing language-aware queries, but
+report-owned prose is not part of the web message catalogue and must remain
+available to CLI callers. T14 added the two supported built-in locales without
+coupling the crate to frontend language packs.
 
-**Impact.** A multi-language project's translated strings never appear in
-the exported document, regardless of which language a user might prefer.
+**Impact.** English and German reports use localized primary chrome and
+product strings. Remaining detailed English prose can still appear in either.
 
-**Lifted when.** Still open, despite T25/T26/T32/T33 (all 2026-09-12)
-having since given the rest of the application translation readers —
-`knx-report` was never among their file lists and remains exactly as
-described above: `render_html`/`build_device_detail` take no language
-parameter, and the crate must not reach `knx-productdb` at all (§46).
-Confirmed directly against `crates/knx-report/src/render.rs` for this
-documentation pass: the only language-related line in the file is its own
-`"Text is rendered in the project's default language only."` notice — a
-disclosure, not a feature. `knx-report` would need its own follow-up task
-to consume a translation reader; none is scheduled. See
-[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)
-for why no frontend catalogue or language pack (T25) can substitute for
-that follow-up either — this document is generated entirely server-side.
+**Remaining limitation.** Detailed table labels, enum/debug values and several
+diagnostic sentences are still English. No third language or external report
+language pack exists. The frontend selector is deferred to T12's report UI.
 
-## 49. Project documentation export has no in-application print preview
+<a id="49-project-documentation-export-has-no-in-application-print-preview"></a>
+## 49. Project documentation export has a preview API but no frontend preview — partially resolved 2026-09-23 (T14)
 
-**Limitation.** There is no preview of the exported document inside
-KNXBench itself, on the web frontend or the CLI. "Export documentation…"
-writes a file; seeing it means opening that file in a browser.
+**Current state.** `POST /api/project/documentation-preview` returns the same
+self-contained HTML and warning DTOs without writing a file or touching the
+session log. The print stylesheet remains embedded. No frontend consumes the
+endpoint yet.
 
-**Cause.** A deliberate scope decision
-(`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
-§9): the browser already provides a preview (the page itself, and its own
-print-preview dialog), so building a second one inside the application
-would duplicate it.
+**Cause.** T14 owns the crate/API contract only. The interactive presentation
+and print action remain in the explicitly deferred T12 frontend half.
 
-**Impact.** A user cannot see the rendered document without leaving the
-application and opening the written file in a browser tab.
+**Impact.** Current users still cannot invoke the preview from KNXBench, even
+though the server contract no longer blocks that UI.
 
-**Lifted when.** Open. No task currently proposes an in-app preview pane.
+**Lifted when.** T12 adds a sandboxed preview and invokes the browser print
+dialog from it.
 
-## 50. Project documentation export has no section selection
+<a id="50-project-documentation-export-has-no-section-selection"></a>
+## 50. Project documentation export has section selection in the crate/API but no frontend control — partially resolved 2026-09-23 (T14)
 
-**Limitation.** `render_html` always renders every section — Header,
-Contents, Summary, Topology, Buildings, Group addresses, Devices, and
-"What this report does not contain." There is no way to request, say,
-"just the group addresses" or "just the devices."
+**Current state.** `ReportOptions::sections` is an ordered set of Summary,
+Topology, Buildings, Group addresses and Devices. Header, filtered Contents,
+and Limits/warnings always remain. Preview and export accept the matching JSON
+names `summary`, `topology`, `buildings`, `groupAddresses`, and `devices`;
+unknown names are rejected. Input order and duplicates cannot change canonical
+document order.
 
-**Cause.** A deliberate scope decision
-(`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
-§6, §9): `ReportOptions` intentionally carries only `generated_at`.
-CLAUDE.md: avoid speculative abstractions — a selection knob is easy to
-add later if someone actually asks for a partial report; adding it before
-then is a guess about a feature nobody has requested.
+**Cause.** T14 owns the pure option and HTTP contract; T12 owns the frontend
+selection controls.
 
-**Impact.** Exporting documentation for a large project always produces
-the full document, even if only one section is of interest — on the
-reference project, roughly 249 KB of HTML for 36 devices, 907
-communication objects, and 514 group addresses.
+**Impact.** API and crate callers can already produce partial documents, but
+the current frontend still requests the backward-compatible default (all
+sections) because it has no selector.
 
-**Lifted when.** Open. A real request for partial reports would motivate
-adding a selection parameter to `ReportOptions`; none has been made.
+**Lifted when.** T12 exposes these choices in the frontend and sends the same
+selection to preview and export.
 
 ## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured
 

@@ -22,7 +22,7 @@ use knx_projection::{build_device_detail, ComObjectNode};
 
 use crate::html::{document_head, document_tail, escape_text};
 use crate::model::{self, Counts, InstallationModel, MalformedField, ReportModel};
-use crate::{HtmlReport, ReportOptions, ReportWarning};
+use crate::{HtmlReport, ReportField, ReportLanguage, ReportOptions, ReportSection, ReportWarning};
 
 /// Assembles the whole document: [`crate::model::build`] derives the
 /// structural walk once, then every section is appended in the order
@@ -43,22 +43,36 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
     let mut warnings = warnings;
 
     let mut out = String::new();
-    out.push_str(&document_head(&document_title(project)));
+    out.push_str(&document_head(
+        &document_title(project, options.language),
+        options.language.code(),
+    ));
 
     render_header(&mut out, project, options);
-    render_contents(&mut out, project);
-    render_summary(&mut out, &counts);
-    render_topology(&mut out, project);
-    render_buildings(&mut out, project, &installations);
-    render_group_addresses(&mut out, project, &installations);
-    render_devices(
-        &mut out,
-        project,
-        &orphan_com_objects,
-        &malformed_com_object_fields,
-        &mut warnings,
-    );
-    render_limits(&mut out, &warnings);
+    render_contents(&mut out, project, options);
+    if options.sections.contains(&ReportSection::Summary) {
+        render_summary(&mut out, &counts, options.language);
+    }
+    if options.sections.contains(&ReportSection::Topology) {
+        render_topology(&mut out, project, options.language);
+    }
+    if options.sections.contains(&ReportSection::Buildings) {
+        render_buildings(&mut out, project, &installations, options.language);
+    }
+    if options.sections.contains(&ReportSection::GroupAddresses) {
+        render_group_addresses(&mut out, project, &installations, options.language);
+    }
+    if options.sections.contains(&ReportSection::Devices) {
+        render_devices(
+            &mut out,
+            project,
+            &orphan_com_objects,
+            &malformed_com_object_fields,
+            options,
+            &mut warnings,
+        );
+    }
+    render_limits(&mut out, &warnings, options.language);
 
     out.push_str(&document_tail());
 
@@ -68,11 +82,15 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
     }
 }
 
-fn document_title(project: &Project) -> String {
+fn document_title(project: &Project, language: ReportLanguage) -> String {
+    let title = language.text(
+        "KNXBench Project Documentation",
+        "KNXBench-Projektdokumentation",
+    );
     if project.info.name.is_empty() {
-        "KNXBench Project Documentation".to_string()
+        title.to_string()
     } else {
-        format!("{} \u{2014} Project Documentation", project.info.name)
+        format!("{} \u{2014} {title}", project.info.name)
     }
 }
 
@@ -84,8 +102,18 @@ fn format_optional_dt(dt: Option<chrono::DateTime<chrono::Utc>>) -> String {
 fn render_header(out: &mut String, project: &Project, options: &ReportOptions) {
     let info = &project.info;
     out.push_str("<header id=\"header\">");
-    write!(out, "<h1>{}</h1>", escape_text(&document_title(project))).unwrap();
-    out.push_str("<h2>Header</h2><table>");
+    write!(
+        out,
+        "<h1>{}</h1>",
+        escape_text(&document_title(project, options.language))
+    )
+    .unwrap();
+    write!(
+        out,
+        "<h2>{}</h2><table>",
+        options.language.text("Header", "Kopf")
+    )
+    .unwrap();
     write!(
         out,
         "<tr><th>Project number</th><td>{}</td></tr>",
@@ -140,32 +168,94 @@ fn render_header(out: &mut String, project: &Project, options: &ReportOptions) {
     out.push_str("</table></header>");
 }
 
-fn render_contents(out: &mut String, project: &Project) {
-    out.push_str("<nav id=\"contents\"><h2>Contents</h2><ul>");
-    out.push_str("<li><a href=\"#header\">Header</a></li>");
-    out.push_str("<li><a href=\"#contents\">Contents</a></li>");
-    out.push_str("<li><a href=\"#summary\">Summary</a></li>");
-    out.push_str("<li><a href=\"#topology\">Topology</a><ul>");
-    for installation in &project.installations {
+fn render_contents(out: &mut String, project: &Project, options: &ReportOptions) {
+    let language = options.language;
+    write!(
+        out,
+        "<nav id=\"contents\"><h2>{}</h2><ul>",
+        language.text("Contents", "Inhalt")
+    )
+    .unwrap();
+    write!(
+        out,
+        "<li><a href=\"#header\">{}</a></li>",
+        language.text("Header", "Kopf")
+    )
+    .unwrap();
+    write!(
+        out,
+        "<li><a href=\"#contents\">{}</a></li>",
+        language.text("Contents", "Inhalt")
+    )
+    .unwrap();
+    if options.sections.contains(&ReportSection::Summary) {
         write!(
             out,
-            "<li><a href=\"#installation-{}\">Installation {}: {}</a></li>",
-            installation.id.0,
-            installation.id.0,
-            escape_text(&installation.name)
+            "<li><a href=\"#summary\">{}</a></li>",
+            language.text("Summary", "Zusammenfassung")
         )
         .unwrap();
     }
-    out.push_str("</ul></li>");
-    out.push_str("<li><a href=\"#buildings\">Buildings</a></li>");
-    out.push_str("<li><a href=\"#group-addresses\">Group addresses</a></li>");
-    out.push_str("<li><a href=\"#devices\">Devices</a></li>");
-    out.push_str("<li><a href=\"#limits\">What this report does not contain</a></li>");
+    if options.sections.contains(&ReportSection::Topology) {
+        write!(
+            out,
+            "<li><a href=\"#topology\">{}</a><ul>",
+            language.text("Topology", "Topologie")
+        )
+        .unwrap();
+        for installation in &project.installations {
+            write!(
+                out,
+                "<li><a href=\"#installation-{}\">{} {}: {}</a></li>",
+                installation.id.0,
+                language.text("Installation", "Installation"),
+                installation.id.0,
+                escape_text(&installation.name)
+            )
+            .unwrap();
+        }
+        out.push_str("</ul></li>");
+    }
+    if options.sections.contains(&ReportSection::Buildings) {
+        write!(
+            out,
+            "<li><a href=\"#buildings\">{}</a></li>",
+            language.text("Buildings", "Gebäude")
+        )
+        .unwrap();
+    }
+    if options.sections.contains(&ReportSection::GroupAddresses) {
+        write!(
+            out,
+            "<li><a href=\"#group-addresses\">{}</a></li>",
+            language.text("Group addresses", "Gruppenadressen")
+        )
+        .unwrap();
+    }
+    if options.sections.contains(&ReportSection::Devices) {
+        write!(
+            out,
+            "<li><a href=\"#devices\">{}</a></li>",
+            language.text("Devices", "Geräte")
+        )
+        .unwrap();
+    }
+    write!(
+        out,
+        "<li><a href=\"#limits\">{}</a></li>",
+        language.text("Limits and warnings", "Grenzen und Warnungen")
+    )
+    .unwrap();
     out.push_str("</ul></nav>");
 }
 
-fn render_summary(out: &mut String, counts: &Counts) {
-    out.push_str("<section id=\"summary\"><h2>Summary</h2><table>");
+fn render_summary(out: &mut String, counts: &Counts, language: ReportLanguage) {
+    write!(
+        out,
+        "<section id=\"summary\"><h2>{}</h2><table>",
+        language.text("Summary", "Zusammenfassung")
+    )
+    .unwrap();
     let rows: [(&str, usize); 9] = [
         ("Installations", counts.installations),
         ("Areas", counts.areas),
@@ -189,8 +279,13 @@ fn render_summary(out: &mut String, counts: &Counts) {
 /// or device id that does not resolve is dropped defensively, the same
 /// precedent `knx_projection::build_topology` sets, rather than invented as
 /// a new warning category outside this task's scope.
-fn render_topology(out: &mut String, project: &Project) {
-    out.push_str("<section id=\"topology\"><h2>Topology</h2>");
+fn render_topology(out: &mut String, project: &Project, language: ReportLanguage) {
+    write!(
+        out,
+        "<section id=\"topology\"><h2>{}</h2>",
+        language.text("Topology", "Topologie")
+    )
+    .unwrap();
     for installation in &project.installations {
         write!(
             out,
@@ -280,8 +375,18 @@ fn render_device_summary_li(out: &mut String, device: &DeviceInstance) {
 /// `orphan_building_parts`, so this file only needs to walk `children` from
 /// each root and separately render the orphans — otherwise they are
 /// reachable from no root and would silently vanish from the document.
-fn render_buildings(out: &mut String, project: &Project, installations: &[InstallationModel]) {
-    out.push_str("<section id=\"buildings\"><h2>Buildings</h2>");
+fn render_buildings(
+    out: &mut String,
+    project: &Project,
+    installations: &[InstallationModel],
+    language: ReportLanguage,
+) {
+    write!(
+        out,
+        "<section id=\"buildings\"><h2>{}</h2>",
+        language.text("Buildings", "Gebäude")
+    )
+    .unwrap();
     for (i, installation) in project.installations.iter().enumerate() {
         let inst_model = &installations[i];
         write!(
@@ -386,9 +491,15 @@ fn render_group_addresses(
     out: &mut String,
     project: &Project,
     installations: &[InstallationModel],
+    language: ReportLanguage,
 ) {
     let style = project.info.group_address_style;
-    out.push_str("<section id=\"group-addresses\"><h2>Group addresses</h2>");
+    write!(
+        out,
+        "<section id=\"group-addresses\"><h2>{}</h2>",
+        language.text("Group addresses", "Gruppenadressen")
+    )
+    .unwrap();
     for (i, installation) in project.installations.iter().enumerate() {
         let inst_model = &installations[i];
         write!(
@@ -550,10 +661,17 @@ fn render_devices(
     project: &Project,
     orphan_com_objects: &[ComObjectInstanceId],
     malformed_com_object_fields: &BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
+    options: &ReportOptions,
     warnings: &mut Vec<ReportWarning>,
 ) {
-    out.push_str("<section id=\"devices\"><h2>Devices</h2>");
+    write!(
+        out,
+        "<section id=\"devices\"><h2>{}</h2>",
+        options.language.text("Devices", "Geräte")
+    )
+    .unwrap();
     for device in project.devices.iter() {
+        let resolved = options.device_data.get(&device.id);
         write!(out, "<article id=\"device-{}\">", device.id.0).unwrap();
         write!(
             out,
@@ -595,17 +713,127 @@ fn render_devices(
         .unwrap();
         write!(
             out,
-            "<tr><th>Product ref (unresolved)</th><td>{}</td></tr>",
+            "<tr><th>Product ref</th><td>{}</td></tr>",
             escape_text(&device.product_ref)
         )
         .unwrap();
         write!(
             out,
-            "<tr><th>Program ref (unresolved)</th><td>{}</td></tr>",
+            "<tr><th>Program ref</th><td>{}</td></tr>",
             escape_text(&device.program_ref)
         )
         .unwrap();
+        let identity_fields = [
+            (
+                "Manufacturer",
+                "manufacturer name",
+                resolved.and_then(|data| data.manufacturer.as_deref()),
+                resolved.and_then(|data| data.manufacturer_reference.as_deref()),
+            ),
+            (
+                "Product",
+                "product name",
+                resolved.and_then(|data| data.product.as_deref()),
+                Some(device.product_ref.as_str()),
+            ),
+            (
+                "Application program",
+                "application-program name",
+                resolved.and_then(|data| data.application_program.as_deref()),
+                Some(device.program_ref.as_str()),
+            ),
+        ];
+        let mut identity_problems = Vec::new();
+        for (label, description, value, raw_reference) in identity_fields {
+            let value = value.filter(|value| !value.trim().is_empty());
+            let fallback = raw_reference.filter(|value| !value.trim().is_empty());
+            write!(
+                out,
+                "<tr><th>{label}</th><td>{}</td></tr>",
+                value
+                    .map(escape_text)
+                    .or_else(|| fallback.map(escape_text))
+                    .unwrap_or_else(|| "unresolved".to_string())
+            )
+            .unwrap();
+            if resolved.is_some() && value.is_none() {
+                identity_problems.push(format!(
+                    "product database did not resolve {description}; {}",
+                    fallback
+                        .map(|reference| format!("raw reference {reference} shown"))
+                        .unwrap_or_else(|| "no raw reference is available".to_string())
+                ));
+            }
+        }
         out.push_str("</table>");
+
+        let identity_row_resolved = resolved
+            .and_then(|data| data.manufacturer_reference.as_ref())
+            .is_some();
+        if !identity_row_resolved {
+            let detail = "product database did not resolve all manufacturer, product, and application-program names; raw references are shown";
+            write!(out, "<p class=\"warning\">{}</p>", escape_text(detail)).unwrap();
+            warnings.push(ReportWarning {
+                location: format!("device {}", device.id),
+                detail: detail.to_string(),
+            });
+        } else {
+            for detail in identity_problems.into_iter().chain(
+                resolved
+                    .into_iter()
+                    .flat_map(|data| data.problems.iter().cloned()),
+            ) {
+                write!(out, "<p class=\"warning\">{}</p>", escape_text(&detail)).unwrap();
+                warnings.push(ReportWarning {
+                    location: format!("device {}", device.id),
+                    detail,
+                });
+            }
+        }
+
+        if let Some(data) = resolved {
+            render_report_fields(out, "Parameters", &data.parameters, device.id, warnings);
+            render_report_fields(
+                out,
+                "Module arguments",
+                &data.module_arguments,
+                device.id,
+                warnings,
+            );
+        } else {
+            let parameters: Vec<ReportField> = project
+                .installations
+                .iter()
+                .flat_map(|installation| installation.parameters.iter())
+                .filter(|parameter| parameter.device == device.id)
+                .map(|parameter| ReportField {
+                    reference: parameter.source.ets_id.clone(),
+                    name: None,
+                    raw_value: parameter.raw.clone(),
+                    display_value: None,
+                    problem: Some(
+                        "parameter declaration could not be resolved; raw value shown".into(),
+                    ),
+                })
+                .collect();
+            let arguments: Vec<ReportField> = project
+                .devices
+                .module_instances()
+                .filter(|module| module.device == device.id)
+                .flat_map(|module| module.arguments.iter())
+                .map(|(source, raw)| ReportField {
+                    reference: source.ets_id.clone(),
+                    name: None,
+                    raw_value: raw.clone(),
+                    display_value: None,
+                    problem: Some(
+                        "module argument declaration could not be resolved; raw value shown".into(),
+                    ),
+                })
+                .collect();
+            render_report_fields(out, "Parameters", &parameters, device.id, warnings);
+            render_report_fields(out, "Module arguments", &arguments, device.id, warnings);
+        }
 
         if !device.binary_data.is_empty() {
             out.push_str("<p>Binary data (referenced, not embedded): ");
@@ -659,6 +887,65 @@ fn render_devices(
         out.push_str("</table>");
     }
     out.push_str("</section>");
+}
+
+fn render_report_fields(
+    out: &mut String,
+    heading: &str,
+    fields: &[ReportField],
+    device_id: knx_core::DeviceId,
+    warnings: &mut Vec<ReportWarning>,
+) {
+    write!(out, "<h4>{}</h4>", escape_text(heading)).unwrap();
+    if fields.is_empty() {
+        out.push_str("<p>None.</p>");
+        return;
+    }
+    out.push_str(
+        "<table><tr><th>Reference</th><th>Name</th><th>Raw value</th><th>Display value</th></tr>",
+    );
+    for field in fields {
+        let name = field.name.as_deref().filter(|name| !name.trim().is_empty());
+        let mut problems = Vec::new();
+        if name.is_none() {
+            problems.push("field name could not be resolved; raw identifier shown".to_string());
+        }
+        if let Some(problem) = &field.problem {
+            problems.push(problem.clone());
+        }
+        write!(
+            out,
+            "<tr{}><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+            if problems.is_empty() {
+                ""
+            } else {
+                " class=\"warning\""
+            },
+            escape_text(&field.reference),
+            name.map(escape_text)
+                .unwrap_or_else(|| escape_text(&field.reference)),
+            escape_text(&field.raw_value),
+            field
+                .display_value
+                .as_deref()
+                .map(escape_text)
+                .unwrap_or_else(|| "—".into()),
+        )
+        .unwrap();
+        for problem in problems {
+            write!(
+                out,
+                "<tr class=\"warning\"><td colspan=\"4\">{}</td></tr>",
+                escape_text(&problem)
+            )
+            .unwrap();
+            warnings.push(ReportWarning {
+                location: format!("device {device_id}, {}", field.reference),
+                detail: problem,
+            });
+        }
+    }
+    out.push_str("</table>");
 }
 
 fn render_com_objects_table(
@@ -752,23 +1039,50 @@ fn render_com_objects_table(
 /// section, so this list alone is a complete account of every warning
 /// `HtmlReport::warnings` carries (CLAUDE.md: never silently discard a
 /// structural oddity).
-fn render_limits(out: &mut String, warnings: &[ReportWarning]) {
-    out.push_str("<section id=\"limits\"><h2>What this report does not contain</h2><ul>");
-    out.push_str(
-        "<li>Manufacturer, product and application-program names are not resolved \u{2014} \
-         the product database is a separate store this generator does not read; the raw \
-         reference identifiers (product ref / program ref) are printed instead.</li>",
-    );
-    out.push_str("<li>Parameter values are stored uninterpreted and are not listed.</li>");
-    out.push_str(
-        "<li>Module instance arguments (schema 21 and later devices) are retained but not decoded.</li>",
-    );
-    out.push_str("<li>Binary data attached to devices is referenced by name and id only.</li>");
-    out.push_str("<li>Text is rendered in the project's default language only.</li>");
-    out.push_str("<li>This report is not an ETS report and has not been compared to one.</li>");
+fn render_limits(out: &mut String, warnings: &[ReportWarning], language: ReportLanguage) {
+    write!(
+        out,
+        "<section id=\"limits\"><h2>{}</h2><ul>",
+        language.text("Limits and warnings", "Grenzen und Warnungen")
+    )
+    .unwrap();
+    write!(out, "<li>{}</li>", language.text(
+        "Names and display values come from caller-supplied product data; unresolved values keep their raw identifiers and appear as warnings.",
+        "Namen und Anzeigewerte stammen aus den vom Aufrufer gelieferten Produktdaten; nicht aufgelöste Werte behalten ihre Rohkennungen und erscheinen als Warnungen.",
+    )).unwrap();
+    write!(out, "<li>{}</li>", language.text(
+        "Module arguments are shown as raw bindings; AllocatorRef and unknown module argument kinds, allocation metadata, and repeat semantics are not interpreted.",
+        "Modulargumente werden als Rohbindungen gezeigt; AllocatorRef und unbekannte Modulargumenttypen, Allokationsmetadaten und Wiederholungssemantik werden nicht interpretiert.",
+    )).unwrap();
+    write!(
+        out,
+        "<li>{}</li>",
+        language.text(
+            "Binary data attached to devices is referenced by name and id only.",
+            "Binärdaten an Geräten werden nur mit Name und Kennung referenziert.",
+        )
+    )
+    .unwrap();
+    write!(
+        out,
+        "<li>{}</li>",
+        language.text(
+            "This report is not an ETS report and has not been compared to one.",
+            "Dieser Bericht ist kein ETS-Bericht und wurde mit keinem solchen verglichen.",
+        )
+    )
+    .unwrap();
     out.push_str("</ul>");
 
-    out.push_str("<h3>Anomalies found while generating this document</h3>");
+    write!(
+        out,
+        "<h3>{}</h3>",
+        language.text(
+            "Anomalies found while generating this document",
+            "Beim Erzeugen dieses Dokuments gefundene Auffälligkeiten",
+        )
+    )
+    .unwrap();
     if warnings.is_empty() {
         out.push_str("<p>None.</p>");
     } else {
@@ -799,10 +1113,16 @@ mod tests {
     use crate::testutil::{
         building_part, device, entry, linked_com_object, range, unlinked_com_object,
     };
-    use crate::{render_html, ReportOptions};
+    use crate::{
+        render_html, ReportDeviceData, ReportField, ReportLanguage, ReportOptions, ReportSection,
+    };
 
     fn fixed_time() -> chrono::DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 9, 10, 12, 0, 0).unwrap()
+    }
+
+    fn options() -> ReportOptions {
+        ReportOptions::new(fixed_time())
     }
 
     /// A hand-built project big enough to exercise every section at once:
@@ -880,12 +1200,7 @@ mod tests {
             (BuildingPartType::Segment, "Segment"),
         ] {
             project.installations[0].buildings = vec![building_part(1, "Test", kind, None, &[])];
-            let report = render_html(
-                &project,
-                &ReportOptions {
-                    generated_at: fixed_time(),
-                },
-            );
+            let report = render_html(&project, &ReportOptions::new(fixed_time()));
             assert!(report
                 .html
                 .contains(&format!("<strong>Test</strong> ({token})")));
@@ -896,9 +1211,7 @@ mod tests {
     #[test]
     fn rendering_the_same_project_twice_with_the_same_timestamp_is_byte_identical() {
         let project = sample_project();
-        let options = ReportOptions {
-            generated_at: fixed_time(),
-        };
+        let options = ReportOptions::new(fixed_time());
         let a = render_html(&project, &options);
         let b = render_html(&project, &options);
         assert_eq!(a.html, b.html);
@@ -910,12 +1223,7 @@ mod tests {
         project.devices.get_mut(DeviceId(1)).unwrap().name = "A & B <x> \"q\" 'r'".into();
         project.installations[0].group_addresses[0].name = "Licht & Steckdose".into();
         project.installations[0].buildings[1].name = "<Keller>".into();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
         assert!(!report.html.contains("A & B <x>"));
         assert!(report.html.contains("A &amp; B &lt;x&gt;"));
@@ -927,12 +1235,7 @@ mod tests {
     #[test]
     fn the_document_is_self_contained() {
         let project = sample_project();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
         assert!(!report.html.contains("<script"));
         assert!(!report.html.contains("http://"));
         assert!(!report.html.contains("https://"));
@@ -943,12 +1246,7 @@ mod tests {
     #[test]
     fn every_device_group_address_and_building_part_name_appears_and_orphans_are_listed() {
         let project = sample_project();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
         for device in project.devices.iter() {
             assert!(
@@ -981,12 +1279,7 @@ mod tests {
     #[test]
     fn all_required_section_headings_and_contents_anchors_are_present() {
         let project = sample_project();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
         for heading in [
             "Header",
@@ -996,7 +1289,7 @@ mod tests {
             "Buildings",
             "Group addresses",
             "Devices",
-            "What this report does not contain",
+            "Limits and warnings",
         ] {
             assert!(report.html.contains(heading), "missing heading {heading}");
         }
@@ -1020,30 +1313,19 @@ mod tests {
     #[test]
     fn the_honesty_section_names_every_documented_limitation() {
         let project = sample_project();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
-        assert!(report.html.contains("product") && report.html.contains("not resolved"));
-        assert!(report.html.contains("Parameter values") && report.html.contains("not listed"));
-        assert!(report.html.contains("Module instance arguments"));
+        assert!(report.html.contains("caller-supplied product data"));
+        assert!(report.html.contains("raw identifiers"));
+        assert!(report.html.contains("warnings"));
         assert!(report.html.contains("Binary data"));
-        assert!(report.html.contains("default language"));
         assert!(report.html.contains("not an ETS report"));
     }
 
     #[test]
     fn html_report_warnings_are_carried_and_each_is_visible_in_the_document_body() {
         let project = sample_project();
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
         assert!(!report.warnings.is_empty());
         for warning in &report.warnings {
@@ -1082,12 +1364,7 @@ mod tests {
             .children
             .push(knx_core::BuildingPartId(404));
 
-        let report = render_html(
-            &project,
-            &ReportOptions {
-                generated_at: fixed_time(),
-            },
-        );
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
 
         assert!(
             report.html.contains("DPST-garbage"),
@@ -1116,10 +1393,119 @@ mod tests {
         let project = sample_project();
         let t1 = fixed_time();
         let t2 = Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap();
-        let report1 = render_html(&project, &ReportOptions { generated_at: t1 });
-        let report2 = render_html(&project, &ReportOptions { generated_at: t2 });
+        let report1 = render_html(&project, &ReportOptions::new(t1));
+        let report2 = render_html(&project, &ReportOptions::new(t2));
 
         assert!(report1.html.contains(&t1.to_rfc3339()));
         assert_ne!(report1.html, report2.html);
+    }
+
+    #[test]
+    fn section_selection_changes_both_contents_and_rendered_body() {
+        let project = sample_project();
+        let mut options = options();
+        options.sections = [ReportSection::Devices].into_iter().collect();
+
+        let report = render_html(&project, &options);
+
+        assert!(report.html.contains("href=\"#devices\""));
+        assert!(report.html.contains("<section id=\"devices\""));
+        assert!(!report.html.contains("href=\"#topology\""));
+        assert!(!report.html.contains("<section id=\"topology\""));
+        assert!(!report.html.contains("<section id=\"summary\""));
+    }
+
+    #[test]
+    fn resolved_identity_values_and_module_arguments_are_rendered() {
+        let project = sample_project();
+        let mut options = options();
+        options.device_data.insert(
+            DeviceId(1),
+            ReportDeviceData {
+                manufacturer_reference: Some("M-acme".into()),
+                manufacturer: Some("Acme Controls".into()),
+                product: Some("Room Controller 8".into()),
+                application_program: Some("Lighting 2.1".into()),
+                problems: vec![],
+                parameters: vec![ReportField {
+                    reference: "P-1_R-1".into(),
+                    name: Some("Operating mode".into()),
+                    raw_value: "1".into(),
+                    display_value: Some("Automatic".into()),
+                    problem: None,
+                }],
+                module_arguments: vec![ReportField {
+                    reference: "MD-1_A-1".into(),
+                    name: Some("Channel".into()),
+                    raw_value: "4".into(),
+                    display_value: None,
+                    problem: None,
+                }],
+            },
+        );
+
+        let report = render_html(&project, &options);
+
+        for expected in [
+            "Acme Controls",
+            "Room Controller 8",
+            "Lighting 2.1",
+            "Operating mode",
+            "Automatic",
+            "Channel",
+        ] {
+            assert!(report.html.contains(expected), "missing {expected}");
+        }
+    }
+
+    #[test]
+    fn unresolved_identity_and_unrenderable_value_warn_and_remain_inline() {
+        let mut project = sample_project();
+        project.devices.remove(DeviceId(2));
+        let mut options = options();
+        options.device_data.insert(
+            DeviceId(1),
+            ReportDeviceData {
+                parameters: vec![ReportField {
+                    reference: "P-broken".into(),
+                    name: None,
+                    raw_value: "raw-17".into(),
+                    display_value: None,
+                    problem: None,
+                }],
+                ..ReportDeviceData::default()
+            },
+        );
+
+        let report = render_html(&project, &options);
+
+        assert!(report.html.contains("P-broken"));
+        assert!(report.html.contains("raw-17"));
+        assert!(report
+            .warnings
+            .iter()
+            .any(|warning| warning.detail.contains("field name could not be resolved")));
+        assert!(report
+            .warnings
+            .iter()
+            .any(|warning| warning.detail.contains("product database")));
+        for warning in &report.warnings {
+            assert!(report.html.contains(&warning.detail));
+        }
+    }
+
+    #[test]
+    fn german_report_localizes_chrome_and_sets_the_document_language() {
+        let project = sample_project();
+        let mut options = options();
+        options.language = ReportLanguage::German;
+
+        let report = render_html(&project, &options);
+
+        assert!(report.html.contains("<html lang=\"de\">"));
+        assert!(report.html.contains("Inhalt"));
+        assert!(report.html.contains("Zusammenfassung"));
+        assert!(report.html.contains("Geräte"));
+        assert!(!report.html.contains(">Contents<"));
     }
 }

@@ -1267,7 +1267,8 @@ pub fn resolve_catalog_item_program(
 /// same permissive way `resolve_catalog_item_program`'s own chain is
 /// modelled: `product.id` → `product.hardware_id` → `hardware`,
 /// `hardware2program.id` → `hardware2program.application_program_ref` →
-/// `application_program`, plus `catalog_item` (optional — a product need
+/// `application_program`, but only when the link names the product's own
+/// hardware, plus `catalog_item` (optional — a product need
 /// not be listed in any catalog section) and `manufacturer` (for the
 /// display name).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1292,6 +1293,16 @@ pub struct DeviceProductRow {
     pub application_number: Option<String>,
     pub application_version: Option<String>,
     pub mask_version: Option<String>,
+    /// Whether the requested program link belongs to this product's
+    /// hardware. Mismatched links never contribute program metadata.
+    pub program_relation: DeviceProgramRelation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceProgramRelation {
+    Matched,
+    Missing,
+    HardwareMismatch,
 }
 
 /// The untranslated row, plus the two extra ids `device_product`'s
@@ -1311,6 +1322,13 @@ struct DeviceProductRawRow {
 }
 
 fn row_to_device_product_raw(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRawRow> {
+    let product_hardware_id: String = r.get(16)?;
+    let program_hardware_id: Option<String> = r.get(17)?;
+    let program_relation = match program_hardware_id.as_deref() {
+        None => DeviceProgramRelation::Missing,
+        Some(id) if id == product_hardware_id => DeviceProgramRelation::Matched,
+        Some(_) => DeviceProgramRelation::HardwareMismatch,
+    };
     Ok(DeviceProductRawRow {
         row: DeviceProductRow {
             manufacturer_id: r.get(0)?,
@@ -1327,6 +1345,7 @@ fn row_to_device_product_raw(r: &rusqlite::Row) -> rusqlite::Result<DeviceProduc
             application_number: r.get(11)?,
             application_version: r.get(12)?,
             mask_version: r.get(13)?,
+            program_relation,
         },
         catalog_item_id: r.get(14)?,
         catalog_item_manufacturer_id: r.get(15)?,
@@ -1383,8 +1402,10 @@ fn row_to_device_product_raw(r: &rusqlite::Row) -> rusqlite::Result<DeviceProduc
 /// Every join below is a `LEFT JOIN` on purpose: a product whose hardware,
 /// hardware-to-program link or catalogue entry was never ingested still
 /// returns its own row with the missing half `None`, rather than collapsing
-/// to `Ok(None)` and losing the product name too. The `hardware2program`
-/// half of that is covered by
+/// to `Ok(None)` and losing the product name too. A program link belonging
+/// to different hardware is likewise retained as
+/// `DeviceProgramRelation::HardwareMismatch`, but cannot populate any
+/// application or catalog columns. The absent `hardware2program` half is covered by
 /// `device_product_with_no_matching_hardware2program_is_a_partial_row_not_none`;
 /// the `hardware` half is not, because a product ingested without its own
 /// `Hardware` element has not been observed. Flipping that one join to an
@@ -1401,14 +1422,17 @@ pub fn device_product(
                 ci.name, ci.number,
                 apg.id, apg.name, apg.application_number,
                 apg.application_version, apg.mask_version,
-                ci.id, ci.manufacturer_id
+                ci.id, ci.manufacturer_id,
+                p.hardware_id, h2p.hardware_id
          FROM product p
          LEFT JOIN hardware h ON h.id = p.hardware_id
          LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
          LEFT JOIN hardware2program h2p ON h2p.id = ?2
          LEFT JOIN application_program apg ON apg.id = h2p.application_program_ref
+              AND h2p.hardware_id = p.hardware_id
          LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
               AND ci.hardware2program_ref_id = ?2
+              AND h2p.hardware_id = p.hardware_id
          WHERE p.id = ?1";
     let raw = conn
         .query_row(
@@ -2122,6 +2146,31 @@ mod tests {
         assert_eq!(row.application_program_id, None);
         assert_eq!(row.application_name, None);
         assert_eq!(row.catalog_item_name, None);
+    }
+
+    #[test]
+    fn device_product_does_not_attach_a_program_linked_to_other_hardware() {
+        let (_dir, conn) = db();
+        conn.execute_batch(
+            "INSERT INTO hardware (id, manufacturer_id, name, source_sha256)
+               VALUES ('H-2', 'M-006A', 'Other hardware', 'x');
+             INSERT INTO product (id, manufacturer_id, hardware_id, text, source_sha256)
+               VALUES ('M-006A_H-2_P-1', 'M-006A', 'H-2', 'Other product', 'x');",
+        )
+        .unwrap();
+
+        let row = device_product(&conn, "M-006A_H-2_P-1", "H-1_HP-1", None)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(row.product_text.as_deref(), Some("Other product"));
+        assert_eq!(row.hardware_name.as_deref(), Some("Other hardware"));
+        assert_eq!(row.application_program_id, None);
+        assert_eq!(row.application_name, None);
+        assert_eq!(
+            row.program_relation,
+            DeviceProgramRelation::HardwareMismatch
+        );
     }
 
     #[test]

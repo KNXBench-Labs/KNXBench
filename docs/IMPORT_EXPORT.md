@@ -574,25 +574,32 @@ with surrounding whitespace ignored; column order does not matter.
 | Column | Written on export | Read on import |
 | --- | --- | --- |
 | `Address` | the address in the project's own group-address style (`Free`, `TwoLevel`, or `ThreeLevel` — a project-wide setting, never per-address) | **required**; this is the row's identity, matched against existing entries |
+| `Action` | `upsert` | optional; empty/`upsert` creates or updates, `readdress` moves the existing entry named by `Address`, and `delete` removes that existing entry |
+| `NewAddress` | empty | required and non-zero for `readdress`; forbidden for `upsert` and `delete` |
 | `Name` | the entry's name | **required**, must be non-empty |
 | `Central` | `true`/`false` | optional; accepted spellings (case-insensitive): `true`/`false`/`1`/`0`/`yes`/`no`; empty means "false" when creating a new address and "leave unchanged" when updating an existing one |
 | `Unfiltered` | `true`/`false` | same rules as `Central` |
-| `DatapointType` | derived from the linked communication objects' DPTs: unanimous → that DPT, none linked → empty, disagreement → empty plus one export warning naming the address | accepted but **never applied** — a group address itself carries no DPT in this domain model (only its linked communication objects do), so this column is recognized and counted in the import report as ignored, never rejected and never silently dropped |
-| `MainGroup` | the name of the containing main group range, if any | accepted but **never applied**, same reporting treatment as `DatapointType` |
-| `MiddleGroup` | the name of the containing middle group range, if any | accepted but **never applied**, same reporting treatment as `DatapointType` |
+| `DatapointType (read-only)` | derived from the linked communication objects' DPTs: unanimous → that DPT, none linked → empty, disagreement → empty plus one export warning naming the address | recognized and validated against the project, but **never applied**; changing the cell is an explicit row error rather than a silently ignored edit. The legacy `DatapointType` header remains accepted with the same semantics |
+| `MainGroup (read-only)` | the name of the containing main group range, if any | recognized and validated, never applied; legacy `MainGroup` remains accepted |
+| `MiddleGroup (read-only)` | the name of the containing middle group range, if any | recognized and validated, never applied; legacy `MiddleGroup` remains accepted |
 
 Unknown columns (anything not in the table above) are collected and
 reported by name once per file, never silently ignored.
 
-**Per row, import produces exactly one of four outcomes:** *create* (no
-existing entry has that address), *update* (an entry has that address and
-at least one applied column — `Name`, `Central`, or `Unfiltered` — differs),
-*unchanged* (an entry has that address and nothing differs), or *error*. A
+**Per row, import produces one of six outcomes:** *create* (no existing entry
+has that address), *update* (an entry has that address and at least one
+applied column differs), *readdress*, *delete*, *unchanged*, or *error*. A
 row is an error when: the address column is missing, unparseable, out of
 range for the project's address style, or is `0` (reserved for broadcast,
 never a valid group address); the name is missing or blank; a `Central`/
 `Unfiltered` cell is present but not a recognized boolean spelling; or an
-address appears more than once in the same file.
+address appears more than once in the same file. Unknown actions, malformed
+shapes, duplicate target claims and targets that already
+exist are also errors. Duplicate recognized headers are file-level errors;
+the first value is retained for diagnostics, never silently overwritten.
+Readdress swaps and moves into an address another row
+deletes are intentionally rejected: targets must be free in the project being
+previewed, independent of CSV row order.
 
 **All-or-nothing.** If any row in the file is an error, nothing from the
 file is applied — the report names every offending row (1-based, counting
@@ -600,21 +607,31 @@ the header, so it matches what a spreadsheet shows) so the user can fix the
 file and retry. A hand-edited spreadsheet that is half-good and half-broken
 either applies in full or not at all; there is no partial apply.
 
-**What import never does**, stated as plainly as what it does:
+**Destructive operations are explicit and two-phase.** Omitting a project
+address from the file still never deletes it, and changing only `Address`
+still creates a new entry. Readdressing requires `Action=readdress` with the
+old `Address` and a separate `NewAddress`; deletion requires
+`Action=delete`. The plan lists every move/delete and the communication-object
+ids linked to its stable group-address id. Readdress preserves that id, so
+all links remain attached. Delete is rejected while any link still refers to
+the id.
 
-- **It never deletes.** An address present in the project but absent from
-  the file is left alone. A CSV is an edit against the current project, not
-  a replacement of it.
-- **It never re-addresses.** The address is the match key, so changing an
-  address in the spreadsheet is read as "create a new entry at the new
-  address," not "move this entry." Deleting the old entry and creating the
-  new one — already possible from the group-address view — is the supported
-  way to re-address. See `KNOWN_LIMITATIONS.md`.
+Server and web return this plan without applying it and issue an opaque
+confirmation token bound to the exact CSV bytes, server incarnation and
+project revision. Only a second request with that token applies the batch;
+a changed CSV or project is rejected and must be previewed again. CLI prints
+a SHA-256 token bound to the exact CSV and semantic project snapshot and
+requires a second `--confirm <token>` invocation; it reloads and rechecks the
+project after acquiring SQLite's write lock, then saves in that same
+transaction. Both
+paths remain all-or-nothing, and the server records the applied batch as one
+undo step.
+
+**What import still never does**, stated as plainly as what it does:
+
 - **It never applies `DatapointType`, `MainGroup`, or `MiddleGroup`.** These
-  three columns exist so an exported spreadsheet shows what each address is
-  for, not just its bare address and name; they are read back and reported
-  as recognized-but-ignored rather than rejected (which would make this
-  tool's own export un-importable) or silently dropped.
+  three read-only columns show derived context. Their values are validated;
+  edits are rejected instead of ignored or silently dropped.
 - **It never creates or renames group ranges.** A newly created address is
   placed into the innermost existing group range whose bounds already
   contain it, if any; if none contains it, the address is created without a
@@ -625,15 +642,16 @@ either applies in full or not at all; there is no partial apply.
   (`GroupAddressEntry`, `crates/knx-core/src/group.rs`), so the CSV format
   cannot round-trip fields that do not exist here.
 
-**One undo step.** A successful import applies as a single
-`Command::Batch`, so the whole import is one undo, the same as T9's bulk
-operations.
+**One server undo step.** A successful server/web import applies as one
+`Command::Batch`, so the whole import is one undo. The standalone CLI writes
+the resulting project file and has no cross-process undo history.
 
 **Surfaces.** Server: `POST /api/group-addresses/csv-export` and
 `POST /api/group-addresses/csv-import` (`apps/knx-server`), both path-based
 like the project import route, and both logging to the
 T11 session log. CLI: `knx ga-export <store.knxdb> <out.csv>` and
-`knx ga-import <store.knxdb> <in.csv> [--dry-run]` (`apps/knx-cli`) —
+`knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]`
+(`apps/knx-cli`) —
 `--dry-run` runs the identical plan and prints a byte-identical report body
 to a real import, then a trailing `store written: yes`/`no (…)` line makes
 explicit whether anything was actually saved. Web: two toolbar buttons in

@@ -2521,48 +2521,41 @@ remembered syntax with no sample to check it against is exactly what
 CLAUDE.md's "do not invent technical facts" forbids) and would need its
 own task, gated the same way on first obtaining a real file.
 
-## 39. CSV import never re-addresses, deletes, or manages group ranges
+<a id="39-csv-import-never-re-addresses-deletes-or-manages-group-ranges"></a>
+## 39. CSV import does not create or rename group ranges
 
-**Limitation.** Importing a "KNXBench group-address CSV v1" file can only
-create new group addresses and update the `Name`/`Central`/`Unfiltered`
-fields of existing ones. Three related things it deliberately does not do:
-it never re-addresses an existing entry (changing the `Address` cell for a
-row that matched an existing entry is read as "create a new entry at the
-new address," leaving the old one in place, because the address is the
-row's match key); it never deletes an entry that exists in the project but
-is simply absent from the file; and it never creates, renames, or targets
-group ranges — a newly created address is placed into whatever existing
-range already contains it by bounds, or left without a range if none does,
-but the ranges themselves are untouched by a CSV import.
+**Limitation.** Explicit readdressing and deletion are implemented, but CSV
+still does not create, rename, resize, or delete group ranges. New and moved
+addresses are assigned to the innermost existing range whose bounds contain
+their final address, or left without a range when none does. Removing a row
+from a CSV still means nothing; deletion requires `Action=delete`. A
+readdress target must be unoccupied in the pre-import project, so swaps and
+"delete this target, then move into it" combinations are rejected rather
+than made order-dependent.
 
-**Cause.** A deliberate design choice
-(`docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
-§4), not a missing feature: the address is the only stable identity a CSV
-row has (names are not unique), so treating an address edit as a move
-would require guessing intent from a spreadsheet diff; treating "absent
-from the file" as "delete this" would make a partial or filtered export
-catastrophic to re-import; and group-range CRUD is an unrelated, already
-separately-modelled concern (`Command::CreateGroupRange`/
-`RenameGroupRange`, T5/T23) that a bulk name/flag editor has no business
-reaching into.
+**Cause.** Range CRUD is separately modelled structure
+(`Command::CreateGroupRange`/`RenameGroupRange`), not a property of one
+address row. Inferring range mutations from repeated `MainGroup` or
+`MiddleGroup` text would introduce ordering, boundary, rename and conflict
+ambiguities. Those columns therefore remain derived/read-only.
 
-**Impact.** Re-addressing a group address still requires the existing
-delete-then-recreate workflow in the group-address view, or hand-editing
-via the group-address commands directly — a CSV round trip cannot do it in
-one step. Someone who deletes rows from an exported file before
-re-importing it, expecting a "sync to this file" semantics, will find the
-deleted rows' addresses untouched in the project rather than removed.
+**Impact.** Bulk address creation, rename, flag edits, stable-id readdressing
+and unreferenced deletion are supported. A spreadsheet cannot reshape the
+group-range hierarchy; that still uses the dedicated project editing
+commands. Delete is refused while communication-object links remain.
 
-**Lifted when.** Open. No task currently proposes changing this — it is
-recorded here as a boundary of the feature, not a gap awaiting a fix.
+**Lifted when.** A dedicated, versioned range-exchange contract defines
+stable range identity, hierarchy and bounds without guessing from names.
 
-## 40. CSV export-only columns are never applied on import, and there are no `Description`/`Comment` columns
+<a id="40-csv-export-only-columns-are-never-applied-on-import-and-there-are-no-descriptioncomment-columns"></a>
+## 40. CSV derived columns are read-only, and there are no `Description`/`Comment` columns
 
-**Limitation.** `DatapointType`, `MainGroup`, and `MiddleGroup` appear in
-an exported CSV so the file is useful to read and edit, but importing that
-same file back never applies any of the three — they are recognized and
-reported as ignored, never rejected and never silently dropped, but never
-written to the project either. Separately, the CSV format has no
+**Limitation.** `DatapointType (read-only)`, `MainGroup (read-only)`, and
+`MiddleGroup (read-only)` appear in an exported CSV as derived context, but
+are never editable project values. Import validates them against the current
+project; a changed value is rejected explicitly and nothing is applied. The
+legacy unsuffixed headers remain readable with identical semantics.
+Separately, the CSV format has no
 `Description` or `Comment` column in either direction, even though the
 `.knxproj` schema itself defines `GroupAddress/@Description` and
 `@Comment` attributes.
@@ -2578,20 +2571,19 @@ from a rename-focused editor. `Description`/`Comment` are simply not
 modelled anywhere in `GroupAddressEntry` yet — the CSV cannot round-trip a
 field the domain model does not have.
 
-**Impact.** A user who edits the `DatapointType`, `MainGroup`, or
-`MiddleGroup` cell of an exported row and re-imports it will see that edit
-reported as ignored rather than applied — surprising the first time, but
-never silent. There is no way to bulk-set or bulk-view a description or
+**Impact.** A user who edits one of these derived cells gets a row-level
+read-only error rather than a false success; an unchanged export imports as
+a tested no-op. There is no way to bulk-set or bulk-view a description or
 comment for a group address via CSV, because there is nowhere in the
 project for it to live yet.
 
-**Lifted when.** `MainGroup`/`MiddleGroup` becoming applicable is tied to
-group-range assignment gaining its own dedicated editing UI/command rather
-than being folded into a name-and-flags import. `Description`/`Comment`
+**Lifted when.** Making `MainGroup`/`MiddleGroup` editable is tied to the
+dedicated range-exchange contract named in §39. `Description`/`Comment`
 becoming available is tied to `GroupAddressEntry` gaining those fields in
 the domain model — no task currently schedules either.
 
-## 41. A CSV file saved from Excel under a German locale may still surprise a user
+<a id="41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user"></a>
+## 41. German-locale separators are supported; unverified spreadsheet transformations remain
 
 **Limitation.** The importer auto-detects `,` and `;` as the field
 separator per file, specifically because Excel's own CSV export/import
@@ -2599,10 +2591,11 @@ behavior depends on the OS list separator setting: under a German
 (or otherwise comma-decimal) locale, Excel writes `;`-separated CSV and
 expects `;` back on open, while under an English locale it uses `,`. Both
 are accepted here. What is not handled is everything else Excel can do
-to a file beyond the separator — most notably re-saving with a different
-encoding, a different quoting style for edge-case cells, or altering
-numeric-looking cells (an `Address` value or a boolean-looking cell) in
-locale-specific ways during a manual edit.
+to a file beyond the separator — most notably re-saving with an unsupported
+encoding or altering address/boolean cells during a manual edit. RFC 4180
+quoting, embedded separators/quotes/newlines, UTF-8 BOM, CRLF/LF and mixed
+line endings all have direct regression tests; they are not part of the
+remaining limitation.
 
 **Cause.** The separator auto-detection in `crates/knx-csv/src/read.rs`
 covers the one Excel behavior this project could concretely name and test
@@ -2612,8 +2605,8 @@ its research, and guessing at more of them without a concrete failing
 sample would be exactly the kind of unverified assumption CLAUDE.md rules
 out.
 
-**Impact.** Most Excel round trips work because of the separator
-detection. A user on a German-locale machine who hand-edits an exported
+**Impact.** The known German-locale separator difference is covered and an
+unchanged export/import round trip is tested. A user who hand-edits an exported
 file in Excel and hits an import error on a cell Excel silently reformatted
 should not assume the importer is broken — it is a known category of risk
 with this specific tool, not a claim that every Excel edit is safe.

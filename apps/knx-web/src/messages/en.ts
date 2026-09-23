@@ -840,7 +840,16 @@ export const messages = {
   "groupAddressCsv.exportSummaryWithWarnings.other":
     "Group addresses exported to CSV, {count} warnings — see Log.",
   "groupAddressCsv.importSummaryBase":
-    "Group addresses imported from CSV: {created} created, {updated} updated, {unchanged} unchanged",
+    "Group addresses imported from CSV: {created} created, {updated} updated, {readdressed} readdressed, {deleted} deleted, {unchanged} unchanged",
+  "groupAddressCsv.confirmDestructive":
+    "Apply this CSV plan? It will readdress {readdressed} and delete {deleted} group addresses; {affectedLinks} communication-object links are affected. This exact preview will be rejected if the project or CSV changes.",
+  "groupAddressCsv.confirmDestructiveDetail":
+    "{action}: raw address {source} → {target}; communication-object ids: {links}",
+  "groupAddressCsv.actionReaddress": "Readdress",
+  "groupAddressCsv.actionDelete": "Delete",
+  "groupAddressCsv.directionSend": "send",
+  "groupAddressCsv.directionReceive": "receive",
+  "groupAddressCsv.confirmCancelled": "CSV import cancelled; no changes were applied.",
   "groupAddressCsv.importSummaryWarnings.one": "{count} warning",
   "groupAddressCsv.importSummaryWarnings.other": "{count} warnings",
   "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} column ignored",

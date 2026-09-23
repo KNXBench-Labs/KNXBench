@@ -40,12 +40,14 @@ pub fn export_group_addresses(project: &Project) -> CsvExport {
     writer
         .write_record([
             "Address",
+            "Action",
+            "NewAddress",
             "Name",
             "Central",
             "Unfiltered",
-            "DatapointType",
-            "MainGroup",
-            "MiddleGroup",
+            "DatapointType (read-only)",
+            "MainGroup (read-only)",
+            "MiddleGroup (read-only)",
         ])
         .expect("writing to an in-memory Vec<u8> cannot fail");
 
@@ -73,6 +75,8 @@ pub fn export_group_addresses(project: &Project) -> CsvExport {
             writer
                 .write_record([
                     ga.address.format(style),
+                    "upsert".to_string(),
+                    String::new(),
                     ga.name.clone(),
                     ga.central.to_string(),
                     ga.unfiltered.to_string(),
@@ -103,7 +107,7 @@ pub fn export_group_addresses(project: &Project) -> CsvExport {
 /// carrying no resolved DPT of its own (`Override::Absent`/`Empty`/
 /// `Malformed`) contributes no vote either way — it neither confirms nor
 /// contests whatever the others say.
-fn derive_dpt(project: &Project, ga: GroupAddressId) -> (Option<DptRef>, bool) {
+pub(crate) fn derive_dpt(project: &Project, ga: GroupAddressId) -> (Option<DptRef>, bool) {
     let mut distinct = Vec::new();
     for com in project.devices.com_objects() {
         if !com.links.iter().any(|link| link.ga == ga) {
@@ -125,7 +129,7 @@ fn derive_dpt(project: &Project, ga: GroupAddressId) -> (Option<DptRef>, bool) {
 /// The names of the main and/or middle `GroupRange`s containing `address`,
 /// if any — `group.rs`'s own doc comment notes the model never nests more
 /// than two levels deep, so at most one of each can match.
-fn containing_range_names(
+pub(crate) fn containing_range_names(
     installation: &Installation,
     address: GroupAddress,
 ) -> (Option<String>, Option<String>) {
@@ -158,7 +162,7 @@ mod tests {
         let header = export.text.lines().next().unwrap();
         assert_eq!(
             header.trim_start_matches('\u{FEFF}').trim_end_matches('\r'),
-            "Address,Name,Central,Unfiltered,DatapointType,MainGroup,MiddleGroup"
+            "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
         );
     }
 
@@ -354,8 +358,12 @@ mod tests {
 
         let lines: Vec<&str> = export.text.lines().skip(1).collect();
         assert_eq!(lines.len(), 2);
-        assert!(lines[0].starts_with("200,Second,"), "{:?}", lines[0]);
-        assert!(lines[1].starts_with("100,First,"), "{:?}", lines[1]);
+        assert!(
+            lines[0].starts_with("200,upsert,,Second,"),
+            "{:?}",
+            lines[0]
+        );
+        assert!(lines[1].starts_with("100,upsert,,First,"), "{:?}", lines[1]);
     }
 
     #[test]

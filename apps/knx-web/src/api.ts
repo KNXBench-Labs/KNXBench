@@ -413,6 +413,53 @@ export interface CatalogInstallMember {
   size: number;
 }
 
+export interface CatalogInstallCount {
+  category:
+    | "archive_member"
+    | "product"
+    | "application_program"
+    | "parameter"
+    | "communication_object"
+    | "dynamic_node"
+    | "module"
+    | "baggage_index"
+    | "baggage"
+    | "unknown_construct"
+    | "master_section"
+    | "datapoint_type";
+  disposition:
+    | "read"
+    | "stored"
+    | "deduplicated"
+    | "retained-but-uninterpreted"
+    | "unsupported"
+    | "dropped";
+  count: number;
+}
+
+export interface CatalogUnknownConstruct {
+  xpath: string;
+  kind: "Element" | "Attribute";
+  name: string;
+  occurrences: number;
+  sample: string | null;
+}
+
+export interface CatalogInstallDiagnostic {
+  kind: "unsupported-master-section" | "unsupported-baggage-index";
+  archivePath: string;
+  xmlPath: string;
+  detail: string;
+  occurrences: number;
+}
+
+export interface CatalogInstallFacts {
+  counts: CatalogInstallCount[];
+  unknownConstructs: CatalogUnknownConstruct[];
+  unknownOccurrences: number;
+  diagnostics: CatalogInstallDiagnostic[];
+}
+
 export interface CatalogInstallReport {
   sha256: string;
   scheme: number;
@@ -420,6 +467,9 @@ export interface CatalogInstallReport {
   members: CatalogInstallMember[];
   unknown: number;
   conflicts: number;
+  translations: { program: number; catalog: number; hardware: number; master: number };
+  droppedDatapointTypes: number;
+  facts: CatalogInstallFacts | null;
 }
 
 export interface CreationDiagnostic {

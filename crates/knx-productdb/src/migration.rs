@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 11;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 12;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -284,7 +284,62 @@ fn migrations() -> Vec<Migration> {
         migrate_v8_to_v9,
         migrate_v9_to_v10,
         migrate_v10_to_v11,
+        migrate_v11_to_v12,
     ]
+}
+
+/// v11 -> v12. Install reports are deliberately separate normalized evidence,
+/// rather than counters inferred from final catalog totals. Existing packages
+/// have no encounter/write ledger, so they receive explicit `unavailable`
+/// markers instead of fabricated measured zeroes. These names cannot exist in
+/// a legitimate v11 schema, so any collision is an error and the outer
+/// migration transaction rolls the whole step back.
+fn migrate_v11_to_v12(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package_install_report (
+            package_sha256 TEXT PRIMARY KEY REFERENCES package(sha256),
+            report_version INTEGER NOT NULL CHECK (report_version = 1),
+            status TEXT NOT NULL CHECK (status IN ('measured','unavailable')),
+            unknown_distinct INTEGER NOT NULL CHECK (unknown_distinct >= 0),
+            unknown_occurrences INTEGER NOT NULL CHECK (unknown_occurrences >= 0),
+            CHECK (status = 'measured' OR (unknown_distinct = 0 AND unknown_occurrences = 0))
+        ) STRICT;
+        CREATE TABLE package_install_count (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            category TEXT NOT NULL CHECK (category IN ('archive_member','product','application_program','parameter','communication_object','dynamic_node','module','baggage_index','baggage','unknown_construct','master_section','datapoint_type')),
+            disposition TEXT NOT NULL CHECK (disposition IN ('read','stored','deduplicated','retained-but-uninterpreted','unsupported','dropped')),
+            count INTEGER NOT NULL CHECK (count >= 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, category, disposition)
+        ) STRICT;
+        CREATE TABLE package_install_unknown (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            xpath TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK (kind IN ('Element','Attribute')),
+            name TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            sample TEXT,
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, xpath, kind, name)
+        ) STRICT;
+        CREATE TABLE package_install_diagnostic (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-baggage-index')),
+            archive_path TEXT NOT NULL,
+            xml_path TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, kind, archive_path, xml_path, detail)
+        ) STRICT;
+        INSERT INTO package_install_report
+            (package_sha256, report_version, status, unknown_distinct, unknown_occurrences)
+            SELECT sha256, 1, 'unavailable', 0, 0 FROM package;",
+    )?;
+    Ok(())
 }
 
 fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
@@ -523,7 +578,7 @@ fn migrate_v10_to_v11(conn: &Connection) -> Result<(), ProductDbError> {
 /// ordinary ingest path.
 ///
 /// The `ingest_unknown` rows the previous `Dynamic` pass wrote are deleted
-/// alongside, matched on that pass's own xpath shape (`.../Dynamic//...`),
+/// alongside, matched on that pass's own xpath shape (`.../Dynamic/...`),
 /// and rewritten from the fresh parse. Without that, a database migrated to
 /// v11 would keep claiming `NumericArg/@Value` is an unmodelled attribute
 /// long after it acquired a column — `backfill_linkable`'s stale-row
@@ -593,7 +648,7 @@ fn clear_dynamic_pass_output(conn: &Connection, sha256: &str) -> Result<(), Prod
     )?;
     conn.execute(
         "DELETE FROM ingest_unknown
-         WHERE source_sha256 = ?1 AND xpath LIKE '%/Dynamic//%'",
+         WHERE source_sha256 = ?1 AND xpath LIKE '%/Dynamic/%'",
         [sha256],
     )?;
     Ok(())
@@ -1151,6 +1206,7 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, ProductDbError> {
         }
     }
     let conn = Connection::open(path)?;
+    conn.pragma_update(None, "foreign_keys", "ON")?;
     let found: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if found > CURRENT_PRODUCTDB_VERSION {
         return Err(ProductDbError::FutureVersion {
@@ -1227,6 +1283,25 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
+    }
+
+    #[test]
+    fn returned_connections_enforce_foreign_keys_when_fresh_and_reopened() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+
+        let fresh = open_and_migrate(&path).unwrap();
+        let enabled: i64 = fresh
+            .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(enabled, 1);
+        drop(fresh);
+
+        let reopened = open_and_migrate(&path).unwrap();
+        let enabled: i64 = reopened
+            .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(enabled, 1);
     }
 
     #[test]

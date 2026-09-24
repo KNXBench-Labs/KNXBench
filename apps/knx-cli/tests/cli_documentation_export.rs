@@ -235,10 +235,10 @@ fn doc_export_reports_the_actual_default_product_database_open_error() {
         "{stderr}"
     );
     assert!(
-        stderr.contains("product database is version 12"),
+        stderr.contains("product database is version 13"),
         "{stderr}"
     );
-    assert!(stderr.contains("this build supports up to 11"), "{stderr}");
+    assert!(stderr.contains("this build supports up to 12"), "{stderr}");
 }
 
 #[test]

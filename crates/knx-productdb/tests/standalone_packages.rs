@@ -1453,7 +1453,11 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     // table that is already in its own target shape would fail looking for
     // the `program_id` column it expects to migrate away from.
     conn.execute_batch(
-        "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
+        "DROP TABLE package_install_diagnostic;
+         DROP TABLE package_install_unknown;
+         DROP TABLE package_install_count;
+         DROP TABLE package_install_report;
+         DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
          DROP TABLE package; DROP TABLE dynamic_node;
          DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
@@ -1507,7 +1511,11 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
     // `db()` already ran the full chain up to v4, so `migrate_v3_to_v4`'s
     // rebuild must find `program_id` still there to migrate away from.
     conn.execute_batch(
-        "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
+        "DROP TABLE package_install_diagnostic;
+         DROP TABLE package_install_unknown;
+         DROP TABLE package_install_count;
+         DROP TABLE package_install_report;
+         DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
          DROP TABLE package; DROP TABLE dynamic_node;
          DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;

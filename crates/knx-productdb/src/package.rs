@@ -1,4 +1,4 @@
-//! Evidence-backed, atomic installation of readable scheme 11/13/20 product ZIPs.
+//! Evidence-backed, atomic installation of readable scheme 11/12/13/14/20 product ZIPs.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
@@ -1005,7 +1005,9 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
                 if root.local_name().as_ref() == "KNX" {
                     match namespace.as_str() {
                         "http://knx.org/xml/project/11" => return Ok(11),
+                        "http://knx.org/xml/project/12" => return Ok(12),
                         "http://knx.org/xml/project/13" => return Ok(13),
+                        "http://knx.org/xml/project/14" => return Ok(14),
                         "http://knx.org/xml/project/20" => return Ok(20),
                         _ => {}
                     }

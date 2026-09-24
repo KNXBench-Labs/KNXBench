@@ -180,7 +180,7 @@ fn lookalike_and_unapproved_namespaces_remain_rejected_without_rows() {
     for namespace in [
         "http://knx.org/xml/project/130",
         "https://knx.org/xml/project/13",
-        "http://knx.org/xml/project/14",
+        "http://knx.org/xml/project/15",
     ] {
         let master = format!("<KNX xmlns=\"{namespace}\"><MasterData/></KNX>");
         let result = install_package(

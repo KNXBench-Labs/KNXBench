@@ -150,9 +150,9 @@ future cycle rather than bundled into "Session 4 leftovers":
   Needs the group-address/communication-object cross-reference a later
   session's entity persistence would make queryable; guessing from one
   communication object alone is not attempted.
-- **`.knxprod` direct ingest** for the remaining observed master-data schemes
-  12, 14 and 21 (KNOWN_LIMITATIONS §11). Schemes 11, 13 and 20 are accepted;
-  scheme 13 is backed by synthetic persistence/rollback tests and four measured
+- **`.knxprod` direct ingest** for the remaining observed master-data scheme 21
+  (KNOWN_LIMITATIONS §11). Schemes 11, 12, 13, 14 and 20 are accepted; schemes
+  12-14 are backed by synthetic persistence/rollback tests and eight measured
   private-corpus packages, without claiming ETS parity or complete semantic
   interpretation. **Schema 23 manufacturer data** is a separate project-import
   boundary and still needs its own known-element evidence.

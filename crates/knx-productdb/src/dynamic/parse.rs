@@ -128,6 +128,11 @@ fn spec_for(kind: &str) -> ElementSpec {
     }
 }
 
+pub(crate) fn attribute_is_known(kind: &str, name: &str, value: Option<&str>) -> bool {
+    let spec = spec_for(kind);
+    spec.known.contains(&name) && (Some(name) != spec.default_attr || value == Some("true"))
+}
+
 /// One open element's node id and the position its next child will get.
 type Frame = (i64, i64);
 
@@ -464,15 +469,12 @@ fn insert_node(
     let default_value = spec.default_attr.and_then(|n| a.get(n));
     let default_is_true = default_value == Some("true");
     let is_default = default_is_true.then_some(1i64);
-    let known: Vec<&str> = if default_is_true {
-        spec.known.to_vec()
-    } else {
-        spec.known
-            .iter()
-            .copied()
-            .filter(|k| Some(*k) != spec.default_attr)
-            .collect()
-    };
+    let known: Vec<&str> = spec
+        .known
+        .iter()
+        .copied()
+        .filter(|name| attribute_is_known(kind, name, a.get(name)))
+        .collect();
     crate::parse::report_unknown_attrs(unknown, &xpath, a, &known);
 
     let element_id = spec.id_attr.and_then(|n| a.get(n));
@@ -499,7 +501,7 @@ fn insert_node(
     let extra: Vec<String> = a
         .names()
         .filter(|n| !captured.contains(n))
-        .map(|n| format!("{n}={}", a.get(n).unwrap_or_default()))
+        .map(|n| format!("{n}={}", a.evidence_value(n).unwrap_or_default()))
         .collect();
     let extra = if extra.is_empty() {
         None
@@ -562,7 +564,7 @@ fn insert_module_def_argument(
     let extra: Vec<String> = a
         .names()
         .filter(|n| !CAPTURED.contains(n))
-        .map(|n| format!("{n}={}", a.get(n).unwrap_or_default()))
+        .map(|n| format!("{n}={}", a.evidence_value(n).unwrap_or_default()))
         .collect();
     let extra = if extra.is_empty() {
         None

@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-24 — PDB-3: install-report projection
+
+The approved core's schema-v12 `InstallFacts` ledger is now projected without
+loss through the server DTO, `knx products ingest`, and the web catalog
+browser. Count rows retain all six dispositions and closed category values;
+unknown constructs expose distinct rows and occurrence totals; unsupported
+diagnostics expose kind, relative archive/XML paths, detail, and occurrences.
+`facts: null` remains historical/unavailable and is distinct from measured
+zero. Host source names are not projected. Signature caution remains explicit;
+ETS parity and signature verification are not claimed. PDB-8 is the future typed
+master-data coverage slice; PDB-10 is the future safe baggage inventory and
+index-to-payload resolution slice. PDB-3 is not marked fully complete until parent review
+and final gates.
+
 ## 2026-09-24 — PDB-2: product-package corpus compatibility matrix
 
 An opt-in `knx-productdb` regression now installs every configured package

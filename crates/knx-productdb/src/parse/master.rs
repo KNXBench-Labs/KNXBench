@@ -7,12 +7,11 @@
 //! `MasterData` child (`DatapointRoles`, `InterfaceObjectTypes`,
 //! `InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
 //! `MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stays unparsed —
-//! [V], `knx_master.xml`'s own top-level section list, corpus-wide — and,
-//! like everything else this function does not recognize, falls through to
-//! `_ => {}` unreported rather than into `unknown` (KNOWN_LIMITATIONS.md
-//! §64 tracks only the two families that actually carry a `Master`-scope
-//! translation; the rest is a pre-existing, wider gap this slice does not
-//! close).
+//! [V], `knx_master.xml`'s own top-level section list, corpus-wide. The parser
+//! returns those top-level section encounters as unsupported install evidence;
+//! it still does not reinterpret their contents as ordinary unknown constructs.
+
+use std::collections::BTreeMap;
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -20,7 +19,7 @@ use rusqlite::{params, Connection};
 
 use super::report_unknown_attrs;
 use super::translation::{ingest_translations, TranslationScope};
-use crate::report::{UnknownCollector, UnknownConstruct};
+use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
 
@@ -38,6 +37,13 @@ const FUNCTION_TYPE_ATTRS: &[&str] = &["Id", "Number", "Text", "Status"];
 const FUNCTION_POINT_ATTRS: &[&str] = &["Id", "Text", "DatapointType", "Role", "Characteristics"];
 /// [V], same two packages as `FUNCTION_TYPE_ATTRS`.
 const SPACE_USAGE_ATTRS: &[&str] = &["Id", "Number", "Text"];
+
+pub(crate) fn is_supported_master_section(name: &str) -> bool {
+    matches!(
+        name,
+        "Manufacturers" | "DatapointTypes" | "FunctionTypes" | "SpaceUsages" | "Languages"
+    )
+}
 
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
@@ -69,7 +75,27 @@ pub struct MasterIngest {
     pub dropped_datapoint_types: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct UnsupportedMasterSection {
+    pub name: String,
+    pub occurrences: u64,
+}
+
+pub(crate) struct DetailedMasterIngest {
+    pub outcome: MasterIngest,
+    pub entities: EntityCounts,
+    pub master_sections_read: u64,
+    pub unsupported_sections: Vec<UnsupportedMasterSection>,
+}
+
 pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
+    Ok(ingest_master_data_detailed(conn, bytes)?.outcome)
+}
+
+pub(crate) fn ingest_master_data_detailed(
+    conn: &Connection,
+    bytes: &[u8],
+) -> Result<DetailedMasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -77,6 +103,10 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     let mut current_main: Option<i64> = None;
     let mut current_function_type: Option<String> = None;
     let mut dropped_datapoint_types = 0usize;
+    let mut entities = EntityCounts::default();
+    let mut parents = Vec::<String>::new();
+    let mut master_sections_read = 0u64;
+    let mut unsupported_sections = BTreeMap::<String, u64>::new();
 
     loop {
         buf.clear();
@@ -93,15 +123,33 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
         let is_self_closing = matches!(&event, Event::Empty(_));
         match event {
             Event::Eof => break,
-            Event::End(e) if e.local_name().as_ref() == "DatapointType" => {
-                current_main = None;
-            }
-            Event::End(e) if e.local_name().as_ref() == "FunctionType" => {
-                current_function_type = None;
+            Event::End(e) => {
+                if e.local_name().as_ref() == "DatapointType" {
+                    current_main = None;
+                } else if e.local_name().as_ref() == "FunctionType" {
+                    current_function_type = None;
+                }
+                parents.pop();
             }
             Event::Start(e) | Event::Empty(e) => {
                 let name = local_name(&e);
                 let a = attrs(&e, source_path)?;
+                if parents == ["KNX", "MasterData"] {
+                    master_sections_read =
+                        master_sections_read
+                            .checked_add(1)
+                            .ok_or_else(|| ProductDbError::Xml {
+                                source_path: source_path.into(),
+                                cause: "master-section counter overflow".into(),
+                            })?;
+                    if !is_supported_master_section(&name) {
+                        let count = unsupported_sections.entry(name.clone()).or_default();
+                        *count = count.checked_add(1).ok_or_else(|| ProductDbError::Xml {
+                            source_path: source_path.into(),
+                            cause: "unsupported master-section counter overflow".into(),
+                        })?;
+                    }
+                }
                 match name.as_str() {
                     "Manufacturer" => {
                         report_unknown_attrs(
@@ -117,6 +165,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                         )?;
                     }
                     "DatapointType" => {
+                        entities.read(EntityKind::DatapointType)?;
                         report_unknown_attrs(
                             &mut unknown,
                             "/KNX/MasterData/DatapointTypes/DatapointType",
@@ -141,10 +190,19 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                             params![a.get("Id"), main, a.get("Name"), a.get("Text")],
                         )?;
                         if written == 0 {
-                            dropped_datapoint_types += 1;
+                            dropped_datapoint_types = dropped_datapoint_types
+                                .checked_add(1)
+                                .ok_or_else(|| ProductDbError::Xml {
+                                    source_path: source_path.into(),
+                                    cause: "dropped datapoint counter overflow".into(),
+                                })?;
+                            entities.dropped(EntityKind::DatapointType)?;
+                        } else {
+                            entities.stored(EntityKind::DatapointType)?;
                         }
                     }
                     "DatapointSubtype" => {
+                        entities.read(EntityKind::DatapointType)?;
                         report_unknown_attrs(
                             &mut unknown,
                             "/KNX/MasterData/DatapointTypes/DatapointType/DatapointSubtypes/DatapointSubtype",
@@ -164,8 +222,18 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                                 ],
                             )?;
                             if written == 0 {
-                                dropped_datapoint_types += 1;
+                                dropped_datapoint_types = dropped_datapoint_types
+                                    .checked_add(1)
+                                    .ok_or_else(|| ProductDbError::Xml {
+                                        source_path: source_path.into(),
+                                        cause: "dropped datapoint counter overflow".into(),
+                                    })?;
+                                entities.dropped(EntityKind::DatapointType)?;
+                            } else {
+                                entities.stored(EntityKind::DatapointType)?;
                             }
+                        } else {
+                            entities.dropped(EntityKind::DatapointType)?;
                         }
                     }
                     "FunctionType" => {
@@ -241,6 +309,9 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                     }
                     _ => {}
                 }
+                if !is_self_closing {
+                    parents.push(name);
+                }
             }
             _ => {}
         }
@@ -250,10 +321,18 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     // `knx_master.xml` carries no owning element to key its translations to,
     // so `TranslationScope::Master` uses the empty-string sentinel instead.
     let translations = ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
-    Ok(MasterIngest {
-        unknown: unknown.into_vec(),
-        translations,
-        dropped_datapoint_types,
+    Ok(DetailedMasterIngest {
+        outcome: MasterIngest {
+            unknown: unknown.into_vec(),
+            translations,
+            dropped_datapoint_types,
+        },
+        entities,
+        master_sections_read,
+        unsupported_sections: unsupported_sections
+            .into_iter()
+            .map(|(name, occurrences)| UnsupportedMasterSection { name, occurrences })
+            .collect(),
     })
 }
 
@@ -450,7 +529,7 @@ mod tests {
     </DatapointTypes>
   </MasterData>
 </KNX>"#;
-        ingest_master_data(&conn, xml.as_bytes()).unwrap();
+        let outcome = ingest_master_data_detailed(&conn, xml.as_bytes()).unwrap();
         let count: i64 = conn
             .query_row(
                 "SELECT count(*) FROM datapoint_type WHERE id = 'DPST-ORPHAN'",
@@ -462,6 +541,8 @@ mod tests {
             count, 0,
             "an orphan DatapointSubtype must be dropped, not attributed to DPT-0's main number"
         );
+        assert_eq!(outcome.outcome.dropped_datapoint_types, 0);
+        assert_eq!(outcome.entities.get(EntityKind::DatapointType).dropped, 1);
     }
 
     const MASTER_WITH_FUNCTIONS: &str = r#"<?xml version="1.0" encoding="utf-8"?>

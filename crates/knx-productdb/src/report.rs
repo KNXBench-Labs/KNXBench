@@ -11,6 +11,103 @@ use rusqlite::{params, Connection};
 
 use crate::ProductDbError;
 
+/// Parser-owned declaration and write outcomes.  These are deliberately
+/// internal: the package report maps them onto its stable public vocabulary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum EntityKind {
+    Product,
+    ApplicationProgram,
+    Parameter,
+    CommunicationObject,
+    DynamicNode,
+    ModuleDef,
+    DatapointType,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct EntityCount {
+    pub read: u64,
+    pub stored: u64,
+    pub deduplicated: u64,
+    pub dropped: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct EntityCounts(BTreeMap<EntityKind, EntityCount>);
+
+impl EntityCounts {
+    fn increment(
+        &mut self,
+        kind: EntityKind,
+        field: impl FnOnce(&mut EntityCount) -> &mut u64,
+    ) -> Result<(), ProductDbError> {
+        let value = field(self.0.entry(kind).or_default());
+        *value = value.checked_add(1).ok_or_else(|| ProductDbError::Xml {
+            source_path: "install evidence".into(),
+            cause: "entity counter overflow".into(),
+        })?;
+        Ok(())
+    }
+
+    pub(crate) fn read(&mut self, kind: EntityKind) -> Result<(), ProductDbError> {
+        self.increment(kind, |count| &mut count.read)
+    }
+
+    pub(crate) fn stored(&mut self, kind: EntityKind) -> Result<(), ProductDbError> {
+        self.increment(kind, |count| &mut count.stored)
+    }
+
+    pub(crate) fn deduplicated(&mut self, kind: EntityKind) -> Result<(), ProductDbError> {
+        self.increment(kind, |count| &mut count.deduplicated)
+    }
+
+    pub(crate) fn dropped(&mut self, kind: EntityKind) -> Result<(), ProductDbError> {
+        self.increment(kind, |count| &mut count.dropped)
+    }
+
+    pub(crate) fn get(&self, kind: EntityKind) -> EntityCount {
+        self.0.get(&kind).copied().unwrap_or_default()
+    }
+
+    pub(crate) fn merge(&mut self, other: &Self) -> Result<(), ProductDbError> {
+        for (kind, incoming) in &other.0 {
+            let count = self.0.entry(*kind).or_default();
+            count.read =
+                count
+                    .read
+                    .checked_add(incoming.read)
+                    .ok_or_else(|| ProductDbError::Xml {
+                        source_path: "install evidence".into(),
+                        cause: "entity read counter overflow".into(),
+                    })?;
+            count.stored =
+                count
+                    .stored
+                    .checked_add(incoming.stored)
+                    .ok_or_else(|| ProductDbError::Xml {
+                        source_path: "install evidence".into(),
+                        cause: "entity stored counter overflow".into(),
+                    })?;
+            count.deduplicated = count
+                .deduplicated
+                .checked_add(incoming.deduplicated)
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: "install evidence".into(),
+                    cause: "entity deduplicated counter overflow".into(),
+                })?;
+            count.dropped =
+                count
+                    .dropped
+                    .checked_add(incoming.dropped)
+                    .ok_or_else(|| ProductDbError::Xml {
+                        source_path: "install evidence".into(),
+                        cause: "entity dropped counter overflow".into(),
+                    })?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnknownKind {
     Element,
@@ -18,7 +115,7 @@ pub enum UnknownKind {
 }
 
 impl UnknownKind {
-    fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             UnknownKind::Element => "Element",
             UnknownKind::Attribute => "Attribute",
@@ -103,11 +200,44 @@ impl TranslationCounts {
         self.program + self.catalog + self.hardware + self.master
     }
 
+    /// Adds another scope breakdown using the pre-PDB-3 public API.
     pub fn add(&mut self, other: TranslationCounts) {
         self.program += other.program;
         self.catalog += other.catalog;
         self.hardware += other.hardware;
         self.master += other.master;
+    }
+
+    pub(crate) fn checked_add(&mut self, other: TranslationCounts) -> Result<(), ProductDbError> {
+        self.program =
+            self.program
+                .checked_add(other.program)
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: "install evidence".into(),
+                    cause: "program translation counter overflow".into(),
+                })?;
+        self.catalog =
+            self.catalog
+                .checked_add(other.catalog)
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: "install evidence".into(),
+                    cause: "catalog translation counter overflow".into(),
+                })?;
+        self.hardware =
+            self.hardware
+                .checked_add(other.hardware)
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: "install evidence".into(),
+                    cause: "hardware translation counter overflow".into(),
+                })?;
+        self.master = self
+            .master
+            .checked_add(other.master)
+            .ok_or_else(|| ProductDbError::Xml {
+                source_path: "install evidence".into(),
+                cause: "master translation counter overflow".into(),
+            })?;
+        Ok(())
     }
 }
 
@@ -160,7 +290,7 @@ pub fn insert_unknown(
             u.xpath,
             u.kind.as_str(),
             u.name,
-            u.occurrences as i64,
+            i64::from(u.occurrences),
             u.sample,
         ])?;
     }

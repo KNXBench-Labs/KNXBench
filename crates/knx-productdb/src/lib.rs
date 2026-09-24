@@ -23,7 +23,10 @@ pub use blob::{
 pub use enrich::{com_object_lookup_id, enrich, EnrichmentIssue, EnrichmentReport};
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
-pub use package::{install_package, InstallReport, PackageError, PackageMember};
+pub use package::{
+    install_package, InstallCategory, InstallCount, InstallDiagnostic, InstallDiagnosticKind,
+    InstallDisposition, InstallFacts, InstallReport, PackageError, PackageMember,
+};
 pub use parse::master::{ingest_master_data, MasterIngest};
 /// Re-exported so callers name the connection type through this crate
 /// rather than depending on `rusqlite` directly.

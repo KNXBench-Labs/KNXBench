@@ -31,7 +31,7 @@ use super::comobject::{
 };
 use super::translation::{insert_translations, TranslationScope};
 use super::{bool_flag, first_winner, report_unknown_attrs};
-use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
+use crate::report::{EntityCounts, EntityKind, IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
 use crate::ProductDbError;
 
@@ -59,6 +59,11 @@ pub struct ProgramIngest {
     /// `Program` scope never goes through that function (see its doc
     /// comment for why).
     pub translations: usize,
+}
+
+pub(crate) struct DetailedProgramIngest {
+    pub outcome: ProgramIngest,
+    pub entities: EntityCounts,
 }
 
 /// The currently open `<Union>`: its sequence number, its `@SizeInBit`, and
@@ -116,6 +121,15 @@ pub fn ingest_program(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<ProgramIngest, ProductDbError> {
+    Ok(ingest_program_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+}
+
+pub(crate) fn ingest_program_detailed(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<DetailedProgramIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
@@ -136,6 +150,7 @@ pub fn ingest_program(
     let mut current_parameter: Option<String> = None;
     let mut translation_state = TranslationState::default();
     let mut translations_written = 0usize;
+    let mut entities = EntityCounts::default();
     // The elements currently open, outermost first, so an unknown construct
     // can be reported at the path it was actually found at instead of one
     // guessed at compile time.
@@ -188,6 +203,7 @@ pub fn ingest_program(
                     &mut current_parameter,
                     &mut translation_state,
                     &mut translations_written,
+                    &mut entities,
                 )?;
             }
             Event::Start(e) => {
@@ -213,6 +229,7 @@ pub fn ingest_program(
                     &mut current_parameter,
                     &mut translation_state,
                     &mut translations_written,
+                    &mut entities,
                 )?;
                 open_path.push(name);
             }
@@ -220,11 +237,14 @@ pub fn ingest_program(
         }
     }
 
-    Ok(ProgramIngest {
-        program_id,
-        unknown: unknown.into_vec(),
-        conflicts,
-        translations: translations_written,
+    Ok(DetailedProgramIngest {
+        outcome: ProgramIngest {
+            program_id,
+            unknown: unknown.into_vec(),
+            conflicts,
+            translations: translations_written,
+        },
+        entities,
     })
 }
 
@@ -538,15 +558,22 @@ fn handle_start_or_empty(
     current_parameter: &mut Option<String>,
     translation_state: &mut TranslationState,
     translations_written: &mut usize,
+    entities: &mut EntityCounts,
 ) -> Result<(), ProductDbError> {
     if *expecting_type_child {
         *expecting_type_child = false;
-        if !*already_present {
-            if let Some((pt_id, pt_name)) = current_parameter_type.clone() {
-                insert_parameter_type(
-                    conn, program_id, &pt_id, &pt_name, name, a, open_path, unknown,
-                )?;
-            }
+        if let Some((pt_id, pt_name)) = current_parameter_type.clone() {
+            insert_parameter_type(
+                conn,
+                program_id,
+                &pt_id,
+                &pt_name,
+                name,
+                a,
+                open_path,
+                unknown,
+                !*already_present,
+            )?;
         }
         return Ok(());
     }
@@ -560,7 +587,11 @@ fn handle_start_or_empty(
             )?;
         }
         "ApplicationProgram" => {
+            entities.read(EntityKind::ApplicationProgram)?;
             *program_id = a.get("Id").unwrap_or_default().to_string();
+            let xpath = xpath_of_child(open_path, name);
+            report_unknown_attrs(unknown, &xpath, a, PROGRAM_ATTRS);
+            let linkable = bool_flag(unknown, &xpath, a, "Linkable");
             *already_present = !first_winner(
                 conn,
                 "application_program",
@@ -570,9 +601,6 @@ fn handle_start_or_empty(
                 conflicts,
             )?;
             if !*already_present {
-                let xpath = xpath_of_child(open_path, name);
-                report_unknown_attrs(unknown, &xpath, a, PROGRAM_ATTRS);
-                let linkable = bool_flag(unknown, &xpath, a, "Linkable");
                 conn.execute(
                     "INSERT INTO application_program
                      (id, manufacturer_id, name, application_number,
@@ -597,6 +625,9 @@ fn handle_start_or_empty(
                         source_sha256,
                     ],
                 )?;
+                entities.stored(EntityKind::ApplicationProgram)?;
+            } else {
+                entities.deduplicated(EntityKind::ApplicationProgram)?;
             }
         }
         "ParameterType" => {
@@ -635,6 +666,7 @@ fn handle_start_or_empty(
             *current_parameter = None;
         }
         "Parameter" => {
+            entities.read(EntityKind::Parameter)?;
             let id = a.get("Id").unwrap_or_default().to_string();
             if !*already_present {
                 let (union_id, union_size, seg, off, bit) = match current_union.as_ref() {
@@ -665,6 +697,7 @@ fn handle_start_or_empty(
                         union_size,
                     ],
                 )?;
+                entities.stored(EntityKind::Parameter)?;
             }
             // A self-closing `<Parameter/>` has no children, so no `Memory`
             // can follow as its child — only a `Start` leaves it open to
@@ -710,39 +743,49 @@ fn handle_start_or_empty(
                 }
             }
         }
-        "ComObject" if !*already_present => {
+        "ComObject" => {
+            entities.read(EntityKind::CommunicationObject)?;
             report_unknown_attrs(
                 unknown,
                 &xpath_of_child(open_path, name),
                 a,
                 COM_OBJECT_ATTRS,
             );
-            insert_com_object(conn, program_id, a)?;
+            if !*already_present {
+                insert_com_object(conn, program_id, a)?;
+                entities.stored(EntityKind::CommunicationObject)?;
+            }
         }
-        "ComObjectRef" if !*already_present => {
+        "ComObjectRef" => {
+            entities.read(EntityKind::CommunicationObject)?;
             report_unknown_attrs(
                 unknown,
                 &xpath_of_child(open_path, name),
                 a,
                 COM_OBJECT_REF_ATTRS,
             );
-            insert_com_object_ref(conn, program_id, a)?;
+            if !*already_present {
+                insert_com_object_ref(conn, program_id, a)?;
+                entities.stored(EntityKind::CommunicationObject)?;
+            }
         }
-        "ParameterRef" if !*already_present => {
-            conn.execute(
-                "INSERT INTO parameter_ref
+        "ParameterRef" => {
+            if !*already_present {
+                conn.execute(
+                    "INSERT INTO parameter_ref
                  (program_id, id, parameter_id, display_order, tag, text, value)
                  VALUES (?1,?2,?3,?4,?5,?6,?7)",
-                params![
-                    program_id.as_str(),
-                    a.get("Id"),
-                    a.get("RefId"),
-                    parse_i64(a.get("DisplayOrder")),
-                    a.get("Tag"),
-                    a.get("Text"),
-                    a.get("Value"),
-                ],
-            )?;
+                    params![
+                        program_id.as_str(),
+                        a.get("Id"),
+                        a.get("RefId"),
+                        parse_i64(a.get("DisplayOrder")),
+                        a.get("Tag"),
+                        a.get("Text"),
+                        a.get("Value"),
+                    ],
+                )?;
+            }
         }
         // Two wrappers this parser has no table for, but which are not
         // empty: `ComObjectTable` carries the com-object table's memory
@@ -758,6 +801,9 @@ fn handle_start_or_empty(
         // are matched by their own name-only arms above regardless of
         // nesting (see this module's top doc comment for `ModuleDef`).
         "ComObjectTable" | "ModuleDef" => {
+            if name == "ModuleDef" {
+                entities.read(EntityKind::ModuleDef)?;
+            }
             report_unknown_attrs(unknown, &xpath_of_child(open_path, name), a, &[]);
         }
         // Everything else reaching here is a real, unmodelled construct —
@@ -817,10 +863,7 @@ fn handle_start_or_empty(
             // — the first ingest stored element and attributes both — so
             // reporting either here would describe this parser's own
             // deduplication as a compatibility gap.
-            const HANDLED_ELSEWHERE_ON_DUPLICATE: &[&str] =
-                &["ComObject", "ComObjectRef", "ParameterRef"];
-            if !DOCUMENT_SPINE.contains(&other) && !HANDLED_ELSEWHERE_ON_DUPLICATE.contains(&other)
-            {
+            if !DOCUMENT_SPINE.contains(&other) {
                 if !ATTRIBUTE_FREE_WRAPPERS.contains(&other) {
                     unknown.element(&xpath_of(open_path), other);
                 }
@@ -891,6 +934,7 @@ fn insert_parameter_type(
     a: &Attrs,
     open_path: &[String],
     unknown: &mut UnknownCollector,
+    store: bool,
 ) -> Result<(), ProductDbError> {
     let (kind, size_in_bit, base, min_inclusive, max_inclusive, number_type): TypeFields =
         match child_name {
@@ -967,22 +1011,24 @@ fn insert_parameter_type(
             known_type_child_attrs(child_name),
         );
     }
-    conn.execute(
-        "INSERT INTO parameter_type
+    if store {
+        conn.execute(
+            "INSERT INTO parameter_type
          (program_id, id, name, kind, size_in_bit, base, min_inclusive, max_inclusive, number_type)
          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
-        params![
-            program_id,
-            pt_id,
-            pt_name,
-            kind,
-            size_in_bit,
-            base,
-            min_inclusive,
-            max_inclusive,
-            number_type,
-        ],
-    )?;
+            params![
+                program_id,
+                pt_id,
+                pt_name,
+                kind,
+                size_in_bit,
+                base,
+                min_inclusive,
+                max_inclusive,
+                number_type,
+            ],
+        )?;
+    }
     Ok(())
 }
 

@@ -30,7 +30,7 @@ const EXPECTED_SHARED_INSTALLS: usize = 102;
 const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 const EXPECTED_UNSUPPORTED_NAMESPACES: usize = 11;
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "e2dbc8313bf18b46dfc46a6e0eeb948e613363b8bf9ad9e149c7f737df4bea01";
+    "fb6a070e2b02d6ab754fbe6023ba17f76e8bcfdb95d7e09179cdad359f4d3825";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -492,6 +492,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared_final_database_counts": final_counts,
         "packages": public_records,
     });
+
     assert_eq!(matrix["package_instances"], EXPECTED_PACKAGE_INSTANCES);
     assert_eq!(matrix["unique_package_hashes"], EXPECTED_UNIQUE_PACKAGES);
     assert_eq!(
@@ -521,7 +522,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 104,
             "member_count": 1539,
-            "unknown_count": 22438,
+            "unknown_count": 22404,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2864784, "catalog": 2821, "hardware": 1368, "master": 103312},
@@ -532,7 +533,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 102,
             "member_count": 1519,
-            "unknown_count": 21944,
+            "unknown_count": 22279,
             "conflict_count": 371,
             "dropped_datapoint_type_count": 35729,
             "translation_counts": {"program": 2740855, "catalog": 2229, "hardware": 1112, "master": 1636},
@@ -543,7 +544,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 104,
             "member_count": 1539,
-            "unknown_count": 22070,
+            "unknown_count": 22404,
             "conflict_count": 373,
             "dropped_datapoint_type_count": 36462,
             "translation_counts": {"program": 2751044, "catalog": 2295, "hardware": 1126, "master": 1636},

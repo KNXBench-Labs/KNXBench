@@ -2201,7 +2201,11 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
     // own target shape would fail looking for the `program_id` column it
     // expects to migrate away from.
     conn.execute_batch(
-        "DROP TABLE dynamic_node;
+        "DROP TABLE package_install_diagnostic;
+         DROP TABLE package_install_unknown;
+         DROP TABLE package_install_count;
+         DROP TABLE package_install_report;
+         DROP TABLE dynamic_node;
          DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
@@ -2288,7 +2292,11 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
     // own target shape would fail looking for the `program_id` column it
     // expects to migrate away from.
     conn.execute_batch(
-        "DROP TABLE dynamic_node;
+        "DROP TABLE package_install_diagnostic;
+         DROP TABLE package_install_unknown;
+         DROP TABLE package_install_count;
+         DROP TABLE package_install_report;
+         DROP TABLE dynamic_node;
          DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
@@ -3551,7 +3559,11 @@ fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
     // — T13's `function_type`, `function_point`, `space_usage` among them —
     // left standing, and the stored blob untouched.
     conn.execute_batch(
-        "DROP TABLE module_def_argument;
+        "DROP TABLE package_install_diagnostic;
+         DROP TABLE package_install_unknown;
+         DROP TABLE package_install_count;
+         DROP TABLE package_install_report;
+         DROP TABLE module_def_argument;
          ALTER TABLE dynamic_node DROP COLUMN value;
          PRAGMA user_version = 10;",
     )

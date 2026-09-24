@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version as packageVersion } from "../package.json";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceNode } from "./bindings/DeviceNode";
@@ -120,6 +120,14 @@ vi.spyOn(crypto, "randomUUID").mockReturnValue(OWN_CLIENT_TOKEN);
 
 let host: HTMLDivElement | undefined;
 
+beforeEach(() => {
+  // Startup jokes intentionally depend on local wall-clock time. Freeze only
+  // Date (not timers) so unrelated App assertions behave the same at noon,
+  // midnight, and on CI runners in another timezone.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-02-03T12:00:00Z"));
+});
+
 afterEach(() => {
   host?.remove();
   host = undefined;
@@ -142,6 +150,7 @@ afterEach(() => {
   document.documentElement.removeAttribute("lang");
   document.title = "";
   resetUiLanguageForTests();
+  vi.useRealTimers();
 });
 
 function baseTree(): ProjectTree {

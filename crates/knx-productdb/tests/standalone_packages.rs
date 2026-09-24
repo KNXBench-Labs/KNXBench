@@ -1951,13 +1951,17 @@ fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
             stmt.execute([source_sha256]).unwrap();
         }
         drop(stmt);
-        // v11's own DDL has to go with the version number: this test
+        // v11/v12's own DDL has to go with the version number: this test
         // rewinds `user_version` without rewinding the schema, which was
         // free while v7-v10 added no structure the module-argument slice
-        // needs and stopped being free the moment v11 added a table and a
-        // column.
+        // needs and stopped being free once later migrations added tables and
+        // a column. Drop v12's evidence children before their parent.
         conn.execute_batch(
-            "DROP TABLE module_def_argument;
+            "DROP TABLE package_install_diagnostic;
+             DROP TABLE package_install_unknown;
+             DROP TABLE package_install_count;
+             DROP TABLE package_install_report;
+             DROP TABLE module_def_argument;
              ALTER TABLE dynamic_node DROP COLUMN value;",
         )
         .unwrap();

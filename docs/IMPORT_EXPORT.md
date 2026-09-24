@@ -484,6 +484,22 @@ contributes `Manufacturers` and `DatapointTypes` only
 (`knx_productdb::ingest_master_data`); the file itself stays in the
 project's own opaque store as `OpaqueKind::MasterData`.
 
+Standalone-package ZIP names are decoded before any path decision
+([ADR-0034](adr/0034-zip-member-names-follow-declared-encoding.md)): bit-11
+names must be valid UTF-8; unflagged names use the ZIP-defined CP437 path. A
+version-1 Unicode-path field overrides that path only when its raw-name CRC and
+UTF-8 are valid; stale CRCs/unknown versions fall back, while duplicate or
+conflicting declarations fail. Local and central names, flags and compression
+methods, CRCs and sizes must agree; local ranges may not alias or overlap, data
+descriptors are verified, and ZIP64 member metadata is rejected in this bounded
+slice. Parser-effective offsets, CRCs and sizes must still match that preflight
+record, so an earlier EOCD cannot become an unchecked fallback. The
+resulting name is then checked for traversal, absolute/drive-like paths,
+NUL/backslash, symlinks and normalized file/prefix collisions, and that exact
+checked value becomes `PackageMember.path`. This admits the measured
+eleven-package legacy-name aggregate without publishing its composition,
+relaxing the archive boundary or implying broader ETS compatibility.
+
 **The project manifest.** `knx-store` schema v3 adds `manufacturer_ref`
 (`source_path`, `sha256`, `len`, `kind`) — what a project was imported
 with, independent of whether the product database that supplied the bytes

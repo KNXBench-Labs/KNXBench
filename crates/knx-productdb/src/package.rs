@@ -1,8 +1,8 @@
 //! Evidence-backed, atomic installation of readable scheme 11/20 product ZIPs.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Seek, SeekFrom};
 
 use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
@@ -16,6 +16,10 @@ const MAX_MEMBER_SIZE: u64 = 64 * 1024 * 1024;
 const MAX_PACKAGE_SIZE: usize = 256 * 1024 * 1024;
 const MAX_EXPANDED_SIZE: u64 = 256 * 1024 * 1024;
 const MAX_MEMBERS: usize = 4096;
+const MAX_PATH_NODES: usize = 65_536;
+const MAX_CENTRAL_DIRECTORY_SIZE: usize = 24 * 1024 * 1024;
+const MAX_LOCAL_METADATA_SIZE: usize = 24 * 1024 * 1024;
+const MAX_DECODED_PATH_SIZE: usize = 72 * 1024 * 1024;
 
 #[derive(Debug)]
 pub enum PackageError {
@@ -86,6 +90,12 @@ pub struct PackageMember {
     pub role: String,
     pub sha256: String,
     pub size: u64,
+}
+
+#[derive(Debug)]
+struct ValidatedMember {
+    archive_index: usize,
+    member: PackageMember,
 }
 
 #[derive(Debug)]
@@ -178,9 +188,134 @@ fn package_conflicts(conn: &Connection, sha256: &str) -> Result<Vec<IdConflict>,
     Ok(conn.prepare("SELECT table_name, logical_id, kept_sha256, other_sha256, occurrence FROM package_conflict WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([sha256], |r| Ok(IdConflict { table: r.get(0)?, id: r.get(1)?, kept_sha256: r.get(2)?, other_sha256: r.get(3)?, occurrence: r.get(4)? }))?.collect::<Result<Vec<_>, _>>()?)
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ZipDirectory {
+    start: usize,
+    end: usize,
+    count: usize,
+}
+
+#[derive(Debug)]
+struct CheckedZipEntry {
+    central_offset: u64,
+    local_offset: u64,
+    crc32: u32,
+    compressed_size: u64,
+    uncompressed_size: u64,
+}
+
+#[derive(Debug)]
+struct ValidatedZipDirectory {
+    entries: Vec<CheckedZipEntry>,
+    neutralized_fields: Vec<usize>,
+    parser_comment_ranges: Vec<std::ops::Range<usize>>,
+}
+
+/// Read-only overlay used only by `zip`: stale Unicode-path field IDs are
+/// replaced without cloning or altering the archive that is persisted.
+struct ZipParserReader<'a> {
+    inner: Cursor<&'a [u8]>,
+    neutralized_fields: Vec<usize>,
+}
+
+impl<'a> ZipParserReader<'a> {
+    fn new(bytes: &'a [u8], neutralized_fields: Vec<usize>) -> Self {
+        Self {
+            inner: Cursor::new(bytes),
+            neutralized_fields,
+        }
+    }
+}
+
+impl Read for ZipParserReader<'_> {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        let start = self.inner.position() as usize;
+        let read = self.inner.read(buffer)?;
+        let end = start + read;
+        let first = self
+            .neutralized_fields
+            .partition_point(|offset| offset.saturating_add(2) <= start);
+        for &offset in &self.neutralized_fields[first..] {
+            if offset >= end {
+                break;
+            }
+            for (index, byte) in 0xA11E_u16.to_le_bytes().into_iter().enumerate() {
+                let absolute = offset + index;
+                if (start..end).contains(&absolute) {
+                    buffer[absolute - start] = byte;
+                }
+            }
+        }
+        Ok(read)
+    }
+}
+
+impl Seek for ZipParserReader<'_> {
+    fn seek(&mut self, position: SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(position)
+    }
+}
+
+#[derive(Debug, Default)]
+struct MemberPathNode {
+    children: HashMap<String, usize>,
+    is_directory: Option<bool>,
+}
+
+#[derive(Debug)]
+struct MemberPathTree {
+    nodes: Vec<MemberPathNode>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PathInsertError {
+    Collision,
+    NodeLimit,
+}
+
+impl Default for MemberPathTree {
+    fn default() -> Self {
+        Self {
+            nodes: vec![MemberPathNode::default()],
+        }
+    }
+}
+
+impl MemberPathTree {
+    fn insert(&mut self, path: &str, is_directory: bool) -> Result<(), PathInsertError> {
+        let mut node = 0;
+        for component in path.split('/') {
+            if self.nodes[node].is_directory == Some(false) {
+                return Err(PathInsertError::Collision);
+            }
+            node = match self.nodes[node].children.get(component) {
+                Some(next) => *next,
+                None => {
+                    if self.nodes.len() >= MAX_PATH_NODES {
+                        return Err(PathInsertError::NodeLimit);
+                    }
+                    let next = self.nodes.len();
+                    self.nodes.push(MemberPathNode::default());
+                    self.nodes[node]
+                        .children
+                        .insert(component.to_string(), next);
+                    next
+                }
+            };
+        }
+        if self.nodes[node].is_directory.is_some()
+            || (!is_directory && !self.nodes[node].children.is_empty())
+        {
+            return Err(PathInsertError::Collision);
+        }
+        self.nodes[node].is_directory = Some(is_directory);
+        Ok(())
+    }
+}
+
 // Bound metadata allocation before ZipArchive constructs its entry index.
 // ZIP64 is outside this small, corpus-proven package slice.
-fn preflight_zip(bytes: &[u8]) -> Result<(), PackageError> {
+fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
     let start = bytes.len().saturating_sub(22 + u16::MAX as usize);
     for offset in (start..bytes.len().saturating_sub(21)).rev() {
         if bytes.get(offset..offset + 4) != Some(b"PK\x05\x06") {
@@ -194,56 +329,299 @@ fn preflight_zip(bytes: &[u8]) -> Result<(), PackageError> {
         if offset >= 20 && bytes.get(offset - 20..offset - 16) == Some(b"PK\x06\x07") {
             return Err(zip_error("ZIP64 product packages are unsupported"));
         }
+        let disk = u16::from_le_bytes([record[4], record[5]]);
+        let directory_disk = u16::from_le_bytes([record[6], record[7]]);
+        let disk_count = u16::from_le_bytes([record[8], record[9]]) as usize;
         let count = u16::from_le_bytes([record[10], record[11]]) as usize;
+        if disk != 0 || directory_disk != 0 || disk_count != count {
+            return Err(zip_error("multi-disk product packages are unsupported"));
+        }
         if count > MAX_MEMBERS {
             return Err(PackageError::SizeLimit {
                 path: "member count (ZIP64 unsupported)".into(),
             });
         }
-        return Ok(());
+        let directory_size = u32::from_le_bytes(record[12..16].try_into().unwrap()) as usize;
+        if directory_size > MAX_CENTRAL_DIRECTORY_SIZE {
+            return Err(PackageError::SizeLimit {
+                path: "central directory metadata".into(),
+            });
+        }
+        let directory_start = u32::from_le_bytes(record[16..20].try_into().unwrap()) as usize;
+        let directory_end = directory_start
+            .checked_add(directory_size)
+            .ok_or_else(|| zip_error("central directory size or extent mismatch"))?;
+        if directory_start >= offset || directory_end != offset {
+            return Err(zip_error("central directory size or extent mismatch"));
+        }
+        return Ok(ZipDirectory {
+            start: directory_start,
+            end: directory_end,
+            count,
+        });
     }
     Err(zip_error("missing complete end-of-directory record"))
 }
 
+fn unicode_path(
+    archive: &[u8],
+    range: std::ops::Range<usize>,
+    raw_name: &[u8],
+    neutralized_fields: &mut Vec<usize>,
+) -> Result<Option<String>, PackageError> {
+    let mut offset = range.start;
+    let mut seen = false;
+    let mut decoded = None;
+    while offset < range.end {
+        let header = archive
+            .get(offset..offset + 4)
+            .ok_or_else(|| zip_error("truncated ZIP extra field"))?;
+        let id = u16::from_le_bytes([header[0], header[1]]);
+        let len = u16::from_le_bytes([header[2], header[3]]) as usize;
+        let payload_start = offset + 4;
+        let payload_end = payload_start
+            .checked_add(len)
+            .filter(|end| *end <= range.end)
+            .ok_or_else(|| zip_error("truncated ZIP extra field payload"))?;
+        if id == 0x0001 {
+            return Err(zip_error("ZIP64 member metadata is unsupported"));
+        }
+        if id == 0x7075 {
+            if seen {
+                return Err(zip_error("duplicate Unicode path field"));
+            }
+            seen = true;
+            let payload = archive
+                .get(payload_start..payload_end)
+                .ok_or_else(|| zip_error("truncated Unicode path field"))?;
+            if payload.len() < 5 {
+                return Err(zip_error("truncated Unicode path field"));
+            }
+            let version = payload[0];
+            let crc = u32::from_le_bytes(payload[1..5].try_into().unwrap());
+            if version != 1 || crc != crc32fast::hash(raw_name) {
+                // APPNOTE 4.6.9 says an unknown version or stale CRC does not
+                // override the header name. Hide only this ignored field from
+                // `zip`, whose v8.6 parser otherwise rejects stale CRCs.
+                neutralized_fields.push(offset);
+            } else {
+                let name = std::str::from_utf8(&payload[5..])
+                    .map_err(|_| zip_error("invalid Unicode path UTF-8"))?;
+                decoded = Some(name.to_string());
+            }
+        }
+        offset = payload_end;
+    }
+    Ok(decoded)
+}
+
+fn data_descriptor_end(
+    archive: &[u8],
+    start: usize,
+    crc32: u32,
+    compressed_size: u32,
+    uncompressed_size: u32,
+) -> Result<usize, PackageError> {
+    let expected = [crc32, compressed_size, uncompressed_size];
+    for signature_len in [4_usize, 0] {
+        if signature_len == 4 && archive.get(start..start + 4) != Some(b"PK\x07\x08") {
+            continue;
+        }
+        let payload_start = start
+            .checked_add(signature_len)
+            .ok_or_else(|| zip_error("data descriptor length overflow"))?;
+        let payload = archive
+            .get(payload_start..payload_start + 12)
+            .ok_or_else(|| zip_error("truncated data descriptor"))?;
+        let actual = [
+            u32::from_le_bytes(payload[0..4].try_into().unwrap()),
+            u32::from_le_bytes(payload[4..8].try_into().unwrap()),
+            u32::from_le_bytes(payload[8..12].try_into().unwrap()),
+        ];
+        if actual == expected {
+            return payload_start
+                .checked_add(12)
+                .ok_or_else(|| zip_error("data descriptor length overflow"));
+        }
+    }
+    Err(zip_error("data descriptor differs from central directory"))
+}
+
 // ZipArchive indexes by name and collapses duplicate entries. Inspect the
-// physical central directory first so no input member can disappear that way.
+// physical central and local headers first so no input member can disappear or
+// acquire two identities. Return the offsets of ignored Unicode-path fields so
+// the parser view can neutralize them without copying the whole archive.
 fn validate_central_directory(
-    bytes: &[u8],
-    start: u64,
-    visible_count: usize,
-) -> Result<(), PackageError> {
-    let mut offset = usize::try_from(start).map_err(zip_error)?;
+    archive: &[u8],
+    directory: ZipDirectory,
+) -> Result<ValidatedZipDirectory, PackageError> {
+    let mut offset = directory.start;
     let mut paths = HashSet::new();
-    let mut count = 0;
-    while bytes.get(offset..offset + 4) == Some(b"PK\x01\x02") {
-        let header = bytes
+    let mut local_offsets = HashSet::new();
+    let mut local_ranges = Vec::with_capacity(directory.count);
+    let mut checked_entries = Vec::with_capacity(directory.count);
+    let mut neutralized_fields = Vec::new();
+    let mut central_comment_ranges = Vec::new();
+    let mut local_metadata_size = 0_usize;
+    for _ in 0..directory.count {
+        if archive.get(offset..offset + 4) != Some(b"PK\x01\x02") {
+            return Err(zip_error("truncated central directory"));
+        }
+        let header = archive
             .get(offset..offset + 46)
-            .ok_or_else(|| zip_error("truncated central directory"))?;
+            .ok_or_else(|| zip_error("truncated central directory"))?
+            .to_vec();
+        let flags = u16::from_le_bytes([header[8], header[9]]);
+        let method = u16::from_le_bytes([header[10], header[11]]);
+        let crc32 = u32::from_le_bytes(header[16..20].try_into().unwrap());
+        let compressed_size = u32::from_le_bytes(header[20..24].try_into().unwrap());
+        let uncompressed_size = u32::from_le_bytes(header[24..28].try_into().unwrap());
         let name_len = u16::from_le_bytes([header[28], header[29]]) as usize;
         let extra_len = u16::from_le_bytes([header[30], header[31]]) as usize;
         let comment_len = u16::from_le_bytes([header[32], header[33]]) as usize;
-        let name = bytes
-            .get(offset + 46..offset + 46 + name_len)
-            .ok_or_else(|| zip_error("truncated central directory name"))?;
-        if !paths.insert(name) {
+        let disk_start = u16::from_le_bytes([header[34], header[35]]);
+        if disk_start != 0 {
+            return Err(zip_error("central member starts on another disk"));
+        }
+        let local_offset = u32::from_le_bytes(header[42..46].try_into().unwrap()) as usize;
+        if !local_offsets.insert(local_offset) {
+            return Err(zip_error("multiple members reference one local header"));
+        }
+        let name_start = offset
+            .checked_add(46)
+            .ok_or_else(|| zip_error("central directory length overflow"))?;
+        let name_end = name_start
+            .checked_add(name_len)
+            .ok_or_else(|| zip_error("central directory length overflow"))?;
+        let extra_end = name_end
+            .checked_add(extra_len)
+            .ok_or_else(|| zip_error("central directory length overflow"))?;
+        let record_end = extra_end
+            .checked_add(comment_len)
+            .filter(|end| *end <= directory.end)
+            .ok_or_else(|| zip_error("central directory size or extent mismatch"))?;
+        if extra_end != record_end {
+            central_comment_ranges.push(extra_end..record_end);
+        }
+        let name = archive
+            .get(name_start..name_end)
+            .ok_or_else(|| zip_error("truncated central directory name"))?
+            .to_vec();
+        if !paths.insert(name.clone()) {
             return Err(PackageError::DuplicateMember {
-                path: String::from_utf8_lossy(name).into_owned(),
+                path: String::from_utf8_lossy(&name).into_owned(),
             });
         }
-        count += 1;
-        if count > MAX_MEMBERS {
-            return Err(PackageError::SizeLimit {
-                path: "member count".into(),
-            });
+        if flags & (1 << 11) != 0 && std::str::from_utf8(&name).is_err() {
+            return Err(zip_error("member name has invalid flagged UTF-8"));
         }
-        offset += 46 + name_len + extra_len + comment_len;
-    }
-    if count != visible_count {
-        return Err(PackageError::DuplicateMember {
-            path: "aliased ZIP member names".into(),
+
+        let local = archive
+            .get(local_offset..local_offset + 30)
+            .ok_or_else(|| zip_error("truncated local file header"))?
+            .to_vec();
+        if local.get(..4) != Some(b"PK\x03\x04") {
+            return Err(zip_error("invalid local file header"));
+        }
+        let local_flags = u16::from_le_bytes([local[6], local[7]]);
+        let local_method = u16::from_le_bytes([local[8], local[9]]);
+        let local_crc32 = u32::from_le_bytes(local[14..18].try_into().unwrap());
+        let local_compressed_size = u32::from_le_bytes(local[18..22].try_into().unwrap());
+        let local_uncompressed_size = u32::from_le_bytes(local[22..26].try_into().unwrap());
+        let local_name_len = u16::from_le_bytes([local[26], local[27]]) as usize;
+        let local_extra_len = u16::from_le_bytes([local[28], local[29]]) as usize;
+        local_metadata_size = local_metadata_size
+            .checked_add(30 + local_name_len + local_extra_len)
+            .filter(|size| *size <= MAX_LOCAL_METADATA_SIZE)
+            .ok_or_else(|| PackageError::SizeLimit {
+                path: "local header metadata".into(),
+            })?;
+        let local_name_start = local_offset
+            .checked_add(30)
+            .ok_or_else(|| zip_error("local header length overflow"))?;
+        let local_name_end = local_name_start
+            .checked_add(local_name_len)
+            .ok_or_else(|| zip_error("local header length overflow"))?;
+        let local_extra_end = local_name_end
+            .checked_add(local_extra_len)
+            .filter(|end| *end <= directory.start)
+            .ok_or_else(|| zip_error("local header length overflow"))?;
+        let local_name = archive
+            .get(local_name_start..local_name_end)
+            .ok_or_else(|| zip_error("truncated local member name"))?
+            .to_vec();
+        if local_name != name {
+            return Err(zip_error("local and central member names differ"));
+        }
+        if local_flags != flags || local_method != method {
+            return Err(zip_error("local and central member metadata differ"));
+        }
+        let uses_descriptor = flags & (1 << 3) != 0;
+        if uses_descriptor {
+            if local_crc32 != 0 || local_compressed_size != 0 || local_uncompressed_size != 0 {
+                return Err(zip_error("invalid local data descriptor placeholders"));
+            }
+        } else if (local_crc32, local_compressed_size, local_uncompressed_size)
+            != (crc32, compressed_size, uncompressed_size)
+        {
+            return Err(zip_error("local and central CRC or sizes differ"));
+        }
+        let data_end = local_extra_end
+            .checked_add(compressed_size as usize)
+            .ok_or_else(|| zip_error("local file record length overflow"))?;
+        let local_end = if uses_descriptor {
+            data_descriptor_end(archive, data_end, crc32, compressed_size, uncompressed_size)?
+        } else {
+            data_end
+        };
+        if local_end > directory.start {
+            return Err(zip_error("local file record overlaps central directory"));
+        }
+        local_ranges.push(local_offset..local_end);
+
+        let local_unicode = unicode_path(
+            archive,
+            local_name_end..local_extra_end,
+            &name,
+            &mut neutralized_fields,
+        )?;
+        let central_unicode =
+            unicode_path(archive, name_end..extra_end, &name, &mut neutralized_fields)?;
+        if local_unicode != central_unicode {
+            return Err(zip_error("local and central Unicode path fields differ"));
+        }
+        if flags & (1 << 11) != 0
+            && central_unicode
+                .as_deref()
+                .is_some_and(|unicode| unicode.as_bytes() != name)
+        {
+            return Err(zip_error("flagged UTF-8 and Unicode path field differ"));
+        }
+        checked_entries.push(CheckedZipEntry {
+            central_offset: offset as u64,
+            local_offset: local_offset as u64,
+            crc32,
+            compressed_size: u64::from(compressed_size),
+            uncompressed_size: u64::from(uncompressed_size),
         });
+        offset = record_end;
     }
-    Ok(())
+    if offset != directory.end {
+        return Err(zip_error("central directory size or extent mismatch"));
+    }
+    local_ranges.sort_unstable_by_key(|range| range.start);
+    if local_ranges
+        .windows(2)
+        .any(|pair| pair[0].end > pair[1].start)
+    {
+        return Err(zip_error("overlapping local file records"));
+    }
+    neutralized_fields.sort_unstable();
+    Ok(ValidatedZipDirectory {
+        entries: checked_entries,
+        neutralized_fields,
+        parser_comment_ranges: central_comment_ranges,
+    })
 }
 
 fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
@@ -351,9 +729,25 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
     Ok(())
 }
 
+fn package_member_role(path: &str, kind: FileKind) -> String {
+    if path == "knx_master.xml" {
+        "Master".into()
+    } else if path.ends_with(".signature") {
+        // This classifies retained bytes; it is not a cryptographic verdict.
+        "Signature".into()
+    } else if path.contains("/Baggages/") {
+        "Baggage".into()
+    } else if manufacturer_partition(path).is_none() || matches!(kind, FileKind::Baggage) {
+        "Unrecognized".into()
+    } else {
+        format!("{kind:?}")
+    }
+}
+
 /// Install a standalone product package, preserving the archive and every file.
-/// All storage and parsing share one transaction. Identical archive bytes skip
-/// parsing, including when the caller supplies a different source name.
+/// All storage and parsing share one transaction. Identical archive bytes are
+/// revalidated and re-extracted, but skip domain ingestion and database
+/// mutation, including when the caller supplies a different source name.
 pub fn install_package(
     conn: &Connection,
     source_name: &str,
@@ -394,37 +788,105 @@ pub fn install_package(
             },
         )
         .optional()?;
-    if let Some((scheme, unknown, translations, dropped_datapoint_types)) = prior {
-        let members = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok(PackageMember { path: r.get(0)?, role: r.get(1)?, sha256: r.get(2)?, size: r.get::<_, i64>(3)? as u64 }))?.collect::<Result<Vec<_>, _>>()?;
-        let conflicts = package_conflicts(&tx, &sha256)?;
-        tx.commit().map_err(ProductDbError::from)?;
-        return Ok(InstallReport {
-            sha256,
-            scheme,
-            skipped: true,
-            members,
-            unknown,
-            conflicts,
-            translations,
-            dropped_datapoint_types,
+    let directory = preflight_zip(bytes)?;
+    let ValidatedZipDirectory {
+        entries: checked_entries,
+        neutralized_fields,
+        mut parser_comment_ranges,
+    } = validate_central_directory(bytes, directory)?;
+    let eocd_comment_start = directory
+        .end
+        .checked_add(22)
+        .ok_or_else(|| zip_error("end-of-directory length overflow"))?;
+    if eocd_comment_start != bytes.len() {
+        parser_comment_ranges.push(eocd_comment_start..bytes.len());
+    }
+    let mut central_view = bytes[directory.start..].to_vec();
+    for &offset in &neutralized_fields {
+        if (directory.start..directory.end).contains(&offset) {
+            let relative = offset - directory.start;
+            central_view[relative..relative + 2].copy_from_slice(&0xA11E_u16.to_le_bytes());
+        }
+    }
+    let relative_eocd = directory.end - directory.start;
+    central_view[relative_eocd + 16..relative_eocd + 20].copy_from_slice(&0_u32.to_le_bytes());
+    let mut comment_index = 0;
+    for relative in 0..central_view.len().saturating_sub(3) {
+        if central_view[relative..relative + 4] != *b"PK\x05\x06" {
+            continue;
+        }
+        let absolute = directory.start + relative;
+        if absolute == directory.end {
+            continue;
+        }
+        while comment_index < parser_comment_ranges.len()
+            && parser_comment_ranges[comment_index].end <= absolute
+        {
+            comment_index += 1;
+        }
+        let safely_ignorable = parser_comment_ranges
+            .get(comment_index)
+            .is_some_and(|range| range.start <= absolute && absolute + 4 <= range.end);
+        if !safely_ignorable {
+            return Err(zip_error(
+                "end-of-directory signature inside member metadata",
+            ));
+        }
+        // Comments are retained in the stored original, but have no effect on
+        // member identity. Hiding their signatures binds `zip` to the one EOCD
+        // selected and range-checked above.
+        central_view[relative..relative + 4].fill(0);
+    }
+    let metadata_archive = zip::ZipArchive::with_config(
+        zip::read::Config {
+            archive_offset: zip::read::ArchiveOffset::Known(0),
+        },
+        Cursor::new(central_view),
+    )
+    .map_err(zip_error)?;
+    let metadata = metadata_archive.metadata();
+    // SAFETY: `metadata` was parsed from this archive's already-validated,
+    // selected central directory. Its local offsets remain absolute and are
+    // cross-checked below before any member is read.
+    let mut archive = unsafe {
+        zip::ZipArchive::unsafe_new_with_metadata(
+            ZipParserReader::new(bytes, neutralized_fields),
+            metadata,
+        )
+    };
+    if archive.len() != directory.count {
+        return Err(PackageError::DuplicateMember {
+            path: "aliased ZIP member names".into(),
         });
     }
-    preflight_zip(bytes)?;
-    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(zip_error)?;
-    validate_central_directory(bytes, archive.central_directory_start(), archive.len())?;
-    if archive.len() > MAX_MEMBERS {
-        return Err(PackageError::SizeLimit {
-            path: "member count".into(),
-        });
+    for (index, checked) in checked_entries.iter().enumerate() {
+        let parsed = archive.by_index_raw(index).map_err(zip_error)?;
+        if parsed.central_header_start() + directory.start as u64 != checked.central_offset
+            || parsed.header_start() != checked.local_offset
+            || parsed.crc32() != checked.crc32
+            || parsed.compressed_size() != checked.compressed_size
+            || parsed.size() != checked.uncompressed_size
+        {
+            return Err(zip_error("ZIP parser selected unchecked member metadata"));
+        }
     }
-    let mut paths = HashSet::new();
+    let mut paths = MemberPathTree::default();
+    let mut has_master = false;
+    let mut decoded_path_size = 0_usize;
     let mut total = 0_u64;
     for i in 0..archive.len() {
         let file = archive.by_index_raw(i).map_err(zip_error)?;
-        let path = file.name();
+        let path = file.name().to_string();
+        let path = path.as_str();
+        decoded_path_size = decoded_path_size
+            .checked_add(path.len())
+            .filter(|size| *size <= MAX_DECODED_PATH_SIZE)
+            .ok_or_else(|| PackageError::SizeLimit {
+                path: "decoded member paths".into(),
+            })?;
         let normalized = path.strip_suffix('/').unwrap_or(path);
-        if std::str::from_utf8(file.name_raw()).is_err()
-            || normalized.is_empty()
+        let is_directory = file.is_dir();
+        if normalized.is_empty()
             || path.contains(['\\', ':', '\0'])
             || normalized
                 .split('/')
@@ -433,9 +895,18 @@ pub fn install_package(
         {
             return Err(PackageError::UnsafeMember { path: path.into() });
         }
-        if !paths.insert(normalized.to_string()) {
-            return Err(PackageError::DuplicateMember { path: path.into() });
+        match paths.insert(normalized, is_directory) {
+            Ok(()) => {}
+            Err(PathInsertError::Collision) => {
+                return Err(PackageError::DuplicateMember { path: path.into() });
+            }
+            Err(PathInsertError::NodeLimit) => {
+                return Err(PackageError::SizeLimit {
+                    path: "decoded path component budget".into(),
+                });
+            }
         }
+        has_master |= normalized == "knx_master.xml";
         if file.encrypted() {
             return Err(PackageError::Encrypted { path: path.into() });
         }
@@ -453,43 +924,86 @@ pub fn install_package(
             return Err(PackageError::ProjectArchive);
         }
     }
-    if !paths.contains("knx_master.xml") {
+    if !has_master {
         return Err(PackageError::MissingMaster);
     }
-    let mut extracted = Vec::new();
+    let mut validated_members = Vec::new();
+    let mut scheme = None;
+    let mut has_manufacturer_data = false;
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).map_err(zip_error)?;
-        if file.is_dir() {
-            continue;
-        }
+        let path = file.name().to_string();
+        let is_directory = file.is_dir();
         let mut data = Vec::new();
         (&mut file)
             .take(MAX_MEMBER_SIZE + 1)
             .read_to_end(&mut data)
             .map_err(zip_error)?;
         if data.len() as u64 > MAX_MEMBER_SIZE {
-            return Err(PackageError::SizeLimit {
-                path: file.name().into(),
-            });
+            return Err(PackageError::SizeLimit { path });
         }
         if data.len() as u64 != file.size() {
-            return Err(zip_error(format!("size mismatch for {}", file.name())));
+            return Err(zip_error(format!("size mismatch for {path}")));
         }
-        extracted.push((file.name().to_string(), data));
-    }
-    let master = extracted
-        .iter()
-        .find(|(path, _)| path == "knx_master.xml")
-        .ok_or(PackageError::MissingMaster)?;
-    let scheme = master_scheme(&master.1)?;
-    if !extracted.iter().any(|(path, data)| {
-        manufacturer_partition(path).is_some()
+        if is_directory {
+            if !data.is_empty() {
+                return Err(PackageError::UnsafeMember { path });
+            }
+            continue;
+        }
+        if path.ends_with(".xml") {
+            validate_xml(&path, &data)?;
+        }
+        let kind = classify(&data);
+        let role = package_member_role(&path, kind);
+        if matches!(role.as_str(), "Catalog" | "Hardware" | "ApplicationProgram") {
+            validate_manufacturer(&path, &data)?;
+        }
+        if path == "knx_master.xml" {
+            scheme = Some(master_scheme(&data)?);
+        }
+        has_manufacturer_data |= manufacturer_partition(&path).is_some()
             && matches!(
-                classify(data),
+                kind,
                 FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
-            )
-    }) {
+            );
+        validated_members.push(ValidatedMember {
+            archive_index: i,
+            member: PackageMember {
+                path,
+                role,
+                sha256: sha256_hex(&data),
+                size: data.len() as u64,
+            },
+        });
+    }
+    let scheme = scheme.ok_or(PackageError::MissingMaster)?;
+    if !has_manufacturer_data {
         return Err(PackageError::MissingManufacturerData);
+    }
+    if let Some((stored_scheme, unknown, translations, dropped_datapoint_types)) = prior {
+        let members = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok(PackageMember { path: r.get(0)?, role: r.get(1)?, sha256: r.get(2)?, size: r.get::<_, i64>(3)? as u64 }))?.collect::<Result<Vec<_>, _>>()?;
+        let member_index_matches = members.len() == validated_members.len()
+            && members
+                .iter()
+                .eq(validated_members.iter().map(|validated| &validated.member));
+        if stored_scheme != scheme || !member_index_matches {
+            return Err(zip_error(
+                "stored package member index differs from validated archive",
+            ));
+        }
+        let conflicts = package_conflicts(&tx, &sha256)?;
+        tx.commit().map_err(ProductDbError::from)?;
+        return Ok(InstallReport {
+            sha256,
+            scheme,
+            skipped: true,
+            members,
+            unknown,
+            conflicts,
+            translations,
+            dropped_datapoint_types,
+        });
     }
     tx.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, ?2, ?3, ?4, ?5, 0)", params![sha256, source_name, scheme, bytes.len() as i64, bytes])?;
     let mut report = InstallReport {
@@ -502,31 +1016,23 @@ pub fn install_package(
         conflicts: Vec::new(),
         translations: TranslationCounts::default(),
     };
-    for (ordinal, (path, data)) in extracted.into_iter().enumerate() {
-        if path.ends_with(".xml") {
-            validate_xml(&path, &data)?;
-        }
-        let kind = classify(&data);
-        let role = if path == "knx_master.xml" {
-            "Master".into()
-        } else if path.ends_with(".signature") {
-            // Recognised and retained verbatim in `source_file` below, like
-            // any other unparsed member — nothing here or anywhere else in
-            // this crate verifies the signature. The role name says what
-            // the member *is*, not that it was checked; see
-            // KNOWN_LIMITATIONS.md §85 before treating this role as proof
-            // of anything.
-            "Signature".into()
-        } else if path.contains("/Baggages/") {
-            "Baggage".into()
-        } else if manufacturer_partition(&path).is_none() || matches!(kind, FileKind::Baggage) {
-            "Unrecognized".into()
-        } else {
-            format!("{kind:?}")
-        };
-        let member_sha = sha256_hex(&data);
-        if matches!(role.as_str(), "Catalog" | "Hardware" | "ApplicationProgram") {
-            validate_manufacturer(&path, &data)?;
+    for (ordinal, validated) in validated_members.into_iter().enumerate() {
+        let PackageMember {
+            path,
+            role,
+            sha256: member_sha,
+            size,
+        } = validated.member;
+        let mut file = archive
+            .by_index(validated.archive_index)
+            .map_err(zip_error)?;
+        let mut data = Vec::new();
+        (&mut file)
+            .take(MAX_MEMBER_SIZE + 1)
+            .read_to_end(&mut data)
+            .map_err(zip_error)?;
+        if data.len() as u64 != size || sha256_hex(&data) != member_sha {
+            return Err(zip_error("member changed between validation passes"));
         }
         let outcome = if matches!(
             role.as_str(),
@@ -576,12 +1082,12 @@ pub fn install_package(
             insert_unknown(&tx, &member_sha, &unknown)?;
             report.unknown += unknown.len();
         }
-        tx.execute("INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", params![report.sha256, ordinal as i64, path, role, member_sha, data.len() as i64])?;
+        tx.execute("INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", params![report.sha256, ordinal as i64, path, role, member_sha, size as i64])?;
         report.members.push(PackageMember {
             path,
             role,
             sha256: member_sha,
-            size: data.len() as u64,
+            size,
         });
     }
     tx.execute(
@@ -616,4 +1122,51 @@ pub fn install_package(
     report.conflicts = package_conflicts(&tx, &report.sha256)?;
     tx.commit().map_err(ProductDbError::from)?;
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parser_overlay_survives_split_reads_and_seeks() {
+        let input = b"0123456789abcdef";
+        let mut expected = input.to_vec();
+        expected[2..4].copy_from_slice(&0xA11E_u16.to_le_bytes());
+        expected[11..13].copy_from_slice(&0xA11E_u16.to_le_bytes());
+
+        for chunk_size in 1..=5 {
+            let mut reader = ZipParserReader::new(input, vec![2, 11]);
+            let mut actual = Vec::new();
+            loop {
+                let mut chunk = vec![0; chunk_size];
+                let read = reader.read(&mut chunk).unwrap();
+                if read == 0 {
+                    break;
+                }
+                actual.extend_from_slice(&chunk[..read]);
+            }
+            assert_eq!(actual, expected, "chunk size {chunk_size}");
+        }
+
+        for start in 0..=input.len() {
+            let mut reader = ZipParserReader::new(input, vec![2, 11]);
+            reader.seek(SeekFrom::Start(start as u64)).unwrap();
+            let mut actual = Vec::new();
+            reader.read_to_end(&mut actual).unwrap();
+            assert_eq!(actual, expected[start..], "seek offset {start}");
+
+            reader.seek(SeekFrom::Start(start as u64)).unwrap();
+            let mut one_byte_at_a_time = Vec::new();
+            let mut byte = [0];
+            while reader.read(&mut byte).unwrap() != 0 {
+                one_byte_at_a_time.push(byte[0]);
+            }
+            assert_eq!(
+                one_byte_at_a_time,
+                expected[start..],
+                "one-byte reads after seek {start}"
+            );
+        }
+    }
 }

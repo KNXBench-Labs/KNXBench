@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-24 — PDB-2: product-package corpus compatibility matrix
+
+An opt-in `knx-productdb` regression now installs every configured package
+against an isolated temporary database and one shared database in stable
+content-hash order. The corpus remains read-only, and the machine-readable
+matrix contains no private source path, filename, or manufacturer label.
+
+The gated baseline is 115 package instances / 113 distinct package hashes.
+Independent review rejected the initial path order because corpus renames could
+change conflict winners. The content-hash-ordered remeasurement installed 104
+in isolation and rejected 11 unsupported namespaces; the shared run installed
+102, deduplicated 2, and rejected the same 11. Its shared final database held
+102 package rows, 1,101 source-file rows, 207,711 parameter rows, and 2,745,832
+translation rows.
+These are importer measurements, not ETS parity or proof that every preserved
+XML construct is interpreted. Without `KNXBENCH_PRODUCT_CORPUS`, normal test
+runs report this private-data gate as ignored instead of claiming coverage.
+The gate requires an explicit confinement root plus an OS-path-list in
+`KNXBENCH_PRODUCT_CORPUS_SCOPES`; it never guesses manufacturer directories.
+It is intentionally Linux-only (`openat2` plus mounted `/proc`) and requires the
+matrix output directory to live on a different filesystem from the corpus.
+
 ## 2026-09-23 — T15: project comparison exposes values and becomes scriptable
 
 `knx-diff` now projects every matched entity snapshot into deterministic,

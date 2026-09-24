@@ -67,7 +67,8 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 | Format | Status | Evidence |
 | --- | --- | --- |
 | Standalone `.knxprod` product package, master data scheme 11 or 20 | ✅ Implemented | Four real files installed, content-addressed, idempotent re-install — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| Standalone `.knxprod`, schemes 12–19, 21, 22 | ❌ Not implemented | No tested sample at those schemes yet — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
+| Standalone `.knxprod`, schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing 115-instance read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics or ETS parity — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| Standalone `.knxprod`, schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's manufacturer data — 4 manufacturers, 12 application programs — ingests completely — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Encrypted `.knxprod` packages | ❌ Not implemented, deliberately | Rejected as a typed error with no rows published; this is a scope exclusion, not a gap to close — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Legacy `.vd2` product data | ❌ Not implemented, deliberately | A distinct pre-2013 ETS2-era container family, not the `.knxprod` ZIP/XML family at all; permanently out of scope — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
@@ -103,8 +104,8 @@ KNXBench names them.
 | --- | --- | --- |
 | Exporting "KNXBench group-address CSV v1" and re-importing it, unchanged | ✅ Implemented | Every group address in the reference project round-trips as `unchanged`, including names with commas, quotes and umlauts — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Interoperability with ETS's own CSV/Excel group-address export, or `.esf` | ❌ Not implemented | No sample of either format exists to build against; KNXBench's format is its own, documented, and never presented as ETS-compatible — [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
-|| Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids retain directional links on moves; linked deletes are refused; confirmation is bound to CSV/project state |
-|| Creating or restructuring group ranges through CSV | ❌ Not implemented | Existing ranges are selected by final address bounds — see [KNOWN_LIMITATIONS.md §39](../../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
+| Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids retain directional links on moves; linked deletes are refused; confirmation is bound to CSV/project state |
+| Creating or restructuring group ranges through CSV | ❌ Not implemented | Existing ranges are selected by final address bounds — see [KNOWN_LIMITATIONS.md §39](../../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
 
 See [Working with group addresses](../user-guide/04-group-addresses.md) for the CSV
 workflow itself.

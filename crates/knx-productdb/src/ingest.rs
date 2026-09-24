@@ -40,6 +40,12 @@ pub enum IngestOutcome {
     },
 }
 
+pub(crate) struct DetailedIngestOutcome {
+    pub outcome: IngestOutcome,
+    pub unknown_constructs: Vec<crate::report::UnknownConstruct>,
+    pub entities: crate::report::EntityCounts,
+}
+
 /// Ingests one manufacturer file. Everything this function writes — the
 /// blob, the parsed rows, the unknown-construct rows — happens in one
 /// transaction, so a parse error partway through leaves the database
@@ -61,7 +67,7 @@ pub fn ingest_file(
         return Ok(IngestOutcome::Skipped { sha256 });
     }
     let tx = conn.unchecked_transaction()?;
-    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false)?;
+    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false)?.outcome;
     tx.commit()?;
     Ok(outcome)
 }
@@ -71,7 +77,7 @@ pub(crate) fn ingest_file_in_transaction(
     source_path: &str,
     bytes: &[u8],
     parse_existing: bool,
-) -> Result<IngestOutcome, ProductDbError> {
+) -> Result<DetailedIngestOutcome, ProductDbError> {
     let sha256 = sha256_hex(bytes);
     let parsed: Option<i64> = conn
         .query_row(
@@ -81,7 +87,11 @@ pub(crate) fn ingest_file_in_transaction(
         )
         .optional()?;
     if !parse_existing && parsed.is_some() {
-        return Ok(IngestOutcome::Skipped { sha256 });
+        return Ok(DetailedIngestOutcome {
+            outcome: IngestOutcome::Skipped { sha256 },
+            unknown_constructs: Vec::new(),
+            entities: crate::report::EntityCounts::default(),
+        });
     }
 
     let manufacturer_id = source_path
@@ -99,7 +109,7 @@ pub(crate) fn ingest_file_in_transaction(
     )?;
 
     let kind = classify(bytes);
-    let (unknown, conflicts, translations) = match kind {
+    let (unknown, conflicts, translations, entities) = match kind {
         FileKind::Catalog => {
             let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
             // A second pass over the same bytes, in the same transaction:
@@ -113,10 +123,12 @@ pub(crate) fn ingest_file_in_transaction(
                     catalog,
                     ..Default::default()
                 },
+                crate::report::EntityCounts::default(),
             )
         }
         FileKind::Hardware => {
-            let out = hardware::ingest_hardware(conn, &sha256, source_path, bytes)?;
+            let detailed = hardware::ingest_hardware_detailed(conn, &sha256, source_path, bytes)?;
+            let out = detailed.outcome;
             // Same second pass as `Catalog` above, for `Hardware.xml`'s own
             // `Languages` block.
             let hardware =
@@ -128,18 +140,24 @@ pub(crate) fn ingest_file_in_transaction(
                     hardware,
                     ..Default::default()
                 },
+                detailed.entities,
             )
         }
         FileKind::ApplicationProgram => {
-            let out = program::ingest_program(conn, &sha256, source_path, bytes)?;
+            let detailed = program::ingest_program_detailed(conn, &sha256, source_path, bytes)?;
+            let out = detailed.outcome;
             // A second pass over the same bytes, in the same transaction:
             // the `Static` pass above still skips `Dynamic` outright (its
             // own doc comment says so); this is what actually reads it.
             // Neither `Dynamic` nor `Languages` block live there, so it
             // contributes no translations of its own.
-            let dyn_out = dynamic::parse::parse_dynamic_trees(conn, &sha256, source_path, bytes)?;
+            let dyn_detailed =
+                dynamic::parse::parse_dynamic_trees_detailed(conn, &sha256, source_path, bytes)?;
+            let dyn_out = dyn_detailed.outcome;
             let mut unknown = out.unknown;
             unknown.extend(dyn_out.unknown);
+            let mut entities = detailed.entities;
+            entities.merge(&dyn_detailed.entities)?;
             (
                 unknown,
                 out.conflicts,
@@ -147,6 +165,7 @@ pub(crate) fn ingest_file_in_transaction(
                     program: out.translations,
                     ..Default::default()
                 },
+                entities,
             )
         }
         // Baggages.xml lists the blobs; the blobs themselves and anything
@@ -155,9 +174,12 @@ pub(crate) fn ingest_file_in_transaction(
         // sites — `package.rs`, `knx-app`'s importer, `knx-cli` — stay
         // unchanged), so a `MasterData` blob reaching this generic path is
         // stored, not parsed, exactly like `Unrecognized`.
-        FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => {
-            (Vec::new(), Vec::new(), TranslationCounts::default())
-        }
+        FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => (
+            Vec::new(),
+            Vec::new(),
+            TranslationCounts::default(),
+            crate::report::EntityCounts::default(),
+        ),
     };
 
     insert_unknown(conn, &sha256, &unknown)?;
@@ -167,12 +189,17 @@ pub(crate) fn ingest_file_in_transaction(
         [&sha256],
     )?;
 
-    Ok(IngestOutcome::Ingested {
-        sha256,
-        kind,
-        unknown: unknown.len(),
-        conflicts,
-        translations,
+    let unknown_count = unknown.len();
+    Ok(DetailedIngestOutcome {
+        outcome: IngestOutcome::Ingested {
+            sha256,
+            kind,
+            unknown: unknown_count,
+            conflicts,
+            translations,
+        },
+        unknown_constructs: unknown,
+        entities,
     })
 }
 

@@ -1,6 +1,6 @@
 //! Evidence-backed, atomic installation of readable scheme 11/20 product ZIPs.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
@@ -8,7 +8,7 @@ use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::ingest::{classify, ingest_file_in_transaction};
+use crate::ingest::{classify, ingest_file_in_transaction, DetailedIngestOutcome};
 use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollector};
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
@@ -20,6 +20,10 @@ const MAX_PATH_NODES: usize = 65_536;
 const MAX_CENTRAL_DIRECTORY_SIZE: usize = 24 * 1024 * 1024;
 const MAX_LOCAL_METADATA_SIZE: usize = 24 * 1024 * 1024;
 const MAX_DECODED_PATH_SIZE: usize = 72 * 1024 * 1024;
+const MASTER_DIAGNOSTIC_PREFIX: &str = "/KNX/MasterData/";
+const BAGGAGE_DIAGNOSTIC_XML_PATH: &str = "/KNX/ManufacturerData/Manufacturer/Baggages/Baggage";
+const BAGGAGE_DIAGNOSTIC_DETAIL: &str =
+    "baggage index declarations are counted but not typed until PDB-10";
 
 #[derive(Debug)]
 pub enum PackageError {
@@ -92,6 +96,216 @@ pub struct PackageMember {
     pub size: u64,
 }
 
+/// Closed vocabulary for persisted install evidence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum InstallCategory {
+    ArchiveMember,
+    Product,
+    ApplicationProgram,
+    Parameter,
+    CommunicationObject,
+    DynamicNode,
+    Module,
+    BaggageIndex,
+    Baggage,
+    UnknownConstruct,
+    MasterSection,
+    DatapointType,
+}
+
+impl InstallCategory {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ArchiveMember => "archive_member",
+            Self::Product => "product",
+            Self::ApplicationProgram => "application_program",
+            Self::Parameter => "parameter",
+            Self::CommunicationObject => "communication_object",
+            Self::DynamicNode => "dynamic_node",
+            Self::Module => "module",
+            Self::BaggageIndex => "baggage_index",
+            Self::Baggage => "baggage",
+            Self::UnknownConstruct => "unknown_construct",
+            Self::MasterSection => "master_section",
+            Self::DatapointType => "datapoint_type",
+        }
+    }
+    fn from_db(value: String) -> Result<Self, ProductDbError> {
+        match value.as_str() {
+            "archive_member" => Ok(Self::ArchiveMember),
+            "product" => Ok(Self::Product),
+            "application_program" => Ok(Self::ApplicationProgram),
+            "parameter" => Ok(Self::Parameter),
+            "communication_object" => Ok(Self::CommunicationObject),
+            "dynamic_node" => Ok(Self::DynamicNode),
+            "module" => Ok(Self::Module),
+            "baggage_index" => Ok(Self::BaggageIndex),
+            "baggage" => Ok(Self::Baggage),
+            "unknown_construct" => Ok(Self::UnknownConstruct),
+            "master_section" => Ok(Self::MasterSection),
+            "datapoint_type" => Ok(Self::DatapointType),
+            _ => Err(ProductDbError::Xml {
+                source_path: "package_install_count".into(),
+                cause: format!("invalid category {value:?}"),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum InstallDisposition {
+    Read,
+    Stored,
+    Deduplicated,
+    RetainedButUninterpreted,
+    Unsupported,
+    Dropped,
+}
+
+impl InstallDisposition {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::Stored => "stored",
+            Self::Deduplicated => "deduplicated",
+            Self::RetainedButUninterpreted => "retained-but-uninterpreted",
+            Self::Unsupported => "unsupported",
+            Self::Dropped => "dropped",
+        }
+    }
+    fn from_db(value: String) -> Result<Self, ProductDbError> {
+        match value.as_str() {
+            "read" => Ok(Self::Read),
+            "stored" => Ok(Self::Stored),
+            "deduplicated" => Ok(Self::Deduplicated),
+            "retained-but-uninterpreted" => Ok(Self::RetainedButUninterpreted),
+            "unsupported" => Ok(Self::Unsupported),
+            "dropped" => Ok(Self::Dropped),
+            _ => Err(ProductDbError::Xml {
+                source_path: "package_install_count".into(),
+                cause: format!("invalid disposition {value:?}"),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstallCount {
+    pub category: InstallCategory,
+    pub disposition: InstallDisposition,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct InstallFacts {
+    pub counts: Vec<InstallCount>,
+    pub unknown_constructs: Vec<crate::report::UnknownConstruct>,
+    pub unknown_occurrences: u64,
+    pub diagnostics: Vec<InstallDiagnostic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstallDiagnostic {
+    kind: InstallDiagnosticKind,
+    archive_path: String,
+    xml_path: String,
+    detail: String,
+    occurrences: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum InstallDiagnosticKind {
+    UnsupportedMasterSection,
+    UnsupportedBaggageIndex,
+}
+
+impl InstallDiagnosticKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::UnsupportedMasterSection => "unsupported-master-section",
+            Self::UnsupportedBaggageIndex => "unsupported-baggage-index",
+        }
+    }
+
+    fn from_db(value: &str) -> Result<Self, ProductDbError> {
+        match value {
+            "unsupported-master-section" => Ok(Self::UnsupportedMasterSection),
+            "unsupported-baggage-index" => Ok(Self::UnsupportedBaggageIndex),
+            _ => Err(report_error(format!("invalid diagnostic kind {value:?}"))),
+        }
+    }
+}
+
+impl InstallDiagnostic {
+    fn new(
+        kind: InstallDiagnosticKind,
+        archive_path: String,
+        xml_path: String,
+        detail: String,
+        occurrences: u64,
+    ) -> Result<Self, ProductDbError> {
+        validate_archive_path(&archive_path)?;
+        validate_xml_path(&xml_path)?;
+        if occurrences == 0 {
+            return Err(report_error("diagnostic occurrences must be positive"));
+        }
+        Ok(Self {
+            kind,
+            archive_path,
+            xml_path,
+            detail,
+            occurrences,
+        })
+    }
+
+    pub const fn kind(&self) -> InstallDiagnosticKind {
+        self.kind
+    }
+
+    pub fn archive_path(&self) -> &str {
+        &self.archive_path
+    }
+
+    pub fn xml_path(&self) -> &str {
+        &self.xml_path
+    }
+
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+
+    pub const fn occurrences(&self) -> u64 {
+        self.occurrences
+    }
+}
+
+impl InstallFacts {
+    fn sort(&mut self) -> Result<(), ProductDbError> {
+        self.counts
+            .sort_by(|a, b| (&a.category, &a.disposition).cmp(&(&b.category, &b.disposition)));
+        self.unknown_constructs.sort_by(|a, b| {
+            (&a.xpath, a.kind.as_str(), &a.name).cmp(&(&b.xpath, b.kind.as_str(), &b.name))
+        });
+        self.diagnostics.sort_by(|a, b| {
+            (a.kind, &a.archive_path, &a.xml_path, &a.detail).cmp(&(
+                b.kind,
+                &b.archive_path,
+                &b.xml_path,
+                &b.detail,
+            ))
+        });
+        self.unknown_occurrences =
+            self.unknown_constructs
+                .iter()
+                .try_fold(0u64, |total, unknown| {
+                    total
+                        .checked_add(u64::from(unknown.occurrences))
+                        .ok_or_else(|| report_error("unknown occurrence counter overflow"))
+                })?;
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 struct ValidatedMember {
     archive_index: usize,
@@ -120,6 +334,8 @@ pub struct InstallReport {
     /// existed, same convention as `translations` above
     /// (KNOWN_LIMITATIONS.md §86).
     pub dropped_datapoint_types: usize,
+    /// None means the package predates the v12 encounter/write ledger.
+    pub facts: Option<InstallFacts>,
 }
 
 fn zip_error(error: impl fmt::Display) -> PackageError {
@@ -134,6 +350,141 @@ fn xml_error(path: &str, error: impl fmt::Display) -> PackageError {
         cause: error.to_string(),
     }
     .into()
+}
+
+fn report_error(cause: impl Into<String>) -> ProductDbError {
+    ProductDbError::Xml {
+        source_path: "package install report".into(),
+        cause: cause.into(),
+    }
+}
+
+fn validate_archive_path(path: &str) -> Result<(), ProductDbError> {
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.contains(['\\', ':', '\0'])
+        || path
+            .split('/')
+            .any(|component| matches!(component, "" | "." | ".."))
+    {
+        return Err(report_error(format!(
+            "diagnostic archive path is not normalized: {path:?}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_xml_path(path: &str) -> Result<(), ProductDbError> {
+    if !path.starts_with('/')
+        || path.contains(['\\', '\0'])
+        || (path != "/"
+            && path[1..]
+                .split('/')
+                .any(|component| matches!(component, "" | "." | "..")))
+    {
+        return Err(report_error(format!(
+            "diagnostic XML path is not normalized and absolute: {path:?}"
+        )));
+    }
+    Ok(())
+}
+
+fn master_diagnostic_detail(section: &str) -> String {
+    format!("master section {section} is retained but not interpreted")
+}
+
+fn is_xml_local_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .is_some_and(|first| first == '_' || first.is_alphabetic())
+        && chars.all(|ch| ch == '_' || ch == '-' || ch == '.' || ch.is_alphanumeric())
+}
+
+fn validate_diagnostic(
+    conn: &Connection,
+    sha256: &str,
+    diagnostic: &InstallDiagnostic,
+) -> Result<(), ProductDbError> {
+    validate_archive_path(&diagnostic.archive_path)?;
+    validate_xml_path(&diagnostic.xml_path)?;
+    if diagnostic.occurrences == 0 {
+        return Err(report_error("diagnostic occurrences must be positive"));
+    }
+
+    let role: Option<String> = conn
+        .query_row(
+            "SELECT role FROM package_member WHERE package_sha256 = ?1 AND path = ?2",
+            params![sha256, diagnostic.archive_path],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(role) = role else {
+        return Err(report_error(
+            "diagnostic archive path is not a package member",
+        ));
+    };
+
+    match diagnostic.kind {
+        InstallDiagnosticKind::UnsupportedMasterSection => {
+            if role != "Master" {
+                return Err(report_error(
+                    "unsupported-master-section diagnostic does not identify the Master member",
+                ));
+            }
+            let section = diagnostic
+                .xml_path
+                .strip_prefix(MASTER_DIAGNOSTIC_PREFIX)
+                .filter(|section| is_xml_local_name(section))
+                .ok_or_else(|| {
+                    report_error("unsupported-master-section diagnostic has a noncanonical path")
+                })?;
+            if crate::parse::master::is_supported_master_section(section) {
+                return Err(report_error(
+                    "unsupported-master-section diagnostic identifies a supported section",
+                ));
+            }
+            if diagnostic.detail != master_diagnostic_detail(section) {
+                return Err(report_error(
+                    "unsupported-master-section diagnostic has noncanonical detail",
+                ));
+            }
+        }
+        InstallDiagnosticKind::UnsupportedBaggageIndex => {
+            if role != "Baggages" {
+                return Err(report_error(
+                    "unsupported-baggage-index diagnostic does not identify a Baggages member",
+                ));
+            }
+            if diagnostic.xml_path != BAGGAGE_DIAGNOSTIC_XML_PATH {
+                return Err(report_error(
+                    "unsupported-baggage-index diagnostic has a noncanonical path",
+                ));
+            }
+            if diagnostic.detail != BAGGAGE_DIAGNOSTIC_DETAIL {
+                return Err(report_error(
+                    "unsupported-baggage-index diagnostic has noncanonical detail",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn u64_to_i64(value: u64, field: &str) -> Result<i64, ProductDbError> {
+    i64::try_from(value).map_err(|_| report_error(format!("{field} exceeds SQLite INTEGER")))
+}
+
+fn usize_to_i64(value: usize, field: &str) -> Result<i64, ProductDbError> {
+    i64::try_from(value).map_err(|_| report_error(format!("{field} exceeds SQLite INTEGER")))
+}
+
+fn usize_to_u64(value: usize, field: &str) -> Result<u64, ProductDbError> {
+    u64::try_from(value).map_err(|_| report_error(format!("{field} exceeds u64")))
+}
+
+fn i64_to_u64(value: i64, field: &str) -> Result<u64, ProductDbError> {
+    u64::try_from(value).map_err(|_| report_error(format!("negative {field}")))
 }
 
 fn manufacturer_partition(path: &str) -> Option<&str> {
@@ -229,12 +580,17 @@ impl<'a> ZipParserReader<'a> {
 
 impl Read for ZipParserReader<'_> {
     fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        let start = self.inner.position() as usize;
+        let start = usize::try_from(self.inner.position()).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "ZIP parser cursor position exceeds usize",
+            )
+        })?;
         let read = self.inner.read(buffer)?;
         let end = start + read;
         let first = self
             .neutralized_fields
-            .partition_point(|offset| offset.saturating_add(2) <= start);
+            .partition_point(|offset| offset.checked_add(2).is_some_and(|end| end <= start));
         for &offset in &self.neutralized_fields[first..] {
             if offset >= end {
                 break;
@@ -316,13 +672,18 @@ impl MemberPathTree {
 // Bound metadata allocation before ZipArchive constructs its entry index.
 // ZIP64 is outside this small, corpus-proven package slice.
 fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
-    let start = bytes.len().saturating_sub(22 + u16::MAX as usize);
-    for offset in (start..bytes.len().saturating_sub(21)).rev() {
+    let search_window = 22 + usize::from(u16::MAX);
+    let start = bytes.len() - bytes.len().min(search_window);
+    let end = bytes
+        .len()
+        .checked_sub(21)
+        .ok_or_else(|| zip_error("end-of-directory record is truncated"))?;
+    for offset in (start..end).rev() {
         if bytes.get(offset..offset + 4) != Some(b"PK\x05\x06") {
             continue;
         }
         let record = &bytes[offset..offset + 22];
-        let comment_len = u16::from_le_bytes([record[20], record[21]]) as usize;
+        let comment_len = usize::from(u16::from_le_bytes([record[20], record[21]]));
         if offset + 22 + comment_len != bytes.len() {
             continue;
         }
@@ -331,8 +692,8 @@ fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
         }
         let disk = u16::from_le_bytes([record[4], record[5]]);
         let directory_disk = u16::from_le_bytes([record[6], record[7]]);
-        let disk_count = u16::from_le_bytes([record[8], record[9]]) as usize;
-        let count = u16::from_le_bytes([record[10], record[11]]) as usize;
+        let disk_count = usize::from(u16::from_le_bytes([record[8], record[9]]));
+        let count = usize::from(u16::from_le_bytes([record[10], record[11]]));
         if disk != 0 || directory_disk != 0 || disk_count != count {
             return Err(zip_error("multi-disk product packages are unsupported"));
         }
@@ -341,13 +702,17 @@ fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
                 path: "member count (ZIP64 unsupported)".into(),
             });
         }
-        let directory_size = u32::from_le_bytes(record[12..16].try_into().unwrap()) as usize;
+        let directory_size =
+            usize::try_from(u32::from_le_bytes(record[12..16].try_into().unwrap()))
+                .map_err(zip_error)?;
         if directory_size > MAX_CENTRAL_DIRECTORY_SIZE {
             return Err(PackageError::SizeLimit {
                 path: "central directory metadata".into(),
             });
         }
-        let directory_start = u32::from_le_bytes(record[16..20].try_into().unwrap()) as usize;
+        let directory_start =
+            usize::try_from(u32::from_le_bytes(record[16..20].try_into().unwrap()))
+                .map_err(zip_error)?;
         let directory_end = directory_start
             .checked_add(directory_size)
             .ok_or_else(|| zip_error("central directory size or extent mismatch"))?;
@@ -377,7 +742,7 @@ fn unicode_path(
             .get(offset..offset + 4)
             .ok_or_else(|| zip_error("truncated ZIP extra field"))?;
         let id = u16::from_le_bytes([header[0], header[1]]);
-        let len = u16::from_le_bytes([header[2], header[3]]) as usize;
+        let len = usize::from(u16::from_le_bytes([header[2], header[3]]));
         let payload_start = offset + 4;
         let payload_end = payload_start
             .checked_add(len)
@@ -476,14 +841,15 @@ fn validate_central_directory(
         let crc32 = u32::from_le_bytes(header[16..20].try_into().unwrap());
         let compressed_size = u32::from_le_bytes(header[20..24].try_into().unwrap());
         let uncompressed_size = u32::from_le_bytes(header[24..28].try_into().unwrap());
-        let name_len = u16::from_le_bytes([header[28], header[29]]) as usize;
-        let extra_len = u16::from_le_bytes([header[30], header[31]]) as usize;
-        let comment_len = u16::from_le_bytes([header[32], header[33]]) as usize;
+        let name_len = usize::from(u16::from_le_bytes([header[28], header[29]]));
+        let extra_len = usize::from(u16::from_le_bytes([header[30], header[31]]));
+        let comment_len = usize::from(u16::from_le_bytes([header[32], header[33]]));
         let disk_start = u16::from_le_bytes([header[34], header[35]]);
         if disk_start != 0 {
             return Err(zip_error("central member starts on another disk"));
         }
-        let local_offset = u32::from_le_bytes(header[42..46].try_into().unwrap()) as usize;
+        let local_offset = usize::try_from(u32::from_le_bytes(header[42..46].try_into().unwrap()))
+            .map_err(zip_error)?;
         if !local_offsets.insert(local_offset) {
             return Err(zip_error("multiple members reference one local header"));
         }
@@ -528,8 +894,8 @@ fn validate_central_directory(
         let local_crc32 = u32::from_le_bytes(local[14..18].try_into().unwrap());
         let local_compressed_size = u32::from_le_bytes(local[18..22].try_into().unwrap());
         let local_uncompressed_size = u32::from_le_bytes(local[22..26].try_into().unwrap());
-        let local_name_len = u16::from_le_bytes([local[26], local[27]]) as usize;
-        let local_extra_len = u16::from_le_bytes([local[28], local[29]]) as usize;
+        let local_name_len = usize::from(u16::from_le_bytes([local[26], local[27]]));
+        let local_extra_len = usize::from(u16::from_le_bytes([local[28], local[29]]));
         local_metadata_size = local_metadata_size
             .checked_add(30 + local_name_len + local_extra_len)
             .filter(|size| *size <= MAX_LOCAL_METADATA_SIZE)
@@ -567,7 +933,7 @@ fn validate_central_directory(
             return Err(zip_error("local and central CRC or sizes differ"));
         }
         let data_end = local_extra_end
-            .checked_add(compressed_size as usize)
+            .checked_add(usize::try_from(compressed_size).map_err(zip_error)?)
             .ok_or_else(|| zip_error("local file record length overflow"))?;
         let local_end = if uses_descriptor {
             data_descriptor_end(archive, data_end, crc32, compressed_size, uncompressed_size)?
@@ -598,8 +964,8 @@ fn validate_central_directory(
             return Err(zip_error("flagged UTF-8 and Unicode path field differ"));
         }
         checked_entries.push(CheckedZipEntry {
-            central_offset: offset as u64,
-            local_offset: local_offset as u64,
+            central_offset: usize_to_u64(offset, "central-directory offset")?,
+            local_offset: usize_to_u64(local_offset, "local-header offset")?,
             crc32,
             compressed_size: u64::from(compressed_size),
             uncompressed_size: u64::from(uncompressed_size),
@@ -744,6 +1110,526 @@ fn package_member_role(path: &str, kind: FileKind) -> String {
     }
 }
 
+fn add_count(
+    facts: &mut InstallFacts,
+    category: InstallCategory,
+    disposition: InstallDisposition,
+    count: u64,
+) -> Result<(), ProductDbError> {
+    if let Some(row) = facts
+        .counts
+        .iter_mut()
+        .find(|row| row.category == category && row.disposition == disposition)
+    {
+        row.count = row
+            .count
+            .checked_add(count)
+            .ok_or_else(|| report_error("install count overflow"))?;
+    } else {
+        facts.counts.push(InstallCount {
+            category,
+            disposition,
+            count,
+        });
+    }
+    Ok(())
+}
+
+const REQUIRED_COUNTS: &[(InstallCategory, InstallDisposition)] = &[
+    (InstallCategory::ArchiveMember, InstallDisposition::Read),
+    (InstallCategory::ArchiveMember, InstallDisposition::Stored),
+    (
+        InstallCategory::ArchiveMember,
+        InstallDisposition::Deduplicated,
+    ),
+    (InstallCategory::Product, InstallDisposition::Read),
+    (InstallCategory::Product, InstallDisposition::Stored),
+    (InstallCategory::Product, InstallDisposition::Deduplicated),
+    (
+        InstallCategory::ApplicationProgram,
+        InstallDisposition::Read,
+    ),
+    (
+        InstallCategory::ApplicationProgram,
+        InstallDisposition::Stored,
+    ),
+    (
+        InstallCategory::ApplicationProgram,
+        InstallDisposition::Deduplicated,
+    ),
+    (InstallCategory::Parameter, InstallDisposition::Read),
+    (InstallCategory::Parameter, InstallDisposition::Stored),
+    (
+        InstallCategory::CommunicationObject,
+        InstallDisposition::Read,
+    ),
+    (
+        InstallCategory::CommunicationObject,
+        InstallDisposition::Stored,
+    ),
+    (InstallCategory::DynamicNode, InstallDisposition::Read),
+    (InstallCategory::DynamicNode, InstallDisposition::Stored),
+    (InstallCategory::Module, InstallDisposition::Read),
+    (InstallCategory::DatapointType, InstallDisposition::Read),
+    (InstallCategory::DatapointType, InstallDisposition::Stored),
+    (InstallCategory::DatapointType, InstallDisposition::Dropped),
+    (InstallCategory::BaggageIndex, InstallDisposition::Read),
+    (
+        InstallCategory::BaggageIndex,
+        InstallDisposition::Unsupported,
+    ),
+    (InstallCategory::Baggage, InstallDisposition::Read),
+    (InstallCategory::Baggage, InstallDisposition::Stored),
+    (InstallCategory::Baggage, InstallDisposition::Deduplicated),
+    (
+        InstallCategory::Baggage,
+        InstallDisposition::RetainedButUninterpreted,
+    ),
+    (InstallCategory::MasterSection, InstallDisposition::Read),
+    (
+        InstallCategory::MasterSection,
+        InstallDisposition::Unsupported,
+    ),
+    (InstallCategory::UnknownConstruct, InstallDisposition::Read),
+    (
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+    ),
+];
+
+fn add_entities(
+    facts: &mut InstallFacts,
+    entities: &crate::report::EntityCounts,
+) -> Result<(), ProductDbError> {
+    use crate::report::EntityKind;
+    for (kind, category) in [
+        (EntityKind::Product, InstallCategory::Product),
+        (
+            EntityKind::ApplicationProgram,
+            InstallCategory::ApplicationProgram,
+        ),
+        (EntityKind::Parameter, InstallCategory::Parameter),
+        (
+            EntityKind::CommunicationObject,
+            InstallCategory::CommunicationObject,
+        ),
+        (EntityKind::DynamicNode, InstallCategory::DynamicNode),
+        (EntityKind::ModuleDef, InstallCategory::Module),
+        (EntityKind::DatapointType, InstallCategory::DatapointType),
+    ] {
+        let count = entities.get(kind);
+        add_count(facts, category, InstallDisposition::Read, count.read)?;
+        if count.stored != 0 {
+            add_count(facts, category, InstallDisposition::Stored, count.stored)?;
+        }
+        if count.deduplicated != 0 {
+            add_count(
+                facts,
+                category,
+                InstallDisposition::Deduplicated,
+                count.deduplicated,
+            )?;
+        }
+        if count.dropped != 0 {
+            add_count(facts, category, InstallDisposition::Dropped, count.dropped)?;
+        }
+    }
+    Ok(())
+}
+
+fn count_of(
+    facts: &InstallFacts,
+    category: InstallCategory,
+    disposition: InstallDisposition,
+) -> Result<u64, ProductDbError> {
+    facts
+        .counts
+        .iter()
+        .find(|row| row.category == category && row.disposition == disposition)
+        .map(|row| row.count)
+        .ok_or_else(|| {
+            report_error(format!(
+                "missing required count {}/{}",
+                category.as_str(),
+                disposition.as_str()
+            ))
+        })
+}
+
+fn finalize_facts(facts: &mut InstallFacts) -> Result<(), ProductDbError> {
+    for &(category, disposition) in REQUIRED_COUNTS {
+        if !facts
+            .counts
+            .iter()
+            .any(|row| row.category == category && row.disposition == disposition)
+        {
+            facts.counts.push(InstallCount {
+                category,
+                disposition,
+                count: 0,
+            });
+        }
+    }
+    facts.sort()
+}
+
+fn checked_sum(left: u64, right: u64, label: &str) -> Result<u64, ProductDbError> {
+    left.checked_add(right)
+        .ok_or_else(|| report_error(format!("{label} count overflow")))
+}
+
+fn validate_facts(
+    conn: &Connection,
+    sha256: &str,
+    facts: &InstallFacts,
+) -> Result<(), ProductDbError> {
+    if facts.counts.len() != REQUIRED_COUNTS.len() {
+        return Err(report_error(
+            "install report has missing or extra count rows",
+        ));
+    }
+    let mut seen = HashSet::new();
+    for row in &facts.counts {
+        if !REQUIRED_COUNTS.contains(&(row.category, row.disposition))
+            || !seen.insert((row.category, row.disposition))
+        {
+            return Err(report_error(
+                "illegal or duplicate category/disposition row",
+            ));
+        }
+    }
+    for unknown in &facts.unknown_constructs {
+        validate_xml_path(&unknown.xpath)?;
+    }
+    let mut diagnostic_identities = HashSet::new();
+    for diagnostic in &facts.diagnostics {
+        validate_diagnostic(conn, sha256, diagnostic)?;
+        if !diagnostic_identities.insert((
+            diagnostic.kind.as_str(),
+            diagnostic.archive_path.as_str(),
+            diagnostic.xml_path.as_str(),
+            diagnostic.detail.as_str(),
+        )) {
+            return Err(report_error("duplicate diagnostic identity"));
+        }
+    }
+    for category in [
+        InstallCategory::ArchiveMember,
+        InstallCategory::Product,
+        InstallCategory::ApplicationProgram,
+    ] {
+        let read = count_of(facts, category, InstallDisposition::Read)?;
+        let stored = count_of(facts, category, InstallDisposition::Stored)?;
+        let deduplicated = count_of(facts, category, InstallDisposition::Deduplicated)?;
+        if read != checked_sum(stored, deduplicated, category.as_str())? {
+            return Err(report_error(format!(
+                "{} outcome mismatch",
+                category.as_str()
+            )));
+        }
+    }
+    for category in [
+        InstallCategory::Parameter,
+        InstallCategory::CommunicationObject,
+        InstallCategory::DynamicNode,
+    ] {
+        if count_of(facts, category, InstallDisposition::Stored)?
+            > count_of(facts, category, InstallDisposition::Read)?
+        {
+            return Err(report_error(format!(
+                "{} stored exceeds read",
+                category.as_str()
+            )));
+        }
+    }
+    let dpt_read = count_of(
+        facts,
+        InstallCategory::DatapointType,
+        InstallDisposition::Read,
+    )?;
+    let dpt_stored = count_of(
+        facts,
+        InstallCategory::DatapointType,
+        InstallDisposition::Stored,
+    )?;
+    let dpt_dropped = count_of(
+        facts,
+        InstallCategory::DatapointType,
+        InstallDisposition::Dropped,
+    )?;
+    if dpt_read != checked_sum(dpt_stored, dpt_dropped, "datapoint type")? {
+        return Err(report_error("datapoint type outcome mismatch"));
+    }
+    let baggage_index_read = count_of(
+        facts,
+        InstallCategory::BaggageIndex,
+        InstallDisposition::Read,
+    )?;
+    let baggage_index_unsupported = count_of(
+        facts,
+        InstallCategory::BaggageIndex,
+        InstallDisposition::Unsupported,
+    )?;
+    if baggage_index_read != baggage_index_unsupported {
+        return Err(report_error("baggage-index capability mismatch"));
+    }
+    let baggage_read = count_of(facts, InstallCategory::Baggage, InstallDisposition::Read)?;
+    let baggage_stored = count_of(facts, InstallCategory::Baggage, InstallDisposition::Stored)?;
+    let baggage_deduplicated = count_of(
+        facts,
+        InstallCategory::Baggage,
+        InstallDisposition::Deduplicated,
+    )?;
+    let baggage_retained = count_of(
+        facts,
+        InstallCategory::Baggage,
+        InstallDisposition::RetainedButUninterpreted,
+    )?;
+    if baggage_read != checked_sum(baggage_stored, baggage_deduplicated, "baggage")?
+        || baggage_read != baggage_retained
+    {
+        return Err(report_error("opaque baggage outcome mismatch"));
+    }
+    let master_read = count_of(
+        facts,
+        InstallCategory::MasterSection,
+        InstallDisposition::Read,
+    )?;
+    let master_unsupported = count_of(
+        facts,
+        InstallCategory::MasterSection,
+        InstallDisposition::Unsupported,
+    )?;
+    if master_unsupported > master_read {
+        return Err(report_error(
+            "unsupported master sections exceed sections read",
+        ));
+    }
+    let unknown_distinct = u64::try_from(facts.unknown_constructs.len())
+        .map_err(|_| report_error("unknown distinct count exceeds u64"))?;
+    if count_of(
+        facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+    )? != facts.unknown_occurrences
+        || count_of(
+            facts,
+            InstallCategory::UnknownConstruct,
+            InstallDisposition::Stored,
+        )? != unknown_distinct
+    {
+        return Err(report_error("unknown construct header/count mismatch"));
+    }
+    let diagnostic_master = facts.diagnostics.iter().try_fold(0u64, |total, row| {
+        if row.kind == InstallDiagnosticKind::UnsupportedMasterSection {
+            total
+                .checked_add(row.occurrences)
+                .ok_or_else(|| report_error("master diagnostic counter overflow"))
+        } else {
+            Ok(total)
+        }
+    })?;
+    let diagnostic_baggage = facts.diagnostics.iter().try_fold(0u64, |total, row| {
+        if row.kind == InstallDiagnosticKind::UnsupportedBaggageIndex {
+            total
+                .checked_add(row.occurrences)
+                .ok_or_else(|| report_error("baggage diagnostic counter overflow"))
+        } else {
+            Ok(total)
+        }
+    })?;
+    if diagnostic_master != master_unsupported || diagnostic_baggage != baggage_index_unsupported {
+        return Err(report_error("diagnostic/unsupported count mismatch"));
+    }
+    let member_total = i64_to_u64(
+        conn.query_row(
+            "SELECT count(*) FROM package_member WHERE package_sha256 = ?1",
+            [sha256],
+            |row| row.get::<_, i64>(0),
+        )?,
+        "archive member total",
+    )?;
+    if count_of(
+        facts,
+        InstallCategory::ArchiveMember,
+        InstallDisposition::Read,
+    )? != member_total
+    {
+        return Err(report_error("archive member total mismatch"));
+    }
+    Ok(())
+}
+
+fn load_facts(conn: &Connection, sha256: &str) -> Result<Option<InstallFacts>, ProductDbError> {
+    let header: Option<(i64, String, i64, i64)> = conn.query_row(
+        "SELECT report_version, status, unknown_distinct, unknown_occurrences FROM package_install_report WHERE package_sha256 = ?1",
+        [sha256],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    ).optional()?;
+    let Some(header) = header else {
+        return Err(report_error(
+            "installed package is missing its report marker",
+        ));
+    };
+    if header.0 != 1 {
+        return Err(report_error("invalid report version"));
+    }
+    let header_distinct = i64_to_u64(header.2, "unknown distinct header")?;
+    let header_occurrences = i64_to_u64(header.3, "unknown occurrences header")?;
+    if header.1 == "unavailable" {
+        let detail_rows: i64 = conn.query_row(
+            "SELECT (SELECT count(*) FROM package_install_count WHERE package_sha256 = ?1)
+                  + (SELECT count(*) FROM package_install_unknown WHERE package_sha256 = ?1)
+                  + (SELECT count(*) FROM package_install_diagnostic WHERE package_sha256 = ?1)",
+            [sha256],
+            |row| row.get(0),
+        )?;
+        if header_distinct != 0 || header_occurrences != 0 || detail_rows != 0 {
+            return Err(report_error(
+                "unavailable report marker has measured details",
+            ));
+        }
+        return Ok(None);
+    }
+    if header.1 != "measured" {
+        return Err(report_error("invalid report status"));
+    }
+    let counts = {
+        let rows = conn.prepare("SELECT category, disposition, count FROM package_install_count WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([sha256], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?)))?.collect::<Result<Vec<_>, _>>()?;
+        rows.into_iter()
+            .map(|(category, disposition, count)| {
+                Ok(InstallCount {
+                    category: InstallCategory::from_db(category)?,
+                    disposition: InstallDisposition::from_db(disposition)?,
+                    count: i64_to_u64(count, "install count")?,
+                })
+            })
+            .collect::<Result<Vec<_>, ProductDbError>>()?
+    };
+    let unknown_constructs = {
+        let mut stmt = conn.prepare("SELECT xpath, kind, name, occurrences, sample FROM package_install_unknown WHERE package_sha256 = ?1 ORDER BY xpath, kind, name")?;
+        let mut out = Vec::new();
+        for row in stmt.query_map([sha256], |r| {
+            let kind: String = r.get(1)?;
+            let occurrences: i64 = r.get(3)?;
+            Ok((
+                r.get::<_, String>(0)?,
+                kind,
+                r.get::<_, String>(2)?,
+                occurrences,
+                r.get(4)?,
+            ))
+        })? {
+            let (xpath, kind, name, occurrences, sample) = row?;
+            validate_xml_path(&xpath)?;
+            let kind = match kind.as_str() {
+                "Attribute" => crate::report::UnknownKind::Attribute,
+                "Element" => crate::report::UnknownKind::Element,
+                _ => {
+                    return Err(ProductDbError::Xml {
+                        source_path: "package_install_unknown".into(),
+                        cause: "invalid unknown kind".into(),
+                    })
+                }
+            };
+            if occurrences <= 0 {
+                return Err(ProductDbError::Xml {
+                    source_path: "package_install_unknown".into(),
+                    cause: "invalid unknown occurrences".into(),
+                });
+            }
+            out.push(crate::report::UnknownConstruct {
+                xpath,
+                kind,
+                name,
+                occurrences: u32::try_from(occurrences)
+                    .map_err(|_| report_error("invalid unknown occurrences"))?,
+                sample,
+            });
+        }
+        out
+    };
+    let diagnostics = {
+        let rows = conn.prepare("SELECT kind, archive_path, xml_path, detail, occurrences FROM package_install_diagnostic WHERE package_sha256 = ?1 ORDER BY kind, archive_path, xml_path, detail")?.query_map([sha256], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, i64>(4)?)))?.collect::<Result<Vec<_>, _>>()?;
+        rows.into_iter()
+            .map(|(kind, archive_path, xml_path, detail, occurrences)| {
+                InstallDiagnostic::new(
+                    InstallDiagnosticKind::from_db(&kind)?,
+                    archive_path,
+                    xml_path,
+                    detail,
+                    i64_to_u64(occurrences, "diagnostic occurrences")?,
+                )
+            })
+            .collect::<Result<Vec<_>, ProductDbError>>()?
+    };
+    let mut facts = InstallFacts {
+        counts,
+        unknown_constructs,
+        unknown_occurrences: 0,
+        diagnostics,
+    };
+    facts.sort()?;
+    let actual_distinct = u64::try_from(facts.unknown_constructs.len())
+        .map_err(|_| report_error("unknown distinct count exceeds u64"))?;
+    if actual_distinct != header_distinct || facts.unknown_occurrences != header_occurrences {
+        return Err(report_error("report header/detail mismatch"));
+    }
+    validate_facts(conn, sha256, &facts)?;
+    Ok(Some(facts))
+}
+
+fn persist_facts(
+    conn: &Connection,
+    sha256: &str,
+    mut facts: InstallFacts,
+) -> Result<(), ProductDbError> {
+    finalize_facts(&mut facts)?;
+    validate_facts(conn, sha256, &facts)?;
+    conn.execute("INSERT INTO package_install_report (package_sha256, report_version, status, unknown_distinct, unknown_occurrences) VALUES (?1, 1, 'measured', ?2, ?3)", params![sha256, usize_to_i64(facts.unknown_constructs.len(), "unknown distinct")?, u64_to_i64(facts.unknown_occurrences, "unknown occurrences")?])?;
+    for (ordinal, row) in facts.counts.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO package_install_count VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                sha256,
+                usize_to_i64(ordinal, "count ordinal")?,
+                row.category.as_str(),
+                row.disposition.as_str(),
+                u64_to_i64(row.count, "install count")?
+            ],
+        )?;
+    }
+    for (ordinal, row) in facts.unknown_constructs.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO package_install_unknown VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                sha256,
+                usize_to_i64(ordinal, "unknown ordinal")?,
+                row.xpath,
+                row.kind.as_str(),
+                row.name,
+                i64::from(row.occurrences),
+                row.sample
+            ],
+        )?;
+    }
+    for (ordinal, row) in facts.diagnostics.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO package_install_diagnostic VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                sha256,
+                usize_to_i64(ordinal, "diagnostic ordinal")?,
+                row.kind.as_str(),
+                row.archive_path,
+                row.xml_path,
+                row.detail,
+                u64_to_i64(row.occurrences, "diagnostic occurrences")?
+            ],
+        )?;
+    }
+    Ok(())
+}
+
 /// Install a standalone product package, preserving the archive and every file.
 /// All storage and parsing share one transaction. Identical archive bytes are
 /// revalidated and re-extracted, but skip domain ingestion and database
@@ -766,7 +1652,7 @@ pub fn install_package(
     }
     let sha256 = sha256_hex(bytes);
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let prior: Option<(u32, usize, TranslationCounts, usize)> = tx
+    let prior_raw: Option<(i64, i64, i64, i64, i64, i64, i64)> = tx
         .query_row(
             "SELECT scheme, unknown_count, translation_program_count, translation_catalog_count,
                     translation_hardware_count, translation_master_count,
@@ -776,18 +1662,36 @@ pub fn install_package(
             |r| {
                 Ok((
                     r.get(0)?,
-                    r.get::<_, i64>(1)? as usize,
-                    TranslationCounts {
-                        program: r.get::<_, i64>(2)? as usize,
-                        catalog: r.get::<_, i64>(3)? as usize,
-                        hardware: r.get::<_, i64>(4)? as usize,
-                        master: r.get::<_, i64>(5)? as usize,
-                    },
-                    r.get::<_, i64>(6)? as usize,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
                 ))
             },
         )
         .optional()?;
+    let prior = prior_raw
+        .map(|row| -> Result<_, ProductDbError> {
+            Ok((
+                u32::try_from(row.0).map_err(|_| report_error("invalid stored package scheme"))?,
+                usize::try_from(row.1).map_err(|_| report_error("invalid stored unknown count"))?,
+                TranslationCounts {
+                    program: usize::try_from(row.2)
+                        .map_err(|_| report_error("invalid program translation count"))?,
+                    catalog: usize::try_from(row.3)
+                        .map_err(|_| report_error("invalid catalog translation count"))?,
+                    hardware: usize::try_from(row.4)
+                        .map_err(|_| report_error("invalid hardware translation count"))?,
+                    master: usize::try_from(row.5)
+                        .map_err(|_| report_error("invalid master translation count"))?,
+                },
+                usize::try_from(row.6)
+                    .map_err(|_| report_error("invalid dropped datapoint count"))?,
+            ))
+        })
+        .transpose()?;
     let directory = preflight_zip(bytes)?;
     let ValidatedZipDirectory {
         entries: checked_entries,
@@ -811,7 +1715,11 @@ pub fn install_package(
     let relative_eocd = directory.end - directory.start;
     central_view[relative_eocd + 16..relative_eocd + 20].copy_from_slice(&0_u32.to_le_bytes());
     let mut comment_index = 0;
-    for relative in 0..central_view.len().saturating_sub(3) {
+    let signature_scan_end = central_view
+        .len()
+        .checked_sub(3)
+        .ok_or_else(|| zip_error("central directory is truncated"))?;
+    for relative in 0..signature_scan_end {
         if central_view[relative..relative + 4] != *b"PK\x05\x06" {
             continue;
         }
@@ -861,7 +1769,11 @@ pub fn install_package(
     }
     for (index, checked) in checked_entries.iter().enumerate() {
         let parsed = archive.by_index_raw(index).map_err(zip_error)?;
-        if parsed.central_header_start() + directory.start as u64 != checked.central_offset
+        let central_header_start = parsed
+            .central_header_start()
+            .checked_add(usize_to_u64(directory.start, "central-directory start")?)
+            .ok_or_else(|| zip_error("central-header offset overflow"))?;
+        if central_header_start != checked.central_offset
             || parsed.header_start() != checked.local_offset
             || parsed.crc32() != checked.crc32
             || parsed.compressed_size() != checked.compressed_size
@@ -939,10 +1851,11 @@ pub fn install_package(
             .take(MAX_MEMBER_SIZE + 1)
             .read_to_end(&mut data)
             .map_err(zip_error)?;
-        if data.len() as u64 > MAX_MEMBER_SIZE {
+        let data_len = usize_to_u64(data.len(), "decoded member size")?;
+        if data_len > MAX_MEMBER_SIZE {
             return Err(PackageError::SizeLimit { path });
         }
-        if data.len() as u64 != file.size() {
+        if data_len != file.size() {
             return Err(zip_error(format!("size mismatch for {path}")));
         }
         if is_directory {
@@ -973,7 +1886,7 @@ pub fn install_package(
                 path,
                 role,
                 sha256: sha256_hex(&data),
-                size: data.len() as u64,
+                size: data_len,
             },
         });
     }
@@ -982,7 +1895,18 @@ pub fn install_package(
         return Err(PackageError::MissingManufacturerData);
     }
     if let Some((stored_scheme, unknown, translations, dropped_datapoint_types)) = prior {
-        let members = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok(PackageMember { path: r.get(0)?, role: r.get(1)?, sha256: r.get(2)?, size: r.get::<_, i64>(3)? as u64 }))?.collect::<Result<Vec<_>, _>>()?;
+        let member_rows = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?)))?.collect::<Result<Vec<_>, _>>()?;
+        let members = member_rows
+            .into_iter()
+            .map(|(path, role, member_sha, size)| {
+                Ok(PackageMember {
+                    path,
+                    role,
+                    sha256: member_sha,
+                    size: i64_to_u64(size, "stored package member size")?,
+                })
+            })
+            .collect::<Result<Vec<_>, ProductDbError>>()?;
         let member_index_matches = members.len() == validated_members.len()
             && members
                 .iter()
@@ -993,9 +1917,10 @@ pub fn install_package(
             ));
         }
         let conflicts = package_conflicts(&tx, &sha256)?;
+        let facts = load_facts(&tx, &sha256)?;
         tx.commit().map_err(ProductDbError::from)?;
         return Ok(InstallReport {
-            sha256,
+            sha256: sha256.clone(),
             scheme,
             skipped: true,
             members,
@@ -1003,9 +1928,10 @@ pub fn install_package(
             conflicts,
             translations,
             dropped_datapoint_types,
+            facts,
         });
     }
-    tx.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, ?2, ?3, ?4, ?5, 0)", params![sha256, source_name, scheme, bytes.len() as i64, bytes])?;
+    tx.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, ?2, ?3, ?4, ?5, 0)", params![sha256, source_name, scheme, usize_to_i64(bytes.len(), "package size")?, bytes])?;
     let mut report = InstallReport {
         sha256,
         scheme,
@@ -1015,7 +1941,10 @@ pub fn install_package(
         unknown: 0,
         conflicts: Vec::new(),
         translations: TranslationCounts::default(),
+        facts: None,
     };
+    let mut facts = InstallFacts::default();
+    let mut package_unknowns = Vec::new();
     for (ordinal, validated) in validated_members.into_iter().enumerate() {
         let PackageMember {
             path,
@@ -1023,6 +1952,53 @@ pub fn install_package(
             sha256: member_sha,
             size,
         } = validated.member;
+        add_count(
+            &mut facts,
+            InstallCategory::ArchiveMember,
+            InstallDisposition::Read,
+            1,
+        )?;
+        let already_stored: Option<i64> = tx
+            .query_row(
+                "SELECT 1 FROM source_file WHERE sha256 = ?1",
+                [&member_sha],
+                |r| r.get(0),
+            )
+            .optional()?;
+        add_count(
+            &mut facts,
+            InstallCategory::ArchiveMember,
+            if already_stored.is_some() {
+                InstallDisposition::Deduplicated
+            } else {
+                InstallDisposition::Stored
+            },
+            1,
+        )?;
+        if role == "Baggage" {
+            add_count(
+                &mut facts,
+                InstallCategory::Baggage,
+                InstallDisposition::Read,
+                1,
+            )?;
+            add_count(
+                &mut facts,
+                InstallCategory::Baggage,
+                if already_stored.is_some() {
+                    InstallDisposition::Deduplicated
+                } else {
+                    InstallDisposition::Stored
+                },
+                1,
+            )?;
+            add_count(
+                &mut facts,
+                InstallCategory::Baggage,
+                InstallDisposition::RetainedButUninterpreted,
+                1,
+            )?;
+        }
         let mut file = archive
             .by_index(validated.archive_index)
             .map_err(zip_error)?;
@@ -1031,7 +2007,9 @@ pub fn install_package(
             .take(MAX_MEMBER_SIZE + 1)
             .read_to_end(&mut data)
             .map_err(zip_error)?;
-        if data.len() as u64 != size || sha256_hex(&data) != member_sha {
+        if usize_to_u64(data.len(), "decoded member size")? != size
+            || sha256_hex(&data) != member_sha
+        {
             return Err(zip_error("member changed between validation passes"));
         }
         let outcome = if matches!(
@@ -1054,10 +2032,19 @@ pub fn install_package(
                     bytes: data.clone(),
                 },
             )?;
-            IngestOutcome::Skipped {
-                sha256: member_sha.clone(),
+            DetailedIngestOutcome {
+                outcome: IngestOutcome::Skipped {
+                    sha256: member_sha.clone(),
+                },
+                unknown_constructs: Vec::new(),
+                entities: crate::report::EntityCounts::default(),
             }
         };
+        let DetailedIngestOutcome {
+            outcome,
+            unknown_constructs,
+            entities,
+        } = outcome;
         if let IngestOutcome::Ingested {
             unknown,
             conflicts,
@@ -1065,24 +2052,95 @@ pub fn install_package(
             ..
         } = outcome
         {
-            report.unknown += unknown;
+            report.unknown = report
+                .unknown
+                .checked_add(unknown)
+                .ok_or_else(|| report_error("package unknown counter overflow"))?;
+            package_unknowns.extend(unknown_constructs);
             report.conflicts.extend(conflicts);
-            report.translations.add(translations);
+            report.translations.checked_add(translations)?;
+            add_entities(&mut facts, &entities)?;
         }
         if role == "Master" {
-            let master = crate::ingest_master_data(&tx, &data)?;
-            insert_unknown(&tx, &member_sha, &master.unknown)?;
-            report.unknown += master.unknown.len();
-            report.translations.master += master.translations;
-            report.dropped_datapoint_types += master.dropped_datapoint_types;
-        } else if role == "Unrecognized" || role == "Baggages" {
+            let master = crate::parse::master::ingest_master_data_detailed(&tx, &data)?;
+            let crate::parse::master::DetailedMasterIngest {
+                outcome: master_outcome,
+                entities,
+                master_sections_read,
+                unsupported_sections,
+            } = master;
+            insert_unknown(&tx, &member_sha, &master_outcome.unknown)?;
+            report.unknown = report
+                .unknown
+                .checked_add(master_outcome.unknown.len())
+                .ok_or_else(|| report_error("package unknown counter overflow"))?;
+            package_unknowns.extend(master_outcome.unknown.clone());
+            report.translations.master = report
+                .translations
+                .master
+                .checked_add(master_outcome.translations)
+                .ok_or_else(|| report_error("master translation counter overflow"))?;
+            report.dropped_datapoint_types = report
+                .dropped_datapoint_types
+                .checked_add(master_outcome.dropped_datapoint_types)
+                .ok_or_else(|| report_error("dropped datapoint counter overflow"))?;
+            add_entities(&mut facts, &entities)?;
+            add_count(
+                &mut facts,
+                InstallCategory::MasterSection,
+                InstallDisposition::Read,
+                master_sections_read,
+            )?;
+            for unsupported in unsupported_sections {
+                add_count(
+                    &mut facts,
+                    InstallCategory::MasterSection,
+                    InstallDisposition::Unsupported,
+                    unsupported.occurrences,
+                )?;
+                facts.diagnostics.push(InstallDiagnostic::new(
+                    InstallDiagnosticKind::UnsupportedMasterSection,
+                    path.clone(),
+                    format!("{MASTER_DIAGNOSTIC_PREFIX}{}", unsupported.name),
+                    master_diagnostic_detail(&unsupported.name),
+                    unsupported.occurrences,
+                )?);
+            }
+        } else if role == "Baggages" {
+            let index = crate::parse::baggage::parse_baggage_index(&path, &data)?;
+            add_count(
+                &mut facts,
+                InstallCategory::BaggageIndex,
+                InstallDisposition::Read,
+                index.declarations,
+            )?;
+            add_count(
+                &mut facts,
+                InstallCategory::BaggageIndex,
+                InstallDisposition::Unsupported,
+                index.declarations,
+            )?;
+            if index.declarations != 0 {
+                facts.diagnostics.push(InstallDiagnostic::new(
+                    InstallDiagnosticKind::UnsupportedBaggageIndex,
+                    path.clone(),
+                    BAGGAGE_DIAGNOSTIC_XML_PATH.into(),
+                    BAGGAGE_DIAGNOSTIC_DETAIL.into(),
+                    index.declarations,
+                )?);
+            }
+        } else if role == "Unrecognized" {
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
             let unknown = unknown.into_vec();
             insert_unknown(&tx, &member_sha, &unknown)?;
-            report.unknown += unknown.len();
+            report.unknown = report
+                .unknown
+                .checked_add(unknown.len())
+                .ok_or_else(|| report_error("package unknown counter overflow"))?;
+            package_unknowns.extend(unknown);
         }
-        tx.execute("INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", params![report.sha256, ordinal as i64, path, role, member_sha, size as i64])?;
+        tx.execute("INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", params![report.sha256, usize_to_i64(ordinal, "package member ordinal")?, path, role, member_sha, u64_to_i64(size, "package member size")?])?;
         report.members.push(PackageMember {
             path,
             role,
@@ -1090,6 +2148,43 @@ pub fn install_package(
             size,
         });
     }
+    let mut unknowns: BTreeMap<(String, String, String), crate::report::UnknownConstruct> =
+        BTreeMap::new();
+    for unknown in package_unknowns {
+        let key = (
+            unknown.xpath.clone(),
+            unknown.kind.as_str().to_string(),
+            unknown.name.clone(),
+        );
+        if let Some(current) = unknowns.get_mut(&key) {
+            current.occurrences = current
+                .occurrences
+                .checked_add(unknown.occurrences)
+                .ok_or_else(|| report_error("unknown occurrence counter overflow"))?;
+        } else {
+            unknowns.insert(key, unknown);
+        }
+    }
+    facts.unknown_constructs = unknowns.into_values().collect();
+    facts.sort()?;
+    let unknown_distinct = u64::try_from(facts.unknown_constructs.len())
+        .map_err(|_| report_error("unknown distinct count exceeds u64"))?;
+    let unknown_occurrences = facts.unknown_occurrences;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        unknown_occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        unknown_distinct,
+    )?;
+    finalize_facts(&mut facts)?;
+    persist_facts(&tx, &report.sha256, facts.clone())?;
+    report.facts = Some(facts);
     tx.execute(
         "UPDATE package SET unknown_count = ?2, translation_program_count = ?3,
                 translation_catalog_count = ?4, translation_hardware_count = ?5,
@@ -1097,12 +2192,15 @@ pub fn install_package(
          WHERE sha256 = ?1",
         params![
             report.sha256,
-            report.unknown as i64,
-            report.translations.program as i64,
-            report.translations.catalog as i64,
-            report.translations.hardware as i64,
-            report.translations.master as i64,
-            report.dropped_datapoint_types as i64,
+            usize_to_i64(report.unknown, "package unknown count")?,
+            usize_to_i64(report.translations.program, "program translation count")?,
+            usize_to_i64(report.translations.catalog, "catalog translation count")?,
+            usize_to_i64(report.translations.hardware, "hardware translation count")?,
+            usize_to_i64(report.translations.master, "master translation count")?,
+            usize_to_i64(
+                report.dropped_datapoint_types,
+                "dropped datapoint type count"
+            )?,
         ],
     )?;
     for (ordinal, conflict) in report.conflicts.iter().enumerate() {
@@ -1110,7 +2208,7 @@ pub fn install_package(
             "INSERT INTO package_conflict (package_sha256, ordinal, table_name, logical_id, kept_sha256, other_sha256, occurrence) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 report.sha256,
-                ordinal as i64,
+                usize_to_i64(ordinal, "package conflict ordinal")?,
                 conflict.table,
                 conflict.id,
                 conflict.kept_sha256,

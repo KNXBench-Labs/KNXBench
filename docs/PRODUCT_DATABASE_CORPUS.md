@@ -145,23 +145,24 @@ need fixture-backed validation for each scheme.
 
 ## Current KNXBench result
 
-The standalone package installer admits schemes 11, 12, 13, 14, and 20. The opt-in,
-content-hash-ordered matrix measures 115 package instances / 113 unique hashes.
-All eight measured scheme-12/13/14 packages install in isolation and either
-install or deduplicate in the shared database. The complete aggregate result is:
+The standalone package installer admits schemes 11, 12, 13, 14, 20 and the
+exact scheme-21 namespace. The passing read-only, content-hash-ordered matrix
+records all 115 instances: 115 isolated installs and, in deterministic shared
+order, 113 installs plus two byte-identical deduplications. The isolated
+unknown count is 23,347. Pinned shared totals, ten observed scheme-21 feature
+frequencies and an aggregate identity/outcome commitment guard the result.
+This is parser/persistence evidence, not ETS parity or commissioning evidence.
+No private source identifiers or member values are part of the published matrix.
 
-- isolation: 112 installed, 3 rejected as unsupported namespaces;
-- shared: 110 installed, 2 content-addressed duplicates, 3 rejected as
-  unsupported namespaces; and
-- remaining namespace rejections: scheme 21 (3).
-
-The shared database ends with 110 package rows, 1,145 retained source files,
-213,841 parameter rows, and 2,783,493 translation rows. Across the 112 isolated
-successful reports, KNXBench records 1,588 members and 23,166 unknown-construct
-rows. Those counts describe the current parser and evidence ledger; they do not
-mean every construct is semantically interpreted. Unknown constructs and opaque
-members remain visible instead of being suppressed merely because another
-namespace is accepted.
+Scheme-21 synthetic support retains original XML bytes and reports targeted
+observations across application-program, hardware, and master branches;
+module-definition subtrees were not separately evidenced by synthetic tests. The
+typed readers still dispatch by local name; scheme-21 typed members therefore
+reject foreign element namespaces and qualified attributes atomically instead
+of allowing an extension to create false typed rows. All 13 XML members in the
+three observed scheme-21 packages use the canonical namespace and unqualified
+attributes. This is explicit parser evidence, not semantic interpretation, ETS
+parity, or commissioning support. Project-schema-21 `.knxproj` import is separate.
 
 Scheme-13 support is deliberately narrower than an ETS compatibility claim.
 The observed scheme-13 grammar introduced no new element or attribute names
@@ -252,14 +253,15 @@ section-level reporting before they can support commissioning decisions.
    name flags/bytes, implement the intended legacy encoding policy explicitly,
    normalize only after decoding, and then apply traversal/absolute-path/NUL and
    duplicate-name checks. Add synthetic CP437/UTF-8/path-attack fixtures plus
-   the corpus matrix. Keep the three currently namespace-gated packages as
-   explicit rejection regressions until their schemes are separately supported.
-   Do not merely remove the rejection.
-2. **Add scheme-21 support as its own slice.** Schemes 12-14 are now supported
-   with frozen synthetic fixtures, eight real gated packages, explicit
-   unknown/loss accounting, and no-partial-publication tests. Scheme 21 must
-   retain/report `LdCtrlDeclarePropDesc` and additionally cover the RF/coupler,
-   variable-length and access-policy fields above before its namespace opens.
+   the corpus matrix. Scheme 21 has since passed its exact-namespace gate;
+   keep unobserved schemes rejected until separately evidenced. Do not merely
+   remove the rejection.
+2. **Deepen scheme-21 evidence and typed coverage.** Scheme 21 is now accepted
+   with synthetic evidence for its observed attribute deltas across application,
+   hardware, and master branches. Keep those fields retained/report-only until
+   fixture-backed semantics and query consumers exist; do not weaken namespace
+   or path checks. The three-package subset passed the private matrix; semantic
+   interpretation and query consumers remain separate work.
 3. **Reduce unknown reports by capability area.** First classify unknowns into
    safe presentation metadata, retained-but-uninterpreted semantics and data
    required for editing/commissioning. Preserve source XML/attributes until a
@@ -283,11 +285,12 @@ section-level reporting before they can support commissioning decisions.
 
 ## Compatibility conclusion
 
-The corpus materially broadens the evidence base: KNXBench installs 112 of 115
-modern package instances in isolation, but the accepted subset still carries
-substantial explicitly unknown metadata. Legacy ZIP filename decoding and
-schemes 12-14 are now evidenced. The next priorities are (1) remaining
-scheme-by-scheme parser support with loss accounting and (2) deeper typed
-coverage of parameter/dynamic/load-procedure semantics. That sequence maximizes
-usable products without pretending that successful catalogue installation is
-full ETS or commissioning compatibility.
+The passing read-only matrix records 115 isolated installs, 113 shared installs
+and 2 exact-byte deduplications. Exact scheme-21 acceptance is namespace-
+constrained, supported by synthetic regressions and this observed subset; the
+accepted packages still carry substantial explicitly unknown metadata. Legacy
+ZIP filename decoding and schemes 12-14 are evidenced. The next priorities are
+(1) remaining scheme-by-scheme parser support with loss accounting and
+(2) deeper typed coverage of parameter/dynamic/load-procedure semantics.
+That sequence maximizes usable products without pretending that successful
+catalogue installation is full ETS or commissioning compatibility.

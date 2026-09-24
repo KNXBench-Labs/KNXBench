@@ -1,5 +1,36 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-24 — PDB-6: scheme-21 package acceptance with retained evidence
+
+`knx-productdb::install_package` now admits only the exact scheme-21 master
+namespace in addition to the previously supported schemes. Synthetic RED-first
+coverage proves representative master, hardware, and application-program
+members install atomically, preserve the original source bytes, and report the
+observed scheme-21 deltas without assigning unverified semantics: application
+program `HardwareType`, datapoint `VariableLength`, hardware-program RF/coupler
+capabilities, and targeted master/interface/resource/string attributes.
+`LdCtrlDeclarePropDesc` remains retained/report-only. Module-definition subtrees
+were not separately evidenced by the scheme-21 synthetic tests.
+
+The evidence pass is now invoked for package master, hardware, and application-
+program XML members. It remains exact-namespace and path constrained; scheme-21
+typed members with foreign element namespaces or qualified attributes fail
+closed before publication because domain readers otherwise dispatch by local
+name. Existing parser unknown rows remain the source of truth, while the pass
+fills coverage gaps in opaque master sections. Original XML bytes remain in
+`source_file`; malformed late-member rejection, post-write evidence-limit
+rollback and unsupported scheme-22 rejection have synthetic regression coverage.
+
+The private read-only 115-instance corpus remeasurement passes its pinned gate:
+115 isolated installs, 113 shared installs and two exact-byte deduplications.
+The isolated unknown count is 23,347; the gate also checks shared totals, ten
+observed scheme-21 feature frequencies and an aggregate identity/outcome
+commitment before publishing its anonymized output. This measures parser and
+persistence behavior only, not ETS parity or commissioning semantics.
+Project-schema-21 `.knxproj` import is distinct. No private member content or
+source identities are published.
+
+
 ## 2026-09-24 — PDB-5: measured standalone scheme-12/14 support
 
 `knx-productdb::install_package` now accepts the exact scheme-12 and scheme-14

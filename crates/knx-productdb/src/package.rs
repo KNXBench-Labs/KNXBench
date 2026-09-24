@@ -1,4 +1,4 @@
-//! Evidence-backed, atomic installation of readable scheme 11/12/13/14/20 product ZIPs.
+//! Evidence-backed, atomic installation of readable scheme 11/12/13/14/20/21 product ZIPs.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
@@ -1009,6 +1009,7 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
                         "http://knx.org/xml/project/13" => return Ok(13),
                         "http://knx.org/xml/project/14" => return Ok(14),
                         "http://knx.org/xml/project/20" => return Ok(20),
+                        "http://knx.org/xml/project/21" => return Ok(21),
                         _ => {}
                     }
                 }
@@ -1018,6 +1019,42 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
             _ => {}
         }
     }
+}
+
+// Domain readers currently dispatch by local name. Reject foreign elements and
+// qualified attributes in scheme 21 rather than publishing extension data as
+// typed KNX rows. This is a deliberately narrow, corpus-evidenced boundary.
+fn validate_scheme21_member_namespace(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
+    const NAMESPACE: &str = "http://knx.org/xml/project/21";
+    let mut reader = quick_xml::NsReader::from_reader(bytes);
+    loop {
+        let (namespace, event) = reader
+            .read_resolved_event()
+            .map_err(|error| xml_error(path, error))?;
+        match event {
+            Event::Start(element) | Event::Empty(element) => {
+                if !matches!(namespace, ResolveResult::Bound(uri) if uri.as_ref() == NAMESPACE) {
+                    return Err(xml_error(
+                        path,
+                        "scheme-21 XML contains a non-KNX element namespace",
+                    ));
+                }
+                for attribute in element.attributes().with_checks(true) {
+                    let attribute = attribute.map_err(|error| xml_error(path, error))?;
+                    let name = attribute.key.as_ref();
+                    if name.contains(':') && !name.starts_with("xmlns:") {
+                        return Err(xml_error(
+                            path,
+                            "scheme-21 XML contains a qualified attribute",
+                        ));
+                    }
+                }
+            }
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 // quick-xml is a streaming tokenizer; enforce a complete document even for
@@ -1894,6 +1931,30 @@ pub fn install_package(
         });
     }
     let scheme = scheme.ok_or(PackageError::MissingMaster)?;
+    if scheme == 21 {
+        for validated in &validated_members {
+            if !matches!(
+                validated.member.role.as_str(),
+                "Master" | "Catalog" | "Hardware" | "ApplicationProgram" | "Baggages"
+            ) {
+                continue;
+            }
+            let mut file = archive
+                .by_index(validated.archive_index)
+                .map_err(zip_error)?;
+            let mut data = Vec::new();
+            (&mut file)
+                .take(MAX_MEMBER_SIZE + 1)
+                .read_to_end(&mut data)
+                .map_err(zip_error)?;
+            if usize_to_u64(data.len(), "scheme-21 member size")? != validated.member.size
+                || sha256_hex(&data) != validated.member.sha256
+            {
+                return Err(zip_error("member changed between validation passes"));
+            }
+            validate_scheme21_member_namespace(&validated.member.path, &data)?;
+        }
+    }
     if !has_manufacturer_data {
         return Err(PackageError::MissingManufacturerData);
     }
@@ -2021,7 +2082,7 @@ pub fn install_package(
         ) {
             // A retained raw member is not proof its domain rows were parsed.
             // The package hash, not the blob hash, controls package retries.
-            ingest_file_in_transaction(&tx, &path, &data, true)?
+            ingest_file_in_transaction(&tx, &path, &data, true, scheme == 21)?
         } else {
             crate::store_source_file(
                 &tx,
@@ -2067,11 +2128,18 @@ pub fn install_package(
         if role == "Master" {
             let master = crate::parse::master::ingest_master_data_detailed(&tx, &data)?;
             let crate::parse::master::DetailedMasterIngest {
-                outcome: master_outcome,
+                outcome: mut master_outcome,
                 entities,
                 master_sections_read,
                 unsupported_sections,
             } = master;
+            if scheme == 21 {
+                crate::parse::scheme_evidence::reconcile_package_unknowns(
+                    &data,
+                    &path,
+                    &mut master_outcome.unknown,
+                )?;
+            }
             insert_unknown(&tx, &member_sha, &master_outcome.unknown)?;
             report.unknown = report
                 .unknown

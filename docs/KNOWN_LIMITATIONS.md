@@ -989,13 +989,16 @@ KNXBench's own licence ([ADR-0002](adr/0002-own-knxproj-parser.md)).
 
 <a id="11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly"></a>
 
-## 11. `.knxprod` support is evidenced only for schemes 11, 12, 13, 14, and 20
+## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
 
 **Limitation.** Manufacturer product files in the `.knxprod` container are
 readable, as a standalone package independent of any `.knxproj`, for master
-data schemes 11, 12, 13, 14, and 20 (`knx_productdb::install_package`). Schemes
-15-19, 21, and 22 remain unread as
-a *standalone package* — they can still reach the product database bundled
+data schemes 11, 12, 13, 14, 20 and exact-namespace 21
+(`knx_productdb::install_package`). Scheme-21 acceptance is evidenced by
+synthetic fixtures and the passing read-only corpus matrix; its additional
+fields remain retained/report-only. Schemes 15-19, 22, and any scheme not
+listed here remain unmeasured
+as a *standalone package* — they can still reach the product database bundled
 inside a `.knxproj` that already contains them (see Impact below;
 `knx_productdb::ingest_file` performs no scheme/namespace gating). `.vd2`,
 a pre-2013 ETS2-era legacy container (SFX/`.vd_`-style, not
@@ -1022,22 +1025,23 @@ check now installs in the local gated regression. Only its count and aggregate
 identity commitment are public. This removes that one container-level rejection only; it does not claim lossless
 interpretation of manufacturer semantics.
 
-**Measured update, 2026-09-24.** The opt-in compatibility matrix covers 115
-package instances (113 unique hashes): scheme 11 (48), scheme 12 (1), scheme
-13 (4), scheme 14 (3), scheme 20 (56), and scheme 21 (3). All eight scheme-
-12/13/14 instances install in isolation and succeed in shared order. The three
-scheme-21 instances are rejected by the deliberate namespace gate; 112 install
-in isolation. In one deterministic shared database, 110 install and 2
-are already present. Public identity is aggregate. Its 115
-hash-ordered per-instance records contain only ordinal, scheme and `{status}`
-for success/deduplication or `{status, category}` for rejection; detailed
-per-instance report-count vectors stay inside the aggregate commitment. No
-individual hash, private source name, or manufacturer identity is published.
-This replaces the earlier assumption that no
-standalone samples existed for those schemes. Scheme-12/13/14 support is backed
-by representative synthetic persistence/rollback tests and the eight real
-packages, but it does not establish complete interpretation of all possible
-files. In particular, observed load-procedure and separator metadata remains
+**Measured update, 2026-09-24.** The first read-only compatibility-matrix run
+covers 115 package instances (113 unique hashes): scheme 11 (48), scheme 12
+(1), scheme 13 (4), scheme 14 (3), scheme 20 (56), and scheme 21 (3). It
+records 115 isolated installs and, in deterministic shared order, 113 installs
+plus 2 exact-byte deduplications. The final gate passes, including its pinned
+23,347 isolated unknown rows, ten scheme-21 field frequencies and aggregate
+identity/outcome commitment. These measurements show parser/persistence behavior,
+not complete manufacturer semantics.
+Public identity is aggregate. Its hash-ordered per-instance records contain
+only ordinal, scheme and `{status}` for success/deduplication or
+`{status, category}` for rejection; detailed per-instance report-count vectors
+stay inside the aggregate commitment. No individual hash, private source name,
+or manufacturer identity is published.
+This replaces the earlier assumption that no standalone samples existed for
+those schemes. Scheme-12/13/14 support is backed by representative synthetic
+persistence/rollback tests and the eight real packages, but it does not
+establish complete interpretation of all possible files. In particular, observed load-procedure and separator metadata remains
 explicitly retained and reported rather than treated as executable semantics.
 The targeted scheme-12/14 evidence pass rejects application-program XML deeper
 than 1,024 nested elements so a size-bounded but adversarial document cannot
@@ -1050,6 +1054,16 @@ deterministic: an unqualified attribute takes precedence over any qualified
 same-local-name attribute in either document order. The qualified values remain
 separate namespace-qualified unknown evidence; they do not overwrite the KNX
 value or create an order-dependent plain-name report.
+
+Scheme-21 package XML is deliberately narrower than schemes 12/14 for foreign
+extensions: every typed member must use the exact scheme-21 element namespace
+and unqualified attributes. Other element namespaces or qualified attributes
+cause a clear import error and no published package rows. The domain readers
+dispatch on local names, so accepting those extensions could otherwise turn
+foreign content into typed KNX rows. The three observed scheme-21 packages use
+only the canonical namespace and unqualified attributes. Evidence for the
+observed scheme-21 fields is retained and reported; it does not implement
+load-procedure execution, RF/coupler behavior, or access-policy enforcement.
 
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,
@@ -1069,23 +1083,25 @@ observed scheme-13 grammar adds no element or attribute names relative to the
 measured scheme-11/20 union, and its four real packages pass isolated and shared
 installation. Scheme-12/14-specific load-procedure and separator fields are
 retained and reported with aggregate corpus counts, not interpreted as executable
-semantics. The matrix proves that scheme-21 samples reach and are refused by the
-exact namespace allowlist. Schemes 15-19/22 remain unmeasured.
+semantics. The passing private matrix shows three scheme-21 packages install in isolation
+and shared order under the exact namespace allowlist. Schemes 15-19/22 remain
+unmeasured.
 
-**Impact.** A manufacturer's standalone `.knxprod` at scheme 11, 12, 13, 14, or 20 can
-be installed directly via `knx products ingest`, the HTTP endpoint, or
-`CatalogBrowser.tsx`'s install picker, without needing a `.knxproj` that
-bundles it. A `.knxprod` at any other scheme, or a legacy `.vd2`, still has
-to reach the product database another way (in practice, from a `.knxproj`
-that already contains the application programs it references) or not at
-all for `.vd2`.
+**Impact.** A manufacturer's standalone `.knxprod` at scheme 11, 12, 13, 14,
+or 20 can be installed directly via `knx products ingest`, the HTTP endpoint,
+or `CatalogBrowser.tsx`'s install picker, without needing a `.knxproj` that
+bundles it. Scheme 21 is accepted only for the exact observed namespace and
+has synthetic and observed parser/persistence evidence; its corpus gate passes.
+A `.knxprod` at any other scheme, or a legacy `.vd2`, still has to reach the
+product database another way (in practice, from a `.knxproj` that already
+contains the application programs it references) or not at all for `.vd2`.
 
-**Lifted when.** For scheme 21, only after the observed XML is
-inventoried, semantic differences are modeled without loss, and focused
-regressions plus the full corpus matrix pass. For schemes 15-19/22, a sample is
-still required before making any claim. For `.vd2`: never — it is a
-structurally different, pre-standard legacy container, not a variant of the
-current format needing decryption.
+**Lifted when.** Scheme 21's exact-namespace parser/persistence acceptance is
+already evidenced synthetically and by the passing corpus gate; remaining work
+needs fixture-backed semantic coverage. For schemes
+15-19/22, a sample is still required before making any claim. For `.vd2`:
+never — it is a structurally different, pre-standard legacy container, not a
+variant of the current format needing decryption.
 
 Schemes 12-14 no longer belong to this unsupported set. Their acceptance does
 not broaden any neighboring namespace and does not alter the permanent `.vd2`

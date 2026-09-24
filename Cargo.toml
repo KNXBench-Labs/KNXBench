@@ -46,6 +46,7 @@ tauri = "2.11"
 tauri-build = "2.6"
 tauri-plugin-dialog = "2.7"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+crc32fast = "1"
 # Decompresses a ZipCrypto entry's compressed data once knx-secure has
 # stripped its encryption layer (Container::open_with_password): the zip
 # crate's own compression handling is fused to its own crypto handling,

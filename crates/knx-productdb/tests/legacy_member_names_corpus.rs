@@ -2,43 +2,13 @@
 //! member names use the historical, unflagged CP437 encoding.
 //! Manufacturer bytes and filenames remain outside the repository and output.
 
-use std::fs;
-use std::io::{Cursor, Read};
-use std::path::{Path, PathBuf};
+mod corpus_support;
+
+use corpus_support::{configured_corpus, CorpusReadBudget};
 
 const EXPECTED_LEGACY_PACKAGE_COUNT: usize = 11;
 const EXPECTED_LEGACY_CORPUS_COMMITMENT: &str =
     "190fc09ab111d4f70e3cd7a32baa1ae8f19a39a382c87fdab79d06084c5bff5d";
-
-fn corpus_root() -> PathBuf {
-    std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
-        .map(PathBuf::from)
-        .expect("set KNXBENCH_PRODUCT_CORPUS to run the private corpus regression")
-}
-
-fn corpus_files(root: &Path) -> Vec<PathBuf> {
-    fn visit(path: &Path, files: &mut Vec<PathBuf>) {
-        let Ok(metadata) = fs::metadata(path) else {
-            panic!("corpus entry is unreadable");
-        };
-        if metadata.is_file() {
-            files.push(path.to_path_buf());
-            return;
-        }
-        let mut children = fs::read_dir(path)
-            .expect("corpus directory is unreadable")
-            .map(|entry| entry.expect("corpus directory entry is unreadable").path())
-            .collect::<Vec<_>>();
-        children.sort();
-        for child in children {
-            visit(&child, files);
-        }
-    }
-
-    let mut files = Vec::new();
-    visit(root, &mut files);
-    files
-}
 
 fn contains_legacy_member_name(bytes: &[u8]) -> bool {
     let Some(eocd) = bytes.windows(4).rposition(|value| value == b"PK\x05\x06") else {
@@ -114,45 +84,17 @@ fn verify_package(bytes: &[u8], ordinal: usize) -> Option<String> {
 }
 
 #[test]
-#[ignore = "requires explicit KNXBENCH_PRODUCT_CORPUS access"]
+#[ignore = "requires explicit KNXBENCH_PRODUCT_CORPUS and KNXBENCH_PRODUCT_CORPUS_SCOPES"]
 fn all_observed_legacy_name_packages_install_without_weakening_the_boundary() {
-    let root = corpus_root();
-    assert!(root.exists(), "configured product corpus is unavailable");
-
     let mut legacy_packages = Vec::new();
-    let mut ordinal = 0;
-    for path in corpus_files(&root) {
-        let bytes = fs::read(&path).expect("corpus file is unreadable");
-        if path
-            .extension()
-            .is_some_and(|extension| extension == "knxprod")
-        {
-            ordinal += 1;
-            legacy_packages.extend(verify_package(&bytes, ordinal));
-            continue;
-        }
-        if !path
-            .extension()
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("zip"))
-        {
-            continue;
-        }
-
-        let Ok(mut bundle) = zip::ZipArchive::new(Cursor::new(&bytes)) else {
-            continue;
-        };
-        for index in 0..bundle.len() {
-            let mut member = bundle.by_index(index).expect("bundle member is unreadable");
-            if !member.name().to_ascii_lowercase().ends_with(".knxprod") {
-                continue;
-            }
-            let mut package = Vec::new();
-            member
-                .read_to_end(&mut package)
-                .expect("nested product package is unreadable");
-            ordinal += 1;
-            legacy_packages.extend(verify_package(&package, ordinal));
-        }
+    let corpus = configured_corpus();
+    assert!(corpus.canonical_root.is_absolute());
+    assert_ne!(corpus.root_device, 0);
+    let discovered = corpus.discover();
+    let mut read_budget = CorpusReadBudget::new();
+    for (index, source) in discovered.packages.into_iter().enumerate() {
+        let bytes = source.load(&mut read_budget);
+        legacy_packages.extend(verify_package(&bytes, index + 1));
     }
 
     legacy_packages.sort();

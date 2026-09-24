@@ -145,23 +145,23 @@ need fixture-backed validation for each scheme.
 
 ## Current KNXBench result
 
-The standalone package installer admits schemes 11, 13, and 20. The opt-in,
+The standalone package installer admits schemes 11, 12, 13, 14, and 20. The opt-in,
 content-hash-ordered matrix measures 115 package instances / 113 unique hashes.
-All four measured scheme-13 packages install in isolation and either install or
-deduplicate in the shared database. The complete aggregate result is:
+All eight measured scheme-12/13/14 packages install in isolation and either
+install or deduplicate in the shared database. The complete aggregate result is:
 
-- isolation: 108 installed, 7 rejected as unsupported namespaces;
-- shared: 106 installed, 2 content-addressed duplicates, 7 rejected as
+- isolation: 112 installed, 3 rejected as unsupported namespaces;
+- shared: 110 installed, 2 content-addressed duplicates, 3 rejected as
   unsupported namespaces; and
-- remaining namespace rejections: scheme 12 (1), scheme 14 (3), scheme 21 (3).
+- remaining namespace rejections: scheme 21 (3).
 
-The shared database ends with 106 package rows, 1,124 retained source files,
-211,231 parameter rows, and 2,764,318 translation rows. Across the 108 isolated
-successful reports, KNXBench records 1,567 members and 22,900 unknown-construct
+The shared database ends with 110 package rows, 1,145 retained source files,
+213,841 parameter rows, and 2,783,493 translation rows. Across the 112 isolated
+successful reports, KNXBench records 1,588 members and 23,166 unknown-construct
 rows. Those counts describe the current parser and evidence ledger; they do not
 mean every construct is semantically interpreted. Unknown constructs and opaque
-members remain visible instead of being suppressed merely because scheme 13 is
-now accepted.
+members remain visible instead of being suppressed merely because another
+namespace is accepted.
 
 Scheme-13 support is deliberately narrower than an ETS compatibility claim.
 The observed scheme-13 grammar introduced no new element or attribute names
@@ -169,6 +169,14 @@ relative to the measured scheme-11/20 union, representative rows are pinned by
 a synthetic regression, malformed packages publish no database rows, and the
 four real corpus packages pass the full isolated/shared matrix. No authoritative
 scheme-13 XSD or independent semantic oracle is available.
+
+Scheme-12/14 support applies the same boundary. The combined parser evidence
+ledger records canonical `AppliesTo` (22), `Occurrence` (5), separator
+`HorizontalRuler` (5), separator `Access` (2), separator `UIHint` (418), and
+`LdCtrlDeclarePropDesc` (14) occurrences across those four packages, including
+constructs nested below subtrees a specialized parser does not model. Values and
+original XML bytes are retained, but KNXBench does not claim to execute load
+procedures or reproduce manufacturer separator layout.
 
 ## Feature-shape observations relevant to implementation
 
@@ -244,16 +252,14 @@ section-level reporting before they can support commissioning decisions.
    name flags/bytes, implement the intended legacy encoding policy explicitly,
    normalize only after decoding, and then apply traversal/absolute-path/NUL and
    duplicate-name checks. Add synthetic CP437/UTF-8/path-attack fixtures plus
-   the corpus matrix. Keep the seven currently namespace-gated packages as
+   the corpus matrix. Keep the three currently namespace-gated packages as
    explicit rejection regressions until their schemes are separately supported.
    Do not merely remove the rejection.
-2. **Add scheme support incrementally: 12/14, then 21.** Scheme 13, the smallest
-   observed grammar delta, is now supported with a frozen synthetic fixture,
-   four real gated packages, explicit unknown/loss accounting, and
-   no-partial-publication tests. Each remaining slice needs the same evidence.
-   Scheme 14/21 must model
-   `LdCtrlDeclarePropDesc`; scheme 21 additionally needs the RF/coupler,
-   variable-length and access-policy fields above.
+2. **Add scheme-21 support as its own slice.** Schemes 12-14 are now supported
+   with frozen synthetic fixtures, eight real gated packages, explicit
+   unknown/loss accounting, and no-partial-publication tests. Scheme 21 must
+   retain/report `LdCtrlDeclarePropDesc` and additionally cover the RF/coupler,
+   variable-length and access-policy fields above before its namespace opens.
 3. **Reduce unknown reports by capability area.** First classify unknowns into
    safe presentation metadata, retained-but-uninterpreted semantics and data
    required for editing/commissioning. Preserve source XML/attributes until a
@@ -277,10 +283,10 @@ section-level reporting before they can support commissioning decisions.
 
 ## Compatibility conclusion
 
-The corpus materially broadens the evidence base: KNXBench installs 108 of 115
+The corpus materially broadens the evidence base: KNXBench installs 112 of 115
 modern package instances in isolation, but the accepted subset still carries
 substantial explicitly unknown metadata. Legacy ZIP filename decoding and
-scheme 13 are now evidenced. The next priorities are (1) remaining
+schemes 12-14 are now evidenced. The next priorities are (1) remaining
 scheme-by-scheme parser support with loss accounting and (2) deeper typed
 coverage of parameter/dynamic/load-procedure semantics. That sequence maximizes
 usable products without pretending that successful catalogue installation is

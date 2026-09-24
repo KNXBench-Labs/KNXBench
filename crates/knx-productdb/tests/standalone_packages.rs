@@ -1338,7 +1338,7 @@ fn malformed_and_unsupported_packages_leave_no_rows() {
             archive(&[
                 (
                     "knx_master.xml",
-                    br#"<KNX xmlns="http://knx.org/xml/project/12"/>"#,
+                    br#"<KNX xmlns="http://knx.org/xml/project/21"/>"#,
                 ),
                 ("M-0001/Hardware.xml", HARDWARE),
             ]),

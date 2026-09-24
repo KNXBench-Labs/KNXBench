@@ -1,5 +1,17 @@
 # Compatibility
 
+## PDB-3 product-install report surface
+
+Schema v12 records measured installation facts and projects them losslessly to
+HTTP, CLI, and web UI. Closed category, disposition, unknown-kind, and
+diagnostic-kind strings are deterministic. Historical rows with no v12 ledger
+return `facts: null`, while a measured zero remains a non-null facts object.
+Unknowns show distinct rows and total occurrences. Unsupported diagnostics keep
+relative archive/XML paths and never reveal host `source_name`. This is honest
+import evidence, not ETS parity or signature verification. PDB-8
+is the future typed master-data coverage slice; PDB-10 is the future safe baggage
+inventory and index-to-payload resolution slice.
+
 **Building-space vocabulary (T13, 2026-09-22).** All eleven types documented
 across Schema23 §§1.1.2.3 and 1.2.6.4 are represented end-to-end. The added
 `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are covered by

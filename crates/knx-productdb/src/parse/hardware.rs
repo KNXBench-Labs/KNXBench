@@ -12,7 +12,7 @@ use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
 use super::{bool_flag, first_winner, report_unknown_attrs};
-use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
+use crate::report::{EntityCounts, EntityKind, IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
 
@@ -57,16 +57,31 @@ pub struct HardwareIngest {
     pub conflicts: Vec<IdConflict>,
 }
 
+pub(crate) struct DetailedHardwareIngest {
+    pub outcome: HardwareIngest,
+    pub entities: EntityCounts,
+}
+
 pub fn ingest_hardware(
     conn: &Connection,
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
 ) -> Result<HardwareIngest, ProductDbError> {
+    Ok(ingest_hardware_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+}
+
+pub(crate) fn ingest_hardware_detailed(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<DetailedHardwareIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut conflicts = Vec::new();
+    let mut entities = EntityCounts::default();
     // Fresh per call, i.e. per file: `first_winner` counts occurrences of
     // each `(table, id)` pair against this, so a stale map would blur two
     // files' ids together (KNOWN_LIMITATIONS.md §86).
@@ -178,6 +193,7 @@ pub fn ingest_hardware(
                         }
                     }
                     "Product" => {
+                        entities.read(EntityKind::Product)?;
                         report_unknown_attrs(
                             &mut unknown,
                             "/KNX/ManufacturerData/Manufacturer/Hardware/Hardware/Products/Product",
@@ -216,6 +232,9 @@ pub fn ingest_hardware(
                                     source_sha256,
                                 ],
                             )?;
+                            entities.stored(EntityKind::Product)?;
+                        } else {
+                            entities.deduplicated(EntityKind::Product)?;
                         }
                     }
                     "Hardware2Program" => {
@@ -280,9 +299,12 @@ pub fn ingest_hardware(
             _ => {}
         }
     }
-    Ok(HardwareIngest {
-        unknown: unknown.into_vec(),
-        conflicts,
+    Ok(DetailedHardwareIngest {
+        outcome: HardwareIngest {
+            unknown: unknown.into_vec(),
+            conflicts,
+        },
+        entities,
     })
 }
 

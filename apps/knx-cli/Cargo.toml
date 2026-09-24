@@ -23,11 +23,11 @@ knx-report.workspace = true
 knx-store.workspace = true
 chrono.workspace = true
 sha2.workspace = true
+serde_json.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "signal"] }
 
 [dev-dependencies]
 tempfile.workspace = true
-serde_json.workspace = true
 zip.workspace = true
 knx-testsupport.workspace = true

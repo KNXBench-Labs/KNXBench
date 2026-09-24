@@ -1,3 +1,4 @@
+/** Tests the browser API client's HTTP contracts. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api";
 import { subscribeSessionExpired } from "./session";
@@ -417,7 +418,23 @@ describe("api", () => {
   });
 
   it("installProductPackage posts the selected package as multipart data", async () => {
-    mockFetchOnce({ sha256: "abc", scheme: 11, skipped: false, members: [], unknown: 0, conflicts: 0 });
+    const fixture: api.CatalogInstallReport = {
+      sha256: "abc",
+      scheme: 11,
+      skipped: false,
+      members: [],
+      unknown: 0,
+      conflicts: 0,
+      translations: { program: 0, catalog: 0, hardware: 0, master: 0 },
+      droppedDatapointTypes: 0,
+      facts: {
+        counts: [{ category: "archive_member", disposition: "read", count: 2 }],
+        unknownConstructs: [],
+        unknownOccurrences: 0,
+        diagnostics: [],
+      },
+    };
+    mockFetchOnce(fixture);
     const file = new File(["package"], "vendor.knxprod", { type: "application/zip" });
     const report = await api.installProductPackage(file);
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -426,6 +443,7 @@ describe("api", () => {
     expect(init.body).toBeInstanceOf(FormData);
     expect((init.body as FormData).get("file")).toBe(file);
     expect(report.scheme).toBe(11);
+    expect(report.facts).toEqual(fixture.facts);
   });
 
   it("deleteDevice issues a DELETE to /api/devices/:id", async () => {

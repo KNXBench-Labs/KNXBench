@@ -267,6 +267,50 @@ fn products_ingest_installs_a_standalone_package() {
 }
 
 #[test]
+fn standalone_package_cli_emits_one_structured_facts_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = dir.path().join("products.sqlite");
+    let package = dir.path().join("example.knxprod");
+    write_standalone_product_package(&package);
+    let out = run_cli(&[
+        "products",
+        "ingest",
+        package.to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let line = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("install_facts_json "))
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_str(line).unwrap();
+    assert_eq!(json["status"], "measured");
+    assert!(json["facts"]["counts"].is_array());
+    assert!(json["facts"]["diagnostics"].is_array());
+    assert_eq!(stdout.matches("install_facts_json ").count(), 1);
+}
+
+#[test]
+fn single_file_project_ingest_does_not_claim_package_facts() {
+    let dir = tempfile::tempdir().unwrap();
+    let project = dir.path().join("sample.knxproj");
+    let products = dir.path().join("products.sqlite");
+    write_knxproj_with_duplicate_id(&project);
+    let out = run_cli(&[
+        "products",
+        "ingest",
+        project.to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(!stdout.contains("install_facts_json"), "{stdout}");
+    assert!(stdout.contains("facts: not applicable"), "{stdout}");
+}
+#[test]
 fn products_verify_is_clean_after_an_ingest() {
     if !reference_ets4_path().exists() {
         eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");

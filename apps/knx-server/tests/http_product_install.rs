@@ -12,9 +12,13 @@ const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData
 const CATALOG: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Catalog><CatalogSection Id="M-0001_CG-1" Name="Actuators" Number="1"><CatalogItem Id="M-0001_CI-1" Name="Example actuator" Number="EX-1" ProductRefId="M-0001_P-1"/></CatalogSection></Catalog></Manufacturer></ManufacturerData></KNX>"#;
 
 fn package() -> Vec<u8> {
+    package_with_master(MASTER)
+}
+
+fn package_with_master(master: &[u8]) -> Vec<u8> {
     let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options = SimpleFileOptions::default();
-    for (path, bytes) in [("knx_master.xml", MASTER), ("M-0001/Catalog.xml", CATALOG)] {
+    for (path, bytes) in [("knx_master.xml", master), ("M-0001/Catalog.xml", CATALOG)] {
         writer.start_file(path, options).unwrap();
         std::io::Write::write_all(&mut writer, bytes).unwrap();
     }
@@ -73,9 +77,50 @@ async fn installing_a_package_returns_report_and_makes_catalog_item_discoverable
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let report = json(response).await;
+    eprintln!("install report: {report}");
     assert_eq!(report["scheme"], 11);
     assert_eq!(report["skipped"], false);
     assert_eq!(report["members"].as_array().unwrap().len(), 2);
+    assert_eq!(report["facts"]["unknownOccurrences"], 0);
+    assert_eq!(report["facts"]["unknownConstructs"], serde_json::json!([]));
+    assert_eq!(report["facts"]["diagnostics"], serde_json::json!([]));
+    assert_eq!(
+        report["facts"]["counts"],
+        serde_json::json!([
+            {"category":"archive_member","count":2,"disposition":"read"},
+            {"category":"archive_member","count":2,"disposition":"stored"},
+            {"category":"archive_member","count":0,"disposition":"deduplicated"},
+            {"category":"product","count":0,"disposition":"read"},
+            {"category":"product","count":0,"disposition":"stored"},
+            {"category":"product","count":0,"disposition":"deduplicated"},
+            {"category":"application_program","count":0,"disposition":"read"},
+            {"category":"application_program","count":0,"disposition":"stored"},
+            {"category":"application_program","count":0,"disposition":"deduplicated"},
+            {"category":"parameter","count":0,"disposition":"read"},
+            {"category":"parameter","count":0,"disposition":"stored"},
+            {"category":"communication_object","count":0,"disposition":"read"},
+            {"category":"communication_object","count":0,"disposition":"stored"},
+            {"category":"dynamic_node","count":0,"disposition":"read"},
+            {"category":"dynamic_node","count":0,"disposition":"stored"},
+            {"category":"module","count":0,"disposition":"read"},
+            {"category":"baggage_index","count":0,"disposition":"read"},
+            {"category":"baggage_index","count":0,"disposition":"unsupported"},
+            {"category":"baggage","count":0,"disposition":"read"},
+            {"category":"baggage","count":0,"disposition":"stored"},
+            {"category":"baggage","count":0,"disposition":"deduplicated"},
+            {"category":"baggage","count":0,"disposition":"retained-but-uninterpreted"},
+            {"category":"unknown_construct","count":0,"disposition":"read"},
+            {"category":"unknown_construct","count":0,"disposition":"stored"},
+            {"category":"master_section","count":1,"disposition":"read"},
+            {"category":"master_section","count":0,"disposition":"unsupported"},
+            {"category":"datapoint_type","count":0,"disposition":"read"},
+            {"category":"datapoint_type","count":0,"disposition":"stored"},
+            {"category":"datapoint_type","count":0,"disposition":"dropped"}
+        ])
+    );
+    let encoded = report.to_string();
+    assert!(!encoded.contains("sourceName"));
+    assert!(!encoded.contains("source_name"));
 
     let response = app
         .oneshot(
@@ -88,6 +133,86 @@ async fn installing_a_package_returns_report_and_makes_catalog_item_discoverable
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(json(response).await[0]["id"], "M-0001_CI-1");
+}
+
+#[tokio::test]
+async fn retry_projects_an_explicit_unavailable_marker_as_null_facts() {
+    let (_dir, state) = state();
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let bytes = package();
+
+    let first = app
+        .clone()
+        .oneshot(multipart("example.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::OK);
+    let first = json(first).await;
+    let sha256 = first["sha256"].as_str().unwrap().to_owned();
+    assert!(first["facts"].is_object());
+
+    {
+        let connection = state.product_db.as_ref().unwrap().lock().unwrap();
+        for table in [
+            "package_install_count",
+            "package_install_unknown",
+            "package_install_diagnostic",
+        ] {
+            connection
+                .execute(
+                    &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                    [&sha256],
+                )
+                .unwrap();
+        }
+        connection
+            .execute(
+                "UPDATE package_install_report SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0 WHERE package_sha256 = ?1",
+                [&sha256],
+            )
+            .unwrap();
+    }
+
+    let retry = app
+        .oneshot(multipart("renamed.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(retry.status(), StatusCode::OK);
+    let retry = json(retry).await;
+    assert_eq!(retry["skipped"], true);
+    assert!(retry["facts"].is_null());
+}
+
+#[tokio::test]
+async fn unsupported_diagnostics_expose_only_archive_relative_paths() {
+    const MASTER_WITH_FUTURE_SECTION: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers><FutureSection/></MasterData></KNX>"#;
+    let (_dir, state) = state();
+    let app = knx_server::app(Arc::new(state), None);
+
+    let response = app
+        .oneshot(multipart(
+            "private-host-path.knxprod",
+            &package_with_master(MASTER_WITH_FUTURE_SECTION),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let report = json(response).await;
+    assert_eq!(
+        report["facts"]["diagnostics"],
+        serde_json::json!([{
+            "kind": "unsupported-master-section",
+            "archivePath": "knx_master.xml",
+            "xmlPath": "/KNX/MasterData/FutureSection",
+            "detail": "master section FutureSection is retained but not interpreted",
+            "occurrences": 1
+        }])
+    );
+    let encoded = report.to_string();
+    assert!(!encoded.contains("private-host-path.knxprod"));
+    assert!(!encoded.contains("sourceName"));
+    assert!(!encoded.contains("source_name"));
 }
 
 #[tokio::test]

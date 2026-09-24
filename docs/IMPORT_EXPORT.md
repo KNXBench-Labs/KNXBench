@@ -500,6 +500,35 @@ checked value becomes `PackageMember.path`. This admits the measured
 eleven-package legacy-name aggregate without publishing its composition,
 relaxing the archive boundary or implying broader ETS compatibility.
 
+The opt-in compatibility-matrix regression
+(`crates/knx-productdb/tests/corpus_compatibility_matrix.rs`) measures a
+configured private product corpus in two modes: each package against an empty
+isolated database, then all packages against one shared database in stable hash
+order. `KNXBENCH_PRODUCT_CORPUS` is the mandatory read-only confinement root;
+`KNXBENCH_PRODUCT_CORPUS_SCOPES` is a mandatory OS path list selecting exact
+directories below it. `KNXBENCH_PRODUCT_MATRIX_OUTPUT` must be outside that
+root and receives JSON containing only ordinals, scheme numbers, per-instance
+`{status}` outcomes for success/deduplication and `{status, category}` for
+rejection, aggregate report totals, final table counts, and one
+aggregate identity/outcome commitment. Detailed per-instance report counts stay
+inside that commitment because their stable vectors can fingerprint individual
+packages; the JSON never publishes those vectors, individual hashes, source
+paths, filenames, or manufacturer labels. The gated implementation is Linux-only: descriptor confinement uses
+`openat2`, and descriptor-backed directory enumeration requires mounted
+`/proc`. The 2026-09-24
+gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
+unsupported; shared 102 installed, 2 already present, and 11 unsupported.
+`isolation_report_totals` sums only the 104 successful isolated installs.
+`shared_installed_report_totals` sums only the 102 attempts that inserted new
+rows; `shared_successful_attempt_report_totals` additionally includes both
+deduplicated attempts, whose installer reports replay the already stored
+package's report even though they add no rows. Final table counts remain a
+fourth, distinct measurement. The output directory is held by descriptor for
+the full run and must be on a different filesystem from the corpus, preventing
+a concurrent rename from turning publication into a corpus write.
+This is a repeatable compatibility baseline, not a claim that preserved unknown
+XML is understood or that ETS would produce the same database.
+
 **The project manifest.** `knx-store` schema v3 adds `manufacturer_ref`
 (`source_path`, `sha256`, `len`, `kind`) — what a project was imported
 with, independent of whether the product database that supplied the bytes

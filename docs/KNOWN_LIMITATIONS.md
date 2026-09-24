@@ -1012,6 +1012,20 @@ identity commitment are public. This removes that one container-level rejection
 only; it does not widen supported XML schemes or claim lossless interpretation
 of manufacturer semantics.
 
+**Measured update, 2026-09-24.** The opt-in compatibility matrix covers 115
+package instances (113 unique hashes): scheme 11 (48), scheme 12 (1), scheme
+13 (4), scheme 14 (3), scheme 20 (56), and scheme 21 (3). All 11
+scheme-12/13/14/21 instances are rejected by the deliberate namespace gate;
+the remaining 104 install in isolation. In one deterministic shared database,
+102 install and 2 are already present. Public identity is aggregate. Its 115
+hash-ordered per-instance records contain only ordinal, scheme and `{status}`
+for success/deduplication or `{status, category}` for rejection; detailed
+per-instance report-count vectors stay inside the aggregate commitment. No
+individual hash, private source name, or manufacturer identity is published.
+This replaces the earlier assumption that no
+standalone samples existed for those four schemes; it does not establish that
+they can be interpreted safely.
+
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,
 `CatalogBrowser.tsx`'s install picker). Full `.knxproj` *project* import
@@ -1025,11 +1039,10 @@ now-verified scheme-20 `.knxprod` package support.
 Schema23 v01.00.00* §4.2.2-§4.2.3's MasterData/`M-iiii` layout); the earlier
 assumption that all schemes ≥ 12 needed a still-unresolved encryption layer
 (RESEARCH §10) has been disproven for schemes 11 and 20 specifically — the
-5 real-world corpus files at those two schemes contain no encryption at all,
-they simply hadn't been exercised through a standalone installer before.
-Schemes 12-19/21/22 remain unread only because no sample of those schemes as
-a *standalone `.knxprod` package* (as opposed to bundled inside a `.knxproj`)
-has been acquired and tested yet — not because a new blocker was found.
+measured scheme-11/20 packages contain no encryption at all. The matrix
+also proves that scheme-12/13/14/21 standalone samples reach and are refused by
+the explicit namespace allowlist; their XML semantics have not passed the
+required data-integrity investigation. Schemes 15-19/22 remain unmeasured.
 
 **Impact.** A manufacturer's standalone `.knxprod` at scheme 11 or 20 can now
 be installed directly via `knx products ingest`, the HTTP endpoint, or
@@ -1039,12 +1052,12 @@ to reach the product database another way (in practice, from a `.knxproj`
 that already contains the application programs it references) or not at
 all for `.vd2`.
 
-**Lifted when.** For the remaining schemes: a standalone `.knxprod` sample at
-that scheme becomes available and is exercised the same way
-`installs_the_readable_corpus` exercises 11/20
-(`crates/knx-productdb/tests/standalone_packages.rs`). For `.vd2`: never —
-it is a structurally different, pre-standard legacy container, not a
-variant of the current format needing decryption.
+**Lifted when.** For schemes 12/13/14/21, only after the observed XML is
+inventoried, semantic differences are modeled without loss, and focused
+regressions plus the full corpus matrix pass. For schemes 15-19/22, a sample is
+still required before making any claim. For `.vd2`: never — it is a
+structurally different, pre-standard legacy container, not a variant of the
+current format needing decryption.
 
 **Update, 2026-09-11 (user decision).** Asked separately about `.vd2`
 support and about the schemes above that remain untested for want of a
@@ -1055,6 +1068,11 @@ decision to stop looking for a standalone sample, not a claim about what
 those files actually contain — whether they are genuinely encrypted was
 never established either way (see Cause above), and this update does not
 establish it now.
+
+**Superseded in part, 2026-09-23.** The current product-database completion
+goal put evidenced scheme expansion back in scope. The permanent `.vd2`
+decision remains unchanged; no scheme is enabled merely because a sample now
+exists.
 
 ## 12. Manufacturer data resolution — one of three gaps closed (2026-09-20)
 

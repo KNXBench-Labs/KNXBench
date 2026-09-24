@@ -1,9 +1,11 @@
+//! Verifies atomic standalone product-package ingestion and ZIP safety boundaries.
+
 use std::io::{Cursor, Read, Write};
 use std::path::PathBuf;
 
 use knx_productdb::{install_package, open_and_migrate, PackageError};
 use rusqlite::Connection;
-use zip::write::SimpleFileOptions;
+use zip::write::{FullFileOptions, SimpleFileOptions};
 
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
 const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"><Products><Product Id="P-1" Text="Example"/></Products></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
@@ -142,6 +144,128 @@ fn excessive_declared_entry_count_is_rejected_before_loading_zip_metadata() {
     assert_eq!(counts(&conn), vec![0; 9]);
 }
 
+#[test]
+fn aggregate_central_comments_stop_at_the_metadata_budget() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    for index in 0..400 {
+        zip.start_file(
+            format!("M-0001/Baggages/{index:04x}.bin"),
+            SimpleFileOptions::default(),
+        )
+        .unwrap();
+    }
+    let bytes = inflate_central_comments(zip.finish().unwrap().into_inner(), u16::MAX);
+    let (_dir, conn) = db();
+
+    assert!(matches!(
+        install_package(&conn, "comment-heavy.knxprod", &bytes),
+        Err(PackageError::SizeLimit { ref path }) if path == "central directory metadata"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn a_maximum_length_legacy_name_stays_within_the_decoded_budget() {
+    let ascii_component = "x".repeat(60_000);
+    let ascii_name = format!("M-0001/Baggages/{ascii_component}.bin");
+    let mut raw_name = b"M-0001/Baggages/".to_vec();
+    raw_name.extend(std::iter::repeat_n(0x81, 60_000));
+    raw_name.extend_from_slice(b".bin");
+    let bytes = legacy_member_names(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            (&ascii_name, b"x"),
+        ]),
+        &[(ascii_name.as_str(), raw_name.as_slice())],
+    );
+    let (_dir, conn) = db();
+
+    let report = install_package(&conn, "long-name.knxprod", &bytes).unwrap();
+    assert!(report
+        .members
+        .iter()
+        .any(|member| member.path.len() > 100_000));
+}
+
+#[test]
+fn maximum_member_count_with_long_shared_prefixes_remains_bounded() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    zip.start_file("M-0001/Hardware.xml", SimpleFileOptions::default())
+        .unwrap();
+    zip.write_all(HARDWARE).unwrap();
+    let shared = "a".repeat(1024);
+    for index in 0..4095 {
+        let name = format!("M-0001/Baggages/{shared}-{index:04x}.bin");
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(b"x").unwrap();
+    }
+    let bytes = zip.finish().unwrap().into_inner();
+    let (_dir, conn) = db();
+
+    assert!(matches!(
+        install_package(&conn, "maximum-members.knxprod", &bytes),
+        Err(PackageError::MissingMaster)
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn maximum_member_count_with_progressively_nested_paths_remains_bounded() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    let mut nested = String::from("M-0001/Baggages/");
+    for _ in 0..4094 {
+        nested.push_str("a/");
+        zip.add_directory(&nested, SimpleFileOptions::default())
+            .unwrap();
+    }
+    let bytes = zip.finish().unwrap().into_inner();
+    let (_dir, conn) = db();
+
+    let report = install_package(&conn, "nested-maximum.knxprod", &bytes).unwrap();
+    assert_eq!(report.members.len(), 2);
+}
+
+#[test]
+fn disjoint_deep_paths_stop_at_the_component_node_budget() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    zip.start_file("M-0001/Hardware.xml", SimpleFileOptions::default())
+        .unwrap();
+    zip.write_all(HARDWARE).unwrap();
+    for member in 0..4095 {
+        let suffix = (0..17)
+            .map(|depth| format!("{member:04x}-{depth:02x}"))
+            .collect::<Vec<_>>()
+            .join("/");
+        let name = format!("M-0001/Baggages/{suffix}.bin");
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(b"x").unwrap();
+    }
+    let bytes = zip.finish().unwrap().into_inner();
+    let (_dir, conn) = db();
+
+    assert!(matches!(
+        install_package(&conn, "deep-disjoint.knxprod", &bytes),
+        Err(PackageError::SizeLimit { ref path })
+            if path == "decoded path component budget"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
 fn archive(members: &[(&str, &[u8])]) -> Vec<u8> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, bytes) in members {
@@ -149,6 +273,818 @@ fn archive(members: &[(&str, &[u8])]) -> Vec<u8> {
         zip.write_all(bytes).unwrap();
     }
     zip.finish().unwrap().into_inner()
+}
+
+fn archive_with_symlink(name: &str) -> Vec<u8> {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (path, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(path, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    zip.start_file(
+        name,
+        SimpleFileOptions::default().unix_permissions(0o120777),
+    )
+    .unwrap();
+    zip.write_all(b"target").unwrap();
+    let mut bytes = zip.finish().unwrap().into_inner();
+    for offset in 0..bytes.len().saturating_sub(46) {
+        if bytes.get(offset..offset + 4) == Some(b"PK\x01\x02") {
+            let name_len = u16::from_le_bytes([bytes[offset + 28], bytes[offset + 29]]) as usize;
+            if bytes.get(offset + 46..offset + 46 + name_len) == Some(name.as_bytes()) {
+                bytes[offset + 5] = 3;
+                bytes[offset + 38..offset + 42]
+                    .copy_from_slice(&(0o120777_u32 << 16).to_le_bytes());
+            }
+        }
+    }
+    bytes
+}
+
+fn archive_with_unicode_path(
+    raw_name: &str,
+    version: u8,
+    crc32: u32,
+    unicode_name: &[u8],
+    duplicate: bool,
+) -> Vec<u8> {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    let mut payload = vec![version];
+    payload.extend_from_slice(&crc32.to_le_bytes());
+    payload.extend_from_slice(unicode_name);
+    let mut options = FullFileOptions::default();
+    for _ in 0..=usize::from(duplicate) {
+        options.add_extra_data(0xA11E, &payload, false).unwrap();
+        options.add_extra_data(0xA11E, &payload, true).unwrap();
+    }
+    zip.start_file(raw_name, options).unwrap();
+    zip.write_all(b"unicode path").unwrap();
+    let mut bytes = zip.finish().unwrap().into_inner();
+    for index in 0..bytes.len().saturating_sub(1) {
+        if bytes[index..index + 2] == 0xA11E_u16.to_le_bytes() {
+            bytes[index..index + 2].copy_from_slice(&0x7075_u16.to_le_bytes());
+        }
+    }
+    bytes
+}
+
+fn archive_with_malformed_aes_extra() -> Vec<u8> {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    let mut options = FullFileOptions::default();
+    options.add_extra_data(0xA11E, [1], false).unwrap();
+    options.add_extra_data(0xA11E, [1], true).unwrap();
+    zip.start_file("M-0001/Baggages/extra.bin", options)
+        .unwrap();
+    zip.write_all(b"payload").unwrap();
+    let mut bytes = zip.finish().unwrap().into_inner();
+    for offset in 0..bytes.len().saturating_sub(1) {
+        if bytes[offset..offset + 2] == 0xA11E_u16.to_le_bytes() {
+            bytes[offset..offset + 2].copy_from_slice(&0x9901_u16.to_le_bytes());
+        }
+    }
+    bytes
+}
+
+fn append_rebased_archive(mut prefix: Vec<u8>, mut archive: Vec<u8>) -> Vec<u8> {
+    let base = prefix.len() as u32;
+    for central in central_headers(&archive) {
+        let local = u32::from_le_bytes(archive[central + 42..central + 46].try_into().unwrap());
+        archive[central + 42..central + 46].copy_from_slice(&(local + base).to_le_bytes());
+    }
+    let eocd = eocd_offset(&archive);
+    let directory = u32::from_le_bytes(archive[eocd + 16..eocd + 20].try_into().unwrap());
+    archive[eocd + 16..eocd + 20].copy_from_slice(&(directory + base).to_le_bytes());
+    prefix.extend(archive);
+    prefix
+}
+
+fn insert_fallback_eocd_in_central_comment(mut bytes: Vec<u8>) -> Vec<u8> {
+    let headers = central_headers(&bytes);
+    assert!(headers.len() >= 3);
+    let old_eocd = eocd_offset(&bytes);
+    let first_record_size = (headers[1] - headers[0]) as u32;
+    let insertion = headers[2];
+    assert_eq!(&bytes[headers[1] + 32..headers[1] + 34], &[0, 0]);
+
+    let mut fake_eocd = Vec::with_capacity(22);
+    fake_eocd.extend_from_slice(b"PK\x05\x06");
+    fake_eocd.extend_from_slice(&0_u16.to_le_bytes());
+    fake_eocd.extend_from_slice(&0_u16.to_le_bytes());
+    fake_eocd.extend_from_slice(&1_u16.to_le_bytes());
+    fake_eocd.extend_from_slice(&1_u16.to_le_bytes());
+    fake_eocd.extend_from_slice(&first_record_size.to_le_bytes());
+    fake_eocd.extend_from_slice(&0_u32.to_le_bytes());
+    fake_eocd.extend_from_slice(&0_u16.to_le_bytes());
+    assert_eq!(fake_eocd.len(), 22);
+
+    bytes[headers[1] + 32..headers[1] + 34].copy_from_slice(&22_u16.to_le_bytes());
+    bytes.splice(insertion..insertion, fake_eocd);
+    let new_eocd = old_eocd + 22;
+    let old_size = u32::from_le_bytes(bytes[new_eocd + 12..new_eocd + 16].try_into().unwrap());
+    bytes[new_eocd + 12..new_eocd + 16].copy_from_slice(&(old_size + 22).to_le_bytes());
+    bytes
+}
+
+fn insert_fallback_eocd_in_final_comment(mut bytes: Vec<u8>) -> Vec<u8> {
+    let headers = central_headers(&bytes);
+    let eocd = eocd_offset(&bytes);
+    let first_record_size = (headers[1] - headers[0]) as u32;
+    assert_eq!(&bytes[eocd + 20..eocd + 22], &[0, 0]);
+
+    bytes[eocd + 20..eocd + 22].copy_from_slice(&23_u16.to_le_bytes());
+    bytes.extend_from_slice(b"PK\x05\x06");
+    bytes.extend_from_slice(&0_u16.to_le_bytes());
+    bytes.extend_from_slice(&0_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&first_record_size.to_le_bytes());
+    bytes.extend_from_slice(&0_u32.to_le_bytes());
+    bytes.extend_from_slice(&0_u16.to_le_bytes());
+    // Keep the nested record from terminating at EOF; the selected EOCD owns
+    // all 23 comment bytes, while `zip` otherwise accepts trailing bytes.
+    bytes.push(b'x');
+    bytes
+}
+
+fn mutate_first_name(mut bytes: Vec<u8>, from: &[u8], to: &[u8]) -> Vec<u8> {
+    assert_eq!(from.len(), to.len());
+    let start = bytes
+        .windows(from.len())
+        .position(|window| window == from)
+        .unwrap();
+    bytes[start..start + to.len()].copy_from_slice(to);
+    bytes
+}
+
+fn mutate_local_metadata(mut bytes: Vec<u8>, name: &[u8], field: usize) -> Vec<u8> {
+    let name_start = bytes
+        .windows(name.len())
+        .position(|window| window == name)
+        .unwrap();
+    bytes[name_start - 30 + field] ^= 1;
+    bytes
+}
+
+fn alias_second_central_local_offset(mut bytes: Vec<u8>) -> Vec<u8> {
+    let headers = bytes
+        .windows(4)
+        .enumerate()
+        .filter_map(|(offset, value)| (value == b"PK\x01\x02").then_some(offset))
+        .collect::<Vec<_>>();
+    let first = bytes[headers[0] + 42..headers[0] + 46].to_vec();
+    bytes[headers[1] + 42..headers[1] + 46].copy_from_slice(&first);
+    bytes
+}
+
+fn eocd_offset(bytes: &[u8]) -> usize {
+    bytes
+        .windows(4)
+        .rposition(|value| value == b"PK\x05\x06")
+        .unwrap()
+}
+
+fn central_headers(bytes: &[u8]) -> Vec<usize> {
+    let eocd = eocd_offset(bytes);
+    let count = u16::from_le_bytes([bytes[eocd + 10], bytes[eocd + 11]]) as usize;
+    let mut offset = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+    let mut headers = Vec::with_capacity(count);
+    for _ in 0..count {
+        assert_eq!(
+            bytes.get(offset..offset + 4),
+            Some(b"PK\x01\x02".as_slice())
+        );
+        headers.push(offset);
+        let name = u16::from_le_bytes([bytes[offset + 28], bytes[offset + 29]]) as usize;
+        let extra = u16::from_le_bytes([bytes[offset + 30], bytes[offset + 31]]) as usize;
+        let comment = u16::from_le_bytes([bytes[offset + 32], bytes[offset + 33]]) as usize;
+        offset += 46 + name + extra + comment;
+    }
+    headers
+}
+
+fn inflate_central_comments(mut bytes: Vec<u8>, comment_len: u16) -> Vec<u8> {
+    let eocd = eocd_offset(&bytes);
+    let directory = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+    let mut rebuilt = Vec::new();
+    for offset in central_headers(&bytes) {
+        let name = u16::from_le_bytes([bytes[offset + 28], bytes[offset + 29]]) as usize;
+        let extra = u16::from_le_bytes([bytes[offset + 30], bytes[offset + 31]]) as usize;
+        let old_comment = u16::from_le_bytes([bytes[offset + 32], bytes[offset + 33]]) as usize;
+        let end = offset + 46 + name + extra + old_comment;
+        let record_start = rebuilt.len();
+        rebuilt.extend_from_slice(&bytes[offset..end - old_comment]);
+        rebuilt[record_start + 32..record_start + 34].copy_from_slice(&comment_len.to_le_bytes());
+        rebuilt.resize(rebuilt.len() + comment_len as usize, b'c');
+    }
+    let mut footer = bytes[eocd..].to_vec();
+    footer[12..16].copy_from_slice(&(rebuilt.len() as u32).to_le_bytes());
+    bytes.truncate(directory);
+    bytes.extend(rebuilt);
+    bytes.extend(footer);
+    bytes
+}
+
+fn add_data_descriptor_to_last_member(
+    mut bytes: Vec<u8>,
+    with_signature: bool,
+    corrupt_crc: bool,
+) -> Vec<u8> {
+    let old_eocd = eocd_offset(&bytes);
+    let old_directory =
+        u32::from_le_bytes(bytes[old_eocd + 16..old_eocd + 20].try_into().unwrap()) as usize;
+    let central = *central_headers(&bytes).last().unwrap();
+    let local = u32::from_le_bytes(bytes[central + 42..central + 46].try_into().unwrap()) as usize;
+    let crc = u32::from_le_bytes(bytes[central + 16..central + 20].try_into().unwrap());
+    let compressed = u32::from_le_bytes(bytes[central + 20..central + 24].try_into().unwrap());
+    let uncompressed = u32::from_le_bytes(bytes[central + 24..central + 28].try_into().unwrap());
+    let local_name = u16::from_le_bytes([bytes[local + 26], bytes[local + 27]]) as usize;
+    let local_extra = u16::from_le_bytes([bytes[local + 28], bytes[local + 29]]) as usize;
+    let data_start = local + 30 + local_name + local_extra;
+    assert_eq!(data_start + compressed as usize, old_directory);
+
+    bytes[local + 6] |= 1 << 3;
+    bytes[local + 14..local + 26].fill(0);
+    let mut descriptor = Vec::with_capacity(16);
+    if with_signature {
+        descriptor.extend_from_slice(b"PK\x07\x08");
+    }
+    descriptor.extend_from_slice(&(crc ^ u32::from(corrupt_crc)).to_le_bytes());
+    descriptor.extend_from_slice(&compressed.to_le_bytes());
+    descriptor.extend_from_slice(&uncompressed.to_le_bytes());
+    let descriptor_len = descriptor.len();
+    bytes.splice(old_directory..old_directory, descriptor);
+
+    let central = central + descriptor_len;
+    let eocd = old_eocd + descriptor_len;
+    bytes[central + 8] |= 1 << 3;
+    bytes[eocd + 16..eocd + 20]
+        .copy_from_slice(&((old_directory + descriptor_len) as u32).to_le_bytes());
+    bytes
+}
+
+fn make_first_local_record_overlap_next(mut bytes: Vec<u8>) -> Vec<u8> {
+    let headers = central_headers(&bytes);
+    let first = headers[0];
+    let second = headers[1];
+    let first_local =
+        u32::from_le_bytes(bytes[first + 42..first + 46].try_into().unwrap()) as usize;
+    let second_local =
+        u32::from_le_bytes(bytes[second + 42..second + 46].try_into().unwrap()) as usize;
+    let name = u16::from_le_bytes([bytes[first_local + 26], bytes[first_local + 27]]) as usize;
+    let extra = u16::from_le_bytes([bytes[first_local + 28], bytes[first_local + 29]]) as usize;
+    let data_start = first_local + 30 + name + extra;
+    let overlapping = (second_local - data_start + 1) as u32;
+    bytes[first_local + 18..first_local + 22].copy_from_slice(&overlapping.to_le_bytes());
+    bytes[first + 20..first + 24].copy_from_slice(&overlapping.to_le_bytes());
+    bytes
+}
+
+fn make_last_local_record_overlap_directory(mut bytes: Vec<u8>) -> Vec<u8> {
+    let central = *central_headers(&bytes).last().unwrap();
+    let local = u32::from_le_bytes(bytes[central + 42..central + 46].try_into().unwrap()) as usize;
+    let compressed = u32::from_le_bytes(bytes[central + 20..central + 24].try_into().unwrap());
+    let overlapping = compressed + 1;
+    bytes[local + 18..local + 22].copy_from_slice(&overlapping.to_le_bytes());
+    bytes[central + 20..central + 24].copy_from_slice(&overlapping.to_le_bytes());
+    bytes
+}
+
+fn legacy_member_names(mut bytes: Vec<u8>, replacements: &[(&str, &[u8])]) -> Vec<u8> {
+    for (utf8_name, legacy_name) in replacements {
+        assert_eq!(utf8_name.len(), legacy_name.len());
+        let mut replaced = 0;
+        let mut offset = 0;
+        while offset + utf8_name.len() <= bytes.len() {
+            let Some(relative) = bytes[offset..]
+                .windows(utf8_name.len())
+                .position(|window| window == utf8_name.as_bytes())
+            else {
+                break;
+            };
+            let start = offset + relative;
+            bytes[start..start + legacy_name.len()].copy_from_slice(legacy_name);
+            replaced += 1;
+            offset = start + legacy_name.len();
+        }
+        assert_eq!(replaced, 2, "local and central ZIP names must both change");
+    }
+    bytes
+}
+
+fn mark_names_as_utf8(mut bytes: Vec<u8>) -> Vec<u8> {
+    for offset in 0..bytes.len().saturating_sub(46) {
+        if bytes.get(offset..offset + 4) == Some(b"PK\x03\x04") {
+            bytes[offset + 7] |= 0x08;
+        } else if bytes.get(offset..offset + 4) == Some(b"PK\x01\x02") {
+            bytes[offset + 9] |= 0x08;
+        }
+    }
+    bytes
+}
+
+#[test]
+fn utf8_and_legacy_cp437_member_names_are_retained_as_unicode() {
+    for bytes in [
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/Grüsse.txt", b"utf8"),
+        ]),
+        legacy_member_names(
+            archive(&[
+                ("knx_master.xml", MASTER),
+                ("M-0001/Hardware.xml", HARDWARE),
+                ("M-0001/Baggages/Grusse.txt", b"cp437"),
+            ]),
+            &[(
+                "M-0001/Baggages/Grusse.txt",
+                b"M-0001/Baggages/Gr\x81sse.txt",
+            )],
+        ),
+    ] {
+        let (_dir, conn) = db();
+        let report = install_package(&conn, "names.knxprod", &bytes).unwrap();
+        assert!(report
+            .members
+            .iter()
+            .any(|member| member.path == "M-0001/Baggages/Grüsse.txt"));
+    }
+}
+
+#[test]
+fn decoded_legacy_names_still_reject_traversal_and_normalized_collisions() {
+    let traversal = legacy_member_names(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/../Grusse.txt", b"bad"),
+        ]),
+        &[(
+            "M-0001/Baggages/../Grusse.txt",
+            b"M-0001/Baggages/../Gr\x81sse.txt",
+        )],
+    );
+    let (_dir, conn) = db();
+    assert!(matches!(
+        install_package(&conn, "traversal.knxprod", &traversal),
+        Err(PackageError::UnsafeMember { .. })
+    ));
+
+    let collision = legacy_member_names(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/Grusse", b"file"),
+            ("M-0001/Baggages/Grusse/", b""),
+        ]),
+        &[
+            ("M-0001/Baggages/Grusse/", b"M-0001/Baggages/Gr\x81sse/"),
+            ("M-0001/Baggages/Grusse", b"M-0001/Baggages/Gr\x81sse"),
+        ],
+    );
+    let (_dir, conn) = db();
+    assert!(matches!(
+        install_package(&conn, "collision.knxprod", &collision),
+        Err(PackageError::DuplicateMember { .. })
+    ));
+}
+
+#[test]
+fn every_documented_decoded_path_hazard_remains_rejected() {
+    let nul = legacy_member_names(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/nul-x", b"nul"),
+        ]),
+        &[("M-0001/Baggages/nul-x", b"M-0001/Baggages/nul\0x")],
+    );
+    for bytes in [
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("/absolute", b"bad"),
+        ]),
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("C:/drive", b"bad"),
+        ]),
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001\\backslash", b"bad"),
+        ]),
+        nul,
+        archive_with_symlink("M-0001/Baggages/link"),
+    ] {
+        let (_dir, conn) = db();
+        assert!(matches!(
+            install_package(&conn, "unsafe.knxprod", &bytes),
+            Err(PackageError::UnsafeMember { .. })
+        ));
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+}
+
+#[test]
+fn invalid_bytes_claiming_to_be_utf8_are_not_treated_as_cp437() {
+    let bytes = mark_names_as_utf8(legacy_member_names(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/Grusse.txt", b"bad flag"),
+        ]),
+        &[(
+            "M-0001/Baggages/Grusse.txt",
+            b"M-0001/Baggages/Gr\x81sse.txt",
+        )],
+    ));
+    let (_dir, conn) = db();
+
+    let error = install_package(&conn, "invalid-utf8.knxprod", &bytes).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause }
+            if cause == "member name has invalid flagged UTF-8"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn local_and_central_member_identity_must_agree() {
+    let bytes = mutate_first_name(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/one.txt", b"identity"),
+        ]),
+        b"M-0001/Baggages/one.txt",
+        b"M-0001/Baggages/two.txt",
+    );
+    let (_dir, conn) = db();
+
+    let error = install_package(&conn, "split-identity.knxprod", &bytes).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause }
+            if cause == "local and central member names differ"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn local_and_central_metadata_and_offsets_must_agree() {
+    let valid = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    for (bytes, cause) in [
+        (
+            mutate_local_metadata(valid.clone(), b"knx_master.xml", 6),
+            "local and central member metadata differ",
+        ),
+        (
+            mutate_local_metadata(valid.clone(), b"knx_master.xml", 8),
+            "local and central member metadata differ",
+        ),
+        (
+            alias_second_central_local_offset(valid.clone()),
+            "multiple members reference one local header",
+        ),
+    ] {
+        let (_dir, conn) = db();
+        let error = install_package(&conn, "metadata.knxprod", &bytes).unwrap_err();
+        assert!(matches!(
+            error,
+            PackageError::InvalidZip { cause: ref actual } if actual == cause
+        ));
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+}
+
+#[test]
+fn zip64_entry_metadata_and_nonzero_entry_disks_are_rejected() {
+    let valid = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    let mut other_disk = valid.clone();
+    let central = central_headers(&other_disk)[0];
+    other_disk[central + 34..central + 36].copy_from_slice(&1_u16.to_le_bytes());
+
+    let raw = "M-0001/Baggages/zip64.txt";
+    let mut zip64_extra = archive_with_unicode_path(
+        raw,
+        2,
+        crc32fast::hash(raw.as_bytes()),
+        b"ignored-version",
+        false,
+    );
+    for offset in 0..zip64_extra.len().saturating_sub(1) {
+        if zip64_extra[offset..offset + 2] == 0x7075_u16.to_le_bytes() {
+            zip64_extra[offset..offset + 2].copy_from_slice(&0x0001_u16.to_le_bytes());
+        }
+    }
+
+    for (bytes, cause) in [
+        (other_disk, "central member starts on another disk"),
+        (zip64_extra, "ZIP64 member metadata is unsupported"),
+    ] {
+        let (_dir, conn) = db();
+        let error = install_package(&conn, "unsupported.knxprod", &bytes).unwrap_err();
+        assert!(matches!(
+            error,
+            PackageError::InvalidZip { cause: ref actual } if actual == cause
+        ));
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+}
+
+#[test]
+fn zip_parser_cannot_backtrack_to_an_unchecked_earlier_directory() {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ] {
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    for index in 0..390 {
+        zip.start_file(
+            format!("M-0001/Baggages/{index:04x}.bin"),
+            SimpleFileOptions::default(),
+        )
+        .unwrap();
+    }
+    // This earlier directory is itself larger than the accepted metadata
+    // budget. The parser must still report the selected final directory's
+    // malformed AES field rather than scanning or allocating from this one.
+    let earlier = inflate_central_comments(zip.finish().unwrap().into_inner(), u16::MAX);
+    let bytes = append_rebased_archive(earlier, archive_with_malformed_aes_extra());
+    let (_dir, conn) = db();
+
+    let error = install_package(&conn, "two-directories.knxprod", &bytes).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause }
+            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn zip_parser_cannot_fall_back_to_an_eocd_inside_a_central_comment() {
+    let bytes = insert_fallback_eocd_in_central_comment(archive_with_malformed_aes_extra());
+    let (_dir, conn) = db();
+
+    let error = install_package(&conn, "comment-eocd.knxprod", &bytes).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause }
+            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn zip_parser_cannot_select_an_eocd_inside_the_final_comment() {
+    let bytes = insert_fallback_eocd_in_final_comment(archive_with_malformed_aes_extra());
+    let (_dir, conn) = db();
+
+    let error = install_package(&conn, "final-comment-eocd.knxprod", &bytes).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause }
+            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn decoded_file_prefix_collisions_and_directory_payloads_are_rejected() {
+    for bytes in [
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/node", b"file"),
+            ("M-0001/Baggages/node/child", b"child"),
+        ]),
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("M-0001/Baggages/node/child", b"child"),
+            ("M-0001/Baggages/node", b"file"),
+        ]),
+    ] {
+        let (_dir, conn) = db();
+        assert!(matches!(
+            install_package(&conn, "prefix.knxprod", &bytes),
+            Err(PackageError::DuplicateMember { .. })
+        ));
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+
+    let (_dir, conn) = db();
+    let payload = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages/directory/", b"hidden payload"),
+    ]);
+    assert!(matches!(
+        install_package(&conn, "directory-payload.knxprod", &payload),
+        Err(PackageError::UnsafeMember { .. })
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+
+    let (_dir, conn) = db();
+    let ordinary_directory = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages/directory/", b""),
+        ("M-0001/Baggages/directory/child", b"child"),
+    ]);
+    assert!(install_package(&conn, "directory.knxprod", &ordinary_directory).is_ok());
+}
+
+#[test]
+fn central_extent_local_ranges_and_crc_size_metadata_must_agree() {
+    let valid = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    let mut wrong_directory_size = valid.clone();
+    let eocd = eocd_offset(&wrong_directory_size);
+    let declared = u32::from_le_bytes(
+        wrong_directory_size[eocd + 12..eocd + 16]
+            .try_into()
+            .unwrap(),
+    );
+    wrong_directory_size[eocd + 12..eocd + 16].copy_from_slice(&(declared + 1).to_le_bytes());
+
+    for (bytes, cause) in [
+        (
+            mutate_local_metadata(valid.clone(), b"knx_master.xml", 14),
+            "local and central CRC or sizes differ",
+        ),
+        (
+            mutate_local_metadata(valid.clone(), b"knx_master.xml", 22),
+            "local and central CRC or sizes differ",
+        ),
+        (
+            make_first_local_record_overlap_next(valid.clone()),
+            "overlapping local file records",
+        ),
+        (
+            make_last_local_record_overlap_directory(valid.clone()),
+            "local file record overlaps central directory",
+        ),
+        (
+            wrong_directory_size,
+            "central directory size or extent mismatch",
+        ),
+    ] {
+        let (_dir, conn) = db();
+        let error = install_package(&conn, "inconsistent.knxprod", &bytes).unwrap_err();
+        assert!(matches!(
+            error,
+            PackageError::InvalidZip { cause: ref actual } if actual == cause
+        ));
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+}
+
+#[test]
+fn data_descriptors_are_checked_against_the_central_directory() {
+    let valid = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    for with_signature in [true, false] {
+        let (_dir, conn) = db();
+        assert!(install_package(
+            &conn,
+            "descriptor.knxprod",
+            &add_data_descriptor_to_last_member(valid.clone(), with_signature, false),
+        )
+        .is_ok());
+    }
+
+    let (_dir, conn) = db();
+    let error = install_package(
+        &conn,
+        "bad-descriptor.knxprod",
+        &add_data_descriptor_to_last_member(valid, true, true),
+    )
+    .unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause } if cause == "data descriptor differs from central directory"
+    ));
+    assert_eq!(counts(&conn), vec![0; 9]);
+}
+
+#[test]
+fn a_hash_retry_still_revalidates_the_stored_archive_boundary() {
+    let (_dir, conn) = db();
+    let malformed = mutate_local_metadata(
+        archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+        ]),
+        b"knx_master.xml",
+        14,
+    );
+    let sha256 = knx_productdb::sha256_hex(&malformed);
+    conn.execute(
+        "INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count)
+         VALUES (?1, 'legacy.knxprod', 11, ?2, ?3, 0)",
+        rusqlite::params![sha256, malformed.len() as i64, malformed],
+    )
+    .unwrap();
+
+    let error = install_package(&conn, "retry.knxprod", &malformed).unwrap_err();
+    assert!(matches!(
+        error,
+        PackageError::InvalidZip { ref cause } if cause == "local and central CRC or sizes differ"
+    ));
+    assert_eq!(
+        conn.query_row("SELECT count(*) FROM package", [], |row| row
+            .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
+fn unicode_path_extra_fields_have_an_explicit_fallback_and_rejection_policy() {
+    let raw = "M-0001/Baggages/Grusse.txt";
+    let crc = crc32fast::hash(raw.as_bytes());
+
+    for (bytes, expected) in [
+        (
+            archive_with_unicode_path(raw, 1, crc, "M-0001/Baggages/Grüsse.txt".as_bytes(), false),
+            "M-0001/Baggages/Grüsse.txt",
+        ),
+        (
+            archive_with_unicode_path(raw, 1, crc ^ 1, b"ignored-bad-crc", false),
+            raw,
+        ),
+        (
+            archive_with_unicode_path(raw, 2, crc, b"ignored-version", false),
+            raw,
+        ),
+    ] {
+        let (_dir, conn) = db();
+        let report = install_package(&conn, "unicode-path.knxprod", &bytes).unwrap();
+        assert!(report.members.iter().any(|member| member.path == expected));
+    }
+
+    for (bytes, expected) in [
+        (
+            archive_with_unicode_path(raw, 1, crc, b"M-0001/Baggages/Gr\xFFsse.txt", false),
+            "invalid Unicode path UTF-8",
+        ),
+        (
+            archive_with_unicode_path(raw, 1, crc, b"../escape", false),
+            "unsafe decoded path",
+        ),
+        (
+            archive_with_unicode_path(raw, 1, crc, b"M-0001/Baggages/Gruesse.txt", true),
+            "duplicate Unicode path field",
+        ),
+    ] {
+        let (_dir, conn) = db();
+        let error = install_package(&conn, "unicode-path.knxprod", &bytes).unwrap_err();
+        match expected {
+            "unsafe decoded path" => {
+                assert!(matches!(error, PackageError::UnsafeMember { .. }))
+            }
+            cause => assert!(matches!(
+                error,
+                PackageError::InvalidZip { cause: ref actual } if actual == cause
+            )),
+        }
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
 }
 
 fn counts(conn: &Connection) -> Vec<i64> {
@@ -492,6 +1428,7 @@ fn duplicate_encrypted_truncated_and_oversized_members_are_rejected() {
         }
         if &valid[i..i + 4] == b"PK\x03\x04" {
             encrypted[i + 6] |= 1;
+            oversized[i + 22..i + 26].copy_from_slice(&(64_u32 * 1024 * 1024 + 1).to_le_bytes());
         }
     }
     assert!(matches!(

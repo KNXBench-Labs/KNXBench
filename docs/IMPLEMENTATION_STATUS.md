@@ -1417,6 +1417,23 @@ layout, `knx_master.xml` root) and `03_01_01 Architecture v03.00.02 AS`
 both checked directly against the primary spec text, not cited on
 faith.
 
+**ZIP member-name compatibility (2026-09-23).** The package preflight now
+captures central/local flags, raw names, methods and offsets and applies the ZIP
+encoding policy before path normalization: strict UTF-8 for bit 11, otherwise
+CP437. Unicode-path version/CRC/UTF-8 is validated explicitly; stale or unknown
+fields fall back and contradictory identities fail. Traversal,
+absolute/drive-like paths, NUL/backslash, symlinks and decoded-name collisions
+remain rejected through an iterative component trie with a 65,536-node budget.
+Central extents, disjoint local ranges, CRC/size fields and data descriptors are
+cross-checked, and parser-effective records must retain the preflight identity,
+including on hash-identical retries. Central and local metadata are each capped
+at 24 MiB and decoded paths at 72 MiB before parser/path-copy expansion.
+Synthetic UTF-8/CP437/attack fixtures pass, and
+`legacy_member_names_corpus.rs` pins only an aggregate commitment and count for
+the 11 observed packages as an ignored, environment-opt-in local test without
+publishing individual fingerprints, manufacturer names, filenames or bytes. See
+[ADR-0034](adr/0034-zip-member-names-follow-declared-encoding.md).
+
 *Task 3 — truthful CLI/HTTP results.* `knx products ingest
 <file.knxproj|file.knxprod|file.vd2>` and `POST /api/catalog/install`
 both return the same typed `PackageError` strings rather than a generic

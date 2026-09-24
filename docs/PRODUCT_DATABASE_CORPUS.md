@@ -22,12 +22,12 @@ python3 tools/inspect_product_corpus.py \
   --output "$TMPDIR/product-corpus.json"
 ```
 
-A temporary Rust corpus probe also installed every discovered modern package,
-in deterministic path order, into one fresh shared `knx-productdb` database per
-manufacturer. It exercised the real `install_package` and `open_and_migrate`
-paths and printed the install report. The temporary test was removed after the
-measurement; the durable follow-up should be a gated/ignored integration test
-that requires an explicit corpus path.
+The ignored `corpus_compatibility_matrix` integration test installs every
+discovered modern package both in isolation and in deterministic content-hash
+order. It exercises the real `install_package` and `open_and_migrate` paths and
+writes an anonymized JSON result only when all three explicit corpus environment
+variables are present. Ordinary test runs skip the private measurement instead
+of reporting a false pass.
 
 Important interpretation rules:
 
@@ -145,44 +145,30 @@ need fixture-backed validation for each scheme.
 
 ## Current KNXBench result
 
-The standalone package installer currently admits only schemes 11 and 20. In
-the sequential shared-database probe:
+The standalone package installer admits schemes 11, 13, and 20. The opt-in,
+content-hash-ordered matrix measures 115 package instances / 113 unique hashes.
+All four measured scheme-13 packages install in isolation and either install or
+deduplicate in the shared database. The complete aggregate result is:
 
-| Corpus | Inputs probed | Installed | Rejected |
-| --- | ---: | ---: | ---: |
-| Gira | 15 | 7 | 8 |
-| MDT | 101 | 86 | 15 |
-| **Total** | **116** | **93** | **23** |
+- isolation: 108 installed, 7 rejected as unsupported namespaces;
+- shared: 106 installed, 2 content-addressed duplicates, 7 rejected as
+  unsupported namespaces; and
+- remaining namespace rejections: scheme 12 (1), scheme 14 (3), scheme 21 (3).
 
-The 23 rejections have three distinct causes:
+The shared database ends with 106 package rows, 1,124 retained source files,
+211,231 parameter rows, and 2,764,318 translation rows. Across the 108 isolated
+successful reports, KNXBench records 1,567 members and 22,900 unknown-construct
+rows. Those counts describe the current parser and evidence ledger; they do not
+mean every construct is semantically interpreted. Unknown constructs and opaque
+members remain visible instead of being suppressed merely because scheme 13 is
+now accepted.
 
-1. **11 modern packages have legacy/non-UTF-8 ZIP member-name encoding**
-   (6 Gira, 5 MDT). The displayed names contain ordinary German text such as
-   `Gerätezertifikat`, `Gehäuse`, `Kanäle` or `grün`, but the safety boundary
-   rejects their central-directory encoding. These packages otherwise use a
-   supported scheme. This is the highest-value compatibility defect because it
-   blocks common, current packages and is independent of XML semantics.
-2. **11 modern packages use an unsupported master namespace**: scheme 12 (1),
-   13 (4), 14 (3) or 21 (3).
-3. **One MDT `MDT_VD_VisuControl.pr5` is a legacy encrypted container**, not a
-   modern package. It has one encrypted member,
-   `Program Files/Ets/Database/ets.pr_`, and no `knx_master.xml`/`M-xxxx`
-   layout. It belongs to the same VD/PR legacy-import work described in
-   [Legacy VD2/VD3/VD4 product databases](VD4_PRODUCT_DATABASE_IMPORT.md), not
-   to the modern `.knxprod` parser.
-
-The accepted set contains 45 scheme-11 and 48 scheme-20 packages (7 Gira + 86
-MDT overall). The shared installs reported no product-reference conflicts and
-no dropped DPT assignments. Those statements apply only to the accepted set
-and to this deterministic install order.
-
-Accepted does not mean fully interpreted. Across successful packages the
-install reports contained 19,291 unknown entries in total (Gira 2,021; MDT
-17,270), with per-package medians of 172 and 149 respectively. Frequent
-categories include presentation/layout attributes, calculation/transformation
-nodes, argument declarations and load-procedure details. These must remain
-visible in reports or opaque storage; reducing the count requires semantic
-support, not a blanket suppression list.
+Scheme-13 support is deliberately narrower than an ETS compatibility claim.
+The observed scheme-13 grammar introduced no new element or attribute names
+relative to the measured scheme-11/20 union, representative rows are pinned by
+a synthetic regression, malformed packages publish no database rows, and the
+four real corpus packages pass the full isolated/shared matrix. No authoritative
+scheme-13 XSD or independent semantic oracle is available.
 
 ## Feature-shape observations relevant to implementation
 
@@ -258,46 +244,44 @@ section-level reporting before they can support commissioning decisions.
    name flags/bytes, implement the intended legacy encoding policy explicitly,
    normalize only after decoding, and then apply traversal/absolute-path/NUL and
    duplicate-name checks. Add synthetic CP437/UTF-8/path-attack fixtures plus
-   the 11 gated corpus regressions. Do not merely remove the rejection.
-2. **Turn this probe into an ignored corpus compatibility matrix.** Require an
-   explicit environment variable, install each package both in isolation and
-   in deterministic shared order, and emit JSON containing scheme, outcome,
-   report counts and final DB counts. CI without `OriginalData` must report a
-   skip, never a false pass.
-3. **Add scheme support incrementally: 13, then 12/14, then 21.** Scheme 13 has
-   the smallest observed grammar delta. Each slice needs a frozen synthetic
-   fixture, one real gated regression, explicit unknown/loss accounting and a
-   no-partial-publication failure test. Scheme 14/21 must model
+   the corpus matrix. Keep the seven currently namespace-gated packages as
+   explicit rejection regressions until their schemes are separately supported.
+   Do not merely remove the rejection.
+2. **Add scheme support incrementally: 12/14, then 21.** Scheme 13, the smallest
+   observed grammar delta, is now supported with a frozen synthetic fixture,
+   four real gated packages, explicit unknown/loss accounting, and
+   no-partial-publication tests. Each remaining slice needs the same evidence.
+   Scheme 14/21 must model
    `LdCtrlDeclarePropDesc`; scheme 21 additionally needs the RF/coupler,
    variable-length and access-policy fields above.
-4. **Reduce unknown reports by capability area.** First classify unknowns into
+3. **Reduce unknown reports by capability area.** First classify unknowns into
    safe presentation metadata, retained-but-uninterpreted semantics and data
    required for editing/commissioning. Preserve source XML/attributes until a
    typed mapping is proven. Never make the report quieter by discarding data.
-5. **Complete parameter-kind and dynamic-layout coverage.** Add corpus-derived,
+4. **Complete parameter-kind and dynamic-layout coverage.** Add corpus-derived,
    synthetic tests for all observed parameter kinds, Rows/Columns,
    rename/button nodes, repeat/module nesting, calculation transformations and
    allocator arguments. Separate evaluation semantics from UI layout.
-6. **Expose a safe baggage inventory.** Model baggage references and metadata,
+5. **Expose a safe baggage inventory.** Model baggage references and metadata,
    classify images/documents/installers/nested archives without executing or
    extracting them, and retain all original bytes. Add maximum-size and nested-
    archive regressions using synthetic fixtures plus gated large-corpus tests.
-7. **Treat the `.pr5` as legacy VD/PR work.** Reuse the independent EX-IM
+6. **Treat the `.pr5` as legacy VD/PR work.** Reuse the independent EX-IM
    research and security/legal constraints in
    `VD4_PRODUCT_DATABASE_IMPORT.md`; do not feed it through the modern-package
    path or embed a password.
-8. **Add catalogue-version UX.** Exact duplicate detection, same-order-number
+7. **Add catalogue-version UX.** Exact duplicate detection, same-order-number
    version grouping, producer/tool metadata, scheme, language coverage,
    secure-capable marker and replacement metadata are all available in this
    corpus and should be visible before users install or replace a product.
 
 ## Compatibility conclusion
 
-The corpus materially broadens the evidence base: KNXBench already accepts 93
-of 115 modern packages, but the accepted subset still carries substantial
-explicitly unknown metadata. The immediate engineering priority is not a vague
-“support more ETS versions”; it is (1) safe legacy ZIP filename decoding,
-(2) scheme-by-scheme parser support with loss accounting, and (3) deeper typed
+The corpus materially broadens the evidence base: KNXBench installs 108 of 115
+modern package instances in isolation, but the accepted subset still carries
+substantial explicitly unknown metadata. Legacy ZIP filename decoding and
+scheme 13 are now evidenced. The next priorities are (1) remaining
+scheme-by-scheme parser support with loss accounting and (2) deeper typed
 coverage of parameter/dynamic/load-procedure semantics. That sequence maximizes
 usable products without pretending that successful catalogue installation is
 full ETS or commissioning compatibility.

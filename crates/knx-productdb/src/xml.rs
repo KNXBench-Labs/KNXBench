@@ -6,7 +6,7 @@
 //! attribute lookup, subtree skipping (the `Dynamic` tree, RESEARCH §4.1),
 //! and errors that name the file they came from.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
@@ -15,17 +15,24 @@ use crate::ProductDbError;
 
 /// One element's attributes, owned and decoded, keyed by local name.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Attrs(BTreeMap<String, String>);
+pub struct Attrs {
+    values: BTreeMap<String, String>,
+    evidence: BTreeMap<String, String>,
+}
 
 impl Attrs {
     pub fn get(&self, name: &str) -> Option<&str> {
-        self.0.get(name).map(String::as_str)
+        self.values.get(name).map(String::as_str)
     }
 
     /// Every attribute name present, so a parser can report the ones it
     /// does not know instead of dropping them.
     pub fn names(&self) -> impl Iterator<Item = &str> {
-        self.0.keys().map(String::as_str)
+        self.evidence.keys().map(String::as_str)
+    }
+
+    pub fn evidence_value(&self, name: &str) -> Option<&str> {
+        self.evidence.get(name).map(String::as_str)
     }
 }
 
@@ -34,12 +41,15 @@ pub fn local_name(e: &BytesStart) -> String {
 }
 
 pub fn attrs(e: &BytesStart, source_path: &str) -> Result<Attrs, ProductDbError> {
-    let mut map = BTreeMap::new();
+    let mut values = BTreeMap::new();
+    let mut evidence = BTreeMap::new();
+    let mut unqualified = HashSet::new();
     for attr in e.attributes() {
         let attr = attr.map_err(|err| ProductDbError::Xml {
             source_path: source_path.to_string(),
             cause: err.to_string(),
         })?;
+        let raw_key = attr.key.as_ref().to_string();
         let key = attr.key.local_name().as_ref().to_string();
         let value = attr
             .normalized_value(XmlVersion::Implicit1_0)
@@ -48,9 +58,16 @@ pub fn attrs(e: &BytesStart, source_path: &str) -> Result<Attrs, ProductDbError>
                 cause: err.to_string(),
             })?
             .into_owned();
-        map.insert(key, value);
+        evidence.insert(raw_key, value.clone());
+        let is_unqualified = !attr.key.as_ref().contains(':');
+        if is_unqualified {
+            unqualified.insert(key.clone());
+            values.insert(key, value);
+        } else if !unqualified.contains(&key) {
+            values.insert(key, value);
+        }
     }
-    Ok(Attrs(map))
+    Ok(Attrs { values, evidence })
 }
 
 /// Consumes events until the element named `name` closes, counting nested
@@ -110,6 +127,27 @@ mod tests {
         assert_eq!(a.get("Id"), Some("M-006A_H-1"));
         assert_eq!(a.get("SerialNumber"), Some("EM12102"));
         assert_eq!(a.get("Missing"), None);
+    }
+
+    #[test]
+    fn unqualified_attributes_win_local_name_collisions_in_both_orders() {
+        for xml in [
+            br#"<when xmlns:e="urn:example" default="true" e:default="false"/>"#.as_slice(),
+            br#"<when xmlns:e="urn:example" e:default="false" default="true"/>"#.as_slice(),
+        ] {
+            let mut reader = Reader::from_reader(xml);
+            let mut buf = Vec::new();
+            let start = match reader.read_event_into(&mut buf).unwrap() {
+                Event::Empty(element) => element,
+                other => panic!("expected an empty element, got {other:?}"),
+            };
+
+            let attributes = attrs(&start, "t.xml").unwrap();
+            assert_eq!(attributes.get("default"), Some("true"));
+            let evidence_names = attributes.names().collect::<Vec<_>>();
+            assert!(evidence_names.contains(&"default"));
+            assert!(evidence_names.contains(&"e:default"));
+        }
     }
 
     #[test]

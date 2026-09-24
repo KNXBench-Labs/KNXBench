@@ -123,13 +123,15 @@ published, and the version number is not a promise that anything is finished.
 - **Workaround:** obtain the product as a `.knxprod` package.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md)
 
-### `.knxprod` packages at master-data scheme 12 and newer are not installable directly
+### Some newer `.knxprod` master-data schemes are not installable directly
 
 - **Affected:** product data for newer devices.
 - **Limitation:** a standalone `.knxprod` package installs at master-data
-  scheme 11 or 20, verified against four real files. No tested sample exists
-  at schemes 12 to 19, 21 or 22, so those are not supported. Encrypted
-  packages are refused permanently, by decision rather than by omission.
+  scheme 11, 13 or 20. Scheme 13 is verified against four measured packages,
+  but that proves KNXBench parser/persistence behavior rather than complete
+  semantics or ETS parity. The observed schemes 12, 14 and 21 and the
+  unobserved schemes 15-19/22 are not supported. Encrypted packages are
+  refused permanently, by decision rather than by omission.
 - **Consequence:** for many current devices the manufacturer's own download
   cannot be installed.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported

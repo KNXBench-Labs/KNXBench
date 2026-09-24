@@ -987,12 +987,14 @@ The separate constraint that no GPL crate enters the runtime dependency graph
 remains unchanged. It governs *incoming* dependencies and is independent of
 KNXBench's own licence ([ADR-0002](adr/0002-own-knxproj-parser.md)).
 
-## 11. `.knxprod` files for master data scheme ≥ 12 cannot be imported directly
+<a id="11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly"></a>
+
+## 11. `.knxprod` support is evidenced only for schemes 11, 13, and 20
 
 **Limitation.** Manufacturer product files in the `.knxprod` container are
-fully readable, as a standalone package independent of any `.knxproj`, for
-master data scheme 11 and scheme 20 (2026-09-10,
-`knx_productdb::install_package`). Schemes 12-19, 21 and 22 remain unread as
+readable, as a standalone package independent of any `.knxproj`, for master
+data schemes 11, 13, and 20 (`knx_productdb::install_package`). Schemes 12,
+14-19, 21, and 22 remain unread as
 a *standalone package* — they can still reach the product database bundled
 inside a `.knxproj` that already contains them (see Impact below;
 `knx_productdb::ingest_file` performs no scheme/namespace gating). `.vd2`,
@@ -1017,23 +1019,25 @@ CRC and valid UTF-8 before every path and duplicate check
 ([ADR-0034](adr/0034-zip-member-names-follow-declared-encoding.md)).
 The eleven-package aggregate that previously stopped at the raw-name UTF-8
 check now installs in the local gated regression. Only its count and aggregate
-identity commitment are public. This removes that one container-level rejection
-only; it does not widen supported XML schemes or claim lossless interpretation
-of manufacturer semantics.
+identity commitment are public. This removes that one container-level rejection only; it does not claim lossless
+interpretation of manufacturer semantics.
 
 **Measured update, 2026-09-24.** The opt-in compatibility matrix covers 115
 package instances (113 unique hashes): scheme 11 (48), scheme 12 (1), scheme
-13 (4), scheme 14 (3), scheme 20 (56), and scheme 21 (3). All 11
-scheme-12/13/14/21 instances are rejected by the deliberate namespace gate;
-the remaining 104 install in isolation. In one deterministic shared database,
-102 install and 2 are already present. Public identity is aggregate. Its 115
+13 (4), scheme 14 (3), scheme 20 (56), and scheme 21 (3). All four scheme-13
+instances install in isolation and succeed in shared order. The remaining 7
+scheme-12/14/21 instances are rejected by the deliberate namespace gate; 108
+install in isolation. In one deterministic shared database, 106 install and 2
+are already present. Public identity is aggregate. Its 115
 hash-ordered per-instance records contain only ordinal, scheme and `{status}`
 for success/deduplication or `{status, category}` for rejection; detailed
 per-instance report-count vectors stay inside the aggregate commitment. No
 individual hash, private source name, or manufacturer identity is published.
 This replaces the earlier assumption that no
-standalone samples existed for those four schemes; it does not establish that
-they can be interpreted safely.
+standalone samples existed for those schemes. Scheme-13 support is backed by
+representative synthetic persistence/rollback tests and the four real packages,
+but it does not establish complete interpretation of all possible scheme-13
+files.
 
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,
@@ -1047,13 +1051,13 @@ now-verified scheme-20 `.knxprod` package support.
 `knx_master.xml`, `http://knx.org/xml/project/{scheme}`, per *Project
 Schema23 v01.00.00* §4.2.2-§4.2.3's MasterData/`M-iiii` layout); the earlier
 assumption that all schemes ≥ 12 needed a still-unresolved encryption layer
-(RESEARCH §10) has been disproven for schemes 11 and 20 specifically — the
-measured scheme-11/20 packages contain no encryption at all. The matrix
-also proves that scheme-12/13/14/21 standalone samples reach and are refused by
-the explicit namespace allowlist; their XML semantics have not passed the
-required data-integrity investigation. Schemes 15-19/22 remain unmeasured.
+(RESEARCH §10) has been disproven for schemes 11, 13, and 20 specifically. The
+observed scheme-13 grammar adds no element or attribute names relative to the
+measured scheme-11/20 union, and its four real packages pass isolated and shared
+installation. The matrix also proves that scheme-12/14/21 samples reach and are
+refused by the exact namespace allowlist. Schemes 15-19/22 remain unmeasured.
 
-**Impact.** A manufacturer's standalone `.knxprod` at scheme 11 or 20 can now
+**Impact.** A manufacturer's standalone `.knxprod` at scheme 11, 13, or 20 can
 be installed directly via `knx products ingest`, the HTTP endpoint, or
 `CatalogBrowser.tsx`'s install picker, without needing a `.knxproj` that
 bundles it. A `.knxprod` at any other scheme, or a legacy `.vd2`, still has
@@ -1061,22 +1065,16 @@ to reach the product database another way (in practice, from a `.knxproj`
 that already contains the application programs it references) or not at
 all for `.vd2`.
 
-**Lifted when.** For schemes 12/13/14/21, only after the observed XML is
+**Lifted when.** For schemes 12/14/21, only after the observed XML is
 inventoried, semantic differences are modeled without loss, and focused
 regressions plus the full corpus matrix pass. For schemes 15-19/22, a sample is
 still required before making any claim. For `.vd2`: never — it is a
 structurally different, pre-standard legacy container, not a variant of the
 current format needing decryption.
 
-**Update, 2026-09-11 (user decision).** Asked separately about `.vd2`
-support and about the schemes above that remain untested for want of a
-sample, the user said "ja" (take it out) to both — both are now **accepted
-out of scope, permanently**, not merely unscheduled. For `.vd2`, this only
-restates what "Lifted when" already said. For schemes 12-19/21/22: this is a
-decision to stop looking for a standalone sample, not a claim about what
-those files actually contain — whether they are genuinely encrypted was
-never established either way (see Cause above), and this update does not
-establish it now.
+Scheme 13 no longer belongs to this unsupported set. Its acceptance does not
+broaden any neighboring namespace and does not alter the permanent `.vd2`
+decision.
 
 **Superseded in part, 2026-09-23.** The current product-database completion
 goal put evidenced scheme expansion back in scope. The permanent `.vd2`

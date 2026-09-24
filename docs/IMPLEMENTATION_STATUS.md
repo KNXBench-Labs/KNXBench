@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-24 — PDB-4: measured standalone scheme-13 support
+
+`knx-productdb::install_package` now accepts the exact
+`http://knx.org/xml/project/13` master namespace in addition to schemes 11 and
+20. A synthetic package regression verifies representative manufacturer,
+product, application-program, parameter, communication-object, DPT, dynamic,
+opaque-payload, unknown-report, persistence, and retry behavior. Separate
+negative fixtures keep lookalike/unapproved namespaces rejected and prove that
+a malformed scheme-13 package leaves every database table unchanged.
+
+The opt-in private matrix remeasurement covers the same 115 package instances /
+113 unique hashes. All four measured scheme-13 packages install in isolation
+and succeed in shared order. Aggregate outcomes move to 108 isolated installs /
+7 namespace rejections and 106 shared installs / 2 deduplications / 7 namespace
+rejections. The matrix publishes no private path, filename, hash, or
+manufacturer identity. This is verified KNXBench parser/persistence behavior,
+not semantic completeness, an ETS-version inference, or ETS parity.
+
 ## 2026-09-24 — PDB-3: install-report projection
 
 The approved core's schema-v12 `InstallFacts` ledger is now projected without
@@ -11,8 +29,8 @@ diagnostics expose kind, relative archive/XML paths, detail, and occurrences.
 zero. Host source names are not projected. Signature caution remains explicit;
 ETS parity and signature verification are not claimed. PDB-8 is the future typed
 master-data coverage slice; PDB-10 is the future safe baggage inventory and
-index-to-payload resolution slice. PDB-3 is not marked fully complete until parent review
-and final gates.
+index-to-payload resolution slice. Parent review and the full fresh-target merge
+gates completed successfully.
 
 ## 2026-09-24 — PDB-2: product-package corpus compatibility matrix
 

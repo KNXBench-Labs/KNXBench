@@ -1,5 +1,22 @@
 # Import and export
 
+## PDB-3 product-install evidence projection (schema v12)
+
+Product-package installs expose the core encounter ledger through the server and
+CLI. A measured report contains deterministic count rows for every encountered
+category/disposition (including `read`, `stored`, `deduplicated`,
+`retained-but-uninterpreted`, `unsupported`, and `dropped`), distinct unknown
+constructs with occurrence totals, and bounded unsupported diagnostics. The
+report preserves relative archive/XML paths only; it never exposes the host
+`source_name`.
+
+`facts: null` means the package was installed before schema v12 recorded the
+ledger and is therefore historical/unavailable. It is not the same as measured
+zero. The projection is reporting only: signature members are stored but not
+verified, and no ETS parity claim is made. PDB-8 is the future typed master-data
+coverage slice; PDB-10 is the future safe baggage inventory and index-to-payload
+resolution slice.
+
 **Space types (T13, 2026-09-22).** Import preserves `Stairway`, `RoomPart`,
 `Area`, `Ground` and `Segment` alongside the six previously supported types.
 Schema23 §1.1.2.3 omits `RoomPart`, while §1.2.6.4 lists both `RoomPart` and

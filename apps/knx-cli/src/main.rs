@@ -1183,6 +1183,50 @@ fn run_products_list(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn install_facts_json(facts: Option<&knx_productdb::InstallFacts>) -> serde_json::Value {
+    let Some(facts) = facts else {
+        return serde_json::json!({ "status": "unavailable", "facts": null });
+    };
+    serde_json::json!({
+        "status": "measured",
+        "facts": {
+            "counts": facts.counts.iter().map(|row| serde_json::json!({
+                "category": row.category.as_str(),
+                "disposition": row.disposition.as_str(),
+                "count": row.count,
+            })).collect::<Vec<_>>(),
+            "unknownConstructs": facts.unknown_constructs.iter().map(|unknown| serde_json::json!({
+                "xpath": unknown.xpath,
+                "kind": unknown.kind.as_str(),
+                "name": unknown.name,
+                "occurrences": unknown.occurrences,
+                "sample": unknown.sample,
+            })).collect::<Vec<_>>(),
+            "unknownOccurrences": facts.unknown_occurrences,
+            "diagnostics": facts.diagnostics.iter().map(|diagnostic| serde_json::json!({
+                "kind": diagnostic.kind().as_str(),
+                "archivePath": diagnostic.archive_path(),
+                "xmlPath": diagnostic.xml_path(),
+                "occurrences": diagnostic.occurrences(),
+                "detail": diagnostic.detail(),
+            })).collect::<Vec<_>>(),
+        },
+    })
+}
+
+fn print_install_facts(facts: Option<&knx_productdb::InstallFacts>) {
+    if facts.is_some() {
+        println!("facts: measured");
+    } else {
+        println!("facts: unavailable (historical install; measured encounter data was not stored)");
+    }
+    println!(
+        "install_facts_json {}",
+        serde_json::to_string(&install_facts_json(facts))
+            .expect("install facts JSON is serializable")
+    );
+}
+
 fn run_products_ingest(args: &[String]) -> ExitCode {
     let (product_db, rest) = match split_product_db_flag(args) {
         Ok(v) => v,
@@ -1235,6 +1279,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
                     report.dropped_datapoint_types,
                     if report.skipped { " (already known)" } else { "" },
                 );
+                print_install_facts(report.facts.as_ref());
                 ExitCode::SUCCESS
             }
             Err(error) => {
@@ -1276,6 +1321,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
     }
 
     println!("{ingested} manufacturer file(s) ingested, {skipped} already known");
+    println!("facts: not applicable (single-file project ingest; package facts are only measured for standalone package installs)");
     ExitCode::SUCCESS
 }
 

@@ -3,6 +3,7 @@
 //! constructs it did not recognize. None of them fails the ingest because
 //! of one unknown element or attribute.
 
+pub(crate) mod baggage;
 pub mod catalog;
 pub mod comobject;
 pub mod hardware;

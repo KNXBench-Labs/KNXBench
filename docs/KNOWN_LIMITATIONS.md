@@ -1,5 +1,14 @@
 # Known limitations
 
+## PDB-3 report history and coverage boundary
+
+Product install facts are measured only for installs carrying the schema-v12
+encounter ledger. Older installs deliberately render as unavailable rather
+than as zero. The projection reports unsupported constructs and diagnostics,
+but does not interpret every vendor construct, verify signatures, or claim ETS
+parity. PDB-8 is the future typed master-data coverage slice; PDB-10 is the
+future safe baggage inventory and index-to-payload resolution slice.
+
 Each entry states the limitation, its cause, what it costs the user, and the
 condition under which it would be lifted. Nothing here is a defect to be fixed
 by trying harder — these are consequences of evidence we do not have or of

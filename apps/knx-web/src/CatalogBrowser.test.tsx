@@ -3,6 +3,13 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  CatalogInstallCount,
+  CatalogInstallDiagnostic,
+  CatalogInstallReport,
+  CatalogUnknownConstruct,
+} from "./api";
+import { messages as deMessages } from "./messages/de";
 import {
   PRODUCT_LANGUAGE_STORAGE_KEY,
   resetProductLanguageForTests,
@@ -13,7 +20,7 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 const apiMock = vi.hoisted(() => ({
   catalogManufacturers: vi.fn().mockResolvedValue([]),
   catalogItems: vi.fn().mockResolvedValue([]),
-  installProductPackage: vi.fn(),
+  installProductPackage: vi.fn<(file: File) => Promise<CatalogInstallReport>>(),
   createDevice: vi.fn(),
 }));
 
@@ -26,6 +33,21 @@ import CatalogBrowser from "./CatalogBrowser";
 import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
+
+function installReport(overrides: Partial<CatalogInstallReport> = {}): CatalogInstallReport {
+  return {
+    sha256: "abc",
+    scheme: 11,
+    skipped: false,
+    members: [],
+    unknown: 0,
+    conflicts: 0,
+    translations: { program: 0, catalog: 0, hardware: 0, master: 0 },
+    droppedDatapointTypes: 0,
+    facts: null,
+    ...overrides,
+  };
+}
 
 afterEach(() => {
   host?.remove();
@@ -94,9 +116,7 @@ describe("CatalogBrowser", () => {
   });
 
   it("refreshes an installed catalog using the latest selected manufacturer", async () => {
-    apiMock.installProductPackage.mockResolvedValueOnce({
-      sha256: "abc", scheme: 11, skipped: false, members: [], unknown: 0, conflicts: 0,
-    });
+    apiMock.installProductPackage.mockResolvedValueOnce(installReport());
     apiMock.catalogManufacturers.mockResolvedValue([{ id: "M-2", name: "Vendor" }]);
     apiMock.catalogItems.mockResolvedValue([]);
     const { root } = await renderBrowser();
@@ -116,21 +136,110 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
-  // KNOWN_LIMITATIONS.md §85: a `.signature` member is stored, never
-  // checked. The server already qualifies its role text; this test pins
+  it("uses a neutral report name and explicit unavailable text for historical facts", async () => {
+    apiMock.installProductPackage.mockResolvedValueOnce(installReport({ skipped: true }));
+    const { root } = await renderBrowser();
+    const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [new File(["package"], "old.knxprod")] });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const report = host!.querySelector<HTMLElement>(".catalog-report")!;
+    expect(report.getAttribute("aria-label")).toBe("Install report");
+    expect(report.textContent).toContain("Install facts unavailable for this historical install");
+    expect(report.textContent).not.toContain("Measured install facts");
+    root.unmount();
+  });
+
+  it("localizes every closed install-fact vocabulary without server detail prose", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    resetUiLanguageForTests();
+    const categories: Array<[CatalogInstallCount["category"], keyof typeof deMessages]> = [
+      ["archive_member", "catalog.installReport.category.archiveMember"],
+      ["product", "catalog.installReport.category.product"],
+      ["application_program", "catalog.installReport.category.applicationProgram"],
+      ["parameter", "catalog.installReport.category.parameter"],
+      ["communication_object", "catalog.installReport.category.communicationObject"],
+      ["dynamic_node", "catalog.installReport.category.dynamicNode"],
+      ["module", "catalog.installReport.category.module"],
+      ["baggage_index", "catalog.installReport.category.baggageIndex"],
+      ["baggage", "catalog.installReport.category.baggage"],
+      ["unknown_construct", "catalog.installReport.category.unknownConstruct"],
+      ["master_section", "catalog.installReport.category.masterSection"],
+      ["datapoint_type", "catalog.installReport.category.datapointType"],
+    ];
+    const dispositions: Array<[CatalogInstallCount["disposition"], keyof typeof deMessages]> = [
+      ["read", "catalog.installReport.disposition.read"],
+      ["stored", "catalog.installReport.disposition.stored"],
+      ["deduplicated", "catalog.installReport.disposition.deduplicated"],
+      ["retained-but-uninterpreted", "catalog.installReport.disposition.retainedButUninterpreted"],
+      ["unsupported", "catalog.installReport.disposition.unsupported"],
+      ["dropped", "catalog.installReport.disposition.dropped"],
+    ];
+    const unknowns: Array<[CatalogUnknownConstruct["kind"], keyof typeof deMessages]> = [
+      ["Element", "catalog.installReport.unknownKind.element"],
+      ["Attribute", "catalog.installReport.unknownKind.attribute"],
+    ];
+    const diagnostics: Array<[CatalogInstallDiagnostic["kind"], keyof typeof deMessages]> = [
+      ["unsupported-master-section", "catalog.installReport.diagnosticKind.unsupportedMasterSection"],
+      ["unsupported-baggage-index", "catalog.installReport.diagnosticKind.unsupportedBaggageIndex"],
+    ];
+    apiMock.installProductPackage.mockResolvedValueOnce(installReport({
+      facts: {
+        counts: categories.map(([category], index) => ({
+          category,
+          disposition: dispositions[index % dispositions.length][0],
+          count: index + 1,
+        })),
+        unknownConstructs: unknowns.map(([kind], index) => ({
+          xpath: `/KNX/X${index}`,
+          kind,
+          name: `future-${index}`,
+          occurrences: index + 1,
+          sample: null,
+        })),
+        unknownOccurrences: 3,
+        diagnostics: diagnostics.map(([kind], index) => ({
+          kind,
+          archivePath: index === 0 ? "knx_master.xml" : "Baggages.xml",
+          xmlPath: index === 0 ? "/KNX/MasterData/Future" : "/KNX/Baggages",
+          detail: `server English detail ${index}`,
+          occurrences: index + 1,
+        })),
+      },
+    }));
+    const { root } = await renderBrowser();
+    const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [new File(["package"], "measured.knxprod")] });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    categories.forEach(([, categoryKey], index) => {
+      const dispositionKey = dispositions[index % dispositions.length][1];
+      expect(host!.textContent).toContain(
+        `${deMessages[categoryKey]} / ${deMessages[dispositionKey]}: ${index + 1}`,
+      );
+    });
+    unknowns.forEach(([, key], index) => {
+      expect(host!.textContent).toContain(`${deMessages[key]} future-${index}`);
+    });
+    diagnostics.forEach(([, key]) => {
+      expect(host!.textContent).toContain(deMessages[key]);
+    });
+    expect(host!.textContent).not.toContain("server English detail");
+    root.unmount();
+  });
+
+  // Signature bytes are stored but deliberately not cryptographically checked.
+  // The server already qualifies its role text; this test pins
   // that the report a person actually reads says so too, in English.
   it("flags an install report containing a signature member as unverified", async () => {
-    apiMock.installProductPackage.mockResolvedValueOnce({
-      sha256: "abc",
-      scheme: 11,
-      skipped: false,
+    apiMock.installProductPackage.mockResolvedValueOnce(installReport({
       members: [
         { path: "M-0001.signature", role: "Signature (stored, not verified)", sha256: "def", size: 175 },
         { path: "M-0001/Catalog.xml", role: "Catalog", sha256: "ghi", size: 42 },
       ],
-      unknown: 0,
-      conflicts: 0,
-    });
+    }));
     const { root } = await renderBrowser();
 
     const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;

@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-24 — PDB-5: measured standalone scheme-12/14 support
+
+`knx-productdb::install_package` now accepts the exact scheme-12 and scheme-14
+master namespaces in addition to schemes 11, 13 and 20. Synthetic fixtures pin
+exact namespace rejection, source-byte retention, idempotent retry and complete
+transaction rollback after earlier members wrote rows.
+
+The targeted XML evidence pass names observed `LdCtrlWriteProp/@AppliesTo`,
+`Property/@Occurrence`, separator `@UIHint`, and every
+`LdCtrlDeclarePropDesc` field even when a specialized parser skips the
+containing subtree. The existing Dynamic parser remains the sole evidence owner
+for separator `@Access` and `@HorizontalRuler`, avoiding duplicate rows.
+The pass is restricted to the exact project namespace and canonical
+`ApplicationProgram/Static|Dynamic` context. Prefixed namespace lookalikes are
+retained as qualified unknown evidence instead of being silently absorbed as
+KNX fields. When qualified and unqualified attributes share a local name, the
+namespace-blind domain parsers deterministically prefer the unqualified KNX
+attribute while the qualified value remains separate evidence, independent of
+XML attribute order. Evidence reconciliation follows the Dynamic parser's
+active non-empty `ModuleDef` scope through intervening wrapper elements, and
+matrix counters require canonical application-program paths.
+Across the four measured packages the canonical counts are `AppliesTo=22`,
+`Occurrence=5`, separator `UIHint=418`, `Access=2`, `HorizontalRuler=5`, and
+`LdCtrlDeclarePropDesc` elements `=14`. These values remain explicitly
+retained-but-uninterpreted;
+KNXBench does not claim executable load-procedure or separator-layout semantics.
+
+The opt-in private matrix installs all one scheme-12 and three scheme-14
+packages in isolation and shared order. Aggregate outcomes are 112 isolated
+installs / 3 namespace rejections and 110 shared installs / 2 deduplications / 3
+namespace rejections. The remaining rejections are scheme 21. Public output
+contains only aggregate evidence and anonymous ordinal/scheme outcomes; it does
+not expose private identities or claim ETS parity. Successful isolated reports
+contain 23,166 unknown rows; the installed-only shared total is 23,041.
+
 ## 2026-09-24 — PDB-4: measured standalone scheme-13 support
 
 `knx-productdb::install_package` now accepts the exact

@@ -9,6 +9,7 @@ pub mod comobject;
 pub mod hardware;
 pub mod master;
 pub mod program;
+pub(crate) mod scheme_evidence;
 pub mod translation;
 
 use std::collections::HashMap;
@@ -29,7 +30,7 @@ pub(crate) fn report_unknown_attrs(
 ) {
     for name in a.names() {
         if !known.contains(&name) {
-            let sample = a.get(name).unwrap_or_default();
+            let sample = a.evidence_value(name).unwrap_or_default();
             collector.attribute(xpath, name, sample);
         }
     }

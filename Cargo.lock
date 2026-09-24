@@ -1948,6 +1948,7 @@ dependencies = [
 name = "knx-productdb"
 version = "0.1.0-alpha.1"
 dependencies = [
+ "crc32fast",
  "knx-core",
  "knx-testsupport",
  "quick-xml 0.42.0",

@@ -1000,6 +1000,18 @@ date the filename check reported no evidence at all. This is a named,
 external blocker (a genuinely different, undocumented legacy format), not
 an untested general failure.
 
+ZIP member-name encoding is no longer an incidental blocker. The installer
+reads the central-directory encoding flag, requires valid UTF-8 when bit 11 is
+set, and otherwise follows the ZIP-defined CP437 path. Local/central identity
+must agree, and Unicode-path overrides require a supported version, matching
+CRC and valid UTF-8 before every path and duplicate check
+([ADR-0034](adr/0034-zip-member-names-follow-declared-encoding.md)).
+The eleven-package aggregate that previously stopped at the raw-name UTF-8
+check now installs in the local gated regression. Only its count and aggregate
+identity commitment are public. This removes that one container-level rejection
+only; it does not widen supported XML schemes or claim lossless interpretation
+of manufacturer semantics.
+
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,
 `CatalogBrowser.tsx`'s install picker). Full `.knxproj` *project* import

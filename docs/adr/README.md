@@ -45,3 +45,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0031](0031-project-notes-are-a-project-owned-collection.md) | Project notes are a project-owned collection | Accepted | 2026-09-22 |
 | [0032](0032-application-snapshot-ordering.md) | Order project snapshots at the application boundary | Accepted | 2026-09-23 |
 | [0033](0033-destructive-csv-imports-require-bound-confirmation.md) | Destructive CSV imports require revision-bound confirmation | Accepted | 2026-09-23 |
+| [0034](0034-zip-member-names-follow-declared-encoding.md) | ZIP member names follow their declared encoding before safety checks | Accepted | 2026-09-23 |

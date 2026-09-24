@@ -1,4 +1,44 @@
-# Product database corpus
+# Gira and MDT product-database corpus
+
+Investigation date: **2026-09-23**.
+
+This note inventories the local, ignored corpora under
+`OriginalData/ProductDatabases/Gira` and
+`OriginalData/ProductDatabases/MDT`. It is an implementation-planning aid, not
+a compatibility claim. The manufacturer files are not redistributed.
+
+## Method and reproducibility
+
+`tools/inspect_product_corpus.py` scans files and nested ZIP members without
+extracting them. It records hashes, ZIP structure, XML namespaces, element and
+attribute frequencies, product/program metadata, parameter kinds, dynamic-tree
+shapes, languages and read failures as JSON. XML/ZIP members larger than 128 MiB
+are skipped and nesting is limited to three levels.
+
+```bash
+python3 tools/inspect_product_corpus.py \
+  OriginalData/ProductDatabases/Gira \
+  OriginalData/ProductDatabases/MDT \
+  --output "$TMPDIR/product-corpus.json"
+```
+
+A temporary Rust corpus probe also installed every discovered modern package,
+in deterministic path order, into one fresh shared `knx-productdb` database per
+manufacturer. It exercised the real `install_package` and `open_and_migrate`
+paths and printed the install report. The temporary test was removed after the
+measurement; the durable follow-up should be a gated/ignored integration test
+that requires an explicit corpus path.
+
+Important interpretation rules:
+
+- `http://knx.org/xml/project/N` is called **scheme N** here. It is not an ETS
+  release number. Creator/tool metadata shows, for example, scheme-11 packages
+  written or converted by tools from ETS/MT generations 4 through 6.
+- Element totals are corpus observations, not unique domain entities. Exact
+  duplicate packages and shared master/baggage data are included.
+- Successful installation proves that the current parser accepted and stored
+  the tested path. It does not prove lossless interpretation; unknown-report
+  entries are quantified separately.
 
 ## PDB-3 evidence contract
 
@@ -31,3 +71,233 @@ unrecognized package member. The shared-order increases come from retaining
 unknown evidence encountered below a declaration whose storage parent is
 rejected. These totals are importer evidence, not a claim that the constructs
 are understood.
+
+## Inventory
+
+| Corpus | Top-level files | Modern packages | Other legacy files | Schemes |
+| --- | ---: | ---: | ---: | --- |
+| Gira | 10 | 15 | 0 | 12: 1, 20: 13, 21: 1 |
+| MDT | 101 | 100 | 1 encrypted `.pr5` | 11: 48, 13: 4, 14: 3, 20: 43, 21: 2 |
+| **Total** | **111** | **115** | **1** | **11: 48, 12: 1, 13: 4, 14: 3, 20: 56, 21: 3** |
+
+All 115 modern packages are readable ZIP files and contain a root
+`knx_master.xml`. No malformed ZIP/XML package was found by the inventory
+scanner. Gira predominantly ships download ZIPs containing one or more nested
+`.knxprod` files; MDT predominantly ships top-level `.knxprod` files. Import
+must therefore distinguish a download bundle from an installable package and
+must not mistake nesting for the product-package format itself.
+
+Observed modern-package content (including exact duplicates) comprises:
+
+- 310 application-program declarations and 388 product declarations;
+- 234,731 parameters, 50,549 communication objects and 148,385 communication-
+  object references;
+- 8,611 dynamic module instances;
+- 620 function types, 2,542 function points and 1,181 space usages;
+- 1,728 baggage declarations; and
+- up to 24 languages, with modern packages commonly carrying the full language
+  set and older scheme-11 packages often carrying only German/English or a
+  small Western-European set.
+
+There are exact duplicates which should be deduplicated by content hash, not
+filename. Notable examples are Gira's loose and wrapped
+`Dummy_Applikation_Secure.knxprod`, and the two MDT files
+`MDT_KP_SCN_02 Glass_Room_Temperature_Controller_V12[ a].knxprod`. Shared help,
+icon and symbol baggage archives are also repeated across versions/products.
+Consequently the 15 Gira package instances represent 14 distinct package
+hashes, while the 100 MDT package instances represent 99 distinct hashes.
+
+The packages are not XML-only. Direct package members include PNG/JPG images,
+PDF, MSI, extensionless files and nested ZIPs; recursively scanning nested help
+and icon bundles also finds thousands of text assets. Representative risk cases
+are MDT's opaque `ETS USB Installation.msi` and nested symbol ZIPs. These bytes
+must never be executed or blindly extracted. Baggage inventory should report
+declared/expanded size, media type, nesting and encryption while retaining the
+original bytes.
+
+Large-file behavior is relevant: the largest observed Gira XML member is
+24,201,031 bytes, and the largest MDT XML member is 54,803,397 bytes. Corpus
+regressions should therefore cover bounded memory and deterministic reporting,
+not just tiny synthetic fixtures.
+
+## Scheme and producer observations
+
+The XML itself records `CreatedBy` and `ToolVersion`. The corpus contains output
+from `MT`, `knxconv`, `ETS4` and `ETS5`; observed tool-version strings range from
+4.x through 6.4.x. This is stronger evidence than guessing from filenames, but
+it still describes the producer, not a guaranteed minimum runtime ETS version.
+`ApplicationProgram/@MinEtsVersion`, where present, should be preserved and
+reported separately.
+
+Compared with the union of observed schemes 11 and 20:
+
+- scheme 12 adds observed attributes `LdCtrlWriteProp/@AppliesTo`,
+  `Property/@Occurrence` and `ParameterSeparator/@HorizontalRuler`;
+- scheme 13 introduces no new observed element/attribute names;
+- scheme 14 adds `LdCtrlDeclarePropDesc` and its property-description fields;
+- scheme 21 also uses `LdCtrlDeclarePropDesc` and adds observed fields including
+  variable/null-terminated data, optional resources, access policy,
+  RF/coupler capabilities and `ApplicationProgram/@HardwareType`.
+
+This comparison is a prioritization aid, not a proof that namespace widening is
+safe. Semantics, cardinality, defaults, identifiers and load procedures still
+need fixture-backed validation for each scheme.
+
+## Current KNXBench result
+
+The standalone package installer currently admits only schemes 11 and 20. In
+the sequential shared-database probe:
+
+| Corpus | Inputs probed | Installed | Rejected |
+| --- | ---: | ---: | ---: |
+| Gira | 15 | 7 | 8 |
+| MDT | 101 | 86 | 15 |
+| **Total** | **116** | **93** | **23** |
+
+The 23 rejections have three distinct causes:
+
+1. **11 modern packages have legacy/non-UTF-8 ZIP member-name encoding**
+   (6 Gira, 5 MDT). The displayed names contain ordinary German text such as
+   `Gerätezertifikat`, `Gehäuse`, `Kanäle` or `grün`, but the safety boundary
+   rejects their central-directory encoding. These packages otherwise use a
+   supported scheme. This is the highest-value compatibility defect because it
+   blocks common, current packages and is independent of XML semantics.
+2. **11 modern packages use an unsupported master namespace**: scheme 12 (1),
+   13 (4), 14 (3) or 21 (3).
+3. **One MDT `MDT_VD_VisuControl.pr5` is a legacy encrypted container**, not a
+   modern package. It has one encrypted member,
+   `Program Files/Ets/Database/ets.pr_`, and no `knx_master.xml`/`M-xxxx`
+   layout. It belongs to the same VD/PR legacy-import work described in
+   [Legacy VD2/VD3/VD4 product databases](VD4_PRODUCT_DATABASE_IMPORT.md), not
+   to the modern `.knxprod` parser.
+
+The accepted set contains 45 scheme-11 and 48 scheme-20 packages (7 Gira + 86
+MDT overall). The shared installs reported no product-reference conflicts and
+no dropped DPT assignments. Those statements apply only to the accepted set
+and to this deterministic install order.
+
+Accepted does not mean fully interpreted. Across successful packages the
+install reports contained 19,291 unknown entries in total (Gira 2,021; MDT
+17,270), with per-package medians of 172 and 149 respectively. Frequent
+categories include presentation/layout attributes, calculation/transformation
+nodes, argument declarations and load-procedure details. These must remain
+visible in reports or opaque storage; reducing the count requires semantic
+support, not a blanket suppression list.
+
+## Feature-shape observations relevant to implementation
+
+### Parameters
+
+Observed direct `ParameterType` children are:
+
+- both corpora: `TypeRestriction`, `TypeNumber`, `TypePicture`, `TypeFloat`,
+  `TypeText`, `TypeColor`;
+- Gira additionally: `TypeRawData`;
+- MDT additionally: `TypeNone`, `TypeIPAddress`, `TypeTime`.
+
+Tests for parameter editing and reporting should cover every observed kind,
+including raw fallback for kinds without an editor. Enum display text,
+translations, ranges, scale/increment, encoding, UI hints and picture/baggage
+references are separate concerns and must not be collapsed into one string.
+
+### Dynamic programs and modules
+
+Scheme 20 carries all observed module-heavy packages: 56 packages, 168
+programs, 33 module-bearing packages and 8,611 module instances. The corpus is
+a strong regression source for nested module expansion, allocator arguments and
+conditional visibility.
+
+Dominant dynamic nodes include `choose`, `when`, `ParameterRefRef`,
+`ComObjectRefRef`, `Assign`, `ParameterBlock`, separators and modules. Layout
+constructs are not rare: Gira has 17,740 `Column` and 9,009 `Row` nodes; MDT
+also contains `ParameterBlockRename`, `Rename` and `Button`. Both corpora contain
+`Repeat` around module instances. The evaluator currently recognizes only a
+small semantic/transparent subset. Future UI work must decide deliberately
+which layout nodes are transparent, which carry presentation semantics, and
+which are unsupported; silently dropping them would make a parameter editor
+look valid while changing the manufacturer's intended interaction model.
+
+### Secure-capable application data
+
+`IsSecureEnabled=true` occurs in 12 Gira package instances and 7 MDT package
+instances (one Gira package is an exact loose/wrapped duplicate). These are
+useful fixtures for preserving secure application metadata. They do **not**
+prove KNX Data Secure commissioning or runtime interoperability; product
+metadata support and bus-security implementation are separate layers.
+
+Observed application-program attributes also include
+`MaxSecurityGroupKeyTableEntries`, `MaxSecurityIndividualAddressEntries`,
+`MaxSecurityP2PKeyTableEntries`, `MaxTunnelingUserEntries`, `MaxUserEntries`,
+`MinEtsVersion` and `ReplacesVersions`. The current structured `PROGRAM_ATTRS`
+list does not include these fields: the source XML survives and the attributes
+can be reported as unknown, but product queries cannot yet expose the secure
+capacity or replacement/version relationship.
+
+### Master data and load procedures
+
+The packages exercise mask versions, memory/absolute/relative segments,
+properties, resources, access rights and many `LdCtrl*` operations. Scheme 14/21
+specifically exposes property-description declarations. These are relevant to
+commissioning/download planning: a product catalogue can be useful while still
+being insufficient to generate a correct device load procedure. Keep catalogue
+installation, parameter interpretation and executable commissioning plans as
+separate acceptance levels.
+
+The embedded master data also contains `InterfaceObjectType`,
+`InterfaceObjectProperty`, `PropertyDataType`, `MediumType`, `MaskVersion`,
+`FunctionalBlock`, `DatapointRole`, `PublicKey` and `RSAKeyValue`. The current
+typed master-data path intentionally covers only selected manufacturer/DPT/
+function/space-usage data. Raw source preservation prevents byte loss, but it
+does not provide queryable interface-object, mask, medium, role or security
+metadata. Unsupported master sections need either typed storage or explicit
+section-level reporting before they can support commissioning decisions.
+
+## Recommended follow-up tasks
+
+1. **Fix ZIP-name compatibility without weakening path safety.** Capture raw ZIP
+   name flags/bytes, implement the intended legacy encoding policy explicitly,
+   normalize only after decoding, and then apply traversal/absolute-path/NUL and
+   duplicate-name checks. Add synthetic CP437/UTF-8/path-attack fixtures plus
+   the 11 gated corpus regressions. Do not merely remove the rejection.
+2. **Turn this probe into an ignored corpus compatibility matrix.** Require an
+   explicit environment variable, install each package both in isolation and
+   in deterministic shared order, and emit JSON containing scheme, outcome,
+   report counts and final DB counts. CI without `OriginalData` must report a
+   skip, never a false pass.
+3. **Add scheme support incrementally: 13, then 12/14, then 21.** Scheme 13 has
+   the smallest observed grammar delta. Each slice needs a frozen synthetic
+   fixture, one real gated regression, explicit unknown/loss accounting and a
+   no-partial-publication failure test. Scheme 14/21 must model
+   `LdCtrlDeclarePropDesc`; scheme 21 additionally needs the RF/coupler,
+   variable-length and access-policy fields above.
+4. **Reduce unknown reports by capability area.** First classify unknowns into
+   safe presentation metadata, retained-but-uninterpreted semantics and data
+   required for editing/commissioning. Preserve source XML/attributes until a
+   typed mapping is proven. Never make the report quieter by discarding data.
+5. **Complete parameter-kind and dynamic-layout coverage.** Add corpus-derived,
+   synthetic tests for all observed parameter kinds, Rows/Columns,
+   rename/button nodes, repeat/module nesting, calculation transformations and
+   allocator arguments. Separate evaluation semantics from UI layout.
+6. **Expose a safe baggage inventory.** Model baggage references and metadata,
+   classify images/documents/installers/nested archives without executing or
+   extracting them, and retain all original bytes. Add maximum-size and nested-
+   archive regressions using synthetic fixtures plus gated large-corpus tests.
+7. **Treat the `.pr5` as legacy VD/PR work.** Reuse the independent EX-IM
+   research and security/legal constraints in
+   `VD4_PRODUCT_DATABASE_IMPORT.md`; do not feed it through the modern-package
+   path or embed a password.
+8. **Add catalogue-version UX.** Exact duplicate detection, same-order-number
+   version grouping, producer/tool metadata, scheme, language coverage,
+   secure-capable marker and replacement metadata are all available in this
+   corpus and should be visible before users install or replace a product.
+
+## Compatibility conclusion
+
+The corpus materially broadens the evidence base: KNXBench already accepts 93
+of 115 modern packages, but the accepted subset still carries substantial
+explicitly unknown metadata. The immediate engineering priority is not a vague
+“support more ETS versions”; it is (1) safe legacy ZIP filename decoding,
+(2) scheme-by-scheme parser support with loss accounting, and (3) deeper typed
+coverage of parameter/dynamic/load-procedure semantics. That sequence maximizes
+usable products without pretending that successful catalogue installation is
+full ETS or commissioning compatibility.

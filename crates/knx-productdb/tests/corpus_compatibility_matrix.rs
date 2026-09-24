@@ -25,12 +25,11 @@ use serde_json::{json, Value};
 const MAX_SCHEME_XML_BYTES: u64 = 64 * 1024 * 1024;
 const EXPECTED_PACKAGE_INSTANCES: usize = 115;
 const EXPECTED_UNIQUE_PACKAGES: usize = 113;
-const EXPECTED_ISOLATED_INSTALLS: usize = 112;
-const EXPECTED_SHARED_INSTALLS: usize = 110;
+const EXPECTED_ISOLATED_INSTALLS: usize = 115;
+const EXPECTED_SHARED_INSTALLS: usize = 113;
 const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
-const EXPECTED_UNSUPPORTED_NAMESPACES: usize = 3;
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "0cb88ae05944fcacac6c9a8cdd786488a638df9114f6af7da984e37d919d2a9d";
+    "263b6bbdb3fb0c847ea2c947a6ac7155efda618e7a2161b74c15631f35200d23";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -200,6 +199,41 @@ fn pdb5_feature_occurrences(conn: &Connection) -> Value {
         "separator_access": separator_count("Access"),
         "separator_ui_hint": separator_count("UIHint"),
         "ld_ctrl_declare_prop_desc": count("Element", "LdCtrlDeclarePropDesc", "Static", ""),
+    })
+}
+
+fn pdb6_feature_occurrences(conn: &Connection) -> Value {
+    let count = |kind: &str, name: &str, xpath: &str| {
+        let value: i64 = conn
+            .query_row(
+                "SELECT coalesce(sum(occurrences), 0) FROM package_install_unknown
+             WHERE kind = ?1 AND name = ?2 AND xpath = ?3",
+                [kind, name, xpath],
+                |row| row.get(0),
+            )
+            .expect("count isolated PDB-6 evidence");
+        u64::try_from(value).expect("PDB-6 evidence count is non-negative")
+    };
+    let master = "/KNX/MasterData";
+    let program = "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram";
+    let hardware =
+        "/KNX/ManufacturerData/Manufacturer/Hardware/Hardware/Hardware2Programs/Hardware2Program";
+    let datatype = format!("{master}/DatapointTypes/DatapointType");
+    let string = format!("{datatype}/DatapointSubtypes/DatapointSubtype/Format/String");
+    let resource =
+        format!("{master}/MaskVersions/MaskVersion/HawkConfigurationData/Resources/Resource");
+    let property = format!("{master}/InterfaceObjectProperties/InterfaceObjectProperty");
+    json!({
+        "hardware_type": count("Attribute", "HardwareType", program),
+        "datapoint_variable_length": count("Attribute", "VariableLength", &datatype),
+        "string_null_terminated": count("Attribute", "NullTerminated", &string),
+        "string_variable_length": count("Attribute", "VariableLength", &string),
+        "optional_resource": count("Attribute", "Optional", &resource),
+        "access_policy": count("Attribute", "AccessPolicy", &property),
+        "coupler_capabilities": count("Attribute", "CouplerCapabilities", hardware),
+        "rf_rx_capabilities": count("Attribute", "RFRxCapabilities", hardware),
+        "rf_tx_capabilities": count("Attribute", "RFTxCapabilities", hardware),
+        "property_description": count("Element", "LdCtrlDeclarePropDesc", &format!("{program}/Static/LoadProcedures/LoadProcedure")),
     })
 }
 
@@ -528,38 +562,48 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         );
         hashes.insert(sha256.clone());
 
-        let (isolation, pdb5_evidence, shared_outcome) = std::thread::scope(|scope| {
-            let isolated = scope.spawn(|| {
-                let isolated_dir =
-                    tempfile::tempdir().expect("temporary isolated database directory");
-                let isolated =
-                    knx_productdb::open_and_migrate(&isolated_dir.path().join("products.sqlite"))
-                        .expect("temporary isolated product database");
-                let outcome = install_json(&isolated, ordinal, &bytes);
-                if matches!(scheme, Some(12..=14)) {
-                    assert_new_scheme_persistence(
-                        &isolated,
-                        &outcome,
-                        scheme.expect("checked new scheme"),
-                    );
-                }
-                let evidence = if matches!(scheme, Some(12 | 14)) {
-                    pdb5_feature_occurrences(&isolated)
-                } else {
-                    Value::Null
-                };
-                (outcome, evidence)
+        let (isolation, pdb5_evidence, pdb6_evidence, shared_outcome) =
+            std::thread::scope(|scope| {
+                let isolated = scope.spawn(|| {
+                    let isolated_dir =
+                        tempfile::tempdir().expect("temporary isolated database directory");
+                    let isolated = knx_productdb::open_and_migrate(
+                        &isolated_dir.path().join("products.sqlite"),
+                    )
+                    .expect("temporary isolated product database");
+                    let outcome = install_json(&isolated, ordinal, &bytes);
+                    if matches!(scheme, Some(12..=14)) {
+                        assert_new_scheme_persistence(
+                            &isolated,
+                            &outcome,
+                            scheme.expect("checked new scheme"),
+                        );
+                    }
+                    let evidence = if matches!(scheme, Some(12 | 14)) {
+                        pdb5_feature_occurrences(&isolated)
+                    } else {
+                        Value::Null
+                    };
+                    let scheme21_evidence = if scheme == Some(21) {
+                        assert_eq!(outcome["status"], "installed");
+                        pdb6_feature_occurrences(&isolated)
+                    } else {
+                        Value::Null
+                    };
+                    (outcome, evidence, scheme21_evidence)
+                });
+                let shared_outcome = install_json(&shared, ordinal, &bytes);
+                let (isolation, pdb5_evidence, pdb6_evidence) =
+                    isolated.join().expect("isolated installation worker");
+                (isolation, pdb5_evidence, pdb6_evidence, shared_outcome)
             });
-            let shared_outcome = install_json(&shared, ordinal, &bytes);
-            let (isolation, pdb5_evidence) = isolated.join().expect("isolated installation worker");
-            (isolation, pdb5_evidence, shared_outcome)
-        });
         private_records.push(json!({
             "ordinal": ordinal,
             "sha256": sha256,
             "scheme": scheme,
             "isolation": isolation,
             "pdb5_evidence": pdb5_evidence,
+            "pdb6_evidence": pdb6_evidence,
             "shared": shared_outcome,
         }));
     }
@@ -590,6 +634,25 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             .sum::<u64>();
         pdb5_evidence.insert(name, occurrences);
     }
+    let mut pdb6_evidence = BTreeMap::new();
+    for name in [
+        "hardware_type",
+        "datapoint_variable_length",
+        "string_null_terminated",
+        "string_variable_length",
+        "optional_resource",
+        "access_policy",
+        "coupler_capabilities",
+        "rf_rx_capabilities",
+        "rf_tx_capabilities",
+        "property_description",
+    ] {
+        let occurrences = private_records
+            .iter()
+            .filter_map(|record| record["pdb6_evidence"][name].as_u64())
+            .sum::<u64>();
+        pdb6_evidence.insert(name, occurrences);
+    }
     let commitment = baseline_commitment(
         &private_records,
         json!({
@@ -601,6 +664,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "shared_successful_attempt_report_totals": shared_successful_totals,
             "shared_final_database_counts": final_counts,
             "scheme_12_14_feature_occurrences": pdb5_evidence,
+            "scheme_21_feature_occurrences": pdb6_evidence,
         }),
     );
     let public_records = private_records
@@ -627,8 +691,10 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared_successful_attempt_report_totals": shared_successful_totals,
         "shared_final_database_counts": final_counts,
         "scheme_12_14_feature_occurrences": pdb5_evidence,
+        "scheme_21_feature_occurrences": pdb6_evidence,
         "packages": public_records,
     });
+
     let scheme_13 = private_records
         .iter()
         .filter(|record| record["scheme"] == 13)
@@ -648,7 +714,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         }),
         "every measured scheme-13 package must install in isolation and succeed in shared order"
     );
-    for (scheme, expected) in [(12, 1), (14, 3)] {
+    for (scheme, expected) in [(12, 1), (14, 3), (21, 3)] {
         let records = private_records
             .iter()
             .filter(|record| record["scheme"] == scheme)
@@ -681,6 +747,22 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         }),
         "scheme-12/14 semantic evidence changed; matrix output was not published"
     );
+    assert_eq!(
+        matrix["scheme_21_feature_occurrences"],
+        json!({
+            "hardware_type": 3,
+            "datapoint_variable_length": 6,
+            "string_null_terminated": 6,
+            "string_variable_length": 6,
+            "optional_resource": 48,
+            "access_policy": 444,
+            "coupler_capabilities": 3,
+            "rf_rx_capabilities": 2,
+            "rf_tx_capabilities": 2,
+            "property_description": 14,
+        }),
+        "scheme-21 retained evidence differs from read-only XML shape inventory; output was not published"
+    );
 
     assert_eq!(matrix["package_instances"], EXPECTED_PACKAGE_INSTANCES);
     assert_eq!(matrix["unique_package_hashes"], EXPECTED_UNIQUE_PACKAGES);
@@ -693,8 +775,6 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         matrix["isolation_outcomes"],
         json!({
             "installed": EXPECTED_ISOLATED_INSTALLS,
-            "rejected": EXPECTED_UNSUPPORTED_NAMESPACES,
-            "rejected:unsupported_namespace": EXPECTED_UNSUPPORTED_NAMESPACES,
         })
     );
     assert_eq!(
@@ -702,57 +782,55 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "deduplicated": EXPECTED_SHARED_DEDUPLICATIONS,
             "installed": EXPECTED_SHARED_INSTALLS,
-            "rejected": EXPECTED_UNSUPPORTED_NAMESPACES,
-            "rejected:unsupported_namespace": EXPECTED_UNSUPPORTED_NAMESPACES,
         })
     );
     assert_eq!(
         matrix["isolation_report_totals"],
         json!({
-            "attempt_count": 112,
-            "member_count": 1588,
-            "unknown_count": 23166,
+            "attempt_count": 115,
+            "member_count": 1606,
+            "unknown_count": 23347,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
-            "translation_counts": {"program": 2902315, "catalog": 2937, "hardware": 1408, "master": 108071},
+            "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
         })
     );
     assert_eq!(
         matrix["shared_installed_report_totals"],
         json!({
-            "attempt_count": 110,
-            "member_count": 1568,
-            "unknown_count": 23041,
-            "conflict_count": 388,
-            "dropped_datapoint_type_count": 38356,
-            "translation_counts": {"program": 2778386, "catalog": 2327, "hardware": 1144, "master": 1636},
+            "attempt_count": 113,
+            "member_count": 1586,
+            "unknown_count": 23222,
+            "conflict_count": 398,
+            "dropped_datapoint_type_count": 39499,
+            "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
         })
     );
     assert_eq!(
         matrix["shared_successful_attempt_report_totals"],
         json!({
-            "attempt_count": 112,
-            "member_count": 1588,
-            "unknown_count": 23166,
-            "conflict_count": 390,
-            "dropped_datapoint_type_count": 39089,
-            "translation_counts": {"program": 2788575, "catalog": 2393, "hardware": 1158, "master": 1636},
+            "attempt_count": 115,
+            "member_count": 1606,
+            "unknown_count": 23347,
+            "conflict_count": 400,
+            "dropped_datapoint_type_count": 40232,
+            "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
         })
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package"], 110,
+        matrix["shared_final_database_counts"]["package"], 113,
         "shared package rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["source_file"], 1145,
+        matrix["shared_final_database_counts"]["source_file"], 1163,
         "shared source-file rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["parameter"], 213841,
+        matrix["shared_final_database_counts"]["parameter"], 213930,
         "shared parameter rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["translation"], 2783493,
+        matrix["shared_final_database_counts"]["translation"], 2784420,
         "shared translation rows changed"
     );
     assert_eq!(

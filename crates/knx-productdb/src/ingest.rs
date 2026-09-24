@@ -109,7 +109,7 @@ pub(crate) fn ingest_file_in_transaction(
     )?;
 
     let kind = classify(bytes);
-    let (unknown, conflicts, translations, entities) = match kind {
+    let (mut unknown, conflicts, translations, entities) = match kind {
         FileKind::Catalog => {
             let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
             // A second pass over the same bytes, in the same transaction:
@@ -181,6 +181,14 @@ pub(crate) fn ingest_file_in_transaction(
             crate::report::EntityCounts::default(),
         ),
     };
+
+    if kind == FileKind::ApplicationProgram {
+        crate::parse::scheme_evidence::reconcile_targeted_unknowns(
+            bytes,
+            source_path,
+            &mut unknown,
+        )?;
+    }
 
     insert_unknown(conn, &sha256, &unknown)?;
     insert_conflicts(conn, &conflicts)?;

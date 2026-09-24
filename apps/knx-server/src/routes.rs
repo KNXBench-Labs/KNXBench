@@ -146,6 +146,43 @@ struct CatalogTranslationCountsDto {
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct CatalogInstallCountDto {
+    category: String,
+    disposition: String,
+    count: u64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogUnknownConstructDto {
+    xpath: String,
+    kind: String,
+    name: String,
+    occurrences: u32,
+    sample: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogInstallDiagnosticDto {
+    kind: String,
+    archive_path: String,
+    xml_path: String,
+    detail: String,
+    occurrences: u64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogInstallFactsDto {
+    counts: Vec<CatalogInstallCountDto>,
+    unknown_constructs: Vec<CatalogUnknownConstructDto>,
+    unknown_occurrences: u64,
+    diagnostics: Vec<CatalogInstallDiagnosticDto>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct CatalogInstallReportDto {
     sha256: String,
     scheme: u32,
@@ -159,10 +196,46 @@ struct CatalogInstallReportDto {
     /// was silently narrower than the one `knx products ingest` prints.
     translations: CatalogTranslationCountsDto,
     dropped_datapoint_types: usize,
+    /// Null is historical/unavailable (pre-v12), never a measured zero.
+    facts: Option<CatalogInstallFactsDto>,
 }
 
 impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
     fn from(report: knx_productdb::InstallReport) -> Self {
+        let facts = report.facts.map(|facts| CatalogInstallFactsDto {
+            counts: facts
+                .counts
+                .into_iter()
+                .map(|row| CatalogInstallCountDto {
+                    category: row.category.as_str().to_owned(),
+                    disposition: row.disposition.as_str().to_owned(),
+                    count: row.count,
+                })
+                .collect(),
+            unknown_constructs: facts
+                .unknown_constructs
+                .into_iter()
+                .map(|unknown| CatalogUnknownConstructDto {
+                    xpath: unknown.xpath,
+                    kind: unknown.kind.as_str().to_owned(),
+                    name: unknown.name,
+                    occurrences: unknown.occurrences,
+                    sample: unknown.sample,
+                })
+                .collect(),
+            unknown_occurrences: facts.unknown_occurrences,
+            diagnostics: facts
+                .diagnostics
+                .into_iter()
+                .map(|diagnostic| CatalogInstallDiagnosticDto {
+                    kind: diagnostic.kind().as_str().to_owned(),
+                    archive_path: diagnostic.archive_path().to_owned(),
+                    xml_path: diagnostic.xml_path().to_owned(),
+                    detail: diagnostic.detail().to_owned(),
+                    occurrences: diagnostic.occurrences(),
+                })
+                .collect(),
+        });
         Self {
             sha256: report.sha256,
             scheme: report.scheme,
@@ -186,6 +259,7 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
                 master: report.translations.master,
             },
             dropped_datapoint_types: report.dropped_datapoint_types,
+            facts,
         }
     }
 }

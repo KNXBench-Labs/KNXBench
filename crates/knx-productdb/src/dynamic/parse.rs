@@ -10,11 +10,13 @@
 //! need to know what an element means, only what it is. That split belongs
 //! to the evaluator this module does not yet have.
 
+use std::collections::HashSet;
+
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::report::{UnknownCollector, UnknownConstruct};
+use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, Attrs};
 use crate::ProductDbError;
 
@@ -24,6 +26,11 @@ use crate::ProductDbError;
 /// parser in this crate follows).
 pub struct DynamicIngest {
     pub unknown: Vec<UnknownConstruct>,
+}
+
+pub(crate) struct DetailedDynamicIngest {
+    pub outcome: DynamicIngest,
+    pub entities: EntityCounts,
 }
 
 /// The attribute names this build recognizes for one element `kind`
@@ -145,13 +152,24 @@ pub fn parse_dynamic_trees(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<DynamicIngest, ProductDbError> {
+    Ok(parse_dynamic_trees_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+}
+
+pub(crate) fn parse_dynamic_trees_detailed(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<DetailedDynamicIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
+    let mut entities = EntityCounts::default();
 
     let mut program_id = String::new();
     let mut module_def_id = String::new();
     let mut skip_program = false;
+    let mut seen_programs = HashSet::new();
 
     // Non-empty exactly while inside an open `<Dynamic>` subtree, root
     // included: one frame per currently-open ancestor.
@@ -184,10 +202,12 @@ pub fn parse_dynamic_trees(
                     &mut program_id,
                     &mut module_def_id,
                     &mut skip_program,
+                    &mut seen_programs,
                     &mut stack,
                     &mut next_node_id,
                     &mut next_argument_position,
                     &mut unknown,
+                    &mut entities,
                 )?;
             }
             Event::Empty(e) => {
@@ -202,10 +222,12 @@ pub fn parse_dynamic_trees(
                     &mut program_id,
                     &mut module_def_id,
                     &mut skip_program,
+                    &mut seen_programs,
                     &mut stack,
                     &mut next_node_id,
                     &mut next_argument_position,
                     &mut unknown,
+                    &mut entities,
                 )?;
             }
             Event::End(e) => {
@@ -220,8 +242,11 @@ pub fn parse_dynamic_trees(
         }
     }
 
-    Ok(DynamicIngest {
-        unknown: unknown.into_vec(),
+    Ok(DetailedDynamicIngest {
+        outcome: DynamicIngest {
+            unknown: unknown.into_vec(),
+        },
+        entities,
     })
 }
 
@@ -239,16 +264,20 @@ fn handle_start_or_empty(
     program_id: &mut String,
     module_def_id: &mut String,
     skip_program: &mut bool,
+    seen_programs: &mut HashSet<String>,
     stack: &mut Vec<Frame>,
     next_node_id: &mut i64,
     next_argument_position: &mut i64,
     unknown: &mut UnknownCollector,
+    entities: &mut EntityCounts,
 ) -> Result<(), ProductDbError> {
     match name {
         "ApplicationProgram" => {
             *program_id = a.get("Id").unwrap_or_default().to_string();
             module_def_id.clear();
-            *skip_program = program_should_be_skipped(conn, program_id, source_sha256)?;
+            let first_declaration = seen_programs.insert(program_id.clone());
+            *skip_program =
+                !first_declaration || program_should_be_skipped(conn, program_id, source_sha256)?;
         }
         "ModuleDef" => {
             *module_def_id = a.get("Id").unwrap_or_default().to_string();
@@ -298,6 +327,7 @@ fn handle_start_or_empty(
                 name,
                 a,
                 unknown,
+                entities,
                 is_start,
             )?;
         }
@@ -356,6 +386,7 @@ fn handle_dynamic_element(
     name: &str,
     a: &Attrs,
     unknown: &mut UnknownCollector,
+    entities: &mut EntityCounts,
     is_start: bool,
 ) -> Result<(), ProductDbError> {
     let (parent_id, position) = if name == "Dynamic" && stack.is_empty() {
@@ -382,9 +413,7 @@ fn handle_dynamic_element(
         stack.push((node_id, 0));
     }
 
-    if skip_program {
-        return Ok(());
-    }
+    entities.read(EntityKind::DynamicNode)?;
     insert_node(
         conn,
         program_id,
@@ -395,7 +424,12 @@ fn handle_dynamic_element(
         name,
         a,
         unknown,
-    )
+        !skip_program,
+    )?;
+    if !skip_program {
+        entities.stored(EntityKind::DynamicNode)?;
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -409,13 +443,14 @@ fn insert_node(
     kind: &str,
     a: &Attrs,
     unknown: &mut UnknownCollector,
+    store: bool,
 ) -> Result<(), ProductDbError> {
     let spec = spec_for(kind);
     let xpath = if module_def_id.is_empty() {
-        format!("/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic//{kind}")
+        format!("/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic/{kind}")
     } else {
         format!(
-            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic//{kind}"
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic/{kind}"
         )
     };
     // `@default`'s only recognized spelling is the literal string `"true"`
@@ -472,27 +507,29 @@ fn insert_node(
         Some(extra.join("\n"))
     };
 
-    conn.execute(
-        "INSERT INTO dynamic_node
+    if store {
+        conn.execute(
+            "INSERT INTO dynamic_node
          (program_id, module_def_id, node_id, parent_id, position, kind,
           element_id, ref_id, test, is_default, text, value, extra)
          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
-        params![
-            program_id,
-            module_def_id,
-            node_id,
-            parent_id,
-            position,
-            kind,
-            element_id,
-            ref_id,
-            test,
-            is_default,
-            text,
-            value,
-            extra,
-        ],
-    )?;
+            params![
+                program_id,
+                module_def_id,
+                node_id,
+                parent_id,
+                position,
+                kind,
+                element_id,
+                ref_id,
+                test,
+                is_default,
+                text,
+                value,
+                extra,
+            ],
+        )?;
+    }
     Ok(())
 }
 

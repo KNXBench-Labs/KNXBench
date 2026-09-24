@@ -15,6 +15,7 @@ const MAX_EVIDENCE_ITEMS: usize = 262_144;
 const MAX_EVIDENCE_BYTES: usize = 64 * 1024 * 1024;
 const SCHEME_12_NAMESPACE: &str = "http://knx.org/xml/project/12";
 const SCHEME_14_NAMESPACE: &str = "http://knx.org/xml/project/14";
+const SCHEME_21_NAMESPACE: &str = "http://knx.org/xml/project/21";
 
 fn xml_error(source_path: &str, cause: impl ToString) -> ProductDbError {
     ProductDbError::Xml {
@@ -34,6 +35,7 @@ struct PathElement {
 struct ElementIdentity {
     expanded_name: String,
     rendered_name: String,
+    scheme21: bool,
 }
 
 fn xpath(path: &[PathElement]) -> String {
@@ -102,6 +104,9 @@ fn is_inside_application_program(path: &[PathElement]) -> bool {
 
 fn is_application_program_context(path: &[PathElement], current_name: &str) -> bool {
     const COMMON_LEN: usize = 5;
+    if current_name == "ApplicationProgram" && is_application_program_parent(path) {
+        return true;
+    }
     path.len() >= COMMON_LEN
         && is_inside_application_program(path)
         && path.iter().all(|element| element.in_project_namespace)
@@ -246,7 +251,77 @@ fn is_targeted_attribute(xpath: &str, name: &str) -> bool {
     (name == "AppliesTo" && xpath.ends_with("/LdCtrlWriteProp"))
         || (name == "Occurrence" && xpath.ends_with("/Property"))
         || (xpath.ends_with("/ParameterSeparator") && name == "UIHint")
+        || (xpath.ends_with("/ApplicationProgram") && name == "HardwareType")
+        || (xpath.ends_with("/DatapointType") && name == "VariableLength")
+        || (xpath.ends_with("/Hardware2Program")
+            && matches!(
+                name,
+                "CouplerCapabilities" | "RFRxCapabilities" | "RFTxCapabilities"
+            ))
+        || (xpath.ends_with("/InterfaceObjectProperty") && name == "AccessPolicy")
+        || (xpath.ends_with("/Resource") && name == "Optional")
+        || (xpath.ends_with("/String") && matches!(name, "NullTerminated" | "VariableLength"))
         || xpath.ends_with("/LdCtrlDeclarePropDesc")
+}
+
+fn is_scheme21_non_program_context(path: &[PathElement], name: &str) -> bool {
+    if !path.iter().all(|element| element.in_project_namespace) {
+        return false;
+    }
+    let names: Vec<&str> = path
+        .iter()
+        .map(|element| element.local_name.as_str())
+        .collect();
+    match name {
+        "DatapointType" => names == ["KNX", "MasterData", "DatapointTypes"],
+        "Resource" => {
+            names == ["KNX", "MasterData", "Resources"]
+                || names
+                    == [
+                        "KNX",
+                        "MasterData",
+                        "MaskVersions",
+                        "MaskVersion",
+                        "HawkConfigurationData",
+                        "Resources",
+                    ]
+        }
+        "InterfaceObjectProperty" => {
+            names == ["KNX", "MasterData", "InterfaceObjectProperties"]
+                || names
+                    == [
+                        "KNX",
+                        "MasterData",
+                        "InterfaceObjectTypes",
+                        "InterfaceObjectType",
+                        "InterfaceObjectProperties",
+                    ]
+        }
+        "String" => {
+            names
+                == [
+                    "KNX",
+                    "MasterData",
+                    "DatapointTypes",
+                    "DatapointType",
+                    "DatapointSubtypes",
+                    "DatapointSubtype",
+                    "Format",
+                ]
+        }
+        "Hardware2Program" => {
+            names
+                == [
+                    "KNX",
+                    "ManufacturerData",
+                    "Manufacturer",
+                    "Hardware",
+                    "Hardware",
+                    "Hardware2Programs",
+                ]
+        }
+        _ => false,
+    }
 }
 
 fn unqualified_attributes(
@@ -327,18 +402,17 @@ fn record_element<R: BufRead>(
     };
     let attributes = unqualified_attributes(element, source_path)?;
 
-    if !is_application_program_context(path, &name) {
-        return Ok(());
-    }
-
-    if name == "LdCtrlDeclarePropDesc" {
+    if name == "LdCtrlDeclarePropDesc" && is_application_program_context(path, &name) {
         collector.element(&parent, &name);
         for (attribute, value) in &attributes {
             collector.attribute(&current, attribute, value);
         }
     } else {
         for (attribute, value) in &attributes {
-            if is_targeted_attribute(&current, attribute) {
+            if is_targeted_attribute(&current, attribute)
+                && (is_application_program_context(path, &name)
+                    || is_scheme21_non_program_context(path, &name))
+            {
                 collector.attribute(&current, attribute, value);
             }
         }
@@ -378,7 +452,8 @@ fn record_namespace_lookalike<R: BufRead>(
 ) -> Result<(), ProductDbError> {
     let local = local_name(element);
     if !(is_inside_application_program(path)
-        || (is_application_program_parent(path) && local == "ApplicationProgram"))
+        || (is_application_program_parent(path) && local == "ApplicationProgram")
+        || (identity.scheme21 && is_scheme21_non_program_context(path, &local)))
     {
         return Ok(());
     }
@@ -428,6 +503,23 @@ pub(crate) fn reconcile_targeted_unknowns(
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
 ) -> Result<(), ProductDbError> {
+    reconcile_unknowns(bytes, source_path, unknown, false)
+}
+
+pub(crate) fn reconcile_package_unknowns(
+    bytes: &[u8],
+    source_path: &str,
+    unknown: &mut Vec<UnknownConstruct>,
+) -> Result<(), ProductDbError> {
+    reconcile_unknowns(bytes, source_path, unknown, true)
+}
+
+fn reconcile_unknowns(
+    bytes: &[u8],
+    source_path: &str,
+    unknown: &mut Vec<UnknownConstruct>,
+    accept_scheme21: bool,
+) -> Result<(), ProductDbError> {
     let text = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
     if text.iter().find(|byte| !byte.is_ascii_whitespace()) != Some(&b'<') {
         return Ok(());
@@ -454,10 +546,10 @@ pub(crate) fn reconcile_targeted_unknowns(
                         _ => return Ok(()),
                     };
                     if element.local_name().as_ref() != "KNX"
-                        || !matches!(
+                        || !(matches!(
                             root_namespace.as_str(),
                             SCHEME_12_NAMESPACE | SCHEME_14_NAMESPACE
-                        )
+                        ) || (accept_scheme21 && root_namespace == SCHEME_21_NAMESPACE))
                     {
                         return Ok(());
                     }
@@ -496,6 +588,7 @@ pub(crate) fn reconcile_targeted_unknowns(
                 let identity = ElementIdentity {
                     expanded_name,
                     rendered_name: rendered_name.clone(),
+                    scheme21: project_namespace.as_deref() == Some(SCHEME_21_NAMESPACE),
                 };
                 charge_expanded_name_budget(
                     &reader,
@@ -504,7 +597,11 @@ pub(crate) fn reconcile_targeted_unknowns(
                     &identity,
                     source_path,
                 )?;
-                if in_project_namespace && is_application_program_context(&path, &local) {
+                if in_project_namespace
+                    && (is_application_program_context(&path, &local)
+                        || (project_namespace.as_deref() == Some(SCHEME_21_NAMESPACE)
+                            && is_scheme21_non_program_context(&path, &local)))
+                {
                     record_element(
                         &reader,
                         &mut collector,
@@ -542,10 +639,10 @@ pub(crate) fn reconcile_targeted_unknowns(
                         _ => return Ok(()),
                     };
                     if element.local_name().as_ref() != "KNX"
-                        || !matches!(
+                        || !(matches!(
                             root_namespace.as_str(),
                             SCHEME_12_NAMESPACE | SCHEME_14_NAMESPACE
-                        )
+                        ) || (accept_scheme21 && root_namespace == SCHEME_21_NAMESPACE))
                     {
                         return Ok(());
                     }
@@ -578,6 +675,7 @@ pub(crate) fn reconcile_targeted_unknowns(
                 let identity = ElementIdentity {
                     expanded_name,
                     rendered_name: rendered_name.clone(),
+                    scheme21: project_namespace.as_deref() == Some(SCHEME_21_NAMESPACE),
                 };
                 charge_expanded_name_budget(
                     &reader,
@@ -586,7 +684,11 @@ pub(crate) fn reconcile_targeted_unknowns(
                     &identity,
                     source_path,
                 )?;
-                if in_project_namespace && is_application_program_context(&path, &local) {
+                if in_project_namespace
+                    && (is_application_program_context(&path, &local)
+                        || (project_namespace.as_deref() == Some(SCHEME_21_NAMESPACE)
+                            && is_scheme21_non_program_context(&path, &local)))
+                {
                     record_element(
                         &reader,
                         &mut collector,
@@ -653,6 +755,19 @@ pub(crate) fn reconcile_targeted_unknowns(
 mod tests {
     use super::*;
     use crate::report::UnknownKind;
+
+    #[test]
+    fn scheme21_scanning_is_package_only() {
+        let xml = br#"<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram HardwareType="RF"/></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+        let mut generic = Vec::new();
+        reconcile_targeted_unknowns(xml, "application.xml", &mut generic).unwrap();
+        assert!(generic.is_empty());
+        let mut package = Vec::new();
+        reconcile_package_unknowns(xml, "application.xml", &mut package).unwrap();
+        assert!(package
+            .iter()
+            .any(|item| item.name == "HardwareType" && item.sample.as_deref() == Some("RF")));
+    }
 
     #[test]
     fn replaces_partial_sightings_with_complete_targeted_evidence() {
@@ -1000,6 +1115,7 @@ mod tests {
         let identity = ElementIdentity {
             expanded_name: "{a-very-long-namespace}Foreign".into(),
             rendered_name: "e:Foreign".into(),
+            scheme21: false,
         };
         let mut bytes = MAX_EVIDENCE_BYTES;
 

@@ -67,7 +67,7 @@ pub fn ingest_file(
         return Ok(IngestOutcome::Skipped { sha256 });
     }
     let tx = conn.unchecked_transaction()?;
-    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false)?.outcome;
+    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false, false)?.outcome;
     tx.commit()?;
     Ok(outcome)
 }
@@ -77,6 +77,7 @@ pub(crate) fn ingest_file_in_transaction(
     source_path: &str,
     bytes: &[u8],
     parse_existing: bool,
+    package_scheme21: bool,
 ) -> Result<DetailedIngestOutcome, ProductDbError> {
     let sha256 = sha256_hex(bytes);
     let parsed: Option<i64> = conn
@@ -182,7 +183,13 @@ pub(crate) fn ingest_file_in_transaction(
         ),
     };
 
-    if kind == FileKind::ApplicationProgram {
+    if package_scheme21 && matches!(kind, FileKind::ApplicationProgram | FileKind::Hardware) {
+        crate::parse::scheme_evidence::reconcile_package_unknowns(
+            bytes,
+            source_path,
+            &mut unknown,
+        )?;
+    } else if kind == FileKind::ApplicationProgram {
         crate::parse::scheme_evidence::reconcile_targeted_unknowns(
             bytes,
             source_path,

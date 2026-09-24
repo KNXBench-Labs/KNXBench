@@ -127,13 +127,14 @@ published, and the version number is not a promise that anything is finished.
 
 - **Affected:** product data for newer devices.
 - **Limitation:** a standalone `.knxprod` package installs at master-data
-  scheme 11, 12, 13, 14 or 20. Schemes 12-14 are verified against eight
-  measured packages, but that proves KNXBench parser/persistence behavior
-  rather than complete semantics or ETS parity. The observed scheme 21 and the
-  unobserved schemes 15-19/22 are not supported. Encrypted packages are refused
+  scheme 11, 12, 13, 14, 20 or exact-namespace 21. Schemes 12-14 and 21 are
+  covered by synthetic tests and a passing read-only corpus matrix, but that
+  proves KNXBench parser/persistence behavior rather than complete semantics or
+  ETS parity. The unobserved schemes 15-19/22 are not supported. Encrypted packages are refused
   permanently, by decision rather than by omission.
-- **Consequence:** for many current devices the manufacturer's own download
-  cannot be installed.
+- **Consequence:** packages at unmeasured schemes, encrypted packages and legacy
+  formats cannot be installed directly; successful import at a supported scheme
+  does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported
   with the project, which covers the common case of working on an existing
   installation.

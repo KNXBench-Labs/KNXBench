@@ -25,12 +25,12 @@ use serde_json::{json, Value};
 const MAX_SCHEME_XML_BYTES: u64 = 64 * 1024 * 1024;
 const EXPECTED_PACKAGE_INSTANCES: usize = 115;
 const EXPECTED_UNIQUE_PACKAGES: usize = 113;
-const EXPECTED_ISOLATED_INSTALLS: usize = 104;
-const EXPECTED_SHARED_INSTALLS: usize = 102;
+const EXPECTED_ISOLATED_INSTALLS: usize = 108;
+const EXPECTED_SHARED_INSTALLS: usize = 106;
 const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
-const EXPECTED_UNSUPPORTED_NAMESPACES: usize = 11;
+const EXPECTED_UNSUPPORTED_NAMESPACES: usize = 7;
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "fb6a070e2b02d6ab754fbe6023ba17f76e8bcfdb95d7e09179cdad359f4d3825";
+    "8233fe0f4fc8ca8693991d5c1f93d9adb9a2750e197976e4c61373c8e89db3f3";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -119,6 +119,54 @@ fn install_json(conn: &Connection, ordinal: usize, bytes: &[u8]) -> Value {
             "status": "rejected",
             "category": error_category(error),
         }),
+    }
+}
+
+fn assert_scheme_13_persistence(conn: &Connection, outcome: &Value) {
+    assert_eq!(outcome["status"], "installed");
+    let member_count = i64::try_from(
+        outcome["report"]["member_count"]
+            .as_u64()
+            .expect("scheme-13 member count"),
+    )
+    .expect("scheme-13 member count fits SQLite INTEGER");
+    assert_eq!(
+        conn.query_row("SELECT count(*) FROM package", [], |row| {
+            row.get::<_, i64>(0)
+        })
+        .expect("count isolated scheme-13 package rows"),
+        1
+    );
+    assert_eq!(
+        conn.query_row("SELECT count(*) FROM package_member", [], |row| {
+            row.get::<_, i64>(0)
+        })
+        .expect("count isolated scheme-13 package members"),
+        member_count
+    );
+    for table in [
+        "source_file",
+        "manufacturer",
+        "product",
+        "application_program",
+        "parameter",
+        "com_object",
+        "datapoint_type",
+        "dynamic_node",
+        "package_install_report",
+        "package_install_count",
+        "package_install_unknown",
+    ] {
+        let quoted = table.replace('"', "\"\"");
+        let rows = conn
+            .query_row(&format!("SELECT count(*) FROM \"{quoted}\""), [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .expect("count isolated scheme-13 persistence evidence");
+        assert!(
+            rows > 0,
+            "scheme-13 install did not persist required {table} evidence"
+        );
     }
 }
 
@@ -414,6 +462,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     for (index, (sha256, source)) in ordered_sources.into_iter().enumerate() {
         let ordinal = index + 1;
         let bytes = source.load(&mut install_budget);
+        let scheme = package_scheme(&bytes);
         assert!(
             knx_productdb::sha256_hex(&bytes) == sha256,
             "corpus package changed between ordering and installation"
@@ -427,7 +476,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
                 let isolated =
                     knx_productdb::open_and_migrate(&isolated_dir.path().join("products.sqlite"))
                         .expect("temporary isolated product database");
-                install_json(&isolated, ordinal, &bytes)
+                let outcome = install_json(&isolated, ordinal, &bytes);
+                if scheme == Some(13) {
+                    assert_scheme_13_persistence(&isolated, &outcome);
+                }
+                outcome
             });
             let shared_outcome = install_json(&shared, ordinal, &bytes);
             (
@@ -438,7 +491,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         private_records.push(json!({
             "ordinal": ordinal,
             "sha256": sha256,
-            "scheme": package_scheme(&bytes),
+            "scheme": scheme,
             "isolation": isolation,
             "shared": shared_outcome,
         }));
@@ -493,6 +546,26 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "packages": public_records,
     });
 
+    let scheme_13 = private_records
+        .iter()
+        .filter(|record| record["scheme"] == 13)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        scheme_13.len(),
+        4,
+        "measured scheme-13 package count changed"
+    );
+    assert!(
+        scheme_13.iter().all(|record| {
+            record["isolation"]["status"] == "installed"
+                && matches!(
+                    record["shared"]["status"].as_str(),
+                    Some("installed" | "deduplicated")
+                )
+        }),
+        "every measured scheme-13 package must install in isolation and succeed in shared order"
+    );
+
     assert_eq!(matrix["package_instances"], EXPECTED_PACKAGE_INSTANCES);
     assert_eq!(matrix["unique_package_hashes"], EXPECTED_UNIQUE_PACKAGES);
     assert_eq!(
@@ -520,50 +593,50 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     assert_eq!(
         matrix["isolation_report_totals"],
         json!({
-            "attempt_count": 104,
-            "member_count": 1539,
-            "unknown_count": 22404,
+            "attempt_count": 108,
+            "member_count": 1567,
+            "unknown_count": 22900,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
-            "translation_counts": {"program": 2864784, "catalog": 2821, "hardware": 1368, "master": 103312},
+            "translation_counts": {"program": 2883218, "catalog": 2873, "hardware": 1386, "master": 104596},
         })
     );
     assert_eq!(
         matrix["shared_installed_report_totals"],
         json!({
-            "attempt_count": 102,
-            "member_count": 1519,
-            "unknown_count": 22279,
-            "conflict_count": 371,
-            "dropped_datapoint_type_count": 35729,
-            "translation_counts": {"program": 2740855, "catalog": 2229, "hardware": 1112, "master": 1636},
+            "attempt_count": 106,
+            "member_count": 1547,
+            "unknown_count": 22775,
+            "conflict_count": 384,
+            "dropped_datapoint_type_count": 37021,
+            "translation_counts": {"program": 2759289, "catalog": 2271, "hardware": 1122, "master": 1636},
         })
     );
     assert_eq!(
         matrix["shared_successful_attempt_report_totals"],
         json!({
-            "attempt_count": 104,
-            "member_count": 1539,
-            "unknown_count": 22404,
-            "conflict_count": 373,
-            "dropped_datapoint_type_count": 36462,
-            "translation_counts": {"program": 2751044, "catalog": 2295, "hardware": 1126, "master": 1636},
+            "attempt_count": 108,
+            "member_count": 1567,
+            "unknown_count": 22900,
+            "conflict_count": 386,
+            "dropped_datapoint_type_count": 37754,
+            "translation_counts": {"program": 2769478, "catalog": 2337, "hardware": 1136, "master": 1636},
         })
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package"], 102,
+        matrix["shared_final_database_counts"]["package"], 106,
         "shared package rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["source_file"], 1101,
+        matrix["shared_final_database_counts"]["source_file"], 1124,
         "shared source-file rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["parameter"], 207711,
+        matrix["shared_final_database_counts"]["parameter"], 211231,
         "shared parameter rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["translation"], 2745832,
+        matrix["shared_final_database_counts"]["translation"], 2764318,
         "shared translation rows changed"
     );
     assert_eq!(

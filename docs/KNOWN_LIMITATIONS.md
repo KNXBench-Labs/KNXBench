@@ -1036,6 +1036,61 @@ of the model or generation; `Hardware/@SerialNumber` is a different number
 entirely, and `PID_ORDER_INFO` was not read. Product identification from a live
 device is therefore still an open question.
 
+**Updated, 2026-09-26 (the first write to real hardware succeeded — and §7's
+headline is now wrong in one specific way).** The operator authorised assigning
+`1.1.67` to the device above, explicitly as a test of whether writing works. It
+does. `1.0.71` is now vacant and `1.1.67` answers with the same mask `0701h`,
+manufacturer `0083` and hardware type `000000000127`, confirmed with the
+independent scan probe rather than by the procedure vouching for itself.
+RESEARCH §8.8.6 has the before/after table and the full reasoning.
+
+So **"blocked" no longer describes individual-address programming.** What is
+still blocked, and deliberately so:
+
+- `WriteScope::Download` and `WriteScope::Unload` against hardware — the write
+  classes that rewrite a device's application and tables, where a half-finished
+  write leaves an unusable device. Refused even with a correctly typed
+  confirmation phrase.
+- `WriteScope::ProgrammingModeToggle` against hardware — design spec §15 records
+  the `0060h` octet's meaning as unsourced for a System B mask, and this project
+  does not write octets whose meaning it cannot cite.
+
+The gate is `knx_core::commissioning::mutation::hardware_write_is_authorised`,
+an allowlist of two scopes, checked by `check_write_target()` only when transport
+*and* authorisation are both hardware. A simulator authorisation still cannot be
+pointed at hardware (the confirmation phrase was never typed) and a hardware
+authorisation still cannot be spent on the simulator (that would make a hardware
+confirmation look exercised when no device was involved).
+`crates/knx-net/tests/hardware_write_gate.rs` — renamed from
+`hardware_write_is_refused.rs`, because the old name is no longer the whole
+truth — holds down both sides plus the alarm-panel refusal.
+
+**Three limitations this first write exposed, all open:**
+
+1. **`individual_address_write` returns `Err` on a write that succeeded.** Step 4
+   (connect to the new address, read the descriptor, restart) failed immediately
+   after the broadcast write with `SessionError::ConnectionReleased`, while the
+   device demonstrably answers at the new address seconds later. The procedure
+   goes straight from step 3's broadcast to step 4's `T_Connect` with no settling
+   delay; `SessionTiming::programming_delay` exists but this procedure never
+   consults it, and MP §2.3 states no figure. Deliberately not fixed in the same
+   pass that discovered it: changing shipped procedure timing deserves its own
+   RED test against a device, not a guessed constant. MP §2.3's own "to 4."
+   exception text anticipates this ambiguity and declines to resolve it.
+2. **"Wrote but could not confirm" is not a distinct outcome.** The information
+   exists — the error carries the report, whose `wrote` flag was `true` — but a
+   caller must destructure the error to find it. Anything built on top of this
+   (CLI, server, UI) must not present the `Err` as "nothing happened".
+3. **No rollback exists for a half-completed readdressing.** If the write lands
+   and the device then cannot be reached, recovery is another programming-mode
+   session by hand. Nothing in this project automates or even detects that state.
+
+**Still not claimed:** no `A_Restart` was verifiably delivered on this run (step
+4 never completed), no download, no KNX Secure, no ETS parity, and no CLI, server
+or UI surface exposes any of this — every hardware write so far has happened
+through an explicitly opt-in `#[ignore]`d test requiring two environment
+variables.
+
 ## 8. KNX Secure is not implemented
 
 **Limitation.** No Data Secure, no IP Secure, no keyring handling (RESEARCH

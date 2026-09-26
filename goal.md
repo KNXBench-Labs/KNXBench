@@ -585,7 +585,8 @@ Small, real, and each one currently misleads a reader:
    status dashboard, device discovery and the humour templates (30+ per part)
    all shipped. Mark them; keep MCP, automation, "who talks to whom", project
    notes, mobile and multi-OS as the genuinely open entries.
-4. **Parked finding F-T30-1** (confirmed 2026-09-20, not yet owned):
+4. **Parked finding F-T30-1** (confirmed 2026-09-20; owned by DIN-10 since
+   2026-09-26, design proposed in ADR-0039, awaiting Board approval):
    `Project`'s six fields are all `pub`
    (`crates/knx-core/src/project.rs:181-186`), so "every mutation goes through
    `Command::apply`" is an invariant held by review, not by the type system.

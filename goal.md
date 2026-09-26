@@ -10,6 +10,12 @@ Do not resume the standing goal without a new explicit user instruction.
 T13 is now merged as `7f9c8c4`; all eleven merged-main gates passed. The standing
 Hermes goal remains paused, not completed.
 
+**Backlog amendment (2026-09-23, no resume):** The user supplied a new local
+Gira/MDT product-database corpus and explicitly asked that its verified import
+findings become future goal work. Section 2.8 now owns PDB-1 through PDB-11;
+the legacy `.pr5` prerequisite is in §7. This amendment changes the backlog and
+the prior product-scheme exclusion, but does not itself resume the paused goal.
+
 Drive KNXBench toward a trustworthy v1 on every front **except** commissioning.
 Work autonomously and persist across turns until every item below is either
 resolved with evidence, or explicitly accepted out of scope by the user.
@@ -126,6 +132,15 @@ T17 diagnostics UI, group-monitor regressions):**
     After the second correction/re-review cycle, the user explicitly authorized
     another targeted restart-lifetime correction round on 2026-09-23; the
     same verification, merge and subsequent pause boundary still applies.
+16. **Refresh project statistics after every completed task** (user amendment
+    2026-09-24). Once a task has passed review and verification and is integrated
+    into `main`, but before starting the next task, run
+    `python /mnt/daten-i/Sourcecode/ai-stats.py` from the root checkout
+    `/mnt/daten-i/Sourcecode/KNXBench`. Verify that it exits successfully and
+    updates the tracked `stats.md`; include that refresh in the completed task's
+    bookkeeping commit or in a dedicated immediately-following stats commit.
+    Never run it from an isolated feature worktree, because the Git statistics
+    must describe the integrated project rather than a temporary branch.
 
 ---
 
@@ -194,6 +209,84 @@ is in scope is the guessing and the rulings for main types 1-30: make the
 input format explicit at the call sites, and cite the Standard for every
 encoding currently justified by a project ruling — or record the ruling as a
 ruling, visibly, at the API boundary.
+
+### 2.8 Product-database corpus follow-up — measured Gira/MDT import gaps
+
+The local ignored corpora under `OriginalData/ProductDatabases/Gira` and `MDT`
+now provide direct evidence for 115 modern package instances (113 unique
+hashes) across product master schemes 11, 12, 13, 14, 20 and 21, plus one
+encrypted legacy MDT `.pr5`. The reproducible inventory and exact boundaries
+are in `docs/PRODUCT_DATABASE_CORPUS.md`; use
+`tools/inspect_product_corpus.py` instead of re-reading millions of XML nodes
+into an agent context.
+
+The real standalone installer accepted 93 inputs. Eleven otherwise-modern
+packages failed at the ZIP-name safety boundary, eleven at the namespace gate,
+and the `.pr5` belongs to the separate legacy format. Accepted packages still
+reported 19,291 unknown constructs. A successful install is therefore not a
+losslessness claim. Work through the following slices in order unless a focused
+test proves a later slice is the prerequisite:
+
+1. **PDB-1 — safe legacy ZIP member names.** Support the observed legacy/
+   CP437-style names only through an explicit decoding policy. Decode before
+   normalization, then retain traversal, absolute-path, NUL, size and
+   normalized-name-collision rejection. RED tests need UTF-8, legacy umlauts,
+   malicious paths and post-normalization collisions; the eleven gated corpus
+   packages are regressions, not fixtures to commit.
+2. **PDB-2 — a durable corpus compatibility matrix.** Replace the temporary
+   probe with an ignored integration test/tool requiring an explicit corpus
+   environment variable. Install every package both in isolation and in
+   deterministic shared order. Emit machine-readable package hash, scheme,
+   outcome, report counts and final DB counts. Absence of `OriginalData` must
+   be a visible skip, never a false pass.
+3. **PDB-3 — honest, countable install reports.** Separate `read`, `stored`,
+   `deduplicated`, `retained-but-uninterpreted`, `unsupported` and `dropped`.
+   Report product/program/parameter/com-object/dynamic/module/baggage counts and
+   unsupported master sections. Do not reduce the 19,291 unknowns with a broad
+   suppression list; classify them by capability and preserve source paths.
+4. **PDB-4 — scheme 13.** It has the smallest observed grammar delta. Add a
+   synthetic frozen fixture plus a gated real-package regression, atomic
+   failure tests and explicit loss accounting before widening the namespace
+   gate.
+5. **PDB-5 — schemes 12 and 14.** Cover the observed
+   `LdCtrlWriteProp/@AppliesTo`, `Property/@Occurrence`, separator metadata and
+   scheme-14 `LdCtrlDeclarePropDesc`. Model or explicitly retain/report every
+   new semantic field; namespace acceptance alone does not complete the task.
+6. **PDB-6 — scheme 21.** Cover `LdCtrlDeclarePropDesc`, variable/null-
+   terminated data, optional resources, access policies, RF/coupler
+   capabilities and `ApplicationProgram/@HardwareType`. Keep product-scheme
+   support separate from `.knxproj` project-schema compatibility.
+7. **PDB-7 — secure and version metadata.** Persist and query
+   `IsSecureEnabled`, the observed `MaxSecurity*`, tunnelling/user capacities,
+   `MinEtsVersion` and `ReplacesVersions`. This is catalogue metadata only; it
+   must not imply KNX Data Secure commissioning or runtime support.
+8. **PDB-8 — master-data coverage without silence.** For interface-object/
+   property, property-data-type, medium, mask, functional-block, datapoint-role,
+   resource/access and public-key sections, either add typed storage needed by
+   a proven feature or emit section-level retained/unsupported diagnostics.
+   Whole-source blob retention is necessary but not a substitute for reporting.
+9. **PDB-9 — parameter and Dynamic fidelity.** Add typed/raw coverage for all
+   observed parameter kinds (`Restriction`, `Number`, `Picture`, `Float`,
+   `Text`, `Color`, `RawData`, `None`, `IPAddress`, `Time`) and synthetic tests
+   for Rows/Columns, rename/button nodes, repeat/module nesting,
+   transformations and allocator arguments. Unknown Dynamic containers must
+   not make their descendants disappear; evaluation semantics and UI layout
+   stay separate.
+10. **PDB-10 — safe baggage inventory.** Model `Baggages.xml` references and
+    report hash, declared/expanded size, media classification, nesting and
+    encryption. Images, PDF, MSI, extensionless files and nested ZIPs remain
+    opaque and are never executed or blindly extracted. Include bounded-memory
+    coverage for the observed 24.2/54.8 MB XML members.
+11. **PDB-11 — package identity and versions.** Distinguish byte-identical
+    packages, same logical ID with different bytes, product families,
+    `ReplacesVersions`, same order number with a different program/scheme and
+    deterministic winner/loser sources. Content hashes, not filenames, own
+    exact deduplication.
+
+For every slice update `docs/PRODUCT_DATABASE_CORPUS.md`, compatibility and
+limitations with what was actually verified. Do not claim ETS-version support
+from filenames: the package namespace, `CreatedBy`, `ToolVersion` and
+`MinEtsVersion` are separate facts.
 
 ---
 
@@ -418,10 +511,13 @@ the run its credibility.
   an invention presented as data).
 - **§13's AES half** — blocked on a real ETS6 AES-protected sample, not on a
   decision. ZipCrypto already works. A synthesized sample proves nothing.
-- **§1 / schema evidence** — schemas 12-19 and 22 rest on no evidence; only
-  actionable when a sample appears. Do not synthesize one.
-- **`.vd2` and `.knxprod` schemes 12-19/21/22** — out of scope by user
-  decision 2026-09-11, no further sample-hunting.
+- **§1 / project-schema evidence** — `.knxproj` schemas 12-19 and 22 still rest
+  on no project evidence; product-package schemes with the same numbers are a
+  different format boundary. Do not use the new `.knxprod` samples to claim
+  `.knxproj` compatibility.
+- **`.vd2` and unobserved `.knxprod` schemes 15-19/22** remain out of scope.
+  The user reopened the now-evidenced standalone product schemes 12/13/14/21
+  on 2026-09-23 through §2.8; no further sample-hunting is needed for those.
 - **ETS re-import of KNXBench-written projects** — dropped as a goal by
   ADR-0015; §5's unsigned-export exposure follows from it.
 - **§6 — devices behind manufacturer plug-in DLLs.** No verified semantics
@@ -459,6 +555,14 @@ that artifact is a legitimate deliverable; producing code is not.
   reach, with the reason visible. Needs the mature UI base it now has, plus
   live telegrams from the bus monitor to be worth more than a static group-link
   diagram. Deferred, not designed, not started.
+- **Legacy VD/PR product import.** The supplied encrypted MDT `.pr5` is a
+  legacy `ets.pr_`/EX-IM container, not a malformed `.knxprod`. Reconcile it
+  with `docs/VD4_PRODUCT_DATABASE_IMPORT.md` and first produce an independent
+  format/security/legal design: user-supplied lawful input, no embedded
+  password, bounded decryption/parsing, synthetic fixtures, atomic publication
+  and explicit mapping-loss reports. Only that reviewed artifact may authorize
+  implementation; do not route PR/VD bytes through the modern XML-package
+  parser.
 
 ---
 

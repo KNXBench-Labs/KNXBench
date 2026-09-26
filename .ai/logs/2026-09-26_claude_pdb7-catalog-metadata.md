@@ -91,3 +91,57 @@ XML forbids would now be rejected rather than half-read — documented, not
 hidden.
 
 PDB-8 is explicitly **not** started.
+
+---
+
+## Addendum, 2026-09-26 11:40 — gating on merged `main`
+
+### Pre-existing defect surfaced by the full workspace run (not caused by PDB-7)
+
+`cargo test --workspace` fails on **seven** tests that assume a *flat*
+`OriginalData/ProductDatabases`: the five `dynamic_tree` `corpus_*` tests,
+`parameter_views_corpus::parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3`,
+and `standalone_packages::installs_the_readable_corpus`. The local corpus now
+has per-manufacturer subdirectories, so every referenced fixture still exists —
+one directory deeper.
+
+Verified pre-existing by running the identical tests at base commit `3fb910a`
+in a detached worktree with `KNXBENCH_PRODUCT_CORPUS` pointed at the real
+corpus: the failing set is **exactly equal** before and after the merge
+(`only in merged: NONE`). Documented in `docs/KNOWN_LIMITATIONS.md`
+(commits `182b54f`, `2162fff`); not fixed here, as it is unrelated to
+catalogue metadata.
+
+> **Trap worth remembering.** The first baseline attempt reported 54/54 passing
+> — because an isolated worktree has no `OriginalData/` and the tests silently
+> took their skip path. A corpus test that skips quietly is worse than one that
+> fails loudly. Always pass `KNXBENCH_PRODUCT_CORPUS` explicitly when judging
+> corpus-gated results.
+
+### Two portable lessons from fixing the gate run
+
+**Positional INSERTs are a schema tripwire.** Two tests broke on v13 purely
+because they used `INSERT INTO application_program VALUES (...)` with a
+hand-counted value list. Both were converted to named column lists.
+
+**Our own fixtures must be valid XML.** `http_parameter_panel.rs` carried a
+comment containing `--`, which XML 1.0 forbids. The new validator was right and
+the fixture was wrong; the comment was reworded rather than the rule relaxed.
+All 115 corpus instances pass the stricter check, so the hardening cost nothing
+in real-world compatibility.
+
+### Gate results on merged `main`
+
+Excluding only the seven flat-layout tests: **1399 passed / 0 failed**.
+`cargo fmt --check`, `clippy --workspace --all-targets -D warnings`,
+`check-layering`, `check-headers` (215 headers), `check-anchors` (376 links /
+202 files), `cargo deny check`, `git diff --check` — all exit 0.
+
+### Not pushed, deliberately
+
+`origin/main..HEAD` holds 6 commits, two of which (`15f704a`, `03e358f`) belong
+to a parallel commissioning strand this work did not review. Publishing them
+under these gate results would misrepresent what was verified. The root
+worktree's foreign local edits were protected across the merge with a targeted
+stash and confirmed byte-identical afterwards. The PDB-7 worktree and branch
+were removed after confirming the branch is an ancestor of `HEAD`.

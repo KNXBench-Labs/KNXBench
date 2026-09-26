@@ -570,6 +570,66 @@ mod tests {
         assert_eq!(load_project(&conn).unwrap(), project);
     }
 
+    /// ADR-0038: a site above several buildings is a `Ground` root space.
+    /// It must survive native save/load/re-save with both buildings under
+    /// it, both devices on the one shared line, and each device referenced
+    /// by exactly one building — the site adds no ownership of its own.
+    #[test]
+    fn a_ground_site_over_two_buildings_on_one_line_round_trips() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut site = part(1, None, BuildingPartType::Ground);
+        site.children = vec![BuildingPartId(2), BuildingPartId(3)];
+        let mut north = part(2, Some(1), BuildingPartType::Building);
+        north.devices = vec![DeviceId(1)];
+        let mut south = part(3, Some(1), BuildingPartType::Building);
+        south.devices = vec![DeviceId(2)];
+        let mut project = project_with_hierarchy(vec![site, north, south], vec![], vec![]);
+        let installation = &mut project.installations[0];
+        installation.topology.lines = vec![Line {
+            id: LineId(1),
+            source: source(),
+            name: "Shared line".into(),
+            address: 1,
+            medium_ref: "TP".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
+            completion: CompletionStatus::FinishedDesign,
+            devices: vec![DeviceId(1), DeviceId(2)],
+        }];
+        installation.topology.areas = vec![Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A1".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        }];
+        project.devices.insert(device(1));
+        project.devices.insert(device(2));
+
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded, project);
+        let root_kinds: Vec<String> = conn
+            .prepare("SELECT kind FROM building_part WHERE parent_id IS NULL")
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(root_kinds, ["Ground"]);
+        let device_refs: i64 = conn
+            .query_row("SELECT count(*) FROM building_part_device", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(device_refs, 2);
+        save_project(&conn, &loaded).unwrap();
+        assert_eq!(load_project(&conn).unwrap(), project);
+    }
+
     #[test]
     fn building_unknown_persisted_kind_is_refused() {
         let conn = open_and_migrate_in_memory().unwrap();

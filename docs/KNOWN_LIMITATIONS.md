@@ -53,15 +53,24 @@ being partially interpreted. All 115 corpus instances pass this check; a
 hypothetical vendor file that ETS tolerates but XML forbids would now be
 refused rather than half-read.
 
-## Five `dynamic_tree` corpus tests assume a flat local corpus directory
+## Seven corpus tests assume a flat local corpus directory
 
-**Limitation.** In `crates/knx-productdb/tests/dynamic_tree.rs`, the five
-`corpus_*` tests resolve fixtures such as
+**Limitation.** Seven tests resolve fixtures such as
 `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` directly beneath
 `OriginalData/ProductDatabases`, and one asserts that the directory contains
 exactly four archives. The local corpus has since been reorganized into
-per-manufacturer subdirectories, so these five tests fail on a machine that
-has the full corpus present.
+per-manufacturer subdirectories, so these tests fail on a machine that has the
+full corpus present. Affected:
+
+| File | Tests |
+| --- | --- |
+| `crates/knx-productdb/tests/dynamic_tree.rs` | the five `corpus_*` tests |
+| `crates/knx-productdb/tests/parameter_views_corpus.rs` | `parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3` |
+| `crates/knx-productdb/tests/standalone_packages.rs` | `installs_the_readable_corpus` |
+
+Every referenced fixture still exists — each is simply one directory deeper.
+`apps/knx-server/tests/http_catalog_to_device.rs` names the same fixtures but
+passes, because it treats absence as a skip rather than a failure.
 
 **Cause.** `OriginalData/` is gitignored and local-only, so its layout is not
 version-controlled and no CI run exercises it. The tests were written against
@@ -72,14 +81,14 @@ reorganized corpus, even though nothing in the product is broken. On a machine
 without the corpus the same tests silently take their skip path, which hides
 the problem rather than reporting it.
 
-**Evidence that this is pre-existing.** The identical five tests fail at
+**Evidence that this is pre-existing.** The identical seven tests fail at
 base commit `3fb910a` when run with `KNXBENCH_PRODUCT_CORPUS` pointed at the
 present corpus — the failing set is exactly equal before and after the PDB-7
 merge, so no part of it is caused by the catalogue-metadata work. The three
 other corpus gates (`corpus_compatibility_matrix`, and the scheme suites) pass,
 because they walk the tree recursively instead of assuming a flat directory.
 
-**Lifted when.** The five tests resolve fixtures recursively — the same way
+**Lifted when.** The seven tests resolve fixtures recursively — the same way
 the compatibility matrix already does — and the "exactly four archives"
 assertion is replaced by one that tolerates a growing corpus. Until then,
 run them with a flat corpus directory or skip them with `--skip corpus_`.

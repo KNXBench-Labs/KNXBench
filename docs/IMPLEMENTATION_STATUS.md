@@ -1,5 +1,39 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-25 — PDB-7: source-value application-program catalogue metadata
+
+The versioned product database is now schema v13. Eight observed unqualified
+`ApplicationProgram` attributes are stored as nullable parser-decoded source
+strings on the winning row and exposed by `query::ProgramRow` and
+`knx products show`. This is catalogue metadata, not KNX Data Secure
+commissioning, capacity enforcement or ETS-version compatibility. Qualified
+lookalikes remain unknown evidence. A v12 migration rederives only rows whose
+program ID and source hash agree with retained source bytes; incomplete XML
+produces a per-source diagnostic rather than partial values. Older install
+reports are historical snapshots and are not rewritten.
+
+Synthetic tests exercise absence versus explicit empty values, unusual source
+lexemes, ID conflicts within and across source files, foreign-qualified
+lookalikes, malformed retained XML, idempotent reopen, and post-write package
+rollback. The read-only 115-instance private corpus measurement records
+22,758 isolated unknown constructs (589 fewer than PDB-6) and aggregate
+winning-row attribute presence, without publishing identities or values.
+See [ADR-0037](adr/0037-product-program-catalog-metadata.md) and
+[PRODUCT_DATABASE_CORPUS.md](PRODUCT_DATABASE_CORPUS.md).
+
+Two independent read-only reviews drove a correction that outgrew the original
+slice: complete-document XML validation was extracted into `knx-productdb`'s
+`xml` module and is now applied identically on package admission, direct
+application-program ingest and v12→v13 backfill. It enables quick-xml's
+comment checking and enforces declaration, DOCTYPE and root-element placement,
+so a document that is ill-formed in a region no domain parser visits can no
+longer contribute catalogue values on one path while being rejected on
+another. Three workspace-test fixtures that encoded pre-v13 assumptions — two
+hard-coded schema numbers and one XML comment containing `--` — were corrected
+rather than the check weakened. All 115 corpus instances still install; the
+isolated and shared attribute-presence counts are unchanged by the stricter
+validation.
+
 ## 2026-09-24 — PDB-6: scheme-21 package acceptance with retained evidence
 
 `knx-productdb::install_package` now admits only the exact scheme-21 master

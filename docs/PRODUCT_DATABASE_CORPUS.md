@@ -223,10 +223,41 @@ metadata support and bus-security implementation are separate layers.
 Observed application-program attributes also include
 `MaxSecurityGroupKeyTableEntries`, `MaxSecurityIndividualAddressEntries`,
 `MaxSecurityP2PKeyTableEntries`, `MaxTunnelingUserEntries`, `MaxUserEntries`,
-`MinEtsVersion` and `ReplacesVersions`. The current structured `PROGRAM_ATTRS`
-list does not include these fields: the source XML survives and the attributes
-can be reported as unknown, but product queries cannot yet expose the secure
-capacity or replacement/version relationship.
+`MinEtsVersion` and `ReplacesVersions`. PDB-7 adds these eight unqualified
+attributes to `PROGRAM_ATTRS`, nullable columns on the winning
+`application_program` row, `query::ProgramRow` and `knx products show`.
+Values are the parser-decoded XML strings, **not** validated security status,
+numeric capacities or interpreted version relationships. Unknown qualified
+lookalikes remain reported; original bytes still survive in `source_file`.
+The v12→v13 migration rederives values from retained winning source blobs,
+leaving historical package encounter reports unchanged.
+
+PDB-7 read-only shape measurement (including duplicate package instances)
+found all eight attributes on `ApplicationProgram`: `IsSecureEnabled` 34,
+`MaxSecurityGroupKeyTableEntries` 34,
+`MaxSecurityIndividualAddressEntries` 32,
+`MaxSecurityP2PKeyTableEntries` 27, `MaxTunnelingUserEntries` 6,
+`MaxUserEntries` 6, `MinEtsVersion` 310 and `ReplacesVersions` 140 XML
+occurrences. A lexical-only shape classification of the same inventory
+found `MinEtsVersion` 271 dotted-numeric / 39 other and `ReplacesVersions`
+57 unsigned-decimal / 83 other. No source value or identifier is published.
+These are source-field frequencies, not device capabilities
+or unique program counts. [ADR-0037](adr/0037-product-program-catalog-metadata.md)
+sets the source-value and migration boundary. The read-only package inventory
+alone does not establish typed persistence, queries or corpus acceptance; those
+require their own synthetic and matrix gates below.
+
+The PDB-7 installer remeasurement persisted those eight fields in isolated
+winning program rows at respective counts **34, 34, 32, 27, 6, 6, 310, 140**
+(in the attribute order above). In deterministic shared-database order,
+first-writer-wins produces **33, 33, 31, 27, 5, 5, 273, 130**; a losing
+program does not overwrite the winner's metadata. Isolated reported unknowns
+fell from 23,347 to **22,758**, exactly 589 recognized source-attribute
+occurrences. This reduction does not imply the remaining unknown constructs
+are understood. Shared installed-attempt unknowns are **22,642**; counting
+successful byte-identical retries gives **22,758**. The matrix pins these
+aggregate counts and a new corpus/outcome commitment. None of this verifies
+the interpreted meaning of a security flag, capacity or ETS-version expression.
 
 ### Master data and load procedures
 

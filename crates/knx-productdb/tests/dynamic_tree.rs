@@ -25,6 +25,26 @@ fn db() -> (tempfile::TempDir, Connection) {
     (dir, conn)
 }
 
+/// A fixture rolled back to v2/v10 must not retain v13's catalogue columns;
+/// otherwise the v12→v13 migration rightly refuses a duplicate column.
+fn drop_v13_catalogue_columns(conn: &Connection) {
+    for column in [
+        "is_secure_enabled",
+        "max_security_group_key_table_entries",
+        "max_security_individual_address_entries",
+        "max_security_p2p_key_table_entries",
+        "max_tunneling_user_entries",
+        "max_user_entries",
+        "min_ets_version",
+        "replaces_versions",
+    ] {
+        conn.execute_batch(&format!(
+            "ALTER TABLE application_program DROP COLUMN {column}"
+        ))
+        .unwrap();
+    }
+}
+
 /// One `ApplicationProgram` with a `Dynamic` tree exercising every element
 /// kind the plan's step 1 lists, plus an unmodelled attribute on a known
 /// kind (`Channel/@Mystery`) and one unknown element kind (`Weird`) nested
@@ -2221,6 +2241,7 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
          PRAGMA user_version = 2;",
     )
     .unwrap();
+    drop_v13_catalogue_columns(&conn);
     drop(conn);
 
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -2312,6 +2333,7 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
          PRAGMA user_version = 2;",
     )
     .unwrap();
+    drop_v13_catalogue_columns(&conn);
     drop(conn);
 
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -3568,6 +3590,7 @@ fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
          PRAGMA user_version = 10;",
     )
     .unwrap();
+    drop_v13_catalogue_columns(&conn);
     drop(conn);
 
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();

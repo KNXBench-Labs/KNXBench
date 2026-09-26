@@ -1382,6 +1382,36 @@ fn run_products_show(args: &[String]) -> ExitCode {
         program.mask_version.as_deref().unwrap_or("?"),
     );
     println!("  {com_objects} communication object(s), {parameters} parameter(s)");
+    let metadata = [
+        ("IsSecureEnabled", program.is_secure_enabled.as_deref()),
+        (
+            "MaxSecurityGroupKeyTableEntries",
+            program.max_security_group_key_table_entries.as_deref(),
+        ),
+        (
+            "MaxSecurityIndividualAddressEntries",
+            program.max_security_individual_address_entries.as_deref(),
+        ),
+        (
+            "MaxSecurityP2PKeyTableEntries",
+            program.max_security_p2p_key_table_entries.as_deref(),
+        ),
+        (
+            "MaxTunnelingUserEntries",
+            program.max_tunneling_user_entries.as_deref(),
+        ),
+        ("MaxUserEntries", program.max_user_entries.as_deref()),
+        ("MinEtsVersion", program.min_ets_version.as_deref()),
+        ("ReplacesVersions", program.replaces_versions.as_deref()),
+    ];
+    if metadata.iter().any(|(_, value)| value.is_some()) {
+        println!("  source catalogue metadata (uninterpreted; not runtime security support):");
+        for (name, value) in metadata {
+            if let Some(value) = value {
+                println!("    {name}: {value}");
+            }
+        }
+    }
     ExitCode::SUCCESS
 }
 

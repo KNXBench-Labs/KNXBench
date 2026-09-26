@@ -155,9 +155,14 @@ future cycle rather than bundled into "Session 4 leftovers":
   evidence, with scheme-21 acceptance constrained to the exact namespace and
   synthetic and read-only corpus fixtures. The passing 115-instance matrix
   records 115 isolated installs, 113 shared installs and 2 exact-byte
-  deduplications. Load-procedure execution and manufacturer-specific
-  behavior remain outside this claim. **Schema 23 manufacturer data** is a
-  separate project-import boundary and still needs its own known-element evidence.
+  deduplications. PDB-7 additionally persists eight observed
+  application-program security/capacity/version source strings in product-DB
+  schema v13, rederives older winning rows from retained bytes, and exposes
+  them through catalogue queries/CLI. The strings are not interpreted as
+  device security or commissioning capability. Load-procedure execution and
+  manufacturer-specific behavior remain outside this claim. **Schema 23
+  manufacturer data** is a separate project-import boundary and still needs
+  its own known-element evidence.
 
 **Entry condition.** Import produces application program references worth
 resolving. Met.

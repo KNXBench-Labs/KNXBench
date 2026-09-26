@@ -107,6 +107,105 @@ pub fn skip_subtree(
     }
 }
 
+/// Complete XML validation shared by package admission and v12 backfill.
+/// Domain parsers may ignore unknown elements; validation may not.
+pub(crate) fn validate_complete_document(path: &str, bytes: &[u8]) -> Result<(), ProductDbError> {
+    let error = |cause: String| ProductDbError::Xml {
+        source_path: path.to_string(),
+        cause,
+    };
+    let mut reader = Reader::from_reader(bytes);
+    reader.config_mut().check_comments = true;
+    let mut depth = 0;
+    let mut roots = 0;
+    let mut seen_content = false;
+    let mut seen_decl = false;
+    let mut seen_doctype = false;
+    loop {
+        let event = reader.read_event().map_err(|e| error(e.to_string()))?;
+        match &event {
+            Event::Decl(_) if seen_content || seen_decl => {
+                return Err(error("XML declaration is not first".to_string()));
+            }
+            Event::Decl(_) => seen_decl = true,
+            Event::DocType(_) if seen_doctype || roots != 0 || depth != 0 => {
+                return Err(error("DOCTYPE outside XML prolog".to_string()));
+            }
+            Event::DocType(_) => seen_doctype = true,
+            Event::Start(element) => {
+                for attribute in element.attributes().with_checks(true) {
+                    let attribute = attribute.map_err(|e| error(e.to_string()))?;
+                    attribute
+                        .normalized_value(XmlVersion::Implicit1_0)
+                        .map_err(|e| error(e.to_string()))?;
+                }
+                if depth == 0 {
+                    roots += 1;
+                }
+                depth += 1;
+            }
+            Event::Empty(element) => {
+                for attribute in element.attributes().with_checks(true) {
+                    let attribute = attribute.map_err(|e| error(e.to_string()))?;
+                    attribute
+                        .normalized_value(XmlVersion::Implicit1_0)
+                        .map_err(|e| error(e.to_string()))?;
+                }
+                if depth == 0 {
+                    roots += 1;
+                }
+            }
+            Event::End(_) if depth > 0 => depth -= 1,
+            Event::End(_) => return Err(error("end tag outside XML root".to_string())),
+            Event::Text(text)
+                if depth == 0 && !text.as_ref().bytes().all(|b| b.is_ascii_whitespace()) =>
+            {
+                return Err(error("text outside XML root".to_string()));
+            }
+            Event::CData(_) if depth == 0 => {
+                return Err(error("CDATA outside XML root".to_string()));
+            }
+            Event::GeneralRef(reference) => {
+                let name = reference.as_ref();
+                let predefined = matches!(name, "lt" | "gt" | "amp" | "apos" | "quot");
+                let numeric = name
+                    .strip_prefix("#x")
+                    .filter(|digits| {
+                        !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_hexdigit())
+                    })
+                    .map(|digits| u32::from_str_radix(digits, 16).ok())
+                    .or_else(|| {
+                        name.strip_prefix('#')
+                            .filter(|digits| {
+                                !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+                            })
+                            .map(|digits| digits.parse().ok())
+                    })
+                    .flatten()
+                    .filter(|code| {
+                        matches!(code, 0x9 | 0xA | 0xD)
+                            || (0x20..=0xD7FF).contains(code)
+                            || (0xE000..=0xFFFD).contains(code)
+                            || (0x10000..=0x10FFFF).contains(code)
+                    })
+                    .is_some();
+                if depth == 0 || (!predefined && !numeric) {
+                    return Err(error(format!("undeclared XML entity {name:?}")));
+                }
+            }
+            Event::Eof => break,
+            _ => {}
+        }
+        if !matches!(event, Event::Decl(_)) {
+            seen_content = true;
+        }
+    }
+    if depth != 0 || roots != 1 {
+        return Err(error("incomplete XML document".to_string()));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

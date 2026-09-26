@@ -553,6 +553,14 @@ fn migrated_packages_are_unavailable_while_fresh_zeroes_are_measured() {
              DROP TABLE package_install_unknown;
              DROP TABLE package_install_count;
              DROP TABLE package_install_report;
+             ALTER TABLE application_program DROP COLUMN is_secure_enabled;
+             ALTER TABLE application_program DROP COLUMN max_security_group_key_table_entries;
+             ALTER TABLE application_program DROP COLUMN max_security_individual_address_entries;
+             ALTER TABLE application_program DROP COLUMN max_security_p2p_key_table_entries;
+             ALTER TABLE application_program DROP COLUMN max_tunneling_user_entries;
+             ALTER TABLE application_program DROP COLUMN max_user_entries;
+             ALTER TABLE application_program DROP COLUMN min_ets_version;
+             ALTER TABLE application_program DROP COLUMN replaces_versions;
              PRAGMA user_version = 11;",
         )
         .unwrap();

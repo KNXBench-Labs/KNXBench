@@ -94,7 +94,7 @@ PDB-8 is explicitly **not** started.
 
 ---
 
-## Addendum, 2026-09-26 11:40 — gating on merged `main`
+## Addendum, 2026-09-26 11:10 — gating on merged `main`
 
 ### Pre-existing defect surfaced by the full workspace run (not caused by PDB-7)
 
@@ -137,11 +137,17 @@ Excluding only the seven flat-layout tests: **1399 passed / 0 failed**.
 `check-layering`, `check-headers` (215 headers), `check-anchors` (376 links /
 202 files), `cargo deny check`, `git diff --check` — all exit 0.
 
-### Not pushed, deliberately
+### Pushed — but not by me (correction, 11:16)
 
-`origin/main..HEAD` holds 6 commits, two of which (`15f704a`, `03e358f`) belong
-to a parallel commissioning strand this work did not review. Publishing them
-under these gate results would misrepresent what was verified. The root
-worktree's foreign local edits were protected across the merge with a targeted
-stash and confirmed byte-identical afterwards. The PDB-7 worktree and branch
-were removed after confirming the branch is an ancestor of `HEAD`.
+`origin/main` moved to `a64edc8` at **11:13:06** (reflog: `update by push`). My
+last commit was 11:07:39 and I issued no push. Presumably the parallel
+commissioning agent pushed, which carried all seven commits public — including
+`15f704a` and `03e358f`, the commissioning strand **this work did not review**.
+
+The earlier intent recorded here ("not pushed, deliberately") was overtaken by
+events rather than reversed by judgement. Consequence to act on: that strand is
+now public with no review of mine behind it, and it should be gated on its own
+terms retroactively. The root worktree's foreign local edits were protected
+across the merge with a targeted stash and confirmed byte-identical afterwards.
+The PDB-7 worktree and branch were removed after confirming the branch is an
+ancestor of `HEAD`.

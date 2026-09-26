@@ -234,11 +234,18 @@ fn doc_export_reports_the_actual_default_product_database_open_error() {
         stderr.contains("failed to open product database"),
         "{stderr}"
     );
+    // Derived from the build's own schema version: hard-coded numbers would
+    // pass for the wrong reason after every ProductDB migration.
+    let unsupported = knx_productdb::CURRENT_PRODUCTDB_VERSION + 1;
+    let supported = knx_productdb::CURRENT_PRODUCTDB_VERSION;
     assert!(
-        stderr.contains("product database is version 13"),
+        stderr.contains(&format!("product database is version {unsupported}")),
         "{stderr}"
     );
-    assert!(stderr.contains("this build supports up to 12"), "{stderr}");
+    assert!(
+        stderr.contains(&format!("this build supports up to {supported}")),
+        "{stderr}"
+    );
 }
 
 #[test]

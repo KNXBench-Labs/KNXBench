@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 12;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 13;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -285,7 +285,60 @@ fn migrations() -> Vec<Migration> {
         migrate_v9_to_v10,
         migrate_v10_to_v11,
         migrate_v11_to_v12,
+        migrate_v12_to_v13,
     ]
+}
+
+/// v12 -> v13. These nullable columns hold verbatim catalogue lexemes;
+/// migration of old source bytes is handled below, never inferred from
+/// product IDs or package-level installation totals.
+fn migrate_v12_to_v13(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE application_program ADD COLUMN is_secure_enabled TEXT;
+         ALTER TABLE application_program ADD COLUMN max_security_group_key_table_entries TEXT;
+         ALTER TABLE application_program ADD COLUMN max_security_individual_address_entries TEXT;
+         ALTER TABLE application_program ADD COLUMN max_security_p2p_key_table_entries TEXT;
+         ALTER TABLE application_program ADD COLUMN max_tunneling_user_entries TEXT;
+         ALTER TABLE application_program ADD COLUMN max_user_entries TEXT;
+         ALTER TABLE application_program ADD COLUMN min_ets_version TEXT;
+         ALTER TABLE application_program ADD COLUMN replaces_versions TEXT;",
+    )?;
+    let mut stmt = conn.prepare(
+        "SELECT sha256, source_path FROM source_file AS s
+         WHERE EXISTS (SELECT 1 FROM application_program WHERE source_sha256 = s.sha256)
+         ORDER BY sha256",
+    )?;
+    let sources = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    drop(stmt);
+    // Collect only identities, never all blobs. Release the read cursor before
+    // savepoint rollback: SQLite aborts an active iterator on ROLLBACK TO.
+    for (sha, path) in sources {
+        let bytes: Vec<u8> = conn.query_row(
+            "SELECT bytes FROM source_file WHERE sha256 = ?1",
+            [&sha],
+            |r| r.get(0),
+        )?;
+        conn.execute_batch("SAVEPOINT catalog_metadata_backfill")?;
+        match crate::parse::program::backfill_catalog_metadata(conn, &sha, &path, &bytes) {
+            Ok(_) => conn.execute_batch("RELEASE catalog_metadata_backfill")?,
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO catalog_metadata_backfill; RELEASE catalog_metadata_backfill",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha,
+                    &path,
+                    "CatalogMetadataBackfillError",
+                    "backfill_catalog_metadata",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v11 -> v12. Install reports are deliberately separate normalized evidence,
@@ -1274,6 +1327,106 @@ mod tests {
     }
 
     #[test]
+    fn v12_catalogue_backfill_uses_winning_source_and_rejects_truncated_blob() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migrate in migrations().iter().take(12) {
+                migrate(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 12).unwrap();
+            conn.execute("INSERT INTO manufacturer (id) VALUES ('M-0001')", [])
+                .unwrap();
+            for (sha, bytes) in [
+                ("winner", b"<KNX><ApplicationProgram Id='A-win' IsSecureEnabled='false' MinEtsVersion=''/></KNX>".as_slice()),
+                ("loser", b"<KNX><ApplicationProgram Id='A-win' IsSecureEnabled='true'/></KNX>".as_slice()),
+                ("truncated", b"<KNX><ApplicationProgram Id='A-bad' IsSecureEnabled='true'/>".as_slice()),
+                ("trailing", b"<KNX><ApplicationProgram Id='A-trailing' IsSecureEnabled='true'/></KNX>garbage".as_slice()),
+                ("entity", b"<KNX><Unknown>&undeclared;</Unknown><ApplicationProgram Id='A-entity' IsSecureEnabled='true'/></KNX>".as_slice()),
+                ("attrs", b"<KNX><Unknown x='1' x='2'/><ApplicationProgram Id='A-attrs' IsSecureEnabled='true'/></KNX>".as_slice()),
+                ("good", b"<KNX><ApplicationProgram Id='A-good' ReplacesVersions='1,2'/></KNX>".as_slice()),
+            ] {
+                conn.execute(
+                    "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes) VALUES (?1, ?2, 'M-0001', ?3, ?4)",
+                    params![sha, format!("M-0001/{sha}.xml"), bytes.len() as i64, bytes],
+                )
+                .unwrap();
+            }
+            for (id, sha) in [
+                ("A-win", "winner"),
+                ("A-bad", "truncated"),
+                ("A-trailing", "trailing"),
+                ("A-entity", "entity"),
+                ("A-attrs", "attrs"),
+                ("A-good", "good"),
+            ] {
+                conn.execute(
+                    "INSERT INTO application_program (id, manufacturer_id, source_sha256) VALUES (?1, 'M-0001', ?2)",
+                    params![id, sha],
+                )
+                .unwrap();
+            }
+            conn.execute(
+                "INSERT INTO ingest_unknown (source_sha256, xpath, kind, name, occurrences) VALUES ('winner', '/KNX/ApplicationProgram', 'Attribute', 'MinEtsVersion', 2)",
+                [],
+            )
+            .unwrap();
+        }
+        let conn = open_and_migrate(&path).unwrap();
+        let win: (Option<String>, Option<String>) = conn
+            .query_row("SELECT is_secure_enabled, min_ets_version FROM application_program WHERE id='A-win'", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(win, (Some("false".into()), Some(String::new())));
+        let good: String = conn
+            .query_row(
+                "SELECT replaces_versions FROM application_program WHERE id='A-good'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(good, "1,2");
+        let bad: Option<String> = conn
+            .query_row(
+                "SELECT is_secure_enabled FROM application_program WHERE id='A-bad'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(bad, None);
+        for id in ["A-trailing", "A-entity", "A-attrs"] {
+            let value: Option<String> = conn
+                .query_row(
+                    "SELECT is_secure_enabled FROM application_program WHERE id=?1",
+                    [id],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(value, None, "malformed source {id} filled metadata");
+        }
+        let diagnostics: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE kind='CatalogMetadataBackfillError'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(diagnostics, 4);
+        let history: i64 = conn.query_row("SELECT occurrences FROM ingest_unknown WHERE source_sha256='winner' AND name='MinEtsVersion'", [], |r| r.get(0)).unwrap();
+        assert_eq!(history, 2);
+        drop(conn);
+        let conn = open_and_migrate(&path).unwrap();
+        let repeat: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE kind='CatalogMetadataBackfillError'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(repeat, 4);
+    }
+
+    #[test]
     fn reopening_an_already_migrated_file_is_a_no_op() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("products.sqlite");
@@ -1581,6 +1734,34 @@ mod tests {
         PROGRAM_TEMPLATE.replace("{LINKABLE}", linkable)
     }
 
+    /// Older migration fixtures use the current parser but must still have
+    /// their original schema when the migration under test opens them.
+    fn with_catalogue_columns_for_fixture(conn: &Connection, ingest: impl FnOnce()) {
+        const COLUMNS: &[&str] = &[
+            "is_secure_enabled",
+            "max_security_group_key_table_entries",
+            "max_security_individual_address_entries",
+            "max_security_p2p_key_table_entries",
+            "max_tunneling_user_entries",
+            "max_user_entries",
+            "min_ets_version",
+            "replaces_versions",
+        ];
+        for name in COLUMNS {
+            conn.execute_batch(&format!(
+                "ALTER TABLE application_program ADD COLUMN {name} TEXT"
+            ))
+            .unwrap();
+        }
+        ingest();
+        for name in COLUMNS {
+            conn.execute_batch(&format!(
+                "ALTER TABLE application_program DROP COLUMN {name}"
+            ))
+            .unwrap();
+        }
+    }
+
     /// Builds the thing this migration exists for: a database at
     /// `user_version` 6 holding a program blob, the program's row, and
     /// `linkable` `NULL` — plus, when `stale_report` is set, the
@@ -1609,7 +1790,9 @@ mod tests {
             params![sha, "M-0083/A.xml", "M-0083", bytes.len() as i64, bytes],
         )
         .unwrap();
-        crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+        with_catalogue_columns_for_fixture(&conn, || {
+            crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+        });
         conn.execute("UPDATE application_program SET linkable = NULL", [])
             .unwrap();
         if let Some(sample) = stale_report {
@@ -1850,7 +2033,9 @@ mod tests {
                 params![sha, "M-0083/A.xml", "M-0083", bytes.len() as i64, bytes],
             )
             .unwrap();
-            crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+            with_catalogue_columns_for_fixture(&conn, || {
+                crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+            });
             conn.execute(
                 "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
                  VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",
@@ -1928,7 +2113,9 @@ mod tests {
             params![sha, "M-006A/A.xml", "M-006A", bytes.len() as i64, bytes],
         )
         .unwrap();
-        crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+        with_catalogue_columns_for_fixture(&conn, || {
+            crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+        });
         conn.execute(
             "UPDATE parameter_type SET min_inclusive = NULL, max_inclusive = NULL
              WHERE kind = 'Float'",
@@ -2181,7 +2368,9 @@ mod tests {
                 params![sha, "M-006A/A.xml", "M-006A", bytes.len() as i64, bytes],
             )
             .unwrap();
-            crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+            with_catalogue_columns_for_fixture(&conn, || {
+                crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+            });
             conn.execute(
                 "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
                  VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",

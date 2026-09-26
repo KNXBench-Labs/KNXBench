@@ -968,6 +968,43 @@ data already live in the product database, `knx-net` already carries every
 frame the specification needs, and phase 2's simulator coverage is what
 that first write would be checked against before and after.
 
+**Updated, 2026-09-26 (first programming-mode search against real hardware).**
+An operator put a device into Programming Mode and asked this application to
+find it, then to assign it the free address `1.1.67`. The search half now exists
+and ran: `crates/knx-net/tests/live_programming_mode.rs` broadcasts MP §2.2's
+`A_IndividualAddress_Read`, waits out the full 3 s time-out, and identifies
+whoever answered read-only. It reported exactly one responder, `1.0.71`, mask
+`0701h`, `PID_MANUFACTURER_ID` `0083` (MDT technologies, resolved from the
+corpus `knx_master.xml`, not from memory), `PID_HARDWARE_TYPE`
+`000000000127`; `PID_PROGRAM_VERSION` answered with zero elements, as it already
+did for `1.1.24` in the entry above. RESEARCH §8.8.5 records the run.
+
+**The address assignment was refused, and that refusal is the point.** No write
+was attempted, because none can be: `ManagementSession::authorised` rejects any
+session where the transport or the authorisation is hardware, and `TunnelClient`
+reports `TargetKind::Hardware`. That was previously an argument from reading the
+source; it is now a test that needs no gateway,
+`crates/knx-net/tests/hardware_write_is_refused.rs`, which presents a *correctly
+confirmed* hardware `WriteAuthorisation` and still gets
+`SessionError::NotASimulator` before a frame can exist. So `NM_IndividualAddress_
+Write` against real hardware remains blocked exactly as design spec §15 and §13
+R11 require, and the operator's go-ahead for one address does not change that:
+what is missing is not permission but the verified write path, its
+`ProgrammingModeWitness`-gated broadcast against real hardware, and a rollback
+story for a device whose address change half-succeeded.
+
+Two honest gaps this run exposed, neither of them closed here. First, **the
+found address was on a different line than expected** (`1.0.71`, not `1.1.x`) —
+a programming-mode search is a search, and the current address is an observation.
+Second, **`PID_HARDWARE_TYPE` does not by itself identify a product.** The
+observed `000000000127` matches `LdCtrlCompareProp` `PropId="78"` `InlineData` in
+one local MDT push-button database whose order numbers are the `BE-TA55*.01`
+generation, while the operator named a `BE-TA55P2.G1` that appears nowhere in the
+local corpus. It is consistent with an MDT 2-fold push button and is **not** proof
+of the model or generation; `Hardware/@SerialNumber` is a different number
+entirely, and `PID_ORDER_INFO` was not read. Product identification from a live
+device is therefore still an open question.
+
 ## 8. KNX Secure is not implemented
 
 **Limitation.** No Data Secure, no IP Secure, no keyring handling (RESEARCH

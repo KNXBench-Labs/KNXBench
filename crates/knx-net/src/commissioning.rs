@@ -44,7 +44,9 @@ use knx_core::commissioning::load_state::{
 use knx_core::commissioning::memory::{
     chunks, service_for, write_limit, ApduLengthSource, ChunkError, MemoryService, WriteLimit,
 };
-use knx_core::commissioning::mutation::{TargetKind, WriteAuthorisation, WriteScope};
+use knx_core::commissioning::mutation::{
+    hardware_write_is_authorised, TargetKind, WriteAuthorisation, WriteScope,
+};
 use knx_core::commissioning::programming_mode::{
     prog_mode_write, ProgModeWrite, ProgrammingModeResponders, CURR_PROG_MODE_ADDRESS,
 };
@@ -563,9 +565,11 @@ impl fmt::Display for SessionError {
                 authorised,
             } => write!(
                 f,
-                "refusing to write to {target}: phase 2 writes to the simulator only, \
-                 and this transport is {transport:?} with an authorisation for \
-                 {authorised:?}"
+                "refusing to write to {target}: this transport is {transport:?} with an \
+                 authorisation for {authorised:?}, which is not a combination this \
+                 project writes with — the simulator accepts any scope, and real \
+                 hardware accepts only the individual-address programming and restart \
+                 scopes an operator has authorised"
             ),
             SessionError::Refused(err) => write!(f, "{err}"),
             SessionError::NotConnected => {
@@ -947,14 +951,30 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             return Ok(());
         };
         let transport_kind = self.transport.target_kind();
-        if transport_kind != TargetKind::Simulator || auth.kind() != TargetKind::Simulator {
-            return Err(SessionError::NotASimulator {
-                target: self.target.address(),
-                transport: transport_kind,
-                authorised: auth.kind(),
-            });
+        // The simulator path is unchanged: both sides simulated, any scope.
+        if transport_kind == TargetKind::Simulator && auth.kind() == TargetKind::Simulator {
+            return Ok(());
         }
-        Ok(())
+        // Real hardware, with an authorisation that names real hardware and
+        // carries the operator's confirmation phrase, for one of the two
+        // scopes MP §2.3 needs. Everything else still fails here.
+        //
+        // Both sides must agree: a simulator authorisation may not be used to
+        // write to hardware (the confirmation phrase would never have been
+        // typed), and a hardware authorisation may not be used against the
+        // simulator (it would make a hardware confirmation look exercised
+        // when no device was involved).
+        if transport_kind == TargetKind::Hardware
+            && auth.kind() == TargetKind::Hardware
+            && hardware_write_is_authorised(auth.scope())
+        {
+            return Ok(());
+        }
+        Err(SessionError::NotASimulator {
+            target: self.target.address(),
+            transport: transport_kind,
+            authorised: auth.kind(),
+        })
     }
 
     /// The gate every write passes: an authorisation exists, it names this
@@ -2928,11 +2948,13 @@ mod tests {
         );
     }
 
-    /// The other half of the same gate: a hardware authorisation, complete
-    /// with the operator's confirmation phrase, still does not run in phase
-    /// 2 — not even against the simulator.
+    /// The other half of the same gate: a hardware authorisation is not a
+    /// licence to write to the *simulator*. Both sides must agree, so a
+    /// confirmation phrase typed for a real device cannot be spent on a
+    /// fixture — that would make hardware confirmation look exercised when no
+    /// device was involved.
     #[tokio::test]
-    async fn a_hardware_authorisation_does_not_run_in_this_phase() {
+    async fn a_hardware_authorisation_does_not_run_against_the_simulator() {
         let device = SimulatedDevice::new();
         let target = device.address();
         let phrase = knx_core::commissioning::mutation::required_confirmation_phrase(
@@ -2944,8 +2966,71 @@ mod tests {
 
         let refusal =
             ManagementSession::authorised(&device, AuthorisationPlan::Skip, fast(), authorisation)
-                .expect_err("a hardware authorisation must not be usable in phase 2");
+                .expect_err("a hardware authorisation must not be spent on the simulator");
         assert!(matches!(refusal, SessionError::NotASimulator { .. }));
+    }
+
+    /// The scope allowlist, on the refusing side: `Download` is the write
+    /// class that rewrites a device's application, nobody has authorised it
+    /// against hardware, and it must still be refused even when the
+    /// authorisation is a fully confirmed hardware one.
+    #[tokio::test]
+    async fn an_unauthorised_scope_is_still_refused_on_hardware() {
+        let device = SimulatedDevice::new();
+        let target = device.address();
+        let hardware = HardwareLikeTransport(device);
+        let phrase = knx_core::commissioning::mutation::required_confirmation_phrase(
+            target,
+            WriteScope::Download,
+        );
+        let authorisation = WriteAuthorisation::for_hardware(target, WriteScope::Download, &phrase)
+            .expect("the phrase is the required one");
+
+        let refusal = ManagementSession::authorised(
+            &hardware,
+            AuthorisationPlan::Skip,
+            fast(),
+            authorisation,
+        )
+        .expect_err("a download to hardware must still be refused");
+        assert!(matches!(refusal, SessionError::NotASimulator { .. }));
+        assert!(
+            !hardware.0.memory_was_written(),
+            "nothing may have been sent before the refusal"
+        );
+    }
+
+    /// The scope allowlist, on the permitting side: the two scopes MP §2.3
+    /// needs do build a session against hardware, because an operator
+    /// authorised exactly that. This is the test that would have to be
+    /// deleted to re-close the gate, so it says so.
+    #[tokio::test]
+    async fn the_two_authorised_scopes_build_a_session_against_hardware() {
+        for scope in [
+            WriteScope::IndividualAddressProgramming,
+            WriteScope::Restart,
+        ] {
+            let device = SimulatedDevice::new();
+            let target = device.address();
+            let hardware = HardwareLikeTransport(device);
+            let phrase =
+                knx_core::commissioning::mutation::required_confirmation_phrase(target, scope);
+            let authorisation = WriteAuthorisation::for_hardware(target, scope, &phrase)
+                .expect("the phrase is the required one");
+
+            let session = ManagementSession::authorised(
+                &hardware,
+                AuthorisationPlan::Skip,
+                fast(),
+                authorisation,
+            )
+            .expect("an operator-authorised scope must build against hardware");
+            assert!(session.may_write(), "{scope} must be writable on hardware");
+            assert!(
+                !hardware.0.memory_was_written(),
+                "building a session may not send anything"
+            );
+        }
     }
 
     /// §2.1, §14 item 11: the alarm panel is refused by the guard before a

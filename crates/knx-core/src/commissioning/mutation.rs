@@ -166,6 +166,47 @@ impl WriteAuthorisation {
     }
 }
 
+/// Whether a write of `scope` may be performed against real hardware.
+///
+/// **This is the one place where "no writes to real hardware" stops being
+/// absolute**, and it is deliberately an allowlist of two, not a `bool` on
+/// the session and not the removal of a check.
+///
+/// Design spec §15's non-goal was written as *"no writes to real hardware in
+/// phase 2 or phase 3, **and no write at all without a fresh, specific
+/// go-ahead naming the device and the operation**"*. The second half is the
+/// operative one: the prohibition exists because no operator had named a
+/// device and an operation, not because writing is forbidden forever. On
+/// 2026-09-26 an operator did exactly that — assign `1.1.67` to the device
+/// held in Programming Mode — so the two scopes MP §2.3 needs to carry that
+/// out are enabled, and every other scope stays refused.
+///
+/// Why these two and no others:
+///
+/// - [`WriteScope::IndividualAddressProgramming`] is the address write
+///   itself. It is guarded twice over independently of this function: the
+///   broadcast cannot be typed without a
+///   [`ProgrammingModeWitness`](crate::commissioning::programming_mode::ProgrammingModeWitness),
+///   so it cannot run unless exactly one device answered, and it changes one
+///   device's address rather than its application.
+/// - [`WriteScope::Restart`] is MP §2.3 step 4's `A_Restart`, which is part
+///   of the same procedure. Leaving it out would mean completing the write
+///   and then failing to finish the procedure the Standard specifies.
+///
+/// Still refused on hardware, because nothing has authorised them and their
+/// failure modes are worse: [`WriteScope::Download`] and
+/// [`WriteScope::Unload`] rewrite a device's application and tables, where a
+/// half-finished write leaves an unusable device; and
+/// [`WriteScope::ProgrammingModeToggle`], whose `0060h` octet meaning design
+/// spec §15 records as unsourced for a System B mask, so this project does
+/// not write it blind.
+pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
+    match scope {
+        WriteScope::IndividualAddressProgramming | WriteScope::Restart => true,
+        WriteScope::Download | WriteScope::Unload | WriteScope::ProgrammingModeToggle => false,
+    }
+}
+
 /// Why a write was not authorised.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AuthorisationRefused {

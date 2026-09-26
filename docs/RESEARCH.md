@@ -3689,6 +3689,82 @@ proven rather than asserted, with no gateway required, by
 hardware `WriteAuthorisation` plus a default (`Hardware`) transport yields the
 refusal before any frame can be constructed.
 
+#### 8.8.6 First write to real hardware — `NM_IndividualAddress_Write` (2026-09-26)
+
+**The first time this project changed a physical device.** An operator
+explicitly authorised assigning `1.1.67` to the device found in Programming
+Mode by §8.8.5, *"auch als test ob schreiben funktioniert"*. Deliverable:
+`crates/knx-net/tests/live_individual_address_write.rs`, `#[ignore]`d and
+additionally gated on `KNX_WRITE_NEW_ADDRESS`, so `--ignored` alone cannot
+perform it.
+
+**Result: the write worked.** Independently confirmed, by the scan probe rather
+than by the procedure vouching for itself — §8.8.3 established that a
+`ManagementSession` read cannot be trusted to prove presence or absence:
+
+| | before | after |
+|---|---|---|
+| `1.0.71` (old) | occupied, mask `0701h` | **vacant** (6005 ms, full timeout) |
+| `1.1.67` (new) | **vacant** (6005 ms) | **occupied, mask `0x0701`** (196 ms) |
+
+Identity at the new address is byte-identical to what §8.8.5 measured at the
+old one: mask `0701h`, `PID_MANUFACTURER_ID` `00 83`, `PID_HARDWARE_TYPE`
+`00 00 00 00 01 27`, `PID_PROGRAM_VERSION` still refused with zero elements. So
+it is the same device, readdressed — not a coincidental second device.
+
+**But step 4 failed, and the procedure reported failure.** `individual_address_
+write` returned `Err`, and the report is precise about where: `occupancy:
+NotOccupied` (step 1 correctly found `1.1.67` free), `wrote: true` (step 3 did
+broadcast `A_IndividualAddress_Write`), then step 4 — connect to the new
+address, read Device Descriptor Type 0, `A_Restart` — failed with
+`SessionError::ConnectionReleased`, i.e. nothing acknowledged the `T_Connect`
+and the Transport Layer gave up after its repetitions.
+
+This is **not** a contradiction of the success above, and MP §2.3 anticipates
+exactly it. Its exception handling "to 4." says *"If no
+A_DeviceDescriptor_Response-PDU is received, than the programming of the
+Individual Address may have failed, or the system (Router) is not configured
+correctly"* — and, as design spec §4.2 already noted, **the Standard itself
+refuses to distinguish those two causes**. The observed facts distinguish them
+here: the device does answer at `1.1.67` seconds later, to a fresh tunnel, so
+the programming did *not* fail. The most likely reading is that the device was
+still settling immediately after adopting its new address, and
+`individual_address_write` proceeds from the broadcast write to step 4's
+`T_Connect` with **no delay at all** — `SessionTiming::programming_delay` exists
+but this procedure never consults it. Not proven: no frame-level capture was
+taken, and a router/line-coupler configuration cause is not excluded.
+
+**Consequences, none of them cosmetic:**
+
+1. **The procedure's failure was honest and its report was usable.** A boolean
+   "worked/failed" would have been actively misleading here; `wrote: true` plus
+   a step number is what made the situation diagnosable. This is evidence for
+   the step-record design, not against it.
+2. **`individual_address_write` needs a settling delay before step 4**, and it
+   is currently unwritten whether the figure is specification-derived. MP §2.3
+   gives no value. This is a real defect for anyone who expects the procedure to
+   return `Ok` on a successful write, and it is **not fixed here** — fixing it
+   is a change to shipped behaviour that deserves its own RED test against a
+   device, not a guessed constant added in passing.
+3. **A caller cannot currently distinguish "wrote but could not confirm" from
+   "did not write"** without inspecting the report's `wrote` field. The error
+   type does carry the report, so the information is present; nothing surfaces
+   it as a distinct outcome.
+4. **Programming Mode switched itself off** after the write: a subsequent
+   broadcast read returned zero responders. Consistent with RES §4.26.1's
+   autonomous disable, though four minutes had not elapsed, so this looks like
+   the device's own post-write behaviour rather than the timeout.
+
+**What was changed to allow this at all.** `knx_core::commissioning::mutation::
+hardware_write_is_authorised` is a new allowlist of exactly two scopes,
+`IndividualAddressProgramming` and `Restart`. `check_write_target()` now permits
+hardware writes only when transport *and* authorisation are both hardware *and*
+the scope is allowlisted; simulator behaviour is unchanged, and mixed
+hardware/simulator pairs are still refused so a confirmation phrase cannot be
+spent on a fixture. `Download`, `Unload` and `ProgrammingModeToggle` remain
+refused on hardware even with a correctly typed confirmation phrase —
+`crates/knx-net/tests/hardware_write_gate.rs` holds both sides of that down.
+
 ### 8.9 Extraction hazard: `pdftotext -layout` silently misreads Volume 6 Annex A's tables (2026-09-20, task C18 fix round)
 
 **Standing caution for anyone auditing Volume 6 (`06 Profiles`) Annex A's

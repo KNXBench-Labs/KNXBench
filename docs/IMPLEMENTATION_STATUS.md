@@ -154,6 +154,23 @@ The gate requires an explicit confinement root plus an OS-path-list in
 It is intentionally Linux-only (`openat2` plus mounted `/proc`) and requires the
 matrix output directory to live on a different filesystem from the corpus.
 
+## 2026-09-23 — Gira/MDT product corpus measured
+
+The ignored local Gira and MDT corpora now have a reproducible, bounded
+inventory tool (`tools/inspect_product_corpus.py`) and a durable analysis in
+[PRODUCT_DATABASE_CORPUS.md](PRODUCT_DATABASE_CORPUS.md). The corpus contains
+115 modern packages across schemes 11, 12, 13, 14, 20 and 21, plus one
+encrypted legacy MDT `.pr5` container.
+
+A temporary real-installer probe accepted 93 inputs. Eleven modern packages
+were blocked by legacy/non-UTF-8 ZIP member-name encoding, eleven by currently
+unsupported master schemes, and the `.pr5` by its separate encrypted legacy
+format. Accepted packages had no reported reference conflicts or dropped DPT
+assignments, but did produce 19,291 unknown report items; installation is
+therefore explicitly not treated as proof of lossless interpretation. No
+production importer behavior or compatibility claim changed in this research
+task.
+
 ## 2026-09-23 — T15: project comparison exposes values and becomes scriptable
 
 `knx-diff` now projects every matched entity snapshot into deterministic,

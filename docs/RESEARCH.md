@@ -4403,6 +4403,48 @@ animation be considered. **[A]**
 
 ---
 
+## 17. Site/property above buildings (ISSUE-06, 2026-09-26)
+
+Decision record: [ADR-0038](adr/0038-site-is-a-ground-root-space.md). This
+section keeps only the findings and their grade.
+
+### 17.1 Findings
+
+- **[D]** *Project Schema23* §1.1.2.3 `SpaceType_t` has ten values, among
+  them `Ground`. There is no `Site`, `Property` or `Campus`. §1.2.6.3: top-level
+  spaces "will nromally have Type "Area" or "Building" or “Ground”".
+  §1.2.3.13: `Topology`, `Locations` and `GroupAddresses` are siblings under
+  one `Installation`. §1.2.3.12: up to 16 installations.
+- **[D]** 3/10/3 §1.2.3.5: `loc:Site` is "a collection of buildings and
+  grounds that belong to a given institution" (`loc:hasBuilding`,
+  `loc:hasSiteSegment`; maps to `IfcSite`). §1.2.1: a site "is usually at the
+  top of a location hierarchy". §1.2.2 permits alternative hierarchies.
+- **[D]** 3/10/4 §1.2.5.2.2 Table 10: `loc:Site` → "Buildings (MaC root
+  node)". 3/10/2 §2.2 Table 1: site → KNX Classic Installer "-".
+- **[M]** All three reference projects (schema 11, 21, 23) have exactly one
+  installation and exactly one root space, of type `Building`. None contains
+  `Ground`.
+- **[M]** `BuildingPartType::Ground` has existed since T13. Nesting is
+  unrestricted, and devices are referenced, never owned, by building parts.
+
+### 17.2 Interpretation
+
+**[I]** In the file format, "site" is the building-structure root of an
+installation, optionally made explicit by a `Ground` space. It is not a
+separate type, and not a level above installations. Several buildings on
+one KNX infrastructure therefore need no model change. **[I]** The IoT
+tables are presentation mappings for KNX IoT servers. They do not define
+`.knxproj` content and are cited only as corroboration.
+
+### 17.3 Open
+
+- No real ETS sample with a `Ground` root (KNOWN_LIMITATIONS §127).
+- No command renames an `Installation` (found on the way, §127).
+- Grouping *separate* installations under one site is unmodelled and would
+  need its own ADR.
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

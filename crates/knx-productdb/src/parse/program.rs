@@ -20,7 +20,7 @@
 //! always the owning `ApplicationProgram`'s id, since `ModuleDef` never
 //! reassigns it. Verified directly (Task 9, 2026-09), not assumed.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -48,6 +48,14 @@ const PROGRAM_ATTRS: &[&str] = &[
     "Hash",
     "Linkable",
     "OriginalManufacturer",
+    "IsSecureEnabled",
+    "MaxSecurityGroupKeyTableEntries",
+    "MaxSecurityIndividualAddressEntries",
+    "MaxSecurityP2PKeyTableEntries",
+    "MaxTunnelingUserEntries",
+    "MaxUserEntries",
+    "MinEtsVersion",
+    "ReplacesVersions",
 ];
 
 pub struct ProgramIngest {
@@ -122,6 +130,112 @@ pub fn ingest_program(
     bytes: &[u8],
 ) -> Result<ProgramIngest, ProductDbError> {
     Ok(ingest_program_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+}
+
+/// Re-derive raw catalogue attributes for v12 rows from their original source.
+/// Validate the complete XML document before writing anything: quick-xml's
+/// ordinary Eof event alone does not diagnose an unclosed root element.
+pub(crate) fn backfill_catalog_metadata(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<usize, ProductDbError> {
+    crate::xml::validate_complete_document(source_path, bytes)?;
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut stack: Vec<String> = Vec::new();
+    let mut roots = 0usize;
+    let mut candidates: Vec<(String, [Option<String>; 8])> = Vec::new();
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match &event {
+            Event::Eof => break,
+            Event::Start(e) | Event::Empty(e) => {
+                let empty = matches!(event, Event::Empty(_));
+                if stack.is_empty() {
+                    roots += 1;
+                }
+                if e.local_name().as_ref() == "ApplicationProgram"
+                    && !stack
+                        .iter()
+                        .any(|name| name.rsplit(':').next() == Some("Dynamic"))
+                {
+                    let a = attrs(e, source_path)?;
+                    // Historical ingest identified rows through Attrs::get,
+                    // including qualified-only Ids; match that stored identity.
+                    if let Some(id) = a.get("Id").filter(|id| !id.is_empty()) {
+                        candidates.push((
+                            id.to_string(),
+                            [
+                                a.evidence_value("IsSecureEnabled"),
+                                a.evidence_value("MaxSecurityGroupKeyTableEntries"),
+                                a.evidence_value("MaxSecurityIndividualAddressEntries"),
+                                a.evidence_value("MaxSecurityP2PKeyTableEntries"),
+                                a.evidence_value("MaxTunnelingUserEntries"),
+                                a.evidence_value("MaxUserEntries"),
+                                a.evidence_value("MinEtsVersion"),
+                                a.evidence_value("ReplacesVersions"),
+                            ]
+                            .map(|v| v.map(str::to_owned)),
+                        ));
+                    }
+                }
+                if !empty {
+                    stack.push(e.name().as_ref().to_string());
+                }
+            }
+            Event::End(e) if stack.pop().as_deref() != Some(e.name().as_ref()) => {
+                return Err(ProductDbError::Xml {
+                    source_path: source_path.to_string(),
+                    cause: "mismatched closing tag in retained source".to_string(),
+                });
+            }
+            Event::End(_) => {}
+            _ => {}
+        }
+    }
+    if roots != 1 || !stack.is_empty() {
+        return Err(ProductDbError::Xml {
+            source_path: source_path.to_string(),
+            cause: "incomplete retained XML document".to_string(),
+        });
+    }
+
+    let mut seen = HashSet::new();
+    let mut filled = 0usize;
+    for (id, values) in candidates {
+        if !seen.insert(id.clone()) {
+            continue; // the first occurrence wins even within the same blob
+        }
+        filled += conn.execute(
+            "UPDATE application_program SET
+                 is_secure_enabled=?1, max_security_group_key_table_entries=?2,
+                 max_security_individual_address_entries=?3,
+                 max_security_p2p_key_table_entries=?4, max_tunneling_user_entries=?5,
+                 max_user_entries=?6, min_ets_version=?7, replaces_versions=?8
+             WHERE id=?9 AND source_sha256=?10",
+            params![
+                values[0].as_deref(),
+                values[1].as_deref(),
+                values[2].as_deref(),
+                values[3].as_deref(),
+                values[4].as_deref(),
+                values[5].as_deref(),
+                values[6].as_deref(),
+                values[7].as_deref(),
+                id,
+                source_sha256,
+            ],
+        )?;
+    }
+    Ok(filled)
 }
 
 pub(crate) fn ingest_program_detailed(
@@ -606,8 +720,13 @@ fn handle_start_or_empty(
                      (id, manufacturer_id, name, application_number,
                       application_version, program_type, mask_version, pei_type,
                       load_procedure_style, default_language, hash, linkable,
-                      original_manufacturer, source_sha256)
-                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)",
+                      original_manufacturer, source_sha256,
+                      is_secure_enabled, max_security_group_key_table_entries,
+                      max_security_individual_address_entries,
+                      max_security_p2p_key_table_entries, max_tunneling_user_entries,
+                      max_user_entries, min_ets_version, replaces_versions)
+                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,
+                             ?15,?16,?17,?18,?19,?20,?21,?22)",
                     params![
                         program_id.as_str(),
                         manufacturer_id.as_str(),
@@ -623,6 +742,14 @@ fn handle_start_or_empty(
                         linkable,
                         a.get("OriginalManufacturer"),
                         source_sha256,
+                        a.evidence_value("IsSecureEnabled"),
+                        a.evidence_value("MaxSecurityGroupKeyTableEntries"),
+                        a.evidence_value("MaxSecurityIndividualAddressEntries"),
+                        a.evidence_value("MaxSecurityP2PKeyTableEntries"),
+                        a.evidence_value("MaxTunnelingUserEntries"),
+                        a.evidence_value("MaxUserEntries"),
+                        a.evidence_value("MinEtsVersion"),
+                        a.evidence_value("ReplacesVersions"),
                     ],
                 )?;
                 entities.stored(EntityKind::ApplicationProgram)?;

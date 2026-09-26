@@ -29,7 +29,7 @@ const EXPECTED_ISOLATED_INSTALLS: usize = 115;
 const EXPECTED_SHARED_INSTALLS: usize = 113;
 const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "263b6bbdb3fb0c847ea2c947a6ac7155efda618e7a2161b74c15631f35200d23";
+    "436532fb279fafca773932402ac26e4ea57eeedf84e35a31f018af091d19a416";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -235,6 +235,34 @@ fn pdb6_feature_occurrences(conn: &Connection) -> Value {
         "rf_tx_capabilities": count("Attribute", "RFTxCapabilities", hardware),
         "property_description": count("Element", "LdCtrlDeclarePropDesc", &format!("{program}/Static/LoadProcedures/LoadProcedure")),
     })
+}
+
+/// Count winning catalogue rows, never private values or source identity.
+fn pdb7_catalogue_presence(conn: &Connection) -> BTreeMap<&'static str, u64> {
+    let mut counts = BTreeMap::new();
+    for column in [
+        "is_secure_enabled",
+        "max_security_group_key_table_entries",
+        "max_security_individual_address_entries",
+        "max_security_p2p_key_table_entries",
+        "max_tunneling_user_entries",
+        "max_user_entries",
+        "min_ets_version",
+        "replaces_versions",
+    ] {
+        let count: i64 = conn
+            .query_row(
+                &format!("SELECT count(*) FROM application_program WHERE {column} IS NOT NULL"),
+                [],
+                |row| row.get(0),
+            )
+            .expect("count persisted catalogue metadata");
+        counts.insert(
+            column,
+            u64::try_from(count).expect("nonnegative catalogue count"),
+        );
+    }
+    counts
 }
 
 #[test]
@@ -562,7 +590,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         );
         hashes.insert(sha256.clone());
 
-        let (isolation, pdb5_evidence, pdb6_evidence, shared_outcome) =
+        let (isolation, pdb5_evidence, pdb6_evidence, pdb7_presence, shared_outcome) =
             std::thread::scope(|scope| {
                 let isolated = scope.spawn(|| {
                     let isolated_dir =
@@ -590,12 +618,19 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
                     } else {
                         Value::Null
                     };
-                    (outcome, evidence, scheme21_evidence)
+                    let catalogue = pdb7_catalogue_presence(&isolated);
+                    (outcome, evidence, scheme21_evidence, catalogue)
                 });
                 let shared_outcome = install_json(&shared, ordinal, &bytes);
-                let (isolation, pdb5_evidence, pdb6_evidence) =
+                let (isolation, pdb5_evidence, pdb6_evidence, pdb7_presence) =
                     isolated.join().expect("isolated installation worker");
-                (isolation, pdb5_evidence, pdb6_evidence, shared_outcome)
+                (
+                    isolation,
+                    pdb5_evidence,
+                    pdb6_evidence,
+                    pdb7_presence,
+                    shared_outcome,
+                )
             });
         private_records.push(json!({
             "ordinal": ordinal,
@@ -604,6 +639,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "isolation": isolation,
             "pdb5_evidence": pdb5_evidence,
             "pdb6_evidence": pdb6_evidence,
+            "pdb7_presence": pdb7_presence,
             "shared": shared_outcome,
         }));
     }
@@ -619,6 +655,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     let shared_installed_totals = report_totals(&private_records, "shared", false);
     let shared_successful_totals = report_totals(&private_records, "shared", true);
     let final_counts = database_counts(&shared);
+    let shared_pdb7_presence = pdb7_catalogue_presence(&shared);
     let mut pdb5_evidence = BTreeMap::new();
     for name in [
         "applies_to",
@@ -653,6 +690,14 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             .sum::<u64>();
         pdb6_evidence.insert(name, occurrences);
     }
+    let mut isolated_pdb7_presence = BTreeMap::new();
+    for column in shared_pdb7_presence.keys() {
+        let occurrences = private_records
+            .iter()
+            .filter_map(|record| record["pdb7_presence"][column].as_u64())
+            .sum::<u64>();
+        isolated_pdb7_presence.insert(*column, occurrences);
+    }
     let commitment = baseline_commitment(
         &private_records,
         json!({
@@ -665,6 +710,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "shared_final_database_counts": final_counts,
             "scheme_12_14_feature_occurrences": pdb5_evidence,
             "scheme_21_feature_occurrences": pdb6_evidence,
+            "isolated_catalogue_metadata_presence": isolated_pdb7_presence,
+            "shared_catalogue_metadata_presence": shared_pdb7_presence,
         }),
     );
     let public_records = private_records
@@ -692,6 +739,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared_final_database_counts": final_counts,
         "scheme_12_14_feature_occurrences": pdb5_evidence,
         "scheme_21_feature_occurrences": pdb6_evidence,
+        "isolated_catalogue_metadata_presence": isolated_pdb7_presence,
+        "shared_catalogue_metadata_presence": shared_pdb7_presence,
         "packages": public_records,
     });
 
@@ -763,6 +812,34 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         }),
         "scheme-21 retained evidence differs from read-only XML shape inventory; output was not published"
     );
+    assert_eq!(
+        matrix["isolated_catalogue_metadata_presence"],
+        json!({
+            "is_secure_enabled": 34,
+            "max_security_group_key_table_entries": 34,
+            "max_security_individual_address_entries": 32,
+            "max_security_p2p_key_table_entries": 27,
+            "max_tunneling_user_entries": 6,
+            "max_user_entries": 6,
+            "min_ets_version": 310,
+            "replaces_versions": 140,
+        }),
+        "PDB-7 isolated winning-row coverage differs from measured XML inventory"
+    );
+    assert_eq!(
+        matrix["shared_catalogue_metadata_presence"],
+        json!({
+            "is_secure_enabled": 33,
+            "max_security_group_key_table_entries": 33,
+            "max_security_individual_address_entries": 31,
+            "max_security_p2p_key_table_entries": 27,
+            "max_tunneling_user_entries": 5,
+            "max_user_entries": 5,
+            "min_ets_version": 273,
+            "replaces_versions": 130,
+        }),
+        "PDB-7 shared first-winner catalogue coverage changed"
+    );
 
     assert_eq!(matrix["package_instances"], EXPECTED_PACKAGE_INSTANCES);
     assert_eq!(matrix["unique_package_hashes"], EXPECTED_UNIQUE_PACKAGES);
@@ -789,7 +866,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 23347,
+            "unknown_count": 22758,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -800,7 +877,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 23222,
+            "unknown_count": 22642,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -811,7 +888,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 23347,
+            "unknown_count": 22758,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},

@@ -145,6 +145,7 @@ pub(crate) fn ingest_file_in_transaction(
             )
         }
         FileKind::ApplicationProgram => {
+            crate::xml::validate_complete_document(source_path, bytes)?;
             let detailed = program::ingest_program_detailed(conn, &sha256, source_path, bytes)?;
             let out = detailed.outcome;
             // A second pass over the same bytes, in the same transaction:

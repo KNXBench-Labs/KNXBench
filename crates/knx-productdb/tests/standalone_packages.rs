@@ -16,6 +16,24 @@ fn db() -> (tempfile::TempDir, Connection) {
     (dir, conn)
 }
 
+fn drop_v13_catalogue_columns(conn: &Connection) {
+    for column in [
+        "is_secure_enabled",
+        "max_security_group_key_table_entries",
+        "max_security_individual_address_entries",
+        "max_security_p2p_key_table_entries",
+        "max_tunneling_user_entries",
+        "max_user_entries",
+        "min_ets_version",
+        "replaces_versions",
+    ] {
+        conn.execute_batch(&format!(
+            "ALTER TABLE application_program DROP COLUMN {column}"
+        ))
+        .unwrap();
+    }
+}
+
 #[test]
 fn known_single_file_ingest_still_skips_inside_a_callers_transaction() {
     let (_dir, conn) = db();
@@ -25,6 +43,36 @@ fn known_single_file_ingest_still_skips_inside_a_callers_transaction() {
         knx_productdb::ingest_file(&tx, "M-0001/Hardware.xml", HARDWARE),
         Ok(knx_productdb::IngestOutcome::Skipped { .. })
     ));
+}
+
+#[test]
+fn post_write_evidence_failure_rolls_back_catalogue_metadata_with_the_program() {
+    let (_dir, conn) = db();
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/21"><MasterData><Manufacturers><Manufacturer Id="M-0001"/></Manufacturers></MasterData></KNX>"#;
+    let program = format!(
+        "<KNX xmlns=\"http://knx.org/xml/project/21\"><ManufacturerData><Manufacturer RefId=\"M-0001\"><ApplicationPrograms><ApplicationProgram Id=\"A-1\" IsSecureEnabled=\"true\" ReplacesVersions=\"1,2\"><Static>{}<Property Occurrence=\"1\"/>{}</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>",
+        "<Wrapper>".repeat(1_025),
+        "</Wrapper>".repeat(1_025),
+    );
+    let bytes = archive(&[
+        ("knx_master.xml", master),
+        ("M-0001/Program.xml", program.as_bytes()),
+    ]);
+    let error = install_package(&conn, "too-deep.knxprod", &bytes).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("XML nesting exceeds evidence limit 1024"),
+        "{error}"
+    );
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM application_program", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 0);
+    let retained: i64 = conn
+        .query_row("SELECT count(*) FROM source_file", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(retained, 0);
 }
 
 #[test]
@@ -1474,6 +1522,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
          PRAGMA user_version = 1;",
     )
     .unwrap();
+    drop_v13_catalogue_columns(&conn);
     drop(conn);
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     assert_eq!(
@@ -1532,6 +1581,7 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
          CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
     )
     .unwrap();
+    drop_v13_catalogue_columns(&conn);
     drop(conn);
     assert!(open_and_migrate(&dir.path().join("products.sqlite")).is_err());
     let conn = Connection::open(dir.path().join("products.sqlite")).unwrap();

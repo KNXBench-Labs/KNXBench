@@ -841,6 +841,15 @@ pub struct ProgramRow {
     pub application_number: Option<String>,
     pub application_version: Option<String>,
     pub mask_version: Option<String>,
+    /// Source lexemes, not validated runtime or commissioning capabilities.
+    pub is_secure_enabled: Option<String>,
+    pub max_security_group_key_table_entries: Option<String>,
+    pub max_security_individual_address_entries: Option<String>,
+    pub max_security_p2p_key_table_entries: Option<String>,
+    pub max_tunneling_user_entries: Option<String>,
+    pub max_user_entries: Option<String>,
+    pub min_ets_version: Option<String>,
+    pub replaces_versions: Option<String>,
 }
 
 /// Every application program, optionally narrowed to one manufacturer,
@@ -850,7 +859,10 @@ pub fn programs(
     manufacturer: Option<&str>,
 ) -> Result<Vec<ProgramRow>, ProductDbError> {
     let sql =
-        "SELECT id, manufacturer_id, name, application_number, application_version, mask_version
+        "SELECT id, manufacturer_id, name, application_number, application_version, mask_version,
+                is_secure_enabled, max_security_group_key_table_entries,
+                max_security_individual_address_entries, max_security_p2p_key_table_entries,
+                max_tunneling_user_entries, max_user_entries, min_ets_version, replaces_versions
                FROM application_program
                WHERE ?1 IS NULL OR manufacturer_id = ?1
                ORDER BY id";
@@ -864,6 +876,14 @@ pub fn programs(
                 application_number: r.get(3)?,
                 application_version: r.get(4)?,
                 mask_version: r.get(5)?,
+                is_secure_enabled: r.get(6)?,
+                max_security_group_key_table_entries: r.get(7)?,
+                max_security_individual_address_entries: r.get(8)?,
+                max_security_p2p_key_table_entries: r.get(9)?,
+                max_tunneling_user_entries: r.get(10)?,
+                max_user_entries: r.get(11)?,
+                min_ets_version: r.get(12)?,
+                replaces_versions: r.get(13)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;

@@ -7599,3 +7599,39 @@ selections. No reconciliation action sends KNX traffic **[V]**.
 **Lifted when.** Identity may be attached only when a separately verified
 protocol procedure or explicit user selection supplies it. A scan response by
 itself never becomes product evidence.
+
+## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
+
+**Limitation.** KNXBench cannot install a legacy ETS3-era product database
+(`.vd3`–`.vd5`) or a legacy project export (`.pr3`–`.pr5`). Both are ZIP
+archives with one ZipCrypto-encrypted member (`ets.vd_` or `ets.pr_`) that
+holds a textual `EX-IM` payload, not a `.knxprod`. The supplied MDT
+`MDT_VD_VisuControl.pr5` is refused atomically on both paths, but under the
+wrong name. `knx products ingest` falls through to the project importer and
+reports "not a zip archive". The same bytes renamed `.knxprod` report
+"encrypted product ZIP member" **[V]** (2026-09-26, `7b64496`, fresh scratch
+product DB, 0 rows written).
+
+**Cause.** No legacy path exists. The CLI routes by suffix (`.knxprod`/`.vd2`
+only), and `install_package` has no content detector for `EX-IM` containers.
+The `EX-IM` grammar is not described anywhere in *The KNX Standard* v3.0.0
+(0 hits across all 179 extracted documents) **[V]**, so every rule has to be
+derived from observed files.
+
+**Impact.** Users with only a legacy file must convert it with the official
+tooling (ETS6 imports `.vd*` directly; `KnxCvNext.exe` or the Manufacturer
+Tool produce a `.knxprod`). The supplied `.pr5` would gain little from a
+direct importer anyway: its `application_program` table has zero rows, so even
+a perfect import yields a catalogue entry with no parameters and no
+communication objects **[V]**.
+
+**Lifted when.** The design
+[2026-09-26-legacy-vd-pr-product-import-design.md](superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
+has an independent review verdict and Board approval of its decisions B-1 to
+B-6. After that, its slices are implemented one at a time: L1 is named
+detection and refusal without decryption. The user-supplied-password,
+no-embedded-password and GPL-provenance constraints of
+[VD4_PRODUCT_DATABASE_IMPORT.md](VD4_PRODUCT_DATABASE_IMPORT.md) stay binding.
+The permanent `.vd2` decision in
+[§11](#11-knxprod-support-is-evidenced-for-schemes-11-12-13-14-20-and-exact-namespace-21)
+is unaffected.

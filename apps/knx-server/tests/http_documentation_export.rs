@@ -345,7 +345,8 @@ async fn preview_resolves_product_identity_in_the_requested_language_seam() {
         "INSERT INTO manufacturer VALUES ('M', 'Acme Controls');
          INSERT INTO hardware VALUES ('HW', 'M', 'Hardware', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'x');
          INSERT INTO product VALUES ('P', 'M', 'HW', 'Room Controller', NULL, NULL, NULL, NULL, NULL, NULL, 'x');
-         INSERT INTO application_program VALUES ('APP', 'M', 'Lighting 2.1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'x');
+         INSERT INTO application_program (id, manufacturer_id, name, source_sha256)
+             VALUES ('APP', 'M', 'Lighting 2.1', 'x');
          INSERT INTO hardware2program VALUES ('H', 'M', 'HW', 'APP', NULL, NULL, NULL, NULL, NULL, 'x');",
     ).unwrap();
     let mut state = state_with_a_device_in_no_line();

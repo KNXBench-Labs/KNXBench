@@ -46,7 +46,7 @@ const WRITE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <ParameterRefs>
   <ParameterRef Id="P-1_R-1" RefId="P-1" DisplayOrder="10" Tag="1" />
   <ParameterRef Id="P-2_R-1" RefId="P-2" DisplayOrder="20" Tag="1" />
-  <!-- No DisplayOrder attribute at all -- fix round 1, item 1: this must
+  <!-- No DisplayOrder attribute at all. Fix round 1, item 1: this must
        come back with displayOrder: null, not skipped, not 0. -->
   <ParameterRef Id="P-3_R-1" RefId="P-3" Tag="1" />
 </ParameterRefs>

@@ -2512,6 +2512,20 @@ both from real hardware and neither hypothetical:
   deliverable.
 - **No writes to real hardware in phase 2 or phase 3**, and no write at all
   without a fresh, specific go-ahead naming the device and the operation.
+
+  **Addendum, 2026-09-26 — partially superseded, by the mechanism this clause
+  itself specifies.** The second half of this bullet was always the operative
+  one, and it has now been satisfied: an operator named a device (the one held in
+  Programming Mode) and an operation (assign `1.1.67`), explicitly as a test of
+  whether writing works. `NM_IndividualAddress_Write` therefore ran against real
+  hardware and succeeded; RESEARCH §8.8.6 and `KNOWN_LIMITATIONS.md` §7 record
+  the run, the independent before/after confirmation, and the step-4 anomaly it
+  exposed. The prohibition is now an allowlist rather than a blanket:
+  `knx_core::commissioning::mutation::hardware_write_is_authorised` permits
+  exactly `IndividualAddressProgramming` and `Restart` on hardware, and the
+  bullets below on `DM_ProgMode_Switch`, downloads and unloads remain fully in
+  force. Nothing about this addendum authorises a further scope; widening it
+  requires another go-ahead of the same kind.
 - **No claim of ETS parity.** §7.1 specifies what the Standard requires of a
   Management Client. Whether ETS matches it step for step is unobserved, and
   `CLAUDE.md` forbids claiming compatibility that has not been verified.

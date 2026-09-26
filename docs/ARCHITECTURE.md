@@ -230,6 +230,12 @@ Every mutation is a `Command` with `apply(&mut Project) -> Result<Inverse>`.
 Undo and redo are a stack of inverses. The UI never holds a mutable reference
 to the model.
 
+Today this rule is held by review, not by the type system: `Project`'s fields
+are `pub`, and nine live server paths still advance the id allocator or enrich
+the project outside a command ([KNOWN_LIMITATIONS §129](KNOWN_LIMITATIONS.md#129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity)).
+[ADR-0039](adr/0039-project-mutation-goes-through-commands.md) (Proposed)
+records how to enforce it.
+
 Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,
 and not in the store.

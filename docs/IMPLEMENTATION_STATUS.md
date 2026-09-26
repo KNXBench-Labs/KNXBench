@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-26 — ISSUE-06 (DIN-16): a site is a `Ground` root, decided rather than built
+
+[ADR-0038](adr/0038-site-is-a-ground-root-space.md) answers the user report
+"a property/site is missing; multiple buildings on one KNX infrastructure
+should be groupable beneath it" with **no domain change**. *Project
+Schema23* §1.2.6.3 names `Ground` as a root `Space` type. `BuildingPartType`
+has carried `Ground` exactly since T13 (§89), and one `Installation` already
+owns the one shared topology and group-address structure. A site is
+therefore a `Ground` root with `Building` children. No new kind, entity or
+migration; store schema stays v9. The KNX IoT documents (3/10/3 `loc:Site`;
+3/10/4 Table 10 "Buildings (MaC root node)"; 3/10/2 Table 1 "-" for
+KNX Classic) were checked and give ETS no separate site type.
+
+Characterization tests only: `knx-etsproj/tests/site_hierarchy.rs` (schema-23
+`Ground` over two `Building`s on one line imports with one installation and
+one reference per device; an undocumented `Site` token stays reported and is
+never read as `Ground`, mutation-checked), `knx-store`
+`a_ground_site_over_two_buildings_on_one_line_round_trips` and `knx-core`
+`a_ground_site_holds_two_buildings_and_a_device_moves_between_them`.
+KNOWN_LIMITATIONS §127 records the evidence boundary (no real ETS sample has
+a `Ground` root) and an unfixed gap found on the way: installations cannot be
+renamed. ISSUE-05's site UI is unblocked with a fixed contract: label a
+`Ground` root as "site", never re-type it.
+
 ## 2026-09-25 — PDB-7: source-value application-program catalogue metadata
 
 The versioned product database is now schema v13. Eight observed unqualified

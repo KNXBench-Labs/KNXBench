@@ -18,6 +18,7 @@ import { exportEnglishTemplate, importLanguagePack, resetLanguagePacksForTests }
 import type { LanguagePack } from "./languagePack";
 import { getSetting, initSettings } from "./settingsStore";
 import { resetSettingsForTests } from "./settingsStore";
+import { rememberProgrammingConsent } from "./programmingConsent";
 
 let host: HTMLDivElement | undefined;
 
@@ -129,6 +130,25 @@ describe("SettingsPanel", () => {
     });
     expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
     expect(host!.querySelector(".settings-section-bus .line-scan-exclusions")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("says programming asks every time until a 'don't ask again' is stored", async () => {
+    const { root } = await renderPanel();
+    const field = host!.querySelector(".settings-field-programming-consent")!;
+    expect(field.textContent).toContain("Asked before every programming operation.");
+    expect(field.querySelector("button")).toBeNull();
+    root.unmount();
+  });
+
+  it("shows a remembered programming consent by stage name and resets it", async () => {
+    rememberProgrammingConsent("alpha", "0.1.0-alpha.1");
+    const { root } = await renderPanel();
+    const field = host!.querySelector(".settings-field-programming-consent")!;
+    expect(field.textContent).toContain("Not asked again for Alpha builds.");
+    await act(async () => field.querySelector("button")!.click());
+    expect(getSetting("programmingConsent")).toBeUndefined();
+    expect(field.textContent).toContain("Asked before every programming operation.");
     root.unmount();
   });
 

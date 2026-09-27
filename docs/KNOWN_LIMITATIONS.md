@@ -7775,23 +7775,42 @@ loudly when it discovers zero files.
 
 **Status.** Resolved 2026-09-27 (branch `din-131-honest-corpus-gates`). The
 real population was larger than recorded below: `xtask check-corpus-gates`
-also found **17 sites under `apps/`** (`knx-cli`, `knx-server`) that the
-original `crates/`-only count missed. In total **89 early-return sites**
-were converted: 71 bare `return`s in `crates/`, 17 in `apps/`, and the
-`return None` in `enrichment_gap_measurement.rs`'s shared `import()` helper,
-which its four tests turned into a `return` of their own. Every one of them
-now `assert!`s the corpus probe, and **91 tests** gained
-`#[ignore = "requires the gitignored OriginalData/ corpus; run with
---ignored"]` (70 + 4 in `crates/`, 17 in `apps/`). A machine without the
+also found **18 sites under `apps/`** (`knx-cli`, `knx-server`) that the
+original `crates/`-only count missed. One of them,
+`http_catalog_to_device.rs`, gated on its own `package.exists()` and was
+found in review, not by the first version of the lint. It is also the proof
+that §131 was never cosmetic: it built its path as
+`ProductDatabases/<file>`, while the corpus files the package under
+`ProductDatabases/MDT/`. So it had **never run once** since it was written
+(2026-09-13); every run, with the corpus or without, took the early return
+and was counted as a pass. It now looks the package up with
+`find_corpus_file` and passes on its first real run. In total **90
+early-return sites** on a missing corpus were converted: 71 bare `return`s in
+`crates/`, 18 in `apps/`, and the `return None` in
+`enrichment_gap_measurement.rs`'s shared `import()` helper, which its four
+tests turned into a `return` of their own. Every one of them now `assert!`s
+its probe, and **93 tests** gained an `#[ignore = "requires …; run with
+--ignored"]` (70 + 4 + 1 in `crates/`, 18 in `apps/`). A machine without the
 corpus therefore reports them as *ignored*, and `--ignored` without the
-corpus fails loudly. `diff_correlation_measurement.rs`, already `#[ignore]`d,
-only lost its early return. `perf_baseline.rs` was left as is: it is `#[ignore]`d already
+corpus fails by name. The review also found a second-level instance: six
+already-ignored tests (five in `oracle_xknxproject.rs`, one in
+`golden_reference_products.rs`) returned early when the second local-only
+artefact, the `project_dump.json` oracle at the workspace root, was absent.
+Under `--ignored` they would have passed without comparing anything. They
+now assert it too, and their ignore reason names it.
+`diff_correlation_measurement.rs`, already `#[ignore]`d, only lost its early
+return. `perf_baseline.rs` was left as is: it is `#[ignore]`d already
 and times the corpus import only as an optional extra over a synthetic
 project. `knx_testsupport::walk_corpus_files` now panics on `read_dir`,
 directory-entry and `file_type` errors instead of treating them as an empty
-subtree. `cargo run -p xtask -- check-corpus-gates` (also a CI step) rejects
-a negated corpus probe whose block returns early, so the idiom cannot come
-back unnoticed. The historical record follows.
+subtree (unit-tested with `#[should_panic]`). `cargo run -p xtask --
+check-corpus-gates` (also a CI step) rejects a negated corpus or oracle probe
+whose block returns early (same line or within six), and also a `"skip…"`
+message naming `OriginalData`, `corpus` or `project_dump` that is followed by
+a `return`. That second rule catches probes it does not know by name. Run on
+the pre-review tree, it flags exactly the seven sites the review found. It
+is textual and cannot prove a test honest: a guard phrased with neither a
+known probe nor such a message would still slip past it. The historical record follows.
 
 **Limitation.** The pattern
 

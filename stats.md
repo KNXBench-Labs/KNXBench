@@ -1,6 +1,6 @@
 # Project Statistics
 
-**Last update:** 2026-09-27 11:46:01 CEST (UTC+02:00)
+**Last update:** 2026-09-27 11:52:04 CEST (UTC+02:00)
 
 Welcome to the numerical engine room of KNXBench: this page counts commits,
 tokens, agents, models, tools, caffeine-adjacent productivity and several things
@@ -48,11 +48,11 @@ Git and session logs; the ants in the fun-fact section remain under observation.
 *No ants were harmed in the making of these statistics — at least none that I know of.*
 
 ## Git Statistics (Current Repository)
-- **Commits:** 1.420
-- **Merges:** 153
+- **Commits:** 1.423
+- **Merges:** 154
 - **Pushes/Sync:** 1.418
-- **Lines Added (+):** 389.773
-- **Lines Deleted (-):** 85.780
+- **Lines Added (+):** 390.243
+- **Lines Deleted (-):** 85.865
 
 ## Session Time & Execution Analysis
 | Provider | Thinking / Reasoning Time | Generation Time | Executed Tasks |
@@ -179,10 +179,10 @@ or older log records remain in the overall tool count without inventing a skill 
 
 | Metric | Value | Interpretation |
 | :--- | ---: | :--- |
-| Tokens per committed added line | 48,321.3 | All selected input/output/cache tokens ÷ historical Git additions |
+| Tokens per committed added line | 48,263.1 | All selected input/output/cache tokens ÷ historical Git additions |
 | Code churn ratio (added ÷ deleted) | 4.54:1 | Above 1 means the history added more lines than it removed |
-| Output tokens per changed line | 134.3 | AI output ÷ added and deleted Git lines |
-| Git commit density | 13,263,621.1 tokens/commit | Total selected token volume ÷ commits |
+| Output tokens per changed line | 134.2 | AI output ÷ added and deleted Git lines |
+| Git commit density | 13,235,658.4 tokens/commit | Total selected token volume ÷ commits |
 
 > Git `--numstat` measures historical committed additions/deletions, not surviving
 > present-day source lines. Generated files, documentation and vendored changes are

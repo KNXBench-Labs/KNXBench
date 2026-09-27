@@ -7834,10 +7834,23 @@ returning.
 
 ## §132 The window manager's close button quits the desktop app without the unsaved-changes prompt
 
-**Status.** Open (documented 2026-09-27; read from code, not reproduced on a
-running desktop build).
+**Status.** Closed 2026-09-27. `App.tsx` registers `quit.ts`
+`onWindowCloseRequested` in the Tauri shell. The pinned `tauri` 2.11.5 then
+calls `prevent_close()` itself while a JS `tauri://close-requested` listener
+exists (`manager/window.rs` `on_window_event`, read from source **[V]**).
+`@tauri-apps/api` 2.11.1 `onCloseRequested` destroys the window after the
+handler unless it called `preventDefault()` (read from
+`node_modules/@tauri-apps/api/window.js` **[V]**). A modified project keeps the
+window and opens the same quit-confirm dialog as File › Quit. A clean project
+closes as before. `quitApp()` now calls `destroy()` rather than `close()`, so
+"discard" does not re-trigger the check; the capability changed from
+`core:window:allow-close` to `core:window:allow-destroy`. Vitest covers the
+modified, clean and browser cases, and the new tests fail with the listener
+registration removed **[V]**. **Not verified on a running desktop build or on
+a real window manager** (no GUI session was driven). The mechanism depends on
+the Tauri contract quoted above, not on a click test.
 
-**Limitation.** File › Quit asks before discarding unsaved changes
+**Original limitation.** File › Quit asks before discarding unsaved changes
 (`App.tsx` `quitRequested` → quit-confirm dialog). The window manager's own
 close button (title-bar ×, Alt+F4, a compositor's close keybinding) does
 not. `apps/knx-desktop/src-tauri/src/lib.rs` `run()` handles only

@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — §132: the window manager's close asks before discarding edits
+
+The title-bar ×, Alt+F4 and compositor close bindings now make the same
+decision as File › Quit ([KNOWN_LIMITATIONS §132](KNOWN_LIMITATIONS.md#132-the-window-managers-close-button-quits-the-desktop-app-without-the-unsaved-changes-prompt),
+closed). Inside the Tauri shell `App.tsx` registers `quit.ts`
+`onWindowCloseRequested`. The listener reads `is_modified` through a ref, so
+it is registered once and unregistered on unmount. A modified project keeps
+the window open and gets the existing quit-confirm dialog; a clean one
+closes as before. `quitApp()` switched from `close()` to `destroy()`, so the
+dialog's "discard" does not re-enter the check. The main-window capability
+changed from `core:window:allow-close` to `core:window:allow-destroy`, and
+`cargo check -p knx-desktop` accepts it. The mechanism was read from the pinned
+sources **[V]**: `tauri` 2.11.5 `manager/window.rs` calls `prevent_close()`
+whenever a JS close-requested listener exists, and `@tauri-apps/api` 2.11.1
+`onCloseRequested` destroys the window unless the handler called
+`preventDefault()`. No Rust handler is needed. Three new `App.test.tsx`
+cases cover modified/clean/browser; the modified and clean cases fail with
+the registration removed **[V]**. Web suite 65 files / 1007 tests, `tsc`
+clean. Not exercised on a running desktop build or a real window manager.
+The T28 entry below describes the earlier `close()`-based Quit and is kept
+as history.
+
 ## 2026-09-27 — DIN-11: ADR-0039 phase 2, the two snapshot callers stop rewinding
 
 The CSV group-address planner (`knx-csv/src/plan.rs`) and bus-scan

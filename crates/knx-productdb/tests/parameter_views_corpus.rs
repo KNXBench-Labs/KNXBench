@@ -42,9 +42,15 @@ fn parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3() {
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let name = "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod";
-    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
-        panic!("corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to OriginalData/ProductDatabases")
+    let path = knx_testsupport::find_corpus_file(&root, name).unwrap_or_else(|| {
+        panic!(
+            "corpus fixture {name} unavailable under {}; set KNXBENCH_PRODUCT_CORPUS to \
+             OriginalData/ProductDatabases",
+            root.display()
+        )
     });
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("corpus fixture {name} at {path:?} unreadable: {e}"));
     knx_productdb::install_package(&conn, name, &bytes).unwrap();
 
     // The query and result this report's step 5 records: the raw table

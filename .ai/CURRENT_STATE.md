@@ -1,5 +1,5 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-09-28 00:00 CEST
+- **Timestamp:** 2026-09-27 23:55 CEST
 - **Completed:** PDB-10 **preflight only**, no production code. A read-only aggregate probe of baggage index and payload shape is recorded in `docs/PRODUCT_DATABASE_CORPUS.md` §"PDB-10 preflight". Findings:
   - 777 `Baggage` declarations in 38 `Baggages.xml`.
     - The grammar is exactly `Baggage/FileInfo`.
@@ -23,7 +23,7 @@
 ---
 
 - **Last Agent:** Claude
-- **Timestamp:** 2026-09-28 01:10 CEST
+- **Timestamp:** 2026-09-27 23:51 CEST
 - **Completed:** **PDB-9 merged as `3643e90`** and pushed (`81922d1` feature, `b1970ca` review fixes, `90e3d49` matrix re-pin). The productdb schema is now **v15** ([ADR-0041](../docs/adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)). What changed:
   - **Parameter kinds.** `TypeColor` (115 in the corpus) and `TypeTime` (17) are now stored as kinds `Color`/`Time`.
     - `Time` keeps its size and bounds in `Number`'s columns and is validated like `Number` (the Project Schema `Value_t` says "Same as TypeNumber").

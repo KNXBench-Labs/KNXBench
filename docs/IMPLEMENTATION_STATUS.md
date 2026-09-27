@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — `individual_address_write` waits once for a device still settling
+
+The first real hardware write (2026-09-26, `03e358f`; RESEARCH §8.8.6,
+KNOWN_LIMITATIONS §7) readdressed an MDT push button from `1.0.71` to
+`1.1.67`, independently confirmed by scan and identity read, yet the
+procedure returned `Err` at step 4: the `T_Connect` to the new address,
+sent with no pause after the broadcast write, went unanswered.
+
+Step 4 now retries one unanswered or released `T_Connect` after
+`SessionTiming::restart_basic_t1` (1 s). The figure is **borrowed** from MP
+§3.7.1.1.2's Basic Restart timing — MP §2.3 gives none for this — and is
+documented as such in `verify_before_restart`. A rejected connect is not
+retried; a second silence still fails step 4 with `wrote: true`; no restart
+is sent to a device that never confirmed.
+
+Evidence: `a_device_still_settling_after_the_write_is_not_a_failure`
+(watched to fail first with `Session { step: 4, wrote: true }`, after a
+first draft that passed vacuously because the simulator only counts
+connects addressed to it — corrected to `unanswered_connects: Some(1..2)`)
+and `a_device_silent_after_the_settling_wait_still_fails_step_four`
+(catches a hand-applied two-retry mutant, reverted). `knx-net` 257 lib
+tests green. **Simulator-verified only**: whether 1 s suffices for the MDT
+device is unmeasured until the next Programming Mode session.
+
 ## 2026-09-27 — PDB-8: uninterpreted subtrees inside supported master sections are reported
 
 The product database is now schema v14. Section-level reporting already

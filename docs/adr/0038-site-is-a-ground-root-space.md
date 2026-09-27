@@ -40,9 +40,14 @@ given.
   plus `RoomPart`, see [KNOWN_LIMITATIONS.md §89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)).
   None of them is a site type other than `Ground`.
 - **[D]** §1.2.6.1: `Locations` sits under
-  `Project_t/Installations/Installation`. §1.2.3.13: the same
-  `Installation` owns `Topology`, `Locations` and `GroupAddresses`.
-  §1.2.3.12: a project holds "Up to 16" installations.
+  `Project_t/Installations/Installation`. §1.2.3.13 lists that
+  `Installation`'s children as `Topology`, `Buildings` ("Contains the
+  building structure"), `GroupAddresses`, `Trades` and `SplitInfos`. The
+  document is inconsistent with itself here: §1.2.3.13 calls the building
+  structure `Buildings`, §1.2.6.1 heads it `…/Installation/Locations` and
+  lists its child as `BuildingPart`, while §1.2.6.2 `Locations_t` holds
+  `Space`. Real exports use `Locations`/`Space`, which is what the importer
+  reads. §1.2.3.12: a project holds "Up to 16" installations.
 - **[M]** A whole-document grep for `site|premises|campus` finds only the
   two `Ground` sentences above. The word `property` appears only as KNX
   interface-object property terms (e.g. `SystemProperty`, `AppProperty`),
@@ -51,8 +56,11 @@ given.
 **[I]** The schema's answer to "several buildings on one KNX
 infrastructure" is: one `Installation` (one topology, one group-address
 structure), whose `Locations` root is a `Ground` space holding several
-`Building` spaces. That is exactly the user's request, stated in the
-format's own vocabulary. `Area` is also named as a root type. Its meaning is
+`Building` spaces. The schema does not say this in so many words: it names
+`Ground` as a normal root type (§1.2.6.3) and places no constraint on the
+type of a child `Space` (§1.2.6.4), so `Building` under `Ground` is *not
+forbidden* rather than prescribed, and the schema never defines what
+`Ground` means. `Area` is also named as a root type. Its meaning is
 not defined in the schema, and it must not be confused with a topology
 area (§1.2.4).
 
@@ -265,6 +273,15 @@ validation.
   today (E4). This is relevant when several installations are used for
   separate infrastructures. It is flagged for ISSUE-05/B10 triage, not
   treated as part of this decision.
+- **Recorded, not fixed — and larger than the rename gap:** decision item 2
+  describes a project shape KNXBench can *import and store* but not *edit*.
+  Every `Command` mutates `installations[0]` only (`knx-core` `command.rs`,
+  the `Command` doc comment; `CreateBuildingPart` uses
+  `installations.first_mut()`). A second installation from an import is
+  kept and saved, but no command can create, move or delete anything in it.
+  Routing commands to a chosen installation is prerequisite to offering
+  "separate infrastructures are separate installations" as an editing
+  workflow; until then, it is a representation, not a feature.
 - **No compatibility claim changes.** `Ground` has been covered by
   COMPATIBILITY.md since T13. This ADR adds only a documented *usage*, with
   synthetic (not real-sample) evidence.

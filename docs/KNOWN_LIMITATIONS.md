@@ -7621,9 +7621,16 @@ stays an `UnknownEnumValue` map problem with the existing reported
 Found on the way and not addressed: no command renames an `Installation`
 after creation. `Installation.name` comes only from `NewProjectDialog` or
 import. That matters once a user splits separate infrastructures into
-separate installations.
+separate installations. Larger than that: **no command edits any
+installation but the first.** Every `Command` applies to `installations[0]`
+(`knx-core` `command.rs`; `CreateBuildingPart` uses
+`installations.first_mut()`), so a second installation brought in by import
+is kept and saved but cannot be edited. ADR-0038's "separate infrastructures
+are separate installations" is therefore a representation KNXBench can hold,
+not yet a workflow it offers.
 
 **Lifted when.** A real ETS export containing a `Ground` root (ideally with
 several `Building` children, or several installations) is added to the
-corpus and imports with the ADR-0038 shape. The installation-rename gap is
-tracked separately, for ISSUE-05/B10 triage.
+corpus and imports with the ADR-0038 shape. The installation-rename and
+first-installation-only gaps are tracked separately, for ISSUE-05/B10
+triage.

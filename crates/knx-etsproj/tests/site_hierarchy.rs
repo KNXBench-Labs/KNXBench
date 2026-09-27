@@ -13,7 +13,8 @@ const PROJECT_INFO_23: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
 </KNX>"#;
 
 /// Schema 23 §1.2.6.3: "Space elements directly below Locations_t will
-/// normally have Type "Area" or "Building" or "Ground"". One installation,
+/// nromally have Type "Area" or "Building" or "Ground"" (typo as printed).
+/// One installation,
 /// one line carrying both devices, and a `Ground` root holding two
 /// `Building`s, each of which references one of the two devices.
 /// `root_type` lets the same fixture probe a type the standard does not
@@ -116,8 +117,14 @@ fn a_ground_root_groups_two_buildings_of_one_installation() {
     assert_eq!(north.devices.len(), 1);
     assert_eq!(south.devices.len(), 1);
     assert_ne!(north.devices[0], south.devices[0]);
-    let referenced: Vec<DeviceId> = parts.iter().flat_map(|p| p.devices.clone()).collect();
-    assert_eq!(referenced.len(), 2);
+    // Every reference points at a device the project owns, and every owned
+    // device is referenced exactly once: comparing counts alone would miss
+    // a building part that references a device id nobody owns.
+    let mut referenced: Vec<DeviceId> = parts.iter().flat_map(|p| p.devices.clone()).collect();
+    referenced.sort();
+    let mut owned: Vec<DeviceId> = project.devices.iter().map(|d| d.id).collect();
+    owned.sort();
+    assert_eq!(referenced, owned);
 }
 
 /// The issue's interface rule: a type the standard does not document must

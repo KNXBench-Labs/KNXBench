@@ -43,7 +43,7 @@ import { localFailure, ownsOperation } from "./loadProgress";
 import HelpPanel from "./HelpPanel";
 import AboutDialog from "./AboutDialog";
 import Overlay from "./Overlay";
-import { canQuit, quitApp } from "./quit";
+import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
 import { opensHelp } from "./help";
 import { useAutosaveSettings } from "./autosaveSettings";
@@ -813,6 +813,30 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
     void quitApp();
   }
+
+  // §132. The window manager's close (×, Alt+F4) takes the same decision as
+  // File › Quit. The listener is registered once, so it reads
+  // `is_modified` through a ref rather than a stale closure; a modified
+  // project keeps the window open and shows the same quit-confirm dialog.
+  const isModifiedRef = useRef(false);
+  isModifiedRef.current = tree?.is_modified ?? false;
+  useEffect(() => {
+    if (!canQuit()) return;
+    let unlisten: (() => void) | null = null;
+    let disposed = false;
+    void onWindowCloseRequested(() => {
+      if (!isModifiedRef.current) return true;
+      setQuitConfirmOpen(true);
+      return false;
+    }).then((stop) => {
+      if (disposed) stop();
+      else unlisten = stop;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   // ISSUE-04's autosave settings and engine. `hasStorePath`/`is_modified`
   // come straight from server-authoritative state (T13's owner, extended

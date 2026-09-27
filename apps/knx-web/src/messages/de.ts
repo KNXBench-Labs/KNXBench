@@ -909,6 +909,7 @@ export const messages: Record<MessageKey, string> = {
   "newProject.conflictBody": "Ein neues Projekt verwirft diese Änderungen, und kein Rückgängig holt sie zurück. Weiter bearbeiten, um sie zuerst zu speichern, oder bewusst verwerfen.",
   "newProject.conflictDiscard": "Änderungen verwerfen und anlegen",
   "newProject.conflictKeep": "Weiter bearbeiten",
+  "newProject.conflictSave": "Speichern und anlegen",
 
   // Siehe `en.ts`: jede Phase benennt einen Schritt, den die Pipeline
   // wirklich ausführt.
@@ -1129,9 +1130,11 @@ export const messages: Record<MessageKey, string> = {
   "quit.message":
     "Dieses Projekt hat Änderungen, die noch in keiner Datei stehen. Wer jetzt beendet, wirft sie weg.",
   "quit.hint":
-    "Brechen Sie ab, speichern Sie mit „Speichern“ oder „Speichern unter…“, und beenden Sie danach.",
+    "„Speichern und beenden“ speichert zuerst und beendet nur, wenn das geklappt hat.",
   "quit.cancel": "Abbrechen",
   "quit.discard": "Ohne Speichern beenden",
+  "quit.saving": "Speichert…",
+  "quit.save": "Speichern und beenden",
 
   "autosave.countdown": "Automatisches Speichern in {seconds}s…",
   "autosave.cancel": "Abbrechen",

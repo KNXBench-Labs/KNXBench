@@ -127,7 +127,7 @@
 **Interfaces:** Replace `can_undo` as a dirty proxy with authoritative saved-baseline state that survives undo/redo correctly. Successful Save/Save As returns refreshed project status including `is_dirty` and `last_saved_at`; failures leave both unchanged.
 
 - [ ] Write server tests for edit→save→prompt (no prompt), edit→save failure (still dirty), save→edit→undo to saved baseline (clean), and edit→undo→branch (correct dirty result).
-- [ ] Write UI tests for Save-and-create and Save-and-quit; failed or cancelled Save keeps the prompt and project open.
+- [x] Write UI tests for Save-and-create and Save-and-quit; failed or cancelled Save keeps the prompt and project open. (2026-09-27)
 - [ ] Write status-bar tests proving the timestamp changes only after a successful save and is formatted in the UI locale.
 - [ ] Add autosave settings: enabled by default, five-minute interval default, configurable interval, and explicit disabled state.
 - [ ] Add fake-timer tests for the five-second countdown, manual-save cancellation, edits during the countdown, missing Save-As path, concurrent save suppression, and autosave failure.

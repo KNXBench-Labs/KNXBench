@@ -226,6 +226,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // command stack can still undo — see `quitRequested` below for why that
   // is the dirty signal.
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
+  const [quitSaving, setQuitSaving] = useState(false);
   // F1. The native `<details>` the File menu is. React does not own its
   // `open` attribute (nothing here re-renders when the user clicks the
   // summary), so closing it means writing that attribute, exactly as the
@@ -701,13 +702,22 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     await runLoad(path, api.openProject, true);
   }
 
-  async function refreshSavedProject() {
+  // Resolves `true` only when the refreshed snapshot was accepted *and*
+  // the server reports it clean. That is the one answer Save-and-quit and
+  // Save-and-create may act on: a save that worked but raced a newer edit
+  // is not "nothing left to lose".
+  async function refreshSavedProject(): Promise<boolean> {
     const current = await api.currentProject();
-    if (!publishTree(current)) return;
+    if (!publishTree(current)) return false;
     setHasStorePath(current.has_store_path);
+    return !current.is_modified;
   }
 
-  async function saveProjectAs() {
+  // Both manual saves still swallow failures into the error toast, but
+  // they now also *answer*: `true` means the project is on disk and clean,
+  // anything else (picker cancelled, snapshot moved on, server refused)
+  // is `false`. The Save-and-* buttons below depend on that answer.
+  async function saveProjectAs(): Promise<boolean> {
     autosave.cancelCountdown();
     const projectSnapshot = {
       serverIncarnation: snapshotLifetimeRef.current.serverIncarnation,
@@ -719,25 +729,27 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       !path ||
       projectSnapshot.serverIncarnation !== latestSnapshot.serverIncarnation ||
       projectSnapshot.revision !== latestSnapshot.revision
-    ) return;
+    ) return false;
     clearErrors();
     try {
       await api.saveProjectAs(path);
-      await refreshSavedProject();
+      return await refreshSavedProject();
     } catch (e) {
       reportError(e);
+      return false;
     }
   }
 
-  async function saveProject() {
+  async function saveProject(): Promise<boolean> {
     if (!hasStorePath) return saveProjectAs();
     autosave.cancelCountdown();
     clearErrors();
     try {
       await api.saveProject();
-      await refreshSavedProject();
+      return await refreshSavedProject();
     } catch (e) {
       reportError(e);
+      return false;
     }
   }
 
@@ -745,10 +757,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // same underlying `api.saveProject()` call, but this one rethrows so
   // `useAutosave`'s own failure handling (skip clearing dirty state,
   // reschedule without wedging) can tell a failed autosave from a
-  // successful one. `saveProject()` stays swallow-and-toast for the
-  // manual button, exactly as its own comment on the quit-confirm dialog
-  // explains; this is not a second persistence path, only a second
-  // caller of the one save the button already uses.
+  // successful one, and it never opens a Save-As picker nobody asked
+  // for. This is not a second persistence path, only a second caller of
+  // the one save the button already uses.
   async function autosaveProject() {
     if (!hasStorePath) return;
     clearErrors();
@@ -806,6 +817,16 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // F4. The server owns the clean project snapshot. Undo availability stays
   // a toolbar concern; only the server's normalized content comparison may
   // decide whether closing would discard user-visible changes.
+  async function saveAndQuit() {
+    if (quitSaving) return;
+    setQuitSaving(true);
+    try {
+      if (await saveProject()) await quitApp();
+    } finally {
+      setQuitSaving(false);
+    }
+  }
+
   function quitRequested() {
     if (tree?.is_modified) {
       setQuitConfirmOpen(true);
@@ -997,7 +1018,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         </div>
       )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
-      {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}
+      {newProjectOpen && (
+        <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject} />
+      )}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
@@ -1010,15 +1033,17 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           <p>{t("quit.message")}</p>
           <p className="quit-confirm-hint">{t("quit.hint")}</p>
           {/* Cancel comes first so `Overlay`'s initial focus lands on it:
-              the safe answer is the one already under the finger. There is
-              deliberately no "save and quit" button — `saveProject`
-              swallows its own failures into a toast and returns nothing,
-              so this dialog could not tell a save that worked from one
-              that did not, and quitting on the strength of that guess is
-              the exact failure it exists to prevent. */}
+              the safe answer is the one already under the finger. "Save
+              and quit" quits only on `saveProject()`'s `true` — saved *and*
+              clean. A failed save (toast), a cancelled Save-As picker or a
+              save that raced a newer edit keeps both this dialog and the
+              project open, which is the whole point of asking. */}
           <footer className="quit-confirm-footer">
             <button type="button" onClick={() => setQuitConfirmOpen(false)}>{t("quit.cancel")}</button>
-            <button type="button" className="quit-confirm-discard" onClick={() => void quitApp()}>{t("quit.discard")}</button>
+            <button type="button" className="quit-confirm-discard" disabled={quitSaving} onClick={() => void quitApp()}>{t("quit.discard")}</button>
+            <button type="button" className="primary-action quit-confirm-save" disabled={quitSaving} onClick={() => void saveAndQuit()}>
+              {quitSaving ? t("quit.saving") : t("quit.save")}
+            </button>
           </footer>
         </Overlay>
       )}

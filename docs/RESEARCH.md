@@ -2457,7 +2457,8 @@ Standard corpus: `LdCtrlWriteMem`, `LdCtrlCompareMem`, `LdCtrlLoadImageMem`,
 `LdCtrlClearLCFilterTable`, `LdCtrlMasterReset` (12 names, 0 files each), and
 `LdCtrlSetControlVariable`, which appears in exactly one file — the *Project
 Schema Documentation*, and only as the host of an enumeration **[V]**. That
-undocumented group is the absolute-addressing and BCU1/BIM M112 family. Each
+undocumented group is the absolute-addressing and BCU1/BIM M112 family (for
+mask `070nh`, see §19: the underlying procedure *is* documented). Each
 of them plainly *names* a documented Management Procedure —
 `LdCtrlWriteMem`/`DM_MemWrite` (`03_05_02` §3.16),
 `LdCtrlCompareMem`/`DM_MemVerify` (§3.17), `LdCtrlLoadImageMem`/`DM_MemRead`
@@ -4488,6 +4489,133 @@ listed here.
   bounded path that decrypts only with a user-supplied password. It must never
   go through the modern XML-package parser. Implementation waits for review
   and Board approval of the design's decisions B-1 to B-6.
+
+
+## 19. Application download to a mask `0701h` (BIM M112) device (2026-09-27)
+
+Trigger: a request to configure button 1 of the MDT push button at `1.1.67`
+(§8.8.6) as an ON/OFF toggle on group address `2/0/53`. That is an
+application download. This section records what the Standard and the product
+data do and do not supply for it. Markers as in §4.3.
+
+**Product identity.** The device reports mask `0701h`, manufacturer `0083h`
+and `PID_HARDWARE_TYPE` `000000000127` (§8.8.6) **[V]**. In
+`MDT_KP_BE_01_Push_Button_V15a.knxprod`, two applications check exactly that
+hardware type in `LdCtrlCompareProp PropId="78"`: `A-0023-15-3EC1`
+(*Taster 2-fach*, `BE-TA5502.01`) and `A-0027-15-0BAC` (*Taster 2-fach Plus*,
+`BE-TA55P2.01`) **[V]**. So the hardware type does not tell the plain device
+from the Plus. The type plate (`BE-TA55P2…`) names the Plus, so the matching
+application is `A-0027-15-0BAC`, with `ApplicationNumber` 39,
+`ApplicationVersion` 21, `MaskVersion` `MV-0701` and `PeiType` 1 **[V]**.
+The newer `BE-TA55xx-x2_MDT_KP_V20a.knxprod` (`BE-TA55P2.02`,
+`A-0227-20-7DE8`) checks hardware type `0x0239` and mask `MV-0705`, so it
+does **not** match this device **[V]**.
+
+**Load procedure (`A-0027-15-0BAC`, verbatim) [V].** The steps are
+`LdCtrlConnect`, `LdCtrlCompareProp` (hardware type), `LdCtrlUnload` for
+LSM 1, 2 and 3, then one Load / `LdCtrlAbsSegment` / `LdCtrlTaskSegment` /
+`LdCtrlLoadCompleted` block for each LSM:
+
+| LSM | segment | `Address` | `Size` | `Access` | `MemType` | `SegFlags` | content |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 (address table) | `AS-4000` | `4000h` | 513 | `FFh` | 3 EEPROM | `80h` | `AddressTable`, MaxEntries 255; 513 data + 513 mask octets |
+| 2 (association table) | `AS-4201` | `4201h` | 511 | `FFh` | 3 | `80h` | `AssociationTable`, MaxEntries 255 |
+| 3 (application) | `AS-0700` | `0700h` | 152 | `00h` | 2 RAM | `00h` | no data |
+| 3 | `AS-0798` stack (`SegType=1`) | `0798h` | 1 | `00h` | 2 | `00h` | no data |
+| 3 | `AS-4400` | `4400h` | 394 | `FFh` | 3 | `80h` | `ComObjectTable` (offset 0) and all 66 memory-placed parameters |
+
+The procedure ends with `LdCtrlRestart` and `LdCtrlDisconnect`. The
+application has 64 `ComObject`s, 161 `ComObjectRef`s and 81 `choose` blocks.
+
+**How the device takes load events: `DMP_LoadStateMachineWrite_RCo_Mem`.**
+MP (`03_05_02` v02.01.02) §3.31.2 states that this procedure *"shall only be
+used with device model for mask version 070nh (BIM M112)"* **[D]**. Its rules
+**[D]**:
+
+- It uses a connection-oriented session and no Verify Mode.
+- Each event is one `A_Memory_Write` of 11 octets (`0Bh`) to the management
+  control at `0104h`.
+- The client then reads 1 octet of load state back, at most 3 times, from
+  `B6EAh` (address table), `B6EBh` (association table), `B6ECh`
+  (application) or `B6EDh` (PEI).
+- The record is octet 1 *"state machine / event"*, followed by the event data.
+  For Unload, Load and LoadComplete the event data is 10 reserved `00h`
+  octets.
+- For AllocAbsDataSeg / AllocAbsStackSeg the record is `L3`, segment type
+  `00h`/`01h`, segment ID `00h`, start `SSSS`, length `EEEE-SSSS+1`, access
+  `AA` (bits 0–3 write level, 4–7 read level), memory type `TT`
+  (1 zero-page RAM, 2 RAM, 3 EEPROM), memory attributes `MM` (bit 7 =
+  checksum control) and one reserved `00h`.
+- For AllocAbsTaskSeg the record is `L3 02h 00h SSSS PP MMMM TTTT VV`: the
+  PEI type, then the manufacturer, application ID and version.
+- TaskPtr (`03h`), TaskCtrl1 (`04h`) and TaskCtrl2 (`05h`) are also defined.
+
+MP never gives numbers for `L1`–`L4`. The page image shows them in italics,
+with no legend (checked by rendering p. 135) **[V]**. The numbers are in
+*Test Suite Supplement G — Load State Machines Tests* (`08_TSSG` v01.02.01
+AS), which describes every property event together with its memory-mapped
+twin **[D]**:
+
+- The first octet is `(state machine type << 4) | event`. Type is 1 address
+  table, 2 association table, 3 application, 4 PEI, matching
+  `DM_LoadStateMachineWrite`'s `stateMachineType`. Event is 0 NoOp, 1 Load,
+  2 LoadCompleted, 3 additional load control, 4 Unload. For example, `14h`
+  unloads the address table and `22h` completes the association table.
+- The state read back is 00 Unloaded, 01 Loaded, 02 Loading or 03 Error.
+- It has a worked AllocAbsDataSeg example:
+  `23 00 00 42 00 00 10 FF 03 80 00` (start `4200h`, length `0010h`, EEPROM,
+  checksum on).
+- It has a worked AllocAbsTaskSeg example:
+  `23 02 00 42 00 80 00 02 A0 4A 10`.
+
+TSSG itself is not consistent **[V]**. Three occurrences of the data-segment
+record carry a 12th octet, which contradicts MP's stated length of `0Bh`.
+Its prose annotation also gives the application ID as `0A4Ah`, while the
+bytes say `A04Ah`. KNXBench should follow MP's 11-octet layout.
+
+The mapping of `LdCtrlAbsSegment`/`LdCtrlTaskSegment` attributes onto these
+records is **[A]**, but it is strongly constrained:
+
+- `LsmIdx` → type nibble.
+- `SegType`, `Address`, `Size`, `Access`, `MemType` and `SegFlags` map one
+  to one.
+- The task segment's manufacturer, application ID and version would be
+  `0083h`, `0027h` and `15h`, the same numbers as the application's own id
+  `A-0027-15`.
+
+This narrows the gap flagged in §8.6.4 ("absolute-addressing and BCU1/BIM
+M112 family … undocumented"). §8.6.4 searched for the `LdCtrl*` *names*,
+which appear nowhere in the Standard. The *procedure* those names drive on
+mask `070nh` is documented, as described above. The encodings for the other
+masks remain open.
+
+**Table formats.** Profiles (`06` v02.01.01) §10.2.7.7 points mask `0701h`
+at Resources (`03_05_01` v01.10.01) for the table formats **[D]**:
+
+- §4.16.11 for the Group Address Table format and management-client usage.
+- §4.17.9 (*GrOAT – Easy 3*) for the association table.
+- §4.19.4 (*Parameter Block Table – Realisation Type 3*) for parameters.
+
+Resources §4.23.3 (*Load State Machine – Realisation Type 2, memory mapped*)
+reads *"not specified in this version"* **[D]**. The state and event octets
+above therefore come only from MP §3.31.2 and TSSG.
+
+**What an end-to-end download would still need (none of it exists in
+KNXBench today) [V]:**
+
+1. A `DMP_LoadStateMachineWrite_RCo_Mem` transport. `download.rs` drives
+   load state machines only through properties
+   (`DMP_LoadStateMachineWrite_RCo_IO`), which mask `0701h` does not offer.
+2. Serializers for the Group Address Table (§4.16.11) and the Easy 3
+   association table (§4.17.9).
+3. An `AS-4400` image builder. It must evaluate the `choose` tree for the
+   chosen parameter values (`knx-productdb::dynamic::evaluate` exists) and
+   place each parameter's bits at its `Memory` offset over the segment's
+   default data. No such encoder exists.
+4. The access-key question. TSSG authorizes before the load, but the key the
+   device expects is not in the product data and must not be guessed.
+5. A policy decision. `WriteScope::Download` is still refused on hardware
+   (§8.8.6's allowlist is `IndividualAddressProgramming` and `Restart` only).
 
 ---
 

@@ -175,3 +175,73 @@ const MINIMAL_MANUFACTURER_DATA: &[u8] = br#"<?xml version="1.0" encoding="utf-8
 <KNX xmlns="http://knx.org/xml/project/11">
   <ManufacturerData />
 </KNX>"#;
+
+/// Recursively lists every regular file under `root`, name-sorted at each
+/// directory level, depth-first. Symlinks are skipped, not followed.
+///
+/// This is dev-only test-fixture plumbing over the local (gitignored)
+/// product corpus a contributor already controls — not code that parses
+/// untrusted input — so it carries none of
+/// `crates/knx-productdb/tests/corpus_support`'s hardening against a
+/// hostile ZIP. It exists because the local corpus was reorganized into
+/// per-manufacturer subdirectories (see `docs/KNOWN_LIMITATIONS.md`), so
+/// tests that used to assume every fixture sat directly under
+/// `OriginalData/ProductDatabases` can no longer just join a filename onto
+/// the root.
+pub fn walk_corpus_files(root: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    walk_corpus_files_into(root, &mut files);
+    files
+}
+
+fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
+    let Ok(read_dir) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut entries: Vec<_> = read_dir.filter_map(Result::ok).collect();
+    entries.sort_by_key(|entry| entry.file_name());
+    for entry in entries {
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if file_type.is_symlink() {
+            continue;
+        }
+        let path = entry.path();
+        if file_type.is_dir() {
+            walk_corpus_files_into(&path, files);
+        } else if file_type.is_file() {
+            files.push(path);
+        }
+    }
+}
+
+/// Recursively finds the one file under `root` whose file name (last path
+/// component) matches `filename` exactly, wherever it sits in the tree.
+///
+/// Tests that name a fixture by its well-known filename (e.g.
+/// `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`) used to join it
+/// directly onto `OriginalData/ProductDatabases`; the local corpus has
+/// since grown per-manufacturer subdirectories, so that join now misses a
+/// fixture that still exists, just one directory deeper. This resolves it
+/// the same way `corpus_compatibility_matrix`'s own discovery already
+/// does: by walking the tree instead of assuming a flat layout.
+///
+/// Returns `None` if no file with this name exists anywhere under `root`.
+/// Panics if more than one does — naming a fixture by its filename only
+/// makes sense while that name is unique; silently picking one of several
+/// candidates would be a worse failure than refusing outright.
+pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
+    let mut matches: Vec<PathBuf> = walk_corpus_files(root)
+        .into_iter()
+        .filter(|path| path.file_name().and_then(|n| n.to_str()) == Some(filename))
+        .collect();
+    match matches.len() {
+        0 => None,
+        1 => matches.pop(),
+        _ => panic!(
+            "corpus fixture name {filename:?} is not unique under {}: {matches:?}",
+            root.display()
+        ),
+    }
+}

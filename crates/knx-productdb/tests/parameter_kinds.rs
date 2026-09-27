@@ -65,6 +65,12 @@ const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
                 <TypeTime SizeInBit="16" Unit="Seconds" minInclusive="0" maxInclusive="3600"
                           UIHint="Duration_hhmmss" />
               </ParameterType>
+              <ParameterType Id="PT-Time2" Name="long delay">
+                <TypeTime SizeInBit="32" Unit="Minutes" minInclusive="1" maxInclusive="1440" />
+              </ParameterType>
+              <ParameterType Id="PT-Color2" Name="accent">
+                <TypeColor Space="HSV" />
+              </ParameterType>
             </ParameterTypes>
             <Parameters />
             <ParameterRefs />
@@ -246,13 +252,7 @@ fn an_unknown_parameter_kind_stays_other_and_is_reported() {
 /// element reported as unknown (with no sample, as `UnknownCollector::element`
 /// writes it) and none of its attributes reported.
 fn rewind_to_v14(conn: &Connection) {
-    conn.execute_batch(
-        "UPDATE parameter_type
-         SET kind = 'Other', size_in_bit = NULL, min_inclusive = NULL, max_inclusive = NULL
-         WHERE kind IN ('Color', 'Time');",
-    )
-    .unwrap();
-    for child in ["TypeColor", "TypeTime"] {
+    for (child, kind) in [("TypeColor", "Color"), ("TypeTime", "Time")] {
         let attr_path = format!("{TYPE_PATH}/{child}");
         let source: String = conn
             .query_row(
@@ -263,14 +263,40 @@ fn rewind_to_v14(conn: &Connection) {
             .unwrap();
         conn.execute("DELETE FROM ingest_unknown WHERE xpath = ?1", [&attr_path])
             .unwrap();
-        conn.execute(
-            "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-             VALUES (?1, NULL, ?2, 'Element', ?3, 1, NULL)",
-            rusqlite::params![source, TYPE_PATH, child],
-        )
-        .unwrap();
+        // v14's `UnknownCollector::element` counted every occurrence.
+        let occurrences: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM parameter_type WHERE kind = ?1",
+                [kind],
+                |r| r.get(0),
+            )
+            .unwrap();
+        // …into the one aggregated row per `(xpath, name)`: a v15 ingest
+        // may already hold one for a *non*-type-deciding occurrence at the
+        // same path, and v14 counted both kinds of occurrence together.
+        let merged = conn
+            .execute(
+                "UPDATE ingest_unknown SET occurrences = occurrences + ?4
+                 WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = 'Element' AND name = ?3",
+                rusqlite::params![source, TYPE_PATH, child, occurrences],
+            )
+            .unwrap();
+        if merged == 0 {
+            conn.execute(
+                "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+                 VALUES (?1, NULL, ?2, 'Element', ?3, ?4, NULL)",
+                rusqlite::params![source, TYPE_PATH, child, occurrences],
+            )
+            .unwrap();
+        }
     }
-    conn.execute_batch("PRAGMA user_version = 14").unwrap();
+    conn.execute_batch(
+        "UPDATE parameter_type
+         SET kind = 'Other', size_in_bit = NULL, min_inclusive = NULL, max_inclusive = NULL
+         WHERE kind IN ('Color', 'Time');
+         PRAGMA user_version = 14;",
+    )
+    .unwrap();
 }
 
 #[test]
@@ -280,8 +306,16 @@ fn v14_to_v15_rederives_color_and_time_kinds_exactly_like_a_fresh_ingest() {
     let (fresh_types, fresh_unknown) = {
         let conn = knx_productdb::open_and_migrate(&path).unwrap();
         knx_productdb::ingest_file(&conn, "M-00FA/kinds.xml", PROGRAM.as_bytes()).unwrap();
-        let types = ["PT-Color", "PT-Time"].map(|id| type_row(&conn, id));
+        let types = ["PT-Color", "PT-Time", "PT-Color2", "PT-Time2"].map(|id| type_row(&conn, id));
         let unknown = unknown_rows(&conn);
+        let time_units: i64 = conn
+            .query_row(
+                "SELECT occurrences FROM ingest_unknown WHERE xpath = ?1 AND name = 'Unit'",
+                [format!("{TYPE_PATH}/TypeTime")],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(time_units, 2, "the fixture aggregates two TypeTime/@Unit");
         rewind_to_v14(&conn);
         assert_eq!(type_row(&conn, "PT-Time").0, "Other", "rewind took effect");
         (types, unknown)
@@ -292,7 +326,7 @@ fn v14_to_v15_rederives_color_and_time_kinds_exactly_like_a_fresh_ingest() {
         .unwrap();
     assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
     assert_eq!(
-        ["PT-Color", "PT-Time"].map(|id| type_row(&conn, id)),
+        ["PT-Color", "PT-Time", "PT-Color2", "PT-Time2"].map(|id| type_row(&conn, id)),
         fresh_types
     );
     assert_eq!(
@@ -335,7 +369,7 @@ fn v14_to_v15_does_not_let_a_losing_blob_rewrite_the_winners_row() {
         .unwrap();
         conn.execute(
             "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-             VALUES (?1, NULL, ?2, 'Element', 'TypeTime', 1, NULL)",
+             VALUES (?1, NULL, ?2, 'Element', 'TypeTime', 2, NULL)",
             rusqlite::params![loser, TYPE_PATH],
         )
         .unwrap();
@@ -347,6 +381,93 @@ fn v14_to_v15_does_not_let_a_losing_blob_rewrite_the_winners_row() {
         ("Other".into(), None, None, None, None, None),
         "first writer wins, in the migration exactly as at ingest"
     );
+    // The loser's own report is still brought to v15 shape, as a fresh
+    // ingest of it would report its constructs too.
+    let loser_rows = |kind: &str, name: &str| -> i64 {
+        conn.query_row(
+            "SELECT count(*) FROM ingest_unknown AS u
+             JOIN source_file AS s ON s.sha256 = u.source_sha256
+             WHERE s.source_path = 'M-00FA/loser.xml' AND u.kind = ?1 AND u.name = ?2",
+            [kind, name],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(loser_rows("Element", "TypeTime"), 0, "stale row retired");
+    assert_eq!(loser_rows("Attribute", "Unit"), 1, "attribute row written");
+}
+
+/// Review follow-ups: (a) a schema-14 program's namespace-prefixed
+/// attribute on `TypeTime` leaves the *same* rows after the backfill as a
+/// fresh ingest (the backfill runs the scheme-evidence reconciliation
+/// ingest runs); (b) a `TypeTime` that is *not* a `ParameterType`'s
+/// type-deciding child keeps its generic element report — only the
+/// type-deciding occurrences are retired. Both a stray one elsewhere and,
+/// the case that shares the retired row's `(xpath, name)`, a second child
+/// of a `ParameterType` whose first child already decided its kind.
+#[test]
+fn v14_to_v15_matches_fresh_ingest_for_prefixed_attributes_and_non_deciding_occurrences() {
+    let program = PROGRAM
+        .replace(
+            r#"xmlns="http://knx.org/xml/project/20""#,
+            r#"xmlns="http://knx.org/xml/project/14" xmlns:e="urn:example""#,
+        )
+        .replace(
+            r#"<TypeTime SizeInBit="16" Unit="Seconds""#,
+            r#"<TypeTime e:Precision="ms" SizeInBit="16" Unit="Seconds""#,
+        )
+        .replace(
+            "<Parameters />",
+            r#"<Parameters /><Stray><TypeTime Unit="Hours" /></Stray>"#,
+        )
+        .replace(
+            r#"<TypeColor Space="HSV" />"#,
+            r#"<TypeColor Space="HSV" /><TypeTime Unit="Days" />"#,
+        );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let (fresh_types, fresh_unknown) = {
+        let conn = knx_productdb::open_and_migrate(&path).unwrap();
+        knx_productdb::ingest_file(&conn, "M-00FA/kinds.xml", program.as_bytes()).unwrap();
+        let unknown = unknown_rows(&conn);
+        assert!(
+            unknown
+                .iter()
+                .any(|(_, k, n, _, _)| k == "Attribute" && n.contains("Precision")),
+            "the fixture really does exercise a prefixed attribute: {unknown:#?}"
+        );
+        assert!(
+            unknown.iter().any(|(x, k, n, _, _)| k == "Element"
+                && n == "TypeTime"
+                && x.ends_with("/Static/Stray")),
+            "the stray TypeTime is a generic unknown element: {unknown:#?}"
+        );
+        assert!(
+            unknown.iter().any(|(x, k, n, c, _)| x == TYPE_PATH
+                && k == "Element"
+                && n == "TypeTime"
+                && *c == 1),
+            "the second child of PT-Color2 is reported at the type path: {unknown:#?}"
+        );
+        let types = ["PT-Color", "PT-Time", "PT-Color2", "PT-Time2"].map(|id| type_row(&conn, id));
+        rewind_to_v14(&conn);
+        // v14's generic arm did report the non-deciding child's own
+        // attribute at the type-child path; the rewind removed it with the
+        // rest, so put back exactly that row.
+        conn.execute(
+            "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+             SELECT sha256, NULL, ?1, 'Attribute', 'Unit', 1, 'Days' FROM source_file",
+            [format!("{TYPE_PATH}/TypeTime")],
+        )
+        .unwrap();
+        (types, unknown)
+    };
+    let conn = knx_productdb::open_and_migrate(&path).unwrap();
+    assert_eq!(
+        ["PT-Color", "PT-Time", "PT-Color2", "PT-Time2"].map(|id| type_row(&conn, id)),
+        fresh_types
+    );
+    assert_eq!(unknown_rows(&conn), fresh_unknown);
 }
 
 /// A stored blob that no longer parses must not keep the database from

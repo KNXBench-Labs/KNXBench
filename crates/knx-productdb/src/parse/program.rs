@@ -605,15 +605,37 @@ fn fill_parameter_type_bounds_element(
 /// ingest determined) and the `EXISTS` clause (a blob that lost its program
 /// id, ADR-0011, cannot rewrite the winner's row — though its own unknown
 /// rows are still corrected, as ingest reports a loser's constructs too).
-/// Only a blob that still holds a stale `Element` row is ever passed in,
-/// and attribute rows already present are left alone, so a re-run adds
-/// nothing. `Dynamic` subtrees are skipped whole, exactly as ingest does,
-/// so `open_path` — and with it every xpath — matches ingest's.
+///
+/// Exactness, point by point:
+/// - The event handling mirrors `handle_start`: `Dynamic` subtrees are
+///   skipped whole, and an element consumed as a `ParameterType`'s
+///   type-deciding child is *only* that (ingest returns early), so
+///   `open_path` — and every xpath — matches ingest's even for a childless
+///   `<ParameterType/>`.
+/// - The stale row is *decremented* by the number of type-deciding
+///   `TypeColor`/`TypeTime` occurrences at that path, not deleted, because
+///   the same `(xpath, name)` row also counts any non-deciding occurrence
+///   the generic arm reported, which a v15 ingest still reports. Ingest
+///   before commit a4ba902 (schema <= v6) wrote this row at a hardcoded
+///   `.../Static/ParameterTypes/ParameterType`; when the computed path has
+///   no row, that legacy path is decremented instead.
+/// - The collected attribute rows go through the same scheme-evidence
+///   reconciliation ingest applies (`reconcile_targeted_unknowns`, or
+///   `reconcile_package_unknowns` when `scheme21_package`), so a
+///   namespace-prefixed attribute leaves the same rows it would at ingest.
+///   Attribute rows at a retired child's path are rebuilt whole, from
+///   deciding and non-deciding occurrences in document order; elsewhere
+///   only rows not already present are inserted, which also drops the
+///   reconciliation's own evidence rows the original ingest wrote.
+///
+/// Runs once per database, under the schema-version gate; it is not
+/// idempotent on its own (a second run would decrement again).
 pub(crate) fn backfill_color_time_kinds(
     conn: &Connection,
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    scheme21_package: bool,
 ) -> Result<usize, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -622,7 +644,8 @@ pub(crate) fn backfill_color_time_kinds(
     let mut current_parameter_type_id: Option<String> = None;
     let mut expecting_type_child = false;
     let mut unknown = UnknownCollector::default();
-    let mut retired: Vec<(String, String)> = Vec::new();
+    let mut retired: std::collections::BTreeMap<(String, String), i64> =
+        std::collections::BTreeMap::new();
     let mut rekinded = 0usize;
 
     loop {
@@ -675,7 +698,9 @@ pub(crate) fn backfill_color_time_kinds(
                        )",
                     params![kind, size, min, max, program_id, pt_id, source_sha256],
                 )?;
-                retired.push((xpath_of(&open_path), name.clone()));
+                *retired
+                    .entry((xpath_of(&open_path), name.clone()))
+                    .or_default() += 1;
                 report_unknown_attrs(
                     &mut unknown,
                     &xpath_of_child(&open_path, &name),
@@ -683,6 +708,19 @@ pub(crate) fn backfill_color_time_kinds(
                     known_type_child_attrs(&name),
                 );
             }
+            // Ingest's `handle_start` returns right after the type child,
+            // so nothing below applies to it.
+            if is_start {
+                open_path.push(name);
+            }
+            continue;
+        }
+        if matches!(name.as_str(), "TypeColor" | "TypeTime") {
+            // Not type-deciding (schema-invalid, but possible): ingest's
+            // generic arm reports every attribute. Collected in document
+            // order alongside the deciding ones so a shared row's count and
+            // first sample come out as ingest's would.
+            report_unknown_attrs(&mut unknown, &xpath_of_child(&open_path, &name), &a, &[]);
         }
         match name.as_str() {
             "ApplicationProgram" => program_id = a.get("Id").unwrap_or_default().to_string(),
@@ -697,17 +735,59 @@ pub(crate) fn backfill_color_time_kinds(
         }
     }
 
-    retired.sort();
-    retired.dedup();
-    for (xpath, name) in &retired {
+    const LEGACY_TYPE_XPATH: &str =
+        "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes/ParameterType";
+    for ((xpath, name), count) in &retired {
+        let has_row = |path: &str| -> Result<bool, ProductDbError> {
+            Ok(conn.query_row(
+                "SELECT EXISTS (SELECT 1 FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3)",
+                params![source_sha256, path, name],
+                |r| r.get(0),
+            )?)
+        };
+        let target = if has_row(xpath)? {
+            xpath.as_str()
+        } else if has_row(LEGACY_TYPE_XPATH)? {
+            LEGACY_TYPE_XPATH
+        } else {
+            continue;
+        };
+        conn.execute(
+            "UPDATE ingest_unknown SET occurrences = occurrences - ?4
+             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3",
+            params![source_sha256, target, name, count],
+        )?;
         conn.execute(
             "DELETE FROM ingest_unknown
-             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3",
-            params![source_sha256, xpath, name],
+             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3
+               AND occurrences <= 0",
+            params![source_sha256, target, name],
         )?;
     }
-    let fresh: Vec<_> = unknown
-        .into_vec()
+    let mut collected = unknown.into_vec();
+    if scheme21_package {
+        super::scheme_evidence::reconcile_package_unknowns(bytes, source_path, &mut collected)?;
+    } else {
+        super::scheme_evidence::reconcile_targeted_unknowns(bytes, source_path, &mut collected)?;
+    }
+    // Attribute rows under a path a type-deciding child was retired from
+    // are rebuilt whole: v14 wrote there only for non-deciding occurrences
+    // (if any), and ingest aggregates both into one row per name. Rows at
+    // every other path are ingest's own v14 output and only gain what is
+    // missing.
+    let rebuilt: std::collections::BTreeSet<String> = retired
+        .keys()
+        .map(|(xpath, name)| format!("{xpath}/{name}"))
+        .collect();
+    for xpath in &rebuilt {
+        conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND xpath = ?2",
+            params![source_sha256, xpath],
+        )?;
+    }
+    let fresh: Vec<_> = collected
         .into_iter()
         .map(|u| {
             let present: bool = conn.query_row(

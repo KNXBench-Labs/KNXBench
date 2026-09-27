@@ -5195,10 +5195,11 @@ mod tests {
         );
     }
 
-    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s fifteen literals
+    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s sixteen literals
     // (twelve at fix round 1, plus three more folded in by this round's
-    // merge of main's T12 module-argument work) and `messages/en.ts`'s
-    // `parameters.diagnostic.*` entries for the same fifteen kinds are two
+    // merge of main's T12 module-argument work, plus PDB-9's
+    // `refBelowSkippedNode`) and `messages/en.ts`'s
+    // `parameters.diagnostic.*` entries for the same sixteen kinds are two
     // independent sources of the same English
     // sentence, and nothing before this test asserted they had to agree.
     // This pins this file's half of that pair: every string below is

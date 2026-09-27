@@ -7807,3 +7807,33 @@ asserts its fixture exists rather than returning, and the traversal helper
 reports errors instead of swallowing them. A lint or `xtask` check that rejects
 a bare `return` after a corpus-presence test would keep the idiom from
 returning.
+
+## §132 The window manager's close button quits the desktop app without the unsaved-changes prompt
+
+**Status.** Open (documented 2026-09-27; read from code, not reproduced on a
+running desktop build).
+
+**Limitation.** File › Quit asks before discarding unsaved changes
+(`App.tsx` `quitRequested` → quit-confirm dialog). The window manager's own
+close button (title-bar ×, Alt+F4, a compositor's close keybinding) does
+not. `apps/knx-desktop/src-tauri/src/lib.rs` `run()` handles only
+`tauri::WindowEvent::Destroyed` for the `main` window and turns it into
+`AppHandle::exit(0)`; nothing intercepts `WindowEvent::CloseRequested`, so
+the frontend is never asked and the process ends with the edits still in
+`knx-server`'s in-memory `AppState`.
+
+**Cost.** Unsaved edits since the last save or autosave are lost without a
+question — exactly the case the Quit dialog exists to prevent, reached by
+the most common way of closing a window. The browser build is not affected
+in the same way: there the project lives in the server process, not in the
+tab.
+
+**Why it is this way.** The `Destroyed` clause was written to make File ›
+Quit end the process (`quit.ts` documents that the close button "quits the
+whole application" as a feature). Routing `CloseRequested` through the
+frontend's dirty check was never part of that change.
+
+**Lifted when.** The desktop shell intercepts `CloseRequested` for `main`
+(`api.prevent_close()`), asks the frontend to run the same check as File ›
+Quit, and closes only on confirmation — with a test that the prompt appears
+for a modified project and does not for a clean one.

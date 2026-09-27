@@ -9,8 +9,8 @@ return `facts: null`, while a measured zero remains a non-null facts object.
 Unknowns show distinct rows and total occurrences. Unsupported diagnostics keep
 relative archive/XML paths and never reveal host `source_name`. This is honest
 import evidence, not ETS parity or signature verification. Since schema v14
-(PDB-8) uninterpreted element subtrees inside the supported master sections are
-reported too (`master_subtree` / `unsupported-master-subtree`, synthetic and
+(PDB-8) uninterpreted element subtrees (not attributes) inside the supported
+master sections are reported too (`master_subtree` / `unsupported-master-subtree`, synthetic and
 v13→v14 backfill tests); they are reported, not typed. PDB-10 is the future
 safe baggage inventory and index-to-payload resolution slice.
 

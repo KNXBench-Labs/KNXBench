@@ -2,8 +2,8 @@
 use std::io::{Cursor, Write};
 
 use knx_productdb::{
-    install_package, open_and_migrate, InstallCategory, InstallDiagnosticKind, InstallDisposition,
-    InstallFacts,
+    install_package, open_and_migrate, sha256_hex, InstallCategory, InstallDiagnosticKind,
+    InstallDisposition, InstallFacts,
 };
 use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
@@ -640,14 +640,40 @@ fn a_master_file_without_uninterpreted_subtrees_measures_zero() {
         .all(|row| row.kind() != InstallDiagnosticKind::UnsupportedMasterSubtree));
 }
 
-/// Rewinds a v14 database to v13's report shape: no `master_subtree` count
-/// row and no subtree diagnostics. The v14 CHECK lists stay, which v13 would
-/// not have, but the migration rebuilds both tables anyway.
+/// Rewinds a v14 database to genuine v13 report tables: the v12/v13 CHECK
+/// lists (no `master_subtree`, no `unsupported-master-subtree`) with every
+/// other row kept, so the v13 -> v14 rebuild runs against real v13 DDL.
 fn rewind_to_v13(conn: &Connection) {
     conn.execute_batch(
-        "DELETE FROM package_install_count WHERE category = 'master_subtree';
-         DELETE FROM package_install_diagnostic WHERE kind = 'unsupported-master-subtree';
-         PRAGMA user_version = 13;",
+        "CREATE TABLE package_install_count_v13 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            category TEXT NOT NULL CHECK (category IN ('archive_member','product','application_program','parameter','communication_object','dynamic_node','module','baggage_index','baggage','unknown_construct','master_section','datapoint_type')),
+            disposition TEXT NOT NULL CHECK (disposition IN ('read','stored','deduplicated','retained-but-uninterpreted','unsupported','dropped')),
+            count INTEGER NOT NULL CHECK (count >= 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, category, disposition)
+        ) STRICT;
+        INSERT INTO package_install_count_v13
+            SELECT * FROM package_install_count WHERE category != 'master_subtree';
+        DROP TABLE package_install_count;
+        ALTER TABLE package_install_count_v13 RENAME TO package_install_count;
+        CREATE TABLE package_install_diagnostic_v13 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-baggage-index')),
+            archive_path TEXT NOT NULL,
+            xml_path TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, kind, archive_path, xml_path, detail)
+        ) STRICT;
+        INSERT INTO package_install_diagnostic_v13
+            SELECT * FROM package_install_diagnostic WHERE kind != 'unsupported-master-subtree';
+        DROP TABLE package_install_diagnostic;
+        ALTER TABLE package_install_diagnostic_v13 RENAME TO package_install_diagnostic;
+        PRAGMA user_version = 13;",
     )
     .unwrap();
 }
@@ -681,35 +707,46 @@ fn v13_to_v14_backfills_subtrees_from_the_retained_master_blob() {
 }
 
 #[test]
-fn v13_to_v14_rolls_back_when_a_retained_master_no_longer_scans() {
+fn v13_to_v14_marks_an_unscannable_master_unavailable_instead_of_zero() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
+    let bytes = subtree_archive();
+    let healthy = full_archive("M-0001/Baggages/vendor.bin", b"opaque");
     {
         let conn = open_and_migrate(&path).unwrap();
-        install_package(&conn, "subtrees.knxprod", &subtree_archive()).unwrap();
+        install_package(&conn, "subtrees.knxprod", &bytes).unwrap();
+        install_package(&conn, "healthy.knxprod", &healthy).unwrap();
         rewind_to_v13(&conn);
+        // Only the subtree package's master rots; the healthy package keeps
+        // its own, different master blob.
         conn.execute(
-            "UPDATE source_file SET bytes = ?1 WHERE sha256 IN
-                 (SELECT source_sha256 FROM package_member WHERE role = 'Master')",
-            [b"<KNX><MasterData></KNX>".as_slice()],
+            "UPDATE source_file SET bytes = ?1 WHERE sha256 = ?2",
+            rusqlite::params![
+                b"<KNX><MasterData></KNX>".as_slice(),
+                sha256_hex(MASTER_WITH_SUBTREES)
+            ],
         )
         .unwrap();
     }
-    assert!(
-        open_and_migrate(&path).is_err(),
-        "a count that cannot be measured is not invented as zero"
+    let conn = open_and_migrate(&path).expect("one bad blob does not lock the database");
+    let rotten = install_package(&conn, "retry.knxprod", &bytes).unwrap();
+    assert!(rotten.skipped);
+    assert_eq!(
+        rotten.facts, None,
+        "a count that cannot be measured is reported unavailable, not invented as zero"
     );
-    let conn = Connection::open(&path).unwrap();
-    let version: i64 = conn
-        .query_row("PRAGMA user_version", [], |row| row.get(0))
+    let recorded: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown
+             WHERE kind = 'InstallReportBackfillError' AND name = 'master_subtree_backfill'",
+            [],
+            |row| row.get(0),
+        )
         .unwrap();
-    assert_eq!(version, 13, "the failed step is rolled back whole");
-    let rows: i64 = conn
-        .query_row("SELECT count(*) FROM package_install_count", [], |row| {
-            row.get(0)
-        })
-        .unwrap();
-    assert!(rows > 0, "existing evidence survives the failed migration");
+    assert_eq!(recorded, 1, "the failure is recorded, not swallowed");
+    let other = install_package(&conn, "healthy-retry.knxprod", &healthy).unwrap();
+    assert!(other.skipped);
+    assert!(other.facts.is_some(), "a healthy package stays measured");
 }
 
 #[test]

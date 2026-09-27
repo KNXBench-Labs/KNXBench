@@ -371,6 +371,14 @@ Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
 ### T37 — Visible, honest progress while loading a project
 
+**Done.** See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
+[adr/0023-load-progress-operation.md](adr/0023-load-progress-operation.md).
+Implemented in `apps/knx-server/src/load_progress.rs` with the phase model in
+`crates/knx-app`; covered by 20 focused tests (7 in
+`crates/knx-app/tests/load_progress.rs`, 13 in
+`apps/knx-server/tests/http_load_progress.rs`). The task text below is kept as
+the original specification.
+
 Added 2026-09-16. Opening a native `.knxdb` project and importing an ETS
 `.knxproj` currently leave the user without feedback: `App.tsx` awaits one
 HTTP response from `/api/project/open` or `/api/project/import`, and neither

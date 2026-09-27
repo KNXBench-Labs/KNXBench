@@ -1008,78 +1008,8 @@ pub fn import_group_addresses_csv_impl(
 ) -> Result<CsvImportOutcome, String> {
     let result = (|| -> Result<CsvImportOutcome, String> {
         let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let (plan, planned_revision) = {
-            let project = state.project.lock().expect("state mutex poisoned");
-            let project = project.as_ref().ok_or("no project open")?;
-            let parsed = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
-            (
-                knx_csv::plan_import(project, &parsed),
-                current_project_revision(state),
-            )
-        };
-
-        {
-            let mut log = state.session_log.lock().expect("state mutex poisoned");
-            for entry in session_log::from_csv_import_report(&plan.report) {
-                log.push(entry);
-            }
-        }
-
-        let error_rows: Vec<String> = plan
-            .report
-            .problems
-            .iter()
-            .filter(|p| p.severity == knx_csv::Severity::Error)
-            .map(|p| match p.row {
-                Some(row) => format!("row {row}: {}", p.detail),
-                None => p.detail.clone(),
-            })
-            .collect();
-        if !error_rows.is_empty() {
-            return Err(format!(
-                "{} error(s), nothing applied: {}",
-                error_rows.len(),
-                error_rows.join("; ")
-            ));
-        }
-
-        let destructive = !plan.report.destructive_changes.is_empty();
-        let expected_token = destructive.then(|| {
-            let mut hasher = Sha256::new();
-            hasher.update(state.server_incarnation.as_bytes());
-            hasher.update(planned_revision.to_le_bytes());
-            hasher.update(text.as_bytes());
-            format!("{:x}", hasher.finalize())
-        });
-        if destructive && confirmation_token != expected_token.as_deref() {
-            if confirmation_token.is_some() {
-                return Err(
-                    "CSV confirmation is stale or the file/project changed; preview again"
-                        .to_string(),
-                );
-            }
-            return Ok(CsvImportOutcome {
-                tree: current_tree(state)?,
-                report: plan.report,
-                applied: false,
-                confirmation_token: expected_token,
-            });
-        }
-
-        let (tree, applied) = match plan.command {
-            Some(cmd) if destructive => (apply_at_revision(state, planned_revision, cmd)?, true),
-            Some(cmd) => (apply(state, cmd)?, true),
-            // Every row was `unchanged` (or the file was empty of data
-            // rows) — nothing to apply, but still a successful import that
-            // needs a current tree in the response.
-            None => (current_tree(state)?, false),
-        };
-        Ok(CsvImportOutcome {
-            tree,
-            report: plan.report,
-            applied,
-            confirmation_token: None,
-        })
+        let planned = plan_csv_import(state, &text)?;
+        apply_planned_csv_import(state, &text, planned, confirmation_token)
     })();
 
     log_outcome(
@@ -1107,6 +1037,105 @@ pub fn import_group_addresses_csv_impl(
     );
 
     result
+}
+
+/// A CSV import plan and the project revision it was computed against.
+struct PlannedCsvImport {
+    plan: knx_csv::ImportPlan,
+    revision: u64,
+}
+
+/// Parses `text` and plans it against the live project under one lock
+/// acquisition, recording the revision the plan is valid for.
+fn plan_csv_import(state: &AppState, text: &str) -> Result<PlannedCsvImport, String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let parsed = knx_csv::parse_group_addresses(text, project.info.group_address_style);
+    Ok(PlannedCsvImport {
+        plan: knx_csv::plan_import(project, &parsed),
+        revision: current_project_revision(state),
+    })
+}
+
+/// Logs `planned`'s diagnostics, enforces the destructive-change
+/// confirmation, and applies the plan **only at the revision it was planned
+/// against** (ADR-0039 Decision 4): the plan's ids, matches and range
+/// placement describe that revision, so an edit in between refuses it
+/// instead of applying a stale view. The user simply imports again.
+fn apply_planned_csv_import(
+    state: &AppState,
+    text: &str,
+    planned: PlannedCsvImport,
+    confirmation_token: Option<&str>,
+) -> Result<CsvImportOutcome, String> {
+    let PlannedCsvImport {
+        plan,
+        revision: planned_revision,
+    } = planned;
+    {
+        let mut log = state.session_log.lock().expect("state mutex poisoned");
+        for entry in session_log::from_csv_import_report(&plan.report) {
+            log.push(entry);
+        }
+    }
+
+    let error_rows: Vec<String> = plan
+        .report
+        .problems
+        .iter()
+        .filter(|p| p.severity == knx_csv::Severity::Error)
+        .map(|p| match p.row {
+            Some(row) => format!("row {row}: {}", p.detail),
+            None => p.detail.clone(),
+        })
+        .collect();
+    if !error_rows.is_empty() {
+        return Err(format!(
+            "{} error(s), nothing applied: {}",
+            error_rows.len(),
+            error_rows.join("; ")
+        ));
+    }
+
+    let destructive = !plan.report.destructive_changes.is_empty();
+    let expected_token = destructive.then(|| {
+        let mut hasher = Sha256::new();
+        hasher.update(state.server_incarnation.as_bytes());
+        hasher.update(planned_revision.to_le_bytes());
+        hasher.update(text.as_bytes());
+        format!("{:x}", hasher.finalize())
+    });
+    if destructive && confirmation_token != expected_token.as_deref() {
+        if confirmation_token.is_some() {
+            return Err(
+                "CSV confirmation is stale or the file/project changed; preview again".to_string(),
+            );
+        }
+        return Ok(CsvImportOutcome {
+            tree: current_tree(state)?,
+            report: plan.report,
+            applied: false,
+            confirmation_token: expected_token,
+        });
+    }
+
+    // Every applied plan is bound to its planned revision, destructive or
+    // not (ADR-0039 Decision 4): the id backstop would catch a colliding
+    // create, but a plan whose matches or range placement went stale must
+    // not apply at all.
+    let (tree, applied) = match plan.command {
+        Some(cmd) => (apply_at_revision(state, planned_revision, cmd)?, true),
+        // Every row was `unchanged` (or the file was empty of data
+        // rows) — nothing to apply, but still a successful import that
+        // needs a current tree in the response.
+        None => (current_tree(state)?, false),
+    };
+    Ok(CsvImportOutcome {
+        tree,
+        report: plan.report,
+        applied,
+        confirmation_token: None,
+    })
 }
 
 /// Projects one device's detail. `Err` names the device id when it no
@@ -1584,7 +1613,7 @@ fn apply_with_expected_revision(
         let current = current_project_revision(state);
         if current != expected {
             return Err(format!(
-                "CSV confirmation is stale: expected project revision {expected}, current revision is {current}; preview again"
+                "CSV import is stale: planned against project revision {expected}, current revision is {current}; import or preview again"
             ));
         }
     }
@@ -2539,7 +2568,7 @@ pub fn reconcile_scan_impl(
                 line,
             });
         }
-        commands.push(knx_core::Command::SetIdAllocators { ids });
+        commands.push(knx_core::Command::ReserveIds { through: ids });
         commands.extend(create_commands);
     }
 
@@ -3876,6 +3905,67 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ADR-0039 Decision 4 / KNOWN_LIMITATIONS §129: a *non-destructive* CSV
+    /// plan is bound to the revision it was planned against, exactly like a
+    /// destructive one. An edit landing between plan and apply refuses the
+    /// stale plan — the project keeps the edit and gains nothing from the
+    /// plan — and re-importing afterwards succeeds.
+    #[test]
+    fn a_csv_plan_is_refused_when_the_project_changed_after_planning() {
+        let state = AppState::default();
+        {
+            let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+            project.installations.push(knx_core::Installation {
+                id: knx_core::InstallationId(0),
+                name: "I".into(),
+                default_line: None,
+                multicast_address: None,
+                completion: knx_core::CompletionStatus::FinishedDesign,
+                topology: knx_core::Topology {
+                    areas: vec![],
+                    lines: vec![],
+                    unassigned: vec![],
+                },
+                buildings: vec![],
+                group_ranges: vec![],
+                group_addresses: vec![],
+                parameters: vec![],
+            });
+            *state.project.lock().unwrap() = Some(project);
+        }
+        let text = "Address,Name\n1/1/1,From CSV\n";
+
+        let planned = plan_csv_import(&state, text).unwrap();
+        create_group_address_impl(&state, "Interleaved".into(), "1/1/2".into(), None).unwrap();
+        let after_edit = state.project.lock().unwrap().clone().unwrap();
+
+        let err = match apply_planned_csv_import(&state, text, planned, None) {
+            Ok(_) => panic!("a stale plan must be refused"),
+            Err(err) => err,
+        };
+        assert!(err.contains("preview again"), "{err}");
+        assert_eq!(state.project.lock().unwrap().as_ref(), Some(&after_edit));
+
+        let replanned = plan_csv_import(&state, text).unwrap();
+        let outcome = apply_planned_csv_import(&state, text, replanned, None).unwrap();
+        assert!(outcome.applied);
+        let names: Vec<String> = state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .installations[0]
+            .group_addresses
+            .iter()
+            .map(|ga| ga.name.clone())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["Interleaved".to_string(), "From CSV".to_string()]
+        );
+    }
 
     #[test]
     fn save_locks_project_before_waiting_for_its_destination_path() {

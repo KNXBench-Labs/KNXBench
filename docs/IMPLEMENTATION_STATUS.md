@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — DIN-11: ADR-0039 phase 2, the two snapshot callers stop rewinding
+
+The CSV group-address planner (`knx-csv/src/plan.rs`) and bus-scan
+reconciliation (`apps/knx-server/src/domain.rs`) now emit `ReserveIds`
+instead of `SetIdAllocators`. A plan applied after a concurrent edit can no
+longer lower that edit's counters. Undo of an import or scan apply restores
+every entity and the topology order exactly, while the counters keep their
+high-water mark, so an undone `KB-GA-n` or device id is never reissued
+(`plan.rs::undoing_an_import_keeps_the_high_water_mark_…`, red first **[V]**;
+`http_bus_scan.rs::…_undo_restores_content_exactly` asserts the counters are
+the only difference **[V]**).
+
+The CSV plan/apply window is closed. Planning moved into `plan_csv_import`,
+which records the revision it planned against, and `apply_planned_csv_import`
+now applies **every** plan through `apply_at_revision`, not only destructive
+ones. An edit in between refuses the plan with "import or preview again"
+before the id backstop is reached
+(`domain.rs::a_csv_plan_is_refused_when_the_project_changed_after_planning`,
+which failed first with the phase 1 `IdInUse` message **[V]**). The two
+documented "undo restores the allocator exactly" guarantees (T09 below, and
+GAP_ANALYSIS_ETS E2) now say content-exact plus high-water mark. Phases 3–5
+(nine live `project.ids` mutation sites, sealing `ids`,
+`xtask check-project-mutation`) stay open, and so does
+[KNOWN_LIMITATIONS §129](KNOWN_LIMITATIONS.md#129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity).
+
 ## 2026-09-27 — DIN-11: ADR-0039 phase 1, a duplicate id is refused instead of saved away
 
 [ADR-0039](adr/0039-project-mutation-goes-through-commands.md) is now
@@ -10237,8 +10262,9 @@ Undo, redo, and other project-tree updates refresh the comparison and clear
 stale selections. Applying selected findings
 creates product/program-less devices or removes uniquely resolved missing
 devices as one `Command::Batch`; empty selection is a true no-op. The batch
-also restores allocator state and exact topology order on undo, so apply then
-undo returns the project structurally byte-identical. No scan or reconciliation
+restores every entity and exact topology order on undo; the id counters keep
+their high-water mark (`ReserveIds`, ADR-0039 Decision 2), so an undone
+device id is never reissued and the counters are the only difference. No scan or reconciliation
 path infers manufacturer, product, or application-program data. New devices
 use a matching line in any installation when one exists. Removal is refused
 while building membership, parameters, or module instances still reference the

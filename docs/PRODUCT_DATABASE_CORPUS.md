@@ -278,6 +278,18 @@ does not provide queryable interface-object, mask, medium, role or security
 metadata. Unsupported master sections need either typed storage or explicit
 section-level reporting before they can support commissioning decisions.
 
+PDB-8 status (schema v14): whole unsupported sections are reported per
+section (`unsupported-master-section`), and every uninterpreted element subtree
+*inside* a supported section is reported per occurrence at its canonical path
+(`unsupported-master-subtree`). A read-only scan of the 69 distinct masters in
+the private corpus found exactly three such roots: `DatapointSubtype/Format`
+(12,072 occurrences, 38 masters), `Manufacturer/PublicKeys` (2,528, all 69) and
+`Manufacturer/OrderNumberFormattingScript` (75, 33). None has typed storage;
+reporting covers them until a feature needs one. Resources and access rights
+sit inside `MaskVersions` and are reported per section only. Attributes in the
+master `Languages` branch (e.g. `TranslationUnit/@Version`, 1,928 occurrences)
+remain unreported; see KNOWN_LIMITATIONS.
+
 ## Recommended follow-up tasks
 
 1. **Fix ZIP-name compatibility without weakening path safety.** Capture raw ZIP

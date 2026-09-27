@@ -532,7 +532,11 @@ inside that commitment because their stable vectors can fingerprint individual
 packages; the JSON never publishes those vectors, individual hashes, source
 paths, filenames, or manufacturer labels. The gated implementation is Linux-only: descriptor confinement uses
 `openat2`, and descriptor-backed directory enumeration requires mounted
-`/proc`. The 2026-09-24
+`/proc`. PDB-8 (schema v14) re-pinned the aggregate commitment after a
+main-vs-branch run showed exactly two of 31 final table counts changed,
+`package_install_count` 3,277 → 3,390 and `package_install_diagnostic`
+645 → 880, both now pinned explicitly; outcomes and report totals were equal.
+The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.
 `isolation_report_totals` sums only the 104 successful isolated installs.

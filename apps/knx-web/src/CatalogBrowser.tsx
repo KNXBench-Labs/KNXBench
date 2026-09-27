@@ -49,6 +49,7 @@ const categoryMessage: Record<CatalogInstallCount["category"], MessageKey> = {
   baggage: "catalog.installReport.category.baggage",
   unknown_construct: "catalog.installReport.category.unknownConstruct",
   master_section: "catalog.installReport.category.masterSection",
+  master_subtree: "catalog.installReport.category.masterSubtree",
   datapoint_type: "catalog.installReport.category.datapointType",
 };
 
@@ -80,11 +81,13 @@ function unknownKindLabel(t: Translate, kind: CatalogUnknownConstruct["kind"]): 
 
 const diagnosticKindMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnosticKind.unsupportedMasterSection",
+  "unsupported-master-subtree": "catalog.installReport.diagnosticKind.unsupportedMasterSubtree",
   "unsupported-baggage-index": "catalog.installReport.diagnosticKind.unsupportedBaggageIndex",
 };
 
 const diagnosticDescriptionMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnostic.unsupportedMasterSection",
+  "unsupported-master-subtree": "catalog.installReport.diagnostic.unsupportedMasterSubtree",
   "unsupported-baggage-index": "catalog.installReport.diagnostic.unsupportedBaggageIndex",
 };
 

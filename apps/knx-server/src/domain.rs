@@ -37,8 +37,10 @@ pub struct AppState {
     /// and is never written as separate `.knxdb` metadata.
     pub clean_project: Mutex<Option<knx_core::Project>>,
     /// RFC3339 timestamp (`session_log::now()`'s own format) of the last
-    /// successful `save_project`/`save_project_as`, or `None` if this
-    /// session has never saved. Set in lockstep with `clean_project` — both
+    /// successful `save_project`/`save_project_as` *of the project currently
+    /// open*, or `None` if it has not been saved since it was created,
+    /// opened or imported — replacing the project resets it, so the status
+    /// bar can never show a previous project's save time. Set in lockstep with `clean_project` — both
     /// are the save's authoritative record, so a failed save (or a failed
     /// autosave, which calls the exact same functions) leaves this
     /// unchanged along with it. Never derived from wall-clock elapsed time
@@ -1410,7 +1412,7 @@ fn replace_project_state_transaction(
     let mut import_counts = state.import_counts.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
     let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
+    let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let mut opaque = state.opaque.lock().expect("state mutex poisoned");
     let mut manufacturer_refs = state
         .manufacturer_refs
@@ -1428,6 +1430,10 @@ fn replace_project_state_transaction(
     *import_counts = replacement_import_counts;
     *store_path = replacement_store_path;
     *clean_project = Some(clean_replacement);
+    // `last_saved_at` describes the project on screen, not the session: a
+    // project that replaced the previous one (new, open, import) has not
+    // been saved by this session yet, whatever the previous one had.
+    *last_saved_at = None;
     *opaque = replacement_opaque;
     *manufacturer_refs = replacement_manufacturer_refs;
     Ok(tree_with_state(

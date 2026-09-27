@@ -76,8 +76,9 @@ pub struct ProjectTree {
     /// `BuildingPartType` below: the enum itself stays in `knx-core`, a
     /// typed TS union is not worth a mirror type for one read-only field.
     pub group_address_style: String,
-    /// RFC3339 timestamp of the last successful save in this session, or
-    /// `None` if this session has never saved. Always `None` straight out
+    /// RFC3339 timestamp of the last successful save of the project
+    /// currently open, or `None` if it has not been saved since it was
+    /// created, opened or imported. Always `None` straight out
     /// of [`build_project_tree`] — this crate never sees the application's
     /// save bookkeeping. The desktop shell overlays the real value from its
     /// own `last_saved_at` state, in lockstep with `is_modified` (both are

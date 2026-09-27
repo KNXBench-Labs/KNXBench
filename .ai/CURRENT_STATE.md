@@ -1,4 +1,28 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 00:00 CEST
+- **Completed:** PDB-10 **preflight only**, no production code. A read-only aggregate probe of baggage index and payload shape is recorded in `docs/PRODUCT_DATABASE_CORPUS.md` §"PDB-10 preflight". Findings:
+  - 777 `Baggage` declarations in 38 `Baggages.xml`.
+    - The grammar is exactly `Baggage/FileInfo`.
+    - Attributes: `@Id`/`@Name`/`@TargetPath` on all, `@InstallOnImport` on 129 (`true`/`false`/`0`), `FileInfo/@TimeInfo` on all, `@Version` on 2.
+  - All 777 resolve exactly to `M-XXXX/Baggages/<TargetPath>/<Name>`. 13 of the 790 payloads are undeclared.
+  - Magic bytes contradict extensions: 35 BMPs are named `.png`, and the 11 `.ai` files are PDF. There is 1 PE (`.dll`) and 1 OLE2 (`.msi`).
+  - No encryption. The 37 nested ZIPs have 7,144 entries, no deeper nesting, and at most 317,240 bytes expanded. The largest payload is 2.1 MB; the largest XML member is 54.8 MB.
+- **Pending/Next Steps:** **PDB-10 implementation**, paused at the work-package boundary because the weekly quota is at 89% (the user's ceiling is 95%). When resumed:
+  - (1) Reconcile the documented "1,728 baggage declarations" with the probe's 777 per distinct package (different counting unit).
+  - (2) Design a typed inventory table (schema v16): declaration id/name/target path/install-on-import (raw)/time info/version, resolved member sha256, content-sniffed media class, declared vs expanded size, nested-ZIP entry count/expanded size read from the central directory only, encryption flag.
+  - (3) Report undeclared payloads and unresolved declarations instead of hiding them.
+  - (4) Bounded-memory coverage for the 24.2/54.8 MB XML members.
+  - (5) Never execute or extract.
+  - (6) Then PDB-11, web leftovers, open issues, manual, alpha release, final review.
+- **Notes for Codex or Claude:**
+  - The probe script is `$TMPDIR/pdb10_probe.py` (Hermes profile scratch, prunable; the doc section is the durable record).
+  - The spec KB (`Project Schema23` §4.2) only says each `Baggage` is an external file. Attribute semantics are unspecified `[A]`.
+  - The two `iaw-settling-delay` entries in this file's working tree belong to another session; they were left uncommitted and untouched.
+  - `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 01:10 CEST
 - **Completed:** **PDB-9 merged as `3643e90`** and pushed (`81922d1` feature, `b1970ca` review fixes, `90e3d49` matrix re-pin). The productdb schema is now **v15** ([ADR-0041](../docs/adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)). What changed:
   - **Parameter kinds.** `TypeColor` (115 in the corpus) and `TypeTime` (17) are now stored as kinds `Color`/`Time`.

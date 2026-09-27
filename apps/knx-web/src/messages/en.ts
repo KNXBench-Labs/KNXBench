@@ -572,6 +572,7 @@ export const messages = {
   "catalog.installReport.category.baggage": "Baggage",
   "catalog.installReport.category.unknownConstruct": "Unknown construct",
   "catalog.installReport.category.masterSection": "Master section",
+  "catalog.installReport.category.masterSubtree": "Master subtree",
   "catalog.installReport.category.datapointType": "Datapoint type",
   "catalog.installReport.disposition.read": "Read",
   "catalog.installReport.disposition.stored": "Stored",
@@ -582,8 +583,11 @@ export const messages = {
   "catalog.installReport.unknownKind.element": "Element",
   "catalog.installReport.unknownKind.attribute": "Attribute",
   "catalog.installReport.diagnosticKind.unsupportedMasterSection": "Unsupported master section",
+  "catalog.installReport.diagnosticKind.unsupportedMasterSubtree": "Uninterpreted master subtree",
   "catalog.installReport.diagnosticKind.unsupportedBaggageIndex": "Unsupported baggage index",
   "catalog.installReport.diagnostic.unsupportedMasterSection": "A master-data section was retained but not interpreted.",
+  "catalog.installReport.diagnostic.unsupportedMasterSubtree":
+    "Part of a supported master-data section was retained but not interpreted.",
   "catalog.installReport.diagnostic.unsupportedBaggageIndex": "A baggage index was retained but not interpreted.",
 
   "catalog.installReport.factsUnavailable": "Install facts unavailable for this historical install",

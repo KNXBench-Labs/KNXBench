@@ -110,6 +110,9 @@ pub enum InstallCategory {
     Baggage,
     UnknownConstruct,
     MasterSection,
+    /// PDB-8: an element subtree inside a *supported* master section that
+    /// the parser does not interpret (see `parse::master`).
+    MasterSubtree,
     DatapointType,
 }
 
@@ -127,6 +130,7 @@ impl InstallCategory {
             Self::Baggage => "baggage",
             Self::UnknownConstruct => "unknown_construct",
             Self::MasterSection => "master_section",
+            Self::MasterSubtree => "master_subtree",
             Self::DatapointType => "datapoint_type",
         }
     }
@@ -143,6 +147,7 @@ impl InstallCategory {
             "baggage" => Ok(Self::Baggage),
             "unknown_construct" => Ok(Self::UnknownConstruct),
             "master_section" => Ok(Self::MasterSection),
+            "master_subtree" => Ok(Self::MasterSubtree),
             "datapoint_type" => Ok(Self::DatapointType),
             _ => Err(ProductDbError::Xml {
                 source_path: "package_install_count".into(),
@@ -216,6 +221,7 @@ pub struct InstallDiagnostic {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InstallDiagnosticKind {
     UnsupportedMasterSection,
+    UnsupportedMasterSubtree,
     UnsupportedBaggageIndex,
 }
 
@@ -223,6 +229,7 @@ impl InstallDiagnosticKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::UnsupportedMasterSection => "unsupported-master-section",
+            Self::UnsupportedMasterSubtree => "unsupported-master-subtree",
             Self::UnsupportedBaggageIndex => "unsupported-baggage-index",
         }
     }
@@ -230,6 +237,7 @@ impl InstallDiagnosticKind {
     fn from_db(value: &str) -> Result<Self, ProductDbError> {
         match value {
             "unsupported-master-section" => Ok(Self::UnsupportedMasterSection),
+            "unsupported-master-subtree" => Ok(Self::UnsupportedMasterSubtree),
             "unsupported-baggage-index" => Ok(Self::UnsupportedBaggageIndex),
             _ => Err(report_error(format!("invalid diagnostic kind {value:?}"))),
         }
@@ -393,6 +401,28 @@ fn master_diagnostic_detail(section: &str) -> String {
     format!("master section {section} is retained but not interpreted")
 }
 
+/// `relative` is slash-joined below `/KNX/MasterData`; the detail names
+/// the subtree's root element, the path carries where it sits.
+pub(crate) fn master_subtree_diagnostic_detail(relative: &str) -> String {
+    let leaf = relative.rsplit('/').next().unwrap_or(relative);
+    format!("master subtree {leaf} is retained but not interpreted")
+}
+
+/// The one constructor for a subtree diagnostic, shared by install and the
+/// v13 -> v14 backfill so both write byte-identical rows.
+pub(crate) fn master_subtree_diagnostic(
+    archive_path: String,
+    subtree: &crate::parse::master::UninterpretedMasterSubtree,
+) -> Result<InstallDiagnostic, ProductDbError> {
+    InstallDiagnostic::new(
+        InstallDiagnosticKind::UnsupportedMasterSubtree,
+        archive_path,
+        format!("{MASTER_DIAGNOSTIC_PREFIX}{}", subtree.path),
+        master_subtree_diagnostic_detail(&subtree.path),
+        subtree.occurrences,
+    )
+}
+
 fn is_xml_local_name(name: &str) -> bool {
     let mut chars = name.chars();
     chars
@@ -447,6 +477,33 @@ fn validate_diagnostic(
             if diagnostic.detail != master_diagnostic_detail(section) {
                 return Err(report_error(
                     "unsupported-master-section diagnostic has noncanonical detail",
+                ));
+            }
+        }
+        InstallDiagnosticKind::UnsupportedMasterSubtree => {
+            if role != "Master" {
+                return Err(report_error(
+                    "unsupported-master-subtree diagnostic does not identify the Master member",
+                ));
+            }
+            let relative = diagnostic
+                .xml_path
+                .strip_prefix(MASTER_DIAGNOSTIC_PREFIX)
+                .filter(|relative| relative.split('/').all(is_xml_local_name))
+                .ok_or_else(|| {
+                    report_error("unsupported-master-subtree diagnostic has a noncanonical path")
+                })?;
+            // Parent interpreted, itself not: excludes interpreted structure,
+            // descendants of an uninterpreted root, and whole unsupported
+            // sections (whose parent `MasterData` is not on the list).
+            if !crate::parse::master::is_uninterpreted_master_subtree_root(relative) {
+                return Err(report_error(
+                    "unsupported-master-subtree diagnostic does not identify an uninterpreted subtree root",
+                ));
+            }
+            if diagnostic.detail != master_subtree_diagnostic_detail(relative) {
+                return Err(report_error(
+                    "unsupported-master-subtree diagnostic has noncanonical detail",
                 ));
             }
         }
@@ -1158,6 +1215,10 @@ const REQUIRED_COUNTS: &[(InstallCategory, InstallDisposition)] = &[
         InstallCategory::MasterSection,
         InstallDisposition::Unsupported,
     ),
+    (
+        InstallCategory::MasterSubtree,
+        InstallDisposition::Unsupported,
+    ),
     (InstallCategory::UnknownConstruct, InstallDisposition::Read),
     (
         InstallCategory::UnknownConstruct,
@@ -1397,6 +1458,24 @@ fn validate_facts(
             Ok(total)
         }
     })?;
+    let diagnostic_subtree = facts.diagnostics.iter().try_fold(0u64, |total, row| {
+        if row.kind == InstallDiagnosticKind::UnsupportedMasterSubtree {
+            total
+                .checked_add(row.occurrences)
+                .ok_or_else(|| report_error("master subtree diagnostic counter overflow"))
+        } else {
+            Ok(total)
+        }
+    })?;
+    if diagnostic_subtree
+        != count_of(
+            facts,
+            InstallCategory::MasterSubtree,
+            InstallDisposition::Unsupported,
+        )?
+    {
+        return Err(report_error("master subtree diagnostic/count mismatch"));
+    }
     let diagnostic_baggage = facts.diagnostics.iter().try_fold(0u64, |total, row| {
         if row.kind == InstallDiagnosticKind::UnsupportedBaggageIndex {
             total
@@ -2060,6 +2139,7 @@ pub fn install_package(
                 entities,
                 master_sections_read,
                 unsupported_sections,
+                uninterpreted_subtrees,
             } = master;
             if scheme == 21 {
                 crate::parse::scheme_evidence::reconcile_package_unknowns(
@@ -2104,6 +2184,17 @@ pub fn install_package(
                     master_diagnostic_detail(&unsupported.name),
                     unsupported.occurrences,
                 )?);
+            }
+            for subtree in &uninterpreted_subtrees {
+                add_count(
+                    &mut facts,
+                    InstallCategory::MasterSubtree,
+                    InstallDisposition::Unsupported,
+                    subtree.occurrences,
+                )?;
+                facts
+                    .diagnostics
+                    .push(master_subtree_diagnostic(path.clone(), subtree)?);
             }
         } else if role == "Baggages" {
             let index = crate::parse::baggage::parse_baggage_index(&path, &data)?;

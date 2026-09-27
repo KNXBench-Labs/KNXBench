@@ -141,10 +141,10 @@ fn reexport_metrics(left: &Project, right: &Project) -> ReexportMetrics {
 #[test]
 #[ignore = "requires the gitignored local OriginalData corpus; run explicitly"]
 fn measures_the_three_documented_correlation_gaps_without_guessing() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
 
     let ets4 = knx_etsproj::import_knxproj(&knx_testsupport::reference_ets4_path())
         .expect("reference ETS4 project imports")

@@ -34,11 +34,12 @@ fn reference_ets4_path() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn rendering_the_reference_project_produces_a_complete_self_contained_document() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
 
     let outcome = knx_etsproj::import_knxproj(&reference_ets4_path())
         .expect("the reference project is a known-good fixture");

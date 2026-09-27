@@ -75,6 +75,9 @@ jobs:
       - name: Anchor gate
         run: cargo run -p xtask -- check-anchors
 
+      - name: Corpus gate (a missing corpus is never a pass)
+        run: cargo run -p xtask -- check-corpus-gates
+
   deny:
     name: License and advisory gate
     runs-on: ubuntu-latest

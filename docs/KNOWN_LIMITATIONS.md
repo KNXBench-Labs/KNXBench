@@ -7773,8 +7773,25 @@ loudly when it discovers zero files.
 
 ## §131 Seventy-two corpus gates repo-wide still pass when the corpus is absent
 
-**Status.** Open (documented 2026-09-27). DIN-4 fixed ten of them; this entry
-records the remaining, larger population.
+**Status.** Resolved 2026-09-27 (branch `din-131-honest-corpus-gates`). The
+real population was larger than recorded below: `xtask check-corpus-gates`
+also found **17 sites under `apps/`** (`knx-cli`, `knx-server`) that the
+original `crates/`-only count missed. In total **89 early-return sites**
+were converted: 71 bare `return`s in `crates/`, 17 in `apps/`, and the
+`return None` in `enrichment_gap_measurement.rs`'s shared `import()` helper,
+which its four tests turned into a `return` of their own. Every one of them
+now `assert!`s the corpus probe, and **91 tests** gained
+`#[ignore = "requires the gitignored OriginalData/ corpus; run with
+--ignored"]` (70 + 4 in `crates/`, 17 in `apps/`). A machine without the
+corpus therefore reports them as *ignored*, and `--ignored` without the
+corpus fails loudly. `diff_correlation_measurement.rs`, already `#[ignore]`d,
+only lost its early return. `perf_baseline.rs` was left as is: it is `#[ignore]`d already
+and times the corpus import only as an optional extra over a synthetic
+project. `knx_testsupport::walk_corpus_files` now panics on `read_dir`,
+directory-entry and `file_type` errors instead of treating them as an empty
+subtree. `cargo run -p xtask -- check-corpus-gates` (also a CI step) rejects
+a negated corpus probe whose block returns early, so the idiom cannot come
+back unnoticed. The historical record follows.
 
 **Limitation.** The pattern
 

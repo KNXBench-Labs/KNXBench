@@ -300,11 +300,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_reference_project_has_no_datapoint_type_conflicts() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = infer_group_address_dpts(&reference_project());
         assert_eq!(
             out.conflicts,

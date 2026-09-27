@@ -220,11 +220,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_reference_project_information_is_read_verbatim() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/Project.xml").unwrap();
         let (info, unknown) =
@@ -237,11 +238,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn tool_state_attributes_are_retained_rather_than_modelled() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/Project.xml").unwrap();
         let (info, _) =

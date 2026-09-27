@@ -42,11 +42,12 @@ fn count(conn: &knx_productdb::Connection, sql: &str) -> i64 {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_reference_projects_manufacturer_data_ingests_completely() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = ingest_all();
     assert_eq!(count(&conn, "SELECT count(*) FROM manufacturer"), 4);
     assert_eq!(count(&conn, "SELECT count(*) FROM source_file"), 24);
@@ -64,21 +65,23 @@ fn the_reference_projects_manufacturer_data_ingests_completely() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn every_blob_verifies_against_its_own_hash() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = ingest_all();
     assert_eq!(knx_productdb::verify(&conn).unwrap(), vec![]);
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn a_second_ingest_of_the_same_files_stores_nothing_new() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = ingest_all();
     let before = count(&conn, "SELECT count(*) FROM source_file");
     for (path, bytes) in manufacturer_files() {
@@ -91,11 +94,12 @@ fn a_second_ingest_of_the_same_files_stores_nothing_new() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     // Not zero — this is one manufacturer sample of four vendors, and an
     // unmodelled attribute is expected. What matters is that every one is
     // on record and that the result stays reviewable, which takes three
@@ -193,11 +197,12 @@ fn ref_id_from_oracle_key(key: &str) -> Option<&str> {
 /// overrides do not exist in the reference project, which RESEARCH already
 /// measured to be false).
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn com_object_texts_and_datapoint_types_agree_with_the_oracle_at_a_high_rate() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     // The oracle is a second local-only artefact, and it does not live under
     // `OriginalData/`, so the guard above says nothing about it. Checking the
     // corpus and then unwrapping the dump panics on exactly one setup: a

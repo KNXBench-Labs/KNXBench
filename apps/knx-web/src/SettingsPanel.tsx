@@ -213,6 +213,10 @@ export default function SettingsPanel(props: {
   productLanguages: readonly ProductLanguage[];
   activeProductLanguage: string | null;
   onSelectProductLanguage: (language: string | null) => void;
+  autosaveEnabled: boolean;
+  onSelectAutosaveEnabled: (enabled: boolean) => void;
+  autosaveIntervalMinutes: number;
+  onSelectAutosaveIntervalMinutes: (minutes: number) => void;
   onClose: () => void;
 }) {
   const {
@@ -228,6 +232,10 @@ export default function SettingsPanel(props: {
     productLanguages,
     activeProductLanguage,
     onSelectProductLanguage,
+    autosaveEnabled,
+    onSelectAutosaveEnabled,
+    autosaveIntervalMinutes,
+    onSelectAutosaveIntervalMinutes,
     onClose,
   } = props;
 
@@ -482,6 +490,32 @@ export default function SettingsPanel(props: {
           </ul>
         )}
       </div>
+      </section>
+      <section className="settings-section settings-section-autosave">
+        <h3>{t("settings.section.autosave")}</h3>
+        <label className="settings-field settings-field-checkbox">
+          <input
+            type="checkbox"
+            checked={autosaveEnabled}
+            onChange={(e) => onSelectAutosaveEnabled(e.target.checked)}
+          />
+          <span className="settings-field-label">{t("settings.autosaveEnabled")}</span>
+        </label>
+        <label className="settings-field">
+          <span className="settings-field-label">{t("settings.autosaveIntervalMinutes")}</span>
+          <input
+            type="number"
+            min={1}
+            max={120}
+            value={autosaveIntervalMinutes}
+            disabled={!autosaveEnabled}
+            aria-label={t("settings.autosaveIntervalMinutes")}
+            onChange={(e) => {
+              const parsed = Number(e.target.value);
+              if (Number.isFinite(parsed)) onSelectAutosaveIntervalMinutes(parsed);
+            }}
+          />
+        </label>
       </section>
       <section className="settings-section settings-section-bus">
         <h3>{t("settings.section.busDiagnostics")}</h3>

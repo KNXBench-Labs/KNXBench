@@ -36,6 +36,15 @@ pub struct AppState {
     /// save operation. This session-only snapshot is compared with `project`
     /// and is never written as separate `.knxdb` metadata.
     pub clean_project: Mutex<Option<knx_core::Project>>,
+    /// RFC3339 timestamp (`session_log::now()`'s own format) of the last
+    /// successful `save_project`/`save_project_as`, or `None` if this
+    /// session has never saved. Set in lockstep with `clean_project` — both
+    /// are the save's authoritative record, so a failed save (or a failed
+    /// autosave, which calls the exact same functions) leaves this
+    /// unchanged along with it. Never derived from wall-clock elapsed time
+    /// client-side; the server is the only clock the UI's status bar
+    /// trusts, same reasoning as `session_log`'s own timestamps.
+    pub last_saved_at: Mutex<Option<String>>,
     /// The `.knxdb` file the in-memory project was last saved to or loaded
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
@@ -154,6 +163,7 @@ impl AppState {
         Self {
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
+            last_saved_at: Mutex::new(None),
             store_path: Mutex::new(None),
             opaque: Mutex::new(Vec::new()),
             manufacturer_refs: Mutex::new(Vec::new()),
@@ -690,6 +700,7 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
         let project = project.as_ref().ok_or("no project open")?;
         let mut store_path = state.store_path.lock().expect("state mutex poisoned");
         let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+        let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
         let opaque = state.opaque.lock().expect("state mutex poisoned");
         let manufacturer_refs = state
             .manufacturer_refs
@@ -698,6 +709,7 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
         save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
         *store_path = Some(path.to_path_buf());
         *clean_project = Some(project.clone());
+        *last_saved_at = Some(session_log::now());
         next_project_revision(state);
         Ok(())
     })();
@@ -733,6 +745,7 @@ fn save_project_with(
         .as_deref()
         .ok_or("no save location yet — use Save As")?;
     let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let opaque = state.opaque.lock().expect("state mutex poisoned");
     let manufacturer_refs = state
         .manufacturer_refs
@@ -740,6 +753,7 @@ fn save_project_with(
         .expect("state mutex poisoned");
     write(path, project, &opaque, &manufacturer_refs)?;
     *clean_project = Some(project.clone());
+    *last_saved_at = Some(session_log::now());
     next_project_revision(state);
     Ok(())
 }
@@ -1304,6 +1318,7 @@ fn tree_with_state(
     import_counts: (usize, usize),
     snapshot_revision: u64,
     server_incarnation: &str,
+    last_saved_at: Option<&str>,
 ) -> knx_projection::ProjectTree {
     let mut tree = knx_projection::build_project_tree(project);
     tree.errors = import_counts.0;
@@ -1313,6 +1328,7 @@ fn tree_with_state(
     tree.is_modified = project_is_modified(project, clean_project);
     tree.server_incarnation = Some(server_incarnation.to_owned());
     tree.snapshot_revision = Some(snapshot_revision);
+    tree.last_saved_at = last_saved_at.map(str::to_owned);
     tree
 }
 
@@ -1394,6 +1410,7 @@ fn replace_project_state_transaction(
     let mut import_counts = state.import_counts.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
     let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let mut opaque = state.opaque.lock().expect("state mutex poisoned");
     let mut manufacturer_refs = state
         .manufacturer_refs
@@ -1420,6 +1437,7 @@ fn replace_project_state_transaction(
         *import_counts,
         next_project_revision(state),
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     ))
 }
 
@@ -1443,6 +1461,7 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
         .expect("state mutex poisoned")
         .is_some();
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     Ok(CurrentProject {
         tree: tree_with_state(
             project,
@@ -1451,6 +1470,7 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
             import_counts,
             current_project_revision(state),
             &state.server_incarnation,
+            last_saved_at.as_deref(),
         ),
         has_store_path,
     })
@@ -1468,6 +1488,7 @@ pub(crate) fn current_project_tree_and_group_address_context(
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let tree = tree_with_state(
         project,
         clean_project.as_ref(),
@@ -1475,6 +1496,7 @@ pub(crate) fn current_project_tree_and_group_address_context(
         import_counts,
         current_project_revision(state),
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     );
     let context = crate::bus::GroupAddressContext::from_project(Some(project));
     Ok((tree, context))
@@ -1486,6 +1508,7 @@ fn current_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String>
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     Ok(tree_with_state(
         project,
         clean_project.as_ref(),
@@ -1493,6 +1516,7 @@ fn current_tree(state: &AppState) -> Result<knx_projection::ProjectTree, String>
         counts,
         current_project_revision(state),
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     ))
 }
 
@@ -1532,6 +1556,7 @@ fn apply_with_expected_revision(
     let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let revision = if result.is_ok() {
         next_project_revision(state)
     } else {
@@ -1544,6 +1569,7 @@ fn apply_with_expected_revision(
         import_counts,
         revision,
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     );
 
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
@@ -2331,6 +2357,7 @@ pub fn create_device_impl(
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     Ok(CreateDeviceResponse {
         tree: tree_with_state(
             project,
@@ -2339,6 +2366,7 @@ pub fn create_device_impl(
             import_counts,
             next_project_revision(state),
             &state.server_incarnation,
+            last_saved_at.as_deref(),
         ),
         diagnostics,
     })
@@ -2394,6 +2422,7 @@ pub fn reconcile_scan_impl(
     if selected_unexpected.is_empty() && selected_missing.is_empty() {
         let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
         let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+        let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
         return Ok(tree_with_state(
             project,
             clean_project.as_ref(),
@@ -2401,6 +2430,7 @@ pub fn reconcile_scan_impl(
             import_counts,
             current_project_revision(state),
             &state.server_incarnation,
+            last_saved_at.as_deref(),
         ));
     }
 
@@ -2484,6 +2514,7 @@ pub fn reconcile_scan_impl(
         .map_err(|error| error.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let revision = if result.is_ok() {
         next_project_revision(state)
     } else {
@@ -2496,6 +2527,7 @@ pub fn reconcile_scan_impl(
         import_counts,
         revision,
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     );
     log_outcome(
         state,
@@ -2608,6 +2640,7 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.undo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let revision = if result.is_ok() {
         next_project_revision(state)
     } else {
@@ -2620,6 +2653,7 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
         import_counts,
         revision,
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     );
     log_outcome(state, "undo", "undo".to_string(), None, &result);
     result.map(|()| tree)
@@ -2632,6 +2666,7 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.redo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let revision = if result.is_ok() {
         next_project_revision(state)
     } else {
@@ -2644,6 +2679,7 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
         import_counts,
         revision,
         &state.server_incarnation,
+        last_saved_at.as_deref(),
     );
     log_outcome(state, "redo", "redo".to_string(), None, &result);
     result.map(|()| tree)

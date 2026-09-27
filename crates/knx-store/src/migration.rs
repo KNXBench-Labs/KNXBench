@@ -928,6 +928,7 @@ mod tests {
                 links: vec![],
                 module_instance: None,
             });
+            crate::project::cover_ids_in_use(&mut project);
             crate::project::save_project(&conn, &project).unwrap();
 
             // Back to a genuine v7 shape: v8 is a no-DDL placeholder and v9's

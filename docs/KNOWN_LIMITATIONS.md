@@ -7709,9 +7709,22 @@ tokio's multi-threaded runtime.
 with no diagnostic. It needs two concurrent edits against one project, so
 it is rare with one user and one browser tab.
 
+**Partly mitigated (ADR-0039 phase 1, DIN-11, 2026-09-27).** Every
+id-inserting command (`CreateDevice` and its com objects, `CreateArea`,
+`CreateLine`, `CreateGroupRange`, `CreateGroupAddress`,
+`CreateBuildingPart`, a new-instance `SetParameterValue`) now refuses an id
+already in use with `CommandError::IdInUse`, so the appendix interleaving
+ends in a typed refusal and a `Batch` rollback instead of a silent loss on
+save (`crates/knx-app/tests/id_allocation_integrity.rs`, which fails with the
+check removed **[V]**). `Command::ReserveIds` exists, and `load_project`
+raises a stored counter below an id in use and reports it
+(`load_project_reporting`; the server logs a warning on open). Not yet done:
+the CSV planner and scan reconciliation still emit the rewinding
+`SetIdAllocators`, so a stale plan is *refused* rather than applied, and the
+user has to retry (phase 2).
+
 **Lifted when.** [ADR-0039](adr/0039-project-mutation-goes-through-commands.md)
-(Proposed, awaiting Board approval) is accepted and its phases 1 and 2 are
-merged: every id-inserting command refuses an id in use, allocation goes
+(Accepted) has its phases 1 and 2 merged: every id-inserting command refuses an id in use, allocation goes
 through a never-rewinding `ReserveIds`, and the CSV plan/apply window is
 closed. Phases 3–5 then remove the nine live bypass points and add the
 `check-project-mutation` gate. Until then this entry stays open.

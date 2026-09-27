@@ -109,6 +109,23 @@ impl IdAllocators {
         self.module_instance
     }
 
+    /// Raises every counter to at least `other`'s and never lowers one —
+    /// `Command::ReserveIds`'s semantics (ADR-0039 Decision 2). Returns
+    /// whether any counter moved.
+    pub fn raise_to(&mut self, other: &IdAllocators) -> bool {
+        let before = self.clone();
+        self.device = self.device.max(other.device);
+        self.area = self.area.max(other.area);
+        self.line = self.line.max(other.line);
+        self.com_object_instance = self.com_object_instance.max(other.com_object_instance);
+        self.group_range = self.group_range.max(other.group_range);
+        self.group_address = self.group_address.max(other.group_address);
+        self.building_part = self.building_part.max(other.building_part);
+        self.parameter_instance = self.parameter_instance.max(other.parameter_instance);
+        self.module_instance = self.module_instance.max(other.module_instance);
+        *self != before
+    }
+
     /// Reconstructs an `IdAllocators` at exactly the counts given —
     /// `knx-store::load_project`'s way of restoring allocator state so a
     /// freshly loaded project never reissues an id already in use.

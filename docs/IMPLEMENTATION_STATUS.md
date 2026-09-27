@@ -1,5 +1,55 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — DIN-11: ADR-0039 phase 1, a duplicate id is refused instead of saved away
+
+[ADR-0039](adr/0039-project-mutation-goes-through-commands.md) is now
+**Accepted**, and its phase 1 backstop is built. `knx-core`:
+`check_id_free` runs at the top of every id-inserting `Command::apply` arm —
+`CreateDevice` (device and each com object, including a duplicate inside the
+same command), `CreateArea`, `CreateLine`, `CreateGroupRange`,
+`CreateGroupAddress`, `CreateBuildingPart` and the new-instance branch of
+`SetParameterValue` — and returns the new `CommandError::IdInUse { kind,
+id }`. Ids are project-unique, so the check searches every installation.
+Inverse forms re-inserting an id their own forward command freed pass
+naturally, so undo/redo is unchanged. The new `Command::ReserveIds {
+through }` raises each counter to at least `through`'s and never lowers
+one; it is its own inverse (`IdAllocators::raise_to`). `knx-store`:
+`load_project` now raises a stored counter below the largest stored id of
+its kind (Decision 7), and `load_project_reporting` returns the
+`AllocatorRepair`; the server's open path logs it as a session-log warning.
+No schema change (still v9); no caller migrated yet.
+
+A failed `Batch` now also restores `project.ids`: rollback is not undo, so a
+reservation made inside a refused batch does not consume ids.
+`save_project_if_unchanged` compares the *repaired* stored project with the
+(repaired) expected one, so a stale-counter file stays saveable; the CLI's
+`ga-import` prints the repair to stderr.
+
+Tests: 17 `knx-core` unit tests (`id_integrity_tests`: one refusal per
+command kind, an id held in a second installation, a parameter row in a
+second installation not bypassing the check, same-command duplicate com
+objects, parameter overwrite vs. new instance, undo/redo re-creation,
+`ReserveIds` raise/never-lower/self-inverse, a failed batch rolling back its
+own reservation); three `knx-store` tests (load repair, no repair, a repaired
+project saved through `save_project_if_unchanged`); two server tests (repair
+logged on open, consistent file logs nothing); and the
+ADR appendix scenario end to end in
+`knx-app/tests/id_allocation_integrity.rs` — stale CSV plan → interleaved
+create → refused `IdInUse`, project unchanged, re-plan succeeds, both group
+addresses survive save/load. With the `CreateGroupAddress` check removed that
+test fails **[V]**. An independent review found three IMPORTANT defects
+(a false `ConcurrentModification` in save-if-unchanged for a repaired file, a
+failed batch keeping its own reservation, and the parameter check scoped wider
+than the upsert). All three were fixed test-first, and each new test failed
+before its fix **[V]**. Seven `knx-store` fixtures that hand-built projects with
+counters below their own ids now call a `cfg(test)` `cover_ids_in_use`, since
+load would otherwise (correctly) repair them.
+
+Still open (KNOWN_LIMITATIONS §129 stays open): phase 2 moves `knx-csv`'s
+planner and the server's scan reconciliation from `SetIdAllocators` to
+`ReserveIds` and closes the CSV plan/apply window — until then a stale plan is
+refused and the user retries, rather than being lost.
+
 ## 2026-09-26 — ISSUE-06 (DIN-16): a site is a `Ground` root, decided rather than built
 
 [ADR-0038](adr/0038-site-is-a-ground-root-space.md) answers the user report

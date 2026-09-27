@@ -231,6 +231,16 @@ fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
 /// Panics if more than one does — naming a fixture by its filename only
 /// makes sense while that name is unique; silently picking one of several
 /// candidates would be a worse failure than refusing outright.
+///
+/// # Known weakness
+///
+/// The traversal in [`walk_corpus_files`] treats an unreadable directory as an
+/// empty one: `read_dir` and `file_type` errors (permission denied, I/O
+/// failure, a directory vanishing mid-walk) are discarded rather than
+/// reported. A partially inaccessible corpus therefore looks like a smaller
+/// corpus. Callers that measure the whole corpus, rather than resolving one
+/// named fixture, can silently measure a subset. Tracked as
+/// `docs/KNOWN_LIMITATIONS.md` §131.
 pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
     let mut matches: Vec<PathBuf> = walk_corpus_files(root)
         .into_iter()

@@ -37,6 +37,10 @@ use knx_core::commissioning::error_code::{read_error_code, ErrorCodeReadError, S
 use knx_core::commissioning::load_control::{
     event_payload, LoadControlPayload, LOAD_CONTROL_NR_OF_ELEM, LOAD_CONTROL_START_INDEX,
 };
+use knx_core::commissioning::load_control_memory::{
+    loads_through_memory, MemoryLoadRecord, MemoryLoadStateMachine, LOAD_STATE_READ_ATTEMPTS,
+    MANAGEMENT_CONTROL_ADDRESS,
+};
 use knx_core::commissioning::load_state::{
     permitted_outcomes, LoadEvent, LoadState, MaskVersion, PermittedOutcomes, Stimulus,
     UnknownLoadState,
@@ -516,6 +520,62 @@ pub enum SessionError {
         /// How many octets the response carried.
         got: usize,
     },
+    /// A memory-mapped load record was about to go to a device whose mask
+    /// is unknown or is not `070nh`.
+    ///
+    /// `[D]` MP §3.31.2: *"This Management Procedure shall only be used with
+    /// device model for mask version 070nh (BIM M112)."* Writing eleven
+    /// octets to `0104h` on any other device is a write to whatever that
+    /// device keeps there, so an unknown mask is refused too.
+    LoadNotMemoryMapped {
+        /// The mask the session knows, if any.
+        mask: Option<MaskVersion>,
+    },
+    /// A memory-mapped load record was about to go out on a connection with
+    /// Verify Mode set.
+    ///
+    /// `[D]` MP §3.31.2: *"The Verify Mode of the Management Server shall
+    /// not be used."* [`ManagementSession::connect`] leaves it alone once the
+    /// session knows the mask is `070nh`; this is the session that learned
+    /// the mask only after connecting.
+    VerifyModeWithMemoryLoad,
+    /// A memory-mapped Load State Machine had not reached a final state
+    /// RES Table 94 permits after MP §3.31.2's three reads.
+    ///
+    /// The memory-mapped twin of [`SessionError::StateUnchanged`] and
+    /// [`SessionError::TransitionTimedOut`], with the machine named as MP
+    /// §3.31.2 names it: a BIM M112 keeps its load states in memory, not in
+    /// interface objects, so an object index here would name something the
+    /// device does not have. `last == from` is the device that never moved.
+    MemoryLoadNotSettled {
+        /// Which machine.
+        machine: MemoryLoadStateMachine,
+        /// The event that was written.
+        event: LoadEvent,
+        /// The state before the write.
+        from: LoadState,
+        /// The state the last read returned.
+        last: LoadState,
+    },
+    /// A memory-mapped load state read returned other than one octet.
+    MalformedMemoryLoadState {
+        /// Which machine.
+        machine: MemoryLoadStateMachine,
+        /// How many octets came back.
+        got: usize,
+    },
+    /// A memory-mapped Load State Machine reported a state RES Table 94
+    /// does not permit: MP §3.31.2's *"Wrong state ⇒ error"*.
+    MemoryLoadIllegalTransition {
+        /// Which machine.
+        machine: MemoryLoadStateMachine,
+        /// The event that was written.
+        event: LoadEvent,
+        /// The state before the write.
+        from: LoadState,
+        /// The state read back.
+        observed: LoadState,
+    },
 }
 
 impl From<BusError> for SessionError {
@@ -707,6 +767,57 @@ impl fmt::Display for SessionError {
                 f,
                 "A_Restart_Response carried {got} octets, not the Error Code plus \
                  two-octet Process Time MP §3.7.1.2.2 expects"
+            ),
+            SessionError::LoadNotMemoryMapped { mask } => match mask {
+                Some(mask) => write!(
+                    f,
+                    "mask {mask} does not take load events through memory: MP §3.31.2 \
+                     is for mask 070nh (BIM M112) only"
+                ),
+                None => f.write_str(
+                    "the device's mask is unknown, so a memory-mapped load record \
+                     (MP §3.31.2, mask 070nh only) was not sent",
+                ),
+            },
+            SessionError::VerifyModeWithMemoryLoad => f.write_str(
+                "Verify Mode is set on this connection, and MP §3.31.2 forbids it for a \
+                 memory-mapped load: reconnect with the mask known",
+            ),
+            SessionError::MemoryLoadNotSettled {
+                machine,
+                event,
+                from,
+                last,
+            } if from == last => write!(
+                f,
+                "the {machine} load state still read {last} after {event} and \
+                 {LOAD_STATE_READ_ATTEMPTS} reads (MP §3.31.2): the device may have \
+                 dropped the record"
+            ),
+            SessionError::MemoryLoadNotSettled {
+                machine,
+                event,
+                from,
+                last,
+            } => write!(
+                f,
+                "the {machine} load state went from {from} to {last} on {event} and \
+                 had not settled after {LOAD_STATE_READ_ATTEMPTS} reads (MP §3.31.2)"
+            ),
+            SessionError::MalformedMemoryLoadState { machine, got } => write!(
+                f,
+                "the {machine} load state read returned {got} octets, not the one \
+                 MP §3.31.2 reads"
+            ),
+            SessionError::MemoryLoadIllegalTransition {
+                machine,
+                event,
+                from,
+                observed,
+            } => write!(
+                f,
+                "the {machine} load state went from {from} to {observed} on {event}, \
+                 which RES Table 94 does not permit"
             ),
         }
     }
@@ -1279,7 +1390,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             authorise_requests: 0,
         });
         self.authorise().await?;
-        if self.authorisation.is_some() {
+        // `[D]` MP §3.31.2: *"The Verify Mode of the Management Server shall
+        // not be used"* by `DMP_LoadStateMachineWrite_RCo_Mem`, the load
+        // procedure of mask `070nh`. Only a session that may load is that
+        // procedure; an address write or a restart on the same device is
+        // not, and keeps Verify Mode as before.
+        let memory_mapped_load = self.mask.is_some_and(loads_through_memory)
+            && matches!(
+                self.session_scope(),
+                Some(WriteScope::Download | WriteScope::Unload)
+            );
+        if self.authorisation.is_some() && !memory_mapped_load {
             self.assert_verify_mode().await?;
         }
         Ok(())
@@ -2037,26 +2158,128 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             .await
     }
 
+    /// Writes one memory-mapped load record and checks what the Load State
+    /// Machine did with it: MP §3.31.2 `DMP_LoadStateMachineWrite_RCo_Mem`,
+    /// the procedure mask `070nh` (BIM M112) takes instead of
+    /// [`Self::write_load_event`]'s property write.
+    ///
+    /// MP's sequence has no read before the write; this one reads the state
+    /// once first, because RES Table 94 says which state may follow only
+    /// relative to the one before. It is a read, and a failed one sends
+    /// nothing. After the write the state is read *"until loadstate is
+    /// correct (for max. 3 times)"*, [`SessionTiming::poll_interval`] apart —
+    /// MP gives no interval, so the property procedure's is reused. A state
+    /// Table 94 does not permit ends the procedure at once (*"Wrong state ⇒
+    /// error"*), and so does a lost connection (*"A_Disconnect.ind ⇒
+    /// error"*): unlike [`Self::write_load_event`], nothing here
+    /// re-establishes one, because MP §3.31.2 does not.
+    ///
+    /// The record goes out as one `A_Memory_Write` with no read-back of
+    /// `0104h`. MP reads back the load state and nothing else, and what a
+    /// device keeps in its management control after taking a record is not
+    /// documented.
+    pub async fn write_memory_load_record(
+        &mut self,
+        record: MemoryLoadRecord,
+    ) -> Result<LoadState, SessionError> {
+        let event = record.event();
+        self.authorise_write(self.load_event_scope(event))?;
+        if !self.mask.is_some_and(loads_through_memory) {
+            return Err(SessionError::LoadNotMemoryMapped { mask: self.mask });
+        }
+        let verify = self
+            .connection
+            .map(|state| state.verify_mode)
+            .ok_or(SessionError::NotConnected)?;
+        if verify == VerifyMode::Active {
+            return Err(SessionError::VerifyModeWithMemoryLoad);
+        }
+        let machine = record.machine();
+        let before = self.read_memory_load_state(machine).await?;
+        self.send_acknowledged(
+            ApplicationService::MemoryWrite {
+                address: MANAGEMENT_CONTROL_ADDRESS,
+                data: record.octets().to_vec(),
+            },
+            "a T_ACK for the load record",
+        )
+        .await?;
+        let outcomes = permitted_outcomes(before, Stimulus::Event(event), self.mask);
+        let mut last = before;
+        for _ in 0..LOAD_STATE_READ_ATTEMPTS {
+            tokio::time::sleep(self.timing.poll_interval).await;
+            last = self.read_memory_load_state(machine).await?;
+            // *"Correct"* is a final state Table 94 permits. Checked first,
+            // because some events end where they started — `Unload` from
+            // `Unloaded` — and that is an answer, not a device that has not
+            // moved yet.
+            if last == outcomes.recommended() || outcomes.alternatives().contains(&last) {
+                return Ok(last);
+            }
+            // On the way, or not started: read again.
+            if outcomes.intermediate().contains(&last) || last == before {
+                continue;
+            }
+            return Err(SessionError::MemoryLoadIllegalTransition {
+                machine,
+                event,
+                from: before,
+                observed: last,
+            });
+        }
+        Err(SessionError::MemoryLoadNotSettled {
+            machine,
+            event,
+            from: before,
+            last,
+        })
+    }
+
+    /// One read of a memory-mapped load state, at the address MP §3.31.2
+    /// names for the machine.
+    async fn read_memory_load_state(
+        &mut self,
+        machine: MemoryLoadStateMachine,
+    ) -> Result<LoadState, SessionError> {
+        let address = u32::from(machine.load_state_address());
+        let octets = self
+            .read_memory_as(MemoryService::Memory, address, 1)
+            .await?;
+        let [octet] = octets[..] else {
+            return Err(SessionError::MalformedMemoryLoadState {
+                machine,
+                got: octets.len(),
+            });
+        };
+        LoadState::from_octet(octet).map_err(SessionError::UnknownLoadState)
+    }
+
+    /// The scope a load event is written under.
+    ///
+    /// An `Unload` is its own scope when it is the point of the operation —
+    /// the standalone procedure of §7.5 — and part of the download when the
+    /// download is the point: `[D]` CP §3.5.2 step 05 unloads every part
+    /// *inside* the complete download, so an operator who authorised a
+    /// download to this device authorised that. No other scope reaches an
+    /// unload, and a download authorisation still reaches nothing but a
+    /// download.
+    fn load_event_scope(&self, event: LoadEvent) -> WriteScope {
+        match event {
+            LoadEvent::Unload if self.session_scope() == Some(WriteScope::Download) => {
+                WriteScope::Download
+            }
+            LoadEvent::Unload => WriteScope::Unload,
+            _ => WriteScope::Download,
+        }
+    }
+
     async fn write_load_control(
         &mut self,
         object_index: ObjectIndex,
         event: LoadEvent,
         payload: LoadControlPayload,
     ) -> Result<LoadState, SessionError> {
-        let scope = match event {
-            // An `Unload` is its own scope when it is the point of the
-            // operation — the standalone procedure of §7.5 — and part of the
-            // download when the download is the point: `[D]` CP §3.5.2 step
-            // 05 unloads every part *inside* the complete download, so an
-            // operator who authorised a download to this device authorised
-            // that. No other scope reaches an unload, and a download
-            // authorisation still reaches nothing but a download.
-            LoadEvent::Unload if self.session_scope() == Some(WriteScope::Download) => {
-                WriteScope::Download
-            }
-            LoadEvent::Unload => WriteScope::Unload,
-            _ => WriteScope::Download,
-        };
+        let scope = self.load_event_scope(event);
         self.authorise_write(scope)?;
         let before = self.read_load_state(object_index).await?;
         let payload = payload.octets().to_vec();
@@ -2601,6 +2824,10 @@ mod tests {
     use super::*;
     use crate::cemi::LDataFrame;
     use knx_core::commissioning::authorisation::AccessKey;
+    use knx_core::commissioning::load_control_memory::{
+        abs_data_segment, abs_task_segment, event_record, AbsoluteSegment, MemoryLoadStateMachine,
+        SegmentMemoryType, TaskSegment,
+    };
     use knx_core::commissioning::programming_mode::CURR_PROG_MODE_ADDRESS;
     use std::ops::Range;
 
@@ -4230,6 +4457,295 @@ mod tests {
             device.load_state(ObjectIndex::APPLICATION_PROGRAM),
             LoadState::Loading
         );
+    }
+
+    // ------------------------------------- memory-mapped load (mask 070nh)
+
+    const BIM_M112: MaskVersion = MaskVersion(0x0701);
+
+    fn bim_m112() -> SimulatedDevice {
+        SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: BIM_M112.0,
+            ..SimulatorConfig::default()
+        })
+    }
+
+    fn memory_reads_at(device: &SimulatedDevice, address: u32) -> usize {
+        device
+            .seen()
+            .iter()
+            .filter(|entry| matches!(entry, Seen::MemoryRead { address: at, .. } if *at == address))
+            .count()
+    }
+
+    /// MP §3.31.2's sequence, octet for octet: the record goes to `0104h`
+    /// as one eleven-octet `A_Memory_Write`, and the state comes back from
+    /// `B6EAh` — never through `PID_LOAD_STATE_CONTROL`.
+    #[tokio::test]
+    async fn a_memory_mapped_unload_goes_to_0104_and_is_read_back_from_b6ea() {
+        let device = bim_m112();
+        device.preset_load_state(ObjectIndex::ADDRESS_TABLE, LoadState::Loaded);
+        let mut session = writer(&device, WriteScope::Download).with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+
+        let record = event_record(MemoryLoadStateMachine::AddressTable, LoadEvent::Unload)
+            .expect("Unload is a plain event");
+        let state = session
+            .write_memory_load_record(record)
+            .await
+            .expect("Unload from Loaded ends in Unloaded");
+
+        assert_eq!(state, LoadState::Unloaded);
+        assert_eq!(
+            device.load_state(ObjectIndex::ADDRESS_TABLE),
+            LoadState::Unloaded
+        );
+        let mut expected = vec![0u8; 11];
+        expected[0] = 0x14;
+        let writes: Vec<Seen> = device
+            .seen()
+            .into_iter()
+            .filter(|entry| matches!(entry, Seen::MemoryWrite { .. }))
+            .collect();
+        assert_eq!(
+            writes,
+            vec![Seen::MemoryWrite {
+                address: 0x0104,
+                data: expected,
+                service: MemoryService::Memory,
+            }]
+        );
+        assert!(memory_reads_at(&device, 0xB6EA) >= 2, "{:?}", device.seen());
+        assert!(
+            !device.seen().iter().any(|entry| matches!(
+                entry,
+                Seen::PropertyWrite {
+                    property_id: PID_LOAD_STATE_CONTROL,
+                    ..
+                } | Seen::PropertyRead {
+                    property_id: PID_LOAD_STATE_CONTROL,
+                    ..
+                }
+            )),
+            "mask 070nh has no load state property to use: {:?}",
+            device.seen()
+        );
+    }
+
+    /// `[D]` MP §3.31.2: *"The Verify Mode of the Management Server shall
+    /// not be used."* A session that knows it talks to a BIM M112 does not
+    /// set it on connecting.
+    #[tokio::test]
+    async fn verify_mode_is_left_alone_on_a_memory_mapped_mask() {
+        let device = bim_m112();
+        let mut session = writer(&device, WriteScope::Download).with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+        assert_eq!(device_control_writes(&device), 0, "{:?}", device.seen());
+        assert!(!device.verify_mode());
+    }
+
+    /// Only a session that may load is a memory-mapped load. Programming an
+    /// address or restarting a BIM M112 is not MP §3.31.2, so it keeps
+    /// Verify Mode as before — the address write of 2026-09-26 ran that way
+    /// on the real `0701h` device.
+    #[tokio::test]
+    async fn verify_mode_is_still_set_for_other_writes_on_a_memory_mapped_mask() {
+        for scope in [
+            WriteScope::IndividualAddressProgramming,
+            WriteScope::Restart,
+        ] {
+            let device = bim_m112();
+            let mut session = writer(&device, scope).with_mask(BIM_M112);
+            session.connect().await.expect("connect");
+            assert!(device.verify_mode(), "{scope:?}: {:?}", device.seen());
+        }
+    }
+
+    /// The session that learned the mask only after connecting has Verify
+    /// Mode set, and refuses the record rather than send it that way.
+    #[tokio::test]
+    async fn a_memory_record_is_refused_on_a_connection_with_verify_mode() {
+        let device = bim_m112();
+        let mut session = writer(&device, WriteScope::Download);
+        session.connect().await.expect("connect");
+        assert!(device.verify_mode(), "set, because the mask was unknown");
+        session.adopt_mask(BIM_M112);
+        let record = event_record(MemoryLoadStateMachine::AddressTable, LoadEvent::Unload).unwrap();
+        let error = session.write_memory_load_record(record).await.unwrap_err();
+        assert!(
+            matches!(error, SessionError::VerifyModeWithMemoryLoad),
+            "{error}"
+        );
+        assert!(!device.memory_was_written(), "{:?}", device.seen());
+    }
+
+    /// A whole loadable part through the memory-mapped machine, with the
+    /// segment records of `A-0027-15-0BAC`'s association table.
+    #[tokio::test]
+    async fn a_memory_mapped_part_goes_from_unloaded_to_loaded() {
+        let device = bim_m112();
+        let mut session = writer(&device, WriteScope::Download).with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+        let machine = MemoryLoadStateMachine::AssociationTable;
+        let records = [
+            event_record(machine, LoadEvent::Unload).unwrap(),
+            event_record(machine, LoadEvent::StartLoading).unwrap(),
+            abs_data_segment(
+                machine,
+                AbsoluteSegment {
+                    start: 0x4201,
+                    length: 511,
+                    access: 0xFF,
+                    memory_type: SegmentMemoryType::Eeprom,
+                    checksum_control: true,
+                },
+            )
+            .unwrap(),
+            abs_task_segment(
+                machine,
+                TaskSegment {
+                    start: 0x4201,
+                    pei_type: 0x01,
+                    manufacturer: 0x0083,
+                    application: 0x0027,
+                    version: 0x15,
+                },
+            ),
+            event_record(machine, LoadEvent::LoadCompleted).unwrap(),
+        ];
+        let mut states = Vec::new();
+        for record in records {
+            states.push(
+                session
+                    .write_memory_load_record(record)
+                    .await
+                    .unwrap_or_else(|err| panic!("{record}: {err}")),
+            );
+        }
+        assert_eq!(
+            states,
+            vec![
+                LoadState::Unloaded,
+                LoadState::Loading,
+                LoadState::Loading,
+                LoadState::Loading,
+                LoadState::Loaded
+            ]
+        );
+    }
+
+    /// MP §3.31.2 reads the state back *"for max. 3 times"*. A record the
+    /// device dropped is reported as unchanged after exactly that many
+    /// reads, plus the one taken before the write.
+    #[tokio::test]
+    async fn a_dropped_memory_record_is_an_unchanged_state_after_three_reads() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: BIM_M112.0,
+            drop_load_state_writes: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download).with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+        let record = event_record(
+            MemoryLoadStateMachine::ApplicationProgram,
+            LoadEvent::StartLoading,
+        )
+        .unwrap();
+        let error = session
+            .write_memory_load_record(record)
+            .await
+            .expect_err("a dropped record must not look like a success");
+        assert!(
+            matches!(
+                error,
+                SessionError::MemoryLoadNotSettled {
+                    machine: MemoryLoadStateMachine::ApplicationProgram,
+                    event: LoadEvent::StartLoading,
+                    from: LoadState::Unloaded,
+                    last: LoadState::Unloaded,
+                }
+            ),
+            "{error}"
+        );
+        assert_eq!(memory_reads_at(&device, 0xB6EC), 1 + 3);
+    }
+
+    /// A state RES Table 94 does not permit is an error on the first read,
+    /// not something to poll past: MP §3.31.2's *"Wrong state ⇒ error"*.
+    #[tokio::test]
+    async fn a_memory_mapped_illegal_transition_is_reported_at_once() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: BIM_M112.0,
+            fail_on_event: Some(LoadEvent::Unload),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::ADDRESS_TABLE, LoadState::Loaded);
+        let mut session = writer(&device, WriteScope::Download).with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+        let record = event_record(MemoryLoadStateMachine::AddressTable, LoadEvent::Unload).unwrap();
+        let error = session.write_memory_load_record(record).await.unwrap_err();
+        assert!(
+            matches!(
+                error,
+                SessionError::MemoryLoadIllegalTransition {
+                    machine: MemoryLoadStateMachine::AddressTable,
+                    from: LoadState::Loaded,
+                    observed: LoadState::Error,
+                    ..
+                }
+            ),
+            "{error}"
+        );
+        assert_eq!(memory_reads_at(&device, 0xB6EA), 1 + 1);
+    }
+
+    /// Eleven octets at `0104h` mean something only to mask `070nh`. A
+    /// session that does not know it is talking to one sends nothing.
+    #[tokio::test]
+    async fn a_memory_record_is_refused_unless_the_mask_is_070n() {
+        for mask in [None, Some(MaskVersion(0x07B0))] {
+            let device = bim_m112();
+            let session = writer(&device, WriteScope::Download);
+            let mut session = match mask {
+                Some(mask) => session.with_mask(mask),
+                None => session,
+            };
+            session.connect().await.expect("connect");
+            let record =
+                event_record(MemoryLoadStateMachine::AddressTable, LoadEvent::Unload).unwrap();
+            let error = session.write_memory_load_record(record).await.unwrap_err();
+            assert!(
+                matches!(error, SessionError::LoadNotMemoryMapped { mask: m } if m == mask),
+                "{error}"
+            );
+            assert!(
+                !device.memory_was_written(),
+                "{mask:?}: {:?}",
+                device.seen()
+            );
+        }
+    }
+
+    /// No authorisation, no write — the same gate every other write passes.
+    #[tokio::test]
+    async fn a_memory_record_needs_a_write_authorisation() {
+        let device = bim_m112();
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            fast(),
+        )
+        .expect("session")
+        .with_mask(BIM_M112);
+        session.connect().await.expect("connect");
+        let record = event_record(MemoryLoadStateMachine::AddressTable, LoadEvent::Unload).unwrap();
+        let error = session.write_memory_load_record(record).await.unwrap_err();
+        assert!(
+            matches!(error, SessionError::NoAuthorisation { .. }),
+            "{error}"
+        );
+        assert!(!device.memory_was_written());
     }
 
     /// §14 item 16 and §10.8: reads work, the write is silently dropped,

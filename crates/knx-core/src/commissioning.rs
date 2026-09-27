@@ -5,6 +5,7 @@
 pub mod authorisation;
 pub mod error_code;
 pub mod load_control;
+pub mod load_control_memory;
 pub mod load_state;
 pub mod mcb;
 pub mod memory;

@@ -159,7 +159,7 @@ pub fn sync_after_command(
         Command::MoveDeviceToLine { .. } => {
             // Line/device-membership persistence layer not yet implemented (Task 4 scope).
         }
-        Command::SetIdAllocators { .. } => {
+        Command::SetIdAllocators { .. } | Command::ReserveIds { .. } => {
             // Allocators are reconstructed from persisted entity ids on load.
         }
         Command::CreateGroupRange { .. } => {
@@ -318,6 +318,7 @@ mod tests {
         second.topology.unassigned = vec![DeviceId(1)];
         project.installations.push(second);
         project.devices.insert(device_one());
+        crate::project::cover_ids_in_use(&mut project);
         crate::save_project(&conn, &project).unwrap();
 
         let command = Command::SetIndividualAddress {

@@ -976,7 +976,8 @@ fn a_type_none_choose_with_its_sole_default_branch_activates_it_without_diagnost
 
 /// D9: any other shape under a `TypeNone`-controlled `choose` (here: two
 /// children instead of the sole default) is `UnexpectedTypeNoneShape`,
-/// nothing activated.
+/// nothing activated. ADR-0041 (review follow-up): a structural refusal,
+/// so the reference it would otherwise hide is named, not activated.
 #[test]
 fn a_type_none_choose_of_any_other_shape_is_reported_and_activates_nothing() {
     let tree = DynamicTree::from_nodes(vec![
@@ -1002,7 +1003,15 @@ fn a_type_none_choose_of_any_other_shape_is_reported_and_activates_nothing() {
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![diag(Diagnostic::UnexpectedTypeNoneShape { choose_node: 0 })]
+        vec![
+            diag(Diagnostic::UnexpectedTypeNoneShape { choose_node: 0 }),
+            diag(Diagnostic::RefBelowSkippedNode {
+                skipped_node: 0,
+                ref_node: 2,
+                kind: "ParameterRefRef".into(),
+                ref_id: Some("A".into()),
+            }),
+        ]
     );
 }
 
@@ -1122,6 +1131,322 @@ fn every_reference_below_a_skipped_node_is_reported_in_document_order() {
             .count(),
         1,
         "only the outermost skipped node is itself reported unrecognized"
+    );
+}
+
+fn skipped_refs(activation: &knx_productdb::dynamic::Activation) -> Vec<(i64, i64, &str)> {
+    activation
+        .diagnostics
+        .iter()
+        .filter_map(|d| match &d.diagnostic {
+            Diagnostic::RefBelowSkippedNode {
+                skipped_node,
+                ref_node,
+                kind,
+                ..
+            } => Some((*skipped_node, *ref_node, kind.as_str())),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Review follow-up: a *nested* unrecognized node is not reported on its
+/// own, and its references are attributed to the outermost skipped node.
+/// A `Module`'s children are argument bindings, not descended — even if
+/// one of them were a reference kind — and a real reference after the
+/// `Module` is still reached.
+#[test]
+fn nested_skipped_nodes_attribute_to_the_outermost_and_module_children_stay_bindings() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "Weird"),
+        nd(1, Some(0), "Weird2"),
+        DynamicNode {
+            ref_id: Some("DEEP".into()),
+            ..nd(2, Some(1), "ParameterRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("MD-1".into()),
+            ..nd(3, Some(0), "Module")
+        },
+        DynamicNode {
+            ref_id: Some("NOT-A-REF-HERE".into()),
+            ..nd(4, Some(3), "ParameterRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("AFTER".into()),
+            ..nd(5, Some(0), "ComObjectRefRef")
+        },
+    ]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]).into());
+    assert_eq!(
+        skipped_refs(&activation),
+        vec![
+            (0, 2, "ParameterRefRef"),
+            (0, 3, "Module"),
+            (0, 5, "ComObjectRefRef")
+        ]
+    );
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(d.diagnostic, Diagnostic::UnrecognizedNode { .. }))
+            .count(),
+        1,
+        "Weird2 is inside a skipped subtree and not itself evaluated"
+    );
+}
+
+/// Review follow-up: a non-`when` child of an evaluated `choose` is
+/// reported unrecognized and its references are named against *that*
+/// child, while the `choose`'s matching branch still evaluates normally.
+#[test]
+fn a_non_when_choose_child_names_its_refs_and_the_matching_branch_still_activates() {
+    let tree = DynamicTree::from_nodes(vec![
+        DynamicNode {
+            ref_id: Some("CTRL".into()),
+            control_kind: Some(ControlKind::Comparable),
+            ..nd(0, None, "choose")
+        },
+        nd(1, Some(0), "otherwise"),
+        DynamicNode {
+            ref_id: Some("P-ODD".into()),
+            ..nd(2, Some(1), "ParameterRefRef")
+        },
+        DynamicNode {
+            test: Some("1".into()),
+            ..nd(3, Some(0), "when")
+        },
+        DynamicNode {
+            ref_id: Some("P-ONE".into()),
+            ..nd(4, Some(3), "ParameterRefRef")
+        },
+    ]);
+    let activation = evaluate(
+        &ProgramTrees::single(tree),
+        &values(&[("CTRL", "1")]).into(),
+    );
+    assert_eq!(activation.parameter_refs, vec![active("P-ONE")]);
+    assert_eq!(skipped_refs(&activation), vec![(1, 2, "ParameterRefRef")]);
+}
+
+/// Review follow-up: the two *structural* `choose` refusals — the
+/// controlling parameter cannot be resolved at all, or a `TypeNone`
+/// `choose` has an undefined shape — name every reference in every
+/// branch against the `choose`. The *value-dependent* ones
+/// (`MissingValue`, `NoBranchMatched`) deliberately do not: those
+/// branches are conditionally hidden by design.
+#[test]
+fn structural_choose_refusals_name_their_refs_value_dependent_ones_do_not() {
+    let branches = |control_kind: Option<ControlKind>, second_default: bool| {
+        DynamicTree::from_nodes(vec![
+            DynamicNode {
+                ref_id: Some("CTRL".into()),
+                control_kind,
+                ..nd(0, None, "choose")
+            },
+            DynamicNode {
+                test: (!second_default).then(|| "1".into()),
+                is_default: second_default,
+                ..nd(1, Some(0), "when")
+            },
+            DynamicNode {
+                ref_id: Some("P-A".into()),
+                ..nd(2, Some(1), "ParameterRefRef")
+            },
+            DynamicNode {
+                is_default: true,
+                ..nd(3, Some(0), "when")
+            },
+            DynamicNode {
+                ref_id: Some("P-B".into()),
+                ..nd(4, Some(3), "ParameterRefRef")
+            },
+        ])
+    };
+    let expected = vec![(0, 2, "ParameterRefRef"), (0, 4, "ParameterRefRef")];
+
+    let unresolved = evaluate(
+        &ProgramTrees::single(branches(None, false)),
+        &values(&[("CTRL", "1")]).into(),
+    );
+    assert!(unresolved.parameter_refs.is_empty());
+    assert!(matches!(
+        unresolved.diagnostics[0].diagnostic,
+        Diagnostic::UnresolvedParamRef { .. }
+    ));
+    assert_eq!(skipped_refs(&unresolved), expected);
+
+    let odd_type_none = evaluate(
+        &ProgramTrees::single(branches(Some(ControlKind::TypeNone), true)),
+        &values(&[]).into(),
+    );
+    assert!(odd_type_none.parameter_refs.is_empty());
+    assert!(matches!(
+        odd_type_none.diagnostics[0].diagnostic,
+        Diagnostic::UnexpectedTypeNoneShape { .. }
+    ));
+    assert_eq!(skipped_refs(&odd_type_none), expected);
+
+    let missing = evaluate(
+        &ProgramTrees::single(branches(Some(ControlKind::Comparable), false)),
+        &values(&[]).into(),
+    );
+    assert!(matches!(
+        missing.diagnostics[0].diagnostic,
+        Diagnostic::MissingValue { .. }
+    ));
+    assert!(skipped_refs(&missing).is_empty());
+}
+
+/// Review follow-up: recognized leaves never have children in the corpus,
+/// but if one does, what is below it is named, not dropped — and the leaf
+/// itself still does its normal job.
+#[test]
+fn a_recognized_leaf_with_unexpected_children_names_them() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "ParameterBlock"),
+        DynamicNode {
+            ref_id: Some("P-OUTER".into()),
+            ..nd(1, Some(0), "ParameterRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("P-INNER".into()),
+            ..nd(2, Some(1), "ParameterRefRef")
+        },
+        nd(3, Some(0), "Assign"),
+        DynamicNode {
+            ref_id: Some("CO-UNDER-ASSIGN".into()),
+            ..nd(4, Some(3), "ComObjectRefRef")
+        },
+        DynamicNode {
+            text: Some("Heading".into()),
+            ..nd(5, Some(0), "ParameterSeparator")
+        },
+        DynamicNode {
+            ref_id: Some("P-UNDER-SEP".into()),
+            ..nd(6, Some(5), "ParameterRefRef")
+        },
+    ]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]).into());
+    assert_eq!(activation.parameter_refs, vec![active("P-OUTER")]);
+    assert!(activation.com_object_refs.is_empty());
+    assert_eq!(
+        skipped_refs(&activation),
+        vec![
+            (1, 2, "ParameterRefRef"),
+            (3, 4, "ComObjectRefRef"),
+            (5, 6, "ParameterRefRef"),
+        ]
+    );
+}
+
+/// Review follow-up: inside an expanded `ModuleDef`, the diagnostic carries
+/// that module's scope, and its node ids are the `ModuleDef` tree's own.
+#[test]
+fn a_ref_below_a_skipped_node_inside_an_expanded_module_carries_the_module_scope() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        nd(1, Some(0), "Weird"),
+        DynamicNode {
+            ref_id: Some("P-IN-MODULE".into()),
+            ..nd(2, Some(1), "ParameterRefRef")
+        },
+    ]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[]).into());
+    let scoped: Vec<_> = activation
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.diagnostic, Diagnostic::RefBelowSkippedNode { .. }))
+        .collect();
+    assert_eq!(scoped.len(), 1);
+    assert_eq!(
+        scoped[0].diagnostic,
+        Diagnostic::RefBelowSkippedNode {
+            skipped_node: 1,
+            ref_node: 2,
+            kind: "ParameterRefRef".to_string(),
+            ref_id: Some("P-IN-MODULE".to_string()),
+        }
+    );
+    let scope = scoped[0].scope.as_ref().expect("module-scoped");
+    assert_eq!(scope.module_node, 0);
+    assert_eq!(scope.module_def_id, "MD-1");
+    assert_eq!(scope.module_id.as_deref(), Some("M-A"));
+}
+
+/// Review IMPORTANT 1: references reported below a skipped node multiply
+/// with module fan-out exactly like activated ones, so they draw on the
+/// same `MAX_MODULE_ACTIVATIONS` budget — the same shape as
+/// `a_wide_module_def_trips_the_activation_budget_...`, with every ref
+/// wrapped in an unrecognized node.
+#[test]
+fn refs_below_skipped_nodes_are_bounded_by_the_activation_budget() {
+    const FANOUT: usize = 4;
+    const MODULE_LEVELS: usize = 6;
+    const REFS_PER_LEVEL: usize = 800;
+    let (program, mut modules) =
+        build_fanout_chain_with_refs(MODULE_LEVELS, FANOUT, REFS_PER_LEVEL);
+    // Same chain, but each level's refs sit under one `Weird` node; the
+    // `Module`s stay at the root, so the fan-out is unchanged.
+    for level in 1..=MODULE_LEVELS {
+        let weird = (FANOUT + REFS_PER_LEVEL) as i64;
+        let mut nodes: Vec<DynamicNode> = (0..FANOUT)
+            .map(|i| DynamicNode {
+                element_id: Some(format!("M-{level}-{i}")),
+                ref_id: Some(format!("F-{}", level + 1)),
+                ..nd(i as i64, None, "Module")
+            })
+            .collect();
+        nodes.push(nd(weird, None, "Weird"));
+        for r in 0..REFS_PER_LEVEL {
+            nodes.push(DynamicNode {
+                ref_id: Some(format!("P-{r}")),
+                ..nd((FANOUT + r) as i64, Some(weird), "ParameterRefRef")
+            });
+        }
+        modules.insert(format!("F-{level}"), DynamicTree::from_nodes(nodes));
+    }
+    let trees = ProgramTrees::from_parts(program, modules);
+
+    let start = std::time::Instant::now();
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(20),
+        "evaluate must refuse the excess and return"
+    );
+    let skipped = activation
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.diagnostic, Diagnostic::RefBelowSkippedNode { .. }))
+        .count();
+    assert!(
+        skipped <= MAX_MODULE_ACTIVATIONS,
+        "{skipped} skipped-ref diagnostics exceed the budget of {MAX_MODULE_ACTIVATIONS}"
+    );
+    assert!(
+        skipped > MAX_MODULE_ACTIVATIONS / 2,
+        "the budget, not something else, must be what stopped it: {skipped}"
+    );
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(
+                d.diagnostic,
+                Diagnostic::ModuleExpansionBudgetExhausted { budget, .. }
+                    if budget == MAX_MODULE_ACTIVATIONS
+            ))
+            .count(),
+        1,
+        "exactly one budget diagnostic says the output was truncated"
     );
 }
 

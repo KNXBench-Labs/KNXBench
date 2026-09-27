@@ -88,8 +88,21 @@ integer bounds; `TypeColor/@Space` takes only `RGB` (64) and `HSV` (51).
 
 ## Consequences
 
-- No parameter, communication-object or module reference in a stored tree
-  can disappear from evaluation output without a diagnostic naming it.
+- A parameter, communication-object or module reference below a node the
+  evaluator refuses for a *structural* reason — an unrecognized kind, a
+  non-`when` child of a `choose`, a `choose` with `UnresolvedParamRef` or
+  `UnexpectedTypeNoneShape`, `Rows`/`Columns`, or a recognized leaf
+  (`ParameterRefRef`, `ComObjectRefRef`, `ParameterSeparator`, `Assign`)
+  that unexpectedly has children — is named by `RefBelowSkippedNode`.
+  These reports count against `MAX_MODULE_ACTIVATIONS` like activations
+  do, so a fanned-out `ModuleDef` cannot multiply them without bound.
+- Deliberately *not* enumerated (review, 2026-09-27): the branches of a
+  `choose` refused for a *value-dependent* reason (`MissingValue`,
+  `NonNumericValue`, `NoBranchMatched` — conditionally hidden by design,
+  the `choose` itself is named), and the contents of a `ModuleDef` a
+  `Module` does not expand (`ModuleDefNotFound`, cycle, depth or
+  expansion budget — the `Module` is named by its own diagnostic). This
+  is not a claim that no reference can ever be absent from the output.
 - `Rows`/`Columns` no longer inflate the "unrecognized" diagnostic count of
   every table-laid-out parameter block.
 - Server, web client and message catalogues carry the new

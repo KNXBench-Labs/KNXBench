@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-09-27 — PDB-9: every observed parameter kind typed, no reference hidden below a skipped Dynamic node
+## 2026-09-27 — PDB-9: every observed parameter kind typed, references below structurally skipped Dynamic nodes named
 
 The product database is now schema v15
 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)).
@@ -24,8 +24,13 @@ blob. The web parameter panel renders `Time` like `Number`.
 
 D10 is amended: the evaluator still does not descend into a node it does not
 understand, but every `ParameterRefRef`, `ComObjectRefRef` and `Module` below
-one is now named by a `RefBelowSkippedNode` diagnostic (document order, all
-`choose` branches, pointing at the outermost skipped node). They are not
+a node refused for a structural reason (unrecognized kind, non-`when`
+`choose` child, `choose` with `UnresolvedParamRef`/`UnexpectedTypeNoneShape`,
+`Rows`/`Columns`, a recognized leaf with unexpected children) is now named by
+a `RefBelowSkippedNode` diagnostic (document order, all `choose` branches,
+pointing at the outermost skipped node, bounded by `MAX_MODULE_ACTIVATIONS`).
+Value-dependent `choose` refusals and unexpanded `Module`s are not
+enumerated; see KNOWN_LIMITATIONS. They are not
 activated — that would invent semantics. `Rows`/`Columns` (4,267 each, only
 under a `@Layout` `ParameterBlock`, holding only `Row`/`Column`) are
 recognized layout and no longer reported. `Rename`, `ParameterBlockRename`,
@@ -33,15 +38,23 @@ recognized layout and no longer reported. `Rename`, `ParameterBlockRename`,
 each `Repeat` is now named instead of vanishing. Server DTO, web kind union
 and en/de catalogues carry `refBelowSkippedNode`.
 
-Evidence: `parameter_kinds.rs` 7 tests (every kind stored as its own kind,
+Evidence: `parameter_kinds.rs` 8 tests (every kind stored as its own kind,
 unmodelled attributes reported with samples, an unseen kind stays `Other`,
-v14→v15 equals a fresh ingest, a losing blob cannot rewrite the winner, a
+v14→v15 equals a fresh ingest — including repeated occurrences, a
+schema-14 namespace-prefixed attribute and a non-type-deciding `TypeTime` —
+a losing blob cannot rewrite the winner but its own report is corrected, a
 corrupt blob is recorded and the database still opens, `Allocator` and
 `ParameterCalculation` reported and their bytes retained), `dynamic_tree.rs`
-four new evaluator tests (every reference below a skipped node in document
-order, layout recognized, a reference hidden in layout still named,
-`Rename`/`Button`/`Repeat` shapes), a server validation test for `Time` and
-`Color`, a web panel test for `Time`.
+ten new evaluator tests (every reference below a skipped node in document
+order, nested skipped nodes attribute to the outermost, `Module` bindings
+not descended, non-`when` `choose` children, structural vs value-dependent
+`choose` refusals, recognized leaves with children, module scope carried,
+the activation budget bounds the new diagnostic, layout recognized, a
+reference hidden in layout still named, `Rename`/`Button`/`Repeat` shapes),
+a server validation test for `Time` and `Color`, a web panel test for
+`Time`. An independent review's findings (budget, overclaim, backfill
+exactness) were fixed before merge; the private compatibility matrix moved
+only by the +11 unknown-report rows an independent Python recount predicts.
 
 ## 2026-09-27 — PDB-8: uninterpreted subtrees inside supported master sections are reported
 

@@ -220,6 +220,11 @@ cannot appear here.
 
 ### D10. Unrecognized nodes are opaque and non-activating; `Module` is not expanded
 
+> **Amended 2026-09-27 by [ADR-0041](../../adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md):**
+> references below a structurally refused node are named by
+> `RefBelowSkippedNode` (not activated), and `Rows`/`Columns` are
+> recognized layout. The text below is the original decision.
+
 Recognized as transparent containers: `Dynamic`, `ChannelIndependentBlock`,
 `Channel`, `ParameterBlock`, `when`. Recognized as activating leaves:
 `ParameterRefRef`, `ComObjectRefRef`. Recognized and deliberately inert:

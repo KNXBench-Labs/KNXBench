@@ -524,6 +524,7 @@ export const messages: Record<MessageKey, string> = {
   "catalog.installReport.category.baggage": "Baggage",
   "catalog.installReport.category.unknownConstruct": "Unbekanntes Konstrukt",
   "catalog.installReport.category.masterSection": "Masterdatenabschnitt",
+  "catalog.installReport.category.masterSubtree": "Masterdaten-Teilbaum",
   "catalog.installReport.category.datapointType": "Datenpunkttyp",
   "catalog.installReport.disposition.read": "Gelesen",
   "catalog.installReport.disposition.stored": "Gespeichert",
@@ -534,8 +535,11 @@ export const messages: Record<MessageKey, string> = {
   "catalog.installReport.unknownKind.element": "Element",
   "catalog.installReport.unknownKind.attribute": "Attribut",
   "catalog.installReport.diagnosticKind.unsupportedMasterSection": "Nicht unterstützter Masterdatenabschnitt",
+  "catalog.installReport.diagnosticKind.unsupportedMasterSubtree": "Nicht interpretierter Masterdaten-Teilbaum",
   "catalog.installReport.diagnosticKind.unsupportedBaggageIndex": "Nicht unterstützter Baggage-Index",
   "catalog.installReport.diagnostic.unsupportedMasterSection": "Ein Masterdatenabschnitt wurde beibehalten, aber nicht interpretiert.",
+  "catalog.installReport.diagnostic.unsupportedMasterSubtree":
+    "Ein Teil eines unterstützten Masterdatenabschnitts wurde beibehalten, aber nicht interpretiert.",
   "catalog.installReport.diagnostic.unsupportedBaggageIndex": "Ein Baggage-Index wurde beibehalten, aber nicht interpretiert.",
 
   "catalog.installReport.factsUnavailable": "Installationsfakten für diese historische Installation nicht verfügbar",

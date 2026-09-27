@@ -6,8 +6,20 @@ Product install facts are measured only for installs carrying the schema-v12
 encounter ledger. Older installs deliberately render as unavailable rather
 than as zero. The projection reports unsupported constructs and diagnostics,
 but does not interpret every vendor construct, verify signatures, or claim ETS
-parity. PDB-8 is the future typed master-data coverage slice; PDB-10 is the
-future safe baggage inventory and index-to-payload resolution slice.
+parity. PDB-8 (schema v14) reports uninterpreted element subtrees inside
+supported master sections (`Format`, `PublicKeys`, `OrderNumberFormattingScript`)
+but gives none of them typed storage: DPT bit layouts, manufacturer public keys
+and order-number scripts are retained bytes plus a diagnostic, not queryable
+data. Section-level master data (`MaskVersions` with its resources and access
+rights, `InterfaceObjectTypes`, …) likewise stays reported per section, not per
+element, and untyped until a commissioning feature proves which parts it needs.
+Attributes inside the master `Languages` branch have no allowlist and are
+still retained without a report — `TranslationUnit/@Version` alone occurs
+1,928 times in the corpus. Reporting them needs corpus-observed allowlists
+for `Languages`, `Language`, `TranslationUnit`, `TranslationElement` and
+`Translation`; until then they are preserved bytes only. Persisted subtree
+diagnostics are validated for shape, not re-derived from the blob. PDB-10 is the future safe baggage inventory and index-to-payload
+resolution slice.
 
 Each entry states the limitation, its cause, what it costs the user, and the
 condition under which it would be lifted. Nothing here is a defect to be fixed

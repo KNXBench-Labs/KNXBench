@@ -1,5 +1,63 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — PDB-8: uninterpreted subtrees inside supported master sections are reported
+
+The product database is now schema v14. Section-level reporting already
+existed (PDB-3: every `knx_master.xml` section outside `Manufacturers`,
+`DatapointTypes`, `FunctionTypes`, `SpaceUsages` and `Languages` is an
+`unsupported-master-section` diagnostic — including `MaskVersions`, which is
+where the corpus's resource and access-right elements live; those stay
+section-level, one row per section, not per element). PDB-8 adds the
+*element* level inside the five supported sections: an element at a canonical
+path whose parent the parser reads but which it does not read itself is an
+uninterpreted subtree root, reported per occurrence as count category
+`master_subtree` / `unsupported` and as diagnostic kind
+`unsupported-master-subtree` at its canonical path
+(`/KNX/MasterData/Manufacturers/Manufacturer/PublicKeys`, …). Descendants
+stay inside their root. The path list is structural
+(`parse::master::INTERPRETED_MASTER_PATHS`), so a new shape is reported
+without a code change. Attributes are not covered: the master `Languages`
+branch has no attribute allowlist, so e.g. `TranslationUnit/@Version` (1,928
+occurrences corpus-wide) is still retained silently — KNOWN_LIMITATIONS, PDB-8.
+
+Corpus scan, read-only, 69 distinct masters, reproduced independently by the
+review: exactly three root shapes — `DatapointSubtype/Format` 12,072
+occurrences in 38 masters, `Manufacturer/PublicKeys` 2,528 in 69,
+`Manufacturer/OrderNumberFormattingScript` 75 in 33. None of them gets typed
+storage: no consumer needs DPT bit formats, manufacturer public keys
+(signature verification is out of scope) or order-number scripts yet, so goal
+§2.8's "either typed storage for a proven feature, or reporting" resolves to
+reporting.
+
+Persisted reports are validated on load for shape: the diagnostic must name
+the Master member, a canonical path whose parent is read and which is not,
+the canonical detail, and its occurrences must sum to the count row. The
+check does not re-scan the blob, so a row renamed to another well-formed
+root, or occurrences moved between rows, pass — the same boundary as the
+section diagnostics. The v13→v14 migration rebuilds both CHECK-constrained
+tables verbatim and *measures* the new row for every measured report from the
+package's own retained master blob with the same pure scanner install uses;
+a package without a Master member measures zero and `unavailable` reports
+stay unavailable. A retained master that no longer scans downgrades only that
+package's report to `unavailable` (never an invented zero), records an
+`InstallReportBackfillError` in `ingest_unknown` as v12→v13 does, and leaves
+the database openable; reinstalling the package measures it again. Web types,
+labels (en/de) and the exact-JSON server test know the new category and kind;
+the CLI serializes both generically.
+
+Private-corpus matrix: installs, outcomes and every pinned total are
+unchanged; the aggregate commitment moves only because the final table
+counts now include the new `master_subtree` / subtree-diagnostic rows, so its
+pin is updated.
+
+Evidence: `install_reports.rs` 21 tests (new: subtree reporting, zero case,
+six persisted-corruption rejections, v13→v14 backfill from genuine v13 DDL
+equals a fresh install, an unscannable master becomes `unavailable` and is
+recorded while a healthy package stays measured). Three hand-applied mutants,
+run once and reverted — backfill invents zero, any subtree path accepted,
+count cross-check removed — each failed at least one test. Independent
+review: no critical findings; its clippy failure and two overclaims are fixed.
+
 ## 2026-09-27 — Programming consent: ask before writing to a device, naming Alpha/Beta
 
 [ADR-0040](adr/0040-programming-requires-release-stage-consent.md). A reusable

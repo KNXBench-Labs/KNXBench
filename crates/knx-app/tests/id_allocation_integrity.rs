@@ -107,7 +107,7 @@ fn a_stale_csv_plan_can_no_longer_make_save_drop_a_group_address() {
 }
 
 #[test]
-fn reserve_ids_in_a_batch_never_lowers_what_an_earlier_edit_consumed() {
+fn reserve_ids_from_a_stale_snapshot_never_lowers_what_an_earlier_edit_consumed() {
     let mut project = empty_project();
     let stale_snapshot = project.ids.clone();
     let taken = project.ids.next_group_address_id();

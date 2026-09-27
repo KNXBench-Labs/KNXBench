@@ -924,8 +924,20 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let mut project = match knx_store::load_project(&conn) {
-        Ok(project) => project,
+    let mut project = match knx_store::load_project_reporting(&conn) {
+        Ok((project, repair)) => {
+            // ADR-0039 D7: a repair is never silent. `ga-import` is the one
+            // CLI command that writes the file back, so the user learns why
+            // the saved counters differ from what was on disk.
+            if let Some(repair) = repair {
+                eprintln!(
+                    "warning: raised a stored id counter that was below an id already in use \
+                     (stored {:?}, repaired {:?}); no project content was changed",
+                    repair.stored, repair.repaired
+                );
+            }
+            project
+        }
         Err(e) => {
             eprintln!("failed to load project from store: {e}");
             return ExitCode::FAILURE;

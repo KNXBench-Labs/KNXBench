@@ -25,7 +25,11 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use knx_core::commissioning::load_control::LoadControlSubtype;
-use knx_core::commissioning::load_state::{LoadEvent, LoadState};
+use knx_core::commissioning::load_control_memory::{
+    loads_through_memory, MemoryLoadStateMachine, MANAGEMENT_CONTROL_ADDRESS,
+    MEMORY_LOAD_RECORD_OCTETS,
+};
+use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
@@ -320,6 +324,14 @@ pub struct SimulatorConfig {
     /// The mask version Device Descriptor Type 0 answers. `07B0h` by
     /// default: a System B mask, which is the profile design spec §7's CP §3.5.2
     /// walkthrough covers.
+    ///
+    /// A `070nh` mask also switches the Load State Machines into memory, as
+    /// MP §3.31.2 has them on the BIM M112: an eleven-octet write to `0104h`
+    /// is a load record, and `B6EAh`–`B6EDh` read the four load states. The
+    /// states are the same ones [`SimulatedDevice::preset_load_state`] and
+    /// [`SimulatedDevice::load_state`] address, keyed by machine type as the
+    /// object index — address table 1, association table 2, application
+    /// program 3, PEI program 4.
     pub mask_version: u16,
     /// Answer `PID_TABLE_REFERENCE` = 0 for this one object the first time
     /// an allocation is attempted for it, and allocate normally afterwards.
@@ -1639,6 +1651,10 @@ impl SimulatedDevice {
             // AL §3.5.3's failure answer: number = 0, no data.
             return Vec::new();
         }
+        if let Some(machine) = self.memory_load_state_at(address, number) {
+            let index = ObjectIndex::new(machine.type_number());
+            return vec![self.load_state(index).octet()];
+        }
         let state = self.lock();
         (0..u32::from(number))
             .map(|offset| state.memory.get(&(address + offset)).copied().unwrap_or(0))
@@ -1651,6 +1667,12 @@ impl SimulatedDevice {
             // there is no answer at all, and the client's own read-back is
             // what notices.
             return self.lock().verify_mode.then(Vec::new);
+        }
+        if self.memory_mapped_load()
+            && address == u32::from(MANAGEMENT_CONTROL_ADDRESS)
+            && data.len() == MEMORY_LOAD_RECORD_OCTETS
+        {
+            self.apply_memory_load_record(data[0]);
         }
         let mut stored = data.to_vec();
         if self.config.corrupt_memory_writes {
@@ -1667,6 +1689,38 @@ impl SimulatedDevice {
         // stored, not what it was sent. The difference is the whole point
         // of reading back.
         state.verify_mode.then_some(stored)
+    }
+
+    /// Whether this device's Load State Machines live in memory (MP §3.31.2).
+    fn memory_mapped_load(&self) -> bool {
+        loads_through_memory(MaskVersion(self.config.mask_version))
+    }
+
+    /// The machine whose load state a one-octet read at `address` returns,
+    /// on a memory-mapped device.
+    fn memory_load_state_at(&self, address: u32, number: u8) -> Option<MemoryLoadStateMachine> {
+        if !self.memory_mapped_load() || number != 1 {
+            return None;
+        }
+        MemoryLoadStateMachine::ALL
+            .into_iter()
+            .find(|machine| u32::from(machine.load_state_address()) == address)
+    }
+
+    /// Octet 0 of a record at `0104h`: the machine type in the upper
+    /// nibble, the RES Table 93 event in the lower one. The segment octets
+    /// that follow an `Additional Load Controls` record are stored as
+    /// memory and otherwise ignored: MP §3.31.2 reads back the load state,
+    /// and a BIM M112 has no `PID_TABLE_REFERENCE` to report an allocation
+    /// through.
+    fn apply_memory_load_record(&self, first: u8) {
+        let Some(machine) = MemoryLoadStateMachine::from_lsm_index(first >> 4) else {
+            return;
+        };
+        let Some(event) = load_event_from_octet(first & 0x0F) else {
+            return;
+        };
+        self.apply_event(machine.type_number(), event);
     }
 
     fn is_protected(&self, address: u32) -> bool {

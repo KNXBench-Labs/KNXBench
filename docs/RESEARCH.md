@@ -4600,12 +4600,31 @@ Resources §4.23.3 (*Load State Machine – Realisation Type 2, memory mapped*)
 reads *"not specified in this version"* **[D]**. The state and event octets
 above therefore come only from MP §3.31.2 and TSSG.
 
-**What an end-to-end download would still need (none of it exists in
-KNXBench today) [V]:**
+**What an end-to-end download would still need [V]:**
 
-1. A `DMP_LoadStateMachineWrite_RCo_Mem` transport. `download.rs` drives
-   load state machines only through properties
-   (`DMP_LoadStateMachineWrite_RCo_IO`), which mask `0701h` does not offer.
+1. ~~A `DMP_LoadStateMachineWrite_RCo_Mem` transport.~~ *Built 2026-09-27,
+   simulator only.* `knx_core::commissioning::load_control_memory` builds
+   the eleven-octet records and pins them to TSSG's example octets.
+   `ManagementSession::write_memory_load_record` reads the state once, sends
+   the record as one `A_Memory_Write` to `0104h`, and reads the state back at
+   most three times, checking every read against RES Table 94. Two choices
+   are not in MP and are recorded here:
+   - **Read before the write.** MP's sequence has none, but Table 94 can
+     only judge a state relative to the one before it. It is a read, and a
+     failed one sends nothing.
+   - **Interval between reads.** MP gives none; the property procedure's
+     `poll_interval` is reused.
+
+   A lost connection is an error, as MP's *"A_Disconnect.ind ⇒ error"* says;
+   unlike the property procedure, nothing re-establishes it. A session that
+   knows the mask is `070nh` and is authorised to download or unload does
+   not set Verify Mode on connecting, because MP §3.31.2 forbids it; a
+   session that learned the mask after connecting refuses the record rather
+   than send it with Verify Mode on. The prohibition is read as belonging to
+   the load procedure only, not to the device: MP §2.3 address programming
+   and restart keep Verify Mode, which is how the address write of
+   2026-09-26 succeeded on this `0701h` device. `download.rs`
+   does not call any of this yet.
 2. Serializers for the Group Address Table (§4.16.11) and the Easy 3
    association table (§4.17.9).
 3. An `AS-4400` image builder. It must evaluate the `choose` tree for the

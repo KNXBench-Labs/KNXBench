@@ -1,5 +1,41 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — Memory-mapped load records for mask `070nh` (simulator only)
+
+The BIM M112 (mask `070nh`; the MDT push button at `1.1.67` is `0701h`) has
+no load state property. MP §3.31.2 `DMP_LoadStateMachineWrite_RCo_Mem`
+drives its load state machines through memory instead: an eleven-octet
+`A_Memory_Write` to `0104h`, and the state read back from `B6EAh`–`B6EDh`.
+RESEARCH §19 has the evidence, and KNOWN_LIMITATIONS §134 item 1 is lifted.
+
+- `knx_core::commissioning::load_control_memory` builds the records: plain
+  events plus the absolute data, stack and task segments. Octet 0 is
+  `(machine type << 4) | RES Table 93 event`. The segment layouts follow MP,
+  and TSSG's example records are pinned octet for octet, with MP's length of
+  eleven where TSSG contradicts itself. `loads_through_memory` limits the
+  procedure to mask `070nh`.
+- `ManagementSession::write_memory_load_record` sends one record. It refuses
+  when there is no write authorisation, when the mask is unknown or not
+  `070nh`, and when Verify Mode is set. It reads the state before the write,
+  sends one `A_Memory_Write`, then reads the state back at most three times.
+  Every read is judged against RES Table 94. A disconnect ends the procedure,
+  as MP says.
+- `connect()` no longer sets Verify Mode when a session that knows its mask
+  is `070nh` is authorised to download or unload: MP §3.31.2 says *"The
+  Verify Mode of the Management Server shall not be used"*. Address
+  programming and restart on the same device keep Verify Mode as before; the
+  first draft dropped it for every scope, and a test now pins that.
+- The simulator acts like a BIM M112 when `mask_version` is `070nh`: `0104h`
+  takes records and `B6EAh`–`B6EDh` read the load states, which reuse its
+  existing Table 94 machine.
+
+Evidence: 13 `load_control_memory` unit tests, including TSSG's records, and
+9 session tests. Seven hand-applied mutants were each caught by at least one
+test and then reverted: mask gate removed, Verify Mode not skipped, the
+Verify Mode guard removed, wrong control address, more than three reads, an
+illegal state polled past, and authorisation skipped. **Simulator-verified only.** `download.rs` does not
+call any of this yet, and `WriteScope::Download` stays refused on hardware.
+
 ## 2026-09-27 — `individual_address_write` waits once for a device still settling
 
 The first real hardware write (2026-09-26, `03e358f`; RESEARCH §8.8.6,

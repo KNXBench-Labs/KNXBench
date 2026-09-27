@@ -390,11 +390,11 @@ async fn completed_scan_comparison_keeps_all_three_evidence_groups_separate() {
 }
 
 #[tokio::test]
-async fn selected_scan_findings_apply_as_one_batch_and_undo_byte_identically() {
+async fn selected_scan_findings_apply_as_one_batch_and_undo_restores_content_exactly() {
     let (tunnel, handle) = fake_tunnel();
     let handle = Arc::new(handle);
     let state = Arc::new(state_with_project(tunnel));
-    let original = format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap());
+    let original_project = state.project.lock().unwrap().as_ref().unwrap().clone();
     let app = knx_server::app(Arc::clone(&state), None);
 
     let response_handle = Arc::clone(&handle);
@@ -481,10 +481,22 @@ async fn selected_scan_findings_apply_as_one_batch_and_undo_byte_identically() {
 
     let undo = call(&app, "POST", "/api/undo", None).await;
     assert_eq!(undo.status(), StatusCode::OK);
-    assert_eq!(
-        format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap()),
-        original
+    // ADR-0039 Decision 2: undo restores the user's content exactly —
+    // devices, topology order, everything but the id high-water mark, which
+    // `ReserveIds` never rewinds, so the undone device's id is never reissued.
+    let project = state.project.lock().unwrap().as_ref().unwrap().clone();
+    assert!(
+        project.same_user_content_as(&original_project),
+        "undo must restore every entity and its order exactly"
     );
+    let mut ids_as_before = project.clone();
+    ids_as_before.ids = original_project.ids.clone();
+    assert_eq!(
+        format!("{ids_as_before:#?}"),
+        format!("{original_project:#?}"),
+        "the id counters are the only permitted difference"
+    );
+    assert!(project.ids.peek_device() > original_project.ids.peek_device());
 }
 
 #[tokio::test]

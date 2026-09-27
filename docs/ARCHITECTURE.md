@@ -237,9 +237,11 @@ the project outside a command ([KNOWN_LIMITATIONS §129](KNOWN_LIMITATIONS.md#12
 records how to enforce it. Its phase 1 backstop is in place: every
 id-inserting command refuses an id already in use anywhere in the project
 (`CommandError::IdInUse`), so an applied command cannot create a duplicate id
-for `save_project` to collapse. Until phase 2, the CSV planner and scan
-reconciliation still emit the rewinding `SetIdAllocators`; a stale plan is
-therefore refused rather than applied.
+for `save_project` to collapse. Since phase 2 the CSV planner and scan
+reconciliation emit the never-rewinding `ReserveIds`. Every applied CSV plan
+is bound to its planned revision, so a stale plan is refused and has to be
+re-imported. The nine phase-3 sites still allocate ids outside a command, and
+a collision with them is caught only by the `IdInUse` backstop.
 
 Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,

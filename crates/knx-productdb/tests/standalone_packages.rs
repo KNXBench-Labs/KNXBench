@@ -1172,7 +1172,15 @@ fn installs_the_readable_corpus() {
         "646704-04_ETS4_2012_47_DE_EN.knxprod",
         "Weinzierl_730_KNX_IP_Interface_ETS4.knxprod",
     ] {
-        let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| panic!("corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to OriginalData/ProductDatabases"));
+        let path = knx_testsupport::find_corpus_file(&root, name).unwrap_or_else(|| {
+            panic!(
+                "corpus fixture {name} unavailable under {}; set KNXBENCH_PRODUCT_CORPUS to \
+                 OriginalData/ProductDatabases",
+                root.display()
+            )
+        });
+        let bytes = std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("corpus fixture {name} at {path:?} unreadable: {e}"));
         let (_dir, conn) = db();
         let report = install_package(&conn, name, &bytes).unwrap();
         assert!(!report.skipped);

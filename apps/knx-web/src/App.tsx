@@ -46,6 +46,8 @@ import Overlay from "./Overlay";
 import { canQuit, quitApp } from "./quit";
 import type { SessionControls } from "./session";
 import { opensHelp } from "./help";
+import { useAutosaveSettings } from "./autosaveSettings";
+import { useAutosave } from "./useAutosave";
 
 // How often the browser asks the server what a running load is doing
 // (ADR-0023). Fast enough that a phase lasting a second is still seen,
@@ -65,6 +67,18 @@ const STACK_BLOCK_MAX_PX = 480;
 function fileNameOf(path: string): string {
   const name = path.split(/[\\/]/).pop();
   return name && name.length > 0 ? name : path;
+}
+
+// ISSUE-04's status-bar text: the browser's own locale formatting, not a
+// hardcoded pattern — `undefined` locale means "whatever the browser is
+// set to", the same convention `Intl` callers elsewhere in this app use.
+function formatLastSaved(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "short",
+    timeStyle: "medium",
+  }).format(parsed);
 }
 
 type AppProps = {
@@ -249,8 +263,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     (sel) => void selectEntity(sel),
   );
   const [themeId, setThemeId] = useThemeId();
-  const appearance = useAppearance();
-  const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
+  const appearance = useAppearance();  const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
   const [productLanguage, setProductLanguage] = useProductLanguage();
   // `[]` both before the fetch resolves and if it fails — SettingsPanel
   // already renders that state honestly (a disabled select explaining "no
@@ -695,6 +708,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   }
 
   async function saveProjectAs() {
+    autosave.cancelCountdown();
     const projectSnapshot = {
       serverIncarnation: snapshotLifetimeRef.current.serverIncarnation,
       revision: snapshotLifetimeRef.current.revision,
@@ -717,6 +731,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
   async function saveProject() {
     if (!hasStorePath) return saveProjectAs();
+    autosave.cancelCountdown();
     clearErrors();
     try {
       await api.saveProject();
@@ -724,6 +739,21 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     } catch (e) {
       reportError(e);
     }
+  }
+
+  // ISSUE-04's autosave engine calls this, never `saveProject()` above —
+  // same underlying `api.saveProject()` call, but this one rethrows so
+  // `useAutosave`'s own failure handling (skip clearing dirty state,
+  // reschedule without wedging) can tell a failed autosave from a
+  // successful one. `saveProject()` stays swallow-and-toast for the
+  // manual button, exactly as its own comment on the quit-confirm dialog
+  // explains; this is not a second persistence path, only a second
+  // caller of the one save the button already uses.
+  async function autosaveProject() {
+    if (!hasStorePath) return;
+    clearErrors();
+    await api.saveProject();
+    await refreshSavedProject();
   }
 
   function downloadProject() {
@@ -783,6 +813,20 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
     void quitApp();
   }
+
+  // ISSUE-04's autosave settings and engine. `hasStorePath`/`is_modified`
+  // come straight from server-authoritative state (T13's owner, extended
+  // above for `last_saved_at`) — this hook never invents a second dirty
+  // signal, only reads the one that already exists.
+  const autosaveSettings = useAutosaveSettings();
+  const autosave = useAutosave({
+    enabled: autosaveSettings.enabled,
+    intervalMinutes: autosaveSettings.intervalMinutes,
+    hasStorePath,
+    isModified: tree?.is_modified ?? false,
+    onSave: autosaveProject,
+    onSaveFailed: () => pushError(t("autosave.failed"), { serverText: false }),
+  });
 
   const ctx: CommandContext = {
     tree,
@@ -908,8 +952,26 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
         </ResizablePane>}
       </div>
-      <footer className="workbench-status"><span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span><span>v{manifestVersion}</span></footer>
+      <footer className="workbench-status">
+        <span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span>
+        {tree && (
+          <span className="workbench-status-saved">
+            {tree.last_saved_at
+              ? t("statusBar.lastSaved", { time: formatLastSaved(tree.last_saved_at) })
+              : t("statusBar.neverSaved")}
+          </span>
+        )}
+        <span>v{manifestVersion}</span>
+      </footer>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
+      {autosave.secondsRemaining !== null && (
+        <div className="autosave-countdown" role="status">
+          <span>{t("autosave.countdown", { seconds: autosave.secondsRemaining })}</span>
+          <button type="button" onClick={autosave.cancelCountdown}>
+            {t("autosave.cancel")}
+          </button>
+        </div>
+      )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
       {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}
       {tree && searchOpen && (
@@ -951,6 +1013,10 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           productLanguages={productLanguages}
           activeProductLanguage={productLanguage}
           onSelectProductLanguage={setProductLanguage}
+          autosaveEnabled={autosaveSettings.enabled}
+          onSelectAutosaveEnabled={autosaveSettings.setEnabled}
+          autosaveIntervalMinutes={autosaveSettings.intervalMinutes}
+          onSelectAutosaveIntervalMinutes={autosaveSettings.setIntervalMinutes}
           onClose={() => setSettingsOpen(false)}
         />
       )}

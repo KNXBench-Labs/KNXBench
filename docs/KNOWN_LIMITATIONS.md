@@ -7679,6 +7679,10 @@ is unaffected.
 
 ## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity
 
+**Status.** Open, but the data-loss path is closed: phases 1–2 of ADR-0039
+landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
+counters any more. The structural phases 3–5 are still open.
+
 **Limitation.** `Command::SetIdAllocators` replaces the id counters
 absolutely, and no `Create*` command refuses an id that is already in use.
 A caller that snapshots the allocator, releases the project lock and applies
@@ -7738,7 +7742,7 @@ closed. Phases 3–5 then remove the nine live bypass points and add the
 
 ## §130 A gate binary can verify a directory that no longer exists
 
-**Status.** Open (documented 2026-09-27). The data-loss path is closed by phases 1–2 (2026-09-27); the structural phases 3–5 are still open.
+**Status.** Open (documented 2026-09-27).
 
 `xtask`'s checks derive their repository root at **compile time** from
 `env!("CARGO_MANIFEST_DIR")` (`xtask/src/main.rs:41`, `:234`, `:283`), not from

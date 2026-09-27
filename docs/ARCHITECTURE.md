@@ -233,8 +233,10 @@ to the model.
 Today this rule is held by review, not by the type system: `Project`'s fields
 are `pub`, and nine live server paths still advance the id allocator or enrich
 the project outside a command ([KNOWN_LIMITATIONS §129](KNOWN_LIMITATIONS.md#129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity)).
-[ADR-0039](adr/0039-project-mutation-goes-through-commands.md) (Proposed)
-records how to enforce it.
+[ADR-0039](adr/0039-project-mutation-goes-through-commands.md) (Accepted)
+records how to enforce it. Its phase 1 backstop is in place: every
+id-inserting command refuses an id already in use (`CommandError::IdInUse`),
+so a duplicate id can no longer reach `save_project` through a command.
 
 Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,

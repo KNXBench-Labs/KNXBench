@@ -433,6 +433,12 @@ fn state_with_device(
             })
             .collect(),
     });
+    // Counters cover the ids built above, exactly as the importer leaves
+    // them; a fixture at 0 would hand out `ParameterInstanceId(1)` again,
+    // which `IdInUse` (ADR-0039) now correctly refuses.
+    let parameter_count = project.installations[0].parameters.len() as u32;
+    project.ids =
+        knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, parameter_count, 0);
     let mut state = knx_server::AppState::default();
     state.product_db = Some(Mutex::new(products));
     *state.project.lock().unwrap() = Some(project);

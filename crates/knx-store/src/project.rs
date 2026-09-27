@@ -106,7 +106,7 @@ pub fn save_project_if_unchanged(
     replacement: &Project,
 ) -> Result<(), StoreError> {
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
-    let current = load_project(&tx)?;
+    let current = load_project_unrepaired(&tx)?;
     if &current != expected {
         return Err(StoreError::ConcurrentModification);
     }
@@ -371,7 +371,90 @@ fn flatten_hierarchy<T>(
         .collect()
 }
 
+/// What `load_project_reporting` changed about the stored id allocator: a
+/// counter below the largest id of its kind actually stored was raised
+/// (ADR-0039 Decision 7). Only counters are touched; no user content.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AllocatorRepair {
+    pub stored: IdAllocators,
+    pub repaired: IdAllocators,
+}
+
+/// `load_project`, plus a report of any allocator repair it had to make.
+/// Callers that can surface diagnostics (the server's session log, the CLI)
+/// should use this form so a repair is never silent.
+pub fn load_project_reporting(
+    conn: &Connection,
+) -> Result<(Project, Option<AllocatorRepair>), StoreError> {
+    let mut project = load_project_unrepaired(conn)?;
+    let stored = project.ids.clone();
+    let repair = if project.ids.raise_to(&highest_ids_in_use(&project)) {
+        Some(AllocatorRepair {
+            stored,
+            repaired: project.ids.clone(),
+        })
+    } else {
+        None
+    };
+    Ok((project, repair))
+}
+
+/// The largest id of every kind that `project` actually holds, as an
+/// allocator: raising the stored counters to this makes the next allocation
+/// of each kind strictly above every id already in use.
+fn highest_ids_in_use(project: &Project) -> IdAllocators {
+    fn max<I: Iterator<Item = u32>>(ids: I) -> u32 {
+        ids.max().unwrap_or(0)
+    }
+    let installations = &project.installations;
+    IdAllocators::from_counts(
+        max(project.devices.iter().map(|d| d.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.topology.areas)
+            .map(|a| a.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.topology.lines)
+            .map(|l| l.id.0)),
+        max(project.devices.com_objects().map(|c| c.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.group_ranges)
+            .map(|r| r.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.group_addresses)
+            .map(|g| g.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.buildings)
+            .map(|b| b.id.0)),
+        max(installations
+            .iter()
+            .flat_map(|i| &i.parameters)
+            .map(|p| p.id.0)),
+        max(project.devices.module_instances().map(|m| m.id.0)),
+    )
+}
+
+/// Raises `project`'s counters to cover every id it holds — what a
+/// consistent in-memory project (one built by the importer or through
+/// commands) already satisfies. For tests that hand-build fixtures.
+#[cfg(test)]
+pub(crate) fn cover_ids_in_use(project: &mut Project) {
+    let highest = highest_ids_in_use(project);
+    project.ids.raise_to(&highest);
+}
+
+/// Loads the saved project. A stored id counter below an id actually in use
+/// is raised (ADR-0039 Decision 7) — use `load_project_reporting` to learn
+/// whether that happened.
 pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
+    load_project_reporting(conn).map(|(project, _)| project)
+}
+
+fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
     let (
         project_id,
         name,
@@ -609,6 +692,7 @@ mod tests {
         project.devices.insert(device(1));
         project.devices.insert(device(2));
 
+        cover_ids_in_use(&mut project);
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         assert_eq!(loaded, project);
@@ -766,6 +850,54 @@ mod tests {
             com_objects: vec![],
             binary_data: vec![],
         }
+    }
+
+    /// ADR-0039 Decision 7: a file saved with a counter below an id it
+    /// stores (a pre-fix stale snapshot could write one) must load with the
+    /// counter raised, or `IdInUse` would refuse every later create of that
+    /// kind. The repair is reported, never silent.
+    #[test]
+    fn a_counter_below_a_stored_id_is_raised_on_load_and_reported() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(4)];
+        project.devices.insert(device(4));
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(9),
+                source: source(),
+                name: "GA".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: false,
+                range: None,
+            });
+        // Stored counters: device 2, group address 3 — both below the ids above.
+        project.ids = IdAllocators::from_counts(2, 0, 0, 0, 0, 3, 0, 0, 0);
+        save_project(&conn, &project).unwrap();
+
+        let (loaded, repair) = load_project_reporting(&conn).unwrap();
+        assert_eq!(loaded.ids.peek_device(), 4);
+        assert_eq!(loaded.ids.peek_group_address(), 9);
+        let repair = repair.expect("a raised counter must be reported");
+        assert_eq!(repair.stored, project.ids);
+        assert_eq!(repair.repaired, loaded.ids);
+        assert!(load_project(&conn).unwrap().ids == loaded.ids);
+    }
+
+    #[test]
+    fn counters_at_or_above_every_stored_id_load_unchanged_and_unreported() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(4)];
+        project.devices.insert(device(4));
+        project.ids = IdAllocators::from_counts(7, 0, 0, 0, 0, 0, 0, 0, 0);
+        save_project(&conn, &project).unwrap();
+
+        let (loaded, repair) = load_project_reporting(&conn).unwrap();
+        assert!(repair.is_none());
+        assert_eq!(loaded, project);
     }
 
     fn project_with_one_installation() -> Project {
@@ -1044,6 +1176,7 @@ mod tests {
             },
         );
 
+        cover_ids_in_use(&mut project);
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         let loaded_device = loaded.devices.get(DeviceId(1)).unwrap();
@@ -1146,6 +1279,7 @@ mod tests {
             group_addresses,
             parameters: vec![],
         });
+        cover_ids_in_use(&mut project);
         project
     }
 
@@ -1336,6 +1470,7 @@ mod tests {
             arguments: vec![(source(), "1".into()), (source(), "0".into())],
         });
 
+        cover_ids_in_use(&mut project);
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         assert_eq!(loaded.devices.module_instances().count(), 1);

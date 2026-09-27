@@ -13,11 +13,11 @@ fn reference_project_path() -> std::path::PathBuf {
 /// numbers into separate `#[test]` functions keeps a failure's cause
 /// legible instead of one giant assertion block naming which of a dozen
 /// counts broke.
-fn import() -> Option<(knx_app::ImportedProject, knx_productdb::Connection)> {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return None;
-    }
+fn import() -> (knx_app::ImportedProject, knx_productdb::Connection) {
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -29,7 +29,7 @@ fn import() -> Option<(knx_app::ImportedProject, knx_productdb::Connection)> {
         },
     )
     .unwrap();
-    Some((imported, products))
+    (imported, products)
 }
 
 /// Gap 2's headline claim (KNOWN_LIMITATIONS §12, ADR-0012): 497 of the
@@ -42,10 +42,9 @@ fn import() -> Option<(knx_app::ImportedProject, knx_productdb::Connection)> {
 /// nothing to offer either (375) — only the first group is what a
 /// `Override<T>` layer-stack fix can actually surface.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn gap2_the_497_of_907_empty_dpt_figure_and_its_liftable_share() {
-    let Some((imported, products)) = import() else {
-        return;
-    };
+    let (imported, products) = import();
     let project = &imported.project;
 
     let mut dpt_absent = 0usize;
@@ -126,10 +125,9 @@ fn gap2_the_497_of_907_empty_dpt_figure_and_its_liftable_share() {
 /// `dpt`, description's program value is never itself ambiguous, so this
 /// side of gap 2 has no unresolved remainder to report.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn gap2_description_and_text_empty_counts() {
-    let Some((imported, products)) = import() else {
-        return;
-    };
+    let (imported, products) = import();
     let project = &imported.project;
 
     let (mut text_empty, mut desc_empty) = (0usize, 0usize);
@@ -193,10 +191,9 @@ fn gap2_description_and_text_empty_counts() {
 /// 11 devices and 51 distinct `ComObjectRef`s carry an ambiguous list in
 /// total.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn gap3_ambiguous_dpt_the_107_issues_and_the_22_that_actually_block_a_fill() {
-    let Some((imported, products)) = import() else {
-        return;
-    };
+    let (imported, products) = import();
     let report = imported.enrichment.as_ref().unwrap();
     let ambiguous_issues = report
         .issues
@@ -269,10 +266,9 @@ fn gap3_ambiguous_dpt_the_107_issues_and_the_22_that_actually_block_a_fill() {
 /// session's `enrich::apply` change (`program_defaults` did not exist)
 /// and passes after it.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn gap2_closed_program_defaults_populated_for_every_liftable_empty_slot() {
-    let Some((imported, _products)) = import() else {
-        return;
-    };
+    let (imported, _products) = import();
     let project = &imported.project;
 
     let (mut dpt_lifted, mut desc_lifted) = (0usize, 0usize);

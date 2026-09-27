@@ -185,11 +185,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_ets4_reference_project_is_schema_eleven() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let d = detect(&mut c).unwrap();
         assert_eq!(d.version, SchemaVersion(11));
@@ -200,11 +201,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_ets6_reference_project_is_schema_twenty_three() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(reference_ets6_bytes()).unwrap();
         assert_eq!(detect(&mut c).unwrap().version, SchemaVersion(23));
     }

@@ -22,11 +22,12 @@ fn reference_ets4_path() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_reference_project_round_trips_through_save_and_load() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let project = knx_etsproj::import_knxproj(&reference_ets4_path())
         .expect("the reference ETS4 project imports")
         .project;
@@ -98,11 +99,12 @@ fn the_reference_project_round_trips_through_save_and_load() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn saving_the_reference_project_twice_over_itself_is_idempotent() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let project = knx_etsproj::import_knxproj(&reference_ets4_path())
         .expect("the reference ETS4 project imports")
         .project;

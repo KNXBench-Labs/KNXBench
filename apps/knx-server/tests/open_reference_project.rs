@@ -10,11 +10,12 @@ fn reference_ets4_path() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn opening_the_reference_project_yields_the_measured_counts() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let tree = knx_server::open_project_impl(&reference_ets4_path()).unwrap();
 
     // The reference project's golden import has no real errors: `warnings`

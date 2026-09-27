@@ -455,6 +455,7 @@ fn a_module_defs_own_dynamic_tree_is_stored_keyed_by_its_own_id_while_the_progra
 /// `choose/@ParamRefId` must resolve against `parameter_ref` — 0 dangling,
 /// matching the spike's own finding on these same files.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -462,10 +463,12 @@ fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     for (name, expected_choose, expected_when) in [
         ("646704-04_ETS4_2012_47_DE_EN.knxprod", 1646i64, 2252i64),
@@ -2412,6 +2415,7 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
 /// `choose` has exactly the one-default-`when` shape the spike found in all
 /// 604 corpus occurrences.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and_type_none_holds() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -2419,10 +2423,12 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     for name in [
         "646704-04_ETS4_2012_47_DE_EN.knxprod",
@@ -2700,6 +2706,7 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
 /// derived numbers; they are not expected to agree, and the difference is the
 /// finding, not a bug in either count (see the Task 2 report).
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -2707,10 +2714,12 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     let name = "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod";
     let path = knx_testsupport::find_corpus_file(&root, name).unwrap_or_else(|| {
@@ -2859,6 +2868,7 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
 /// `ProgramTrees::single` — which is also what slice 1's own `evaluate(&tree,
 /// ...)` did before this slice existed.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -2866,10 +2876,12 @@ fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     let name = "646704-04_ETS4_2012_47_DE_EN.knxprod";
     let path = knx_testsupport::find_corpus_file(&root, name).unwrap_or_else(|| {
@@ -2978,6 +2990,7 @@ fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
 /// this task. Loudly skipped, same idiom as every other corpus test in
 /// this file, when `OriginalData/` is absent.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_nested_module_measurement_task_11() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -2985,10 +2998,12 @@ fn corpus_nested_module_measurement_task_11() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     let (_dir, conn) = db();
     let mut installed = Vec::new();
@@ -3440,6 +3455,7 @@ fn count_allocator_ref_literal(text: &str) -> usize {
 ///    twelve *different* channel labels, where before task 12 they
 ///    produced twelve identical ones.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn corpus_argument_measurement_task_12() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(std::path::PathBuf::from)
@@ -3447,10 +3463,12 @@ fn corpus_argument_measurement_task_12() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     // Claim 1, measured over the archives as they sit on disk — not over
     // what this crate chose to parse out of them, which would only prove

@@ -1,4 +1,33 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-27 22:44 CEST
+- **Completed:** On branch `iaw-settling-delay` (worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-settling-delay`, 4 commits ahead of `origin/main`, **not pushed**), new commit `765873b` feat(net): **memory-mapped load records for mask `070nh`**. This lifts KNOWN_LIMITATIONS §134 item 1, simulator only. What changed:
+  - `knx_core::commissioning::load_control_memory` builds the 11-octet records. It covers events plus the abs data/stack/task segments, pins the TSSG golden vectors, and has `loads_through_memory(mask)`.
+  - `ManagementSession::write_memory_load_record` (`knx-net`):
+    - Refuses when there is no authorisation, when the mask is unknown or not `070n`, and when Verify Mode is active on the connection (new error `VerifyModeWithMemoryLoad`).
+    - Reads the state first, which MP doesn't do. Table 94 needs the starting state, and a failed read sends nothing.
+    - Sends one `A_Memory_Write` to `0104h` and waits only for the T_ACK. There is no read-back of `0104h`, because MP doesn't do one.
+    - Reads `B6EA`..`B6EDh` back at most 3 times, `poll_interval` apart. MP gives no interval.
+    - Errors: `MemoryLoadIllegalTransition` returns immediately; `MemoryLoadNotSettled` after 3 reads; `MalformedMemoryLoadState`. A disconnect is an error, with no re-establishment.
+  - `connect()` skips Verify Mode only for a `070n` session with scope Download or Unload. Address programming and Restart on the same device keep Verify Mode. This regression was caught in review and a test now pins it.
+  - Simulator: when `mask_version` is `070n`, `0104h` takes records, and `B6EA`..`B6EDh` return the existing Table-94 LSM, keyed by machine type 1..4 as `ObjectIndex`.
+  - Tests: 13 core + 9 session. 7 mutants were each killed and reverted.
+  - Gates: fmt 0, clippy 0, workspace tests 2085 passed / 0 failed, layering, headers 228, anchors 389, diff-check.
+  - Docs: RESEARCH §19 item 1, KNOWN_LIMITATIONS §134 item 1 lifted, IMPLEMENTATION_STATUS entry.
+- **Pending/Next Steps:**
+  - The user said: continue **offline** until a real test is possible, then **wait for their approval**. No bus/device write without an explicit go.
+  - (1) GrAT serializer (Resources §4.16.11, "GrAT Easy 2") and GrOAT Easy 3 serializer (§4.17.9), pure functions in knx-core, with spec examples as fixtures.
+  - (2) `AS-4400` parameter-image builder for `A-0027-15-0BAC`: `choose` evaluation plus `Memory` offsets over the segment defaults.
+  - (3) An ordered procedure: unload → start → segments → write data → task → complete per LSM. Take the order from MP §3.31.2/TSSG, do not invent it. `download.rs` does not use the memory path yet.
+  - (4) Access key (unknown) and the hardware policy for `WriteScope::Download`: both need a user decision.
+  - (5) Push/merge of the branch: user decision.
+- **Notes for Codex or Claude:**
+  - The spec KB is at `/mnt/daten-i/Sourcecode/knx-spec-kb/sources/The KNX Standard v3.0.0/`. `pdftotext -layout` of MP gives §3.31.2 at around line 7041.
+  - Resources §4.23.3 (LSM realisation type 2, memory mapped) is "not specified in this version". The encoding comes only from MP plus TSSG.
+  - The device is at `1.1.67`, gateway `172.18.250.1:3671`. No bus traffic in this block.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-27 21:50 CEST
 - **Completed:** On branch `iaw-settling-delay` (worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-settling-delay`, rebased onto `abf35d3`, **not pushed**), two commits:
   - `be91fe3` fix(commissioning): `individual_address_write` step 4 now waits once for `SessionTiming::restart_basic_t1` (1 s, a borrowed figure, documented as such) and retries after an *unanswered* connect to the new address. A rejected connect still fails immediately. Simulator tests: a device silent for the first connect then succeeds; a device still silent after the retry fails at step 4 with `wrote: true`. The retry was mutation-checked (the test goes red without it). RESEARCH §8.8.6, KNOWN_LIMITATIONS §7 and IMPLEMENTATION_STATUS updated.

@@ -45,6 +45,111 @@ pub(crate) fn is_supported_master_section(name: &str) -> bool {
     )
 }
 
+/// PDB-8: the element paths inside the supported sections that this module
+/// and `translation.rs` actually interpret, relative to `/KNX/MasterData`.
+/// Any element whose parent is on this list but which is not itself on it
+/// is an *uninterpreted subtree root*: retained in the source blob, never
+/// read. Corpus-wide (69 distinct masters) that is exactly
+/// `DatapointSubtype/Format`, `Manufacturer/PublicKeys` and
+/// `Manufacturer/OrderNumberFormattingScript`; the list is structural, so
+/// a new shape is reported without a code change.
+const INTERPRETED_MASTER_PATHS: &[&str] = &[
+    "Manufacturers",
+    "Manufacturers/Manufacturer",
+    "DatapointTypes",
+    "DatapointTypes/DatapointType",
+    "DatapointTypes/DatapointType/DatapointSubtypes",
+    "DatapointTypes/DatapointType/DatapointSubtypes/DatapointSubtype",
+    "FunctionTypes",
+    "FunctionTypes/FunctionType",
+    "FunctionTypes/FunctionType/FunctionPoint",
+    "SpaceUsages",
+    "SpaceUsages/SpaceUsage",
+    "Languages",
+    "Languages/Language",
+    "Languages/Language/TranslationUnit",
+    "Languages/Language/TranslationUnit/TranslationElement",
+    "Languages/Language/TranslationUnit/TranslationElement/Translation",
+];
+
+/// Whether `relative` (slash-joined, below `/KNX/MasterData`) is a path the
+/// parser interprets. See `INTERPRETED_MASTER_PATHS`.
+pub(crate) fn is_interpreted_master_path(relative: &str) -> bool {
+    INTERPRETED_MASTER_PATHS.contains(&relative)
+}
+
+/// Whether `relative` is the root of an uninterpreted subtree inside a
+/// supported section: its parent is interpreted, it is not. A descendant of
+/// such a root is *inside* it and is not a root of its own; a whole
+/// unsupported section is the section diagnostic's business, not this one's.
+pub(crate) fn is_uninterpreted_master_subtree_root(relative: &str) -> bool {
+    match relative.rsplit_once('/') {
+        Some((parent, _)) => {
+            is_interpreted_master_path(parent) && !is_interpreted_master_path(relative)
+        }
+        None => false,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct UninterpretedMasterSubtree {
+    /// Slash-joined, relative to `/KNX/MasterData`.
+    pub path: String,
+    pub occurrences: u64,
+}
+
+/// Every uninterpreted subtree root in `bytes`, counted per occurrence and
+/// sorted by path. Pure: no database. Both the install path and the
+/// v13 -> v14 backfill of already-installed packages use it, so the two
+/// cannot disagree about what counts.
+pub(crate) fn uninterpreted_master_subtrees(
+    bytes: &[u8],
+) -> Result<Vec<UninterpretedMasterSubtree>, ProductDbError> {
+    let source_path = "knx_master.xml";
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut parents = Vec::<String>::new();
+    let mut roots = BTreeMap::<String, u64>::new();
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::End(_) => {
+                parents.pop();
+            }
+            Event::Start(ref e) | Event::Empty(ref e) => {
+                let name = local_name(e);
+                if parents.len() >= 3 && parents[0] == "KNX" && parents[1] == "MasterData" {
+                    let relative = format!("{}/{name}", parents[2..].join("/"));
+                    if is_supported_master_section(&parents[2])
+                        && is_uninterpreted_master_subtree_root(&relative)
+                    {
+                        let count = roots.entry(relative).or_default();
+                        *count = count.checked_add(1).ok_or_else(|| ProductDbError::Xml {
+                            source_path: source_path.into(),
+                            cause: "master-subtree counter overflow".into(),
+                        })?;
+                    }
+                }
+                if matches!(event, Event::Start(_)) {
+                    parents.push(name);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(roots
+        .into_iter()
+        .map(|(path, occurrences)| UninterpretedMasterSubtree { path, occurrences })
+        .collect())
+}
+
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
 }
@@ -86,6 +191,7 @@ pub(crate) struct DetailedMasterIngest {
     pub entities: EntityCounts,
     pub master_sections_read: u64,
     pub unsupported_sections: Vec<UnsupportedMasterSection>,
+    pub uninterpreted_subtrees: Vec<UninterpretedMasterSubtree>,
 }
 
 pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
@@ -321,7 +427,9 @@ pub(crate) fn ingest_master_data_detailed(
     // `knx_master.xml` carries no owning element to key its translations to,
     // so `TranslationScope::Master` uses the empty-string sentinel instead.
     let translations = ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
+    let uninterpreted_subtrees = uninterpreted_master_subtrees(bytes)?;
     Ok(DetailedMasterIngest {
+        uninterpreted_subtrees,
         outcome: MasterIngest {
             unknown: unknown.into_vec(),
             translations,

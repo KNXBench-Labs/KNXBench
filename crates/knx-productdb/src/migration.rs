@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 13;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 14;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -286,7 +286,132 @@ fn migrations() -> Vec<Migration> {
         migrate_v10_to_v11,
         migrate_v11_to_v12,
         migrate_v12_to_v13,
+        migrate_v13_to_v14,
     ]
+}
+
+/// v13 -> v14 (PDB-8). Adds the `master_subtree` count category and the
+/// `unsupported-master-subtree` diagnostic kind. SQLite cannot widen a
+/// CHECK in place, so both tables are rebuilt with identical columns and
+/// their rows copied verbatim.
+///
+/// Every *measured* report then needs its new required row. It is measured,
+/// not assumed: the package's own retained `knx_master.xml` bytes are
+/// re-scanned with the same pure function install uses
+/// (`uninterpreted_master_subtrees`), and a package without a Master member
+/// honestly measures zero. `unavailable` reports stay unavailable. A master
+/// blob that is missing or no longer scans is an error, and the outer
+/// migration transaction rolls the whole step back rather than fabricate a
+/// count or drop the package's existing evidence.
+fn migrate_v13_to_v14(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package_install_count_v14 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            category TEXT NOT NULL CHECK (category IN ('archive_member','product','application_program','parameter','communication_object','dynamic_node','module','baggage_index','baggage','unknown_construct','master_section','master_subtree','datapoint_type')),
+            disposition TEXT NOT NULL CHECK (disposition IN ('read','stored','deduplicated','retained-but-uninterpreted','unsupported','dropped')),
+            count INTEGER NOT NULL CHECK (count >= 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, category, disposition)
+        ) STRICT;
+        INSERT INTO package_install_count_v14 SELECT * FROM package_install_count;
+        DROP TABLE package_install_count;
+        ALTER TABLE package_install_count_v14 RENAME TO package_install_count;
+        CREATE TABLE package_install_diagnostic_v14 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-master-subtree','unsupported-baggage-index')),
+            archive_path TEXT NOT NULL,
+            xml_path TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, kind, archive_path, xml_path, detail)
+        ) STRICT;
+        INSERT INTO package_install_diagnostic_v14 SELECT * FROM package_install_diagnostic;
+        DROP TABLE package_install_diagnostic;
+        ALTER TABLE package_install_diagnostic_v14 RENAME TO package_install_diagnostic;",
+    )?;
+    let measured = conn
+        .prepare(
+            "SELECT package_sha256 FROM package_install_report
+             WHERE status = 'measured' ORDER BY package_sha256",
+        )?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for package in measured {
+        let masters = conn
+            .prepare(
+                "SELECT path, source_sha256 FROM package_member
+                 WHERE package_sha256 = ?1 AND role = 'Master' ORDER BY path",
+            )?
+            .query_map([&package], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut total = 0u64;
+        let mut diagnostics = Vec::new();
+        for (path, source_sha) in masters {
+            let bytes =
+                crate::load_source_file(conn, &source_sha)?.ok_or_else(|| ProductDbError::Xml {
+                    source_path: path.clone(),
+                    cause: "v14 backfill: retained master blob is missing".into(),
+                })?;
+            for subtree in crate::parse::master::uninterpreted_master_subtrees(&bytes)? {
+                total =
+                    total
+                        .checked_add(subtree.occurrences)
+                        .ok_or_else(|| ProductDbError::Xml {
+                            source_path: path.clone(),
+                            cause: "v14 backfill: master-subtree counter overflow".into(),
+                        })?;
+                diagnostics.push(crate::package::master_subtree_diagnostic(
+                    path.clone(),
+                    &subtree,
+                )?);
+            }
+        }
+        let count_ordinal: i64 = conn.query_row(
+            "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_count WHERE package_sha256 = ?1",
+            [&package],
+            |r| r.get(0),
+        )?;
+        conn.execute(
+            "INSERT INTO package_install_count VALUES (?1, ?2, 'master_subtree', 'unsupported', ?3)",
+            params![
+                package,
+                count_ordinal,
+                i64::try_from(total).map_err(|_| ProductDbError::Xml {
+                    source_path: package.clone(),
+                    cause: "v14 backfill: master-subtree count exceeds SQLite INTEGER".into(),
+                })?
+            ],
+        )?;
+        let mut ordinal: i64 = conn.query_row(
+            "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_diagnostic WHERE package_sha256 = ?1",
+            [&package],
+            |r| r.get(0),
+        )?;
+        for row in diagnostics {
+            conn.execute(
+                "INSERT INTO package_install_diagnostic VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    package,
+                    ordinal,
+                    row.kind().as_str(),
+                    row.archive_path(),
+                    row.xml_path(),
+                    row.detail(),
+                    i64::try_from(row.occurrences()).map_err(|_| ProductDbError::Xml {
+                        source_path: package.clone(),
+                        cause: "v14 backfill: occurrences exceed SQLite INTEGER".into(),
+                    })?
+                ],
+            )?;
+            ordinal += 1;
+        }
+    }
+    Ok(())
 }
 
 /// v12 -> v13. These nullable columns hold verbatim catalogue lexemes;

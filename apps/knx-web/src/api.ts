@@ -426,6 +426,7 @@ export interface CatalogInstallCount {
     | "baggage"
     | "unknown_construct"
     | "master_section"
+    | "master_subtree"
     | "datapoint_type";
   disposition:
     | "read"
@@ -446,7 +447,7 @@ export interface CatalogUnknownConstruct {
 }
 
 export interface CatalogInstallDiagnostic {
-  kind: "unsupported-master-section" | "unsupported-baggage-index";
+  kind: "unsupported-master-section" | "unsupported-master-subtree" | "unsupported-baggage-index";
   archivePath: string;
   xmlPath: string;
   detail: string;

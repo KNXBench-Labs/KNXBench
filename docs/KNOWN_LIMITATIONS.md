@@ -7848,7 +7848,12 @@ closes as before. `quitApp()` now calls `destroy()` rather than `close()`, so
 modified, clean and browser cases, and the new tests fail with the listener
 registration removed **[V]**. **Not verified on a running desktop build or on
 a real window manager** (no GUI session was driven). The mechanism depends on
-the Tauri contract quoted above, not on a click test.
+the Tauri contract quoted above, not on a click test. The close is now a JS round trip,
+not a native one, and that has a cost recorded as
+[§133](#133-a-dead-webview-cannot-be-closed-with-the-window-managers-close-button).
+The dirty signal is the same one File › Quit uses (`is_modified` from the last
+fetched tree), so a mutation still in flight or an inline edit that has not
+been committed is not seen by either path.
 
 **Original limitation.** File › Quit asks before discarding unsaved changes
 (`App.tsx` `quitRequested` → quit-confirm dialog). The window manager's own
@@ -7874,3 +7879,33 @@ frontend's dirty check was never part of that change.
 (`api.prevent_close()`), asks the frontend to run the same check as File ›
 Quit, and closes only on confirmation — with a test that the prompt appears
 for a modified project and does not for a clean one.
+
+## §133 A dead webview cannot be closed with the window manager's close button
+
+**Status.** Open (documented 2026-09-27; follows from the §132 fix, read
+from the pinned `tauri` 2.11.5 sources, not reproduced).
+
+**Limitation.** Since §132, the main window's frontend listens for
+`tauri://close-requested`. While such a JS listener is registered, `tauri`
+2.11.5 calls `prevent_close()` on every `CloseRequested`
+(`manager/window.rs` `on_window_event`), and only the frontend's handler can
+then `destroy()` the window. If the WebKit web process has crashed or hangs
+for good, × and Alt+F4 do nothing. Rust never drops a JS listener on its own
+when a page crashes or reloads, so a stale registration keeps blocking. The
+same holds briefly after a reload until `App` mounts again, for example while
+a login screen is shown.
+
+**Cost.** The user has to end the process some other way (the compositor's
+kill binding, `kill`, a task manager). Unsaved edits are lost exactly as they
+would have been before §132; the new cost is that the window will not close
+at all.
+
+**Why it is this way.** The obvious mitigation, Rust destroying the window
+when the frontend does not answer within N seconds, would close a merely
+*busy* frontend with unsaved edits and no question asked. That is the silent
+loss §132 removed. Data integrity outranks convenience here.
+
+**Lifted when.** The shell can tell a dead web process from a busy one. For
+example, it could observe a WebKit web-process-terminated signal and then
+drop the stale listener or destroy the window. Either way this needs a
+test, or at least a manual reproduction on a real window manager.

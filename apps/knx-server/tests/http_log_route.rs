@@ -78,11 +78,12 @@ async fn get_log_on_a_fresh_state_returns_an_empty_array() {
 }
 
 #[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 async fn get_log_reflects_import_a_failed_edit_and_a_successful_edit_in_order() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
 

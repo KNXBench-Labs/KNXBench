@@ -74,15 +74,21 @@ async fn body_json(response: axum::response::Response) -> Value {
 }
 
 #[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ product corpus (or KNXBENCH_PRODUCT_CORPUS); run with --ignored"]
 async fn a_new_project_takes_a_device_from_a_manufacturer_package_with_no_ets_import() {
-    let package = corpus_root().join(PACKAGE);
-    if !package.exists() {
-        eprintln!(
-            "skip: {PACKAGE} not present (OriginalData/ is gitignored, local-only); \
-             set KNXBENCH_PRODUCT_CORPUS to a directory holding it to run this test"
-        );
-        return;
-    }
+    // Looked up by name anywhere under the root: the local corpus files
+    // packages by manufacturer (`MDT/…`), and a flat `join(PACKAGE)` missed
+    // it on every run since this test was written, where the early return
+    // then passed it (docs/KNOWN_LIMITATIONS.md §131).
+    let root = corpus_root();
+    assert!(
+        root.exists(),
+        "product corpus {} not present (OriginalData/ is gitignored, local-only); \
+         set KNXBENCH_PRODUCT_CORPUS to a directory holding {PACKAGE}",
+        root.display()
+    );
+    let package = knx_testsupport::find_corpus_file(&root, PACKAGE)
+        .unwrap_or_else(|| panic!("{PACKAGE} not found under {}", root.display()));
     let bytes = std::fs::read(&package).unwrap();
 
     let dir = tempfile::tempdir().unwrap();

@@ -647,11 +647,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_reference_project_inventory_has_thirty_eight_entries() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(c.entries().len(), 38);
         // Measured: unlike the per-installation `0.xml` files, ETS4 writes
@@ -661,11 +662,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn entry_lookup_is_case_insensitive() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(
             c.find("p-0512/project.xml").map(|e| e.path.as_str()),
@@ -674,11 +676,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_project_part_comes_from_the_signature_filename() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(c.project_part().unwrap(), "P-0512");
     }

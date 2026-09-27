@@ -1,5 +1,56 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — §131: a missing corpus is now "ignored", never "passed"
+
+Every test that answered an absent `OriginalData/` corpus with an early
+`return` (and so counted as *passed* on every machine without the private
+data, CI included) now carries `#[ignore = "requires the gitignored
+OriginalData/ corpus; run with --ignored"]` and `assert!`s its corpus probe
+([KNOWN_LIMITATIONS §131](KNOWN_LIMITATIONS.md#131-seventy-two-corpus-gates-repo-wide-still-pass-when-the-corpus-is-absent),
+resolved). The documented population was 72 in `crates/`. The new lint found
+17 more in `apps/` (`knx-cli`, `knx-server`), and review found an 18th,
+`http_catalog_to_device.rs`, gated on its own `package.exists()`. That test had
+never run since it was written: it looked for its package at the wrong path,
+so even with the corpus present it returned early and was counted as passed.
+Made honest, it failed at once; with the path fixed (`find_corpus_file`) it
+passes. In all there
+are 90 early-return sites and 93 newly ignored tests. Review also found six
+already-ignored oracle tests that returned when `project_dump.json` (the
+second local-only artefact, at the workspace root) was missing. They now
+assert it, so `--ignored` cannot pass them vacuously either.
+`knx_testsupport::walk_corpus_files` panics on `read_dir`, entry and
+`file_type` errors instead of shrinking the corpus silently (`#[should_panic]`
+unit test). `cargo run -p xtask -- check-corpus-gates` (new, and a CI step)
+rejects a negated corpus or oracle probe that returns, plus any `"skip…"`
+message naming the private data that is followed by a `return`. It has 9 unit
+tests, a planted violation is caught, and run against the pre-review tree it
+flags exactly the review's seven sites **[V]**.
+
+Evidence **[V]**:
+- Without the corpus (`KNXBENCH_REFERENCE_PROJECT` pointing nowhere),
+  `knx-app --test import_service` now reports `0 passed; 3 ignored`. It
+  used to report `3 passed … 0.00s`. With `--ignored` it fails with "corpus
+  not present".
+- With the corpus, every newly ignored suite was run with `--ignored`
+  (`--skip live_ --skip perf_baseline`): `knx-etsproj` lib 42 + tests 51,
+  `knx-app` 17, `knx-store` 2, `knx-productdb` golden 5, `knx-cli` 8,
+  `knx-server` lib 2 + tests 9, all passing. After review, also
+  `oracle_xknxproject` 5, `golden_reference_products` 5 (with the oracle
+  present) and `http_catalog_to_device` 1 (after its path fix). None of the previously silent
+  tests was hiding a failure.
+- Default workspace run, after the review fixes: 2055 passed, 0 failed, 114
+  ignored. The drop from
+  earlier totals is the point: those tests no longer count as passes without
+  running.
+
+Clippy `-D warnings` and fmt are clean; layering OK; headers 222; 388
+links. `perf_baseline.rs` is unchanged: it was already `#[ignore]`d and
+treats the corpus import only as an optional extra timing.
+
+**Operational note:** running several `--ignored` suites back to back once
+got the linker OOM-killed (`ld terminated with signal 9`). That was a build
+failure, not a test failure; the suite passed when rerun alone.
+
 ## 2026-09-27 — ISSUE-04: Save and quit, Save and create
 
 The two unsaved-changes prompts can now save instead of only offering

@@ -636,11 +636,12 @@ fn reference_ets4_path() -> PathBuf {
 }
 
 #[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 async fn a_session_over_a_real_imported_project_does_not_panic_while_decoding() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (tunnel, handle) = fake_tunnel();
     let state = state_with_connector(FakeConnector::succeeding(tunnel));
     let app = knx_server::app(Arc::new(state), None);

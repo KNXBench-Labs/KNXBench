@@ -339,11 +339,12 @@ mod import_tests {
     use knx_core::GroupAddressStyle;
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn importing_the_reference_project_succeeds_with_a_clean_report() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = import_knxproj(&reference_ets4_path()).unwrap();
         assert_eq!(out.report.source.schema_version, 11);
         assert_eq!(out.report.errors, vec![]);
@@ -355,11 +356,12 @@ mod import_tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = import_knxproj(&reference_kv_schema21_path()).unwrap();
         assert_eq!(out.report.source.schema_version, 21);
         assert_eq!(
@@ -372,11 +374,12 @@ mod import_tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn importing_the_ets6_schema_23_project_succeeds_but_carries_no_round_trip_claim() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         // Not a re-export of the KV reference project — a genuinely
         // different installation (Session 7 evidence). Schema 23 imports
         // successfully (Task 3/7's known-element table and mapper already
@@ -389,11 +392,12 @@ mod import_tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_opaque_entries_cover_every_container_entry_we_do_not_regenerate() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = import_knxproj(&reference_ets4_path()).unwrap();
         // 36 whole-file entries, split between the opaque store and the
         // manufacturer files now handed out separately (Task 12).

@@ -59,8 +59,12 @@ pub fn reference_kv_schema21_path() -> PathBuf {
 /// True when the gitignored `OriginalData/` fixture corpus is present
 /// locally. It holds the maintainer's own real KNX installation and
 /// manufacturer files — never committed, so CI (and any contributor
-/// without a copy) has none of it. Every test that needs the corpus must
-/// check this first and skip, not panic, or CI is permanently red.
+/// without a copy) has none of it. A test that needs the corpus is
+/// `#[ignore = "requires the gitignored OriginalData/ corpus; run with
+/// --ignored"]` and `assert!`s this first: without the corpus it is reported
+/// *ignored* by default and fails by name under `--ignored`. Returning early
+/// instead would count as a pass that tested nothing
+/// (docs/KNOWN_LIMITATIONS.md §131; `cargo run -p xtask -- check-corpus-gates`).
 ///
 /// All three projects, not just the ETS4 one: the three paths are
 /// independently overridable, so checking one and handing out another is
@@ -179,6 +183,12 @@ const MINIMAL_MANUFACTURER_DATA: &[u8] = br#"<?xml version="1.0" encoding="utf-8
 /// Recursively lists every regular file under `root`, name-sorted at each
 /// directory level, depth-first. Symlinks are skipped, not followed.
 ///
+/// # Panics
+///
+/// On any `read_dir`, directory-entry or `file_type` error, including a
+/// `root` that does not exist. A partially readable corpus is reported, not
+/// measured as a smaller one.
+///
 /// This is dev-only test-fixture plumbing over the local (gitignored)
 /// product corpus a contributor already controls — not code that parses
 /// untrusted input — so it carries none of
@@ -195,15 +205,22 @@ pub fn walk_corpus_files(root: &Path) -> Vec<PathBuf> {
 }
 
 fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(read_dir) = std::fs::read_dir(dir) else {
-        return;
-    };
-    let mut entries: Vec<_> = read_dir.filter_map(Result::ok).collect();
+    // A test that walks the corpus measures it, so an unreadable directory
+    // must stop the test rather than quietly shrink what it measured
+    // (docs/KNOWN_LIMITATIONS.md §131). Whether the corpus exists at all is
+    // the caller's gate, asserted before the walk starts.
+    let read_dir = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("cannot read corpus directory {}: {e}", dir.display()));
+    let mut entries: Vec<_> = read_dir
+        .map(|entry| {
+            entry.unwrap_or_else(|e| panic!("cannot list corpus directory {}: {e}", dir.display()))
+        })
+        .collect();
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
-        let Ok(file_type) = entry.file_type() else {
-            continue;
-        };
+        let file_type = entry
+            .file_type()
+            .unwrap_or_else(|e| panic!("cannot stat corpus entry {}: {e}", entry.path().display()));
         if file_type.is_symlink() {
             continue;
         }
@@ -232,15 +249,7 @@ fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
 /// makes sense while that name is unique; silently picking one of several
 /// candidates would be a worse failure than refusing outright.
 ///
-/// # Known weakness
-///
-/// The traversal in [`walk_corpus_files`] treats an unreadable directory as an
-/// empty one: `read_dir` and `file_type` errors (permission denied, I/O
-/// failure, a directory vanishing mid-walk) are discarded rather than
-/// reported. A partially inaccessible corpus therefore looks like a smaller
-/// corpus. Callers that measure the whole corpus, rather than resolving one
-/// named fixture, can silently measure a subset. Tracked as
-/// `docs/KNOWN_LIMITATIONS.md` §131.
+/// Inherits [`walk_corpus_files`]'s panics on unreadable directories.
 pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
     let mut matches: Vec<PathBuf> = walk_corpus_files(root)
         .into_iter()
@@ -253,5 +262,55 @@ pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
             "corpus fixture name {filename:?} is not unique under {}: {matches:?}",
             root.display()
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fresh, empty directory under the system temp dir, removed on drop.
+    /// Hand-rolled so this crate keeps its single dependency.
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new(tag: &str) -> Self {
+            let dir =
+                std::env::temp_dir().join(format!("knx-testsupport-{tag}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn walk_lists_nested_files_name_sorted_depth_first() {
+        let scratch = Scratch::new("walk");
+        std::fs::create_dir_all(scratch.0.join("b")).unwrap();
+        std::fs::write(scratch.0.join("b/z.knxprod"), b"").unwrap();
+        std::fs::write(scratch.0.join("a.knxprod"), b"").unwrap();
+        let names: Vec<_> = walk_corpus_files(&scratch.0)
+            .into_iter()
+            .map(|p| p.strip_prefix(&scratch.0).unwrap().to_path_buf())
+            .collect();
+        assert_eq!(
+            names,
+            [PathBuf::from("a.knxprod"), PathBuf::from("b/z.knxprod")]
+        );
+    }
+
+    /// A root that cannot be read is an error, not an empty corpus: a test
+    /// measuring the corpus would otherwise report on nothing (§131).
+    #[test]
+    #[should_panic(expected = "cannot read corpus directory")]
+    fn walk_panics_on_a_missing_root_instead_of_measuring_nothing() {
+        let scratch = Scratch::new("missing");
+        walk_corpus_files(&scratch.0.join("not-there"));
     }
 }

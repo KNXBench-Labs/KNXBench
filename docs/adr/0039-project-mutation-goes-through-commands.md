@@ -1,7 +1,7 @@
 # ADR 0039: A live project changes only through `Command::apply`, and ids are reserved by a command that never rewinds
 
 Date: 2026-09-26
-Status: Proposed (DIN-10 / F-T30-1; awaits independent review and Board approval)
+Status: Accepted (approved per goal.md §12; phase 1 implemented in DIN-11, 2026-09-27)
 Session: DIN-10 (Paperclip), design only — no product code
 
 ## Context

@@ -203,11 +203,20 @@ pub enum Command {
         device: DeviceId,
         line: Option<LineId>,
     },
-    /// Replaces the project-id allocator snapshot as part of a larger batch.
-    /// This exists so commands that allocate several entities can restore the
-    /// allocator exactly on undo instead of leaving consumed ids behind.
+    /// Replaces the project-id allocator snapshot absolutely. Kept as an
+    /// exact-restore form only (ADR-0039 Decision 2): a snapshot taken
+    /// before another edit *lowers* the high-water mark when applied, so no
+    /// production path should emit it — use `ReserveIds`.
     SetIdAllocators {
         ids: IdAllocators,
+    },
+    /// Raises each allocator counter to `max(current, through)` and never
+    /// lowers one (ADR-0039 Decision 2). Its inverse is itself, so undo
+    /// leaves the high-water mark where it was and an id is never issued
+    /// twice in one project's history. A caller that allocated from a clone
+    /// of `project.ids` submits `Batch([ReserveIds { through: clone }, …])`.
+    ReserveIds {
+        through: IdAllocators,
     },
     /// Creates a device with its communication-object instances already
     /// attached, placed in `line` or, if `None`, `Topology::unassigned` —
@@ -401,8 +410,45 @@ pub enum CommandError {
         style: GroupAddressStyle,
     },
     InstallationNotFound,
+    /// A command tried to insert an entity under an id another entity of
+    /// the same kind already holds (ADR-0039 Decision 3). Refused so a stale
+    /// allocator snapshot becomes a typed error instead of a duplicate that
+    /// `save_project`'s upsert would later collapse, losing one entity.
+    IdInUse {
+        kind: IdKind,
+        id: u32,
+    },
     NothingToUndo,
     NothingToRedo,
+}
+
+/// Which id space an `CommandError::IdInUse` refers to — one per synthetic
+/// id newtype that a command can insert.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdKind {
+    Device,
+    Area,
+    Line,
+    ComObjectInstance,
+    GroupRange,
+    GroupAddress,
+    BuildingPart,
+    ParameterInstance,
+}
+
+impl fmt::Display for IdKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            IdKind::Device => "device",
+            IdKind::Area => "area",
+            IdKind::Line => "line",
+            IdKind::ComObjectInstance => "communication object instance",
+            IdKind::GroupRange => "group range",
+            IdKind::GroupAddress => "group address",
+            IdKind::BuildingPart => "building part",
+            IdKind::ParameterInstance => "parameter instance",
+        })
+    }
 }
 
 impl std::error::Error for CommandError {}
@@ -478,6 +524,10 @@ impl fmt::Display for CommandError {
                 "group range {id} (boundary raw value {raw}) does not fit style {style:?}, refusing the whole restyle"
             ),
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
+            CommandError::IdInUse { kind, id } => write!(
+                f,
+                "{kind} id {id} is already in use; refusing to create a second entity under it"
+            ),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
             CommandError::NothingToRedo => write!(f, "nothing to redo"),
         }
@@ -487,6 +537,45 @@ impl fmt::Display for CommandError {
 impl From<ValidationError> for CommandError {
     fn from(e: ValidationError) -> Self {
         CommandError::Validation(e)
+    }
+}
+
+/// Refuses `id` if an entity of `kind` already holds it anywhere in
+/// `project` (ADR-0039 Decision 3). Ids are project-unique, not
+/// installation-unique, so every installation is searched. The inverse forms
+/// that re-insert an id their own forward command just freed pass this
+/// check naturally, because the id is no longer present.
+fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), CommandError> {
+    let installations = project.installations.iter();
+    let taken = match kind {
+        IdKind::Device => project.devices.get(DeviceId(id)).is_some(),
+        IdKind::ComObjectInstance => project
+            .devices
+            .com_object(ComObjectInstanceId(id))
+            .is_some(),
+        IdKind::Area => installations
+            .flat_map(|i| &i.topology.areas)
+            .any(|a| a.id == AreaId(id)),
+        IdKind::Line => installations
+            .flat_map(|i| &i.topology.lines)
+            .any(|l| l.id == LineId(id)),
+        IdKind::GroupRange => installations
+            .flat_map(|i| &i.group_ranges)
+            .any(|r| r.id == GroupRangeId(id)),
+        IdKind::GroupAddress => installations
+            .flat_map(|i| &i.group_addresses)
+            .any(|g| g.id == GroupAddressId(id)),
+        IdKind::BuildingPart => installations
+            .flat_map(|i| &i.buildings)
+            .any(|b| b.id == BuildingPartId(id)),
+        IdKind::ParameterInstance => installations
+            .flat_map(|i| &i.parameters)
+            .any(|p| p.id == ParameterInstanceId(id)),
+    };
+    if taken {
+        Err(CommandError::IdInUse { kind, id })
+    } else {
+        Ok(())
     }
 }
 
@@ -753,6 +842,21 @@ impl Command {
                     .source
                     .path
                     .clone();
+                // Only a *new* instance inserts `id`; overwriting the value
+                // of an existing (device, ets_id) row keeps that row's id.
+                // Same scope as `upsert_parameter_value` below — the first
+                // installation — so a matching row elsewhere cannot hide
+                // that this push needs a free id.
+                let is_new_instance = !project
+                    .installations
+                    .first()
+                    .ok_or(CommandError::InstallationNotFound)?
+                    .parameters
+                    .iter()
+                    .any(|p| p.device == device_id && p.source.ets_id == *ets_id);
+                if is_new_instance {
+                    check_id_free(project, IdKind::ParameterInstance, id.0)?;
+                }
                 let installation = project
                     .installations
                     .first_mut()
@@ -822,6 +926,7 @@ impl Command {
                 }
             }
             Command::CreateGroupAddress { entry } => {
+                check_id_free(project, IdKind::GroupAddress, entry.id.0)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -883,6 +988,7 @@ impl Command {
                 Ok(Command::DeleteGroupAddress { id })
             }
             Command::CreateArea { area } => {
+                check_id_free(project, IdKind::Area, area.id.0)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -911,6 +1017,7 @@ impl Command {
                 Ok(Command::CreateArea { area })
             }
             Command::CreateLine { area, line } => {
+                check_id_free(project, IdKind::Line, line.id.0)?;
                 let area_id = *area;
                 let installation = project
                     .installations
@@ -1009,6 +1116,12 @@ impl Command {
                 let previous = std::mem::replace(&mut project.ids, ids.clone());
                 Ok(Command::SetIdAllocators { ids: previous })
             }
+            Command::ReserveIds { through } => {
+                project.ids.raise_to(through);
+                Ok(Command::ReserveIds {
+                    through: through.clone(),
+                })
+            }
             Command::CreateDevice {
                 device,
                 com_objects,
@@ -1022,6 +1135,19 @@ impl Command {
                 let installation_id = *installation;
                 let line = *line;
                 let device_id = device.id;
+                check_id_free(project, IdKind::Device, device_id.0)?;
+                for (index, com) in com_objects.iter().enumerate() {
+                    check_id_free(project, IdKind::ComObjectInstance, com.id.0)?;
+                    if com_objects[..index]
+                        .iter()
+                        .any(|earlier| earlier.id == com.id)
+                    {
+                        return Err(CommandError::IdInUse {
+                            kind: IdKind::ComObjectInstance,
+                            id: com.id.0,
+                        });
+                    }
+                }
                 let installation = match installation_id {
                     Some(id) => project
                         .installations
@@ -1186,6 +1312,7 @@ impl Command {
                 })
             }
             Command::CreateBuildingPart { part } => {
+                check_id_free(project, IdKind::BuildingPart, part.id.0)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1281,6 +1408,7 @@ impl Command {
                 })
             }
             Command::CreateGroupRange { range } => {
+                check_id_free(project, IdKind::GroupRange, range.id.0)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1518,6 +1646,11 @@ impl Command {
                 Ok(Command::SetGroupAddressStyle { style: previous })
             }
             Command::Batch(commands) => {
+                // A rollback is not an undo: `ReserveIds` never rewinds on
+                // undo, but a batch that fails must leave the project exactly
+                // as it found it, reservation included (ADR-0039: a refused
+                // create does not consume an id).
+                let ids_before = project.ids.clone();
                 let mut inverses = Vec::with_capacity(commands.len());
                 for cmd in commands {
                     match cmd.apply(project) {
@@ -1534,6 +1667,7 @@ impl Command {
                                     "an inverse of an already-applied command must re-apply",
                                 );
                             }
+                            project.ids = ids_before;
                             return Err(e);
                         }
                     }
@@ -4317,5 +4451,495 @@ mod tests {
             project.installations[0].group_addresses[0].address,
             GroupAddress::from_raw(100)
         );
+    }
+}
+
+/// ADR-0039 phase 1: every id-inserting command refuses an id already in
+/// use, and `ReserveIds` only ever raises the allocator.
+#[cfg(test)]
+mod id_integrity_tests {
+    use super::*;
+    use crate::building::BuildingPartType;
+    use crate::commissioning::{CommissioningState, CompletionStatus};
+    use crate::flags::ResolvedFlags;
+    use crate::ids::{InstallationId, SourceRef};
+    use crate::string_table::Language;
+    use crate::topology::Topology;
+
+    fn source() -> SourceRef {
+        SourceRef {
+            path: "t".into(),
+            ets_id: "t".into(),
+        }
+    }
+
+    fn project() -> Project {
+        let mut p = Project::new(Language("en".into()));
+        p.installations.push(Installation {
+            id: InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: CompletionStatus::FinishedDesign,
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        p
+    }
+
+    fn ga(id: u32, raw: u16) -> GroupAddressEntry {
+        GroupAddressEntry {
+            id: GroupAddressId(id),
+            source: source(),
+            name: format!("GA{raw}"),
+            address: GroupAddress::from_raw(raw),
+            central: false,
+            unfiltered: false,
+            range: None,
+        }
+    }
+
+    fn area(id: u32, address: u8) -> Area {
+        Area {
+            id: AreaId(id),
+            source: source(),
+            name: format!("Area {address}"),
+            address,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        }
+    }
+
+    fn line(id: u32, address: u8) -> Line {
+        Line {
+            id: LineId(id),
+            source: source(),
+            name: format!("Line {address}"),
+            address,
+            medium_ref: "TP".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
+            completion: CompletionStatus::FinishedDesign,
+            devices: vec![],
+        }
+    }
+
+    fn range(id: u32, start: u16, end: u16) -> GroupRange {
+        GroupRange {
+            id: GroupRangeId(id),
+            source: source(),
+            name: "R".into(),
+            start: GroupAddress::from_raw(start),
+            end: GroupAddress::from_raw(end),
+            parent: None,
+            children: vec![],
+        }
+    }
+
+    fn part(id: u32) -> BuildingPart {
+        BuildingPart {
+            id: BuildingPartId(id),
+            source: source(),
+            name: "B".into(),
+            number: None,
+            kind: BuildingPartType::Building,
+            default_line: None,
+            completion: CompletionStatus::Editing,
+            children: vec![],
+            devices: vec![],
+            parent: None,
+        }
+    }
+
+    fn com(id: u32, device: u32) -> ComObjectInstance {
+        ComObjectInstance {
+            id: ComObjectInstanceId(id),
+            source: source(),
+            device: DeviceId(device),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        }
+    }
+
+    fn create_device(id: u32, name: &str, coms: &[u32]) -> Command {
+        Command::CreateDevice {
+            device: DeviceInstance {
+                id: DeviceId(id),
+                source: source(),
+                name: name.into(),
+                description: None,
+                address: None,
+                product_ref: "P".into(),
+                program_ref: "H".into(),
+                commissioning: CommissioningState::default(),
+                visibility_calculated: true,
+                com_objects: coms.iter().map(|&c| ComObjectInstanceId(c)).collect(),
+                binary_data: vec![],
+            },
+            com_objects: coms.iter().map(|&c| com(c, id)).collect(),
+            program_defaults: vec![],
+            installation: None,
+            line: None,
+        }
+    }
+
+    /// Applies `first`, then asserts `second` is refused with
+    /// `IdInUse { kind, id }` and leaves the project exactly as `first` left it.
+    fn assert_second_is_refused(first: Command, second: Command, kind: IdKind, id: u32) {
+        let mut p = project();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(&mut p, first)
+            .expect("first create applies");
+        let before = format!("{p:#?}");
+        let result = stack.do_command(&mut p, second);
+        assert_eq!(result, Err(CommandError::IdInUse { kind, id }));
+        assert_eq!(
+            format!("{p:#?}"),
+            before,
+            "a refused command must not mutate"
+        );
+    }
+
+    #[test]
+    fn create_group_address_refuses_an_id_in_use() {
+        assert_second_is_refused(
+            Command::CreateGroupAddress { entry: ga(1, 1) },
+            Command::CreateGroupAddress { entry: ga(1, 2) },
+            IdKind::GroupAddress,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_area_refuses_an_id_in_use() {
+        assert_second_is_refused(
+            Command::CreateArea { area: area(1, 1) },
+            Command::CreateArea { area: area(1, 2) },
+            IdKind::Area,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_line_refuses_an_id_in_use_even_in_another_area() {
+        assert_second_is_refused(
+            Command::Batch(vec![
+                Command::CreateArea { area: area(1, 1) },
+                Command::CreateArea { area: area(2, 2) },
+                Command::CreateLine {
+                    area: AreaId(1),
+                    line: line(1, 1),
+                },
+            ]),
+            Command::CreateLine {
+                area: AreaId(2),
+                line: line(1, 1),
+            },
+            IdKind::Line,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_group_range_refuses_an_id_in_use() {
+        assert_second_is_refused(
+            Command::CreateGroupRange {
+                range: range(1, 0, 2047),
+            },
+            Command::CreateGroupRange {
+                range: range(1, 2048, 4095),
+            },
+            IdKind::GroupRange,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_building_part_refuses_an_id_in_use() {
+        assert_second_is_refused(
+            Command::CreateBuildingPart { part: part(1) },
+            Command::CreateBuildingPart { part: part(1) },
+            IdKind::BuildingPart,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_device_refuses_a_device_id_in_use_instead_of_overwriting_it() {
+        assert_second_is_refused(
+            create_device(1, "first", &[]),
+            create_device(1, "second", &[]),
+            IdKind::Device,
+            1,
+        );
+    }
+
+    #[test]
+    fn create_device_refuses_a_com_object_id_in_use() {
+        assert_second_is_refused(
+            create_device(1, "first", &[7]),
+            create_device(2, "second", &[7]),
+            IdKind::ComObjectInstance,
+            7,
+        );
+    }
+
+    #[test]
+    fn create_device_refuses_the_same_com_object_id_twice_in_one_command() {
+        let mut p = project();
+        let result = create_device(1, "d", &[7, 7]).apply(&mut p);
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::ComObjectInstance,
+                id: 7,
+            })
+        );
+        assert!(p.devices.get(DeviceId(1)).is_none());
+    }
+
+    #[test]
+    fn a_new_parameter_value_refuses_an_instance_id_in_use() {
+        let set = |id: u32, ets_id: &str| Command::SetParameterValue {
+            id: ParameterInstanceId(id),
+            device: DeviceId(1),
+            ets_id: ets_id.into(),
+            raw: "1".into(),
+        };
+        assert_second_is_refused(
+            Command::Batch(vec![create_device(1, "d", &[]), set(1, "P-1")]),
+            set(1, "P-2"),
+            IdKind::ParameterInstance,
+            1,
+        );
+    }
+
+    #[test]
+    fn overwriting_an_existing_parameter_value_is_not_an_id_clash() {
+        let mut p = project();
+        let mut stack = CommandStack::new();
+        let set = |raw: &str| Command::SetParameterValue {
+            id: ParameterInstanceId(1),
+            device: DeviceId(1),
+            ets_id: "P-1".into(),
+            raw: raw.into(),
+        };
+        stack
+            .do_command(
+                &mut p,
+                Command::Batch(vec![create_device(1, "d", &[]), set("1")]),
+            )
+            .unwrap();
+        stack.do_command(&mut p, set("2")).unwrap();
+        assert_eq!(p.installations[0].parameters.len(), 1);
+        assert_eq!(p.installations[0].parameters[0].raw, "2");
+    }
+
+    #[test]
+    fn delete_then_undo_still_restores_the_same_id() {
+        // The `Restore*`/inverse forms re-insert ids their own forward
+        // command just freed; the uniqueness check must not block them.
+        let mut p = project();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(&mut p, Command::CreateGroupAddress { entry: ga(1, 1) })
+            .unwrap();
+        stack
+            .do_command(
+                &mut p,
+                Command::DeleteGroupAddress {
+                    id: GroupAddressId(1),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut p).unwrap();
+        assert_eq!(p.installations[0].group_addresses.len(), 1);
+        stack.undo(&mut p).unwrap();
+        stack.redo(&mut p).unwrap();
+        assert_eq!(p.installations[0].group_addresses[0].id, GroupAddressId(1));
+    }
+
+    #[test]
+    fn reserve_ids_raises_each_counter_and_never_lowers_one() {
+        let mut p = project();
+        p.ids = IdAllocators::from_counts(5, 5, 5, 5, 5, 5, 5, 5, 5);
+        let through = IdAllocators::from_counts(9, 1, 5, 0, 7, 2, 6, 3, 8);
+        Command::ReserveIds { through }.apply(&mut p).unwrap();
+        assert_eq!(p.ids, IdAllocators::from_counts(9, 5, 5, 5, 7, 5, 6, 5, 8));
+    }
+
+    #[test]
+    fn reserve_ids_is_self_inverse_so_undo_keeps_the_high_water_mark() {
+        let mut p = project();
+        let mut stack = CommandStack::new();
+        let mut clone = p.ids.clone();
+        let id = clone.next_group_address_id();
+        stack
+            .do_command(
+                &mut p,
+                Command::Batch(vec![
+                    Command::ReserveIds { through: clone },
+                    Command::CreateGroupAddress { entry: ga(id.0, 1) },
+                ]),
+            )
+            .unwrap();
+        assert_eq!(p.ids.peek_group_address(), 1);
+        stack.undo(&mut p).unwrap();
+        assert!(p.installations[0].group_addresses.is_empty());
+        assert_eq!(
+            p.ids.peek_group_address(),
+            1,
+            "undo must not rewind: the next create has to get a fresh id"
+        );
+        let next = p.ids.clone().next_group_address_id();
+        assert_eq!(next, GroupAddressId(2));
+    }
+
+    #[test]
+    fn a_stale_snapshot_can_no_longer_duplicate_an_id() {
+        // ADR-0039 appendix, at the core level: request A plans from a
+        // snapshot, request B creates with the live counter in between,
+        // then A applies its stale plan.
+        let mut p = project();
+        let mut stack = CommandStack::new();
+        let mut stale = p.ids.clone();
+        let planned = stale.next_group_address_id();
+
+        let live = p.ids.next_group_address_id();
+        stack
+            .do_command(
+                &mut p,
+                Command::CreateGroupAddress {
+                    entry: ga(live.0, 10),
+                },
+            )
+            .unwrap();
+
+        let before = format!("{p:#?}");
+        let result = stack.do_command(
+            &mut p,
+            Command::Batch(vec![
+                Command::CreateGroupAddress {
+                    entry: ga(planned.0, 20),
+                },
+                Command::ReserveIds { through: stale },
+            ]),
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::GroupAddress,
+                id: 1,
+            })
+        );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    fn second_installation(p: &mut Project) {
+        let mut second = p.installations[0].clone();
+        second.id = InstallationId(1);
+        second.name = "J".into();
+        p.installations.push(second);
+    }
+
+    #[test]
+    fn an_id_held_in_another_installation_is_refused_too() {
+        let mut p = project();
+        second_installation(&mut p);
+        p.installations[1].group_addresses.push(ga(3, 9));
+        let before = format!("{p:#?}");
+        let result = Command::CreateGroupAddress { entry: ga(3, 1) }.apply(&mut p);
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::GroupAddress,
+                id: 3,
+            })
+        );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    /// The edited row lives in `installations[0]` (where `upsert` writes); a
+    /// same-(device, ets_id) row elsewhere must not hide that this is a new
+    /// instance whose id is already taken.
+    #[test]
+    fn a_parameter_row_in_another_installation_does_not_bypass_the_check() {
+        let mut p = project();
+        second_installation(&mut p);
+        let row = |id: u32| crate::parameter::ParameterInstance {
+            id: ParameterInstanceId(id),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "P-1".into(),
+            },
+            raw: "0".into(),
+        };
+        p.installations[1].parameters.push(row(5));
+        p.installations[0]
+            .parameters
+            .push(crate::parameter::ParameterInstance {
+                source: SourceRef {
+                    path: "t".into(),
+                    ets_id: "P-2".into(),
+                },
+                ..row(7)
+            });
+        create_device(1, "d", &[]).apply(&mut p).unwrap();
+        let before = format!("{p:#?}");
+        let result = Command::SetParameterValue {
+            id: ParameterInstanceId(5),
+            device: DeviceId(1),
+            ets_id: "P-1".into(),
+            raw: "1".into(),
+        }
+        .apply(&mut p);
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::ParameterInstance,
+                id: 5,
+            })
+        );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    /// `apply`'s contract is "untouched on `Err`", and a failed batch's
+    /// rollback is not an undo: a reservation the batch made must go too,
+    /// or a refused create would still consume ids (ADR-0039 Consequences).
+    #[test]
+    fn a_failed_batch_rolls_back_its_own_reservation() {
+        let mut p = project();
+        Command::CreateArea { area: area(1, 1) }
+            .apply(&mut p)
+            .unwrap();
+        let before = format!("{p:#?}");
+        let mut through = p.ids.clone();
+        through.next_area_id();
+        through.next_area_id();
+        let result = Command::Batch(vec![
+            Command::ReserveIds { through },
+            Command::CreateArea { area: area(1, 2) },
+        ])
+        .apply(&mut p);
+        assert!(matches!(result, Err(CommandError::IdInUse { .. })));
+        assert_eq!(format!("{p:#?}"), before);
     }
 }

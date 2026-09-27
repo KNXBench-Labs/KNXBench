@@ -1,4 +1,43 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 01:10 CEST
+- **Completed:** **PDB-9 merged as `3643e90`** and pushed (`81922d1` feature, `b1970ca` review fixes, `90e3d49` matrix re-pin). The productdb schema is now **v15** ([ADR-0041](../docs/adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)). What changed:
+  - **Parameter kinds.** `TypeColor` (115 in the corpus) and `TypeTime` (17) are now stored as kinds `Color`/`Time`.
+    - `Time` keeps its size and bounds in `Number`'s columns and is validated like `Number` (the Project Schema `Value_t` says "Same as TypeNumber").
+    - `Color` gets only a non-empty/XML-safe check, because no value encoding is documented.
+    - Every unmodelled type attribute is reported with a sample value: `UIHint`, `Increment`, `Unit`, `Space`, `Pattern`, `Encoding`, `AddressType`, `RefId`, `MaxSize`, …
+  - **v14→v15 upgrade.** It re-derives the new kinds from the retained program files.
+    - It runs the same scheme-evidence reconciliation a fresh install runs.
+    - It decrements the old "unknown element" rows instead of deleting them, rebuilds the attribute rows at retired paths, and handles the pre-v6 hardcoded xpath.
+    - The first installed file wins an ID conflict (ADR-0011). A corrupt file records a `ParameterKindBackfillError` and the database still opens.
+  - **Dynamic trees.** A new diagnostic, `RefBelowSkippedNode`, names every `ParameterRefRef`/`ComObjectRefRef`/`Module` below a node the evaluator refuses for a *structural* reason. Those references are not activated. The structural reasons are:
+    - an unrecognized node kind;
+    - a non-`when` child of a `choose`;
+    - a `choose` with `UnresolvedParamRef` or `UnexpectedTypeNoneShape`;
+    - a recognized leaf that has children.
+  - These reports count against `MAX_MODULE_ACTIVATIONS`. `Rows`/`Columns` are now recognized layout. `Rename`, `ParameterBlockRename`, `Button` and `Repeat` stay `UnrecognizedNode`: not applied, not expanded, not run.
+  - **Server/web.** They know `Color`, `Time` and `refBelowSkippedNode` (en/de). The parameter panel renders `Time` like `Number`.
+  - **Review `deleg_5626dd73`.** Verdict "Approve with follow-ups": 0 critical, 2 important (the missing budget, a doc overclaim), 8 minor. All were fixed, and 8 deliberate breaks of the new code were each caught by a test.
+  - **Corpus matrix.** A main-vs-branch comparison changed exactly 2 of 31 tables:
+    - `ingest_unknown` 23,040→23,051;
+    - `package_install_unknown` 9,245→9,251.
+
+    Report totals went from 22,758 to 22,769 per instance and from 22,642 to 22,653 shared. An independent Python recount (`$TMPDIR/pdb9_matrix_delta.py`) predicts every one of these deltas. The fingerprint is re-pinned to `c8db13b0…`, and the matrix is green (632 s). The corpus `dynamic_tree` tests pass 6/6.
+  - **Gates.** fmt 0, clippy 0, workspace 2080 passed / 0 failed / 114 ignored, headers 228 (at the ceiling of 162 files without a header), anchors 389, corpus-gates, layering, diff-check, tsc 0, ParameterPanel 14/14.
+- **Pending/Next Steps:** **PDB-10** (goal.md), then PDB-11, web leftovers, open issues, the manual, the alpha release and the final review. Still open from PDB-9, documented in KNOWN_LIMITATIONS §PDB-9:
+  - repeat expansion, rename application, button scripts;
+  - evaluating `ParameterCalculation`/`Allocator`;
+  - `TypeColor`'s value encoding;
+  - display-only attributes (no slider, no duration picker, no colour picker);
+  - value-dependent `choose` refusals and unexpanded `Module`s, which are named but whose references are not enumerated.
+- **Notes for Codex or Claude:**
+  - The two `iaw-settling-delay` entries in this file's working tree belong to another session (branch not pushed, awaiting a user decision). They were deliberately left uncommitted and untouched.
+  - The `check-headers` gate prints its rule text last. Grep for `headers ok`/`violation` instead of trusting `| tail`/`$?`: a new test file without a header nearly slipped through here.
+  - The matrix still needs `KNXBENCH_PRODUCT_CORPUS_SCOPES` and `KNXBENCH_PRODUCT_MATRIX_OUTPUT`.
+  - `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-27 21:36 CEST
 - **Completed:** **PDB-8 merged as `6fcc01f`** (`df006ec` feature + `f2011fe` review fixes; productdb schema **v14**). Uninterpreted *element* subtrees inside the five supported `knx_master.xml` sections are reported per occurrence: count category `master_subtree`/`unsupported`, diagnostic kind `unsupported-master-subtree` at the canonical path. `parse::master::INTERPRETED_MASTER_PATHS` is structural; corpus (69 distinct masters) has exactly `DatapointSubtype/Format` 12,072/38, `Manufacturer/PublicKeys` 2,528/69, `Manufacturer/OrderNumberFormattingScript` 75/33, all reporting-only, no typed storage. v13→v14 rebuilds both CHECK tables and *measures* the new row from each package's retained master blob. An unscannable blob downgrades only that report to `unavailable` and records `InstallReportBackfillError` (database stays openable). Review `deleg_cca43f5a`: 0 critical; clippy `explicit_counter_loop` fixed; overclaims narrowed (elements only, shape-only validation, MaskVersions resources/access section-level); migration test uses genuine v13 DDL. Corpus matrix: a main-vs-branch run showed exactly `package_install_count` 3277→3390 and `package_install_diagnostic` 645→880 changed out of 31 tables. Commitment re-pinned to `23a6c2ad…`, both counts now asserted; matrix green (693 s). Gates: workspace 2061 passed / 0 failed / 114 ignored, clippy workspace 0, fmt, headers 227, anchors 389, corpus-gates, layering; web 67 files / 1055; `install_reports` 21/21; legacy_member_names_corpus 1/1. Three mutants (zero backfill, any path accepted, cross-check removed) each killed.
 - **Pending/Next Steps:** **PDB-9** (goal §2.9): typed/raw coverage for all observed parameter kinds (`Restriction`, `Number`, `Picture`, `Float`, `Text`, `Color`, `RawData`, `None`, `IPAddress`, `Time`), synthetic Dynamic tests (Rows/Columns, rename/button, repeat/module nesting, transformations, allocator args), unknown Dynamic containers must not hide descendants. Then PDB-10, PDB-11, web leftovers, open issues, manual, alpha release, final review.

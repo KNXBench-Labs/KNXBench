@@ -33,8 +33,16 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// `package_install_count` 3,277 -> 3,390 (one `master_subtree` row per
 /// installed package) and `package_install_diagnostic` 645 -> 880 (the new
 /// subtree diagnostics). Every install outcome and report total was equal.
+///
+/// Re-pinned for PDB-9 (schema v15): a main-vs-branch run differed in
+/// exactly two of 31 final table counts — `ingest_unknown` 23,040 -> 23,051
+/// and `package_install_unknown` 9,245 -> 9,251 — because the 75 v14
+/// `Element TypeColor`/`TypeTime` rows became 86 unread-attribute rows
+/// (per package, distinct: 26 -> 32). An independent Python recount of the
+/// same 115 package instances predicts both deltas exactly. No product
+/// table changed; the report totals are pinned above.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "23a6c2ad37ccb08175fc8ee754c77a427cb9ab9eefeb40db35ca1d75b0b9a7ec";
+    "c8db13b0ce492ad33e6bbbbb63a2919936c9c7bd1a0a7a1c5dd1c3ea7aff0fb9";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -866,12 +874,19 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "installed": EXPECTED_SHARED_INSTALLS,
         })
     );
+    // PDB-9 (schema v15): +11 on all three `unknown_count` totals. A v14
+    // ingest reported each distinct `TypeColor`/`TypeTime` child as one
+    // unknown *element* per program member; v15 types both kinds and reports
+    // their unmodelled *attributes* instead. An independent Python recount
+    // over the same 115 discovered packages (bundles included) predicted
+    // 75 element rows -> 86 attribute rows, +11, identically for the 113
+    // unique packages; every other total is unchanged.
     assert_eq!(
         matrix["isolation_report_totals"],
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -882,7 +897,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22642,
+            "unknown_count": 22653,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -893,7 +908,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},

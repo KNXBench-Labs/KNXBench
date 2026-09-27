@@ -592,6 +592,220 @@ fn fill_parameter_type_bounds_element(
     Ok(0)
 }
 
+/// PDB-9 (v14 -> v15). Re-derives the two `ParameterType` kinds a v14
+/// parser filed under `Other` — `TypeColor` and `TypeTime` — out of one
+/// already-stored blob, and brings that blob's `ingest_unknown` rows to
+/// exactly what a fresh v15 ingest writes: the stale `Element` row for the
+/// type child is retired, and the child's unmodelled attributes (which the
+/// `Other` arm never reported) are recorded through the same
+/// `report_unknown_attrs`/`known_type_child_attrs` pair ingest uses, so the
+/// two cannot drift. Returns how many `parameter_type` rows it re-kinded.
+///
+/// Guards, per ADR-0020: `kind = 'Other'` (never overwrite a row a current
+/// ingest determined) and the `EXISTS` clause (a blob that lost its program
+/// id, ADR-0011, cannot rewrite the winner's row — though its own unknown
+/// rows are still corrected, as ingest reports a loser's constructs too).
+///
+/// Exactness, point by point:
+/// - The event handling mirrors `handle_start`: `Dynamic` subtrees are
+///   skipped whole, and an element consumed as a `ParameterType`'s
+///   type-deciding child is *only* that (ingest returns early), so
+///   `open_path` — and every xpath — matches ingest's even for a childless
+///   `<ParameterType/>`.
+/// - The stale row is *decremented* by the number of type-deciding
+///   `TypeColor`/`TypeTime` occurrences at that path, not deleted, because
+///   the same `(xpath, name)` row also counts any non-deciding occurrence
+///   the generic arm reported, which a v15 ingest still reports. Ingest
+///   before commit a4ba902 (schema <= v6) wrote this row at a hardcoded
+///   `.../Static/ParameterTypes/ParameterType`; when the computed path has
+///   no row, that legacy path is decremented instead.
+/// - The collected attribute rows go through the same scheme-evidence
+///   reconciliation ingest applies (`reconcile_targeted_unknowns`, or
+///   `reconcile_package_unknowns` when `scheme21_package`), so a
+///   namespace-prefixed attribute leaves the same rows it would at ingest.
+///   Attribute rows at a retired child's path are rebuilt whole, from
+///   deciding and non-deciding occurrences in document order; elsewhere
+///   only rows not already present are inserted, which also drops the
+///   reconciliation's own evidence rows the original ingest wrote.
+///
+/// Runs once per database, under the schema-version gate; it is not
+/// idempotent on its own (a second run would decrement again).
+pub(crate) fn backfill_color_time_kinds(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+    scheme21_package: bool,
+) -> Result<usize, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut open_path: Vec<String> = Vec::new();
+    let mut program_id = String::new();
+    let mut current_parameter_type_id: Option<String> = None;
+    let mut expecting_type_child = false;
+    let mut unknown = UnknownCollector::default();
+    let mut retired: std::collections::BTreeMap<(String, String), i64> =
+        std::collections::BTreeMap::new();
+    let mut rekinded = 0usize;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let (e, is_start) = match &event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+                continue;
+            }
+            Event::End(_) => {
+                if open_path.pop().as_deref() == Some("ParameterType") {
+                    current_parameter_type_id = None;
+                }
+                continue;
+            }
+            Event::Start(e) => (e, true),
+            Event::Empty(e) => (e, false),
+            _ => continue,
+        };
+        let name = local_name(e);
+        let a = attrs(e, source_path)?;
+        if expecting_type_child {
+            expecting_type_child = false;
+            if let (Some(pt_id), "TypeColor" | "TypeTime") =
+                (current_parameter_type_id.as_deref(), name.as_str())
+            {
+                let (kind, size, min, max) = if name == "TypeTime" {
+                    (
+                        "Time",
+                        parse_i64(a.get("SizeInBit")),
+                        a.get("minInclusive"),
+                        a.get("maxInclusive"),
+                    )
+                } else {
+                    ("Color", None, None, None)
+                };
+                rekinded += conn.execute(
+                    "UPDATE parameter_type
+                     SET kind = ?1, size_in_bit = ?2, min_inclusive = ?3, max_inclusive = ?4
+                     WHERE program_id = ?5 AND id = ?6 AND kind = 'Other'
+                       AND EXISTS (
+                         SELECT 1 FROM application_program WHERE id = ?5 AND source_sha256 = ?7
+                       )",
+                    params![kind, size, min, max, program_id, pt_id, source_sha256],
+                )?;
+                *retired
+                    .entry((xpath_of(&open_path), name.clone()))
+                    .or_default() += 1;
+                report_unknown_attrs(
+                    &mut unknown,
+                    &xpath_of_child(&open_path, &name),
+                    &a,
+                    known_type_child_attrs(&name),
+                );
+            }
+            // Ingest's `handle_start` returns right after the type child,
+            // so nothing below applies to it.
+            if is_start {
+                open_path.push(name);
+            }
+            continue;
+        }
+        if matches!(name.as_str(), "TypeColor" | "TypeTime") {
+            // Not type-deciding (schema-invalid, but possible): ingest's
+            // generic arm reports every attribute. Collected in document
+            // order alongside the deciding ones so a shared row's count and
+            // first sample come out as ingest's would.
+            report_unknown_attrs(&mut unknown, &xpath_of_child(&open_path, &name), &a, &[]);
+        }
+        match name.as_str() {
+            "ApplicationProgram" => program_id = a.get("Id").unwrap_or_default().to_string(),
+            "ParameterType" => {
+                current_parameter_type_id = Some(a.get("Id").unwrap_or_default().to_string());
+                expecting_type_child = true;
+            }
+            _ => {}
+        }
+        if is_start {
+            open_path.push(name);
+        }
+    }
+
+    const LEGACY_TYPE_XPATH: &str =
+        "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes/ParameterType";
+    for ((xpath, name), count) in &retired {
+        let has_row = |path: &str| -> Result<bool, ProductDbError> {
+            Ok(conn.query_row(
+                "SELECT EXISTS (SELECT 1 FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3)",
+                params![source_sha256, path, name],
+                |r| r.get(0),
+            )?)
+        };
+        let target = if has_row(xpath)? {
+            xpath.as_str()
+        } else if has_row(LEGACY_TYPE_XPATH)? {
+            LEGACY_TYPE_XPATH
+        } else {
+            continue;
+        };
+        conn.execute(
+            "UPDATE ingest_unknown SET occurrences = occurrences - ?4
+             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3",
+            params![source_sha256, target, name, count],
+        )?;
+        conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3
+               AND occurrences <= 0",
+            params![source_sha256, target, name],
+        )?;
+    }
+    let mut collected = unknown.into_vec();
+    if scheme21_package {
+        super::scheme_evidence::reconcile_package_unknowns(bytes, source_path, &mut collected)?;
+    } else {
+        super::scheme_evidence::reconcile_targeted_unknowns(bytes, source_path, &mut collected)?;
+    }
+    // Attribute rows under a path a type-deciding child was retired from
+    // are rebuilt whole: v14 wrote there only for non-deciding occurrences
+    // (if any), and ingest aggregates both into one row per name. Rows at
+    // every other path are ingest's own v14 output and only gain what is
+    // missing.
+    let rebuilt: std::collections::BTreeSet<String> = retired
+        .keys()
+        .map(|(xpath, name)| format!("{xpath}/{name}"))
+        .collect();
+    for xpath in &rebuilt {
+        conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND xpath = ?2",
+            params![source_sha256, xpath],
+        )?;
+    }
+    let fresh: Vec<_> = collected
+        .into_iter()
+        .map(|u| {
+            let present: bool = conn.query_row(
+                "SELECT EXISTS (SELECT 1 FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = ?3 AND name = ?4)",
+                params![source_sha256, u.xpath, u.kind.as_str(), u.name],
+                |r| r.get(0),
+            )?;
+            Ok((present, u))
+        })
+        .collect::<Result<Vec<_>, ProductDbError>>()?
+        .into_iter()
+        .filter_map(|(present, u)| (!present).then_some(u))
+        .collect();
+    crate::report::insert_unknown(conn, source_sha256, &fresh)?;
+    Ok(rekinded)
+}
+
 /// One `TypeFloat` element's contribution. Two guards, the shape
 /// ADR-0020 requires: `min_inclusive IS NULL AND max_inclusive IS NULL`
 /// (the pair the old parser always wrote together, never one alone) so a
@@ -1037,6 +1251,14 @@ type TypeFields<'a> = (
 /// — reporting them is a strictly smaller claim than storing them: it only
 /// says the parser met these attributes and did not model them, which is
 /// true today and was silently false before.
+///
+/// PDB-9 adds `TypeColor` and `TypeTime` (corpus: 115 and 17 of 304
+/// distinct programs' type children). `TypeTime` stores exactly what
+/// `TypeNumber` stores, because the Project Schema's `Value_t` table says
+/// its value encoding is "Same as TypeNumber" and all 17 corpus bounds are
+/// integers; `@Unit` and `@UIHint` are reported, not interpreted.
+/// `TypeColor/@Space` (`RGB`/`HSV`) is reported: no documented value
+/// encoding exists to validate against.
 fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
     match child_name {
         "TypeRestriction" => &["SizeInBit", "Base"],
@@ -1047,6 +1269,8 @@ fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
         "TypeIPAddress" => &[],
         "TypePicture" => &[],
         "TypeRawData" => &[],
+        "TypeColor" => &[],
+        "TypeTime" => &["SizeInBit", "minInclusive", "maxInclusive"],
         _ => &[],
     }
 }
@@ -1117,6 +1341,15 @@ fn insert_parameter_type(
             "TypeIPAddress" => ("IPAddress", None, None, None, None, None),
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
+            "TypeColor" => ("Color", None, None, None, None, None),
+            "TypeTime" => (
+                "Time",
+                parse_i64(a.get("SizeInBit")),
+                None,
+                a.get("minInclusive"),
+                a.get("maxInclusive"),
+                None,
+            ),
             other => {
                 unknown.element(&xpath_of(open_path), other);
                 ("Other", None, None, None, None, None)

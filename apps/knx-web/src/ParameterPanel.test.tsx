@@ -296,6 +296,27 @@ describe("ParameterPanel", () => {
     root.unmount();
   });
 
+  it("renders a Time field as a bounded integer input like Number (PDB-9)", async () => {
+    const timed: ParameterPanelDto = {
+      ...fixture,
+      sections: [
+        {
+          scope: null,
+          fields: [{ ...fixture.sections[0].fields[0], kind: "Time", min: "0", max: "3600" }],
+        },
+      ],
+    };
+    apiMock.deviceParameters.mockResolvedValue(timed);
+    const root = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    expect(input).not.toBeNull();
+    expect(input.min).toBe("0");
+    expect(input.max).toBe("3600");
+
+    root.unmount();
+  });
+
   it("writes a module-scoped field's writeEtsId, not its declared etsId", async () => {
     const scopedPanel: ParameterPanelDto = {
       programId: "PROG-1",

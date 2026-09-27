@@ -161,7 +161,11 @@ future cycle rather than bundled into "Session 4 leftovers":
   them through catalogue queries/CLI. The strings are not interpreted as
   device security or commissioning capability. PDB-8 (schema v14) reports
   every uninterpreted subtree inside a supported master section alongside
-  the existing section-level diagnostics; none of it is typed yet. Load-procedure execution and
+  the existing section-level diagnostics; none of it is typed yet. PDB-9
+  (schema v15, ADR-0041) types `TypeColor`/`TypeTime`, reports every
+  unmodelled parameter-type attribute, and names every reference below a
+  skipped Dynamic node; repeat expansion, renames, buttons, calculations
+  and allocators stay reported, not evaluated. Load-procedure execution and
   manufacturer-specific behavior remain outside this claim. **Schema 23
   manufacturer data** is a separate project-import boundary and still needs
   its own known-element evidence.

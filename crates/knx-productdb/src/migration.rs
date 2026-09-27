@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 14;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 15;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -287,7 +287,67 @@ fn migrations() -> Vec<Migration> {
         migrate_v11_to_v12,
         migrate_v12_to_v13,
         migrate_v13_to_v14,
+        migrate_v14_to_v15,
     ]
+}
+
+/// v14 -> v15 (PDB-9). `TypeColor` and `TypeTime` get their own
+/// `parameter_type.kind` (`Color`, `Time`) instead of `Other`; no DDL is
+/// needed because `kind` has no CHECK list. Every blob that still carries a
+/// v14-era unknown-`Element` row for either child is re-read with
+/// `parse::program::backfill_color_time_kinds` (ADR-0020), which re-kinds
+/// the winning rows and swaps the stale element row for the attribute rows
+/// a fresh ingest writes. Package install reports are historical encounter
+/// records and are left as measured, the v12 -> v13 precedent. Per-blob
+/// `SAVEPOINT`; a failure is recorded, not fatal — a database that refuses
+/// to open is worse than one with a named gap.
+fn migrate_v14_to_v15(conn: &Connection) -> Result<(), ProductDbError> {
+    // `scheme21`: whether ingest ran this blob through the scheme-21
+    // package reconciliation (it does for an application program installed
+    // as a member of a scheme-21 package, ingest.rs), so the backfill
+    // reconciles its new attribute rows the same way.
+    let sources = conn
+        .prepare(
+            "SELECT DISTINCT u.source_sha256, s.source_path,
+                    EXISTS (SELECT 1 FROM package_member AS m JOIN package AS p
+                            ON p.sha256 = m.package_sha256
+                            WHERE m.source_sha256 = u.source_sha256 AND p.scheme = 21)
+             FROM ingest_unknown AS u JOIN source_file AS s ON s.sha256 = u.source_sha256
+             WHERE u.kind = 'Element' AND u.name IN ('TypeColor', 'TypeTime')
+             ORDER BY u.source_sha256",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha, path, scheme21) in sources {
+        let bytes: Vec<u8> = conn.query_row(
+            "SELECT bytes FROM source_file WHERE sha256 = ?1",
+            [&sha],
+            |r| r.get(0),
+        )?;
+        conn.execute_batch("SAVEPOINT color_time_backfill")?;
+        match crate::parse::program::backfill_color_time_kinds(conn, &sha, &path, &bytes, scheme21)
+        {
+            Ok(_) => conn.execute_batch("RELEASE color_time_backfill")?,
+            Err(error) => {
+                conn.execute_batch("ROLLBACK TO color_time_backfill; RELEASE color_time_backfill")?;
+                record_backfill_failure(
+                    conn,
+                    &sha,
+                    &path,
+                    "ParameterKindBackfillError",
+                    "backfill_color_time_kinds",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v13 -> v14 (PDB-8). Adds the `master_subtree` count category and the

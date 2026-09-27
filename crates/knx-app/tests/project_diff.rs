@@ -34,11 +34,12 @@ fn reference_ets4_path() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn rendering_diff_projects_between_two_independent_imports_of_the_reference_project_is_empty() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
 
     // Two independent imports, not one project cloned — the strongest form
     // of design spec §3.7's property, and the one that actually exercises

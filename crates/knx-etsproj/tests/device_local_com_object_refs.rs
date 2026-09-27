@@ -42,11 +42,12 @@ fn malformed_ref_ids(report: &knx_etsproj::ImportReport) -> Vec<String> {
 /// to lose 867 communication-object references over 310 distinct ids, and
 /// nothing in `docs/` said so. Both numbers are now zero.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let out = import_knxproj(&support::reference_ets6_path()).unwrap();
     assert_eq!(out.report.source.schema_version, 23);
 
@@ -132,11 +133,12 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
 /// behind. Read off the mapped project, not off the file, so the assertion
 /// is about what a caller actually receives.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn every_ets6_com_object_number_matches_its_own_ref_ids_o_digits() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let out = import_knxproj(&support::reference_ets6_path()).unwrap();
     let project = &out.project;
 
@@ -181,11 +183,12 @@ fn every_ets6_com_object_number_matches_its_own_ref_ids_o_digits() {
 /// to would be worse than the loss it removed. Both counts are the ones
 /// measured on `fcf4563`, before the change.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_ets4_and_schema21_projects_are_untouched_by_the_device_local_path() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
 
     let ets4 = import_knxproj(&support::reference_ets4_path()).unwrap();
     assert_eq!(ets4.report.source.schema_version, 11);

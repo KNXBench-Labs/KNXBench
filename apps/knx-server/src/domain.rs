@@ -4642,11 +4642,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn opening_a_project_through_a_wired_product_db_enriches_more_than_without() {
-        if !reference_project_path().exists() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            reference_project_path().exists(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let dir = tempfile::tempdir().unwrap();
         let products_path = dir.path().join("products.sqlite");
         {
@@ -5051,11 +5052,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_successful_import_resets_and_repopulates_the_log() {
-        if !reference_project_path().exists() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            reference_project_path().exists(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let state = AppState::default();
         push_sentinel(&state);
 

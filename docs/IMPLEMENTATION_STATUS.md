@@ -13,20 +13,30 @@ resolve `true` only when the refreshed `GET /api/project` snapshot was
 accepted *and* reports `is_modified == false`. A failed save, a cancelled
 Save-As picker, a superseded snapshot or an edit that landed during the
 save all resolve `false`. On `false`, Save and quit keeps the dialog and the
-project open (its buttons are disabled while the save runs). Save and
-create never sends `discardChanges`: after a successful save it resends the
-plain request, so if anything is still unsaved the server's 409 simply
-comes back and the prompt stays up. `NewProjectDialog` receives the save as
+project open (Discard and Save are disabled while the save runs). Cancel,
+Escape and the backdrop stay live during the save: they withdraw the quit,
+not the save, so a save that finishes after the user cancelled still lands
+but never quits. Save and create never sends `discardChanges`: after a
+successful save it resends the plain request, so if anything is still
+unsaved the server's 409 simply comes back and the prompt stays up. If the
+dialog is dismissed (Keep editing, Escape, backdrop, unmount) while its
+save is running, nothing is created. `NewProjectDialog` receives the save as
 `onSaveFirst`, so there is no second persistence path. The quit hint text
 (en/de) that told users to cancel and save by hand was replaced.
 
-Tests: three new `App.test.tsx` cases (save-and-quit when clean; save
+Tests: four new `App.test.tsx` cases (save-and-quit when clean; save
 rejected or still dirty keeps the prompt; cancelled Save-As keeps the
-prompt) and three new `NewProjectDialog.test.tsx` cases (save then create,
-never discarding; failed or cancelled save creates nothing; still-dirty
-after save stays in the prompt). With the result check removed, exactly
-the three negative cases fail **[V]**. Web suite 65 files / 1013 tests,
-`tsc` clean. No Rust change.
+prompt; Cancel during the save does not quit) and four new
+`NewProjectDialog.test.tsx` cases (save then create, never discarding;
+failed or cancelled save creates nothing; still-dirty after save stays in
+the prompt; Escape during the save creates nothing). With the result check
+removed, exactly the three negative result cases fail, and with the two
+withdrawal guards removed, exactly the two mid-save dismissal cases fail
+**[V]**. The review (`deleg_2ca50518`) found those two dismissal races;
+they were fixed before merge. Web suite 65 files / 1015 tests, `tsc` clean.
+No Rust change. A manual Save while an autosave is already in flight still
+sends a second, serialized save; this is redundant but safe, because both
+callers re-read the authoritative snapshot afterwards.
 
 This completes ISSUE-04's user-facing half. The authoritative
 `is_modified` / `last_saved_at` state ([KNOWN_LIMITATIONS §103](KNOWN_LIMITATIONS.md#103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag),

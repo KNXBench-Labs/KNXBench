@@ -305,6 +305,33 @@ describe("NewProjectDialog", () => {
     root.unmount();
   });
 
+  it("creates nothing when the dialog is dismissed while Save and create is still saving", async () => {
+    apiMock.newProject.mockRejectedValueOnce(httpError(409, "the open project has unsaved changes"));
+    let finishSave!: (saved: boolean) => void;
+    const { root, onCreated, onClose } = await renderDialog(
+      () => new Promise<boolean>((resolve) => { finishSave = resolve; }),
+    );
+
+    await submitForm();
+    await act(async () => {
+      button("Save and create").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      host!
+        .querySelector('[role="dialog"]')!
+        .dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishSave(true);
+    });
+    expect(apiMock.newProject).toHaveBeenCalledTimes(1);
+    expect(onCreated).not.toHaveBeenCalled();
+
+    root.unmount();
+  });
+
   it("disables the discard button when the form behind the 409 prompt goes invalid", async () => {
     apiMock.newProject.mockRejectedValue(httpError(409, "the open project has unsaved changes"));
     const { root } = await renderDialog();

@@ -4413,8 +4413,10 @@ section keeps only the findings and their grade.
 - **[D]** *Project Schema23* §1.1.2.3 `SpaceType_t` has ten values, among
   them `Ground`. There is no `Site`, `Property` or `Campus`. §1.2.6.3: top-level
   spaces "will nromally have Type "Area" or "Building" or “Ground”".
-  §1.2.3.13: `Topology`, `Locations` and `GroupAddresses` are siblings under
-  one `Installation`. §1.2.3.12: up to 16 installations.
+  §1.2.3.13 lists `Topology`, `Buildings` and `GroupAddresses` as siblings
+  under one `Installation` (it names the building structure `Buildings`;
+  §1.2.6.1 heads it `Locations`, which is what exports use). §1.2.3.12: up
+  to 16 installations.
 - **[D]** 3/10/3 §1.2.3.5: `loc:Site` is "a collection of buildings and
   grounds that belong to a given institution" (`loc:hasBuilding`,
   `loc:hasSiteSegment`; maps to `IfcSite`). §1.2.1: a site "is usually at the

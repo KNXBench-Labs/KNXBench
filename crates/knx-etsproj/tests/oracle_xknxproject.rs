@@ -1,6 +1,6 @@
 //! Cross-checks the import against `xknxproject`'s own reading of the
-//! reference project (`project_dump.json`, committed at the workspace
-//! root). `xknxproject` is a good reader and a lossy one (RESEARCH §7.1):
+//! reference project (`project_dump.json` at the workspace root, gitignored
+//! and local-only like `OriginalData/`). `xknxproject` is a good reader and a lossy one (RESEARCH §7.1):
 //! used here as a second opinion on the parts it does read, with the parts
 //! it is known to lose asserted as differences rather than ignored, so a
 //! future version of the oracle that starts reading them makes this test
@@ -17,12 +17,12 @@ fn oracle() -> Result<serde_json::Value, Box<dyn std::error::Error>> {
 }
 
 #[test]
-#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+#[ignore = "requires the gitignored OriginalData/ corpus and project_dump.json oracle; run with --ignored"]
 fn group_addresses_agree_with_the_oracle_by_address_and_name() {
-    if !oracle_dump_path().exists() {
-        eprintln!("skip: project_dump.json (oracle) not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        oracle_dump_path().exists(),
+        "project_dump.json (the xknxproject oracle) not present at the workspace root (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     assert!(
         reference_ets4_path().exists(),
         "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
@@ -43,12 +43,12 @@ fn group_addresses_agree_with_the_oracle_by_address_and_name() {
 }
 
 #[test]
-#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+#[ignore = "requires the gitignored OriginalData/ corpus and project_dump.json oracle; run with --ignored"]
 fn devices_agree_with_the_oracle_except_for_the_one_it_loses() {
-    if !oracle_dump_path().exists() {
-        eprintln!("skip: project_dump.json (oracle) not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        oracle_dump_path().exists(),
+        "project_dump.json (the xknxproject oracle) not present at the workspace root (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     assert!(
         reference_ets4_path().exists(),
         "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
@@ -73,11 +73,12 @@ fn devices_agree_with_the_oracle_except_for_the_one_it_loses() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus and project_dump.json oracle; run with --ignored"]
 fn the_oracle_still_loses_exactly_what_research_measured() {
-    if !oracle_dump_path().exists() {
-        eprintln!("skip: project_dump.json (oracle) not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        oracle_dump_path().exists(),
+        "project_dump.json (the xknxproject oracle) not present at the workspace root (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     // If any of these starts holding data, RESEARCH §7.1 needs updating and
     // the comparison above can be widened.
     let oracle = oracle().unwrap();
@@ -97,12 +98,12 @@ fn the_oracle_still_loses_exactly_what_research_measured() {
 }
 
 #[test]
-#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+#[ignore = "requires the gitignored OriginalData/ corpus and project_dump.json oracle; run with --ignored"]
 fn the_project_metadata_agrees_with_the_oracle() {
-    if !oracle_dump_path().exists() {
-        eprintln!("skip: project_dump.json (oracle) not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        oracle_dump_path().exists(),
+        "project_dump.json (the xknxproject oracle) not present at the workspace root (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     assert!(
         reference_ets4_path().exists(),
         "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
@@ -125,12 +126,12 @@ fn the_project_metadata_agrees_with_the_oracle() {
 }
 
 #[test]
-#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+#[ignore = "requires the gitignored OriginalData/ corpus and project_dump.json oracle; run with --ignored"]
 fn our_linked_communication_objects_match_the_oracle_count() {
-    if !oracle_dump_path().exists() {
-        eprintln!("skip: project_dump.json (oracle) not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        oracle_dump_path().exists(),
+        "project_dump.json (the xknxproject oracle) not present at the workspace root (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     assert!(
         reference_ets4_path().exists(),
         "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"

@@ -69,8 +69,12 @@ pub(crate) fn reference_ets4_path() -> PathBuf {
 /// True when the gitignored `OriginalData/` fixture corpus is present
 /// locally. It holds the maintainer's own real KNX installation and
 /// manufacturer files — never committed, so CI (and any contributor
-/// without a copy) has none of it. Every test that needs the corpus must
-/// check this first and skip, not panic, or CI is permanently red.
+/// without a copy) has none of it. A test that needs the corpus is
+/// `#[ignore = "requires the gitignored OriginalData/ corpus; run with
+/// --ignored"]` and `assert!`s this first: without the corpus it is reported
+/// *ignored* by default and fails by name under `--ignored`. Returning early
+/// instead would count as a pass that tested nothing
+/// (docs/KNOWN_LIMITATIONS.md §131; `cargo run -p xtask -- check-corpus-gates`).
 pub(crate) fn corpus_available() -> bool {
     knx_testsupport::corpus_available()
 }

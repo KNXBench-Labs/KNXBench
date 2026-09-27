@@ -342,6 +342,8 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnostic.nonNumericValue": "Der steuernde Wert einer Auswahl war keine gültige Zahl.",
   "parameters.diagnostic.unexpectedTypeNoneShape": "Eine ungewöhnliche Auswahlstruktur wurde übersprungen.",
   "parameters.diagnostic.unrecognizedNode": "Ein nicht erkanntes Programmelement wurde übersprungen.",
+  "parameters.diagnostic.refBelowSkippedNode":
+    "Ein Parameter, Objekt oder Modul in einem übersprungenen Element wurde nicht ausgewertet.",
   "parameters.diagnostic.moduleDefNotFound": "Ein Modul konnte in diesem Programm nicht gefunden werden.",
   "parameters.diagnostic.moduleCycleDetected":
     "Ein Modul verweist zurück auf eines seiner eigenen umschließenden Module und wurde nicht expandiert.",

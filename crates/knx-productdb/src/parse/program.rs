@@ -592,6 +592,140 @@ fn fill_parameter_type_bounds_element(
     Ok(0)
 }
 
+/// PDB-9 (v14 -> v15). Re-derives the two `ParameterType` kinds a v14
+/// parser filed under `Other` — `TypeColor` and `TypeTime` — out of one
+/// already-stored blob, and brings that blob's `ingest_unknown` rows to
+/// exactly what a fresh v15 ingest writes: the stale `Element` row for the
+/// type child is retired, and the child's unmodelled attributes (which the
+/// `Other` arm never reported) are recorded through the same
+/// `report_unknown_attrs`/`known_type_child_attrs` pair ingest uses, so the
+/// two cannot drift. Returns how many `parameter_type` rows it re-kinded.
+///
+/// Guards, per ADR-0020: `kind = 'Other'` (never overwrite a row a current
+/// ingest determined) and the `EXISTS` clause (a blob that lost its program
+/// id, ADR-0011, cannot rewrite the winner's row — though its own unknown
+/// rows are still corrected, as ingest reports a loser's constructs too).
+/// Only a blob that still holds a stale `Element` row is ever passed in,
+/// and attribute rows already present are left alone, so a re-run adds
+/// nothing. `Dynamic` subtrees are skipped whole, exactly as ingest does,
+/// so `open_path` — and with it every xpath — matches ingest's.
+pub(crate) fn backfill_color_time_kinds(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<usize, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut open_path: Vec<String> = Vec::new();
+    let mut program_id = String::new();
+    let mut current_parameter_type_id: Option<String> = None;
+    let mut expecting_type_child = false;
+    let mut unknown = UnknownCollector::default();
+    let mut retired: Vec<(String, String)> = Vec::new();
+    let mut rekinded = 0usize;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let (e, is_start) = match &event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+                continue;
+            }
+            Event::End(_) => {
+                if open_path.pop().as_deref() == Some("ParameterType") {
+                    current_parameter_type_id = None;
+                }
+                continue;
+            }
+            Event::Start(e) => (e, true),
+            Event::Empty(e) => (e, false),
+            _ => continue,
+        };
+        let name = local_name(e);
+        let a = attrs(e, source_path)?;
+        if expecting_type_child {
+            expecting_type_child = false;
+            if let (Some(pt_id), "TypeColor" | "TypeTime") =
+                (current_parameter_type_id.as_deref(), name.as_str())
+            {
+                let (kind, size, min, max) = if name == "TypeTime" {
+                    (
+                        "Time",
+                        parse_i64(a.get("SizeInBit")),
+                        a.get("minInclusive"),
+                        a.get("maxInclusive"),
+                    )
+                } else {
+                    ("Color", None, None, None)
+                };
+                rekinded += conn.execute(
+                    "UPDATE parameter_type
+                     SET kind = ?1, size_in_bit = ?2, min_inclusive = ?3, max_inclusive = ?4
+                     WHERE program_id = ?5 AND id = ?6 AND kind = 'Other'
+                       AND EXISTS (
+                         SELECT 1 FROM application_program WHERE id = ?5 AND source_sha256 = ?7
+                       )",
+                    params![kind, size, min, max, program_id, pt_id, source_sha256],
+                )?;
+                retired.push((xpath_of(&open_path), name.clone()));
+                report_unknown_attrs(
+                    &mut unknown,
+                    &xpath_of_child(&open_path, &name),
+                    &a,
+                    known_type_child_attrs(&name),
+                );
+            }
+        }
+        match name.as_str() {
+            "ApplicationProgram" => program_id = a.get("Id").unwrap_or_default().to_string(),
+            "ParameterType" => {
+                current_parameter_type_id = Some(a.get("Id").unwrap_or_default().to_string());
+                expecting_type_child = true;
+            }
+            _ => {}
+        }
+        if is_start {
+            open_path.push(name);
+        }
+    }
+
+    retired.sort();
+    retired.dedup();
+    for (xpath, name) in &retired {
+        conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND kind = 'Element' AND xpath = ?2 AND name = ?3",
+            params![source_sha256, xpath, name],
+        )?;
+    }
+    let fresh: Vec<_> = unknown
+        .into_vec()
+        .into_iter()
+        .map(|u| {
+            let present: bool = conn.query_row(
+                "SELECT EXISTS (SELECT 1 FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = ?3 AND name = ?4)",
+                params![source_sha256, u.xpath, u.kind.as_str(), u.name],
+                |r| r.get(0),
+            )?;
+            Ok((present, u))
+        })
+        .collect::<Result<Vec<_>, ProductDbError>>()?
+        .into_iter()
+        .filter_map(|(present, u)| (!present).then_some(u))
+        .collect();
+    crate::report::insert_unknown(conn, source_sha256, &fresh)?;
+    Ok(rekinded)
+}
+
 /// One `TypeFloat` element's contribution. Two guards, the shape
 /// ADR-0020 requires: `min_inclusive IS NULL AND max_inclusive IS NULL`
 /// (the pair the old parser always wrote together, never one alone) so a
@@ -1037,6 +1171,14 @@ type TypeFields<'a> = (
 /// — reporting them is a strictly smaller claim than storing them: it only
 /// says the parser met these attributes and did not model them, which is
 /// true today and was silently false before.
+///
+/// PDB-9 adds `TypeColor` and `TypeTime` (corpus: 115 and 17 of 304
+/// distinct programs' type children). `TypeTime` stores exactly what
+/// `TypeNumber` stores, because the Project Schema's `Value_t` table says
+/// its value encoding is "Same as TypeNumber" and all 17 corpus bounds are
+/// integers; `@Unit` and `@UIHint` are reported, not interpreted.
+/// `TypeColor/@Space` (`RGB`/`HSV`) is reported: no documented value
+/// encoding exists to validate against.
 fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
     match child_name {
         "TypeRestriction" => &["SizeInBit", "Base"],
@@ -1047,6 +1189,8 @@ fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
         "TypeIPAddress" => &[],
         "TypePicture" => &[],
         "TypeRawData" => &[],
+        "TypeColor" => &[],
+        "TypeTime" => &["SizeInBit", "minInclusive", "maxInclusive"],
         _ => &[],
     }
 }
@@ -1117,6 +1261,15 @@ fn insert_parameter_type(
             "TypeIPAddress" => ("IPAddress", None, None, None, None, None),
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
+            "TypeColor" => ("Color", None, None, None, None, None),
+            "TypeTime" => (
+                "Time",
+                parse_i64(a.get("SizeInBit")),
+                None,
+                a.get("minInclusive"),
+                a.get("maxInclusive"),
+                None,
+            ),
             other => {
                 unknown.element(&xpath_of(open_path), other);
                 ("Other", None, None, None, None, None)

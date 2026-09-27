@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — ISSUE-04: Save and quit, Save and create
+
+The two unsaved-changes prompts can now save instead of only offering
+Cancel or Discard. The quit-confirm dialog (File › Quit and, since §132, the
+window manager's close) gains **Save and quit**. The new-project 409 prompt
+gains **Save and create**.
+
+Both go through the workbench's one save. `App.tsx` `saveProject()` /
+`saveProjectAs()` still report failures through the error toast, but now
+resolve `true` only when the refreshed `GET /api/project` snapshot was
+accepted *and* reports `is_modified == false`. A failed save, a cancelled
+Save-As picker, a superseded snapshot or an edit that landed during the
+save all resolve `false`. On `false`, Save and quit keeps the dialog and the
+project open (its buttons are disabled while the save runs). Save and
+create never sends `discardChanges`: after a successful save it resends the
+plain request, so if anything is still unsaved the server's 409 simply
+comes back and the prompt stays up. `NewProjectDialog` receives the save as
+`onSaveFirst`, so there is no second persistence path. The quit hint text
+(en/de) that told users to cancel and save by hand was replaced.
+
+Tests: three new `App.test.tsx` cases (save-and-quit when clean; save
+rejected or still dirty keeps the prompt; cancelled Save-As keeps the
+prompt) and three new `NewProjectDialog.test.tsx` cases (save then create,
+never discarding; failed or cancelled save creates nothing; still-dirty
+after save stays in the prompt). With the result check removed, exactly
+the three negative cases fail **[V]**. Web suite 65 files / 1013 tests,
+`tsc` clean. No Rust change.
+
+This completes ISSUE-04's user-facing half. The authoritative
+`is_modified` / `last_saved_at` state ([KNOWN_LIMITATIONS §103](KNOWN_LIMITATIONS.md#103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag),
+resolved), the status-bar "Last saved" time and the autosave engine
+(`useAutosave.ts`, `autosaveSettings.ts`: on by default, 5 min interval,
+1–120 min, 5 s countdown, never opens a Save-As picker) landed with DIN-12
+(`d135c5e`) without a status entry of their own; this entry records them.
+
 ## 2026-09-27 — §132: the window manager's close asks before discarding edits
 
 The title-bar ×, Alt+F4 and compositor close bindings now make the same

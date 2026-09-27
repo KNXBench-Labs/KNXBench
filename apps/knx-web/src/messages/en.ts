@@ -1049,6 +1049,7 @@ export const messages = {
   "newProject.conflictBody": "Creating a new project throws those changes away, and no undo brings them back. Keep editing to save them first, or discard them deliberately.",
   "newProject.conflictDiscard": "Discard changes and create",
   "newProject.conflictKeep": "Keep editing",
+  "newProject.conflictSave": "Save and create",
 
   // The project-load banner (ADR-0023). Every `loadProgress.phase.*` entry
   // names a stage the import/open pipeline really runs, in pipeline order;
@@ -1279,9 +1280,11 @@ export const messages = {
   "quit.message":
     "This project has edits that are in no file yet. Quitting now throws them away.",
   "quit.hint":
-    "Cancel, save with “Save” or “Save as…”, and quit after that.",
+    "“Save and quit” saves first and quits only if that worked.",
   "quit.cancel": "Cancel",
   "quit.discard": "Quit without saving",
+  "quit.saving": "Saving…",
+  "quit.save": "Save and quit",
 
   // ISSUE-04's autosave countdown toast and failure notice. `{seconds}`
   // ticks down from `AUTOSAVE_COUNTDOWN_SECONDS`; `cancel` stops this

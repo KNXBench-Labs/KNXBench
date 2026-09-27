@@ -640,6 +640,78 @@ fn a_master_file_without_uninterpreted_subtrees_measures_zero() {
         .all(|row| row.kind() != InstallDiagnosticKind::UnsupportedMasterSubtree));
 }
 
+/// Rewinds a v14 database to v13's report shape: no `master_subtree` count
+/// row and no subtree diagnostics. The v14 CHECK lists stay, which v13 would
+/// not have, but the migration rebuilds both tables anyway.
+fn rewind_to_v13(conn: &Connection) {
+    conn.execute_batch(
+        "DELETE FROM package_install_count WHERE category = 'master_subtree';
+         DELETE FROM package_install_diagnostic WHERE kind = 'unsupported-master-subtree';
+         PRAGMA user_version = 13;",
+    )
+    .unwrap();
+}
+
+#[test]
+fn v13_to_v14_backfills_subtrees_from_the_retained_master_blob() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bytes = subtree_archive();
+    let fresh = {
+        let conn = open_and_migrate(&path).unwrap();
+        let fresh = install_package(&conn, "subtrees.knxprod", &bytes)
+            .unwrap()
+            .facts
+            .unwrap();
+        rewind_to_v13(&conn);
+        fresh
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
+    let retried = install_package(&conn, "retry.knxprod", &bytes).unwrap();
+    assert!(retried.skipped);
+    assert_eq!(
+        retried.facts.unwrap(),
+        fresh,
+        "the backfill measures exactly what a fresh install measures"
+    );
+}
+
+#[test]
+fn v13_to_v14_rolls_back_when_a_retained_master_no_longer_scans() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "subtrees.knxprod", &subtree_archive()).unwrap();
+        rewind_to_v13(&conn);
+        conn.execute(
+            "UPDATE source_file SET bytes = ?1 WHERE sha256 IN
+                 (SELECT source_sha256 FROM package_member WHERE role = 'Master')",
+            [b"<KNX><MasterData></KNX>".as_slice()],
+        )
+        .unwrap();
+    }
+    assert!(
+        open_and_migrate(&path).is_err(),
+        "a count that cannot be measured is not invented as zero"
+    );
+    let conn = Connection::open(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 13, "the failed step is rolled back whole");
+    let rows: i64 = conn
+        .query_row("SELECT count(*) FROM package_install_count", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert!(rows > 0, "existing evidence survives the failed migration");
+}
+
 #[test]
 fn migrated_packages_are_unavailable_while_fresh_zeroes_are_measured() {
     let dir = tempfile::tempdir().unwrap();
@@ -726,7 +798,10 @@ fn malformed_persisted_report_shapes_are_rejected() {
         "DELETE FROM package_install_count WHERE category = 'module' AND disposition = 'read'",
         "UPDATE package_install_count SET count = count + 1 WHERE category = 'master_section' AND disposition = 'unsupported'",
     ];
-    assert_rejected_after(&corruptions, &full_archive("M-0001/Baggages/vendor.bin", b"opaque"));
+    assert_rejected_after(
+        &corruptions,
+        &full_archive("M-0001/Baggages/vendor.bin", b"opaque"),
+    );
 }
 
 #[test]

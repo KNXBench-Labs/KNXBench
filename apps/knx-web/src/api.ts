@@ -1382,6 +1382,7 @@ export type ParameterDiagnosticKind =
   | "nonNumericValue"
   | "unexpectedTypeNoneShape"
   | "unrecognizedNode"
+  | "refBelowSkippedNode"
   | "moduleDefNotFound"
   | "moduleCycleDetected"
   | "moduleNestingTooDeep"

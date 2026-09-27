@@ -792,8 +792,35 @@ pub enum Diagnostic {
     /// for any other shape; nothing activates.
     UnexpectedTypeNoneShape { choose_node: i64 },
     /// An element kind this build does not recognize in this position
-    /// (design D10). Its subtree is not descended.
+    /// (design D10). Its subtree is not evaluated; every reference inside
+    /// it is named by a [`Diagnostic::RefBelowSkippedNode`] (ADR-0041).
     UnrecognizedNode { node_id: i64, kind: String },
+    /// ADR-0041 (PDB-9), amending D10: a `ParameterRefRef`,
+    /// `ComObjectRefRef` or `Module` below a node the walk refuses for a
+    /// *structural* reason. `skipped_node` is that node: an unrecognized
+    /// kind, a non-`when` child of a `choose`, a `choose` with
+    /// `UnresolvedParamRef` or `UnexpectedTypeNoneShape`, a recognized
+    /// layout container (`Rows`/`Columns`), or a recognized leaf
+    /// (`ParameterRefRef`, `ComObjectRefRef`, `ParameterSeparator`,
+    /// `Assign`) that unexpectedly has children. The reference is *not*
+    /// activated (that would guess at the skipped node's meaning) but it no
+    /// longer vanishes. Reported in document order, every `choose` branch
+    /// included; a `Module`'s own argument bindings are not references and
+    /// are not descended (D19). Counted against `MAX_MODULE_ACTIVATIONS`.
+    ///
+    /// Deliberately *not* emitted for value-dependent refusals
+    /// (`MissingValue`, `NonNumericValue`, `NoBranchMatched`): there the
+    /// branches are conditionally hidden by design and the `choose` itself
+    /// is already named. Nor for a `Module` that is not expanded
+    /// (`ModuleDefNotFound`, cycle, depth, expansion budget): the `Module`
+    /// is named by its own diagnostic, but its `ModuleDef`'s contents are
+    /// not enumerated.
+    RefBelowSkippedNode {
+        skipped_node: i64,
+        ref_node: i64,
+        kind: String,
+        ref_id: Option<String>,
+    },
     /// Design D17: a `Module/@RefId` is absent, or names a `ModuleDef`
     /// with no stored tree for this program. The `Module` is not
     /// descended — not even its own `NumericArg`/`TextArg` children
@@ -1086,6 +1113,11 @@ pub struct Activation {
     /// non-empty `@Text`.
     pub labels: Vec<ActiveLabel>,
     pub diagnostics: Vec<ScopedDiagnostic>,
+    /// How many [`Diagnostic::RefBelowSkippedNode`]s were emitted. Counted
+    /// against [`MAX_MODULE_ACTIVATIONS`] like a ref or a label (ADR-0041):
+    /// a `ModuleDef` wrapping its refs in an unrecognized node multiplies
+    /// them with fan-out exactly as unwrapped refs would.
+    skipped_refs_reported: usize,
 }
 
 /// The dedup key design D18 specifies, qualified for nested expansion
@@ -1111,7 +1143,10 @@ impl Activation {
     /// labels would be a budget with a hole in it the width of a
     /// `ModuleDef` whose tree is all `Channel`s.
     fn activations_recorded(&self) -> usize {
-        self.parameter_refs.len() + self.com_object_refs.len() + self.labels.len()
+        self.parameter_refs.len()
+            + self.com_object_refs.len()
+            + self.labels.len()
+            + self.skipped_refs_reported
     }
 
     /// Whether the activation budget has already produced its one
@@ -1257,6 +1292,65 @@ fn is_transparent_container(kind: &str) -> bool {
     )
 }
 
+/// ADR-0041: a `ParameterBlock`'s table layout. Corpus (304 distinct
+/// programs): `Rows` and `Columns` 4,267 each, always directly under a
+/// `ParameterBlock` carrying `@Layout`, holding only `Row`/`Column`, never
+/// a reference. Recognized presentation — no diagnostic, no activation.
+fn is_layout_container(kind: &str) -> bool {
+    matches!(kind, "Rows" | "Columns")
+}
+
+/// The element kinds [`Diagnostic::RefBelowSkippedNode`] names.
+fn is_reference(kind: &str) -> bool {
+    matches!(kind, "ParameterRefRef" | "ComObjectRefRef" | "Module")
+}
+
+/// Names every reference strictly below `skipped`, depth-first in document
+/// order, against `skipped` itself (ADR-0041). Nothing is evaluated, so a
+/// `choose` contributes all of its branches and nested unrecognized kinds
+/// are not separately reported; a `Module`'s children are argument
+/// bindings (D19) and are not descended. Iterative, so a hostile nesting
+/// depth cannot exhaust the stack. Each report counts against
+/// [`MAX_MODULE_ACTIVATIONS`]; once that budget is spent the walk stops
+/// here and the budget's own diagnostic says output was truncated.
+fn report_refs_below(
+    tree: &DynamicTree,
+    skipped: i64,
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+) {
+    let mut pending: Vec<i64> = tree
+        .children_of(Some(skipped))
+        .iter()
+        .rev()
+        .copied()
+        .collect();
+    while let Some(id) = pending.pop() {
+        let Some(node) = tree.node(id) else {
+            continue;
+        };
+        if is_reference(&node.kind) {
+            if activation.activation_budget_spent(scope, id, node.ref_id.as_deref()) {
+                return;
+            }
+            activation.skipped_refs_reported += 1;
+            activation.diagnose(
+                scope,
+                Diagnostic::RefBelowSkippedNode {
+                    skipped_node: skipped,
+                    ref_node: id,
+                    kind: node.kind.clone(),
+                    ref_id: node.ref_id.clone(),
+                },
+            );
+            if node.kind == "Module" {
+                continue;
+            }
+        }
+        pending.extend(tree.children_of(Some(id)).iter().rev().copied());
+    }
+}
+
 /// `tree` is the `Dynamic` tree currently being walked — the program's own
 /// tree while `scope` is `None`, or the `ModuleDef` tree named by the
 /// innermost `Module` in `scope`'s chain once one has been expanded.
@@ -1315,11 +1409,13 @@ fn walk(
             if let Some(id) = &node.ref_id {
                 activation.activate_parameter_ref(seen_params, scope, node_id, id.clone());
             }
+            report_refs_below(tree, node_id, activation, scope);
         }
         "ComObjectRefRef" => {
             if let Some(id) = &node.ref_id {
                 activation.activate_com_object_ref(seen_coms, scope, node_id, id.clone());
             }
+            report_refs_below(tree, node_id, activation, scope);
         }
         // Recognized and deliberately inert (design D10): presentation
         // (`ParameterSeparator`) and assignment (`Assign`) constructs whose
@@ -1329,8 +1425,15 @@ fn walk(
         // `ParameterSeparator` is still inert as an activation, but it
         // carries `@Text` and therefore a label (design D49). `Assign`
         // does not and stays entirely inert.
-        "ParameterSeparator" => record_label(activation, scope, node),
-        "Assign" => {}
+        // ADR-0041: none of these is expected to have children (none does
+        // in the corpus), and none is descended; should one ever hold a
+        // reference, it is named rather than lost.
+        "ParameterSeparator" => {
+            record_label(activation, scope, node);
+            report_refs_below(tree, node_id, activation, scope);
+        }
+        "Assign" => report_refs_below(tree, node_id, activation, scope),
+        kind if is_layout_container(kind) => report_refs_below(tree, node_id, activation, scope),
         // Design D19: `Module` is dispatched here like any other node kind,
         // no special container handling. Its own children (`NumericArg`/
         // `TextArg`) are argument bindings, not activations, and are never
@@ -1448,13 +1551,16 @@ fn walk(
                 ),
             }
         }
-        other => activation.diagnose(
-            scope,
-            Diagnostic::UnrecognizedNode {
-                node_id,
-                kind: other.to_string(),
-            },
-        ),
+        other => {
+            activation.diagnose(
+                scope,
+                Diagnostic::UnrecognizedNode {
+                    node_id,
+                    kind: other.to_string(),
+                },
+            );
+            report_refs_below(tree, node_id, activation, scope);
+        }
     }
 }
 
@@ -1682,6 +1788,9 @@ fn evaluate_choose(
                 param_ref: node.ref_id.clone(),
             },
         );
+        // ADR-0041: a structural refusal — the product data itself is not
+        // understood — so every reference in every branch is named.
+        report_refs_below(tree, node.node_id, activation, scope);
         return;
     };
 
@@ -1712,12 +1821,17 @@ fn evaluate_choose(
                     expansions_used,
                     scope,
                 ),
-                None => activation.diagnose(
-                    scope,
-                    Diagnostic::UnexpectedTypeNoneShape {
-                        choose_node: node.node_id,
-                    },
-                ),
+                None => {
+                    activation.diagnose(
+                        scope,
+                        Diagnostic::UnexpectedTypeNoneShape {
+                            choose_node: node.node_id,
+                        },
+                    );
+                    // ADR-0041: structural refusal, as for
+                    // `UnresolvedParamRef` above.
+                    report_refs_below(tree, node.node_id, activation, scope);
+                }
             }
         }
         ControlKind::Comparable => evaluate_comparable_choose(
@@ -1795,6 +1909,7 @@ fn evaluate_comparable_choose(
                     kind: child.kind.clone(),
                 },
             );
+            report_refs_below(tree, child_id, activation, scope);
             continue;
         }
         if child.is_default {

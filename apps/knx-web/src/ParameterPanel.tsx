@@ -118,7 +118,7 @@ function ParameterFieldRow(props: {
             </option>
           ))}
         </select>
-      ) : field.kind === "Number" ? (
+      ) : field.kind === "Number" || field.kind === "Time" ? (
         <input
           type="number"
           value={value}
@@ -186,6 +186,7 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   nonNumericValue: "parameters.diagnostic.nonNumericValue",
   unexpectedTypeNoneShape: "parameters.diagnostic.unexpectedTypeNoneShape",
   unrecognizedNode: "parameters.diagnostic.unrecognizedNode",
+  refBelowSkippedNode: "parameters.diagnostic.refBelowSkippedNode",
   moduleDefNotFound: "parameters.diagnostic.moduleDefNotFound",
   moduleCycleDetected: "parameters.diagnostic.moduleCycleDetected",
   moduleNestingTooDeep: "parameters.diagnostic.moduleNestingTooDeep",

@@ -366,6 +366,8 @@ export const messages = {
   "parameters.diagnostic.nonNumericValue": "A choice's controlling value was not a valid number.",
   "parameters.diagnostic.unexpectedTypeNoneShape": "An unusual choice structure was skipped.",
   "parameters.diagnostic.unrecognizedNode": "An unrecognized program element was skipped.",
+  "parameters.diagnostic.refBelowSkippedNode":
+    "A parameter, object or module inside a skipped element was not evaluated.",
   "parameters.diagnostic.moduleDefNotFound": "A module could not be found in this program.",
   "parameters.diagnostic.moduleCycleDetected":
     "A module refers back to one of its own enclosing modules and was not expanded.",

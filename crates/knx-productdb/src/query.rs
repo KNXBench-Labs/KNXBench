@@ -449,7 +449,8 @@ pub struct ParameterView {
     pub text: Option<String>,
     pub text_layer: ValueLayer,
     /// `parameter_type.kind`, verbatim: one of `Restriction`, `Number`,
-    /// `Text`, `None`, `Float`, `IPAddress`, `Picture`, `Raw`, `Other`.
+    /// `Text`, `None`, `Float`, `IPAddress`, `Picture`, `Raw`, `Color`,
+    /// `Time`, `Other`.
     pub kind: String,
     /// `parameter.access`, verbatim — display only, D24 does not gate on it.
     pub access: Option<String>,
@@ -596,7 +597,7 @@ pub fn parameter_views(
         let (text, text_layer) = pick(p_text, pr_text);
         let name = overlay_text(overlay.as_ref(), &raw.parameter_id, "Name").or(raw.name);
         // Only `Restriction` kinds ever have rows in `parameter_type_enum`
-        // (the other seven kinds have no enumeration concept at all) — the
+        // (the other nine kinds have no enumeration concept at all) — the
         // kind check keeps this a second query for the fraction of rows
         // that need it, not a blind per-row lookup.
         let enum_options = if raw.kind == "Restriction" {

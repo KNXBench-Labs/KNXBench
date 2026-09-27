@@ -2788,6 +2788,10 @@ fn diagnostic_kind_and_message(
             Kind::UnrecognizedNode,
             "An unrecognized program element was skipped.",
         ),
+        Diagnostic::RefBelowSkippedNode { .. } => (
+            Kind::RefBelowSkippedNode,
+            "A parameter, object or module inside a skipped element was not evaluated.",
+        ),
         Diagnostic::ModuleDefNotFound { .. } => (
             Kind::ModuleDefNotFound,
             "A module could not be found in this program.",
@@ -3543,12 +3547,17 @@ fn is_schema_ipv6(s: &str) -> bool {
 /// D9). `Float`/`Text`/`IPAddress` (T18 slice 5) validate against the
 /// `.knxprod`/`.knxproj` schema's own documented or corpus-observed
 /// encoding for that kind — see each arm's own comment for its evidence.
-/// `Picture`/`Raw` stay a non-empty-string-plus-XML-safety check: neither
-/// kind appears anywhere in the Project Schema's `Value_t` encoding table,
-/// in either spec knowledge base, or in any `.knxprod` under
-/// `OriginalData/` (checked; zero occurrences of both `<TypePicture>` and
-/// `<TypeRawData>`), so there is no format to validate against without
-/// inventing one — recorded, not pretended away, in
+/// `Time` (PDB-9) shares `Number`'s integer-and-bounds check: the Project
+/// Schema's `Value_t` table documents its encoding as "Same as TypeNumber",
+/// and every one of the 17 corpus `TypeTime` declarations carries integer
+/// bounds. `Picture`/`Raw`/`Color` stay a non-empty-string-plus-XML-safety
+/// check: none of them has a documented value encoding in `Value_t` or in
+/// either spec knowledge base. They are *not* absent from the corpus — the
+/// PDB-9 read-only scan of 304 distinct programs found `TypePicture` 1,118,
+/// `TypeColor` 115 and `TypeRawData` 3 times (an earlier note here said
+/// zero; that scan missed the archive members) — but a declaration is not
+/// an encoding, so there is still no format to validate against without
+/// inventing one. Recorded, not pretended away, in
 /// docs/KNOWN_LIMITATIONS.md §3.
 fn validate_kind_and_bounds(
     view: &knx_productdb::query::ParameterView,
@@ -3559,14 +3568,14 @@ fn validate_kind_and_bounds(
             "'{}' has parameter kind None, which carries no writable value",
             view.id
         )),
-        "Number" => {
+        "Number" | "Time" => {
             if raw.is_empty() {
                 return Err(format!("'{}' requires a non-empty value", view.id));
             }
             let parsed: i64 = raw.parse().map_err(|_| {
                 format!(
-                    "'{}' is Number-kind; '{raw}' does not parse as an integer",
-                    view.id
+                    "'{}' is {}-kind; '{raw}' does not parse as an integer",
+                    view.id, view.kind
                 )
             })?;
             if let Some(min) = &view.min_inclusive {
@@ -3757,7 +3766,7 @@ fn validate_kind_and_bounds(
                 ))
             }
         }
-        "Picture" | "Raw" => {
+        "Picture" | "Raw" | "Color" => {
             if raw.is_empty() {
                 Err(format!("'{}' requires a non-empty value", view.id))
             } else if contains_disallowed_xml_char(raw) {
@@ -4556,7 +4565,7 @@ mod tests {
 
     #[test]
     fn picture_and_raw_accept_any_non_empty_xml_safe_string() {
-        for kind in ["Picture", "Raw"] {
+        for kind in ["Picture", "Raw", "Color"] {
             let view = view_of_kind(kind);
             assert!(validate_kind_and_bounds(&view, "anything at all").is_ok());
         }
@@ -4564,11 +4573,28 @@ mod tests {
 
     #[test]
     fn picture_and_raw_reject_empty_and_a_raw_control_character() {
-        for kind in ["Picture", "Raw"] {
+        for kind in ["Picture", "Raw", "Color"] {
             let view = view_of_kind(kind);
             assert!(validate_kind_and_bounds(&view, "").is_err());
             assert!(validate_kind_and_bounds(&view, "a\u{1}b").is_err());
         }
+    }
+
+    /// PDB-9: `TypeTime` is validated exactly like `TypeNumber` (Value_t:
+    /// "Same as TypeNumber"), bounds included, and says which kind failed.
+    #[test]
+    fn time_is_an_integer_within_its_declared_bounds() {
+        let mut view = view_of_kind("Time");
+        view.min_inclusive = Some("0".to_string());
+        view.max_inclusive = Some("3600".to_string());
+        assert!(validate_kind_and_bounds(&view, "90").is_ok());
+        assert!(validate_kind_and_bounds(&view, "3601").is_err());
+        assert!(validate_kind_and_bounds(&view, "-1").is_err());
+        assert_eq!(
+            validate_kind_and_bounds(&view, "1:30").unwrap_err(),
+            "'P-1' is Time-kind; '1:30' does not parse as an integer"
+        );
+        assert!(validate_kind_and_bounds(&view, "").is_err());
     }
 
     // Fix round 1, item 3: an id containing two syntactically valid
@@ -5169,10 +5195,11 @@ mod tests {
         );
     }
 
-    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s fifteen literals
+    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s sixteen literals
     // (twelve at fix round 1, plus three more folded in by this round's
-    // merge of main's T12 module-argument work) and `messages/en.ts`'s
-    // `parameters.diagnostic.*` entries for the same fifteen kinds are two
+    // merge of main's T12 module-argument work, plus PDB-9's
+    // `refBelowSkippedNode`) and `messages/en.ts`'s
+    // `parameters.diagnostic.*` entries for the same sixteen kinds are two
     // independent sources of the same English
     // sentence, and nothing before this test asserted they had to agree.
     // This pins this file's half of that pair: every string below is
@@ -5234,6 +5261,16 @@ mod tests {
                 },
                 Kind::UnrecognizedNode,
                 "An unrecognized program element was skipped.",
+            ),
+            (
+                Diagnostic::RefBelowSkippedNode {
+                    skipped_node: 1,
+                    ref_node: 2,
+                    kind: "ParameterRefRef".to_string(),
+                    ref_id: None,
+                },
+                Kind::RefBelowSkippedNode,
+                "A parameter, object or module inside a skipped element was not evaluated.",
             ),
             (
                 Diagnostic::ModuleDefNotFound {

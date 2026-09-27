@@ -1,13 +1,13 @@
 {
   "identifier": "default",
-  "description": "Capabilities for the main window: file dialogs, opening and focusing the diagnostics companion, and closing itself for File > Quit",
+  "description": "Capabilities for the main window: file dialogs, opening and focusing the diagnostics companion, and destroying itself once the unsaved-changes check has passed (File > Quit, window-manager close)",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-focus",
-    "core:window:allow-close"
+    "core:window:allow-destroy"
   ],
   "remote": {
     "urls": ["http://localhost:1420", "http://127.0.0.1:*"]

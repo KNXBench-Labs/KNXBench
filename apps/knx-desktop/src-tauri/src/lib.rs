@@ -48,12 +48,15 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         // The only window this app ever builds is "main" (see `setup` below).
-        // Destroying it — whether via `quitApp()`'s `getCurrentWindow().close()`
-        // or the window manager's own close button — must end the process, not
-        // just hide it: a File > Quit that leaves the binary running is a bug,
-        // and a user closing the last window expects the app gone. `exit(0)`
-        // needs no plugin; `AppHandle::exit` and `WindowEvent::Destroyed` are
-        // both already in the pinned `tauri` crate.
+        // Destroying it must end the process, not just hide it: a File > Quit
+        // that leaves the binary running is a bug, and a user closing the
+        // last window expects the app gone. `exit(0)` needs no plugin;
+        // `AppHandle::exit` and `WindowEvent::Destroyed` are both already in
+        // the pinned `tauri` crate. `CloseRequested` needs no clause here:
+        // the frontend listens for `tauri://close-requested` (`quit.ts`
+        // `onWindowCloseRequested`), and while a JS listener exists `tauri`
+        // itself calls `prevent_close()` and leaves the decision — the same
+        // unsaved-changes check as File > Quit — to it (§132).
         .on_window_event(|window, event| {
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
                 window.app_handle().exit(0);

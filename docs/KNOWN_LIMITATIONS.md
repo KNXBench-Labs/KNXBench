@@ -7679,6 +7679,10 @@ is unaffected.
 
 ## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity
 
+**Status.** Open, but the data-loss path is closed: phases 1–2 of ADR-0039
+landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
+counters any more. The structural phases 3–5 are still open.
+
 **Limitation.** `Command::SetIdAllocators` replaces the id counters
 absolutely, and no `Create*` command refuses an id that is already in use.
 A caller that snapshots the allocator, releases the project lock and applies
@@ -7718,10 +7722,17 @@ ends in a typed refusal and a `Batch` rollback instead of a silent loss on
 save (`crates/knx-app/tests/id_allocation_integrity.rs`, which fails with the
 check removed **[V]**). `Command::ReserveIds` exists, and `load_project`
 raises a stored counter below an id in use and reports it
-(`load_project_reporting`; the server logs a warning on open). Not yet done:
-the CSV planner and scan reconciliation still emit the rewinding
-`SetIdAllocators`, so a stale plan is *refused* rather than applied, and the
-user has to retry (phase 2).
+(`load_project_reporting`; the server logs a warning on open, CLI
+`ga-import` prints it). **Phase 2:** the CSV planner and scan reconciliation
+emit the never-rewinding `ReserveIds` instead of `SetIdAllocators`. Every
+applied CSV plan is bound to the revision it was planned against, so an edit
+in between refuses it with "import or preview again" before it gets to the
+id backstop (`domain.rs::a_csv_plan_is_refused_when_the_project_changed_after_planning`,
+red without the binding **[V]**). Undoing an import or scan apply keeps the
+counters' high-water mark, so an undone stable id such as `KB-GA-n` is never
+reissued. What is still open (phases 3–5): nine live paths still mutate
+`project.ids` directly and not through a command. They are protected by the
+backstop but have not been migrated, and no gate enforces the rule yet.
 
 **Lifted when.** [ADR-0039](adr/0039-project-mutation-goes-through-commands.md)
 (Accepted) has its phases 1 and 2 merged: every id-inserting command refuses an id in use, allocation goes

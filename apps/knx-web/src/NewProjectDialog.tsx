@@ -35,8 +35,15 @@ const STYLES: readonly GroupAddressStyle[] = ["ThreeLevel", "TwoLevel", "Free"];
 export default function NewProjectDialog(props: {
   onCreated: (tree: ProjectTree) => void;
   onClose: () => void;
+  /**
+   * The workbench's own Save (ISSUE-04 Save-and-create). Resolves `true`
+   * only when the open project is on disk *and* clean; anything else — a
+   * failed save, a cancelled Save-As picker, a save that raced a newer
+   * edit — keeps this prompt up and creates nothing.
+   */
+  onSaveFirst: () => Promise<boolean>;
 }) {
-  const { onCreated, onClose } = props;
+  const { onCreated, onClose, onSaveFirst } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
   // Seeded once, at open. A UI-language switch while the dialog is up must
@@ -70,17 +77,21 @@ export default function NewProjectDialog(props: {
     : t("newProject.languageInvalid");
   const canSubmit = nameError === null && languageError === null && !busy;
 
-  async function submit(discardChanges: boolean) {
+  async function submit(discardChanges: boolean, saveFirst = false) {
     if (!canSubmit) return;
-    // A second non-discarding attempt while the conflict prompt is up
-    // would only earn the same 409 back; the two buttons below are the
-    // only ways out of that state.
-    if (conflict !== null && !discardChanges) return;
+    // A second plain attempt while the conflict prompt is up would only
+    // earn the same 409 back; the three buttons below are the only ways
+    // out of that state.
+    if (conflict !== null && !discardChanges && !saveFirst) return;
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setBusy(true);
     setError(null);
     try {
+      // Save-and-create never sends `discardChanges`: if the save left
+      // anything unsaved (or failed), the server's 409 simply comes back
+      // and the prompt stays — nothing is thrown away on a guess.
+      if (saveFirst && !(await onSaveFirst())) return;
       const tree = await api.newProject({
         name: trimmedName,
         installationName: installationName.trim(),
@@ -193,6 +204,14 @@ export default function NewProjectDialog(props: {
                 return silently and the button would do nothing at all. */}
             <button type="button" disabled={!canSubmit} onClick={() => void submit(true)}>
               {busy ? t("newProject.creating") : t("newProject.conflictDiscard")}
+            </button>
+            <button
+              type="button"
+              className="primary-action new-project-save-and-create"
+              disabled={!canSubmit}
+              onClick={() => void submit(false, true)}
+            >
+              {busy ? t("newProject.creating") : t("newProject.conflictSave")}
             </button>
           </div>
         </section>

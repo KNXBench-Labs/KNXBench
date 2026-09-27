@@ -56,16 +56,17 @@ function httpError(status: number, message: string): Error {
   return error;
 }
 
-async function renderDialog() {
+async function renderDialog(saveFirst: () => Promise<boolean> = () => Promise.resolve(false)) {
   const onCreated = vi.fn();
   const onClose = vi.fn();
+  const onSaveFirst = vi.fn(saveFirst);
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<NewProjectDialog onCreated={onCreated} onClose={onClose} />);
+    root.render(<NewProjectDialog onCreated={onCreated} onClose={onClose} onSaveFirst={onSaveFirst} />);
   });
-  return { root, onCreated, onClose };
+  return { root, onCreated, onClose, onSaveFirst };
 }
 
 function field(label: string): HTMLInputElement {
@@ -243,6 +244,63 @@ describe("NewProjectDialog", () => {
     expect(
       apiMock.newProject.mock.calls.every((call) => call[0].discardChanges === false),
     ).toBe(true);
+
+    root.unmount();
+  });
+
+  it("saves first and then creates, never sending discardChanges (ISSUE-04 Save-and-create)", async () => {
+    apiMock.newProject.mockRejectedValueOnce(httpError(409, "the open project has unsaved changes"));
+    const { root, onCreated, onSaveFirst } = await renderDialog(() => Promise.resolve(true));
+
+    await submitForm();
+    expect(onSaveFirst).not.toHaveBeenCalled();
+
+    apiMock.newProject.mockResolvedValueOnce(tree());
+    await act(async () => {
+      button("Save and create").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onSaveFirst).toHaveBeenCalledTimes(1);
+    expect(apiMock.newProject).toHaveBeenCalledTimes(2);
+    expect(apiMock.newProject.mock.calls.every((call) => call[0].discardChanges === false)).toBe(true);
+    expect(onCreated).toHaveBeenCalledWith(tree());
+
+    root.unmount();
+  });
+
+  it("keeps the prompt up and creates nothing when the save fails or is cancelled", async () => {
+    apiMock.newProject.mockRejectedValueOnce(httpError(409, "the open project has unsaved changes"));
+    const { root, onCreated, onSaveFirst } = await renderDialog(() => Promise.resolve(false));
+
+    await submitForm();
+    await act(async () => {
+      button("Save and create").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onSaveFirst).toHaveBeenCalledTimes(1);
+    expect(apiMock.newProject).toHaveBeenCalledTimes(1);
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')).not.toBeNull();
+    expect(button("Save and create").disabled).toBe(false);
+
+    root.unmount();
+  });
+
+  it("stays in the prompt when the project is still dirty after saving", async () => {
+    // The save reported success, but the server still refuses: e.g. an edit
+    // landed between the save and the create. Nothing may be discarded.
+    apiMock.newProject.mockRejectedValue(httpError(409, "the open project has unsaved changes"));
+    const { root, onCreated } = await renderDialog(() => Promise.resolve(true));
+
+    await submitForm();
+    await act(async () => {
+      button("Save and create").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(apiMock.newProject).toHaveBeenCalledTimes(2);
+    expect(apiMock.newProject.mock.calls.every((call) => call[0].discardChanges === false)).toBe(true);
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')).not.toBeNull();
 
     root.unmount();
   });

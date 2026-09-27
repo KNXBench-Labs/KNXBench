@@ -844,10 +844,15 @@ impl Command {
                     .clone();
                 // Only a *new* instance inserts `id`; overwriting the value
                 // of an existing (device, ets_id) row keeps that row's id.
+                // Same scope as `upsert_parameter_value` below — the first
+                // installation — so a matching row elsewhere cannot hide
+                // that this push needs a free id.
                 let is_new_instance = !project
                     .installations
+                    .first()
+                    .ok_or(CommandError::InstallationNotFound)?
+                    .parameters
                     .iter()
-                    .flat_map(|i| &i.parameters)
                     .any(|p| p.device == device_id && p.source.ets_id == *ets_id);
                 if is_new_instance {
                     check_id_free(project, IdKind::ParameterInstance, id.0)?;
@@ -1641,6 +1646,11 @@ impl Command {
                 Ok(Command::SetGroupAddressStyle { style: previous })
             }
             Command::Batch(commands) => {
+                // A rollback is not an undo: `ReserveIds` never rewinds on
+                // undo, but a batch that fails must leave the project exactly
+                // as it found it, reservation included (ADR-0039: a refused
+                // create does not consume an id).
+                let ids_before = project.ids.clone();
                 let mut inverses = Vec::with_capacity(commands.len());
                 for cmd in commands {
                     match cmd.apply(project) {
@@ -1657,6 +1667,7 @@ impl Command {
                                     "an inverse of an already-applied command must re-apply",
                                 );
                             }
+                            project.ids = ids_before;
                             return Err(e);
                         }
                     }
@@ -4838,6 +4849,97 @@ mod id_integrity_tests {
                 id: 1,
             })
         );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    fn second_installation(p: &mut Project) {
+        let mut second = p.installations[0].clone();
+        second.id = InstallationId(1);
+        second.name = "J".into();
+        p.installations.push(second);
+    }
+
+    #[test]
+    fn an_id_held_in_another_installation_is_refused_too() {
+        let mut p = project();
+        second_installation(&mut p);
+        p.installations[1].group_addresses.push(ga(3, 9));
+        let before = format!("{p:#?}");
+        let result = Command::CreateGroupAddress { entry: ga(3, 1) }.apply(&mut p);
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::GroupAddress,
+                id: 3,
+            })
+        );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    /// The edited row lives in `installations[0]` (where `upsert` writes); a
+    /// same-(device, ets_id) row elsewhere must not hide that this is a new
+    /// instance whose id is already taken.
+    #[test]
+    fn a_parameter_row_in_another_installation_does_not_bypass_the_check() {
+        let mut p = project();
+        second_installation(&mut p);
+        let row = |id: u32| crate::parameter::ParameterInstance {
+            id: ParameterInstanceId(id),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "P-1".into(),
+            },
+            raw: "0".into(),
+        };
+        p.installations[1].parameters.push(row(5));
+        p.installations[0]
+            .parameters
+            .push(crate::parameter::ParameterInstance {
+                source: SourceRef {
+                    path: "t".into(),
+                    ets_id: "P-2".into(),
+                },
+                ..row(7)
+            });
+        create_device(1, "d", &[]).apply(&mut p).unwrap();
+        let before = format!("{p:#?}");
+        let result = Command::SetParameterValue {
+            id: ParameterInstanceId(5),
+            device: DeviceId(1),
+            ets_id: "P-1".into(),
+            raw: "1".into(),
+        }
+        .apply(&mut p);
+        assert_eq!(
+            result,
+            Err(CommandError::IdInUse {
+                kind: IdKind::ParameterInstance,
+                id: 5,
+            })
+        );
+        assert_eq!(format!("{p:#?}"), before);
+    }
+
+    /// `apply`'s contract is "untouched on `Err`", and a failed batch's
+    /// rollback is not an undo: a reservation the batch made must go too,
+    /// or a refused create would still consume ids (ADR-0039 Consequences).
+    #[test]
+    fn a_failed_batch_rolls_back_its_own_reservation() {
+        let mut p = project();
+        Command::CreateArea { area: area(1, 1) }
+            .apply(&mut p)
+            .unwrap();
+        let before = format!("{p:#?}");
+        let mut through = p.ids.clone();
+        through.next_area_id();
+        through.next_area_id();
+        let result = Command::Batch(vec![
+            Command::ReserveIds { through },
+            Command::CreateArea { area: area(1, 2) },
+        ])
+        .apply(&mut p);
+        assert!(matches!(result, Err(CommandError::IdInUse { .. })));
         assert_eq!(format!("{p:#?}"), before);
     }
 }

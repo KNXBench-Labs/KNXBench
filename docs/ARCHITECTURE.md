@@ -235,8 +235,11 @@ are `pub`, and nine live server paths still advance the id allocator or enrich
 the project outside a command ([KNOWN_LIMITATIONS §129](KNOWN_LIMITATIONS.md#129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity)).
 [ADR-0039](adr/0039-project-mutation-goes-through-commands.md) (Accepted)
 records how to enforce it. Its phase 1 backstop is in place: every
-id-inserting command refuses an id already in use (`CommandError::IdInUse`),
-so a duplicate id can no longer reach `save_project` through a command.
+id-inserting command refuses an id already in use anywhere in the project
+(`CommandError::IdInUse`), so an applied command cannot create a duplicate id
+for `save_project` to collapse. Until phase 2, the CSV planner and scan
+reconciliation still emit the rewinding `SetIdAllocators`; a stale plan is
+therefore refused rather than applied.
 
 Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,

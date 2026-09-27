@@ -235,8 +235,11 @@ describe("useAutosave", () => {
     expect(onSaveFailed.mock.calls[0][0]).toBeInstanceOf(Error);
 
     // The failure must not wedge autosave: the next cycle still offers.
+    // Advance to where the next countdown *begins* — one interval minus the
+    // countdown window — not a whole interval, which would run that countdown
+    // to zero and fire a second save, leaving `secondsRemaining` null again.
     await act(async () => {
-      vi.advanceTimersByTime(5 * 60_000);
+      vi.advanceTimersByTime(5 * 60_000 - 5 * 1_000);
     });
     expect(harness.current.secondsRemaining).toBe(5);
   });

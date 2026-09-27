@@ -1,6 +1,6 @@
 # Project Statistics
 
-**Last update:** 2026-09-27 13:49:21 CEST (UTC+02:00)
+**Last update:** 2026-09-27 13:58:38 CEST (UTC+02:00)
 
 Welcome to the numerical engine room of KNXBench: this page counts commits,
 tokens, agents, models, tools, caffeine-adjacent productivity and several things
@@ -48,11 +48,11 @@ Git and session logs; the ants in the fun-fact section remain under observation.
 *No ants were harmed in the making of these statistics — at least none that I know of.*
 
 ## Git Statistics (Current Repository)
-- **Commits:** 1.444
-- **Merges:** 157
-- **Pushes/Sync:** 1.440
-- **Lines Added (+):** 391.642
-- **Lines Deleted (-):** 86.096
+- **Commits:** 1.452
+- **Merges:** 158
+- **Pushes/Sync:** 1.446
+- **Lines Added (+):** 392.740
+- **Lines Deleted (-):** 86.175
 
 ## Session Time & Execution Analysis
 | Provider | Thinking / Reasoning Time | Generation Time | Executed Tasks |
@@ -179,10 +179,10 @@ or older log records remain in the overall tool count without inventing a skill 
 
 | Metric | Value | Interpretation |
 | :--- | ---: | :--- |
-| Tokens per committed added line | 48,095.8 | All selected input/output/cache tokens ÷ historical Git additions |
-| Code churn ratio (added ÷ deleted) | 4.55:1 | Above 1 means the history added more lines than it removed |
-| Output tokens per changed line | 133.8 | AI output ÷ added and deleted Git lines |
-| Git commit density | 13,044,547.7 tokens/commit | Total selected token volume ÷ commits |
+| Tokens per committed added line | 47,961.3 | All selected input/output/cache tokens ÷ historical Git additions |
+| Code churn ratio (added ÷ deleted) | 4.56:1 | Above 1 means the history added more lines than it removed |
+| Output tokens per changed line | 133.5 | AI output ÷ added and deleted Git lines |
+| Git commit density | 12,972,676.9 tokens/commit | Total selected token volume ÷ commits |
 
 > Git `--numstat` measures historical committed additions/deletions, not surviving
 > present-day source lines. Generated files, documentation and vendored changes are

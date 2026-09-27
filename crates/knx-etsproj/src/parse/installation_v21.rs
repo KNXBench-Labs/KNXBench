@@ -980,11 +980,12 @@ mod tests {
     use crate::Container;
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_kv_sample_parses_with_a_bounded_unknown_count() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         // Not yet zero — Task 3's table is filled in iteratively against this
         // exact test's failure output. This test's job in this task is to
         // prove the state machine itself does not panic or error on the real
@@ -1005,11 +1006,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_module_based_device_carries_its_module_instances_and_group_object_tree() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
         let bytes = c.read("P-03DE/0.xml").unwrap();
         let out =
@@ -1041,11 +1043,12 @@ mod tests {
     /// the same structural xpath). It must be addressable per device instead
     /// — Task 7's export brief assumes exactly that.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn every_device_carries_its_own_security_element_raw() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
         let bytes = c.read("P-03DE/0.xml").unwrap();
         let out =

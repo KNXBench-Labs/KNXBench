@@ -179,6 +179,12 @@ const MINIMAL_MANUFACTURER_DATA: &[u8] = br#"<?xml version="1.0" encoding="utf-8
 /// Recursively lists every regular file under `root`, name-sorted at each
 /// directory level, depth-first. Symlinks are skipped, not followed.
 ///
+/// # Panics
+///
+/// On any `read_dir`, directory-entry or `file_type` error, including a
+/// `root` that does not exist. A partially readable corpus is reported, not
+/// measured as a smaller one.
+///
 /// This is dev-only test-fixture plumbing over the local (gitignored)
 /// product corpus a contributor already controls — not code that parses
 /// untrusted input — so it carries none of
@@ -195,15 +201,22 @@ pub fn walk_corpus_files(root: &Path) -> Vec<PathBuf> {
 }
 
 fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(read_dir) = std::fs::read_dir(dir) else {
-        return;
-    };
-    let mut entries: Vec<_> = read_dir.filter_map(Result::ok).collect();
+    // A test that walks the corpus measures it, so an unreadable directory
+    // must stop the test rather than quietly shrink what it measured
+    // (docs/KNOWN_LIMITATIONS.md §131). Whether the corpus exists at all is
+    // the caller's gate, asserted before the walk starts.
+    let read_dir = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("cannot read corpus directory {}: {e}", dir.display()));
+    let mut entries: Vec<_> = read_dir
+        .map(|entry| {
+            entry.unwrap_or_else(|e| panic!("cannot list corpus directory {}: {e}", dir.display()))
+        })
+        .collect();
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
-        let Ok(file_type) = entry.file_type() else {
-            continue;
-        };
+        let file_type = entry
+            .file_type()
+            .unwrap_or_else(|e| panic!("cannot stat corpus entry {}: {e}", entry.path().display()));
         if file_type.is_symlink() {
             continue;
         }
@@ -232,15 +245,7 @@ fn walk_corpus_files_into(dir: &Path, files: &mut Vec<PathBuf>) {
 /// makes sense while that name is unique; silently picking one of several
 /// candidates would be a worse failure than refusing outright.
 ///
-/// # Known weakness
-///
-/// The traversal in [`walk_corpus_files`] treats an unreadable directory as an
-/// empty one: `read_dir` and `file_type` errors (permission denied, I/O
-/// failure, a directory vanishing mid-walk) are discarded rather than
-/// reported. A partially inaccessible corpus therefore looks like a smaller
-/// corpus. Callers that measure the whole corpus, rather than resolving one
-/// named fixture, can silently measure a subset. Tracked as
-/// `docs/KNOWN_LIMITATIONS.md` §131.
+/// Inherits [`walk_corpus_files`]'s panics on unreadable directories.
 pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
     let mut matches: Vec<PathBuf> = walk_corpus_files(root)
         .into_iter()

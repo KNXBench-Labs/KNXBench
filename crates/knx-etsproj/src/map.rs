@@ -1940,11 +1940,12 @@ mod tests {
     };
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn every_imported_value_carries_the_instance_layer() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         let com = out
             .project
@@ -1959,11 +1960,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn an_empty_datapoint_type_maps_to_empty_and_an_absent_one_to_absent() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         let mut empty = 0usize;
         let mut absent = 0usize;
@@ -1990,11 +1992,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_device_address_is_composed_from_its_area_and_line() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         let d = out
             .project
@@ -2006,11 +2009,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_unassigned_device_keeps_no_address_and_is_still_owned() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         let installation = &out.project.installations[0];
         assert_eq!(installation.topology.unassigned.len(), 1);
@@ -2060,11 +2064,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn known_but_unmodelled_attributes_are_retained_for_export() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         assert!(out
             .retained
@@ -2074,11 +2079,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn links_keep_their_direction() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_source_document(), "P-0512/0.xml");
         let (send, receive) = out
             .project
@@ -2095,11 +2101,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_module_based_device_maps_every_group_object_tree_id_even_without_an_override() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         let device = out
             .project
@@ -2119,11 +2126,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_module_based_com_object_carries_its_module_instance_id() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         let com = out
             .project
@@ -2143,11 +2151,12 @@ mod tests {
     /// the KV v2.5 demo's real switch actuator instance (design doc E1's
     /// table), not a synthesised value.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_module_instance_retains_its_id_distinct_from_its_ref_id() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         let mi = out
             .project
@@ -2161,11 +2170,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn schema_21_group_links_default_to_send_direction_documented_assumption() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         let com = out
             .project
@@ -2177,11 +2187,12 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn ets_schema_version_is_recorded_on_the_project() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         assert_eq!(out.project.info.ets_schema_version, 21);
     }
@@ -2194,11 +2205,12 @@ mod tests {
     /// element's own id is what identifies it), so only the `/Segment/`
     /// step is asserted here.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_schema_21_map_problem_xpath_includes_the_segment_element() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut doc = reference_kv_source_document();
         doc.installations[0]
             .areas
@@ -2230,11 +2242,12 @@ mod tests {
     /// device's `MapProblem` xpath must not gain a `/Segment/` that doesn't
     /// exist in the real document.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn a_schema_21_unassigned_device_map_problem_xpath_has_no_segment_element() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let mut doc = reference_kv_source_document();
         assert!(
             doc.installations[0].unassigned_devices.is_empty(),

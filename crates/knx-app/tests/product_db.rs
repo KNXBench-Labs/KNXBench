@@ -5,11 +5,12 @@ fn reference_project_path() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn importing_with_a_product_db_ingests_manufacturer_files_and_keeps_them_out_of_the_opaque_store() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -39,11 +40,12 @@ fn importing_with_a_product_db_ingests_manufacturer_files_and_keeps_them_out_of_
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn a_second_import_into_the_same_product_db_skips_every_file() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let first_store = knx_store::open_and_migrate(&dir.path().join("a.knxdb")).unwrap();
@@ -72,11 +74,12 @@ fn a_second_import_into_the_same_product_db_skips_every_file() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn a_project_names_its_manufacturer_gap_when_the_product_database_is_gone() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products_path = dir.path().join("products.sqlite");
@@ -170,11 +173,12 @@ fn an_empty_product_database_reports_how_many_devices_it_could_not_resolve() {
 /// zero. Without this, a `devices_unresolved` wired to a constant would
 /// pass the test above.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn a_populated_product_database_leaves_no_unresolved_device() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_project_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();

@@ -396,10 +396,7 @@ pub fn save_project_as_impl(
 /// opaque/manifest rows already on disk, so `state.opaque`/
 /// `state.manufacturer_refs` stay accurate after a native load too, not
 /// just after an ETS import.
-fn load_native(
-    path: &Path,
-    progress: &LoadHandle,
-) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), String> {
+fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, String> {
     // The five phases a native open really has (ADR-0023): the store open
     // (which also runs any pending migration), the normalized read, the
     // two passthrough reads, and the projection. Each is announced before
@@ -407,14 +404,44 @@ fn load_native(
     progress.phase(LoadPhase::OpenStore);
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
     progress.phase(LoadPhase::LoadStoredProject);
-    let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
+    let (project, allocator_repair) =
+        knx_store::load_project_reporting(&conn).map_err(|e| e.to_string())?;
     progress.phase(LoadPhase::LoadOpaque);
     let opaque = knx_store::load_opaque(&conn).map_err(|e| e.to_string())?;
     progress.phase(LoadPhase::LoadManufacturerRefs);
     let manufacturer_refs = knx_store::load_manufacturer_refs(&conn).map_err(|e| e.to_string())?;
     progress.phase(LoadPhase::BuildProjectTree);
     let tree = knx_projection::build_project_tree(&project);
-    Ok((tree, project, (opaque, manufacturer_refs)))
+    Ok((tree, project, (opaque, manufacturer_refs), allocator_repair))
+}
+
+/// What `load_native` read: the projection, the project, its passthrough
+/// data, and any id-allocator repair the load made (ADR-0039 Decision 7).
+type NativeLoad = (
+    ProjectTree,
+    knx_core::Project,
+    ImportedOpaqueData,
+    Option<knx_store::AllocatorRepair>,
+);
+
+/// The session-log line for an allocator repair: a warning, because the
+/// file on disk held a counter below an id in use — something a pre-ADR-0039
+/// build could write — and the user should know the file was inconsistent.
+fn allocator_repair_log_entry(repair: &knx_store::AllocatorRepair) -> LogEntry {
+    LogEntry {
+        timestamp: session_log::now(),
+        severity: Severity::Warning,
+        source: "open".to_string(),
+        message: "raised a stored id counter that was below an id already in use; \
+                  no project content was changed"
+            .to_string(),
+        location: None,
+        diagnostic: None,
+        detail: Some(format!(
+            "stored: {:?}\nrepaired: {:?}",
+            repair.stored, repair.repaired
+        )),
+    }
 }
 
 /// Loads a `.knxdb` file at `path` and projects it, without touching
@@ -439,7 +466,7 @@ pub fn open_native_project(
     progress: &LoadHandle,
 ) -> Result<ProjectTree, String> {
     let loaded = load_native(path, progress);
-    let (_tree, project, (opaque, manufacturer_refs)) = match loaded {
+    let (_tree, project, (opaque, manufacturer_refs), allocator_repair) = match loaded {
         Ok(v) => v,
         Err(e) => {
             state
@@ -478,6 +505,9 @@ pub fn open_native_project(
         diagnostic: None,
         detail: None,
     });
+    if let Some(repair) = &allocator_repair {
+        log.push(allocator_repair_log_entry(repair));
+    }
     drop(log);
 
     Ok(tree)
@@ -945,7 +975,7 @@ pub fn diff_project_impl(state: &AppState, path: &Path) -> Result<knx_diff::Proj
     // The right-hand side is read for comparison only and never becomes
     // the open project, so its stages go to a detached handle rather than
     // onto the banner of whatever the user has open.
-    let (_, right, _) = load_native(path, &detached_progress(crate::LoadKind::Open, path))?;
+    let (_, right, ..) = load_native(path, &detached_progress(crate::LoadKind::Open, path))?;
     Ok(knx_diff::diff_projects(left, &right))
 }
 
@@ -4954,6 +4984,97 @@ mod tests {
         let last = entries.last().expect("at least the final import notice");
         assert_eq!(last.source, "import");
         assert_eq!(last.severity, Severity::Info);
+    }
+
+    /// ADR-0039 Decision 7 end to end: a `.knxdb` whose stored device
+    /// counter is below a device it holds opens with the counter raised, the
+    /// repair is a session-log warning (never silent), and the next create
+    /// gets an id no existing device holds.
+    #[test]
+    fn opening_a_file_with_a_stale_id_counter_repairs_it_and_says_so() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("stale-counter.knxdb");
+        {
+            let mut project = knx_core::Project::new(knx_core::string_table::Language("en".into()));
+            project.installations.push(knx_core::Installation {
+                id: knx_core::InstallationId(0),
+                name: "I".into(),
+                default_line: None,
+                multicast_address: None,
+                completion: knx_core::CompletionStatus::FinishedDesign,
+                topology: knx_core::topology::Topology {
+                    areas: vec![],
+                    lines: vec![],
+                    unassigned: vec![knx_core::DeviceId(3)],
+                },
+                buildings: vec![],
+                group_ranges: vec![],
+                group_addresses: vec![],
+                parameters: vec![],
+            });
+            project.devices.insert(knx_core::DeviceInstance {
+                id: knx_core::DeviceId(3),
+                source: knx_core::SourceRef {
+                    path: "t".into(),
+                    ets_id: "t".into(),
+                },
+                name: "Existing".into(),
+                description: None,
+                address: None,
+                product_ref: "P".into(),
+                program_ref: "H".into(),
+                commissioning: Default::default(),
+                visibility_calculated: true,
+                com_objects: vec![],
+                binary_data: vec![],
+            });
+            // Device counter 1 while device 3 exists — the pre-fix shape.
+            project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
+            let conn = knx_store::open_and_migrate(&db_path).unwrap();
+            knx_store::save_project(&conn, &project).unwrap();
+        }
+
+        let state = AppState::default();
+        open_native_project(
+            &state,
+            &db_path,
+            &detached_progress(crate::LoadKind::Open, &db_path),
+        )
+        .unwrap();
+
+        let entries = state.session_log.lock().unwrap().entries().to_vec();
+        let repair = entries
+            .iter()
+            .find(|e| e.source == "open" && e.severity == Severity::Warning)
+            .expect("an allocator repair must be reported in the session log");
+        assert!(repair.message.contains("id counter"), "{}", repair.message);
+
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().expect("the opened project is installed");
+        assert_eq!(project.ids.peek_device(), 3);
+    }
+
+    #[test]
+    fn opening_a_consistent_file_logs_no_allocator_repair() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("consistent.knxdb");
+        {
+            let project = knx_core::Project::new(knx_core::string_table::Language("en".into()));
+            let conn = knx_store::open_and_migrate(&db_path).unwrap();
+            knx_store::save_project(&conn, &project).unwrap();
+        }
+        let state = AppState::default();
+        open_native_project(
+            &state,
+            &db_path,
+            &detached_progress(crate::LoadKind::Open, &db_path),
+        )
+        .unwrap();
+        let entries = state.session_log.lock().unwrap().entries().to_vec();
+        assert!(
+            entries.iter().all(|e| e.severity != Severity::Warning),
+            "{entries:?}"
+        );
     }
 
     // Fix round 1 (Q2): `diagnostic_kind_and_message`'s fifteen literals

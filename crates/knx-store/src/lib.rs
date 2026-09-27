@@ -21,7 +21,9 @@ pub use migration::{
     open_and_migrate, open_and_migrate_in_memory, MigrationError, CURRENT_SCHEMA_VERSION,
 };
 pub use opaque::{insert_opaque, load_opaque, StoredOpaqueEntry};
-pub use project::{load_project, save_project, save_project_if_unchanged};
+pub use project::{
+    load_project, load_project_reporting, save_project, save_project_if_unchanged, AllocatorRepair,
+};
 /// Re-exported so `knx-app` names the connection type through the storage
 /// crate rather than depending on `rusqlite` directly.
 pub use rusqlite::{Connection, Error as SqlError};

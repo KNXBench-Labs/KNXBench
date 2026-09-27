@@ -599,7 +599,7 @@ Small, real, and each one currently misleads a reader:
    all shipped. Mark them; keep MCP, automation, "who talks to whom", project
    notes, mobile and multi-OS as the genuinely open entries.
 4. **Parked finding F-T30-1** (confirmed 2026-09-20). ADR-0039 has been
-   written and approved (see §12), but it is not merged yet, and no
+   written, approved (see §12) and merged, but no
    implementation exists. The finding itself:
    `Project`'s six fields are all `pub`
    (`crates/knx-core/src/project.rs:181-186`), so "every mutation goes through

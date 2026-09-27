@@ -7635,3 +7635,42 @@ no-embedded-password and GPL-provenance constraints of
 The permanent `.vd2` decision in
 [§11](#11-knxprod-support-is-evidenced-for-schemes-11-12-13-14-20-and-exact-namespace-21)
 is unaffected.
+
+## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity
+
+**Limitation.** `Command::SetIdAllocators` replaces the id counters
+absolutely, and no `Create*` command refuses an id that is already in use.
+A caller that snapshots the allocator, releases the project lock and applies
+later can therefore lower the high-water mark and insert a second entity
+with an existing id. `save_project` upserts by id (`ON CONFLICT(id) DO
+UPDATE`), so on save one of the two entities silently disappears.
+
+**Cause.** `Project`'s six fields are `pub`, so ARCHITECTURE §6's "every
+mutation is a `Command`" is held by review, not by the type system
+(goal.md §8.4, F-T30-1). Eight live server handlers advance `project.ids`
+outside any command, and `create_device_impl` enriches the live project
+after `CreateDevice` was applied. Those nine points are safe today only
+because they increment the live counter directly. The non-destructive
+group-address CSV import plans under one lock acquisition and applies under
+another without a revision check (`apps/knx-server/src/domain.rs:965-1025`
+at `7b64496`), so it is exposed.
+
+**Evidence.** A scratch probe against `knx-core`, `knx-csv` and `knx-store`
+at `7b64496` interleaved `create_area_impl`'s and
+`create_group_address_impl`'s command sequence between `plan_import` and the
+apply. It produced two group addresses with id 1 and an area counter of 0
+while area 1 existed. `save_project` returned `Ok`, and after reload only
+one of the two group addresses was left **[V]** for the library path. The
+race has not been reproduced over HTTP; it is reachable by construction on
+tokio's multi-threaded runtime.
+
+**Cost.** Silent loss of a user's group address (or another entity) on save,
+with no diagnostic. It needs two concurrent edits against one project, so
+it is rare with one user and one browser tab.
+
+**Lifted when.** [ADR-0039](adr/0039-project-mutation-goes-through-commands.md)
+(Proposed, awaiting Board approval) is accepted and its phases 1 and 2 are
+merged: every id-inserting command refuses an id in use, allocation goes
+through a never-rewinding `ReserveIds`, and the CSV plan/apply window is
+closed. Phases 3–5 then remove the nine live bypass points and add the
+`check-project-mutation` gate. Until then this entry stays open.

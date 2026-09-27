@@ -20,10 +20,11 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
 ---
 
-## K1 — kritisch (7)
+## K1 — kritisch (8)
 
 | § | Thema | Warum K1 |
 | --- | --- | --- |
+| 129 | Veralteter Id-Allokator-Snapshot dupliziert Ids, Speichern verwirft eine Entität | Ein nebenläufiger CSV-Import neben einer Einzelbearbeitung erzeugt zwei Entitäten mit derselben Id; `save_project` behält stillschweigend nur eine. Datenverlust ohne Meldung. |
 | 92 | Inbetriebnahme nur gegen den eigenen Simulator geprüft | Kein einziger Download hat je ein reales Gerät adressiert. Jede Aussage über Phase 2 ruht auf Code, den dieses Projekt selbst geschrieben hat. |
 | 22 | Web-/Docker-Ziel ohne jede Authentifizierung | Kein Login, keine Session, keine Autorisierung. Wer den Port erreicht, hat das Projekt. |
 | 61 | DPT-Codec rät das Eingabeformat, mehrere Kodierungen sind Rulings statt Standard | Ein falsch kodierter Wert geht als gültiges Telegramm auf den Bus und sieht dort richtig aus. |
@@ -167,6 +168,9 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
 ## Nicht in dieser Zählung
 
+- **§121–§126** sind nach dem Stand dieser Zählung (2026-09-20) hinzugekommen
+  und hier noch nicht eingestuft. §129 (2026-09-26, DIN-10) ist oben unter
+  K1 eingetragen, ohne dass die übrigen Zahlen neu gezählt wurden.
 - **§105** (Ctrl1-Priorität `SYSTEM` bei den vier verbindungsorientierten
   TL-Frames) ist gemerged und existiert, ist aber absichtlich nicht
   eingestuft: der Eintrag selbst sagt "Unknown on real hardware and

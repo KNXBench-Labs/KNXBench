@@ -3,7 +3,18 @@
 Written 2026-09-20. Use this file as the instruction passed to `/goal`. Its
 creation alone starts no run.
 
-**Execution boundary (2026-09-23):** User requested completion of the already
+**Handback from Paperclip (2026-09-27): read §12 first.** From 2026-09-25 to
+2026-09-27 the backlog ran as a Paperclip experiment (company "DingsBumbs
+Labs", issues DIN-1 to DIN-53). That experiment has now stopped, and all of its
+agents are paused. This file is once again the only backlog, and the standing
+goal returns to the Hermes `knxbench` profile. §12 has the verified status map,
+the unmerged Paperclip branches and the order in which to take them over. The
+2026-09-23 pause boundary described below, and rule 15, are superseded by the
+user's handback. Paperclip's DIN-3 plan meant to cut this file down to a
+25-line pointer (branch `din-3-goal-migration`, `90add0c`). **Do not merge
+that branch.** It is obsolete.
+
+**Execution boundary (2026-09-23, superseded 2026-09-27 by §12):** User requested completion of the already
 open T13 through verified merge, then a pause. T14 and every subsequent task
 remain unstarted; the read-only T14 survey is not implementation approval.
 Do not resume the standing goal without a new explicit user instruction.
@@ -125,7 +136,9 @@ T17 diagnostics UI, group-monitor regressions):**
     the earlier Opus branch rule and temporary Astra exception; historical
     review evidence remains valid. Pin and verify the actual model and effort,
     not merely the model name in a prompt. Review scope and quality gates stay.
-15. **Current execution boundary (user amendment 2026-09-23):** finish the
+15. **Superseded on 2026-09-27.** The user handed the goal back to Hermes;
+    see §12 for what to do next. The old text is kept for history.
+    *Execution boundary (user amendment 2026-09-23):* finish the
     already-open T13 task, including review fixes, Sol re-review, verification
     and merge. Then stop the goal before T14 or any new task. This limited
     resumption does not authorize the final whole-goal review.
@@ -585,7 +598,9 @@ Small, real, and each one currently misleads a reader:
    status dashboard, device discovery and the humour templates (30+ per part)
    all shipped. Mark them; keep MCP, automation, "who talks to whom", project
    notes, mobile and multi-OS as the genuinely open entries.
-4. **Parked finding F-T30-1** (confirmed 2026-09-20, not yet owned):
+4. **Parked finding F-T30-1** (confirmed 2026-09-20). ADR-0039 has been
+   written and approved (see §12), but it is not merged yet, and no
+   implementation exists. The finding itself:
    `Project`'s six fields are all `pub`
    (`crates/knx-core/src/project.rs:181-186`), so "every mutation goes through
    `Command::apply`" is an invariant held by review, not by the type system.
@@ -688,3 +703,125 @@ bus-monitor text/service filters, KNXnet/IP discovery, and separate Send and
 Receive group links exist today. Those tasks reproduce reachability or
 packaging failures and add the missing behavior; they do not reimplement the
 existing core. Evidence-gated KNX/domain questions remain investigation-first.
+
+---
+
+## 12. Status after the Paperclip handback (2026-09-27)
+
+Sources for this section:
+
+- The status map from the Paperclip DIN-3 plan, which Steve Smith checked against git and the docs on 2026-09-26 at `main` `7b64496`.
+- The eight agent handoffs in `docs/paperclip-shutdown/` (uncommitted) and their summary, `docs/paperclip-shutdown/STATUS.md`.
+- A git check of every Paperclip worktree on 2026-09-27.
+
+`main` is still at `7b64496`. Paperclip merged nothing and pushed nothing.
+
+"Board" in the Paperclip sources means the user. A Board approval listed below is therefore a user decision. Do not ask for it again.
+
+### 12.1 What was already done before Paperclip (check it, do not redo it)
+
+| goal.md item | State | Evidence |
+| --- | --- | --- |
+| §2.1 §22 server auth (T01/T01b) | done | `af12fa2`, `0f28c1e`, ADR-0026 |
+| §2.2 §117 read_on_init (T02) | done | `1e74075` |
+| §2.3 §34 export | withdrawn | ADR-0028, `a619c13` |
+| §2.4 §12 manufacturer data (T04, T29) | done; remaining gaps documented | `8856486`, `240792b` |
+| §2.5 §85 signature (T05) | done, as an evidenced boundary | `d8fc36a` |
+| §2.6 §2 validation (T06) | done | `258feee` |
+| §2.7 §61 DPT (T07) | done | `03c1316` |
+| §2.8 PDB-1 to PDB-7 | done | `21e22fa`, `d8f58dd`, `ce6f339`, `6503c97`, `b65cdfa`, `badcc33`, `16ee372` |
+| §3.1 D6 diagnostics UI (T08) | done | `bc6e53e` |
+| §3.2 E2 reconcile (T09) | done | `3bf8ce7` |
+| §3.3 D8 settings (T10), §3.8 settings file | done | `7a874b8`, `d31dd75` |
+| §3.4 B10 drag & drop (T11) | done (two gestures) | `02237eb` |
+| §3.5 UI residue A/B (T12/T13) | done | `ff73ab9`, `7f9c8c4` |
+| §3.6 discovery in the app (T25) | done | `62ff969` |
+| §3.7 GA notation (T26) | done, as a fixed slash notation | ADR-0030, `fcf4563` |
+| §4 report (T14), diff (T15), CSV (T16) | backend done; web residues open (see 12.3) | `cd10132`, `2403c63`, `0e278f0` |
+| §5 §16 Tauri/GTK3, §79 docs (T17) | done | KNOWN_LIMITATIONS §16 |
+| §7 MCP/NL, macros, notes ADR, who-talks-to-whom | done, as research artifacts | RESEARCH §13, §14, §16; ADR-0031 |
+
+### 12.2 Paperclip branches: take them over first, in this order
+
+All of these worktrees are under `/mnt/daten-i/Sourcecode/.paperclip-worktrees/KNXBench/<DIN-n>`. Each one had a clean working tree at shutdown. None has been pushed. You can use the worktrees as they are, or check the branch out into a normal worktree under `KNXBench.worktrees/`.
+
+In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author identity. Outside Paperclip this does not apply, but check the author of the wip commits before you build on them.
+
+1. **`din-9-legacy-pr-design` @ `72da572` (docs only, +727 lines).** This is the §7 legacy VD/PR `.pr5` design: RESEARCH §18, KNOWN_LIMITATIONS §128 and the spec `docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md`.
+   - Independent review DIN-34 gave **APPROVE** and reproduced the measurements.
+   - The user **accepted B-1 to B-6 as recommended and approved the merge as-is** (approval `57d5c7a1`, 2026-09-26 17:49Z).
+   - To do: fast-forward merge, then run `ai-stats.py` (rule 16).
+2. **`din-10-command-apply-adr` @ `cc4012c` (docs only).** This is ADR-0039, "Project mutation goes through commands", which answers §8.4 F-T30-1. It adds KNOWN_LIMITATIONS §129.
+   - Review DIN-35 gave **APPROVE**.
+   - The user **accepted B-1 to B-5 and approved the merge** (approval `ef64a57b`, 2026-09-26 17:27Z).
+   - To do: merge it.
+   - The branch edits goal.md §8.4. Keep main's text when that conflicts.
+   - At merge time, recount LIMITATION_TRIAGE by command. The branch raised K1 from 7 to 8 by hand.
+   - Run `ai-stats.py`.
+   - Review nit, not a blocker: goal.md cites `project.rs:181-186`, but the fields are now at 184-190.
+3. **`din-11-command-apply-phase1` @ `cc4012c`.** Same commit as DIN-10. There is **no implementation yet**.
+   - ADR-0039 phases 1 and 2 close §129 (data loss). This is the next real §8.4 work, and it is now approved.
+   - The first implementation commit flips ADR-0039 from `Proposed` to `Accepted`.
+   - B-2 changes a documented undo guarantee. The phase-2 commit must rewrite the matching sentences in IMPLEMENTATION_STATUS and in GAP_ANALYSIS E2.
+   - It touches `knx-core`'s public surface. Serialize it against any PDB slice that also touches `knx-core`.
+4. **`din-4-corpus-manufacturer-dirs` @ `cfe80a1` (2 wip commits).** This fixes the gate blocker "Seven corpus tests assume a flat local corpus directory" (KNOWN_LIMITATIONS). It is a **prerequisite for PDB-8 to PDB-11**.
+   - What was done:
+     - It adds `knx_testsupport::walk_corpus_files` and `find_corpus_file`.
+     - It rewires `dynamic_tree.rs`, `parameter_views_corpus.rs` and `standalone_packages.rs` to use them.
+     - It removes assertions that pinned counts.
+   - Current state: 8 of 9 corpus tests pass against the real corpus.
+   - To do:
+     - `a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs` fails with `duplicate column name: is_secure_enabled`. The manual schema rewind in the test is missing the column added in `migration.rs:297`. This was a pre-existing gap that the old path bug had hidden.
+     - Run fmt and clippy.
+     - Update the KNOWN_LIMITATIONS entry.
+     - Audit the three files for any remaining count pins.
+     - Get a review.
+   - Always run with `KNXBENCH_PRODUCT_CORPUS=<root>/OriginalData/ProductDatabases`. Otherwise the tests take the skip path and pass for the wrong reason. `corpus_nested_module_measurement_task_11` takes about 400 s, so run it in the background.
+5. **`din-16-site-hierarchy-decision` @ `93348bc`.** This is ADR-0038 for §11 ISSUE-06. A site or property is a `Space`/`BuildingPartType::Ground` root, with no new `Site` kind. It adds characterization tests and changes no production code or schema. Its status is `Proposed`.
+   - **No review yet.** Paperclip review DIN-33 never started, because of provider errors.
+   - To do: an independent review (the scope is in the old DIN-33: spec evidence Project Schema23 §1.1.2.3/§1.2.6.3, 3/10/3 §1.2.3.5, 3/10/4 Table 10, 3/10/2 Table 1; the tests; KNOWN_LIMITATIONS §127; the gates). Then ask the user for approval and merge.
+   - It blocks ISSUE-05.
+6. **`din-12-dirty-state-autosave` @ `0db4841` (1 wip commit).** §11 ISSUE-04, together with the §3.5 residues §103 and §81.
+   - The commit contains `useAutosave.ts`, `autosaveSettings.ts`, SettingsPanel wiring, the dirty-state signal in `App.tsx`, server-side dirty state in `apps/knx-server/src/domain.rs`, and tests.
+   - **The tests were not run after the wip commit.** Save-and-continue and the last-save indicator are not finished.
+   - No architecture review has been done against AGENTS.md (the UI must not own domain logic). Verify everything before you build on it.
+7. **`din-26-board-oos-acceptance` @ `70b683e`.** This is a draft of an out-of-scope decision (`docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md`), and **there is no verdict yet**. It covers:
+   - §45 native PDF
+   - §48 the full report prose catalogue
+   - §52/§53/§54 diff correlation
+   - §55 applying a diff
+   - §56 three-way compare
+   - §39 CSV ranges and renaming
+   - §41 spreadsheet transforms
+   - §12 remaining manufacturer gaps
+   - §85 signature verification
+   - §2 XSD
+
+   To do: put it to the user for a decision. Whatever is accepted goes into §6.
+8. **`din-3-goal-migration` @ `90add0c`: do not merge it** (see the header). You may delete the branch and its worktree.
+
+### 12.3 Still open (not started)
+
+- **§2.8 PDB-8 to PDB-11:** in strict order, after DIN-4 (step 4 above). For PDB-8, the start of the legacy L1 slice (`.vd`/`.pr` container detection plus a named refusal) now follows from the accepted DIN-9 design.
+- **§4 web residues:** §49 print preview, §50 section selection, §57 comparison against a raw `.knxproj`, §59/§60 diff values in the web panel.
+- **§11 ISSUE-01 to ISSUE-13, apart from ISSUE-04 and ISSUE-06 above:** see `docs/superpowers/plans/2026-09-21-user-reported-issues.md`.
+  - Run all `apps/knx-web` work as one serial chain, never two web tasks in parallel.
+  - ISSUE-04 comes before any autosave UX.
+  - ISSUE-06 comes before any site UI (ISSUE-05).
+  - ISSUE-08 comes before channel grouping.
+  - ISSUE-12 diagnoses before it changes discovery.
+- **§8.1 to §8.3 and §8.5, doc hygiene:**
+  - ROADMAP T37 still reads as open.
+  - `ideas.md` still lists shipped work as open.
+  - `codex-goal.md` has already been removed from `main`; verify that.
+  - LIMITATION_TRIAGE is at 119 while KNOWN_LIMITATIONS has 125+ entries. Recount by command after the DIN-9 and DIN-10 merges (§128, §129).
+- **§5 D12, the user manual (T23):** not accepted. The open points are the location per ADR-0024, removing the screenshots, and a claim-by-claim verification report.
+- **§5 alpha release (T18):** a user decision; do not tag.
+- **§10 final whole-goal review:** last of all.
+
+The PDB (backend) chain and the web chain may run in parallel, with at most two implementers (§9). Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order.
+
+### 12.4 Lessons from the Paperclip run
+
+- Provider errors (HTTP 400 thinking block, HTTP 429) ate every review run on 2026-09-26. An automatic error comment is not a review verdict.
+- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the ntfs3 check.

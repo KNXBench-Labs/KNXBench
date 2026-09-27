@@ -339,7 +339,7 @@ pub async fn individual_address_write<T: ManagementTransport>(
     let mut finishing =
         ManagementSession::authorised(transport, plan, timing, restart_authorisation)
             .map_err(|err| at_step(4, &report, err))?;
-    if let Err(err) = verify_before_restart(&mut finishing).await {
+    if let Err(err) = verify_before_restart(&mut finishing, timing).await {
         // MP §2.3, p. 15, the last line of the sequence: *"Abort the
         // connection of the client side Transport Layer."* It is not
         // conditioned on the verification having succeeded, and a failed
@@ -362,10 +362,49 @@ pub async fn individual_address_write<T: ManagementTransport>(
 
 /// Step 4's half that runs under an open connection, so that its caller has
 /// exactly one failure path to disconnect on.
+///
+/// The first `T_Connect` is allowed to go unanswered once. A device that has
+/// just adopted a new Individual Address is not necessarily reachable at it
+/// yet, and MP §2.3's exception handling "to 4." reads that silence as
+/// *"the programming of the Individual Address may have failed, or the
+/// system (Router) is not configured correctly"* — two causes the Standard
+/// declines to separate, and neither of which is "still settling". A real
+/// MDT push button produced exactly this: step 4's connect was refused, and
+/// the device answered perfectly well at the new address seconds later
+/// (`RESEARCH.md` §8.8.6).
+///
+/// The wait between the attempts is [`SessionTiming::restart_basic_t1`],
+/// MP §3.7.1.1.2's `t1` (1 s). **This is a borrowed figure, not a mandated
+/// one.** `t1` is defined for reconnecting after a *Basic Restart*, and in
+/// this procedure step 4's connect happens *before* the restart; MP §2.3
+/// states no settling time after `A_IndividualAddress_Write` at all. `t1` is
+/// used because it is the Standard's own figure for the nearest comparable
+/// situation — a device reconfiguring itself and then being connected to
+/// again — and so avoids inventing a new constant. Whether one second is
+/// enough for every device is not established; it is what the one observed
+/// device needs to be re-measured against.
+///
+/// One retry — not a poll loop — is deliberate: a device that is still
+/// silent after `t1` is the genuine "to 4." case, and turning that into a
+/// long retry loop would hide a real misconfiguration behind a delay. A
+/// *rejected* connect is not retried: somebody is there and said no, which
+/// settling does not explain.
 async fn verify_before_restart<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
+    timing: SessionTiming,
 ) -> Result<(), SessionError> {
-    session.connect().await?;
+    if let Err(first) = session.connect().await {
+        if !matches!(
+            first,
+            SessionError::NoAnswer { .. } | SessionError::ConnectionReleased { .. }
+        ) {
+            // A rejected connect is an answer: somebody is there and said no,
+            // which settling does not explain.
+            return Err(first);
+        }
+        tokio::time::sleep(timing.restart_basic_t1).await;
+        session.connect().await?;
+    }
     session.read_mask_version().await?;
     Ok(())
 }
@@ -739,6 +778,110 @@ mod tests {
             device.individual_address_read_broadcasts(),
             1,
             "step 3 must refuse before it re-verifies, let alone writes"
+        );
+    }
+
+    /// **A device that is still settling after adopting its new address must
+    /// not be reported as a failed write.**
+    ///
+    /// This is the defect the first real-hardware run exposed
+    /// (`RESEARCH.md` §8.8.6): step 3 broadcast the write, the device took
+    /// it, and step 4's `T_Connect` to the brand-new address went
+    /// unanswered because the device had not finished adopting it. The
+    /// procedure returned `Err` for a write that had in fact landed —
+    /// `report.wrote` was `true` and the device answered at the new address
+    /// seconds later.
+    ///
+    /// `unanswered_connects` reproduces it: the first `T_Connect` after the
+    /// write gets no answer, a later one succeeds. MP §2.3 states no
+    /// settling figure, so step 4 waits the borrowed
+    /// [`SessionTiming::restart_basic_t1`] and retries once rather than
+    /// giving up on the first silence (see `verify_before_restart`).
+    ///
+    /// Written before the fix and watched to fail, per the project's TDD
+    /// rule: without a retry this returns `Err(Session { step: 4, .. })`.
+    #[tokio::test]
+    async fn a_device_still_settling_after_the_write_is_not_a_failure() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            // The connect counter only counts frames that actually reach this
+            // device, and step 1 probes IA_new while the device is still at
+            // SIMULATED_DEVICE_ADDRESS — that frame is for somebody else and
+            // is dropped uncounted. So step 4's first attempt at the new
+            // address is connect #1, and swallowing it is exactly what the
+            // hardware did.
+            unanswered_connects: Some(1..2),
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        let (programming, restart) = authorisations(new_address);
+
+        let report = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect("a device that is merely settling must not fail the procedure");
+
+        assert!(report.wrote, "step 3 must still have written the address");
+        assert_eq!(device.address(), new_address, "the device must be renamed");
+        // The point of the fix: step 4 completes rather than aborting, so
+        // the restart MP §2.3 mandates actually happens.
+        assert!(
+            device
+                .seen()
+                .iter()
+                .any(|entry| matches!(entry, Seen::Restart { .. })),
+            "step 4 must still restart the device after waiting out the settling: {:?}",
+            device.seen()
+        );
+    }
+
+    /// The other side of the settling retry: a device that is *still* silent
+    /// after the one wait is MP §2.3's genuine "to 4." case and must keep
+    /// failing at step 4 — with `wrote: true`, so a caller can still tell
+    /// "wrote but could not confirm" from "did not write". One retry, not a
+    /// loop that would hide a misconfigured router behind a delay.
+    #[tokio::test]
+    async fn a_device_silent_after_the_settling_wait_still_fails_step_four() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            // Both of step 4's attempts go unanswered.
+            unanswered_connects: Some(1..3),
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        let (programming, restart) = authorisations(new_address);
+
+        let err = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect_err("a device that never answers at its new address is a step-4 failure");
+
+        match err {
+            IndividualAddressWriteError::Session { step, report, .. } => {
+                assert_eq!(step, 4, "the failure must be attributed to step 4");
+                assert!(report.wrote, "step 3 did write, and the report must say so");
+            }
+            other => panic!("expected a step-4 session error, got {other:?}"),
+        }
+        assert!(
+            !device
+                .seen()
+                .iter()
+                .any(|entry| matches!(entry, Seen::Restart { .. })),
+            "no restart may be sent to a device that never confirmed: {:?}",
+            device.seen()
         );
     }
 

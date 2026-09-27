@@ -314,6 +314,13 @@ Phases 1 and 2 are the data-integrity fix and should not wait for 3–5. If
 the Board rejects B-2 in favour of R, phase 2 shrinks to closing the CSV
 window, and phase 3 emits the rewinding form instead.
 
+**Progress.** Phase 1 was merged on 2026-09-27 (`43f68a0`). Phase 2 is on
+the same task branch: `knx-csv` `plan_import` and scan reconciliation now
+emit `ReserveIds`. Every applied CSV plan is bound to the revision it was
+planned against, destructive or not. The scan undo test now asserts
+same-content-plus-high-water-mark, and both documented guarantees are
+updated. Phases 3–5 remain open.
+
 ## Appendix: reproduction
 
 The probe was a scratch binary that depended on `knx-core`, `knx-csv` and

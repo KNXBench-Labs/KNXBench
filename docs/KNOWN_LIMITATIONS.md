@@ -7606,6 +7606,41 @@ selections. No reconciliation action sends KNX traffic **[V]**.
 protocol procedure or explicit user selection supplies it. A scan response by
 itself never becomes product evidence.
 
+## 127. A site over several buildings rests on schema text and synthetic tests, not on an ETS sample
+
+**Boundary.** [ADR-0038](adr/0038-site-is-a-ground-root-space.md) represents a
+site/property that groups several buildings on one KNX infrastructure as a
+`Ground` space at the root of one installation's building structure, with
+`Building` children. The only authority is *Project Schema23 v01.00.00*
+§1.2.6.3 ("Space elements directly below Locations_t will nromally have Type
+"Area" or "Building" or “Ground”"). None of the three reference projects
+contains a `Ground` space, more than one root space, or more than one
+installation (ADR-0038 E3). The import, native round-trip and command
+behaviour is covered only by synthetic tests (`knx-etsproj/tests/site_hierarchy.rs`,
+`knx-store` and `knx-core` unit tests). How ETS 5/6 displays or restricts a
+`Ground` root is unverified.
+
+An undocumented `Space/@Type` such as `Site` is **not** read as `Ground`. It
+stays an `UnknownEnumValue` map problem with the existing reported
+`BuildingPart` fallback (§89), and a test pins that.
+
+Found on the way and not addressed: no command renames an `Installation`
+after creation. `Installation.name` comes only from `NewProjectDialog` or
+import. That matters once a user splits separate infrastructures into
+separate installations. Larger than that: **no command edits any
+installation but the first.** Every `Command` applies to `installations[0]`
+(`knx-core` `command.rs`; `CreateBuildingPart` uses
+`installations.first_mut()`), so a second installation brought in by import
+is kept and saved but cannot be edited. ADR-0038's "separate infrastructures
+are separate installations" is therefore a representation KNXBench can hold,
+not yet a workflow it offers.
+
+**Lifted when.** A real ETS export containing a `Ground` root (ideally with
+several `Building` children, or several installations) is added to the
+corpus and imports with the ADR-0038 shape. The installation-rename and
+first-installation-only gaps are tracked separately, for ISSUE-05/B10
+triage.
+
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
 
 **Limitation.** KNXBench cannot install a legacy ETS3-era product database

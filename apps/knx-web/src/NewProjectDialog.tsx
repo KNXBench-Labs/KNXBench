@@ -1,5 +1,5 @@
 /** Overlay that creates a project from scratch, including the honest 409 unsaved-changes prompt. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { GroupAddressStyle } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -64,6 +64,21 @@ export default function NewProjectDialog(props: {
   // only state in which `discardChanges: true` may ever leave this file.
   const [conflict, setConflict] = useState<string | null>(null);
   const inFlightRef = useRef(false);
+  // Set once the dialog is dismissed (Keep editing, Escape, backdrop) or
+  // unmounted. Save and create awaits a save first; if the user walked
+  // away meanwhile, that save still lands but nothing is created. Reset on
+  // mount so StrictMode's simulated unmount/remount does not latch it.
+  const dismissedRef = useRef(false);
+  useEffect(() => {
+    dismissedRef.current = false;
+    return () => {
+      dismissedRef.current = true;
+    };
+  }, []);
+  function dismiss() {
+    dismissedRef.current = true;
+    onClose();
+  }
   const nameRef = useRef<HTMLInputElement>(null);
 
   const trimmedName = name.trim();
@@ -92,6 +107,9 @@ export default function NewProjectDialog(props: {
       // anything unsaved (or failed), the server's 409 simply comes back
       // and the prompt stays — nothing is thrown away on a guess.
       if (saveFirst && !(await onSaveFirst())) return;
+      // Checked only before the request: once `newProject` is sent the
+      // server has replaced the project, and the UI must follow it.
+      if (dismissedRef.current) return;
       const tree = await api.newProject({
         name: trimmedName,
         installationName: installationName.trim(),
@@ -113,7 +131,7 @@ export default function NewProjectDialog(props: {
   }
 
   return (
-    <Overlay labelledBy="new-project-title" className="new-project-panel" onClose={onClose} initialFocusRef={nameRef}>
+    <Overlay labelledBy="new-project-title" className="new-project-panel" onClose={dismiss} initialFocusRef={nameRef}>
       <h2 className="settings-panel-title" id="new-project-title">
         {t("newProject.title")}
       </h2>
@@ -175,7 +193,7 @@ export default function NewProjectDialog(props: {
         </label>
         {conflict === null && (
           <div className="new-project-actions">
-            <button type="button" onClick={onClose}>
+            <button type="button" onClick={dismiss}>
               {t("newProject.cancel")}
             </button>
             <button type="submit" className="primary-action" disabled={!canSubmit}>
@@ -196,7 +214,7 @@ export default function NewProjectDialog(props: {
               two ways out (save first, or resend discarding). */}
           <p className="new-project-conflict-detail">{conflict}</p>
           <div className="new-project-actions">
-            <button type="button" onClick={onClose}>
+            <button type="button" onClick={dismiss}>
               {t("newProject.conflictKeep")}
             </button>
             {/* `!canSubmit`, not `busy`: the fields stay editable while the

@@ -2416,6 +2416,45 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     filePickerMock.isTauri.mockReturnValue(false);
   });
 
+  it("does not quit when the user cancels while Save and quit is still saving", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxdb");
+    const dirty = treeAt({ ...baseTree(), can_undo: true, is_modified: true }, 1);
+    apiMock.openProject.mockResolvedValue(dirty);
+    apiMock.currentProject.mockResolvedValue({ ...dirty, is_modified: false, has_store_path: true });
+    let finishSave!: () => void;
+    apiMock.saveProject.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { finishSave = resolve; }),
+    );
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await openMenu();
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton(enMessages["quit.save"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // The user changes their mind while the save is still on the wire.
+    await act(async () => {
+      findButton(enMessages["quit.cancel"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).toBeNull();
+
+    await act(async () => {
+      finishSave();
+    });
+    // The save itself still lands; the withdrawn quit does not.
+    expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.destroy).not.toHaveBeenCalled();
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
   it("keeps the quit prompt open when the Save-As picker behind Save and quit is cancelled", async () => {
     filePickerMock.isTauri.mockReturnValue(true);
     // An ETS import has no .knxdb location yet, so Save means Save As.

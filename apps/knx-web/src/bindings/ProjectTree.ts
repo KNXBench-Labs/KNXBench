@@ -73,8 +73,9 @@ group_address_context_session_id?: number,
  */
 group_address_style: string, 
 /**
- * RFC3339 timestamp of the last successful save in this session, or
- * `None` if this session has never saved. Always `None` straight out
+ * RFC3339 timestamp of the last successful save of the project
+ * currently open, or `None` if it has not been saved since it was
+ * created, opened or imported. Always `None` straight out
  * of [`build_project_tree`] — this crate never sees the application's
  * save bookkeeping. The desktop shell overlays the real value from its
  * own `last_saved_at` state, in lockstep with `is_modified` (both are

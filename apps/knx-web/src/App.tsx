@@ -227,6 +227,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // is the dirty signal.
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
   const [quitSaving, setQuitSaving] = useState(false);
+  // Which Save-and-quit attempt, if any, the user still wants. Every way
+  // out of the quit dialog (Cancel, Escape, backdrop) bumps it, so a save
+  // that resolves after the user changed their mind saves and nothing
+  // more — it never quits on an answer the user has already withdrawn.
+  const quitAttemptRef = useRef(0);
   // F1. The native `<details>` the File menu is. React does not own its
   // `open` attribute (nothing here re-renders when the user clicks the
   // summary), so closing it means writing that attribute, exactly as the
@@ -819,12 +824,19 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // decide whether closing would discard user-visible changes.
   async function saveAndQuit() {
     if (quitSaving) return;
+    const attempt = ++quitAttemptRef.current;
     setQuitSaving(true);
     try {
-      if (await saveProject()) await quitApp();
+      const saved = await saveProject();
+      if (saved && quitAttemptRef.current === attempt) await quitApp();
     } finally {
       setQuitSaving(false);
     }
+  }
+
+  function dismissQuitConfirm() {
+    quitAttemptRef.current += 1;
+    setQuitConfirmOpen(false);
   }
 
   function quitRequested() {
@@ -1028,7 +1040,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {quitConfirmOpen && (
-        <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={() => setQuitConfirmOpen(false)}>
+        <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={dismissQuitConfirm}>
           <h2 id="quit-confirm-title">{t("quit.title")}</h2>
           <p>{t("quit.message")}</p>
           <p className="quit-confirm-hint">{t("quit.hint")}</p>
@@ -1039,7 +1051,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
               save that raced a newer edit keeps both this dialog and the
               project open, which is the whole point of asking. */}
           <footer className="quit-confirm-footer">
-            <button type="button" onClick={() => setQuitConfirmOpen(false)}>{t("quit.cancel")}</button>
+            {/* Cancel stays live during a save: it withdraws the quit, not
+                the save, which finishes (or fails) and leaves the app open. */}
+            <button type="button" onClick={dismissQuitConfirm}>{t("quit.cancel")}</button>
             <button type="button" className="quit-confirm-discard" disabled={quitSaving} onClick={() => void quitApp()}>{t("quit.discard")}</button>
             <button type="button" className="primary-action quit-confirm-save" disabled={quitSaving} onClick={() => void saveAndQuit()}>
               {quitSaving ? t("quit.saving") : t("quit.save")}

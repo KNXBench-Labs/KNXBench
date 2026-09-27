@@ -59,8 +59,12 @@ pub fn reference_kv_schema21_path() -> PathBuf {
 /// True when the gitignored `OriginalData/` fixture corpus is present
 /// locally. It holds the maintainer's own real KNX installation and
 /// manufacturer files — never committed, so CI (and any contributor
-/// without a copy) has none of it. Every test that needs the corpus must
-/// check this first and skip, not panic, or CI is permanently red.
+/// without a copy) has none of it. A test that needs the corpus is
+/// `#[ignore = "requires the gitignored OriginalData/ corpus; run with
+/// --ignored"]` and `assert!`s this first: without the corpus it is reported
+/// *ignored* by default and fails by name under `--ignored`. Returning early
+/// instead would count as a pass that tested nothing
+/// (docs/KNOWN_LIMITATIONS.md §131; `cargo run -p xtask -- check-corpus-gates`).
 ///
 /// All three projects, not just the ETS4 one: the three paths are
 /// independently overridable, so checking one and handing out another is
@@ -258,5 +262,55 @@ pub fn find_corpus_file(root: &Path, filename: &str) -> Option<PathBuf> {
             "corpus fixture name {filename:?} is not unique under {}: {matches:?}",
             root.display()
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fresh, empty directory under the system temp dir, removed on drop.
+    /// Hand-rolled so this crate keeps its single dependency.
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new(tag: &str) -> Self {
+            let dir =
+                std::env::temp_dir().join(format!("knx-testsupport-{tag}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn walk_lists_nested_files_name_sorted_depth_first() {
+        let scratch = Scratch::new("walk");
+        std::fs::create_dir_all(scratch.0.join("b")).unwrap();
+        std::fs::write(scratch.0.join("b/z.knxprod"), b"").unwrap();
+        std::fs::write(scratch.0.join("a.knxprod"), b"").unwrap();
+        let names: Vec<_> = walk_corpus_files(&scratch.0)
+            .into_iter()
+            .map(|p| p.strip_prefix(&scratch.0).unwrap().to_path_buf())
+            .collect();
+        assert_eq!(
+            names,
+            [PathBuf::from("a.knxprod"), PathBuf::from("b/z.knxprod")]
+        );
+    }
+
+    /// A root that cannot be read is an error, not an empty corpus: a test
+    /// measuring the corpus would otherwise report on nothing (§131).
+    #[test]
+    #[should_panic(expected = "cannot read corpus directory")]
+    fn walk_panics_on_a_missing_root_instead_of_measuring_nothing() {
+        let scratch = Scratch::new("missing");
+        walk_corpus_files(&scratch.0.join("not-there"));
     }
 }

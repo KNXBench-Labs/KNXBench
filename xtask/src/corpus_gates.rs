@@ -2,16 +2,24 @@
 //!
 //! The local `OriginalData/` corpus is gitignored, so every CI machine runs
 //! without it. A test that answers a missing corpus with `return` is counted
-//! as *passed* there while it exercised nothing; that idiom once covered 72
-//! tests (docs/KNOWN_LIMITATIONS.md §131). The honest form is `#[ignore =
+//! as *passed* there while it exercised nothing; that idiom once covered 90
+//! early-return sites (docs/KNOWN_LIMITATIONS.md §131). The honest form is `#[ignore =
 //! "..."]` plus an `assert!` on the corpus probe, so a run without
 //! `--ignored` reports the test as ignored, and a run with it fails loudly
 //! when the corpus is absent.
 //!
-//! This lint is deliberately textual and narrow: it flags a negated corpus
-//! probe (`if !corpus_available()`, `if !reference_*_path().exists()`) whose
-//! block returns within the next few lines. It cannot prove a test honest,
-//! only keep the one known dishonest shape from coming back.
+//! This lint is deliberately textual. It flags two spellings of the idiom:
+//!
+//! 1. a negated corpus probe (`if !corpus_available()`,
+//!    `if !reference_*_path().exists()`, `if !oracle_dump_path().exists()`)
+//!    whose block returns, on the same line or within the next few;
+//! 2. a `"skip…"` message that names the private data (`OriginalData`,
+//!    `corpus`, `project_dump`) followed by a `return` in the same block, which
+//!    catches probes this list does not know by name (`if !package.exists()`).
+//!
+//! It cannot prove a test honest; it keeps the known dishonest shapes from
+//! coming back. Network-capability skips (`knx-net`'s "skipping …: no route")
+//! are a different question and are not matched.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -24,11 +32,16 @@ const PROBES: &[&str] = &[
     "reference_ets6_path().exists()",
     "reference_kv_schema21_path().exists()",
     "reference_project_path().exists()",
+    "oracle_dump_path().exists()",
 ];
 
-/// How many lines after the `if` may hold the `return`: the idiom is an
-/// `eprintln!` (possibly wrapped over a few lines) and then `return`.
-const RETURN_WINDOW: usize = 4;
+/// Words that mark a skip message as being about the private data.
+const CORPUS_WORDS: &[&str] = &["OriginalData", "corpus", "project_dump"];
+
+/// How many lines after the `if` (or the skip message) may hold the
+/// `return`: the idiom is an `eprintln!`, possibly wrapped over a few lines,
+/// and then `return`.
+const RETURN_WINDOW: usize = 6;
 
 /// Directories never descended into, by name, wherever they appear.
 const SKIP_DIRS: &[&str] = &["target", "node_modules", "dist", ".git"];
@@ -36,28 +49,42 @@ const SKIP_DIRS: &[&str] = &["target", "node_modules", "dist", ".git"];
 /// Workspace directories the lint walks.
 const SCAN_ROOTS: &[&str] = &["apps", "crates"];
 
-/// 1-based line numbers of every negated corpus probe in `source` whose
-/// block returns early.
+/// 1-based line numbers of every early return on missing private data in
+/// `source`: the line of the negated probe, or of the skip message when the
+/// probe is not one [`PROBES`] knows.
 pub fn violations(source: &str) -> Vec<usize> {
     let lines: Vec<&str> = source.lines().collect();
     let mut found = Vec::new();
     for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if !trimmed.starts_with("if !") || !PROBES.iter().any(|probe| trimmed.contains(probe)) {
+        let negated_probe =
+            trimmed.starts_with("if !") && PROBES.iter().any(|probe| trimmed.contains(probe));
+        if negated_probe && (trimmed.contains("return") || returns_soon(&lines, index)) {
+            found.push(index + 1);
             continue;
         }
-        let returns_early = lines
-            .iter()
-            .skip(index + 1)
-            .take(RETURN_WINDOW)
-            .map(|l| l.trim_start())
-            .take_while(|l| !l.starts_with('}'))
-            .any(|l| l.starts_with("return"));
-        if returns_early {
+        let corpus_skip_message =
+            trimmed.contains("\"skip") && CORPUS_WORDS.iter().any(|word| trimmed.contains(word));
+        let already_reported = found
+            .last()
+            .is_some_and(|&last| index + 1 - last <= RETURN_WINDOW);
+        if corpus_skip_message && !already_reported && returns_soon(&lines, index) {
             found.push(index + 1);
         }
     }
     found
+}
+
+/// True when a `return` statement follows line `index` within
+/// [`RETURN_WINDOW`] lines, before the enclosing block closes.
+fn returns_soon(lines: &[&str], index: usize) -> bool {
+    lines
+        .iter()
+        .skip(index + 1)
+        .take(RETURN_WINDOW)
+        .map(|l| l.trim_start())
+        .take_while(|l| !l.starts_with('}'))
+        .any(|l| l.starts_with("return"))
 }
 
 /// Every violation under `root`, as `(path relative to root, line)`, in
@@ -132,6 +159,39 @@ mod tests {
     fn does_not_look_past_the_end_of_the_block() {
         // The `return` belongs to later code, not to the probe's block.
         let source = "if !corpus_available() {\n    panic!(\"missing\");\n}\nreturn;\n";
+        assert!(violations(source).is_empty());
+    }
+
+    #[test]
+    fn flags_a_one_line_guard_and_the_oracle_probe() {
+        let one_line = "if !corpus_available() { return; }\n";
+        assert_eq!(violations(one_line), vec![1]);
+        let oracle = "if !oracle_dump_path().exists() {\n    eprintln!(\"skip: dump\");\n    \
+                      return;\n}\n";
+        assert_eq!(violations(oracle), vec![1]);
+    }
+
+    #[test]
+    fn flags_an_unknown_probe_by_its_skip_message() {
+        // `package.exists()` is no probe the lint knows by name; the message
+        // saying what is missing gives the idiom away.
+        let source = "let package = corpus_root().join(PACKAGE);\nif !package.exists() {\n    \
+                      eprintln!(\n        \"skip: {PACKAGE} not present (OriginalData/ is \
+                      gitignored)\"\n    );\n    return;\n}\n";
+        assert_eq!(violations(source), vec![4]);
+    }
+
+    #[test]
+    fn reports_a_known_probe_once_not_again_for_its_message() {
+        let source = "if !corpus_available() {\n    eprintln!(\"skip: OriginalData/ corpus \
+                      missing\");\n    return;\n}\n";
+        assert_eq!(violations(source), vec![1]);
+    }
+
+    #[test]
+    fn ignores_network_capability_skips() {
+        let source = "if probe.connect(ADDR).await.is_err() {\n    eprintln!(\"skipping t: no \
+                      route in this sandbox\");\n    return;\n}\n";
         assert!(violations(source).is_empty());
     }
 

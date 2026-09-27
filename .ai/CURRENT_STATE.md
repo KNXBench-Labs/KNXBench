@@ -1,4 +1,30 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-27 21:50 CEST
+- **Completed:** On branch `iaw-settling-delay` (worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-settling-delay`, rebased onto `abf35d3`, **not pushed**), two commits:
+  - `be91fe3` fix(commissioning): `individual_address_write` step 4 now waits once for `SessionTiming::restart_basic_t1` (1 s, a borrowed figure, documented as such) and retries after an *unanswered* connect to the new address. A rejected connect still fails immediately. Simulator tests: a device silent for the first connect then succeeds; a device still silent after the retry fails at step 4 with `wrote: true`. The retry was mutation-checked (the test goes red without it). RESEARCH §8.8.6, KNOWN_LIMITATIONS §7 and IMPLEMENTATION_STATUS updated.
+  - `90ecde3` docs(research): **RESEARCH §19** and **KNOWN_LIMITATIONS §134**. The user asked to program button 1 of MDT `1.1.67` as an ON/OFF toggle on `2/0/53`. Not done; the evidence is in §19:
+    - The device maps to `A-0027-15-0BAC` (*Taster 2-fach Plus*, `MDT_KP_BE_01_Push_Button_V15a`). V20a checks hardware type `0x0239` / `MV-0705` and does not fit.
+    - Mask `070nh` loads via `DMP_LoadStateMachineWrite_RCo_Mem` (MP §3.31.2): an 11-octet `A_Memory_Write` to `0104h`, with the state read back from `B6EAh`..`B6EDh`.
+    - The first octet is `(LSM type << 4) | event`, decoded only in `08_TSSG` Load State Machine tests. TSSG contradicts itself on the record length; MP's `0Bh` wins.
+- **Pending/Next Steps:**
+  - (1) The user decides on pushing/merging `iaw-settling-delay` (2 commits ahead of `origin/main`).
+  - (2) Optional: live-verify the settling retry (it needs the device in Programming Mode again, plus explicit permission).
+  - (3) The toggle download needs, per KNOWN_LIMITATIONS §134:
+    - an RCo_Mem LSM transport;
+    - GrAT (Resources §4.16.11) and GrOAT Easy 3 (§4.17.9) serializers;
+    - an `AS-4400` parameter-image builder (`choose` evaluation plus `Memory` offsets);
+    - the device's access key (unknown; do not guess it);
+    - a user/Board decision to open `WriteScope::Download` on hardware.
+
+    Do not attempt this ad hoc.
+- **Notes for Codex or Claude:**
+  - The spec KB lives at `/mnt/daten-i/Sourcecode/knx-spec-kb/sources/The KNX Standard v3.0.0/` (the user said `knx-spec-db`; it is `-kb`).
+  - `08_TSSG … Load State Machines Tests` has golden vectors for memory-mapped LSM records. Use them as test fixtures, but trust MP for the record length.
+  - The device is at `1.1.67`, gateway `172.18.250.1:3671`. No bus traffic in this block.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-27 21:36 CEST
 - **Completed:** **PDB-8 merged as `6fcc01f`** (`df006ec` feature + `f2011fe` review fixes; productdb schema **v14**). Uninterpreted *element* subtrees inside the five supported `knx_master.xml` sections are reported per occurrence: count category `master_subtree`/`unsupported`, diagnostic kind `unsupported-master-subtree` at the canonical path. `parse::master::INTERPRETED_MASTER_PATHS` is structural; corpus (69 distinct masters) has exactly `DatapointSubtype/Format` 12,072/38, `Manufacturer/PublicKeys` 2,528/69, `Manufacturer/OrderNumberFormattingScript` 75/33, all reporting-only, no typed storage. v13→v14 rebuilds both CHECK tables and *measures* the new row from each package's retained master blob. An unscannable blob downgrades only that report to `unavailable` and records `InstallReportBackfillError` (database stays openable). Review `deleg_cca43f5a`: 0 critical; clippy `explicit_counter_loop` fixed; overclaims narrowed (elements only, shape-only validation, MaskVersions resources/access section-level); migration test uses genuine v13 DDL. Corpus matrix: a main-vs-branch run showed exactly `package_install_count` 3277→3390 and `package_install_diagnostic` 645→880 changed out of 31 tables. Commitment re-pinned to `23a6c2ad…`, both counts now asserted; matrix green (693 s). Gates: workspace 2061 passed / 0 failed / 114 ignored, clippy workspace 0, fmt, headers 227, anchors 389, corpus-gates, layering; web 67 files / 1055; `install_reports` 21/21; legacy_member_names_corpus 1/1. Three mutants (zero backfill, any path accepted, cross-check removed) each killed.
 - **Pending/Next Steps:** **PDB-9** (goal §2.9): typed/raw coverage for all observed parameter kinds (`Restriction`, `Number`, `Picture`, `Float`, `Text`, `Color`, `RawData`, `None`, `IPAddress`, `Time`), synthetic Dynamic tests (Rows/Columns, rename/button, repeat/module nesting, transformations, allocator args), unknown Dynamic containers must not hide descendants. Then PDB-10, PDB-11, web leftovers, open issues, manual, alpha release, final review.

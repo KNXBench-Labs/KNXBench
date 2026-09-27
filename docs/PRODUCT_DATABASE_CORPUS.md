@@ -285,7 +285,10 @@ section (`unsupported-master-section`), and every uninterpreted element subtree
 the private corpus found exactly three such roots: `DatapointSubtype/Format`
 (12,072 occurrences, 38 masters), `Manufacturer/PublicKeys` (2,528, all 69) and
 `Manufacturer/OrderNumberFormattingScript` (75, 33). None has typed storage;
-reporting is the complete answer until a feature needs one of them.
+reporting covers them until a feature needs one. Resources and access rights
+sit inside `MaskVersions` and are reported per section only. Attributes in the
+master `Languages` branch (e.g. `TranslationUnit/@Version`, 1,928 occurrences)
+remain unreported; see KNOWN_LIMITATIONS.
 
 ## Recommended follow-up tasks
 

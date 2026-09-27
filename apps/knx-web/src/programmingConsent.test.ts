@@ -30,6 +30,10 @@ it.each<[string | null, ReleaseStage]>([
   // is not "alpha", so it is an unnamed pre-release, not a guess.
   ["1.0.0-Alpha.1", "preRelease"],
   ["1.0.0-nightly.20260927", "preRelease"],
+  // The stage is the whole first identifier, not a prefix of it.
+  ["1.0.0-alphabet", "preRelease"],
+  ["1.0.0-betamax.2", "preRelease"],
+  ["1.0.0-rc1", "preRelease"],
   ["not a version", "unknown"],
   ["", "unknown"],
   [null, "unknown"],

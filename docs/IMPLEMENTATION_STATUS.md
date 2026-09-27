@@ -20,10 +20,13 @@ live tests), and group-value sends from the bus monitor and CLI are
 deliberately unchanged. It is a UI confirmation, not an authorisation:
 `WriteAuthorisation` and the hardware allowlist are untouched.
 
-Evidence: `programmingConsent.test.ts` (22), `useProgrammingConsent.test.tsx`
-(13), two `SettingsPanel.test.tsx` cases; mutation checks — answering yes for
-alpha without asking fails 10 of 13, persisting an unticked "don't ask again"
-fails 1 of 13. Web suite 67 files / 1052 tests, `tsc` clean.
+Evidence: `programmingConsent.test.ts` (25), `useProgrammingConsent.test.tsx`
+(13), two `SettingsPanel.test.tsx` cases, and an HTTP round trip in
+`http_settings.rs` (store, reread, `null` forgets). Two hand-applied mutations
+of `useProgrammingConsent.tsx`, run once and reverted, not a committed harness:
+answering yes for any alpha build without asking failed 10 of 13 hook tests;
+persisting "don't ask again" without the box ticked failed 1 of 13.
+Independent review: approve, no critical or important findings.
 
 ## 2026-09-27 — §131: a missing corpus is now "ignored", never "passed"
 

@@ -333,6 +333,14 @@ The official conversion and subsequent KNXBench install remain unverified for
 this exact product. The Linux-only direct-import path is technically plausible
 because the password and format are known, but it has not been implemented.
 
+**Update 2026-09-26 (DIN-9).** The supplied MDT `.pr5` was measured as the
+same `EX-IM` container family (`ets.pr_`, header `H project`), and it has no
+application program. The design basis for a direct importer is now
+[2026-09-26-legacy-vd-pr-product-import-design.md](superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
+That design decrypts only with a user-supplied password. It does not rely on
+the password being known locally, and it keeps every constraint of this
+document.
+
 ## Sources
 
 - [Eibmarkt download centre](https://www.eibmarkt.de/en/downloadcenter.html)

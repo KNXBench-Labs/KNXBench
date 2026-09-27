@@ -4403,6 +4403,42 @@ animation be considered. **[A]**
 
 ---
 
+## 18. Legacy VD/PR (`EX-IM`) product files (DIN-9, 2026-09-26)
+
+The full design, with every measurement and its reproduction, is
+[2026-09-26-legacy-vd-pr-product-import-design.md](superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
+It extends [VD4_PRODUCT_DATABASE_IMPORT.md](VD4_PRODUCT_DATABASE_IMPORT.md).
+Only the findings that change what KNXBench knows about external formats are
+listed here.
+
+- **Standard coverage.** *The KNX Standard* v3.0.0 names `vd3`–`vd5` as the
+  ETS3 end-user product database format (Volume 5, *KNX Certification of
+  Products — Procedure* v01.07.09 AS, §6.1.1) **[D]**. It directs conversion
+  to `knxprod` with the KNX Converter (Volume 2, *Manufacturer Tool*
+  v01.00.01, §4.2.5) **[D]**. It says nothing about the bytes: `EX-IM`,
+  `ets.vd_`, `ets.pr_` and `.pr1`–`.pr5` have zero hits across the 179
+  extracted documents **[V]**.
+- **Container.** The supplied `.vd4` and `.pr5` are both a one-member ZIP
+  with a ZipCrypto-encrypted, deflated member that holds a CRLF-terminated
+  `EX-IM` text payload ending in `XXX` **[V]**. The header key `H` tells
+  `virtual_device` (`.vd4`) from `project` (`.pr5`) **[V]**.
+- **`.pr5` is project-shaped.** It holds 16 tables with 12 rows, and its
+  `application_program` table is empty **[V]**. Its product content is
+  therefore a catalogue entry without an application program.
+- **Grammar.** For both samples, a line grammar of `T`/`C`/`R` records with
+  `\\`-prefixed continuation lines parses with zero structural anomalies
+  **[V]**. That continuation rule is an inference, not a documented fact.
+  Column type codes 1–8 are undocumented **[A]**.
+- **Text encoding.** The `.vd4` payload is not UTF-8. It reads correctly as
+  Windows-1252, but no byte falls in `0x80`–`0x9F`, so ISO-8859-1 cannot be
+  excluded **[A]**.
+- **Consequence.** A legacy importer must stay a separate, content-detected,
+  bounded path that decrypts only with a user-supplied password. It must never
+  go through the modern XML-package parser. Implementation waits for review
+  and Board approval of the design's decisions B-1 to B-6.
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

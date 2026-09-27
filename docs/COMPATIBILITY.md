@@ -11,7 +11,11 @@ relative archive/XML paths and never reveal host `source_name`. This is honest
 import evidence, not ETS parity or signature verification. Since schema v14
 (PDB-8) uninterpreted element subtrees (not attributes) inside the supported
 master sections are reported too (`master_subtree` / `unsupported-master-subtree`, synthetic and
-v13→v14 backfill tests); they are reported, not typed. PDB-10 is the future
+v13→v14 backfill tests); they are reported, not typed. Since schema v15
+(PDB-9, ADR-0041) all ten corpus-observed `ParameterType` kinds are typed
+(`Color`/`Time` added), unmodelled type attributes are reported with samples,
+and a reference below a Dynamic node the evaluator skips is named by
+`RefBelowSkippedNode` instead of vanishing. PDB-10 is the future
 safe baggage inventory and index-to-payload resolution slice.
 
 **Building-space vocabulary (T13, 2026-09-22).** All eleven types documented

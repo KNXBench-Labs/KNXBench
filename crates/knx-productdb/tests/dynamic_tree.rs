@@ -1006,9 +1006,11 @@ fn a_type_none_choose_of_any_other_shape_is_reported_and_activates_nothing() {
     );
 }
 
-/// D10: an unrecognized element kind activates nothing, is reported, and
-/// its subtree is not descended (a `ParameterRefRef` nested under it must
-/// not activate).
+/// D10, as amended by ADR-0041 (PDB-9): an unrecognized element kind
+/// activates nothing, is reported, and its subtree is not *evaluated* — but
+/// a reference below it no longer vanishes. Every `ParameterRefRef`,
+/// `ComObjectRefRef` and `Module` underneath is named in its own
+/// `RefBelowSkippedNode` diagnostic, pointing back at the skipped node.
 #[test]
 fn an_unrecognized_element_kind_is_reported_and_its_subtree_is_not_descended() {
     let tree = DynamicTree::from_nodes(vec![
@@ -1022,10 +1024,213 @@ fn an_unrecognized_element_kind_is_reported_and_its_subtree_is_not_descended() {
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![diag(Diagnostic::UnrecognizedNode {
-            node_id: 0,
-            kind: "Weird".to_string(),
+        vec![
+            diag(Diagnostic::UnrecognizedNode {
+                node_id: 0,
+                kind: "Weird".to_string(),
+            }),
+            diag(Diagnostic::RefBelowSkippedNode {
+                skipped_node: 0,
+                ref_node: 1,
+                kind: "ParameterRefRef".to_string(),
+                ref_id: Some("HIDDEN".to_string()),
+            }),
+        ]
+    );
+}
+
+/// PDB-9 / ADR-0041: every reference below a skipped node is reported,
+/// however deep and in document order — including all branches of a
+/// `choose` it contains (nothing below a skipped node is evaluated, so no
+/// branch is preferred) and nested structural nodes. A `Module`'s own
+/// argument bindings are not references and are not reported.
+#[test]
+fn every_reference_below_a_skipped_node_is_reported_in_document_order() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "Weird"),
+        nd(1, Some(0), "ParameterBlock"),
+        DynamicNode {
+            ref_id: Some("CO-1".into()),
+            ..nd(2, Some(1), "ComObjectRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("CTRL".into()),
+            ..nd(3, Some(0), "choose")
+        },
+        DynamicNode {
+            test: Some("1".into()),
+            ..nd(4, Some(3), "when")
+        },
+        DynamicNode {
+            ref_id: Some("P-A".into()),
+            ..nd(5, Some(4), "ParameterRefRef")
+        },
+        DynamicNode {
+            is_default: true,
+            ..nd(6, Some(3), "when")
+        },
+        DynamicNode {
+            ref_id: Some("P-B".into()),
+            ..nd(7, Some(6), "ParameterRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("MD-1".into()),
+            ..nd(8, Some(0), "Module")
+        },
+        DynamicNode {
+            ref_id: Some("MD-1_A-1".into()),
+            value: Some("7".into()),
+            ..nd(9, Some(8), "NumericArg")
+        },
+    ]);
+    let activation = evaluate(
+        &ProgramTrees::single(tree),
+        &values(&[("CTRL", "1")]).into(),
+    );
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    let skipped: Vec<(i64, &str, Option<&str>)> = activation
+        .diagnostics
+        .iter()
+        .filter_map(|d| match &d.diagnostic {
+            Diagnostic::RefBelowSkippedNode {
+                skipped_node,
+                ref_node,
+                kind,
+                ref_id,
+            } => {
+                assert_eq!(*skipped_node, 0, "always the outermost skipped node");
+                Some((*ref_node, kind.as_str(), ref_id.as_deref()))
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        skipped,
+        vec![
+            (2, "ComObjectRefRef", Some("CO-1")),
+            (5, "ParameterRefRef", Some("P-A")),
+            (7, "ParameterRefRef", Some("P-B")),
+            (8, "Module", Some("MD-1")),
+        ]
+    );
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(d.diagnostic, Diagnostic::UnrecognizedNode { .. }))
+            .count(),
+        1,
+        "only the outermost skipped node is itself reported unrecognized"
+    );
+}
+
+/// PDB-9 / ADR-0041: `Rows`/`Columns` are a `ParameterBlock`'s table
+/// layout (corpus: 4,267 each, always directly under a `ParameterBlock`
+/// with `@Layout`, holding only `Row`/`Column`). They are recognized
+/// presentation, not unknown: no diagnostic, no activation, and they do not
+/// disturb their siblings.
+#[test]
+fn rows_and_columns_are_recognized_layout_not_unrecognized_nodes() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "ParameterBlock"),
+        nd(1, Some(0), "Rows"),
+        nd(2, Some(1), "Row"),
+        nd(3, Some(0), "Columns"),
+        nd(4, Some(3), "Column"),
+        nd(5, Some(3), "Column"),
+        DynamicNode {
+            ref_id: Some("P-1".into()),
+            ..nd(6, Some(0), "ParameterRefRef")
+        },
+    ]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]).into());
+    assert_eq!(activation.parameter_refs, vec![active("P-1")]);
+    assert!(
+        activation.diagnostics.is_empty(),
+        "layout is not a compatibility gap: {:?}",
+        activation.diagnostics
+    );
+}
+
+/// The corpus never nests a reference inside `Rows`/`Columns`. Should a
+/// manufacturer ever do so, it must not vanish silently just because the
+/// layout container itself is recognized: it is reported like any other
+/// reference below a node the evaluator does not descend into.
+#[test]
+fn a_reference_hidden_inside_layout_is_still_reported() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "ParameterBlock"),
+        nd(1, Some(0), "Rows"),
+        nd(2, Some(1), "Row"),
+        DynamicNode {
+            ref_id: Some("P-IN-ROW".into()),
+            ..nd(3, Some(2), "ParameterRefRef")
+        },
+    ]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]).into());
+    assert!(activation.parameter_refs.is_empty());
+    assert_eq!(
+        activation.diagnostics,
+        vec![diag(Diagnostic::RefBelowSkippedNode {
+            skipped_node: 1,
+            ref_node: 3,
+            kind: "ParameterRefRef".to_string(),
+            ref_id: Some("P-IN-ROW".to_string()),
         })]
+    );
+}
+
+/// PDB-9: the corpus's other unrecognized kinds. `Rename` /
+/// `ParameterBlockRename` (always under `when`, never with children) and
+/// `Button` (script handler, never with children) stay reported
+/// unrecognized — applying a rename or running a script is not modelled —
+/// but have nothing below them to lose. `Repeat` always wraps exactly one
+/// `Module`; that module is not expanded, and is named.
+#[test]
+fn rename_button_and_repeat_are_reported_and_a_repeated_module_is_named() {
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "ParameterBlock"),
+        DynamicNode {
+            ref_id: Some("PB-2".into()),
+            text: Some("Renamed".into()),
+            ..nd(1, Some(0), "ParameterBlockRename")
+        },
+        DynamicNode {
+            ref_id: Some("P-9".into()),
+            text: Some("Renamed too".into()),
+            ..nd(2, Some(0), "Rename")
+        },
+        nd(3, Some(0), "Button"),
+        nd(4, Some(0), "Repeat"),
+        DynamicNode {
+            ref_id: Some("MD-7".into()),
+            element_id: Some("MOD-7".into()),
+            ..nd(5, Some(4), "Module")
+        },
+    ]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]).into());
+    assert!(activation.parameter_refs.is_empty());
+    let unrecognized = |kind: &str, node_id: i64| {
+        diag(Diagnostic::UnrecognizedNode {
+            node_id,
+            kind: kind.to_string(),
+        })
+    };
+    assert_eq!(
+        activation.diagnostics,
+        vec![
+            unrecognized("ParameterBlockRename", 1),
+            unrecognized("Rename", 2),
+            unrecognized("Button", 3),
+            unrecognized("Repeat", 4),
+            diag(Diagnostic::RefBelowSkippedNode {
+                skipped_node: 4,
+                ref_node: 5,
+                kind: "Module".to_string(),
+                ref_id: Some("MD-7".to_string()),
+            }),
+        ]
     );
 }
 

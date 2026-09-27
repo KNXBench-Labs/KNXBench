@@ -383,7 +383,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// An imported `ModuleInstance`'s id does not decompose as expected
     /// (D39 rule 3).
     MalformedModuleInstanceId,
-    /// The remaining fifteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
+    /// The remaining sixteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
     /// own variants 1:1 (see `diagnostic_kind_and_message` in `domain.rs`).
     NoBranchMatched,
     UnparsableTest,
@@ -391,6 +391,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     NonNumericValue,
     UnexpectedTypeNoneShape,
     UnrecognizedNode,
+    RefBelowSkippedNode,
     ModuleDefNotFound,
     ModuleCycleDetected,
     ModuleNestingTooDeep,

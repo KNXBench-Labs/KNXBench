@@ -866,12 +866,19 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "installed": EXPECTED_SHARED_INSTALLS,
         })
     );
+    // PDB-9 (schema v15): +11 on all three `unknown_count` totals. A v14
+    // ingest reported each distinct `TypeColor`/`TypeTime` child as one
+    // unknown *element* per program member; v15 types both kinds and reports
+    // their unmodelled *attributes* instead. An independent Python recount
+    // over the same 115 discovered packages (bundles included) predicted
+    // 75 element rows -> 86 attribute rows, +11, identically for the 113
+    // unique packages; every other total is unchanged.
     assert_eq!(
         matrix["isolation_report_totals"],
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -882,7 +889,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22642,
+            "unknown_count": 22653,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -893,7 +900,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},

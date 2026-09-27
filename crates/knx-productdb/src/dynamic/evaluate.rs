@@ -792,8 +792,24 @@ pub enum Diagnostic {
     /// for any other shape; nothing activates.
     UnexpectedTypeNoneShape { choose_node: i64 },
     /// An element kind this build does not recognize in this position
-    /// (design D10). Its subtree is not descended.
+    /// (design D10). Its subtree is not evaluated; every reference inside
+    /// it is named by a [`Diagnostic::RefBelowSkippedNode`] (ADR-0041).
     UnrecognizedNode { node_id: i64, kind: String },
+    /// ADR-0041 (PDB-9), amending D10: a `ParameterRefRef`,
+    /// `ComObjectRefRef` or `Module` below a node the walk does not descend
+    /// into. `skipped_node` is the outermost such node — an unrecognized
+    /// kind, a non-`when` child of a `choose`, or a recognized layout
+    /// container (`Rows`/`Columns`) that unexpectedly holds a reference.
+    /// The reference is *not* activated (that would guess at the skipped
+    /// node's meaning) but it no longer vanishes. Reported in document
+    /// order, every `choose` branch included; a `Module`'s own argument
+    /// bindings are not references and are not descended (D19).
+    RefBelowSkippedNode {
+        skipped_node: i64,
+        ref_node: i64,
+        kind: String,
+        ref_id: Option<String>,
+    },
     /// Design D17: a `Module/@RefId` is absent, or names a `ModuleDef`
     /// with no stored tree for this program. The `Module` is not
     /// descended — not even its own `NumericArg`/`TextArg` children
@@ -1257,6 +1273,59 @@ fn is_transparent_container(kind: &str) -> bool {
     )
 }
 
+/// ADR-0041: a `ParameterBlock`'s table layout. Corpus (304 distinct
+/// programs): `Rows` and `Columns` 4,267 each, always directly under a
+/// `ParameterBlock` carrying `@Layout`, holding only `Row`/`Column`, never
+/// a reference. Recognized presentation — no diagnostic, no activation.
+fn is_layout_container(kind: &str) -> bool {
+    matches!(kind, "Rows" | "Columns")
+}
+
+/// The element kinds [`Diagnostic::RefBelowSkippedNode`] names.
+fn is_reference(kind: &str) -> bool {
+    matches!(kind, "ParameterRefRef" | "ComObjectRefRef" | "Module")
+}
+
+/// Names every reference strictly below `skipped`, depth-first in document
+/// order, against `skipped` itself (ADR-0041). Nothing is evaluated, so a
+/// `choose` contributes all of its branches and nested unrecognized kinds
+/// are not separately reported; a `Module`'s children are argument
+/// bindings (D19) and are not descended. Iterative, so a hostile nesting
+/// depth cannot exhaust the stack.
+fn report_refs_below(
+    tree: &DynamicTree,
+    skipped: i64,
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+) {
+    let mut pending: Vec<i64> = tree
+        .children_of(Some(skipped))
+        .iter()
+        .rev()
+        .copied()
+        .collect();
+    while let Some(id) = pending.pop() {
+        let Some(node) = tree.node(id) else {
+            continue;
+        };
+        if is_reference(&node.kind) {
+            activation.diagnose(
+                scope,
+                Diagnostic::RefBelowSkippedNode {
+                    skipped_node: skipped,
+                    ref_node: id,
+                    kind: node.kind.clone(),
+                    ref_id: node.ref_id.clone(),
+                },
+            );
+            if node.kind == "Module" {
+                continue;
+            }
+        }
+        pending.extend(tree.children_of(Some(id)).iter().rev().copied());
+    }
+}
+
 /// `tree` is the `Dynamic` tree currently being walked — the program's own
 /// tree while `scope` is `None`, or the `ModuleDef` tree named by the
 /// innermost `Module` in `scope`'s chain once one has been expanded.
@@ -1331,6 +1400,7 @@ fn walk(
         // does not and stays entirely inert.
         "ParameterSeparator" => record_label(activation, scope, node),
         "Assign" => {}
+        kind if is_layout_container(kind) => report_refs_below(tree, node_id, activation, scope),
         // Design D19: `Module` is dispatched here like any other node kind,
         // no special container handling. Its own children (`NumericArg`/
         // `TextArg`) are argument bindings, not activations, and are never
@@ -1448,13 +1518,16 @@ fn walk(
                 ),
             }
         }
-        other => activation.diagnose(
-            scope,
-            Diagnostic::UnrecognizedNode {
-                node_id,
-                kind: other.to_string(),
-            },
-        ),
+        other => {
+            activation.diagnose(
+                scope,
+                Diagnostic::UnrecognizedNode {
+                    node_id,
+                    kind: other.to_string(),
+                },
+            );
+            report_refs_below(tree, node_id, activation, scope);
+        }
     }
 }
 
@@ -1795,6 +1868,7 @@ fn evaluate_comparable_choose(
                     kind: child.kind.clone(),
                 },
             );
+            report_refs_below(tree, child_id, activation, scope);
             continue;
         }
         if child.is_default {

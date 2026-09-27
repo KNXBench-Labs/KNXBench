@@ -1156,16 +1156,19 @@ fn counts(conn: &Connection) -> Vec<i64> {
 }
 
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn installs_the_readable_corpus() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
     for name in [
         "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod",
         "Dummy_Applikation_Secure.knxprod",
@@ -1226,16 +1229,19 @@ fn installs_the_readable_corpus() {
 }
 
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
     let name = "Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2";
     let path = knx_testsupport::find_corpus_file(&root, name).unwrap_or_else(|| {
         panic!(
@@ -1956,16 +1962,19 @@ fn signature_members_are_stored_verbatim_and_never_verified() {
 /// `Linkable="true"`/`"false"`, which is the spelling the old `bool_flag` read
 /// as absent.
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
     let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
         });
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");

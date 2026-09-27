@@ -32,12 +32,15 @@ const PROD3_PROGRAM_ID: &str = "M-0083_A-0317-31-7DC6";
 const PROD3_AP_LEVEL_PARAMETER_REF_COUNT: i64 = 543;
 
 #[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
 fn parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3() {
     let root = corpus_root();
-    if !root.exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        root.exists(),
+        "corpus root {} does not exist; this test is #[ignore]d and must be \
+         run with KNXBENCH_PRODUCT_CORPUS pointing at the private corpus",
+        root.display()
+    );
 
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();

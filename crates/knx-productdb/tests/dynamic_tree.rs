@@ -527,7 +527,10 @@ fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
     // Reinstalling the same archive must contribute no new dynamic_node rows:
     // `install_package` recognizes the repeat by whole-package content hash
     // and skips re-parsing outright.
-    let bytes_a = std::fs::read(root.join("Weinzierl_730_KNX_IP_Interface_ETS4.knxprod")).unwrap();
+    let weinzierl_path =
+        knx_testsupport::find_corpus_file(&root, "Weinzierl_730_KNX_IP_Interface_ETS4.knxprod")
+            .expect("Weinzierl_730_KNX_IP_Interface_ETS4.knxprod must exist under the corpus root");
+    let bytes_a = std::fs::read(&weinzierl_path).unwrap();
     let bytes_b = bytes_a.clone();
     assert_eq!(
         knx_productdb::sha256_hex(&bytes_a),

@@ -1,5 +1,7 @@
-//! PDB-9: every observed `ParameterType` kind lands as its own typed row,
-//! and what the parser does not model is reported, not dropped.
+//! PDB-9: each observed `ParameterType` kind is typed, the rest reported.
+//!
+//! Every observed kind lands as its own typed row, and what the parser does
+//! not model is reported, not dropped.
 //!
 //! Corpus basis (304 distinct application programs, read-only aggregate
 //! scan): `TypeRestriction` 20,759, `TypeNumber` 4,153, `TypePicture` 1,118,

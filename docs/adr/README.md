@@ -48,3 +48,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0034](0034-zip-member-names-follow-declared-encoding.md) | ZIP member names follow their declared encoding before safety checks | Accepted | 2026-09-23 |
 | [0038](0038-site-is-a-ground-root-space.md) | A site is a `Ground` space at the root of the building structure — no new kind, no new level | Proposed | 2026-09-26 |
 | [0039](0039-project-mutation-goes-through-commands.md) | A live project changes only through `Command::apply`, and ids are reserved by a command that never rewinds | Accepted | 2026-09-26 |
+| [0040](0040-programming-requires-release-stage-consent.md) | Programming a device needs a release-stage-aware consent, rememberable per stage | Accepted | 2026-09-27 |

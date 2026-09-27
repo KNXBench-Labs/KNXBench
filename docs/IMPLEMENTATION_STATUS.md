@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — Programming consent: ask before writing to a device, naming Alpha/Beta
+
+[ADR-0040](adr/0040-programming-requires-release-stage-consent.md). A reusable
+gate for the web UI: `useProgrammingConsent().request(target)` resolves `true`
+only after the user confirms in `ProgrammingConsentDialog`, which names the
+running build's release stage (parsed from `GET /api/version`: alpha, beta,
+release candidate, stable, unnamed pre-release, unknown), the build string,
+the target and a per-stage risk sentence (en/de). "Don't ask again" persists
+`{ stage, version }` under `programmingConsent` in the settings document and
+applies only while the stage is unchanged; it is not offered for an unknown or
+unnamed stage. Cancel, Escape, backdrop, unmount and a concurrent second
+request all resolve `false`; initial focus is on Cancel. Settings › Bus &
+diagnostics shows the remembered stage and "Ask again".
+
+**Not wired to anything yet, by the user's choice:** the application has no
+programming entry point (the procedures live only in `knx-net` and its opt-in
+live tests), and group-value sends from the bus monitor and CLI are
+deliberately unchanged. It is a UI confirmation, not an authorisation:
+`WriteAuthorisation` and the hardware allowlist are untouched.
+
+Evidence: `programmingConsent.test.ts` (22), `useProgrammingConsent.test.tsx`
+(13), two `SettingsPanel.test.tsx` cases; mutation checks — answering yes for
+alpha without asking fails 10 of 13, persisting an unticked "don't ask again"
+fails 1 of 13. Web suite 67 files / 1052 tests, `tsc` clean.
+
 ## 2026-09-27 — §131: a missing corpus is now "ignored", never "passed"
 
 Every test that answered an absent `OriginalData/` corpus with an early

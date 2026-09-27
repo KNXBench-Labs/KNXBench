@@ -29,7 +29,7 @@ pub use address::{
     GroupAddressStyle, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES,
 };
 pub use building::{BuildingPart, BuildingPartType};
-pub use command::{Command, CommandError, CommandStack};
+pub use command::{Command, CommandError, CommandStack, IdKind};
 pub use commissioning::mutation::{WriteAuthorisation, WriteScope};
 pub use commissioning::{
     CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,

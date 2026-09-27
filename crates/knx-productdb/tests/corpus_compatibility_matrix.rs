@@ -28,8 +28,13 @@ const EXPECTED_UNIQUE_PACKAGES: usize = 113;
 const EXPECTED_ISOLATED_INSTALLS: usize = 115;
 const EXPECTED_SHARED_INSTALLS: usize = 113;
 const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
+/// Re-pinned for PDB-8 (schema v14): a main-vs-branch run of this gate
+/// differed in exactly two of 31 final table counts, both pinned below —
+/// `package_install_count` 3,277 -> 3,390 (one `master_subtree` row per
+/// installed package) and `package_install_diagnostic` 645 -> 880 (the new
+/// subtree diagnostics). Every install outcome and report total was equal.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "436532fb279fafca773932402ac26e4ea57eeedf84e35a31f018af091d19a416";
+    "23a6c2ad37ccb08175fc8ee754c77a427cb9ab9eefeb40db35ca1d75b0b9a7ec";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -909,6 +914,14 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     assert_eq!(
         matrix["shared_final_database_counts"]["translation"], 2784420,
         "shared translation rows changed"
+    );
+    assert_eq!(
+        matrix["shared_final_database_counts"]["package_install_count"], 3390,
+        "shared install-count rows changed"
+    );
+    assert_eq!(
+        matrix["shared_final_database_counts"]["package_install_diagnostic"], 880,
+        "shared install-diagnostic rows changed"
     );
     assert_eq!(
         matrix["aggregate_identity_and_outcome_commitment"],

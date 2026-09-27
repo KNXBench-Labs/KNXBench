@@ -45,14 +45,23 @@ pub(crate) fn is_supported_master_section(name: &str) -> bool {
     )
 }
 
-/// PDB-8: the element paths inside the supported sections that this module
-/// and `translation.rs` actually interpret, relative to `/KNX/MasterData`.
-/// Any element whose parent is on this list but which is not itself on it
-/// is an *uninterpreted subtree root*: retained in the source blob, never
-/// read. Corpus-wide (69 distinct masters) that is exactly
+/// PDB-8: the canonical element paths, relative to `/KNX/MasterData`, whose
+/// elements this module and `translation.rs` read or pass through
+/// (`DatapointSubtypes`, `TranslationUnit` are wrappers whose own attributes
+/// nobody reads). Any element whose parent is on this list but which is not
+/// itself on it is an *uninterpreted subtree root*: retained in the source
+/// blob, never read. Corpus-wide (69 distinct masters) that is exactly
 /// `DatapointSubtype/Format`, `Manufacturer/PublicKeys` and
 /// `Manufacturer/OrderNumberFormattingScript`; the list is structural, so
 /// a new shape is reported without a code change.
+///
+/// Two deliberate limits. Elements only: attributes are the unknown-attribute
+/// allowlists' business, and the `Languages` branch has none (see
+/// KNOWN_LIMITATIONS, PDB-8). And canonical paths only: the ingest loops
+/// match by local name at any depth, so a non-canonical shape (say a
+/// `TranslationElement` directly under `Language`) is both read *and*
+/// reported here. No such shape occurs in the corpus; over-reporting it is
+/// the safe direction.
 const INTERPRETED_MASTER_PATHS: &[&str] = &[
     "Manufacturers",
     "Manufacturers/Manufacturer",

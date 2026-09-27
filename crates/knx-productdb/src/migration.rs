@@ -299,10 +299,14 @@ fn migrations() -> Vec<Migration> {
 /// not assumed: the package's own retained `knx_master.xml` bytes are
 /// re-scanned with the same pure function install uses
 /// (`uninterpreted_master_subtrees`), and a package without a Master member
-/// honestly measures zero. `unavailable` reports stay unavailable. A master
-/// blob that is missing or no longer scans is an error, and the outer
-/// migration transaction rolls the whole step back rather than fabricate a
-/// count or drop the package's existing evidence.
+/// honestly measures zero. `unavailable` reports stay unavailable.
+///
+/// A retained master that no longer scans (bit rot, tampering) cannot be
+/// measured, so that one package's report is downgraded to `unavailable` —
+/// the same honest "not measured" marker pre-v12 packages carry, never an
+/// invented zero — and the failure is recorded through
+/// `record_backfill_failure`, as v12 -> v13 does. The database stays
+/// openable; reinstalling the package bytes measures it again.
 fn migrate_v13_to_v14(conn: &Connection) -> Result<(), ProductDbError> {
     conn.execute_batch(
         "CREATE TABLE package_install_count_v14 (
@@ -340,76 +344,133 @@ fn migrate_v13_to_v14(conn: &Connection) -> Result<(), ProductDbError> {
         .query_map([], |r| r.get::<_, String>(0))?
         .collect::<Result<Vec<_>, _>>()?;
     for package in measured {
-        let masters = conn
-            .prepare(
-                "SELECT path, source_sha256 FROM package_member
-                 WHERE package_sha256 = ?1 AND role = 'Master' ORDER BY path",
-            )?
-            .query_map([&package], |r| {
-                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut total = 0u64;
-        let mut diagnostics = Vec::new();
-        for (path, source_sha) in masters {
-            let bytes =
-                crate::load_source_file(conn, &source_sha)?.ok_or_else(|| ProductDbError::Xml {
-                    source_path: path.clone(),
-                    cause: "v14 backfill: retained master blob is missing".into(),
-                })?;
-            for subtree in crate::parse::master::uninterpreted_master_subtrees(&bytes)? {
-                total =
-                    total
-                        .checked_add(subtree.occurrences)
-                        .ok_or_else(|| ProductDbError::Xml {
-                            source_path: path.clone(),
-                            cause: "v14 backfill: master-subtree counter overflow".into(),
-                        })?;
-                diagnostics.push(crate::package::master_subtree_diagnostic(
-                    path.clone(),
-                    &subtree,
-                )?);
+        match measure_master_subtrees(conn, &package)? {
+            Ok((total, diagnostics)) => {
+                persist_master_subtrees(conn, &package, total, diagnostics)?
+            }
+            Err((source_sha, path, error)) => {
+                conn.execute_batch("SAVEPOINT v14_unavailable")?;
+                for table in [
+                    "package_install_count",
+                    "package_install_unknown",
+                    "package_install_diagnostic",
+                ] {
+                    conn.execute(
+                        &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                        [&package],
+                    )?;
+                }
+                conn.execute(
+                    "UPDATE package_install_report
+                     SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0
+                     WHERE package_sha256 = ?1",
+                    [&package],
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &source_sha,
+                    &path,
+                    "InstallReportBackfillError",
+                    "master_subtree_backfill",
+                    &error,
+                )?;
+                conn.execute_batch("RELEASE v14_unavailable")?;
             }
         }
-        let count_ordinal: i64 = conn.query_row(
-            "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_count WHERE package_sha256 = ?1",
-            [&package],
-            |r| r.get(0),
-        )?;
+    }
+    Ok(())
+}
+
+type MeasuredSubtrees = (u64, Vec<crate::package::InstallDiagnostic>);
+type UnmeasurableMaster = (String, String, ProductDbError);
+
+/// Scans every Master member of `package`. The outer `Result` is a database
+/// failure (aborts the migration); the inner `Err` names a master whose
+/// retained bytes cannot be measured (downgrades just this report).
+fn measure_master_subtrees(
+    conn: &Connection,
+    package: &str,
+) -> Result<Result<MeasuredSubtrees, UnmeasurableMaster>, ProductDbError> {
+    let masters = conn
+        .prepare(
+            "SELECT path, source_sha256 FROM package_member
+             WHERE package_sha256 = ?1 AND role = 'Master' ORDER BY path",
+        )?
+        .query_map([package], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut total = 0u64;
+    let mut diagnostics = Vec::new();
+    for (path, source_sha) in masters {
+        let Some(bytes) = crate::load_source_file(conn, &source_sha)? else {
+            let error = ProductDbError::Xml {
+                source_path: path.clone(),
+                cause: "v14 backfill: retained master blob is missing".into(),
+            };
+            return Ok(Err((source_sha, path, error)));
+        };
+        let subtrees = match crate::parse::master::uninterpreted_master_subtrees(&bytes) {
+            Ok(subtrees) => subtrees,
+            Err(error) => return Ok(Err((source_sha, path, error))),
+        };
+        for subtree in subtrees {
+            total = total
+                .checked_add(subtree.occurrences)
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: path.clone(),
+                    cause: "v14 backfill: master-subtree counter overflow".into(),
+                })?;
+            diagnostics.push(crate::package::master_subtree_diagnostic(
+                path.clone(),
+                &subtree,
+            )?);
+        }
+    }
+    Ok(Ok((total, diagnostics)))
+}
+
+fn persist_master_subtrees(
+    conn: &Connection,
+    package: &str,
+    total: u64,
+    diagnostics: Vec<crate::package::InstallDiagnostic>,
+) -> Result<(), ProductDbError> {
+    let too_large = |what: &str| ProductDbError::Xml {
+        source_path: package.to_string(),
+        cause: format!("v14 backfill: {what} exceeds SQLite INTEGER"),
+    };
+    let count_ordinal: i64 = conn.query_row(
+        "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_count WHERE package_sha256 = ?1",
+        [package],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO package_install_count VALUES (?1, ?2, 'master_subtree', 'unsupported', ?3)",
+        params![
+            package,
+            count_ordinal,
+            i64::try_from(total).map_err(|_| too_large("master-subtree count"))?
+        ],
+    )?;
+    let first_ordinal: i64 = conn.query_row(
+        "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_diagnostic WHERE package_sha256 = ?1",
+        [package],
+        |r| r.get(0),
+    )?;
+    for (ordinal, row) in (first_ordinal..).zip(diagnostics) {
         conn.execute(
-            "INSERT INTO package_install_count VALUES (?1, ?2, 'master_subtree', 'unsupported', ?3)",
+            "INSERT INTO package_install_diagnostic VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 package,
-                count_ordinal,
-                i64::try_from(total).map_err(|_| ProductDbError::Xml {
-                    source_path: package.clone(),
-                    cause: "v14 backfill: master-subtree count exceeds SQLite INTEGER".into(),
-                })?
+                ordinal,
+                row.kind().as_str(),
+                row.archive_path(),
+                row.xml_path(),
+                row.detail(),
+                i64::try_from(row.occurrences()).map_err(|_| too_large("occurrences"))?
             ],
         )?;
-        let mut ordinal: i64 = conn.query_row(
-            "SELECT coalesce(max(ordinal) + 1, 0) FROM package_install_diagnostic WHERE package_sha256 = ?1",
-            [&package],
-            |r| r.get(0),
-        )?;
-        for row in diagnostics {
-            conn.execute(
-                "INSERT INTO package_install_diagnostic VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                params![
-                    package,
-                    ordinal,
-                    row.kind().as_str(),
-                    row.archive_path(),
-                    row.xml_path(),
-                    row.detail(),
-                    i64::try_from(row.occurrences()).map_err(|_| ProductDbError::Xml {
-                        source_path: package.clone(),
-                        cause: "v14 backfill: occurrences exceed SQLite INTEGER".into(),
-                    })?
-                ],
-            )?;
-            ordinal += 1;
-        }
     }
     Ok(())
 }

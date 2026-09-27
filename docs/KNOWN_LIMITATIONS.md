@@ -7972,3 +7972,44 @@ loss §132 removed. Data integrity outranks convenience here.
 example, it could observe a WebKit web-process-terminated signal and then
 drop the stale listener or destroy the window. Either way this needs a
 test, or at least a manual reproduction on a real window manager.
+
+## §134 Mask `0701h` (BIM M112) devices cannot receive an application download
+
+**Status.** Open. Found 2026-09-27 while evaluating a request to configure
+button 1 of the MDT *Taster 2-fach Plus* at `1.1.67` as an ON/OFF toggle on
+`2/0/53`. RESEARCH §19 has the evidence.
+
+**Limitation.** KNXBench can address and restart such a device (RESEARCH §8.8.6), but
+it cannot load an application program, parameters, group addresses or links
+into it. Five pieces are missing:
+
+1. **A memory-mapped load state machine transport.** Mask `070nh` takes load
+   events as an 11-octet `A_Memory_Write` to `0104h`, with the state read back
+   from `B6EAh`–`B6EDh` (`DMP_LoadStateMachineWrite_RCo_Mem`, MP §3.31.2). The
+   downloader drives load state machines only through properties.
+2. **Serializers** for the Group Address Table (Resources §4.16.11) and the
+   Easy 3 association table (§4.17.9).
+3. **A parameter-segment image builder.** It must evaluate the `choose` tree
+   and place each parameter at its `Memory` offset over the segment defaults.
+4. **The device's access key.** The device's access key is unknown, and the
+   product data does not contain it.
+5. **A hardware-write policy decision.** `WriteScope::Download` is refused on
+   hardware by design.
+
+**Cost.** Devices in this family must still be parameterised with another
+tool. In the one live installation measured (RESEARCH §8.5), every device reported
+`0701h`.
+
+**Why it is this way.** Items 1–3 are ordinary work now that the encodings
+are documented. The first byte of each load state machine record is
+documented only by the conformance test suite (TSSG), and that suite
+contradicts itself on the record length (RESEARCH §19). Item 5 is deliberate.
+A wrong download can leave the device unloaded (without a working
+application) until a correct download succeeds, so the gate stays closed
+until the path has been tested end to end against the simulator and then
+reviewed.
+
+**Lifted when.** Items 1–3 are implemented and tested against the simulator,
+including the TSSG examples as golden vectors. Items 4 and 5 are then decided
+explicitly, and one real download of a known configuration is verified by
+observing the resulting group telegram on the bus.

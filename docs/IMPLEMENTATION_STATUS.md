@@ -12,7 +12,7 @@ high-water mark, so an undone `KB-GA-n` or device id is never reissued
 `http_bus_scan.rs::…_undo_restores_content_exactly` asserts the counters are
 the only difference **[V]**).
 
-The CSV plan/apply window is closed. Planning moved into `plan_csv_import`,
+A CSV plan can no longer apply stale. (A concurrent edit through one of the nine phase-3 sites, which allocate ids without bumping the revision, is still caught only by the `IdInUse` backstop, and nothing is lost. A save between plan and apply bumps the revision and refuses the import harmlessly.) Planning moved into `plan_csv_import`,
 which records the revision it planned against, and `apply_planned_csv_import`
 now applies **every** plan through `apply_at_revision`, not only destructive
 ones. An edit in between refuses the plan with "import or preview again"

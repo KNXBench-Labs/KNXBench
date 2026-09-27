@@ -536,6 +536,13 @@ paths, filenames, or manufacturer labels. The gated implementation is Linux-only
 main-vs-branch run showed exactly two of 31 final table counts changed,
 `package_install_count` 3,277 → 3,390 and `package_install_diagnostic`
 645 → 880, both now pinned explicitly; outcomes and report totals were equal.
+PDB-9 (schema v15) re-pinned it again: exactly two of 31 final table counts
+changed, `ingest_unknown` 23,040 → 23,051 and `package_install_unknown`
+9,245 → 9,251, because 75 `Element TypeColor`/`TypeTime` report rows became
+86 unread-attribute rows (26 → 32 distinct per package). The unknown report
+totals moved by the same +11 (22,758 → 22,769 per instance, 22,642 →
+22,653 shared); an independent Python recount of the same package instances
+predicts every one of these deltas, and no product table changed.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

@@ -33,8 +33,16 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// `package_install_count` 3,277 -> 3,390 (one `master_subtree` row per
 /// installed package) and `package_install_diagnostic` 645 -> 880 (the new
 /// subtree diagnostics). Every install outcome and report total was equal.
+///
+/// Re-pinned for PDB-9 (schema v15): a main-vs-branch run differed in
+/// exactly two of 31 final table counts — `ingest_unknown` 23,040 -> 23,051
+/// and `package_install_unknown` 9,245 -> 9,251 — because the 75 v14
+/// `Element TypeColor`/`TypeTime` rows became 86 unread-attribute rows
+/// (per package, distinct: 26 -> 32). An independent Python recount of the
+/// same 115 package instances predicts both deltas exactly. No product
+/// table changed; the report totals are pinned above.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "23a6c2ad37ccb08175fc8ee754c77a427cb9ab9eefeb40db35ca1d75b0b9a7ec";
+    "c8db13b0ce492ad33e6bbbbb63a2919936c9c7bd1a0a7a1c5dd1c3ea7aff0fb9";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {

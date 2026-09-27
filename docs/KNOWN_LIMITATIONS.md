@@ -53,45 +53,48 @@ being partially interpreted. All 115 corpus instances pass this check; a
 hypothetical vendor file that ETS tolerates but XML forbids would now be
 refused rather than half-read.
 
-## Seven corpus tests assume a flat local corpus directory
+## Ten corpus tests assumed a flat local corpus directory (resolved 2026-09-27)
 
-**Limitation.** Seven tests resolve fixtures such as
+**Resolved (verified 2026-09-27).** The corpus-dependent tests now resolve
+fixtures recursively through `knx_testsupport::find_corpus_file` /
+`walk_corpus_files` instead of joining a filename onto the corpus root, and the
+"exactly four archives" assertion is gone. Verification on the reorganized
+local corpus: `standalone_packages` 42 passed, `parameter_views_corpus` 1
+passed, `dynamic_tree` 54 passed, 0 failed. A repository-wide search for
+`product_corpus_root().join(` returns no remaining call sites.
+
+**Correction to the original count.** This entry said "seven tests"; the true
+number is ten. The seven came from the first failing workspace run, which stops
+at the first failing binary — suites sharing the fixture fail in separate
+binaries and were never reached. Counting test functions that call a corpus
+resolver gives ten: six in `dynamic_tree.rs`, one in
+`parameter_views_corpus.rs`, three in `standalone_packages.rs`.
+
+**Historical record.** The limitation below is kept because the cause is a
+recurring trap, not because the defect is open.
+
+**Limitation (was).** Ten tests resolved fixtures such as
 `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` directly beneath
-`OriginalData/ProductDatabases`, and one asserts that the directory contains
-exactly four archives. The local corpus has since been reorganized into
-per-manufacturer subdirectories, so these tests fail on a machine that has the
-full corpus present. Affected:
-
-| File | Tests |
-| --- | --- |
-| `crates/knx-productdb/tests/dynamic_tree.rs` | the five `corpus_*` tests |
-| `crates/knx-productdb/tests/parameter_views_corpus.rs` | `parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3` |
-| `crates/knx-productdb/tests/standalone_packages.rs` | `installs_the_readable_corpus` |
-
-Every referenced fixture still exists — each is simply one directory deeper.
-`apps/knx-server/tests/http_catalog_to_device.rs` names the same fixtures but
-passes, because it treats absence as a skip rather than a failure.
+`OriginalData/ProductDatabases`, and one asserted that the directory contains
+exactly four archives. The local corpus had since been reorganized into
+per-manufacturer subdirectories, so these tests failed on a machine that has the
+full corpus present.
 
 **Cause.** `OriginalData/` is gitignored and local-only, so its layout is not
 version-controlled and no CI run exercises it. The tests were written against
 the flat layout and were never updated when the corpus grew subdirectories.
 
-**Cost.** `cargo test --workspace` fails on a developer machine holding the
-reorganized corpus, even though nothing in the product is broken. On a machine
-without the corpus the same tests silently take their skip path, which hides
-the problem rather than reporting it.
+**Cost.** `cargo test --workspace` failed on a developer machine holding the
+reorganized corpus, even though nothing in the product was broken. On a machine
+without the corpus the same tests silently took their skip path, which hid the
+problem rather than reporting it — a green result that proved nothing.
 
-**Evidence that this is pre-existing.** The identical seven tests fail at
+**Evidence that it was pre-existing.** The identical failing set appeared at
 base commit `3fb910a` when run with `KNXBENCH_PRODUCT_CORPUS` pointed at the
-present corpus — the failing set is exactly equal before and after the PDB-7
-merge, so no part of it is caused by the catalogue-metadata work. The three
-other corpus gates (`corpus_compatibility_matrix`, and the scheme suites) pass,
-because they walk the tree recursively instead of assuming a flat directory.
-
-**Lifted when.** The seven tests resolve fixtures recursively — the same way
-the compatibility matrix already does — and the "exactly four archives"
-assertion is replaced by one that tolerates a growing corpus. Until then,
-run them with a flat corpus directory or skip them with `--skip corpus_`.
+present corpus — equal before and after the PDB-7 merge, so no part of it was
+caused by the catalogue-metadata work. The other corpus gates
+(`corpus_compatibility_matrix`, and the scheme suites) passed throughout
+because they already walked the tree recursively.
 
 ## 1. Single-sample bias
 

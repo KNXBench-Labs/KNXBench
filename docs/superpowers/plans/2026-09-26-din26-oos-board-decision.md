@@ -5,7 +5,8 @@ out-of-scope acceptance") and §4. Prepared by Sigrid Holz (Project Lead),
 2026-09-26. Re-verified against the current `docs/KNOWN_LIMITATIONS.md` on
 this date at commit `7b64496` (branch `din-26-board-oos-acceptance`).
 
-This is a decision request, not a decision. Each line below is a remaining
+This was a decision request; it was decided on 2026-09-27 (see **Decision**
+below). Each line below is a remaining
 documented boundary that goal.md §4 explicitly scoped as Priority 3
 ("reporting, diff and CSV residue — none is a correctness risk") or that
 independently has no task scheduled to close it. None of them touches
@@ -116,6 +117,27 @@ hardware-write exclusions from goal.md lines 48-53 (§7, §92, §93, §99,
 §101, §104, §105, §108, §109, §111, §112, §113, §114, §115, §116) are
 likewise excluded here — they are governed separately by the hardware
 rules and are not this issue's remit.
+
+## Decision
+
+**Accepted 2026-09-27.** All twelve documented boundaries listed above — §45,
+§48, §52, §53, §54, §55, §56 (reporting and project diff), §39, §41
+(group-address CSV and manufacturer data), §12, §85 (product-package integrity)
+and §2 (import validation) — are accepted as permanent documented boundaries.
+No work is scheduled against them.
+
+Accepted by the project owner. This closes the "pending explicit acceptance"
+state that goal.md §10 requires before the alpha gate can be called complete.
+
+What this decision does **not** say:
+
+- It does not claim ETS parity in any of these areas; each remains a documented
+  difference, and the corresponding `KNOWN_LIMITATIONS.md` entry stays open as
+  the public record.
+- It does not forbid revisiting an item. Acceptance means "no scheduled work
+  now", not "never"; a future concrete need re-opens the question.
+- It does not cover anything touching hardware, data integrity, or persisted
+  formats. No item in this list does — that was a precondition for asking.
 
 ## What the Board is being asked
 

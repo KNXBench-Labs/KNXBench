@@ -2052,6 +2052,17 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .about-dialog-version { font-family: var(--knx-font-mono); overflow-wrap: anywhere; }
 .about-dialog p { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--knx-muted); max-width: 60ch; }
 .about-dialog-footer { display: flex; justify-content: flex-end; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+.search-panel.programming-consent-dialog { width: min(36rem, 92vw); padding: 1rem 1.15rem; }
+.programming-consent-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.programming-consent-target { font-weight: 600; }
+.programming-consent-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0 0 12px; }
+.programming-consent-facts dt { color: var(--knx-muted); font-size: 12px; }
+.programming-consent-facts dd { margin: 0; font-size: 13px; }
+.programming-consent-stage { font-weight: 700; }
+.programming-consent-stage-alpha, .programming-consent-stage-beta, .programming-consent-stage-preRelease, .programming-consent-stage-unknown { color: var(--knx-warning-color); }
+.programming-consent-risk { border-left: 3px solid var(--knx-warning-color); padding-left: 10px; }
+.programming-consent-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+.settings-field-programming-consent { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 
 /* T28/F4 — the question asked before unsaved work goes in the bin. The
    discarding button is coloured as the warning it is; Cancel stays plain

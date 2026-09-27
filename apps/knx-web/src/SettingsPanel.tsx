@@ -11,7 +11,9 @@ import Overlay from "./Overlay";
 import { usePreferredGateway } from "./gatewayPreference";
 import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
 import { formatSettingsDiagnostic } from "./settingsDiagnostic";
-import { useSettingsState } from "./settingsStore";
+import { useSettingsRevision, useSettingsState } from "./settingsStore";
+import { forgetProgrammingConsent, rememberedProgrammingConsentStage } from "./programmingConsent";
+import { STAGE_LABEL } from "./ProgrammingConsentDialog";
 import {
   exportEnglishTemplate,
   exportLanguagePack,
@@ -243,6 +245,10 @@ export default function SettingsPanel(props: {
   const t = useTranslate();
   const [preferredGateway, setPreferredGateway] = usePreferredGateway();
   const settingsState = useSettingsState();
+  // Re-read on every record change, so a "don't ask again" given in the
+  // programming dialog shows up here without reopening the panel.
+  useSettingsRevision();
+  const rememberedStage = rememberedProgrammingConsentStage();
 
   const packs = useLanguagePacks();
   const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null);
@@ -529,6 +535,19 @@ export default function SettingsPanel(props: {
           <span className="settings-field-hint">{t("settings.preferredGatewayHint")}</span>
         </label>
         <LineScanExclusionsEditor disabled={false} />
+        <div className="settings-field settings-field-programming-consent">
+          <span className="settings-field-label">{t("settings.programmingConsent")}</span>
+          <span className="settings-field-hint">
+            {rememberedStage
+              ? t("settings.programmingConsentRemembered", { stage: t(STAGE_LABEL[rememberedStage]) })
+              : t("settings.programmingConsentAsks")}
+          </span>
+          {rememberedStage && (
+            <button type="button" onClick={() => forgetProgrammingConsent()}>
+              {t("settings.programmingConsentReset")}
+            </button>
+          )}
+        </div>
         {(settingsState.diagnostic || settingsState.fallbackMessage) && (
           <p className="settings-diagnostic" role="status">
             {formatSettingsDiagnostic(

@@ -52,6 +52,11 @@ export const messages = {
   "toolbar.settings": "Settings",
   "toolbar.busMonitor": "Bus monitor",
   "toolbar.commands": "Commands… (Ctrl+Shift+P)",
+  // ISSUE-04's status-bar text. `never` covers a session that has not
+  // saved yet; the timestamped form uses the browser's own locale
+  // formatting (`Intl.DateTimeFormat`), not a hardcoded pattern.
+  "statusBar.lastSaved": "Last saved: {time}",
+  "statusBar.neverSaved": "Not saved yet",
   "settings.uiLanguage": "UI language",
   "language.en": "English",
   "language.de": "Deutsch",
@@ -653,6 +658,9 @@ export const messages = {
   "settings.section.appearance": "Appearance",
   "settings.section.languageData": "Language & data",
   "settings.section.busDiagnostics": "Bus & diagnostics",
+  "settings.section.autosave": "Autosave",
+  "settings.autosaveEnabled": "Autosave",
+  "settings.autosaveIntervalMinutes": "Autosave interval (minutes)",
   "settings.preferredGateway": "Preferred KNXnet/IP gateway",
   "settings.preferredGatewayHint": "Seeds a new monitor or scan only; saving it sends no KNX traffic.",
   "settings.diagnostic.migrated": "Settings migrated from schema {fromVersion} to {toVersion}.",
@@ -1274,6 +1282,13 @@ export const messages = {
     "Cancel, save with “Save” or “Save as…”, and quit after that.",
   "quit.cancel": "Cancel",
   "quit.discard": "Quit without saving",
+
+  // ISSUE-04's autosave countdown toast and failure notice. `{seconds}`
+  // ticks down from `AUTOSAVE_COUNTDOWN_SECONDS`; `cancel` stops this
+  // cycle only — the next interval still offers to autosave again.
+  "autosave.countdown": "Autosaving in {seconds}s…",
+  "autosave.cancel": "Cancel",
+  "autosave.failed": "Autosave failed. Your edits are safe but unsaved — save manually when you can.",
 
   "about.title": "About KNXBench",
   "about.version": "Version",

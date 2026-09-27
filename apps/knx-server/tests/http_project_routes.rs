@@ -176,12 +176,29 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
     let dir = tempfile::tempdir().unwrap();
     let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
     let app = knx_server::app(state, None);
+
+    // Before any save this session, there is no save record at all.
+    assert_eq!(
+        app.clone()
+            .oneshot(post(
+                "/api/project/new",
+                json!({ "name": "First", "force": true }),
+            ))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let fresh = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_eq!(fresh["has_store_path"], false);
+    assert_eq!(fresh["is_modified"], false);
+    assert_eq!(
+        fresh.get("last_saved_at"),
+        None,
+        "a session that has never saved reports no save time"
+    );
+
     for (route, body, saved) in [
-        (
-            "/api/project/new",
-            json!({ "name": "First", "force": true }),
-            false,
-        ),
         (
             "/api/project/save-as",
             json!({ "path": "first.knxdb" }),
@@ -201,6 +218,15 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
         let tree = body_json(response).await;
         assert_eq!(tree["has_store_path"], saved, "{route}");
         assert_eq!(tree["is_modified"], false, "{route}");
+        // `last_saved_at` is this session's own save record, never a
+        // project field: once this session has saved once, opening or
+        // replacing the project (which never re-saves) must not erase
+        // that record — it is the session's memory of its own last save,
+        // not a property of whichever project happens to be open.
+        assert!(
+            tree["last_saved_at"].as_str().is_some(),
+            "{route} should still report the session's earlier save time"
+        );
     }
 }
 
@@ -228,6 +254,13 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
         .await
         .unwrap();
     assert_eq!(body_json(edited).await["is_modified"], true);
+    assert_eq!(
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap())
+            .await
+            .get("last_saved_at"),
+        None,
+        "a session that has never saved reports no save time"
+    );
 
     assert_eq!(
         app.clone()
@@ -240,10 +273,12 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
             .status(),
         StatusCode::OK
     );
-    assert_eq!(
-        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await["is_modified"],
-        false
-    );
+    let after_save_as = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_eq!(after_save_as["is_modified"], false);
+    let first_saved_at = after_save_as["last_saved_at"]
+        .as_str()
+        .expect("save as stamps last_saved_at")
+        .to_string();
 
     let edited_again = app
         .clone()
@@ -254,6 +289,12 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
         .await
         .unwrap();
     assert_eq!(body_json(edited_again).await["is_modified"], true);
+    // Editing after a save must not touch the save record — only another
+    // successful save may move it.
+    assert_eq!(
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await["last_saved_at"],
+        first_saved_at
+    );
 
     *state.store_path.lock().unwrap() = Some(dir.path().join("missing/project.knxdb"));
     let failed = app
@@ -262,9 +303,15 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
         .await
         .unwrap();
     assert_eq!(failed.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let after_failed_save =
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_eq!(after_failed_save["is_modified"], true);
+    // A failed save must never clear dirty state, and must never advance
+    // the last-saved timestamp — this is the same save record a
+    // successful save-as already stamped above.
     assert_eq!(
-        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await["is_modified"],
-        true
+        after_failed_save["last_saved_at"], first_saved_at,
+        "a failed save must not advance the last-saved timestamp"
     );
 
     *state.store_path.lock().unwrap() = Some(db_path);
@@ -275,6 +322,12 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
             .unwrap()
             .status(),
         StatusCode::OK
+    );
+    let after_second_save =
+        body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_ne!(
+        after_second_save["last_saved_at"], first_saved_at,
+        "a successful save must advance the last-saved timestamp"
     );
     assert_eq!(
         body_json(app.oneshot(get("/api/project")).await.unwrap()).await["is_modified"],

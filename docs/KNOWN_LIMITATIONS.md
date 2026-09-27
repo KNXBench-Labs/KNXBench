@@ -1092,18 +1092,24 @@ confirmation look exercised when no device was involved).
 `hardware_write_is_refused.rs`, because the old name is no longer the whole
 truth — holds down both sides plus the alarm-panel refusal.
 
-**Three limitations this first write exposed, all open:**
+**Three limitations this first write exposed (item 1 partly lifted 2026-09-27; items 2 and 3 open):**
 
-1. **`individual_address_write` returns `Err` on a write that succeeded.** Step 4
+1. **`individual_address_write` returned `Err` on a write that succeeded.** Step 4
    (connect to the new address, read the descriptor, restart) failed immediately
    after the broadcast write with `SessionError::ConnectionReleased`, while the
    device demonstrably answers at the new address seconds later. The procedure
-   goes straight from step 3's broadcast to step 4's `T_Connect` with no settling
-   delay; `SessionTiming::programming_delay` exists but this procedure never
-   consults it, and MP §2.3 states no figure. Deliberately not fixed in the same
-   pass that discovered it: changing shipped procedure timing deserves its own
-   RED test against a device, not a guessed constant. MP §2.3's own "to 4."
-   exception text anticipates this ambiguity and declines to resolve it.
+   went straight from step 3's broadcast to step 4's `T_Connect` with no settling
+   allowance, and MP §2.3 states no figure. MP §2.3's own "to 4." exception text
+   anticipates this ambiguity and declines to resolve it.
+   **Partly lifted, 2026-09-27 (simulator-verified, not hardware-verified).**
+   Step 4 now retries a single unanswered or released `T_Connect` after
+   `SessionTiming::restart_basic_t1` (1 s). That figure is borrowed from MP
+   §3.7.1.1.2's Basic Restart timing, not specified for this situation; a
+   rejected connect is not retried, and a second silence still fails step 4
+   with `wrote: true`. What remains open: whether 1 s is enough for the MDT
+   push button (or any other device) has not been measured — the next
+   Programming Mode session has to confirm it, and a device that needs longer
+   will still produce this limitation's original symptom.
 2. **"Wrote but could not confirm" is not a distinct outcome.** The information
    exists — the error carries the report, whose `wrote` flag was `true` — but a
    caller must destructure the error to find it. Anything built on top of this
@@ -7015,6 +7021,15 @@ obligation at all. The timing values themselves are correct and tested
 (`recovery_wait_never_goes_below_the_configured_floor`,
 `default_restart_timings_match_mp_section_3_7_verbatim`); only the
 waiting and the retry are absent.
+
+**Updated, 2026-09-27.** `restart_basic_t1` now has one reader:
+`individual_address_write`'s step 4 waits it out once before retrying a
+`T_Connect` to a freshly addressed device (§7, "Three limitations this
+first write exposed", item 1). That use is a **borrowing**, not the MP
+§3.7.1.1.2 obligation this section describes — the retry happens *before*
+the restart, not after it — so the "call the failed service one last time
+after a restart" behaviour is still unimplemented, and `recovery_wait`
+still has no reader.
 
 **Lifted when.** A Configuration Procedure exists in this project whose
 recovery from a Basic Restart or Master Reset needs more than "restart,

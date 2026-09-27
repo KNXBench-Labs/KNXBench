@@ -3740,12 +3740,22 @@ taken, and a router/line-coupler configuration cause is not excluded.
    "worked/failed" would have been actively misleading here; `wrote: true` plus
    a step number is what made the situation diagnosable. This is evidence for
    the step-record design, not against it.
-2. **`individual_address_write` needs a settling delay before step 4**, and it
-   is currently unwritten whether the figure is specification-derived. MP §2.3
-   gives no value. This is a real defect for anyone who expects the procedure to
-   return `Ok` on a successful write, and it is **not fixed here** — fixing it
-   is a change to shipped behaviour that deserves its own RED test against a
-   device, not a guessed constant added in passing.
+2. **`individual_address_write` needed a settling allowance before step 4.**
+   MP §2.3 gives no value. It was deliberately not fixed in the pass that
+   discovered it. **Fixed on 2026-09-27, in simulation only:** step 4 now
+   treats one unanswered or released `T_Connect` as possibly still settling,
+   waits `SessionTiming::restart_basic_t1` (MP §3.7.1.1.2's `t1`, 1 s) and
+   connects once more. A second silence is still the genuine "to 4." failure,
+   still with `wrote: true`; a *rejected* connect is not retried at all.
+   `t1` is a **borrowed** figure — it is defined for reconnecting after a Basic
+   Restart, not after `A_IndividualAddress_Write` — used as the Standard's
+   nearest comparable number instead of inventing a constant. The fix is pinned
+   by `a_device_still_settling_after_the_write_is_not_a_failure` (watched to
+   fail first with `Session { step: 4, wrote: true }`) and its counterpart
+   `a_device_silent_after_the_settling_wait_still_fails_step_four` (checked
+   against a two-retry mutant, which it catches). **Not yet re-verified
+   against the MDT device**: that needs another Programming Mode session, and
+   whether 1 s suffices for that device is unmeasured.
 3. **A caller cannot currently distinguish "wrote but could not confirm" from
    "did not write"** without inspecting the report's `wrote` field. The error
    type does carry the report, so the information is present; nothing surfaces

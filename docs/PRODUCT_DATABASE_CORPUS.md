@@ -120,6 +120,42 @@ Large-file behavior is relevant: the largest observed Gira XML member is
 regressions should therefore cover bounded memory and deterministic reporting,
 not just tiny synthetic fixtures.
 
+### PDB-10 preflight: baggage index and payload shape (2026-09-28)
+
+A read-only, aggregate-only probe (Python `zipfile`/`ElementTree`, no
+extraction to disk, no names or contents printed) over the whole
+`OriginalData/ProductDatabases` tree: 117 package instances, 115 distinct
+package hashes, each counted once.
+
+- **Index grammar.** 38 `Baggages.xml` files, exactly the path
+  `KNX/ManufacturerData/Manufacturer/Baggages/Baggage/FileInfo`, nothing else.
+  777 `Baggage` declarations, each with exactly one `FileInfo`.
+  `Baggage/@Id`, `@Name` and `@TargetPath` on all 777; `@InstallOnImport` on
+  129 with the observed values `true`, `false` and `0` (so boolean *and*
+  numeric spellings). `FileInfo/@TimeInfo` on all 777 (ISO date-time);
+  `FileInfo/@Version` on only 2. The Project Schema (v3.0.0 §4.2) says only
+  that each `Baggage` is stored as an external file; the attribute semantics
+  above are corpus observations `[A]`, not specified.
+- **Index → payload.** All 777 declarations resolve *exactly* (case-sensitive)
+  to the member `M-XXXX/Baggages/<TargetPath>/<Name>`. There are 790
+  `Baggages/` members, so 13 payloads have no declaration in their package.
+- **Payload media.** Extensions: `.png` 734, `.zip` 37, `.ai` 11, `.jpg` 5,
+  `.dll` 1, `.pdf` 1, `.msi` 1. Magic bytes disagree with extensions: PNG 699,
+  ZIP 37, **BMP 35** (all named `.png`), PDF 12 (the 11 `.ai` files are PDF),
+  JPEG 5, PE executable 1, OLE2 compound file 1. Classification must use
+  content, never the extension.
+- **Size and encryption.** No member carries the ZIP encryption flag. Deflate
+  431, stored 359. Payload size min 205 B, median 2,623 B, p99 223,370 B,
+  max 2,111,931 B, total 15,009,507 B.
+- **Nesting.** 37 nested ZIPs with 7,144 entries in total, the largest
+  expanding to 317,240 bytes; none contains a further ZIP and none has an
+  encrypted entry. They stay opaque; the inventory may read their central
+  directory for counts/sizes but must not extract them.
+- **Open discrepancy.** The inventory above (1,728 baggage declarations)
+  counts a different unit than this probe's 777 per distinct package; PDB-10
+  must reconcile the two before either number is pinned.
+- **Largest XML member** in the tree: 54,803,397 bytes (unchanged).
+
 ## Scheme and producer observations
 
 The XML itself records `CreatedBy` and `ToolVersion`. The corpus contains output

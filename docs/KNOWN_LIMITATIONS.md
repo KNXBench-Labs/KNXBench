@@ -87,7 +87,10 @@ the flat layout and were never updated when the corpus grew subdirectories.
 **Cost.** `cargo test --workspace` failed on a developer machine holding the
 reorganized corpus, even though nothing in the product was broken. On a machine
 without the corpus the same tests silently took their skip path, which hid the
-problem rather than reporting it — a green result that proved nothing.
+problem rather than reporting it — a green result that proved nothing. **The
+recursive resolution and the honest `#[ignore]` gating fixed that for these ten
+tests only. The same silent-pass idiom remains at 72 other sites repo-wide; see
+§131.**
 
 **Evidence that it was pre-existing.** The identical failing set appeared at
 base commit `3fb910a` when run with `KNXBENCH_PRODUCT_CORPUS` pointed at the
@@ -7708,3 +7711,64 @@ up: exit code 0 is not evidence that work happened.
 `current_dir` to the workspace manifest, or passing `--root`) so a relocated
 or stale binary cannot silently check a foreign path, and each check fails
 loudly when it discovers zero files.
+
+## §131 Seventy-two corpus gates repo-wide still pass when the corpus is absent
+
+**Status.** Open (documented 2026-09-27). DIN-4 fixed ten of them; this entry
+records the remaining, larger population.
+
+**Limitation.** The pattern
+
+```rust
+if !reference_ets4_path().exists() {
+    eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+    return;
+}
+```
+
+appears at **73 sites across 25 files**, and in **72 of them the enclosing
+`#[test]` carries no `#[ignore]`**. A plain `return` from a test function is a
+**pass**, so on any machine without the private corpus — which is every CI
+machine — those tests report success while exercising nothing. Only one site is
+honestly gated. Affected crates: `knx-etsproj` (14 files), `knx-app` (9),
+`knx-productdb` (1), `knx-store` (1).
+
+**Evidence [V]** (2026-09-27, `a04f9fc`). Pointing the fixture at a
+non-existent path and running one suite:
+
+```
+KNXBENCH_REFERENCE_PROJECT=$TMPDIR/does-not-exist.knxproj \
+  cargo test -p knx-app --test import_service
+test importing_persists_the_opaque_entries ... ok
+test the_persisted_bytes_are_the_bytes_that_were_read ... ok
+test a_failed_import_leaves_the_store_untouched ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; finished in 0.00s
+```
+
+Three passes in 0.00 s over a file that does not exist. `0 ignored` is the tell:
+nothing was skipped, three assertions-free bodies were counted as evidence.
+
+**Cause.** The idiom predates the rule that absent private data must never be
+green. It was applied consistently and therefore spread; DIN-4 only converted
+the ten tests inside its own scope to
+`#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]`
+plus hard assertions.
+
+**Cost.** Every workspace-wide test total quoted in this repository's history is
+inflated by up to 72 tests that may never have run. A real regression in ETS
+project import, opaque-entry persistence or store round-tripping can reach
+`main` with a green `cargo test --workspace`, because the tests that would
+catch it pass by returning early.
+
+**Related.** `knx_testsupport::walk_corpus_files`
+(`crates/knx-testsupport/src/lib.rs:197-217`) compounds this: `let Ok(read_dir)
+= std::fs::read_dir(dir) else { return; }` and `let Ok(file_type) = ... else {
+continue; }` treat permission-denied and I/O errors as an empty subtree, so an
+unreadable manufacturer directory silently shrinks the corpus instead of
+failing.
+
+**Lifted when.** Every corpus-gated test carries `#[ignore]` with a reason and
+asserts its fixture exists rather than returning, and the traversal helper
+reports errors instead of swallowing them. A lint or `xtask` check that rejects
+a bare `return` after a corpus-presence test would keep the idiom from
+returning.

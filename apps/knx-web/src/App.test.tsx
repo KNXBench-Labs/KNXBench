@@ -109,6 +109,9 @@ vi.mock("./filePicker", () => ({ ...filePickerMock }));
 const tauriWindowMock = vi.hoisted(() => {
   const mock = {
     destroy: vi.fn().mockResolvedValue(undefined),
+    // Never called: `close()` would re-emit close-requested and reopen the
+    // dialog "discard" just dismissed (§132), so `quitApp()` uses `destroy()`.
+    close: vi.fn().mockResolvedValue(undefined),
     closeHandler: null as null | ((event: { preventDefault: () => void }) => void),
     onCloseRequested: vi.fn(async (handler: (event: { preventDefault: () => void }) => void) => {
       mock.closeHandler = handler;
@@ -2284,6 +2287,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     const root = await openProject({ ...baseTree(), is_modified: true });
     expect(tauriWindowMock.closeHandler).not.toBeNull();
 
+    tauriWindowMock.close.mockClear();
     let mayClose = true;
     await act(async () => {
       mayClose = tauriCloseRequested();
@@ -2296,6 +2300,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).not.toHaveBeenCalled();
 
     await act(async () => root.unmount());
     expect(tauriWindowMock.closeHandler).toBeNull();

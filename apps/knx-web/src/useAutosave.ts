@@ -1,4 +1,6 @@
-/** ISSUE-04's autosave engine: a repeating countdown-then-save timer with no state of its own about *what* dirty means — that stays the server's `is_modified`/`last_saved_at`. */
+/** ISSUE-04's autosave engine: a repeating countdown-then-save timer. */
+// It keeps no state of its own about *what* dirty means — that stays the
+// server's `is_modified`/`last_saved_at`.
 // This hook is deliberately blind to the save mechanics. It calls
 // `onSave` — the same `saveProject` App.tsx already wires to Save's own
 // button — and never invents a second persistence path (Global

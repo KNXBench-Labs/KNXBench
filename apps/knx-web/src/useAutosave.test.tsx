@@ -1,4 +1,7 @@
-/** Fake-timer tests for ISSUE-04's autosave engine: the five-second countdown, manual-save cancellation, edits mid-countdown, missing Save-As path, concurrent-save suppression, and autosave failure. */
+/** Fake-timer tests for ISSUE-04's autosave engine. */
+// Covers: the five-second countdown, manual-save cancellation, edits
+// mid-countdown, missing Save-As path, concurrent-save suppression, and
+// autosave failure.
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

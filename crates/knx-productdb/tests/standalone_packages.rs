@@ -2035,6 +2035,7 @@ fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
              ALTER TABLE dynamic_node DROP COLUMN value;",
         )
         .unwrap();
+        drop_v13_catalogue_columns(&conn);
         conn.pragma_update(None, "user_version", 6i64).unwrap();
     }
 

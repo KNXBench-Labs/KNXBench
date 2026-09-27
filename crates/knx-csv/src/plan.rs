@@ -233,7 +233,10 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
     }
 
     if created > 0 {
-        commands.push(Command::SetIdAllocators { ids });
+        // Never-rewinding (ADR-0039 Decision 2): applied after a concurrent
+        // edit it cannot lower that edit's counters, and undo leaves the
+        // high-water mark in place so a stable `KB-GA-n` is never reissued.
+        commands.push(Command::ReserveIds { through: ids });
     }
 
     let has_errors = problems.iter().any(|p| p.severity == Severity::Error);
@@ -458,7 +461,7 @@ mod tests {
         assert_eq!(entry.address, GroupAddress::from_raw(100));
         assert_eq!(entry.source.path, format!("KB-GA-{}", entry.id.0));
         assert_eq!(entry.source.ets_id, format!("KB-GA-{}", entry.id.0));
-        assert!(matches!(cmds[1], Command::SetIdAllocators { .. }));
+        assert!(matches!(cmds[1], Command::ReserveIds { .. }));
     }
 
     #[test]
@@ -476,6 +479,38 @@ mod tests {
             .collect();
         assert_eq!(ids, vec![GroupAddressId(1), GroupAddressId(2)]);
         assert_eq!(project.ids.peek_group_address(), 2);
+    }
+
+    /// ADR-0039 Decision 2: the plan reserves ids with the never-rewinding
+    /// `ReserveIds`, so undo restores the user's content but not the
+    /// counter, and a stable `KB-GA-n` never names two different addresses
+    /// in one project's history.
+    #[test]
+    fn undoing_an_import_keeps_the_high_water_mark_so_a_stable_id_is_never_reissued() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        let mut stack = knx_core::CommandStack::new();
+        let first = plan_import(&project, &parsed("Address,Name\n100,A\n"));
+        let Some(Command::Batch(cmds)) = &first.command else {
+            panic!("expected a batch, got {:?}", first.command);
+        };
+        assert!(
+            matches!(cmds.last(), Some(Command::ReserveIds { .. })),
+            "{cmds:?}"
+        );
+        stack
+            .do_command(&mut project, first.command.unwrap())
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].group_addresses.is_empty());
+        assert_eq!(project.ids.peek_group_address(), 1);
+
+        let second = plan_import(&project, &parsed("Address,Name\n200,B\n"));
+        stack
+            .do_command(&mut project, second.command.unwrap())
+            .unwrap();
+        let only = &project.installations[0].group_addresses[0];
+        assert_eq!(only.id, GroupAddressId(2));
+        assert_eq!(only.source.ets_id, "KB-GA-2");
     }
 
     #[test]

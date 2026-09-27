@@ -3776,6 +3776,67 @@ mod tests {
         assert!(project.installations[0].buildings[0].devices.is_empty());
     }
 
+    /// ADR-0038: the commands ISSUE-05's site UI will call already build a
+    /// `Ground` site over two `Building`s in one installation, and moving a
+    /// device from one building to the other never leaves it referenced
+    /// twice — the site itself never takes a device.
+    #[test]
+    fn a_ground_site_holds_two_buildings_and_a_device_moves_between_them() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        for part in [
+            test_building_part(BuildingPartId(1), BuildingPartType::Ground, None),
+            test_building_part(
+                BuildingPartId(2),
+                BuildingPartType::Building,
+                Some(BuildingPartId(1)),
+            ),
+            test_building_part(
+                BuildingPartId(3),
+                BuildingPartType::Building,
+                Some(BuildingPartId(1)),
+            ),
+        ] {
+            stack
+                .do_command(&mut project, Command::CreateBuildingPart { part })
+                .unwrap();
+        }
+        for target in [BuildingPartId(2), BuildingPartId(3)] {
+            stack
+                .do_command(
+                    &mut project,
+                    Command::MoveDeviceToBuildingPart {
+                        device: DeviceId(1),
+                        part: Some(target),
+                    },
+                )
+                .unwrap();
+        }
+        let installation = &project.installations[0];
+        assert_eq!(installation.buildings.len(), 3);
+        let find = |id| {
+            installation
+                .buildings
+                .iter()
+                .find(|part| part.id == id)
+                .unwrap()
+        };
+        assert_eq!(
+            find(BuildingPartId(1)).children,
+            vec![BuildingPartId(2), BuildingPartId(3)]
+        );
+        assert!(find(BuildingPartId(1)).devices.is_empty());
+        assert!(find(BuildingPartId(2)).devices.is_empty());
+        assert_eq!(find(BuildingPartId(3)).devices, vec![DeviceId(1)]);
+        let references = installation
+            .buildings
+            .iter()
+            .flat_map(|part| part.devices.iter())
+            .filter(|device| **device == DeviceId(1))
+            .count();
+        assert_eq!(references, 1);
+    }
+
     #[test]
     fn move_device_between_two_building_parts() {
         let mut project = test_project_with_one_device(None);

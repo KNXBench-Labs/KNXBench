@@ -306,6 +306,17 @@ produce a `MapProblem`; unknown native types cause a typed load error.
 The unconstrained `kind TEXT NOT NULL` column needs no migration: schema v9
 is unchanged. ETS project export remains absent (ADR-0028).
 
+**A site/property is a `Ground` root, not a new kind**
+([ADR-0038](adr/0038-site-is-a-ground-root-space.md), 2026-09-26). Several
+buildings sharing one KNX infrastructure are `Building` children of one
+parentless `Ground` part in one `Installation`. The installation owns the
+shared topology and group addresses, so the site owns no device and
+duplicates none. Schema23 §1.2.6.3 names `Ground` among the normal root
+types. No `Site` kind exists, and an undocumented `Site` token on import
+stays a reported `UnknownEnumValue` rather than becoming `Ground`. A level
+above `Installation` (grouping *separate* infrastructures) is explicitly not
+modelled and would need its own ADR.
+
 **A device without a line is valid** and lives in `Topology::unassigned`. The
 reference project contains exactly one, and it is precisely the device
 `xknxproject` loses (RESEARCH §7.1). Any model that makes line membership

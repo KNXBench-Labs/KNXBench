@@ -599,6 +599,10 @@ export const messages: Record<MessageKey, string> = {
   "settings.autosaveIntervalMinutes": "Intervall (Minuten)",
   "settings.preferredGateway": "Bevorzugtes KNXnet/IP-Gateway",
   "settings.preferredGatewayHint": "Dient nur als Startwert für einen neuen Monitor oder Scan; das Speichern erzeugt keinen KNX-Verkehr.",
+  "settings.programmingConsent": "Bestätigung vor dem Programmieren",
+  "settings.programmingConsentRemembered": "Für {stage}-Builds wird nicht erneut gefragt.",
+  "settings.programmingConsentAsks": "Wird vor jedem Programmiervorgang abgefragt.",
+  "settings.programmingConsentReset": "Wieder fragen",
   "settings.diagnostic.migrated": "Einstellungen wurden von Schema {fromVersion} auf {toVersion} migriert.",
   "settings.diagnostic.adopted": "Browser-Einstellungen wurden in Einstellungsschema {toVersion} übernommen.",
   "settings.diagnostic.refusedNewer": "Einstellungsschema {fileVersion} ist neuer als dieser Build ({currentVersion}); die Datei blieb unverändert.",
@@ -1149,6 +1153,37 @@ export const messages: Record<MessageKey, string> = {
     "KNXBench ist ein unabhängiges Projekt. Es ist von der KNX Association nicht zertifiziert und steht mit ihr in keiner Verbindung.",
   "about.trademark": "ETS ist eine Marke der KNX Association.",
   "about.close": "Schließen",
+
+  "programmingConsent.title": "Dieses Gerät programmieren?",
+  "programmingConsent.target": "Wird programmiert: {target}",
+  "programmingConsent.stageLabel": "Entwicklungsstand",
+  "programmingConsent.versionLabel": "Build",
+  "programmingConsent.versionUnknown": "unbekannt – der Server hat nicht geantwortet",
+  "programmingConsent.stage.alpha": "Alpha",
+  "programmingConsent.stage.beta": "Beta",
+  "programmingConsent.stage.releaseCandidate": "Release Candidate",
+  "programmingConsent.stage.stable": "Stabile Version",
+  "programmingConsent.stage.preRelease": "Unbenannte Vorabversion",
+  "programmingConsent.stage.unknown": "Unbekannt",
+  "programmingConsent.risk.alpha":
+    "Dies ist Alpha-Software. Das Programmieren ist neu, unvollständig und nur an sehr wenigen Geräten getestet. Ein fehlgeschlagener oder falscher Schreibvorgang kann ein Gerät unbrauchbar machen, bis es mit anderen Werkzeugen neu programmiert wird.",
+  "programmingConsent.risk.beta":
+    "Dies ist Beta-Software. Das Programmieren ist funktional vollständig, aber noch nicht in vielen Anlagen erprobt. Ein fehlgeschlagener oder falscher Schreibvorgang kann ein Gerät unbrauchbar machen, bis es neu programmiert wird.",
+  "programmingConsent.risk.releaseCandidate":
+    "Dies ist ein Release Candidate. Das Programmieren sollte funktionieren, ist aber noch nicht freigegeben.",
+  "programmingConsent.risk.stable":
+    "Das Programmieren ändert das Gerät sofort. Eine falsche Projekteinstellung wird so geschrieben, wie sie ist.",
+  "programmingConsent.risk.preRelease":
+    "Dieser Build trägt eine Vorabversions-Kennung, die KNXBench nicht kennt. Behandeln Sie ihn als ungetestet.",
+  "programmingConsent.risk.unknown":
+    "KNXBench konnte nicht feststellen, welcher Build läuft. Behandeln Sie ihn als ungetestet.",
+  "programmingConsent.backup":
+    "Fahren Sie nur fort, wenn Sie wissen, wie Sie dieses Gerät wiederherstellen. KNXBench ist nicht von der KNX Association zertifiziert.",
+  "programmingConsent.remember": "Für {stage}-Builds nicht erneut fragen",
+  "programmingConsent.rememberUnavailable":
+    "Weil der Entwicklungsstand nicht bekannt ist, wird diese Frage jedes Mal gestellt.",
+  "programmingConsent.cancel": "Abbrechen",
+  "programmingConsent.confirm": "Gerät programmieren",
 
   // T29 — der Fehlerbericht. Der Dialog ist übersetzt, report.md und der
   // GitHub-Text nicht (beides erzeugt der Server auf Englisch, gelesen von

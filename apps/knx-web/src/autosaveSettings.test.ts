@@ -1,4 +1,6 @@
-/** Tests for the ISSUE-04 autosave preference readers/writers: default-enabled, five-minute default, and safe fallbacks for anything out of range. */
+/** Tests for the ISSUE-04 autosave preference readers and writers. */
+// Covers: enabled by default, five-minute default, and safe fallbacks for
+// anything out of range.
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_AUTOSAVE_INTERVAL_MINUTES,

@@ -7677,3 +7677,34 @@ merged: every id-inserting command refuses an id in use, allocation goes
 through a never-rewinding `ReserveIds`, and the CSV plan/apply window is
 closed. Phases 3–5 then remove the nine live bypass points and add the
 `check-project-mutation` gate. Until then this entry stays open.
+
+## §130 A gate binary can verify a directory that no longer exists
+
+**Status.** Open (documented 2026-09-27).
+
+`xtask`'s checks derive their repository root at **compile time** from
+`env!("CARGO_MANIFEST_DIR")` (`xtask/src/main.rs:41`, `:234`, `:283`), not from
+the working directory at run time. A cached `xtask` binary built inside a
+different worktree therefore keeps checking *that* worktree's path. When the
+worktree is deleted, `check-anchors` fails with `cannot read .../DIN-3`, while
+`check-headers` reports `0 files with a well-formed header ... 0 without one`
+and still **exits 0** — a gate that inspected nothing and called it success.
+
+**Evidence.** After the `din-3-goal-migration` worktree was removed,
+`strings target/debug/xtask` still contained
+`/mnt/daten-i/Sourcecode/.paperclip-worktrees/KNXBench/DIN-3`. `git worktree
+prune` did not help (the path is in the binary, not in git metadata), and
+`touch xtask/src/main.rs && cargo build -p xtask` did **not** rebuild it on
+this ntfs3 mount. A build with a fresh `CARGO_TARGET_DIR` produced a binary
+carrying `/mnt/daten-i/Sourcecode/KNXBench`, after which the same three gates
+reported real magnitudes: anchors **382 links / 214 files**, headers **215**,
+layering ok, all exit 0 **[V]**.
+
+**Cost.** Any documentation gate run from a stale binary is worthless but
+looks green. This is the skip-vs-pass failure of §129's corpus tests one layer
+up: exit code 0 is not evidence that work happened.
+
+**Lifted when.** The root is resolved at run time (e.g. walking up from
+`current_dir` to the workspace manifest, or passing `--root`) so a relocated
+or stale binary cannot silently check a foreign path, and each check fails
+loudly when it discovers zero files.

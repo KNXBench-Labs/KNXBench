@@ -159,7 +159,9 @@ future cycle rather than bundled into "Session 4 leftovers":
   application-program security/capacity/version source strings in product-DB
   schema v13, rederives older winning rows from retained bytes, and exposes
   them through catalogue queries/CLI. The strings are not interpreted as
-  device security or commissioning capability. Load-procedure execution and
+  device security or commissioning capability. PDB-8 (schema v14) reports
+  every uninterpreted subtree inside a supported master section alongside
+  the existing section-level diagnostics; none of it is typed yet. Load-procedure execution and
   manufacturer-specific behavior remain outside this claim. **Schema 23
   manufacturer data** is a separate project-import boundary and still needs
   its own known-element evidence.

@@ -2,8 +2,8 @@
 use std::io::{Cursor, Write};
 
 use knx_productdb::{
-    install_package, open_and_migrate, InstallCategory, InstallDiagnosticKind, InstallDisposition,
-    InstallFacts,
+    install_package, open_and_migrate, sha256_hex, InstallCategory, InstallDiagnosticKind,
+    InstallDisposition, InstallFacts,
 };
 use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
@@ -531,6 +531,224 @@ fn unsupported_master_sections_aggregate_and_languages_remain_supported() {
     assert_eq!(baggage.occurrences(), 2);
 }
 
+/// PDB-8: inside a *supported* master section the parser interprets only
+/// part of the structure. Every element subtree it does not interpret is
+/// reported once per occurrence at its canonical path, instead of vanishing
+/// into the retained blob. Shapes taken from the private corpus:
+/// `Manufacturer/PublicKeys` and `Manufacturer/OrderNumberFormattingScript`
+/// under `Manufacturers`, `DatapointSubtype/Format` under `DatapointTypes`.
+const MASTER_WITH_SUBTREES: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData>
+<Manufacturers>
+<Manufacturer Id="M-0001" Name="Example"><PublicKeys><PublicKey><RSAKeyValue><Modulus>AQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue></PublicKey></PublicKeys></Manufacturer>
+<Manufacturer Id="M-0002" Name="Other"><OrderNumberFormattingScript>x</OrderNumberFormattingScript><PublicKeys><PublicKey/></PublicKeys></Manufacturer>
+</Manufacturers>
+<DatapointTypes><DatapointType Id="DPT-1" Number="1" Name="one" Text="one"><DatapointSubtypes>
+<DatapointSubtype Id="DPST-1-1" Number="1" Name="switch" Text="switch"><Format><Bit Id="B-1" Cleared="off" Set="on"/></Format></DatapointSubtype>
+<DatapointSubtype Id="DPST-1-2" Number="2" Name="bool" Text="bool"/>
+</DatapointSubtypes></DatapointType></DatapointTypes>
+<FunctionTypes><FunctionType Id="FT-1" Number="1" Text="f"><FunctionPoint Id="FP-1" Text="p"/></FunctionType></FunctionTypes>
+<SpaceUsages><SpaceUsage Id="SU-1" Number="1" Text="room"/></SpaceUsages>
+<Languages><Language Identifier="de-DE"><TranslationUnit RefId="M-0001"><TranslationElement RefId="M-0001"><Translation AttributeName="Name" Text="Beispiel"/></TranslationElement></TranslationUnit></Language></Languages>
+<MaskVersions><MaskVersion Id="MV-1"><HawkConfigurationData/></MaskVersion></MaskVersions>
+</MasterData></KNX>"#;
+
+fn subtree_archive() -> Vec<u8> {
+    archive(&[
+        ("knx_master.xml", MASTER_WITH_SUBTREES),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages.xml", BAGGAGES),
+    ])
+}
+
+#[test]
+fn uninterpreted_subtrees_inside_supported_master_sections_are_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let report = install_package(&conn, "subtrees.knxprod", &subtree_archive()).unwrap();
+    let facts = report.facts.unwrap();
+
+    let subtrees: Vec<(&str, u64)> = facts
+        .diagnostics
+        .iter()
+        .filter(|row| row.kind() == InstallDiagnosticKind::UnsupportedMasterSubtree)
+        .map(|row| (row.xml_path(), row.occurrences()))
+        .collect();
+    assert_eq!(
+        subtrees,
+        [
+            (
+                "/KNX/MasterData/DatapointTypes/DatapointType/DatapointSubtypes/DatapointSubtype/Format",
+                1
+            ),
+            (
+                "/KNX/MasterData/Manufacturers/Manufacturer/OrderNumberFormattingScript",
+                1
+            ),
+            ("/KNX/MasterData/Manufacturers/Manufacturer/PublicKeys", 2),
+        ],
+        "one row per uninterpreted subtree root; descendants (PublicKey, \
+         RSAKeyValue, Bit) are inside the root, not rows of their own; \
+         interpreted structure (FunctionPoint, SpaceUsage, Translation) and \
+         whole unsupported sections (MaskVersions) are not subtree rows"
+    );
+    assert!(facts
+        .diagnostics
+        .iter()
+        .filter(|row| row.kind() == InstallDiagnosticKind::UnsupportedMasterSubtree)
+        .all(|row| row.archive_path() == "knx_master.xml"));
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::MasterSubtree,
+            InstallDisposition::Unsupported
+        ),
+        4
+    );
+    // The unsupported *section* keeps its own, unchanged diagnostic.
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::MasterSection,
+            InstallDisposition::Unsupported
+        ),
+        1
+    );
+}
+
+#[test]
+fn a_master_file_without_uninterpreted_subtrees_measures_zero() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let report = install_package(
+        &conn,
+        "plain.knxprod",
+        &full_archive("M-0001/Baggages/vendor.bin", b"opaque"),
+    )
+    .unwrap();
+    let facts = report.facts.unwrap();
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::MasterSubtree,
+            InstallDisposition::Unsupported
+        ),
+        0
+    );
+    assert!(facts
+        .diagnostics
+        .iter()
+        .all(|row| row.kind() != InstallDiagnosticKind::UnsupportedMasterSubtree));
+}
+
+/// Rewinds a v14 database to genuine v13 report tables: the v12/v13 CHECK
+/// lists (no `master_subtree`, no `unsupported-master-subtree`) with every
+/// other row kept, so the v13 -> v14 rebuild runs against real v13 DDL.
+fn rewind_to_v13(conn: &Connection) {
+    conn.execute_batch(
+        "CREATE TABLE package_install_count_v13 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            category TEXT NOT NULL CHECK (category IN ('archive_member','product','application_program','parameter','communication_object','dynamic_node','module','baggage_index','baggage','unknown_construct','master_section','datapoint_type')),
+            disposition TEXT NOT NULL CHECK (disposition IN ('read','stored','deduplicated','retained-but-uninterpreted','unsupported','dropped')),
+            count INTEGER NOT NULL CHECK (count >= 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, category, disposition)
+        ) STRICT;
+        INSERT INTO package_install_count_v13
+            SELECT * FROM package_install_count WHERE category != 'master_subtree';
+        DROP TABLE package_install_count;
+        ALTER TABLE package_install_count_v13 RENAME TO package_install_count;
+        CREATE TABLE package_install_diagnostic_v13 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-baggage-index')),
+            archive_path TEXT NOT NULL,
+            xml_path TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, kind, archive_path, xml_path, detail)
+        ) STRICT;
+        INSERT INTO package_install_diagnostic_v13
+            SELECT * FROM package_install_diagnostic WHERE kind != 'unsupported-master-subtree';
+        DROP TABLE package_install_diagnostic;
+        ALTER TABLE package_install_diagnostic_v13 RENAME TO package_install_diagnostic;
+        PRAGMA user_version = 13;",
+    )
+    .unwrap();
+}
+
+#[test]
+fn v13_to_v14_backfills_subtrees_from_the_retained_master_blob() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bytes = subtree_archive();
+    let fresh = {
+        let conn = open_and_migrate(&path).unwrap();
+        let fresh = install_package(&conn, "subtrees.knxprod", &bytes)
+            .unwrap()
+            .facts
+            .unwrap();
+        rewind_to_v13(&conn);
+        fresh
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
+    let retried = install_package(&conn, "retry.knxprod", &bytes).unwrap();
+    assert!(retried.skipped);
+    assert_eq!(
+        retried.facts.unwrap(),
+        fresh,
+        "the backfill measures exactly what a fresh install measures"
+    );
+}
+
+#[test]
+fn v13_to_v14_marks_an_unscannable_master_unavailable_instead_of_zero() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bytes = subtree_archive();
+    let healthy = full_archive("M-0001/Baggages/vendor.bin", b"opaque");
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "subtrees.knxprod", &bytes).unwrap();
+        install_package(&conn, "healthy.knxprod", &healthy).unwrap();
+        rewind_to_v13(&conn);
+        // Only the subtree package's master rots; the healthy package keeps
+        // its own, different master blob.
+        conn.execute(
+            "UPDATE source_file SET bytes = ?1 WHERE sha256 = ?2",
+            rusqlite::params![
+                b"<KNX><MasterData></KNX>".as_slice(),
+                sha256_hex(MASTER_WITH_SUBTREES)
+            ],
+        )
+        .unwrap();
+    }
+    let conn = open_and_migrate(&path).expect("one bad blob does not lock the database");
+    let rotten = install_package(&conn, "retry.knxprod", &bytes).unwrap();
+    assert!(rotten.skipped);
+    assert_eq!(
+        rotten.facts, None,
+        "a count that cannot be measured is reported unavailable, not invented as zero"
+    );
+    let recorded: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown
+             WHERE kind = 'InstallReportBackfillError' AND name = 'master_subtree_backfill'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(recorded, 1, "the failure is recorded, not swallowed");
+    let other = install_package(&conn, "healthy-retry.knxprod", &healthy).unwrap();
+    assert!(other.skipped);
+    assert!(other.facts.is_some(), "a healthy package stays measured");
+}
+
 #[test]
 fn migrated_packages_are_unavailable_while_fresh_zeroes_are_measured() {
     let dir = tempfile::tempdir().unwrap();
@@ -617,19 +835,41 @@ fn malformed_persisted_report_shapes_are_rejected() {
         "DELETE FROM package_install_count WHERE category = 'module' AND disposition = 'read'",
         "UPDATE package_install_count SET count = count + 1 WHERE category = 'master_section' AND disposition = 'unsupported'",
     ];
-    for (case, sql) in corruptions.into_iter().enumerate() {
+    assert_rejected_after(
+        &corruptions,
+        &full_archive("M-0001/Baggages/vendor.bin", b"opaque"),
+    );
+}
+
+#[test]
+fn malformed_persisted_subtree_diagnostics_are_rejected() {
+    let corruptions = [
+        "UPDATE package_install_count SET count = count + 1 WHERE category = 'master_subtree' AND disposition = 'unsupported'",
+        "UPDATE package_install_diagnostic SET archive_path = 'M-0001/Hardware.xml' WHERE kind = 'unsupported-master-subtree'",
+        "UPDATE package_install_diagnostic SET detail = detail || ' altered' WHERE kind = 'unsupported-master-subtree'",
+        // A whole unsupported section is not a subtree of a supported one.
+        "UPDATE package_install_diagnostic SET xml_path = '/KNX/MasterData/MaskVersions/MaskVersion', detail = 'master subtree MaskVersion is retained but not interpreted' WHERE kind = 'unsupported-master-subtree' AND xml_path LIKE '%/PublicKeys'",
+        // Interpreted structure is not an uninterpreted subtree.
+        "UPDATE package_install_diagnostic SET xml_path = '/KNX/MasterData/FunctionTypes/FunctionType/FunctionPoint', detail = 'master subtree FunctionPoint is retained but not interpreted' WHERE kind = 'unsupported-master-subtree' AND xml_path LIKE '%/PublicKeys'",
+        // A descendant of an uninterpreted root is inside that root.
+        "UPDATE package_install_diagnostic SET xml_path = '/KNX/MasterData/Manufacturers/Manufacturer/PublicKeys/PublicKey', detail = 'master subtree PublicKey is retained but not interpreted' WHERE kind = 'unsupported-master-subtree' AND xml_path LIKE '%/PublicKeys'",
+    ];
+    assert_rejected_after(&corruptions, &subtree_archive());
+}
+
+fn assert_rejected_after(corruptions: &[&str], bytes: &[u8]) {
+    for (case, sql) in corruptions.iter().enumerate() {
         let dir = tempfile::tempdir().unwrap();
         let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-        let bytes = full_archive("M-0001/Baggages/vendor.bin", b"opaque");
-        install_package(&conn, "sample.knxprod", &bytes).unwrap();
+        install_package(&conn, "sample.knxprod", bytes).unwrap();
         conn.execute_batch("PRAGMA ignore_check_constraints = ON;")
             .unwrap();
         conn.execute_batch(sql).unwrap();
         conn.execute_batch("PRAGMA ignore_check_constraints = OFF;")
             .unwrap();
         assert!(
-            install_package(&conn, "retry.knxprod", &bytes).is_err(),
-            "corruption case {case} was accepted"
+            install_package(&conn, "retry.knxprod", bytes).is_err(),
+            "corruption case {case} ({sql}) was accepted"
         );
     }
 }

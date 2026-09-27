@@ -113,6 +113,7 @@ async fn installing_a_package_returns_report_and_makes_catalog_item_discoverable
             {"category":"unknown_construct","count":0,"disposition":"stored"},
             {"category":"master_section","count":1,"disposition":"read"},
             {"category":"master_section","count":0,"disposition":"unsupported"},
+            {"category":"master_subtree","count":0,"disposition":"unsupported"},
             {"category":"datapoint_type","count":0,"disposition":"read"},
             {"category":"datapoint_type","count":0,"disposition":"stored"},
             {"category":"datapoint_type","count":0,"disposition":"dropped"}

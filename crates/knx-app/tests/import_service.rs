@@ -21,11 +21,12 @@ fn migrated_store() -> (tempfile::TempDir, Connection) {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn importing_persists_the_opaque_entries() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = migrated_store();
     let imported = import_ets_project(&reference_ets4_path(), &conn).unwrap();
     assert_eq!(imported.project.installations.len(), 1);
@@ -34,11 +35,12 @@ fn importing_persists_the_opaque_entries() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_persisted_bytes_are_the_bytes_that_were_read() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = migrated_store();
     import_ets_project(&reference_ets4_path(), &conn).unwrap();
     let stored = load_opaque(&conn).unwrap();
@@ -50,11 +52,12 @@ fn the_persisted_bytes_are_the_bytes_that_were_read() {
 }
 
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn a_failed_import_leaves_the_store_untouched() {
-    if !reference_ets4_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        reference_ets4_path().exists(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let (_dir, conn) = migrated_store();
     assert!(import_ets_project(Path::new("/nonexistent.knxproj"), &conn).is_err());
     assert_eq!(load_opaque(&conn).unwrap().len(), 0);

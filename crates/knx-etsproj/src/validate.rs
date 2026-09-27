@@ -610,11 +610,12 @@ mod tests {
     };
 
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_reference_project_validates_clean() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let doc = reference_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);
@@ -629,11 +630,12 @@ mod tests {
     /// short-id resolution has drifted from the mapper's, or somebody has
     /// fed `ModuleInstance/@Id` to the project-wide duplicate-id check.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_schema_21_reference_project_validates_clean() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let doc = reference_kv_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);
@@ -646,11 +648,12 @@ mod tests {
     /// projects'. If this ever reports anything, the short-id resolution
     /// has drifted from the mapper's on the corpus it matters on most.
     #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
     fn the_ets6_schema_23_reference_project_validates_clean() {
-        if !crate::testutil::corpus_available() {
-            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-            return;
-        }
+        assert!(
+            crate::testutil::corpus_available(),
+            "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+        );
         let doc = reference_ets6_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);

@@ -5,6 +5,7 @@
 
 mod anchors;
 mod appimage;
+mod corpus_gates;
 mod headers;
 mod layering;
 
@@ -12,7 +13,8 @@ use std::path::Path;
 use std::process::ExitCode;
 
 const AVAILABLE_TASKS: &str =
-    "check-layering, check-headers, check-anchors, check-appimage, freeze-fixture <path>";
+    "check-layering, check-headers, check-anchors, check-corpus-gates, check-appimage, \
+     freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
@@ -20,6 +22,7 @@ fn main() -> ExitCode {
         Some("check-layering") => check_layering(),
         Some("check-headers") => check_headers(),
         Some("check-anchors") => check_anchors(),
+        Some("check-corpus-gates") => check_corpus_gates(),
         Some("check-appimage") => check_appimage(),
         Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
@@ -220,6 +223,37 @@ fn check_layering() -> ExitCode {
          storage or async runtime (architecture spec, section 3.1). \
          knx-etsproj must not depend on knx-store: the conversion between \
          OpaqueEntry and StoredOpaqueEntry belongs in knx-app alone."
+    );
+    ExitCode::FAILURE
+}
+
+/// Fails on any test that answers a missing private corpus with an early
+/// `return`, which counts as a pass on every machine without the corpus
+/// (docs/KNOWN_LIMITATIONS.md §131). See `corpus_gates.rs` for the rule.
+fn check_corpus_gates() -> ExitCode {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask lives one level below the workspace root");
+    let found = match corpus_gates::scan(root) {
+        Ok(found) => found,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if found.is_empty() {
+        println!("corpus gates ok: no silent early return on a missing corpus");
+        return ExitCode::SUCCESS;
+    }
+    for (path, line) in &found {
+        eprintln!(
+            "corpus gate violation: {}:{line}: a missing corpus returns early (a silent pass)",
+            path.display()
+        );
+    }
+    eprintln!(
+        "use #[ignore = \"requires the gitignored OriginalData/ corpus; run with --ignored\"] and \
+         assert! the corpus probe instead of returning (docs/KNOWN_LIMITATIONS.md §131)"
     );
     ExitCode::FAILURE
 }

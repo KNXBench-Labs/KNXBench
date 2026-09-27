@@ -42,11 +42,12 @@ fn enrichment_of(path: &std::path::Path) -> knx_productdb::EnrichmentReport {
 /// reported non-guess, not a lookup failure, and they only became visible
 /// once the lookups started hitting.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_ets6_project_enriches_every_device_local_com_object() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let report = enrichment_of(&knx_testsupport::reference_ets6_path());
 
     assert!(report.available);
@@ -77,11 +78,12 @@ fn the_ets6_project_enriches_every_device_local_com_object() {
 /// have moved: the device-local branch is reached only for an id that is
 /// neither module-based nor already fully qualified.
 #[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn the_schema21_project_still_enriches_through_the_module_hop() {
-    if !knx_testsupport::corpus_available() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
+    assert!(
+        knx_testsupport::corpus_available(),
+        "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
+    );
     let report = enrichment_of(&knx_testsupport::reference_kv_schema21_path());
     assert_eq!(report.devices_resolved, 4);
     assert_eq!(report.com_objects_enriched, 75);

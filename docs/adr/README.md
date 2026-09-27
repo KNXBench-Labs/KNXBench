@@ -49,3 +49,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0038](0038-site-is-a-ground-root-space.md) | A site is a `Ground` space at the root of the building structure — no new kind, no new level | Proposed | 2026-09-26 |
 | [0039](0039-project-mutation-goes-through-commands.md) | A live project changes only through `Command::apply`, and ids are reserved by a command that never rewinds | Accepted | 2026-09-26 |
 | [0040](0040-programming-requires-release-stage-consent.md) | Programming a device needs a release-stage-aware consent, rememberable per stage | Accepted | 2026-09-27 |
+| [0041](0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md) | Unmodelled parameter kinds and Dynamic nodes are named, never hidden | Accepted | 2026-09-27 |

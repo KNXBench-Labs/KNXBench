@@ -1,5 +1,47 @@
 # Known limitations
 
+## PDB-9 parameter and Dynamic coverage boundary
+
+Since schema v15 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md))
+every `ParameterType` kind observed in the corpus is stored as its own kind,
+and a reference below a Dynamic node refused for a structural reason is named
+by `RefBelowSkippedNode`. What is still not modelled, each reported rather
+than dropped:
+
+- **Repeat expansion.** `Repeat` (16 in the corpus) is `UnrecognizedNode`;
+  its `Module` is named by `RefBelowSkippedNode` but not expanded, so the
+  repeated module's parameters are not offered for editing. Expansion needs
+  the repeat count (`@Count` or a controlling `@ParameterRefId`) and
+  project-side instance matching.
+- **Renames and buttons.** `ParameterBlockRename` (270), `Rename` (56) and
+  `Button` (20) are `UnrecognizedNode`: a conditional rename is not applied
+  to the displayed label, and a button's `@EventHandler` script is not run.
+- **Calculations and allocators.** `ParameterCalculation` (1,236 in 91
+  programs) and `Allocator` (94 in 14) are reported unknown elements with
+  their attributes, and the program bytes are retained; their
+  transformation scripts and allocation ranges are not evaluated.
+- **Display-only type attributes.** `UIHint`, `Increment`, `DisplayFactor`,
+  `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
+  `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
+  `TypeRawData/@MaxSize` are reported with a sample, not stored in columns:
+  the editor does not use them yet (e.g. no slider, no hh:mm:ss duration
+  input, no colour picker, no picture display).
+- **`Color`, `Picture`, `Raw` values** get only a non-empty, XML-safe check;
+  the Project Schema documents no value encoding for them.
+- **Not every absent reference is enumerated.** The branches of a `choose`
+  refused for a value-dependent reason (`MissingValue`, `NonNumericValue`,
+  `NoBranchMatched`) are conditionally hidden by design — the `choose` is
+  named, its branches' references are not listed. A `Module` that is not
+  expanded (`ModuleDefNotFound`, cycle, depth or expansion budget) is named
+  by its own diagnostic, but its `ModuleDef`'s references are not listed.
+  `RefBelowSkippedNode` reports share the `MAX_MODULE_ACTIVATIONS` budget;
+  past it, output is truncated with one budget diagnostic.
+- **Install reports stay historical.** `package_install_unknown` rows
+  written before v15 keep their `Element TypeTime`/`TypeColor` entries; the
+  v14→v15 backfill corrects `ingest_unknown` (the per-blob report), not the
+  install-time snapshot — the same rule as the v12→v13 precedent
+  (COMPATIBILITY: "Historical encounter reports remain historical").
+
 ## PDB-3 report history and coverage boundary
 
 Product install facts are measured only for installs carrying the schema-v12
@@ -514,14 +556,20 @@ that server-named id instead of the declared one (D43).
   inventing a rule the Standard does not state, so the compressed forms
   are rejected even though a real IPv6 address may use them — narrower
   than necessary is the defensible choice here, not the complete one.
-  `Picture` and `Raw` get no format check beyond non-empty, because no
-  format exists to check against: `Value_t`'s encoding table (§1.1.3.19)
-  lists `TypeNone`, `TypeText`, `TypeNumber`, `TypeFloat`,
-  `TypeRestriction`, `TypeTime`, `TypeDate`, `TypeIPAddress` and
-  `TypeAllocatorRefId` — `TypePicture` and `TypeRawData` are absent from
-  it entirely `[D]`. A full sweep of all five corpus `.knxprod` archives
-  found zero `<TypePicture>` and zero `<TypeRawData>` elements to
-  cross-check against, and neither knx-spec-kb knowledge base nor
+  `Picture`, `Raw` and (PDB-9, ADR-0041) `Color` get no format check
+  beyond non-empty, because no format exists to check against:
+  `Value_t`'s encoding table (§1.1.3.19) lists `TypeNone`, `TypeText`,
+  `TypeNumber`, `TypeFloat`, `TypeRestriction`, `TypeTime`, `TypeDate`,
+  `TypeIPAddress` and `TypeAllocatorRefId` — `TypePicture`, `TypeRawData`
+  and `TypeColor` are absent from it entirely `[D]`. `Time` (PDB-9) is
+  validated like `Number`, exactly as `Value_t` says ("Same as
+  TypeNumber"). *Correction (2026-09-27, PDB-9):* an earlier, smaller sweep
+  reported zero `<TypePicture>`/`<TypeRawData>` elements (why it missed
+  them is not established `[A]`); the PDB-9 read-only scan of 304 distinct
+  programs finds
+  `TypePicture` 1,118, `TypeColor` 115 and `TypeRawData` 3 times. The
+  conclusion stands — those are declarations, not a documented value
+  encoding — and neither knx-spec-kb knowledge base nor
   xknxproject's own source turned up a documented encoding. The schema
   does use `xs:base64Binary` for other binary attributes elsewhere
   (`SerialNumber`, `LoadedImage`, `PasswordHash`) `[D]`, which was

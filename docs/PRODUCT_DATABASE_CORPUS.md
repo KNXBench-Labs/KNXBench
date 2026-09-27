@@ -190,6 +190,16 @@ Observed direct `ParameterType` children are:
 - Gira additionally: `TypeRawData`;
 - MDT additionally: `TypeNone`, `TypeIPAddress`, `TypeTime`.
 
+PDB-9 whole-corpus scan (304 distinct programs, read-only, aggregate):
+`TypeRestriction` 20,759, `TypeNumber` 4,153, `TypePicture` 1,118,
+`TypeFloat` 579, `TypeText` 554, `TypeColor` 115, `TypeNone` 87,
+`TypeIPAddress` 19, `TypeTime` 17, `TypeRawData` 3 — all ten typed since
+schema v15. Unrecognized Dynamic kinds: `Rows`/`Columns` 4,267 each
+(`Row` 9,275, `Column` 18,171; recognized layout since v15),
+`ParameterBlockRename` 270, `Rename` 56, `Button` 20, `Repeat` 16 (each
+holding exactly one `Module`). Static constructs reported but not
+evaluated: `ParameterCalculation` 1,236 in 91 programs, `Allocator` 94 in 14.
+
 Tests for parameter editing and reporting should cover every observed kind,
 including raw fallback for kinds without an editor. Enum display text,
 translations, ranges, scale/increment, encoding, UI hints and picture/baggage

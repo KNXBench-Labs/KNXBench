@@ -28,6 +28,8 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.settings": "Einstellungen",
   "toolbar.busMonitor": "Busmonitor",
   "toolbar.commands": "Befehle… (Strg+Umschalt+P)",
+  "statusBar.lastSaved": "Zuletzt gespeichert: {time}",
+  "statusBar.neverSaved": "Noch nicht gespeichert",
   "settings.uiLanguage": "UI-Sprache",
   // A language names itself, not the currently active UI language — this
   // pair is meant to read identically in both catalogues, not a copy-paste
@@ -592,6 +594,9 @@ export const messages: Record<MessageKey, string> = {
   "settings.section.appearance": "Darstellung",
   "settings.section.languageData": "Sprache & Daten",
   "settings.section.busDiagnostics": "Bus & Diagnose",
+  "settings.section.autosave": "Automatisches Speichern",
+  "settings.autosaveEnabled": "Automatisches Speichern",
+  "settings.autosaveIntervalMinutes": "Intervall (Minuten)",
   "settings.preferredGateway": "Bevorzugtes KNXnet/IP-Gateway",
   "settings.preferredGatewayHint": "Dient nur als Startwert für einen neuen Monitor oder Scan; das Speichern erzeugt keinen KNX-Verkehr.",
   "settings.diagnostic.migrated": "Einstellungen wurden von Schema {fromVersion} auf {toVersion} migriert.",
@@ -1127,6 +1132,10 @@ export const messages: Record<MessageKey, string> = {
     "Brechen Sie ab, speichern Sie mit „Speichern“ oder „Speichern unter…“, und beenden Sie danach.",
   "quit.cancel": "Abbrechen",
   "quit.discard": "Ohne Speichern beenden",
+
+  "autosave.countdown": "Automatisches Speichern in {seconds}s…",
+  "autosave.cancel": "Abbrechen",
+  "autosave.failed": "Automatisches Speichern fehlgeschlagen. Ihre Änderungen sind sicher, aber ungespeichert — bitte manuell speichern.",
 
   "about.title": "Über KNXBench",
   "about.version": "Version",

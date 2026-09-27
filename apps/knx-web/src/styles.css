@@ -333,6 +333,38 @@ main {
   z-index: 100;
 }
 
+/* ISSUE-04's five-second autosave warning. Sits above the toast stack
+   (same fixed corner, one row higher) so an error toast arriving mid-
+   countdown does not cover the only control that cancels it. */
+.autosave-countdown {
+  position: fixed;
+  bottom: 4.5rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--knx-border);
+  border-radius: 6px;
+  background: var(--knx-surface);
+  color: var(--knx-foreground);
+  font-size: 0.85rem;
+  z-index: 100;
+}
+
+.autosave-countdown button {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.workbench-status-saved {
+  white-space: nowrap;
+}
+
 .toast {
   display: flex;
   align-items: center;
@@ -715,6 +747,12 @@ main {
 .settings-field-label {
   font-size: 0.8rem;
   color: var(--knx-muted);
+}
+
+.settings-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .settings-field select {

@@ -90,6 +90,10 @@ function Harness(props: { onClose: () => void; productLanguages?: readonly Produ
         productLanguages={props.productLanguages ?? []}
         activeProductLanguage={productLanguage}
         onSelectProductLanguage={setProductLanguage}
+        autosaveEnabled={true}
+        onSelectAutosaveEnabled={vi.fn()}
+        autosaveIntervalMinutes={5}
+        onSelectAutosaveIntervalMinutes={vi.fn()}
         onClose={props.onClose}
       />
     </>
@@ -112,7 +116,7 @@ describe("SettingsPanel", () => {
     const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual(["Appearance", "Language & data", "Bus & diagnostics"]);
+    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics"]);
     const gateway = host!.querySelector<HTMLInputElement>(
       '.settings-section-bus input[placeholder="192.0.2.10:3671"]',
     )!;
@@ -125,6 +129,58 @@ describe("SettingsPanel", () => {
     });
     expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
     expect(host!.querySelector(".settings-section-bus .line-scan-exclusions")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("autosave interval is disabled while autosave is off, and both controls call back", async () => {
+    const onSelectAutosaveEnabled = vi.fn();
+    const onSelectAutosaveIntervalMinutes = vi.fn();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        <SettingsPanel
+          themes={THEMES}
+          activeThemeId="bitcoin-defi"
+          onSelectTheme={vi.fn()}
+          motionStyles={MOTION_STYLES}
+          activeMotionStyle="apple"
+          onSelectMotionStyle={vi.fn()}
+          motionLevels={MOTION_LEVELS}
+          activeMotionLevel="standard"
+          onSelectMotionLevel={vi.fn()}
+          productLanguages={[]}
+          activeProductLanguage={null}
+          onSelectProductLanguage={vi.fn()}
+          autosaveEnabled={false}
+          onSelectAutosaveEnabled={onSelectAutosaveEnabled}
+          autosaveIntervalMinutes={5}
+          onSelectAutosaveIntervalMinutes={onSelectAutosaveIntervalMinutes}
+          onClose={vi.fn()}
+        />,
+      );
+    });
+    const checkbox = host!.querySelector<HTMLInputElement>(
+      ".settings-section-autosave input[type=\"checkbox\"]",
+    )!;
+    const interval = host!.querySelector<HTMLInputElement>(
+      ".settings-section-autosave input[type=\"number\"]",
+    )!;
+    expect(checkbox.checked).toBe(false);
+    expect(interval.disabled).toBe(true);
+    await act(async () => {
+      checkbox.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onSelectAutosaveEnabled).toHaveBeenCalledWith(true);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(
+        interval,
+        "10",
+      );
+      interval.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(onSelectAutosaveIntervalMinutes).toHaveBeenCalledWith(10);
     root.unmount();
   });
 
@@ -681,6 +737,10 @@ describe("SettingsPanel's accent control", () => {
         productLanguages={[]}
         activeProductLanguage={null}
         onSelectProductLanguage={vi.fn()}
+        autosaveEnabled={true}
+        onSelectAutosaveEnabled={vi.fn()}
+        autosaveIntervalMinutes={5}
+        onSelectAutosaveIntervalMinutes={vi.fn()}
         onClose={vi.fn()}
       />
     );

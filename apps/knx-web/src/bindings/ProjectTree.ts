@@ -41,26 +41,26 @@ can_redo: boolean,
  * whether the live project differs from its last successful open,
  * import, creation, or save snapshot.
  */
-is_modified: boolean,
+is_modified: boolean, 
 /**
  * Opaque identity of the running server process that owns
  * `snapshot_revision`. Pure/offline projections omit it together with
  * the revision; it is transient application metadata, not project data.
  */
-server_incarnation?: string,
+server_incarnation?: string, 
 /**
  * Application-owned response ordering. Pure/offline projections omit it;
  * the server stamps every UI-facing snapshot while holding its project
  * lock. This is transient metadata and is never persisted in a KNX or
  * native project format.
  */
-snapshot_revision?: number,
+snapshot_revision?: number, 
 /**
  * Present only when this response also republished the complete group-
  * address context into the named active bus session. The frontend may
  * rebase that exact session's fingerprint after accepting the snapshot.
  */
-group_address_context_session_id?: number,
+group_address_context_session_id?: number, 
 /**
  * The project-wide rendering choice every `GroupAddressNode`,
  * `GroupRangeNode` and `GroupLinkNode` address string in this tree was
@@ -71,4 +71,13 @@ group_address_context_session_id?: number,
  * `BuildingPartType` below: the enum itself stays in `knx-core`, a
  * typed TS union is not worth a mirror type for one read-only field.
  */
-group_address_style: string, installations: Array<InstallationNode>, };
+group_address_style: string, 
+/**
+ * RFC3339 timestamp of the last successful save in this session, or
+ * `None` if this session has never saved. Always `None` straight out
+ * of [`build_project_tree`] — this crate never sees the application's
+ * save bookkeeping. The desktop shell overlays the real value from its
+ * own `last_saved_at` state, in lockstep with `is_modified` (both are
+ * stamped only by a successful save, never by a failed one).
+ */
+last_saved_at?: string, installations: Array<InstallationNode>, };

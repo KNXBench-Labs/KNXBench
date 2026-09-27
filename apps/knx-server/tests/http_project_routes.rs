@@ -198,18 +198,26 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
         "a session that has never saved reports no save time"
     );
 
-    for (route, body, saved) in [
+    for (route, body, saved, save_time_expected) in [
         (
             "/api/project/save-as",
             json!({ "path": "first.knxdb" }),
+            true,
             true,
         ),
         (
             "/api/project/new",
             json!({ "name": "Second", "force": true }),
             false,
+            false,
         ),
-        ("/api/project/open", json!({ "path": "first.knxdb" }), true),
+        (
+            "/api/project/open",
+            json!({ "path": "first.knxdb" }),
+            true,
+            false,
+        ),
+        ("/api/project/save", json!({}), true, true),
     ] {
         let response = app.clone().oneshot(post(route, body)).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK, "{route}");
@@ -218,14 +226,15 @@ async fn current_project_save_metadata_tracks_save_open_and_replacement() {
         let tree = body_json(response).await;
         assert_eq!(tree["has_store_path"], saved, "{route}");
         assert_eq!(tree["is_modified"], false, "{route}");
-        // `last_saved_at` is this session's own save record, never a
-        // project field: once this session has saved once, opening or
-        // replacing the project (which never re-saves) must not erase
-        // that record — it is the session's memory of its own last save,
-        // not a property of whichever project happens to be open.
-        assert!(
+        // `last_saved_at` belongs to the project on screen. Replacing the
+        // project (new, open) never saves it, so the status bar must say
+        // "not yet saved" rather than show the previous project's time —
+        // after "new" that time would describe a project nobody saved.
+        assert_eq!(
             tree["last_saved_at"].as_str().is_some(),
-            "{route} should still report the session's earlier save time"
+            save_time_expected,
+            "{route}: last_saved_at = {:?}",
+            tree.get("last_saved_at")
         );
     }
 }

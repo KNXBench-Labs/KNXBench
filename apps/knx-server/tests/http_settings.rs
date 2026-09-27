@@ -143,6 +143,36 @@ async fn a_null_in_a_patch_clears_the_preference() {
     assert_eq!(body["settings"].get("productLanguage"), None);
 }
 
+/// ADR-0040: the web UI's "don't ask again" for programming is an object
+/// under `programmingConsent`. It must survive the real wire path and a
+/// reread from disk, and "Ask again" (a `null` patch) must remove it.
+#[tokio::test]
+async fn a_programming_consent_round_trips_and_is_forgotten_by_null() {
+    let (state, _dir) = state();
+    let consent = json!({ "stage": "alpha", "version": "0.1.0-alpha.1+gabc1234" });
+    let (status, _) = send(
+        &state,
+        "PUT",
+        "/api/settings",
+        json!({ "settings": { "programmingConsent": consent } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, reread) = get(&state).await;
+    assert_eq!(reread["settings"]["programmingConsent"], consent);
+
+    send(
+        &state,
+        "PUT",
+        "/api/settings",
+        json!({ "settings": { "programmingConsent": null } }),
+    )
+    .await;
+    let (_, reread) = get(&state).await;
+    assert_eq!(reread["settings"].get("programmingConsent"), None);
+}
+
 #[tokio::test]
 async fn a_file_from_a_newer_build_is_refused_without_being_rewritten() {
     let (state, dir) = state();

@@ -663,6 +663,10 @@ export const messages = {
   "settings.autosaveIntervalMinutes": "Autosave interval (minutes)",
   "settings.preferredGateway": "Preferred KNXnet/IP gateway",
   "settings.preferredGatewayHint": "Seeds a new monitor or scan only; saving it sends no KNX traffic.",
+  "settings.programmingConsent": "Programming confirmation",
+  "settings.programmingConsentRemembered": "Not asked again for {stage} builds.",
+  "settings.programmingConsentAsks": "Asked before every programming operation.",
+  "settings.programmingConsentReset": "Ask again",
   "settings.diagnostic.migrated": "Settings migrated from schema {fromVersion} to {toVersion}.",
   "settings.diagnostic.adopted": "Browser preferences were adopted into settings schema {toVersion}.",
   "settings.diagnostic.refusedNewer": "Settings schema {fileVersion} is newer than this build ({currentVersion}); the file was left untouched.",
@@ -1305,6 +1309,40 @@ export const messages = {
     "KNXBench is an independent project. It is not certified by the KNX Association and is not affiliated with it.",
   "about.trademark": "ETS is a trademark of the KNX Association.",
   "about.close": "Close",
+
+  // Programming consent (`ProgrammingConsentDialog.tsx`). Asked before any
+  // write that programs a device; names the build's release stage. Group
+  // value sends from the bus monitor are not programming and never ask.
+  "programmingConsent.title": "Program this device?",
+  "programmingConsent.target": "About to program: {target}",
+  "programmingConsent.stageLabel": "Release stage",
+  "programmingConsent.versionLabel": "Build",
+  "programmingConsent.versionUnknown": "unknown — the server did not answer",
+  "programmingConsent.stage.alpha": "Alpha",
+  "programmingConsent.stage.beta": "Beta",
+  "programmingConsent.stage.releaseCandidate": "Release candidate",
+  "programmingConsent.stage.stable": "Stable release",
+  "programmingConsent.stage.preRelease": "Unnamed pre-release",
+  "programmingConsent.stage.unknown": "Unknown",
+  "programmingConsent.risk.alpha":
+    "This is alpha software. Programming is new, incomplete and has been tested on very few devices. A failed or wrong write can leave a device unusable until it is reprogrammed with other tools.",
+  "programmingConsent.risk.beta":
+    "This is beta software. Programming is feature-complete but not yet proven across many installations. A failed or wrong write can leave a device unusable until it is reprogrammed.",
+  "programmingConsent.risk.releaseCandidate":
+    "This is a release candidate. Programming is expected to work but has not been released yet.",
+  "programmingConsent.risk.stable":
+    "Programming changes the device immediately. A wrong project setting is written as it is.",
+  "programmingConsent.risk.preRelease":
+    "This build carries a pre-release label KNXBench does not recognise. Treat it as untested.",
+  "programmingConsent.risk.unknown":
+    "KNXBench could not determine which build is running. Treat it as untested.",
+  "programmingConsent.backup":
+    "Only continue if you know how to restore this device. KNXBench is not certified by the KNX Association.",
+  "programmingConsent.remember": "Don't ask again for {stage} builds",
+  "programmingConsent.rememberUnavailable":
+    "Because the release stage is not known, this question is asked every time.",
+  "programmingConsent.cancel": "Cancel",
+  "programmingConsent.confirm": "Program device",
 
   // T29 — the debug report. The dialog is translated; `report.md` and the
   // GitHub issue body are not (they are server-generated English, read by

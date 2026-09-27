@@ -106,7 +106,11 @@ pub fn save_project_if_unchanged(
     replacement: &Project,
 ) -> Result<(), StoreError> {
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
-    let current = load_project_unrepaired(&tx)?;
+    // Repaired, like `expected` (every caller gets it from `load_project`):
+    // the repair is deterministic, so comparing unrepaired stored counters
+    // with repaired expected ones would refuse every save of a file whose
+    // counters were stale — a false concurrency conflict (ADR-0039 D7).
+    let current = load_project(&tx)?;
     if &current != expected {
         return Err(StoreError::ConcurrentModification);
     }
@@ -884,6 +888,25 @@ mod tests {
         assert_eq!(repair.stored, project.ids);
         assert_eq!(repair.repaired, loaded.ids);
         assert!(load_project(&conn).unwrap().ids == loaded.ids);
+    }
+
+    /// The CLI's `ga-import` path: `expected` comes from `load_project`, so it
+    /// carries the repaired counters. The concurrency check must compare like
+    /// with like, or a stale-counter file could never be saved again.
+    #[test]
+    fn a_repaired_project_can_still_be_saved_if_unchanged() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(4)];
+        project.devices.insert(device(4));
+        project.ids = IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
+        save_project(&conn, &project).unwrap();
+
+        let expected = load_project(&conn).unwrap();
+        let mut replacement = expected.clone();
+        replacement.installations[0].name = "Renamed".into();
+        save_project_if_unchanged(&conn, &expected, &replacement).unwrap();
+        assert_eq!(load_project(&conn).unwrap(), replacement);
     }
 
     #[test]

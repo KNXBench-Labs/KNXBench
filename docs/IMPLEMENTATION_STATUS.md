@@ -7,8 +7,11 @@ decision as File › Quit ([KNOWN_LIMITATIONS §132](KNOWN_LIMITATIONS.md#132-th
 closed). Inside the Tauri shell `App.tsx` registers `quit.ts`
 `onWindowCloseRequested`. The listener reads `is_modified` through a ref, so
 it is registered once and unregistered on unmount. A modified project keeps
-the window open and gets the existing quit-confirm dialog; a clean one
-closes as before. `quitApp()` switched from `close()` to `destroy()`, so the
+the window open and gets the existing quit-confirm dialog. A clean one
+closes, now through a JS round trip; a dead webview can no longer be closed
+with × at all, recorded as [KNOWN_LIMITATIONS §133](KNOWN_LIMITATIONS.md#133-a-dead-webview-cannot-be-closed-with-the-window-managers-close-button).
+The review decided against a forced-destroy timeout, because it would
+silently close a busy frontend that has unsaved edits. `quitApp()` switched from `close()` to `destroy()`, so the
 dialog's "discard" does not re-enter the check. The main-window capability
 changed from `core:window:allow-close` to `core:window:allow-destroy`, and
 `cargo check -p knx-desktop` accepts it. The mechanism was read from the pinned
@@ -16,7 +19,8 @@ sources **[V]**: `tauri` 2.11.5 `manager/window.rs` calls `prevent_close()`
 whenever a JS close-requested listener exists, and `@tauri-apps/api` 2.11.1
 `onCloseRequested` destroys the window unless the handler called
 `preventDefault()`. No Rust handler is needed. Three new `App.test.tsx`
-cases cover modified/clean/browser; the modified and clean cases fail with
+cases cover modified/clean/browser (the modified case also pins that
+"discard" uses `destroy()`, never `close()`); the modified and clean cases fail with
 the registration removed **[V]**. Web suite 65 files / 1007 tests, `tsc`
 clean. Not exercised on a running desktop build or a real window manager.
 The T28 entry below describes the earlier `close()`-based Quit and is kept

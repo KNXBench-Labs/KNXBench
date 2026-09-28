@@ -1,5 +1,5 @@
 /** File-menu button that opens the project documentation preview and export dialog. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import DocumentationDialog from "./DocumentationDialog";
 import { useTranslate } from "./i18n";
@@ -23,10 +23,24 @@ export default function DocumentationExportButton(props: {
   const { tree, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  // `Overlay` gives focus back to this button on close, but the File menu
+  // around it closed when the entry was chosen, so the button is hidden and
+  // focus would fall to `<body>`. Moving it to the menu's `<summary>` (the
+  // nearest visible control) happens after the overlay's own restoration,
+  // hence in an effect keyed on `open` rather than in the close handler.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      buttonRef.current?.closest("details")?.querySelector("summary")?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   return (
     <>
-      <button onClick={() => setOpen(true)} disabled={!tree}>
+      <button ref={buttonRef} onClick={() => setOpen(true)} disabled={!tree}>
         {t("documentationExport.button")}
       </button>
       {open && (

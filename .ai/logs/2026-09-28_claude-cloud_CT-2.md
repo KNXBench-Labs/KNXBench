@@ -62,5 +62,8 @@ the access threw a cross-origin error.
 - Report language follows the UI language; no separate selector (§48).
 - Focus returns to the File-menu button on close, which is hidden once the
   menu has closed; focus then falls back to the document.
+  *Closed during local review:* `DocumentationExportButton` now moves focus
+  to the File menu's `<summary>` after the dialog closes. Regression test in
+  `App.test.tsx` ("returns focus to the File menu …"), red without the fix.
 - Stop hook asked to re-author commits as noreply@anthropic.com; not done,
   project rules require github@knxbench.com.

@@ -1,8 +1,13 @@
 # ADR 0038: A site is a `Ground` space at the root of the building structure — no new kind, no new level
 
 Date: 2026-09-26
-Status: Proposed (DIN-16 / ISSUE-06; awaits independent review and Board merge)
+Status: Accepted (2026-09-28; independent UI-track review and user acceptance)
 Session: DIN-16 (Paperclip), research and decision only — no UI
+Review: UI-track U1 checked the cited Project Schema23 and KNX IoT source PDFs,
+`knx-etsproj/tests/site_hierarchy.rs`, native storage and core command
+characterization tests, and KNOWN_LIMITATIONS §127. No blocking contradiction.
+`Ground` is a documented root space, not an asserted synonym for `loc:Site`;
+real ETS `Ground` exports and editing non-first installations remain unverified.
 
 ## Context
 

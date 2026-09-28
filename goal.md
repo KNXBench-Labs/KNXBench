@@ -804,8 +804,8 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 
 ### 12.3 Still open (not started)
 
-- **§2.8 PDB-8 to PDB-11:** in strict order, after DIN-4 (step 4 above). For PDB-8, the start of the legacy L1 slice (`.vd`/`.pr` container detection plus a named refusal) now follows from the accepted DIN-9 design.
-- **§4 web residues:** §49 print preview, §50 section selection, §57 comparison against a raw `.knxproj`, §59/§60 diff values in the web panel.
+- **§2.8 PDB-8 to PDB-11:** done. PDB-8 `abf35d3`, PDB-9 `3643e90`, PDB-10 `15b4c56`, PDB-11 `7844590` (ADR-0043, schema v17), all merged and pushed.
+- **§4 web residues:** §49/§50 lifted by CT-2 (`d9ff0db`), §59 lifted and §60 narrowed by CT-1 (`313489e`), both through the cloud chain. Open: §57, comparison against a raw `.knxproj` (queued as CT-6).
 - **§11 ISSUE-01 to ISSUE-13, apart from ISSUE-04 and ISSUE-06 above:** see `docs/superpowers/plans/2026-09-21-user-reported-issues.md`.
   - Run all `apps/knx-web` work as one serial chain, never two web tasks in parallel.
   - ISSUE-04 comes before any autosave UX.

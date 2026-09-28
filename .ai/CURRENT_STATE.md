@@ -1,4 +1,13 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 21:55
+- Web lock: released
+- **Completed:** `goal-ui.md` U1: independently reviewed ADR-0038 against source PDFs, importer, native store, command tests, and KNOWN_LIMITATIONS §127; no blocking contradiction. User accepted the bounded `Ground` decision; ADR status set to Accepted. ISSUE-06 research/decision/conditional-type rows updated; site UI remains for U12. Log: `.ai/logs/2026-09-28_codex_ui-adr0038-review.md`. Branch gate: 121 suites / 2366 passing / 0 failing / 135 ignored, 1105 Vitest passing, fmt, Clippy, TypeScript, layering, headers, anchors, corpus gates and diff-check green. No KNX traffic.
+- **Pending/Next Steps:** U2: diagnose AppImage discovery without guessing a fix; research line-relative device-address editing from KNX source PDFs. Web lock remains free for the commissioning session's K6 UI until U3 requests it.
+- **Notes for Codex or Claude:** `Ground` is a supported schema-23 root type, *not* a verified synonym for IoT `loc:Site` or an observed ETS UI site; KL §127 still applies. The root checkout's foreign `docs/paperclip-shutdown/` was untouched. The K6 handover entry below has its original timestamp unchanged.
+- **For the goal.md session:** No new limitation number. ADR-0038 accepted; ISSUE-05 site UI is unblocked, but KL §127 and non-first-installation editing remain open. Refresh `stats.md` after this merge per `goal-ui.md` §6.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 21:31
 - Web lock: released
 - **Completed:** `goal-ui.md` U0 baseline in `ui-baseline` (log: `.ai/logs/2026-09-28_codex_ui-baseline.md`). Fresh-worktree web build, TypeScript, 71 Vitest files / 1105 tests; workspace fmt, Clippy, 121 suites / 2350 passed / 0 failed / 135 ignored; layering, headers, anchors and corpus gates green. Initial Clippy failed only because fresh worktree had no web `dist`; built it and reran successfully. No product changes or KNX traffic.

@@ -821,7 +821,11 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 
 The PDB (backend) chain and the web chain may run in parallel, with at most two implementers (§9). Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order.
 
-### 12.4 Lessons from the Paperclip run
+### 12.4 Parallel tracks outside this goal
+
+- Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself.
+
+### 12.5 Lessons from the Paperclip run
 
 - Provider errors (HTTP 400 thinking block, HTTP 429) ate every review run on 2026-09-26. An automatic error comment is not a review verdict.
 - Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the ntfs3 check.

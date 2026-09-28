@@ -53,8 +53,11 @@ totals.
    attribute (on a declaration or on the `KNX/ManufacturerData/Manufacturer/
    Baggages` spine, except the shared `KNX/@CreatedBy`/`@ToolVersion`
    envelope), a second `FileInfo`, any element outside the grammar, or
-   non-whitespace text is an `ingest_unknown` row, reported through the
-   install report like every other parser unknown. A standalone index that
+   character content (text, CDATA or an entity/character reference; one
+   `#text` per element) is an `ingest_unknown` row, reported through the
+   install report like every other parser unknown. A prefixed attribute is
+   only ever reported, never read as the unprefixed one of the same local
+   name. A standalone index that
    does not parse (project import) is still stored, as before, with a
    `BaggageIndexParseError` row; inside a package it refuses the install.
 2. **Exact resolution only.** A declaration resolves to the member
@@ -103,8 +106,10 @@ totals.
    including the `package.unknown_count` a fresh install writes. A package
    whose bytes no longer parse, or whose stored v15 report no longer
    validates, gets an `unavailable` inventory and an `unavailable` report plus
-   a recorded `InstallReportBackfillError`; only a database failure aborts the
-   migration, so the database still opens.
+   a recorded `InstallReportBackfillError`; the unknowns of each of its indexes
+   that still parses are kept (they describe the index blob), but not credited
+   to `package.unknown_count`. Only a database failure aborts the migration,
+   so the database still opens — also when a package has no report row.
 
 ## Consequences
 

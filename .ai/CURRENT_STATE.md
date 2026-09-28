@@ -1,4 +1,39 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 (paused at the user's request "pausiere wenn sinnvoll")
+- **Completed:** **Still nothing written to 1.1.67.** One more real-bus action, read-only again (property reads only).
+  - **Source rule (user):** *"dont use the extraxted data. only use the pdf soec files directly"*. Every spec citation must come from the PDFs under `knx-spec-kb/sources/`, never from `extracted/`.
+  - Commit `e71aa6e`: the `BitOffset` citation now points at `Project Schema23 v01.00.00.pdf` §1.1.3.17, pp. 29–30.
+  - Commit `f97295b`: `live_memory_readonly.rs` also reads properties. Live results:
+    - OI0/PID78 = `00 00 00 00 01 27`, the same as `LdCtrlCompareProp`.
+    - OI1/OI2 PID7 = `4000h`/`4201h`.
+    - OI3/PID13 = `00 83 00 27 15`.
+    - OI3/PID16 = `01`.
+    - OI3/PID7 is refused (no elements).
+  - The user chose **option C**: button 1 toggles `2/0/53`, button 2 is inactive, everything else is at product defaults, and there are no other group addresses.
+  - PDF-verified, RES v01.10.01 (`03_05_01`):
+    - §4.18.9.1 (p. 276): GrOT Easy 3 is 1 octet size, 2 octets RAM-flags pointer, then 4-octet descriptors.
+    - §4.18.3.1.2.1 (pp. 262–265): Config Octet (bit 7 = 1, T, SegSel, W, R, C, prio: 00 system, 10 urgent, 01 normal, 11 low) and Type Octet codes 0–14.
+    - §4.18.4.1: realisation type 2 puts Update Enable in bit 7.
+    - **Not in any PDF:** the full 4-octet Easy-3 descriptor layout (probably a 2-octet data pointer), the `<Mask>` semantics, and the `ParameterByteOrder`.
+  - PDF, Cookbook `02_03_01 Load Controls v01.00.02` pp. 6–12: the download image is the S19/knxprod default image modified by ETS (group objects, group addresses, parameters). The load procedure itself contains no data writes. MP §3.31.4 (p. 142): *"Load the loadable data via Property access or memory access"* between StartLoading and LoadCompleted.
+  - Offline Python model (scratch `mdt/mdt_env.py`, **not an authority**):
+    - It reproduces the device's current `AS-4400` **byte for byte (0 diffs)** from the product data plus the device parameters, with shutter config P-1007=1 and P-1014=2.
+    - This validates the evaluator, the union placement, BitOffset MSB-first, BigEndian and the descriptor rule (config bit 5 from the base, C-flag cleared on inactive objects, type from ObjectSize).
+    - Option C target: `mdt/target_4400.hex`. It differs from the device in 8 octets (desc 1/18, UP-5500/5501 at +264/+266, UP-5559 +310/+312, P-95/P-326 +381, P-27 +392).
+    - Active objects: O-0 "Switch" (1 bit) and O-1 "Value for toggle".
+- **Pending/Next Steps:** (all offline, before any write)
+  - (a) Port the model to Rust as a crate-appropriate image builder. The productdb stores parameter placement, but **not** the segment `Data`/`Mask` or the `LoadProcedures`; those are only in the stored source blob (`blob::load_source_file`). Decide where parsing belongs (productdb?) and add an ADR.
+  - (b) Group tables for C: GrAT `01 1143 1035` (2/0/53), GrOAT `01 01 00`. Check the object numbering and the sending flag.
+  - (c) `<Mask>`: leave the IA octets at `4001h`–`4002h` untouched. The semantics are only [A].
+  - (d) Load-procedure orchestrator (unload 1–3, load/segment/task/completed per LSM, data writes inside Loading, restart), end to end against the simulator. Then (e) open `WriteScope::Download` for hardware and (f) DM_Authorize with `FFFFFFFFh`.
+  - Then show the user the exact write sequence and **get confirmation again** before the live write, followed by read-back and a telegram check on `2/0/53`.
+- **Notes for Codex or Claude:**
+  - `origin/main` is 7+ commits ahead. The branch is not rebased and not pushed.
+  - Scratch: `~/.hermes/profiles/knxbench/cache/scratch/mdt/` (`mdt_env.py`, `target_4400.hex`, `decode_dump.py`, backup `../backup/1.1.67_dump.txt`), plus PDF text renderings in `../spec/pdf/`, generated directly from the source PDFs with `pdftotext`.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 06:46 CEST
 - **Completed:** The user gave **"ok, go fuer write"**. The only real-bus action so far was a **read-only** step. **Nothing has been written.**
   - New `crates/knx-net/tests/live_memory_readonly.rs`: `#[ignore]`, `read_only` + `Skip`, env `KNX_GATEWAY` + `KNX_READ_MEMORY_ADDRESS`. It ran against `1.1.67` via `172.18.250.1:3671`: 180 `A_Memory_Read`s, all answered.

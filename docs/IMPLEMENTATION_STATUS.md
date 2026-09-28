@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — K3: the download request comes from the project
+
+- `[V]` None of the three ETS demo projects contains `1.1.67` or program
+  `A-0027-15-0BAC` (checked in every `0.xml`). As the user chose, KNXBench
+  builds the device itself: new project, area/line `1.1`, GA `2/0/53`, the
+  MDT package, the device from the catalog, `1.1.67`, the option-C values
+  through the parameter panel, one link, **Save As**.
+- `knx_productdb::image_request`: `image_request_from_project` (pure, no
+  database, no bus) reads `program_id`, address, `ParameterInstance`s
+  (`ets_id` → `raw`) and links (number, GA, `Send`) from one device.
+  `image_request_for_device` resolves the program through
+  `Hardware2Program` and refuses a link on an object instance the values do
+  not activate. Missing or contradictory data is refused by name
+  (`ProjectRequestError`, `DeviceRequestError`): no address, a foreign or
+  contradictory parameter, a dangling GA, links on two instances of one
+  number, two sending links, a number above `FFh`. An absent value stays
+  absent; nothing is defaulted.
+- Found on the way: `A-0027-15-0BAC` declares 23 `ComObjectRef`s for object
+  number 0, and a catalog device gets all of them. The image builder checks
+  numbers only, so a link on an inactive instance would have landed on the
+  active one. It is now refused (`LinkOnInactiveObject`).
+- Acceptance (`knx-server/tests/project_download_request.rs`, corpus,
+  `--ignored`): the saved and reloaded project yields exactly the
+  hand-written request, and its image equals the hand-written image with
+  0 differing octets. 14 unit tests. 3 mutants of the mapping (no
+  activation check, `sending` always false, values dropped), all caught.
+- The saved project is kept locally as
+  `OriginalData/DemoProjects/KNXBench 1.1.67 option C.knxdb` (gitignored),
+  the input for K4.
+
 ## 2026-09-28 — K2 live: frame trace of a closing restart on `1.1.67`
 
 - `[V]` With the user's go, one Basic Restart went to `1.1.67` through the

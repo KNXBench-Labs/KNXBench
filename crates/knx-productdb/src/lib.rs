@@ -13,6 +13,7 @@ pub mod dynamic;
 pub mod enrich;
 pub mod identity;
 pub mod image;
+pub mod image_request;
 pub mod ingest;
 pub mod migration;
 pub mod package;

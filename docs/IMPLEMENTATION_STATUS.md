@@ -10,6 +10,11 @@
   answer, the length of the device's repetition ladder. The load-state
   wait loop keeps one time-out per read (RES §4.23.2.4.1).
 - Found live on `1.1.67`: two download runs stopped early (RESEARCH §19.4).
+  A third run with the fix wrote the 1416 planned octets. A read-back of all
+  1418 segment octets found 0 differences, the individual address unchanged
+  and all load states Loaded. Only
+  the closing Basic Restart went unacknowledged, and whether the device
+  restarted is still open.
 - The simulator can lose the client's `T_ACK` for one answer
   (`lost_ack_for_answer`) and then behaves like the device did.
 - 4 new tests. 7 mutants of the fix were all caught. Workspace: 2217 passed,

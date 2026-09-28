@@ -353,6 +353,9 @@ pub struct InstallReport {
     /// PDB-10 baggage inventory. `None` only when the v16 upgrade could not
     /// measure it from retained bytes; a fresh install always measures.
     pub baggage: Option<crate::baggage::BaggageInventory>,
+    /// PDB-11: every source name these package bytes arrived under, sorted,
+    /// including this call's. The name never decides identity (ADR-0043).
+    pub source_names: Vec<String>,
 }
 
 fn zip_error(error: impl fmt::Display) -> PackageError {
@@ -2242,6 +2245,12 @@ pub fn install_package(
         let conflicts = package_conflicts(&tx, &sha256)?;
         let facts = load_facts(&tx, &sha256)?;
         let baggage = crate::baggage::load_baggage_inventory(&tx, &sha256)?;
+        // The only write of a retry: the name these bytes arrived under.
+        tx.execute(
+            "INSERT OR IGNORE INTO package_source_name (package_sha256, source_name) VALUES (?1, ?2)",
+            params![sha256, source_name],
+        )?;
+        let source_names = crate::identity::package_source_names(&tx, &sha256)?;
         tx.commit().map_err(ProductDbError::from)?;
         return Ok(InstallReport {
             sha256: sha256.clone(),
@@ -2254,10 +2263,16 @@ pub fn install_package(
             dropped_datapoint_types,
             facts,
             baggage,
+            source_names,
         });
     }
     tx.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, ?2, ?3, ?4, ?5, 0)", params![sha256, source_name, scheme, usize_to_i64(bytes.len(), "package size")?, bytes])?;
+    tx.execute(
+        "INSERT INTO package_source_name (package_sha256, source_name) VALUES (?1, ?2)",
+        params![sha256, source_name],
+    )?;
     let mut report = InstallReport {
+        source_names: vec![source_name.to_string()],
         sha256,
         scheme,
         skipped: false,
@@ -2348,7 +2363,7 @@ pub fn install_package(
             // The package hash, not the blob hash, controls package retries.
             ingest_file_in_transaction(&tx, &path, &data, true, scheme == 21)?
         } else {
-            crate::store_source_file(
+            let stored = crate::store_source_file(
                 &tx,
                 &crate::SourceFile {
                     source_path: path.clone(),
@@ -2360,6 +2375,9 @@ pub fn install_package(
                     bytes: data.clone(),
                 },
             )?;
+            if stored {
+                crate::identity::record_producer(&tx, &member_sha, &data)?;
+            }
             DetailedIngestOutcome {
                 outcome: IngestOutcome::Skipped {
                     sha256: member_sha.clone(),

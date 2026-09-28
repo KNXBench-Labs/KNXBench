@@ -6,8 +6,22 @@
 //! detail and ordinal), and the v15 diagnostic CHECK list. The v15 index
 //! parser reported no unknowns, so a fixture whose index has any is refused
 //! rather than half-rewound.
+//!
+//! A rewind starts at the current schema, so the v17 identity tables
+//! (ADR-0043) are dropped first; v15 and v16 had neither.
 
 use rusqlite::Connection;
+
+/// The v17 tables, gone before any v16-or-older shape is restored.
+fn drop_v17_tables(conn: &Connection) {
+    conn.execute_batch(
+        "DROP TABLE IF EXISTS source_identity;
+         DROP TABLE IF EXISTS source_identity_scan;
+         DROP TABLE IF EXISTS source_producer;
+         DROP TABLE IF EXISTS package_source_name;",
+    )
+    .unwrap();
+}
 
 #[allow(dead_code)]
 pub const V15_BAGGAGE_DETAIL: &str =
@@ -15,6 +29,7 @@ pub const V15_BAGGAGE_DETAIL: &str =
 
 #[allow(dead_code)]
 pub fn rewind_to_v15(conn: &Connection) {
+    drop_v17_tables(conn);
     let index_unknowns: i64 = conn
         .query_row(
             "SELECT (SELECT count(*) FROM ingest_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%')
@@ -73,6 +88,7 @@ pub fn rewind_to_v15(conn: &Connection) {
 /// wholesale: only the v16 tables need removing.
 #[allow(dead_code)]
 pub fn drop_baggage_inventory_tables(conn: &Connection) {
+    drop_v17_tables(conn);
     conn.execute_batch(
         "DROP TABLE package_baggage_declaration;
          DROP TABLE package_baggage_payload;

@@ -1,4 +1,29 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 14:10 CEST
+- **Completed:** Offline only. **Still nothing written to 1.1.67.** Download image assembly; details in `.ai/logs/2026-09-28_claude_iaw-image-assembly.md`.
+  - `knx_productdb::code`: `ProgramCode::parameters` gives each parameter's placement from the blob: `Memory`, `UnionMember { union, offset, bit_offset }`, or `Unmodelled`. The union-member gap from the last entry is closed.
+  - New module `knx_productdb::image::build_download_image(conn, &ImageRequest) -> DownloadImage`. It evaluates the Dynamic tree, then writes parameters, GrOT, GrAT and GrOAT into the product's base `Data`, then checks the masks.
+  - **[V] Acceptance against the device's read-back** (ignored corpus tests in `crates/knx-productdb/tests/program_code.rs`):
+    - device configuration: `AS-4400` equal in all 394 octets; GrAT and GrOAT equal;
+    - option C: exactly 8 `AS-4400` octets change; GrAT `02 1143 1035`; GrOAT `01 01 00`.
+  - Refused by name rather than guessed (KNOWN_LIMITATIONS §7): modules, `Property` placements, unions that start mid-octet, other parameter types, priority `High`/`Alert`, `ReadOnInit`, evaluation diagnostics (except a legal value no `when` covers, [V]), masked octets other than the IA slot, and parameters that overlap the GrOT.
+  - Tests: 24 `image::` and 26 `code::` unit tests; 20/20 mutants caught. The review found a real gap in the GrOT overlap check (only the field start was tested); it is fixed and covered by a test.
+  - Gate: fmt; clippy `-D warnings`; workspace 2174 passed, 0 failed; corpus 4/4; xtask headers/layering/anchors exit 0; diff-check. Clippy flagged an unused import after the first run; it is fixed, then clippy and the productdb tests (412) and corpus test were rerun.
+  - Docs: RESEARCH §19.2 (new), KNOWN_LIMITATIONS §7, IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:** (offline first)
+  1. Load-procedure executor over `LoadStep`, end to end against the mask-`0701h` simulator, from `DownloadImage`.
+     - Skip masked octets when writing.
+     - Refuse an `Unmodelled` step by name.
+     - Map `LdCtrlAbsSegment`/`LdCtrlLoadCompleted` to the existing `load_control_memory` records.
+  2. `WriteScope::Download` for hardware; show the user the exact write sequence and get a **new go**.
+- **Notes for Codex or Claude:**
+  - Session separation still applies: this track writes only to this worktree, `.ai/logs/*_claude_iaw-*` and `scratch/iaw/`.
+  - Python reference model: `scratch/iaw/mdt/mdt_env.py`, with `ref_values.py` for the acceptance values.
+  - Not pushed, not rebased; `origin/main` is ahead.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 12:30 CEST
 - **Completed:** Offline only. **Still nothing written to 1.1.67.**
   - Commit `0e6b72f` implements ADR-0044 as the new module `crates/knx-productdb/src/code.rs`.

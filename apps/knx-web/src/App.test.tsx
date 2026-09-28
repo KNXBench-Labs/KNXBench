@@ -2144,6 +2144,29 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => root.unmount());
   });
 
+  // The dialog's own focus restoration aims at the button that opened it,
+  // but that button sits in the File menu, which closed on activation, so
+  // focus would drop to `<body>`. Closing it must land on the menu's
+  // summary, the nearest visible control to the entry the user chose.
+  it("returns focus to the File menu when the documentation dialog closes", async () => {
+    const root = await openProject();
+
+    await openMenu();
+    await act(async () => {
+      findButton("Export documentation…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const close = Array.from(document.body.querySelectorAll<HTMLButtonElement>(".documentation-dialog button"))
+      .find((button) => button.textContent === "Close")!;
+    await act(async () => {
+      close.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(document.body.querySelector(".documentation-dialog")).toBeNull();
+    expect(document.activeElement).toBe(host!.querySelector(".file-menu summary"));
+
+    await act(async () => root.unmount());
+  });
+
   // The same half, reached by keyboard. happy-dom implements no
   // activation behaviour — Enter on a focused button produces no click at
   // all — so this dispatches what a real browser dispatches on Enter: a

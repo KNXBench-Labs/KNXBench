@@ -634,6 +634,26 @@ application does, on any platform.
 
 ## 7. Commissioning and device download are required, but blocked
 
+**Updated, 2026-09-28 (download data readable, ADR-0044).** The storage
+half of the gap below is closed for downloads without a schema change.
+`knx_productdb::code::load_program_code` reads a program's
+`AbsoluteSegment`s (with `Data`/`Mask`), table placements, `LoadProcedures`
+and `Options` from the stored blob on demand.
+
+What remains open here:
+
+- `Mask` semantics are undefined in every KNX PDF read. Treating it as
+  "do not overwrite" is `[A]` (RESEARCH §19.1).
+- `LdCtrlMerge`/`MergedProcedure` programs (40 of 310) are not expanded.
+- 59 programs contain steps nothing executes yet.
+- No download has been run against a device.
+- `[V]` A union member's own `Offset`/`BitOffset` is not stored, and nothing
+  reports it. `parameter` rows hold the *union's* `Memory` placement.
+  `A-0027-15-0BAC` has 16 unions: 51 members sit at `0/0`, but six sit at
+  `Offset=1` with `BitOffset` 5–7. An image builder must take a member's
+  position from the source blob (union placement plus member offset), not
+  from the row.
+
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
 **Cause.** As of 2026-09-13 (superseded below — see the 2026-09-20 update)

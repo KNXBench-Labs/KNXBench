@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Group object table encoder and product download data (ADR-0044)
+
+- **`knx_core::commissioning::group_object_table`** writes a mask-`0701h`
+  GrOT *Easy 3* over the product's base image. Active objects get their
+  Type-2 config octet and value type; inactive objects lose only the
+  communication flag. `[V]` It rebuilds the 259-octet table read back from
+  `1.1.67` octet for octet. 14 tests; 13/13 mutants caught.
+- **`knx_productdb::code`** (ADR-0044) reads an application program's
+  download data on demand from the stored source blob: absolute segments
+  with decoded `Data`/`Mask`, the three table placements, the load
+  procedures and `Options`. No schema change.
+  - Steps it does not model stay as `LoadStep::Unmodelled`, by name and
+    with their attributes.
+  - Parses all 310 corpus application programs with 0 errors; 59 contain
+    an unmodelled step.
+  - 20 unit tests, 11/11 mutants caught. A corpus test pins the MDT
+    `A-0027-15-0BAC` layout, image hashes, its one `Mask`, and its
+    21-step procedure.
+- **Correction (RESEARCH §19.1):** the MDT product file does not declare
+  `ParameterByteOrder`. High-octet-first rests on the device read-back,
+  not on the product.
+- **Still not built:** the image assembly (Dynamic evaluation → parameters
+  → tables), the load-procedure executor, and `WriteScope::Download` on
+  hardware. Nothing has been written to a device's application memory.
+
 ## 2026-09-28 — Live read-only memory dump of a mask-`0701h` device
 
 `crates/knx-net/tests/live_memory_readonly.rs` (`#[ignore]`, env

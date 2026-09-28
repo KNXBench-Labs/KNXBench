@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
-import type { ProjectDiffReport } from "./api";
+import type { ComparisonImport, ProjectDiffReport } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import ProjectDiffDetails from "./ProjectDiffDetails";
+import ProjectDiffImportDiagnostics from "./ProjectDiffImportDiagnostics";
+import { compareFilters } from "./projectDiffView";
 
 // One non-generic entity table's shape, enough for the grouped-count
 // renderer below — every table in a `ProjectDiffReport` (`api.ts`'s
@@ -128,6 +130,9 @@ export default function ProjectDiffPanel(props: {
   const { tree, onError, onClearErrors } = props;
   const t = useTranslate();
   const [report, setReport] = useState<ProjectDiffReport | null>(null);
+  // A `.knxproj` the server refused over error-level import diagnostics:
+  // shown in this panel instead of a diff, never alongside a stale one.
+  const [refusal, setRefusal] = useState<ComparisonImport | null>(null);
   const [open, setOpen] = useState(false);
   // Remounts the details on every comparison, so a new report starts
   // collapsed instead of inheriting the previous one's expanded tables.
@@ -155,21 +160,27 @@ export default function ProjectDiffPanel(props: {
 
   async function compare() {
     // Not module-level (see the removed `COMPARE_FILTER` constant): the
-    // filter name shown in the native file dialog must follow the active
-    // UI language, so it is built fresh from `t()` on every click instead
+    // filter names shown in the file dialog must follow the active UI
+    // language, so they are built fresh from `t()` on every click instead
     // of once at module load.
-    const path = await pickOpenPath([
-      { name: t("projectDiff.compareFilterName"), extensions: ["knxdb"] },
-    ]);
+    const path = await pickOpenPath(compareFilters(t));
     if (!path) return;
     onClearErrors();
     try {
       const result = await api.diffProject(path);
       setReport(result);
+      setRefusal(null);
       setGeneration((value) => value + 1);
       setOpen(true);
     } catch (e) {
-      onError(e);
+      const refused = api.importRefusal(e);
+      if (!refused) {
+        onError(e);
+        return;
+      }
+      setReport(null);
+      setRefusal(refused);
+      setOpen(true);
     }
   }
 
@@ -186,7 +197,7 @@ export default function ProjectDiffPanel(props: {
       <button ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
         {t("projectDiff.compareButton")}
       </button>
-      {open && report && (
+      {open && (report || refusal) && (
         <div
           className="project-diff-panel"
           ref={panelRef}
@@ -204,7 +215,18 @@ export default function ProjectDiffPanel(props: {
           }}
         >
           <h2>{t("projectDiff.title")}</h2>
-          {lines.length === 0 ? (
+          {refusal && (
+            <>
+              <p className="project-diff-panel-refused" role="alert">
+                {t("projectDiff.importRefused")}
+              </p>
+              <ProjectDiffImportDiagnostics diagnostics={refusal.importDiagnostics} />
+            </>
+          )}
+          {report?.inputKind === "knxproj" && (
+            <ProjectDiffImportDiagnostics key={generation} diagnostics={report.importDiagnostics} />
+          )}
+          {!report ? null : lines.length === 0 ? (
             <p className="project-diff-panel-empty">{t("projectDiff.noDifferences")}</p>
           ) : (
             <>

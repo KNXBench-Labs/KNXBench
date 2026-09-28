@@ -733,6 +733,15 @@ export const messages: Record<MessageKey, string> = {
   "projectDiff.key.unaddressed": "ohne Adresse",
   "projectDiff.shownOf": "{shown} von {total} angezeigt.",
   "projectDiff.showMore": "Weitere anzeigen ({count})",
+  "projectDiff.anyFilterName": "KNXBench- oder ETS-Projekt",
+  "projectDiff.etsFilterName": "ETS-Projektexport",
+  "projectDiff.importSummary.one": "ETS-Importbericht: {count} Meldung",
+  "projectDiff.importSummary.other": "ETS-Importbericht: {count} Meldungen",
+  "projectDiff.importErrors.one": "{count} Fehler",
+  "projectDiff.importErrors.other": "{count} Fehler",
+  "projectDiff.importWarnings.one": "{count} Warnung",
+  "projectDiff.importWarnings.other": "{count} Warnungen",
+  "projectDiff.importRefused": "Vergleich abgelehnt: Der ETS-Import meldet Fehler, das Ergebnis wäre nicht verlässlich. Export korrigieren und erneut vergleichen.",
 
   "groupAddressCsv.filterName": "Gruppenadressen-CSV",
 

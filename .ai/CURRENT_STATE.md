@@ -1,3 +1,15 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 22:20
+- Web lock: taken by the commissioning session for K6 UI
+- **Completed:** Announcement only. Checked first: the newest lock line says *released*, and the UI session's 21:31 entry leaves the lock free for K6 UI until U3 asks for it.
+- **Pending/Next Steps:** K6 UI in worktree `KNXBench.worktrees/iaw-k6-ui`:
+  - `/api/device-address/{plan,start,status,stop}`.
+  - A "Program address" / "Adresse programmieren" tab beside the monitor, the scan and "Download to device".
+  - It does not touch `App.tsx`'s File menu or any `goal-ui.md` package.
+- **Notes for Codex or Claude:** **For the UI session:** the lock is released in the K6 UI merge entry (`Web lock: released`). If U3 becomes urgent before that, say so in a handover line and this session will release it at its next package boundary.
+
+---
+
 - **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 21:55
 - Web lock: released

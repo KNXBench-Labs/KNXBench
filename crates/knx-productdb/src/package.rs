@@ -2455,9 +2455,8 @@ pub fn install_package(
             }
         } else if role == "Baggages" {
             // Its unknowns already arrived through `ingest_file_in_transaction`.
-            let declarations =
-                crate::parse::baggage::parse_baggage_index(&path, &data)?.declarations;
-            let count = usize_to_u64(declarations.len(), "baggage declarations")?;
+            let (index, _) = crate::baggage::parse_index(&path, &data)?;
+            let count = usize_to_u64(index.1.len(), "baggage declarations")?;
             add_count(
                 &mut facts,
                 InstallCategory::BaggageIndex,
@@ -2470,7 +2469,7 @@ pub fn install_package(
                 InstallDisposition::Stored,
                 count,
             )?;
-            baggage_indexes.push((path.clone(), declarations));
+            baggage_indexes.push(index);
         } else if role == "Baggage" {
             baggage_payloads.push(crate::baggage::BaggagePayload::measure(
                 path.clone(),

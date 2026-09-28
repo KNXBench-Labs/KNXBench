@@ -141,8 +141,8 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Comparing two `.knxdb` projects, in the interface and on the command line | ✅ Implemented | [Reports and comparison](user-guide/08-reports-and-diff.md) |
-| Showing before and after values for every entity type | 🟡 Partial or experimental | Most types name the changed fields only — [§59](../KNOWN_LIMITATIONS.md#59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types) |
-| The web panel's detail level | 🟡 Partial or experimental | Grouped counts — [§60](../KNOWN_LIMITATIONS.md#60-project-diffs-web-panel-shows-grouped-counts-only) |
+| Showing before and after values for every entity type | ✅ Implemented | Field names are shown untranslated — [§59](../KNOWN_LIMITATIONS.md#59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types) |
+| The web panel's detail level | 🟡 Partial or experimental | Expandable per-entity list, paged at 50 rows; no search — [§60](../KNOWN_LIMITATIONS.md#60-project-diffs-web-panel-shows-grouped-counts-only) |
 | Comparing against a raw `.knxproj` | ❌ Not implemented | [§57](../KNOWN_LIMITATIONS.md#57-project-diff-cannot-compare-against-a-raw-knxproj) |
 | Merging or applying a difference | ❌ Not implemented | [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project) |
 | Three-way comparison, and a non-zero exit code for pipelines | ❌ Not implemented | [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison), [§58](../KNOWN_LIMITATIONS.md#58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag) |

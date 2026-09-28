@@ -1,3 +1,22 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 18:36 CEST
+- **Completed:** `goal-commission.md` **K1**: the commissioning documents are true again (docs only, no code). Log: `.ai/logs/2026-09-28_claude_iaw-k1-docs.md`.
+  - KNOWN_LIMITATIONS §7: "does not program devices" got a dated correction (IA write 2026-09-26, download 2026-09-28, both on `1.1.67`, both only from `live_*` tests). The phase-2 sentence "None of this has been run against a real device" and the Lifted-when "first real write" paragraph were corrected in place.
+  - §92: new title "…; one device has been written since", with a correction block. The old anchor stays as `<a id>`, so all 7 links still resolve.
+  - GAP E1: status "Hardware-verified on one device, not yet a product feature". The open condition is now "programming as a user command" (K4–K6).
+  - ROADMAP Session 7: correction paragraph. Decision row: **"Narrowed by the go for `1.1.67`, decision pending"**. The new decision comes only after the user confirms it.
+  - Design spec: status update (phase 3 is no longer read-only; the memory path is not described there).
+  - Gates: only `.md` changed (0 non-md files vs `origin/main`); fmt, layering, headers, anchors, corpus-gates and diff-check green. The workspace build/tests are unaffected, since the code is byte-identical to `main`.
+- **Pending/Next Steps:**
+  1. **User decision:** confirm the ROADMAP decision row "v1.0.0 writes to real hardware" (currently "decision pending").
+  2. K2 offline: MP §3.7.3/RES on T_ACK for Basic Restart, simulator RED for "loaded, restart unconfirmed". The frame trace on `1.1.67` [W] needs a go.
+- **For the goal.md session:**
+  - `docs/manual/known-issues.md` (§92 link, "no user-facing command … Read-only verification … furthest"), `docs/manual/implementation-status.md` ("never against hardware", "writing has not") and `docs/manual/reference/02-supported-and-unsupported.md` ("never against real hardware") are **factually out of date**. There have been real writes on `1.1.67` since 2026-09-26/28, but still no user command. The manual is not a commissioning row (goal-commission §0.3), so these are findings for you, not fixes.
+  - KNOWN_LIMITATIONS §92 has a new title. The anchor is kept via `<a id>`, but the LIMITATION_TRIAGE recount should pick up the new title.
+- **Notes for Codex or Claude:** Worktree `iaw-k1-docs` is deleted after the merge. No bus traffic in K1.
+
+---
+
 - **Last Agent:** Claude (goal.md session)
 - **Timestamp:** 2026-09-28 18:40 CEST
 - **Completed:** `goal-commission.md` created (user request). It is a separate goal for the commissioning session: T30 phase 3, packages K1–K10.

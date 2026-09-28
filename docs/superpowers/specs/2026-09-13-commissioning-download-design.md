@@ -7,6 +7,14 @@
   no hardware attached. Phase 3 verifies **read-only** against real hardware.
   Writing to a real device can destroy it, which is the whole reason the
   specification is a separate phase.
+- **Status update, 2026-09-28:** phase 3 is no longer read-only. With an
+  explicit go naming the device, `1.1.67` (MDT, mask `0701h`) received an
+  individual-address write (2026-09-26, RESEARCH §8.8.6) and a memory
+  download (2026-09-28, RESEARCH §19.4). That download ran a mask-`070nh`
+  path (ADR-0044, `run_memory_download`) that this document does not
+  describe. Its §5 load state machine is reached over memory records at
+  `0104h`, not over `PID_LOAD_STATE_CONTROL`. The property-based
+  procedures specified here have still run only against the simulator.
 - **Closes:** nothing on its own. It narrows
   [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md) from "blocked" to
   "specified, unimplemented", and it is the design input for

@@ -3414,53 +3414,63 @@ scripts are not broken by a newly nonzero result they did not request.
 `knx --help` output and the user manual.
 
 <a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a>
-## 59. Project diff exposes before/after values, but the web panel does not render them yet
+<a id="59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet"></a>
+## 59. Project diff shows before/after values in CLI, API and web panel
 
-**Limitation.** `knx diff` now prints one ordered line per changed field
-with its old and new display values. The HTTP response adds `fieldChanges`
-to every generic/device change while retaining `changedFields`, `left`,
-and `right`. The current web panel still renders grouped counts only.
+**Status.** Lifted (CT-1, 2026-09-28). `knx diff` prints one ordered line
+per changed field with its old and new display values; the HTTP response
+carries `fieldChanges` on every generic/device change; and the web panel
+now renders each changed entity's `fieldChanges` as a *Field / Before /
+After* table, plus the project-info and installation-info changes the
+same way.
 
-**Cause.** T15 added one pure `FieldDiff` projection in `knx-diff`, so CLI
-and HTTP cannot disagree about value formatting. Plain `String` and
-`Option<String>` values are never `Debug`-quoted; structured values use
-an explicit debug fallback. The frontend rendering itself belongs to the
-separate UI task and was not quietly expanded here.
+**Cause of the former limit.** T15 added one pure `FieldDiff` projection
+in `knx-diff`, so CLI and HTTP cannot disagree about value formatting;
+the frontend rendering was deliberately left to a separate UI task.
 
-**Impact.** CLI/API consumers can see "what changed to what" without
-reconstructing values from snapshots. A web user still sees only counts.
+**What remains.** Field names are shown as the `knx-diff` identifiers
+(`product_ref`, `name`, …), untranslated and in monospace, because the
+response carries no display label for them. Values are the server's
+pre-formatted strings (`-` for an absent value; enums and structured
+values use the explicit `Debug` fallback T15 recorded). The web view
+has no inline character-level highlighting inside a value.
 
-**Lifted when.** Fully resolved when the web panel renders the supplied
-entity keys and `fieldChanges` values accessibly; crate, CLI, and API work
-are complete.
+<a id="60-project-diffs-web-panel-shows-grouped-counts-only"></a>
+## 60. Project diff's web panel lists entities, but pages large tables
 
-## 60. Project diff's web panel shows grouped counts only
+**Status.** Largely lifted (CT-1, 2026-09-28). `ProjectDiffPanel.tsx`
+keeps the grouped-count summary lines and adds, below them, one
+collapsed-by-default disclosure per non-empty table and installation
+(`ProjectDiffDetails.tsx`, projection in `projectDiffView.ts`). Expanded,
+a table lists each added, removed, changed and ambiguous entity by its
+natural key (area `1`, line `1.2`, device address plus ETS id, group
+address in the user's notation plus ETS id, group-range bounds, building
+path). A changed entity shows how it was matched (ETS id or natural key)
+and its before/after table; an ambiguous one shows its candidate counts
+on each side; a changed device nests its communication-object and
+parameter tables the same way.
 
-**Limitation.** `ProjectDiffPanel.tsx` renders one summary line per
-non-empty entity table (e.g. `Devices: 1 added, 2 changed`) across the
-whole report. There is no tree view of individual added/removed/changed
-entities, and no inline before/after value highlighting anywhere in the
-panel.
+**Accessibility.** Disclosures are native buttons with `aria-expanded`/
+`aria-controls`, so Enter and Space come from the platform. Every status
+is spelled out as a word and prefixed by a symbol (`+`, `−`, `~`, `?`);
+colour only reinforces it. English and German catalogues cover every new
+string. Escape still closes the report first, as before.
 
-**Cause.** Design spec §9, explicit out-of-scope: "no tree view, no
-inline before/after text highlighting" — the same visual register as the
-existing Log tab (`LogPanel.tsx`), not a richer side-by-side diff view.
+**What remains.**
 
-**Impact.** A user who wants to see *which* device was added, or the
-actual old/new value of a changed field, cannot do so from the web panel
-alone — only counts per table, per installation.
-
-**Lifted when.** Open. A richer visual diff view is a real, larger
-feature a future task could propose; not built speculatively now.
-
-**T15 handoff.** The response already supplies ordered `fieldChanges`
-(`field`, `left`, `right`) on every generic and device change, plus full
-typed `left`/`right` snapshots, entity keys, match kind, nested object/
-parameter tables, and ambiguity counts. The UI task should provide an
-expandable, keyboard-accessible per-installation/entity tree, identify
-added/removed/ambiguous entries individually, and show each before/after
-pair without requiring color alone. It must not invent a match or an
-apply/merge action.
+- **Paging, not virtualisation.** A table renders 50 rows, then a
+  "Show more" control reveals 50 more at a time and moves focus to the
+  first new row. A user who expands a table of thousands and keeps
+  clicking will eventually render all of them in the DOM.
+- **No search or filter** inside the diff view, and no jump from a diff
+  row to the entity in the Project Explorer.
+- **Keyboard activation is verified structurally in Vitest.** happy-dom
+  does not synthesize a button's Enter/Space activation, so the tests
+  reproduce the browser's rule (an uncancelled Enter/Space keydown on a
+  focused `<button>` clicks it). No Playwright run covers the panel yet,
+  and no screen reader was used to check it.
+- The panel still accepts `.knxdb` only (§57); it never applies or
+  merges a diff (§55) and has no three-way mode (§56).
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 

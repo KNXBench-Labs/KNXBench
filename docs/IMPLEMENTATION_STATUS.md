@@ -1,5 +1,39 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Claude Code cloud sessions prepared (tooling, no product change)
+
+- **Files:**
+  - [`docs/CLOUD_SESSIONS.md`](CLOUD_SESSIONS.md) states what a cloud session
+    can and cannot do. It has no corpus, no bus, and its results are
+    integrated locally.
+  - The same file holds the one-time environment configuration and five task
+    briefs:
+    - CT-1: diff web panel (§59/§60);
+    - CT-2: documentation preview/sections (§49/§50);
+    - CT-3: parser fuzzing;
+    - CT-4: read-only branch review;
+    - CT-5: doc hygiene.
+  - `.claude/settings.json` is now versioned. It disables every Claude commit
+    and PR attribution and registers `tools/cloud/session-start.sh`.
+  - That hook runs only when `CLAUDE_CODE_REMOTE=true`. It sets the git
+    identity, puts cargo on `PATH`, runs `npm ci`, and prints
+    `tools/cloud/SESSION_RULES.md` plus an environment report.
+  - `tools/cloud/setup-env.sh` is the setup script for the claude.ai
+    environment. It installs the CI's Tauri/WebKit packages and the pinned
+    Rust toolchain.
+- **Verified:** In a local `ubuntu:24.04` root container used as a stand-in for
+  the cloud VM:
+  - the setup script exits 0 inside the five-minute cache budget;
+  - the hook reports the toolchain;
+  - `cargo check -p knx-desktop` succeeds.
+
+  The probe caught one real bug: `rustup-init` refuses to run under a `mktemp`
+  file name.
+- **Not verified:**
+  - behaviour on the real cloud VM;
+  - that the empty `attribution` strings suppress the trailers there. The
+    first session must be checked as described in CLOUD_SESSIONS §3.1.
+
 ## 2026-09-28 — PDB-10: baggage inventoried by content, declarations resolved exactly
 
 The product database is now schema v16

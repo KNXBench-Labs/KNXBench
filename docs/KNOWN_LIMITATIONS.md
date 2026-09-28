@@ -646,9 +646,16 @@ What remains open here:
   "do not overwrite" is `[A]` (RESEARCH §19.1).
 - `LdCtrlMerge`/`MergedProcedure` programs (40 of 310) are not expanded.
 - 59 programs contain steps nothing executes yet.
-- No download has been run against a device. The whole path (image, plan,
-  executor) runs only against the simulator; `WriteScope::Download` is not
-  on the hardware allowlist.
+- `[V]` Two live download runs on `1.1.67` (2026-09-28) stopped early, at
+  steps 13 and 8, on a `T_ACK` of this client's that never reached the bus
+  (RESEARCH §19.4). Fixed in the session's Transport Layer handling. Until
+  a download completes, that device has no loaded application.
+  `WriteScope::Download` is allowed on hardware only for this path
+  (`run_memory_download`); the property-based `Downloader` still refuses
+  hardware.
+- `[A]` An acknowledged request waits up to 12 s (four acknowledge
+  time-outs) for its answer, the device's own repetition ladder. No PDF
+  read gives a client-side figure.
 - **Memory download (RESEARCH §19.3): `[A]` rules not in any PDF read.**
   - How `LdCtrlCompareProp` compares a property with longer `InlineData`:
     the device's octets must start the data, and the rest must be zero.

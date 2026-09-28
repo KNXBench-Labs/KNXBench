@@ -19,7 +19,7 @@
 //! the client sends what the Standard says a client sends; it proves nothing
 //! whatsoever about what a physical device does with it.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::ops::Range;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -423,6 +423,26 @@ pub struct SimulatorConfig {
     /// Mode exchange `connect()` runs first and so never let a session
     /// reach the restart call at all.
     pub restart_unanswered: bool,
+    /// Lose the client's first `T_ACK` for this device's *n*-th answer,
+    /// counting every answer from one.
+    ///
+    /// The device then behaves as TL §5.4.1 makes it: its own
+    /// `T_DATA_CONNECTED` sits unacknowledged in `OPEN_WAIT`, so after
+    /// [`SimulatorConfig::answer_repeat_after`] it repeats that frame with
+    /// the *same* sequence number (action `A9`), and every answer it
+    /// produces meanwhile waits behind it (`A11`, *"Don't change order of
+    /// T_Data_Connected.req events"*; §5 p. 17: *"no parallel services are
+    /// allowed"*). It still acknowledges the client's requests at once,
+    /// because receiving is `E04`/`A2` in `OPEN_WAIT` as much as in
+    /// `OPEN_IDLE`.
+    ///
+    /// Measured on hardware, not invented for the test: `1.1.67`
+    /// (2026-09-28) acknowledged a read, withheld its answer, and repeated
+    /// its previous answer 6 s, 9 s and 12 s later. RESEARCH §19.4.
+    pub lost_ack_for_answer: Option<u32>,
+    /// How long the device waits before repeating an answer whose `T_ACK`
+    /// was lost. TL clause 4's acknowledge time-out on a real device.
+    pub answer_repeat_after: Duration,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -565,6 +585,8 @@ impl Default for SimulatorConfig {
             restart_process_time: Duration::ZERO,
             restart_response_malformed: false,
             restart_unanswered: false,
+            lost_ack_for_answer: None,
+            answer_repeat_after: Duration::ZERO,
         }
     }
 }
@@ -681,6 +703,14 @@ struct State {
     level: u8,
     verify_mode: bool,
     send_seq: u8,
+    /// How many answers this device has produced, what
+    /// [`SimulatorConfig::lost_ack_for_answer`] counts against.
+    answers: u32,
+    /// The answer still waiting for its `T_ACK`, if one is.
+    unacknowledged: Option<Unacknowledged>,
+    /// Answers produced while [`State::unacknowledged`] was pending, in
+    /// order.
+    held: VecDeque<ApplicationService>,
     frames: usize,
     load: HashMap<u8, LoadState>,
     completing: HashMap<u8, u8>,
@@ -696,6 +726,14 @@ struct State {
     properties: HashMap<(u8, u8), Vec<u8>>,
     memory: HashMap<u32, u8>,
     seen: Vec<Seen>,
+}
+
+/// An answer whose `T_ACK` has not arrived yet.
+#[derive(Debug)]
+struct Unacknowledged {
+    seq: u8,
+    /// The next `T_ACK` for `seq` is the one that gets lost.
+    lose_next_ack: bool,
 }
 
 /// A device that answers management services, wrongly on request.
@@ -759,6 +797,9 @@ impl SimulatedDevice {
             level: config.free_access_level,
             verify_mode: false,
             send_seq: 0,
+            answers: 0,
+            unacknowledged: None,
+            held: VecDeque::new(),
             frames: 0,
             load: HashMap::new(),
             completing: HashMap::new(),
@@ -953,13 +994,70 @@ impl SimulatedDevice {
     }
 
     fn emit_answer(&self, service: ApplicationService) {
-        let seq = {
+        let (seq, repeat) = {
             let mut state = self.lock();
+            if state.unacknowledged.is_some() {
+                // TL §5.3 `A11`: a second request waits for the first one's
+                // confirmation, in order.
+                state.held.push_back(service);
+                return;
+            }
             let seq = state.send_seq & 0x0F;
             state.send_seq = (state.send_seq + 1) & 0x0F;
-            seq
+            state.answers += 1;
+            let repeat = self.config.lost_ack_for_answer == Some(state.answers);
+            if repeat {
+                state.unacknowledged = Some(Unacknowledged {
+                    seq,
+                    lose_next_ack: true,
+                });
+            }
+            (seq, repeat)
         };
-        self.emit(Tpci::NumberedData { seq }, service);
+        self.emit(Tpci::NumberedData { seq }, service.clone());
+        if repeat {
+            self.repeat_later(seq, service);
+        }
+    }
+
+    /// TL §5.3 `A9`: the stored frame again, same sequence number, once the
+    /// acknowledge time-out has passed.
+    fn repeat_later(&self, seq: u8, service: ApplicationService) {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Indication,
+            source: self.lock().address,
+            destination: Destination::Individual(self.client),
+            transport: Tpci::NumberedData { seq },
+            service,
+        };
+        let events = self.events.clone();
+        let after = self.config.answer_repeat_after;
+        tokio::spawn(async move {
+            tokio::time::sleep(after).await;
+            let _ = events.send(TunnelEvent::Telegram(frame));
+        });
+    }
+
+    /// A `T_ACK` from the client: TL §5.4.1 `E08` in `OPEN_WAIT`, whose
+    /// action `A8` releases whatever [`Self::emit_answer`] held back.
+    fn acknowledged(&self, seq: u8) {
+        let released = {
+            let mut state = self.lock();
+            match state.unacknowledged.as_mut() {
+                Some(pending) if pending.seq == seq => {
+                    if pending.lose_next_ack {
+                        pending.lose_next_ack = false;
+                        return;
+                    }
+                    state.unacknowledged = None;
+                    std::mem::take(&mut state.held)
+                }
+                _ => return,
+            }
+        };
+        for service in released {
+            self.emit_answer(service);
+        }
     }
 
     /// Whether a write is allowed at the level this connection holds.
@@ -1265,6 +1363,9 @@ impl SimulatedDevice {
                 state.level = self.config.free_access_level;
                 state.verify_mode = false;
                 state.send_seq = 0;
+                // A new connection starts a new state machine (TL §5.3 `A1`).
+                state.unacknowledged = None;
+                state.held.clear();
                 state.seen.push(Seen::Connect);
                 return;
             }
@@ -1279,7 +1380,11 @@ impl SimulatedDevice {
                 state.seen.push(Seen::Disconnect);
                 return;
             }
-            Tpci::Ack { .. } | Tpci::Nak { .. } => return,
+            Tpci::Ack { seq } => {
+                self.acknowledged(seq);
+                return;
+            }
+            Tpci::Nak { .. } => return,
             Tpci::NumberedData { seq } => {
                 if !self.lock().connected {
                     return;

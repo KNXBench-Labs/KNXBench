@@ -9,6 +9,7 @@ pub mod baggage;
 pub mod blob;
 pub mod dynamic;
 pub mod enrich;
+pub mod identity;
 pub mod ingest;
 pub mod migration;
 pub mod package;
@@ -26,6 +27,11 @@ pub use blob::{
     SourceFile,
 };
 pub use enrich::{com_object_lookup_id, enrich, EnrichmentIssue, EnrichmentReport};
+pub use identity::{
+    identity_candidates, identity_divergences, package_source_names, products_by_order_number,
+    program_family, Divergence, FamilyKey, FamilyMember, IdentityCandidate, IdentityKind,
+    IdentityReport, OrderNumberProduct, ProgramFamily, ReplacesVersions, UnmeasuredSource,
+};
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 pub use package::{

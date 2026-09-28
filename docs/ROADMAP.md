@@ -167,7 +167,12 @@ future cycle rather than bundled into "Session 4 leftovers":
   skipped Dynamic node; repeat expansion, renames, buttons, calculations
   and allocators stay reported, not evaluated. PDB-10 (schema v16,
   ADR-0042) inventories baggage by content and resolves every declaration
-  exactly; payloads are never opened, extracted or executed. Load-procedure execution and
+  exactly; payloads are never opened, extracted or executed. PDB-11 (schema
+  v17, ADR-0043) records every source name of a package and every
+  package-content candidate element with a digest, names winner and losers
+  per id, and derives program families, `ReplacesVersions` links and
+  order-number lookups at query time (library and CLI); the stored winner
+  stays first-installed. Load-procedure execution and
   manufacturer-specific behavior remain outside this claim. **Schema 23
   manufacturer data** is a separate project-import boundary and still needs
   its own known-element evidence.

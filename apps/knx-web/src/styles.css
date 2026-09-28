@@ -1013,6 +1013,70 @@ main {
   gap: 0.5rem;
 }
 
+/* `ProjectDiffDetails` — collapsed disclosures below the summary. Status is
+   always a word plus a symbol; the colour only reinforces it. */
+.project-diff-details {
+  margin-top: 0.75rem;
+}
+
+.project-diff-toggle {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-diff-disclosure-content {
+  padding-left: 1rem;
+}
+
+.project-diff-entries {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.project-diff-status {
+  font-weight: 600;
+}
+
+.project-diff-status-added {
+  color: var(--knx-success-color);
+}
+
+.project-diff-status-removed {
+  color: var(--knx-error-color);
+}
+
+.project-diff-status-ambiguous {
+  color: var(--knx-warning-color);
+}
+
+.project-diff-key {
+  font-family: var(--knx-font-mono);
+}
+
+.project-diff-meta {
+  opacity: 0.8;
+}
+
+.project-diff-fields {
+  margin: 0.25rem 0 0.25rem 1rem;
+  border-collapse: collapse;
+}
+
+.project-diff-fields th,
+.project-diff-fields td {
+  text-align: left;
+  padding: 0.1rem 0.75rem 0.1rem 0;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
 /* `BusMonitorPanel` — a centre-pane view like `.log-panel`, reached from
    the navigation pane or the command palette rather than a toolbar
    toggle, and laid out by `.workbench-center` rather than by flex. */

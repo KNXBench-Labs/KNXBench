@@ -125,12 +125,26 @@ element, from its start tag to its end tag:
   parent. A marker naming its kind and id takes its place, so the parent
   still changes when its set or order of children changes.
 
-Equal digests mean equal canonical content. Different digests mean
+Every digest starts with the context the parser stores for the element
+from outside it: `Manufacturer/@RefId`, and the parent id where a column
+holds one (the enclosing `CatalogSection` for sections and items, the
+last `Hardware` with an `Id` for products and `Hardware2Program`). The same
+element bytes under another parent therefore report as different, because
+the stored row would differ.
+
+Equal digests mean equal as the parsers read it. Different digests mean
 something differs, possibly something without meaning (a different
-namespace prefix, for example). The comparison never calls two different
-elements equal. It covers the element's subtree only: a program's
-`Languages` translations are outside the `ApplicationProgram` element and
-are not covered.
+namespace prefix, for example). Two elements count as equal only where
+the parsers cannot tell them apart either: whitespace-only text runs are
+dropped, and names are compared as written without resolving namespaces.
+Beyond the stored context, the comparison covers the element's subtree
+only: a program's `Languages` translations are outside the
+`ApplicationProgram` element and are not covered.
+
+The whole definition (dispatch, context and canonical form) is versioned
+as `IDENTITY_SCANNER`, stored with every scan. A row from another scanner
+version fails closed; changing the definition requires a bump and a
+rescanning migration.
 
 ### 4. The candidate scan is checked against the parsers on every ingest
 
@@ -140,8 +154,11 @@ dispatch exactly: the same element names, `Hardware` only with an `Id`, and
 in program files the `Dynamic` skip and the parameter-type child that is
 never dispatched. After each parse of a blob, the ingest checks the scan
 against what the parser did: every typed row the blob won and every
-`IdConflict` it produced must have its candidate row. A mismatch fails the
-ingest, and the transaction rolls back. A scan that cannot read the blob
+`IdConflict` it produced must have its candidate row. On the pass that
+parses a blob for the first time, the parser's decisions are complete, so
+the check is exact: the candidates with an id must be exactly those rows
+and conflicts, nothing more. A mismatch fails the ingest, and the
+transaction rolls back. A scan that cannot read the blob
 records `unavailable` with its reason in `source_identity_scan` and never
 fails the ingest. The same helper serves the migration.
 
@@ -184,8 +201,11 @@ Creates `package_source_name`, `source_identity`, `source_identity_scan` and
   actually read; a raw-stored member never becomes a candidate;
 - extracts producer facts from every stored blob.
 
-A per-blob scan failure is recorded as `unavailable` and the upgrade
-continues. The original install order is not recoverable, so historical
+The backfill also runs the agreement check against the historical rows.
+A per-blob scan failure, or historical rows that disagree with the scan,
+is recorded as `unavailable` with its reason and the upgrade continues, so
+a later re-parse of that blob cannot fail on rows an earlier build wrote.
+The six identity tables get an index on `source_sha256` for the check. The original install order is not recoverable, so historical
 winners and `package_conflict` rows stay exactly as they were.
 
 ## Consequences

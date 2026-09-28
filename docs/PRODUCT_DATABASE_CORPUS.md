@@ -211,6 +211,12 @@ that element's own digest carries the difference. This explanation is
 inferred from the two definitions, not separately measured. No install outcome, report total or pre-existing
 table count changed.
 
+After the independent review, every digest also covers the context the
+stored row takes from outside the element (manufacturer, parent section,
+parent hardware). The re-run matrix (979 s) produced the same aggregates
+and the same baseline commitment: in this corpus, no id appears with equal
+element bytes under different parents or manufacturers.
+
 ## Scheme and producer observations
 
 The XML itself records `CreatedBy` and `ToolVersion`. The corpus contains output

@@ -1,10 +1,16 @@
-/** Tests for ProjectDiffPanel's diff request flow and rendered entity counts. */
+/** Tests for ProjectDiffPanel's diff request flow, grouped counts and expandable entity details. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import type { ProjectDiffReport, EntityTable, DeviceTable } from "./api";
+import type {
+  DeviceTable,
+  EntityTable,
+  GroupAddressFields,
+  GroupAddressKey,
+  ProjectDiffReport,
+} from "./api";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
@@ -348,5 +354,256 @@ describe("ProjectDiffPanel", () => {
     expect(host!.textContent).toContain("Projektinfo: 2 Felder geändert");
     expect(host!.textContent).toContain("Installationsinfo: 2 Felder geändert");
     plural.root.unmount();
+  });
+});
+
+// CT-1: the expandable entity list below the grouped counts.
+
+function toggle(label: string): HTMLButtonElement {
+  const button = Array.from(host!.querySelectorAll<HTMLButtonElement>("button.project-diff-toggle")).find(
+    (b) => b.textContent?.includes(label),
+  );
+  if (!button) throw new Error(`no disclosure labelled ${label}`);
+  return button;
+}
+
+// happy-dom does not synthesize a native button's keyboard activation, so
+// this does what a browser does: Enter or Space on a focused `<button>`
+// whose keydown was not cancelled activates it with a click.
+async function pressKey(element: HTMLElement, key: string) {
+  await act(async () => {
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    const proceed = element.dispatchEvent(event);
+    if (proceed && element instanceof HTMLButtonElement && (key === "Enter" || key === " ")) {
+      element.click();
+    }
+  });
+}
+
+async function openReport(report: ProjectDiffReport) {
+  filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+  apiMock.diffProject.mockResolvedValueOnce(report);
+  const rendered = await renderPanel();
+  await click(host!.querySelector("button")!);
+  return rendered;
+}
+
+function manyAddedGroupAddresses(count: number): ProjectDiffReport {
+  const added: [GroupAddressKey, GroupAddressFields][] = Array.from({ length: count }, (_, i) => [
+    { etsId: null, address: `1/1/${i}` },
+    { name: `GA ${i}`, central: false, unfiltered: false, range: null },
+  ]);
+  return {
+    infoChanges: [],
+    installations: [
+      {
+        ...emptyReport.installations[0],
+        groupAddresses: { added, removed: [], changed: [], ambiguous: [] },
+      },
+    ],
+  };
+}
+
+function entryItems(): HTMLLIElement[] {
+  return Array.from(host!.querySelectorAll<HTMLLIElement>(".project-diff-entries > li"));
+}
+
+describe("ProjectDiffPanel entity details", () => {
+  it("keeps every table collapsed until asked, then lists entities by natural key", async () => {
+    const { root } = await openReport(changesReport);
+    expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("false");
+    expect(host!.textContent).not.toContain("New actuator");
+
+    await click(toggle("Devices (1)"));
+    expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("true");
+    const [device] = entryItems();
+    expect(device.textContent).toContain("added");
+    expect(device.textContent).toContain("unaddressed (d1)");
+    expect(device.textContent).toContain("New actuator");
+    root.unmount();
+  });
+
+  it("lists each changed field as field, before and after", async () => {
+    const { root } = await openReport(changesReport);
+    await click(toggle("Group addresses (2)"));
+    const [first, second] = entryItems();
+    expect(first.textContent).toContain("changed");
+    expect(first.textContent).toContain("1/1/1 (ga1)");
+    expect(first.textContent).toContain("matched by ETS ID");
+    const headers = Array.from(first.querySelectorAll("thead th")).map((th) => th.textContent);
+    expect(headers).toEqual(["Field", "Before", "After"]);
+    const cells = Array.from(first.querySelectorAll("tbody tr > *")).map((cell) => cell.textContent);
+    expect(cells).toEqual(["name", "Old name", "New name"]);
+    expect(second.textContent).toContain("1/1/2 (ga2)");
+    root.unmount();
+  });
+
+  it("names ambiguous entries in words with their candidate counts", async () => {
+    const { root } = await openReport(ambiguousOnlyReport);
+    await click(toggle("Group addresses (1)"));
+    const [entry] = entryItems();
+    expect(entry.textContent).toContain("ambiguous");
+    expect(entry.textContent).toContain("2 candidates before, 1 after");
+    root.unmount();
+  });
+
+  it("shows project and installation info changes as before/after tables", async () => {
+    const { root } = await openReport(singularFieldChangeReport);
+    await click(toggle("Project info (1)"));
+    await click(toggle("Installation info (1)"));
+    const rows = Array.from(host!.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
+      Array.from(row.children).map((cell) => cell.textContent),
+    );
+    expect(rows).toEqual([
+      ["name", "Old", "New"],
+      ["address", "1", "2"],
+    ]);
+    root.unmount();
+  });
+
+  it("nests a changed device's communication object changes under the device", async () => {
+    const left = changesReport.installations[0].devices.added[0][1];
+    const report: ProjectDiffReport = {
+      infoChanges: [],
+      installations: [
+        {
+          ...emptyReport.installations[0],
+          devices: {
+            added: [],
+            removed: [],
+            ambiguous: [],
+            changed: [
+              {
+                key: { etsId: "d1", address: "1.1.5" },
+                matchedBy: "naturalKey",
+                left,
+                right: left,
+                changedFields: [],
+                fieldChanges: [],
+                comObjects: {
+                  added: [],
+                  changed: [],
+                  ambiguous: [],
+                  removed: [
+                    [
+                      { device: { etsId: "d1", address: "1.1.5" }, number: 3 },
+                      {
+                        text: "Switch",
+                        description: null,
+                        dpt: null,
+                        read: null,
+                        write: null,
+                        transmit: null,
+                        update: null,
+                        communication: null,
+                        readOnInit: null,
+                        links: [],
+                        moduleInstance: null,
+                      },
+                    ],
+                  ],
+                },
+                parameters: emptyTable(),
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const { root } = await openReport(report);
+    await click(toggle("Devices (1)"));
+    expect(host!.textContent).toContain("matched by natural key");
+    expect(host!.textContent).not.toContain("Parameters (");
+    await click(toggle("Communication objects (1)"));
+    const nested = host!.querySelector(".project-diff-entries .project-diff-entries > li")!;
+    expect(nested.textContent).toContain("removed");
+    expect(nested.textContent).toContain("#3");
+    expect(nested.textContent).toContain("Switch");
+    root.unmount();
+  });
+
+  it("expands and collapses with the keyboard, and Escape still closes the report", async () => {
+    const { root } = await openReport(changesReport);
+    const button = toggle("Devices (1)");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.type).toBe("button");
+    expect(button.tabIndex).toBe(0);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    await pressKey(button, "Enter");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    const controlled = document.getElementById(button.getAttribute("aria-controls")!);
+    expect(controlled?.textContent).toContain("New actuator");
+
+    await pressKey(button, " ");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(host!.textContent).not.toContain("New actuator");
+
+    await pressKey(button, "Escape");
+    expect(host!.textContent).not.toContain("Comparison result");
+    root.unmount();
+  });
+
+  it("starts a new comparison collapsed even if the previous one was expanded", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/data/compare.knxdb");
+    apiMock.diffProject.mockResolvedValue(changesReport);
+    const { root } = await renderPanel();
+    await click(compareButton());
+    await click(toggle("Devices (1)"));
+    expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("true");
+    await click(compareButton());
+    expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("false");
+    root.unmount();
+  });
+
+  it("renders the details in German", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await openReport(changesReport);
+    await click(toggle("Geräte (1)"));
+    await click(toggle("Gruppenadressen (2)"));
+    expect(host!.textContent).toContain("hinzugefügt");
+    expect(host!.textContent).toContain("ohne Adresse (d1)");
+    expect(host!.textContent).toContain("zugeordnet über ETS-ID");
+    const headers = Array.from(host!.querySelectorAll(".project-diff-fields thead th")).map(
+      (th) => th.textContent,
+    );
+    expect(headers.slice(0, 3)).toEqual(["Feld", "Vorher", "Nachher"]);
+    root.unmount();
+  });
+
+  it("limits a large table to one page and reveals more on request", async () => {
+    const { root } = await openReport(manyAddedGroupAddresses(3000));
+    expect(host!.textContent).toContain("Group addresses: 3000 added");
+    expect(entryItems()).toHaveLength(0);
+
+    await click(toggle("Group addresses (3000)"));
+    expect(entryItems()).toHaveLength(50);
+    expect(host!.textContent).toContain("Showing 50 of 3000.");
+
+    const more = Array.from(host!.querySelectorAll("button")).find((b) =>
+      b.textContent?.startsWith("Show more"),
+    )!;
+    expect(more.textContent).toBe("Show more (50)");
+    await click(more);
+    expect(entryItems()).toHaveLength(100);
+    expect(document.activeElement).toBe(entryItems()[50]);
+    expect(entryItems()[50].textContent).toContain("1/1/50");
+    root.unmount();
+  });
+
+  it("drops the show-more control after the last page and keeps focus on the list", async () => {
+    const { root } = await openReport(manyAddedGroupAddresses(60));
+    await click(toggle("Group addresses (60)"));
+    const more = Array.from(host!.querySelectorAll("button")).find((b) =>
+      b.textContent?.startsWith("Show more"),
+    )!;
+    expect(more.textContent).toBe("Show more (10)");
+    await click(more);
+    expect(entryItems()).toHaveLength(60);
+    expect(host!.textContent).not.toContain("Show more");
+    expect(document.activeElement).toBe(entryItems()[50]);
+    root.unmount();
   });
 });

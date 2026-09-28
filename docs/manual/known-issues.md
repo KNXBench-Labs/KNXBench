@@ -446,16 +446,16 @@ published, and the version number is not a promise that anything is finished.
   [§49](../KNOWN_LIMITATIONS.md#49-project-documentation-export-has-no-in-application-print-preview),
   [§50](../KNOWN_LIMITATIONS.md#50-project-documentation-export-has-no-section-selection)
 
-### Project comparison tells you what changed, rarely what it became
+### Project comparison is read-only and paged in the web panel
 
 - **Affected:** comparing two projects.
-- **Limitation:** for most entity types the renderers name the fields that
-  differ rather than showing before and after values, and the web panel shows
-  grouped counts only. A comparison cannot read a raw `.knxproj`, cannot
-  merge or apply a difference back onto a project, does not do a three-way
-  comparison, and has no exit code for use in a pipeline.
-- **Consequence:** it answers "did anything change, and where", not "what
-  exactly does it say now".
+- **Limitation:** the web panel lists entities and before/after values in
+  pages of 50 rows per table, with no search inside the result. A
+  comparison cannot read a raw `.knxproj`, cannot merge or apply a
+  difference back onto a project, does not do a three-way comparison, and
+  has no exit code for use in a pipeline.
+- **Consequence:** a very large comparison is read page by page rather than
+  searched.
 - **Details:** [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project),
   [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison),
   [§57](../KNOWN_LIMITATIONS.md#57-project-diff-cannot-compare-against-a-raw-knxproj),

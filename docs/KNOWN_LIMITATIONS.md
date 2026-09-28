@@ -8292,6 +8292,23 @@ inside view. It would take a confirmed alternative such as a Master Reset
 with an Erase Code for a confirmed restart (MP §3.7.1.2, Table 4, p. 81),
 whose support on mask `0701h` has not been checked.
 
+**Closed 2026-09-28 19:18 (K2, Master Reset trace).** Tried with the user's
+go: Master Reset with Erase Code `01h` (no reset) got no `A_Restart_Response`
+from `1.1.67`, only the same silence as a Basic Restart. The device came
+back unchanged (RESEARCH §19.4). There is no confirmed restart for this
+device. "Restart unconfirmed" is the final outcome, and whether it
+restarted internally cannot be settled from the bus. KNXBench offers no
+Master Reset for mask `0701h`, because MP §3.7.3 requires verified support
+first and there is no means to verify it for `0701h`.
+
+**New, open:** two management sessions straight after each other can
+collide. In the trace a `T_Disconnect` did not show up (no `L_Data.con`),
+the device kept the old connection and NAKed the new one for ~6 s.
+`ManagementSession::disconnect` discards the send error. It should at
+least report it, and whoever opens a new session to the same device
+straight after one has closed should wait out the device's connection
+time-out (TL: 6 s).
+
 Resolution of the five items below:
 
 1. Load state machine transport: in `ManagementSession`, used by

@@ -169,7 +169,7 @@ impl WriteAuthorisation {
 /// Whether a write of `scope` may be performed against real hardware.
 ///
 /// **This is the one place where "no writes to real hardware" stops being
-/// absolute**, and it is deliberately an allowlist of two, not a `bool` on
+/// absolute**, and it is deliberately an allowlist, not a `bool` on
 /// the session and not the removal of a check.
 ///
 /// Design spec §15's non-goal was written as *"no writes to real hardware in
@@ -193,17 +193,25 @@ impl WriteAuthorisation {
 ///   of the same procedure. Leaving it out would mean completing the write
 ///   and then failing to finish the procedure the Standard specifies.
 ///
-/// Still refused on hardware, because nothing has authorised them and their
-/// failure modes are worse: [`WriteScope::Download`] and
-/// [`WriteScope::Unload`] rewrite a device's application and tables, where a
-/// half-finished write leaves an unusable device; and
-/// [`WriteScope::ProgrammingModeToggle`], whose `0060h` octet meaning design
-/// spec §15 records as unsourced for a System B mask, so this project does
-/// not write it blind.
+/// **Added 2026-09-28:** [`WriteScope::Download`]. The operator named
+/// `1.1.67` and its application download (mask `0701h`, button 1 toggling
+/// `2/0/53`), after the memory download had run end to end against the
+/// simulator (RESEARCH §19.3). The scope opens the memory download
+/// (`knx_net::commissioning::memory_download`) only. The property-path
+/// `Downloader` refuses a hardware session by itself, because it has never
+/// been run end to end against anything but the simulator's property model.
+///
+/// Still refused on hardware: [`WriteScope::Unload`], which leaves a device
+/// without an application and has no procedure of its own that an operator
+/// has asked for; and [`WriteScope::ProgrammingModeToggle`], whose `0060h`
+/// octet meaning design spec §15 records as unsourced for a System B mask,
+/// so this project does not write it blind.
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
-        WriteScope::IndividualAddressProgramming | WriteScope::Restart => true,
-        WriteScope::Download | WriteScope::Unload | WriteScope::ProgrammingModeToggle => false,
+        WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
+            true
+        }
+        WriteScope::Unload | WriteScope::ProgrammingModeToggle => false,
     }
 }
 

@@ -1120,16 +1120,21 @@ RESEARCH §8.8.6 has the before/after table and the full reasoning.
 So **"blocked" no longer describes individual-address programming.** What is
 still blocked, and deliberately so:
 
-- `WriteScope::Download` and `WriteScope::Unload` against hardware — the write
-  classes that rewrite a device's application and tables, where a half-finished
-  write leaves an unusable device. Refused even with a correctly typed
-  confirmation phrase.
+- `WriteScope::Unload` against hardware. It leaves a device without an
+  application, and no operator has asked for it. It is refused even with a
+  correctly typed confirmation phrase.
+- **Addendum 2026-09-28:** `WriteScope::Download` is allowed on hardware for
+  the memory download of mask `070nh` (`run_memory_download`). The operator
+  named `1.1.67` and its option-C download. The property-path `Downloader`
+  (CP §3.5.2) still refuses any non-simulator transport before it sends a
+  frame (`DownloadError::NotOnHardware`), because it has never run against
+  a device.
 - `WriteScope::ProgrammingModeToggle` against hardware — design spec §15 records
   the `0060h` octet's meaning as unsourced for a System B mask, and this project
   does not write octets whose meaning it cannot cite.
 
 The gate is `knx_core::commissioning::mutation::hardware_write_is_authorised`,
-an allowlist of two scopes, checked by `check_write_target()` only when transport
+an allowlist of three scopes (two until 2026-09-28), checked by `check_write_target()` only when transport
 *and* authorisation are both hardware. A simulator authorisation still cannot be
 pointed at hardware (the confirmation phrase was never typed) and a hardware
 authorisation still cannot be spent on the simulator (that would make a hardware

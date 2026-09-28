@@ -1428,6 +1428,70 @@ export function pollDeviceDownload(
   return request(`/api/device-download/status?since=${since}${expected}`);
 }
 
+// ---- Programming an individual address (MP §2.3 on the button loop; ADR-0046) ----
+
+/** What `start` will demand for a new address. Nothing is sent. */
+export interface AddressProgrammingPhrase {
+  address: string;
+  confirmationPhrase: string;
+  defaultWaitSeconds: number;
+  maxWaitSeconds: number;
+}
+
+export type AddressProgrammingEvent =
+  | { kind: "round"; number: number; inProgrammingMode: string[] }
+  | { kind: "found"; currentAddress: string };
+
+/** `noNeed`: the device already had the address. `unconfirmed`: written, but silent at the new address. */
+export type AddressWritten = "yes" | "noNeed" | "no" | "unconfirmed";
+
+export type AddressProgrammingStatus =
+  | { state: "waiting"; rounds: number; inProgrammingMode: string[] }
+  | { state: "programming"; previousAddress: string }
+  | { state: "finished"; written: AddressWritten; previousAddress: string; wasFree: boolean }
+  | { state: "stopped"; rounds: number }
+  | { state: "failed"; written: AddressWritten; step: number | null; error: string };
+
+export interface AddressProgrammingStatusResponse {
+  programmingId: number;
+  address: string;
+  waitSeconds: number;
+  status: AddressProgrammingStatus;
+  nextSince: number;
+  events: AddressProgrammingEvent[];
+}
+
+export function addressProgrammingPhrase(address: string): Promise<AddressProgrammingPhrase> {
+  return request(`/api/device-address/phrase?address=${encodeURIComponent(address)}`);
+}
+
+export function startAddressProgramming(
+  address: string,
+  gateway: string,
+  confirmation: string,
+  waitSeconds: number,
+): Promise<{ programmingId: number }> {
+  return request("/api/device-address/start", {
+    method: "POST",
+    body: JSON.stringify({ address, gateway, confirmation, waitSeconds }),
+  });
+}
+
+export function pollAddressProgramming(
+  since: number,
+  programmingId?: number,
+): Promise<AddressProgrammingStatusResponse> {
+  const expected = programmingId === undefined ? "" : `&programmingId=${programmingId}`;
+  return request(`/api/device-address/status?since=${since}${expected}`);
+}
+
+export function stopAddressProgramming(programmingId: number): Promise<{ stopping: boolean }> {
+  return request("/api/device-address/stop", {
+    method: "POST",
+    body: JSON.stringify({ programmingId }),
+  });
+}
+
 export function compareLineScan(sessionId: number): Promise<LineScanComparison> {
   return request(`/api/bus/scan/comparison?sessionId=${sessionId}`);
 }

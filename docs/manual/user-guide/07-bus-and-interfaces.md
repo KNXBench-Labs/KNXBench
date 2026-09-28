@@ -186,6 +186,33 @@ There is no stop button: stopping between steps would leave the device in an und
 state. The server cannot tell a person from a script; like the command, it only checks
 that the request names the device it was shown.
 
+## Programming an individual address
+
+This gives *one* device its individual address: whichever device has its programming
+button pressed. Only the address is written; this is not a download of parameters.
+
+1. **Bus monitor** → **Program address** tab (German: **Adresse programmieren**). Type
+   the new address (the project's device addresses are offered as suggestions), the
+   gateway, and how long to wait for the button (1–600 s, default 120).
+2. The tab lists what happens: wait for exactly one device in programming mode, then
+   the four steps of the standard procedure (check the address is free, count again,
+   write, connect to the new address, read back and restart, which ends programming
+   mode). **Program 1.1.30** asks for confirmation in the programming dialog; only then
+   does the server open a tunnel.
+3. While waiting, the tab says what the person at the device must do: **press the
+   programming button**, or, if several devices are in programming mode, **release all
+   but one**. **Stop waiting** ends the wait; nothing has been written at that point.
+4. Once exactly one device answers, the procedure runs to its end and cannot be stopped.
+5. It ends with **Address written: yes** (old → new address), **no need** (the device
+   already had it), **no**, or **yes, but NOT confirmed**: the address went out, but the
+   device did not answer at it afterwards. Check that device with a read before anything
+   else.
+
+The same procedure is available as
+[`knx device program-address`](10-command-line.md#knx-device-program-address--give-a-device-its-individual-address).
+The tab refuses while the monitor, a line scan or a download holds the gateway's tunnel,
+and those refuse while it runs.
+
 ## What KNXBench does and does not do on a bus
 
 This section is deliberately plain.
@@ -210,8 +237,12 @@ confirmation for that one device. It has been verified on one product family on 
 device so far. See
 [`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 
-**What KNXBench does not do.** Programming an individual address, unloading a device,
-and secure devices. If you need to commission an installation today, you need a tool
+**What KNXBench writes to a device, continued.** An individual address, to the one
+device in programming mode, from `knx device program-address` and the **Program
+address** tab ([below](#programming-an-individual-address)). Verified in the simulator
+only so far.
+
+**What KNXBench does not do.** Unloading a device, and secure devices. If you need to commission an installation today, you need a tool
 that does commissioning; KNXBench is not yet one.
 
 **The guard rails that actually exist in the code.**
@@ -220,9 +251,10 @@ that does commissioning; KNXBench is not yet one.
   session that was not handed a write authorisation returns an error before touching the
   transport. An authorisation for real hardware exists only with the operator's phrase
   naming that device, and only for the kinds of write that have been verified. Two
-  entry points reach this layer: `knx device download` and the Download to device tab.
-  The tab's server route demands the same phrase, and refuses a plan the project no
-  longer gives (ADR-0045).
+  entry points per write: `knx device download` and the Download to device tab,
+  `knx device program-address` and the Program address tab. The server routes demand
+  the same phrases; the download route refuses a plan the project no longer gives
+  (ADR-0045), and the address route's one phrase covers the closing restart (ADR-0046).
 - KNXBench compiles in a list of individual addresses that must never be contacted. The
   scan planner never generates them into a candidate list in the first place, and the
   address type used for probing cannot be constructed without passing that check — so

@@ -1,5 +1,44 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28: K6 UI half, the Program address tab
+
+- **ADR-0046.** One phrase (`IndividualAddressProgramming`, new address)
+  covers MP §2.3 including step 4's restart. The restart is derived only in
+  `AddressProgrammingAuthorisation::for_hardware`, which the CLI now uses
+  too. There is no plan id, since no project data is involved. The button
+  wait can be stopped; the procedure cannot. The wait is 1–600 s.
+- **Server.** `address_programming.rs` holds the background session:
+  - It logs only rounds whose answer changed, plus the find.
+  - The status is `waiting | programming | finished | stopped | failed`,
+    with `written: yes | noNeed | no | unconfirmed`.
+  - The stop check and the switch to `programming` share one lock.
+- **Routes.** `address_programming_routes.rs`:
+  `/api/device-address/{phrase,start,status,stop}`.
+- **Locking.** The lock order is download → programming → monitor → scan,
+  and each start refuses while another holds the tunnel.
+- **Web.** `AddressProgrammingPanel.tsx`, as a fourth Bus tab:
+  - "Program address" / "Adresse programmieren".
+  - It lists what happens, asks for consent, and uses the server's phrase.
+  - Its prompt: press / one found / release all but one.
+  - Stop only while waiting.
+  - It ends with honest yes / no need / no / NOT confirmed lines.
+- **Tests.**
+  - Loop 7/7, including the phrase constructor.
+  - HTTP 8/8, no corpus needed. It covers:
+    - the press during the wait;
+    - give up;
+    - stop, and stop too late;
+    - several buttons;
+    - unconfirmed;
+    - refusals before any tunnel;
+    - both-direction exclusion.
+  - K5 HTTP 7/7, including a new test: a waiting programming holds off a
+    download.
+  - UI 10/10.
+- **Mutants.** 11 server and 9 UI, all caught.
+- Simulator only; no device was contacted. Open: K6 item 2 **[W]**, a live
+  run.
+
 ## 2026-09-28 — U1: ADR-0038 independently reviewed and accepted
 
 - Reviewed the `Ground` root decision against Project Schema23 §1.1.2.3 and

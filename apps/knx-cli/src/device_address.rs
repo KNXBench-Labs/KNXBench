@@ -7,12 +7,10 @@
 //! programming the individual address, not a download (docs/GLOSSARY.md).
 //!
 //! Without `--confirm` it prints what would happen and opens no socket. The
-//! phrase is [`required_confirmation_phrase`] for the new address and
-//! [`WriteScope::IndividualAddressProgramming`]. It covers the whole
-//! procedure, including step 4's restart: MP §2.3 makes that restart part
-//! of the procedure ("shall deactivate the Programming Mode by executing a
-//! restart"), so the restart authorisation is derived here, and only after
-//! the programming phrase matched.
+//! phrase is `required_confirmation_phrase` for the new address and
+//! `WriteScope::IndividualAddressProgramming`. It covers the whole
+//! procedure, including step 4's restart
+//! ([`AddressProgrammingAuthorisation::for_hardware`]).
 
 use std::fmt::Write as _;
 use std::io::Write;
@@ -20,9 +18,6 @@ use std::ops::ControlFlow;
 use std::time::Duration;
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
-use knx_core::commissioning::mutation::{
-    required_confirmation_phrase, WriteAuthorisation, WriteScope,
-};
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::individual_address_write::{IndividualAddressWriteError, Occupancy};
 use knx_net::commissioning::programming_button_wait::{
@@ -122,26 +117,12 @@ pub fn check(args: &ProgramAddressArgs) -> Result<(ContactableAddress, Mode), St
             let gateway = gateway
                 .parse()
                 .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())?;
-            let programming = WriteAuthorisation::for_hardware(
-                address,
-                WriteScope::IndividualAddressProgramming,
-                confirmation,
-            )
-            .map_err(|e| format!("not written: {e}"))?;
-            // Only reached with the programming phrase matched: step 4's
-            // restart is part of the procedure the operator confirmed.
-            let restart = WriteAuthorisation::for_hardware(
-                address,
-                WriteScope::Restart,
-                &required_confirmation_phrase(address, WriteScope::Restart),
-            )
-            .map_err(|e| format!("not written: {e}"))?;
+            let authorisation =
+                AddressProgrammingAuthorisation::for_hardware(address, confirmation)
+                    .map_err(|e| format!("not written: {e}"))?;
             Mode::Program {
                 gateway,
-                authorisation: AddressProgrammingAuthorisation {
-                    programming,
-                    restart,
-                },
+                authorisation,
             }
         }
         _ => Mode::Plan,
@@ -304,6 +285,7 @@ fn written_line(err: &ButtonProgrammingError) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
     use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 
     fn args(list: &[&str]) -> Vec<String> {

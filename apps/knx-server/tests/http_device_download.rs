@@ -560,3 +560,48 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     assert_eq!(end["state"], "failed", "{end}");
     assert_eq!(end["written"], "no");
 }
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_waiting_address_programming_holds_off_the_download() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = self::plan(&h).await;
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device-address/start",
+            json!({
+                "address": "1.1.30",
+                "gateway": GATEWAY,
+                "confirmation": "I confirm individual-address programming to 1.1.30",
+                "waitSeconds": 30,
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert!(body.to_string().contains("programming"), "{body}");
+    assert_eq!(
+        h.calls.load(Ordering::SeqCst),
+        1,
+        "only the programming's tunnel"
+    );
+    assert!(!h.device.memory_was_written());
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device-address/stop",
+            json!({ "programmingId": body_id(&h).await }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+async fn body_id(h: &Harness) -> Value {
+    let (status, body) = send(&h.app, get("/api/device-address/status")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    body["programmingId"].clone()
+}

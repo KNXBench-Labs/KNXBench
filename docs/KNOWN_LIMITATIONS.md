@@ -1250,10 +1250,12 @@ truth — holds down both sides plus the alarm-panel refusal.
    exists — the error carries the report, whose `wrote` flag was `true` — but a
    caller must destructure the error to find it. Anything built on top of this
    (CLI, server, UI) must not present the `Err` as "nothing happened".
-   **Status 2026-09-28 (K6):** the one surface built on it so far,
-   `knx device program-address`, destructures it and ends with `address
-   written: yes, but NOT confirmed` (test `written_but_unconfirmed_says_so`).
-   The library type is unchanged.
+   **Status 2026-09-28 (K6):** both surfaces built on it destructure it.
+   `knx device program-address` ends with `address written: yes, but NOT
+   confirmed` (test `written_but_unconfirmed_says_so`). The web route reports
+   `written: "unconfirmed"`, shown as a warning (test
+   `written_but_silent_at_the_new_address_is_unconfirmed`). The library type
+   is unchanged.
 3. **No rollback exists for a half-completed readdressing.** If the write lands
    and the device then cannot be reached, recovery is another programming-mode
    session by hand. Nothing in this project automates or even detects that state.
@@ -7320,9 +7322,12 @@ prints the count and "press" / "release all but one" whenever it changes
 `individual_address_write` still does its own step 2 count and its re-count
 before the write. A button released after the wait is caught there (test
 `a_button_released_after_the_wait_is_caught_by_step_two`).
-`individual_address_write` itself is unchanged, and still single-shot. Still
-open: the UI dialog (K6's UI half, which needs the web lock), and a
-live run on hardware (**[W]**, needs the user's go and a button press). The
+`individual_address_write` itself is unchanged, and still single-shot.
+**UI half, same day:** the web's **Program address** tab and
+`/api/device-address/*` (ADR-0046) run the same loop, show the prompt
+whenever the count changes, and can stop the wait (never the procedure).
+Still open: a live run on hardware (**[W]**, needs the user's go and a
+button press). The
 occupancy-reading half of this entry is unchanged. The occupancy reading is revisited if
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.

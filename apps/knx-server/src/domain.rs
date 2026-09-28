@@ -151,6 +151,16 @@ pub struct AppState {
     /// The management-session timing for downloads. The Standard's figures
     /// in production; tests shorten it, the way the CLI's tests do.
     pub device_download_timing: knx_net::SessionTiming,
+    /// At most one individual-address programming (ADR-0046), retained
+    /// after it ends so its result stays readable. `tokio::sync::Mutex` for
+    /// the same reason as `device_download`.
+    pub address_programming: tokio::sync::Mutex<Option<crate::AddressProgrammingSession>>,
+    pub next_address_programming_id: std::sync::atomic::AtomicU64,
+    /// The Standard's figures in production; tests shorten them.
+    pub address_programming_timing: knx_net::SessionTiming,
+    /// Quiet time between two button rounds (`ButtonWait::DEFAULT_PAUSE`
+    /// in production).
+    pub address_programming_pause: std::time::Duration,
     /// The single project load this server run may have in flight, and
     /// the snapshot `GET /api/project/load-progress` answers with
     /// (ADR-0023). `Arc`, not a plain field: a [`LoadHandle`] outlives the
@@ -200,6 +210,11 @@ impl AppState {
             device_download: tokio::sync::Mutex::new(None),
             next_device_download_id: std::sync::atomic::AtomicU64::new(1),
             device_download_timing: knx_net::SessionTiming::default(),
+            address_programming: tokio::sync::Mutex::new(None),
+            next_address_programming_id: std::sync::atomic::AtomicU64::new(1),
+            address_programming_timing: knx_net::SessionTiming::default(),
+            address_programming_pause:
+                knx_net::commissioning::programming_button_wait::ButtonWait::DEFAULT_PAUSE,
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),

@@ -1,5 +1,46 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Memory download: plan and executor (mask `070nh`)
+
+- **`knx_core::commissioning::memory_download`**: the step list of a
+  BIM M112 download as pure data (`MemoryDownloadPlan`), plus two `[A]`
+  rules. `property_matches` checks `LdCtrlCompareProp`: the device's
+  octets must start the `InlineData`, and the rest must be zero.
+  `unmasked_runs` leaves out every octet whose `Mask` is not `FFh`.
+- **`knx_productdb::download_plan::plan_memory_download`** turns a
+  `DownloadImage` and the product's own `LoadProcedure` into that plan.
+  The data write follows each `LdCtrlAbsSegment`, as CP §3.9.2.2.2 does.
+  Task segments get CP's identities: zeros for the tables, and PEI type,
+  manufacturer, application number and version for the program. It
+  refuses by name:
+  - another `LoadProcedureStyle`, or a mask that does not load through
+    memory;
+  - unmodelled steps, the PEI machine, reserved `SegFlags`/`MemType`/
+    `SegType`;
+  - size mismatches, double allocations, and segments the procedure never
+    allocates.
+- **`knx_net::commissioning::memory_download::run_memory_download`** runs a
+  plan against one session.
+  - Mask, manufacturer and `CompareProp` are all checked before the first
+    write. A plan that checks after writing is refused before anything is
+    sent.
+  - Every data write is read back. Verify Mode is never set (MP §3.31.2).
+  - Every load record must reach the state its event aims at (`[A]`,
+    stricter than RES Table 94).
+  - The closing restart runs under the download's own scope
+    (`restart_basic_as`, crate-internal).
+  - A failure stops at once and undoes nothing.
+- `[V]` Option C for `1.1.67` works end to end against the simulator, as
+  an ignored corpus test (`apps/knx-cli/tests/memory_download_simulated.rs`).
+  The path is product file → image → 25-step plan → simulated mask-`0701h`
+  device. Every segment lands octet for octet. `4001h`–`4002h` (the
+  individual address) is never written. There is exactly one restart, and
+  a second run is idempotent.
+- 11 + 13 + 13 unit tests (core, planner, executor), plus 3 corpus tests.
+  16/16 mutants of the safety checks were caught.
+- **Still not done:** `WriteScope::Download` stays off the hardware
+  allowlist. No real application download has been run.
+
 ## 2026-09-28 — Download image assembly (`knx_productdb::image`)
 
 - **`knx_productdb::image::build_download_image`** turns a program, its

@@ -4,8 +4,10 @@
 //! this one is `#[ignore]`d and runs with `KNXBENCH_PRODUCT_CORPUS` (default:
 //! `OriginalData/ProductDatabases` of the root checkout).
 
+use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::{GroupAddress, IndividualAddress};
 use knx_productdb::code::{load_program_code, LoadStep, TablePlacement};
+use knx_productdb::download_plan::plan_memory_download;
 use knx_productdb::image::{build_download_image, ImageRequest, Link};
 use knx_productdb::{install_package, open_and_migrate, sha256_hex};
 
@@ -348,4 +350,70 @@ fn option_c_toggles_2_0_53_from_button_1_and_changes_only_what_it_must() {
         .expect("AS-4201")
         .octets;
     assert_eq!(&associations[..3], &hex("010100")[..]);
+}
+
+#[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
+fn option_c_plans_the_products_own_procedure_and_keeps_the_individual_address() {
+    let (_dir, conn) = installed();
+    let request = image_request(
+        &[
+            ("P-1007_R-1007", "2"),
+            ("UP-5500_R-5500", "0"),
+            ("UP-5501_R-5501", "1"),
+        ],
+        vec![link(0, 0x1035, true)],
+    );
+    let image = build_download_image(&conn, &request).expect("builds");
+    let plan = plan_memory_download(&image).expect("plans");
+    let steps: Vec<String> = plan.steps.iter().map(ToString::to_string).collect();
+    assert_eq!(
+        steps,
+        [
+            "connect; check mask and manufacturer",
+            "compare property 0/78 with 00 00 00 00 01 27 00 00 00 00",
+            "A_Memory_Write 0104h: 14 00 00 00 00 00 00 00 00 00 00 (unload address table)",
+            "A_Memory_Write 0104h: 24 00 00 00 00 00 00 00 00 00 00 (unload association table)",
+            "A_Memory_Write 0104h: 34 00 00 00 00 00 00 00 00 00 00 (unload application program)",
+            "A_Memory_Write 0104h: 11 00 00 00 00 00 00 00 00 00 00 (load address table)",
+            "A_Memory_Write 0104h: 13 00 00 40 00 02 01 FF 03 80 00 (segment address table)",
+            // 4001h-4002h, the individual address, are masked out.
+            "A_Memory_Write 4000h..4000h, 1 octets",
+            "A_Memory_Write 4003h..4200h, 510 octets",
+            "A_Memory_Write 0104h: 13 02 00 40 00 00 00 00 00 00 00 (segment address table)",
+            "A_Memory_Write 0104h: 12 00 00 00 00 00 00 00 00 00 00 (load completed address table)",
+            "A_Memory_Write 0104h: 21 00 00 00 00 00 00 00 00 00 00 (load association table)",
+            "A_Memory_Write 0104h: 23 00 00 42 01 01 FF FF 03 80 00 (segment association table)",
+            "A_Memory_Write 4201h..43FFh, 511 octets",
+            "A_Memory_Write 0104h: 23 02 00 42 01 00 00 00 00 00 00 (segment association table)",
+            "A_Memory_Write 0104h: 22 00 00 00 00 00 00 00 00 00 00 (load completed association table)",
+            "A_Memory_Write 0104h: 31 00 00 00 00 00 00 00 00 00 00 (load application program)",
+            "A_Memory_Write 0104h: 33 00 00 07 00 00 98 00 02 00 00 (segment application program)",
+            "A_Memory_Write 0104h: 33 01 00 07 98 00 01 00 02 00 00 (segment application program)",
+            "A_Memory_Write 0104h: 33 00 00 44 00 01 8A FF 03 80 00 (segment application program)",
+            "A_Memory_Write 4400h..4589h, 394 octets",
+            "A_Memory_Write 0104h: 33 02 00 44 00 01 00 83 00 27 15 (segment application program)",
+            "A_Memory_Write 0104h: 32 00 00 00 00 00 00 00 00 00 00 (load completed application program)",
+            "A_Restart (basic)",
+            "disconnect",
+        ]
+    );
+    assert_eq!(plan.data_octets(), 1 + 510 + 511 + 394);
+
+    let parameters = &image
+        .segment(&segment_id("AS-4400"))
+        .expect("AS-4400")
+        .octets;
+    let written = plan.steps.iter().find_map(|step| match step {
+        MemoryDownloadStep::WriteMemory {
+            address: 0x4400,
+            octets,
+        } => Some(octets),
+        _ => None,
+    });
+    assert_eq!(
+        written,
+        Some(parameters),
+        "the parameter segment goes out as built"
+    );
 }

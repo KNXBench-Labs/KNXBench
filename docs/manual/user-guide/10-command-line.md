@@ -464,4 +464,48 @@ it. Some devices never acknowledge that restart
 Only memory downloads to products whose load procedure KNXBench can plan are supported;
 anything else is refused while planning, before a connection opens.
 
+### `knx device program-address` — give a device its individual address
+
+**This changes a device's individual address and restarts it.** It is not a download:
+it writes one thing, the address, to whichever device is in programming mode.
+
+```bash
+knx device program-address 1.1.30
+knx device program-address 1.1.30 --gateway 192.0.2.1:3671 \
+    --confirm "I confirm individual-address programming to 1.1.30"
+```
+
+Without `--confirm` it prints the steps and opens no connection. With it, the command
+asks the bus about every two seconds which devices are in programming mode, and tells
+you what to do whenever the answer changes:
+
+```text
+== program individual address 1.1.30: waiting for a programming button ==
+  [round 1] no device is in programming mode — press the programming button on the device to address
+  [round 4] 2 devices are in programming mode (1.1.5, 1.1.9) — release all but one
+  [round 6] 1 device is in programming mode (1.1.5)
+  found 1.1.5 in programming mode; programming 1.1.30
+== program individual address 1.1.30: finished ==
+1.1.30 was free before
+address written: yes, 1.1.5 -> 1.1.30; the device answered at 1.1.30 and was restarted
+```
+
+Then it runs the four steps of the KNX procedure (MP §2.3): it checks that no *other*
+device already has the new address and stops if one does; counts again; writes the
+address; connects to the device at its new address, reads it back and restarts it, which
+ends programming mode. A device that already has the address is not written again.
+
+| Flag | Effect |
+| --- | --- |
+| `--wait <seconds>` | How long to wait for exactly one pressed button (default 120, at most 600). Waiting only reads |
+| `--gateway <host:port>` | The KNXnet/IP interface to use |
+| `--confirm "<phrase>"` | Program. The phrase must read exactly `I confirm individual-address programming to <address>`; it also covers the closing restart |
+
+It exits `0` only when the device answered at its new address. The last line always says
+whether the address changed: `address written: no` when it gave up, found the address
+taken, or lost the button before writing; and `address written: yes, but NOT confirmed`
+when the write went out but the device did not answer at the new address afterwards.
+In that last case, read the device before doing anything else; recovery is another
+programming-mode session.
+
 [Manual index](../README.md) · Next: [Web and Docker deployment](11-web-and-docker.md) →

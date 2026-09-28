@@ -8072,13 +8072,14 @@ winner. The stored row is still the **first installed** one: installing the
 same packages in another order stores other values for the ids whose
 elements differ. KNXBench shows this; it does not choose.
 
-- The digest is conservative. Equal digests mean equal canonical content;
-  different digests can come from differences without meaning (a different
-  namespace prefix, a changed `Hash` attribute, re-wrapped text). It never
-  calls two different elements equal.
-- It covers the element's own subtree only. A program's `Languages`
-  translations, and catalogue/hardware translations, live outside the element
-  and are not compared.
+- The digest is conservative. Equal digests mean equal as the parsers read
+  it: the element's subtree plus the context its stored row takes from
+  outside (manufacturer, parent section, parent hardware). Different digests
+  can come from differences without meaning (a different namespace prefix, a
+  changed `Hash` attribute, re-wrapped text). Whitespace-only text and
+  namespace URIs are not compared, as the parsers ignore them too.
+- Translations are not compared. A program's `Languages`, and catalogue and
+  hardware translations, live outside the element.
 - Families (`ApplicationNumber`) and `ReplacesVersions` links rest on an
   unofficial public copy of the project schema plus corpus agreement, not on a
   KNX-published XSD. A value that does not parse is shown raw with the reason
@@ -8090,8 +8091,9 @@ elements differ. KNXBench shows this; it does not choose.
 - Master data is not covered: `manufacturer.name` stays last-writer-wins
   (§88) and `datapoint_type` first-wins without provenance (§86).
 - A blob the scan cannot read (an entity the parsers ignore, or retained
-  bytes that no longer match their hash after an upgrade) is recorded
-  `unavailable` with its reason and listed as unmeasured, not guessed.
+  bytes that no longer match their hash after an upgrade), or whose rows
+  from before v17 disagree with the scan, is recorded `unavailable` with its
+  reason and listed as unmeasured, not guessed. It is not rescanned later.
 - Server and web have no identity, family or order-number views; the
   library and CLI do.
 

@@ -24,9 +24,20 @@
 //!   dropped. Comments and processing instructions do not split a run.
 //! - `K` table name, logical id: a nested tracked element, in place of its
 //!   content, which goes to that element's own digest.
+//! - `C` first token of every digest: the context the parser takes from
+//!   outside the element into the stored row: `Manufacturer/@RefId`, then a
+//!   presence flag (`0`/`1`) and the parent id (the enclosing
+//!   `CatalogSection` for sections and items, the last `Hardware` with an
+//!   `Id` for products and hardware-to-program links).
 //!
 //! Comments, processing instructions, the XML declaration and DOCTYPE are
 //! not hashed. Names are compared as written; namespaces are not resolved.
+//! Equal digests therefore mean "equal as the parsers read it", not
+//! byte-equal: whitespace-only text and namespace URIs do not count.
+//!
+//! `IDENTITY_SCANNER` versions this whole definition. Every recorded scan
+//! carries it; a change to the dispatch or the digest must bump it and
+//! rescan in a migration.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
@@ -114,6 +125,10 @@ const TOKEN_START: u8 = b'S';
 const TOKEN_END: u8 = b'E';
 const TOKEN_TEXT: u8 = b'T';
 const TOKEN_MARKER: u8 = b'K';
+const TOKEN_CONTEXT: u8 = b'C';
+
+/// Version of the scan's dispatch and digest definition (ADR-0043).
+pub(crate) const IDENTITY_SCANNER: i64 = 1;
 
 fn field(hasher: &mut Sha256, value: &str) {
     hasher.update((value.len() as u64).to_le_bytes());
@@ -210,30 +225,84 @@ fn start_token(hasher: &mut Sha256, qname: &str, attributes: &crate::xml::Attrs)
     }
 }
 
+/// The parser state the scan mirrors: which elements the parsers skip, and
+/// the context they carry from outside an element into its stored row.
+#[derive(Default)]
+struct MirrorState {
+    /// Depth of the `Dynamic` the program parser is skipping.
+    skipped_dynamic: Option<usize>,
+    /// The program parser consumes the next element as a parameter type.
+    expecting_type_child: bool,
+    /// Every parser's `manufacturer_id`: the last `Manufacturer/@RefId`.
+    manufacturer: String,
+    /// The catalogue parser's `section_stack`.
+    section_stack: Vec<String>,
+    /// The hardware parser's `hardware_id`: the last `Hardware` with an
+    /// `Id`, never reset.
+    hardware_id: String,
+}
+
+impl MirrorState {
+    /// The `C` token: what the parser stores for this kind from outside
+    /// the element.
+    fn context_token(&self, hasher: &mut Sha256, kind: IdentityKind) {
+        hasher.update([TOKEN_CONTEXT]);
+        field(hasher, &self.manufacturer);
+        let parent = match kind {
+            IdentityKind::CatalogSection | IdentityKind::CatalogItem => {
+                self.section_stack.last().map(String::as_str)
+            }
+            IdentityKind::Product | IdentityKind::Hardware2Program => {
+                Some(self.hardware_id.as_str())
+            }
+            IdentityKind::Hardware | IdentityKind::ApplicationProgram => None,
+        };
+        match parent {
+            Some(parent) => {
+                field(hasher, "1");
+                field(hasher, parent);
+            }
+            None => field(hasher, "0"),
+        }
+    }
+}
+
 /// What the domain parser for this blob's kind dispatches `element` as.
 /// Advances the program parser's `Dynamic` skip and parameter-type state
-/// exactly as `parse/program.rs` does.
+/// and every parser's carried context exactly as the parsers do. The
+/// caller pushes a catalogue section only after hashing its context.
 fn dispatch_element(
     dispatch: Dispatch,
     local: &str,
     attributes: &crate::xml::Attrs,
     is_start: bool,
     depth: usize,
-    skipped_dynamic: &mut Option<usize>,
-    expecting_type_child: &mut bool,
+    state: &mut MirrorState,
 ) -> Option<IdentityKind> {
-    if skipped_dynamic.is_some() {
+    if state.skipped_dynamic.is_some() {
         return None;
     }
+    let refid = || attributes.get("RefId").unwrap_or_default().to_string();
     match dispatch {
         Dispatch::Catalog => match local {
+            "Manufacturer" => {
+                state.manufacturer = refid();
+                None
+            }
             "CatalogSection" => Some(IdentityKind::CatalogSection),
             "CatalogItem" => Some(IdentityKind::CatalogItem),
             _ => None,
         },
         // The outer `<Hardware>` is the collection, the inner the entity.
         Dispatch::Hardware => match local {
-            "Hardware" if attributes.get("Id").is_some() => Some(IdentityKind::Hardware),
+            "Manufacturer" => {
+                state.manufacturer = refid();
+                None
+            }
+            "Hardware" if attributes.get("Id").is_some() => {
+                state.hardware_id = attributes.get("Id").unwrap_or_default().to_string();
+                Some(IdentityKind::Hardware)
+            }
             "Product" => Some(IdentityKind::Product),
             "Hardware2Program" => Some(IdentityKind::Hardware2Program),
             _ => None,
@@ -243,16 +312,20 @@ fn dispatch_element(
                 // The parser's first match arm skips the subtree before the
                 // parameter-type child is ever looked at, so a skipped
                 // `Dynamic` does not consume that child.
-                *skipped_dynamic = Some(depth);
+                state.skipped_dynamic = Some(depth);
                 None
-            } else if *expecting_type_child {
-                *expecting_type_child = false;
+            } else if state.expecting_type_child {
+                state.expecting_type_child = false;
                 None
             } else {
                 match local {
+                    "Manufacturer" => {
+                        state.manufacturer = refid();
+                        None
+                    }
                     "ApplicationProgram" => Some(IdentityKind::ApplicationProgram),
                     "ParameterType" => {
-                        *expecting_type_child = true;
+                        state.expecting_type_child = true;
                         None
                     }
                     _ => None,
@@ -284,8 +357,7 @@ pub(crate) fn scan_identities(
     let mut frames: Vec<Frame> = Vec::new();
     let mut depth = 0usize;
     let mut text = String::new();
-    let mut skipped_dynamic: Option<usize> = None;
-    let mut expecting_type_child = false;
+    let mut state = MirrorState::default();
 
     loop {
         buf.clear();
@@ -304,8 +376,13 @@ pub(crate) fn scan_identities(
                 if let Some(frame) = frames.pop_if(|frame| frame.depth == depth) {
                     candidates[frame.index].digest = hex(&frame.hasher.finalize());
                 }
-                if skipped_dynamic == Some(depth) {
-                    skipped_dynamic = None;
+                if state.skipped_dynamic == Some(depth) {
+                    state.skipped_dynamic = None;
+                } else if dispatch == Dispatch::Catalog
+                    && e.local_name().as_ref() == "CatalogSection"
+                {
+                    // `parse/catalog.rs` pops on every `</CatalogSection>`.
+                    state.section_stack.pop();
                 }
                 depth = depth
                     .checked_sub(1)
@@ -338,15 +415,7 @@ pub(crate) fn scan_identities(
         let qname = element.name().as_ref().to_string();
         let local = crate::xml::local_name(&element);
         let attributes = crate::xml::attrs(&element, source_path)?;
-        let tracked = dispatch_element(
-            dispatch,
-            &local,
-            &attributes,
-            is_start,
-            depth,
-            &mut skipped_dynamic,
-            &mut expecting_type_child,
-        );
+        let tracked = dispatch_element(dispatch, &local, &attributes, is_start, depth, &mut state);
         if let Some(kind) = tracked {
             let logical_id = attributes.get("Id").unwrap_or_default().to_string();
             let occurrence = {
@@ -367,11 +436,19 @@ pub(crate) fn scan_identities(
                 occurrence,
                 digest: String::new(),
             });
+            let mut hasher = Sha256::new();
+            state.context_token(&mut hasher, kind);
             frames.push(Frame {
-                hasher: Sha256::new(),
+                hasher,
                 depth,
                 index: candidates.len() - 1,
             });
+        }
+        // `parse/catalog.rs` pushes a section after handling it, on `Start`.
+        if dispatch == Dispatch::Catalog && is_start && local == "CatalogSection" {
+            state
+                .section_stack
+                .push(attributes.get("Id").unwrap_or_default().to_string());
         }
         if let Some(frame) = frames.last_mut() {
             start_token(&mut frame.hasher, &qname, &attributes);
@@ -410,8 +487,8 @@ pub(crate) fn record_scan(
     match scan_identities(source_path, bytes) {
         Ok(candidates) => {
             conn.execute(
-                "INSERT INTO source_identity_scan (source_sha256, status, reason) VALUES (?1, 'measured', NULL)",
-                [sha256],
+                "INSERT INTO source_identity_scan (source_sha256, status, reason, scanner) VALUES (?1, 'measured', NULL, ?2)",
+                params![sha256, IDENTITY_SCANNER],
             )?;
             let mut insert = conn.prepare(
                 "INSERT INTO source_identity (source_sha256, table_name, logical_id, occurrence, digest)
@@ -443,24 +520,33 @@ pub(crate) fn record_unavailable(
     reason: &str,
 ) -> Result<(), ProductDbError> {
     conn.execute(
-        "INSERT INTO source_identity_scan (source_sha256, status, reason) VALUES (?1, 'unavailable', ?2)",
-        params![sha256, reason],
+        "INSERT INTO source_identity_scan (source_sha256, status, reason, scanner) VALUES (?1, 'unavailable', ?2, ?3)",
+        params![sha256, reason, IDENTITY_SCANNER],
     )?;
     Ok(())
 }
 
 fn stored_status(conn: &Connection, sha256: &str) -> Result<Option<ScanStatus>, ProductDbError> {
-    let row: Option<(String, Option<String>)> = conn
+    let row: Option<(String, Option<String>, i64)> = conn
         .query_row(
-            "SELECT status, reason FROM source_identity_scan WHERE source_sha256 = ?1",
+            "SELECT status, reason, scanner FROM source_identity_scan WHERE source_sha256 = ?1",
             [sha256],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )
         .optional()?;
-    row.map(|(status, reason)| match (status.as_str(), reason) {
-        ("measured", None) => Ok(ScanStatus::Measured),
-        ("unavailable", Some(reason)) => Ok(ScanStatus::Unavailable(reason)),
-        _ => Err(corrupt("source_identity_scan row has an invalid status")),
+    row.map(|(status, reason, scanner)| {
+        // A scan by another definition is not comparable with this one;
+        // a scanner change must come with a rescanning migration.
+        if scanner != IDENTITY_SCANNER {
+            return Err(corrupt(format!(
+                "source_identity_scan row was recorded by identity scanner {scanner}, this build is {IDENTITY_SCANNER}"
+            )));
+        }
+        match (status.as_str(), reason) {
+            ("measured", None) => Ok(ScanStatus::Measured),
+            ("unavailable", Some(reason)) => Ok(ScanStatus::Unavailable(reason)),
+            _ => Err(corrupt("source_identity_scan row has an invalid status")),
+        }
     })
     .transpose()
 }
@@ -516,13 +602,16 @@ pub(crate) fn record_and_check(
     bytes: &[u8],
     conflicts: &[IdConflict],
 ) -> Result<(), ProductDbError> {
-    let status = match stored_status(conn, sha256)? {
-        Some(status) => status,
-        None => record_scan(conn, sha256, source_path, bytes)?,
+    let (status, fresh) = match stored_status(conn, sha256)? {
+        Some(status) => (status, false),
+        None => (record_scan(conn, sha256, source_path, bytes)?, true),
     };
     if status == ScanStatus::Measured {
         let candidates = stored_keys(conn, sha256)?;
         check_agreement(conn, sha256, source_path, &candidates, conflicts)?;
+        if fresh {
+            check_exact(conn, sha256, source_path, &candidates, conflicts)?;
+        }
     }
     Ok(())
 }
@@ -593,6 +682,111 @@ pub(crate) fn check_agreement(
         }
     }
     Ok(())
+}
+
+/// On the pass that parsed a blob for the first time, the parser's decisions
+/// are complete: every `first_winner` call either stored a row for this
+/// blob or recorded a conflict naming it. So the candidates with a
+/// non-empty id must be exactly the rows this blob won (occurrence 1) plus
+/// this pass's conflicts for this blob. This catches what the subset rules
+/// cannot: a candidate the parser never dispatched whose id another blob
+/// happens to hold.
+pub(crate) fn check_exact(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    candidates: &HashSet<CandidateKey>,
+    conflicts: &[IdConflict],
+) -> Result<(), ProductDbError> {
+    let mut expected: HashSet<CandidateKey> = HashSet::new();
+    for kind in IdentityKind::ALL {
+        let table = kind.as_table();
+        let won = conn
+            .prepare(&format!(
+                "SELECT id FROM {table} WHERE source_sha256 = ?1 AND id IS NOT NULL AND id <> ''"
+            ))?
+            .query_map([sha256], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        expected.extend(won.into_iter().map(|id| (kind, id, 1)));
+    }
+    for conflict in conflicts
+        .iter()
+        .filter(|c| c.other_sha256 == sha256 && !c.id.is_empty())
+    {
+        if let Some(kind) = IdentityKind::parse(&conflict.table) {
+            expected.insert((kind, conflict.id.clone(), conflict.occurrence));
+        }
+    }
+    let recorded: HashSet<&CandidateKey> = candidates
+        .iter()
+        .filter(|(_, id, _)| !id.is_empty())
+        .collect();
+    let mut extra: Vec<&CandidateKey> = recorded
+        .iter()
+        .copied()
+        .filter(|key| !expected.contains(*key))
+        .collect();
+    extra.sort();
+    if let Some((kind, id, occurrence)) = extra.first() {
+        return Err(disagreement(
+            source_path,
+            format!(
+                "candidate {} {id:?} occurrence {occurrence} matches no row or conflict of this parse",
+                kind.as_table()
+            ),
+        ));
+    }
+    let mut missing: Vec<&CandidateKey> = expected
+        .iter()
+        .filter(|key| !recorded.contains(key))
+        .collect();
+    missing.sort();
+    if let Some((kind, id, occurrence)) = missing.first() {
+        return Err(disagreement(
+            source_path,
+            format!(
+                "{} {id:?} occurrence {occurrence} of this parse has no candidate",
+                kind.as_table()
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// v16 -> v17 backfill of one parsed blob (ADR-0043 §6): scans it and, if
+/// measured, checks the historical rows against the scan. The rows were
+/// written by an earlier build, so a disagreement is not an ingest error
+/// here; it is recorded as `unavailable` with the reason, which also keeps
+/// a later re-parse of this blob from failing on it.
+pub(crate) fn backfill_scan(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    if record_scan(conn, sha256, source_path, bytes)? != ScanStatus::Measured {
+        return Ok(());
+    }
+    let candidates = stored_keys(conn, sha256)?;
+    match check_agreement(conn, sha256, source_path, &candidates, &[]) {
+        Ok(()) => Ok(()),
+        Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
+        Err(error) => {
+            conn.execute(
+                "DELETE FROM source_identity WHERE source_sha256 = ?1",
+                [sha256],
+            )?;
+            conn.execute(
+                "DELETE FROM source_identity_scan WHERE source_sha256 = ?1",
+                [sha256],
+            )?;
+            record_unavailable(
+                conn,
+                sha256,
+                &format!("v17 backfill: stored rows disagree with the scan: {error}"),
+            )
+        }
+    }
 }
 
 /// Records `KNX/@CreatedBy`, `@ToolVersion` and the root namespace of a
@@ -829,6 +1023,16 @@ pub fn identity_candidates(
     let mut unmeasured = Vec::new();
     for holder in holders {
         match stored_status(conn, &holder)? {
+            Some(ScanStatus::Measured)
+                if winner.as_deref() == Some(holder.as_str()) && winner_digest.is_none() =>
+            {
+                unmeasured.push(UnmeasuredSource {
+                    source_sha256: holder,
+                    reason:
+                        "the winner's scan is measured but records no first occurrence of this id"
+                            .into(),
+                });
+            }
             Some(ScanStatus::Measured) => {}
             Some(ScanStatus::Unavailable(reason)) => unmeasured.push(UnmeasuredSource {
                 source_sha256: holder,
@@ -1295,6 +1499,102 @@ mod tests {
     }
 
     #[test]
+    fn the_stored_context_from_outside_the_element_is_part_of_its_digest() {
+        // Review I-1: identical element bytes under another parent store
+        // another `section_id`/`hardware_id`/`manufacturer_id`, so they
+        // must not report as the same element.
+        let item = |section: &str| {
+            catalog_file(&format!(
+                r#"<CatalogSection Id="{section}"><CatalogItem Id="CI-1" Name="x"/></CatalogSection>"#
+            ))
+        };
+        assert_ne!(
+            digest(&item("CS-1"), IdentityKind::CatalogItem, "CI-1"),
+            digest(&item("CS-2"), IdentityKind::CatalogItem, "CI-1")
+        );
+        let nested = |outer: &str| {
+            catalog_file(&format!(
+                r#"<CatalogSection Id="{outer}"><CatalogSection Id="CS-9"/></CatalogSection>"#
+            ))
+        };
+        assert_ne!(
+            digest(&nested("CS-1"), IdentityKind::CatalogSection, "CS-9"),
+            digest(&nested("CS-2"), IdentityKind::CatalogSection, "CS-9")
+        );
+        // A top-level section has no parent, which is not a parent `""`.
+        assert_ne!(
+            digest(
+                &catalog_file(r#"<CatalogSection Id="CS-9"/>"#),
+                IdentityKind::CatalogSection,
+                "CS-9"
+            ),
+            digest(
+                &catalog_file(
+                    r#"<CatalogSection Id=""><CatalogSection Id="CS-9"/></CatalogSection>"#
+                ),
+                IdentityKind::CatalogSection,
+                "CS-9"
+            )
+        );
+        // After a section closes, its sibling is back at the outer parent.
+        // A `Start`/`End` pair, since the parser pushes only on `Start`.
+        let siblings = catalog_file(
+            r#"<CatalogSection Id="CS-1"><CatalogSection Id="CS-2"></CatalogSection><CatalogItem Id="CI-1" Name="x"/></CatalogSection>"#,
+        );
+        assert_eq!(
+            digest(&siblings, IdentityKind::CatalogItem, "CI-1"),
+            digest(&item("CS-1"), IdentityKind::CatalogItem, "CI-1")
+        );
+
+        let product = |hardware: &str| {
+            hardware_file(&format!(
+                r#"<Hardware Id="{hardware}"><Products><Product Id="P-1"/></Products><Hardware2Programs><Hardware2Program Id="HP-1"/></Hardware2Programs></Hardware>"#
+            ))
+        };
+        for kind in [IdentityKind::Product, IdentityKind::Hardware2Program] {
+            let id = if kind == IdentityKind::Product {
+                "P-1"
+            } else {
+                "HP-1"
+            };
+            assert_ne!(
+                digest(&product("H-1"), kind, id),
+                digest(&product("H-2"), kind, id),
+                "{kind:?}"
+            );
+        }
+
+        let manufacturer =
+            |refid: &str| hardware_file(r#"<Hardware Id="H-1"/>"#).replace("M-0001", refid);
+        assert_ne!(
+            digest(&manufacturer("M-0001"), IdentityKind::Hardware, "H-1"),
+            digest(&manufacturer("M-0002"), IdentityKind::Hardware, "H-1")
+        );
+        let program = |refid: &str| {
+            program_file(r#"<ApplicationProgram Id="A-1"><Static/></ApplicationProgram>"#)
+                .replace("M-0001", refid)
+        };
+        assert_ne!(
+            digest(&program("M-0001"), IdentityKind::ApplicationProgram, "A-1"),
+            digest(&program("M-0002"), IdentityKind::ApplicationProgram, "A-1")
+        );
+    }
+
+    #[test]
+    fn a_manufacturer_inside_a_skipped_dynamic_does_not_change_the_context() {
+        let with = program_file(
+            r#"<ApplicationProgram Id="A-1"><Dynamic><Manufacturer RefId="M-9"/></Dynamic></ApplicationProgram><ApplicationProgram Id="A-2"/>"#,
+        );
+        let without = program_file(
+            r#"<ApplicationProgram Id="A-1"><Dynamic><X RefId="M-9"/></Dynamic></ApplicationProgram><ApplicationProgram Id="A-2"/>"#,
+        );
+        assert_eq!(
+            digest(&with, IdentityKind::ApplicationProgram, "A-2"),
+            digest(&without, IdentityKind::ApplicationProgram, "A-2")
+        );
+    }
+
+    #[test]
     fn a_different_namespace_prefix_is_reported_as_different() {
         assert_ne!(
             hw(r#"<Hardware Id="H-1"><a:Note xmlns:a="urn:x"/></Hardware>"#),
@@ -1574,6 +1874,82 @@ mod tests {
             let mut foreign = conflict(&sha);
             foreign.other_sha256 = "f".repeat(64);
             check_agreement(&conn, &sha, "x", &candidates, &[foreign]).unwrap();
+        }
+
+        #[test]
+        fn a_fresh_scan_must_match_the_parse_exactly() {
+            // Review M-1: a candidate the parser never dispatched, whose id
+            // another blob already won, passes the subset rules but not
+            // the exact rule of a first parse.
+            let (_dir, conn, sha) = ingested();
+            conn.execute(
+                "INSERT INTO hardware (id, manufacturer_id, source_sha256) VALUES ('H-OTHER', 'M-0001', ?1)",
+                [&"e".repeat(64)],
+            )
+            .unwrap();
+            let mut candidates = keys(&conn, &sha);
+            assert_eq!(
+                check_exact(
+                    &conn,
+                    &sha,
+                    "M-0001/Hardware.xml",
+                    &candidates,
+                    &[conflict(&sha)]
+                )
+                .map_err(|e| e.to_string()),
+                Ok(())
+            );
+            candidates.insert((IdentityKind::Hardware, "H-OTHER".to_string(), 1));
+            assert_eq!(
+                check(&conn, &sha, &candidates),
+                "",
+                "the subset rules cannot see it"
+            );
+            let error = check_exact(
+                &conn,
+                &sha,
+                "M-0001/Hardware.xml",
+                &candidates,
+                &[conflict(&sha)],
+            )
+            .unwrap_err()
+            .to_string();
+            assert!(
+                error.contains("candidate hardware \"H-OTHER\" occurrence 1 matches no row or conflict of this parse"),
+                "{error}"
+            );
+            // And the other direction: a conflict of this parse without a
+            // candidate.
+            let mut candidates = keys(&conn, &sha);
+            candidates.remove(&(IdentityKind::Product, "P-1".to_string(), 2));
+            let error = check_exact(
+                &conn,
+                &sha,
+                "M-0001/Hardware.xml",
+                &candidates,
+                &[conflict(&sha)],
+            )
+            .unwrap_err()
+            .to_string();
+            assert!(
+                error.contains("product \"P-1\" occurrence 2 of this parse has no candidate"),
+                "{error}"
+            );
+        }
+
+        #[test]
+        fn a_scan_recorded_by_another_scanner_version_is_refused() {
+            let (_dir, conn, sha) = ingested();
+            conn.execute(
+                "UPDATE source_identity_scan SET scanner = ?1 WHERE source_sha256 = ?2",
+                rusqlite::params![IDENTITY_SCANNER + 1, sha],
+            )
+            .unwrap();
+            let error = stored_status(&conn, &sha).unwrap_err().to_string();
+            assert!(
+                error.contains("identity scanner 2, this build is 1"),
+                "{error}"
+            );
         }
 
         #[test]

@@ -18,7 +18,13 @@ fn drop_v17_tables(conn: &Connection) {
         "DROP TABLE IF EXISTS source_identity;
          DROP TABLE IF EXISTS source_identity_scan;
          DROP TABLE IF EXISTS source_producer;
-         DROP TABLE IF EXISTS package_source_name;",
+         DROP TABLE IF EXISTS package_source_name;
+         DROP INDEX IF EXISTS catalog_section_source;
+         DROP INDEX IF EXISTS catalog_item_source;
+         DROP INDEX IF EXISTS hardware_source;
+         DROP INDEX IF EXISTS product_source;
+         DROP INDEX IF EXISTS hardware2program_source;
+         DROP INDEX IF EXISTS application_program_source;",
     )
     .unwrap();
 }

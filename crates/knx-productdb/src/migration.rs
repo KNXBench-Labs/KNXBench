@@ -299,9 +299,11 @@ fn migrations() -> Vec<Migration> {
 /// scans every parsed blob that classifies as a catalogue, hardware or
 /// program file (exactly the blobs a domain parser read, so a raw-stored
 /// member never becomes a candidate), and extracts producer facts from
-/// every stored blob. A blob whose stored bytes no longer match its key, or
-/// that the scan cannot read, is recorded `unavailable` with the reason and
-/// the upgrade continues. Winners and `package_conflict` rows stay as they
+/// every stored blob. A blob whose stored bytes no longer match its key,
+/// that the scan cannot read, or whose historical rows disagree with its
+/// scan is recorded `unavailable` with the reason and the upgrade
+/// continues. It also indexes the six identity tables by `source_sha256`
+/// for the agreement check. Winners and `package_conflict` rows stay as they
 /// were: the original install order is not recoverable.
 fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
     conn.execute_batch(
@@ -314,6 +316,7 @@ fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
             source_sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256),
             status        TEXT NOT NULL CHECK (status IN ('measured','unavailable')),
             reason        TEXT,
+            scanner       INTEGER NOT NULL,
             CHECK ((status = 'unavailable') = (reason IS NOT NULL))
         ) STRICT;
         CREATE TABLE source_identity (
@@ -331,6 +334,12 @@ fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
             created_by     TEXT,
             tool_version   TEXT
         ) STRICT;
+        CREATE INDEX IF NOT EXISTS catalog_section_source ON catalog_section (source_sha256);
+        CREATE INDEX IF NOT EXISTS catalog_item_source ON catalog_item (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware_source ON hardware (source_sha256);
+        CREATE INDEX IF NOT EXISTS product_source ON product (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware2program_source ON hardware2program (source_sha256);
+        CREATE INDEX IF NOT EXISTS application_program_source ON application_program (source_sha256);
         INSERT INTO package_source_name (package_sha256, source_name)
             SELECT sha256, source_name FROM package;",
     )?;
@@ -370,7 +379,7 @@ fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
             classify(&bytes),
             FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
         ) {
-            crate::identity::record_scan(conn, &sha, &path, &bytes)?;
+            crate::identity::backfill_scan(conn, &sha, &path, &bytes)?;
         }
     }
     Ok(())

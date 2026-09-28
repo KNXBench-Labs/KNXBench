@@ -280,6 +280,14 @@ is `goal-ui.md` U3. No real device written; the UI's
 2. **[W]** Live-verify the settling retry (`be91fe3`) in the next
    programming-mode session.
 
+**Status 2026-09-28: CLI half done (simulator).** `knx device
+program-address` on the new `programming_button_wait` loop. It says
+"press" / "release all but one" when the count changes, gives up after
+`--wait`, and ends with `address written: yes | no | yes, but NOT
+confirmed`. KL §116's `repeat` is lifted for the CLI. Still open: the UI
+dialog (web lock) and item 2 **[W]** (needs a go and a button press).
+IMPLEMENTATION_STATUS 2026-09-28 "K6".
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

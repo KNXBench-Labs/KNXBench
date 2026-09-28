@@ -25,6 +25,7 @@
 pub mod download;
 pub mod individual_address_write;
 pub mod memory_download;
+pub mod programming_button_wait;
 pub mod simulator;
 
 use std::convert::Infallible;

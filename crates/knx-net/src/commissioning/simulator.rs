@@ -675,6 +675,15 @@ struct State {
     /// device that a test needs to observe *changing* mid-run: step 4
     /// reconnects to the new address and must reach this same device.
     address: IndividualAddress,
+    /// Whether this device's programming button is pressed right now.
+    /// Starts at [`SimulatorConfig::programming_mode`] and moves only
+    /// through [`SimulatedDevice::set_programming_mode`]: an operator
+    /// pressing the button while MP §2.3 step 2 is waiting for one.
+    programming_mode: bool,
+    /// Who else answers the broadcast read right now. Starts at
+    /// [`SimulatorConfig::other_programming_mode_devices`]; moves through
+    /// [`SimulatedDevice::set_other_programming_mode_devices`].
+    other_programming_mode_devices: Vec<IndividualAddress>,
     /// When the first `PID_LOAD_STATE_CONTROL` read arrived, for
     /// [`SimulatorConfig::settle_load_state_after`] to measure against.
     /// Measuring from device construction instead would make a test's
@@ -800,6 +809,8 @@ impl SimulatedDevice {
 
         let state = State {
             address,
+            programming_mode: config.programming_mode,
+            other_programming_mode_devices: config.other_programming_mode_devices.clone(),
             first_load_state_read: None,
             connected: false,
             dropped: false,
@@ -931,6 +942,21 @@ impl SimulatedDevice {
             .iter()
             .filter(|entry| matches!(entry, Seen::Authorize(_)))
             .count()
+    }
+
+    /// Presses (`true`) or releases (`false`) this device's programming
+    /// button, as an operator would while a procedure waits. Moves the
+    /// `0060h` octet with it, so a memory read agrees.
+    pub fn set_programming_mode(&self, pressed: bool) {
+        let mut state = self.lock();
+        state.programming_mode = pressed;
+        state.memory.insert(0x0060, u8::from(pressed));
+    }
+
+    /// Replaces the other devices that answer the broadcast read, as if
+    /// their operators pressed or released their buttons.
+    pub fn set_other_programming_mode_devices(&self, devices: Vec<IndividualAddress>) {
+        self.lock().other_programming_mode_devices = devices;
     }
 
     /// How many broadcast `A_IndividualAddress_Read` frames arrived.
@@ -1242,19 +1268,23 @@ impl SimulatedDevice {
         }
         match service {
             ApplicationService::IndividualAddressRead => {
-                let own_address = {
+                let (own_address, pressed, others) = {
                     let mut state = self.lock();
                     state.seen.push(Seen::IndividualAddressReadBroadcast);
-                    state.address
+                    (
+                        state.address,
+                        state.programming_mode,
+                        state.other_programming_mode_devices.clone(),
+                    )
                 };
-                if self.config.programming_mode {
+                if pressed {
                     self.emit_from(
                         own_address,
                         Tpci::UnnumberedData,
                         ApplicationService::IndividualAddressResponse,
                     );
                 }
-                for &other in &self.config.other_programming_mode_devices {
+                for other in others {
                     self.emit_from(
                         other,
                         Tpci::UnnumberedData,
@@ -1297,10 +1327,11 @@ impl SimulatedDevice {
             // Address shall be set to the new address."* MP §2.3's own
             // exception handling has no "to 3." — step 3 is the one step
             // the clause raises no exception for.
-            ApplicationService::IndividualAddressWrite { address }
-                if self.config.programming_mode =>
-            {
-                self.lock().address = address;
+            ApplicationService::IndividualAddressWrite { address } => {
+                let mut state = self.lock();
+                if state.programming_mode {
+                    state.address = address;
+                }
             }
             _ => {}
         }

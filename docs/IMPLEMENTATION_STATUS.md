@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — K6 (CLI half): `knx device program-address` waits for the button
+
+- `knx_net::commissioning::programming_button_wait::program_individual_address`
+  implements MP §2.3 step 2's `repeat`. It sends a broadcast count
+  (`A_IndividualAddress_Read`, a read, 1 s window), pauses 1 s, and repeats
+  until exactly one device answers. Then it runs the unchanged
+  `individual_address_write`. An observer hears every round and may stop
+  the wait. The wait gives up after `ButtonWait::give_up_after`. Waiting
+  writes nothing.
+- The CLI `knx device program-address <addr> [--wait s] [--gateway
+  --confirm "I confirm individual-address programming to <addr>"]`:
+  - It shows the plan by default and opens no socket.
+  - An excluded address and a wrong phrase are refused before any socket.
+  - The phrase covers step 4's restart, which MP §2.3 makes part of the
+    procedure.
+  - Output: the count, and "press" / "release all but one" when it changes
+    (footnote 2). It ends with `address written: yes | no | yes, but NOT
+    confirmed` (KL §7 item 2) and exits 0 only on yes.
+- Simulator: `SimulatedDevice::set_programming_mode` and
+  `set_other_programming_mode_devices`, so a test can press or release a
+  button mid-wait. The programming-mode state moved from `SimulatorConfig`
+  into the device's `State`, and the config only seeds it.
+- Tests:
+  - 6 loop tests: press during round 3, several then one, give up, stop,
+    released after the wait and caught by step 2, the count wording.
+  - 10 CLI tests, including simulator runs for a write, give up, written
+    but unconfirmed, and another device already on the address.
+- 8 mutants, all caught. "Never gives up" hung at first; the test now has
+  its own deadline.
+- KL §116 `repeat` lifted for the CLI. Open: the UI dialog (web lock), and
+  **[W]** a live run (needs a go and a button press). No device was
+  contacted.
+
 ## 2026-09-28 — K5: download to a device from the web UI, with live progress
 
 - ADR-0045 settles what ADR-0040 left open: the server demands the plan's

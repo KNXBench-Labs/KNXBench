@@ -7,6 +7,38 @@
 
 ---
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 22:05
+- **Completed:** goal-commission **K6, CLI half**. Simulator only; no device was contacted. Log: `.ai/logs/2026-09-28_claude_k6-program-address-cli.md`.
+  - `knx device program-address <addr> [--wait s] [--gateway --confirm "I confirm individual-address programming to <addr>"]`:
+    - Plan by default, with no socket.
+    - It waits round by round until exactly one programming button is pressed, and says "press" / "release all but one" when the count changes.
+    - Then it runs MP §2.3 (the unchanged `individual_address_write`).
+    - It ends with `address written: yes | no | yes, but NOT confirmed`.
+  - New `knx_net::commissioning::programming_button_wait`. KL §116's `repeat` is lifted for the CLI.
+  - Simulator: the programming button is live state (`set_programming_mode`).
+  - Docs:
+    - manual ch. 10 new section
+    - `manual/implementation-status.md` row
+    - KL §7 item 2 and §116 status
+    - GLOSSARY
+    - IMPLEMENTATION_STATUS "K6"
+  - Gate:
+    - fmt, clippy
+    - 2366/0 workspace
+    - K5 HTTP 6, K4 CLI 11
+    - layering, headers, anchors, corpus-gates, diff-check
+  - 8 mutants, all caught.
+- **Pending/Next Steps:**
+  - K6 UI dialog. It needs the web lock per `goal-ui.md` §3; take it only if the UI session is not holding it.
+  - K6 item 2 **[W]**: a live run of the settling retry, which needs the user's go **and a pressed programming button**. Ask for exactly that, then wait for "done".
+  - K7 **[W]**: a real download through K4/K5, only with a device-specific go.
+- **Notes for Codex or Claude:**
+  - A fresh worktree needs `npm ci && npm run build` in `apps/knx-web` before `cargo test --workspace`, or `knx-desktop`'s build script fails on a missing `dist`.
+  - No web files were touched: web lock not taken.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 21:30
 - Web lock: released
 - **Completed:** goal-commission **K5** merged. It is simulator-only; no real device was written. Log: `.ai/logs/2026-09-28_claude_k5-device-download-ui.md`.

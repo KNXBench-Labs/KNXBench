@@ -7975,7 +7975,7 @@ test, or at least a manual reproduction on a real window manager.
 
 ## §134 Mask `0701h` (BIM M112) devices cannot receive an application download
 
-**Status.** Open; item 1 lifted 2026-09-27. Found 2026-09-27 while evaluating
+**Status.** Open; items 1 and 2 lifted 2026-09-27. Found 2026-09-27 while evaluating
 a request to configure button 1 of the MDT *Taster 2-fach Plus* at `1.1.67` as
 an ON/OFF toggle on `2/0/53`. RESEARCH §19 has the evidence.
 
@@ -7994,8 +7994,11 @@ into it. Five pieces are missing:
    §3.31.2 requires. The downloader does not call
    it yet: nothing strings the records into a whole download, and items 2–5
    still stand.
-2. **Serializers** for the Group Address Table (Resources §4.16.11) and the
-   Easy 3 association table (§4.17.9).
+2. ~~**Serializers**~~ *Lifted 2026-09-27, offline only:*
+   `commissioning::group_tables` builds the Group Address Table (Resources
+   §4.16.11) and the Easy 3 association table (§4.17.9). The byte order of a
+   two-octet entry is an assumption (high octet first; RESEARCH §19). It
+   stays unconfirmed until a real device's table has been read back.
 3. **A parameter-segment image builder.** It must evaluate the `choose` tree
    and place each parameter at its `Memory` offset over the segment defaults.
 4. **The device's access key.** The device's access key is unknown, and the
@@ -8007,7 +8010,7 @@ into it. Five pieces are missing:
 tool. In the one live installation measured (RESEARCH §8.5), every device reported
 `0701h`.
 
-**Why it is this way.** Items 2 and 3 are ordinary work now that the encodings
+**Why it is this way.** Item 3 is ordinary work now that the encodings
 are documented. The first byte of each load state machine record is
 documented only by the conformance test suite (TSSG), and that suite
 contradicts itself on the record length (RESEARCH §19). Item 5 is deliberate.
@@ -8016,7 +8019,7 @@ application) until a correct download succeeds, so the gate stays closed
 until the path has been tested end to end against the simulator and then
 reviewed.
 
-**Lifted when.** Items 2 and 3 are implemented and tested against the simulator,
+**Lifted when.** Item 3 is implemented and tested against the simulator,
 including the TSSG examples as golden vectors. Items 4 and 5 are then decided
 explicitly, and one real download of a known configuration is verified by
 observing the resulting group telegram on the bus.

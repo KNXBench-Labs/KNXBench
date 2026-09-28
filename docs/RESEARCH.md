@@ -4625,8 +4625,31 @@ above therefore come only from MP §3.31.2 and TSSG.
    and restart keep Verify Mode, which is how the address write of
    2026-09-26 succeeded on this `0701h` device. `download.rs`
    does not call any of this yet.
-2. Serializers for the Group Address Table (§4.16.11) and the Easy 3
-   association table (§4.17.9).
+2. ~~Serializers for the Group Address Table (§4.16.11) and the Easy 3
+   association table (§4.17.9).~~ *Built 2026-09-27.*
+   `knx_core::commissioning::group_tables::build_group_tables` builds both
+   tables from `(object, group address, sending)` links:
+   - **Address table:** Length (the individual address included), the
+     individual address, then the group addresses, sorted and de-duplicated.
+   - **Association table:** Current Size, then `TSAP | ASAP` pairs, grouped
+     by object with the object's sending association first (§4.17.9.5).
+   - **Refusals:** broadcast `0/0/0`, a duplicate link, a second sending
+     address on one object, and anything over the product's `MaxEntries` or
+     the one count octet (254 group addresses, 255 associations). Nothing is
+     truncated.
+
+   It rebuilds the product data's own defaults octet for octet (`AS-4000`
+   `03 0000 1900 1901`, `AS-4201` `02 0100 0205`).
+   **Open [A]: byte order.** No clause of Resources states the byte order of
+   a two-octet table entry. High octet first is assumed, on three indirect
+   sources:
+   - §4.16.3.4.2's `DMP_MemWrite_LEmi1(0117h, 0118h, PPPPh)`.
+   - API §1.2.1, which calls the BCU's two-octet EEPROM pointers *"Big
+     Endian"*.
+   - The MDT defaults, which read validly either way (`3/1/0` and `3/1/1`,
+     or `0/0/25` and `0/1/25`).
+
+   One read of a real device's table would settle it.
 3. An `AS-4400` image builder. It must evaluate the `choose` tree for the
    chosen parameter values (`knx-productdb::dynamic::evaluate` exists) and
    place each parameter's bits at its `Memory` offset over the segment's

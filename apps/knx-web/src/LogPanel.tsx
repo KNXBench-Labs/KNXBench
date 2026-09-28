@@ -7,6 +7,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { formatSettingsDiagnostic } from "./settingsDiagnostic";
+import { droppedCount, saveSessionLog } from "./sessionLogExport";
+import type { LogExportScope } from "./sessionLogExport";
 
 type Severity = LogEntry["severity"];
 
@@ -38,23 +40,37 @@ const SEVERITY_LABEL_KEYS: Record<Severity, MessageKey> = {
 export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: number }) {
   const t = useTranslate();
   const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<Severity, boolean>>({
     error: true,
     warning: true,
     info: true,
   });
+  const [search, setSearch] = useState("");
+  const [exportScope, setExportScope] = useState<LogExportScope>("filtered");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setError(null); // clear a stale error from a previous fetch before retrying
+    // A new project/log revision invalidates the previous snapshot at once:
+    // it must not remain exportable while the next request is in flight.
+    setEntries([]);
+    setLoading(true);
+    setError(null);
     api
       .getSessionLog()
       .then((fetched) => {
-        if (!cancelled) setEntries(fetched);
+        if (!cancelled) {
+          setEntries(fetched);
+          setLoading(false);
+        }
       })
       .catch((e) => {
-        if (!cancelled) setError(api.errorMessage(e));
+        if (!cancelled) {
+          setError(api.errorMessage(e));
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -65,9 +81,23 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
     setFilters((f) => ({ ...f, [severity]: !f[severity] }));
   }
 
-  // Backend appends chronologically (oldest first) — reverse for
-  // newest-first display, then apply the (render-only) severity filter.
-  const visible = [...entries].reverse().filter((entry) => filters[entry.severity]);
+  // Newest first for display; export-all keeps the server's chronological
+  // ordering while a filtered export mirrors the current visible order.
+  const query = search.trim().toLocaleLowerCase();
+  const visible = [...entries].reverse().filter((entry) =>
+    filters[entry.severity] &&
+    (!query || [entry.source, formatSettingsDiagnostic(t, entry.diagnostic, entry.message), entry.detail ?? ""]
+      .some((field) => field.toLocaleLowerCase().includes(query))),
+  );
+
+  async function exportLog() {
+    setExportError(null);
+    try {
+      await saveSessionLog(entries, exportScope === "all" ? entries : visible, exportScope);
+    } catch (e) {
+      setExportError(api.errorMessage(e));
+    }
+  }
 
   return (
     <div className="log-panel">
@@ -93,6 +123,26 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
           ))}
         </div>
       </header>
+      <div className="log-panel-tools">
+        <label className="log-panel-search">
+          {t("logPanel.search")}
+          <input type="search" aria-label={t("logPanel.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
+        </label>
+        <button type="button" className="log-panel-clear" onClick={() => setSearch("")} disabled={!search}>
+          {t("logPanel.clear")}
+        </button>
+        <span className="log-panel-count" role="status">{t("logPanel.count", { shown: visible.length, total: entries.length })}</span>
+        <label className="log-panel-scope">
+          {t("logPanel.exportScope")}
+          <select className="log-panel-export-scope" value={exportScope} onChange={(event) => setExportScope(event.target.value as LogExportScope)}>
+            <option value="filtered">{t("logPanel.exportFiltered")}</option>
+            <option value="all">{t("logPanel.exportAll")}</option>
+          </select>
+        </label>
+        <button type="button" className="log-panel-export" onClick={exportLog} disabled={loading || error !== null}>{t("logPanel.exportJson")}</button>
+      </div>
+      <p className="log-panel-hint">{t("logPanel.retention", { count: droppedCount(entries) ?? t("logPanel.unknownCount") })}</p>
+      {exportError && <span className="field-error" role="alert">{exportError}</span>}
       {/* §66/§67 disclosure (fix round 2, B4): message/location/detail below
           are the server's own text and are never translated — stated here,
           where the reader actually meets them, not just in
@@ -100,7 +150,9 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
           to disclose about, independent of the severity filter above. */}
       {entries.length > 0 && <p className="log-panel-hint">{t("logPanel.entryTextIsEnglish")}</p>}
       {error && <span className="field-error">{error}</span>}
-      {entries.length === 0 ? (
+      {loading ? (
+        <p className="log-panel-empty">{t("logPanel.loading")}</p>
+      ) : error ? null : entries.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>
       ) : visible.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyFiltered")}</p>

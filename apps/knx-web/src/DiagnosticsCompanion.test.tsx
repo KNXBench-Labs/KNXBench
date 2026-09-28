@@ -269,6 +269,7 @@ describe("one editing workspace", () => {
       "messages/de.ts",
       "messages/en.ts",
       "session.ts",
+      "sessionLogExport.ts",
       "settingsDiagnostic.ts",
       "settingsStore.ts",
       "uiLanguage.ts",

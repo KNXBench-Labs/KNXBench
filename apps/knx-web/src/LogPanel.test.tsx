@@ -9,6 +9,12 @@ import { messages as enMessages } from "./messages/en";
 const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn().mockResolvedValue([]),
 }));
+const exportMock = vi.hoisted(() => ({ saveSessionLog: vi.fn().mockResolvedValue(true) }));
+
+vi.mock("./sessionLogExport", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./sessionLogExport")>(),
+  ...exportMock,
+}));
 
 vi.mock("./api", () => ({
   ...apiMock,
@@ -24,6 +30,7 @@ afterEach(() => {
   host = undefined;
   vi.clearAllMocks();
   apiMock.getSessionLog.mockResolvedValue([]);
+  exportMock.saveSessionLog.mockResolvedValue(true);
 });
 
 function baseTree(): ProjectTree {
@@ -40,6 +47,12 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
     detail: null,
     ...overrides,
   };
+}
+
+function setSearch(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 async function renderPanel(tree: ProjectTree, refreshKey = 0) {
@@ -85,6 +98,89 @@ describe("LogPanel", () => {
     });
     expect(host!.textContent).toContain(enMessages["logPanel.entryTextIsEnglish"]);
 
+    root.unmount();
+  });
+
+  it("searches source, summary and detail case-insensitively, composes with severity, and clears without refetch", async () => {
+    apiMock.getSessionLog.mockResolvedValue([
+      entry({ source: "IMPORT", severity: "warning", message: "missing product" }),
+      entry({ source: "edit", severity: "error", message: "Bad ADDRESS" }),
+      entry({ source: "save", severity: "info", detail: "address checked" }),
+    ]);
+    const root = await renderPanel(baseTree());
+    const search = host!.querySelector<HTMLInputElement>('input[type="search"]')!;
+    expect(search?.getAttribute("aria-label")).toBe("Search session log");
+    await act(async () => { setSearch(search, "aDdReSs"); });
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(2);
+    expect(host!.textContent).toContain("2 of 3 entries");
+    const error = [...host!.querySelectorAll<HTMLInputElement>(".log-panel-filter input")].find((input) => input.closest("label")!.textContent === "Error")!;
+    await act(async () => error.click());
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(1);
+    expect(host!.textContent).toContain("1 of 3 entries");
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-clear")!.click());
+    expect(search.value).toBe("");
+    expect(host!.querySelectorAll(".log-entry")).toHaveLength(2);
+    expect(apiMock.getSessionLog).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  it("offers explicit all/filtered JSON export and retains a dropped marker outside the filtered view", async () => {
+    const marker = entry({ severity: "warning", source: "log", message: "2 log entries dropped after exceeding the 1000-entry session log cap" });
+    const matching = entry({ severity: "error", source: "import", message: "Bad address" });
+    apiMock.getSessionLog.mockResolvedValue([marker, matching]);
+    const root = await renderPanel(baseTree());
+    const search = host!.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => { setSearch(search, "address"); });
+    expect(host!.textContent).toContain("2 entries dropped");
+    const scope = host!.querySelector<HTMLSelectElement>(".log-panel-export-scope")!;
+    expect(scope?.value).toBe("filtered");
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([marker, matching], [matching], "filtered");
+    await act(async () => { scope.value = "all"; scope.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith([marker, matching], [marker, matching], "all");
+    root.unmount();
+  });
+
+  it("can export an empty log without suggesting it is a lifetime audit", async () => {
+    const root = await renderPanel(baseTree());
+    expect(host!.textContent).toContain("not a lifetime audit");
+    await act(async () => host!.querySelector<HTMLButtonElement>(".log-panel-export")!.click());
+    expect(exportMock.saveSessionLog).toHaveBeenCalledWith([], [], "filtered");
+    root.unmount();
+  });
+
+  it("shows a file-save failure without losing the log and clears it on retry", async () => {
+    const item = entry({ message: "keep me" });
+    apiMock.getSessionLog.mockResolvedValue([item]);
+    exportMock.saveSessionLog.mockRejectedValueOnce(new Error("disk full"));
+    const root = await renderPanel(baseTree());
+    const button = host!.querySelector<HTMLButtonElement>(".log-panel-export")!;
+    await act(async () => button.click());
+    expect(host!.querySelector('[role="alert"]')!.textContent).toBe("disk full");
+    expect(host!.textContent).toContain("keep me");
+    await act(async () => button.click());
+    expect(host!.querySelector('[role="alert"]')).toBeNull();
+    root.unmount();
+  });
+
+  it("never exports the previous project's entries during a refetch or after a failed refetch", async () => {
+    const oldEntry = entry({ message: "previous project" });
+    apiMock.getSessionLog.mockResolvedValueOnce([oldEntry]);
+    let rejectRefetch!: (error: Error) => void;
+    apiMock.getSessionLog.mockImplementationOnce(() => new Promise((_, reject) => { rejectRefetch = reject; }));
+    const root = await renderPanel(baseTree());
+    const button = host!.querySelector<HTMLButtonElement>(".log-panel-export")!;
+    expect(button.disabled).toBe(false);
+    await act(async () => root.render(<LogPanel tree={baseTree()} refreshKey={0} />));
+    expect(button.disabled).toBe(true);
+    expect(host!.textContent).not.toContain("previous project");
+    await act(async () => button.click());
+    expect(exportMock.saveSessionLog).not.toHaveBeenCalled();
+    await act(async () => rejectRefetch(new Error("failed to refetch")));
+    expect(button.disabled).toBe(true);
+    expect(host!.textContent).not.toContain("previous project");
+    expect(host!.querySelector(".field-error")!.textContent).toBe("failed to refetch");
     root.unmount();
   });
 

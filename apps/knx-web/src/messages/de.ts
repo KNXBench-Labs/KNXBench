@@ -414,7 +414,17 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.severity.warning": "Warnung",
   "logPanel.severity.info": "Info",
   "logPanel.emptyNoEntries": "Noch keine Protokolleinträge.",
+  "logPanel.loading": "Sitzungsprotokoll wird geladen…",
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
+  "logPanel.search": "Sitzungsprotokoll durchsuchen",
+  "logPanel.clear": "Suche löschen",
+  "logPanel.count": "{shown} von {total} Einträgen",
+  "logPanel.exportScope": "Exportumfang",
+  "logPanel.exportFiltered": "Passende Einträge",
+  "logPanel.exportAll": "Alle vorhandenen Einträge",
+  "logPanel.exportJson": "Protokoll exportieren (JSON)…",
+  "logPanel.unknownCount": "unbekannt",
+  "logPanel.retention": "Nur die neuesten 1000 Einträge dieser Serversitzung bleiben erhalten; {count} Einträge verworfen. Kein vollständiges Auditprotokoll. Der Export kann Adressen und Namen enthalten.",
   "logPanel.entryTextIsEnglish":
     "Meldung, Ort und Detail sind der unveränderte Text des Servers, auf Englisch.",
 

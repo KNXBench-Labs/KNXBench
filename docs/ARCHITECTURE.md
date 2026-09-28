@@ -63,14 +63,15 @@ apps/
                    knx-desktop used to own directly, now the only crate
                    that speaks HTTP.
   knx-desktop/     Tauri v2 shell. src-tauri/ is a thin native wrapper that
-                   spawns knx-server locally and points a WebView at it —
-                   no #[tauri::command] handlers of its own since the
-                   web/Docker deployment target. src-tauri/'s only
-                   workspace dependency is knx-server.
+                   spawns knx-server locally and points a WebView at it;
+                   one native save-dialog command writes the session-log
+                   JSON export chosen by the user (ADR-0047). No KNX
+                   domain or project mutation lives in the shell.
   knx-web/         React + Vite frontend (npm package, not a Cargo
                    workspace member) — served by knx-server's static-file
                    fallback and, in dev, by knx-desktop's Tauri WebView.
-                   Talks to knx-server over fetch(); no Tauri invoke().
+                   Project and bus operations use fetch(); the only native
+                   invoke is the desktop session-log file-delivery adapter.
 
 crates/
   knx-core/        Domain model, addresses, DPT, override resolution, validation.
@@ -182,17 +183,18 @@ These are tests. Each one fails the build.
    licence not on the list is rejected, and GPL is not on the list.
    `xknxproject` stays in `.venv`, invoked only by test scripts, never by the
    Rust build (ADR-0002).
-3. **The UI communicates only through HTTP, into `knx-server`**, and has no
-   path of its own to `knx-app`, `knx-store` or `knx-etsproj`. Originally
-   stated as "only through Tauri commands into `knx-app`" when
+3. **Project and bus operations communicate through HTTP into `knx-server`**;
+   the UI has no path of its own to `knx-app`, `knx-store` or `knx-etsproj`.
+   The one desktop-only exception is the OS save-dialog command for a
+   session-log JSON snapshot (ADR-0047): it writes a local file selected
+   by the dialog and cannot mutate project or KNX state. Originally this
+   rule was stated as "only through Tauri commands into `knx-app`" when
    `apps/knx-desktop` was the only deployment target (Session 5); the
-   web/Docker deployment target replaced Tauri IPC with an HTTP API, so
-   the boundary moved from `knx-desktop/src-tauri` to `knx-server`, but the
-   shape of the rule — one crate mediates between the UI and everything
-   below it — is unchanged. This rule is **still not mechanically
-   enforced**: `check-layering`'s four roots (rule 1, above) do not
-   include a UI-boundary check, since `apps/knx-web` is an npm package
-   outside the Cargo dependency graph `cargo metadata` walks.
+   web/Docker deployment target moved domain requests to the HTTP API.
+   This rule is **still not mechanically enforced**: `check-layering`'s
+   four roots (rule 1, above) do not include a UI-boundary check, since
+   `apps/knx-web` is an npm package outside the Cargo dependency graph
+   `cargo metadata` walks.
 
 All gates run in CI on every push and pull request, and all are runnable
 locally with the same command. A check that only exists on CI gets

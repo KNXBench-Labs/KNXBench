@@ -25,6 +25,32 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::DialogExt;
+
+mod session_log_export;
+use session_log_export::write_session_log;
+
+#[tauri::command]
+async fn save_session_log(app: tauri::AppHandle, contents: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let destination = app
+            .dialog()
+            .file()
+            .add_filter("JSON", &["json"])
+            .set_file_name("session-log.json")
+            .blocking_save_file();
+        let Some(destination) = destination else {
+            return Ok(false);
+        };
+        let path = destination
+            .into_path()
+            .map_err(|error| format!("Invalid session log destination: {error}"))?;
+        write_session_log(&path, &contents)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| format!("Session log save task failed: {error}"))?
+}
 
 fn spawn_server(
     listener: TcpListener,
@@ -47,6 +73,7 @@ fn spawn_server(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![save_session_log])
         // The only window this app ever builds is "main" (see `setup` below).
         // Destroying it must end the process, not just hide it: a File > Quit
         // that leaves the binary running is a bug, and a user closing the
@@ -100,4 +127,29 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running knx-desktop");
+}
+
+#[cfg(test)]
+mod session_log_export_tests {
+    use super::*;
+
+    #[test]
+    fn rejects_malformed_or_oversized_exports_without_touching_existing_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("session-log.json");
+        std::fs::write(&path, "previous").unwrap();
+        assert!(write_session_log(&path, "not json").is_err());
+        assert!(write_session_log(&path, &"x".repeat(16 * 1024 * 1024 + 1)).is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "previous");
+    }
+
+    #[test]
+    fn writes_a_versioned_log_atomically_to_a_dialog_selected_location() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("session-log.json");
+        let content =
+            r#"{"format":"knxbench-session-log","version":1,"capacity":1000,"entries":[]}"#;
+        write_session_log(&path, content).unwrap();
+        assert_eq!(std::fs::read_to_string(path).unwrap(), content);
+    }
 }

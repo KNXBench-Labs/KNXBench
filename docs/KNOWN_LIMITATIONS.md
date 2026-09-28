@@ -3179,44 +3179,50 @@ product strings. Remaining detailed English prose can still appear in either.
 
 **Remaining limitation.** Detailed table labels, enum/debug values and several
 diagnostic sentences are still English. No third language or external report
-language pack exists. The frontend selector is deferred to T12's report UI.
+language pack exists. The web documentation dialog (CT-2) requests the
+report in the UI language (`de` for German, `en` otherwise); a separate report
+language selector is still absent.
 
 <a id="49-project-documentation-export-has-no-in-application-print-preview"></a>
-## 49. Project documentation export has a preview API but no frontend preview — partially resolved 2026-09-23 (T14)
+## 49. Project documentation export has an in-application preview and print action
 
-**Current state.** `POST /api/project/documentation-preview` returns the same
-self-contained HTML and warning DTOs without writing a file or touching the
-session log. The print stylesheet remains embedded. No frontend consumes the
-endpoint yet.
+**Status.** Lifted (CT-2, 2026-09-28). *Export documentation…* in the File
+menu opens a dialog that calls `POST /api/project/documentation-preview`
+and shows the returned HTML in an `<iframe srcdoc>` with
+`sandbox="allow-same-origin allow-modals"`. No `allow-scripts`: nothing in
+the document runs. The preview's warnings are listed next to it, a preview
+failure is shown as an alert in the dialog, and *Print…* calls `print()` on
+the frame's window, so the browser prints the embedded print stylesheet's
+rendering of the document, not the application.
 
-**Cause.** T14 owns the crate/API contract only. The interactive presentation
-and print action remain in the explicitly deferred T12 frontend half.
+**Verified.** Vitest covers the sandbox attribute, `srcdoc`, warnings, the
+error alert and that print targets the frame. A headless Chromium check in
+the cloud session confirmed the two sandbox tokens are both needed: without
+`allow-same-origin` the frame's `print` is a cross-origin access error;
+without `allow-modals` Chromium ignores the call ("The document is
+sandboxed, and the 'allow-modals' keyword is not set"). A script in the
+document was blocked.
 
-**Impact.** Current users still cannot invoke the preview from KNXBench, even
-though the server contract no longer blocks that UI.
-
-**Lifted when.** T12 adds a sandboxed preview and invokes the browser print
-dialog from it.
+**Not verified.** The visible print dialog itself (headless), Firefox, and
+the Tauri desktop shell's WebKitGTK webview. Printing there may behave
+differently and needs a manual check.
 
 <a id="50-project-documentation-export-has-no-section-selection"></a>
-## 50. Project documentation export has section selection in the crate/API but no frontend control — partially resolved 2026-09-23 (T14)
+## 50. Project documentation export has section selection in the web UI
 
-**Current state.** `ReportOptions::sections` is an ordered set of Summary,
-Topology, Buildings, Group addresses and Devices. Header, filtered Contents,
-and Limits/warnings always remain. Preview and export accept the matching JSON
-names `summary`, `topology`, `buildings`, `groupAddresses`, and `devices`;
-unknown names are rejected. Input order and duplicates cannot change canonical
-document order.
+**Status.** Lifted (CT-2, 2026-09-28). `ReportOptions::sections` is an
+ordered set of Summary, Topology, Buildings, Group addresses and Devices.
+Header, filtered Contents, and Limits/warnings always remain. Preview and
+export accept the matching JSON names `summary`, `topology`, `buildings`,
+`groupAddresses`, and `devices`; unknown names are rejected. Input order and
+duplicates cannot change canonical document order.
 
-**Cause.** T14 owns the pure option and HTTP contract; T12 owns the frontend
-selection controls.
-
-**Impact.** API and crate callers can already produce partial documents, but
-the current frontend still requests the backward-compatible default (all
-sections) because it has no selector.
-
-**Lifted when.** T12 exposes these choices in the frontend and sends the same
-selection to preview and export.
+The documentation dialog offers one checkbox per section, all ticked by
+default. One `DocumentationOptions` object
+(`apps/knx-web/src/documentationOptions.ts`) feeds both the preview request
+and the export request, so the written file is the previewed selection. An
+empty selection is sent as `[]`, which yields header, contents and limits
+only; it is never omitted, because an absent `sections` means "all".
 
 ## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured
 

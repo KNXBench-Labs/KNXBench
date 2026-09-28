@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — CT-2: documentation export gets a preview, section choice and print (cloud session)
+
+- **Scope:** `apps/knx-web` only; the server/crate contract from T14 is used
+  unchanged.
+- **Files:**
+  - `src/documentationOptions.ts` holds the five section names in server
+    document order and builds the one `{ sections, language }` object that
+    both requests send. The report language follows the UI language
+    (`de` → `de`, anything else → `en`).
+  - `src/api.ts` gains `previewDocumentation(options)`;
+    `exportDocumentation(path, options?)` now forwards the options.
+  - `src/DocumentationDialog.tsx` is a modal (`Overlay`, portalled to
+    `<body>` so the closing File menu cannot hide it): section checkboxes,
+    the preview in an `<iframe srcdoc>` with
+    `sandbox="allow-same-origin allow-modals"` (no scripts), warnings beside
+    it, a preview error as `role="alert"`, and Print / Export / Close.
+    Stale preview responses for an earlier selection are dropped.
+  - `DocumentationExportButton.tsx` now only opens that dialog; the File menu
+    label stays *Export documentation…*. 16 new EN/DE message keys; styles
+    in `styles.css`.
+- **Tests:** new `DocumentationDialog.test.tsx` (16 tests: identical
+  selection to preview and export, document order, empty selection, sandbox
+  and `srcdoc`, warnings, print targets the frame and reports failures,
+  preview error, loading state, stale response, cancel, export summary and
+  close, export error, Escape/Close, German) and
+  `documentationOptions.test.ts` (4); `DocumentationExportButton.test.tsx`
+  reduced to the button (2); `api.test.ts` +2; `App.test.tsx` asserts the
+  dialog survives the File menu closing.
+- **Verified here:** `npm test` and `npm run build` exit 0. A headless
+  Chromium check showed that script execution is blocked in the frame and that
+  both sandbox tokens are required for `print()`. Not verified: the visible
+  print dialog, Firefox, the Tauri WebKitGTK webview, a screen-reader pass.
+- **Limitations:** KNOWN_LIMITATIONS §49 and §50 lifted; §48 notes that the
+  dialog follows the UI language but no separate language selector exists.
+
 ## 2026-09-28 — CT-1: project-diff web panel lists entities and before/after values (cloud session)
 
 - **Scope:** `apps/knx-web` only; no server, crate or CLI change.

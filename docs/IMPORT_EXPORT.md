@@ -14,8 +14,20 @@ report preserves relative archive/XML paths only; it never exposes the host
 ledger and is therefore historical/unavailable. It is not the same as measured
 zero. The projection is reporting only: signature members are stored but not
 verified, and no ETS parity claim is made. PDB-8 is the future typed master-data
-coverage slice; PDB-10 is the future safe baggage inventory and index-to-payload
-resolution slice.
+coverage slice. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. The `baggage_index` count is `stored`, and
+`unsupported-baggage-index` gave way to `unresolved-baggage-declaration`
+(per index and reason) and `undeclared-baggage-payload` (per member).
+PDB-11 (schema v17, ADR-0043): every name a package's bytes arrive under is
+recorded (`package_source_name`; a byte-identical retry writes only that
+row), and `InstallReport::source_names` lists them. The name never decides
+identity: packages and members stay keyed by SHA-256 of their bytes. Each
+parsed catalogue/hardware/program member gets a `source_identity_scan` row
+(`measured` or `unavailable` with a reason) and one `source_identity` row per
+candidate element (table, id, per-file occurrence, element digest). Every
+ingest checks the scan against what the parser stored and conflicted; a
+mismatch fails and rolls back the ingest. `KNX/@CreatedBy`, `@ToolVersion`
+and the root namespace are stored per blob (`source_producer`) as source
+strings, never compared.
 
 **Space types (T13, 2026-09-22).** Import preserves `Stairway`, `RoomPart`,
 `Area`, `Ground` and `Segment` alongside the six previously supported types.
@@ -536,6 +548,28 @@ paths, filenames, or manufacturer labels. The gated implementation is Linux-only
 main-vs-branch run showed exactly two of 31 final table counts changed,
 `package_install_count` 3,277 → 3,390 and `package_install_diagnostic`
 645 → 880, both now pinned explicitly; outcomes and report totals were equal.
+PDB-9 (schema v15) re-pinned it again: exactly two of 31 final table counts
+changed, `ingest_unknown` 23,040 → 23,051 and `package_install_unknown`
+9,245 → 9,251, because 75 `Element TypeColor`/`TypeTime` report rows became
+86 unread-attribute rows (26 → 32 distinct per package). The unknown report
+totals moved by the same +11 (22,758 → 22,769 per instance, 22,642 →
+22,653 shared); an independent Python recount of the same package instances
+predicts every one of these deltas, and no product table changed.
+PDB-10 (schema v16) re-pinned it a third time: the new
+`package_baggage_inventory`/`_payload`/`_declaration` tables hold 113 / 789 /
+776 rows, and the only existing count that moved is
+`package_install_diagnostic` 880 → 859 — 34 `unsupported-baggage-index` rows
+(one per non-empty index; 3 of 37 indexes are empty) replaced by 13
+`undeclared-baggage-payload` rows and no unresolved declaration. Outcomes and
+report totals were equal, and an independent Python recount predicts each
+number.
+PDB-11 (schema v17) re-pinned it a fourth time. The four new tables hold
+`package_source_name` 115, `source_identity` 1,972, `source_identity_scan`
+528 and `source_producer` 629 rows, and the matrix publishes per-kind identity
+aggregates (candidate rows, distinct ids, ids in several blobs, ids with
+differing digests) plus scan status counts. The test recomputes the v16
+projection without the new tables and asserts it still equals the PDB-10
+commitment, so no existing outcome, report total or table count moved.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

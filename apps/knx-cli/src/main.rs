@@ -20,6 +20,9 @@ const USAGE: &str =
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
+     \x20     knx products identity <table> <id> [--product-db <path>]\n\
+     \x20     knx products family <program-id> [--product-db <path>]\n\
+     \x20     knx products order-number <manufacturer-id> <order-number> [--product-db <path>]\n\
      \x20     knx bus discover\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      \x20         (with --project, decodes against each address's resolved DPT)\n\
@@ -280,11 +283,7 @@ fn run_import(args: &[String]) -> ExitCode {
 /// Report entries that are genuine errors, not warnings — `ImportReport`
 /// keeps both in one `errors` Vec, told apart by their `Severity`.
 fn error_count(report: &knx_etsproj::ImportReport) -> usize {
-    report
-        .errors
-        .iter()
-        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
-        .count()
+    report.error_count()
 }
 
 fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
@@ -1085,14 +1084,18 @@ fn print_import_report(input: &str, report: &knx_csv::CsvImportReport) {
     }
 }
 
-/// `knx products list|ingest|show|verify` — inspection and separate ingest
-/// of the shared product database (spec §8).
+/// `knx products list|ingest|show|verify|identity|family|order-number` —
+/// inspection and separate ingest of the shared product database (spec §8,
+/// ADR-0043).
 fn run_products(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("list") => run_products_list(&args[1..]),
         Some("ingest") => run_products_ingest(&args[1..]),
         Some("show") => run_products_show(&args[1..]),
         Some("verify") => run_products_verify(&args[1..]),
+        Some("identity") => run_products_identity(&args[1..]),
+        Some("family") => run_products_family(&args[1..]),
+        Some("order-number") => run_products_order_number(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1289,7 +1292,14 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
                     report.translations.hardware,
                     report.translations.master,
                     report.dropped_datapoint_types,
-                    if report.skipped { " (already known)" } else { "" },
+                    if report.skipped {
+                        format!(
+                            " (already known; {} source name(s))",
+                            report.source_names.len()
+                        )
+                    } else {
+                        String::new()
+                    },
                 );
                 print_install_facts(report.facts.as_ref());
                 ExitCode::SUCCESS
@@ -1461,6 +1471,192 @@ fn run_products_verify(args: &[String]) -> ExitCode {
     } else {
         ExitCode::FAILURE
     }
+}
+
+/// Opens the product database and splits exactly `count` positionals, or
+/// prints the usage error. Shared by the PDB-11 inspection commands.
+fn products_positionals(
+    args: &[String],
+    count: usize,
+    missing: &str,
+) -> Result<(knx_productdb::Connection, Vec<String>), ExitCode> {
+    let (product_db, rest) = split_product_db_flag(args).map_err(|e| {
+        eprintln!("{e}\n{USAGE}");
+        ExitCode::FAILURE
+    })?;
+    if rest.len() != count {
+        eprintln!("{missing}\n{USAGE}");
+        return Err(ExitCode::FAILURE);
+    }
+    let conn = open_products_db(product_db.as_deref()).map_err(|e| {
+        eprintln!("{e}");
+        ExitCode::FAILURE
+    })?;
+    Ok((conn, rest))
+}
+
+/// `knx products identity <table> <id>`: the winner and every recorded
+/// candidate of one package-content id (ADR-0043).
+fn run_products_identity(args: &[String]) -> ExitCode {
+    let (conn, rest) = match products_positionals(args, 2, "expected <table> <id>") {
+        Ok(v) => v,
+        Err(code) => return code,
+    };
+    let Some(kind) = knx_productdb::IdentityKind::parse(&rest[0]) else {
+        let tables: Vec<_> = knx_productdb::IdentityKind::ALL
+            .iter()
+            .map(|kind| kind.as_table())
+            .collect();
+        eprintln!(
+            "unknown identity table {:?}; expected one of {}",
+            rest[0],
+            tables.join(", ")
+        );
+        return ExitCode::FAILURE;
+    };
+    let report = match knx_productdb::identity_candidates(&conn, kind, &rest[1]) {
+        Ok(report) => report,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    println!("{} {}", kind.as_table(), report.logical_id);
+    println!(
+        "  winner: {}",
+        report.winner.as_deref().unwrap_or("(no stored row)")
+    );
+    println!("  {} candidate(s)", report.candidates.len());
+    for candidate in &report.candidates {
+        println!(
+            "    blob {}  occurrence {}  digest {}  {}  {} package(s)  {}",
+            candidate.source_sha256,
+            candidate.occurrence,
+            &candidate.digest[..16],
+            match candidate.same_as_winner {
+                Some(true) => "same",
+                Some(false) => "differs",
+                None => "unknown",
+            },
+            candidate.packages.len(),
+            candidate.source_path,
+        );
+    }
+    for unmeasured in &report.unmeasured {
+        println!(
+            "  unmeasured blob {}: {}",
+            unmeasured.source_sha256, unmeasured.reason
+        );
+    }
+    ExitCode::SUCCESS
+}
+
+/// `knx products family <program-id>`: programs sharing its manufacturer
+/// and parsed `ApplicationNumber`, with `ReplacesVersions` resolved.
+fn run_products_family(args: &[String]) -> ExitCode {
+    let (conn, rest) = match products_positionals(args, 1, "expected <program-id>") {
+        Ok(v) => v,
+        Err(code) => return code,
+    };
+    let family = match knx_productdb::program_family(&conn, &rest[0]) {
+        Ok(Some(family)) => family,
+        Ok(None) => {
+            eprintln!("no such program: {}", rest[0]);
+            return ExitCode::FAILURE;
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match &family.key {
+        knx_productdb::FamilyKey::Number(number) => println!(
+            "{}  family {} ApplicationNumber {number}: {} member(s)",
+            family.program_id,
+            family.manufacturer_id,
+            family.members.len()
+        ),
+        knx_productdb::FamilyKey::Unparsed { raw, reason } => println!(
+            "{}  no family: ApplicationNumber {} ({reason})",
+            family.program_id,
+            raw.as_deref()
+                .map_or("absent".to_string(), |raw| format!("{raw:?}")),
+        ),
+    }
+    for member in &family.members {
+        let version = match (member.parsed_version, member.application_version.as_deref()) {
+            (Some(version), _) => version.to_string(),
+            (None, Some(raw)) => format!("{raw:?} (unparsed)"),
+            (None, None) => "absent".to_string(),
+        };
+        println!("  {}  version {version}", member.program_id);
+        match &member.replaces {
+            knx_productdb::ReplacesVersions::Absent => {}
+            knx_productdb::ReplacesVersions::Unparsed { raw, reason } => {
+                println!("    ReplacesVersions {raw:?}: not linked ({reason})")
+            }
+            knx_productdb::ReplacesVersions::Parsed { raw, entries } => {
+                println!("    ReplacesVersions {raw:?}");
+                for (version, programs) in entries {
+                    if programs.is_empty() {
+                        println!("      {version}: not installed");
+                    } else {
+                        println!("      {version}: {}", programs.join(", "));
+                    }
+                }
+            }
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+/// `knx products order-number <manufacturer-id> <order-number>`: every
+/// winning product with exactly that order number. Never merges them.
+fn run_products_order_number(args: &[String]) -> ExitCode {
+    let (conn, rest) =
+        match products_positionals(args, 2, "expected <manufacturer-id> <order-number>") {
+            Ok(v) => v,
+            Err(code) => return code,
+        };
+    let products = match knx_productdb::products_by_order_number(&conn, &rest[0], &rest[1]) {
+        Ok(products) => products,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    println!(
+        "{} product(s) with order number {:?}",
+        products.len(),
+        rest[1]
+    );
+    for product in &products {
+        println!(
+            "  {}  {}  hardware {}",
+            product.product_id,
+            product.text.as_deref().unwrap_or(""),
+            product.hardware_id
+        );
+        println!(
+            "    programs: {}",
+            if product.programs.is_empty() {
+                "(none)".to_string()
+            } else {
+                product.programs.join(", ")
+            }
+        );
+        let schemes: Vec<_> = product.schemes.iter().map(u32::to_string).collect();
+        println!(
+            "    source blob {}  package scheme(s): {}",
+            product.source_sha256,
+            if schemes.is_empty() {
+                "(no package)".to_string()
+            } else {
+                schemes.join(", ")
+            }
+        );
+    }
+    ExitCode::SUCCESS
 }
 
 /// `knx bus monitor` — connects to a real KNXnet/IP gateway over tunnelling

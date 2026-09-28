@@ -49,4 +49,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0038](0038-site-is-a-ground-root-space.md) | A site is a `Ground` space at the root of the building structure — no new kind, no new level | Proposed | 2026-09-26 |
 | [0039](0039-project-mutation-goes-through-commands.md) | A live project changes only through `Command::apply`, and ids are reserved by a command that never rewinds | Accepted | 2026-09-26 |
 | [0040](0040-programming-requires-release-stage-consent.md) | Programming a device needs a release-stage-aware consent, rememberable per stage | Accepted | 2026-09-27 |
+| [0041](0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md) | Unmodelled parameter kinds and Dynamic nodes are named, never hidden | Accepted | 2026-09-27 |
+| [0042](0042-baggage-is-inventoried-by-content-and-resolved-exactly.md) | Baggage is inventoried by content and resolved exactly, never opened | Accepted | 2026-09-28 |
+| [0043](0043-package-identity-is-recorded-per-candidate.md) | Package identity is recorded per candidate, never decided by a new winner rule | Accepted | 2026-09-28 |
 | [0044](0044-download-data-is-read-from-the-stored-product-file.md) | An application's download data is read on demand from the stored product file | Accepted | 2026-09-28 |

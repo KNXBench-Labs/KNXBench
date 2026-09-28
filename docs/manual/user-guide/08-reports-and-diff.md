@@ -71,11 +71,25 @@ is only in one place.
 
 ### Exporting from the application
 
-Open the **File** menu and choose **Export documentation…**. KNXBench asks where to
-save — the file dialog filters on *HTML document* and suggests
-`project-documentation.html` — and writes the file. The application currently
-exports all five content sections; the API's preview, section, and language options
-do not yet have frontend controls.
+Open the **File** menu and choose **Export documentation…**. A dialog opens with
+a preview of the document:
+
+- **Sections** — one checkbox each for Summary, Topology, Buildings, Group
+  addresses and Devices, all ticked at first. The header, the contents and the
+  limits section are always included. Changing a tick refreshes the preview.
+- **Preview** — the document exactly as it will be written, shown in a sandboxed
+  frame in which nothing can run. If the preview fails, the reason is shown in
+  its place.
+- **Warnings** — listed next to the preview, so you can see them before
+  exporting.
+- **Print…** — opens the browser's print dialog for the preview document, not
+  for the application window. Use it to print to paper or to PDF.
+- **Export…** — asks where to save (the file dialog filters on *HTML document*
+  and suggests `project-documentation.html`) and writes the same sections you
+  previewed.
+
+The document follows the application language: German when the interface is
+German, English otherwise.
 
 When it is done you get one of two messages: *"Project documentation exported, no
 warnings."* or *"Project documentation exported, 3 warnings — see Log."* The warnings
@@ -149,14 +163,32 @@ explicit note that its own fields are unchanged.
 
 ### Comparing in the application
 
-Open the **File** menu and choose **Compare with…**. Pick a `.knxdb` file; KNXBench
-compares the project you currently have open (the left side) against the file you
-picked (the right side) and opens a **Comparison result** panel.
+Open the **File** menu and choose **Compare with…**. Pick a KNXBench project (`.knxdb`)
+or a raw ETS project export (`.knxproj`); in the browser you can also upload one from
+your computer in the same picker. KNXBench compares the project you currently have open
+(the left side) against the file you picked (the right side) and opens a **Comparison
+result** panel.
+
+A `.knxproj` is imported for the comparison through the regular importer. The panel
+then shows a collapsed **ETS import report** line above the result, for example
+*"ETS import report: 3 diagnostics (1 warning)"*. Open it to read every diagnostic:
+its severity, message, and where in the archive it was found. If the import reports
+an error, KNXBench does not compare at all: the panel says *"Comparison refused"* and
+shows the diagnostics instead, because a partly misread file would produce a
+misleading comparison. Warnings do not stop the comparison.
 
 The panel lists, per installation, one line per entity kind with the counts in each
 bucket — *Areas*, *Lines*, *Devices*, *Group ranges*, *Group addresses*, *Buildings* —
 plus separate lines for changed project and installation info fields. If nothing
 differs it says *"No differences found."* and you close it again.
+
+Below those lines, each non-empty table has a collapsed entry such as *Devices (3)*.
+Open it with a click, Enter or Space to list every entity in it: its status in words
+(*added*, *removed*, *changed*, *ambiguous*), its key (a device's address, a group
+address, a building path…) and its name. A changed entity shows how it was matched
+and a *Field / Before / After* table; a changed device lists its changed
+communication objects and parameters underneath. Long tables show 50 entries at a
+time; **Show more** reveals the next 50.
 
 Comparing does not change either project. The file you pick is read, compared and
 released; it never becomes the open project.
@@ -208,8 +240,8 @@ already had.
 
 The limits are worth knowing before you rely on it:
 
-- The application panel still accepts only `.knxdb`; raw `.knxproj` comparison is a CLI
-  capability and always discloses its normalization report.
+- A raw `.knxproj` is always compared together with its import report, in the panel
+  and on the command line; an import with errors is refused, not compared.
 - It compares the typed domain model. Anything KNXBench stores as opaque preserved data
   rather than as typed fields is not compared field by field.
 - Parameters are compared by their raw stored value, because KNXBench does not

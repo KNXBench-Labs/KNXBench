@@ -54,8 +54,7 @@ A `facts: null` response means the package predates the v12 ledger and its
 encounter facts are historically unavailable. It must not be interpreted as a
 measured zero. This evidence describes KNXBench importer behavior only: it does
 not establish ETS parity and does not verify package signatures. PDB-8 is the
-future typed master-data coverage slice; PDB-10 is the future safe baggage
-inventory and index-to-payload resolution slice.
+future typed master-data coverage slice. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only.
 
 Corpus measurements must remain opt-in and confined to an explicitly supplied
 local corpus root. No private corpus content, manufacturer identity, or host
@@ -119,6 +118,104 @@ Large-file behavior is relevant: the largest observed Gira XML member is
 24,201,031 bytes, and the largest MDT XML member is 54,803,397 bytes. Corpus
 regressions should therefore cover bounded memory and deterministic reporting,
 not just tiny synthetic fixtures.
+
+### PDB-10 preflight: baggage index and payload shape (2026-09-28)
+
+A read-only, aggregate-only probe (Python `zipfile`/`ElementTree`, no
+extraction to disk, no names or contents printed) over the whole
+`OriginalData/ProductDatabases` tree: 117 package instances, 115 distinct
+package hashes, each counted once.
+
+- **Index grammar.** 38 `Baggages.xml` files, exactly the path
+  `KNX/ManufacturerData/Manufacturer/Baggages/Baggage/FileInfo`, nothing else.
+  777 `Baggage` declarations, each with exactly one `FileInfo`.
+  `Baggage/@Id`, `@Name` and `@TargetPath` on all 777; `@InstallOnImport` on
+  129 with the observed values `true`, `false` and `0` (so boolean *and*
+  numeric spellings). `FileInfo/@TimeInfo` on all 777 (ISO date-time);
+  `FileInfo/@Version` on only 2. The Project Schema (v3.0.0 §4.2) says only
+  that each `Baggage` is stored as an external file; the attribute semantics
+  above are corpus observations `[A]`, not specified.
+- **Index → payload.** All 777 declarations resolve *exactly* (case-sensitive)
+  to the member `M-XXXX/Baggages/<TargetPath>/<Name>`. There are 790
+  `Baggages/` members, so 13 payloads have no declaration in their package.
+- **Payload media.** Extensions: `.png` 734, `.zip` 37, `.ai` 11, `.jpg` 5,
+  `.dll` 1, `.pdf` 1, `.msi` 1. Magic bytes disagree with extensions: PNG 699,
+  ZIP 37, **BMP 35** (all named `.png`), PDF 12 (the 11 `.ai` files are PDF),
+  JPEG 5, PE executable 1, OLE2 compound file 1. Classification must use
+  content, never the extension.
+- **Size and encryption.** No member carries the ZIP encryption flag. Deflate
+  431, stored 359. Payload size min 205 B, median 2,623 B, p99 223,370 B,
+  max 2,111,931 B, total 15,009,507 B.
+- **Nesting.** 37 nested ZIPs with 7,144 entries in total, the largest
+  expanding to 317,240 bytes; none contains a further ZIP and none has an
+  encrypted entry. They stay opaque; the inventory may read their central
+  directory for counts/sizes but must not extract them.
+- **Reconciled units.** The inventory above (1,728) counts every `Baggage`
+  element in every XML of every package instance; this probe counts index
+  declarations once per distinct package. Neither is pinned for the other.
+  A per-location recount over the whole tree (117 instances) finds 1,730
+  `Baggage` elements (1,713 counting each distinct package once): 786 in
+  `Baggages.xml` (777 distinct, the declarations above), 943 as
+  `ApplicationProgram/Static/Extension/Baggage` references (935 distinct)
+  and 1 under `Hardware/Product/Baggages`. The program references point
+  at baggage by `RefId`; PDB-10 does not type or resolve them. The program
+  parser reports `Extension`, its `Baggage` child and the `RefId` attribute
+  as unknown constructs (verified with a throwaway ingest probe), so they
+  are reported, not dropped.
+  Over the matrix scopes (`Gira`, `MDT`: 115 instances, 113 distinct), an
+  independent Python recount gives 37 index members, 776 declarations, 789
+  payloads and 13 undeclared payloads, no unresolved declaration and no
+  index unknown; the installer's inventory must match those numbers.
+- **Largest XML member** in the tree: 54,803,397 bytes (unchanged).
+
+### PDB-11: package identity and versions (2026-09-28)
+
+Read-only, aggregate-only probes (ADR-0043 Context; 117 package instances,
+115 unique in the probe's discovery): every id that appears in more than one
+unique package does so in member files whose bytes differ. Whether the
+*element* differs depends on the kind — application programs 2 of 29
+byte-identical but 19 of 29 attribute-identical, hardware 18 of 68, products
+23 of 69, catalogue sections 1 of 53, all 33 `Hardware2Program` and 16 of 17
+catalogue items identical. `ApplicationNumber`/`ApplicationVersion` match the
+program id in 275 of 275 programs; families by (manufacturer, number) have
+size 1 (183), 2 (40), 3 (4). `ReplacesVersions` is absent on 145 distinct
+programs, one integer on 55, a whitespace-separated list on 75; 16 of 289
+listed versions name a program in the corpus. 73 of 304 order numbers appear
+in more than one package (44 with different program sets, 18 with different
+schemes); 4 sit on more than one product id.
+
+The schema-v17 matrix (115 instances / 113 unique hashes, shared order by
+package hash) records, over the shared database:
+
+| kind | candidate rows | distinct ids | ids in >1 blob | ids with differing digests |
+|---|---:|---:|---:|---:|
+| application_program | 302 | 273 | 29 | 25 |
+| catalog_item | 362 | 345 | 17 | 0 |
+| catalog_section | 251 | 103 | 53 | 49 |
+| hardware | 334 | 255 | 68 | 50 |
+| hardware2program | 337 | 298 | 33 | 0 |
+| product | 386 | 306 | 69 | 46 |
+
+170 ids diverge in total; all 528 parsed members were `measured`, none
+`unavailable`. New tables: `package_source_name` 115, `source_identity`
+1,972, `source_identity_scan` 528, `source_producer` 629. The "ids in >1
+blob" column equals the Python probe's multi-package id counts exactly. The
+differing-digest counts match the probe's whole-subtree canonical comparison
+for programs (25; 27 differ byte-wise), hardware (50), products (46),
+catalogue items (0; 1 differs byte-wise) and `Hardware2Program` (0). For
+catalogue sections the matrix finds 49 where the probe's whole-subtree
+comparison finds 52 and its own-content-only comparison 34: the digest
+replaces a nested section or item by a marker, so a section whose only
+difference lies inside a nested tracked element is reported equal here and
+that element's own digest carries the difference. This explanation is
+inferred from the two definitions, not separately measured. No install outcome, report total or pre-existing
+table count changed.
+
+After the independent review, every digest also covers the context the
+stored row takes from outside the element (manufacturer, parent section,
+parent hardware). The re-run matrix (979 s) produced the same aggregates
+and the same baseline commitment: in this corpus, no id appears with equal
+element bytes under different parents or manufacturers.
 
 ## Scheme and producer observations
 
@@ -189,6 +286,16 @@ Observed direct `ParameterType` children are:
   `TypeText`, `TypeColor`;
 - Gira additionally: `TypeRawData`;
 - MDT additionally: `TypeNone`, `TypeIPAddress`, `TypeTime`.
+
+PDB-9 whole-corpus scan (304 distinct programs, read-only, aggregate):
+`TypeRestriction` 20,759, `TypeNumber` 4,153, `TypePicture` 1,118,
+`TypeFloat` 579, `TypeText` 554, `TypeColor` 115, `TypeNone` 87,
+`TypeIPAddress` 19, `TypeTime` 17, `TypeRawData` 3 — all ten typed since
+schema v15. Unrecognized Dynamic kinds: `Rows`/`Columns` 4,267 each
+(`Row` 9,275, `Column` 18,171; recognized layout since v15),
+`ParameterBlockRename` 270, `Rename` 56, `Button` 20, `Repeat` 16 (each
+holding exactly one `Module`). Static constructs reported but not
+evaluated: `ParameterCalculation` 1,236 in 91 programs, `Allocator` 94 in 14.
 
 Tests for parameter editing and reporting should cover every observed kind,
 including raw fallback for kinds without an editor. Enum display text,
@@ -325,6 +432,10 @@ remain unreported; see KNOWN_LIMITATIONS.
    version grouping, producer/tool metadata, scheme, language coverage,
    secure-capable marker and replacement metadata are all available in this
    corpus and should be visible before users install or replace a product.
+   PDB-11 (schema v17) supplies the data layer and CLI: per-candidate
+   element digests, winner/loser naming, source names, producer facts,
+   families, `ReplacesVersions` links and order-number lookup. Server/web
+   views and a user-chosen winner remain open.
 
 ## Compatibility conclusion
 

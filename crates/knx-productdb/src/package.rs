@@ -22,8 +22,11 @@ const MAX_LOCAL_METADATA_SIZE: usize = 24 * 1024 * 1024;
 const MAX_DECODED_PATH_SIZE: usize = 72 * 1024 * 1024;
 const MASTER_DIAGNOSTIC_PREFIX: &str = "/KNX/MasterData/";
 const BAGGAGE_DIAGNOSTIC_XML_PATH: &str = "/KNX/ManufacturerData/Manufacturer/Baggages/Baggage";
-const BAGGAGE_DIAGNOSTIC_DETAIL: &str =
-    "baggage index declarations are counted but not typed until PDB-10";
+/// A payload is a whole archive member, not an XML node: its diagnostic
+/// path is the document root.
+const PAYLOAD_DIAGNOSTIC_XML_PATH: &str = "/";
+const UNDECLARED_PAYLOAD_DETAIL: &str =
+    "baggage payload is retained but no Baggages.xml declaration names it";
 
 #[derive(Debug)]
 pub enum PackageError {
@@ -222,7 +225,8 @@ pub struct InstallDiagnostic {
 pub enum InstallDiagnosticKind {
     UnsupportedMasterSection,
     UnsupportedMasterSubtree,
-    UnsupportedBaggageIndex,
+    UnresolvedBaggageDeclaration,
+    UndeclaredBaggagePayload,
 }
 
 impl InstallDiagnosticKind {
@@ -230,7 +234,8 @@ impl InstallDiagnosticKind {
         match self {
             Self::UnsupportedMasterSection => "unsupported-master-section",
             Self::UnsupportedMasterSubtree => "unsupported-master-subtree",
-            Self::UnsupportedBaggageIndex => "unsupported-baggage-index",
+            Self::UnresolvedBaggageDeclaration => "unresolved-baggage-declaration",
+            Self::UndeclaredBaggagePayload => "undeclared-baggage-payload",
         }
     }
 
@@ -238,7 +243,8 @@ impl InstallDiagnosticKind {
         match value {
             "unsupported-master-section" => Ok(Self::UnsupportedMasterSection),
             "unsupported-master-subtree" => Ok(Self::UnsupportedMasterSubtree),
-            "unsupported-baggage-index" => Ok(Self::UnsupportedBaggageIndex),
+            "unresolved-baggage-declaration" => Ok(Self::UnresolvedBaggageDeclaration),
+            "undeclared-baggage-payload" => Ok(Self::UndeclaredBaggagePayload),
             _ => Err(report_error(format!("invalid diagnostic kind {value:?}"))),
         }
     }
@@ -344,6 +350,12 @@ pub struct InstallReport {
     pub dropped_datapoint_types: usize,
     /// None means the package predates the v12 encounter/write ledger.
     pub facts: Option<InstallFacts>,
+    /// PDB-10 baggage inventory. `None` only when the v16 upgrade could not
+    /// measure it from retained bytes; a fresh install always measures.
+    pub baggage: Option<crate::baggage::BaggageInventory>,
+    /// PDB-11: every source name these package bytes arrived under, sorted,
+    /// including this call's. The name never decides identity (ADR-0043).
+    pub source_names: Vec<String>,
 }
 
 fn zip_error(error: impl fmt::Display) -> PackageError {
@@ -395,6 +407,35 @@ fn validate_xml_path(path: &str) -> Result<(), ProductDbError> {
         )));
     }
     Ok(())
+}
+
+const UNRESOLVED_DECLARATION_PREFIX: &str = "baggage declaration does not resolve: ";
+
+/// Diagnostics for a measured inventory: one per (index, reason) group of
+/// unresolved declarations and one per undeclared payload.
+pub(crate) fn baggage_diagnostics(
+    inventory: &crate::baggage::BaggageInventory,
+) -> Result<Vec<InstallDiagnostic>, ProductDbError> {
+    let mut out = Vec::new();
+    for ((index_path, reason), count) in inventory.unresolved_groups() {
+        out.push(InstallDiagnostic::new(
+            InstallDiagnosticKind::UnresolvedBaggageDeclaration,
+            index_path,
+            BAGGAGE_DIAGNOSTIC_XML_PATH.into(),
+            format!("{UNRESOLVED_DECLARATION_PREFIX}{reason}"),
+            count,
+        )?);
+    }
+    for payload in inventory.undeclared() {
+        out.push(InstallDiagnostic::new(
+            InstallDiagnosticKind::UndeclaredBaggagePayload,
+            payload.member_path.clone(),
+            PAYLOAD_DIAGNOSTIC_XML_PATH.into(),
+            UNDECLARED_PAYLOAD_DETAIL.into(),
+            1,
+        )?);
+    }
+    Ok(out)
 }
 
 fn master_diagnostic_detail(section: &str) -> String {
@@ -507,20 +548,56 @@ fn validate_diagnostic(
                 ));
             }
         }
-        InstallDiagnosticKind::UnsupportedBaggageIndex => {
-            if role != "Baggages" {
+        InstallDiagnosticKind::UnresolvedBaggageDeclaration => {
+            if role != "Baggages" || diagnostic.xml_path != BAGGAGE_DIAGNOSTIC_XML_PATH {
                 return Err(report_error(
-                    "unsupported-baggage-index diagnostic does not identify a Baggages member",
+                    "unresolved-baggage-declaration diagnostic does not identify a Baggages declaration",
                 ));
             }
-            if diagnostic.xml_path != BAGGAGE_DIAGNOSTIC_XML_PATH {
+            // The detail is the stored reason; the count must be exactly the
+            // unresolved declarations of this index that carry it.
+            let reason = diagnostic
+                .detail
+                .strip_prefix(UNRESOLVED_DECLARATION_PREFIX)
+                .ok_or_else(|| {
+                    report_error(
+                        "unresolved-baggage-declaration diagnostic has noncanonical detail",
+                    )
+                })?;
+            let matching: i64 = conn.query_row(
+                "SELECT count(*) FROM package_baggage_declaration
+                 WHERE package_sha256 = ?1 AND index_path = ?2 AND detail = ?3
+                   AND resolution <> 'resolved'",
+                params![sha256, diagnostic.archive_path, reason],
+                |row| row.get(0),
+            )?;
+            if i64_to_u64(matching, "unresolved declarations")? != diagnostic.occurrences {
                 return Err(report_error(
-                    "unsupported-baggage-index diagnostic has a noncanonical path",
+                    "unresolved-baggage-declaration diagnostic disagrees with the inventory",
                 ));
             }
-            if diagnostic.detail != BAGGAGE_DIAGNOSTIC_DETAIL {
+        }
+        InstallDiagnosticKind::UndeclaredBaggagePayload => {
+            if role != "Baggage"
+                || diagnostic.xml_path != PAYLOAD_DIAGNOSTIC_XML_PATH
+                || diagnostic.detail != UNDECLARED_PAYLOAD_DETAIL
+                || diagnostic.occurrences != 1
+            {
                 return Err(report_error(
-                    "unsupported-baggage-index diagnostic has noncanonical detail",
+                    "undeclared-baggage-payload diagnostic has a noncanonical shape",
+                ));
+            }
+            let declarations: Option<i64> = conn
+                .query_row(
+                    "SELECT declarations FROM package_baggage_payload
+                     WHERE package_sha256 = ?1 AND member_path = ?2",
+                    params![sha256, diagnostic.archive_path],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if declarations != Some(0) {
+                return Err(report_error(
+                    "undeclared-baggage-payload diagnostic names a declared payload",
                 ));
             }
         }
@@ -597,7 +674,7 @@ fn package_conflicts(conn: &Connection, sha256: &str) -> Result<Vec<IdConflict>,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ZipDirectory {
+pub(crate) struct ZipDirectory {
     start: usize,
     end: usize,
     count: usize,
@@ -727,8 +804,9 @@ impl MemberPathTree {
 }
 
 // Bound metadata allocation before ZipArchive constructs its entry index.
-// ZIP64 is outside this small, corpus-proven package slice.
-fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
+// ZIP64 is outside this small, corpus-proven package slice. PDB-10 applies
+// the same gate to ZIP payloads nested in baggage (`crate::baggage`).
+pub(crate) fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
     let search_window = 22 + usize::from(u16::MAX);
     let start = bytes.len() - bytes.len().min(search_window);
     let end = bytes
@@ -1047,6 +1125,52 @@ fn validate_central_directory(
     })
 }
 
+/// Directory metadata of one member of a ZIP that passed
+/// [`validate_central_directory`]. Nothing is decompressed.
+pub(crate) struct ZipEntryMeta {
+    pub name: Vec<u8>,
+    pub flags: u16,
+    pub uncompressed_size: u64,
+}
+
+/// The package validator applied to a nested archive, reduced to the
+/// checked central-directory metadata.
+pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, PackageError> {
+    // An empty archive is only its end-of-directory record (no entries, no
+    // directory, optional comment). A package cannot be empty; a nested
+    // archive can, and is then read as zero entries rather than unreadable.
+    if bytes.len() >= 22
+        && bytes[..4] == *b"PK\x05\x06"
+        && bytes[4..20].iter().all(|&b| b == 0)
+        && 22 + usize::from(u16::from_le_bytes([bytes[20], bytes[21]])) == bytes.len()
+    {
+        return Ok(Vec::new());
+    }
+    let directory = preflight_zip(bytes)?;
+    let validated = validate_central_directory(bytes, directory)?;
+    validated
+        .entries
+        .iter()
+        .map(|entry| {
+            let at = usize::try_from(entry.central_offset).map_err(zip_error)?;
+            let header = bytes
+                .get(at..at + 46)
+                .ok_or_else(|| zip_error("truncated central directory"))?;
+            let flags = u16::from_le_bytes([header[8], header[9]]);
+            let name_len = usize::from(u16::from_le_bytes([header[28], header[29]]));
+            let name = bytes
+                .get(at + 46..at + 46 + name_len)
+                .ok_or_else(|| zip_error("truncated central directory name"))?
+                .to_vec();
+            Ok(ZipEntryMeta {
+                name,
+                flags,
+                uncompressed_size: entry.uncompressed_size,
+            })
+        })
+        .collect()
+}
+
 fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
     let mut reader = quick_xml::NsReader::from_reader(bytes);
     loop {
@@ -1199,10 +1323,7 @@ const REQUIRED_COUNTS: &[(InstallCategory, InstallDisposition)] = &[
     (InstallCategory::DatapointType, InstallDisposition::Stored),
     (InstallCategory::DatapointType, InstallDisposition::Dropped),
     (InstallCategory::BaggageIndex, InstallDisposition::Read),
-    (
-        InstallCategory::BaggageIndex,
-        InstallDisposition::Unsupported,
-    ),
+    (InstallCategory::BaggageIndex, InstallDisposition::Stored),
     (InstallCategory::Baggage, InstallDisposition::Read),
     (InstallCategory::Baggage, InstallDisposition::Stored),
     (InstallCategory::Baggage, InstallDisposition::Deduplicated),
@@ -1394,13 +1515,21 @@ fn validate_facts(
         InstallCategory::BaggageIndex,
         InstallDisposition::Read,
     )?;
-    let baggage_index_unsupported = count_of(
+    let baggage_index_stored = count_of(
         facts,
         InstallCategory::BaggageIndex,
-        InstallDisposition::Unsupported,
+        InstallDisposition::Stored,
     )?;
-    if baggage_index_read != baggage_index_unsupported {
-        return Err(report_error("baggage-index capability mismatch"));
+    let stored_declarations = i64_to_u64(
+        conn.query_row(
+            "SELECT count(*) FROM package_baggage_declaration WHERE package_sha256 = ?1",
+            [sha256],
+            |row| row.get::<_, i64>(0),
+        )?,
+        "stored baggage declarations",
+    )?;
+    if baggage_index_read != baggage_index_stored || baggage_index_stored != stored_declarations {
+        return Err(report_error("baggage-index outcome mismatch"));
     }
     let baggage_read = count_of(facts, InstallCategory::Baggage, InstallDisposition::Read)?;
     let baggage_stored = count_of(facts, InstallCategory::Baggage, InstallDisposition::Stored)?;
@@ -1476,17 +1605,37 @@ fn validate_facts(
     {
         return Err(report_error("master subtree diagnostic/count mismatch"));
     }
-    let diagnostic_baggage = facts.diagnostics.iter().try_fold(0u64, |total, row| {
-        if row.kind == InstallDiagnosticKind::UnsupportedBaggageIndex {
-            total
-                .checked_add(row.occurrences)
-                .ok_or_else(|| report_error("baggage diagnostic counter overflow"))
-        } else {
-            Ok(total)
-        }
-    })?;
-    if diagnostic_master != master_unsupported || diagnostic_baggage != baggage_index_unsupported {
+    if diagnostic_master != master_unsupported {
         return Err(report_error("diagnostic/unsupported count mismatch"));
+    }
+    // Every unresolved declaration and undeclared payload of the stored
+    // inventory has a diagnostic; `validate_diagnostic` already proved each
+    // one matches, so equal totals mean none is missing.
+    let sum_kind = |kind: InstallDiagnosticKind| {
+        facts.diagnostics.iter().try_fold(0u64, |total, row| {
+            if row.kind == kind {
+                total
+                    .checked_add(row.occurrences)
+                    .ok_or_else(|| report_error("baggage diagnostic counter overflow"))
+            } else {
+                Ok(total)
+            }
+        })
+    };
+    let (unresolved, undeclared): (i64, i64) = conn.query_row(
+        "SELECT (SELECT count(*) FROM package_baggage_declaration
+                  WHERE package_sha256 = ?1 AND resolution <> 'resolved'),
+                (SELECT count(*) FROM package_baggage_payload
+                  WHERE package_sha256 = ?1 AND declarations = 0)",
+        [sha256],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    if sum_kind(InstallDiagnosticKind::UnresolvedBaggageDeclaration)?
+        != i64_to_u64(unresolved, "unresolved declarations")?
+        || sum_kind(InstallDiagnosticKind::UndeclaredBaggagePayload)?
+            != i64_to_u64(undeclared, "undeclared payloads")?
+    {
+        return Err(report_error("baggage diagnostic/inventory mismatch"));
     }
     let member_total = i64_to_u64(
         conn.query_row(
@@ -1508,6 +1657,20 @@ fn validate_facts(
 }
 
 fn load_facts(conn: &Connection, sha256: &str) -> Result<Option<InstallFacts>, ProductDbError> {
+    let facts = load_facts_unvalidated(conn, sha256)?;
+    if let Some(facts) = &facts {
+        validate_facts(conn, sha256, facts)?;
+    }
+    Ok(facts)
+}
+
+/// `load_facts` without the cross-row validation, for the v15 -> v16
+/// upgrade, which reads a report in its old shape and re-persists it in
+/// the new one. Header/detail agreement is still checked.
+fn load_facts_unvalidated(
+    conn: &Connection,
+    sha256: &str,
+) -> Result<Option<InstallFacts>, ProductDbError> {
     let header: Option<(i64, String, i64, i64)> = conn.query_row(
         "SELECT report_version, status, unknown_distinct, unknown_occurrences FROM package_install_report WHERE package_sha256 = ?1",
         [sha256],
@@ -1622,8 +1785,100 @@ fn load_facts(conn: &Connection, sha256: &str) -> Result<Option<InstallFacts>, P
     if actual_distinct != header_distinct || facts.unknown_occurrences != header_occurrences {
         return Err(report_error("report header/detail mismatch"));
     }
-    validate_facts(conn, sha256, &facts)?;
     Ok(Some(facts))
+}
+
+/// Why a measured v15 report cannot be carried into v16. The caller
+/// downgrades just that report to `unavailable`.
+#[derive(Debug)]
+pub(crate) struct ReportNotUpgradable(pub String);
+
+/// v15 -> v16: rewrites one package's measured report in the shape a fresh
+/// v16 install writes. `baggage_index` becomes `stored` (the declarations
+/// now are), the old `unsupported-baggage-index` diagnostic is gone (the
+/// migration dropped it), the inventory's own diagnostics are added and the
+/// index parser's unknowns are merged in exactly as install merges member
+/// unknowns. Rows are then re-persisted through `persist_facts`, so
+/// ordinals, sorting and validation are install's own. `inventory` must
+/// already be persisted.
+pub(crate) fn upgrade_report_for_baggage(
+    conn: &Connection,
+    sha256: &str,
+    inventory: &crate::baggage::BaggageInventory,
+    index_unknowns: Vec<crate::report::UnknownConstruct>,
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let Some(mut facts) = load_facts_unvalidated(conn, sha256)? else {
+        return Ok(Ok(()));
+    };
+    let declarations = usize_to_u64(inventory.declarations.len(), "baggage declarations")?;
+    let read = count_of(
+        &facts,
+        InstallCategory::BaggageIndex,
+        InstallDisposition::Read,
+    )?;
+    if read != declarations {
+        return Ok(Err(ReportNotUpgradable(format!(
+            "report counted {read} baggage declarations, retained indexes hold {declarations}"
+        ))));
+    }
+    facts.counts.retain(|row| {
+        !(row.category == InstallCategory::BaggageIndex
+            && row.disposition == InstallDisposition::Unsupported)
+            && row.category != InstallCategory::UnknownConstruct
+    });
+    add_count(
+        &mut facts,
+        InstallCategory::BaggageIndex,
+        InstallDisposition::Stored,
+        read,
+    )?;
+    facts.diagnostics.extend(baggage_diagnostics(inventory)?);
+    let mut merged: BTreeMap<(String, String, String), crate::report::UnknownConstruct> =
+        BTreeMap::new();
+    for unknown in facts.unknown_constructs.drain(..).chain(index_unknowns) {
+        let key = (
+            unknown.xpath.clone(),
+            unknown.kind.as_str().to_string(),
+            unknown.name.clone(),
+        );
+        if let Some(current) = merged.get_mut(&key) {
+            current.occurrences = current
+                .occurrences
+                .checked_add(unknown.occurrences)
+                .ok_or_else(|| report_error("unknown occurrence counter overflow"))?;
+        } else {
+            merged.insert(key, unknown);
+        }
+    }
+    facts.unknown_constructs = merged.into_values().collect();
+    facts.sort()?;
+    let distinct = usize_to_u64(facts.unknown_constructs.len(), "unknown distinct")?;
+    let occurrences = facts.unknown_occurrences;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        distinct,
+    )?;
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+        "package_install_report",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+            [sha256],
+        )?;
+    }
+    persist_facts(conn, sha256, facts)?;
+    Ok(Ok(()))
 }
 
 fn persist_facts(
@@ -1989,6 +2244,13 @@ pub fn install_package(
         }
         let conflicts = package_conflicts(&tx, &sha256)?;
         let facts = load_facts(&tx, &sha256)?;
+        let baggage = crate::baggage::load_baggage_inventory(&tx, &sha256)?;
+        // The only write of a retry: the name these bytes arrived under.
+        tx.execute(
+            "INSERT OR IGNORE INTO package_source_name (package_sha256, source_name) VALUES (?1, ?2)",
+            params![sha256, source_name],
+        )?;
+        let source_names = crate::identity::package_source_names(&tx, &sha256)?;
         tx.commit().map_err(ProductDbError::from)?;
         return Ok(InstallReport {
             sha256: sha256.clone(),
@@ -2000,10 +2262,17 @@ pub fn install_package(
             translations,
             dropped_datapoint_types,
             facts,
+            baggage,
+            source_names,
         });
     }
     tx.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, ?2, ?3, ?4, ?5, 0)", params![sha256, source_name, scheme, usize_to_i64(bytes.len(), "package size")?, bytes])?;
+    tx.execute(
+        "INSERT INTO package_source_name (package_sha256, source_name) VALUES (?1, ?2)",
+        params![sha256, source_name],
+    )?;
     let mut report = InstallReport {
+        source_names: vec![source_name.to_string()],
         sha256,
         scheme,
         skipped: false,
@@ -2013,9 +2282,12 @@ pub fn install_package(
         conflicts: Vec::new(),
         translations: TranslationCounts::default(),
         facts: None,
+        baggage: None,
     };
     let mut facts = InstallFacts::default();
     let mut package_unknowns = Vec::new();
+    let mut baggage_indexes = Vec::new();
+    let mut baggage_payloads = Vec::new();
     for (ordinal, validated) in validated_members.into_iter().enumerate() {
         let PackageMember {
             path,
@@ -2091,7 +2363,7 @@ pub fn install_package(
             // The package hash, not the blob hash, controls package retries.
             ingest_file_in_transaction(&tx, &path, &data, true, scheme == 21)?
         } else {
-            crate::store_source_file(
+            let stored = crate::store_source_file(
                 &tx,
                 &crate::SourceFile {
                     source_path: path.clone(),
@@ -2103,6 +2375,9 @@ pub fn install_package(
                     bytes: data.clone(),
                 },
             )?;
+            if stored {
+                crate::identity::record_producer(&tx, &member_sha, &data)?;
+            }
             DetailedIngestOutcome {
                 outcome: IngestOutcome::Skipped {
                     sha256: member_sha.clone(),
@@ -2197,28 +2472,28 @@ pub fn install_package(
                     .push(master_subtree_diagnostic(path.clone(), subtree)?);
             }
         } else if role == "Baggages" {
-            let index = crate::parse::baggage::parse_baggage_index(&path, &data)?;
+            // Its unknowns already arrived through `ingest_file_in_transaction`.
+            let (index, _) = crate::baggage::parse_index(&path, &data)?;
+            let count = usize_to_u64(index.1.len(), "baggage declarations")?;
             add_count(
                 &mut facts,
                 InstallCategory::BaggageIndex,
                 InstallDisposition::Read,
-                index.declarations,
+                count,
             )?;
             add_count(
                 &mut facts,
                 InstallCategory::BaggageIndex,
-                InstallDisposition::Unsupported,
-                index.declarations,
+                InstallDisposition::Stored,
+                count,
             )?;
-            if index.declarations != 0 {
-                facts.diagnostics.push(InstallDiagnostic::new(
-                    InstallDiagnosticKind::UnsupportedBaggageIndex,
-                    path.clone(),
-                    BAGGAGE_DIAGNOSTIC_XML_PATH.into(),
-                    BAGGAGE_DIAGNOSTIC_DETAIL.into(),
-                    index.declarations,
-                )?);
-            }
+            baggage_indexes.push(index);
+        } else if role == "Baggage" {
+            baggage_payloads.push(crate::baggage::BaggagePayload::measure(
+                path.clone(),
+                member_sha.clone(),
+                &data,
+            ));
         } else if role == "Unrecognized" {
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
@@ -2256,6 +2531,10 @@ pub fn install_package(
         }
     }
     facts.unknown_constructs = unknowns.into_values().collect();
+    let inventory = crate::baggage::BaggageInventory::resolve(baggage_indexes, baggage_payloads);
+    crate::baggage::persist(&tx, &report.sha256, &inventory)?;
+    facts.diagnostics.extend(baggage_diagnostics(&inventory)?);
+    report.baggage = Some(inventory);
     facts.sort()?;
     let unknown_distinct = u64::try_from(facts.unknown_constructs.len())
         .map_err(|_| report_error("unknown distinct count exceeds u64"))?;

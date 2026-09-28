@@ -157,7 +157,7 @@ Evidence: 12 unit tests. Ten mutants were each caught and reverted:
 - a field recorded before it was checked;
 - no signed range check.
 
-KNOWN_LIMITATIONS §134 item 3 is half lifted. Choosing the active parameters
+KNOWN_LIMITATIONS §136 item 3 is half lifted. Choosing the active parameters
 (the `Dynamic` tree and the `Union` member) is still missing. Found on the
 way: a segment's base data is not its parameter defaults (RESEARCH §19).
 Nothing calls this yet.
@@ -166,7 +166,7 @@ Nothing calls this yet.
 
 `knx_core::commissioning::group_tables::build_group_tables` builds the two
 tables that link a mask-`0701h` device's group objects to group addresses.
-KNOWN_LIMITATIONS §134 item 2 is lifted.
+KNOWN_LIMITATIONS §136 item 2 is lifted.
 
 - **Address table:** *GrAT – Easy 2*, Resources §4.16.11 → §4.16.3.1:
   Length, individual address, then the group addresses, ascending.
@@ -192,7 +192,7 @@ The BIM M112 (mask `070nh`; the MDT push button at `1.1.67` is `0701h`) has
 no load state property. MP §3.31.2 `DMP_LoadStateMachineWrite_RCo_Mem`
 drives its load state machines through memory instead: an eleven-octet
 `A_Memory_Write` to `0104h`, and the state read back from `B6EAh`–`B6EDh`.
-RESEARCH §19 has the evidence, and KNOWN_LIMITATIONS §134 item 1 is lifted.
+RESEARCH §19 has the evidence, and KNOWN_LIMITATIONS §136 item 1 is lifted.
 
 - `knx_core::commissioning::load_control_memory` builds the records: plain
   events plus the absolute data, stack and task segments. Octet 0 is
@@ -245,6 +245,330 @@ and `a_device_silent_after_the_settling_wait_still_fails_step_four`
 (catches a hand-applied two-retry mutant, reverted). `knx-net` 257 lib
 tests green. **Simulator-verified only**: whether 1 s suffices for the MDT
 device is unmeasured until the next Programming Mode session.
+
+## 2026-09-28 — PDB-11: package identity recorded per candidate, versions derived at query time
+
+The product database is now schema v17
+([ADR-0043](adr/0043-package-identity-is-recorded-per-candidate.md)).
+Packages and members stay keyed by the SHA-256 of their bytes. New:
+
+- **Source names.** `package_source_name` keeps every name a package's bytes
+  arrived under; a byte-identical retry writes only that row.
+  `InstallReport::source_names` lists them, and `knx products ingest` prints
+  their count on a retry.
+- **Candidates.** Every `CatalogSection`, `CatalogItem`, `Hardware` (with an
+  `Id`), `Product`, `Hardware2Program` and `ApplicationProgram` the domain
+  parsers dispatch in a parsed member gets a `source_identity` row (table,
+  id, per-file occurrence, element digest). The scan mirrors the parsers
+  (the program parser's skipped `Dynamic` subtree and unconsumed
+  parameter-type child included); the digest is SHA-256 over a
+  length-prefixed canonical token stream of the element (attributes sorted
+  and normalized as the parsers read them, references resolved, CDATA
+  literal, line endings normalized, whitespace-only runs, comments and PIs
+  ignored; a nested tracked element is a marker in its parent). The rows are
+  a pure function of the blob, so the recorded set does not depend on install
+  order. `source_identity_scan` records `measured` or `unavailable` with a
+  reason.
+- **Agreement check.** After each parse, every typed row the blob won, every
+  `IdConflict` it produced and every non-empty candidate must match; a
+  mismatch fails and rolls back the ingest.
+- **Producer facts.** `source_producer` stores `KNX/@CreatedBy`,
+  `@ToolVersion` (unprefixed only) and the root namespace per newly stored
+  blob, as source strings.
+- **Queries (library + CLI).** `identity_candidates` / `knx products
+  identity <table> <id>` (winner, candidates, packages, same/differs/unknown,
+  unmeasured blobs), `identity_divergences`, `program_family` / `knx products
+  family` (manufacturer + `ApplicationNumber` as `xs:unsignedShort`,
+  `ReplacesVersions` as an `xs:list` of `xs:unsignedByte`, unparsable values
+  shown raw), `products_by_order_number` / `knx products order-number`.
+  Malformed persisted identity rows are an error, not a guess.
+- **Migration v16→v17** seeds source names from `package.source_name`, scans
+  every parsed catalogue/hardware/program blob and extracts producer facts;
+  a blob whose retained bytes no longer match its key is `unavailable`, and
+  winners and `package_conflict` rows are untouched.
+
+The winner rule is unchanged (first installed) and now visible; see
+KNOWN_LIMITATIONS §135.
+
+Evidence: `package_identity.rs` 17 tests (retry records only the name and
+changes no other table; candidates named with packages and same/differs;
+install order changes the winner but not the recorded rows; undispatched
+programs are not candidates; duplicate id → occurrences 1 and 2 and the
+conflict names 2; an unreadable blob is `unavailable` and still ingests; a
+candidate set missing a parsed row fails the ingest and leaves every table
+unchanged; v16→v17 equals a fresh install; damaged retained bytes →
+`unavailable` and the database still opens; families, `ReplacesVersions`
+and order numbers; producer facts; corrupted identity rows fail closed;
+historical rows that disagree with the backfill scan → `unavailable` and
+the blob re-ingests; a first parse whose scan adds a candidate fails and
+rolls back; the six `source_sha256` indexes are used; a measured
+winner without a candidate is named); 25 `identity::` unit tests (digest
+invariances and sensitivities, stored context from outside the element,
+markers, dispatch mirror, agreement rules a/b/c and the exact rule of a
+first parse, scanner version); `cli_product_identity.rs` 2 CLI tests.
+Mutation sweeps: 23 mutants over the check, digest and query guards, then
+13 over the review fixes (context token, section stack, exact rule,
+backfill check, scanner version, indexes, unmeasured winner). All 23 and
+12 of the 13 were killed at once; two survivors exposed test gaps (a
+section closed by `End`, the exact rule wired into the ingest) that got
+tests. The 13th, dropping the `0` no-parent flag, is equivalent: the next
+token byte already tells the cases apart. The independent review (no CRITICAL; one IMPORTANT: equal
+element bytes under another parent reported as the same element although
+the stored row differs) led to the context token. The
+115-instance corpus matrix re-pinned with every v16 outcome, report total
+and table count unchanged (the v16 projection commitment still equals the
+PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.
+
+## 2026-09-28 — CT-2: documentation export gets a preview, section choice and print (cloud session)
+
+- **Scope:** `apps/knx-web` only; the server/crate contract from T14 is used
+  unchanged.
+- **Files:**
+  - `src/documentationOptions.ts` holds the five section names in server
+    document order and builds the one `{ sections, language }` object that
+    both requests send. The report language follows the UI language
+    (`de` → `de`, anything else → `en`).
+  - `src/api.ts` gains `previewDocumentation(options)`;
+    `exportDocumentation(path, options?)` now forwards the options.
+  - `src/DocumentationDialog.tsx` is a modal (`Overlay`, portalled to
+    `<body>` so the closing File menu cannot hide it): section checkboxes,
+    the preview in an `<iframe srcdoc>` with
+    `sandbox="allow-same-origin allow-modals"` (no scripts), warnings beside
+    it, a preview error as `role="alert"`, and Print / Export / Close.
+    Stale preview responses for an earlier selection are dropped.
+  - `DocumentationExportButton.tsx` now only opens that dialog; the File menu
+    label stays *Export documentation…*. 16 new EN/DE message keys; styles
+    in `styles.css`.
+- **Tests:** new `DocumentationDialog.test.tsx` (16 tests: identical
+  selection to preview and export, document order, empty selection, sandbox
+  and `srcdoc`, warnings, print targets the frame and reports failures,
+  preview error, loading state, stale response, cancel, export summary and
+  close, export error, Escape/Close, German) and
+  `documentationOptions.test.ts` (4); `DocumentationExportButton.test.tsx`
+  reduced to the button (2); `api.test.ts` +2; `App.test.tsx` asserts the
+  dialog survives the File menu closing.
+- **Verified here:** `npm test` and `npm run build` exit 0. A headless
+  Chromium check showed that script execution is blocked in the frame and that
+  both sandbox tokens are required for `print()`. Not verified: the visible
+  print dialog, Firefox, the Tauri WebKitGTK webview, a screen-reader pass.
+- **Limitations:** KNOWN_LIMITATIONS §49 and §50 lifted; §48 notes that the
+  dialog follows the UI language but no separate language selector exists.
+
+## 2026-09-28 — CT-6: project diff against a raw `.knxproj` in the web UI (cloud session)
+
+- **Server:** `POST /api/project/diff` takes `{path, inputKind?}` with
+  `inputKind` `"knxdb"` | `"knxproj"`; absent, the kind is detected from the
+  extension. The response names `inputKind` and, for a `.knxproj`, carries
+  `importReport` (the full `ImportReport`) and `importDiagnostics` (the same
+  report as session-log entries) next to the unchanged diff fields. An
+  import with error-level diagnostics is a `422` carrying the report; an
+  unknown, contradicting or unsupported kind is a `400`.
+- **One loader:** `domain::diff_project_impl` now loads through
+  `knx_app::comparison::load_comparison_input` (also `knx diff`'s), which
+  gains `ComparisonInputKind::of_path`. `ImportReport::error_count` replaces
+  the CLI's private counter. The load runs without the project lock.
+- **Web:** the picker offers `.knxdb` and `.knxproj` (combined filter first);
+  paths still come from the mount picker or `/api/fs/upload`. New
+  `ProjectDiffImportDiagnostics.tsx` shows the diagnostics collapsed above
+  the diff with total/error/warning counts; a refused import shows its
+  diagnostics in the panel instead of an error toast. 9 new EN/DE keys.
+- **Tests:** 9 new HTTP tests in `apps/knx-server/tests/http_project_diff.rs`
+  with synthetic archives (clean, warning, error refused, unknown/contradicting
+  kind, unsupported extension, detected kind, uploaded relative path, `.knxdb`
+  kind); 1 in `crates/knx-app/tests/comparison_input.rs`; 6 in
+  `ProjectDiffPanel.test.tsx` (filters, block, singular, refusal, bare 422,
+  German); 2 in `api.test.ts`.
+- **Not verified:** real ETS exports (no corpus in the cloud), a browser run,
+  the Tauri native dialog's filters.
+- **Limitations:** KNOWN_LIMITATIONS §57 lifted, with the remaining gaps
+  listed there.
+
+## 2026-09-28 — CT-1: project-diff web panel lists entities and before/after values (cloud session)
+
+- **Scope:** `apps/knx-web` only; no server, crate or CLI change.
+- **Files:**
+  - `src/projectDiffView.ts` projects a `ProjectDiffReport` installation
+    into per-table rows: status, natural-key label, name, match kind,
+    `fieldChanges`, ambiguity counts, and a changed device's nested
+    communication-object/parameter tables. Pure, deterministic order
+    (added, removed, changed, ambiguous; server order within each).
+  - `src/ProjectDiffDetails.tsx` renders those rows below the unchanged
+    grouped-count summary: one collapsed native-button disclosure per
+    non-empty table, a *Field / Before / After* table per changed entity,
+    status as word plus symbol, 50 rows per page with a "Show more"
+    control that moves focus to the first new row.
+  - `ProjectDiffPanel.tsx` mounts it and remounts it per comparison, so a
+    new report starts collapsed. 16 new EN/DE message keys; styles in
+    `styles.css`.
+- **Tests:** `ProjectDiffPanel.test.tsx` grows from 9 to 19 tests
+  (collapsed default, natural keys, field/before/after table, ambiguous
+  counts, info tables, nested device tables, keyboard expand/collapse and
+  Escape, reset per comparison, German output, 3000-row synthetic diff
+  paging and focus, last-page behaviour); new `projectDiffView.test.ts`
+  (3 tests: empty tables omitted, entry order, key formatting).
+- **Verified here:** `npm test` and `npm run build` exit 0 in the cloud
+  session. Rust gates results are in the session log. Not verified: a
+  browser/Playwright run of the panel and a screen-reader pass.
+- **Limitations:** KNOWN_LIMITATIONS §59 lifted; §60 largely lifted, with
+  paging instead of virtualisation, no search, and untranslated field
+  identifiers remaining.
+
+## 2026-09-28 — Claude Code cloud sessions prepared (tooling, no product change)
+
+- **Files:**
+  - [`docs/CLOUD_SESSIONS.md`](CLOUD_SESSIONS.md) states what a cloud session
+    can and cannot do. It has no corpus, no bus, and its results are
+    integrated locally.
+  - The same file holds the one-time environment configuration and five task
+    briefs:
+    - CT-1: diff web panel (§59/§60);
+    - CT-2: documentation preview/sections (§49/§50);
+    - CT-3: parser fuzzing;
+    - CT-4: read-only branch review;
+    - CT-5: doc hygiene.
+  - `.claude/settings.json` is now versioned. It disables every Claude commit
+    and PR attribution and registers `tools/cloud/session-start.sh`.
+  - That hook runs only when `CLAUDE_CODE_REMOTE=true`. It sets the git
+    identity, puts cargo on `PATH`, runs `npm ci`, and prints
+    `tools/cloud/SESSION_RULES.md` plus an environment report.
+  - `tools/cloud/setup-env.sh` is the setup script for the claude.ai
+    environment. It installs the CI's Tauri/WebKit packages and the pinned
+    Rust toolchain.
+- **Verified:** In a local `ubuntu:24.04` root container used as a stand-in for
+  the cloud VM:
+  - the setup script exits 0 inside the five-minute cache budget;
+  - the hook reports the toolchain;
+  - `cargo check -p knx-desktop` succeeds.
+
+  The probe caught one real bug: `rustup-init` refuses to run under a `mktemp`
+  file name.
+- **Not verified:**
+  - behaviour on the real cloud VM;
+  - that the empty `attribution` strings suppress the trailers there. The
+    first session must be checked as described in CLOUD_SESSIONS §3.1.
+
+## 2026-09-28 — PDB-10: baggage inventoried by content, declarations resolved exactly
+
+The product database is now schema v16
+([ADR-0042](adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)).
+`Baggages.xml` declarations are typed (`Id`, `Name`, `TargetPath`,
+`InstallOnImport`, `FileInfo/@TimeInfo`, `FileInfo/@Version`, all raw
+lexemes; `InstallOnImport="0"` stays `"0"`) and any other attribute,
+element or character content in an index — including on the
+`KNX/ManufacturerData/Manufacturer/Baggages` spine — is reported as an
+unknown construct. Each declaration resolves byte-exactly to
+`<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a stated
+reason; an index whose single `Manufacturer/@RefId` is not its directory
+binds nothing (every declaration `invalid`). A standalone `Baggages.xml`
+(project import's `ingest_file`) that does not parse is still stored, as
+before PDB-10, with a recorded `BaggageIndexParseError` row instead of
+failing the import; inside a package it still refuses the install. Every `Baggage` member is
+classified by magic bytes (BMP-named-`.png`, PDF-named-`.ai`, PE and OLE2
+are recognized; the extension only reports disagreement). A ZIP payload
+passes the package `preflight_zip` gate and then only its central directory
+is read (entries, declared expanded size, encrypted and `.zip`-named
+entries); nothing is decompressed, extracted, rendered or executed.
+
+Storage: `package_baggage_inventory`/`_payload`/`_declaration`. Reload
+re-measures each payload from its retained blob and re-resolves every
+declaration; a tampered row is an error. The install report's
+`baggage_index` count moves from `unsupported` to `stored`;
+`unsupported-baggage-index` is replaced by `unresolved-baggage-declaration`
+(per index and reason) and `undeclared-baggage-payload` (per member). The
+v15→v16 migration re-derives inventory, index unknowns and report with the
+install's own functions (fresh-install identical) and marks a package whose
+retained bytes no longer parse `unavailable` with a recorded
+`InstallReportBackfillError`, instead of refusing to open. Web catalogue
+labels (en/de) name the two new diagnostics.
+
+Evidence: `baggage_inventory.rs` 13 tests (typed/resolved/classified
+inventory with the four unresolved/undeclared diagnostics, retry returns the
+persisted inventory and reports index unknowns, sixteen tamper cases rejected
+on reload — including forged `Id`/`InstallOnImport`/`TimeInfo`/`Name`
+lexemes that leave the resolution unchanged, because reload re-derives the
+declarations from the retained index blob — and a payload row swapped to a
+same-shaped blob, v15→v16 equals a fresh install, v15→v16 merges index unknowns and
+the package's `unknown_count` like a fresh install, an unreadable index
+becomes `unavailable` and the database still opens, a v15 report that no
+longer validates is downgraded to `unavailable` instead of refusing to open
+the database, a prefixed `x:Name` is
+reported as foreign rather than read as `Name`, an index naming another
+manufacturer binds nothing and that refusal is itself re-checked on reload,
+a standalone index that does not parse is stored with its reason, a v15
+package with no report row no longer stops the database opening, and a
+package downgraded only for its report keeps its index's unknown rows as a
+fresh install would); unit tests for spine attributes and text reported,
+character content (text, CDATA, entity/character references) counted once per
+element, a prefixed-only `x:Name`/`x:RefId` reported and never read as the
+known attribute, the one-matching-`Manufacturer` binding rule, sniffing
+(weak `BM`/`MZ` magics refused), extension disagreement, nested directory
+reads, an empty nested ZIP read as zero entries, a nested ZIP naming one
+entry twice refused rather than collapsed, encrypted and `.zip`-named entries
+counted from validated metadata, a
+nested ZIP whose end-of-directory record claims 65,535 entries or ZIP64
+(refused before indexing) and two hostile 256 KiB nested ZIPs refused in
+linear time (the `zip` crate's reader took 8.3 s on one of them, so nested
+archives no longer go through it); `install_reports.rs` updated for the new report shape and
+tamper cases; a shared `v16_rewind` test helper rebuilds genuine v15
+databases for the older migration tests; the heavy `large_member_memory`
+test installs a 54.8 MB program member (the corpus maximum) at 4.2× peak
+RSS growth against an 8× bound.
+
+## 2026-09-27 — PDB-9: every observed parameter kind typed, references below structurally skipped Dynamic nodes named
+
+The product database is now schema v15
+([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)).
+A read-only, aggregate-only scan of the 304 distinct application programs in
+the private corpus found ten `ParameterType` children; the eight already
+typed plus `TypeColor` (115) and `TypeTime` (17), which v14 filed under
+`Other`. They are now kinds `Color` and `Time`. `Time` keeps `SizeInBit` and
+its integer bounds in `Number`'s columns and is validated like `Number`
+(Project Schema `Value_t`: "Same as TypeNumber"); `Color` is validated like
+`Picture`/`Raw` (non-empty, XML-safe) because no value encoding is
+documented. Every attribute not stored in a column is reported with a
+sample (`TypeTime/@Unit`, `@UIHint`, `TypeColor/@Space`, and the
+already-reported `UIHint`/`Increment`/`Pattern`/`AddressType`/`RefId`/
+`HorizontalAlignment`/`MaxSize`/`Encoding` of the other kinds); an unseen
+type child stays `Other` and is reported as an element. The v14→v15
+migration re-derives both kinds from each affected retained blob with the
+ingest code's own attribute allowlist, retires the stale element row, never
+rewrites a row another blob won (ADR-0011), and records a
+`ParameterKindBackfillError` instead of refusing to open on an unreadable
+blob. The web parameter panel renders `Time` like `Number`.
+
+D10 is amended: the evaluator still does not descend into a node it does not
+understand, but every `ParameterRefRef`, `ComObjectRefRef` and `Module` below
+a node refused for a structural reason (unrecognized kind, non-`when`
+`choose` child, `choose` with `UnresolvedParamRef`/`UnexpectedTypeNoneShape`,
+`Rows`/`Columns`, a recognized leaf with unexpected children) is now named by
+a `RefBelowSkippedNode` diagnostic (document order, all `choose` branches,
+pointing at the outermost skipped node, bounded by `MAX_MODULE_ACTIVATIONS`).
+Value-dependent `choose` refusals and unexpanded `Module`s are not
+enumerated; see KNOWN_LIMITATIONS. They are not
+activated — that would invent semantics. `Rows`/`Columns` (4,267 each, only
+under a `@Layout` `ParameterBlock`, holding only `Row`/`Column`) are
+recognized layout and no longer reported. `Rename`, `ParameterBlockRename`,
+`Button` and `Repeat` remain `UnrecognizedNode`; the single `Module` inside
+each `Repeat` is now named instead of vanishing. Server DTO, web kind union
+and en/de catalogues carry `refBelowSkippedNode`.
+
+Evidence: `parameter_kinds.rs` 8 tests (every kind stored as its own kind,
+unmodelled attributes reported with samples, an unseen kind stays `Other`,
+v14→v15 equals a fresh ingest — including repeated occurrences, a
+schema-14 namespace-prefixed attribute and a non-type-deciding `TypeTime` —
+a losing blob cannot rewrite the winner but its own report is corrected, a
+corrupt blob is recorded and the database still opens, `Allocator` and
+`ParameterCalculation` reported and their bytes retained), `dynamic_tree.rs`
+ten new evaluator tests (every reference below a skipped node in document
+order, nested skipped nodes attribute to the outermost, `Module` bindings
+not descended, non-`when` `choose` children, structural vs value-dependent
+`choose` refusals, recognized leaves with children, module scope carried,
+the activation budget bounds the new diagnostic, layout recognized, a
+reference hidden in layout still named, `Rename`/`Button`/`Repeat` shapes),
+a server validation test for `Time` and `Color`, a web panel test for
+`Time`. An independent review's findings (budget, overclaim, backfill
+exactness) were fixed before merge; the private compatibility matrix moved
+only by the +11 unknown-report rows an independent Python recount predicts.
 
 ## 2026-09-27 — PDB-8: uninterpreted subtrees inside supported master sections are reported
 
@@ -682,7 +1006,7 @@ diagnostics expose kind, relative archive/XML paths, detail, and occurrences.
 zero. Host source names are not projected. Signature caution remains explicit;
 ETS parity and signature verification are not claimed. PDB-8 is the future typed
 master-data coverage slice; PDB-10 is the future safe baggage inventory and
-index-to-payload resolution slice. Parent review and the full fresh-target merge
+index-to-payload resolution slice (delivered 2026-09-28, see top). Parent review and the full fresh-target merge
 gates completed successfully.
 
 ## 2026-09-24 — PDB-2: product-package corpus compatibility matrix
@@ -2962,7 +3286,10 @@ first of three planned slices ([design spec](superpowers/specs/2026-09-11-dynami
   default branch without a comparison, exactly as all 604 corpus
   occurrences look; any other shape under it is
   `UnexpectedTypeNoneShape`. An unrecognized element kind is
-  `UnrecognizedNode` and its subtree is not descended. **At this point in
+  `UnrecognizedNode` and its subtree is not descended *(amended
+  2026-09-27 by [ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md):
+  every reference below it is now named by `RefBelowSkippedNode`, and
+  `Rows`/`Columns` are recognized layout)*. **At this point in
   the slice, `Module` is recognized but not expanded — it evaluates to
   `ModuleNotExpanded`.** *(Superseded the same day: T18 slice 2, below,
   expands `Module` and removes this diagnostic. It is described here

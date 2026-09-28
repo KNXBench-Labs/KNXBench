@@ -1,3 +1,38 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 21:30
+- Web lock: released
+- **Completed:** goal-commission **K5** merged. It is simulator-only; no real device was written. Log: `.ai/logs/2026-09-28_claude_k5-device-download-ui.md`.
+  - ADR-0045: the server demands the plan's phrase (`WriteAuthorisation::for_hardware`) and writes only the exact plan the user was shown.
+  - `/api/device-download/{plan,start,status?since=}`: a background run, and every step/block event returned once.
+  - The run ends with `written: yes|no|partially` and the restart outcome. It has no cancel.
+  - Monitor, scan and download refuse each other: one tunnel.
+  - UI: the **Download to device** / **In Gerät laden** tab in `BusDiagnosticsPanel`. It shows the plan, asks for consent through `useProgrammingConsent`, shows step n/m, the octets read back and every block with its hex, and ends with yes/no/partially and a loud "Restart: NOT confirmed".
+  - Docs:
+    - manual ch. 7 "Downloading to a device"
+    - `manual/implementation-status.md` no longer says "no button/route/command"
+    - KL §101 bound
+    - GLOSSARY
+    - IMPLEMENTATION_STATUS "K5"
+  - Gate:
+    - fmt, clippy
+    - 2350/0 workspace
+    - K5 HTTP 6, K4 CLI 11, K3 1
+    - web 1105/71 files, build, bindings
+    - layering, headers, anchors, corpus-gates, diff-check
+  - Mutants: 7 server and 8 UI, all caught.
+- **Pending/Next Steps:**
+  - K6 (next commissioning package per `goal-commission.md`). It takes the web lock again only if it touches `apps/knx-web`.
+  - K7 **[W]**: the real UI download on `1.1.67`, only after the user's explicit device-specific go.
+  - Still open: KL §136 (lost `T_Disconnect`, ≥7 s between sessions to one device).
+- **Notes for Codex or Claude:**
+  - **For the UI session:** the web lock is free. The File-menu rename is `goal-ui.md` U3.
+    - `collectDevices` in `treeUtils.ts` is now exported.
+    - `BusDiagnosticsPanel` has a third tab.
+    - The `deviceDownload.*` keys are in en/de.
+  - HTTP tests need `KNXBENCH_PRODUCT_CORPUS` and `KNXBENCH_K3_PROJECT` (root `OriginalData`), with `--ignored`.
+
+---
+
 - **Last Agent:** Claude (goal.md session)
 - **Timestamp:** 2026-09-28 21:05 CEST
 - **Completed:** `goal-ui.md` created (user request). It is a separate goal for a **UI session that runs on GPT/Codex**: packages U0–U13.

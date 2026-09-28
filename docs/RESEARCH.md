@@ -4983,6 +4983,27 @@ independent read-back straight afterwards, on a fresh connection, found:
 - the individual address octets at `4001h`–`4002h` still `11 43` (`1.1.67`);
 - load states `B6EAh`–`B6EDh` at `01 01 01 00`, all Loaded.
 
+**Update 2026-09-28 (K2), spec reading.** Read directly from the MP
+v02.01.02 PDF:
+
+- §3.7.1.1.2, p. 78, Figure 19: between `t0` and `t1` *"The MaS may react
+  under the pre-reset conditions, may not react at all, or may already react
+  according the post-reset conditions"*. A missing `T_ACK` after a Basic
+  Restart is inside that range.
+- §3.7.1.1.3, p. 80: *"The Application Layer of the Management Server shall
+  not confirm the A_Restart-service if a Basic Restart is called; to obtain
+  the same result with an AL-confirmation, the Management Client should
+  instead call a Master Reset with Erase Code 00h."*
+- §3.7.3, p. 89: the reset of the communication system may mean *"that no
+  T_Disconnect –frame is sent on the bus"*.
+
+`[D]` So no clause read requires a `T_ACK` for a Basic Restart, and none
+forbids leaving it out. KNXBench reports the case as
+`RestartOutcome::Unconfirmed` and never repeats the restart. The confirmed
+alternative the Standard names, a Master Reset with Erase Code `00h`, is a
+different service. Whether mask `0701h` supports it has not been checked,
+so it is not used.
+
 **`[O]` Open: did the device restart?** MP §3.7.1.1.3 says the server does
 not confirm a Basic Restart at the Application Layer, and MP §3.7.3
 exception (5) tells the client to ignore everything the server sends after

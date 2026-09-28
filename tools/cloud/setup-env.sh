@@ -38,15 +38,27 @@ APT_LOG="$STATE_DIR/setup-apt.log"
 STATUS_FILE="$STATE_DIR/setup.status"
 RUN_BY="${1:-environment-setup-script}"
 
+# Observed on a real cloud VM (CT-2 session, 2026-09-28): the image arrived with
+# an interrupted dpkg run ("dpkg was interrupted, you must manually run
+# 'dpkg --configure -a'"), so every install failed. Finishing that run is
+# idempotent and harmless on a clean system. The same VM's proxy answers 403
+# for some third-party PPAs; `apt-get update` then exits non-zero even though
+# the Ubuntu archives were fetched, so its status must not gate the install.
+# The install's own exit status is the verdict.
 install_system_packages() {
   {
-    apt-get update &&
-      apt-get install -y --no-install-recommends \
-        pkg-config \
-        libwebkit2gtk-4.1-dev \
-        libgtk-3-dev \
-        libayatana-appindicator3-dev \
-        librsvg2-dev
+    echo "--- dpkg --configure -a"
+    dpkg --configure -a || echo "[knxbench-setup] dpkg --configure -a failed; the install below will say whether it matters"
+    echo "--- apt-get update"
+    apt-get -o DPkg::Lock::Timeout=120 update ||
+      echo "[knxbench-setup] apt-get update reported errors (e.g. a blocked PPA); installing anyway"
+    echo "--- apt-get install"
+    apt-get -o DPkg::Lock::Timeout=120 install -y --no-install-recommends \
+      pkg-config \
+      libwebkit2gtk-4.1-dev \
+      libgtk-3-dev \
+      libayatana-appindicator3-dev \
+      librsvg2-dev
   } >"$APT_LOG" 2>&1
 }
 

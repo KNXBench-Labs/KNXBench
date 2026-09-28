@@ -153,6 +153,15 @@ package hashes, each counted once.
 - **Reconciled units.** The inventory above (1,728) counts every `Baggage`
   element in every XML of every package instance; this probe counts index
   declarations once per distinct package. Neither is pinned for the other.
+  A per-location recount over the whole tree (117 instances) finds 1,730
+  `Baggage` elements (1,713 counting each distinct package once): 786 in
+  `Baggages.xml` (777 distinct, the declarations above), 943 as
+  `ApplicationProgram/Static/Extension/Baggage` references (935 distinct)
+  and 1 under `Hardware/Product/Baggages`. The program references point
+  at baggage by `RefId`; PDB-10 does not type or resolve them. The program
+  parser reports `Extension`, its `Baggage` child and the `RefId` attribute
+  as unknown constructs (verified with a throwaway ingest probe), so they
+  are reported, not dropped.
   Over the matrix scopes (`Gira`, `MDT`: 115 instances, 113 distinct), an
   independent Python recount gives 37 index members, 776 declarations, 789
   payloads and 13 undeclared payloads, no unresolved declaration and no

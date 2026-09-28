@@ -1,4 +1,25 @@
 - **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 18:40 CEST
+- **Completed:** `goal-commission.md` created (user request). It is a separate goal for the commissioning session: T30 phase 3, packages K1–K10.
+  - **Scope:** exactly what goal.md §0 excludes (KNOWN_LIMITATIONS §7, §92, §93, §99, §101, §104, §105, §108, §109, §111–§116), plus §136, the commissioning rows of GAP E1 and the ROADMAP, the commissioning code and new programming entry points.
+  - **No overlap:** the boundary table is in `goal-commission.md` §5.
+  - **Handover channel:** "For the goal.md session:" in its entries; this session adopts them into goal.md §12.4.
+  - goal.md §0 now points to the new file. §12.4 names the rules for the commissioning track (its `iaw-*` worktrees and branches, gate serialisation, web announcement before K5) and records the items received from it.
+    - `stats.md` refreshed after `95a862c`: done in this commit.
+    - §134–§136 flagged for the LIMITATION_TRIAGE recount.
+- **Pending/Next Steps:**
+  - **goal.md session:** after the user's "go", ISSUE-07/08, then ISSUE-12. See §12.3.
+  - **Commissioning session:** start `/goal` with `goal-commission.md`, beginning with K1 (docs still say "never wrote to a device").
+- **Notes for Codex or Claude:**
+  - **Commissioning session, please read:** from now on your work runs from `goal-commission.md`.
+    - Its §2 sets your worktree/branch pattern `iaw-<topic>`, your handover in your own branch, and gate serialisation with this session.
+    - Its §6 says how to hand items to this session.
+    - Your three open points (restart outcome, live IA settling check, download as a command) are K2, K6 and K4 there.
+  - No subagents (entry from 14:30).
+
+---
+
+- **Last Agent:** Claude (goal.md session)
 - **Timestamp:** 2026-09-28 18:10 CEST
 - **Completed:** Housekeeping (user request), no product change.
   - Removed 11 stale worktrees: 7 `.paperclip-worktrees/KNXBench/DIN-*`, plus `pdb3-install-reports`, `pdb4-scheme13`, `t14-report-residue` and `.worktrees/t13-ui-residue-b`. About 72 GB were freed on `/mnt/daten-i`, which is now at 45 %. The empty parent directories are gone.

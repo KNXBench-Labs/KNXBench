@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Transport Layer: lost `T_ACK`s and repeated answers
+
+- `ManagementSession` now keeps TL §5's `SeqNoRcv`. A device's
+  `T_DATA_CONNECTED` is acknowledged and passed on only when it is the
+  next one (`E04`/`A2`). A repetition is acknowledged and dropped
+  (`E05`/`A3`); anything else gets a `T_NAK` (`E06`/`A4`).
+- An acknowledged request waits up to four acknowledge time-outs for its
+  answer, the length of the device's repetition ladder. The load-state
+  wait loop keeps one time-out per read (RES §4.23.2.4.1).
+- Found live on `1.1.67`: two download runs stopped early (RESEARCH §19.4).
+- The simulator can lose the client's `T_ACK` for one answer
+  (`lost_ack_for_answer`) and then behaves like the device did.
+- 4 new tests. 7 mutants of the fix were all caught. Workspace: 2217 passed,
+  0 failed.
+
 ## 2026-09-28 — Memory download: plan and executor (mask `070nh`)
 
 - **`knx_core::commissioning::memory_download`**: the step list of a
@@ -38,8 +53,8 @@
   a second run is idempotent.
 - 11 + 13 + 13 unit tests (core, planner, executor), plus 3 corpus tests.
   16/16 mutants of the safety checks were caught.
-- **Still not done:** `WriteScope::Download` stays off the hardware
-  allowlist. No real application download has been run.
+- **Still not done:** no real application download has completed; see the
+  entry above and RESEARCH §19.4.
 
 ## 2026-09-28 — Download image assembly (`knx_productdb::image`)
 

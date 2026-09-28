@@ -875,6 +875,30 @@ enum AckIsEnough {
     Yes,
 }
 
+/// What TL §5's receiving side made of one `T_DATA_CONNECTED`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Received {
+    /// `E04`: the next frame, for the user.
+    New,
+    /// `E05`: a frame already received, repeated by a device that did not
+    /// see this client's `T_ACK`.
+    Repetition,
+    /// `E06`: neither, answered with a `T_NAK`.
+    OutOfSequence,
+}
+
+/// How long an acknowledged request waits for its answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AnswerWait {
+    /// Through the device's repetition ladder, see
+    /// [`ManagementSession::exchange_inner`].
+    RepetitionLadder,
+    /// One acknowledge time-out. For the one caller that tolerates silence
+    /// and must poll again within `[D]` RES §4.23.2.4.1's *"The period for
+    /// reading shall not exceed half the TL-timeout, i.e. 3 seconds."*
+    OneTimeout,
+}
+
 /// What one exchange came back with.
 enum Exchanged<R> {
     /// A frame the matcher accepted.
@@ -910,6 +934,12 @@ pub struct ManagementSession<'t, T: ManagementTransport> {
     level_count: LevelCount,
     /// Our own send sequence number, 4 bit, wrapping.
     send_seq: u8,
+    /// `[D]` TL §5 `SeqNoRcv`: the sequence number the next new
+    /// `T_DATA_CONNECTED` from the device carries, 4 bit, wrapping.
+    recv_seq: u8,
+    /// See [`AnswerWait`]. [`AnswerWait::RepetitionLadder`] except while
+    /// the property wait loop reads.
+    answer_wait: AnswerWait,
     /// `None` when no connection is open.
     connection: Option<ConnectionState>,
     /// How many times [`Self::connect`] has re-opened the connection, so a
@@ -993,6 +1023,8 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             mask: None,
             level_count: LevelCount::Unknown,
             send_seq: 0,
+            recv_seq: 0,
+            answer_wait: AnswerWait::RepetitionLadder,
             connection: None,
             reconnects: 0,
         })
@@ -1188,6 +1220,38 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         }
     }
 
+    /// The receiving half of TL §5's state machine for one
+    /// `T_DATA_CONNECTED` from the device, events `E04`–`E06`.
+    ///
+    /// `[D]` TL §5.4.1, p. 21, the same in `OPEN_IDLE` and `OPEN_WAIT`:
+    /// - `E04`, `SeqNo_of_PDU == SeqNoRcv`: `A2`, acknowledge, *"Increment
+    ///   the SeqNoRcv"*, pass the frame on;
+    /// - `E05`, `SeqNo_of_PDU == ((SeqNoRcv-1)&Fh)`: `A3`, acknowledge with
+    ///   the received sequence number and pass nothing on — the device
+    ///   repeated a frame whose `T_ACK` it never got;
+    /// - `E06`, anything else: `A4`, a `T_NAK` with the received number.
+    ///
+    /// `A3` is not bookkeeping. `1.1.67` (2026-09-28) lost one of this
+    /// client's `T_ACK`s and then held every further answer until it had
+    /// repeated the unacknowledged one; a client that does not acknowledge
+    /// the repetition gets nothing more on that connection. And a client
+    /// that passed the repetition on would hand a stale answer to a request
+    /// for the same address.
+    async fn receive_numbered(&mut self, received: u8) -> Received {
+        let (reply, outcome) = if received == self.recv_seq {
+            self.recv_seq = (self.recv_seq + 1) & 0x0F;
+            (Tpci::Ack { seq: received }, Received::New)
+        } else if received == (self.recv_seq.wrapping_sub(1) & 0x0F) {
+            (Tpci::Ack { seq: received }, Received::Repetition)
+        } else {
+            (Tpci::Nak { seq: received }, Received::OutOfSequence)
+        };
+        // Best-effort, like every acknowledgement: a lost one makes the
+        // device repeat, and `A3` above is how that repetition is met.
+        let _ = self.send(reply, ApplicationService::NoApplicationPdu).await;
+        outcome
+    }
+
     async fn exchange_inner<R>(
         &mut self,
         service: ApplicationService,
@@ -1201,6 +1265,8 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         let seq = self.next_seq();
         let mut attempts = 0u8;
         let mut acknowledged = false;
+        // Wait slices spent on an acknowledged request, see below.
+        let mut answer_slices = 0u8;
         let mut events = self.transport.subscribe();
         self.send(Tpci::NumberedData { seq }, service.clone())
             .await?;
@@ -1235,20 +1301,13 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                                 });
                             }
                             Tpci::NumberedData { seq: received } => {
-                                // The receiver's obligation (TL §2): every
-                                // T_Data_Connected gets a T_ACK. A session
-                                // stays open for the whole download, so
-                                // skipping this — as a one-shot probe can
-                                // get away with — would have the device
-                                // repeat every answer three times.
-                                let _ = self
-                                    .send(
-                                        Tpci::Ack { seq: received },
-                                        ApplicationService::NoApplicationPdu,
-                                    )
-                                    .await;
-                                if let Some(answer) = matcher(&frame.service) {
-                                    return Ok(Exchanged::Answer(answer));
+                                match self.receive_numbered(received).await {
+                                    Received::New => {
+                                        if let Some(answer) = matcher(&frame.service) {
+                                            return Ok(Exchanged::Answer(answer));
+                                        }
+                                    }
+                                    Received::Repetition | Received::OutOfSequence => {}
                                 }
                                 continue;
                             }
@@ -1285,9 +1344,29 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             // sits in `OPEN_IDLE`, and the connection survives a silence
             // that belongs to the application layer.
             if acknowledged {
+                // The request is not repeated (above), but the answer may
+                // still be on its way. A device whose own earlier frame is
+                // unacknowledged holds every later answer back (TL §5.3
+                // `A11`) and repeats that frame (`A9`) up to
+                // `max_rep_count` times before it has to give up with
+                // `A6`. `[D]` TL clause 4 and §5.2 `E17`/`E18` bound that
+                // ladder: `MAX_TRANSMISSIONS` acknowledge time-outs. So the
+                // wait for the answer is the same ladder long, and a
+                // device that gives up says so with a `T_Disconnect`,
+                // which ends the wait early as `ConnectionLost`.
+                //
+                // `[V]` `1.1.67`, 2026-09-28: the repetition came 6 s after
+                // the unacknowledged answer, then every 3 s — outside one
+                // acknowledge time-out, inside the ladder.
+                answer_slices += 1;
+                if self.answer_wait == AnswerWait::RepetitionLadder
+                    && answer_slices < MAX_TRANSMISSIONS
+                {
+                    continue;
+                }
                 return Err(SessionError::NoAnswer {
                     waiting_for,
-                    each: self.timing.response_timeout,
+                    each: self.timing.response_timeout * u32::from(answer_slices),
                     attempts,
                 });
             }
@@ -1382,7 +1461,9 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 }
             }
         }
+        // `[D]` TL §5.3 `A12`: *"SeqNoSend=0; SeqNoRcv =0"*.
         self.send_seq = 0;
+        self.recv_seq = 0;
         self.connection = Some(ConnectionState {
             authorisation: self.plan.initial_authorisation(),
             // Assumed clear, per RES §4.2.14.7.4: *"When opening a Transport
@@ -2406,7 +2487,14 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             // collecting a `NotConnected` this loop would then have to
             // pretend to understand.
             let read = match connected {
-                true => self.read_load_state(object_index).await.map(Some),
+                true => {
+                    // No `?` between the two assignments, so the session
+                    // never keeps the short wait by accident.
+                    self.answer_wait = AnswerWait::OneTimeout;
+                    let read = self.read_load_state(object_index).await.map(Some);
+                    self.answer_wait = AnswerWait::RepetitionLadder;
+                    read
+                }
                 false => Ok(None),
             };
             match read {
@@ -3705,6 +3793,160 @@ mod tests {
             session.connection().is_some(),
             "RES §4.23.2.4.1: the T_ACK is the MaS responding, and that \
              connection is kept alive"
+        );
+    }
+
+    /// `1.1.67`, 2026-09-28: the client's `T_ACK` for an answer never
+    /// reached the bus, so the device sat in `OPEN_WAIT` and held the next
+    /// answer back until it had repeated the first one (TL §5.3 `A9`,
+    /// `A11`). The client has to stay long enough to acknowledge that
+    /// repetition (`A3`) and receive what was held.
+    #[tokio::test]
+    async fn an_answer_held_behind_a_lost_t_ack_still_arrives() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            lost_ack_for_answer: Some(1),
+            // Later than one acknowledge time-out, as on the device (6 s
+            // against 3 s), and inside the repetition ladder.
+            answer_repeat_after: Duration::from_millis(120),
+            ..SimulatorConfig::default()
+        });
+        device.preset_memory(0x4000, &[0x11, 0x22, 0x33, 0x44]);
+        let mut session = read_only(&device);
+        session.connect().await.expect("connect");
+        assert_eq!(
+            session.read_memory(0x4000, 2).await.expect("first read"),
+            vec![0x11, 0x22]
+        );
+        assert_eq!(
+            session
+                .read_memory(0x4002, 2)
+                .await
+                .expect("the held answer arrives once the repetition is acknowledged"),
+            vec![0x33, 0x44]
+        );
+        assert!(session.connection().is_some());
+    }
+
+    /// The same device, reading the same address twice: the repetition of
+    /// the old answer matches the new request's address, and taking it
+    /// would report a value the device no longer holds. `[D]` TL §5.2
+    /// `E05` (`SeqNo_of_PDU == SeqNoRcv - 1`) is acknowledged by `A3` and
+    /// not passed to the user.
+    #[tokio::test]
+    async fn a_repeated_answer_is_never_taken_for_a_new_one() {
+        let device = SimulatorConfig {
+            lost_ack_for_answer: Some(1),
+            // Inside one wait slice, so a client that does not track the
+            // receive sequence sees the stale frame before the fresh one.
+            answer_repeat_after: Duration::from_millis(10),
+            ..SimulatorConfig::default()
+        };
+        let device = SimulatedDevice::with_config(device);
+        device.preset_memory(0x4000, &[0x01]);
+        let mut session = read_only(&device);
+        session.connect().await.expect("connect");
+        assert_eq!(
+            session.read_memory(0x4000, 1).await.expect("first read"),
+            vec![0x01]
+        );
+        device.preset_memory(0x4000, &[0x02]);
+        assert_eq!(
+            session.read_memory(0x4000, 1).await.expect("second read"),
+            vec![0x02],
+            "the repetition of the first answer is a duplicate, not the answer"
+        );
+    }
+
+    /// The load-state wait loop reads with one acknowledge time-out, not the
+    /// repetition ladder: `[D]` RES §4.23.2.4.1, *"The period for reading
+    /// shall not exceed half the TL-timeout, i.e. 3 seconds."* A device that
+    /// acknowledges and stays silent must therefore be polled about once
+    /// per time-out, not once per ladder.
+    #[tokio::test]
+    async fn the_wait_loop_polls_a_silent_device_once_per_timeout() {
+        const SLICES: u32 = 30;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Read #1 answers LoadCompleting, every read after it is
+            // acknowledged and never answered.
+            unanswered_load_state_reads: Some(2..u32::MAX),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::LoadCompleting);
+        let timing = fast();
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                max_transition: timing.response_timeout * SLICES,
+                ..timing
+            },
+        )
+        .expect("the simulated device is contactable");
+        session.connect().await.expect("connect");
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        let _ = session
+            .wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            )
+            .await;
+        // About `SLICES` reads at one time-out each; the ladder would allow
+        // at most `SLICES / MAX_TRANSMISSIONS + 2`. The threshold sits between
+        // the two with room for a loaded machine.
+        assert!(
+            device.load_state_reads() > SLICES / 2,
+            "{} reads in {SLICES} time-outs: the wait loop waited out the \
+             repetition ladder instead of polling",
+            device.load_state_reads()
+        );
+    }
+
+    /// And the short wait ends with the loop: the next request outside it
+    /// waits through the ladder again, or a held answer is lost.
+    #[tokio::test]
+    async fn the_short_wait_does_not_outlive_the_wait_loop() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Answer #1 is the wait loop's read; #2's T_ACK is lost.
+            lost_ack_for_answer: Some(2),
+            answer_repeat_after: Duration::from_millis(120),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::Loaded);
+        device.preset_memory(0x4000, &[0x11, 0x22]);
+        let mut session = read_only(&device);
+        session.connect().await.expect("connect");
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        let settled = session
+            .wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            )
+            .await
+            .expect("already settled");
+        assert_eq!(settled, LoadState::Loaded);
+        assert_eq!(
+            session.read_memory(0x4000, 1).await.expect("read"),
+            vec![0x11]
+        );
+        assert_eq!(
+            session
+                .read_memory(0x4001, 1)
+                .await
+                .expect("held behind the lost T_ACK, and still waited for"),
+            vec![0x22]
         );
     }
 

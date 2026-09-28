@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 00:00
+- Web lock: taken by UI session for U4 session-log search/export
+- **Completed:** U3 is merged and pushed (`86df150`), with branch and merged-main gates green (122 Rust suites/2376 passed; web 72 files/1116 passed). This handover-only entry reserves the web lock before U4 code changes.
+- **Pending/Next Steps:** Implement U4 ISSUE-13 under the web lock in a new isolated worktree, test and review, merge, release the lock and push. Continue U5 thereafter.
+- **Notes for Codex or Claude:** Session log is capped at 1000 entries and records dropped entries in a synthetic warning; do not treat exports as complete audit trails. No hardware operations in U4.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 23:56
 - Web lock: released (U3 merged File-menu rename)
 - **Completed:** U3: browser File menu now says “Export project…” / “Projekt exportieren…”; `toolbar.exportProject` and `exportProject` name the behavior honestly while the existing `/api/project/download` route remains unchanged. The label differs from server-side Save As, stays disabled without a project, and remains omitted from Tauri. RED: 3 targeted failures against the old label; GREEN: 5 focused tests, full web 72 files / 1116 passed, TypeScript and build, Rust 122 suites / 2376 passed, fmt, clippy, layering, headers, anchors, corpus gates and diff-check. Manual, glossary, implementation status and log `.ai/logs/2026-09-28_codex_ui-file-menu-rename.md` updated. No KNX device operations.

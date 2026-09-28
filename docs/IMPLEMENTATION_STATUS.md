@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — U1: ADR-0038 independently reviewed and accepted
+
+- Reviewed the `Ground` root decision against Project Schema23 §1.1.2.3 and
+  §1.2.6.3–4, KNX IoT Information Model §1.2.3.5, and KNX IoT 3rd Party API
+  Table 10 directly in the source PDFs. No new model type or migration.
+- Checked the characterization tests `a_ground_root_groups_two_buildings_of_one_installation`,
+  `an_undocumented_root_type_is_reported_not_read_as_a_site`,
+  `a_ground_site_over_two_buildings_on_one_line_round_trips`, and
+  `a_ground_site_holds_two_buildings_and_a_device_moves_between_them` against
+  the importer, native store, and command implementation. Review found no
+  blocking contradiction; the user accepted the decision on 2026-09-28.
+- `Ground` does not imply semantic identity with IoT `loc:Site` or a verified
+  ETS UI representation. KNOWN_LIMITATIONS §127 and the non-first-installation
+  edit gap remain open. ISSUE-05's site UI can use this accepted decision.
+
 ## 2026-09-28 — K6 (CLI half): `knx device program-address` waits for the button
 
 - `knx_net::commissioning::programming_button_wait::program_individual_address`

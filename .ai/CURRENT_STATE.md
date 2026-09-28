@@ -29,7 +29,11 @@
   - Then show the user the exact write sequence and **get confirmation again** before the live write, followed by read-back and a telegram check on `2/0/53`.
 - **Notes for Codex or Claude:**
   - `origin/main` is 7+ commits ahead. The branch is not rebased and not pushed.
-  - Scratch: `~/.hermes/profiles/knxbench/cache/scratch/mdt/` (`mdt_env.py`, `target_4400.hex`, `decode_dump.py`, backup `../backup/1.1.67_dump.txt`), plus PDF text renderings in `../spec/pdf/`, generated directly from the source PDFs with `pdftotext`.
+  - Scratch (moved on 2026-09-28): everything is in `~/.hermes/profiles/knxbench/cache/scratch/iaw/`: `mdt/` (`mdt_env.py`, `target_4400.hex`, `decode_dump.py`), `backup/1.1.67_dump.txt`, `spec/pdf/` (`pdftotext` renderings of the source PDFs), `live-target/`.
+  - **Session separation** (log `.ai/logs/2026-09-28_claude_iaw-session-separation.md`):
+    - This session writes **only** to this worktree's `.ai/CURRENT_STATE.md`, to `.ai/logs/*_claude_iaw-*.md`, and to `scratch/iaw/`.
+    - The root `.ai/CURRENT_STATE.md` and `goal.md` belong to the goal.md/PDB session. A handover notice has been left there.
+    - Before the merge, rebase onto the then-current `main`. There are 3 doc conflicts (CURRENT_STATE, IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS); keep both sides.
 
 ---
 

@@ -311,8 +311,8 @@
 **Interfaces:** UI keeps host and numeric port separate and composes the existing endpoint string only at the API boundary. Discovered endpoints populate both fields. Discovery remains a read-only multicast operation and never auto-connects.
 
 - [ ] Add parsing/validation tests for IPv4, IPv6, hostname, blank/default port, invalid port, and discovered endpoints.
-- [ ] Reproduce discovery from the unpackaged dev build and the exact AppImage on the same host/interface, recording bind address, HPAI, multicast interface, timeout, and firewall/sandbox evidence.
-- [ ] Rank causes from evidence before editing; do not add retries, sleeps, or a packaging workaround without a demonstrated mechanism.
+- [x] Reproduce discovery from the unpackaged dev build and the exact AppImage on the same host/interface, recording bind address, HPAI, multicast interface, timeout, and firewall/sandbox evidence. (2026-09-28 U2 live syscall comparison, RESEARCH §20.1: both send from the host interface and get no response; firewall-rule inspection is denied, explicitly recorded as unknown.)
+- [x] Rank causes from evidence before editing; do not add retries, sleeps, or a packaging workaround without a demonstrated mechanism. (U2 AppImage-vs-dev comparison, RESEARCH §20.1 and KNOWN_LIMITATIONS §79: a packaging-only fault is unsupported; network/gateway behavior remains unproven.)
 - [ ] Implement the narrow fix at the owning network/packaging layer and retain manual connection as a first-class fallback.
 - [ ] Add loopback tests where possible and document the boundary that still requires a real multicast network.
 

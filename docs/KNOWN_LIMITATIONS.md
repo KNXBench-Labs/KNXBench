@@ -5162,6 +5162,17 @@ even when gateways exist. Project work and tunnelling to a manually entered
 unicast endpoint remain usable through the bridge. The Dockerfile, README and
 manual direct Linux users who need discovery to `--network host`.
 
+**Host AppImage comparison (2026-09-28, [V], RESEARCH §20.1).** On this host,
+a built AppImage's embedded server and an unpackaged debug server both sent
+one 14-byte multicast search from the same LAN interface and observed no
+response. The unpackaged route returned HTTP 200 with an empty interface
+list. The AppImage's WebView reached the route. This **does not show an
+AppImage-only packaging fault**; it also does not prove the packets crossed
+the NIC, because a wire capture and firewall-rule inspection required
+privileges this session lacks. The network/gateway reason for the empty
+result remains open, and a manually entered endpoint is the fallback. No
+protocol retry or packaging workaround is justified by this result alone.
+
 **Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
 API had no discovery route —
 `grep -rn discover apps/knx-server/src/` finds none — so the shipped

@@ -1,5 +1,21 @@
 # Claude Code cloud sessions
 
+> **Status 2026-09-28: paused.** The user decided to run the remaining work
+> locally again. Delivered through the cloud:
+>
+> - CT-1 (`313489e`);
+> - CT-2 (`d9ff0db`);
+> - CT-6 (`826466a`).
+>
+> The briefs CT-3, CT-5 and CT-7 to CT-10 below remain valid as task
+> specifications for local work. Only their cloud mechanics do not apply:
+> draft PR, `claude-cloud` log name, and the root and WebKit workarounds.
+>
+> The environment, the setup script and the SessionStart hook stay in place,
+> dormant. The hook exits immediately outside a cloud session. Resuming only
+> needs a new session in the existing claude.ai environment. The credit
+> (243 $ left) expires on 2026-11-04.
+
 KNXBench can hand self-contained work to Claude Code **cloud sessions**. These
 are Anthropic-hosted VMs that clone this GitHub repository, work on their own
 branch and open a pull request. This document covers:

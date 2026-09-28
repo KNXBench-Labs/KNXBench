@@ -7332,8 +7332,19 @@ run for investigation, not be accepted as proof of freshness. `touch` the source
 trust a file's mtime or checksum as proof that a *build output* is current,
 because the output's own mtime was equally unreliable in the measured case.
 
-**Lifted when.** Either the working copy moves to a filesystem whose mtimes
-cargo can rely on, or cargo's checksum-based freshness stabilises:
+**Lifted 2026-09-28: the working copy moved to ext4.** `findmnt -T
+/mnt/daten-i/Sourcecode/KNXBench` now reports `/dev/sdc1 ext4 rw,relatime`, so
+the first lifting condition below is met and the `ntfs3`-specific hazard no
+longer applies to this machine. The entry stays as history. Two things are
+unchanged and remain good practice: a target directory shared with another run
+can still replay a cached result, so confirm the log shows the changed crate
+being compiled, and a disputed result is settled with a fresh
+`CARGO_TARGET_DIR`. No stale-fingerprint event has been observed on ext4; that
+is an absence of observations, not a proof.
+
+**Lifted when (original condition).** Either the working copy moves to a
+filesystem whose mtimes cargo can rely on, or cargo's checksum-based freshness
+stabilises:
 `-Z checksum-freshness` ("Use a checksum to determine if output is fresh
 rather than filesystem mtime", listed by `cargo -Z help` on cargo 1.98.0)
 exists for exactly this situation but is nightly-only and unstable.

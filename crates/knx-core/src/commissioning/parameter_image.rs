@@ -7,14 +7,15 @@
 //! Which parameters to write, and with which values, is the caller's
 //! business.
 //!
-//! `[D]` Project Schema 23, `BitOffset_t`: *"The bit offset is the distance
-//! of the most significant bit of the parameter from the most significant
-//! bit of the first octet in memory"*, range 0–7.
+//! `[D]` *Project Schema23 v01.00.00.pdf*, §1.1.3.17 `BitOffset_t`
+//! (pp. 29–30): *"The bit offset is the distance of the most significant bit
+//! of the parameter from the most significant bit of the first octet in
+//! memory"*, range 0–7.
 //!
-//! `[V]` Multi-octet values are written high octet first. The product data
-//! declares the order as `Options/@ParameterByteOrder`: all 20 `Options`
-//! elements of mask-`0701h` applications materialised in the corpus
-//! projects carry `BigEndian`.
+//! `[V]` Multi-octet values are written high octet first. That PDF does not
+//! define `ParameterByteOrder`. The evidence is the product data: all 20
+//! `Options` elements of mask-`0701h` applications materialised in the
+//! corpus projects carry `ParameterByteOrder="BigEndian"`.
 //! A caller must refuse an application that declares another order. This
 //! module has no little-endian mode, because no source says how a bit
 //! offset combines with it.

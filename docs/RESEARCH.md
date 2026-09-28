@@ -4689,7 +4689,7 @@ What it established `[V]`:
    writer** is built: `knx_core::commissioning::parameter_image`.
    - **Placement:** it places a value at `Offset`/`BitOffset`/`SizeInBit`.
      `BitOffset` counts from the octet's MSB to the value's MSB (`[D]`
-     Project Schema 23, `BitOffset_t`). Multi-octet values go high octet
+     *Project Schema23 v01.00.00.pdf* §1.1.3.17 `BitOffset_t`, pp. 29–30). Multi-octet values go high octet
      first (`[V]`: all 20 `Options` elements of mask-`0701h` applications
      in the corpus projects say `ParameterByteOrder="BigEndian"`).
    - **Refusals:** shapes that definition does not settle (unaligned

@@ -317,6 +317,9 @@ to the user as an accepted boundary.
 
 - **Offline and actionable now:** §105, Transport Layer control frames at
   priority `SYSTEM`, with a cEMI test pinning the Ctrl1 octet.
+  **Status 2026-09-28: done (encoder, simulator).** `0xB2` for
+  `T_CONNECT`/`T_DISCONNECT`, `0xB0` for `T_ACK`/`T_NAK`, test plus 7
+  mutants. The live effect is unverified; see KNOWN_LIMITATIONS §105.
 - **Spec boundaries, likely to become user acceptances:** §108, §109, §99,
   §114.
 - **Needs a use case or a feature:** §111 (unload IA), §112 (`A_Key_Write`),

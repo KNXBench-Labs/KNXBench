@@ -320,6 +320,213 @@ Task CT-4 from docs/CLOUD_SESSIONS.md for branch <BRANCH> against <BASE>.
   - `goal.md` and `.ai/CURRENT_STATE.md` (owned by the local goal session).
 - **Gates:** `check-anchors`, `git diff --check`.
 
+### Web queue after CT-2 (CT-6 to CT-10)
+
+These tasks continue goal §12.3's serial web chain. Run them **one at a
+time, in this order**. Start the next one only after the previous PR is
+merged locally, because they share `App.tsx`, `styles.css` and the message
+catalogues.
+
+None of them needs the corpus or a bus. Each has at least one server half,
+so the full Rust gates apply.
+
+Sources:
+
+- goal.md §4 and §12.3;
+- `docs/superpowers/plans/2026-09-21-user-reported-issues.md` (the "issue
+  plan" below).
+
+In the issue plan, tick only the checkboxes you close, and only after naming
+the test that covers each one.
+
+**Deliberately not queued for the cloud:**
+
+- ISSUE-12 needs the AppImage and a real multicast network.
+- ISSUE-07 and ISSUE-08 need product data from the corpus.
+- ISSUE-05 waits on the command-apply phases (ADR-0039) and the site
+  decision.
+- ISSUE-09's address-editor half needs a KNX-standard check first.
+- ISSUE-02 and ISSUE-03 are candidates for a later brief once this queue
+  is empty.
+
+### CT-6 — Project diff against a raw `.knxproj` in the web UI (KNOWN_LIMITATIONS §57)
+
+- **Scope:** `apps/knx-server` (the diff route) and `apps/knx-web`
+  (`ProjectDiffPanel.tsx`).
+- **Context:**
+  - `knx diff` already accepts `.knxdb` and `.knxproj` on either side,
+    through the `knx-app` loader, which keeps the full ETS import report.
+  - `POST /api/project/diff {path}` and the web picker still take `.knxdb`
+    only.
+  - Read §57, especially "Lifted when". Silently normalising a browser path
+    **without** the import diagnostics is explicitly not acceptable.
+- **Deliver:**
+  - The diff request names its input kind explicitly (`knxdb` | `knxproj`),
+    or detects it and says so in the response. It reuses the existing
+    `knx-app` loader: no second import path.
+  - For a `.knxproj`, the response carries the import report next to the
+    diff. An import whose report has error-level diagnostics is a failure,
+    not a comparison, as with `knx diff`.
+  - The web panel's picker offers both file types. The panel shows the
+    import diagnostics collapsed above the diff, with their count in the
+    summary line.
+  - Browser uploads go through the existing mount/upload boundary
+    (`crate::paths`, `/api/fs/upload`); never expose a server path the
+    user did not choose.
+- **Tests:**
+  - HTTP tests in `apps/knx-server/tests/` using a **synthetic** `.knxproj`
+    built in the test. Existing ZIP builders to copy from:
+    `knxproj_with_installation` in `crates/knx-etsproj/tests/malformed_input.rs`,
+    and `crates/knx-etsproj/tests/site_hierarchy.rs`. No corpus. Cover:
+    - a clean import;
+    - an import with warnings;
+    - an import with an error-level diagnostic (refused);
+    - an unknown input kind (400).
+  - Vitest for the picker filter and the diagnostics block, in English and
+    German.
+- **Docs:** §57 (lifted or what remains), IMPLEMENTATION_STATUS, and the
+  manual page `docs/manual/user-guide/08-reports-and-diff.md`.
+- **Not in scope:**
+  - applying a diff (§55);
+  - three-way compare (§56);
+  - correlation gaps (§52–§54).
+
+### CT-7 — Session log: freetext search and export (issue plan ISSUE-13)
+
+- **Scope:** `apps/knx-web/src/LogPanel.tsx`, plus a server export route if
+  needed (`apps/knx-server/src/session_log.rs`, `routes.rs`).
+- **Context:**
+  - `LogPanel` filters by severity only, client-side, over the fetched
+    entries.
+  - The server log is capped at 1000 entries (`MAX_ENTRIES`). It counts
+    dropped entries and inserts one synthetic "N log entries dropped"
+    entry.
+- **Deliver:** everything in the ISSUE-13 section of the issue plan:
+  - A labelled search input with a clear action and a result count. It is
+    case-insensitive over operation, summary and detail, and composes with
+    the severity filters.
+  - Export with an explicit scope: all entries, or the current filtered
+    view. It keeps timestamp, severity, operation, summary, detail and
+    report metadata.
+  - The export goes through the existing file-picker/save boundary (like
+    the group-address CSV export). Do not expose server filesystem paths to
+    the browser.
+  - The file format is documented and open. If it is CSV, escape cells
+    that start with `=`, `+`, `-`, `@`, tab or CR (spreadsheet formula
+    injection).
+  - The export states the cap and the dropped count. It must never look
+    like a complete lifetime audit.
+- **Tests:**
+  - Search: case-insensitivity, composition with severity, empty result.
+  - Export: quotes, newlines, Unicode, an empty log, formula-prefixed
+    user text, and a log over the cap (the dropped marker is present).
+  - Server tests in `apps/knx-server/tests/http_log_route.rs` if a route
+    is added.
+- **Docs:** IMPLEMENTATION_STATUS, the ISSUE-13 checkboxes, and the manual
+  page that describes the log panel (`docs/manual/user-guide/01-user-interface.md`,
+  or wherever `grep -rn -i "log" docs/manual/user-guide` finds it).
+
+### CT-8 — Actionable 422 errors and topic-targeted help (issue plan ISSUE-10)
+
+- **Scope:** `apps/knx-server/src/errors.rs` and the route parsers in
+  `routes.rs`, plus `apps/knx-web/src/{api.ts,HelpTip.tsx,HelpPanel.tsx,help.ts,GroupAddressTable.tsx}`.
+- **Context:**
+  - `ApiError` is `{status, message}`.
+  - `HelpPanel` always opens on `DEFAULT_HELP_TOPIC_ID`.
+  - `help.ts` has ten topic ids (`comObjectFlags`, `groupAddresses`, …).
+- **Deliver:** the ISSUE-10 section of the issue plan:
+  - Validation errors carry a stable machine-readable `kind`, the human
+    `detail`, and, where applicable, `syntax` and `example` fields. Cover
+    individual address, group address, DPT and BCP-47 language. Existing
+    clients that read only the message must keep working, so this is an
+    additive JSON change.
+  - `api.ts` surfaces the structured fields; the error toast shows the
+    syntax hint. The raw server detail stays available for diagnostics.
+  - Help opens on a topic id: a `HelpTip` opens its own topic. F1 uses the
+    focused control's registered topic and falls back to the overview. The
+    active topic heading becomes the dialog's accessible name.
+  - Short "Range" help for group ranges. It describes hierarchy and
+    containment, not a datapoint range.
+- **Tests:**
+  - A 422 test for each of the four parsers, asserting the exact `kind`,
+    `syntax` and `example`.
+  - Help routing: a flag tip opens `comObjectFlags`, range help opens the
+    group-range topic, plain F1 opens the overview.
+  - German output.
+- **Docs:** IMPLEMENTATION_STATUS, the ISSUE-10 checkboxes, and ADR-0024's
+  help list if a topic is added.
+
+### CT-9 — Application zoom and remembered pane widths (issue plan ISSUE-01)
+
+- **Scope:**
+  - `apps/knx-web/src/{App.tsx,ResizablePane.tsx,settingsStore.ts,styles.css}`;
+  - `apps/knx-server/src/settings.rs` only if the settings document needs a
+    migration step.
+- **Context:**
+  - The versioned settings document (`settings.rs`,
+    `CURRENT_SCHEMA_VERSION = 1`, `Preferences` is an open JSON map) and
+    `settingsStore.ts` are the **only** place for new preferences. Do not
+    add `localStorage` keys (issue-plan constraint).
+  - `ResizablePane` keeps its width in local state today, so hiding the
+    pane loses it.
+- **Deliver:** the ISSUE-01 section of the issue plan:
+  - Ctrl+Plus, Ctrl+Minus and Ctrl+0 scale the UI, bounded. They are
+    ignored while typing in an editable field, where they must still work
+    as the browser/field expects.
+  - The navigation and inspector widths survive hide/show and a restart,
+    and are clamped on load.
+  - Hovering a diagram device no longer hides its icon, address or object
+    count.
+  - Pointer and arrow-key resizing both keep working.
+- **Tests:**
+  - The three shortcuts including the editable-field case, and bounds.
+  - Resize, then hide, show, remount, and the same clamped width comes
+    back.
+  - The hover CSS regression.
+  - A settings round-trip through the server document, with an old
+    document lacking the new keys.
+- **Docs:** IMPLEMENTATION_STATUS, the ISSUE-01 checkboxes,
+  `docs/manual/user-guide/09-settings-and-appearance.md`, and
+  KNOWN_LIMITATIONS if a bound or a fallback is a real limit.
+
+### CT-10 — Bus monitor: pause, export, decode visibility, statistics (issue plan ISSUE-11)
+
+- **Scope:** `apps/knx-web/src/BusMonitorPanel.tsx` and `styles.css`, plus
+  `apps/knx-server/src/{bus.rs,bus_routes.rs}` as needed.
+- **Context:**
+  - No bus in the cloud. Use the existing fakes (`knx_server::fake`:
+    `FakeConnector`, `FakeTunnel`), as `apps/knx-server/tests/http_bus_monitor.rs`
+    does.
+  - Text and service filters already exist. The report that they are
+    "missing" is a reachability/layout problem to reproduce, not a feature
+    to rebuild.
+- **Deliver:** the ISSUE-11 section of the issue plan:
+  - **Pause/Resume:**
+    - Pause stops client polling and render advancement. It does not
+      disconnect and does not reset the server cursor.
+    - Resume fetches the buffered gap with the existing dropped-row
+      accounting.
+  - **Export** of the captured rows keeps timestamp, source, destination,
+    service, raw payload, DPT, decoded value or error, and sequence. Same
+    format rules as CT-7: open, documented, formula-safe.
+  - **Decode visibility:** the UI distinguishes "no DPT assigned",
+    "conflicting DPT", "unsupported DPT" and "decode failed".
+  - **Statistics:** service counts, busiest group addresses and talkative
+    sources.
+    - Only when the DTO carries the source data.
+    - Labelled as buffer-limited.
+    - Bounded in size.
+- **Tests:**
+  - Fake-timer tests: pause/resume, gateway close while paused, buffer
+    overflow while paused, disconnect while paused.
+  - Export over raw-only, decoded, decode-error and dropped-gap rows.
+  - The four decode states.
+  - A large buffer does not block polling.
+- **Docs:** IMPLEMENTATION_STATUS, the ISSUE-11 checkboxes, and
+  `docs/manual/user-guide/07-bus-and-interfaces.md`.
+- **Not in scope:** live-bus verification. Say in the PR that it remains
+  for a local hardware check.
+
 ## 5. Budget notes
 
 - The promotional cloud credit is spent first. After it runs out, cloud

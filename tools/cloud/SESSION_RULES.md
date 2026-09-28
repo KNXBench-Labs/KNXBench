@@ -14,7 +14,9 @@ are in `docs/CLOUD_SESSIONS.md`.
 3. **One task, one branch, one pull request.** Work only on the task named in
    your prompt. Do not merge into `main`, do not push to `main`, do not
    rebase or delete other branches. Open a **draft** pull request whose title
-   starts with the task id (for example `CT-1: …`).
+   starts with the task id (for example `CT-1: …`). Stop once the draft PR
+   exists. Do not subscribe to it, watch CI or wait for review: it is
+   reviewed and merged locally, and a waiting session spends credit.
 4. **Handover.**
    - Do not edit `.ai/CURRENT_STATE.md`; it belongs to the local session
      that integrates your branch.

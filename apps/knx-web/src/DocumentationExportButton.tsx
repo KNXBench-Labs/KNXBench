@@ -1,21 +1,19 @@
-/** Button that exports the current project as a self-contained HTML documentation file. */
-import { pickSavePath } from "./filePicker";
-import * as api from "./api";
+/** File-menu button that opens the project documentation preview and export dialog. */
+import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import DocumentationDialog from "./DocumentationDialog";
 import { useTranslate } from "./i18n";
 
-// Writes the live project as one self-contained "project documentation"
-// HTML file (`crates/knx-report`, `POST /api/project/documentation-export`).
-// Never labelled an "ETS report" — no ETS-produced sample exists anywhere
-// in this repository to be compatible with.
+// Opens `DocumentationDialog`, which previews and writes the live project as
+// one self-contained "project documentation" HTML file (`crates/knx-report`,
+// `POST /api/project/documentation-preview` and `-export`). Never labelled
+// an "ETS report" — no ETS-produced sample exists anywhere in this
+// repository to be compatible with.
 //
-// Same precedent as `GroupAddressCsvButtons.tsx`: a standalone component
-// that owns its `./api`/`./filePicker` calls outright rather than taking
-// them as props, with the toast/tree plumbing it does need coming in as
-// narrow callbacks from `App.tsx`, which already owns both. This export
-// never touches the open project's tree, so unlike `GroupAddressCsvButtons`
-// there is no `onTreeUpdate`.
-
+// Same precedent as `GroupAddressCsvButtons.tsx`: the dialog owns its
+// `./api`/`./filePicker` calls outright, with the toast plumbing it does
+// need coming in as narrow callbacks from `App.tsx`. This export never
+// touches the open project's tree, so there is no `onTreeUpdate`.
 export default function DocumentationExportButton(props: {
   tree: ProjectTree | null;
   onSummary: (message: string) => void;
@@ -24,34 +22,35 @@ export default function DocumentationExportButton(props: {
 }) {
   const { tree, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
-  // Rebuilt every render, not hoisted to module scope — a module-level
-  // `const` would call `t()` once at import time and freeze the filter name
-  // in whichever language was active then. Same trap as `App.tsx`'s filters.
-  const documentationFilter = [{ name: t("documentationExport.filterName"), extensions: ["html"] }];
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
-  async function exportDocumentation() {
-    const path = await pickSavePath(documentationFilter, "project-documentation.html");
-    if (!path) return;
-    // Sequenced exactly like `GroupAddressCsvButtons`'s `exportCsv`: clear
-    // any leftover error toast before this operation runs, not after — so
-    // a stale error never sits on screen through a subsequent success.
-    onClearErrors();
-    try {
-      const { warnings } = await api.exportDocumentation(path);
-      const n = warnings.length;
-      onSummary(
-        n === 0
-          ? t("documentationExport.summaryNone")
-          : t("documentationExport.summaryWithWarnings", { count: n }),
-      );
-    } catch (e) {
-      onError(e);
+  // `Overlay` gives focus back to this button on close, but the File menu
+  // around it closed when the entry was chosen, so the button is hidden and
+  // focus would fall to `<body>`. Moving it to the menu's `<summary>` (the
+  // nearest visible control) happens after the overlay's own restoration,
+  // hence in an effect keyed on `open` rather than in the close handler.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      buttonRef.current?.closest("details")?.querySelector("summary")?.focus();
     }
-  }
+    wasOpen.current = open;
+  }, [open]);
 
   return (
-    <button onClick={exportDocumentation} disabled={!tree}>
-      {t("documentationExport.button")}
-    </button>
+    <>
+      <button ref={buttonRef} onClick={() => setOpen(true)} disabled={!tree}>
+        {t("documentationExport.button")}
+      </button>
+      {open && (
+        <DocumentationDialog
+          onSummary={onSummary}
+          onError={onError}
+          onClearErrors={onClearErrors}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }

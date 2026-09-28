@@ -162,11 +162,11 @@ put it, exactly as Save As does. The suggested name is `project.knxdb`.
 **Save As…** always asks.
 
 In the browser, Save As writes to the server's permitted directory, not to your
-computer's Downloads folder. To obtain a copy locally, choose **Download
-project** from the File menu after opening a project. This downloads a freshly
+computer's Downloads folder. To obtain a copy locally, choose **Export
+project…** from the File menu after opening a project. This exports a freshly
 serialized `.knxdb` from the current in-memory project; it is not a substitute
 for saving changes on the server. The native desktop build uses its own file
-dialog for Save As and does not show the browser-only Download project item.
+dialog for Save As and does not show the browser-only Export project item.
 
 There is no autosave. Nothing is written until you ask for it.
 

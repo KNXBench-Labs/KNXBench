@@ -20,6 +20,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
 import { messages as enMessages } from "./messages/en";
+import { messages as deMessages } from "./messages/de";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
 import { resetUiLanguageForTests } from "./uiLanguage";
 
@@ -966,7 +967,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Open project…",
       "Open (.knxdb)…",
       "Save As…",
-      "Download project",
+      "Export project…",
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",
@@ -1029,26 +1030,33 @@ describe("App — the File menu by keyboard alone", () => {
   });
 });
 
-describe("App — browser project download", () => {
-  it("shows a localized download command, disables it without a project, and uses native navigation", async () => {
+describe("App — browser project export", () => {
+  it("labels the local export differently from Save As in both languages", () => {
+    expect(enMessages["toolbar.exportProject"]).toBe("Export project…");
+    expect(deMessages["toolbar.exportProject"]).toBe("Projekt exportieren…");
+    expect(enMessages["toolbar.exportProject"]).not.toBe(enMessages["toolbar.saveAs"]);
+    expect(deMessages["toolbar.exportProject"]).not.toBe(deMessages["toolbar.saveAs"]);
+  });
+
+  it("shows a localized export command, disables it without a project, and uses native navigation", async () => {
     let anchor: HTMLAnchorElement | undefined;
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       anchor = this;
     });
     const root = await renderApp();
-    const download = findButton("Download project");
+    const exportButton = findButton("Export project…");
 
-    expect(download.disabled).toBe(true);
+    expect(exportButton.disabled).toBe(true);
 
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     await act(async () => {
       findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(download.disabled).toBe(false);
+    expect(exportButton.disabled).toBe(false);
 
     await act(async () => {
-      download.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      exportButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(anchor?.href).toMatch(/\/api\/project\/download$/);
     expect(anchor?.download).toBe("project.knxdb");
@@ -1057,11 +1065,11 @@ describe("App — browser project download", () => {
     await act(async () => root.unmount());
   });
 
-  it("omits the browser download command inside the Tauri shell", async () => {
+  it("omits the browser export command inside the Tauri shell", async () => {
     filePickerMock.isTauri.mockReturnValue(true);
     const root = await renderApp();
 
-    expect(host!.textContent).not.toContain("Download project");
+    expect(host!.textContent).not.toContain("Export project…");
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);

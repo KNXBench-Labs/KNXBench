@@ -14,8 +14,9 @@ report preserves relative archive/XML paths only; it never exposes the host
 ledger and is therefore historical/unavailable. It is not the same as measured
 zero. The projection is reporting only: signature members are stored but not
 verified, and no ETS parity claim is made. PDB-8 is the future typed master-data
-coverage slice; PDB-10 is the future safe baggage inventory and index-to-payload
-resolution slice.
+coverage slice. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. The `baggage_index` count is `stored`, and
+`unsupported-baggage-index` gave way to `unresolved-baggage-declaration`
+(per index and reason) and `undeclared-baggage-payload` (per member).
 
 **Space types (T13, 2026-09-22).** Import preserves `Stairway`, `RoomPart`,
 `Area`, `Ground` and `Segment` alongside the six previously supported types.
@@ -543,6 +544,14 @@ changed, `ingest_unknown` 23,040 → 23,051 and `package_install_unknown`
 totals moved by the same +11 (22,758 → 22,769 per instance, 22,642 →
 22,653 shared); an independent Python recount of the same package instances
 predicts every one of these deltas, and no product table changed.
+PDB-10 (schema v16) re-pinned it a third time: the new
+`package_baggage_inventory`/`_payload`/`_declaration` tables hold 113 / 789 /
+776 rows, and the only existing count that moved is
+`package_install_diagnostic` 880 → 859 — 34 `unsupported-baggage-index` rows
+(one per non-empty index; 3 of 37 indexes are empty) replaced by 13
+`undeclared-baggage-payload` rows and no unresolved declaration. Outcomes and
+report totals were equal, and an independent Python recount predicts each
+number.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

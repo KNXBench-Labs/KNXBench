@@ -1,5 +1,7 @@
 //! Verifies atomic standalone product-package ingestion and ZIP safety boundaries.
 
+mod v16_rewind;
+
 use std::io::{Cursor, Read, Write};
 use std::path::PathBuf;
 
@@ -17,6 +19,8 @@ fn db() -> (tempfile::TempDir, Connection) {
 }
 
 fn drop_v13_catalogue_columns(conn: &Connection) {
+    // The same fixtures predate v16's baggage inventory tables too.
+    v16_rewind::drop_baggage_inventory_tables(conn);
     for column in [
         "is_secure_enabled",
         "max_security_group_key_table_entries",

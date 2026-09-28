@@ -1,3 +1,5 @@
+//! HTTP product-package install returns the measured install report over the wire.
+
 use std::io::Cursor;
 use std::sync::Arc;
 
@@ -104,7 +106,7 @@ async fn installing_a_package_returns_report_and_makes_catalog_item_discoverable
             {"category":"dynamic_node","count":0,"disposition":"stored"},
             {"category":"module","count":0,"disposition":"read"},
             {"category":"baggage_index","count":0,"disposition":"read"},
-            {"category":"baggage_index","count":0,"disposition":"unsupported"},
+            {"category":"baggage_index","count":0,"disposition":"stored"},
             {"category":"baggage","count":0,"disposition":"read"},
             {"category":"baggage","count":0,"disposition":"stored"},
             {"category":"baggage","count":0,"disposition":"deduplicated"},

@@ -538,11 +538,15 @@ export const messages: Record<MessageKey, string> = {
   "catalog.installReport.unknownKind.attribute": "Attribut",
   "catalog.installReport.diagnosticKind.unsupportedMasterSection": "Nicht unterstützter Masterdatenabschnitt",
   "catalog.installReport.diagnosticKind.unsupportedMasterSubtree": "Nicht interpretierter Masterdaten-Teilbaum",
-  "catalog.installReport.diagnosticKind.unsupportedBaggageIndex": "Nicht unterstützter Baggage-Index",
+  "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration": "Nicht auflösbare Baggage-Deklaration",
+  "catalog.installReport.diagnosticKind.undeclaredBaggagePayload": "Nicht deklarierte Baggage-Datei",
   "catalog.installReport.diagnostic.unsupportedMasterSection": "Ein Masterdatenabschnitt wurde beibehalten, aber nicht interpretiert.",
   "catalog.installReport.diagnostic.unsupportedMasterSubtree":
     "Ein Teil eines unterstützten Masterdatenabschnitts wurde beibehalten, aber nicht interpretiert.",
-  "catalog.installReport.diagnostic.unsupportedBaggageIndex": "Ein Baggage-Index wurde beibehalten, aber nicht interpretiert.",
+  "catalog.installReport.diagnostic.unresolvedBaggageDeclaration":
+    "Eine Baggage-Deklaration verweist auf keine Datei im Paket.",
+  "catalog.installReport.diagnostic.undeclaredBaggagePayload":
+    "Eine Baggage-Datei wurde beibehalten, aber keine Deklaration verweist auf sie.",
 
   "catalog.installReport.factsUnavailable": "Installationsfakten für diese historische Installation nicht verfügbar",
   "catalog.installReport.countsHeading": "Gezählte Vorkommen",

@@ -120,7 +120,7 @@ pub(crate) fn ingest_file_in_transaction(
         .next()
         .filter(|top| top.starts_with("M-"))
         .map(str::to_string);
-    store_source_file(
+    let stored = store_source_file(
         conn,
         &SourceFile {
             source_path: source_path.to_string(),
@@ -128,6 +128,9 @@ pub(crate) fn ingest_file_in_transaction(
             bytes: bytes.to_vec(),
         },
     )?;
+    if stored {
+        crate::identity::record_producer(conn, &sha256, bytes)?;
+    }
 
     let kind = classify(bytes);
     let (mut unknown, conflicts, translations, entities) = match kind {
@@ -242,6 +245,15 @@ pub(crate) fn ingest_file_in_transaction(
         )?;
     }
 
+    if matches!(
+        kind,
+        FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
+    ) {
+        // ADR-0043 §4: record this blob's candidates once, then check them
+        // against what the parser just did. A disagreement fails the ingest
+        // and the caller's transaction rolls everything back.
+        crate::identity::record_and_check(conn, &sha256, source_path, bytes, &conflicts)?;
+    }
     insert_unknown(conn, &sha256, &unknown)?;
     insert_conflicts(conn, &conflicts)?;
     conn.execute(

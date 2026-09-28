@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 16;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 17;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -289,7 +289,100 @@ fn migrations() -> Vec<Migration> {
         migrate_v13_to_v14,
         migrate_v14_to_v15,
         migrate_v15_to_v16,
+        migrate_v16_to_v17,
     ]
+}
+
+/// v16 -> v17 (PDB-11, ADR-0043). Adds the package identity tables.
+///
+/// The backfill seeds `package_source_name` from `package.source_name`,
+/// scans every parsed blob that classifies as a catalogue, hardware or
+/// program file (exactly the blobs a domain parser read, so a raw-stored
+/// member never becomes a candidate), and extracts producer facts from
+/// every stored blob. A blob whose stored bytes no longer match its key,
+/// that the scan cannot read, or whose historical rows disagree with its
+/// scan is recorded `unavailable` with the reason and the upgrade
+/// continues. It also indexes the six identity tables by `source_sha256`
+/// for the agreement check. Winners and `package_conflict` rows stay as they
+/// were: the original install order is not recoverable.
+fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package_source_name (
+            package_sha256 TEXT NOT NULL REFERENCES package(sha256),
+            source_name    TEXT NOT NULL,
+            PRIMARY KEY (package_sha256, source_name)
+        ) STRICT;
+        CREATE TABLE source_identity_scan (
+            source_sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256),
+            status        TEXT NOT NULL CHECK (status IN ('measured','unavailable')),
+            reason        TEXT,
+            scanner       INTEGER NOT NULL,
+            CHECK ((status = 'unavailable') = (reason IS NOT NULL))
+        ) STRICT;
+        CREATE TABLE source_identity (
+            source_sha256 TEXT NOT NULL REFERENCES source_identity_scan(source_sha256),
+            table_name    TEXT NOT NULL CHECK (table_name IN ('catalog_section','catalog_item','hardware','product','hardware2program','application_program')),
+            logical_id    TEXT NOT NULL,
+            occurrence    INTEGER NOT NULL CHECK (occurrence >= 1),
+            digest        TEXT NOT NULL CHECK (length(digest) = 64),
+            PRIMARY KEY (source_sha256, table_name, logical_id, occurrence)
+        ) STRICT;
+        CREATE INDEX source_identity_by_id ON source_identity (table_name, logical_id);
+        CREATE TABLE source_producer (
+            source_sha256  TEXT PRIMARY KEY REFERENCES source_file(sha256),
+            root_namespace TEXT,
+            created_by     TEXT,
+            tool_version   TEXT
+        ) STRICT;
+        CREATE INDEX IF NOT EXISTS catalog_section_source ON catalog_section (source_sha256);
+        CREATE INDEX IF NOT EXISTS catalog_item_source ON catalog_item (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware_source ON hardware (source_sha256);
+        CREATE INDEX IF NOT EXISTS product_source ON product (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware2program_source ON hardware2program (source_sha256);
+        CREATE INDEX IF NOT EXISTS application_program_source ON application_program (source_sha256);
+        INSERT INTO package_source_name (package_sha256, source_name)
+            SELECT sha256, source_name FROM package;",
+    )?;
+    let blobs = conn
+        .prepare(
+            "SELECT s.sha256, s.source_path, EXISTS (SELECT 1 FROM source_parse_evidence AS e WHERE e.sha256 = s.sha256)
+             FROM source_file AS s ORDER BY s.sha256",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha, path, parsed) in blobs {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            continue;
+        };
+        let intact = crate::sha256_hex(&bytes) == sha;
+        if intact {
+            crate::identity::record_producer(conn, &sha, &bytes)?;
+        }
+        if !parsed {
+            continue;
+        }
+        if !intact {
+            // Damaged bytes cannot be trusted to classify either: any parsed
+            // blob that no longer matches its key is recorded unmeasured.
+            crate::identity::record_unavailable(
+                conn,
+                &sha,
+                "v17 backfill: stored bytes do not match their SHA-256 key",
+            )?;
+        } else if matches!(
+            classify(&bytes),
+            FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
+        ) {
+            crate::identity::backfill_scan(conn, &sha, &path, &bytes)?;
+        }
+    }
+    Ok(())
 }
 
 /// v15 -> v16 (PDB-10, ADR-0042). Adds the baggage inventory tables and

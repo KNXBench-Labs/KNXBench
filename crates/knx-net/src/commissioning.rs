@@ -2284,7 +2284,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 address: MANAGEMENT_CONTROL_ADDRESS,
                 data: record.octets().to_vec(),
             },
-            "a T_ACK for the load record",
+            "the load record",
         )
         .await?;
         let outcomes = permitted_outcomes(before, Stimulus::Event(event), self.mask);
@@ -2729,7 +2729,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                     restart_type: 0,
                     data: Vec::new(),
                 },
-                "T_ACK for A_Restart (Basic Restart)",
+                "A_Restart (Basic Restart)",
             )
             .await;
         self.disconnect_after_restart().await;
@@ -2882,8 +2882,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 // acknowledgement there will be — and therefore the one that
                 // has to be waited for, with TL clause 4's time-out and
                 // `max_rep_count = 3` applying to it like any other request.
-                self.send_acknowledged(request, "a T_ACK for the memory write")
-                    .await?;
+                self.send_acknowledged(request, "the memory write").await?;
                 tokio::time::sleep(self.timing.programming_delay).await;
                 let number = u8::try_from(data.len()).expect(
                     "a chunk is at most SERVICE_MAX_OCTETS = 63 octets \

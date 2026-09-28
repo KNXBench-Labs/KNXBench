@@ -59,8 +59,9 @@ fn take_attrs(
         if raw == "xmlns" || raw.starts_with("xmlns:") {
             continue;
         }
-        let local = raw.rsplit(':').next().unwrap_or(raw);
-        if !known.contains(&local) {
+        // Only an unprefixed attribute is the known one; `x:Name` is a
+        // foreign-namespace attribute that happens to share a local name.
+        if !known.contains(&raw) {
             unknown.attribute(xpath, raw, values.evidence_value(raw).unwrap_or_default());
         }
     }

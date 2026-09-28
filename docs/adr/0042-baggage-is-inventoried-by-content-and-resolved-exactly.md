@@ -64,30 +64,39 @@ totals.
    (BMP reserved words zero; PE `PE\0\0` at `e_lfanew`), so a text file
    starting `BM`/`MZ` stays `unknown`. The extension is kept only to *report*
    disagreement.
-4. **Nested ZIPs: directory only.** A ZIP payload first passes the same
-   `preflight_zip` gate as a package (entry budget, directory-size cap,
-   no ZIP64 or multi-disk) and then has its central directory read for entry
-   count, *declared* expanded size, encrypted-entry count and `.zip`-named
-   entry count. No entry is decompressed; nothing is ever extracted, written
-   to disk, rendered or executed. An unreadable directory is `unreadable`,
-   not zero.
+4. **Nested ZIPs: directory only.** A ZIP payload passes the same validator
+   as a package (`preflight_zip` and `validate_central_directory`: entry
+   budget, directory-size cap, no ZIP64 or multi-disk, only the
+   end-of-directory record that ends the buffer, local/central agreement, no
+   overlapping records, no repeated entry name). An empty archive (only its
+   end-of-directory record) is read as zero entries. Its entry count, *declared* expanded size,
+   encrypted-entry count (general-purpose flag bit 0) and `.zip`-named entry
+   count are then taken from that checked metadata. The `zip` crate's
+   archive reader is not used here: it tries every end-of-directory
+   candidate, which is superlinear on hostile input (a 256 KiB payload of
+   crafted records measured 8.3 s). No entry is decompressed; nothing is
+   ever extracted, written to disk, rendered or executed. An unreadable
+   directory is `unreadable`, not zero.
 5. **Storage (schema v16).** `package_baggage_inventory` (status
    `measured`/`unavailable`), `package_baggage_payload` (one row per `Baggage`
    member: hash, size, class, nested facts, resolving-declaration count) and
    `package_baggage_declaration` (one row per declaration in document order:
-   lexemes, resolution, member, reason). Reload re-measures every payload from
-   its retained blob and re-resolves every declaration; any disagreement is a
-   corruption error, not a silently accepted row.
+   lexemes, resolution, member, reason). Reload re-parses every retained
+   index blob, re-measures every payload from its retained blob and
+   re-resolves; the stored rows must equal that result exactly, so a forged
+   lexeme is a corruption error even when it leaves the resolution unchanged.
 6. **Report shape.** The `baggage_index` `unsupported` count becomes `stored`
    (every declaration is kept typed). `unsupported-baggage-index` is retired;
    `unresolved-baggage-declaration` (grouped per index and reason) and
    `undeclared-baggage-payload` (one per member) name the actual gaps.
 7. **Upgrade = fresh install.** v15 → v16 re-derives each package's inventory
    and index unknowns from its retained bytes with the install's own
-   functions and rewrites the stored report into the fresh v16 shape. A
-   package whose bytes no longer parse gets an `unavailable` inventory and an
-   `unavailable` report plus a recorded `InstallReportBackfillError`; the
-   database still opens.
+   functions and rewrites the stored report into the fresh v16 shape,
+   including the `package.unknown_count` a fresh install writes. A package
+   whose bytes no longer parse, or whose stored v15 report no longer
+   validates, gets an `unavailable` inventory and an `unavailable` report plus
+   a recorded `InstallReportBackfillError`; only a database failure aborts the
+   migration, so the database still opens.
 
 ## Consequences
 

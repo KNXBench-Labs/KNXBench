@@ -406,16 +406,34 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
         let failure = match measure_baggage(conn, &package)? {
             Err(failure) => Some(failure),
             Ok((inventory, unknowns)) => {
+                // A fresh install adds each re-parsed member's distinct
+                // unknown rows to `package.unknown_count` (`InstallReport::
+                // unknown`); v15 parsed indexes without reporting any.
+                let mut added: i64 = 0;
                 for (sha, rows) in &unknowns {
                     insert_unknown(conn, sha, rows)?;
+                    added = i64::try_from(rows.len())
+                        .ok()
+                        .and_then(|n| added.checked_add(n))
+                        .ok_or_else(|| ProductDbError::Xml {
+                            source_path: package.clone(),
+                            cause: "v16 backfill: unknown counter overflow".into(),
+                        })?;
                 }
+                conn.execute(
+                    "UPDATE package SET unknown_count = unknown_count + ?2 WHERE sha256 = ?1",
+                    rusqlite::params![package, added],
+                )?;
                 let unknowns = unknowns.into_iter().flat_map(|(_, rows)| rows).collect();
                 crate::baggage::persist(conn, &package, &inventory)?;
+                // A report that cannot be read or re-validated downgrades
+                // just this package to `unavailable`, as v13 -> v14 does; only
+                // a database failure aborts the migration.
                 match crate::package::upgrade_report_for_baggage(
                     conn, &package, &inventory, unknowns,
-                )? {
-                    Ok(()) => None,
-                    Err(why) => Some((
+                ) {
+                    Ok(Ok(())) => None,
+                    Ok(Err(why)) => Some((
                         package.clone(),
                         package.clone(),
                         ProductDbError::Xml {
@@ -423,6 +441,10 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
                             cause: format!("v16 backfill: {}", why.0),
                         },
                     )),
+                    Err(ProductDbError::Sqlite(error)) => {
+                        return Err(ProductDbError::Sqlite(error))
+                    }
+                    Err(error) => Some((package.clone(), package.clone(), error)),
                 }
             }
         };

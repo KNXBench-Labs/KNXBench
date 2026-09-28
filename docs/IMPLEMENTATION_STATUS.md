@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — Group address and association tables for mask `0701h`
+
+`knx_core::commissioning::group_tables::build_group_tables` builds the two
+tables that link a mask-`0701h` device's group objects to group addresses.
+KNOWN_LIMITATIONS §134 item 2 is lifted.
+
+- **Address table:** *GrAT – Easy 2*, Resources §4.16.11 → §4.16.3.1:
+  Length, individual address, then the group addresses, ascending.
+- **Association table:** *GrOAT – Easy 3*, §4.17.9 → §4.17.3.1: Current
+  Size, then `TSAP | ASAP`. Each object's sending association comes first,
+  as §4.17.9.5 requires.
+- **Refusals:** duplicates, `0/0/0`, two sending addresses on one object,
+  and overflow of `MaxEntries` or of the count octet. Nothing is dropped to
+  fit.
+
+Evidence: 11 unit tests. They cover MDT `A-0027-15-0BAC`'s own `AS-4000` and
+`AS-4201` defaults rebuilt octet for octet, and the requested `2/0/53`
+toggle at `1.1.67` (address table `02 1143 1035`, association table
+`01 0100`). Eight mutants were each caught and then reverted: both byte
+orders, Length without the individual address, the sending association not
+first, 0-based TSAPs, no 254 cap, duplicates merged, and TSAP/ASAP swapped.
+**Unverified on hardware:** the byte order of a two-octet entry is `[A]`
+(RESEARCH §19). Nothing calls this yet.
+
 ## 2026-09-27 — Memory-mapped load records for mask `070nh` (simulator only)
 
 The BIM M112 (mask `070nh`; the MDT push button at `1.1.67` is `0701h`) has

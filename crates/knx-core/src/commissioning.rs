@@ -4,6 +4,7 @@
 
 pub mod authorisation;
 pub mod error_code;
+pub mod group_tables;
 pub mod load_control;
 pub mod load_control_memory;
 pub mod load_state;

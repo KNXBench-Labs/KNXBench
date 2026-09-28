@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — U2: AppImage discovery diagnosis and address-editor evidence
+
+- Built and launched the exact AppImage on this Linux host, and built an
+  unpackaged debug `knx-server` from the same source. The AppImage's WebView
+  called its embedded `/api/bus/discover` route. A syscall capture of both
+  paths showed one successful 14-byte multicast search from the host LAN
+  interface to `224.0.23.12:3671`, with a nonzero HPAI port; neither process
+  saw a response. The unpackaged route returned HTTP 200, `interfaces: []`
+  after ten seconds. This reproduces the symptom outside the AppImage;
+  there is no evidenced package-specific fix. No wire capture or firewall
+  read was permitted without elevated privileges (RESEARCH §20.1, KL §79).
+- Direct KNX PDFs (Architecture §3.1 and Project Schema23 §1.2.4–1.2.5)
+  establish that a line-assigned device's area and line address components
+  come from its containing topology; the device's own address is [0…255].
+  The current core command checks only uniqueness, so ISSUE-09's relative
+  editor still needs a core membership validation and regression tests
+  before implementation (RESEARCH §20.2). No address-editing behavior was
+  changed in U2.
+- No tunnel was opened or device contacted. The manual endpoint remains the
+  connection fallback; U10 owns its separate host/port fields.
+
 ## 2026-09-28: K8, §105 Transport Layer control frames at system priority
 
 - `encode_l_data` (`crates/knx-net/src/cemi.rs`): Ctrl1 is now `0xB2` for

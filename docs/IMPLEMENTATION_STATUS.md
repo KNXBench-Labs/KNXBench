@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Live read-only memory dump of a mask-`0701h` device
+
+`crates/knx-net/tests/live_memory_readonly.rs` (`#[ignore]`, env
+`KNX_GATEWAY` + `KNX_READ_MEMORY_ADDRESS`) reads the segments a download
+rewrites, plus the four load states. It uses `read_only` +
+`AuthorisationPlan::Skip`, so it has no write path.
+
+Run once against `1.1.67`: 180 reads, all answered.
+- **Byte order `[V]`:** the group table entries are high octet first. The
+  `[A]` in `group_tables` becomes `[V]`, and a new test rebuilds the
+  device's own tables octet for octet.
+- **Two more pieces for the download:** a group object table encoder, and
+  `<Mask>` handling, which keeps the device's individual address
+  (RESEARCH §19.1).
+- **Backup:** the dump is the device's pre-download backup, stored
+  gitignored under `OriginalData/DeviceBackups/`.
+
 ## 2026-09-27 — Parameter segment image writer
 
 `knx_core::commissioning::parameter_image::ParameterImage` lays parameter

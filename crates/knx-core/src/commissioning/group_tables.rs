@@ -17,24 +17,23 @@
 //! (§4.16.3.1), and a TSAP is the 1-based position of a group address in that
 //! table (§4.16.3.3.2). An ASAP is a group object number.
 //!
-//! `[A]` Each two-octet address is stored high octet first. No clause of
-//! Resources states the byte order for these tables, so this is an
-//! assumption, resting on three indirect sources:
+//! `[V]` Each two-octet address is stored high octet first. No clause of
+//! Resources states the byte order for these tables. It was settled by a
+//! read-back (2026-09-28, `live_memory_readonly`): a real mask-`0701h`
+//! device at `1.1.67` holds `05 1143 …` at `4000h`, and `1143h` read high
+//! octet first is `1.1.67`. The indirect sources that had pointed the same
+//! way:
 //!
 //! - `[D]` Resources §4.16.3.4.2 writes the individual address as
 //!   `DMP_MemWrite_LEmi1(0117h, 0118h, PPPPh)`: one 16-bit value across the
 //!   two ascending addresses, in the notation that writes high first.
 //! - `[D]` API §1.2.1 (`03_06_01`): the BCU's two-octet EEPROM pointers
-//!   (`CommsTabPtr2` and its siblings) are *"Big Endian"*. That is the same
-//!   memory family, but it does not name these tables.
-//! - `[V]` The product data agrees without deciding it. MDT's
-//!   `A-0027-15-0BAC` ships `AS-4000` as `03 0000 1900 1901`. High first
-//!   that is `3/1/0` and `3/1/1`; low first it is `0/0/25` and `0/1/25`,
-//!   equally valid and equally sorted.
+//!   (`CommsTabPtr2` and its siblings) are *"Big Endian"*.
+//! - The product data's `AS-4000` default `03 0000 1900 1901` is consistent
+//!   with it, but it reads validly both ways, so it is no evidence.
 //!
-//! One read of a real device's table, with a known group address, would
-//! settle it. Until then a download built on this must not be claimed
-//! verified.
+//! The same read-back also showed an association table in this format:
+//! `04 0300 0401 0112 0212`, with TSAPs 1-based into the address table.
 //!
 //! These functions build the table octets only. Where they go, and what
 //! fills the rest of their segment, is the segment image's business.
@@ -280,6 +279,33 @@ mod tests {
             vec![0x03, 0x00, 0x00, 0x19, 0x00, 0x19, 0x01]
         );
         assert_eq!(tables.association_table, vec![0x02, 0x01, 0x00, 0x02, 0x05]);
+    }
+
+    /// A read-back of a real mask-`0701h` device at `1.1.67` (2026-09-28,
+    /// RESEARCH §19.1): `4000h` held `05 1143 0406 0407 110F 1110`, and
+    /// `4201h` held `04 0300 0401 0112 0212`. The links it encodes must
+    /// rebuild both, octet for octet.
+    #[test]
+    fn the_live_read_back_of_1_1_67_is_rebuilt_octet_for_octet() {
+        let tables = build_group_tables(
+            IndividualAddress::new(1, 1, 67).unwrap(),
+            &[
+                link(0, ga(2, 1, 15), true),
+                link(1, ga(2, 1, 16), true),
+                link(18, ga(0, 4, 6), true),
+                link(18, ga(0, 4, 7), false),
+            ],
+            ROOMY,
+        )
+        .unwrap();
+        assert_eq!(
+            tables.address_table,
+            vec![0x05, 0x11, 0x43, 0x04, 0x06, 0x04, 0x07, 0x11, 0x0F, 0x11, 0x10]
+        );
+        assert_eq!(
+            tables.association_table,
+            vec![0x04, 0x03, 0x00, 0x04, 0x01, 0x01, 0x12, 0x02, 0x12]
+        );
     }
 
     /// The request that started this: button 1 (object 0) toggles `2/0/53`

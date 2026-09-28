@@ -7996,9 +7996,9 @@ into it. Five pieces are missing:
    still stand.
 2. ~~**Serializers**~~ *Lifted 2026-09-27, offline only:*
    `commissioning::group_tables` builds the Group Address Table (Resources
-   §4.16.11) and the Easy 3 association table (§4.17.9). The byte order of a
-   two-octet entry is an assumption (high octet first; RESEARCH §19). It
-   stays unconfirmed until a real device's table has been read back.
+   §4.16.11) and the Easy 3 association table (§4.17.9). The entries are
+   stored high octet first, as confirmed by a read-back of a real
+   mask-`0701h` device (RESEARCH §19.1).
 3. **A parameter-segment image builder.** *Half lifted 2026-09-27:*
    `commissioning::parameter_image` places values at their `Memory`
    offset/bit offset and refuses shapes, widths and overlaps it cannot
@@ -8008,6 +8008,12 @@ into it. Five pieces are missing:
    - **Trap:** the segment's base `<Data>` is not the parameter defaults
      (33 of 66 differ in `A-0027-15-0BAC`, RESEARCH §19). Every active
      parameter must be written.
+   - **Also missing:** a group object table encoder. For this application
+     the table sits at the start of the parameter segment, and its
+     configuration and type octets follow the active `ComObjectRef`s
+     (RESEARCH §19.1).
+   - **Segment `<Mask>` handling:** `AS-4000`'s mask excludes the
+     individual address. A download must keep the device's own address.
 4. **The device's access key.** The device's access key is unknown, and the
    product data does not contain it.
 5. **A hardware-write policy decision.** `WriteScope::Download` is refused on

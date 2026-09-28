@@ -11,6 +11,7 @@ pub mod load_state;
 pub mod mcb;
 pub mod memory;
 pub mod mutation;
+pub mod parameter_image;
 pub mod partial_download_variant;
 pub mod procedure;
 pub mod programming_mode;

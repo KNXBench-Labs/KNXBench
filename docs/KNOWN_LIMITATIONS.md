@@ -7975,7 +7975,7 @@ test, or at least a manual reproduction on a real window manager.
 
 ## §134 Mask `0701h` (BIM M112) devices cannot receive an application download
 
-**Status.** Open; items 1 and 2 lifted 2026-09-27. Found 2026-09-27 while evaluating
+**Status.** Open; items 1 and 2 lifted, item 3 half lifted 2026-09-27. Found 2026-09-27 while evaluating
 a request to configure button 1 of the MDT *Taster 2-fach Plus* at `1.1.67` as
 an ON/OFF toggle on `2/0/53`. RESEARCH §19 has the evidence.
 
@@ -7999,8 +7999,15 @@ into it. Five pieces are missing:
    §4.16.11) and the Easy 3 association table (§4.17.9). The byte order of a
    two-octet entry is an assumption (high octet first; RESEARCH §19). It
    stays unconfirmed until a real device's table has been read back.
-3. **A parameter-segment image builder.** It must evaluate the `choose` tree
-   and place each parameter at its `Memory` offset over the segment defaults.
+3. **A parameter-segment image builder.** *Half lifted 2026-09-27:*
+   `commissioning::parameter_image` places values at their `Memory`
+   offset/bit offset and refuses shapes, widths and overlaps it cannot
+   write exactly.
+   - **Still missing:** choosing which parameters are written. That is
+     `Dynamic`-tree evaluation plus the active `Union` member.
+   - **Trap:** the segment's base `<Data>` is not the parameter defaults
+     (33 of 66 differ in `A-0027-15-0BAC`, RESEARCH §19). Every active
+     parameter must be written.
 4. **The device's access key.** The device's access key is unknown, and the
    product data does not contain it.
 5. **A hardware-write policy decision.** `WriteScope::Download` is refused on

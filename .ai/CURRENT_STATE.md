@@ -24,9 +24,9 @@
   - `stats.md` regenerated; goal.md §12.3 updated (PDB chain done; §4 web residues: only §57 left, queued as CT-6).
   - The catalog_section 49-vs-52 difference stays documented as inferred (PRODUCT_DATABASE_CORPUS); nothing contradicts it.
 - **Pending/Next Steps:**
-  - PDB chain (§2.8) is complete. The cloud entry below owns the web chain (CT-6 to CT-10, serial, merged locally). CT-3/CT-5 were gated on PDB-11 being merged, and it now is.
+  - PDB chain (§2.8) is complete. **Update 2026-09-28 14:50 (user decision): the cloud track is stopped; all remaining work runs locally again.** The web chain (CT-7 to CT-10) and CT-3/CT-5 are now local tasks; see the cloud entry below.
   - goal.md order from here:
-    1. ISSUE items not in the cloud queue: ISSUE-12 (hardware; diagnosis only), ISSUE-07/08 (corpus), ISSUE-05 (site, after ISSUE-06), ISSUE-09, ISSUE-02/03.
+    1. The web chain, serial and local: ISSUE-13 (CT-7 brief), ISSUE-10 (CT-8), ISSUE-01 (CT-9), ISSUE-11 (CT-10). After that: ISSUE-12 (hardware; diagnosis only), ISSUE-07/08 (corpus), ISSUE-05 (site, after ISSUE-06), ISSUE-09, ISSUE-02/03.
     2. §8 doc hygiene.
     3. Manual (T23).
     4. Alpha decision (a user decision, do not tag).
@@ -39,7 +39,7 @@
 ---
 
 - **Last Agent:** Claude (Hermes chat session "cloud credit", **not** the goal.md session: this is a short, separate entry)
-- **Timestamp:** 2026-09-28 14:35 CEST
+- **Timestamp:** 2026-09-28 14:50 CEST
 - **Completed:**
   - Cloud setup: `f37f55b`, then the setup fix `cba8aa7` (status file plus a hook fallback). Details: `docs/CLOUD_SESSIONS.md`, `.ai/logs/2026-09-28_claude_cloud-sessions-setup.md`.
   - **CT-1 (web diff panel, §59 lifted, §60 narrowed)** was delivered by the first cloud session as PR #1. Reviewed and gated locally as non-root:
@@ -75,19 +75,22 @@
     - Merged as `826466a`, tree equal. PR #3 shows as MERGED.
   - `origin/main` = `826466a`. The root checkout (`main`) is at `826466a` and clean; only `docs/paperclip-shutdown/` is untracked and was not touched.
 - **Pending/Next Steps:**
-  - Web chain in the cloud: CT-6 done; next CT-7, then CT-8, CT-9 and CT-10, **serially**. Start the next one only after the previous PR is merged locally.
-    - These ISSUE items belong to the cloud chain: do not start them locally in parallel.
+  - **Cloud track stopped (user decision, 2026-09-28 14:50): "wir lassen den rest wieder lokal laufen".** No further cloud sessions are started.
+    - The web chain continues **locally and serially**: CT-7 (ISSUE-13), then CT-8 (ISSUE-10), CT-9 (ISSUE-01), CT-10 (ISSUE-11).
+    - The briefs in `docs/CLOUD_SESSIONS.md` §4 stay valid as task specifications. The cloud-only parts do not apply locally: draft PR, `claude-cloud` log name, root/`--exclude` workarounds. The local session commits and merges as usual.
+    - Still at most two implementers (goal §9), never two web tasks at once.
+    - The cloud infrastructure stays in the repository, dormant: the SessionStart hook exits immediately outside the cloud, and nothing else runs locally. Remaining credit: 243 $, expiring 2026-11-04. It can be resumed later from the same briefs.
     - Deliberately not queued: ISSUE-12 (hardware), ISSUE-07/08 (corpus), ISSUE-05 (ADR-0039/site), ISSUE-09 address editor (standard check), ISSUE-02/03 (later).
-  - PDB-11 is merged, so CT-3 (fuzzing) and CT-5 (doc hygiene) are unblocked.
-    - CT-3 touches only parser crates and fuzz targets; it may run in parallel with the web chain.
-    - CT-5 edits ROADMAP, LIMITATION_TRIAGE and the plan; better not in parallel with a web task that edits the same docs.
-  - CT-4 (read-only review) can run any time.
+  - CT-3 (fuzzing) and CT-5 (doc hygiene) are unblocked and now local too.
+    - CT-3 may run alongside the web chain as the second implementer.
+    - CT-5 is the same work as goal §8 doc hygiene; do it there, once.
+  - CT-4 (independent review) becomes a normal local review step.
   - Possible follow-up from CT-6: the `KV v2.5 - demo` export has an empty `Installation/@DefaultLine`. Whether the importer should reject it as an error or treat it as "not set" belongs to the importer, not the diff. Leave it as a candidate for the local goal session; nothing was changed.
-  - Cloud PRs are always reviewed and merged **locally**; the cloud session does not watch or merge its own PR.
+  - No cloud PRs are open (#1–#3 merged). If the cloud is resumed, its PRs are still reviewed and merged locally only.
 - **Notes for the goal.md session:**
   - PDB-11 has been delivered (see the entry above); this note is overtaken.
   - Expected overlaps: the new top entries in `docs/IMPLEMENTATION_STATUS.md`, and CT-1/CT-2's edits to `docs/KNOWN_LIMITATIONS.md` §48–§50, §59/§60 and `docs/manual/*`. Keep both sides.
-  - A cloud session counts as one of the ≤2 implementers from goal §9, and the cloud CT-1/CT-2 run *is* the serial web chain. Do not start a parallel local web task while one is open.
+  - The serial web chain is local again. The cloud delivered CT-1, CT-2 and CT-6 (§59/§60, §49/§50, §57).
 
 ---
 

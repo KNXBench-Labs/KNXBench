@@ -805,7 +805,19 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 ### 12.3 Still open (not started)
 
 - **§2.8 PDB-8 to PDB-11:** done. PDB-8 `abf35d3`, PDB-9 `3643e90`, PDB-10 `15b4c56`, PDB-11 `7844590` (ADR-0043, schema v17), all merged and pushed.
-- **§4 web residues:** §49/§50 lifted by CT-2 (`d9ff0db`), §59 lifted and §60 narrowed by CT-1 (`313489e`), both through the cloud chain. Open: §57, comparison against a raw `.knxproj` (queued as CT-6).
+- **§4 web residues:** done.
+  - §49/§50 lifted by CT-2 (`d9ff0db`).
+  - §59 lifted and §60 narrowed by CT-1 (`313489e`).
+  - §57 lifted by CT-6 (`826466a`).
+
+  All three came through the cloud chain.
+- **Cloud track stopped 2026-09-28 (user decision).** The remaining web chain runs locally and serially:
+  1. ISSUE-13
+  2. ISSUE-10
+  3. ISSUE-01
+  4. ISSUE-11
+
+  Their briefs CT-7 to CT-10 in `docs/CLOUD_SESSIONS.md` §4 serve as task specifications. Ignore the cloud-only mechanics there (draft PR, cloud log name).
 - **§11 ISSUE-01 to ISSUE-13, apart from ISSUE-04 and ISSUE-06 above:** see `docs/superpowers/plans/2026-09-21-user-reported-issues.md`.
   - Run all `apps/knx-web` work as one serial chain, never two web tasks in parallel.
   - ISSUE-04 comes before any autosave UX.

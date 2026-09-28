@@ -143,6 +143,46 @@ impl LoadProcedure {
     }
 }
 
+/// Where a `Memory` element puts a value: `@CodeSegment`, `@Offset`,
+/// `@BitOffset`, verbatim.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MemoryPlacement {
+    /// `@CodeSegment`, a segment id.
+    pub code_segment: String,
+    /// `@Offset` into that segment, in octets.
+    pub offset: u32,
+    /// `@BitOffset`, 0–7.
+    pub bit_offset: u8,
+}
+
+/// Where one `Static/Parameters` parameter lives, as the product file
+/// states it. Nothing here is combined or interpreted: a union member keeps
+/// the union's placement and its own offsets apart, because no PDF says how
+/// they combine (docs/RESEARCH.md §19.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParameterPlacement {
+    /// `Parameter/Memory`.
+    Memory(MemoryPlacement),
+    /// A `Union/Parameter`: the union's `Memory`, and the member's own
+    /// `@Offset` and `@BitOffset`.
+    UnionMember {
+        /// `Union/Memory`.
+        union: MemoryPlacement,
+        /// The member's `@Offset`.
+        offset: u32,
+        /// The member's `@BitOffset`.
+        bit_offset: u8,
+    },
+    /// Anything else (a `Property` placement, attributes that do not
+    /// parse), kept by name so that it can be refused by name.
+    Unmodelled {
+        /// What was found, for example `Property` or `Union/Property`.
+        name: String,
+        /// Its attributes, verbatim.
+        attributes: BTreeMap<String, String>,
+    },
+}
+
 /// Everything a download of one program needs from its product file.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ProgramCode {
@@ -164,6 +204,9 @@ pub struct ProgramCode {
     pub load_procedures: Vec<LoadProcedure>,
     /// `Static/Options` attributes, verbatim.
     pub options: BTreeMap<String, String>,
+    /// `Static/Parameters` placements by parameter id. A parameter with
+    /// no placement (it lives nowhere in memory) has no entry.
+    pub parameters: BTreeMap<String, ParameterPlacement>,
 }
 
 impl ProgramCode {
@@ -390,6 +433,7 @@ impl<'a> Parser<'a> {
                     self.skip(&child)?;
                 }
                 "LoadProcedures" if !child.empty => self.read_procedures(code)?,
+                "Parameters" if !child.empty => self.read_parameters(code)?,
                 _ => self.skip(&child)?,
             }
         }
@@ -515,6 +559,90 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn read_parameters(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+        while let Some(child) = self.next_inside("Parameters")? {
+            match child.name.as_str() {
+                "Parameter" => {
+                    let id = self.parameter_id(&child)?;
+                    if let Some(placement) = self.parameter_placement(&child)? {
+                        code.parameters.insert(id, placement);
+                    }
+                }
+                "Union" if !child.empty => self.read_union(code)?,
+                _ => self.skip(&child)?,
+            }
+        }
+        Ok(())
+    }
+
+    fn parameter_id(&self, element: &Element) -> Result<String, CodeError> {
+        element
+            .attributes
+            .get("Id")
+            .map(str::to_string)
+            .ok_or_else(|| self.malformed(format!("a <{}> has no Id", element.name)))
+    }
+
+    /// The placement a `Parameter` element's children give it; `None` when
+    /// it has none. The first `Memory` or `Property` child decides.
+    fn parameter_placement(
+        &mut self,
+        element: &Element,
+    ) -> Result<Option<ParameterPlacement>, CodeError> {
+        let mut placement = None;
+        if element.empty {
+            return Ok(placement);
+        }
+        while let Some(child) = self.next_inside(&element.name)? {
+            if placement.is_none() && matches!(child.name.as_str(), "Memory" | "Property") {
+                placement = Some(match memory_placement(&child) {
+                    Some(memory) => ParameterPlacement::Memory(memory),
+                    None => unmodelled_placement(&child.name, &child),
+                });
+            }
+            self.skip(&child)?;
+        }
+        Ok(placement)
+    }
+
+    /// A `Union`: its placement and its members, in either order.
+    fn read_union(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+        let mut union: Option<Element> = None;
+        let mut members: Vec<Element> = Vec::new();
+        while let Some(child) = self.next_inside("Union")? {
+            match child.name.as_str() {
+                "Memory" | "Property" if union.is_none() => {
+                    self.skip(&child)?;
+                    union = Some(child);
+                }
+                "Parameter" => {
+                    // A member's own children are not placements: its
+                    // position is the union's plus its own attributes.
+                    self.skip(&child)?;
+                    members.push(child);
+                }
+                _ => self.skip(&child)?,
+            }
+        }
+        for member in members {
+            let id = self.parameter_id(&member)?;
+            let placement = match &union {
+                None => unmodelled_placement("Union/Parameter", &member),
+                Some(element) => match (memory_placement(element), member_offsets(&member)) {
+                    (Some(memory), Some((offset, bit_offset))) => ParameterPlacement::UnionMember {
+                        union: memory,
+                        offset,
+                        bit_offset,
+                    },
+                    (None, _) => unmodelled_placement(&format!("Union/{}", element.name), element),
+                    (Some(_), None) => unmodelled_placement("Union/Parameter", &member),
+                },
+            };
+            code.parameters.insert(id, placement);
+        }
+        Ok(())
+    }
+
     fn read_procedures(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
         while let Some(child) = self.next_inside("LoadProcedures")? {
             if child.name != "LoadProcedure" {
@@ -628,6 +756,38 @@ fn verbatim(attributes: &Attrs) -> BTreeMap<String, String> {
                 .map(|value| (name.to_string(), value.to_string()))
         })
         .collect()
+}
+
+/// A `Memory` element's placement, or `None` if it is not a `Memory` with
+/// a segment, an octet offset and a bit offset of 0–7
+/// (*Project Schema23* §1.1.3.17: `BitOffset_t` is 0–7).
+fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
+    let a = &element.attributes;
+    if element.name != "Memory" {
+        return None;
+    }
+    let bit_offset: u8 = a.get("BitOffset")?.parse().ok()?;
+    (bit_offset <= 7).then_some(())?;
+    Some(MemoryPlacement {
+        code_segment: a.get("CodeSegment")?.to_string(),
+        offset: a.get("Offset")?.parse().ok()?,
+        bit_offset,
+    })
+}
+
+/// A union member's own `@Offset` and `@BitOffset`, both required.
+fn member_offsets(member: &Element) -> Option<(u32, u8)> {
+    let a = &member.attributes;
+    let bit_offset: u8 = a.get("BitOffset")?.parse().ok()?;
+    (bit_offset <= 7).then_some(())?;
+    Some((a.get("Offset")?.parse().ok()?, bit_offset))
+}
+
+fn unmodelled_placement(name: &str, element: &Element) -> ParameterPlacement {
+    ParameterPlacement::Unmodelled {
+        name: name.to_string(),
+        attributes: verbatim(&element.attributes),
+    }
 }
 
 fn unmodelled(element: &Element, has_children: bool) -> LoadStep {
@@ -984,5 +1144,121 @@ mod tests {
             parse_program_code("t.xml", cut, ID),
             Err(CodeError::Malformed { .. })
         ));
+    }
+
+    const PARAMETERS: &str = r#"<Parameters>
+          <Parameter Id="P-1" ParameterType="T"><Memory CodeSegment="S" Offset="7" BitOffset="3" /></Parameter>
+          <Parameter Id="P-2" ParameterType="T" />
+          <Parameter Id="P-3" ParameterType="T"><Property ObjectIndex="1" PropertyId="2" Offset="0" BitOffset="0" /></Parameter>
+          <Union SizeInBit="16">
+            <Memory CodeSegment="S" Offset="264" BitOffset="0" />
+            <Parameter Id="UP-1" ParameterType="T" Offset="0" BitOffset="0" />
+            <Parameter Id="UP-2" ParameterType="T" Offset="1" BitOffset="5" />
+          </Union>
+          <Union SizeInBit="8">
+            <Parameter Id="UP-3" ParameterType="T" Offset="0" BitOffset="0" />
+            <Memory CodeSegment="S" Offset="9" BitOffset="0" />
+          </Union>
+          <Union SizeInBit="8">
+            <Property ObjectIndex="1" PropertyId="2" Offset="0" BitOffset="0" />
+            <Parameter Id="UP-4" ParameterType="T" Offset="0" BitOffset="0" />
+          </Union>
+          <Parameter Id="P-4" ParameterType="T"><Memory CodeSegment="S" Offset="x" BitOffset="0" /></Parameter>
+        </Parameters>"#;
+
+    fn memory(offset: u32, bit_offset: u8) -> MemoryPlacement {
+        MemoryPlacement {
+            code_segment: "S".to_string(),
+            offset,
+            bit_offset,
+        }
+    }
+
+    #[test]
+    fn parameter_placements_are_read_verbatim() {
+        let parameters = parsed(PARAMETERS).parameters;
+        assert_eq!(
+            parameters.get("P-1"),
+            Some(&ParameterPlacement::Memory(memory(7, 3)))
+        );
+        assert_eq!(parameters.get("P-2"), None, "no placement, no entry");
+        assert_eq!(
+            parameters.get("UP-2"),
+            Some(&ParameterPlacement::UnionMember {
+                union: memory(264, 0),
+                offset: 1,
+                bit_offset: 5,
+            })
+        );
+        assert_eq!(
+            parameters.get("UP-1"),
+            Some(&ParameterPlacement::UnionMember {
+                union: memory(264, 0),
+                offset: 0,
+                bit_offset: 0,
+            })
+        );
+    }
+
+    #[test]
+    fn a_unions_memory_may_follow_its_members() {
+        assert_eq!(
+            parsed(PARAMETERS).parameters.get("UP-3"),
+            Some(&ParameterPlacement::UnionMember {
+                union: memory(9, 0),
+                offset: 0,
+                bit_offset: 0,
+            })
+        );
+    }
+
+    #[test]
+    fn property_placements_and_unparsable_ones_are_kept_as_unmodelled() {
+        let parameters = parsed(PARAMETERS).parameters;
+        let name = |id: &str| match parameters.get(id) {
+            Some(ParameterPlacement::Unmodelled { name, attributes }) => {
+                (name.clone(), attributes.get("Offset").cloned())
+            }
+            other => panic!("{id}: expected Unmodelled, got {other:?}"),
+        };
+        assert_eq!(name("P-3"), ("Property".to_string(), Some("0".to_string())));
+        assert_eq!(
+            name("UP-4"),
+            ("Union/Property".to_string(), Some("0".to_string()))
+        );
+        assert_eq!(name("P-4"), ("Memory".to_string(), Some("x".to_string())));
+    }
+
+    #[test]
+    fn a_union_member_without_offsets_is_unmodelled() {
+        let parameters = parsed(
+            r#"<Parameters><Union SizeInBit="8"><Memory CodeSegment="S" Offset="0" BitOffset="0" />
+               <Parameter Id="UP-9" ParameterType="T" /></Union></Parameters>"#,
+        )
+        .parameters;
+        assert!(matches!(
+            parameters.get("UP-9"),
+            Some(ParameterPlacement::Unmodelled { name, .. }) if name == "Union/Parameter"
+        ));
+    }
+
+    #[test]
+    fn a_bit_offset_above_seven_is_unmodelled() {
+        let parameters = parsed(
+            r#"<Parameters><Parameter Id="P-9" ParameterType="T"><Memory CodeSegment="S" Offset="0" BitOffset="8" /></Parameter></Parameters>"#,
+        )
+        .parameters;
+        assert!(matches!(
+            parameters.get("P-9"),
+            Some(ParameterPlacement::Unmodelled { .. })
+        ));
+    }
+
+    #[test]
+    fn a_parameter_without_an_id_is_refused() {
+        assert!(
+            malformed(r#"<Parameters><Parameter ParameterType="T" /></Parameters>"#)
+                .contains("Parameter")
+        );
     }
 }

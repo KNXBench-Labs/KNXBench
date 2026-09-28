@@ -170,13 +170,22 @@ pub(crate) fn ingest_file_in_transaction(
                 entities,
             )
         }
-        // Baggages.xml lists the blobs; the blobs themselves and anything
-        // unrecognized are stored and not parsed. `knx_master.xml` is
+        // Baggages.xml's declarations are typed per package by
+        // `package.rs` (PDB-10); here only what the index parser does not
+        // model is reported, like every other parser's unknowns.
+        FileKind::Baggages => (
+            crate::parse::baggage::parse_baggage_index(source_path, bytes)?.unknown,
+            Vec::new(),
+            TranslationCounts::default(),
+            crate::report::EntityCounts::default(),
+        ),
+        // The blobs themselves and anything unrecognized are stored and not
+        // parsed. `knx_master.xml` is
         // ingested through `ingest_master_data` instead (its three call
         // sites — `package.rs`, `knx-app`'s importer, `knx-cli` — stay
         // unchanged), so a `MasterData` blob reaching this generic path is
         // stored, not parsed, exactly like `Unrecognized`.
-        FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => (
+        FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => (
             Vec::new(),
             Vec::new(),
             TranslationCounts::default(),

@@ -41,8 +41,17 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// (per package, distinct: 26 -> 32). An independent Python recount of the
 /// same 115 package instances predicts both deltas exactly. No product
 /// table changed; the report totals are pinned above.
+///
+/// Re-pinned for PDB-10 (schema v16): a main-vs-branch run added the three
+/// baggage inventory tables (113 / 789 / 776 rows, pinned below) and
+/// changed exactly one existing count, `package_install_diagnostic`
+/// 880 -> 859: the 34 `unsupported-baggage-index` rows (one per non-empty
+/// index; 3 of the 37 indexes declare nothing) gave way to 13
+/// `undeclared-baggage-payload` rows and no unresolved declaration. Every
+/// outcome and report total was equal. An independent Python recount of the
+/// same 115 instances / 113 distinct packages predicts every number.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "c8db13b0ce492ad33e6bbbbb63a2919936c9c7bd1a0a7a1c5dd1c3ea7aff0fb9";
+    "c204acc82024f4e231e8a0eb2e6ec44b92d52950309e4351696882dbe9280892";
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -935,9 +944,19 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared install-count rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_diagnostic"], 880,
+        matrix["shared_final_database_counts"]["package_install_diagnostic"], 859,
         "shared install-diagnostic rows changed"
     );
+    for (table, rows) in [
+        ("package_baggage_inventory", 113),
+        ("package_baggage_payload", 789),
+        ("package_baggage_declaration", 776),
+    ] {
+        assert_eq!(
+            matrix["shared_final_database_counts"][table], rows,
+            "shared {table} rows changed"
+        );
+    }
     assert_eq!(
         matrix["aggregate_identity_and_outcome_commitment"],
         EXPECTED_BASELINE_COMMITMENT,

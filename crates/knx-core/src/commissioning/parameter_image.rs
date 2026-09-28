@@ -13,9 +13,14 @@
 //! memory"*, range 0–7.
 //!
 //! `[V]` Multi-octet values are written high octet first. That PDF does not
-//! define `ParameterByteOrder`. The evidence is the product data: all 20
-//! `Options` elements of mask-`0701h` applications materialised in the
-//! corpus projects carry `ParameterByteOrder="BigEndian"`.
+//! define `ParameterByteOrder`, and the MDT product file does not declare
+//! it either: its `Options` carries only one legacy flag. Only 26 of 310
+//! corpus product files declare the attribute, all `BigEndian`. ETS
+//! materialises it as `BigEndian` in all 20 mask-`0701h` `Options` of the
+//! corpus projects. A real device (`1.1.67`, `A-0027-15-0BAC`) settles it:
+//! its enumerated 16-bit parameters read back `00 32` (50 ms) and `01 90`
+//! (0.4 s), and a low-octet-first reading would give values the
+//! enumerations do not allow (docs/RESEARCH.md §19.1).
 //! A caller must refuse an application that declares another order. This
 //! module has no little-endian mode, because no source says how a bit
 //! offset combines with it.

@@ -1,4 +1,39 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 04:11 CEST
+- **Completed:** On branch `iaw-settling-delay`: 7 commits ahead and 7 behind `origin/main`, **not pushed, not rebased**. Two new offline commits; no bus traffic.
+  - `638791b` feat(core): `knx_core::commissioning::group_tables::build_group_tables`, built from `(object, GA, sending)` links.
+    - GrAT Easy 2 (Resources §4.16.11 → §4.16.3.1): Length (the IA included), the IA, then the GAs sorted and de-duplicated.
+    - GrOAT Easy 3 (§4.17.9 → §4.17.3.1): Current Size, then `TSAP|ASAP`. Grouped by object, with the sending association first (§4.17.9.5).
+    - Refuses 0/0/0, duplicates, two senders on one object, `MaxEntries` overflow, and count-octet overflow (254 GAs / 255 associations).
+    - Golden vectors: MDT `AS-4000` `03 0000 1900 1901` and `AS-4201` `02 0100 0205`. The `2/0/53` toggle at `1.1.67` gives GrAT `02 1143 1035`, GrOAT `01 0100`.
+    - 11 tests; 8 mutants killed. **[A]** The byte order of a 2-octet entry: high-first is assumed. No clause states it; the evidence is indirect (§4.16.3.4.2's `PPPPh` notation, API §1.2.1 "Big Endian" pointers, and the MDT defaults, which read validly either way).
+  - `e815029` feat(core): `knx_core::commissioning::parameter_image::ParameterImage` plus `signed_bits`.
+    - `BitOffset` = the distance from the octet's MSB to the value's MSB (`[D]` Project Schema 23, `BitOffset_t`). Multi-octet values go high first (`[V]` `ParameterByteOrder="BigEndian"` on all 20 `Options` of mask-`0701h` applications in the corpus projects).
+    - Supported shapes: within one octet, or whole octets 8..64 bits at bit offset 0. Everything else is refused.
+    - Refuses out-of-segment, too wide and overlapping writes; the image is left unchanged. 12 tests; 10 mutants killed.
+  - **Finding [V]:** the base `<Data>` of `AS-4400` is **not** the parameter defaults: 33 of 66 differ. A download must write every active parameter.
+  - The target values for the toggle are enumerated (RESEARCH §19 item 3):
+    - `P-1007` = 2 (*Push buttons unique*);
+    - `UP-5500` @AS-4400+264, 16 bit = 0 (*Switch*);
+    - `UP-5501` @+266, 16 bit = 1 (*Toggle by push*);
+    - the object is `O-0`.
+  - Gates: fmt 0, clippy 0, workspace tests 2108 passed / 0 failed, layering, headers 230, anchors 389, diff-check.
+- **Pending/Next Steps:**
+  - The user said: **offline** until a real test is possible, then **wait for approval**. No bus/device write without an explicit go.
+  - (1) Choose the active parameters: evaluate the `Dynamic` tree (`knx-productdb::dynamic::evaluate`) and pick the active `Union` member per union. Then fill `AS-4400` with every active parameter.
+    - Refuse applications with `ParameterByteOrder` other than `BigEndian`, or with the attribute absent. Standalone `.knxprod` files omit it, so the default must be pinned down first.
+    - Where do `UP-5021`/`UP-5500`/`UP-253` get decided? Through `choose` on `R-1007`/`R-1014`.
+  - (2) The `AS-4000`/`AS-4201` images: GrAT/GrOAT within the segment. Check what `AS-4000` holds beyond the GrAT (Size 513, Mask present).
+  - (3) An ordered procedure following the product `LoadProcedure` (`LdCtrlUnload` 1..3, `Load`/`AbsSegment`/`TaskSegment`/`LoadCompleted` per LSM, `Restart`), run against the simulator. `LdCtrlCompareProp` PID 78 = `00000000012700000000`.
+  - (4) The access key and the hardware policy for `WriteScope::Download`: user decision.
+  - (5) Push/rebase: user decision. `origin/main` is 7 commits ahead.
+- **Notes for Codex or Claude:**
+  - Scratch probes (not in the repo, reproducible): `~/.hermes/profiles/knxbench/cache/scratch/mdt/param_image_probe.py` (defaults vs. `<Data>`), `dyn_probe.py` (enums/choose per parameter), `app27.xml` (extracted application).
+  - The corpus `ParameterByteOrder` count came from `.knxproj` files. Standalone `.knxprod` files do not materialise the attribute.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-27 22:44 CEST
 - **Completed:** On branch `iaw-settling-delay` (worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-settling-delay`, 4 commits ahead of `origin/main`, **not pushed**), new commit `765873b` feat(net): **memory-mapped load records for mask `070nh`**. This lifts KNOWN_LIMITATIONS §134 item 1, simulator only. What changed:
   - `knx_core::commissioning::load_control_memory` builds the 11-octet records. It covers events plus the abs data/stack/task segments, pins the TSSG golden vectors, and has `loads_through_memory(mask)`.

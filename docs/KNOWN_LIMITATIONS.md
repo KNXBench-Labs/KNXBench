@@ -6697,6 +6697,23 @@ from its caller, the Transport Layer control paths in
 encoding test pins the Ctrl1 octet of each of the four control frames
 against the clauses above.
 
+**Status 2026-09-28 (K8): lifted in the encoder, simulator-verified only.**
+`encode_l_data` derives Ctrl1 from the frame instead of taking it from the
+caller: every Transport Layer control *request* now leaves at system
+priority. `T_CONNECT`/`T_DISCONNECT` carry `0xB2` (priority `00b`, ack
+requested, §3.7/§3.8); `T_ACK`/`T_NAK` carry `0xB0` (priority `00b`, ack
+bit clear: A2–A4 name only the priority). Data frames, group traffic and
+indications keep `0xBC`; a negative confirmation keeps `0xBD`. The priority
+codes are from Data Link Layer General v01.03.02 AS §2.2.3 (`00b` system,
+`11b` low), the Ctrl1 layout from EMI_IMI v01.04.02 AS §4.1.5.3.2. Test
+`control_frames_request_system_priority_and_data_frames_stay_low`; 7
+mutants caught. Unverified: whether a real KNXnet/IP interface honours
+the priority bits of a tunnelled `L_Data.req` (EMI §4.1.5.3.3 says it
+shall), and whether the change is measurable on a loaded line. The next
+live session with `1.1.67` is the first real exposure; the ack-request bit
+on TP1 is "requested" either way (EMI §4.1.5.3.3 a-flag table), so only
+the priority is a behavioural change on the wire.
+
 
 ## 106. The debug report redacts four pattern classes, and nothing else
 

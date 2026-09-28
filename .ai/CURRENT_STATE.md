@@ -1,4 +1,21 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 23:40
+- Web lock: released (not touched by this package)
+- **Completed:** goal-commission **K8, §105** (simulator only; no device contacted).
+  - `encode_l_data` sends Transport Layer control requests at system priority: `T_CONNECT`/`T_DISCONNECT` Ctrl1 `0xB2`, `T_ACK`/`T_NAK` `0xB0` (TL v01.02.03 AS §3.7, §3.8, §5.3; Ctrl1 layout EMI_IMI §4.1.5.3.2; priority codes DLL General §2.2.3). All other frames are unchanged.
+  - Test `control_frames_request_system_priority_and_data_frames_stay_low`; 7 mutants caught.
+  - Gate: fmt, clippy, workspace 2376/0, layering, headers, anchors, corpus, diff-check.
+- **Pending/Next Steps:**
+  - K8, the rest: user decisions on §108/§109/§99/§114 (spec boundaries) and on §111/§112/§113/§115 (need a use case); §93 is parked and unowned; §101/§104 need hardware measurements.
+  - K6 item 2 **[W]**: a live readdress, which needs a go and a person pressing the button.
+  - K7 **[W]**: a real download, which needs a device-specific go.
+  - K9: the v1 scope decision (user).
+- **Notes for Codex or Claude:**
+  - The next live session with `1.1.67` is the first time system-priority control frames reach real hardware; watch for connect/ack behaviour differences against the K2 traces.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 23:10
 - Web lock: released
 - **Completed:** goal-commission **K6 UI half** (simulator only; no device contacted). Log: `.ai/logs/2026-09-28_claude_k6-program-address-ui.md`.

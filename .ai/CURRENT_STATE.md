@@ -1,4 +1,36 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 12:30 CEST
+- **Completed:** Offline only. **Still nothing written to 1.1.67.**
+  - Commit `0e6b72f` implements ADR-0044 as the new module `crates/knx-productdb/src/code.rs`.
+  - `load_program_code(conn, program_id)` reads, on demand from the stored source blob with no schema change:
+    - `AbsoluteSegment` (`Data`/`Mask` base64, checked against `Size`);
+    - the placements of the Address, Association and ComObject tables;
+    - `LoadProcedures` as `LoadStep` values, where unknown `LdCtrl*` stay by name as `Unmodelled` and are never dropped;
+    - `Options`.
+  - Tests:
+    - 20 unit tests; 11/11 mutants caught.
+    - A corpus test pins the MDT layout, the SHA-256 of both base images, the `Mask`, and the 21 steps.
+    - The corpus sweep parses 310/310 programs with 0 errors; 59 of them have unmodelled steps.
+  - **[V] `Mask`** on `AS-4000` marks exactly octets 1–2, which hold the device's IA (`11 43`). Reading it as "do not overwrite" is still only [A] (RESEARCH §19.1).
+  - **Correction:** the MDT product does **not** declare `ParameterByteOrder` (its `Options` has only the legacy flag). BigEndian rests on the device read-back (`00 32` = 50 ms, `01 90` = 0.4 s). RESEARCH §19.1 and the `parameter_image` module docs are updated.
+  - **New finding (KNOWN_LIMITATIONS §7):** a union member's own `Offset`/`BitOffset` is neither stored nor reported. The `parameter` row carries the *union's* placement. In `A-0027-15-0BAC`, 6 members sit at `Offset=1`, `BitOffset` 5–7. The image builder must add the union placement and the member offset from the blob.
+  - Gate: fmt; clippy `-D warnings`; 2144 workspace tests passed, 0 failed; xtask layering/headers/anchors/corpus-gates exit 0; diff-check. The header check first failed (163 > 162) because `code.rs` had a two-line first sentence, which is fixed.
+- **Pending/Next Steps:** (all offline)
+  1. **Image assembly.** Produce AS-4400/AS-4000/AS-4201 from `code::ProgramCode`, Dynamic evaluation (`knx_productdb::dynamic`), `parameter_image`, `group_object_table` and `group_tables`.
+     - Read union-member offsets from the blob (see above).
+     - Leave `Mask` octets untouched.
+     - Acceptance: device AS-4400 with 0 diffs (P-1007=1, P-1014=2) and option C = `scratch/iaw/mdt/target_4400.hex`.
+     - Placement is probably a new `knx-app` service or `knx-productdb::image`. Watch the layering: `knx-core` stays free of quick-xml and rusqlite.
+  2. Load-procedure orchestrator over `LoadStep` (Connect/Unload/Load/AbsSegment/TaskSegment/LoadCompleted/Restart/CompareProp), end to end against the simulator. Refuse an `Unmodelled` step by name.
+  3. `WriteScope::Download` for hardware, then show the user the exact sequence and get a **new go**.
+- **Notes for Codex or Claude:**
+  - Session separation still applies: this track writes only to this worktree, `.ai/logs/*_claude_iaw-*` and `scratch/iaw/`.
+  - Scratch was cleaned up; the evidence (`backup/`, `mdt/`, `spec/`, `live-target/`, `root_CURRENT_STATE.*`, `live_props.txt`) stays. `target/` is this track's `CARGO_TARGET_DIR`.
+  - Not pushed, not rebased; `origin/main` is ahead.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 09:45 CEST
 - **Completed:** The user said *"kannst weitermachen"* (the other session was informed). This entry is offline work only. **Still nothing written to 1.1.67.**
   - Commit `d1ad9bf`: new module `crates/knx-core/src/commissioning/group_object_table.rs`, GrOT Easy 3 for mask `0701h`.

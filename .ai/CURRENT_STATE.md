@@ -1,3 +1,15 @@
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 22:35
+- Web lock: released
+- **Completed:** `goal-ui.md` U2: built the actual AppImage and an unpackaged debug server from one tree; both sent the same 14-byte multicast search from the host interface, both saw no response. The dev route returned 200 with an empty interface list. No AppImage-only cause was found; the wire/firewall boundary is still unverified because this account lacks packet-capture/ruleset permission. Direct KNX PDFs establish line-relative area/line address components, and the importer already composes them. Docs: RESEARCH §20, KL §79, IMPLEMENTATION_STATUS, ISSUE-12 diagnosis checkboxes, `.ai/logs/2026-09-28_codex_ui-discovery-research.md`. AppImage validator at the measured tree, and branch gates after K6:
+  122 suites / 2375 passed / 0 failed / 136 ignored; web 72 files /
+  1115 passed; fmt, clippy, TypeScript, layering, headers, anchors, corpus
+  gates and diff-check green. No tunnel or device write.
+- **Pending/Next Steps:** U3 File-menu rename (`Download project` → `Export project…`) with the web lock; then U4 ISSUE-13 session-log search/export. U10 should keep manual endpoint and make no protocol/packaging workaround until a wire/network explanation is obtained. U11 address editor requires core membership validation first.
+- **Notes for Codex or Claude:** The AppImage comparison was made at `48cc48e`; K6 subsequently changed its programming UI, not the discovery transport. `strace` captures successful syscalls, not packets crossing the NIC. Do not copy the private HPAI address into tracked docs. The K6 entry below retains its original timestamp unchanged.
+- **For the goal.md session:** No new KL number: §79 gained the bounded host AppImage observation. Refresh `stats.md` after this merge. The ISSUE-09 address finding stays with this UI goal's U11; no import/product-data work was moved.
+
+---
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 23:40
 - Web lock: released (not touched by this package)

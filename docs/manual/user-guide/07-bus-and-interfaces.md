@@ -171,20 +171,25 @@ device-descriptor read, a disconnect — to each candidate address. Those are tr
 the bus, and they occupy the addressed device briefly, but they do not change anything
 in it.
 
-**What KNXBench does not do at all.** It does not program devices. It does not download
-an application program, parameters, group links, or an individual address into any
-device. It does not put a device into programming mode, read or write device memory, or
-perform any part of commissioning. None of that exists in KNXBench today, in the user
-interface or on the command line, and it is not hiding behind a flag. If you need to
-commission an installation, you need a tool that does commissioning; this is not one.
+**What KNXBench writes to a device.** One command, and nothing in the user interface:
+`knx device download` downloads a project device's configuration *to the device*
+(application tables and parameters). By default it only prints the plan; it writes
+only with the exact confirmation phrase for that one device. It has been verified on one
+product family on one device so far. See
+[`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
+
+**What KNXBench does not do.** Programming an individual address, unloading a device,
+secure devices, and any download from the user interface. If you need to commission an
+installation today, you need a tool that does commissioning; KNXBench is not yet one.
 
 **The guard rails that actually exist in the code.**
 
-- There is a management-session layer in the networking crate that could in principle
-  write to a device. It refuses twice over: a session that was not handed a write
-  authorisation returns an error before touching the transport, and a session whose
-  transport is not a simulator refuses to write at all. No command, no HTTP route and
-  no button reaches that layer.
+- Writes to a device go through a management-session layer in the networking crate. A
+  session that was not handed a write authorisation returns an error before touching the
+  transport. An authorisation for real hardware exists only with the operator's phrase
+  naming that device, and only for the kinds of write that have been verified. The one
+  command that reaches this layer is `knx device download`; no HTTP route and no button
+  does.
 - KNXBench compiles in a list of individual addresses that must never be contacted. The
   scan planner never generates them into a candidate list in the first place, and the
   address type used for probing cannot be constructed without passing that check — so

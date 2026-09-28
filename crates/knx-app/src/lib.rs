@@ -8,6 +8,7 @@
 //! `import`'s own doc comment for why that matters.
 
 pub mod comparison;
+pub mod device_download;
 pub mod documentation;
 pub mod import;
 pub mod progress;

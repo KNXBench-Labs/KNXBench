@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod device_download;
 mod scan;
 
 const USAGE: &str =
@@ -49,6 +50,11 @@ const USAGE: &str =
      \x20         --project prints a comparison, never writes it back; --dry-run prints the\n\
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
      \x20         opening a connection)\n\
+     \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
+     \x20                  [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
+     \x20         (a download TO the device over the bus; without --confirm it prints the\n\
+     \x20         plan (segments, octets, steps) and opens no connection. The phrase must\n\
+     \x20         name this device; excluded addresses are refused before anything opens)\n\
      \x20     knx --version\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
@@ -74,6 +80,7 @@ fn main() -> ExitCode {
         Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
+        Some("device") => run_device(&args[1..]),
         Some("--version" | "-V") => {
             println!("{}", version_line());
             ExitCode::SUCCESS
@@ -1661,6 +1668,137 @@ fn run_products_order_number(args: &[String]) -> ExitCode {
 
 /// `knx bus monitor` — connects to a real KNXnet/IP gateway over tunnelling
 /// and prints decoded telegrams as they arrive (spec §9, Task 9).
+fn run_device(args: &[String]) -> ExitCode {
+    match args.first().map(String::as_str) {
+        Some("download") => run_device_download(&args[1..]),
+        _ => {
+            eprintln!("{USAGE}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `knx device download`. Order matters: address, exclusion list and
+/// phrase are checked first; then the project and product database are
+/// read and the plan is built; only then, and only with the phrase, does a
+/// socket open.
+fn run_device_download(args: &[String]) -> ExitCode {
+    let parsed = match device_download::parse_download_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let (target, mode) = match device_download::check_target(&parsed) {
+        Ok(checked) => checked,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    // `open_and_migrate` creates a missing file; a typo must not become an
+    // empty project.
+    if !Path::new(&parsed.project).exists() {
+        eprintln!("project not found: {}", parsed.project);
+        return ExitCode::FAILURE;
+    }
+    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+        .map_err(|e| e.to_string())
+        .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
+    {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("could not read project {}: {e}", parsed.project);
+            return ExitCode::FAILURE;
+        }
+    };
+    let products = match open_products_db(parsed.product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let prepared = match knx_app::device_download::prepare_device_download(
+        &products,
+        &project,
+        target.address(),
+    ) {
+        Ok(prepared) => prepared,
+        Err(e) => {
+            eprintln!("no download to device {} prepared: {e}", target.address());
+            return ExitCode::FAILURE;
+        }
+    };
+    print!("{}", device_download::format_plan(&prepared));
+
+    let (gateway, confirmation) = match mode {
+        device_download::Mode::Plan => {
+            println!(
+                "written to the device: no (plan only; add --gateway and --confirm {:?} to write)",
+                knx_core::commissioning::mutation::required_confirmation_phrase(
+                    target.address(),
+                    knx_core::WriteScope::Download
+                )
+            );
+            return ExitCode::SUCCESS;
+        }
+        device_download::Mode::Write {
+            gateway,
+            confirmation,
+        } => (gateway, confirmation),
+    };
+    let authorisation = match knx_core::WriteAuthorisation::for_hardware(
+        target.address(),
+        knx_core::WriteScope::Download,
+        &confirmation,
+    ) {
+        Ok(authorisation) => authorisation,
+        Err(e) => {
+            eprintln!("{e}");
+            println!("written to the device: no");
+            return ExitCode::FAILURE;
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                println!("written to the device: no");
+                return ExitCode::FAILURE;
+            }
+        };
+        let written = device_download::execute(
+            &tunnel,
+            authorisation,
+            knx_net::SessionTiming::default(),
+            &prepared,
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        match written {
+            device_download::Written::Yes => ExitCode::SUCCESS,
+            device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        }
+    })
+}
+
 fn run_bus(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("discover") => run_bus_discover(&args[1..]),

@@ -21,6 +21,7 @@ use std::sync::Mutex;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
 use base64::Engine as _;
+use knx_app::comparison::{load_comparison_input, ComparisonInput, ComparisonInputKind};
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 use sha2::{Digest, Sha256};
@@ -951,32 +952,96 @@ pub fn export_documentation_impl(
     result
 }
 
+/// What one project comparison produced: the detected input kind, the ETS
+/// import report when the right-hand side was a raw `.knxproj`, and the
+/// diff itself.
+pub struct ProjectDiffOutcome {
+    pub input_kind: ComparisonInputKind,
+    pub import_report: Option<knx_etsproj::ImportReport>,
+    pub diff: knx_diff::ProjectDiff,
+}
+
+/// Why [`diff_project_impl`] did not compare.
+pub enum DiffProjectError {
+    /// The caller's to fix: no project open, a missing file, an unsupported
+    /// extension, an input kind that disagrees with the file, or a load
+    /// failure.
+    Rejected(String),
+    /// The `.knxproj` imported, but its report carries error-level
+    /// diagnostics. A lossy import is not a comparison (same rule as
+    /// `knx diff`), so the report travels back instead of a diff. Boxed:
+    /// the report dwarfs the `Ok` side.
+    ImportRefused(Box<knx_etsproj::ImportReport>),
+}
+
 /// Computes what changed between the server's live, possibly edited,
-/// in-memory project (`left`) and the `.knxdb` file at `path` (`right`) —
-/// "what would Save change", deliberately not a re-read of `store_path`
-/// (design spec `docs/superpowers/specs/2026-09-10-project-diff-design.md`
-/// §7). Never mutates the project, never touches the session log: a diff
-/// mutates nothing and produces no `ReportWarning`-shaped output, so there
-/// is nothing established for it to log (task-4 brief).
+/// in-memory project (`left`) and the `.knxdb` or `.knxproj` file at `path`
+/// (`right`) — "what would Save change", deliberately not a re-read of
+/// `store_path` (design spec
+/// `docs/superpowers/specs/2026-09-10-project-diff-design.md` §7). Never
+/// mutates the project, never touches the session log: every import
+/// diagnostic goes back in the outcome instead.
 ///
-/// `path` is checked with `path.exists()` *before* anything touches
-/// `knx-store`: `knx_store::open_and_migrate` "opens, creating if absent"
-/// — handed a typo'd path it would happily create an empty `.knxdb` and
-/// this function would then dutifully report every entity in `left` as
-/// removed instead of failing with a clear "does not exist" (the exact
-/// gotcha design spec §7 calls out by name; regression-tested in
-/// `tests/http_project_diff.rs`).
-pub fn diff_project_impl(state: &AppState, path: &Path) -> Result<knx_diff::ProjectDiff, String> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    let left = project.as_ref().ok_or("no project open")?;
-    if !path.exists() {
-        return Err(format!("{} does not exist", path.display()));
+/// `right` is loaded through `knx_app::comparison::load_comparison_input`,
+/// the same loader `knx diff` uses, so there is exactly one comparison
+/// import path. That loader checks existence before anything touches
+/// `knx-store`, whose `open_and_migrate` would otherwise create an empty
+/// `.knxdb` for a typo'd path and report every entity in `left` as removed
+/// (regression-tested in `tests/http_project_diff.rs`).
+///
+/// `requested_kind`, when given, must agree with the kind the extension
+/// names: a caller that says `knxproj` about a `.knxdb` file is told so
+/// rather than silently served the other format.
+///
+/// The load runs without the project lock, so a slow `.knxproj` import
+/// does not stall every other route.
+pub fn diff_project_impl(
+    state: &AppState,
+    path: &Path,
+    requested_kind: Option<ComparisonInputKind>,
+) -> Result<ProjectDiffOutcome, DiffProjectError> {
+    let rejected = |message: String| DiffProjectError::Rejected(message);
+    if state
+        .project
+        .lock()
+        .expect("state mutex poisoned")
+        .is_none()
+    {
+        return Err(rejected("no project open".into()));
     }
-    // The right-hand side is read for comparison only and never becomes
-    // the open project, so its stages go to a detached handle rather than
-    // onto the banner of whatever the user has open.
-    let (_, right, ..) = load_native(path, &detached_progress(crate::LoadKind::Open, path))?;
-    Ok(knx_diff::diff_projects(left, &right))
+    let input_kind = ComparisonInputKind::of_path(path).ok_or_else(|| {
+        rejected(format!(
+            "unsupported comparison input {}; expected .knxdb or .knxproj",
+            path.display()
+        ))
+    })?;
+    if requested_kind.is_some_and(|requested| requested != input_kind) {
+        return Err(rejected(format!(
+            "requested input kind does not match {}",
+            path.display()
+        )));
+    }
+
+    let ComparisonInput {
+        project: right,
+        import_report,
+    } = load_comparison_input(path).map_err(|e| rejected(e.to_string()))?;
+    let import_report = match import_report {
+        Some(report) if report.error_count() > 0 => {
+            return Err(DiffProjectError::ImportRefused(Box::new(report)))
+        }
+        other => other,
+    };
+
+    let project = state.project.lock().expect("state mutex poisoned");
+    let left = project
+        .as_ref()
+        .ok_or_else(|| rejected("no project open".into()))?;
+    Ok(ProjectDiffOutcome {
+        input_kind,
+        import_report,
+        diff: knx_diff::diff_projects(left, &right),
+    })
 }
 
 /// Reads `path` as "KNXBench group-address CSV v1" text, plans the edit

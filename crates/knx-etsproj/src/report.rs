@@ -114,6 +114,16 @@ impl ImportReport {
         serde_json::to_string(self).expect("ImportReport contains no non-serializable value")
     }
 
+    /// Number of error-level entries in [`Self::errors`]. Callers that must
+    /// refuse a lossy import (a comparison, for one) gate on this; warnings
+    /// stay usable data and are not counted.
+    pub fn error_count(&self) -> usize {
+        self.errors
+            .iter()
+            .filter(|e| e.severity == Severity::Error)
+            .count()
+    }
+
     /// Whether anything was actually lost or misunderstood — not whether a
     /// documented capability gap ([`Self::unsupported`]) exists, and not
     /// whether `errors` merely contains a `Severity::Warning` (data the

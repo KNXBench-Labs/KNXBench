@@ -107,10 +107,12 @@ T17 diagnostics UI, group-monitor regressions):**
    `apps/knx-web` when any file under it was touched.
    `ABSENT_CEILING` is 162 with zero slack (verified 2026-09-23) — a new headerless file fails the
    gate. Markdown is not counted at all.
-7. **This `ntfs3` mount has served a stale binary from a current fingerprint
-   once** (`KNOWN_LIMITATIONS.md` §119). A green gate alone is not proof:
-   sanity-check that the `knx-net` lib test count matches the source you just
-   edited, and `cargo clean -p <crate>` when it does not.
+7. **Freshness check.** The former `ntfs3` mount once served a stale binary
+   from a current fingerprint (`KNOWN_LIMITATIONS.md` §119). The working copy
+   is on ext4 since 2026-09-28, so that hazard is lifted, but a green gate is
+   still not proof on its own: confirm the log shows the changed crate being
+   compiled (a shared target directory can replay a cached result), and settle
+   a disputed result with a fresh `CARGO_TARGET_DIR`.
 8. Do not silently downgrade a limitation. If an item depends on unavailable
    samples, specifications, credentials, hardware or a user decision, record
    the exact blocker and move to another actionable item.
@@ -678,7 +680,7 @@ Finish only when:
   code;
 - every actionable item in sections 2-5 and 8 has proof of completion, or a
   recorded, non-actionable external blocker;
-- all nine gates pass, with the `ntfs3` freshness check from rule 7 done;
+- all nine gates pass, with the freshness check from rule 7 done;
 - every remaining exception carries the user's explicit out-of-scope
   acceptance;
 - and the final strongest-model review has run over the finished whole and its findings
@@ -828,4 +830,4 @@ The PDB (backend) chain and the web chain may run in parallel, with at most two 
 ### 12.5 Lessons from the Paperclip run
 
 - Provider errors (HTTP 400 thinking block, HTTP 429) ate every review run on 2026-09-26. An automatic error comment is not a review verdict.
-- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the ntfs3 check.
+- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the freshness check from rule 7.

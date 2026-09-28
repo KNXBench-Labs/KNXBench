@@ -1449,6 +1449,75 @@ main {
   word-break: break-all;
 }
 
+/* Programming an individual address (AddressProgrammingPanel): the button loop, then MP §2.3. */
+.address-programming-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.address-programming-panel header h2,
+.address-programming-panel header p {
+  margin: 4px 0;
+}
+
+.address-programming-config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.address-programming-config label {
+  display: grid;
+  gap: 4px;
+  color: var(--knx-muted);
+  font-size: 12px;
+}
+
+.address-programming-plan,
+.address-programming-progress {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  padding: 14px;
+  background: var(--knx-surface);
+}
+
+.address-programming-plan h3,
+.address-programming-progress h3,
+.address-programming-plan ol {
+  margin: 0;
+}
+
+/* What the person at the device must do: the loudest line on the page. */
+.address-programming-instruction {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.address-programming-instruction[data-instruction="release"] {
+  color: var(--knx-warning-color);
+}
+
+.address-programming-written[data-written="yes"],
+.address-programming-written[data-written="noNeed"] {
+  color: var(--knx-success-color);
+}
+
+.address-programming-progress .form-warning {
+  color: var(--knx-warning-color);
+  font-weight: 600;
+}
+
+.address-programming-rounds {
+  max-height: 200px;
+  overflow: auto;
+  margin: 0;
+  color: var(--knx-muted);
+}
+
 .line-scan-results [data-scan-outcome] {
   display: inline-block;
   border-left: 4px solid var(--knx-border);

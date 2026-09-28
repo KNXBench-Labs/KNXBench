@@ -1,4 +1,28 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 23:10
+- Web lock: released
+- **Completed:** goal-commission **K6 UI half** (simulator only; no device contacted). Log: `.ai/logs/2026-09-28_claude_k6-program-address-ui.md`.
+  - ADR-0046: one phrase covers MP §2.3 including the restart, derived only in `AddressProgrammingAuthorisation::for_hardware`, which the CLI now uses as well. No plan id. The wait can be stopped, the procedure cannot.
+  - `/api/device-address/{phrase,start,status,stop}`.
+  - The Bus → **Program address** / **Adresse programmieren** tab: press / release-all-but-one prompts, and the outcomes yes / no need / no / NOT confirmed.
+  - Lock order: download → programming → monitor → scan. Each start refuses while another holds the tunnel.
+  - Gate:
+    - web build, tsc, vitest 1115/0
+    - fmt, clippy, workspace 2375/0
+    - K5 HTTP 7, K4 11
+    - layering, headers, anchors, corpus, diff-check
+  - Mutants: 11 server and 9 UI, all caught.
+- **Pending/Next Steps:**
+  - K6 item 2 **[W]**: a live run. It needs the user's go **and a person pressing the programming button** on the device that should get the new address; ask for exactly that and wait for "done".
+  - K7 **[W]**: a real download through CLI or tab, only with a device-specific go.
+  - K8 offline: §105, a cEMI test pinning SYSTEM priority on Transport Layer control frames.
+- **Notes for Codex or Claude:**
+  - **Web lock is free again.** U3 can take it per `goal-ui.md` §3.
+  - This package touched only the Bus diagnostics tabs, not `App.tsx` or the File menu.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 22:20
 - Web lock: taken by the commissioning session for K6 UI
 - **Completed:** Announcement only. Checked first: the newest lock line says *released*, and the UI session's 21:31 entry leaves the lock free for K6 UI until U3 asks for it.

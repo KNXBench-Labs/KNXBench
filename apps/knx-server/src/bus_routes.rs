@@ -181,6 +181,12 @@ async fn start_scan(
             "a download to a device is running: the gateway serves one tunnel",
         ));
     }
+    if crate::address_programming_routes::address_programming_in_progress(&state) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "an individual-address programming is running: the gateway serves one tunnel",
+        ));
+    }
     if let Some(existing) = guard.as_mut() {
         if existing.status() == LineScanStatus::Running {
             return Err(ApiError::with_status(
@@ -523,6 +529,12 @@ async fn start_monitor(
         return Err(ApiError::with_status(
             StatusCode::CONFLICT,
             "a download to a device is running: the gateway serves one tunnel",
+        ));
+    }
+    if crate::address_programming_routes::address_programming_in_progress(&state) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "an individual-address programming is running: the gateway serves one tunnel",
         ));
     }
     if let Some(existing) = guard.as_ref() {

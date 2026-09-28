@@ -177,7 +177,7 @@ raised. A project that has been imported stays in `.knxdb`.
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Downloading a project device's configuration to the device | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab: plan first, confirmation, live progress. Verified in the simulator; one real device (`1.1.67`, MDT) so far — [Bus](user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
-| Programming an individual address | 🟡 Partial or experimental | `knx device program-address` waits for exactly one pressed button, then writes and restarts. Verified in the simulator; no UI yet — [command line](user-guide/10-command-line.md#knx-device-program-address--give-a-device-its-individual-address) |
+| Programming an individual address | 🟡 Partial or experimental | `knx device program-address` and the Bus → **Program address** tab wait for exactly one pressed button, then write and restart. Verified in the simulator only — [command line](user-guide/10-command-line.md#knx-device-program-address--give-a-device-its-individual-address), [web](user-guide/07-bus-and-interfaces.md#programming-an-individual-address) |
 | The load/unload/reset/memory-write procedures inside the core library | 🚧 In progress | Verified against a simulator this project wrote, never against hardware — [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 | Read-only verification against a real installation | 🟡 Partial or experimental | Reading device state has been exercised against real hardware — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
 

@@ -216,9 +216,18 @@ async fn start(
         }
     }
     // Held until the download is registered, in the order download →
-    // monitor → scan. Monitor and scan starts take their own lock first and
-    // then only `try_lock` this one, so neither can start between these
-    // checks and the registration, and no wait can form a cycle.
+    // address programming → monitor → scan. The others take their own lock
+    // first and then only `try_lock` this one, so none can start between
+    // these checks and the registration, and no wait can form a cycle.
+    let programming = state.address_programming.lock().await;
+    if programming
+        .as_ref()
+        .is_some_and(crate::AddressProgrammingSession::is_active)
+    {
+        return Err(conflict(
+            "an individual-address programming is running: the gateway serves one tunnel",
+        ));
+    }
     let monitor = state.bus_session.lock().await;
     if monitor.is_some() {
         return Err(conflict(
@@ -266,6 +275,7 @@ async fn start(
     ));
     drop(scan);
     drop(monitor);
+    drop(programming);
     // A plan is written at most once.
     *state
         .device_download_plan

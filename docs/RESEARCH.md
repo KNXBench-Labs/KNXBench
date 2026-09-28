@@ -5043,6 +5043,56 @@ What this shows:
 - Cosmetic, fixed with it: the error read "no T_ACK for T_ACK for A_Restart".
   The three `send_acknowledged` labels now name only the request.
 
+**`[V]` Master Reset, Erase Code `01h` "Confirmed Restart" (K2, 2026-09-28
+19:18 CEST, `1.1.67_MDT-0701_2026-09-28_master-reset-01h-trace.txt`).** MP
+§3.7.1.2 Table 4 (p. 81) defines Erase Code `01h` as "the Master Reset as a
+confirmed alternative to the unconfirmed Basic Restart", with no Resource
+reset. MP §3.7.3 (p. 88) requires the client to verify support first. For
+mask `0701h` there is no means to do that: Profiles v02.01.01 §4.2 (p. 37)
+marks Master Reset `O` (optional) for BIM M112 mask `0701h`, and the
+Management Profile that announces it (Resources §4.1.3 Table 8) belongs to
+the E-Mode device descriptor. The user gave the go explicitly for this test
+device, and the only way left to find out was to try it once, with the
+erase code that resets nothing. The probe first ran in the simulator
+(`Connect`, Verify-Mode read/write of `PID_DEVICE_CONTROL`, `A_Restart
+type 1 [01 00]`, `Disconnect`; no memory write).
+
+| t (s) | Frame |
+|---|---|
+| 7.56–7.78 | `T_Connect`; `PID_DEVICE_CONTROL` read `00`, written `04`, echoed `04`: Verify Mode active. All `T_ACK`ed |
+| 7.82 | `A_Restart`, restart_type 1, Erase Code `01h`, channel `00h` (seq 2) |
+| 10.80, 13.80, 16.81 | the same frame repeated by TL clause 4 |
+| 7.78 → 45.8 | **nothing from `1.1.67`**: no `T_ACK`, no `A_Restart_Response`, no `T_Disconnect` |
+| 19.81, 19.83 | client `T_Disconnect` ×2 |
+| 45.8 | read-only check: mask `0701h`, `4001h` = `11 43`, `B6EAh` = `01 01 01 00`, `4400h` = `40 07 00 07 40 4F 00 07`, identical to before |
+
+- `[V]` `1.1.67` sends no `A_Restart_Response` to a Master Reset. It acts
+  exactly as it does for a Basic Restart. MP footnote 11 (p. 88) anticipates
+  this: *"Existing implementations may not check bit 0 of octet 7 … may
+  only perform a Basic Restart if a Master Reset is called"*. NOTE 10's
+  guarantee (the response is sent *before* the reset) therefore does not
+  hold for this device.
+- `[V]` The device kept its address, application (first 8 octets of `4400h`)
+  and load states. Erase Code `01h` really reset nothing.
+- `[D]` Verify Mode: this Restart-scoped session set it, as `connect()` does
+  for every scope except a memory-mapped load. MP §3.7.1.2.3 does not
+  exempt it. On a new connection a client must assume it cleared (MP
+  §3.29.1), so it has no lasting effect.
+- **Consequence:** a confirmed restart does not exist for this device. The
+  inside view of the restart ("did it really restart?") cannot be
+  established from the bus. `RestartOutcome::Unconfirmed` stays the final
+  answer for mask `0701h` MDT devices, and KNXBench offers no Master Reset
+  for them.
+- `[V]` Side finding from attempt 1 (19:16, kept as
+  `…master-reset-01h-attempt1-lost-disconnect.txt`): the read-only
+  pre-check's `T_Disconnect` produced no `L_Data.con` in the trace, and
+  `1.1.67` answered the next session's first request with `T_NAK` twice,
+  then sent `T_Disconnect` itself after ~6 s. So its old connection was
+  still open. A second session started straight after a first one is
+  therefore not safe. The probe waited 7 s in attempt 2, and that worked.
+  Why the disconnect never showed up is open: `ManagementSession::disconnect`
+  discards the send error (`let _ =`).
+
 **`[O]` Open: did the device restart?** MP §3.7.1.1.3 says the server does
 not confirm a Basic Restart at the Application Layer, and MP §3.7.3
 exception (5) tells the client to ignore everything the server sends after

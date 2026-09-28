@@ -13,6 +13,12 @@
 - Fixed: the error text said "no T_ACK for T_ACK for …"; the three
   `send_acknowledged` labels now name only the request (RED/GREEN test).
 - knx-net: 291 passed, 0 failed.
+- `[V]` Master Reset, Erase Code `01h` (Confirmed Restart) tried once on
+  `1.1.67` (user's go): no `A_Restart_Response`, same silence as a Basic
+  Restart, device unchanged. There is no confirmed restart for mask `0701h`
+  MDT, so "unconfirmed" is final. **K2 is closed.**
+- New open point: a lost `T_Disconnect` makes the next session NAK for ~6 s;
+  `disconnect()` discards the send error (KNOWN_LIMITATIONS §136).
 
 ## 2026-09-28 — Download to the device: unconfirmed restart, live progress, one meaning of "download"
 

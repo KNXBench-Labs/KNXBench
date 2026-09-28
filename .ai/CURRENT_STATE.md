@@ -1,3 +1,42 @@
+- **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 09:36 CEST
+- **Completed:**
+  - Read and adopted the commissioning session's ownership notice below; it stays in this file as the record. Added its line to goal.md as §12.4 "Parallel tracks outside this goal" (former §12.4 "Lessons" is now §12.5; nothing referenced the old number).
+  - **PDB-11 (package identity and versions) is implemented but NOT delivered.** Branch `pdb-11-package-identity` (based on `701bf33`). The code is uncommitted in the root working tree. Design: [ADR-0043](../docs/adr/0043-package-identity-is-recorded-per-candidate.md) (uncommitted, like the ADR index row). Summary:
+    - No new winner rule (first installed still wins). Instead, schema v17 records every candidate element of the six identity kinds per member blob with a canonical element digest (`source_identity`, `source_identity_scan`), so winner, losers, their packages and "identical or not" are queryable independent of install order.
+    - Also new: every source name per package hash (`package_source_name`), `CreatedBy`/`ToolVersion`/root namespace per blob (`source_producer`), query-time program families by (manufacturer, `ApplicationNumber`), `ReplacesVersions` parsed as a list of unsigned bytes and linked within the family, and products by order number. CLI: `knx products identity|family|order-number`.
+    - A scan that disagrees with the domain parsers fails the ingest (agreement check).
+  - Implementer-reported results (NOT yet verified by the lead): `knx-productdb` 440 passed / 0 failed / 18 ignored, `knx-cli` 78 / 0 / 8, 23/23 mutants killed, fmt/headers 161≤161/anchors/corpus-gates/layering/diff-check green. Private matrix passes on the final code: the old v16 projection is asserted unchanged, commitment re-pinned; new rows `source_identity` 1,972, 528 blobs all `measured`, 170 ids with differing digests.
+- **Pending/Next Steps:** The user paused work ("Pause, bis go") while the other session is re-planned. On "go":
+  1. Lead review of the uncommitted PDB-11 diff: read `crates/knx-productdb/src/identity.rs`, the migration and the ingest hook; rerun clippy (the implementer ran it only before its last comment edit) and the crate tests with a fresh `CARGO_TARGET_DIR`.
+  2. Independent review, fixes, full workspace suite, private matrix, merge, push, `stats.md`.
+  3. Then continue goal.md: web leftovers, open issues, manual, alpha decision, final review.
+- **Notes for Codex or Claude:**
+  - Open detail: catalog sections show 49 differing ids against 52 in the Python probe; likely the digest's nested-element markers. This is inferred, not measured.
+  - Implementer scratch (probes, gate logs, `mutation.log`, BRIEF.md): `~/.hermes/profiles/knxbench/cache/scratch/pdb11/`. Do not touch `scratch/iaw/`, branch or worktree `iaw-settling-delay`, or `docs/paperclip-shutdown/`.
+
+---
+
+- **Last Agent:** Claude (session `iaw-settling-delay`, commissioning track, **not** the goal.md session)
+- **Timestamp:** 2026-09-28 07:50 CEST
+- **Completed:** **Handover notice to the goal.md/PDB session: the two sessions are now separated.** This entry only concerns file ownership. No goal.md work was done.
+  - The four `iaw-settling-delay` entries this file carried **uncommitted** in the root working tree (06:46, 04:11, 22:44 and 21:50) have been **removed from here**. This file is back to `HEAD` plus this notice. Nothing that belongs to PDB was touched (the uncommitted diff held 0 PDB lines).
+    - Those entries live on in the worktree's own `.ai/CURRENT_STATE.md` on branch `iaw-settling-delay` (commit `f758224`).
+    - Pre-cleanup backup: `~/.hermes/profiles/knxbench/cache/scratch/iaw/root_CURRENT_STATE.before.md`.
+  - The commissioning session has moved all of its scratch into `~/.hermes/profiles/knxbench/cache/scratch/iaw/` and deleted only its own loose files. It did not touch `pdb11/` or any of your other files.
+- **Pending/Next Steps (for the goal.md session):**
+  - Commit this file with your next handover as usual. **You may delete this notice** once you have read it.
+  - Please add one line to goal.md §12, because the file is yours: *"Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself."*
+- **Notes for Codex or Claude:**
+  - **Ownership from now on:**
+    - Root `.ai/CURRENT_STATE.md` and `goal.md` belong to the goal.md session only.
+    - The commissioning session writes only to its worktree's `.ai/CURRENT_STATE.md`, to `.ai/logs/*_claude_iaw-*.md`, and to `scratch/iaw/`.
+    - Neither session touches the other's branch, worktree or scratch.
+  - Before `iaw-settling-delay` merges into `main`, the commissioning session rebases onto the then-current `main`. A `git merge-tree` probe run today shows exactly **3 doc conflicts** (`.ai/CURRENT_STATE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/KNOWN_LIMITATIONS.md`) and **none in code**. It resolves them itself by keeping both sides.
+  - Status of the commissioning track: paused, and **nothing has been written to 1.1.67 yet**.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 06:27 CEST
 - **Completed:** **PDB-10 merged as `15b4c56` and pushed** (`origin/main` = `15b4c56`, read back). Product database schema is now **v16** ([ADR-0042](../docs/adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)). Branch commits: `9b75091` feature, `23ad852` reconciliation of the historical 1,728 count, `28c88ba` / `b4cecfe` / `4b23b09` review fixes.

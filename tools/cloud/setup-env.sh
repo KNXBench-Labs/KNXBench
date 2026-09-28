@@ -29,14 +29,25 @@ log() { echo "[knxbench-setup] $*"; }
 
 RUST_TOOLCHAIN="1.98.0" # keep equal to rust-toolchain.toml
 
+# Evidence for tools/cloud/session-start.sh, which otherwise cannot tell
+# "the setup script never ran" from "it ran and failed". /var/tmp survives
+# into the cached environment snapshot.
+STATE_DIR="/var/tmp/knxbench-cloud"
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+APT_LOG="$STATE_DIR/setup-apt.log"
+STATUS_FILE="$STATE_DIR/setup.status"
+RUN_BY="${1:-environment-setup-script}"
+
 install_system_packages() {
-  apt-get update -qq &&
-    apt-get install -y -qq --no-install-recommends \
-      pkg-config \
-      libwebkit2gtk-4.1-dev \
-      libgtk-3-dev \
-      libayatana-appindicator3-dev \
-      librsvg2-dev >/dev/null
+  {
+    apt-get update &&
+      apt-get install -y --no-install-recommends \
+        pkg-config \
+        libwebkit2gtk-4.1-dev \
+        libgtk-3-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev
+  } >"$APT_LOG" 2>&1
 }
 
 install_rust() {
@@ -69,15 +80,28 @@ install_rust &
 rust_pid=$!
 
 if wait "$apt_pid"; then
+  apt_status="ok"
   log "system packages ok"
 else
+  apt_status="failed (see $APT_LOG)"
   log "WARNING: apt install failed; knx-desktop (Tauri) will not build"
+  tail -n 20 "$APT_LOG" 2>/dev/null
 fi
 if wait "$rust_pid"; then
+  rust_status="ok"
   log "rust $RUST_TOOLCHAIN ok"
 else
+  rust_status="failed"
   log "WARNING: rust toolchain install failed; session-start will report it"
 fi
+
+{
+  echo "ran_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "run_by=$RUN_BY"
+  echo "uid=$(id -u)"
+  echo "apt=$apt_status"
+  echo "rust=$rust_status"
+} >"$STATUS_FILE" 2>/dev/null || log "WARNING: could not write $STATUS_FILE"
 
 # Never block the session: the session-start hook reports what is missing.
 exit 0

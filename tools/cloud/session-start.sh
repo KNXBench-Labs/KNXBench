@@ -21,6 +21,34 @@ cd "$repo" || exit 0
 git config user.name "KNXBench"
 git config user.email "github@knxbench.com"
 
+# The environment's setup script (tools/cloud/setup-env.sh) leaves
+# /var/tmp/knxbench-cloud/setup.status behind. A session without it, or
+# without WebKit, gets the same script run here once, so a missing or
+# stale environment setup costs a minute instead of a whole session.
+status_file="/var/tmp/knxbench-cloud/setup.status"
+if [ -f "$status_file" ]; then
+  setup_origin="ran as $(grep '^run_by=' "$status_file" | cut -d= -f2) at $(grep '^ran_at=' "$status_file" | cut -d= -f2)"
+else
+  setup_origin="NOT RUN by the environment (no $status_file)"
+fi
+fallback="not needed"
+if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
+  if [ "$(id -u)" = "0" ]; then
+    runner=(bash)
+  elif sudo -n true 2>/dev/null; then
+    runner=(sudo -n bash)
+  else
+    runner=()
+  fi
+  if [ "${#runner[@]}" -gt 0 ]; then
+    "${runner[@]}" tools/cloud/setup-env.sh session-start-fallback \
+      >/tmp/knxbench-setup-fallback.log 2>&1
+    fallback="ran setup-env.sh (log: /tmp/knxbench-setup-fallback.log)"
+  else
+    fallback="IMPOSSIBLE: not root and no passwordless sudo"
+  fi
+fi
+
 if [ -d "$HOME/.cargo/bin" ]; then
   export PATH="$HOME/.cargo/bin:$PATH"
   if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
@@ -45,10 +73,15 @@ echo
 echo "- rustc: $(rustc --version 2>/dev/null || echo 'MISSING — setup script did not install the toolchain')"
 echo "- node: $(node --version 2>/dev/null || echo MISSING)"
 echo "- apps/knx-web/node_modules: $npm_status"
+echo "- environment setup: $setup_origin"
+echo "- setup fallback in this hook: $fallback"
+if [ -f "$status_file" ]; then
+  echo "- last setup status: $(tr '\n' ' ' <"$status_file")"
+fi
 if pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
   echo "- webkit2gtk-4.1: present (knx-desktop builds)"
 else
-  echo "- webkit2gtk-4.1: MISSING — exclude knx-desktop: cargo test --workspace --exclude knx-desktop"
+  echo "- webkit2gtk-4.1: MISSING — report the two setup lines above; for apps/knx-web-only work, gate with --exclude knx-desktop on test AND clippy and say so in the PR"
 fi
 if [ -d OriginalData ]; then
   echo "- OriginalData/: PRESENT — stop and report this; the private corpus must never be in a cloud session"

@@ -210,7 +210,7 @@ impl DeviceDownloadSession {
 }
 
 /// The server's tunnel seen as what the management session needs.
-struct TunnelTransport<'a>(&'a dyn BusTunnel);
+pub(crate) struct TunnelTransport<'a>(pub(crate) &'a dyn BusTunnel);
 
 impl ScanTransport for TunnelTransport<'_> {
     fn assigned_address(&self) -> IndividualAddress {

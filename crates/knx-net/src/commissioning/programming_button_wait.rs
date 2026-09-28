@@ -26,7 +26,9 @@ use std::ops::ControlFlow;
 use std::time::Duration;
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
-use knx_core::commissioning::mutation::WriteAuthorisation;
+use knx_core::commissioning::mutation::{
+    required_confirmation_phrase, AuthorisationRefused, WriteAuthorisation, WriteScope,
+};
 use knx_core::IndividualAddress;
 
 use super::individual_address_write::{
@@ -152,6 +154,36 @@ pub struct AddressProgrammingAuthorisation {
     pub restart: WriteAuthorisation,
 }
 
+impl AddressProgrammingAuthorisation {
+    /// Real hardware, on the operator's phrase for
+    /// [`WriteScope::IndividualAddressProgramming`] and `new_address`.
+    ///
+    /// The restart authorisation is derived here, and only after that
+    /// phrase matched: MP §2.3 makes step 4's restart part of the procedure
+    /// ("shall deactivate the Programming Mode by executing a restart"), so
+    /// the one phrase confirms both. The CLI and the web route both come
+    /// through here, so neither can derive the restart differently.
+    pub fn for_hardware(
+        new_address: IndividualAddress,
+        confirmation: &str,
+    ) -> Result<Self, AuthorisationRefused> {
+        let programming = WriteAuthorisation::for_hardware(
+            new_address,
+            WriteScope::IndividualAddressProgramming,
+            confirmation,
+        )?;
+        let restart = WriteAuthorisation::for_hardware(
+            new_address,
+            WriteScope::Restart,
+            &required_confirmation_phrase(new_address, WriteScope::Restart),
+        )?;
+        Ok(Self {
+            programming,
+            restart,
+        })
+    }
+}
+
 /// The finished procedure, with the wait that preceded it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ButtonProgrammingReport {
@@ -234,7 +266,6 @@ pub async fn program_individual_address<T: ManagementTransport>(
 mod tests {
     use super::super::simulator::{SimulatedDevice, SimulatorConfig};
     use super::*;
-    use knx_core::commissioning::mutation::WriteScope;
     use knx_core::commissioning::programming_mode::ProgrammingModeCountError;
     use std::sync::{Arc, Mutex};
 
@@ -496,5 +527,34 @@ mod tests {
         out.clear();
         write_count(&mut out, &[addr(1, 1, 5), addr(1, 1, 9)]).unwrap();
         assert_eq!(out, "2 devices are in programming mode (1.1.5, 1.1.9)");
+    }
+
+    #[test]
+    fn one_phrase_authorises_the_write_and_its_restart_for_that_address_only() {
+        let target: IndividualAddress = "1.1.30".parse().unwrap();
+        let phrase = required_confirmation_phrase(target, WriteScope::IndividualAddressProgramming);
+        let both = AddressProgrammingAuthorisation::for_hardware(target, &phrase).expect("matches");
+        assert_eq!(
+            both.programming.scope(),
+            WriteScope::IndividualAddressProgramming
+        );
+        assert_eq!(both.restart.scope(), WriteScope::Restart);
+        assert_eq!(both.programming.target().address(), target);
+        assert_eq!(both.restart.target().address(), target);
+
+        // Another address's phrase, the restart's own phrase, a download
+        // phrase: none of them programs an address.
+        let other: IndividualAddress = "1.1.31".parse().unwrap();
+        for wrong in [
+            required_confirmation_phrase(other, WriteScope::IndividualAddressProgramming),
+            required_confirmation_phrase(target, WriteScope::Restart),
+            required_confirmation_phrase(target, WriteScope::Download),
+            String::new(),
+        ] {
+            assert!(
+                AddressProgrammingAuthorisation::for_hardware(target, &wrong).is_err(),
+                "{wrong:?} must not authorise"
+            );
+        }
     }
 }

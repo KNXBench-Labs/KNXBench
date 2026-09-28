@@ -288,6 +288,17 @@ confirmed`. KL §116's `repeat` is lifted for the CLI. Still open: the UI
 dialog (web lock) and item 2 **[W]** (needs a go and a button press).
 IMPLEMENTATION_STATUS 2026-09-28 "K6".
 
+**Status 2026-09-28: UI half done (simulator).** Bus → **Program address**
+tab and `/api/device-address/{phrase,start,status,stop}` (ADR-0046) on the
+same loop:
+- press / release-all-but-one prompts;
+- the wait can be stopped, the procedure cannot;
+- one phrase covers the write and its restart;
+- mutual exclusion with the monitor, the scan and the download.
+
+Item 1 is done. Item 2 **[W]** still needs a go and a button press.
+IMPLEMENTATION_STATUS 2026-09-28 "K6 UI".
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

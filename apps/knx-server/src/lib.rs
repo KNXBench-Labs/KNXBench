@@ -30,6 +30,11 @@ mod device_download;
 pub use device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent, Restart, Written};
 mod device_download_routes;
 pub use device_download_routes::ShownPlan;
+mod address_programming;
+pub use address_programming::{
+    AddressProgrammingEvent, AddressProgrammingSession, AddressProgrammingStatus, AddressWritten,
+};
+mod address_programming_routes;
 mod debug_report_routes;
 mod domain;
 pub use domain::*;
@@ -144,6 +149,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
         .merge(device_download_routes::device_download_routes())
+        .merge(address_programming_routes::address_programming_routes())
         .merge(debug_report_routes::debug_report_routes())
         .merge(settings_routes::settings_routes())
         // Deliberately not in `routes::project_routes()`: this answers for

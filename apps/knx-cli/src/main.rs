@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod device_address;
 mod device_download;
 mod scan;
 
@@ -55,6 +56,12 @@ const USAGE: &str =
      \x20         (a download TO the device over the bus; without --confirm it prints the\n\
      \x20         plan (segments, octets, steps) and opens no connection. The phrase must\n\
      \x20         name this device; excluded addresses are refused before anything opens)\n\
+     \x20     knx device program-address <area.line.device> [--wait <seconds>]\n\
+     \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
+     \x20         (gives the one device in programming mode this individual address, MP §2.3;\n\
+     \x20         waits up to --wait seconds (default 120) for exactly one pressed button and\n\
+     \x20         says when to press or release; ends with a restart. Without --confirm it\n\
+     \x20         prints the steps and opens no connection)\n\
      \x20     knx --version\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
@@ -1671,6 +1678,7 @@ fn run_products_order_number(args: &[String]) -> ExitCode {
 fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
+        Some("program-address") => run_device_program_address(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1795,6 +1803,82 @@ fn run_device_download(args: &[String]) -> ExitCode {
         match written {
             device_download::Written::Yes => ExitCode::SUCCESS,
             device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        }
+    })
+}
+
+/// `knx device program-address`. The address, exclusion list and phrase
+/// are checked before a socket opens; without the phrase only the steps are
+/// printed.
+fn run_device_program_address(args: &[String]) -> ExitCode {
+    let parsed = match device_address::parse_program_address_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let (target, mode) = match device_address::check(&parsed) {
+        Ok(checked) => checked,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let new_address = target.address();
+    print!("{}", device_address::format_plan(new_address, parsed.wait));
+    let (gateway, authorisation) = match mode {
+        device_address::Mode::Plan => {
+            println!(
+                "address written: no (plan only; add --gateway and --confirm {:?} to program)",
+                knx_core::commissioning::mutation::required_confirmation_phrase(
+                    new_address,
+                    knx_core::WriteScope::IndividualAddressProgramming
+                )
+            );
+            return ExitCode::SUCCESS;
+        }
+        device_address::Mode::Program {
+            gateway,
+            authorisation,
+        } => (gateway, authorisation),
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                println!("address written: no");
+                return ExitCode::FAILURE;
+            }
+        };
+        let programmed = device_address::execute(
+            &tunnel,
+            new_address,
+            authorisation,
+            knx_net::SessionTiming::default(),
+            knx_net::commissioning::programming_button_wait::ButtonWait::up_to(parsed.wait),
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        if programmed {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
         }
     })
 }

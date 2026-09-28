@@ -1250,6 +1250,10 @@ truth — holds down both sides plus the alarm-panel refusal.
    exists — the error carries the report, whose `wrote` flag was `true` — but a
    caller must destructure the error to find it. Anything built on top of this
    (CLI, server, UI) must not present the `Err` as "nothing happened".
+   **Status 2026-09-28 (K6):** the one surface built on it so far,
+   `knx device program-address`, destructures it and ends with `address
+   written: yes, but NOT confirmed` (test `written_but_unconfirmed_says_so`).
+   The library type is unchanged.
 3. **No rollback exists for a half-completed readdressing.** If the write lands
    and the device then cannot be reached, recovery is another programming-mode
    session by hand. Nothing in this project automates or even detects that state.
@@ -1258,7 +1262,9 @@ truth — holds down both sides plus the alarm-panel refusal.
 4 never completed), no download, no KNX Secure, no ETS parity, and no CLI, server
 or UI surface exposes any of this — every hardware write so far has happened
 through an explicitly opt-in `#[ignore]`d test requiring two environment
-variables.
+variables. *(Historical, as of that first write. Since then `knx device
+download` (K4), the Download to device tab (K5) and `knx device
+program-address` (K6) are such surfaces; see IMPLEMENTATION_STATUS.)*
 
 ## 8. KNX Secure is not implemented
 
@@ -7301,7 +7307,23 @@ be somebody else still stops.
 dialogue — a UI loop that re-runs step 2 while showing "press the
 programming button on exactly one device" implements the Standard's wait
 in the only place it can be implemented, and this function stays the
-single-shot primitive underneath it. The occupancy reading is revisited if
+single-shot primitive underneath it.
+
+**Status 2026-09-28 (K6): the `repeat` half is lifted for the command line,
+simulator-verified.** `knx_net::commissioning::programming_button_wait`
+repeats the broadcast count (one 1 s window per round, a 1 s pause between
+rounds) until exactly one device answers, the operator stops it, or `--wait`
+runs out. Every round goes to an observer; `knx device program-address`
+prints the count and "press" / "release all but one" whenever it changes
+(MP §2.3 footnote 2). The wait runs before step 1 rather than between steps
+1 and 2. That changes no decision: step 1 only reads, and
+`individual_address_write` still does its own step 2 count and its re-count
+before the write. A button released after the wait is caught there (test
+`a_button_released_after_the_wait_is_caught_by_step_two`).
+`individual_address_write` itself is unchanged, and still single-shot. Still
+open: the UI dialog (K6's UI half, which needs the web lock), and a
+live run on hardware (**[W]**, needs the user's go and a button press). The
+occupancy-reading half of this entry is unchanged. The occupancy reading is revisited if
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.
 

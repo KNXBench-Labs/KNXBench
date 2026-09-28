@@ -71,11 +71,25 @@ is only in one place.
 
 ### Exporting from the application
 
-Open the **File** menu and choose **Export documentation…**. KNXBench asks where to
-save — the file dialog filters on *HTML document* and suggests
-`project-documentation.html` — and writes the file. The application currently
-exports all five content sections; the API's preview, section, and language options
-do not yet have frontend controls.
+Open the **File** menu and choose **Export documentation…**. A dialog opens with
+a preview of the document:
+
+- **Sections** — one checkbox each for Summary, Topology, Buildings, Group
+  addresses and Devices, all ticked at first. The header, the contents and the
+  limits section are always included. Changing a tick refreshes the preview.
+- **Preview** — the document exactly as it will be written, shown in a sandboxed
+  frame in which nothing can run. If the preview fails, the reason is shown in
+  its place.
+- **Warnings** — listed next to the preview, so you can see them before
+  exporting.
+- **Print…** — opens the browser's print dialog for the preview document, not
+  for the application window. Use it to print to paper or to PDF.
+- **Export…** — asks where to save (the file dialog filters on *HTML document*
+  and suggests `project-documentation.html`) and writes the same sections you
+  previewed.
+
+The document follows the application language: German when the interface is
+German, English otherwise.
 
 When it is done you get one of two messages: *"Project documentation exported, no
 warnings."* or *"Project documentation exported, 3 warnings — see Log."* The warnings

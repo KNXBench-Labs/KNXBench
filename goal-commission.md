@@ -221,6 +221,11 @@ from a project device:
 3. Acceptance: the mapping, fed option C's project values, produces
    **exactly** the image of the hard-coded test (0 differing octets).
 
+**Status 2026-09-28: done.** No imported project has `1.1.67`; KNXBench
+built it (catalog → device → panel → link → Save As). `image_request` in
+`knx-productdb`; acceptance test `project_download_request.rs`: same request,
+0 differing octets. IMPLEMENTATION_STATUS 2026-09-28 "K3".
+
 ### K4 — Download as a CLI command, with a dry run
 
 1. The default is a plan without a write: target, program, segments,

@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — CT-1: project-diff web panel lists entities and before/after values (cloud session)
+
+- **Scope:** `apps/knx-web` only; no server, crate or CLI change.
+- **Files:**
+  - `src/projectDiffView.ts` projects a `ProjectDiffReport` installation
+    into per-table rows: status, natural-key label, name, match kind,
+    `fieldChanges`, ambiguity counts, and a changed device's nested
+    communication-object/parameter tables. Pure, deterministic order
+    (added, removed, changed, ambiguous; server order within each).
+  - `src/ProjectDiffDetails.tsx` renders those rows below the unchanged
+    grouped-count summary: one collapsed native-button disclosure per
+    non-empty table, a *Field / Before / After* table per changed entity,
+    status as word plus symbol, 50 rows per page with a "Show more"
+    control that moves focus to the first new row.
+  - `ProjectDiffPanel.tsx` mounts it and remounts it per comparison, so a
+    new report starts collapsed. 16 new EN/DE message keys; styles in
+    `styles.css`.
+- **Tests:** `ProjectDiffPanel.test.tsx` grows from 9 to 19 tests
+  (collapsed default, natural keys, field/before/after table, ambiguous
+  counts, info tables, nested device tables, keyboard expand/collapse and
+  Escape, reset per comparison, German output, 3000-row synthetic diff
+  paging and focus, last-page behaviour); new `projectDiffView.test.ts`
+  (3 tests: empty tables omitted, entry order, key formatting).
+- **Verified here:** `npm test` and `npm run build` exit 0 in the cloud
+  session. Rust gates results are in the session log. Not verified: a
+  browser/Playwright run of the panel and a screen-reader pass.
+- **Limitations:** KNOWN_LIMITATIONS §59 lifted; §60 largely lifted, with
+  paging instead of virtualisation, no search, and untranslated field
+  identifiers remaining.
+
 ## 2026-09-28 — Claude Code cloud sessions prepared (tooling, no product change)
 
 - **Files:**

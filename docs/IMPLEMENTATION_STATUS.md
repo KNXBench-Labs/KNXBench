@@ -1,5 +1,37 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — K4: `knx device download`, a download to the device from the CLI
+
+- `knx device download <address> --project <file.knxdb>` prints the plan and
+  opens no connection. The plan shows device, program, mask/manufacturer,
+  per segment the octets written and kept, the total, and every step.
+  `--gateway` plus `--confirm "I confirm download to <address>"` writes.
+- Order of checks: address, exclusion list, phrase for *this* address
+  (`required_confirmation_phrase`), project file exists (never created),
+  plan built. Only then does a socket open. All four refusals were run
+  against the binary: exit 1 within milliseconds, no connection.
+- `knx_app::device_download::prepare_device_download` (no bus) finds the
+  one project device at the address (refuses none or several), then K3's
+  `image_request_for_device`, `build_download_image`, `plan_memory_download`.
+  The UI (K5) can reuse it.
+- R1: while writing, every step and every data block is printed, a block
+  only after read-back. R2: every heading says "download to device
+  <address>". It ends with `written to the device: yes | no | partially`;
+  exit 0 only for `yes`. K2: an unconfirmed restart is `yes` plus
+  `restart: NOT confirmed. …`.
+- Tests: 7 argument/phrase/exclusion tests and 4 end-to-end tests against the
+  simulator (the saved K3 project, corpus, `--ignored`): a complete write,
+  an unconfirmed restart, another mask (`no`, nothing written), a lost
+  connection (`partially`). 3 `prepare` tests. 5 mutants (partial reported as
+  `no`, phrase unchecked, unconfirmed restart silenced, exclusion skipped, no
+  progress lines), all caught.
+- Manual: `10-command-line.md` has a new "Writing to a device" section.
+  `07-bus-and-interfaces.md` no longer says that no command writes to a
+  device.
+- Not run against the real device: the executor underneath is the one that
+  wrote `1.1.67` on 2026-09-28 (RESEARCH §19.4). The CLI around it has only
+  seen the simulator.
+
 ## 2026-09-28 — K3: the download request comes from the project
 
 - `[V]` None of the three ETS demo projects contains `1.1.67` or program

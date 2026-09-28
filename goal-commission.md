@@ -240,6 +240,12 @@ built it (catalog → device → panel → link → Save As). `image_request` in
    device** (e.g. `knx device download <address>`), with the target in
    every heading.
 
+**Status 2026-09-28: done (simulator).** `knx device download`: a plan by
+default, a write only with `--gateway` and the phrase, refusals before any
+socket, `written to the device: yes|no|partially`, and a loud unconfirmed
+restart. Four end-to-end simulator tests plus five mutants. Not yet run
+against `1.1.67`; that needs a go. IMPLEMENTATION_STATUS 2026-09-28 "K4".
+
 ### K5 — Download in server and UI
 
 1. **Decision first.** ADR-0040 leaves it open whether the server must demand

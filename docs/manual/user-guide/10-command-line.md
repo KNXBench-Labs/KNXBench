@@ -21,8 +21,9 @@ If you built from source, the binary is at `target/debug/knx` or `target/release
 ## Before you go near the bus commands
 
 Six subcommands live under `knx bus`, and **every one of them puts traffic on a real
-KNX installation**. They are listed together at the end of this chapter, under a heading
-that says so. Everything before that heading touches files only.
+KNX installation**. They are listed together near the end of this chapter, under a
+heading that says so. `knx device download` writes to a device; it has its own section
+at the very end. Everything before those headings touches files only.
 
 ## Exit codes
 
@@ -396,5 +397,71 @@ comparison is printed and never written back into the project.
 A malformed `--exclude` address aborts the command before a single frame is sent.
 KNXBench also compiles in a list of addresses that can never be probed regardless of
 what you type; they are not generated into the candidate list in the first place.
+
+## Writing to a device
+
+### `knx device download` — download a project device's configuration *to the device*
+
+**This rewrites a device's application, tables and parameters.** "Download" in KNXBench
+always means *from KNXBench to the device, over the bus*; saving a project to a file is
+never called a download (see the [glossary](../../GLOSSARY.md)).
+
+```bash
+knx device download 1.1.67 --project house.knxdb
+```
+
+Without `--confirm` the command only prints the plan and opens no connection: the
+project device at that address, its application program, mask and manufacturer, each
+memory segment with the octets that will be written and the octets the device keeps
+(its own individual address), and every step of the product's load procedure:
+
+```text
+== download to device 1.1.67: plan (nothing sent yet) ==
+device:  Push button 2-fold Plus (project device 1)
+program: M-0083_A-0027-15-0BAC
+mask 0701h, manufacturer 0083h
+configuration: 3 parameter values, 1 group links
+segments (octets the device keeps itself are not written):
+  M-0083_A-0027-15-0BAC_AS-4000 at 4000h: 513 octets, 511 written, 2 kept
+  ...
+octets written to the device: 1416 (every one is read back)
+steps: 25
+   1: connect; check mask and manufacturer
+  ...
+written to the device: no (plan only; add --gateway and --confirm "I confirm download to 1.1.67" to write)
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--project <path.knxdb>` | The saved project the configuration comes from (required) |
+| `--product-db <path>` | The product database holding the device's application program |
+| `--gateway <host:port>` | The KNXnet/IP interface to write through |
+| `--confirm "<phrase>"` | Write. The phrase must read exactly `I confirm download to <address>` |
+
+The checks run in this order, and each stops the command before the next: the address
+is parsed and checked against the list of addresses KNXBench never contacts; the phrase
+is compared with the one for *this* address; the project and product database are read
+and the plan is built (a missing project file is an error, never a new empty one); only
+then is a connection opened. The configuration is taken from the project and nothing
+is filled in: a device without an address or program, two devices on the same address,
+contradictory values or a link on an object the parameters do not activate are refused
+by name.
+
+While writing, every step and every data block sent to the device is printed as it
+happens, with the running octet count; a block is printed only after it was read back
+unchanged. The command ends with one of three lines, and exits `0` only for the first:
+
+- `written to the device: yes, … octets, every one read back`
+- `written to the device: no` — it stopped before the first write
+- `written to the device: partially (stopped in step …)` — the device may not run until
+  a complete download
+
+A download that wrote everything but whose closing restart the device did not
+acknowledge still ends `yes`, followed by `restart: NOT confirmed` and what to do about
+it. Some devices never acknowledge that restart
+([known limitations §136](../../KNOWN_LIMITATIONS.md#136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download)).
+
+Only memory downloads to products whose load procedure KNXBench can plan are supported;
+anything else is refused while planning, before a connection opens.
 
 [Manual index](../README.md) · Next: [Web and Docker deployment](11-web-and-docker.md) →

@@ -23,7 +23,12 @@ USER.md
 IDENTITY.md
 MEMORY.md
 MEMORY.md.bak.*
-.claude/
+# Local Claude Code state stays private; only the shared project settings
+# (cloud-session hook, attribution off) are versioned. `.claude/*` rather
+# than `.claude/` because git cannot re-include a file below an ignored
+# directory.
+.claude/*
+!.claude/settings.json
 memory/
 .agent-memory/
 

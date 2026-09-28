@@ -266,6 +266,13 @@ against `1.1.67`; that needs a go. IMPLEMENTATION_STATUS 2026-09-28 "K4".
 4. KNOWN_LIMITATIONS §101 lifts, or gets its bound, once the UI shows a
    progress bound.
 
+**Status 2026-09-28: done (simulator).** ADR-0045 (the server demands the
+plan's phrase and the exact shown plan). `/api/device-download/{plan,start,status}`
+and the "Download to device" / "In Gerät laden" tab with R1 progress. §101
+bound: the tab shows counted progress, no time bound. The File menu rename
+is `goal-ui.md` U3. No real device written; the UI's
+**[W]** run belongs to K7. IMPLEMENTATION_STATUS 2026-09-28 "K5".
+
 ### K6 — Individual-address programming as a product command
 
 1. CLI command and UI dialog with a loop "press the programming button on

@@ -176,9 +176,10 @@ raised. A project that has been imported stays in `.knxdb`.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Programming a device — application, parameters, links or individual address | ❌ Not implemented | **For a user this is simply absent:** no button, no route and no command exists anywhere in the interface or the command line, whatever the core library can do internally |
+| Downloading a project device's configuration to the device | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab: plan first, confirmation, live progress. Verified in the simulator; one real device (`1.1.67`, MDT) so far — [Bus](user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
+| Programming an individual address | ❌ Not implemented | No button and no command yet |
 | The load/unload/reset/memory-write procedures inside the core library | 🚧 In progress | Verified against a simulator this project wrote, never against hardware — [§92](../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
-| Read-only verification against a real installation | 🟡 Partial or experimental | Reading device state has been exercised against real hardware; writing has not — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
+| Read-only verification against a real installation | 🟡 Partial or experimental | Reading device state has been exercised against real hardware — [§7](../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
 
 ## KNX Secure
 

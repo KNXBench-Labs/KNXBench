@@ -137,6 +137,20 @@ pub struct AppState {
     /// remains pollable until a later scan replaces it.
     pub line_scan_session: tokio::sync::Mutex<Option<LineScanSession>>,
     pub next_line_scan_session_id: std::sync::atomic::AtomicU64,
+    /// The plan last shown for a download to a device (ADR-0045 §3), kept
+    /// so `POST /api/device-download/start` can prove it writes exactly
+    /// that plan. Cleared once written.
+    pub device_download_plan: Mutex<Option<crate::ShownPlan>>,
+    /// At most one download to a device, retained after it ends so its
+    /// final state stays readable. `tokio::sync::Mutex`: `start` holds it
+    /// across the tunnel connect, so a second start waits and then sees
+    /// the first one running.
+    pub device_download: tokio::sync::Mutex<Option<crate::DeviceDownloadSession>>,
+    /// Plan ids, never reused; a download keeps its plan's id.
+    pub next_device_download_id: std::sync::atomic::AtomicU64,
+    /// The management-session timing for downloads. The Standard's figures
+    /// in production; tests shorten it, the way the CLI's tests do.
+    pub device_download_timing: knx_net::SessionTiming,
     /// The single project load this server run may have in flight, and
     /// the snapshot `GET /api/project/load-progress` answers with
     /// (ADR-0023). `Arc`, not a plain field: a [`LoadHandle`] outlives the
@@ -182,6 +196,10 @@ impl AppState {
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
             line_scan_session: tokio::sync::Mutex::new(None),
             next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),
+            device_download_plan: Mutex::new(None),
+            device_download: tokio::sync::Mutex::new(None),
+            next_device_download_id: std::sync::atomic::AtomicU64::new(1),
+            device_download_timing: knx_net::SessionTiming::default(),
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),

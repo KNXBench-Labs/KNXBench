@@ -211,16 +211,6 @@ pub fn format_progress(progress: &Progress) -> Option<String> {
     }
 }
 
-/// Whether a step changes the device.
-fn writes(step: &MemoryDownloadStep) -> bool {
-    matches!(
-        step,
-        MemoryDownloadStep::LoadRecord(_)
-            | MemoryDownloadStep::WriteMemory { .. }
-            | MemoryDownloadStep::Restart
-    )
-}
-
 /// How a run ended, for the summary and the exit code.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Written {
@@ -266,7 +256,11 @@ pub async fn execute<T: ManagementTransport>(
         }
     })
     .await;
-    let wrote_something = last_started.is_some_and(|last| plan.steps[..=last].iter().any(writes));
+    let wrote_something = last_started.is_some_and(|last| {
+        plan.steps[..=last]
+            .iter()
+            .any(MemoryDownloadStep::changes_device)
+    });
     match result {
         Ok(report) => {
             summarise(out, target, &report);

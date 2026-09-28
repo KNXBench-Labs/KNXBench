@@ -1,5 +1,48 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — K5: download to a device from the web UI, with live progress
+
+- ADR-0045 settles what ADR-0040 left open: the server demands the plan's
+  confirmation phrase (`WriteAuthorisation::for_hardware`) and writes only
+  the exact plan the user was shown. It does not trust the UI's remembered
+  consent.
+- Server: `POST /api/device-download/plan` prepares from the open project
+  (K4's `prepare_device_download`) and remembers the plan under an id.
+  `POST /api/device-download/start` checks, before any tunnel opens, that the
+  plan id is the one shown last, that the phrase is right, that no monitor,
+  scan or other download holds the tunnel, and that the project still gives
+  an identical plan. It then runs K2's `run_memory_download_observed` in the
+  background. `GET /api/device-download/status?since=` returns every
+  step/block/done event once, plus `written: yes|no|partially` and the
+  restart outcome. A plan is written at most once. Monitor and scan starts
+  refuse while a download runs. There is no cancel (ADR-0045 §5).
+- UI: a **Download to device** / **In Gerät laden** tab beside monitor and
+  scan (`DeviceDownloadPanel`). It shows the plan (program, expected mask
+  and manufacturer, values and links from the project, segments, steps,
+  "nothing has been sent"), asks through `useProgrammingConsent`, then shows
+  step n/m, octets read back against the total, and every data block
+  (address, hex octets) after its read-back. It ends with the CLI's
+  yes/no/partially line and a loud "Restart: NOT confirmed". A project edit
+  drops a shown plan.
+- `SimulatedDevice::with_config_at` places the simulator at the project's
+  address. `MemoryDownloadStep::changes_device` moved from the CLI into
+  `knx-core`, so the CLI and the server decide "partially" the same way.
+- One tunnel: `start` holds the download, monitor and scan locks until the
+  run is registered; monitor and scan starts check for a download only
+  after taking their own lock (`try_lock`, so no wait cycle).
+- Tests: 6 HTTP end-to-end tests against the simulator (the saved K3
+  project, corpus, `--ignored`): full write with every block checked against
+  the simulator's memory, an unconfirmed restart, a lost connection
+  (`partially`, step named), another mask (`no`, nothing written), all
+  refusals before any tunnel (wrong/empty phrase, unknown or replaced plan,
+  project edited after the plan, excluded address), and one tunnel in both
+  directions. 7 server mutants and 8 UI mutants, all caught. 10 UI tests.
+- Terminology (R2): the tab says "Download to device" / "In Gerät laden",
+  and its text says it is not saving or exporting a file. The File menu's
+  "Download project" rename is `goal-ui.md` U3 (UI session, web lock).
+- KNOWN_LIMITATIONS §101 gets its bound: the tab shows no time bound, only
+  counted progress. No real device was written by K5.
+
 ## 2026-09-28 — K4: `knx device download`, a download to the device from the CLI
 
 - `knx device download <address> --project <file.knxdb>` prints the plan and

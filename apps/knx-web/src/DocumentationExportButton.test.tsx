@@ -1,4 +1,4 @@
-/** Tests that DocumentationExportButton gates on an open project and opens the documentation dialog. */
+/** Tests that DocumentationExportButton needs an open project and opens its dialog. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

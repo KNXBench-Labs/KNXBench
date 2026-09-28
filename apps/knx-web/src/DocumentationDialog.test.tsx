@@ -1,4 +1,4 @@
-/** Tests for DocumentationDialog: section selection, sandboxed preview, warnings, print, export and errors. */
+/** Tests for DocumentationDialog: selection, sandboxed preview, warnings, print, export, errors. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

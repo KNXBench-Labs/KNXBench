@@ -4650,6 +4650,39 @@ above therefore come only from MP §3.31.2 and TSSG.
      or `0/0/25` and `0/1/25`).
 
    One read of a real device's table would settle it.
+3. *Partly built 2026-09-27:* the parameter-segment image. The **bit
+   writer** is built: `knx_core::commissioning::parameter_image`.
+   - **Placement:** it places a value at `Offset`/`BitOffset`/`SizeInBit`.
+     `BitOffset` counts from the octet's MSB to the value's MSB (`[D]`
+     Project Schema 23, `BitOffset_t`). Multi-octet values go high octet
+     first (`[V]`: all 20 `Options` elements of mask-`0701h` applications
+     in the corpus projects say `ParameterByteOrder="BigEndian"`).
+   - **Refusals:** shapes that definition does not settle (unaligned
+     across octets, a whole-octet width at a bit offset), fields past the
+     segment, values too wide, and overlapping writes. It never lets a
+     later union member silently overwrite an earlier one.
+   - **Still missing:** choosing *which* parameters are written. That means
+     evaluating the `Dynamic` tree and picking the active `Union` member.
+
+   **`[V]` The segment base data is not the parameter defaults.** In
+   `A-0027-15-0BAC`, `AS-4400`'s `<Data>` disagrees with the effective
+   default in 33 of 66 non-union-alternative parameter locations. Examples:
+   `P-5003` is 400 by default but 3000 in the data, and `P-1`/`P-2` are 0 by
+   default but 3 in the data. MDT's product
+   `ParameterRef`s override several of them, so the data is at most one
+   snapshot. Consequence: a download must write **every** active parameter
+   over the base data, not just the ones the user changed. Otherwise the
+   device runs with values the user never saw. The comparison script and
+   its output are not in the repository; they are reproducible from the
+   `.knxprod` in a few lines.
+
+   The values the toggle on `2/0/53` needs are all enumerated in the
+   product data, not guessed. For button 1:
+   - `P-1007` *Function buttons 1/2*: `2` = *Push buttons unique*.
+   - `UP-5500` *Function* at `AS-4400`+264: `0` = *Switch*.
+   - `UP-5501` *Subfunction* at +266: `1` = *Toggle by push*.
+
+   Each is a 16-bit field; the object is `O-0`.
 3. An `AS-4400` image builder. It must evaluate the `choose` tree for the
    chosen parameter values (`knx-productdb::dynamic::evaluate` exists) and
    place each parameter's bits at its `Memory` offset over the segment's

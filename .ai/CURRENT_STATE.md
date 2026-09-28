@@ -1,3 +1,23 @@
+- **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 21:05 CEST
+- **Completed:** `goal-ui.md` created (user request). It is a separate goal for a **UI session that runs on GPT/Codex**: packages U0–U13.
+  - **Owns:** ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12 and 13, the UI half of ISSUE-08, the ADR-0038 review (ISSUE-06), and the File-menu rename (R2) handed over by the commissioning session.
+  - **Web lock** for `apps/knx-web` across all sessions: `goal-ui.md` §3. It is taken and released through a handover line on `main`. It is currently held by the commissioning session for K5 (entry 20:44), so the UI session starts with the lock-free packages U0–U2.
+  - **goal.md:**
+    - §0 points to the file.
+    - §12.3 moves the §11 web chain there and keeps the ISSUE-08 **data** half here. The manual, alpha and final review wait for U13.
+    - §12.4 has the UI track's rules and the items adopted from the commissioning session: manual chapters still say "never written to hardware" (→ T23); the File-menu rename was passed on to goal-ui U3.
+  - **goal-commission.md §5:** one boundary row updated (UI parts now in goal-ui, web lock). No other change to that file.
+  - The Hermes Agent entry from 19:35 (ai-stats), which was uncommitted in the root checkout, is committed here unchanged, in chronological position.
+- **Pending/Next Steps:**
+  - **goal.md session:** after the user's "go", the ISSUE-08 data half (no web edits). Then doc hygiene §8 and the LIMITATION_TRIAGE recount.
+  - **UI session:** `/goal` with `goal-ui.md`, starting with U0.
+- **Notes for Codex or Claude:**
+  - **UI session (Codex), please read:** `goal-ui.md` §2 (worktree `ui-<topic>`, `npm ci`, the corpus symlink, `git add -f` for `.ai/`, author `github@knxbench.com`, no co-author) and §3 (web lock).
+  - **Commissioning session:** your web lock for K5 stands. Please release it in your K5 merge entry with the line `Web lock: released`.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 20:44
 - **Completed:** Announcement only (goal-commission K5 item 3 / goal.md §12.4): **the commissioning session starts K5's web part now**, in worktree `KNXBench.worktrees/iaw-k5-ui`. Checked first: no goal.md web task in flight (last `apps/knx-web` commit `8cf6c0f` 14:23; no other worktree).
@@ -16,6 +36,19 @@
 - **Completed:** K3 of `goal-commission.md` (`3f79b4c`). None of the three ETS demo projects has `1.1.67`, so KNXBench builds it through the app routes: new project, line 1.1, GA `2/0/53`, the MDT package, the device from the catalog, the option-C values through the panel, one link, Save As. New `knx_productdb::image_request`. `image_request_from_project` is pure, with no database and no bus. `image_request_for_device` resolves the program via `Hardware2Program` and refuses a link on an inactive object instance. Missing or contradictory data is refused by name, never defaulted. Acceptance `apps/knx-server/tests/project_download_request.rs` (corpus, `--ignored`): the saved and reloaded project yields exactly the hand-written request, with 0 differing octets. 14 unit tests, 3 mutants caught. Gate: clippy, 2339/0, corpus 1+1+3, layering, anchors, headers, corpus-gates, diff-check.
 - **Pending/Next Steps:** K4, a CLI download command whose default is a dry-run plan (target, program, segments, changed octets, steps). Writing needs the `WriteAuthorisation` phrase, and excluded addresses are refused before the first socket. Input: the project file `OriginalData/DemoProjects/KNXBench 1.1.67 option C.knxdb` (local, gitignored) plus device `1.1.67`. R1 progress display and R2 wording apply. After that, K5 (UI). Still open: KL §136 (`disconnect()` swallows the send error).
 - **Notes for Codex or Claude:** `A-0027-15-0BAC` declares 23 `ComObjectRef`s for object number 0, and a catalog device gets all of them. `build_download_image` checks numbers only, so the mapping must use `image_request_for_device` (with its activation check), not the pure function alone. Recreate the saved project with `KNXBENCH_K3_KEEP_PROJECT=<path>` on the acceptance test. The root checkout has an uncommitted Hermes-Agent entry (ai-stats) in this file; it was not touched.
+
+- **Last Agent:** Hermes Agent
+- **Timestamp:** 2026-09-28 19:35 CEST
+- **Completed:** Root cause and fix for the missing Claude Opus 5.5 usage breakdown. Log: `.ai/logs/2026-09-28_hermes_ai-stats-cloud-telemetry.md`.
+  - Cause: `/mnt/daten-i/Sourcecode/ai-stats.py` read only local `~/.claude/projects` JSONL. The three KNXBench Claude-Code-Web jobs exist only as `anthropic_cloud` sessions, so Opus 5.5 was visible in the model catalogue but had no attributable usage row.
+  - The collector now reads the live Claude Code session/event API using the local OAuth access token, accepts only uniquely repository-attributed cloud sessions, deduplicates cursor events and local/teleported session IDs, and uses the newest sequenced per-model `modelUsage` ledger rather than summing assistant stream fragments.
+  - The three sessions are explicitly attributed by `KNXBench-Labs/KNXBench` metadata to `claude-opus-5-5`: 24,299,395 tokens (7,787 input, 128,182 output, 23,746,860 cache read, 416,566 cache creation), 4 real user tasks, 177 tool calls, 2,873.244 s API time.
+  - `stats.md` regenerated. It now has measured rows for `Claude Code Cloud` and `Claude Opus 5.5 (claude-opus-5-5)`, both at 24,299,395 tokens. Synthetic aggregation, missing-credentials, repository attribution, live read, report assertion, `py_compile`, and `git diff --check` passed.
+  - The self-referential report was committed alone as `4e0ef5b` (`docs(stats): opus 5.5 finally hands in its cloud receipts`), regenerated after that commit, amended, pushed to `origin/main`, and read back. Its displayed 1,560 commits equal `git rev-list --count HEAD`.
+- **Pending/Next Steps:** No implementation or delivery work remains for this statistics issue. This handover entry stays with the concurrent local `.ai/CURRENT_STATE.md` work and was deliberately not included in the stats-only commit.
+- **Notes for Codex or Claude:** The Claude Code endpoint is live-verified but external and not controlled by KNXBench. On API/schema/auth failure the collector warns and keeps local statistics; it never fabricates zero-use rows. `/mnt/daten-i/Sourcecode/ai-stats.py` is outside this Git repository. `docs/paperclip-shutdown/` remains foreign and untouched.
+
+---
 
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 19:19

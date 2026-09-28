@@ -447,7 +447,11 @@ export interface CatalogUnknownConstruct {
 }
 
 export interface CatalogInstallDiagnostic {
-  kind: "unsupported-master-section" | "unsupported-master-subtree" | "unsupported-baggage-index";
+  kind:
+    | "unsupported-master-section"
+    | "unsupported-master-subtree"
+    | "unresolved-baggage-declaration"
+    | "undeclared-baggage-payload";
   archivePath: string;
   xmlPath: string;
   detail: string;

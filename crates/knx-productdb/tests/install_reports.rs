@@ -1,4 +1,6 @@
 //! PDB-3 install evidence is measured at encounter/write time and survives retry.
+mod v16_rewind;
+
 use std::io::{Cursor, Write};
 
 use knx_productdb::{
@@ -269,11 +271,7 @@ fn measured_facts_match_parser_owned_rows_and_baggage_boundaries() {
             2,
         ),
         (InstallCategory::BaggageIndex, InstallDisposition::Read, 2),
-        (
-            InstallCategory::BaggageIndex,
-            InstallDisposition::Unsupported,
-            2,
-        ),
+        (InstallCategory::BaggageIndex, InstallDisposition::Stored, 2),
         (InstallCategory::Baggage, InstallDisposition::Read, 1),
         (InstallCategory::Baggage, InstallDisposition::Stored, 1),
         (
@@ -524,11 +522,22 @@ fn unsupported_master_sections_aggregate_and_languages_remain_supported() {
             && row.xml_path().starts_with('/')
             && !row.detail().contains("/host/private")
     }));
-    let baggage = diagnostics
+    // PDB-10: both FULL_BAGGAGES declarations lack `Name`, so neither can
+    // name a member; `vendor.bin` is carried but declared by nothing.
+    let unresolved = diagnostics
         .iter()
-        .find(|row| row.kind() == InstallDiagnosticKind::UnsupportedBaggageIndex)
+        .find(|row| row.kind() == InstallDiagnosticKind::UnresolvedBaggageDeclaration)
         .unwrap();
-    assert_eq!(baggage.occurrences(), 2);
+    assert_eq!(unresolved.occurrences(), 2);
+    assert_eq!(
+        unresolved.detail(),
+        "baggage declaration does not resolve: declaration has no Name"
+    );
+    let undeclared = diagnostics
+        .iter()
+        .find(|row| row.kind() == InstallDiagnosticKind::UndeclaredBaggagePayload)
+        .unwrap();
+    assert_eq!(undeclared.archive_path(), "M-0001/Baggages/vendor.bin");
 }
 
 /// PDB-8: inside a *supported* master section the parser interprets only
@@ -644,6 +653,7 @@ fn a_master_file_without_uninterpreted_subtrees_measures_zero() {
 /// lists (no `master_subtree`, no `unsupported-master-subtree`) with every
 /// other row kept, so the v13 -> v14 rebuild runs against real v13 DDL.
 fn rewind_to_v13(conn: &Connection) {
+    v16_rewind::rewind_to_v15(conn);
     conn.execute_batch(
         "CREATE TABLE package_install_count_v13 (
             package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
@@ -766,6 +776,7 @@ fn migrated_packages_are_unavailable_while_fresh_zeroes_are_measured() {
         assert_eq!(foreign_keys, 1);
         // Simulate v11 in dependency order while FK enforcement stays on:
         // detail children first, then their report parent.
+        v16_rewind::drop_baggage_inventory_tables(&conn);
         conn.execute_batch(
             "DROP TABLE package_install_diagnostic;
              DROP TABLE package_install_unknown;
@@ -829,9 +840,14 @@ fn malformed_persisted_report_shapes_are_rejected() {
         "UPDATE package_install_diagnostic SET xml_path = '/KNX/MasterData/MaskVersions/Nested' WHERE kind = 'unsupported-master-section'",
         "UPDATE package_install_diagnostic SET detail = detail || ' altered' WHERE kind = 'unsupported-master-section'",
         "UPDATE package_install_diagnostic SET xml_path = '/KNX/MasterData/Languages', detail = 'master section Languages is retained but not interpreted' WHERE kind = 'unsupported-master-section' AND ordinal = (SELECT min(ordinal) FROM package_install_diagnostic WHERE kind = 'unsupported-master-section')",
-        "UPDATE package_install_diagnostic SET archive_path = 'knx_master.xml' WHERE kind = 'unsupported-baggage-index'",
-        "UPDATE package_install_diagnostic SET xml_path = '/KNX/ManufacturerData/Manufacturer/Baggages/Other' WHERE kind = 'unsupported-baggage-index'",
-        "UPDATE package_install_diagnostic SET detail = detail || ' altered' WHERE kind = 'unsupported-baggage-index'",
+        "UPDATE package_install_diagnostic SET archive_path = 'knx_master.xml' WHERE kind = 'unresolved-baggage-declaration'",
+        "UPDATE package_install_diagnostic SET xml_path = '/KNX/ManufacturerData/Manufacturer/Baggages/Other' WHERE kind = 'unresolved-baggage-declaration'",
+        "UPDATE package_install_diagnostic SET detail = detail || ' altered' WHERE kind = 'unresolved-baggage-declaration'",
+        "UPDATE package_install_diagnostic SET occurrences = occurrences + 1 WHERE kind = 'unresolved-baggage-declaration'",
+        "UPDATE package_install_diagnostic SET archive_path = 'M-0001/Baggages.xml' WHERE kind = 'undeclared-baggage-payload'",
+        "UPDATE package_install_diagnostic SET detail = detail || ' altered' WHERE kind = 'undeclared-baggage-payload'",
+        "DELETE FROM package_install_diagnostic WHERE kind = 'undeclared-baggage-payload'",
+        "UPDATE package_install_count SET count = count + 1 WHERE category = 'baggage_index' AND disposition = 'stored'",
         "DELETE FROM package_install_count WHERE category = 'module' AND disposition = 'read'",
         "UPDATE package_install_count SET count = count + 1 WHERE category = 'master_section' AND disposition = 'unsupported'",
     ];
@@ -902,7 +918,7 @@ fn duplicate_diagnostic_identity_is_rejected_on_reload_without_schema_help() {
          CREATE TABLE package_install_diagnostic (
              package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
              ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
-             kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-baggage-index')),
+             kind TEXT NOT NULL,
              archive_path TEXT NOT NULL,
              xml_path TEXT NOT NULL,
              detail TEXT NOT NULL,
@@ -911,11 +927,11 @@ fn duplicate_diagnostic_identity_is_rejected_on_reload_without_schema_help() {
          ) STRICT;
          INSERT INTO package_install_diagnostic SELECT * FROM original_diagnostic;
          UPDATE package_install_diagnostic SET occurrences = 1
-         WHERE kind = 'unsupported-baggage-index';
+         WHERE kind = 'unresolved-baggage-declaration';
          INSERT INTO package_install_diagnostic
              (package_sha256, ordinal, kind, archive_path, xml_path, detail, occurrences)
          SELECT package_sha256, 999, kind, archive_path, xml_path, detail, 1
-         FROM original_diagnostic WHERE kind = 'unsupported-baggage-index';
+         FROM original_diagnostic WHERE kind = 'unresolved-baggage-declaration';
          DROP TABLE original_diagnostic;",
     )
     .unwrap();

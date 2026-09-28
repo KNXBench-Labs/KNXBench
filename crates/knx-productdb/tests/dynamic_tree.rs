@@ -6,6 +6,8 @@
 //! migration-backfill/corpus-evaluation tests live further down this same
 //! file, after the storage tests above.
 
+mod v16_rewind;
+
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
@@ -28,6 +30,8 @@ fn db() -> (tempfile::TempDir, Connection) {
 /// A fixture rolled back to v2/v10 must not retain v13's catalogue columns;
 /// otherwise the v12→v13 migration rightly refuses a duplicate column.
 fn drop_v13_catalogue_columns(conn: &Connection) {
+    // The same fixtures predate v16's baggage inventory tables too.
+    v16_rewind::drop_baggage_inventory_tables(conn);
     for column in [
         "is_secure_enabled",
         "max_security_group_key_table_entries",

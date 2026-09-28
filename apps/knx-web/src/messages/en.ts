@@ -586,11 +586,15 @@ export const messages = {
   "catalog.installReport.unknownKind.attribute": "Attribute",
   "catalog.installReport.diagnosticKind.unsupportedMasterSection": "Unsupported master section",
   "catalog.installReport.diagnosticKind.unsupportedMasterSubtree": "Uninterpreted master subtree",
-  "catalog.installReport.diagnosticKind.unsupportedBaggageIndex": "Unsupported baggage index",
+  "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration": "Unresolved baggage declaration",
+  "catalog.installReport.diagnosticKind.undeclaredBaggagePayload": "Undeclared baggage file",
   "catalog.installReport.diagnostic.unsupportedMasterSection": "A master-data section was retained but not interpreted.",
   "catalog.installReport.diagnostic.unsupportedMasterSubtree":
     "Part of a supported master-data section was retained but not interpreted.",
-  "catalog.installReport.diagnostic.unsupportedBaggageIndex": "A baggage index was retained but not interpreted.",
+  "catalog.installReport.diagnostic.unresolvedBaggageDeclaration":
+    "A baggage declaration names no file in the package.",
+  "catalog.installReport.diagnostic.undeclaredBaggagePayload":
+    "A baggage file was retained, but no declaration names it.",
 
   "catalog.installReport.factsUnavailable": "Install facts unavailable for this historical install",
   "catalog.installReport.countsHeading": "Encounter counts",

@@ -15,8 +15,7 @@ v13→v14 backfill tests); they are reported, not typed. Since schema v15
 (PDB-9, ADR-0041) all ten corpus-observed `ParameterType` kinds are typed
 (`Color`/`Time` added), unmodelled type attributes are reported with samples,
 and a reference below a Dynamic node the evaluator skips is named by
-`RefBelowSkippedNode` instead of vanishing. PDB-10 is the future
-safe baggage inventory and index-to-payload resolution slice.
+`RefBelowSkippedNode` instead of vanishing. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. Declared attributes such as `InstallOnImport` are carried, not acted on.
 
 **Building-space vocabulary (T13, 2026-09-22).** All eleven types documented
 across Schema23 §§1.1.2.3 and 1.2.6.4 are represented end-to-end. The added

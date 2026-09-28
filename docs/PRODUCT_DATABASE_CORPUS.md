@@ -54,8 +54,7 @@ A `facts: null` response means the package predates the v12 ledger and its
 encounter facts are historically unavailable. It must not be interpreted as a
 measured zero. This evidence describes KNXBench importer behavior only: it does
 not establish ETS parity and does not verify package signatures. PDB-8 is the
-future typed master-data coverage slice; PDB-10 is the future safe baggage
-inventory and index-to-payload resolution slice.
+future typed master-data coverage slice. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only.
 
 Corpus measurements must remain opt-in and confined to an explicitly supplied
 local corpus root. No private corpus content, manufacturer identity, or host
@@ -151,9 +150,13 @@ package hashes, each counted once.
   expanding to 317,240 bytes; none contains a further ZIP and none has an
   encrypted entry. They stay opaque; the inventory may read their central
   directory for counts/sizes but must not extract them.
-- **Open discrepancy.** The inventory above (1,728 baggage declarations)
-  counts a different unit than this probe's 777 per distinct package; PDB-10
-  must reconcile the two before either number is pinned.
+- **Reconciled units.** The inventory above (1,728) counts every `Baggage`
+  element in every XML of every package instance; this probe counts index
+  declarations once per distinct package. Neither is pinned for the other.
+  Over the matrix scopes (`Gira`, `MDT`: 115 instances, 113 distinct), an
+  independent Python recount gives 37 index members, 776 declarations, 789
+  payloads and 13 undeclared payloads, no unresolved declaration and no
+  index unknown; the installer's inventory must match those numbers.
 - **Largest XML member** in the tree: 54,803,397 bytes (unchanged).
 
 ## Scheme and producer observations

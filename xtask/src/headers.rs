@@ -210,7 +210,7 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// day, to 162: deleting the `.knxproj` writer (ADR-0028) took five
 /// headerless files with it, and a ratchet that does not follow a deletion
 /// down is the same slack by another route.
-pub const ABSENT_CEILING: usize = 162;
+pub const ABSENT_CEILING: usize = 161;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

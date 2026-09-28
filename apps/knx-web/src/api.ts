@@ -5,6 +5,7 @@
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
+import type { DocumentationOptions } from "./documentationOptions";
 import { notifySessionExpired } from "./session";
 
 /**
@@ -740,10 +741,28 @@ export interface DocumentationExportReport {
   warnings: ReportWarning[];
 }
 
-export function exportDocumentation(path: string): Promise<DocumentationExportReport> {
+// `DocumentationPreviewReportDto` (apps/knx-server/src/routes.rs): the same
+// self-contained HTML the export writes, returned instead of written.
+export interface DocumentationPreview {
+  html: string;
+  warnings: ReportWarning[];
+}
+
+// Without `options` the server falls back to all sections in English.
+export function exportDocumentation(
+  path: string,
+  options?: DocumentationOptions,
+): Promise<DocumentationExportReport> {
   return request("/api/project/documentation-export", {
     method: "POST",
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, ...options }),
+  });
+}
+
+export function previewDocumentation(options: DocumentationOptions): Promise<DocumentationPreview> {
+  return request("/api/project/documentation-preview", {
+    method: "POST",
+    body: JSON.stringify(options),
   });
 }
 

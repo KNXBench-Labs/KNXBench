@@ -95,6 +95,22 @@ The Bus monitor and the Log replace the workspace entirely while they are open, 
 the properties pane hides itself while they are, because neither of them has a
 selection to inspect.
 
+In **Log**, type into **Search session log** to match operation, summary or
+detail without changing the severity checkboxes; **Clear search** restores
+the unsearched view. The result count compares shown entries with the
+retained total. **Export scope** chooses either those matching entries or
+all retained entries, then **Export log (JSON)…** saves `session-log.json` to
+your computer. JSON v1 preserves raw timestamp, severity, source/operation,
+message/summary, location, detail and diagnostic metadata, including
+quotes, line breaks and Unicode; it is not spreadsheet CSV. The export
+contains the cap and loss notice even when filtering hides the notice.
+Only this server run's most recent 1000 entries exist here; older entries
+may have been dropped, and opening a replacement project or restarting the
+server resets the trail. **This is not a complete audit.** Entries may name
+project elements, KNX addresses or local paths; check before sharing the
+file. The desktop build opens an OS save dialog; browser export uses a local
+file download, not the server's Save As directory.
+
 ## The properties pane
 
 The right pane inspects whatever is selected and lets you edit it. It says "Select an

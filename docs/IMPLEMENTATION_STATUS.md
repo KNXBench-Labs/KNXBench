@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 UTC — U4: session-log search and versioned JSON export
+
+- The Log panel now has labelled case-insensitive search across operation,
+  displayed summary and detail, composed with severity filters, a clear
+  action and a shown/retained count. No search request mutates or refetches
+  the server log (`LogPanel.test.tsx`).
+- An explicit all-retained / matching selection exports the currently fetched
+  snapshot as KNXBench JSON v1. While a replacement/refetch is pending,
+  the previous snapshot is cleared and export is disabled; a fetch error
+  cannot export stale project data (`LogPanel.test.tsx::never exports the
+  previous project's entries`). Browser delivery uses a Blob URL; Tauri
+  invokes a native command that owns its save dialog and writes a validated
+  document atomically. No new HTTP route or server filesystem path crosses
+  the browser boundary (ADR-0047). Quotes, newlines, Unicode, formula-like
+  text, empty logs, cap loss and unknown notices are covered by
+  `sessionLogExport.test.ts`, `sessionLogExportDelivery.test.ts` and desktop
+  `session_log_export_tests`.
+- The UI and export disclose the 1000-entry cap, dropped count and privacy
+  boundary. They do not claim lifetime audit coverage. Native desktop dialog
+  behavior has not been manually verified across Linux environments; a
+  16 MiB document cap is explicit (KNOWN_LIMITATIONS §36).
+
 ## 2026-09-28 — U3: browser project export wording
 
 - The File menu now says **Export project… / Projekt exportieren…** rather

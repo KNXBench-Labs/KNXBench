@@ -1,5 +1,14 @@
 - **Last Agent:** Codex (UI session)
-- **Timestamp:** 2026-09-29 00:00
+- **Timestamp:** 2026-09-28 22:48
+- Web lock: released (U4 session-log search/export, upon merge)
+- **Completed:** `goal-ui.md` U4 / ISSUE-13: labelled case-insensitive search composed with severity filters, clear/count, explicit all-retained vs matching JSON v1 export. Browser uses a local Blob; desktop uses a native dialog command with validated atomic write, no browser-supplied server path. A previous project's log cannot be exported while the next fetch is pending or failed. Data-loss count and 1000-entry cap are explicit; this is not a lifetime audit. ADR-0047, ARCHITECTURE, IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS §36, manual and issue-plan evidence updated. Tests: web 74 files / 1127 passed; Rust workspace 122 suites / 2378 passed; fmt, clippy, layering, headers, anchors, corpus gate and diff-check green. Release AppImage built and `xtask check-appimage` passed. No bus operation.
+- **Pending/Next Steps:** U5 ISSUE-10 actionable 422 errors and topic-targeted help, after reserving the web lock afresh. U6–U12 remain, and U13 requires the user's closing review choice. Native file dialog runtime remains unverified on a GUI-capable Linux host; document the boundary, don't claim desktop end-to-end proof.
+- **Notes for Codex or Claude:** The U4 reservation below was originally recorded in CEST after midnight; it is expressed as UTC here (22:00), so the ordering is chronological in absolute time even though earlier U3 entries used CEST. The `droppedCount` is parsed from the server's pinned warning; unknown text returns null, preserving its raw message. No server route or product/project domain model changed.
+- **For the goal.md session:** Refresh `stats.md` after U4 merges. No new limitation number: §36 now states the export's bounded lifetime, native 16 MiB cap and privacy limits.
+
+---
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 22:00
 - Web lock: taken by UI session for U4 session-log search/export
 - **Completed:** U3 is merged and pushed (`86df150`), with branch and merged-main gates green (122 Rust suites/2376 passed; web 72 files/1116 passed). This handover-only entry reserves the web lock before U4 code changes.
 - **Pending/Next Steps:** Implement U4 ISSUE-13 under the web lock in a new isolated worktree, test and review, merge, release the lock and push. Continue U5 thereafter.

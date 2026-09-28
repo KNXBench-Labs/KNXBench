@@ -7,7 +7,12 @@
 //! comparison-file fixture is written with `knx_store::open_and_migrate`/
 //! `knx_store::save_project`, exactly as `save_project_as_impl` does
 //! internally.
+//!
+//! CT-6 added raw `.knxproj` comparison inputs. Those fixtures are small
+//! synthetic archives built here (no corpus), after the ZIP builders in
+//! `crates/knx-etsproj/tests/malformed_input.rs`.
 
+use std::io::{Cursor, Write};
 use std::sync::Arc;
 
 use axum::body::Body;
@@ -253,4 +258,332 @@ async fn calling_it_with_no_project_open_is_a_400_not_a_500() {
     let response = diff_project(&app, &db_path).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+// ---------------------------------------------------------------------
+// CT-6: raw `.knxproj` comparison inputs (KNOWN_LIMITATIONS §57).
+// ---------------------------------------------------------------------
+
+/// One installation, one line, one device linked to one group address —
+/// the same minimal document `crates/knx-etsproj/tests/malformed_input.rs`
+/// imports cleanly.
+const MINIMAL_INSTALLATION: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation InstallationId="0" Name="" DefaultLine="P-0001-0_L-2" CompletionStatus="Undefined">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Name="A" Address="1" CompletionStatus="Undefined">
+            <Line Id="P-0001-0_L-2" Name="L" Address="1" MediumTypeRefId="MT-0" CompletionStatus="Accepted">
+              <DeviceInstance Id="P-0001-0_DI-1" Name="D" ProductRefId="M-0001_H-1_P-1"
+                              Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1"
+                              LastModified="2023-07-14T11:55:33" CompletionStatus="FinishedDesign"
+                              IndividualAddressLoaded="1" ApplicationProgramLoaded="1"
+                              ParametersLoaded="1" CommunicationPartLoaded="1"
+                              MediumConfigLoaded="1" IsCommunicationObjectVisibilityCalculated="1"
+                              Broken="0">
+                <ComObjectInstanceRefs>
+                  <ComObjectInstanceRef RefId="M-0001_A-1_O-0_R-1" DatapointType="" IsActive="1">
+                    <Connectors><Send GroupAddressRefId="P-0001-0_GA-1" /></Connectors>
+                  </ComObjectInstanceRef>
+                </ComObjectInstanceRefs>
+              </DeviceInstance>
+            </Line>
+          </Area>
+        </Topology>
+        <GroupAddresses>
+          <GroupRanges>
+            <GroupRange Id="P-0001-0_GR-1" Name="Licht" RangeStart="1" RangeEnd="255">
+              <GroupRange Id="P-0001-0_GR-2" Name="An/Aus" RangeStart="1" RangeEnd="127">
+                <GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />
+              </GroupRange>
+            </GroupRange>
+          </GroupRanges>
+        </GroupAddresses>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;
+
+const PROJECT_INFO: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <Project Id="P-0001">
+    <ProjectInformation Name="T" GroupAddressStyle="ThreeLevel" CompletionStatus="Undefined" />
+  </Project>
+</KNX>"#;
+
+const GROUP_ADDRESS: &str = r#"<GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />"#;
+
+/// A `.knxproj`-shaped archive: `installation_xml` as `P-0001/0.xml`, a
+/// valid `Project.xml`, and the signature entry the container reader
+/// needs to find the project part.
+fn knxproj_bytes(installation_xml: &str) -> Vec<u8> {
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let entries: [(&str, &[u8]); 3] = [
+        ("P-0001.signature", b"x"),
+        ("P-0001/0.xml", installation_xml.as_bytes()),
+        ("P-0001/Project.xml", PROJECT_INFO),
+    ];
+    for (name, bytes) in entries {
+        writer.start_file(name, options).unwrap();
+        writer.write_all(bytes).unwrap();
+    }
+    writer.finish().unwrap().into_inner()
+}
+
+fn clean_knxproj() -> Vec<u8> {
+    knxproj_bytes(MINIMAL_INSTALLATION)
+}
+
+/// An attribute no schema knows: imported, reported as an unknown
+/// construct (a warning), never an error.
+fn knxproj_with_unknown_attribute() -> Vec<u8> {
+    knxproj_bytes(&MINIMAL_INSTALLATION.replace(
+        GROUP_ADDRESS,
+        r#"<GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" FancyNewAttr="1" />"#,
+    ))
+}
+
+/// Two group addresses sharing one ETS id: an error-level `DuplicateId`.
+fn knxproj_with_duplicate_id() -> Vec<u8> {
+    knxproj_bytes(&MINIMAL_INSTALLATION.replace(
+        GROUP_ADDRESS,
+        r#"<GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />
+           <GroupAddress Id="P-0001-0_GA-1" Address="2" Name="GA2" />"#,
+    ))
+}
+
+async fn diff_with_kind(
+    app: &axum::Router,
+    path: &std::path::Path,
+    input_kind: &str,
+) -> axum::response::Response {
+    call(
+        app,
+        "POST",
+        "/api/project/diff",
+        Some(json!({ "path": path.to_string_lossy(), "inputKind": input_kind })),
+    )
+    .await
+}
+
+fn severities(body: &Value) -> Vec<String> {
+    body["importDiagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["severity"].as_str().unwrap().to_string())
+        .collect()
+}
+
+#[tokio::test]
+async fn a_knxdb_comparison_names_its_input_kind_and_carries_no_import_report() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("compare.knxdb");
+    write_knxdb_fixture(&db_path, &project_with_device_description("Same"));
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_project(&app, &db_path).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+
+    assert_eq!(body["inputKind"], "knxdb", "{body}");
+    assert!(body["importReport"].is_null(), "{body}");
+    assert_eq!(body["importDiagnostics"], json!([]), "{body}");
+}
+
+#[tokio::test]
+async fn a_clean_knxproj_is_compared_and_its_import_report_travels_with_the_diff() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("clean.knxproj");
+    std::fs::write(&path, clean_knxproj()).unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_with_kind(&app, &path, "knxproj").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+
+    assert_eq!(body["inputKind"], "knxproj", "{body}");
+    assert_eq!(body["importReport"]["errors"], json!([]), "{body}");
+    assert_eq!(
+        body["importReport"]["source"]["file_name"], "clean.knxproj",
+        "the full report, not a summary: {body}"
+    );
+    assert!(
+        severities(&body).iter().all(|severity| severity == "info"),
+        "a clean import has no warning or error: {body}"
+    );
+    // The live project has one unassigned device the archive lacks, and
+    // the archive has an area the live project lacks: a real comparison ran.
+    let installation = &body["installations"][0];
+    assert_eq!(
+        installation["devices"]["removed"].as_array().unwrap().len(),
+        1,
+        "{body}"
+    );
+    assert_eq!(
+        installation["areas"]["added"].as_array().unwrap().len(),
+        1,
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn a_knxproj_kind_is_detected_from_the_extension_when_not_named() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("Detected.KNXPROJ");
+    std::fs::write(&path, clean_knxproj()).unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_project(&app, &path).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await["inputKind"], "knxproj");
+}
+
+#[tokio::test]
+async fn a_knxproj_with_warnings_is_compared_and_every_warning_is_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("warnings.knxproj");
+    std::fs::write(&path, knxproj_with_unknown_attribute()).unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_with_kind(&app, &path, "knxproj").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+
+    assert_eq!(
+        body["importReport"]["unknown"].as_array().unwrap().len(),
+        1,
+        "{body}"
+    );
+    let severities = severities(&body);
+    assert!(severities.iter().any(|s| s == "warning"), "{body}");
+    assert!(!severities.iter().any(|s| s == "error"), "{body}");
+    assert!(
+        body.to_string().contains("FancyNewAttr"),
+        "the warning names what it found: {body}"
+    );
+    assert!(body["installations"].is_array(), "{body}");
+}
+
+#[tokio::test]
+async fn a_knxproj_with_an_error_diagnostic_is_refused_with_its_report() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("broken.knxproj");
+    std::fs::write(&path, knxproj_with_duplicate_id()).unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_with_kind(&app, &path, "knxproj").await;
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let body = body_json(response).await;
+
+    assert!(
+        body["error"]
+            .as_str()
+            .unwrap()
+            .contains("1 error diagnostic"),
+        "{body}"
+    );
+    assert_eq!(body["inputKind"], "knxproj", "{body}");
+    assert!(severities(&body).iter().any(|s| s == "error"), "{body}");
+    assert!(body.to_string().contains("DuplicateId"), "{body}");
+    assert!(
+        body.get("installations").is_none(),
+        "a refused import is not a comparison: {body}"
+    );
+}
+
+#[tokio::test]
+async fn an_unknown_input_kind_is_a_400_naming_the_accepted_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("clean.knxproj");
+    std::fs::write(&path, clean_knxproj()).unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_with_kind(&app, &path, "ets6").await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let error = body_json(response).await["error"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        error.contains("knxdb") && error.contains("knxproj"),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn an_input_kind_that_contradicts_the_extension_is_a_400() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("compare.knxdb");
+    write_knxdb_fixture(&db_path, &project_with_device_description("Same"));
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_with_kind(&app, &db_path, "knxproj").await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn an_unsupported_extension_is_a_400() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("notes.txt");
+    std::fs::write(&path, "not a project").unwrap();
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_device_description("Same"))),
+        None,
+    );
+
+    let response = diff_project(&app, &path).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn an_uploaded_knxproj_is_compared_by_its_mount_relative_path() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("uploads")).unwrap();
+    std::fs::write(dir.path().join("uploads/up.knxproj"), clean_knxproj()).unwrap();
+    let mut state = state_with_project(project_with_device_description("Same"));
+    state.data_dir = dir.path().to_path_buf();
+    let app = knx_server::app(Arc::new(state), None);
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/project/diff",
+        Some(json!({ "path": "uploads/up.knxproj", "inputKind": "knxproj" })),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let escape = call(
+        &app,
+        "POST",
+        "/api/project/diff",
+        Some(json!({ "path": "../outside.knxproj" })),
+    )
+    .await;
+    assert_eq!(escape.status(), StatusCode::BAD_REQUEST);
 }

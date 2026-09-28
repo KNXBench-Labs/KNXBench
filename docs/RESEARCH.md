@@ -4916,6 +4916,65 @@ enforces MP §3.31.2's records and RES Table 94. It does not model
 EEPROM timing, checksum control (`SegFlags` bit 7), or what a real
 BIM M112 does with the task segment's identity.
 
+### 19.4 First live download attempts on `1.1.67`, and a lost `T_ACK` (2026-09-28)
+
+Two runs of the unchanged plan (`apps/knx-cli/tests/live_memory_download.rs`,
+gated by `KNX_DOWNLOAD_ADDRESS` and `KNX_DOWNLOAD_CONFIRM`) both stopped
+early. Logs: `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-28_*`
+(gitignored).
+
+- **`[V]` Before the run** a fresh read-only dump was byte-identical to the
+  morning's backup; load states `B6EAh` = `01 01 01 00`.
+- **`[V]` Run 1** stopped at step 13 (the association table's 511 octets):
+  one read-back got `T_ACK` and no answer within 3 s. Afterwards the load
+  states read `01 02 00 00`, the address table read `02 1143 1035` (option
+  C's one group address, `2/0/53`) and the individual address at
+  `4001h`–`4002h` was unchanged.
+- **`[V]` Run 2** stopped at step 8 the same way.
+- **`[V]` The cause, from a frame trace** (read-only, `diag4-frametrace`):
+  1. the device answered a read with `T_DATA_CONNECTED seq 1`;
+  2. this client's `T_ACK seq 1` has **no `L_Data.con`** in the trace: it
+     never reached the bus (a group telegram from another device arrived
+     3 ms after the answer);
+  3. the device acknowledged the next request (`seq 2`) at once but did not
+     answer it;
+  4. it repeated the old answer, unchanged, `seq 1`, 6 s after the first
+     transmission and then every 3 s.
+- **`[D]` That is TL §5.4.1 exactly** (*Transport Layer* v01.02.03, pp.
+  17–22). With its answer unacknowledged the device sits in `OPEN_WAIT`:
+  it still receives (`E04` → `A2`, acknowledge), repeats its stored frame
+  on each acknowledge time-out (`E17` → `A9`) and keeps every newer answer
+  behind it (`A11`, *"Don't change order of T_Data_Connected.req
+  events"*). The client has to acknowledge the repetition: `E05`
+  (`SeqNo_of_PDU == SeqNoRcv - 1`) → `A3`, *"Send an N_Data_Individual.req
+  with T_ACK_PDU … sequence = sequence of received message"*, and nothing
+  goes to the user.
+- **`[V]` The client's two defects.** It gave up on an acknowledged request
+  after one 3 s time-out, before the device's first repetition at 6 s. And
+  it had no `SeqNoRcv`, so a repetition would have been taken as the answer
+  to a new read of the same address.
+
+The fix (`ManagementSession::exchange_inner`, `receive_numbered`):
+
+- **`[D]`** The session keeps `SeqNoRcv` (reset by `A12` on connect) and
+  handles `E04`/`E05`/`E06` as `A2`/`A3`/`A4`. A repetition is
+  acknowledged and never matched.
+- **`[D]`/`[A]`** An acknowledged request waits up to `MAX_TRANSMISSIONS`
+  acknowledge time-outs (12 s) for its answer: the length of the device's
+  own repetition ladder (`E17`/`E18`). The request itself is still never
+  repeated. Using the ladder as the bound is this project's reading; no
+  PDF read states a client-side figure for it.
+- **`[D]`** The load-state wait loop keeps one time-out per read. RES
+  §4.23.2.4.1: *"The period for reading shall not exceed half the
+  TL-timeout, i.e. 3 seconds."*
+- The simulator reproduces the device (`lost_ack_for_answer`,
+  `answer_repeat_after`). Four new tests; seven mutants of the fix, all
+  caught.
+
+**`[V]` The device is left partly loaded** by the two runs: the application
+is unloaded until a download completes. Re-running the plan is the
+recovery (§19.3, KNOWN_LIMITATIONS).
+
 ---
 
 ## Sources

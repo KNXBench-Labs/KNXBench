@@ -6,10 +6,16 @@ The product database is now schema v16
 ([ADR-0042](adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)).
 `Baggages.xml` declarations are typed (`Id`, `Name`, `TargetPath`,
 `InstallOnImport`, `FileInfo/@TimeInfo`, `FileInfo/@Version`, all raw
-lexemes; `InstallOnImport="0"` stays `"0"`) and any other attribute or
-element in an index is reported as an unknown construct. Each declaration
-resolves byte-exactly to `<dir>/Baggages/<TargetPath>/<Name>` or is
-`missing`/`invalid` with a stated reason. Every `Baggage` member is
+lexemes; `InstallOnImport="0"` stays `"0"`) and any other attribute,
+element or non-whitespace text in an index — including on the
+`KNX/ManufacturerData/Manufacturer/Baggages` spine — is reported as an
+unknown construct. Each declaration resolves byte-exactly to
+`<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a stated
+reason; an index whose single `Manufacturer/@RefId` is not its directory
+binds nothing (every declaration `invalid`). A standalone `Baggages.xml`
+(project import's `ingest_file`) that does not parse is still stored, as
+before PDB-10, with a recorded `BaggageIndexParseError` row instead of
+failing the import; inside a package it still refuses the install. Every `Baggage` member is
 classified by magic bytes (BMP-named-`.png`, PDF-named-`.ai`, PE and OLE2
 are recognized; the extension only reports disagreement). A ZIP payload
 passes the package `preflight_zip` gate and then only its central directory
@@ -28,7 +34,7 @@ retained bytes no longer parse `unavailable` with a recorded
 `InstallReportBackfillError`, instead of refusing to open. Web catalogue
 labels (en/de) name the two new diagnostics.
 
-Evidence: `baggage_inventory.rs` 9 tests (typed/resolved/classified
+Evidence: `baggage_inventory.rs` 11 tests (typed/resolved/classified
 inventory with the four unresolved/undeclared diagnostics, retry returns the
 persisted inventory and reports index unknowns, sixteen tamper cases rejected
 on reload — including forged `Id`/`InstallOnImport`/`TimeInfo`/`Name`
@@ -39,7 +45,11 @@ the package's `unknown_count` like a fresh install, an unreadable index
 becomes `unavailable` and the database still opens, a v15 report that no
 longer validates is downgraded to `unavailable` instead of refusing to open
 the database, a prefixed `x:Name` is
-reported as foreign rather than read as `Name`); unit tests for sniffing
+reported as foreign rather than read as `Name`, an index naming another
+manufacturer binds nothing and that refusal is itself re-checked on reload,
+a standalone index that does not parse is stored with its reason); unit
+tests for spine attributes and text reported, the one-matching-`Manufacturer`
+binding rule, sniffing
 (weak `BM`/`MZ` magics refused), extension disagreement, nested directory
 reads, an empty nested ZIP read as zero entries, a nested ZIP naming one
 entry twice refused rather than collapsed, encrypted and `.zip`-named entries

@@ -4971,9 +4971,27 @@ The fix (`ManagementSession::exchange_inner`, `receive_numbered`):
   `answer_repeat_after`). Four new tests; seven mutants of the fix, all
   caught.
 
-**`[V]` The device is left partly loaded** by the two runs: the application
-is unloaded until a download completes. Re-running the plan is the
-recovery (§19.3, KNOWN_LIMITATIONS).
+**`[V]` Run 3, with the fix (16:55–16:58 CEST, `download-run-3`).** Steps
+0–22 completed: every unload, write, read-back and load-state transition.
+Only step 23, the final `A_Restart` (Basic Restart), failed. The device sent
+no `T_ACK` in four transmissions of 3 s each, the session released the
+connection, and the executor reported the download as failed. An
+independent read-back straight afterwards, on a fresh connection, found:
+
+- all three segments (`4000h` 513, `4201h` 511, `4400h` 394 octets) equal to
+  the option-C image, with **0 differing unmasked octets**;
+- the individual address octets at `4001h`–`4002h` still `11 43` (`1.1.67`);
+- load states `B6EAh`–`B6EDh` at `01 01 01 00`, all Loaded.
+
+**`[O]` Open: did the device restart?** MP §3.7.1.1.3 says the server does
+not confirm a Basic Restart at the Application Layer, and MP §3.7.3
+exception (5) tells the client to ignore everything the server sends after
+`A_Restart` *"except negative TL-confirmations"*. That clause does not say
+whether a missing `T_ACK` counts as one. The run took no frame trace. One
+possible reading, **not verified**, is that the device restarts before its
+Transport Layer acknowledges. Whether the device now runs the option-C
+application has to be checked on the device itself (button 1 → `2/0/53`),
+not guessed from this log.
 
 ---
 

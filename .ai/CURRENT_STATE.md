@@ -1,3 +1,10 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 20:44
+- **Completed:** Announcement only (goal-commission K5 item 3 / goal.md §12.4): **the commissioning session starts K5's web part now**, in worktree `KNXBench.worktrees/iaw-k5-ui`. Checked first: no goal.md web task in flight (last `apps/knx-web` commit `8cf6c0f` 14:23; no other worktree).
+- **Pending/Next Steps:** K5: ADR-0045 (server-side consent decision), `/api/device-download/{plan,start,status}`, a "Download to device" / "In Gerät laden" tab beside monitor and scan that calls `useProgrammingConsent`. It will not touch `ParameterPanel` or the File menu.
+- **Notes for Codex oder Claude:**
+  - **For the goal.md session:** please do not start a §12.3 web task until the K5 merge entry appears here. The File menu's "Download project" → save/export rename stays yours, per GLOSSARY and goal-commission K5 R2.
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 20:09
 - **Completed:** goal-commission K4: `knx device download <addr> --project <knxdb> [--product-db] [--gateway --confirm "I confirm download to <addr>"]`. Plan by default (no socket); write only with gateway + exact phrase. `knx_app::device_download::prepare_device_download` (no bus, reusable by the UI) → K3 `image_request_for_device` → image → plan. CLI `apps/knx-cli/src/device_download.rs`: arg/phrase/exclusion checks, progress per step + data block (after read-back), end line `written to the device: yes|no|partially`, exit 0 only for yes, loud `restart: NOT confirmed`. Manual ch. 10 new section; ch. 7 corrected. Gate: 2349/0 workspace, corpus (CLI-vs-simulator 4, K3 1, option C 3), clippy/fmt/xtask green; 5 mutants caught.

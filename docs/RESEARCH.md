@@ -4993,6 +4993,22 @@ Transport Layer acknowledges. Whether the device now runs the option-C
 application has to be checked on the device itself (button 1 → `2/0/53`),
 not guessed from this log.
 
+**`[V]` Function check after a power cycle (17:08 CEST,
+`monitor-after-powercycle`).** The user disconnected the device from the bus
+once and reconnected it, then pressed button 1 repeatedly. A read-only bus
+monitor recorded 33 telegrams from `1.1.67`:
+
+- all 33 were `GroupValueWrite` to `2/0/53`;
+- the values alternate strictly `1, 0, 1, …`, with no value repeated back to
+  back;
+- there were **no** telegrams to the old associations (`2/1/15`, `2/1/16`,
+  `0/4/6`, `0/4/7`) or to any other group address.
+
+Option C is working: button 1 toggles `2/0/53`. The question above stays
+open, because the power cycle restarted the device regardless of whether
+the `A_Restart` had already done it. What this check shows is that the
+downloaded image is correct and a device restart activates it.
+
 ---
 
 ## Sources

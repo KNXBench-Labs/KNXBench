@@ -652,7 +652,9 @@ What remains open here:
   third run wrote and verified every octet, and all load states read
   Loaded. Its final Basic Restart got no `T_ACK`, so the executor reported
   failure. Whether the device restarted is unverified, and the executor
-  cannot yet tell "restart unconfirmed" from a failed download.
+  cannot yet tell "restart unconfirmed" from a failed download. After a
+  power cycle, a bus monitor confirmed option C (button 1 toggles
+  `2/0/53`, 33 telegrams, nothing else).
   `WriteScope::Download` is allowed on hardware only for this path
   (`run_memory_download`); the property-based `Downloader` still refuses
   hardware.

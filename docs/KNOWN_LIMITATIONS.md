@@ -648,8 +648,11 @@ What remains open here:
 - 59 programs contain steps nothing executes yet.
 - `[V]` Two live download runs on `1.1.67` (2026-09-28) stopped early, at
   steps 13 and 8, on a `T_ACK` of this client's that never reached the bus
-  (RESEARCH §19.4). Fixed in the session's Transport Layer handling. Until
-  a download completes, that device has no loaded application.
+  (RESEARCH §19.4). Fixed in the session's Transport Layer handling. A
+  third run wrote and verified every octet, and all load states read
+  Loaded. Its final Basic Restart got no `T_ACK`, so the executor reported
+  failure. Whether the device restarted is unverified, and the executor
+  cannot yet tell "restart unconfirmed" from a failed download.
   `WriteScope::Download` is allowed on hardware only for this path
   (`run_memory_download`); the property-based `Downloader` still refuses
   hardware.

@@ -646,7 +646,21 @@ What remains open here:
   "do not overwrite" is `[A]` (RESEARCH §19.1).
 - `LdCtrlMerge`/`MergedProcedure` programs (40 of 310) are not expanded.
 - 59 programs contain steps nothing executes yet.
-- No download has been run against a device.
+- No download has been run against a device. The whole path (image, plan,
+  executor) runs only against the simulator; `WriteScope::Download` is not
+  on the hardware allowlist.
+- **Memory download (RESEARCH §19.3): `[A]` rules not in any PDF read.**
+  - How `LdCtrlCompareProp` compares a property with longer `InlineData`:
+    the device's octets must start the data, and the rest must be zero.
+  - That the data write follows `LdCtrlAbsSegment`. CP's own BIM M112
+    procedure does this; the product procedure has no write step.
+  - The application task segment's identity is taken from `PeiType`,
+    `ApplicationNumber`, `ApplicationVersion` and the `M-hhhh` prefix.
+  - A load record is accepted only in the state its event aims at, which is
+    stricter than RES Table 94. A device that legitimately answers `Error`
+    stops the download.
+  - A failed run undoes nothing: the machines stay where the failure left
+    them, and unloaded parts stay unloaded until the next download.
 - `[V]` Union members: the `parameter` row still holds only the *union's*
   `Memory` placement. `knx_productdb::code` now reads each member's own
   `Offset`/`BitOffset` from the blob (`ParameterPlacement::UnionMember`),

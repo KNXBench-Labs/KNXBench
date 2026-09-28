@@ -262,6 +262,24 @@ pub struct ResolvedDeclaration {
     pub detail: Option<String>,
 }
 
+/// One parsed index: its archive path, its declarations in document order,
+/// and why none of them may be bound to its directory, if so.
+pub(crate) type ParsedIndex = (String, Vec<BaggageDeclaration>, Option<&'static str>);
+
+/// Parses a retained index into the shape [`BaggageInventory::resolve`]
+/// takes, with the unknown constructs the parser reported.
+pub(crate) fn parse_index(
+    path: &str,
+    bytes: &[u8],
+) -> Result<(ParsedIndex, Vec<crate::report::UnknownConstruct>), ProductDbError> {
+    let index = crate::parse::baggage::parse_baggage_index(path, bytes)?;
+    let refused = crate::parse::baggage::manufacturer_mismatch(path, &index);
+    Ok((
+        (path.to_string(), index.declarations, refused),
+        index.unknown,
+    ))
+}
+
 /// Everything one package declares and carries as baggage.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BaggageInventory {
@@ -271,10 +289,7 @@ pub struct BaggageInventory {
 
 impl BaggageInventory {
     /// Joins parsed indexes to measured payloads by exact archive path.
-    pub(crate) fn resolve(
-        indexes: Vec<(String, Vec<BaggageDeclaration>)>,
-        mut payloads: Vec<BaggagePayload>,
-    ) -> Self {
+    pub(crate) fn resolve(indexes: Vec<ParsedIndex>, mut payloads: Vec<BaggagePayload>) -> Self {
         payloads.sort_by(|a, b| a.member_path.cmp(&b.member_path));
         let by_path: BTreeMap<String, usize> = payloads
             .iter()
@@ -284,19 +299,22 @@ impl BaggageInventory {
         let mut declarations = Vec::new();
         let mut indexes = indexes;
         indexes.sort_by(|a, b| a.0.cmp(&b.0));
-        for (index_path, parsed) in indexes {
+        for (index_path, parsed, refused) in indexes {
             for (ordinal, declaration) in (0u64..).zip(parsed) {
-                let (resolution, member_path, detail) =
-                    match declared_member_path(&index_path, &declaration) {
-                        Err(why) => (Resolution::Invalid, None, Some(why.to_string())),
-                        Ok(path) => match by_path.get(&path) {
-                            Some(&position) => {
-                                payloads[position].declarations += 1;
-                                (Resolution::Resolved, Some(path), None)
-                            }
-                            None => (Resolution::Missing, None, Some(MISSING_DETAIL.to_string())),
-                        },
-                    };
+                let bound = match refused {
+                    Some(why) => Err(why),
+                    None => declared_member_path(&index_path, &declaration),
+                };
+                let (resolution, member_path, detail) = match bound {
+                    Err(why) => (Resolution::Invalid, None, Some(why.to_string())),
+                    Ok(path) => match by_path.get(&path) {
+                        Some(&position) => {
+                            payloads[position].declarations += 1;
+                            (Resolution::Resolved, Some(path), None)
+                        }
+                        None => (Resolution::Missing, None, Some(MISSING_DETAIL.to_string())),
+                    },
+                };
                 declarations.push(ResolvedDeclaration {
                     index_path: index_path.clone(),
                     ordinal,
@@ -587,10 +605,9 @@ fn validate(
     for (path, sha) in members_of("Baggages")? {
         let bytes = crate::load_source_file(conn, &sha)?
             .ok_or_else(|| inventory_error("baggage index blob is missing"))?;
-        let declarations = crate::parse::baggage::parse_baggage_index(&path, &bytes)
-            .map_err(|_| inventory_error("retained baggage index no longer parses"))?
-            .declarations;
-        expected_indexes.push((path, declarations));
+        let (index, _) = parse_index(&path, &bytes)
+            .map_err(|_| inventory_error("retained baggage index no longer parses"))?;
+        expected_indexes.push(index);
     }
     let mut unmeasured = Vec::with_capacity(inventory.payloads.len());
     for payload in &inventory.payloads {

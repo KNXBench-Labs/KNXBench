@@ -8020,7 +8020,12 @@ measured decompression. Installing still holds each member whole in memory
 *references* from application programs
 (`Static/Extension/Baggage/@RefId`, 935 distinct in the corpus) are reported
 as unknown constructs, not resolved against the inventory; whether the single
-`Hardware/Product/Baggages` element is reported has not been probed.
+`Hardware/Product/Baggages` element is reported has not been probed. When a
+`Baggages.xml` is both ingested standalone and carried in a package, a fresh
+install records its index unknowns under that blob once per path while a v15
+upgrade records them once, so unknown *row* counts (not the inventory or
+report) can differ in that shape. The package corpus alone cannot produce
+it; a project import followed by installing the same package can.
 
 **Cost.** The user sees what a manufacturer ships and which files are
 undeclared, but cannot preview them in KNXBench, and a package that relies on

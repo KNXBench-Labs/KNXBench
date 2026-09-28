@@ -35,6 +35,11 @@ pub struct BaggageDeclaration {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct BaggageIndexIngest {
     pub declarations: Vec<BaggageDeclaration>,
+    /// `Manufacturer` elements on the spine, and the last one's `@RefId`.
+    /// Resolution uses the index's directory; these let a caller say when
+    /// the document disagrees with it.
+    pub manufacturers: u32,
+    pub manufacturer_ref: Option<String>,
     pub unknown: Vec<UnknownConstruct>,
 }
 
@@ -79,6 +84,8 @@ pub(crate) fn parse_baggage_index(
     let mut unknown = UnknownCollector::default();
     // `Some` while inside a declaration; its `FileInfo` was seen already.
     let mut current: Option<(BaggageDeclaration, bool)> = None;
+    let mut manufacturers = 0u32;
+    let mut manufacturer_ref: Option<String> = None;
 
     loop {
         buf.clear();
@@ -129,10 +136,31 @@ pub(crate) fn parse_baggage_index(
                         declaration.file_version = values.get("Version").map(str::to_string);
                         *seen = true;
                     }
-                } else if !(depth < CHAIN.len()
+                } else if depth < CHAIN.len()
                     && name == CHAIN[depth]
-                    && parents[..] == CHAIN[..depth])
+                    && parents[..] == CHAIN[..depth]
                 {
+                    // The spine. `KNX/@CreatedBy`/`@ToolVersion` are the
+                    // document-envelope gap every parser shares
+                    // (KNOWN_LIMITATIONS §7) and `Manufacturer/@RefId` is
+                    // checked against the index's directory; anything else
+                    // on the spine is reported like any unknown attribute.
+                    let known: &[&str] = match depth {
+                        0 => &["CreatedBy", "ToolVersion"],
+                        2 => &["RefId"],
+                        _ => &[],
+                    };
+                    let mut xpath = String::new();
+                    for part in parents.iter().chain(std::iter::once(&name)) {
+                        xpath.push('/');
+                        xpath.push_str(part);
+                    }
+                    let values = take_attrs(source_path, &element, &xpath, known, &mut unknown)?;
+                    if depth == 2 {
+                        manufacturers += 1;
+                        manufacturer_ref = values.get("RefId").map(str::to_string);
+                    }
+                } else {
                     // Outside the known chain, a second `FileInfo`, or any
                     // child of `FileInfo`: named at its parent's path.
                     unknown.element(&format!("/{}", parents.join("/")), &name);
@@ -155,6 +183,17 @@ pub(crate) fn parse_baggage_index(
                     }
                 }
             }
+            Event::Text(text) if !parents.is_empty() => {
+                let text = text.into_inner();
+                // Whitespace between elements is formatting; anything else is
+                // content no field models.
+                if !text.trim_matches([' ', '\t', '\r', '\n']).is_empty() {
+                    unknown.element(&format!("/{}", parents.join("/")), "#text");
+                }
+            }
+            Event::CData(_) if !parents.is_empty() => {
+                unknown.element(&format!("/{}", parents.join("/")), "#text");
+            }
             Event::Eof => break,
             _ => {}
         }
@@ -162,8 +201,26 @@ pub(crate) fn parse_baggage_index(
 
     Ok(BaggageIndexIngest {
         declarations,
+        manufacturers,
+        manufacturer_ref,
         unknown: unknown.into_vec(),
     })
+}
+
+/// Why an index's declarations cannot be bound to the manufacturer
+/// directory it sits in: the document names another manufacturer, several,
+/// or none. `None` when `Manufacturer/@RefId` is exactly that directory.
+pub(crate) fn manufacturer_mismatch(
+    index_path: &str,
+    index: &BaggageIndexIngest,
+) -> Option<&'static str> {
+    let directory = index_path.strip_suffix("/Baggages.xml")?;
+    match (index.manufacturers, index.manufacturer_ref.as_deref()) {
+        (1, Some(reference)) if reference == directory => None,
+        (1, Some(_)) => Some("Manufacturer RefId differs from the index's directory"),
+        (1, None) => Some("Manufacturer has no RefId"),
+        _ => Some("index does not declare exactly one Manufacturer"),
+    }
 }
 
 /// The archive path a declaration names: `<M-XXXX>/Baggages/<TargetPath>/<Name>`
@@ -260,6 +317,64 @@ mod tests {
                 (FILE_INFO_XPATH, "Element", "Deep", 1),
             ]
         );
+    }
+
+    #[test]
+    fn spine_attributes_and_text_are_reported_not_dropped() {
+        let xml = br#"<KNX xmlns="http://knx.org/xml/project/20" CreatedBy="t" ToolVersion="1" Extra="e"><ManufacturerData Odd="o"><Manufacturer RefId="M-0001" Also="a"><Baggages Odd="o">
+<Baggage Id="i" Name="a.png" TargetPath="">loose<![CDATA[x]]></Baggage>
+</Baggages></Manufacturer></ManufacturerData></KNX>"#;
+        let index = parse_baggage_index(INDEX, xml).unwrap();
+        assert_eq!(
+            (index.manufacturers, index.manufacturer_ref.as_deref()),
+            (1, Some("M-0001"))
+        );
+        let mut seen: Vec<_> = index
+            .unknown
+            .iter()
+            .map(|u| {
+                (
+                    u.xpath.as_str(),
+                    u.kind.as_str(),
+                    u.name.as_str(),
+                    u.occurrences,
+                )
+            })
+            .collect();
+        seen.sort();
+        assert_eq!(
+            seen,
+            [
+                ("/KNX", "Attribute", "Extra", 1),
+                ("/KNX/ManufacturerData", "Attribute", "Odd", 1),
+                ("/KNX/ManufacturerData/Manufacturer", "Attribute", "Also", 1),
+                (
+                    "/KNX/ManufacturerData/Manufacturer/Baggages",
+                    "Attribute",
+                    "Odd",
+                    1
+                ),
+                (BAGGAGE_XPATH, "Element", "#text", 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_index_is_bound_only_to_the_manufacturer_it_sits_under() {
+        let index = |manufacturers: &str| {
+            let xml = format!(r#"<KNX><ManufacturerData>{manufacturers}</ManufacturerData></KNX>"#);
+            parse_baggage_index(INDEX, xml.as_bytes()).unwrap()
+        };
+        let one = |r: &str| format!(r#"<Manufacturer {r}><Baggages/></Manufacturer>"#);
+        assert_eq!(
+            manufacturer_mismatch(INDEX, &index(&one(r#"RefId="M-0001""#))),
+            None
+        );
+        assert!(manufacturer_mismatch(INDEX, &index(&one(r#"RefId="M-0002""#))).is_some());
+        assert!(manufacturer_mismatch(INDEX, &index(&one(""))).is_some());
+        assert!(manufacturer_mismatch(INDEX, &index("")).is_some());
+        let two = one(r#"RefId="M-0001""#).repeat(2);
+        assert!(manufacturer_mismatch(INDEX, &index(&two)).is_some());
     }
 
     #[test]

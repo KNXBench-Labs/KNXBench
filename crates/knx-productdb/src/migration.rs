@@ -387,14 +387,10 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
         }
         match crate::parse::baggage::parse_baggage_index(&path, &bytes) {
             Ok(index) => insert_unknown(conn, &sha, &index.unknown)?,
-            Err(error) => record_backfill_failure(
-                conn,
-                &sha,
-                &path,
-                "InstallReportBackfillError",
-                "baggage_index_backfill",
-                &error,
-            )?,
+            Err(error @ ProductDbError::Xml { .. }) => {
+                crate::ingest::record_unreadable_baggage_index(conn, &sha, &path, &error)?
+            }
+            Err(error) => return Err(error),
         }
     }
     let packages = conn
@@ -538,10 +534,10 @@ fn measure_baggage(
             payloads.push(crate::baggage::BaggagePayload::measure(path, sha, &bytes));
             continue;
         }
-        match crate::parse::baggage::parse_baggage_index(&path, &bytes) {
-            Ok(index) => {
-                unknowns.push((sha, index.unknown));
-                indexes.push((path, index.declarations));
+        match crate::baggage::parse_index(&path, &bytes) {
+            Ok((index, unknown)) => {
+                unknowns.push((sha, unknown));
+                indexes.push(index);
             }
             Err(error) => return Ok(Err((sha, path, error))),
         }

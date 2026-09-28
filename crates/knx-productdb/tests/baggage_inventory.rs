@@ -592,3 +592,72 @@ fn a_payload_row_swapped_to_a_same_shaped_blob_is_rejected_on_reload() {
     conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
     assert!(install_package(&conn, "again.knxprod", &twins).is_err());
 }
+
+#[test]
+fn an_index_naming_another_manufacturer_binds_nothing() {
+    // Resolution is by the index's directory; a document that disagrees
+    // with it is reported, and none of its declarations resolve.
+    let foreign = String::from_utf8(INDEX.to_vec()).unwrap().replace(
+        r#"<Manufacturer RefId="M-0001">"#,
+        r#"<Manufacturer RefId="M-0002">"#,
+    );
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages.xml", foreign.as_bytes()),
+        ("M-0001/Baggages/Icons/logo.png", BMP),
+    ]);
+    let (_dir, conn) = db();
+    let report = install_package(&conn, "foreign.knxprod", &bytes).unwrap();
+    let inventory = report.baggage.unwrap();
+    assert!(inventory
+        .declarations
+        .iter()
+        .all(|row| row.resolution == Resolution::Invalid
+            && row.detail.as_deref()
+                == Some("Manufacturer RefId differs from the index's directory")));
+    assert_eq!(inventory.undeclared().count(), 1);
+    // And the stored refusal is itself checked on reload.
+    conn.execute(
+        "UPDATE package_baggage_declaration SET resolution = 'missing', detail = 'declared file is not in the package'",
+        [],
+    )
+    .unwrap();
+    assert!(install_package(&conn, "again.knxprod", &bytes).is_err());
+}
+
+#[test]
+fn a_standalone_index_that_does_not_parse_is_stored_with_its_reason() {
+    // Project import feeds manufacturer files through `ingest_file`; before
+    // PDB-10 an index was an opaque blob there, so it must not start failing.
+    let (_dir, conn) = db();
+    let broken = b"<KNX><ManufacturerData><Manufacturer><Baggages></KNX>";
+    let outcome = knx_productdb::ingest_file(&conn, "M-0001/Baggages.xml", broken).unwrap();
+    assert!(matches!(
+        outcome,
+        knx_productdb::IngestOutcome::Ingested { .. }
+    ));
+    let recorded: Vec<(String, String)> = conn
+        .prepare("SELECT kind, name FROM ingest_unknown WHERE source_sha256 = ?1")
+        .unwrap()
+        .query_map([knx_productdb::sha256_hex(broken)], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        recorded,
+        [(
+            "BaggageIndexParseError".to_string(),
+            "Baggages.xml".to_string()
+        )]
+    );
+    // Inside a package the same bytes still refuse the install.
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages.xml", broken),
+    ]);
+    assert!(install_package(&conn, "broken.knxprod", &bytes).is_err());
+}

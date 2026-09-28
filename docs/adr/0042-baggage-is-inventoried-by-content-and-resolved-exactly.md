@@ -50,14 +50,22 @@ totals.
    declaration's `Id`, `Name`, `TargetPath`, `InstallOnImport`,
    `FileInfo/@TimeInfo` and `FileInfo/@Version` as raw lexemes. No
    boolean/date coercion: `InstallOnImport="0"` stays `"0"`. Any other
-   attribute, a second `FileInfo`, or any element outside the grammar is an
-   `ingest_unknown` row, reported through the install report like every other
-   parser unknown.
+   attribute (on a declaration or on the `KNX/ManufacturerData/Manufacturer/
+   Baggages` spine, except the shared `KNX/@CreatedBy`/`@ToolVersion`
+   envelope), a second `FileInfo`, any element outside the grammar, or
+   non-whitespace text is an `ingest_unknown` row, reported through the
+   install report like every other parser unknown. A standalone index that
+   does not parse (project import) is still stored, as before, with a
+   `BaggageIndexParseError` row; inside a package it refuses the install.
 2. **Exact resolution only.** A declaration resolves to the member
    `<index dir>/Baggages/<TargetPath>/<Name>` byte-for-byte, or it does not.
    No case folding, no extension guessing, no search. Missing `Name`, an
    absolute/empty/dot/backslashed `TargetPath` component, or a path that no
-   member carries yields `invalid` or `missing` with a stated reason.
+   member carries yields `invalid` or `missing` with a stated reason. The
+   directory is authoritative only when the document agrees: an index that
+   does not carry exactly one `Manufacturer` whose `@RefId` is that directory
+   binds nothing, and every declaration is `invalid` with that reason (all
+   37 corpus indexes agree).
 3. **Content, not names.** Each payload is classified by magic bytes
    (`MediaClass`: PNG, JPEG, GIF, BMP, PDF, ZIP, PE executable, OLE2
    compound, XML, empty, unknown). Weak two-byte magics are confirmed
@@ -107,6 +115,11 @@ totals.
   source first.
 - Payload bytes stay opaque. Rendering an icon or opening a manual is a
   separate, later decision with its own sandboxing questions.
+- Reload compares stored rows with what the *current* code derives. A later
+  change to sniffing, reasons or the nested-ZIP validator therefore must ship
+  with a schema migration that re-derives the inventory (as v15 → v16 does);
+  otherwise existing packages would fail reload as corrupt. The integrity
+  check is bought with that coupling on purpose.
 - Install still holds each member whole (≤ 64 MiB, `MAX_MEMBER_SIZE`); a
   55 MB program member measured 4.2× peak RSS growth, which the heavy
   `large_member_memory` test bounds at 8×. Streaming is not claimed.

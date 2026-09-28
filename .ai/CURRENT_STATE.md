@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 23:46
+- Web lock: taken by UI session for U3 File-menu rename
+- **Completed:** U2 merged and pushed as `e637b76` after branch and merged-main gates (Rust 122 suites/2376 passed; web 72 files/1115 passed); isolated worktree and scratch removed. This entry reserves only the web lock; no U3 implementation yet.
+- **Pending/Next Steps:** U3 rename and regression tests, docs, branch and merged gates, release web lock and push.
+- **Notes for Codex or Claude:** `apps/knx-web` belongs to the UI session until this package is merged and lock released; no real-device operations.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 22:35
 - Web lock: released
 - **Completed:** `goal-ui.md` U2: built the actual AppImage and an unpackaged debug server from one tree; both sent the same 14-byte multicast search from the host interface, both saw no response. The dev route returned 200 with an empty interface list. No AppImage-only cause was found; the wire/firewall boundary is still unverified because this account lacks packet-capture/ruleset permission. Direct KNX PDFs establish line-relative area/line address components, and the importer already composes them. Docs: RESEARCH §20, KL §79, IMPLEMENTATION_STATUS, ISSUE-12 diagnosis checkboxes, `.ai/logs/2026-09-28_codex_ui-discovery-research.md`. AppImage validator at the measured tree, and branch gates after K6:

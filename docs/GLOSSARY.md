@@ -12,7 +12,7 @@ renamed or added here first.
 | **Download (to the device)** | KNXBench → **device**, over the bus | Writing configuration into a KNX device: application program, parameters, address and association tables, and the load state machines that go with them. The KNX sense of the word. | `knx_net::commissioning::memory_download`, `…::download`, `knx device download`, `/api/device-download/*`, the UI tab "Download to device" (German "In Gerät laden"), KNOWN_LIMITATIONS §7/§92/§136, `goal-commission.md` |
 | **Programming (the individual address)** | KNXBench → **device**, over the bus | Writing a device's individual address (MP §2.3). Counted as a write to the device, not as a download. | `individual_address_write`, `knx device program-address`, RESEARCH §8.8.6 |
 | **Read-back** | **device** → KNXBench, over the bus | Reading memory or properties back from a device, to check a write or to inspect it. Never called "upload". | `write_memory_region`'s verification, `live_memory_read` |
-| **Save / export (to your computer)** | KNXBench server → **user's computer**, over HTTP | Handing a project or report file to the browser. **Open:** the File menu still labels this "Download project" / "Projekt herunterladen" (`toolbar.downloadProject`). Renaming it is web work, which `goal.md` owns (`goal-commission.md` §5), so it is handed over, not done here. | `/api/project/download` (route name kept for compatibility), File menu |
+| **Save / export (to your computer)** | KNXBench server → **user's computer**, over HTTP | Handing a project or report file to the browser. The browser File menu says "Export project…" / "Projekt exportieren…" (`toolbar.exportProject`); Save As instead writes to the server's permitted directory. | `/api/project/download` (route name kept for compatibility), File menu |
 | **Upload (to KNXBench)** | **user's computer** → KNXBench server, over HTTP | Sending a file (project, product database) to the server for import. Never used for anything on the bus. | file-system routes, import |
 
 ### Why the device direction owns "download"
@@ -46,7 +46,6 @@ Standard doesn't have.
    could take it the other way, say **"download to the device"** in full.
 2. A file going from KNXBench to the user is **saved** or **exported**,
    never "downloaded". The `/api/project/download` route keeps its name
-   because clients depend on it; its label in the UI is to follow (see the
-   open item above).
+   because clients depend on it; the File menu calls it "Export project…".
 3. Every download report and progress display names its target device and
    says which direction the data goes (KNXBench → device).

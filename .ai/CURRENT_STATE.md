@@ -1,3 +1,19 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 17:59 CEST
+- **Completed:** Branch `iaw-settling-delay` merged into `main` and pushed. It contains the first real application download with KNXBench: MDT `1.1.67` (mask 0701h), option C, button 1 toggles `2/0/53`, verified with a bus monitor (RESEARCH §19.4).
+  - Merge `95a862c` (branch + `faaf339`). Conflicts: `knx-productdb/src/lib.rs` (both modules kept), ADR index (0041–0043 + 0044), IMPLEMENTATION_STATUS (both kept), KNOWN_LIMITATIONS (both sides had a §134; main keeps §134/§135, the download entry is now **§136**, marked *lifted*).
+  - Merge `9d078b1` pulls in `8e47360` (handover/docs only, no code).
+  - Gates on `95a862c`: workspace 2317 passed / 0 failed; fmt, clippy `-D warnings`, layering, headers, anchors, diff-check green. Corpus: 106 + 10 ignored corpus tests green, `check-corpus-gates` ok, `corpus_compatibility_matrix` (release, scopes Gira:MDT) and `legacy_member_names_corpus` green, matrix commitment unchanged. On `9d078b1` only `.md` files changed; anchors/headers/diff-check green.
+- **Pending/Next Steps:**
+  1. Frame trace of a closing `A_Restart` on `1.1.67`, then have the executor report "data loaded, restart unconfirmed" as its own outcome. That is a device write and needs a new "go".
+  2. Verify the IA settling fix live (next programming-mode session).
+  3. Download as a proper command (CLI/UI with dry-run plan and confirmation), not only a test.
+- **Notes for Codex or Claude:**
+  - The corpus gates need `KNXBENCH_PRODUCT_CORPUS`, `KNXBENCH_PRODUCT_CORPUS_SCOPES=<C>/Gira:<C>/MDT` and `KNXBENCH_PRODUCT_MATRIX_OUTPUT`, plus `project_dump.json`/`OriginalData` at the workspace root. Without them they fail with `SKIP:`, which is not a regression.
+  - `docs/paperclip-shutdown/` (untracked, root checkout) belongs to another session and was not touched.
+
+---
+
 - **Last Agent:** Claude (goal.md session)
 - **Timestamp:** 2026-09-28 13:55 CEST
 - **Completed:**

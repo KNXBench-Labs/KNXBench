@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-27 — Parameter segment image writer
+
+`knx_core::commissioning::parameter_image::ParameterImage` lays parameter
+values over a segment's base data.
+
+- **Placement:** at `Offset`/`BitOffset`, where `BitOffset` counts MSB to
+  MSB (Project Schema 23 `BitOffset_t`). Multi-octet values go high octet
+  first (`ParameterByteOrder="BigEndian"` on all 20 mask-`0701h` `Options`
+  elements in the corpus projects).
+- **Refusals:** unsupported shapes, fields past the segment end, values
+  too wide, and overlaps. The image is left unchanged.
+- **Signed values:** `signed_bits` gives the two's complement of a signed
+  value.
+
+Evidence: 12 unit tests. Ten mutants were each caught and reverted:
+- little-endian;
+- bit offset counted from the LSB;
+- old bits not cleared;
+- no width check;
+- no overlap check, and an overlap off-by-one;
+- no bounds check;
+- cross-octet shapes allowed;
+- a field recorded before it was checked;
+- no signed range check.
+
+KNOWN_LIMITATIONS §134 item 3 is half lifted. Choosing the active parameters
+(the `Dynamic` tree and the `Union` member) is still missing. Found on the
+way: a segment's base data is not its parameter defaults (RESEARCH §19).
+Nothing calls this yet.
+
 ## 2026-09-27 — Group address and association tables for mask `0701h`
 
 `knx_core::commissioning::group_tables::build_group_tables` builds the two

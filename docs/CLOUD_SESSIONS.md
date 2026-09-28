@@ -126,6 +126,44 @@ Also check that the pull request's commits carry no `Co-Authored-By` or
 `Claude-Session` trailer. If either check fails, stop and fix the environment
 before spending more credit.
 
+**Self-repair (added 2026-09-28 after the first real session).**
+
+*Observed.* The first real cloud session reported:
+
+- rustc 1.98.0 and Node 22;
+- `webkit2gtk-4.1: MISSING`.
+
+Rust and Node are pre-installed on the VM, so that report cannot tell whether
+the environment's setup script ran at all.
+
+*Unknown.* Whether the setup script ran and failed, or never ran. The session
+had no exit code.
+
+*Change.* Two changes make this visible and repairable:
+
+- `setup-env.sh` now writes `/var/tmp/knxbench-cloud/setup.status` with the
+  time, the caller, the uid and the apt/rust outcome. It also keeps the full
+  apt log next to that file.
+- If WebKit is missing, the SessionStart hook runs the same script itself.
+  This works when the hook is root or has passwordless sudo, and takes about
+  70 s in the local probe.
+
+The report now carries two extra lines:
+
+- `environment setup: …` either says `NOT RUN by the environment` or names who
+  ran the script and when;
+- `setup fallback in this hook: …` says whether the fallback ran and where its
+  log is.
+
+`run_by=session-start-fallback` means the environment's own setup script did
+not do the job. In that case re-check the environment dialog.
+
+*Remaining limit.* If the hook is neither root nor passwordless sudo, it says
+`IMPOSSIBLE` and changes nothing. Then only the environment's setup script can
+install WebKit. For `apps/knx-web`-only work (CT-1, CT-2) a session may gate
+with `--exclude knx-desktop` on **both** `cargo test` and `cargo clippy`, but
+it must say so in the PR. The local merge gate then covers `knx-desktop`.
+
 ## 4. Task briefs
 
 Each prompt is deliberately short. The brief below is the specification, and

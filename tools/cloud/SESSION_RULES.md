@@ -42,6 +42,14 @@ are in `docs/CLOUD_SESSIONS.md`.
    A command that runs longer than the tool timeout moves to the
    background: wait for it and read its real exit status. If a gate cannot
    run here, say so; never report it as passed.
+
+   If the environment report says `webkit2gtk-4.1: MISSING`:
+   1. Run `bash tools/cloud/setup-env.sh session-agent` (use `sudo -n` if you
+      are not root), then `pkg-config --exists webkit2gtk-4.1`.
+   2. If it is still missing, quote `/var/tmp/knxbench-cloud/setup-apt.log`.
+   3. For `apps/knx-web`-only tasks, continue with `--exclude knx-desktop` on
+      both `cargo test` and `cargo clippy`, and state that in the PR. For any
+      other task, stop.
 7. **Documentation.**
    - Update `docs/IMPLEMENTATION_STATUS.md` and `docs/KNOWN_LIMITATIONS.md`
      when your change affects them.

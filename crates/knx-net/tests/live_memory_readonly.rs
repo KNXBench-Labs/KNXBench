@@ -26,6 +26,7 @@
 use std::net::SocketAddrV4;
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
+use knx_core::commissioning::properties::ObjectIndex;
 use knx_core::{IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES};
 use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, SessionTiming};
 
@@ -46,6 +47,22 @@ fn address() -> IndividualAddress {
 /// Octets per `A_Memory_Read`. Small enough for a standard frame on any
 /// mask.
 const CHUNK: u8 = 8;
+
+/// `(object_index, PID, nr_of_elem, name)`, read before the memory. `[D]`
+/// *03_07_03 Standardized Identifier Tables* numbers the PIDs; the object
+/// indices 1–3 are the ones the Resources procedures use for mask `0701h`
+/// (RES §4.16.11.2, §4.17.9.2, §4.18.9.2); 78 is `LdCtrlCompareProp`'s
+/// property in `A-0027-15-0BAC`'s load procedure.
+const PROPERTIES: [(u8, u8, u8, &str); 8] = [
+    (0, 78, 1, "device object, compared by the load procedure"),
+    (1, 7, 1, "address table PID_TABLE_REFERENCE"),
+    (2, 7, 1, "association table PID_TABLE_REFERENCE"),
+    (3, 7, 1, "application PID_TABLE_REFERENCE"),
+    (3, 13, 1, "application PID_PROGRAM_VERSION"),
+    (3, 16, 1, "application PID_PEI_TYPE"),
+    (1, 13, 1, "address table PID_PROGRAM_VERSION"),
+    (2, 13, 1, "association table PID_PROGRAM_VERSION"),
+];
 
 /// `(name, start, length)`. The full `AbsoluteSegment`s of `A-0027-15-0BAC`
 /// that a download rewrites (`AS-4000`, `AS-4201`, `AS-4400`), so the dump
@@ -88,6 +105,15 @@ async fn dumps_the_tables_and_load_states_read_only() {
     match session.read_mask_version().await {
         Ok(mask) => println!("  mask version: {mask}"),
         Err(err) => println!("  mask version: {err}"),
+    }
+    for (object, pid, count, name) in PROPERTIES {
+        let result = session
+            .read_property(ObjectIndex::new(object), pid, count, 1)
+            .await;
+        match result {
+            Ok(bytes) => println!("  OI {object} PID {pid:>3} {name}: {bytes:02x?}"),
+            Err(err) => println!("  OI {object} PID {pid:>3} {name}: {err}"),
+        }
     }
     for (name, start, length) in REGIONS {
         println!("  {name}:");

@@ -428,16 +428,18 @@ published, and the version number is not a promise that anything is finished.
 ### Documentation export is HTML, and less than ETS's
 
 - **Affected:** the project documentation export.
-- **Limitation:** HTML only — no native PDF and no frontend preview or section
-  controls. The API can preview and select sections, and one export can be
-  English or German. Installed product data can add manufacturer/product/
+- **Limitation:** HTML only — no native PDF. The export dialog previews the
+  document, selects sections and prints the preview through the browser, and
+  one export can be English or German (following the interface language).
+  Printing from the desktop app's webview has not been checked. Installed product data can add manufacturer/product/
   program names, parameter enum labels and module-argument names, but only for
   a hardware-consistent product/program pair. Missing or blank names,
   unformatted parameter kinds and unsupported module semantics remain raw and
   explicitly warned. No parity with ETS's reports has been measured, and with
   no ETS installation here it cannot be.
 - **Consequence:** useful as a record, not as a substitute for an ETS report.
-- **Workaround:** print the HTML from a browser for PDF.
+- **Workaround:** use *Print…* in the export dialog, or print the exported HTML
+  from a browser, for PDF.
 - **Details:** [§44](../KNOWN_LIMITATIONS.md#44-project-documentation-export-t13-has-no-ets-report-parity-and-none-can-currently-be-measured),
   [§45](../KNOWN_LIMITATIONS.md#45-project-documentation-export-has-no-native-pdf-output),
   [§46](../KNOWN_LIMITATIONS.md#46-project-documentation-export-does-not-resolve-manufacturer-product-or-program-names),
@@ -446,16 +448,16 @@ published, and the version number is not a promise that anything is finished.
   [§49](../KNOWN_LIMITATIONS.md#49-project-documentation-export-has-no-in-application-print-preview),
   [§50](../KNOWN_LIMITATIONS.md#50-project-documentation-export-has-no-section-selection)
 
-### Project comparison tells you what changed, rarely what it became
+### Project comparison is read-only and paged in the web panel
 
 - **Affected:** comparing two projects.
-- **Limitation:** for most entity types the renderers name the fields that
-  differ rather than showing before and after values, and the web panel shows
-  grouped counts only. A comparison cannot read a raw `.knxproj`, cannot
-  merge or apply a difference back onto a project, does not do a three-way
-  comparison, and has no exit code for use in a pipeline.
-- **Consequence:** it answers "did anything change, and where", not "what
-  exactly does it say now".
+- **Limitation:** the web panel lists entities and before/after values in
+  pages of 50 rows per table, with no search inside the result. A
+  comparison cannot merge or apply a
+  difference back onto a project, does not do a three-way comparison, and
+  has no exit code for use in a pipeline.
+- **Consequence:** a very large comparison is read page by page rather than
+  searched.
 - **Details:** [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project),
   [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison),
   [§57](../KNOWN_LIMITATIONS.md#57-project-diff-cannot-compare-against-a-raw-knxproj),

@@ -12,6 +12,32 @@ pub struct ComparisonInput {
     pub import_report: Option<ImportReport>,
 }
 
+/// The two input formats a comparison accepts, detected from the file
+/// extension alone (case-insensitive). Contents are never sniffed: a
+/// renamed file fails in its format's own loader with a named error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComparisonInputKind {
+    /// A KNXBench `.knxdb` store.
+    NativeStore,
+    /// A raw ETS `.knxproj` archive, imported in memory.
+    EtsProject,
+}
+
+impl ComparisonInputKind {
+    pub fn of_path(path: &Path) -> Option<Self> {
+        match path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref()
+        {
+            Some("knxdb") => Some(Self::NativeStore),
+            Some("knxproj") => Some(Self::EtsProject),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ComparisonInputError {
     NotFound(PathBuf),
@@ -74,13 +100,8 @@ pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonI
         return Err(ComparisonInputError::NotFound(path.to_path_buf()));
     }
 
-    match path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .map(str::to_ascii_lowercase)
-        .as_deref()
-    {
-        Some("knxdb") => {
+    match ComparisonInputKind::of_path(path) {
+        Some(ComparisonInputKind::NativeStore) => {
             let connection = knx_store::open_and_migrate(path).map_err(|error| {
                 ComparisonInputError::NativeStore {
                     path: path.to_path_buf(),
@@ -98,7 +119,7 @@ pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonI
                 import_report: None,
             })
         }
-        Some("knxproj") => {
+        Some(ComparisonInputKind::EtsProject) => {
             let outcome = knx_etsproj::import_knxproj(path).map_err(|source| {
                 ComparisonInputError::EtsProject {
                     path: path.to_path_buf(),
@@ -110,6 +131,6 @@ pub fn load_comparison_input(path: &Path) -> Result<ComparisonInput, ComparisonI
                 import_report: Some(outcome.report),
             })
         }
-        _ => Err(ComparisonInputError::UnsupportedFormat(path.to_path_buf())),
+        None => Err(ComparisonInputError::UnsupportedFormat(path.to_path_buf())),
     }
 }

@@ -3,9 +3,13 @@ use axum::extract::Multipart;
 use axum::extract::Path as AxumPath;
 use axum::extract::Query;
 use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
+
+use knx_app::comparison::ComparisonInputKind;
 
 use crate::bus::GroupAddressContext;
 use crate::domain;
@@ -383,7 +387,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// An imported `ModuleInstance`'s id does not decompose as expected
     /// (D39 rule 3).
     MalformedModuleInstanceId,
-    /// The remaining fifteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
+    /// The remaining sixteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
     /// own variants 1:1 (see `diagnostic_kind_and_message` in `domain.rs`).
     NoBranchMatched,
     UnparsableTest,
@@ -391,6 +395,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     NonNumericValue,
     UnexpectedTypeNoneShape,
     UnrecognizedNode,
+    RefBelowSkippedNode,
     ModuleDefNotFound,
     ModuleCycleDetected,
     ModuleNestingTooDeep,
@@ -1798,34 +1803,148 @@ impl From<&knx_diff::ProjectDiff> for ProjectDiffDto {
     }
 }
 
+/// `POST /api/project/diff` body. `inputKind` is optional: absent, the
+/// server detects the kind from the extension and names it in the
+/// response; present, it must be `"knxdb"` or `"knxproj"` and agree with
+/// the extension. It is read as a plain string so an unknown value is a
+/// `400` naming the accepted values, not axum's generic `422`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DiffBody {
+    path: String,
+    #[serde(default)]
+    input_kind: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+enum InputKindDto {
+    Knxdb,
+    Knxproj,
+}
+
+impl From<ComparisonInputKind> for InputKindDto {
+    fn from(kind: ComparisonInputKind) -> Self {
+        match kind {
+            ComparisonInputKind::NativeStore => Self::Knxdb,
+            ComparisonInputKind::EtsProject => Self::Knxproj,
+        }
+    }
+}
+
+fn parse_input_kind(value: &str) -> Result<ComparisonInputKind, ApiError> {
+    match value {
+        "knxdb" => Ok(ComparisonInputKind::NativeStore),
+        "knxproj" => Ok(ComparisonInputKind::EtsProject),
+        other => Err(ApiError::bad_request(format!(
+            "unknown inputKind {other:?}; expected \"knxdb\" or \"knxproj\""
+        ))),
+    }
+}
+
+/// What the comparison input brought with it. `importReport` is the full
+/// `knx_etsproj::ImportReport`, serialized as-is (its own snake_case field
+/// names, the same JSON `knx diff` prints), so nothing the importer found
+/// is dropped on the way to the browser. `importDiagnostics` is that report
+/// flattened into session-log entries by `session_log::from_import_report`,
+/// the shape the web panel lists. Both are `null`/empty for a `.knxdb`.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComparisonImportDto {
+    input_kind: InputKindDto,
+    import_report: Option<knx_etsproj::ImportReport>,
+    import_diagnostics: Vec<crate::session_log::LogEntry>,
+}
+
+impl ComparisonImportDto {
+    fn new(kind: ComparisonInputKind, report: Option<knx_etsproj::ImportReport>) -> Self {
+        Self {
+            input_kind: kind.into(),
+            import_diagnostics: report
+                .as_ref()
+                .map(crate::session_log::from_import_report)
+                .unwrap_or_default(),
+            import_report: report,
+        }
+    }
+}
+
+/// The diff response: the input description next to the unchanged
+/// `ProjectDiffDto` fields, flattened so existing readers of
+/// `infoChanges`/`installations` keep working.
+#[derive(serde::Serialize)]
+struct ProjectDiffResponseDto {
+    #[serde(flatten)]
+    input: ComparisonImportDto,
+    #[serde(flatten)]
+    diff: ProjectDiffDto,
+}
+
+/// The `422` body for an import refused over error-level diagnostics:
+/// the usual `error` message plus everything a caller needs to show why.
+#[derive(serde::Serialize)]
+struct ImportRefusedDto {
+    error: String,
+    #[serde(flatten)]
+    input: ComparisonImportDto,
+}
+
 /// Compares the server's live, possibly edited, in-memory project against
-/// the `.knxdb` file at `body.path` — "what would Save change", not a
-/// comparison of two files on disk (design spec
+/// the `.knxdb` or `.knxproj` file at `body.path` — "what would Save
+/// change", not a comparison of two files on disk (design spec
 /// `docs/superpowers/specs/2026-09-10-project-diff-design.md` §7). `path`
 /// is resolved with `resolve_project_path`, a *read* of a file that must
 /// already exist — same function `import_project`/`open_native_project`
-/// use, never `resolve_new_project_path`.
+/// use, never `resolve_new_project_path`. A browser therefore reaches only
+/// what it picked from the mount or uploaded through `/api/fs/upload`.
 ///
-/// Every failure `domain::diff_project_impl` can return — "no project
-/// open" or "comparison file does not exist" — is the caller's to fix
-/// relative to a project that may already be open. That is different from
+/// Every rejection `domain::diff_project_impl` can return — "no project
+/// open", "comparison file does not exist", an unsupported or mismatched
+/// input kind — is the caller's to fix relative to a project that may
+/// already be open. That is different from
 /// `import_project`/`open_native_project`, which read the *only* project a
 /// route establishes, so *their* failures are environment problems mapped
 /// to `ApiError::internal` (`errors.rs`'s own documented 400/500 split).
-/// This route therefore maps its whole result to `ApiError::bad_request`
-/// instead — the same uniform mapping `export_documentation` above already
-/// uses. Do not "fix" this back to `ApiError::internal` by analogy with
+/// This route therefore maps those to `ApiError::bad_request` instead —
+/// the same uniform mapping `export_documentation` above already uses. Do
+/// not "fix" this back to `ApiError::internal` by analogy with
 /// `import_project`/`open_native_project` without re-reading this comment
 /// first.
+///
+/// A `.knxproj` whose import report carries error-level diagnostics is a
+/// `422` with that report attached ([`ImportRefusedDto`]): the request was
+/// well-formed and the file was read, but a lossy import is not a
+/// comparison (`knx diff` refuses the same case).
 async fn diff_project(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
-) -> Result<Json<ProjectDiffDto>, ApiError> {
+    Json(body): Json<DiffBody>,
+) -> Result<Response, ApiError> {
+    let requested_kind = body
+        .input_kind
+        .as_deref()
+        .map(parse_input_kind)
+        .transpose()?;
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::diff_project_impl(&state, &path)
-        .map(|diff| ProjectDiffDto::from(&diff))
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    match domain::diff_project_impl(&state, &path, requested_kind) {
+        Ok(outcome) => Ok(Json(ProjectDiffResponseDto {
+            input: ComparisonImportDto::new(outcome.input_kind, outcome.import_report),
+            diff: ProjectDiffDto::from(&outcome.diff),
+        })
+        .into_response()),
+        Err(domain::DiffProjectError::Rejected(message)) => Err(ApiError::bad_request(message)),
+        Err(domain::DiffProjectError::ImportRefused(report)) => {
+            let error = format!(
+                "comparison refused: the ETS import reported {} error diagnostic(s)",
+                report.error_count()
+            );
+            let input = ComparisonImportDto::new(ComparisonInputKind::EtsProject, Some(*report));
+            Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ImportRefusedDto { error, input }),
+            )
+                .into_response())
+        }
+    }
 }
 
 #[derive(serde::Serialize)]

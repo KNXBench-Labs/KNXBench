@@ -126,6 +126,10 @@ Generated snapshots stay ignored under `.agent-memory/`. See
 [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) for the authority order and
 promotion rules.
 
+Self-contained tasks can also run in Claude Code cloud sessions. They cannot see the
+private corpus or the bus; boundaries, environment setup and task briefs are in
+[`docs/CLOUD_SESSIONS.md`](docs/CLOUD_SESSIONS.md).
+
 The manual is the place to start. It explains KNX itself where that is needed, and does not
 assume you have used ETS.
 

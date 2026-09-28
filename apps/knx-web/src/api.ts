@@ -5,6 +5,7 @@
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
+import type { DocumentationOptions } from "./documentationOptions";
 import { notifySessionExpired } from "./session";
 
 /**
@@ -41,7 +42,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     noteRefusal(path, response.status);
-    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`, body);
   }
   if (response.headers.get("content-length") === "0") {
     return undefined as T;
@@ -55,10 +56,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // exported through every `vi.mock("./api", ...)` factory in the test suite.
 // `BusMonitorPanel.tsx`'s mount-time reattach uses this to tell "no session
 // exists yet" (`404`) apart from every other failure, which it does not
-// silently swallow the same way.
-function requestError(status: number, message: string): Error {
-  const error = new Error(message) as Error & { status: number };
+// silently swallow the same way. `body` is the parsed JSON error body
+// (or `null`), for the few routes whose refusal carries more than `error`
+// — `diffProject`'s `422` import refusal is one (see `importRefusal`).
+function requestError(status: number, message: string, body: unknown = null): Error {
+  const error = new Error(message) as Error & { status: number; body: unknown };
   error.status = status;
+  error.body = body;
   return error;
 }
 
@@ -447,7 +451,11 @@ export interface CatalogUnknownConstruct {
 }
 
 export interface CatalogInstallDiagnostic {
-  kind: "unsupported-master-section" | "unsupported-master-subtree" | "unsupported-baggage-index";
+  kind:
+    | "unsupported-master-section"
+    | "unsupported-master-subtree"
+    | "unresolved-baggage-declaration"
+    | "undeclared-baggage-payload";
   archivePath: string;
   xmlPath: string;
   detail: string;
@@ -592,7 +600,7 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     noteRefusal("/api/catalog/install", response.status);
-    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`, body);
   }
   return response.json() as Promise<CatalogInstallReport>;
 }
@@ -736,10 +744,28 @@ export interface DocumentationExportReport {
   warnings: ReportWarning[];
 }
 
-export function exportDocumentation(path: string): Promise<DocumentationExportReport> {
+// `DocumentationPreviewReportDto` (apps/knx-server/src/routes.rs): the same
+// self-contained HTML the export writes, returned instead of written.
+export interface DocumentationPreview {
+  html: string;
+  warnings: ReportWarning[];
+}
+
+// Without `options` the server falls back to all sections in English.
+export function exportDocumentation(
+  path: string,
+  options?: DocumentationOptions,
+): Promise<DocumentationExportReport> {
   return request("/api/project/documentation-export", {
     method: "POST",
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, ...options }),
+  });
+}
+
+export function previewDocumentation(options: DocumentationOptions): Promise<DocumentationPreview> {
+  return request("/api/project/documentation-preview", {
+    method: "POST",
+    body: JSON.stringify(options),
   });
 }
 
@@ -1039,22 +1065,52 @@ export interface InstallationDiff {
   buildings: EntityTable<BuildingPartKey, BuildingPartFields>;
 }
 
-// `ProjectDiffDto` — mirrors `knx_diff::ProjectDiff`, the whole response
-// body of `POST /api/project/diff`.
-export interface ProjectDiffReport {
+// `InputKindDto` — which format the comparison file was read as.
+export type ComparisonInputKind = "knxdb" | "knxproj";
+
+// `ComparisonImportDto` — what the comparison input brought with it.
+// `importReport` is the full ETS import report exactly as the server
+// serialized it (snake_case, the JSON `knx diff` prints); the panel shows
+// `importDiagnostics`, the same report flattened into session-log entries.
+// Both are `null`/empty for a `.knxdb`.
+export interface ComparisonImport {
+  inputKind: ComparisonInputKind;
+  importReport: unknown;
+  importDiagnostics: LogEntry[];
+}
+
+// `ProjectDiffResponseDto` — `ProjectDiffDto` (mirrors
+// `knx_diff::ProjectDiff`) flattened next to `ComparisonImport`, the whole
+// response body of `POST /api/project/diff`.
+export interface ProjectDiffReport extends ComparisonImport {
   infoChanges: FieldChange[];
   installations: InstallationDiff[];
 }
 
 // Compares the server's live, possibly edited, in-memory project against
-// the `.knxdb` file at `path` — "what would Save change", never a
-// comparison of two files on disk, and never an ETS-parity claim (design
-// spec `docs/superpowers/specs/2026-09-10-project-diff-design.md` §7).
+// the `.knxdb` or `.knxproj` file at `path` — "what would Save change",
+// never a comparison of two files on disk, and never an ETS-parity claim
+// (design spec `docs/superpowers/specs/2026-09-10-project-diff-design.md`
+// §7). The server detects the input kind from the extension and names it
+// in `inputKind`. A `.knxproj` with error-level import diagnostics rejects
+// with a `422`; `importRefusal` reads its report back off the error.
 export function diffProject(path: string): Promise<ProjectDiffReport> {
   return request("/api/project/diff", {
     method: "POST",
     body: JSON.stringify({ path }),
   });
+}
+
+// The import report a refused comparison carries (`ImportRefusedDto`), or
+// `null` for every other failure.
+export function importRefusal(error: unknown): ComparisonImport | null {
+  const { status, body } = (error ?? {}) as { status?: number; body?: Partial<ComparisonImport> | null };
+  if (status !== 422 || !body || !Array.isArray(body.importDiagnostics) || !body.inputKind) return null;
+  return {
+    inputKind: body.inputKind,
+    importReport: body.importReport ?? null,
+    importDiagnostics: body.importDiagnostics,
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -1382,6 +1438,7 @@ export type ParameterDiagnosticKind =
   | "nonNumericValue"
   | "unexpectedTypeNoneShape"
   | "unrecognizedNode"
+  | "refBelowSkippedNode"
   | "moduleDefNotFound"
   | "moduleCycleDetected"
   | "moduleNestingTooDeep"

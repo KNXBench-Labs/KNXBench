@@ -168,6 +168,49 @@ package hashes, each counted once.
   index unknown; the installer's inventory must match those numbers.
 - **Largest XML member** in the tree: 54,803,397 bytes (unchanged).
 
+### PDB-11: package identity and versions (2026-09-28)
+
+Read-only, aggregate-only probes (ADR-0043 Context; 117 package instances,
+115 unique in the probe's discovery): every id that appears in more than one
+unique package does so in member files whose bytes differ. Whether the
+*element* differs depends on the kind — application programs 2 of 29
+byte-identical but 19 of 29 attribute-identical, hardware 18 of 68, products
+23 of 69, catalogue sections 1 of 53, all 33 `Hardware2Program` and 16 of 17
+catalogue items identical. `ApplicationNumber`/`ApplicationVersion` match the
+program id in 275 of 275 programs; families by (manufacturer, number) have
+size 1 (183), 2 (40), 3 (4). `ReplacesVersions` is absent on 145 distinct
+programs, one integer on 55, a whitespace-separated list on 75; 16 of 289
+listed versions name a program in the corpus. 73 of 304 order numbers appear
+in more than one package (44 with different program sets, 18 with different
+schemes); 4 sit on more than one product id.
+
+The schema-v17 matrix (115 instances / 113 unique hashes, shared order by
+package hash) records, over the shared database:
+
+| kind | candidate rows | distinct ids | ids in >1 blob | ids with differing digests |
+|---|---:|---:|---:|---:|
+| application_program | 302 | 273 | 29 | 25 |
+| catalog_item | 362 | 345 | 17 | 0 |
+| catalog_section | 251 | 103 | 53 | 49 |
+| hardware | 334 | 255 | 68 | 50 |
+| hardware2program | 337 | 298 | 33 | 0 |
+| product | 386 | 306 | 69 | 46 |
+
+170 ids diverge in total; all 528 parsed members were `measured`, none
+`unavailable`. New tables: `package_source_name` 115, `source_identity`
+1,972, `source_identity_scan` 528, `source_producer` 629. The "ids in >1
+blob" column equals the Python probe's multi-package id counts exactly. The
+differing-digest counts match the probe's whole-subtree canonical comparison
+for programs (25; 27 differ byte-wise), hardware (50), products (46),
+catalogue items (0; 1 differs byte-wise) and `Hardware2Program` (0). For
+catalogue sections the matrix finds 49 where the probe's whole-subtree
+comparison finds 52 and its own-content-only comparison 34: the digest
+replaces a nested section or item by a marker, so a section whose only
+difference lies inside a nested tracked element is reported equal here and
+that element's own digest carries the difference. This explanation is
+inferred from the two definitions, not separately measured. No install outcome, report total or pre-existing
+table count changed.
+
 ## Scheme and producer observations
 
 The XML itself records `CreatedBy` and `ToolVersion`. The corpus contains output
@@ -383,6 +426,10 @@ remain unreported; see KNOWN_LIMITATIONS.
    version grouping, producer/tool metadata, scheme, language coverage,
    secure-capable marker and replacement metadata are all available in this
    corpus and should be visible before users install or replace a product.
+   PDB-11 (schema v17) supplies the data layer and CLI: per-candidate
+   element digests, winner/loser naming, source names, producer facts,
+   families, `ReplacesVersions` links and order-number lookup. Server/web
+   views and a user-chosen winner remain open.
 
 ## Compatibility conclusion
 

@@ -1,5 +1,65 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — PDB-11: package identity recorded per candidate, versions derived at query time
+
+The product database is now schema v17
+([ADR-0043](adr/0043-package-identity-is-recorded-per-candidate.md)).
+Packages and members stay keyed by the SHA-256 of their bytes. New:
+
+- **Source names.** `package_source_name` keeps every name a package's bytes
+  arrived under; a byte-identical retry writes only that row.
+  `InstallReport::source_names` lists them, and `knx products ingest` prints
+  their count on a retry.
+- **Candidates.** Every `CatalogSection`, `CatalogItem`, `Hardware` (with an
+  `Id`), `Product`, `Hardware2Program` and `ApplicationProgram` the domain
+  parsers dispatch in a parsed member gets a `source_identity` row (table,
+  id, per-file occurrence, element digest). The scan mirrors the parsers
+  (the program parser's skipped `Dynamic` subtree and unconsumed
+  parameter-type child included); the digest is SHA-256 over a
+  length-prefixed canonical token stream of the element (attributes sorted
+  and normalized as the parsers read them, references resolved, CDATA
+  literal, line endings normalized, whitespace-only runs, comments and PIs
+  ignored; a nested tracked element is a marker in its parent). The rows are
+  a pure function of the blob, so the recorded set does not depend on install
+  order. `source_identity_scan` records `measured` or `unavailable` with a
+  reason.
+- **Agreement check.** After each parse, every typed row the blob won, every
+  `IdConflict` it produced and every non-empty candidate must match; a
+  mismatch fails and rolls back the ingest.
+- **Producer facts.** `source_producer` stores `KNX/@CreatedBy`,
+  `@ToolVersion` (unprefixed only) and the root namespace per newly stored
+  blob, as source strings.
+- **Queries (library + CLI).** `identity_candidates` / `knx products
+  identity <table> <id>` (winner, candidates, packages, same/differs/unknown,
+  unmeasured blobs), `identity_divergences`, `program_family` / `knx products
+  family` (manufacturer + `ApplicationNumber` as `xs:unsignedShort`,
+  `ReplacesVersions` as an `xs:list` of `xs:unsignedByte`, unparsable values
+  shown raw), `products_by_order_number` / `knx products order-number`.
+  Malformed persisted identity rows are an error, not a guess.
+- **Migration v16→v17** seeds source names from `package.source_name`, scans
+  every parsed catalogue/hardware/program blob and extracts producer facts;
+  a blob whose retained bytes no longer match its key is `unavailable`, and
+  winners and `package_conflict` rows are untouched.
+
+The winner rule is unchanged (first installed) and now visible; see
+KNOWN_LIMITATIONS §135.
+
+Evidence: `package_identity.rs` 13 tests (retry records only the name and
+changes no other table; candidates named with packages and same/differs;
+install order changes the winner but not the recorded rows; undispatched
+programs are not candidates; duplicate id → occurrences 1 and 2 and the
+conflict names 2; an unreadable blob is `unavailable` and still ingests; a
+candidate set missing a parsed row fails the ingest and leaves every table
+unchanged; v16→v17 equals a fresh install; damaged retained bytes →
+`unavailable` and the database still opens; families, `ReplacesVersions`
+and order numbers; producer facts; corrupted identity rows fail closed);
+21 `identity::` unit tests (digest invariances and sensitivities, markers,
+dispatch mirror, agreement rules a/b/c); `cli_product_identity.rs` 2 CLI
+tests; a mutation sweep over the check, digest and query guards. The
+115-instance corpus matrix re-pinned with every v16 outcome, report total
+and table count unchanged (the v16 projection commitment still equals the
+PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.
+
 ## 2026-09-28 — CT-1: project-diff web panel lists entities and before/after values (cloud session)
 
 - **Scope:** `apps/knx-web` only; no server, crate or CLI change.

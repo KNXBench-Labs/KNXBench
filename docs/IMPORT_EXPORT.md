@@ -17,6 +17,17 @@ verified, and no ETS parity claim is made. PDB-8 is the future typed master-data
 coverage slice. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. The `baggage_index` count is `stored`, and
 `unsupported-baggage-index` gave way to `unresolved-baggage-declaration`
 (per index and reason) and `undeclared-baggage-payload` (per member).
+PDB-11 (schema v17, ADR-0043): every name a package's bytes arrive under is
+recorded (`package_source_name`; a byte-identical retry writes only that
+row), and `InstallReport::source_names` lists them. The name never decides
+identity: packages and members stay keyed by SHA-256 of their bytes. Each
+parsed catalogue/hardware/program member gets a `source_identity_scan` row
+(`measured` or `unavailable` with a reason) and one `source_identity` row per
+candidate element (table, id, per-file occurrence, element digest). Every
+ingest checks the scan against what the parser stored and conflicted; a
+mismatch fails and rolls back the ingest. `KNX/@CreatedBy`, `@ToolVersion`
+and the root namespace are stored per blob (`source_producer`) as source
+strings, never compared.
 
 **Space types (T13, 2026-09-22).** Import preserves `Stairway`, `RoomPart`,
 `Area`, `Ground` and `Segment` alongside the six previously supported types.
@@ -552,6 +563,13 @@ PDB-10 (schema v16) re-pinned it a third time: the new
 `undeclared-baggage-payload` rows and no unresolved declaration. Outcomes and
 report totals were equal, and an independent Python recount predicts each
 number.
+PDB-11 (schema v17) re-pinned it a fourth time. The four new tables hold
+`package_source_name` 115, `source_identity` 1,972, `source_identity_scan`
+528 and `source_producer` 629 rows, and the matrix publishes per-kind identity
+aggregates (candidate rows, distinct ids, ids in several blobs, ids with
+differing digests) plus scan status counts. The test recomputes the v16
+projection without the new tables and asserts it still equals the PDB-10
+commitment, so no existing outcome, report total or table count moved.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

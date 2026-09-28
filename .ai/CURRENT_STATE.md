@@ -1,4 +1,34 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 06:46 CEST
+- **Completed:** The user gave **"ok, go fuer write"**. The only real-bus action so far was a **read-only** step. **Nothing has been written.**
+  - New `crates/knx-net/tests/live_memory_readonly.rs`: `#[ignore]`, `read_only` + `Skip`, env `KNX_GATEWAY` + `KNX_READ_MEMORY_ADDRESS`. It ran against `1.1.67` via `172.18.250.1:3671`: 180 `A_Memory_Read`s, all answered.
+    - The first attempt read 0 octets on a `u8` overflow in the test. The device dropped the connection and the test was fixed; nothing was written.
+  - **Backup** of `AS-4000`/`4201`/`4400` plus the load states: `/mnt/daten-i/Sourcecode/KNXBench/OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-28_before-download.txt` (and `_decoded.txt`), gitignored.
+  - Findings (RESEARCH §19.1):
+    - Load states are `01 01 01 00`.
+    - GrAT `05 1143 0406 0407 110F 1110`: the table byte order is now **[V] high first**. The `group_tables` doc goes from [A] to [V], and a new test rebuilds the device's own tables octet for octet.
+    - GrOAT `04 0300 0401 0112 0212`: objects 0 → `2/1/15`, 1 → `2/1/16`, 18 → `0/4/6` and `0/4/7`.
+    - `AS-4400` starts with the **group object table**, which needs an encoder.
+    - `AS-4000`'s `<Mask>` protects offsets 1–2 (the device's own IA).
+    - **The device is configured:** buttons 1/2 are a grouped **Shutter** (union +264 = `0002`) on `2/1/15` and `2/1/16`; the LED orientation light is on `0/4/6` and `0/4/7`.
+  - Commit `7768090`. Gates: fmt, clippy (`knx-core`/`knx-net`), `knx-net` tests 271/0, `group_tables` 12/0, headers 231, anchors, layering, diff-check.
+- **Pending/Next Steps:**
+  - **Open user question:** a toggle on button 1 means splitting the shutter pair ("Push buttons unique"). What should button 2 do, and should the shutter control on `2/1/15`/`2/1/16` be kept? The answer is still pending.
+  - Still missing for the write, all offline:
+    - (a) a group object table encoder for `0701h` (research the Resources realisation first);
+    - (b) choosing the active parameters (`Dynamic` tree plus `Union` member) and filling all of `AS-4400`;
+    - (c) segment `<Mask>` handling (keep the IA);
+    - (d) orchestrating the product `LoadProcedure` over `write_memory_load_record` plus segment writes, end to end against the simulator;
+    - (e) opening `WriteScope::Download` for hardware (the user said go) with tests for both sides;
+    - (f) authorisation: DM_Authorize2 with `FFFFFFFFh` (MP §3.5.2), with no guessed key.
+  - Then the double-gated live write test, a read-back comparison, and a telegram check on `2/0/53`.
+- **Notes for Codex or Claude:**
+  - `origin/main` is 7 commits ahead, all PDB-9/10 productdb work. The branch is not rebased and not pushed.
+  - Probe scripts are in `~/.hermes/profiles/knxbench/cache/scratch/mdt/` (`decode_dump.py`, `param_image_probe.py`, `dyn_probe.py`, `app27.xml`).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 04:11 CEST
 - **Completed:** On branch `iaw-settling-delay`: 7 commits ahead and 7 behind `origin/main`, **not pushed, not rebased**. Two new offline commits; no bus traffic.
   - `638791b` feat(core): `knx_core::commissioning::group_tables::build_group_tables`, built from `(object, GA, sending)` links.

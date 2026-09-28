@@ -46,10 +46,11 @@ use knx_core::commissioning::load_control::{
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::mcb::MemoryControlBlock;
 use knx_core::commissioning::memory::WriteLimit;
-use knx_core::commissioning::mutation::WriteScope;
+use knx_core::commissioning::mutation::{TargetKind, WriteScope};
 use knx_core::commissioning::partial_download_variant::PartialDownloadVariant;
 use knx_core::commissioning::procedure::ProcedureKind;
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION};
+use knx_core::IndividualAddress;
 
 use super::{ManagementSession, SessionError};
 use crate::management::ManagementTransport;
@@ -776,6 +777,15 @@ pub enum DownloadError {
     /// the part to be downloaded, then the MaC shall not perform a Partial
     /// Download."*
     DownloadCounterUnavailable,
+    /// The session reaches real hardware. The download scope is open on
+    /// hardware for the memory download of mask `070nh` only
+    /// (`hardware_write_is_authorised`); this sequencer has run end to end
+    /// against the simulator's property model and nothing else. Nothing was
+    /// sent.
+    NotOnHardware {
+        /// The device the session was built for.
+        target: IndividualAddress,
+    },
 }
 
 impl std::error::Error for DownloadError {}
@@ -837,6 +847,11 @@ impl fmt::Display for DownloadError {
                 f,
                 "PID_DOWNLOAD_COUNTER is not available for the part to be downloaded, so the \
                  MaC shall not perform a Partial Download (RES §5.3.2.2, p. 320)"
+            ),
+            DownloadError::NotOnHardware { target } => write!(
+                f,
+                "refusing the property-path download to {target}: it has never run against a \
+                 real device, so it runs against the simulator only; nothing was sent"
             ),
         }
     }
@@ -1294,6 +1309,11 @@ async fn open<T: ManagementTransport>(
     kind: ProcedureKind,
     report: &mut DownloadReport,
 ) -> Result<(MaskVersion, WriteLimit), DownloadError> {
+    if session.transport.target_kind() != TargetKind::Simulator {
+        return Err(DownloadError::NotOnHardware {
+            target: session.target(),
+        });
+    }
     record(report, kind, 1, "connect");
     // One call, two numbered steps: `connect()` authorises as it connects
     // (design spec §10.3), so Nr. 03 happens here rather than after Nr. 02.

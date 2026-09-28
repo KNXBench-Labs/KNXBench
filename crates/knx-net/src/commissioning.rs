@@ -629,8 +629,8 @@ impl fmt::Display for SessionError {
                 "refusing to write to {target}: this transport is {transport:?} with an \
                  authorisation for {authorised:?}, which is not a combination this \
                  project writes with — the simulator accepts any scope, and real \
-                 hardware accepts only the individual-address programming and restart \
-                 scopes an operator has authorised"
+                 hardware accepts only the individual-address programming, restart and \
+                 download scopes an operator has authorised"
             ),
             SessionError::Refused(err) => write!(f, "{err}"),
             SessionError::NotConnected => {
@@ -1068,8 +1068,9 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             return Ok(());
         }
         // Real hardware, with an authorisation that names real hardware and
-        // carries the operator's confirmation phrase, for one of the two
-        // scopes MP §2.3 needs. Everything else still fails here.
+        // carries the operator's confirmation phrase, for one of the scopes
+        // `hardware_write_is_authorised` lists. Everything else still fails
+        // here.
         //
         // Both sides must agree: a simulator authorisation may not be used to
         // write to hardware (the confirmation phrase would never have been
@@ -3208,10 +3209,11 @@ mod tests {
         assert!(matches!(refusal, SessionError::NotASimulator { .. }));
     }
 
-    /// The scope allowlist, on the refusing side: `Download` is the write
-    /// class that rewrites a device's application, nobody has authorised it
-    /// against hardware, and it must still be refused even when the
-    /// authorisation is a fully confirmed hardware one.
+    /// The scope allowlist, on the refusing side: `Unload` leaves a device
+    /// without an application, nobody has authorised it against hardware,
+    /// and it must still be refused even when the authorisation is a fully
+    /// confirmed hardware one. (`Download` was this test's scope until the
+    /// operator authorised the `1.1.67` memory download on 2026-09-28.)
     #[tokio::test]
     async fn an_unauthorised_scope_is_still_refused_on_hardware() {
         let device = SimulatedDevice::new();
@@ -3219,9 +3221,9 @@ mod tests {
         let hardware = HardwareLikeTransport(device);
         let phrase = knx_core::commissioning::mutation::required_confirmation_phrase(
             target,
-            WriteScope::Download,
+            WriteScope::Unload,
         );
-        let authorisation = WriteAuthorisation::for_hardware(target, WriteScope::Download, &phrase)
+        let authorisation = WriteAuthorisation::for_hardware(target, WriteScope::Unload, &phrase)
             .expect("the phrase is the required one");
 
         let refusal = ManagementSession::authorised(
@@ -3230,7 +3232,7 @@ mod tests {
             fast(),
             authorisation,
         )
-        .expect_err("a download to hardware must still be refused");
+        .expect_err("an unload on hardware must still be refused");
         assert!(matches!(refusal, SessionError::NotASimulator { .. }));
         assert!(
             !hardware.0.memory_was_written(),
@@ -3239,14 +3241,16 @@ mod tests {
     }
 
     /// The scope allowlist, on the permitting side: the two scopes MP §2.3
-    /// needs do build a session against hardware, because an operator
-    /// authorised exactly that. This is the test that would have to be
-    /// deleted to re-close the gate, so it says so.
+    /// needs, and the memory download of `1.1.67`, build a session against
+    /// hardware, because an operator authorised exactly those. This is the
+    /// test that would have to be deleted to re-close the gate, so it says
+    /// so.
     #[tokio::test]
-    async fn the_two_authorised_scopes_build_a_session_against_hardware() {
+    async fn the_authorised_scopes_build_a_session_against_hardware() {
         for scope in [
             WriteScope::IndividualAddressProgramming,
             WriteScope::Restart,
+            WriteScope::Download,
         ] {
             let device = SimulatedDevice::new();
             let target = device.address();

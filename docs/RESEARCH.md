@@ -4726,6 +4726,8 @@ What it established `[V]`:
    device expects is not in the product data and must not be guessed.
 5. A policy decision. `WriteScope::Download` is still refused on hardware
    (§8.8.6's allowlist is `IndividualAddressProgramming` and `Restart` only).
+   *Settled 2026-09-28:* the operator authorised the `1.1.67` download, and
+   `Download` is on the allowlist for the memory download only (§19.3).
 
 ### 19.1 Download data in the product file, and what the PDFs say about it (2026-09-28)
 

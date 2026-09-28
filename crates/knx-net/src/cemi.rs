@@ -736,8 +736,11 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
 /// never emitting additional information (`add_info_len = 0`; this cycle
 /// never needs any). Ctrl1 0xBC (standard frame, no repeat, domain
 /// broadcast, low priority, no ack request) and Ctrl2's hop-count-6 are
-/// this crate's only outbound defaults — the same values already implied
-/// by every hand-built fixture `decode_l_data` is tested against above.
+/// this crate's outbound defaults — the same values already implied by
+/// every hand-built fixture `decode_l_data` is tested against above. The
+/// exception is a Transport Layer control request (`T_CONNECT`,
+/// `T_DISCONNECT`, `T_ACK`, `T_NAK`), sent at system priority per TL §3.7,
+/// §3.8 and §5.3 (see [`CTRL1_SYSTEM_ACK_REQUESTED`], [`CTRL1_SYSTEM`]).
 /// Names a management service (spec §6.6) from its APCI and data octets,
 /// or returns `None` if the octets do not fit that service's PDU.
 ///
@@ -862,14 +865,27 @@ fn decode_memory_or_restart(apci: u16, extra: &[u8]) -> Option<ApplicationServic
     None
 }
 
+/// Ctrl1 of an outbound `T_CONNECT`/`T_DISCONNECT` request: standard frame,
+/// R and SB as in 0xBC, priority `00b` (system), ack requested (1011_0010).
+/// TL v01.02.03 AS §3.7/§3.8: "the priority shall be set to 'system'; the
+/// ack_request shall be set to true". Ctrl1 layout EMI_IMI v01.04.02 AS
+/// §4.1.5.3.2; priority codes Data Link Layer General v01.03.02 AS §2.2.3.
+const CTRL1_SYSTEM_ACK_REQUESTED: u8 = 0xB2;
+/// Ctrl1 of an outbound `T_ACK`/`T_NAK`: as above, but TL §5.3 A2-A4 name
+/// only "priority = SYSTEM", so ack_request keeps the crate default (clear):
+/// 1011_0000.
+const CTRL1_SYSTEM: u8 = 0xB0;
+
 pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     let message_code = match frame.kind {
         LDataMessageKind::Request => L_DATA_REQ,
         LDataMessageKind::Indication => L_DATA_IND,
         LDataMessageKind::Confirmation { .. } => L_DATA_CON,
     };
-    let ctrl1 = match frame.kind {
-        LDataMessageKind::Confirmation { error: true } => 0xBD,
+    let ctrl1 = match (frame.kind, frame.transport) {
+        (LDataMessageKind::Confirmation { error: true }, _) => 0xBD,
+        (LDataMessageKind::Request, Tpci::Connect | Tpci::Disconnect) => CTRL1_SYSTEM_ACK_REQUESTED,
+        (LDataMessageKind::Request, Tpci::Ack { .. } | Tpci::Nak { .. }) => CTRL1_SYSTEM,
         _ => 0xBC,
     };
     let (address_type_bit, dest_raw) = match frame.destination {
@@ -2769,5 +2785,44 @@ mod tests {
             encode_l_data(&frame).unwrap_err(),
             CemiError::InvalidApci(0x07C0)
         );
+    }
+
+    /// §105: the four Transport Layer control TPDUs go out at `SYSTEM`
+    /// priority, and `T_Connect`/`T_Disconnect` with `ack_request` set.
+    /// TL v01.02.03 AS §3.7 (p. 13) and §3.8 (p. 14): "the priority shall
+    /// be set to 'system'; the ack_request shall be set to true". §5.3
+    /// (p. 19) A2/A3 (`T_ACK`), A4 (`T_NAK`) and A6 (`T_DISCONNECT`) say
+    /// "priority = SYSTEM" and nothing about ack_request, so that bit stays
+    /// clear on `T_ACK`/`T_NAK`. Ctrl1 layout: EMI_IMI v01.04.02 AS
+    /// §4.1.5.3.2 (p. 76) `FT 0 R SB P P A C`; priority `00b` = system,
+    /// `11b` = low (Data Link Layer General v01.03.02 AS §2.2.3).
+    #[test]
+    fn control_frames_request_system_priority_and_data_frames_stay_low() {
+        let request = |transport, service| LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x0000),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1143)),
+            transport,
+            service,
+        };
+        let ctrl1 = |frame: LDataFrame| encode_l_data(&frame).unwrap()[2];
+        let none = || ApplicationService::NoApplicationPdu;
+        // FT=1 R=1 SB=1, P=00 (system), A=1: 1011_0010.
+        assert_eq!(ctrl1(request(Tpci::Connect, none())), 0xB2);
+        assert_eq!(ctrl1(request(Tpci::Disconnect, none())), 0xB2);
+        // P=00 (system), A=0: 1011_0000.
+        assert_eq!(ctrl1(request(Tpci::Ack { seq: 3 }, none())), 0xB0);
+        assert_eq!(ctrl1(request(Tpci::Nak { seq: 3 }, none())), 0xB0);
+        // Data frames keep the crate's low-priority default: 1011_1100.
+        let data = request(
+            Tpci::NumberedData { seq: 0 },
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+        );
+        assert_eq!(ctrl1(data), 0xBC);
+        // An indication's priority is "don't care (11b)" (EMI §4.1.5.4.1):
+        // the simulator's device-side control frames are not changed.
+        let mut ind = request(Tpci::Ack { seq: 0 }, none());
+        ind.kind = LDataMessageKind::Indication;
+        assert_eq!(ctrl1(ind), 0xBC);
     }
 }

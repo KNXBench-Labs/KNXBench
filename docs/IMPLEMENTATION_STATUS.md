@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28: K8, §105 Transport Layer control frames at system priority
+
+- `encode_l_data` (`crates/knx-net/src/cemi.rs`): Ctrl1 is now `0xB2` for
+  `T_CONNECT`/`T_DISCONNECT` requests and `0xB0` for `T_ACK`/`T_NAK`
+  requests (TL v01.02.03 AS §3.7, §3.8, §5.3). Everything else is
+  unchanged (`0xBC`, or `0xBD` for a negative confirmation).
+- One test pins all six cases; 7 mutants caught. Simulator only.
+- KNOWN_LIMITATIONS §105 is lifted in the encoder; the live effect is
+  still unverified.
+
 ## 2026-09-28: K6 UI half, the Program address tab
 
 - **ADR-0046.** One phrase (`IndividualAddressProgramming`, new address)

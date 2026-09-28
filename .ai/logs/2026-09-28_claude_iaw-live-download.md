@@ -23,3 +23,6 @@ Read-only frame trace: the device answers with seq 1, and our T_ACK seq 1 has no
 ## Result of run 3
 Read-back on a fresh connection: all 1418 segment octets equal to the image (the 2 IA octets masked, `11 43` unchanged); load states all Loaded (01).
 Open: A_Restart got no T_ACK. Whether the device restarted is unknown. MP §3.7.3 (5) ("ignore all telegrams … except negative TL-confirmations") does not settle it. Next: check on the device (button 1 → 2/0/53), and only then decide.
+
+## Function check (17:08)
+The user power-cycled the device, then pressed button 1 repeatedly. Read-only `knx bus monitor`: 33 telegrams `1.1.67 → 2/0/53`, strictly alternating 1/0, none to 2/1/15, 2/1/16, 0/4/6, 0/4/7 or any other group address. **Option C is working.** The restart question remains open because the power cycle restarted the device anyway.

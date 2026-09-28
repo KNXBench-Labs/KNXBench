@@ -4,8 +4,9 @@
   - Runs 1 and 2 stopped at steps 13 and 8. Cause (frame trace): one of our `T_ACK`s never reached the bus. The device stayed in OPEN_WAIT, repeated its old answer (seq 1) every 3 s and held the new answer behind it (TL §5.4.1 A9/A11).
   - Fix `aacd60a`: `ManagementSession` keeps `SeqNoRcv` (E04/E05/E06 → A2/A3/A4). An acknowledged request waits up to 4 × 3 s for its answer; the load-state poll keeps 3 s. Simulator fault: `lost_ack_for_answer`/`answer_repeat_after`. 4 tests, 7/7 mutants caught, workspace 2217/0, gates green. The temporary `tmp_diag_readonly.rs` is deleted; its logs are in `OriginalData/DeviceBackups/`.
   - **Run 3 (16:55):** steps 0–22 all OK. Independent read-back: 0 differing octets in 4000h/4201h/4400h, IA `11 43` unchanged, B6EA..B6ED = `01 01 01 00` (all Loaded). **Only step 23, A_Restart (Basic), got no T_ACK**, so the executor reported failure.
+  - **17:08 [V] Option C works:** the user power-cycled the device and pressed button 1. Bus monitor (read-only, `monitor-after-powercycle.txt`): 33 × `1.1.67 → 2/0/53`, strictly alternating 1/0, no telegrams to old group addresses. The monitor is stopped and the tunnel is free.
 - **Pending/Next Steps:**
-  1. **Needs the user:** press button 1 on 1.1.67 and check that `2/0/53` toggles (option C active?). If not, a restart is needed. That is a new write (`WriteScope::Restart`) and needs a separate "go".
+  1. Whether the A_Restart alone would have been enough remains open (the power cycle made it moot).
   2. With a restart but no T_ACK: take a frame trace and clarify what MP §3.7.3 (5) says about it. The executor should then report "data loaded, restart unconfirmed" as its own outcome, not "failed". Do not guess.
   3. Push/merge of the branch only once the user decides; `origin/main` is ahead.
 - **Notes for Codex or Claude:**

@@ -31,7 +31,7 @@ use knx_core::commissioning::mutation::{
     required_confirmation_phrase, WriteAuthorisation, WriteScope,
 };
 use knx_core::{GroupAddress, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES};
-use knx_net::commissioning::memory_download::run_memory_download;
+use knx_net::commissioning::memory_download::{run_memory_download_observed, Progress};
 use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, SessionTiming};
 use knx_productdb::download_plan::plan_memory_download;
 use knx_productdb::image::{build_download_image, DownloadImage, ImageRequest, Link};
@@ -130,7 +130,9 @@ fn downloads_option_c_and_reads_it_back() {
                 authorisation,
             )
             .expect("an operator-authorised download session");
-            run_memory_download(&mut session, &plan).await
+            // Shown while it happens: a three-minute download that prints
+            // nothing until the end looks exactly like a hung one.
+            run_memory_download_observed(&mut session, &plan, print_progress).await
         };
         match &outcome {
             Ok(report) => {
@@ -144,6 +146,9 @@ fn downloads_option_c_and_reads_it_back() {
                     }
                 }
                 println!("  final states: {:?}", report.final_states);
+                // Loud on purpose: an unconfirmed restart is an Ok, and an
+                // operator skimming for FAILED must still not miss it.
+                println!("  restart: {}", report.restart);
                 println!(
                     "  data octets written and read back: {}",
                     report.data_octets
@@ -206,7 +211,13 @@ fn downloads_option_c_and_reads_it_back() {
         check.disconnect().await;
         tunnel.disconnect().await.expect("clean tunnel disconnect");
 
-        outcome.expect("the download completes");
+        let report = outcome.expect("the download completes");
+        if !report.restart.is_confirmed() {
+            println!(
+                "== restart NOT confirmed: the new program runs only after a \
+                 power cycle or a restart the operator sends on purpose =="
+            );
+        }
         assert_eq!(differences, 0, "every unmasked octet reads back as written");
         let raw = target.raw();
         assert_eq!(
@@ -220,4 +231,39 @@ fn downloads_option_c_and_reads_it_back() {
             "all three machines Loaded"
         );
     });
+}
+
+/// Everything below goes from KNXBench *to the device*.
+fn print_progress(progress: Progress) {
+    match progress {
+        Progress::Started {
+            target,
+            steps,
+            data_octets,
+        } => println!(
+            "== download to device {target}: {steps} steps, {data_octets} octets of segment data =="
+        ),
+        Progress::StepStarted { index, of, step } => {
+            println!("  [{:2}/{of}] {step}", index + 1)
+        }
+        Progress::DataWritten {
+            address,
+            octets,
+            written,
+            of,
+            ..
+        } => println!(
+            "        -> {address:04X}h {} ({written}/{of} octets, read back OK)",
+            octets
+                .iter()
+                .map(|octet| format!("{octet:02X}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
+        Progress::StepDone(done) => {
+            if let Some(observed) = done.observed {
+                println!("        done: {observed}");
+            }
+        }
+    }
 }

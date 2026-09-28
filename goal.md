@@ -55,6 +55,10 @@ section excludes, plus KNOWN_LIMITATIONS §136, in the separate commissioning
 session. The two files do not overlap; `goal-commission.md` §5 is the
 boundary table. Items it hands over reach this file through §12.4.
 
+**Update 2026-09-28: the UX/UI issues of §11 have their own goal file too,
+[`goal-ui.md`](goal-ui.md)**, run by a separate GPT/Codex session. It owns
+the web chain and the web lock. What stays here is listed in §12.3.
+
 **Commissioning and every write to real KNX hardware is out of scope for this
 run.** Not cancelled, not downgraded — the user ruled on 2026-09-11 that
 commissioning must work, and the ROADMAP's 2026-09-20 ruling defers phase 3
@@ -817,19 +821,10 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
   - §57 lifted by CT-6 (`826466a`).
 
   All three came through the cloud chain.
-- **Cloud track stopped 2026-09-28 (user decision).** The remaining web chain runs locally and serially:
-  1. ISSUE-13
-  2. ISSUE-10
-  3. ISSUE-01
-  4. ISSUE-11
-
-  Their briefs CT-7 to CT-10 in `docs/CLOUD_SESSIONS.md` §4 serve as task specifications. Ignore the cloud-only mechanics there (draft PR, cloud log name).
-- **§11 ISSUE-01 to ISSUE-13, apart from ISSUE-04 and ISSUE-06 above:** see `docs/superpowers/plans/2026-09-21-user-reported-issues.md`.
-  - Run all `apps/knx-web` work as one serial chain, never two web tasks in parallel.
-  - ISSUE-04 comes before any autosave UX.
-  - ISSUE-06 comes before any site UI (ISSUE-05).
-  - ISSUE-08 comes before channel grouping.
-  - ISSUE-12 diagnoses before it changes discovery.
+- **§11 UX/UI issues: moved to [`goal-ui.md`](goal-ui.md) on 2026-09-28 (user decision).** A separate UI session (GPT/Codex) owns ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12 and 13, the UI half of ISSUE-08, the ADR-0038 review (ISSUE-06) and the File-menu rename. Its boundary table is `goal-ui.md` §5; the web lock is `goal-ui.md` §3.
+  - The cloud track stopped on 2026-09-28. Its web queue (CT-7 to CT-10) is now `goal-ui.md` U4 to U7.
+- **§11 ISSUE-08 data half (stays here):** reproduce each symptom against installed product data, trace it source XML → database → enrichment → projection, count and classify the diagnostics, add language-aware object/DPT names (keeping canonical DPT ids), and carry evaluated active/visible state and evidenced channel ownership into the projection, with corpus regression counts. See the issue plan's ISSUE-08 checkboxes 1–4 and 6.
+  - It does not edit `apps/knx-web`. When it is merged, hand the UI session the new projection fields and the merge commit ("For the UI session:"); its U12 waits for that.
 - **§8.1 to §8.3 and §8.5, doc hygiene:**
   - ROADMAP T37 still reads as open.
   - `ideas.md` still lists shipped work as open.
@@ -839,7 +834,7 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 - **§5 alpha release (T18):** a user decision; do not tag.
 - **§10 final whole-goal review:** last of all.
 
-The PDB (backend) chain and the web chain may run in parallel, with at most two implementers (§9). Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order.
+Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order. The manual and everything after it wait for the end of the UI track (`goal-ui.md` U13), because the manual describes the finished UI. §10's completion condition includes the UI track's result.
 
 ### 12.4 Parallel tracks outside this goal
 
@@ -849,8 +844,15 @@ The PDB (backend) chain and the web chain may run in parallel, with at most two 
   - Its worktrees `KNXBench.worktrees/iaw-*`, branches `iaw-*` and `scratch/iaw/` belong to that session. Do not merge, rebase, clean up or `worktree prune` them; it merges into `main` itself.
   - Do not start a workspace gate while its gate is running (`pgrep -af cargo`).
   - Before K5 it announces its web part in its handover. Do not start a web task of the §12.3 chain in parallel.
+- **UI track, from 2026-09-28: [`goal-ui.md`](goal-ui.md)** (UX/UI issues, U0–U13), run by a GPT/Codex session.
+  - Its worktrees `KNXBench.worktrees/ui-*`, branches `ui-*` and `scratch/ui/` belong to that session. It merges into `main` itself.
+  - This session no longer edits `apps/knx-web`. If it ever must, it takes the web lock (`goal-ui.md` §3) first.
+  - Do not start a workspace gate while another session's gate runs (`pgrep -af cargo`).
+  - Items it hands over arrive under "For the goal.md session:" and are adopted into this section.
 - **Received from the commissioning session** (its handover entries under "For the goal.md session:"; this session adopts them here and confirms in its next handover):
   - 2026-09-28, from merge `95a862c`: `stats.md` predated that merge (last refresh `cf791b0`). **Done:** refreshed in the commit that adds `goal-commission.md`.
+  - 2026-09-28 (K1/K2): `docs/manual/known-issues.md`, `docs/manual/implementation-status.md` and `docs/manual/reference/02-supported-and-unsupported.md` still say KNXBench never wrote to hardware. That is false since 2026-09-26. Fix it with the §12.3 manual work (T23). KNOWN_LIMITATIONS §92 has a new title; the triage recount must pick it up.
+  - 2026-09-28 (K2): the File-menu rename "Download project" → save/export (R2, `docs/GLOSSARY.md`) is web work. **Passed on to `goal-ui.md` (U3).**
   - 2026-09-28: KNOWN_LIMITATIONS gained §134–§136 (and now counts 139 `##` headings, versus the triage's 119). Add them to the LIMITATION_TRIAGE recount in §12.3 (§8.5). §136 is commissioning-owned: triage classifies it, and only `goal-commission.md` changes its text.
 
 ### 12.5 Lessons from the Paperclip run

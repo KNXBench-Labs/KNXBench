@@ -184,7 +184,8 @@ describe("CatalogBrowser", () => {
     const diagnostics: Array<[CatalogInstallDiagnostic["kind"], keyof typeof deMessages]> = [
       ["unsupported-master-section", "catalog.installReport.diagnosticKind.unsupportedMasterSection"],
       ["unsupported-master-subtree", "catalog.installReport.diagnosticKind.unsupportedMasterSubtree"],
-      ["unsupported-baggage-index", "catalog.installReport.diagnosticKind.unsupportedBaggageIndex"],
+      ["unresolved-baggage-declaration", "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration"],
+      ["undeclared-baggage-payload", "catalog.installReport.diagnosticKind.undeclaredBaggagePayload"],
     ];
     apiMock.installProductPackage.mockResolvedValueOnce(installReport({
       facts: {
@@ -203,8 +204,8 @@ describe("CatalogBrowser", () => {
         unknownOccurrences: 3,
         diagnostics: diagnostics.map(([kind], index) => ({
           kind,
-          archivePath: kind === "unsupported-baggage-index" ? "Baggages.xml" : "knx_master.xml",
-          xmlPath: kind === "unsupported-baggage-index" ? "/KNX/Baggages" : "/KNX/MasterData/Future",
+          archivePath: kind.includes("baggage") ? "M-0001/Baggages.xml" : "knx_master.xml",
+          xmlPath: kind.includes("baggage") ? "/KNX/ManufacturerData/Manufacturer/Baggages/Baggage" : "/KNX/MasterData/Future",
           detail: `server English detail ${index}`,
           occurrences: index + 1,
         })),

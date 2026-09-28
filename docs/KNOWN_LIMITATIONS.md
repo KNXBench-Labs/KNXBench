@@ -60,8 +60,7 @@ still retained without a report — `TranslationUnit/@Version` alone occurs
 1,928 times in the corpus. Reporting them needs corpus-observed allowlists
 for `Languages`, `Language`, `TranslationUnit`, `TranslationElement` and
 `Translation`; until then they are preserved bytes only. Persisted subtree
-diagnostics are validated for shape, not re-derived from the blob. PDB-10 is the future safe baggage inventory and index-to-payload
-resolution slice.
+diagnostics are validated for shape, not re-derived from the blob. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. See §134 for what it deliberately does not do.
 
 Each entry states the limitation, its cause, what it costs the user, and the
 condition under which it would be lifted. Nothing here is a defect to be fixed
@@ -8005,3 +8004,38 @@ loss §132 removed. Data integrity outranks convenience here.
 example, it could observe a WebKit web-process-terminated signal and then
 drop the stale listener or destroy the window. Either way this needs a
 test, or at least a manual reproduction on a real window manager.
+
+## §134 Baggage is inventoried, not interpreted
+
+**Limitation.** Since PDB-10 (schema v16, ADR-0042) every baggage
+declaration is typed and resolved and every payload is classified, but
+nothing acts on it: `InstallOnImport`, `TargetPath` destinations and
+`FileInfo` timestamps are carried as raw lexemes, icons are not rendered,
+manuals not opened, plug-in DLLs/MSIs not run, nested ZIP entries not
+decompressed. Media classes cover the formats the corpus contains (PNG,
+JPEG, GIF, BMP, PDF, ZIP, PE, OLE2, XML); anything else is `unknown`, not
+guessed. A nested ZIP's expanded size is what its directory *declares*, not a
+measured decompression. Installing still holds each member whole in memory
+(≤ 64 MiB each; a 54.8 MB member measured 4.2× peak RSS growth). Baggage
+*references* from application programs
+(`Static/Extension/Baggage/@RefId`, 935 distinct in the corpus) are reported
+as unknown constructs, not resolved against the inventory; whether the single
+`Hardware/Product/Baggages` element is reported has not been probed. When a
+`Baggages.xml` is both ingested standalone and carried in a package, a fresh
+install records its index unknowns under that blob once per path while a v15
+upgrade records them once, so unknown *row* counts (not the inventory or
+report) can differ in that shape. The package corpus alone cannot produce
+it; a project import followed by installing the same package can.
+
+**Cost.** The user sees what a manufacturer ships and which files are
+undeclared, but cannot preview them in KNXBench, and a package that relies on
+a baggage file being installed on import gets no such installation.
+
+**Why it is this way.** The Project Schema specifies only that each
+`Baggage` is an external file; the corpus spells `InstallOnImport` as both
+`false` and `0`. Acting on undocumented semantics, or opening untrusted
+vendor payloads, would trade integrity and safety for convenience.
+
+**Lifted when.** A specified source defines the declaration attributes, or a
+concrete feature (icon display, manual links) needs a payload and brings its
+own sandboxed viewer with tests.

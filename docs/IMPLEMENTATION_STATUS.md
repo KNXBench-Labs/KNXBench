@@ -1,5 +1,72 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — PDB-10: baggage inventoried by content, declarations resolved exactly
+
+The product database is now schema v16
+([ADR-0042](adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)).
+`Baggages.xml` declarations are typed (`Id`, `Name`, `TargetPath`,
+`InstallOnImport`, `FileInfo/@TimeInfo`, `FileInfo/@Version`, all raw
+lexemes; `InstallOnImport="0"` stays `"0"`) and any other attribute,
+element or character content in an index — including on the
+`KNX/ManufacturerData/Manufacturer/Baggages` spine — is reported as an
+unknown construct. Each declaration resolves byte-exactly to
+`<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a stated
+reason; an index whose single `Manufacturer/@RefId` is not its directory
+binds nothing (every declaration `invalid`). A standalone `Baggages.xml`
+(project import's `ingest_file`) that does not parse is still stored, as
+before PDB-10, with a recorded `BaggageIndexParseError` row instead of
+failing the import; inside a package it still refuses the install. Every `Baggage` member is
+classified by magic bytes (BMP-named-`.png`, PDF-named-`.ai`, PE and OLE2
+are recognized; the extension only reports disagreement). A ZIP payload
+passes the package `preflight_zip` gate and then only its central directory
+is read (entries, declared expanded size, encrypted and `.zip`-named
+entries); nothing is decompressed, extracted, rendered or executed.
+
+Storage: `package_baggage_inventory`/`_payload`/`_declaration`. Reload
+re-measures each payload from its retained blob and re-resolves every
+declaration; a tampered row is an error. The install report's
+`baggage_index` count moves from `unsupported` to `stored`;
+`unsupported-baggage-index` is replaced by `unresolved-baggage-declaration`
+(per index and reason) and `undeclared-baggage-payload` (per member). The
+v15→v16 migration re-derives inventory, index unknowns and report with the
+install's own functions (fresh-install identical) and marks a package whose
+retained bytes no longer parse `unavailable` with a recorded
+`InstallReportBackfillError`, instead of refusing to open. Web catalogue
+labels (en/de) name the two new diagnostics.
+
+Evidence: `baggage_inventory.rs` 13 tests (typed/resolved/classified
+inventory with the four unresolved/undeclared diagnostics, retry returns the
+persisted inventory and reports index unknowns, sixteen tamper cases rejected
+on reload — including forged `Id`/`InstallOnImport`/`TimeInfo`/`Name`
+lexemes that leave the resolution unchanged, because reload re-derives the
+declarations from the retained index blob — and a payload row swapped to a
+same-shaped blob, v15→v16 equals a fresh install, v15→v16 merges index unknowns and
+the package's `unknown_count` like a fresh install, an unreadable index
+becomes `unavailable` and the database still opens, a v15 report that no
+longer validates is downgraded to `unavailable` instead of refusing to open
+the database, a prefixed `x:Name` is
+reported as foreign rather than read as `Name`, an index naming another
+manufacturer binds nothing and that refusal is itself re-checked on reload,
+a standalone index that does not parse is stored with its reason, a v15
+package with no report row no longer stops the database opening, and a
+package downgraded only for its report keeps its index's unknown rows as a
+fresh install would); unit tests for spine attributes and text reported,
+character content (text, CDATA, entity/character references) counted once per
+element, a prefixed-only `x:Name`/`x:RefId` reported and never read as the
+known attribute, the one-matching-`Manufacturer` binding rule, sniffing
+(weak `BM`/`MZ` magics refused), extension disagreement, nested directory
+reads, an empty nested ZIP read as zero entries, a nested ZIP naming one
+entry twice refused rather than collapsed, encrypted and `.zip`-named entries
+counted from validated metadata, a
+nested ZIP whose end-of-directory record claims 65,535 entries or ZIP64
+(refused before indexing) and two hostile 256 KiB nested ZIPs refused in
+linear time (the `zip` crate's reader took 8.3 s on one of them, so nested
+archives no longer go through it); `install_reports.rs` updated for the new report shape and
+tamper cases; a shared `v16_rewind` test helper rebuilds genuine v15
+databases for the older migration tests; the heavy `large_member_memory`
+test installs a 54.8 MB program member (the corpus maximum) at 4.2× peak
+RSS growth against an 8× bound.
+
 ## 2026-09-27 — PDB-9: every observed parameter kind typed, references below structurally skipped Dynamic nodes named
 
 The product database is now schema v15
@@ -492,7 +559,7 @@ diagnostics expose kind, relative archive/XML paths, detail, and occurrences.
 zero. Host source names are not projected. Signature caution remains explicit;
 ETS parity and signature verification are not claimed. PDB-8 is the future typed
 master-data coverage slice; PDB-10 is the future safe baggage inventory and
-index-to-payload resolution slice. Parent review and the full fresh-target merge
+index-to-payload resolution slice (delivered 2026-09-28, see top). Parent review and the full fresh-target merge
 gates completed successfully.
 
 ## 2026-09-24 — PDB-2: product-package corpus compatibility matrix

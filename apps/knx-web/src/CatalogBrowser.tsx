@@ -82,13 +82,15 @@ function unknownKindLabel(t: Translate, kind: CatalogUnknownConstruct["kind"]): 
 const diagnosticKindMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnosticKind.unsupportedMasterSection",
   "unsupported-master-subtree": "catalog.installReport.diagnosticKind.unsupportedMasterSubtree",
-  "unsupported-baggage-index": "catalog.installReport.diagnosticKind.unsupportedBaggageIndex",
+  "unresolved-baggage-declaration": "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration",
+  "undeclared-baggage-payload": "catalog.installReport.diagnosticKind.undeclaredBaggagePayload",
 };
 
 const diagnosticDescriptionMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnostic.unsupportedMasterSection",
   "unsupported-master-subtree": "catalog.installReport.diagnostic.unsupportedMasterSubtree",
-  "unsupported-baggage-index": "catalog.installReport.diagnostic.unsupportedBaggageIndex",
+  "unresolved-baggage-declaration": "catalog.installReport.diagnostic.unresolvedBaggageDeclaration",
+  "undeclared-baggage-payload": "catalog.installReport.diagnostic.undeclaredBaggagePayload",
 };
 
 function diagnosticLabel(t: Translate, kind: CatalogInstallDiagnostic["kind"]): string {

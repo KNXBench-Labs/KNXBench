@@ -919,8 +919,40 @@ main {
 
 .log-panel-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   margin: 0.75rem 0;
+}
+
+.log-panel-tools {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}
+
+.log-panel-search, .log-panel-scope {
+  display: grid;
+  gap: 0.3rem;
+  min-width: min(100%, 12rem);
+}
+
+.log-panel-search input {
+  min-width: min(100%, 15rem);
+}
+
+.log-panel-count {
+  color: var(--knx-muted);
+  align-self: center;
+}
+
+.log-panel-clear, .log-panel-export {
+  align-self: flex-end;
+}
+
+.log-panel-export-scope {
+  min-width: min(100%, 12rem);
 }
 
 .log-panel-filter {

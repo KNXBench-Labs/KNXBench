@@ -2652,6 +2652,21 @@ still open) would play for import.
 
 ## 36. Session log (T11): the Log tab was unreachable without an open project, and had no growth cap — resolved (2026-09-10)
 
+**U4 export boundary (2026-09-28 UTC).** The Log view now searches the
+retained entries locally and exports either all retained entries or the
+matching view as `knxbench-session-log` JSON v1. The export carries the
+1000-entry cap, the pinned warning's dropped count (or `null` when its
+wording is unfamiliar), and the raw warning message even if filtered out.
+It cannot reconstruct entries evicted by the cap, a replaced project or a
+server restart: this is **not** a lifetime audit. Exported raw entries can
+contain project names, KNX addresses, filesystem locations and diagnostic
+metadata. Browser export stays local; the native dialog writes atomically
+but refuses a document above 16 MiB without replacing a previous file.
+The desktop file chooser still needs interactive Linux validation across
+supported environments; no complete desktop compatibility claim follows
+from command/build tests alone (ADR-0047, `LogPanel.test.tsx`,
+`sessionLogExport.test.ts`, `session_log_export_tests`).
+
 **Resolved.** Two independent fixes: Part A in one commit, Part B in two —
 its drop counter needed a follow-up correction, described at the end of
 Part B below.

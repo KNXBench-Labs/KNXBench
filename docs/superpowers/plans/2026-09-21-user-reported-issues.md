@@ -331,11 +331,11 @@
 
 **Interfaces:** Freetext search combines with existing severity filters over the same in-memory entries. Export scope is explicit (all entries or current filtered view) and preserves timestamp, severity, operation, summary, detail, and report metadata.
 
-- [ ] Add tests for case-insensitive search across operation/summary/detail and composition with severity filters.
-- [ ] Add export tests for quotes, newlines, Unicode, empty logs, and entries containing user-controlled spreadsheet-active prefixes.
-- [ ] Implement a labelled search input with a clear action and result count.
-- [ ] Implement export through the existing file-picker/download boundary; do not expose server filesystem paths to the browser.
-- [ ] Verify log capacity/drop behavior is disclosed so an export is not presented as a complete lifetime audit.
+- [x] Add tests for case-insensitive search across operation/summary/detail and composition with severity filters. (`LogPanel.test.tsx::searches source, summary and detail case-insensitively`.)
+- [x] Add export tests for quotes, newlines, Unicode, empty logs, and entries containing user-controlled spreadsheet-active prefixes. (`sessionLogExport.test.ts` JSON roundtrip/empty/loss tests; JSON strings, not CSV cells; `sessionLogExportDelivery.test.ts` native/browser delivery.)
+- [x] Implement a labelled search input with a clear action and result count. (`LogPanel.test.tsx` search and count test.)
+- [x] Implement export through the existing file-picker/download boundary; do not expose server filesystem paths to the browser. (Browser Blob URL; Tauri command owns its native save dialog and atomic write, `session_log_export_tests`; no path accepted from JS, no new HTTP route.)
+- [x] Verify log capacity/drop behavior is disclosed so an export is not presented as a complete lifetime audit. (`sessionLogExport.test.ts` filtered loss marker, cap, unknown marker; `LogPanel.test.tsx` retention hint; §36/ADR-0047.)
 
 ## Source Coverage
 

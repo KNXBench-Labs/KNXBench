@@ -20,3 +20,5 @@ axum.workspace = true
 tokio.workspace = true
 tauri.workspace = true
 tauri-plugin-dialog.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true

@@ -9,8 +9,7 @@
 //! central directory is read for entry count, declared expanded size and
 //! encryption flags without decompressing a single entry.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::Cursor;
+use std::collections::BTreeMap;
 
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -152,30 +151,25 @@ fn inspect_nested(class: MediaClass, bytes: &[u8]) -> NestedArchive {
     if class != MediaClass::Zip {
         return NestedArchive::NotArchive;
     }
-    // The package gate first: it bounds the entry count and directory size
-    // and refuses ZIP64/multi-disk *before* `ZipArchive` allocates an index
-    // sized by the untrusted end-of-directory record.
-    if crate::package::preflight_zip(bytes).is_err() {
-        return NestedArchive::Unreadable;
-    }
-    let Ok(mut archive) = zip::ZipArchive::new(Cursor::new(bytes)) else {
+    // The package validator in full (entry/directory budgets, no ZIP64 or
+    // multi-disk, local/central agreement, no overlaps), then only its
+    // checked directory metadata: no `ZipArchive`, whose end-of-directory
+    // search is superlinear on hostile input, and nothing is decompressed.
+    let Ok(entries) = crate::package::validated_zip_metadata(bytes) else {
         return NestedArchive::Unreadable;
     };
     let (mut expanded, mut encrypted, mut archives) = (0u64, 0u64, 0u64);
-    for index in 0..archive.len() {
-        // `by_index_raw` exposes directory metadata; the entry is never read.
-        let Ok(entry) = archive.by_index_raw(index) else {
-            return NestedArchive::Unreadable;
-        };
-        let Some(sum) = expanded.checked_add(entry.size()) else {
+    for entry in &entries {
+        let Some(sum) = expanded.checked_add(entry.uncompressed_size) else {
             return NestedArchive::Unreadable;
         };
         expanded = sum;
-        encrypted += u64::from(entry.encrypted());
-        archives += u64::from(entry.name().to_ascii_lowercase().ends_with(".zip"));
+        // General-purpose flag bit 0: the entry is encrypted.
+        encrypted += u64::from(entry.flags & 1);
+        archives += u64::from(entry.name.to_ascii_lowercase().ends_with(b".zip"));
     }
     NestedArchive::Read {
-        entries: archive.len() as u64,
+        entries: entries.len() as u64,
         declared_expanded_size: expanded,
         encrypted_entries: encrypted,
         archive_named_entries: archives,
@@ -563,38 +557,40 @@ fn validate(
     package: &str,
     inventory: &BaggageInventory,
 ) -> Result<(), ProductDbError> {
-    let members: BTreeSet<String> = conn
-        .prepare("SELECT path FROM package_member WHERE package_sha256 = ?1 AND role = 'Baggage'")?
-        .query_map([package], |r| r.get(0))?
-        .collect::<Result<_, _>>()?;
-    let payload_paths: BTreeSet<String> = inventory
+    let members_of = |role: &str| -> Result<BTreeMap<String, String>, ProductDbError> {
+        Ok(conn
+            .prepare(
+                "SELECT path, source_sha256 FROM package_member
+                 WHERE package_sha256 = ?1 AND role = ?2",
+            )?
+            .query_map(params![package, role], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<Result<_, _>>()?)
+    };
+    let members = members_of("Baggage")?;
+    let payload_members: BTreeMap<String, String> = inventory
         .payloads
         .iter()
-        .map(|payload| payload.member_path.clone())
+        .map(|payload| (payload.member_path.clone(), payload.sha256.clone()))
         .collect();
-    if members != payload_paths {
+    // Paths only: the loader already binds each payload row to its member's
+    // blob hash. A repeated path collapses in the map and fails the length.
+    if members.keys().ne(payload_members.keys())
+        || payload_members.len() != inventory.payloads.len()
+    {
         return Err(inventory_error(
-            "baggage payload rows do not cover the package's Baggage members",
+            "baggage payload rows do not match the package's Baggage members",
         ));
     }
-    let indexes: BTreeSet<String> = conn
-        .prepare("SELECT path FROM package_member WHERE package_sha256 = ?1 AND role = 'Baggages'")?
-        .query_map([package], |r| r.get(0))?
-        .collect::<Result<_, _>>()?;
-    let mut grouped: BTreeMap<String, Vec<BaggageDeclaration>> = BTreeMap::new();
-    for (position, row) in inventory.declarations.iter().enumerate() {
-        if !indexes.contains(&row.index_path) {
-            return Err(inventory_error(
-                "baggage declaration names a non-index member",
-            ));
-        }
-        let list = grouped.entry(row.index_path.clone()).or_default();
-        if row.ordinal != list.len() as u64 {
-            return Err(inventory_error(format!(
-                "baggage declaration ordinals have a gap at row {position}"
-            )));
-        }
-        list.push(row.declaration.clone());
+    // The declarations are re-derived from the retained index blobs, never
+    // taken from the stored rows: a forged lexeme must not survive reload.
+    let mut expected_indexes = Vec::new();
+    for (path, sha) in members_of("Baggages")? {
+        let bytes = crate::load_source_file(conn, &sha)?
+            .ok_or_else(|| inventory_error("baggage index blob is missing"))?;
+        let declarations = crate::parse::baggage::parse_baggage_index(&path, &bytes)
+            .map_err(|_| inventory_error("retained baggage index no longer parses"))?
+            .declarations;
+        expected_indexes.push((path, declarations));
     }
     let mut unmeasured = Vec::with_capacity(inventory.payloads.len());
     for payload in &inventory.payloads {
@@ -606,7 +602,7 @@ fn validate(
             &bytes,
         ));
     }
-    let expected = BaggageInventory::resolve(grouped.into_iter().collect(), unmeasured);
+    let expected = BaggageInventory::resolve(expected_indexes, unmeasured);
     if &expected != inventory {
         return Err(inventory_error(
             "stored baggage resolution disagrees with its declarations",
@@ -618,6 +614,7 @@ fn validate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
 
     #[test]
     fn sniffing_uses_content_and_refuses_weak_two_byte_matches() {
@@ -708,5 +705,134 @@ mod tests {
         let payload =
             BaggagePayload::measure("M-0001/Baggages/z64.zip".into(), "00".into(), &named);
         assert_eq!(payload.nested, NestedArchive::Unreadable);
+    }
+
+    #[test]
+    fn hostile_nested_zips_are_refused_in_linear_time() {
+        // Two shapes that must be refused without superlinear work. The
+        // first is a run of complete end-of-directory records, each claiming
+        // a one-entry directory spanning everything before it: `zip` 8.6
+        // tries every candidate and re-parses that span each time (measured
+        // 24 ms at 16 KiB, 343 ms at 64 KiB, 8.3 s at 256 KiB). The bounded
+        // validator accepts only the record that ends the buffer. The second
+        // points one valid-looking record at a garbage run. The cap is
+        // generous so only superlinear behaviour trips it.
+        fn eocd(size: u32, start: u32) -> Vec<u8> {
+            let mut record = b"PK\x05\x06".to_vec();
+            record.extend_from_slice(&[0, 0, 0, 0, 1, 0, 1, 0]);
+            record.extend_from_slice(&size.to_le_bytes());
+            record.extend_from_slice(&start.to_le_bytes());
+            record.extend_from_slice(&[0, 0]);
+            record
+        }
+        let mut shapes = Vec::new();
+        let mut candidates = b"PK\x03\x04".to_vec();
+        while candidates.len() < 256 * 1024 {
+            let at = u32::try_from(candidates.len()).unwrap();
+            candidates.extend_from_slice(&eocd(at, 0));
+        }
+        shapes.push(candidates);
+        let mut garbage = b"PK\x03\x04".to_vec();
+        garbage.resize(256 * 1024, 0xA5);
+        let start = u32::try_from(garbage.len() - 46).unwrap();
+        garbage.extend_from_slice(&eocd(46, start));
+        shapes.push(garbage);
+        for bytes in shapes {
+            let started = std::time::Instant::now();
+            let payload =
+                BaggagePayload::measure("M-0001/Baggages/h.zip".into(), "00".into(), &bytes);
+            assert_eq!(payload.media_class, MediaClass::Zip);
+            assert_eq!(payload.nested, NestedArchive::Unreadable);
+            assert!(
+                started.elapsed() < std::time::Duration::from_secs(1),
+                "{} bytes took {:?}",
+                bytes.len(),
+                started.elapsed()
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_nested_zip_is_read_as_zero_entries() {
+        let mut bytes = b"PK\x05\x06".to_vec();
+        bytes.extend_from_slice(&[0; 18]);
+        let payload = BaggagePayload::measure("M-0001/Baggages/e.zip".into(), "00".into(), &bytes);
+        assert_eq!(payload.media_class, MediaClass::Zip);
+        assert_eq!(
+            payload.nested,
+            NestedArchive::Read {
+                entries: 0,
+                declared_expanded_size: 0,
+                encrypted_entries: 0,
+                archive_named_entries: 0,
+            }
+        );
+        // A record claiming entries it does not have is still unreadable.
+        bytes[8] = 1;
+        bytes[10] = 1;
+        let claimed = BaggagePayload::measure("M-0001/Baggages/f.zip".into(), "00".into(), &bytes);
+        assert_eq!(claimed.nested, NestedArchive::Unreadable);
+    }
+
+    #[test]
+    fn a_nested_zip_naming_one_entry_twice_is_unreadable_not_collapsed() {
+        use std::io::Write;
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        writer.start_file("aa", options).unwrap();
+        writer.write_all(b"12").unwrap();
+        writer.start_file("bb", options).unwrap();
+        writer.write_all(b"345").unwrap();
+        let mut bytes = writer.finish().unwrap().into_inner();
+        // Rename the second entry to the first's name in both headers: a
+        // name-keyed reader would count one entry of 3 bytes.
+        let mut renamed = 0;
+        for at in 0..bytes.len() - 4 {
+            let header = &bytes[at..at + 4];
+            let name_at = if header == b"PK\x03\x04" {
+                at + 30
+            } else if header == b"PK\x01\x02" {
+                at + 46
+            } else {
+                continue;
+            };
+            if &bytes[name_at..name_at + 2] == b"bb" {
+                bytes[name_at..name_at + 2].copy_from_slice(b"aa");
+                renamed += 1;
+            }
+        }
+        assert_eq!(renamed, 2);
+        let payload = BaggagePayload::measure("M-0001/Baggages/d.zip".into(), "00".into(), &bytes);
+        assert_eq!(payload.nested, NestedArchive::Unreadable);
+    }
+
+    #[test]
+    fn encrypted_and_archive_named_entries_come_from_validated_metadata() {
+        use std::io::Write;
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        writer.start_file("DEEP.ZIP", options).unwrap();
+        writer.write_all(b"x").unwrap();
+        writer.start_file("plain.txt", options).unwrap();
+        writer.write_all(b"yy").unwrap();
+        let mut bytes = writer.finish().unwrap().into_inner();
+        // Mark the first entry encrypted (flag bit 0) in both headers, as a
+        // traditionally encrypted member would be; nothing is decrypted.
+        let local = 0;
+        let central = bytes.windows(4).position(|w| w == b"PK\x01\x02").unwrap();
+        bytes[local + 6] |= 1;
+        bytes[central + 8] |= 1;
+        let payload = BaggagePayload::measure("M-0001/Baggages/e.zip".into(), "00".into(), &bytes);
+        assert_eq!(
+            payload.nested,
+            NestedArchive::Read {
+                entries: 2,
+                declared_expanded_size: 3,
+                encrypted_entries: 1,
+                archive_named_entries: 1,
+            }
+        );
     }
 }

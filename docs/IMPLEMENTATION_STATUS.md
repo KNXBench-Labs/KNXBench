@@ -28,15 +28,26 @@ retained bytes no longer parse `unavailable` with a recorded
 `InstallReportBackfillError`, instead of refusing to open. Web catalogue
 labels (en/de) name the two new diagnostics.
 
-Evidence: `baggage_inventory.rs` 6 tests (typed/resolved/classified
+Evidence: `baggage_inventory.rs` 9 tests (typed/resolved/classified
 inventory with the four unresolved/undeclared diagnostics, retry returns the
-persisted inventory and reports index unknowns, eleven tamper cases rejected
-on reload, v15→v16 equals a fresh install, v15→v16 merges index unknowns like
-a fresh install, an unreadable index becomes `unavailable` and the database
-still opens); unit tests for sniffing (weak `BM`/`MZ` magics refused),
-extension disagreement, nested directory reads and a nested ZIP whose
-end-of-directory record claims 65,535 entries or ZIP64 (refused before
-indexing); `install_reports.rs` updated for the new report shape and
+persisted inventory and reports index unknowns, sixteen tamper cases rejected
+on reload — including forged `Id`/`InstallOnImport`/`TimeInfo`/`Name`
+lexemes that leave the resolution unchanged, because reload re-derives the
+declarations from the retained index blob — and a payload row swapped to a
+same-shaped blob, v15→v16 equals a fresh install, v15→v16 merges index unknowns and
+the package's `unknown_count` like a fresh install, an unreadable index
+becomes `unavailable` and the database still opens, a v15 report that no
+longer validates is downgraded to `unavailable` instead of refusing to open
+the database, a prefixed `x:Name` is
+reported as foreign rather than read as `Name`); unit tests for sniffing
+(weak `BM`/`MZ` magics refused), extension disagreement, nested directory
+reads, an empty nested ZIP read as zero entries, a nested ZIP naming one
+entry twice refused rather than collapsed, encrypted and `.zip`-named entries
+counted from validated metadata, a
+nested ZIP whose end-of-directory record claims 65,535 entries or ZIP64
+(refused before indexing) and two hostile 256 KiB nested ZIPs refused in
+linear time (the `zip` crate's reader took 8.3 s on one of them, so nested
+archives no longer go through it); `install_reports.rs` updated for the new report shape and
 tamper cases; a shared `v16_rewind` test helper rebuilds genuine v15
 databases for the older migration tests; the heavy `large_member_memory`
 test installs a 54.8 MB program member (the corpus maximum) at 4.2× peak

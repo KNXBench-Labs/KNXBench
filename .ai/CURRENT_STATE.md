@@ -1,4 +1,30 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 09:45 CEST
+- **Completed:** The user said *"kannst weitermachen"* (the other session was informed). This entry is offline work only. **Still nothing written to 1.1.67.**
+  - Commit `d1ad9bf`: new module `crates/knx-core/src/commissioning/group_object_table.rs`, GrOT Easy 3 for mask `0701h`.
+    - `write_group_object_table(base, active)` rewrites the descriptors over the product's `<Data>` base.
+    - Active object: config octet = Type-2 flags/priority, with bit 5 (segment selector) taken from the base; type octet = `ValueType`.
+    - Inactive object: only bit 2 (communication) is cleared. Pointer octets 0–1 and the header are never written.
+    - Refused inputs: missing header, truncated base, object ≥ Current Size, duplicate objects. `ValueType::for_bits` rounds nothing up.
+  - **[V] evidence:** a test rebuilds the 259-octet read-back of `1.1.67` **octet for octet** from the `A-0027-15-0BAC` product base: shutter objects 0/1 as sender, object 18 LED with W/C/T/U.
+  - For option C, only descriptors 1 and 18 change: octets 9 and 77, giving `07404f00 0748d700`.
+  - 14 tests; 13/13 mutants caught; clippy, fmt and diff-check are green.
+  - `CARGO_TARGET_DIR` for this track is now `scratch/iaw/target`.
+- **Pending/Next Steps:** (in this order; all offline)
+  1. **ADR + productdb:** the product DB does not store segment `<Data>`/`<Mask>` or `<LoadProcedures>`; they exist only in the source blob. The ADR decides where parsing happens (probably `knx-productdb`, as a lazy parser over `blob::load_source_file`, with no schema migration needed). Check ADR numbering against `main` first: **0041–0043 are taken** on main/PDB-11, so start at 0044 or later.
+  2. **Image assembly (knx-app or productdb):** `Dynamic` evaluation (`knx_productdb::dynamic::{load_program_trees, resolve_values, evaluate}`) → active `ParameterRef`s → `parameter_image` for AS-4400 → `group_object_table` for the table part → `group_tables` for AS-4000/AS-4201 (leave the IA octets `4001h`–`4002h` untouched, per `<Mask>` [A]).
+     - **Acceptance:** the device's current AS-4400 (0 diffs, reference: scratch `iaw/mdt/mdt_env.py`) and the option-C target `iaw/mdt/target_4400.hex`.
+     - Required values: P-1007=1 and P-1014=2 for the current state; P-1007=2, UP-5500=0 and UP-5501=1 for option C.
+  3. Load-procedure orchestrator over `write_memory_load_record` plus `write_memory_region`, following MP §3.31.4 (data between StartLoading and LoadCompleted), end to end against the simulator.
+  4. Open `WriteScope::Download` for hardware, with tests on both sides. DM_Authorize uses `FFFFFFFFh` only.
+  5. Show the user the exact write sequence and get a **new go** for the live write, then read back and check telegrams on `2/0/53`.
+- **Notes for Codex or Claude:**
+  - Session separation is active: this track writes only to this worktree, to `.ai/logs/*_claude_iaw-*` and to `scratch/iaw/`. The root `CURRENT_STATE.md` and `goal.md` belong to the goal.md session.
+  - Stop reason: the session quota was at 89% used (reset 11:40 CEST). The next package (ADR + productdb parsing) would not have fit, so it was not started.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 (paused at the user's request "pausiere wenn sinnvoll")
 - **Completed:** **Still nothing written to 1.1.67.** One more real-bus action, read-only again (property reads only).
   - **Source rule (user):** *"dont use the extraxted data. only use the pdf soec files directly"*. Every spec citation must come from the PDFs under `knx-spec-kb/sources/`, never from `extracted/`.

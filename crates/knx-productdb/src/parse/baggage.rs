@@ -7,6 +7,8 @@
 //! a declaration, or outside the `KNX/ManufacturerData/Manufacturer/Baggages`
 //! chain, is reported as an unknown construct, not dropped.
 
+use std::collections::BTreeMap;
+
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
@@ -50,27 +52,35 @@ fn xml_error(source_path: &str, cause: impl Into<String>) -> ProductDbError {
     }
 }
 
-/// Reads the known attributes of `element` into the declaration and reports
-/// every other (non-namespace-declaration) attribute at `xpath`.
+/// Returns the values of the known attributes of `element`, keyed by their
+/// exact unprefixed name, and reports every other (non-namespace-declaration)
+/// attribute at `xpath`.
+///
+/// Only an unprefixed attribute is the known one: `x:Name` is a
+/// foreign-namespace attribute that happens to share a local name, so it is
+/// reported and never read as `Name` (the shared `Attrs::get` would fall back
+/// to it by local name).
 fn take_attrs(
     source_path: &str,
     element: &BytesStart,
     xpath: &str,
     known: &[&str],
     unknown: &mut UnknownCollector,
-) -> Result<crate::xml::Attrs, ProductDbError> {
+) -> Result<BTreeMap<String, String>, ProductDbError> {
     let values = attrs(element, source_path)?;
+    let mut exact = BTreeMap::new();
     for raw in values.names() {
         if raw == "xmlns" || raw.starts_with("xmlns:") {
             continue;
         }
-        // Only an unprefixed attribute is the known one; `x:Name` is a
-        // foreign-namespace attribute that happens to share a local name.
-        if !known.contains(&raw) {
-            unknown.attribute(xpath, raw, values.evidence_value(raw).unwrap_or_default());
+        let value = values.evidence_value(raw).unwrap_or_default();
+        if known.contains(&raw) {
+            exact.insert(raw.to_string(), value.to_string());
+        } else {
+            unknown.attribute(xpath, raw, value);
         }
     }
-    Ok(values)
+    Ok(exact)
 }
 
 pub(crate) fn parse_baggage_index(
@@ -86,6 +96,9 @@ pub(crate) fn parse_baggage_index(
     let mut current: Option<(BaggageDeclaration, bool)> = None;
     let mut manufacturers = 0u32;
     let mut manufacturer_ref: Option<String> = None;
+    // Per open element: whether its character content was reported already,
+    // so text split by comments, CDATA or entity references counts once.
+    let mut text_seen = Vec::<bool>::new();
 
     loop {
         buf.clear();
@@ -109,10 +122,10 @@ pub(crate) fn parse_baggage_index(
                         &mut unknown,
                     )?;
                     let declaration = BaggageDeclaration {
-                        id: values.get("Id").map(str::to_string),
-                        name: values.get("Name").map(str::to_string),
-                        target_path: values.get("TargetPath").map(str::to_string),
-                        install_on_import: values.get("InstallOnImport").map(str::to_string),
+                        id: values.get("Id").cloned(),
+                        name: values.get("Name").cloned(),
+                        target_path: values.get("TargetPath").cloned(),
+                        install_on_import: values.get("InstallOnImport").cloned(),
                         ..Default::default()
                     };
                     if is_start {
@@ -132,8 +145,8 @@ pub(crate) fn parse_baggage_index(
                         &mut unknown,
                     )?;
                     if let Some((declaration, seen)) = current.as_mut() {
-                        declaration.time_info = values.get("TimeInfo").map(str::to_string);
-                        declaration.file_version = values.get("Version").map(str::to_string);
+                        declaration.time_info = values.get("TimeInfo").cloned();
+                        declaration.file_version = values.get("Version").cloned();
                         *seen = true;
                     }
                 } else if depth < CHAIN.len()
@@ -158,7 +171,7 @@ pub(crate) fn parse_baggage_index(
                     let values = take_attrs(source_path, &element, &xpath, known, &mut unknown)?;
                     if depth == 2 {
                         manufacturers += 1;
-                        manufacturer_ref = values.get("RefId").map(str::to_string);
+                        manufacturer_ref = values.get("RefId").cloned();
                     }
                 } else {
                     // Outside the known chain, a second `FileInfo`, or any
@@ -167,6 +180,7 @@ pub(crate) fn parse_baggage_index(
                 }
                 if is_start {
                     parents.push(name);
+                    text_seen.push(false);
                     if parents.len() > MAX_DEPTH {
                         return Err(xml_error(
                             source_path,
@@ -177,22 +191,27 @@ pub(crate) fn parse_baggage_index(
             }
             Event::End(_) => {
                 parents.pop();
+                text_seen.pop();
                 if parents.len() == CHAIN.len() {
                     if let Some((declaration, _)) = current.take() {
                         declarations.push(declaration);
                     }
                 }
             }
+            // Whitespace between elements is formatting; any other character
+            // content (text, CDATA, an entity or character reference) is
+            // content no field models, reported once per element.
             Event::Text(text) if !parents.is_empty() => {
-                let text = text.into_inner();
-                // Whitespace between elements is formatting; anything else is
-                // content no field models.
-                if !text.trim_matches([' ', '\t', '\r', '\n']).is_empty() {
-                    unknown.element(&format!("/{}", parents.join("/")), "#text");
+                if !text
+                    .into_inner()
+                    .trim_matches([' ', '\t', '\r', '\n'])
+                    .is_empty()
+                {
+                    report_text(&parents, &mut text_seen, &mut unknown);
                 }
             }
-            Event::CData(_) if !parents.is_empty() => {
-                unknown.element(&format!("/{}", parents.join("/")), "#text");
+            Event::CData(_) | Event::GeneralRef(_) if !parents.is_empty() => {
+                report_text(&parents, &mut text_seen, &mut unknown);
             }
             Event::Eof => break,
             _ => {}
@@ -205,6 +224,13 @@ pub(crate) fn parse_baggage_index(
         manufacturer_ref,
         unknown: unknown.into_vec(),
     })
+}
+
+fn report_text(parents: &[String], text_seen: &mut [bool], unknown: &mut UnknownCollector) {
+    if let Some(seen @ false) = text_seen.last_mut() {
+        *seen = true;
+        unknown.element(&format!("/{}", parents.join("/")), "#text");
+    }
 }
 
 /// Why an index's declarations cannot be bound to the manufacturer
@@ -354,9 +380,47 @@ mod tests {
                     "Odd",
                     1
                 ),
-                (BAGGAGE_XPATH, "Element", "#text", 2),
+                // Text and CDATA in one element: one piece of content.
+                (BAGGAGE_XPATH, "Element", "#text", 1),
             ]
         );
+    }
+
+    #[test]
+    fn a_prefixed_attribute_is_reported_and_never_read_as_the_known_one() {
+        let xml =
+            br#"<KNX xmlns:x="urn:x"><ManufacturerData><Manufacturer x:RefId="M-0001"><Baggages>
+<Baggage x:Name="a.bin" TargetPath=""/>
+</Baggages></Manufacturer></ManufacturerData></KNX>"#;
+        let index = parse_baggage_index(INDEX, xml).unwrap();
+        assert_eq!(index.manufacturer_ref, None);
+        assert_eq!(index.declarations[0].name, None);
+        assert!(manufacturer_mismatch(INDEX, &index).is_some());
+        let mut names: Vec<_> = index.unknown.iter().map(|u| u.name.as_str()).collect();
+        names.sort();
+        assert_eq!(names, ["x:Name", "x:RefId"]);
+    }
+
+    #[test]
+    fn character_content_is_reported_once_per_element_whatever_its_form() {
+        // Reference-only, text split by a reference, text split by a
+        // comment, CDATA: one `#text` each, none dropped, none doubled.
+        let xml = br#"<KNX><ManufacturerData><Manufacturer RefId="M-0001"><Baggages>
+<Baggage Name="a" TargetPath="">&amp;&#65;</Baggage>
+<Baggage Name="b" TargetPath="">a&amp;b</Baggage>
+<Baggage Name="c" TargetPath="">a<!--c-->b</Baggage>
+<Baggage Name="d" TargetPath=""><![CDATA[x]]>y</Baggage>
+<Baggage Name="e" TargetPath="">
+</Baggage>
+</Baggages></Manufacturer></ManufacturerData></KNX>"#;
+        let index = parse_baggage_index(INDEX, xml).unwrap();
+        let text: Vec<_> = index
+            .unknown
+            .iter()
+            .filter(|u| u.name == "#text")
+            .map(|u| (u.xpath.as_str(), u.occurrences))
+            .collect();
+        assert_eq!(text, [(BAGGAGE_XPATH, 4)]);
     }
 
     #[test]

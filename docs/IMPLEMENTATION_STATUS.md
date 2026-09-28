@@ -7,7 +7,7 @@ The product database is now schema v16
 `Baggages.xml` declarations are typed (`Id`, `Name`, `TargetPath`,
 `InstallOnImport`, `FileInfo/@TimeInfo`, `FileInfo/@Version`, all raw
 lexemes; `InstallOnImport="0"` stays `"0"`) and any other attribute,
-element or non-whitespace text in an index — including on the
+element or character content in an index — including on the
 `KNX/ManufacturerData/Manufacturer/Baggages` spine — is reported as an
 unknown construct. Each declaration resolves byte-exactly to
 `<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a stated
@@ -34,7 +34,7 @@ retained bytes no longer parse `unavailable` with a recorded
 `InstallReportBackfillError`, instead of refusing to open. Web catalogue
 labels (en/de) name the two new diagnostics.
 
-Evidence: `baggage_inventory.rs` 11 tests (typed/resolved/classified
+Evidence: `baggage_inventory.rs` 13 tests (typed/resolved/classified
 inventory with the four unresolved/undeclared diagnostics, retry returns the
 persisted inventory and reports index unknowns, sixteen tamper cases rejected
 on reload — including forged `Id`/`InstallOnImport`/`TimeInfo`/`Name`
@@ -47,9 +47,13 @@ longer validates is downgraded to `unavailable` instead of refusing to open
 the database, a prefixed `x:Name` is
 reported as foreign rather than read as `Name`, an index naming another
 manufacturer binds nothing and that refusal is itself re-checked on reload,
-a standalone index that does not parse is stored with its reason); unit
-tests for spine attributes and text reported, the one-matching-`Manufacturer`
-binding rule, sniffing
+a standalone index that does not parse is stored with its reason, a v15
+package with no report row no longer stops the database opening, and a
+package downgraded only for its report keeps its index's unknown rows as a
+fresh install would); unit tests for spine attributes and text reported,
+character content (text, CDATA, entity/character references) counted once per
+element, a prefixed-only `x:Name`/`x:RefId` reported and never read as the
+known attribute, the one-matching-`Manufacturer` binding rule, sniffing
 (weak `BM`/`MZ` magics refused), extension disagreement, nested directory
 reads, an empty nested ZIP read as zero entries, a nested ZIP naming one
 entry twice refused rather than collapsed, encrypted and `.zip`-named entries

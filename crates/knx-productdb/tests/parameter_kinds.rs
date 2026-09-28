@@ -13,6 +13,8 @@
 
 use rusqlite::Connection;
 
+mod v16_rewind;
+
 fn db() -> (tempfile::TempDir, Connection) {
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -254,6 +256,7 @@ fn an_unknown_parameter_kind_stays_other_and_is_reported() {
 /// element reported as unknown (with no sample, as `UnknownCollector::element`
 /// writes it) and none of its attributes reported.
 fn rewind_to_v14(conn: &Connection) {
+    v16_rewind::rewind_to_v15(conn);
     for (child, kind) in [("TypeColor", "Color"), ("TypeTime", "Time")] {
         let attr_path = format!("{TYPE_PATH}/{child}");
         let source: String = conn
@@ -375,6 +378,7 @@ fn v14_to_v15_does_not_let_a_losing_blob_rewrite_the_winners_row() {
             rusqlite::params![loser, TYPE_PATH],
         )
         .unwrap();
+        v16_rewind::rewind_to_v15(&conn);
         conn.execute_batch("PRAGMA user_version = 14").unwrap();
     }
     let conn = knx_productdb::open_and_migrate(&path).unwrap();

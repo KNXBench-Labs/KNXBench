@@ -15,6 +15,10 @@
   and all load states Loaded. Only
   the closing Basic Restart went unacknowledged, and whether the device
   restarted is still open.
+- **`[V]` Option C works on the device:** after a power cycle, button 1
+  toggles `2/0/53` (bus monitor, 33 telegrams, strictly alternating, none
+  to the old group addresses). This is the first real application download
+  with KNXBench.
 - The simulator can lose the client's `T_ACK` for one answer
   (`lost_ack_for_answer`) and then behaves like the device did.
 - 4 new tests. 7 mutants of the fix were all caught. Workspace: 2217 passed,

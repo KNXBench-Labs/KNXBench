@@ -345,7 +345,8 @@ and the next user decision.
 | Group-value sends, bus monitor, scan, discovery, T17 diagnostics UI, E2 scan reconciliation (`goal.md` §3) | goal.md |
 | `/api/project/download` (downloads the `.knxdb` **file**, KNOWN_LIMITATIONS §23/§30) | goal.md; this is not a device download |
 | The ADR-0040 consent gate itself (hook, dialog, settings) | goal.md, built and closed. This goal only calls it; the server-side enforcement decision belongs to K5 |
-| Parameter editor, device editor, catalog (ISSUE-07/08/09) | goal.md |
+| Parameter editor, device editor, catalog (ISSUE-07/08/09) | goal.md; the UI parts are in `goal-ui.md` since 2026-09-28 |
+| `apps/knx-web` in general, and the web lock | `goal-ui.md` §3. K5/K6 take the lock for their own views only, one package at a time |
 | Product-database import, schema, PDB-x | goal.md; this goal only reads the stored product file (ADR-0044) |
 | `docs/LIMITATION_TRIAGE.md` recount (`goal.md` §8.5), `stats.md`, `goal.md` itself, the root `.ai/CURRENT_STATE.md` working copy | goal.md session |
 | Commissioning rows and entries from §0.2/§0.3, code from §0.4 | this goal |

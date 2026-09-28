@@ -1,3 +1,218 @@
+- **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 13:55 CEST
+- **Completed:**
+  - **PDB-11 delivered.** Merge `7844590` on `main`, pushed; `origin/main` = `7844590`. Branch commits: `e22b83a` (implementation, rebased onto `3ab20b1`), `968c3c3` (review fixes), `59e51b2` (catch-up merge with CT-2, one append-only conflict in IMPLEMENTATION_STATUS, both entries kept).
+  - `3ab20b1` (before PDB-11): the project drive is ext4 now. KNOWN_LIMITATIONS §119 is marked lifted as history, LIMITATION_TRIAGE moved it to done, and goal.md rule 7 keeps only the filesystem-neutral freshness check.
+  - Independent review (deleg_1814c151): accept with follow-ups, no CRITICAL. All code findings fixed in `968c3c3`:
+    - I-1: every digest now begins with the context the parser stores from outside the element (manufacturer, parent section, parent hardware).
+    - M-1: an exact agreement rule on a blob's first parse.
+    - M-2: the v16->v17 backfill checks historical rows and degrades a disagreement to `unavailable`.
+    - M-4: six `source_sha256` indexes.
+    - M-5: `IDENTITY_SCANNER` version column, fail closed.
+    - M-6: a measured winner without a candidate is named.
+    - M-3/M-7: doc wording and mutation evidence.
+    - M-8: `InstallReport.source_names` public field accepted unchanged; no external constructor exists.
+  - Lead-verified gates on `968c3c3`, fresh `CARGO_TARGET_DIR`:
+    - fmt, clippy `-D warnings` (knx-productdb really rebuilt).
+    - Workspace tests: 2151 passed, 0 failed, 115 ignored, 115 suites.
+    - Headers 161≤161, anchors, layering, corpus-gates, diff-check.
+  - Private Gira+MDT matrix on the review-fix digests: pass, 979 s. Aggregates and baseline commitment are identical to the pre-review pin, so the context token changes nothing in this corpus.
+  - Mutation evidence:
+    - 23/23 killed on the original guards.
+    - 12/13 on the review fixes. Two survivors exposed test gaps and got tests: an `End`-closed section, and the exact rule wired into the ingest.
+    - R3 (the `0` no-parent flag) is equivalent: the next token byte already separates the cases.
+  - `stats.md` regenerated; goal.md §12.3 updated (PDB chain done; §4 web residues: only §57 left, queued as CT-6).
+  - The catalog_section 49-vs-52 difference stays documented as inferred (PRODUCT_DATABASE_CORPUS); nothing contradicts it.
+- **Pending/Next Steps:**
+  - PDB chain (§2.8) is complete. The cloud entry below owns the web chain (CT-6 to CT-10, serial, merged locally). CT-3/CT-5 were gated on PDB-11 being merged, and it now is.
+  - goal.md order from here:
+    1. ISSUE items not in the cloud queue: ISSUE-12 (hardware; diagnosis only), ISSUE-07/08 (corpus), ISSUE-05 (site, after ISSUE-06), ISSUE-09, ISSUE-02/03.
+    2. §8 doc hygiene.
+    3. Manual (T23).
+    4. Alpha decision (a user decision, do not tag).
+    5. Final review.
+- **Notes for Codex or Claude:**
+  - Scratch for PDB-11 (`~/.hermes/profiles/knxbench/cache/scratch/pdb11/`) can go once nobody needs the gate logs. Do not touch `scratch/iaw/`, branch or worktree `iaw-settling-delay`, or `docs/paperclip-shutdown/`.
+  - The cloud session's entry below was left uncommitted in the root file; it is committed here unchanged.
+  - **Quota rule (user, 2026-09-28 14:30):** the limit that counts for this session is Claude's 5h session and weekly limit, not the Codex/GPT window (GPT is ~99 % used). **No `delegate_task` subagents** from now on (they run on GPT); reviews and implementation happen in the Claude session itself. At handover the session was at 87 %, the week at 25 %.
+
+---
+
+- **Last Agent:** Claude (Hermes chat session "cloud credit", **not** the goal.md session: this is a short, separate entry)
+- **Timestamp:** 2026-09-28 14:35 CEST
+- **Completed:**
+  - Cloud setup: `f37f55b`, then the setup fix `cba8aa7` (status file plus a hook fallback). Details: `docs/CLOUD_SESSIONS.md`, `.ai/logs/2026-09-28_claude_cloud-sessions-setup.md`.
+  - **CT-1 (web diff panel, §59 lifted, §60 narrowed)** was delivered by the first cloud session as PR #1. Reviewed and gated locally as non-root:
+    - Workspace fmt, clippy and test incl. `knx-desktop`: 2107 passed, 0 failed.
+    - The four xtask gates, `tsc`, 1069 Vitest tests and the build.
+    - Merged as `313489e`, with a tree identical to the branch. GitHub shows PR #1 as MERGED.
+  - `6ce330f`: the `knx-cli` read-only-store test now skips visibly when the read-only bit is not enforced, i.e. as root. Cloud VMs run as root.
+    - Mutant check: without the probe it fails under `unshare -r`; with it, it skips and the non-root path still runs.
+    - `CLOUD_SESSIONS.md` §5/§6 record the cost (3 $ for CT-1) and this lesson.
+  - `95bd57d` (11:20): `setup-env.sh` runs `dpkg --configure -a` first and no longer lets a failed `apt-get update` (403 PPAs) stop the install.
+    - Reason: the CT-2 VM image had an interrupted dpkg run, so the fallback reported `apt=failed`.
+    - Docker probe: the setup succeeds and WebKit is present.
+  - **CT-2 (documentation dialog, §49/§50 lifted)** was delivered by the cloud as PR #2. Cost about 4 $; balance 243/250 $. The environment repair worked: WebKit was present and no `--exclude` was needed.
+    - Local review added `dff0ef4`: on close, focus returns to the File menu's `<summary>` instead of `<body>`. Regression test red without the fix.
+    - Local gates as non-root: workspace fmt, clippy and test incl. `knx-desktop` (2107 passed, 0 failed), xtask gates, `tsc`, 1087 Vitest tests, build.
+    - Sandbox behaviour re-checked in headless Chromium: the script is blocked, `print()` is ignored without `allow-modals`, and the host title is untouched.
+    - Merged as `d9ff0db`, tree equal to the branch. PR #2 shows as MERGED.
+  - `2670c38` (13:50): new cloud briefs CT-6 to CT-10 in `docs/CLOUD_SESSIONS.md`. SESSION_RULES now say to stop after the draft PR.
+    - CT-6: §57, raw `.knxproj` diff in the web UI.
+    - CT-7: ISSUE-13, session-log search and export.
+    - CT-8: ISSUE-10, structured 422 errors and topic help.
+    - CT-9: ISSUE-01, zoom and pane widths.
+    - CT-10: ISSUE-11, bus-monitor pause, export and statistics.
+  - **CT-6 (§57, raw `.knxproj` diff in the web UI)** was delivered by the cloud as PR #3.
+    - The branch was based on `7844590`. Locally it was caught up with `cf791b0` (PDB-11 bookkeeping, no overlap).
+    - The cloud deleted `apps/knx-web/dist/.gitkeep` through a build; restored.
+    - Local gates as non-root on the merged tree: fmt, clippy, workspace test 2161 passed / 0 failed, xtask gates, `tsc`, 1095 Vitest tests, build, `diff --check`.
+    - Checked against the three real ETS demo exports (`OriginalData/DemoProjects`) on a loopback server:
+      - ETS4 export: 200, compared, 2 warnings.
+      - ETS 6.3 export against itself: 200, empty diff.
+      - `KV v2.5 - demo`: 422, refused over `UnresolvedReference Installation/@DefaultLine ""`. `knx diff` refuses the same file (exit 1).
+      - A contradicting `inputKind`: 400.
+    - Merged as `826466a`, tree equal. PR #3 shows as MERGED.
+  - `origin/main` = `826466a`. The root checkout (`main`) is at `826466a` and clean; only `docs/paperclip-shutdown/` is untracked and was not touched.
+- **Pending/Next Steps:**
+  - Web chain in the cloud: CT-6 done; next CT-7, then CT-8, CT-9 and CT-10, **serially**. Start the next one only after the previous PR is merged locally.
+    - These ISSUE items belong to the cloud chain: do not start them locally in parallel.
+    - Deliberately not queued: ISSUE-12 (hardware), ISSUE-07/08 (corpus), ISSUE-05 (ADR-0039/site), ISSUE-09 address editor (standard check), ISSUE-02/03 (later).
+  - PDB-11 is merged, so CT-3 (fuzzing) and CT-5 (doc hygiene) are unblocked.
+    - CT-3 touches only parser crates and fuzz targets; it may run in parallel with the web chain.
+    - CT-5 edits ROADMAP, LIMITATION_TRIAGE and the plan; better not in parallel with a web task that edits the same docs.
+  - CT-4 (read-only review) can run any time.
+  - Possible follow-up from CT-6: the `KV v2.5 - demo` export has an empty `Installation/@DefaultLine`. Whether the importer should reject it as an error or treat it as "not set" belongs to the importer, not the diff. Leave it as a candidate for the local goal session; nothing was changed.
+  - Cloud PRs are always reviewed and merged **locally**; the cloud session does not watch or merge its own PR.
+- **Notes for the goal.md session:**
+  - PDB-11 has been delivered (see the entry above); this note is overtaken.
+  - Expected overlaps: the new top entries in `docs/IMPLEMENTATION_STATUS.md`, and CT-1/CT-2's edits to `docs/KNOWN_LIMITATIONS.md` §48–§50, §59/§60 and `docs/manual/*`. Keep both sides.
+  - A cloud session counts as one of the ≤2 implementers from goal §9, and the cloud CT-1/CT-2 run *is* the serial web chain. Do not start a parallel local web task while one is open.
+
+---
+
+- **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 09:36 CEST
+- **Completed:**
+  - Read and adopted the commissioning session's ownership notice below; it stays in this file as the record. Added its line to goal.md as §12.4 "Parallel tracks outside this goal" (former §12.4 "Lessons" is now §12.5; nothing referenced the old number).
+  - **PDB-11 (package identity and versions) is implemented but NOT delivered.** Branch `pdb-11-package-identity` (based on `701bf33`). The code is uncommitted in the root working tree. Design: [ADR-0043](../docs/adr/0043-package-identity-is-recorded-per-candidate.md) (uncommitted, like the ADR index row). Summary:
+    - No new winner rule (first installed still wins). Instead, schema v17 records every candidate element of the six identity kinds per member blob with a canonical element digest (`source_identity`, `source_identity_scan`), so winner, losers, their packages and "identical or not" are queryable independent of install order.
+    - Also new: every source name per package hash (`package_source_name`), `CreatedBy`/`ToolVersion`/root namespace per blob (`source_producer`), query-time program families by (manufacturer, `ApplicationNumber`), `ReplacesVersions` parsed as a list of unsigned bytes and linked within the family, and products by order number. CLI: `knx products identity|family|order-number`.
+    - A scan that disagrees with the domain parsers fails the ingest (agreement check).
+  - Implementer-reported results (NOT yet verified by the lead): `knx-productdb` 440 passed / 0 failed / 18 ignored, `knx-cli` 78 / 0 / 8, 23/23 mutants killed, fmt/headers 161≤161/anchors/corpus-gates/layering/diff-check green. Private matrix passes on the final code: the old v16 projection is asserted unchanged, commitment re-pinned; new rows `source_identity` 1,972, 528 blobs all `measured`, 170 ids with differing digests.
+- **Pending/Next Steps:** The user paused work ("Pause, bis go") while the other session is re-planned. On "go":
+  1. Lead review of the uncommitted PDB-11 diff: read `crates/knx-productdb/src/identity.rs`, the migration and the ingest hook; rerun clippy (the implementer ran it only before its last comment edit) and the crate tests with a fresh `CARGO_TARGET_DIR`.
+  2. Independent review, fixes, full workspace suite, private matrix, merge, push, `stats.md`.
+  3. Then continue goal.md: web leftovers, open issues, manual, alpha decision, final review.
+- **Notes for Codex or Claude:**
+  - Open detail: catalog sections show 49 differing ids against 52 in the Python probe; likely the digest's nested-element markers. This is inferred, not measured.
+  - Implementer scratch (probes, gate logs, `mutation.log`, BRIEF.md): `~/.hermes/profiles/knxbench/cache/scratch/pdb11/`. Do not touch `scratch/iaw/`, branch or worktree `iaw-settling-delay`, or `docs/paperclip-shutdown/`.
+
+---
+
+- **Last Agent:** Claude (session `iaw-settling-delay`, commissioning track, **not** the goal.md session)
+- **Timestamp:** 2026-09-28 07:50 CEST
+- **Completed:** **Handover notice to the goal.md/PDB session: the two sessions are now separated.** This entry only concerns file ownership. No goal.md work was done.
+  - The four `iaw-settling-delay` entries this file carried **uncommitted** in the root working tree (06:46, 04:11, 22:44 and 21:50) have been **removed from here**. This file is back to `HEAD` plus this notice. Nothing that belongs to PDB was touched (the uncommitted diff held 0 PDB lines).
+    - Those entries live on in the worktree's own `.ai/CURRENT_STATE.md` on branch `iaw-settling-delay` (commit `f758224`).
+    - Pre-cleanup backup: `~/.hermes/profiles/knxbench/cache/scratch/iaw/root_CURRENT_STATE.before.md`.
+  - The commissioning session has moved all of its scratch into `~/.hermes/profiles/knxbench/cache/scratch/iaw/` and deleted only its own loose files. It did not touch `pdb11/` or any of your other files.
+- **Pending/Next Steps (for the goal.md session):**
+  - Commit this file with your next handover as usual. **You may delete this notice** once you have read it.
+  - Please add one line to goal.md §12, because the file is yours: *"Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself."*
+- **Notes for Codex or Claude:**
+  - **Ownership from now on:**
+    - Root `.ai/CURRENT_STATE.md` and `goal.md` belong to the goal.md session only.
+    - The commissioning session writes only to its worktree's `.ai/CURRENT_STATE.md`, to `.ai/logs/*_claude_iaw-*.md`, and to `scratch/iaw/`.
+    - Neither session touches the other's branch, worktree or scratch.
+  - Before `iaw-settling-delay` merges into `main`, the commissioning session rebases onto the then-current `main`. A `git merge-tree` probe run today shows exactly **3 doc conflicts** (`.ai/CURRENT_STATE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/KNOWN_LIMITATIONS.md`) and **none in code**. It resolves them itself by keeping both sides.
+  - Status of the commissioning track: paused, and **nothing has been written to 1.1.67 yet**.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 06:27 CEST
+- **Completed:** **PDB-10 merged as `15b4c56` and pushed** (`origin/main` = `15b4c56`, read back). Product database schema is now **v16** ([ADR-0042](../docs/adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)). Branch commits: `9b75091` feature, `23ad852` reconciliation of the historical 1,728 count, `28c88ba` / `b4cecfe` / `4b23b09` review fixes.
+  - `Baggages.xml` declarations are typed as raw lexemes (`Id`, `Name`, `TargetPath`, `InstallOnImport`, `FileInfo/@TimeInfo`, `@Version`). Each resolves byte-exactly to `<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a reason. An index binds only when its single `Manufacturer/@RefId` equals its directory (all 37 corpus indexes do).
+  - Every `Baggage` payload is classified by magic bytes (BMP-named-`.png`, PDF-named-`.ai`, PE, OLE2 recognized). Nested ZIPs are measured only from the package validator's checked central directory (`validated_zip_metadata`). Nothing is decompressed, extracted or executed.
+  - Unmodelled attributes (also on the `KNX/ManufacturerData/Manufacturer/Baggages` spine), prefixed look-alikes (`x:Name`, never read as `Name`) and character content (one `#text` per element) are reported as unknowns.
+  - A standalone `Baggages.xml` that does not parse (project import) is stored with a `BaggageIndexParseError` row instead of failing the import; inside a package it still refuses the install.
+  - Reload re-parses retained index blobs and re-measures payloads; any stored-row disagreement is a corruption error.
+  - v15 → v16 re-derives inventory, index unknowns and `package.unknown_count` like a fresh install. A package whose bytes or stored report are bad is downgraded to `unavailable` with an `InstallReportBackfillError`; its parseable index unknowns are kept. The database still opens, also with a missing report row.
+  - Reviews: round 1 on `9b75091` found 3 CRITICAL / 5 IMPORTANT / 5 MINOR; all fixed or documented (I8 reload-vs-code coupling in the ADR, M11 in KNOWN_LIMITATIONS §134). Re-review of `28c88ba`+`b4cecfe`: "accept with minor follow-ups", 4 MINOR, all fixed in `4b23b09`. Every fix has a regression test that fails when the fix is reverted.
+  - Gates on `4b23b09` (merge tree identical): workspace 2107 passed / 0 failed / 115 ignored (113 suites); fmt; clippy (fresh target dir, `knx-productdb` checked); headers 233/161 ≤ 161; anchors 389; corpus-gates; layering; `git diff --check`; private corpus matrix (scopes Gira + MDT) matches its committed pin, 637 s.
+  - `stats.md` regenerated after the merge.
+- **Pending/Next Steps:** Continue `goal.md` sequentially: **PDB-11**, then web leftovers, open issues, manual/documentation, alpha release, final review.
+- **Notes for Codex or Claude:**
+  - The corpus matrix needs `KNXBENCH_PRODUCT_MATRIX_OUTPUT` plus scopes `OriginalData/ProductDatabases/Gira:…/MDT`. It takes about 11 minutes, so run it in the background.
+  - `Static/Extension/Baggage/@RefId` program references (935 distinct) are still reported as unknowns, not linked to the inventory (§134).
+  - The two `iaw-settling-delay` entries below belong to another session; they were left uncommitted and untouched. `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-27 23:55 CEST
+- **Completed:** PDB-10 **preflight only**, no production code. A read-only aggregate probe of baggage index and payload shape is recorded in `docs/PRODUCT_DATABASE_CORPUS.md` §"PDB-10 preflight". Findings:
+  - 777 `Baggage` declarations in 38 `Baggages.xml`.
+    - The grammar is exactly `Baggage/FileInfo`.
+    - Attributes: `@Id`/`@Name`/`@TargetPath` on all, `@InstallOnImport` on 129 (`true`/`false`/`0`), `FileInfo/@TimeInfo` on all, `@Version` on 2.
+  - All 777 resolve exactly to `M-XXXX/Baggages/<TargetPath>/<Name>`. 13 of the 790 payloads are undeclared.
+  - Magic bytes contradict extensions: 35 BMPs are named `.png`, and the 11 `.ai` files are PDF. There is 1 PE (`.dll`) and 1 OLE2 (`.msi`).
+  - No encryption. The 37 nested ZIPs have 7,144 entries, no deeper nesting, and at most 317,240 bytes expanded. The largest payload is 2.1 MB; the largest XML member is 54.8 MB.
+- **Pending/Next Steps:** **PDB-10 implementation**, paused at the work-package boundary because the weekly quota is at 89% (the user's ceiling is 95%). When resumed:
+  - (1) Reconcile the documented "1,728 baggage declarations" with the probe's 777 per distinct package (different counting unit).
+  - (2) Design a typed inventory table (schema v16): declaration id/name/target path/install-on-import (raw)/time info/version, resolved member sha256, content-sniffed media class, declared vs expanded size, nested-ZIP entry count/expanded size read from the central directory only, encryption flag.
+  - (3) Report undeclared payloads and unresolved declarations instead of hiding them.
+  - (4) Bounded-memory coverage for the 24.2/54.8 MB XML members.
+  - (5) Never execute or extract.
+  - (6) Then PDB-11, web leftovers, open issues, manual, alpha release, final review.
+- **Notes for Codex or Claude:**
+  - The probe script is `$TMPDIR/pdb10_probe.py` (Hermes profile scratch, prunable; the doc section is the durable record).
+  - The spec KB (`Project Schema23` §4.2) only says each `Baggage` is an external file. Attribute semantics are unspecified `[A]`.
+  - The two `iaw-settling-delay` entries in this file's working tree belong to another session; they were left uncommitted and untouched.
+  - `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-27 23:51 CEST
+- **Completed:** **PDB-9 merged as `3643e90`** and pushed (`81922d1` feature, `b1970ca` review fixes, `90e3d49` matrix re-pin). The productdb schema is now **v15** ([ADR-0041](../docs/adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md)). What changed:
+  - **Parameter kinds.** `TypeColor` (115 in the corpus) and `TypeTime` (17) are now stored as kinds `Color`/`Time`.
+    - `Time` keeps its size and bounds in `Number`'s columns and is validated like `Number` (the Project Schema `Value_t` says "Same as TypeNumber").
+    - `Color` gets only a non-empty/XML-safe check, because no value encoding is documented.
+    - Every unmodelled type attribute is reported with a sample value: `UIHint`, `Increment`, `Unit`, `Space`, `Pattern`, `Encoding`, `AddressType`, `RefId`, `MaxSize`, …
+  - **v14→v15 upgrade.** It re-derives the new kinds from the retained program files.
+    - It runs the same scheme-evidence reconciliation a fresh install runs.
+    - It decrements the old "unknown element" rows instead of deleting them, rebuilds the attribute rows at retired paths, and handles the pre-v6 hardcoded xpath.
+    - The first installed file wins an ID conflict (ADR-0011). A corrupt file records a `ParameterKindBackfillError` and the database still opens.
+  - **Dynamic trees.** A new diagnostic, `RefBelowSkippedNode`, names every `ParameterRefRef`/`ComObjectRefRef`/`Module` below a node the evaluator refuses for a *structural* reason. Those references are not activated. The structural reasons are:
+    - an unrecognized node kind;
+    - a non-`when` child of a `choose`;
+    - a `choose` with `UnresolvedParamRef` or `UnexpectedTypeNoneShape`;
+    - a recognized leaf that has children.
+  - These reports count against `MAX_MODULE_ACTIVATIONS`. `Rows`/`Columns` are now recognized layout. `Rename`, `ParameterBlockRename`, `Button` and `Repeat` stay `UnrecognizedNode`: not applied, not expanded, not run.
+  - **Server/web.** They know `Color`, `Time` and `refBelowSkippedNode` (en/de). The parameter panel renders `Time` like `Number`.
+  - **Review `deleg_5626dd73`.** Verdict "Approve with follow-ups": 0 critical, 2 important (the missing budget, a doc overclaim), 8 minor. All were fixed, and 8 deliberate breaks of the new code were each caught by a test.
+  - **Corpus matrix.** A main-vs-branch comparison changed exactly 2 of 31 tables:
+    - `ingest_unknown` 23,040→23,051;
+    - `package_install_unknown` 9,245→9,251.
+
+    Report totals went from 22,758 to 22,769 per instance and from 22,642 to 22,653 shared. An independent Python recount (`$TMPDIR/pdb9_matrix_delta.py`) predicts every one of these deltas. The fingerprint is re-pinned to `c8db13b0…`, and the matrix is green (632 s). The corpus `dynamic_tree` tests pass 6/6.
+  - **Gates.** fmt 0, clippy 0, workspace 2080 passed / 0 failed / 114 ignored, headers 228 (at the ceiling of 162 files without a header), anchors 389, corpus-gates, layering, diff-check, tsc 0, ParameterPanel 14/14.
+- **Pending/Next Steps:** **PDB-10** (goal.md), then PDB-11, web leftovers, open issues, the manual, the alpha release and the final review. Still open from PDB-9, documented in KNOWN_LIMITATIONS §PDB-9:
+  - repeat expansion, rename application, button scripts;
+  - evaluating `ParameterCalculation`/`Allocator`;
+  - `TypeColor`'s value encoding;
+  - display-only attributes (no slider, no duration picker, no colour picker);
+  - value-dependent `choose` refusals and unexpanded `Module`s, which are named but whose references are not enumerated.
+- **Notes for Codex or Claude:**
+  - The two `iaw-settling-delay` entries in this file's working tree belong to another session (branch not pushed, awaiting a user decision). They were deliberately left uncommitted and untouched.
+  - The `check-headers` gate prints its rule text last. Grep for `headers ok`/`violation` instead of trusting `| tail`/`$?`: a new test file without a header nearly slipped through here.
+  - The matrix still needs `KNXBENCH_PRODUCT_CORPUS_SCOPES` and `KNXBENCH_PRODUCT_MATRIX_OUTPUT`.
+  - `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 17:05 CEST
 - **Completed:** **Real writes to 1.1.67 (after the user's "go").** Details in `.ai/logs/2026-09-28_claude_iaw-live-download.md` and RESEARCH §19.4.

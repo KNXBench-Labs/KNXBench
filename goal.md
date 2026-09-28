@@ -107,10 +107,12 @@ T17 diagnostics UI, group-monitor regressions):**
    `apps/knx-web` when any file under it was touched.
    `ABSENT_CEILING` is 162 with zero slack (verified 2026-09-23) — a new headerless file fails the
    gate. Markdown is not counted at all.
-7. **This `ntfs3` mount has served a stale binary from a current fingerprint
-   once** (`KNOWN_LIMITATIONS.md` §119). A green gate alone is not proof:
-   sanity-check that the `knx-net` lib test count matches the source you just
-   edited, and `cargo clean -p <crate>` when it does not.
+7. **Freshness check.** The former `ntfs3` mount once served a stale binary
+   from a current fingerprint (`KNOWN_LIMITATIONS.md` §119). The working copy
+   is on ext4 since 2026-09-28, so that hazard is lifted, but a green gate is
+   still not proof on its own: confirm the log shows the changed crate being
+   compiled (a shared target directory can replay a cached result), and settle
+   a disputed result with a fresh `CARGO_TARGET_DIR`.
 8. Do not silently downgrade a limitation. If an item depends on unavailable
    samples, specifications, credentials, hardware or a user decision, record
    the exact blocker and move to another actionable item.
@@ -678,7 +680,7 @@ Finish only when:
   code;
 - every actionable item in sections 2-5 and 8 has proof of completion, or a
   recorded, non-actionable external blocker;
-- all nine gates pass, with the `ntfs3` freshness check from rule 7 done;
+- all nine gates pass, with the freshness check from rule 7 done;
 - every remaining exception carries the user's explicit out-of-scope
   acceptance;
 - and the final strongest-model review has run over the finished whole and its findings
@@ -802,8 +804,8 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 
 ### 12.3 Still open (not started)
 
-- **§2.8 PDB-8 to PDB-11:** in strict order, after DIN-4 (step 4 above). For PDB-8, the start of the legacy L1 slice (`.vd`/`.pr` container detection plus a named refusal) now follows from the accepted DIN-9 design.
-- **§4 web residues:** §49 print preview, §50 section selection, §57 comparison against a raw `.knxproj`, §59/§60 diff values in the web panel.
+- **§2.8 PDB-8 to PDB-11:** done. PDB-8 `abf35d3`, PDB-9 `3643e90`, PDB-10 `15b4c56`, PDB-11 `7844590` (ADR-0043, schema v17), all merged and pushed.
+- **§4 web residues:** §49/§50 lifted by CT-2 (`d9ff0db`), §59 lifted and §60 narrowed by CT-1 (`313489e`), both through the cloud chain. Open: §57, comparison against a raw `.knxproj` (queued as CT-6).
 - **§11 ISSUE-01 to ISSUE-13, apart from ISSUE-04 and ISSUE-06 above:** see `docs/superpowers/plans/2026-09-21-user-reported-issues.md`.
   - Run all `apps/knx-web` work as one serial chain, never two web tasks in parallel.
   - ISSUE-04 comes before any autosave UX.
@@ -821,7 +823,11 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 
 The PDB (backend) chain and the web chain may run in parallel, with at most two implementers (§9). Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order.
 
-### 12.4 Lessons from the Paperclip run
+### 12.4 Parallel tracks outside this goal
+
+- Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself.
+
+### 12.5 Lessons from the Paperclip run
 
 - Provider errors (HTTP 400 thinking block, HTTP 429) ate every review run on 2026-09-26. An automatic error comment is not a review verdict.
-- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the ntfs3 check.
+- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the freshness check from rule 7.

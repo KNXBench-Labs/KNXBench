@@ -1,5 +1,47 @@
 # Known limitations
 
+## PDB-9 parameter and Dynamic coverage boundary
+
+Since schema v15 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md))
+every `ParameterType` kind observed in the corpus is stored as its own kind,
+and a reference below a Dynamic node refused for a structural reason is named
+by `RefBelowSkippedNode`. What is still not modelled, each reported rather
+than dropped:
+
+- **Repeat expansion.** `Repeat` (16 in the corpus) is `UnrecognizedNode`;
+  its `Module` is named by `RefBelowSkippedNode` but not expanded, so the
+  repeated module's parameters are not offered for editing. Expansion needs
+  the repeat count (`@Count` or a controlling `@ParameterRefId`) and
+  project-side instance matching.
+- **Renames and buttons.** `ParameterBlockRename` (270), `Rename` (56) and
+  `Button` (20) are `UnrecognizedNode`: a conditional rename is not applied
+  to the displayed label, and a button's `@EventHandler` script is not run.
+- **Calculations and allocators.** `ParameterCalculation` (1,236 in 91
+  programs) and `Allocator` (94 in 14) are reported unknown elements with
+  their attributes, and the program bytes are retained; their
+  transformation scripts and allocation ranges are not evaluated.
+- **Display-only type attributes.** `UIHint`, `Increment`, `DisplayFactor`,
+  `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
+  `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
+  `TypeRawData/@MaxSize` are reported with a sample, not stored in columns:
+  the editor does not use them yet (e.g. no slider, no hh:mm:ss duration
+  input, no colour picker, no picture display).
+- **`Color`, `Picture`, `Raw` values** get only a non-empty, XML-safe check;
+  the Project Schema documents no value encoding for them.
+- **Not every absent reference is enumerated.** The branches of a `choose`
+  refused for a value-dependent reason (`MissingValue`, `NonNumericValue`,
+  `NoBranchMatched`) are conditionally hidden by design — the `choose` is
+  named, its branches' references are not listed. A `Module` that is not
+  expanded (`ModuleDefNotFound`, cycle, depth or expansion budget) is named
+  by its own diagnostic, but its `ModuleDef`'s references are not listed.
+  `RefBelowSkippedNode` reports share the `MAX_MODULE_ACTIVATIONS` budget;
+  past it, output is truncated with one budget diagnostic.
+- **Install reports stay historical.** `package_install_unknown` rows
+  written before v15 keep their `Element TypeTime`/`TypeColor` entries; the
+  v14→v15 backfill corrects `ingest_unknown` (the per-blob report), not the
+  install-time snapshot — the same rule as the v12→v13 precedent
+  (COMPATIBILITY: "Historical encounter reports remain historical").
+
 ## PDB-3 report history and coverage boundary
 
 Product install facts are measured only for installs carrying the schema-v12
@@ -18,8 +60,7 @@ still retained without a report — `TranslationUnit/@Version` alone occurs
 1,928 times in the corpus. Reporting them needs corpus-observed allowlists
 for `Languages`, `Language`, `TranslationUnit`, `TranslationElement` and
 `Translation`; until then they are preserved bytes only. Persisted subtree
-diagnostics are validated for shape, not re-derived from the blob. PDB-10 is the future safe baggage inventory and index-to-payload
-resolution slice.
+diagnostics are validated for shape, not re-derived from the blob. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. See §134 for what it deliberately does not do.
 
 Each entry states the limitation, its cause, what it costs the user, and the
 condition under which it would be lifted. Nothing here is a defect to be fixed
@@ -514,14 +555,20 @@ that server-named id instead of the declared one (D43).
   inventing a rule the Standard does not state, so the compressed forms
   are rejected even though a real IPv6 address may use them — narrower
   than necessary is the defensible choice here, not the complete one.
-  `Picture` and `Raw` get no format check beyond non-empty, because no
-  format exists to check against: `Value_t`'s encoding table (§1.1.3.19)
-  lists `TypeNone`, `TypeText`, `TypeNumber`, `TypeFloat`,
-  `TypeRestriction`, `TypeTime`, `TypeDate`, `TypeIPAddress` and
-  `TypeAllocatorRefId` — `TypePicture` and `TypeRawData` are absent from
-  it entirely `[D]`. A full sweep of all five corpus `.knxprod` archives
-  found zero `<TypePicture>` and zero `<TypeRawData>` elements to
-  cross-check against, and neither knx-spec-kb knowledge base nor
+  `Picture`, `Raw` and (PDB-9, ADR-0041) `Color` get no format check
+  beyond non-empty, because no format exists to check against:
+  `Value_t`'s encoding table (§1.1.3.19) lists `TypeNone`, `TypeText`,
+  `TypeNumber`, `TypeFloat`, `TypeRestriction`, `TypeTime`, `TypeDate`,
+  `TypeIPAddress` and `TypeAllocatorRefId` — `TypePicture`, `TypeRawData`
+  and `TypeColor` are absent from it entirely `[D]`. `Time` (PDB-9) is
+  validated like `Number`, exactly as `Value_t` says ("Same as
+  TypeNumber"). *Correction (2026-09-27, PDB-9):* an earlier, smaller sweep
+  reported zero `<TypePicture>`/`<TypeRawData>` elements (why it missed
+  them is not established `[A]`); the PDB-9 read-only scan of 304 distinct
+  programs finds
+  `TypePicture` 1,118, `TypeColor` 115 and `TypeRawData` 3 times. The
+  conclusion stands — those are declarations, not a documented value
+  encoding — and neither knx-spec-kb knowledge base nor
   xknxproject's own source turned up a documented encoding. The schema
   does use `xs:base64Binary` for other binary attributes elsewhere
   (`SerialNumber`, `LoadedImage`, `PasswordHash`) `[D]`, which was
@@ -3201,44 +3248,50 @@ product strings. Remaining detailed English prose can still appear in either.
 
 **Remaining limitation.** Detailed table labels, enum/debug values and several
 diagnostic sentences are still English. No third language or external report
-language pack exists. The frontend selector is deferred to T12's report UI.
+language pack exists. The web documentation dialog (CT-2) requests the
+report in the UI language (`de` for German, `en` otherwise); a separate report
+language selector is still absent.
 
 <a id="49-project-documentation-export-has-no-in-application-print-preview"></a>
-## 49. Project documentation export has a preview API but no frontend preview — partially resolved 2026-09-23 (T14)
+## 49. Project documentation export has an in-application preview and print action
 
-**Current state.** `POST /api/project/documentation-preview` returns the same
-self-contained HTML and warning DTOs without writing a file or touching the
-session log. The print stylesheet remains embedded. No frontend consumes the
-endpoint yet.
+**Status.** Lifted (CT-2, 2026-09-28). *Export documentation…* in the File
+menu opens a dialog that calls `POST /api/project/documentation-preview`
+and shows the returned HTML in an `<iframe srcdoc>` with
+`sandbox="allow-same-origin allow-modals"`. No `allow-scripts`: nothing in
+the document runs. The preview's warnings are listed next to it, a preview
+failure is shown as an alert in the dialog, and *Print…* calls `print()` on
+the frame's window, so the browser prints the embedded print stylesheet's
+rendering of the document, not the application.
 
-**Cause.** T14 owns the crate/API contract only. The interactive presentation
-and print action remain in the explicitly deferred T12 frontend half.
+**Verified.** Vitest covers the sandbox attribute, `srcdoc`, warnings, the
+error alert and that print targets the frame. A headless Chromium check in
+the cloud session confirmed the two sandbox tokens are both needed: without
+`allow-same-origin` the frame's `print` is a cross-origin access error;
+without `allow-modals` Chromium ignores the call ("The document is
+sandboxed, and the 'allow-modals' keyword is not set"). A script in the
+document was blocked.
 
-**Impact.** Current users still cannot invoke the preview from KNXBench, even
-though the server contract no longer blocks that UI.
-
-**Lifted when.** T12 adds a sandboxed preview and invokes the browser print
-dialog from it.
+**Not verified.** The visible print dialog itself (headless), Firefox, and
+the Tauri desktop shell's WebKitGTK webview. Printing there may behave
+differently and needs a manual check.
 
 <a id="50-project-documentation-export-has-no-section-selection"></a>
-## 50. Project documentation export has section selection in the crate/API but no frontend control — partially resolved 2026-09-23 (T14)
+## 50. Project documentation export has section selection in the web UI
 
-**Current state.** `ReportOptions::sections` is an ordered set of Summary,
-Topology, Buildings, Group addresses and Devices. Header, filtered Contents,
-and Limits/warnings always remain. Preview and export accept the matching JSON
-names `summary`, `topology`, `buildings`, `groupAddresses`, and `devices`;
-unknown names are rejected. Input order and duplicates cannot change canonical
-document order.
+**Status.** Lifted (CT-2, 2026-09-28). `ReportOptions::sections` is an
+ordered set of Summary, Topology, Buildings, Group addresses and Devices.
+Header, filtered Contents, and Limits/warnings always remain. Preview and
+export accept the matching JSON names `summary`, `topology`, `buildings`,
+`groupAddresses`, and `devices`; unknown names are rejected. Input order and
+duplicates cannot change canonical document order.
 
-**Cause.** T14 owns the pure option and HTTP contract; T12 owns the frontend
-selection controls.
-
-**Impact.** API and crate callers can already produce partial documents, but
-the current frontend still requests the backward-compatible default (all
-sections) because it has no selector.
-
-**Lifted when.** T12 exposes these choices in the frontend and sends the same
-selection to preview and export.
+The documentation dialog offers one checkbox per section, all ticked by
+default. One `DocumentationOptions` object
+(`apps/knx-web/src/documentationOptions.ts`) feeds both the preview request
+and the export request, so the written file is the previewed selection. An
+empty selection is sent as `[]`, which yields header, contents and limits
+only; it is never omitted, because an absent `sections` means "all".
 
 ## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured
 
@@ -3395,25 +3448,46 @@ merge behavior additionally waits for §55. T15 does not pretend that
 running two unrelated two-way comparisons creates a three-way result.
 
 <a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a>
-## 57. Raw `.knxproj` comparison is available on the CLI, not the web route
+## 57. Raw `.knxproj` comparison is available on the CLI and in the web UI
 
-**Limitation.** `knx diff` accepts `.knxdb` and `.knxproj` on either side,
-but `POST /api/project/diff {path}` and the web file picker still compare
-the open project only against a `.knxdb` path.
+**Status.** Lifted (CT-6, 2026-09-28). `POST /api/project/diff` accepts a
+`.knxdb` or a `.knxproj` path and an optional `inputKind`
+(`"knxdb"` | `"knxproj"`). Without it the server detects the kind from the
+extension; with it the kind must match the extension. An unknown value, an
+unsupported extension or a contradicting kind is a `400`. Every response
+names the `inputKind` it used.
 
-**Cause.** `knx-diff` correctly remains independent of formats. T15 added
-a `knx-app` loader that normalizes either format and preserves the full ETS
-import report; the CLI can present that report without changing the HTTP
-route's current mounted-path contract. Extending the browser picker/API is
-owned by the later UI slice.
+Both kinds load through `knx_app::comparison::load_comparison_input`, the
+loader `knx diff` uses, so there is one comparison import path. For a
+`.knxproj` the response carries the full `ImportReport` (`importReport`,
+serialized as `knx diff` prints it) and the same report flattened into
+session-log entries (`importDiagnostics`). A report with error-level
+diagnostics is refused with a `422` that carries that report, not a diff,
+matching `knx diff`'s refusal.
 
-**Impact.** Scripts and terminal users can compare raw ETS exports directly
-and see every import diagnostic on stderr. Application users must still
-import the archive or use the CLI.
+The web panel's picker offers both kinds. Its paths come from the existing
+mount picker or `/api/fs/upload` (`crate::paths` confines relative paths
+to the data directory). The import diagnostics are shown collapsed above
+the diff, their total, error and warning counts in the summary line; a
+refused import shows its diagnostics in the panel instead of a diff.
 
-**Lifted when.** The project-diff HTTP request and picker gain an explicit
-input-kind/upload contract and expose the same import report; silently
-normalizing a browser path without those diagnostics is not acceptable.
+**Verified.** HTTP tests with synthetic archives (no corpus): clean
+import, import with a warning, import with an error (refused), unknown and
+contradicting input kinds, an unsupported extension, and an uploaded
+relative path. Vitest covers the picker filters and the diagnostics block
+in English and German.
+
+**What remains.**
+
+- Warning-level diagnostics do not block a comparison, as on the CLI. The
+  user sees them only by opening the collapsed block.
+- `importDiagnostics` inherits `session_log::from_import_report`'s
+  omissions: inferred values and a namespace disagreement are not listed
+  there. They remain in the raw `importReport`, which the panel does not
+  render.
+- The comparison's diagnostics are not written to the session log.
+- Not verified against real ETS exports in the cloud session (no corpus),
+  and not in a browser or the desktop shell's native file dialog.
 
 <a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a>
 ## 58. Project diff has an opt-in CI exit-code contract
@@ -3436,53 +3510,63 @@ scripts are not broken by a newly nonzero result they did not request.
 `knx --help` output and the user manual.
 
 <a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a>
-## 59. Project diff exposes before/after values, but the web panel does not render them yet
+<a id="59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet"></a>
+## 59. Project diff shows before/after values in CLI, API and web panel
 
-**Limitation.** `knx diff` now prints one ordered line per changed field
-with its old and new display values. The HTTP response adds `fieldChanges`
-to every generic/device change while retaining `changedFields`, `left`,
-and `right`. The current web panel still renders grouped counts only.
+**Status.** Lifted (CT-1, 2026-09-28). `knx diff` prints one ordered line
+per changed field with its old and new display values; the HTTP response
+carries `fieldChanges` on every generic/device change; and the web panel
+now renders each changed entity's `fieldChanges` as a *Field / Before /
+After* table, plus the project-info and installation-info changes the
+same way.
 
-**Cause.** T15 added one pure `FieldDiff` projection in `knx-diff`, so CLI
-and HTTP cannot disagree about value formatting. Plain `String` and
-`Option<String>` values are never `Debug`-quoted; structured values use
-an explicit debug fallback. The frontend rendering itself belongs to the
-separate UI task and was not quietly expanded here.
+**Cause of the former limit.** T15 added one pure `FieldDiff` projection
+in `knx-diff`, so CLI and HTTP cannot disagree about value formatting;
+the frontend rendering was deliberately left to a separate UI task.
 
-**Impact.** CLI/API consumers can see "what changed to what" without
-reconstructing values from snapshots. A web user still sees only counts.
+**What remains.** Field names are shown as the `knx-diff` identifiers
+(`product_ref`, `name`, …), untranslated and in monospace, because the
+response carries no display label for them. Values are the server's
+pre-formatted strings (`-` for an absent value; enums and structured
+values use the explicit `Debug` fallback T15 recorded). The web view
+has no inline character-level highlighting inside a value.
 
-**Lifted when.** Fully resolved when the web panel renders the supplied
-entity keys and `fieldChanges` values accessibly; crate, CLI, and API work
-are complete.
+<a id="60-project-diffs-web-panel-shows-grouped-counts-only"></a>
+## 60. Project diff's web panel lists entities, but pages large tables
 
-## 60. Project diff's web panel shows grouped counts only
+**Status.** Largely lifted (CT-1, 2026-09-28). `ProjectDiffPanel.tsx`
+keeps the grouped-count summary lines and adds, below them, one
+collapsed-by-default disclosure per non-empty table and installation
+(`ProjectDiffDetails.tsx`, projection in `projectDiffView.ts`). Expanded,
+a table lists each added, removed, changed and ambiguous entity by its
+natural key (area `1`, line `1.2`, device address plus ETS id, group
+address in the user's notation plus ETS id, group-range bounds, building
+path). A changed entity shows how it was matched (ETS id or natural key)
+and its before/after table; an ambiguous one shows its candidate counts
+on each side; a changed device nests its communication-object and
+parameter tables the same way.
 
-**Limitation.** `ProjectDiffPanel.tsx` renders one summary line per
-non-empty entity table (e.g. `Devices: 1 added, 2 changed`) across the
-whole report. There is no tree view of individual added/removed/changed
-entities, and no inline before/after value highlighting anywhere in the
-panel.
+**Accessibility.** Disclosures are native buttons with `aria-expanded`/
+`aria-controls`, so Enter and Space come from the platform. Every status
+is spelled out as a word and prefixed by a symbol (`+`, `−`, `~`, `?`);
+colour only reinforces it. English and German catalogues cover every new
+string. Escape still closes the report first, as before.
 
-**Cause.** Design spec §9, explicit out-of-scope: "no tree view, no
-inline before/after text highlighting" — the same visual register as the
-existing Log tab (`LogPanel.tsx`), not a richer side-by-side diff view.
+**What remains.**
 
-**Impact.** A user who wants to see *which* device was added, or the
-actual old/new value of a changed field, cannot do so from the web panel
-alone — only counts per table, per installation.
-
-**Lifted when.** Open. A richer visual diff view is a real, larger
-feature a future task could propose; not built speculatively now.
-
-**T15 handoff.** The response already supplies ordered `fieldChanges`
-(`field`, `left`, `right`) on every generic and device change, plus full
-typed `left`/`right` snapshots, entity keys, match kind, nested object/
-parameter tables, and ambiguity counts. The UI task should provide an
-expandable, keyboard-accessible per-installation/entity tree, identify
-added/removed/ambiguous entries individually, and show each before/after
-pair without requiring color alone. It must not invent a match or an
-apply/merge action.
+- **Paging, not virtualisation.** A table renders 50 rows, then a
+  "Show more" control reveals 50 more at a time and moves focus to the
+  first new row. A user who expands a table of thousands and keeps
+  clicking will eventually render all of them in the DOM.
+- **No search or filter** inside the diff view, and no jump from a diff
+  row to the entity in the Project Explorer.
+- **Keyboard activation is verified structurally in Vitest.** happy-dom
+  does not synthesize a button's Enter/Space activation, so the tests
+  reproduce the browser's rule (an uncancelled Enter/Space keydown on a
+  focused `<button>` clicks it). No Playwright run covers the panel yet,
+  and no screen reader was used to check it.
+- The panel never applies or merges a diff (§55) and has no three-way
+  mode (§56). Raw `.knxproj` inputs are accepted since CT-6 (§57).
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 
@@ -5693,10 +5777,10 @@ ON CONFLICT(id) DO UPDATE SET name = excluded.name` — whichever
 wrote. Every other id-collision path this crate has is first-writer-wins
 instead, plus a recorded `IdConflict` when the losing row's file differs:
 `first_winner` in `parse/mod.rs`, shared by `hardware.rs` and `catalog.rs`
-since 2026-09-13, and an equivalent that `program.rs` still inlines for
-`application_program` rather than calling — editing the shared helper does
-not reach it. Manufacturer names update silently and take the
-opposite side.
+since 2026-09-13 and by `program.rs` since 2026-09-17 (§86). Since PDB-11
+(schema v17, §135) every such candidate element is also recorded with its
+digest; manufacturer names are master data and are not. Manufacturer names
+update silently and take the opposite side.
 
 **Cause.** `hardware.rs` and `catalog.rs` can each create a manufacturer row
 stub (`id`, `name = NULL`) before any `knx_master.xml` naming it has been
@@ -7353,8 +7437,19 @@ run for investigation, not be accepted as proof of freshness. `touch` the source
 trust a file's mtime or checksum as proof that a *build output* is current,
 because the output's own mtime was equally unreliable in the measured case.
 
-**Lifted when.** Either the working copy moves to a filesystem whose mtimes
-cargo can rely on, or cargo's checksum-based freshness stabilises:
+**Lifted 2026-09-28: the working copy moved to ext4.** `findmnt -T
+/mnt/daten-i/Sourcecode/KNXBench` now reports `/dev/sdc1 ext4 rw,relatime`, so
+the first lifting condition below is met and the `ntfs3`-specific hazard no
+longer applies to this machine. The entry stays as history. Two things are
+unchanged and remain good practice: a target directory shared with another run
+can still replay a cached result, so confirm the log shows the changed crate
+being compiled, and a disputed result is settled with a fresh
+`CARGO_TARGET_DIR`. No stale-fingerprint event has been observed on ext4; that
+is an absence of observations, not a proof.
+
+**Lifted when (original condition).** Either the working copy moves to a
+filesystem whose mtimes cargo can rely on, or cargo's checksum-based freshness
+stabilises:
 `-Z checksum-freshness` ("Use a checksum to determine if output is fresh
 rather than filesystem mtime", listed by `cargo -Z help` on cargo 1.98.0)
 exists for exactly this situation but is nightly-only and unstable.
@@ -8036,11 +8131,115 @@ example, it could observe a WebKit web-process-terminated signal and then
 drop the stale listener or destroy the window. Either way this needs a
 test, or at least a manual reproduction on a real window manager.
 
-## §134 Mask `0701h` (BIM M112) devices cannot receive an application download
+## §134 Baggage is inventoried, not interpreted
 
-**Status.** Open; items 1 and 2 lifted, item 3 half lifted 2026-09-27. Found 2026-09-27 while evaluating
-a request to configure button 1 of the MDT *Taster 2-fach Plus* at `1.1.67` as
-an ON/OFF toggle on `2/0/53`. RESEARCH §19 has the evidence.
+**Limitation.** Since PDB-10 (schema v16, ADR-0042) every baggage
+declaration is typed and resolved and every payload is classified, but
+nothing acts on it: `InstallOnImport`, `TargetPath` destinations and
+`FileInfo` timestamps are carried as raw lexemes, icons are not rendered,
+manuals not opened, plug-in DLLs/MSIs not run, nested ZIP entries not
+decompressed. Media classes cover the formats the corpus contains (PNG,
+JPEG, GIF, BMP, PDF, ZIP, PE, OLE2, XML); anything else is `unknown`, not
+guessed. A nested ZIP's expanded size is what its directory *declares*, not a
+measured decompression. Installing still holds each member whole in memory
+(≤ 64 MiB each; a 54.8 MB member measured 4.2× peak RSS growth). Baggage
+*references* from application programs
+(`Static/Extension/Baggage/@RefId`, 935 distinct in the corpus) are reported
+as unknown constructs, not resolved against the inventory; whether the single
+`Hardware/Product/Baggages` element is reported has not been probed. When a
+`Baggages.xml` is both ingested standalone and carried in a package, a fresh
+install records its index unknowns under that blob once per path while a v15
+upgrade records them once, so unknown *row* counts (not the inventory or
+report) can differ in that shape. The package corpus alone cannot produce
+it; a project import followed by installing the same package can.
+
+**Cost.** The user sees what a manufacturer ships and which files are
+undeclared, but cannot preview them in KNXBench, and a package that relies on
+a baggage file being installed on import gets no such installation.
+
+**Why it is this way.** The Project Schema specifies only that each
+`Baggage` is an external file; the corpus spells `InstallOnImport` as both
+`false` and `0`. Acting on undocumented semantics, or opening untrusted
+vendor payloads, would trade integrity and safety for convenience.
+
+**Lifted when.** A specified source defines the declaration attributes, or a
+concrete feature (icon display, manual links) needs a payload and brings its
+own sandboxed viewer with tests.
+
+## §135 Package identity is recorded, not decided
+
+**Limitation.** Since PDB-11 (schema v17, ADR-0043) every element of the six
+package-content kinds (`catalog_section`, `catalog_item`, `hardware`,
+`product`, `hardware2program`, `application_program`) in every parsed member
+blob is recorded with an element digest, and `knx products identity` names
+the winner, every candidate, their packages and whether each equals the
+winner. The stored row is still the **first installed** one: installing the
+same packages in another order stores other values for the ids whose
+elements differ. KNXBench shows this; it does not choose.
+
+- The digest is conservative. Equal digests mean equal as the parsers read
+  it: the element's subtree plus the context its stored row takes from
+  outside (manufacturer, parent section, parent hardware). Different digests
+  can come from differences without meaning (a different namespace prefix, a
+  changed `Hash` attribute, re-wrapped text). Whitespace-only text and
+  namespace URIs are not compared, as the parsers ignore them too.
+- Translations are not compared. A program's `Languages`, and catalogue and
+  hardware translations, live outside the element.
+- Families (`ApplicationNumber`) and `ReplacesVersions` links rest on an
+  unofficial public copy of the project schema plus corpus agreement, not on a
+  KNX-published XSD. A value that does not parse is shown raw with the reason
+  and nothing is linked; a listed version with no installed program means
+  *not installed*, not *does not exist*. KNXBench implements no upgrade
+  behaviour behind `ReplacesVersions`.
+- Order-number lookup is exact-string per manufacturer. An order number is
+  never an identity and never merges products.
+- Master data is not covered: `manufacturer.name` stays last-writer-wins
+  (§88) and `datapoint_type` first-wins without provenance (§86).
+- A blob the scan cannot read (an entity the parsers ignore, or retained
+  bytes that no longer match their hash after an upgrade), or whose rows
+  from before v17 disagree with the scan, is recorded `unavailable` with its
+  reason and listed as unmeasured, not guessed. It is not rescanned later.
+- Server and web have no identity, family or order-number views; the
+  library and CLI do.
+
+**Cost.** A user who installs overlapping packages sees which package
+supplied each value and which offer different ones, but cannot yet pick a
+different winner.
+
+**Why it is this way.** No normative ordering of package content exists:
+`ToolVersion` is a free-form producer string, the namespace is a format
+version, and any hash order would be arbitrary and silently change existing
+databases (ADR-0043 §2).
+
+**Lifted when.** A specified ordering of package content exists, or a later
+UI slice lets the user pick a winner per id.
+
+## §136 Mask `0701h` (BIM M112) devices cannot receive an application download
+
+**Status.** **Lifted 2026-09-28** for the one verified path. Found
+2026-09-27 while evaluating a request to configure button 1 of the MDT
+*Taster 2-fach Plus* at `1.1.67` as an ON/OFF toggle on `2/0/53` (RESEARCH
+§19). The *Lifted when* condition below is met: a real download of a known
+configuration (option C) was verified by the group telegrams it produces on
+the bus (RESEARCH §19.4). What stays open is listed under §7's memory
+download entries: an unacknowledged closing `A_Restart`, `[A]` rules not in
+any PDF read, one product family verified on one device.
+
+Resolution of the five items below:
+
+1. Load state machine transport: in `ManagementSession`, used by
+   `run_memory_download`; live on `1.1.67`.
+2. Table serializers: verified by byte-exact read-back after the download.
+3. Parameter image: `knx_productdb::image::build_download_image` (Dynamic
+   evaluation, union members, GrOT, masks; ADR-0044).
+4. Access key: not needed. The device accepted the download without an
+   `A_Authorize_Request` and no key was used or guessed. A device that
+   demands one is still refused.
+5. Hardware-write policy: `WriteScope::Download` is allowed on hardware only
+   through `run_memory_download`, behind the ignored, doubly confirmed live
+   test. The property-based `Downloader` still refuses hardware.
+
+The original entry follows unchanged, as the record of what was missing.
 
 **Limitation.** KNXBench can address and restart such a device (RESEARCH §8.8.6), but
 it cannot load an application program, parameters, group addresses or links

@@ -363,6 +363,21 @@ fn ga_import_of_a_real_change_against_a_readonly_store_reports_the_save_error() 
     readonly_permissions.set_readonly(true);
     std::fs::set_permissions(&store, readonly_permissions).unwrap();
 
+    // The read-only bit is only a precondition if the OS enforces it for
+    // this user. Root (CAP_DAC_OVERRIDE), which is how Claude Code cloud
+    // sessions and many containers run, may open the file for writing
+    // anyway. The save then succeeds, and the test would fail for reasons
+    // that have nothing to do with the CLI. Probe directly instead of
+    // guessing from the uid, and skip out loud rather than pass silently.
+    if std::fs::OpenOptions::new().write(true).open(&store).is_ok() {
+        std::fs::set_permissions(&store, original_permissions).unwrap();
+        eprintln!(
+            "SKIPPED: the read-only bit is not enforced for this user (root?); \
+             the save-error path cannot be exercised here"
+        );
+        return;
+    }
+
     let out = run_cli(&[
         "ga-import",
         store.to_str().unwrap(),

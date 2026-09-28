@@ -17,12 +17,13 @@ use serde_json::json;
 ///
 /// `diff_project` (`routes.rs`) is the one deliberate exception to the
 /// first half of that rule: it also calls into `knx-store` (to load the
-/// comparison file), yet still maps its whole result to `bad_request`.
-/// Both of its failure modes — "no project open" and "comparison file
-/// does not exist" — are the caller's to fix relative to a project that
-/// may already be open, not an environment problem, so they follow the
-/// second half of the split instead (see the route's own doc comment for
-/// the full reasoning).
+/// comparison file), yet still maps its rejections to `bad_request`:
+/// "no project open", "comparison file does not exist", an unsupported or
+/// mismatched input kind — all the caller's to fix relative to a project
+/// that may already be open, not an environment problem, so they follow
+/// the second half of the split instead. Its one non-400 failure is a
+/// `.knxproj` refused over error-level import diagnostics, a `422` that
+/// carries the import report (see the route's own doc comment).
 ///
 /// `bus_routes.rs` (T15 task 3) adds a third category the two constructors
 /// above cannot express, so it reaches for [`ApiError::with_status`]

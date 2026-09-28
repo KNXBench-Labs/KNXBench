@@ -1013,6 +1013,117 @@ main {
   gap: 0.5rem;
 }
 
+/* CT-6: a `.knxproj` comparison's import report, collapsed above the diff.
+   Severity is always a word; the colour only reinforces it. */
+.project-diff-panel-refused {
+  color: var(--knx-error-color);
+  font-weight: 600;
+}
+
+.project-diff-import {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.project-diff-import > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.project-diff-import-list {
+  list-style: none;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.project-diff-import-severity {
+  font-weight: 600;
+}
+
+.project-diff-import-error .project-diff-import-severity {
+  color: var(--knx-error-color);
+}
+
+.project-diff-import-warning .project-diff-import-severity {
+  color: var(--knx-warning-color);
+}
+
+.project-diff-import-location,
+.project-diff-import-detail {
+  display: block;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.project-diff-import-location {
+  font-family: var(--knx-font-mono);
+}
+
+/* `ProjectDiffDetails` — collapsed disclosures below the summary. Status is
+   always a word plus a symbol; the colour only reinforces it. */
+.project-diff-details {
+  margin-top: 0.75rem;
+}
+
+.project-diff-toggle {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-diff-disclosure-content {
+  padding-left: 1rem;
+}
+
+.project-diff-entries {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.project-diff-status {
+  font-weight: 600;
+}
+
+.project-diff-status-added {
+  color: var(--knx-success-color);
+}
+
+.project-diff-status-removed {
+  color: var(--knx-error-color);
+}
+
+.project-diff-status-ambiguous {
+  color: var(--knx-warning-color);
+}
+
+.project-diff-key {
+  font-family: var(--knx-font-mono);
+}
+
+.project-diff-meta {
+  opacity: 0.8;
+}
+
+.project-diff-fields {
+  margin: 0.25rem 0 0.25rem 1rem;
+  border-collapse: collapse;
+}
+
+.project-diff-fields th,
+.project-diff-fields td {
+  text-align: left;
+  padding: 0.1rem 0.75rem 0.1rem 0;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
 /* `BusMonitorPanel` — a centre-pane view like `.log-panel`, reached from
    the navigation pane or the command palette rather than a toolbar
    toggle, and laid out by `.workbench-center` rather than by flex. */
@@ -2239,4 +2350,90 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .login-panel {
     animation: knx-login-panel-in var(--knx-transition-duration) var(--knx-motion-easing) both;
   }
+}
+
+/* `DocumentationDialog` — wider than the other overlays because it carries
+   a page preview; the preview and its warnings sit side by side and stack
+   on narrow windows. */
+.search-panel.documentation-dialog {
+  width: min(72rem, 95vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.documentation-dialog-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.documentation-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  border: 1px solid var(--knx-border);
+  border-radius: 4px;
+}
+
+.documentation-sections label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.documentation-hint,
+.documentation-status {
+  flex-basis: 100%;
+  margin: 0.25rem 0 0;
+  opacity: 0.8;
+}
+
+.documentation-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.documentation-preview {
+  flex: 3 1 28rem;
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.documentation-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 50vh;
+  /* No background: the report paints its own light page
+     (`knx-report`'s `DOCUMENT_STYLE`), in a dark shell too. */
+  border: 1px solid var(--knx-border);
+}
+
+.documentation-warnings {
+  flex: 1 1 14rem;
+  overflow-y: auto;
+}
+
+.documentation-warnings h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.documentation-warning-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.documentation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

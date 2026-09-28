@@ -2,11 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
-import type { ProjectDiffReport } from "./api";
+import type { ComparisonImport, ProjectDiffReport } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
 import type { MessageKey } from "./messages/en";
+import ProjectDiffDetails from "./ProjectDiffDetails";
+import ProjectDiffImportDiagnostics from "./ProjectDiffImportDiagnostics";
+import { compareFilters } from "./projectDiffView";
 
 // One non-generic entity table's shape, enough for the grouped-count
 // renderer below — every table in a `ProjectDiffReport` (`api.ts`'s
@@ -54,9 +57,9 @@ const INSTALLATION_STATUS_KEYS: Record<"added" | "removed", MessageKey> = {
   removed: "projectDiff.entityStatus.removed",
 };
 
-// Builds the one-line grouped-count summary for a non-empty table (design
-// spec §5/§9: grouped counts only, no tree view, no inline before/after
-// highlighting). Returns `null` for an empty table so callers can filter
+// Builds the one-line grouped-count summary for a non-empty table. The
+// per-entity detail lives in `ProjectDiffDetails` below it (CT-1, lifting
+// design spec §9's "grouped counts only" scope). Returns `null` for an empty table so callers can filter
 // those out without rendering an empty line — and, per CLAUDE.md's
 // never-silently-discard rule, a table with *only* ambiguous entries is
 // still non-empty and still gets a line.
@@ -115,8 +118,8 @@ function summaryLines(t: Translate, report: ProjectDiffReport): string[] {
 
 // Self-contained result panel, closer in spirit to `LogPanel.tsx` than to
 // `DocumentationExportButton.tsx`'s one-line toast: the comparison result
-// is a list of grouped counts, not something a single summary string can
-// carry. Owns its `./api`/`./filePicker` calls the same way
+// is a list of grouped counts plus an expandable entity list, not something
+// a single summary string can carry. Owns its `./api`/`./filePicker` calls the same way
 // `DocumentationExportButton` owns its own, but additionally owns the
 // fetched `ProjectDiffReport` and an open/closed toggle for the panel.
 export default function ProjectDiffPanel(props: {
@@ -127,7 +130,13 @@ export default function ProjectDiffPanel(props: {
   const { tree, onError, onClearErrors } = props;
   const t = useTranslate();
   const [report, setReport] = useState<ProjectDiffReport | null>(null);
+  // A `.knxproj` the server refused over error-level import diagnostics:
+  // shown in this panel instead of a diff, never alongside a stale one.
+  const [refusal, setRefusal] = useState<ComparisonImport | null>(null);
   const [open, setOpen] = useState(false);
+  // Remounts the details on every comparison, so a new report starts
+  // collapsed instead of inheriting the previous one's expanded tables.
+  const [generation, setGeneration] = useState(0);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const compareRef = useRef<HTMLButtonElement | null>(null);
 
@@ -151,20 +160,27 @@ export default function ProjectDiffPanel(props: {
 
   async function compare() {
     // Not module-level (see the removed `COMPARE_FILTER` constant): the
-    // filter name shown in the native file dialog must follow the active
-    // UI language, so it is built fresh from `t()` on every click instead
+    // filter names shown in the file dialog must follow the active UI
+    // language, so they are built fresh from `t()` on every click instead
     // of once at module load.
-    const path = await pickOpenPath([
-      { name: t("projectDiff.compareFilterName"), extensions: ["knxdb"] },
-    ]);
+    const path = await pickOpenPath(compareFilters(t));
     if (!path) return;
     onClearErrors();
     try {
       const result = await api.diffProject(path);
       setReport(result);
+      setRefusal(null);
+      setGeneration((value) => value + 1);
       setOpen(true);
     } catch (e) {
-      onError(e);
+      const refused = api.importRefusal(e);
+      if (!refused) {
+        onError(e);
+        return;
+      }
+      setReport(null);
+      setRefusal(refused);
+      setOpen(true);
     }
   }
 
@@ -181,7 +197,7 @@ export default function ProjectDiffPanel(props: {
       <button ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
         {t("projectDiff.compareButton")}
       </button>
-      {open && report && (
+      {open && (report || refusal) && (
         <div
           className="project-diff-panel"
           ref={panelRef}
@@ -199,14 +215,28 @@ export default function ProjectDiffPanel(props: {
           }}
         >
           <h2>{t("projectDiff.title")}</h2>
-          {lines.length === 0 ? (
+          {refusal && (
+            <>
+              <p className="project-diff-panel-refused" role="alert">
+                {t("projectDiff.importRefused")}
+              </p>
+              <ProjectDiffImportDiagnostics diagnostics={refusal.importDiagnostics} />
+            </>
+          )}
+          {report?.inputKind === "knxproj" && (
+            <ProjectDiffImportDiagnostics key={generation} diagnostics={report.importDiagnostics} />
+          )}
+          {!report ? null : lines.length === 0 ? (
             <p className="project-diff-panel-empty">{t("projectDiff.noDifferences")}</p>
           ) : (
-            <ul className="project-diff-panel-list">
-              {lines.map((line, index) => (
-                <li key={index}>{line}</li>
-              ))}
-            </ul>
+            <>
+              <ul className="project-diff-panel-list">
+                {lines.map((line, index) => (
+                  <li key={index}>{line}</li>
+                ))}
+              </ul>
+              <ProjectDiffDetails key={generation} report={report} />
+            </>
           )}
           <button onClick={close}>{t("projectDiff.close")}</button>
         </div>

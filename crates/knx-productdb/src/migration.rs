@@ -9,14 +9,14 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ingest::{classify, FileKind};
 use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 14;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 17;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -287,7 +287,461 @@ fn migrations() -> Vec<Migration> {
         migrate_v11_to_v12,
         migrate_v12_to_v13,
         migrate_v13_to_v14,
+        migrate_v14_to_v15,
+        migrate_v15_to_v16,
+        migrate_v16_to_v17,
     ]
+}
+
+/// v16 -> v17 (PDB-11, ADR-0043). Adds the package identity tables.
+///
+/// The backfill seeds `package_source_name` from `package.source_name`,
+/// scans every parsed blob that classifies as a catalogue, hardware or
+/// program file (exactly the blobs a domain parser read, so a raw-stored
+/// member never becomes a candidate), and extracts producer facts from
+/// every stored blob. A blob whose stored bytes no longer match its key,
+/// that the scan cannot read, or whose historical rows disagree with its
+/// scan is recorded `unavailable` with the reason and the upgrade
+/// continues. It also indexes the six identity tables by `source_sha256`
+/// for the agreement check. Winners and `package_conflict` rows stay as they
+/// were: the original install order is not recoverable.
+fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package_source_name (
+            package_sha256 TEXT NOT NULL REFERENCES package(sha256),
+            source_name    TEXT NOT NULL,
+            PRIMARY KEY (package_sha256, source_name)
+        ) STRICT;
+        CREATE TABLE source_identity_scan (
+            source_sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256),
+            status        TEXT NOT NULL CHECK (status IN ('measured','unavailable')),
+            reason        TEXT,
+            scanner       INTEGER NOT NULL,
+            CHECK ((status = 'unavailable') = (reason IS NOT NULL))
+        ) STRICT;
+        CREATE TABLE source_identity (
+            source_sha256 TEXT NOT NULL REFERENCES source_identity_scan(source_sha256),
+            table_name    TEXT NOT NULL CHECK (table_name IN ('catalog_section','catalog_item','hardware','product','hardware2program','application_program')),
+            logical_id    TEXT NOT NULL,
+            occurrence    INTEGER NOT NULL CHECK (occurrence >= 1),
+            digest        TEXT NOT NULL CHECK (length(digest) = 64),
+            PRIMARY KEY (source_sha256, table_name, logical_id, occurrence)
+        ) STRICT;
+        CREATE INDEX source_identity_by_id ON source_identity (table_name, logical_id);
+        CREATE TABLE source_producer (
+            source_sha256  TEXT PRIMARY KEY REFERENCES source_file(sha256),
+            root_namespace TEXT,
+            created_by     TEXT,
+            tool_version   TEXT
+        ) STRICT;
+        CREATE INDEX IF NOT EXISTS catalog_section_source ON catalog_section (source_sha256);
+        CREATE INDEX IF NOT EXISTS catalog_item_source ON catalog_item (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware_source ON hardware (source_sha256);
+        CREATE INDEX IF NOT EXISTS product_source ON product (source_sha256);
+        CREATE INDEX IF NOT EXISTS hardware2program_source ON hardware2program (source_sha256);
+        CREATE INDEX IF NOT EXISTS application_program_source ON application_program (source_sha256);
+        INSERT INTO package_source_name (package_sha256, source_name)
+            SELECT sha256, source_name FROM package;",
+    )?;
+    let blobs = conn
+        .prepare(
+            "SELECT s.sha256, s.source_path, EXISTS (SELECT 1 FROM source_parse_evidence AS e WHERE e.sha256 = s.sha256)
+             FROM source_file AS s ORDER BY s.sha256",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha, path, parsed) in blobs {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            continue;
+        };
+        let intact = crate::sha256_hex(&bytes) == sha;
+        if intact {
+            crate::identity::record_producer(conn, &sha, &bytes)?;
+        }
+        if !parsed {
+            continue;
+        }
+        if !intact {
+            // Damaged bytes cannot be trusted to classify either: any parsed
+            // blob that no longer matches its key is recorded unmeasured.
+            crate::identity::record_unavailable(
+                conn,
+                &sha,
+                "v17 backfill: stored bytes do not match their SHA-256 key",
+            )?;
+        } else if matches!(
+            classify(&bytes),
+            FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
+        ) {
+            crate::identity::backfill_scan(conn, &sha, &path, &bytes)?;
+        }
+    }
+    Ok(())
+}
+
+/// v15 -> v16 (PDB-10, ADR-0042). Adds the baggage inventory tables and
+/// swaps the `unsupported-baggage-index` diagnostic kind for
+/// `unresolved-baggage-declaration` and `undeclared-baggage-payload`
+/// (the CHECK list is rebuilt, rows copied verbatim).
+///
+/// Every installed package then gets an inventory re-derived from its own
+/// retained member bytes by install's own functions, never inferred from
+/// counts. `ingest_unknown` gets the index parser's unknown rows as a fresh
+/// ingest writes them: once per package member (package install re-parses
+/// its members, `parse_existing`), and once per parsed index blob that no
+/// package carries (standalone `ingest_file`, which parses a blob once).
+///
+/// A measured install report is rewritten into its v16 shape by
+/// `upgrade_report_for_baggage`; an `unavailable` report stays so. A
+/// package whose retained bytes no longer parse or whose report disagrees
+/// with them gets an `unavailable` inventory and an `unavailable` report,
+/// never an invented zero, and a recorded `InstallReportBackfillError`.
+fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package_baggage_inventory (
+            package_sha256 TEXT PRIMARY KEY REFERENCES package(sha256),
+            status TEXT NOT NULL CHECK (status IN ('measured','unavailable'))
+        ) STRICT;
+        CREATE TABLE package_baggage_payload (
+            package_sha256 TEXT NOT NULL REFERENCES package_baggage_inventory(package_sha256),
+            member_path TEXT NOT NULL,
+            sha256 TEXT NOT NULL REFERENCES source_file(sha256),
+            size INTEGER NOT NULL CHECK (size >= 0),
+            media_class TEXT NOT NULL CHECK (media_class IN ('empty','png','jpeg','gif','bmp','pdf','zip','pe-executable','ole2-compound','xml','unknown')),
+            declarations INTEGER NOT NULL CHECK (declarations >= 0),
+            nested_status TEXT NOT NULL CHECK (nested_status IN ('not-archive','unreadable','read')),
+            nested_entries INTEGER CHECK (nested_entries >= 0),
+            nested_expanded_size INTEGER CHECK (nested_expanded_size >= 0),
+            nested_encrypted_entries INTEGER CHECK (nested_encrypted_entries >= 0),
+            nested_archive_names INTEGER CHECK (nested_archive_names >= 0),
+            PRIMARY KEY (package_sha256, member_path),
+            CHECK ((nested_status = 'read') = (nested_entries IS NOT NULL)),
+            CHECK ((nested_entries IS NULL) = (nested_expanded_size IS NULL)),
+            CHECK ((nested_entries IS NULL) = (nested_encrypted_entries IS NULL)),
+            CHECK ((nested_entries IS NULL) = (nested_archive_names IS NULL)),
+            CHECK ((media_class = 'zip') = (nested_status <> 'not-archive'))
+        ) STRICT;
+        CREATE TABLE package_baggage_declaration (
+            package_sha256 TEXT NOT NULL REFERENCES package_baggage_inventory(package_sha256),
+            index_path TEXT NOT NULL,
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            baggage_id TEXT,
+            name TEXT,
+            target_path TEXT,
+            install_on_import TEXT,
+            time_info TEXT,
+            file_version TEXT,
+            resolution TEXT NOT NULL CHECK (resolution IN ('resolved','missing','invalid')),
+            member_path TEXT,
+            detail TEXT,
+            PRIMARY KEY (package_sha256, index_path, ordinal),
+            CHECK ((resolution = 'resolved') = (member_path IS NOT NULL)),
+            CHECK ((resolution = 'resolved') = (detail IS NULL))
+        ) STRICT;
+        CREATE TABLE package_install_diagnostic_v16 (
+            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('unsupported-master-section','unsupported-master-subtree','unresolved-baggage-declaration','undeclared-baggage-payload')),
+            archive_path TEXT NOT NULL,
+            xml_path TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            occurrences INTEGER NOT NULL CHECK (occurrences > 0),
+            PRIMARY KEY (package_sha256, ordinal),
+            UNIQUE (package_sha256, kind, archive_path, xml_path, detail)
+        ) STRICT;
+        INSERT INTO package_install_diagnostic_v16
+            SELECT * FROM package_install_diagnostic WHERE kind <> 'unsupported-baggage-index';
+        DROP TABLE package_install_diagnostic;
+        ALTER TABLE package_install_diagnostic_v16 RENAME TO package_install_diagnostic;",
+    )?;
+    // Parsed blobs outside every package: standalone ingests. Only these
+    // need classifying; package members carry their role.
+    let standalone = conn
+        .prepare(
+            "SELECT s.sha256, s.source_path FROM source_file AS s
+             JOIN source_parse_evidence AS e ON e.sha256 = s.sha256
+             WHERE NOT EXISTS (SELECT 1 FROM package_member AS m WHERE m.source_sha256 = s.sha256)
+             ORDER BY s.sha256",
+        )?
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha, path) in standalone {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            continue;
+        };
+        if classify(&bytes) != FileKind::Baggages {
+            continue;
+        }
+        match crate::parse::baggage::parse_baggage_index(&path, &bytes) {
+            Ok(index) => insert_unknown(conn, &sha, &index.unknown)?,
+            Err(error @ ProductDbError::Xml { .. }) => {
+                crate::ingest::record_unreadable_baggage_index(conn, &sha, &path, &error)?
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    let packages = conn
+        .prepare("SELECT sha256 FROM package ORDER BY sha256")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for package in packages {
+        conn.execute_batch("SAVEPOINT v16_baggage")?;
+        let failure = match measure_baggage(conn, &package)? {
+            Err(failure) => Some(failure),
+            Ok((inventory, unknowns)) => {
+                // A fresh install adds each re-parsed member's distinct
+                // unknown rows to `package.unknown_count` (`InstallReport::
+                // unknown`); v15 parsed indexes without reporting any.
+                let mut added: i64 = 0;
+                for (sha, rows) in &unknowns {
+                    insert_unknown(conn, sha, rows)?;
+                    added = i64::try_from(rows.len())
+                        .ok()
+                        .and_then(|n| added.checked_add(n))
+                        .ok_or_else(|| ProductDbError::Xml {
+                            source_path: package.clone(),
+                            cause: "v16 backfill: unknown counter overflow".into(),
+                        })?;
+                }
+                conn.execute(
+                    "UPDATE package SET unknown_count = unknown_count + ?2 WHERE sha256 = ?1",
+                    rusqlite::params![package, added],
+                )?;
+                let unknowns = unknowns.into_iter().flat_map(|(_, rows)| rows).collect();
+                crate::baggage::persist(conn, &package, &inventory)?;
+                // A report that cannot be read or re-validated downgrades
+                // just this package to `unavailable`, as v13 -> v14 does; only
+                // a database failure aborts the migration.
+                match crate::package::upgrade_report_for_baggage(
+                    conn, &package, &inventory, unknowns,
+                ) {
+                    Ok(Ok(())) => None,
+                    Ok(Err(why)) => Some((
+                        package.clone(),
+                        package.clone(),
+                        ProductDbError::Xml {
+                            source_path: package.clone(),
+                            cause: format!("v16 backfill: {}", why.0),
+                        },
+                    )),
+                    Err(ProductDbError::Sqlite(error)) => {
+                        return Err(ProductDbError::Sqlite(error))
+                    }
+                    Err(error) => Some((package.clone(), package.clone(), error)),
+                }
+            }
+        };
+        match failure {
+            None => conn.execute_batch("RELEASE v16_baggage")?,
+            Some((source_sha, path, error)) => {
+                conn.execute_batch("ROLLBACK TO v16_baggage; RELEASE v16_baggage")?;
+                crate::baggage::persist_unavailable(conn, &package)?;
+                // A package with no report row (only a damaged v15 database)
+                // has nothing to downgrade; that must not stop it opening.
+                let measured: Option<bool> = conn
+                    .query_row(
+                        "SELECT status = 'measured' FROM package_install_report WHERE package_sha256 = ?1",
+                        [&package],
+                        |r| r.get(0),
+                    )
+                    .optional()?;
+                if measured == Some(true) {
+                    for table in [
+                        "package_install_count",
+                        "package_install_unknown",
+                        "package_install_diagnostic",
+                    ] {
+                        conn.execute(
+                            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                            [&package],
+                        )?;
+                    }
+                    conn.execute(
+                        "UPDATE package_install_report
+                         SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0
+                         WHERE package_sha256 = ?1",
+                        [&package],
+                    )?;
+                }
+                record_backfill_failure(
+                    conn,
+                    &source_sha,
+                    &path,
+                    "InstallReportBackfillError",
+                    "baggage_inventory_backfill",
+                    &error,
+                )?;
+                // The rollback also took the index unknowns, but they describe
+                // each index blob, not this package's report: keep those of
+                // every index that still parses. The report stays
+                // `unavailable`, so `package.unknown_count` is not raised.
+                for (sha, rows) in parseable_index_unknowns(conn, &package)? {
+                    insert_unknown(conn, &sha, &rows)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The unknowns of each of `package`'s retained `Baggages.xml` members that
+/// is present, matches its hash and parses. Anything else was already
+/// recorded as the package's backfill failure.
+fn parseable_index_unknowns(
+    conn: &Connection,
+    package: &str,
+) -> Result<Vec<(String, Vec<crate::report::UnknownConstruct>)>, ProductDbError> {
+    let members = conn
+        .prepare(
+            "SELECT path, source_sha256 FROM package_member
+             WHERE package_sha256 = ?1 AND role = 'Baggages' ORDER BY ordinal",
+        )?
+        .query_map([package], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = Vec::new();
+    for (path, sha) in members {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            continue;
+        };
+        if crate::sha256_hex(&bytes) != sha {
+            continue;
+        }
+        match crate::baggage::parse_index(&path, &bytes) {
+            Ok((_, unknown)) => out.push((sha, unknown)),
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(_) => {}
+        }
+    }
+    Ok(out)
+}
+
+/// The inventory plus each index member's unknowns, keyed by blob hash.
+type MeasuredBaggage = (
+    crate::baggage::BaggageInventory,
+    Vec<(String, Vec<crate::report::UnknownConstruct>)>,
+);
+
+/// Re-derives one package's inventory, and the index-parser unknowns its
+/// install report merges, from retained member bytes. The outer `Result` is
+/// a database failure; the inner `Err` names the blob that cannot be read.
+fn measure_baggage(
+    conn: &Connection,
+    package: &str,
+) -> Result<Result<MeasuredBaggage, UnmeasurableMaster>, ProductDbError> {
+    let members = conn
+        .prepare(
+            "SELECT path, role, source_sha256 FROM package_member
+             WHERE package_sha256 = ?1 AND role IN ('Baggages', 'Baggage') ORDER BY ordinal",
+        )?
+        .query_map([package], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut indexes = Vec::new();
+    let mut payloads = Vec::new();
+    let mut unknowns = Vec::new();
+    for (path, role, sha) in members {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            let error = ProductDbError::Xml {
+                source_path: path.clone(),
+                cause: "v16 backfill: retained baggage member is missing".into(),
+            };
+            return Ok(Err((sha, path, error)));
+        };
+        if crate::sha256_hex(&bytes) != sha {
+            let error = ProductDbError::Xml {
+                source_path: path.clone(),
+                cause: "v16 backfill: retained baggage member does not match its hash".into(),
+            };
+            return Ok(Err((sha, path, error)));
+        }
+        if role == "Baggage" {
+            payloads.push(crate::baggage::BaggagePayload::measure(path, sha, &bytes));
+            continue;
+        }
+        match crate::baggage::parse_index(&path, &bytes) {
+            Ok((index, unknown)) => {
+                unknowns.push((sha, unknown));
+                indexes.push(index);
+            }
+            Err(error) => return Ok(Err((sha, path, error))),
+        }
+    }
+    Ok(Ok((
+        crate::baggage::BaggageInventory::resolve(indexes, payloads),
+        unknowns,
+    )))
+}
+
+/// v14 -> v15 (PDB-9). `TypeColor` and `TypeTime` get their own
+/// `parameter_type.kind` (`Color`, `Time`) instead of `Other`; no DDL is
+/// needed because `kind` has no CHECK list. Every blob that still carries a
+/// v14-era unknown-`Element` row for either child is re-read with
+/// `parse::program::backfill_color_time_kinds` (ADR-0020), which re-kinds
+/// the winning rows and swaps the stale element row for the attribute rows
+/// a fresh ingest writes. Package install reports are historical encounter
+/// records and are left as measured, the v12 -> v13 precedent. Per-blob
+/// `SAVEPOINT`; a failure is recorded, not fatal — a database that refuses
+/// to open is worse than one with a named gap.
+fn migrate_v14_to_v15(conn: &Connection) -> Result<(), ProductDbError> {
+    // `scheme21`: whether ingest ran this blob through the scheme-21
+    // package reconciliation (it does for an application program installed
+    // as a member of a scheme-21 package, ingest.rs), so the backfill
+    // reconciles its new attribute rows the same way.
+    let sources = conn
+        .prepare(
+            "SELECT DISTINCT u.source_sha256, s.source_path,
+                    EXISTS (SELECT 1 FROM package_member AS m JOIN package AS p
+                            ON p.sha256 = m.package_sha256
+                            WHERE m.source_sha256 = u.source_sha256 AND p.scheme = 21)
+             FROM ingest_unknown AS u JOIN source_file AS s ON s.sha256 = u.source_sha256
+             WHERE u.kind = 'Element' AND u.name IN ('TypeColor', 'TypeTime')
+             ORDER BY u.source_sha256",
+        )?
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, bool>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (sha, path, scheme21) in sources {
+        let bytes: Vec<u8> = conn.query_row(
+            "SELECT bytes FROM source_file WHERE sha256 = ?1",
+            [&sha],
+            |r| r.get(0),
+        )?;
+        conn.execute_batch("SAVEPOINT color_time_backfill")?;
+        match crate::parse::program::backfill_color_time_kinds(conn, &sha, &path, &bytes, scheme21)
+        {
+            Ok(_) => conn.execute_batch("RELEASE color_time_backfill")?,
+            Err(error) => {
+                conn.execute_batch("ROLLBACK TO color_time_backfill; RELEASE color_time_backfill")?;
+                record_backfill_failure(
+                    conn,
+                    &sha,
+                    &path,
+                    "ParameterKindBackfillError",
+                    "backfill_color_time_kinds",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v13 -> v14 (PDB-8). Adds the `master_subtree` count category and the

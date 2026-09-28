@@ -11,8 +11,11 @@ relative archive/XML paths and never reveal host `source_name`. This is honest
 import evidence, not ETS parity or signature verification. Since schema v14
 (PDB-8) uninterpreted element subtrees (not attributes) inside the supported
 master sections are reported too (`master_subtree` / `unsupported-master-subtree`, synthetic and
-v13→v14 backfill tests); they are reported, not typed. PDB-10 is the future
-safe baggage inventory and index-to-payload resolution slice.
+v13→v14 backfill tests); they are reported, not typed. Since schema v15
+(PDB-9, ADR-0041) all ten corpus-observed `ParameterType` kinds are typed
+(`Color`/`Time` added), unmodelled type attributes are reported with samples,
+and a reference below a Dynamic node the evaluator skips is named by
+`RefBelowSkippedNode` instead of vanishing. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. Declared attributes such as `InstallOnImport` are carried, not acted on. PDB-11 (schema v17, ADR-0043) records, for every catalogue section/item, hardware, product, `Hardware2Program` and application-program element in every parsed member, an element digest (canonical content, not bytes), so identical and differing copies of one id across packages are told apart; the stored row is still the first installed one (KNOWN_LIMITATIONS §135). `ApplicationNumber`/`ApplicationVersion`/`ReplacesVersions` are read by the lexical rules of an unofficial public schema copy; values that do not fit are shown raw, never guessed.
 
 **Building-space vocabulary (T13, 2026-09-22).** All eleven types documented
 across Schema23 §§1.1.2.3 and 1.2.6.4 are represented end-to-end. The added

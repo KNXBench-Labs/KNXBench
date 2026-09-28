@@ -33,8 +33,44 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// `package_install_count` 3,277 -> 3,390 (one `master_subtree` row per
 /// installed package) and `package_install_diagnostic` 645 -> 880 (the new
 /// subtree diagnostics). Every install outcome and report total was equal.
+///
+/// Re-pinned for PDB-9 (schema v15): a main-vs-branch run differed in
+/// exactly two of 31 final table counts — `ingest_unknown` 23,040 -> 23,051
+/// and `package_install_unknown` 9,245 -> 9,251 — because the 75 v14
+/// `Element TypeColor`/`TypeTime` rows became 86 unread-attribute rows
+/// (per package, distinct: 26 -> 32). An independent Python recount of the
+/// same 115 package instances predicts both deltas exactly. No product
+/// table changed; the report totals are pinned above.
+///
+/// Re-pinned for PDB-10 (schema v16): a main-vs-branch run added the three
+/// baggage inventory tables (113 / 789 / 776 rows, pinned below) and
+/// changed exactly one existing count, `package_install_diagnostic`
+/// 880 -> 859: the 34 `unsupported-baggage-index` rows (one per non-empty
+/// index; 3 of the 37 indexes declare nothing) gave way to 13
+/// `undeclared-baggage-payload` rows and no unresolved declaration. Every
+/// outcome and report total was equal. An independent Python recount of the
+/// same 115 instances / 113 distinct packages predicts every number.
+///
+/// Re-pinned for PDB-11 (schema v17): the four identity tables join the
+/// final counts and the identity section joins the projection. The v16
+/// projection, recomputed without either, must still equal the PDB-10 pin
+/// (`EXPECTED_V16_PROJECTION_COMMITMENT`): no install outcome, report total
+/// or pre-existing table count moved. The measured run did so; the new
+/// tables hold 115 / 1,972 / 528 / 629 rows (pinned below), and per kind the
+/// ids recorded in several blobs equal an independent Python recount of the
+/// same packages exactly.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "23a6c2ad37ccb08175fc8ee754c77a427cb9ab9eefeb40db35ca1d75b0b9a7ec";
+    "424042dafdc03737fbfb0483acd3d181d14c9384084e82615d9ad6ece0ab0420";
+/// The PDB-10 baseline, over only what schema v16 had.
+const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
+    "c204acc82024f4e231e8a0eb2e6ec44b92d52950309e4351696882dbe9280892";
+/// Tables schema v17 added (ADR-0043), left out of the v16 projection.
+const V17_TABLES: [&str; 4] = [
+    "package_source_name",
+    "source_identity",
+    "source_identity_scan",
+    "source_producer",
+];
 static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
@@ -365,6 +401,53 @@ fn report_totals(records: &[Value], field: &str, include_deduplicated: bool) -> 
             "hardware": hardware,
             "master": master,
         }
+    })
+}
+
+/// PDB-11 aggregates over the shared database: per identity kind the
+/// candidate rows, distinct ids, ids recorded in more than one blob, and ids
+/// whose recorded elements do not all share one digest; plus the scan
+/// status counts. Counts only, never an id or a hash.
+fn pdb11_identity_aggregates(conn: &Connection) -> Value {
+    let mut kinds = serde_json::Map::new();
+    for kind in knx_productdb::IdentityKind::ALL {
+        let (rows, ids, multi_blob, differing): (i64, i64, i64, i64) = conn
+            .query_row(
+                "SELECT COALESCE(sum(n), 0), count(*), COALESCE(sum(blobs > 1), 0), COALESCE(sum(digests > 1), 0)
+                 FROM (SELECT count(*) AS n, count(DISTINCT source_sha256) AS blobs,
+                              count(DISTINCT digest) AS digests
+                       FROM source_identity WHERE table_name = ?1 GROUP BY logical_id)",
+                [kind.as_table()],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .expect("aggregate identity rows");
+        kinds.insert(
+            kind.as_table().to_string(),
+            json!({
+                "candidate_rows": rows,
+                "distinct_ids": ids,
+                "ids_in_multiple_blobs": multi_blob,
+                "ids_with_differing_digests": differing,
+            }),
+        );
+    }
+    let divergences = knx_productdb::identity_divergences(conn)
+        .expect("identity divergence query over the shared database");
+    let mut scans = serde_json::Map::new();
+    for status in ["measured", "unavailable"] {
+        let count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM source_identity_scan WHERE status = ?1",
+                [status],
+                |r| r.get(0),
+            )
+            .expect("count identity scans");
+        scans.insert(status.to_string(), json!(count));
+    }
+    json!({
+        "kinds": kinds,
+        "divergent_ids": divergences.len(),
+        "scan_status": scans,
     })
 }
 
@@ -703,22 +786,36 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             .sum::<u64>();
         isolated_pdb7_presence.insert(*column, occurrences);
     }
-    let commitment = baseline_commitment(
-        &private_records,
-        json!({
-            "schemes": scheme_counts,
-            "isolation_outcomes": isolation_counts,
-            "shared_outcomes": shared_counts,
-            "isolation_report_totals": isolation_totals,
-            "shared_installed_report_totals": shared_installed_totals,
-            "shared_successful_attempt_report_totals": shared_successful_totals,
-            "shared_final_database_counts": final_counts,
-            "scheme_12_14_feature_occurrences": pdb5_evidence,
-            "scheme_21_feature_occurrences": pdb6_evidence,
-            "isolated_catalogue_metadata_presence": isolated_pdb7_presence,
-            "shared_catalogue_metadata_presence": shared_pdb7_presence,
-        }),
-    );
+    let pdb11_identity = pdb11_identity_aggregates(&shared);
+    let mut projection = json!({
+        "schemes": scheme_counts,
+        "isolation_outcomes": isolation_counts,
+        "shared_outcomes": shared_counts,
+        "isolation_report_totals": isolation_totals,
+        "shared_installed_report_totals": shared_installed_totals,
+        "shared_successful_attempt_report_totals": shared_successful_totals,
+        "shared_final_database_counts": final_counts,
+        "scheme_12_14_feature_occurrences": pdb5_evidence,
+        "scheme_21_feature_occurrences": pdb6_evidence,
+        "isolated_catalogue_metadata_presence": isolated_pdb7_presence,
+        "shared_catalogue_metadata_presence": shared_pdb7_presence,
+    });
+    let v16_projection = {
+        let mut v16 = projection.clone();
+        let counts = v16["shared_final_database_counts"]
+            .as_object_mut()
+            .expect("final counts object");
+        for table in V17_TABLES {
+            assert!(
+                counts.remove(table).is_some(),
+                "v17 table {table} not counted"
+            );
+        }
+        v16
+    };
+    let v16_commitment = baseline_commitment(&private_records, v16_projection);
+    projection["pdb11_identity"] = pdb11_identity.clone();
+    let commitment = baseline_commitment(&private_records, projection);
     let public_records = private_records
         .iter()
         .map(|record| {
@@ -746,8 +843,22 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "scheme_21_feature_occurrences": pdb6_evidence,
         "isolated_catalogue_metadata_presence": isolated_pdb7_presence,
         "shared_catalogue_metadata_presence": shared_pdb7_presence,
+        "pdb11_identity": pdb11_identity,
         "packages": public_records,
     });
+    // Aggregates only; printed so a failed pin can be re-measured.
+    eprintln!(
+        "pdb11 aggregates: {}",
+        json!({
+            "v16_projection_unchanged": v16_commitment == EXPECTED_V16_PROJECTION_COMMITMENT,
+            "identity": matrix["pdb11_identity"],
+            "v17_tables": V17_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
+        })
+    );
+    assert_eq!(
+        v16_commitment, EXPECTED_V16_PROJECTION_COMMITMENT,
+        "PDB-11 changed a pre-existing outcome, report total or table count; matrix output was not published"
+    );
 
     let scheme_13 = private_records
         .iter()
@@ -866,12 +977,19 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "installed": EXPECTED_SHARED_INSTALLS,
         })
     );
+    // PDB-9 (schema v15): +11 on all three `unknown_count` totals. A v14
+    // ingest reported each distinct `TypeColor`/`TypeTime` child as one
+    // unknown *element* per program member; v15 types both kinds and reports
+    // their unmodelled *attributes* instead. An independent Python recount
+    // over the same 115 discovered packages (bundles included) predicted
+    // 75 element rows -> 86 attribute rows, +11, identically for the 113
+    // unique packages; every other total is unchanged.
     assert_eq!(
         matrix["isolation_report_totals"],
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -882,7 +1000,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22642,
+            "unknown_count": 22653,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -893,7 +1011,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22758,
+            "unknown_count": 22769,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -920,8 +1038,55 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared install-count rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_diagnostic"], 880,
+        matrix["shared_final_database_counts"]["package_install_diagnostic"], 859,
         "shared install-diagnostic rows changed"
+    );
+    for (table, rows) in [
+        ("package_baggage_inventory", 113),
+        ("package_baggage_payload", 789),
+        ("package_baggage_declaration", 776),
+    ] {
+        assert_eq!(
+            matrix["shared_final_database_counts"][table], rows,
+            "shared {table} rows changed"
+        );
+    }
+    for (table, rows) in [
+        ("package_source_name", 115),
+        ("source_identity", 1972),
+        ("source_identity_scan", 528),
+        ("source_producer", 629),
+    ] {
+        assert_eq!(
+            matrix["shared_final_database_counts"][table], rows,
+            "shared {table} rows changed"
+        );
+    }
+    // Per kind: candidate rows, distinct ids, ids in several blobs, ids whose
+    // recorded elements differ. Every parsed member was measurable.
+    let kind = |rows: u64, ids: u64, multi: u64, differing: u64| {
+        json!({
+            "candidate_rows": rows,
+            "distinct_ids": ids,
+            "ids_in_multiple_blobs": multi,
+            "ids_with_differing_digests": differing,
+        })
+    };
+    assert_eq!(
+        matrix["pdb11_identity"],
+        json!({
+            "kinds": {
+                "application_program": kind(302, 273, 29, 25),
+                "catalog_item": kind(362, 345, 17, 0),
+                "catalog_section": kind(251, 103, 53, 49),
+                "hardware": kind(334, 255, 68, 50),
+                "hardware2program": kind(337, 298, 33, 0),
+                "product": kind(386, 306, 69, 46),
+            },
+            "divergent_ids": 170,
+            "scan_status": {"measured": 528, "unavailable": 0},
+        }),
+        "PDB-11 identity aggregates changed"
     );
     assert_eq!(
         matrix["aggregate_identity_and_outcome_commitment"],

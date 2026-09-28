@@ -1,4 +1,34 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 14:01 CEST
+- **Completed:** Offline only. **Still nothing written to 1.1.67.** The memory download now runs as plan plus executor; details in `.ai/logs/2026-09-28_claude_iaw-memory-download.md`.
+  - `knx_core::commissioning::memory_download` is the pure plan (`MemoryDownloadPlan`/`Step`). It has two [A] rules: `property_matches` (the device's octets start the `InlineData` and the rest is zero) and `unmasked_runs` (a write only where the mask is `FFh`).
+  - `knx_productdb::download_plan::plan_memory_download(&DownloadImage)` turns the product `LoadProcedure` into that plan.
+    - The data write goes after `LdCtrlAbsSegment` (CP §3.9.2.2.2 pp. 67–68).
+    - Tables get task identity 0. The program gets PeiType plus `M-hhhh`, ApplicationNumber and ApplicationVersion.
+    - It refuses by name: another style or mask, unmodelled steps, PEI, reserved bits, size mismatch, double allocation, and never-allocated segments.
+  - `knx_net::commissioning::memory_download::run_memory_download(session, plan)`:
+    - checks mask, manufacturer and CompareProp **before** the first write; a late check is refused before anything is sent;
+    - reads back every data write, and never sets Verify Mode;
+    - accepts a record only in the state its event aims at;
+    - restarts via `restart_basic_as(WriteScope::Download)` (crate-internal);
+    - stops at once on a failure, undoing nothing.
+  - Simulator: `preset_load_state`.
+  - **[V] End to end** (`apps/knx-cli/tests/memory_download_simulated.rs`, ignored, corpus): the chain is the MDT file, option-C image, 25-step plan and the simulated 0701h device. Every segment lands octet for octet, IA `4001h`–`4002h` is never written, there is one restart, and the run is idempotent.
+  - Tests: core 11, planner 13, executor 13, corpus 1 (program_code) + 2 (knx-cli). Mutants: 16/16 caught.
+  - Docs: RESEARCH §19.3 (new), KNOWN_LIMITATIONS §7, IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:**
+  1. Controlled real write: add `WriteScope::Download` to the hardware allowlist, as a separate small commit, only for this path.
+  2. A dry-run tool that prints the complete plan (25 steps, addresses, lengths) for the user to review, then asks for a **new explicit go** from the user.
+  3. Before the write, back up memory again (`live_memory_readonly`) and compare it with `OriginalData/DeviceBackups/1.1.67_*before-download.txt`.
+  4. Access key: the device has so far been reachable without a key (level 15 / skip). If it asks for one, stop; do not guess.
+- **Notes for Codex or Claude:**
+  - Session separation still applies: this track writes only to this worktree, `.ai/logs/*_claude_iaw-*` and `scratch/iaw/`.
+  - A real failure leaves machines in Unloaded/Loading. The device then has no loaded application until a new download. Plan the recovery path, re-running the same plan, before going live.
+  - Not pushed, not rebased; `origin/main` is ahead.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-28 14:10 CEST
 - **Completed:** Offline only. **Still nothing written to 1.1.67.** Download image assembly; details in `.ai/logs/2026-09-28_claude_iaw-image-assembly.md`.
   - `knx_productdb::code`: `ProgramCode::parameters` gives each parameter's placement from the blob: `Memory`, `UnionMember { union, offset, bit_offset }`, or `Unmodelled`. The union-member gap from the last entry is closed.

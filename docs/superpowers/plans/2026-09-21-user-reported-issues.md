@@ -173,9 +173,9 @@
 
 **Interfaces:** No `BuildingPartType` or storage value is added until the representation, import mapping, and compatibility behavior are documented. Unknown external `Space/@Type` values remain reported rather than silently becoming Site.
 
-- [ ] Check KNX/ETS schema evidence and the installed corpus for a property/site concept and record exact findings.
-- [ ] Decide between an evidenced external type, a KNXBench-native hierarchy node, or no domain change with a documented explanation.
-- [ ] If a type is added, specify migration, import preservation, export non-goal, tree placement, and multi-building tests before implementation.
+- [x] Check KNX/ETS schema evidence and the installed corpus for a property/site concept and record exact findings. (ADR-0038 E1–E4; `a_ground_root_groups_two_buildings_of_one_installation`)
+- [x] Decide between an evidenced external type, a KNXBench-native hierarchy node, or no domain change with a documented explanation. (ADR-0038 accepted 2026-09-28; `an_undocumented_root_type_is_reported_not_read_as_a_site`)
+- [x] If a type is added, specify migration, import preservation, export non-goal, tree placement, and multi-building tests before implementation. (Not applicable: accepted decision adds no type or migration; import and native round-trip are covered by `a_ground_root_groups_two_buildings_of_one_installation` and `a_ground_site_over_two_buildings_on_one_line_round_trips`.)
 - [ ] Add the UI only after the model decision; prove multiple buildings can share the same installation without ownership duplication.
 
 ### ISSUE-07: Main-workspace product catalog with atomic multi-device creation

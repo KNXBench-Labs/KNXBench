@@ -1,4 +1,24 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 06:27 CEST
+- **Completed:** **PDB-10 merged as `15b4c56` and pushed** (`origin/main` = `15b4c56`, read back). Product database schema is now **v16** ([ADR-0042](../docs/adr/0042-baggage-is-inventoried-by-content-and-resolved-exactly.md)). Branch commits: `9b75091` feature, `23ad852` reconciliation of the historical 1,728 count, `28c88ba` / `b4cecfe` / `4b23b09` review fixes.
+  - `Baggages.xml` declarations are typed as raw lexemes (`Id`, `Name`, `TargetPath`, `InstallOnImport`, `FileInfo/@TimeInfo`, `@Version`). Each resolves byte-exactly to `<dir>/Baggages/<TargetPath>/<Name>` or is `missing`/`invalid` with a reason. An index binds only when its single `Manufacturer/@RefId` equals its directory (all 37 corpus indexes do).
+  - Every `Baggage` payload is classified by magic bytes (BMP-named-`.png`, PDF-named-`.ai`, PE, OLE2 recognized). Nested ZIPs are measured only from the package validator's checked central directory (`validated_zip_metadata`). Nothing is decompressed, extracted or executed.
+  - Unmodelled attributes (also on the `KNX/ManufacturerData/Manufacturer/Baggages` spine), prefixed look-alikes (`x:Name`, never read as `Name`) and character content (one `#text` per element) are reported as unknowns.
+  - A standalone `Baggages.xml` that does not parse (project import) is stored with a `BaggageIndexParseError` row instead of failing the import; inside a package it still refuses the install.
+  - Reload re-parses retained index blobs and re-measures payloads; any stored-row disagreement is a corruption error.
+  - v15 → v16 re-derives inventory, index unknowns and `package.unknown_count` like a fresh install. A package whose bytes or stored report are bad is downgraded to `unavailable` with an `InstallReportBackfillError`; its parseable index unknowns are kept. The database still opens, also with a missing report row.
+  - Reviews: round 1 on `9b75091` found 3 CRITICAL / 5 IMPORTANT / 5 MINOR; all fixed or documented (I8 reload-vs-code coupling in the ADR, M11 in KNOWN_LIMITATIONS §134). Re-review of `28c88ba`+`b4cecfe`: "accept with minor follow-ups", 4 MINOR, all fixed in `4b23b09`. Every fix has a regression test that fails when the fix is reverted.
+  - Gates on `4b23b09` (merge tree identical): workspace 2107 passed / 0 failed / 115 ignored (113 suites); fmt; clippy (fresh target dir, `knx-productdb` checked); headers 233/161 ≤ 161; anchors 389; corpus-gates; layering; `git diff --check`; private corpus matrix (scopes Gira + MDT) matches its committed pin, 637 s.
+  - `stats.md` regenerated after the merge.
+- **Pending/Next Steps:** Continue `goal.md` sequentially: **PDB-11**, then web leftovers, open issues, manual/documentation, alpha release, final review.
+- **Notes for Codex or Claude:**
+  - The corpus matrix needs `KNXBENCH_PRODUCT_MATRIX_OUTPUT` plus scopes `OriginalData/ProductDatabases/Gira:…/MDT`. It takes about 11 minutes, so run it in the background.
+  - `Static/Extension/Baggage/@RefId` program references (935 distinct) are still reported as unknowns, not linked to the inventory (§134).
+  - The two `iaw-settling-delay` entries below belong to another session; they were left uncommitted and untouched. `docs/paperclip-shutdown/` was not touched. No KNX/LAN/hardware traffic.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-27 23:55 CEST
 - **Completed:** PDB-10 **preflight only**, no production code. A read-only aggregate probe of baggage index and payload shape is recorded in `docs/PRODUCT_DATABASE_CORPUS.md` §"PDB-10 preflight". Findings:
   - 777 `Baggage` declarations in 38 `Baggages.xml`.

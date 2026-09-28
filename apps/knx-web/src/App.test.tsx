@@ -45,6 +45,9 @@ const apiMock = vi.hoisted(() => ({
   undo: vi.fn(),
   // The File menu's Compare entry (stage 4, item 4's keyboard walk).
   diffProject: vi.fn(),
+  // The File menu's documentation entry opens a dialog that previews on
+  // mount; a promise that never settles keeps that dialog inert.
+  previewDocumentation: vi.fn(() => new Promise(() => {})),
   // `Inspector` renders `ParameterPanel` unconditionally once a device's
   // detail has loaded (see `Inspector.tsx`'s own comment on why), and
   // `ParameterPanel` fetches on mount — every test in the T33 describe
@@ -2126,8 +2129,8 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
   it("closes on an item activation, including one whose button belongs to a child component", async () => {
     // `DocumentationExportButton` owns this button; `App` never sees its
     // `onClick`, which is why the close lives on the container and not on
-    // each entry. A `null` path makes the click a no-op after that.
-    filePickerMock.pickSavePath.mockResolvedValue(null);
+    // each entry. Its dialog is portalled out of the menu, so closing the
+    // menu does not hide it.
     const root = await openProject();
 
     const menu = await openMenu();
@@ -2136,6 +2139,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       findButton("Export documentation…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(menu.open).toBe(false);
+    expect(document.body.querySelector(".documentation-dialog")).not.toBeNull();
 
     await act(async () => root.unmount());
   });

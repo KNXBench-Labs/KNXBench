@@ -538,6 +538,31 @@ describe("api", () => {
     );
   });
 
+  it("exportDocumentation sends the section selection and language next to the path", async () => {
+    mockFetchOnce({ warnings: [] });
+    await api.exportDocumentation("/data/project.html", {
+      sections: ["summary", "devices"],
+      language: "de",
+    });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      path: "/data/project.html",
+      sections: ["summary", "devices"],
+      language: "de",
+    });
+  });
+
+  it("previewDocumentation posts the options to /api/project/documentation-preview", async () => {
+    const preview = { html: "<!doctype html><title>x</title>", warnings: [] };
+    mockFetchOnce(preview);
+    const result = await api.previewDocumentation({ sections: [], language: "en" });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/documentation-preview");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ sections: [], language: "en" });
+    expect(result).toEqual(preview);
+  });
+
   it("diffProject posts the path to /api/project/diff", async () => {
     mockFetchOnce({ infoChanges: [], installations: [] });
     const report = await api.diffProject("/data/compare.knxdb");

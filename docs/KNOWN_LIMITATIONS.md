@@ -8016,7 +8016,11 @@ decompressed. Media classes cover the formats the corpus contains (PNG,
 JPEG, GIF, BMP, PDF, ZIP, PE, OLE2, XML); anything else is `unknown`, not
 guessed. A nested ZIP's expanded size is what its directory *declares*, not a
 measured decompression. Installing still holds each member whole in memory
-(≤ 64 MiB each; a 54.8 MB member measured 4.2× peak RSS growth).
+(≤ 64 MiB each; a 54.8 MB member measured 4.2× peak RSS growth). Baggage
+*references* from application programs
+(`Static/Extension/Baggage/@RefId`, 935 distinct in the corpus) are reported
+as unknown constructs, not resolved against the inventory; whether the single
+`Hardware/Product/Baggages` element is reported has not been probed.
 
 **Cost.** The user sees what a manufacturer ships and which files are
 undeclared, but cannot preview them in KNXBench, and a package that relies on

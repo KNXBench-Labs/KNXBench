@@ -741,6 +741,20 @@ What remains open here:
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
+**Corrected 2026-09-28.** The sentence above is no longer true as written.
+Two operations have written to one real device, `1.1.67` (MDT push button,
+mask `0701h`), each after the operator's explicit go:
+
+- `[V]` the individual-address write `1.0.71` → `1.1.67` on 2026-09-26
+  (RESEARCH §8.8.6);
+- `[V]` the memory download of program `A-0027-15-0BAC` (option C) on
+  2026-09-28, checked by read-back and by a bus monitor (RESEARCH §19.4,
+  §136).
+
+What stays true: neither runs as a product command. Both run only from
+doubly gated `live_*` tests, and nothing in the CLI, server or UI can start
+them. Every other procedure below is still simulator-only.
+
 **Cause.** As of 2026-09-13 (superseded below — see the 2026-09-20 update)
 the cause is **implementation and hardware, not research**: there is no
 commissioning code, nothing has been *written* to a
@@ -1110,6 +1124,11 @@ data preservation in `knx-etsproj`/`knx-server` instead — see
 unimplemented procedure, was ruled obsolete once C16 shipped the real
 execution path it existed to guard.) None of this has been run against a
 real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
+*Corrected 2026-09-28:* of these six, the individual-address write has run
+on a real device (2026-09-26). The download that ran (2026-09-28) is the
+separate mask-`070nh` memory path (`run_memory_download`), not the
+property-based complete download listed here, which still refuses
+hardware.
 
 **Lifted when.** Research no longer blocks this, phase 2's simulator-driven
 implementation is substantially delivered (above), and T30 phase 3's
@@ -1130,6 +1149,13 @@ today except the go-ahead itself: load procedures, memory layout and mask
 data already live in the product database, `knx-net` already carries every
 frame the specification needs, and phase 2's simulator coverage is what
 that first write would be checked against before and after.
+
+*Overtaken 2026-09-28:* the "first real write" this paragraph waits for
+has happened, on the operator's own device and with a go naming it (see
+*Corrected 2026-09-28* above). The dedicated-test-hardware condition was not
+met; the operator chose `1.1.67` as the test device. The condition that
+still holds is the per-write go: each write names its device and
+operation, and a go covers one attempt.
 
 **Updated, 2026-09-26 (first programming-mode search against real hardware).**
 An operator put a device into Programming Mode and asked this application to
@@ -6020,7 +6046,25 @@ fixed slash-based representation for the chosen level; no slash/dot notation
 selector was added.
 
 
-## 92. Commissioning phase 2 is verified against a simulator this project wrote, and has never addressed a device
+<a id="92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device"></a>
+
+## 92. Commissioning phase 2 is verified against a simulator this project wrote; one device has been written since
+
+**Corrected 2026-09-28.** This entry used to say the code *"has never
+addressed a device"* and that *"no frame produced by this code has ever
+left the machine"*. Both stopped being true on 2026-09-26. What has been
+observed on real hardware so far, all on `1.1.67` (MDT, mask `0701h`):
+
+- `[V]` individual-address write (RESEARCH §8.8.6);
+- `[V]` memory download, restart request and load-state machine over
+  memory (RESEARCH §19.4). The Transport Layer met a lost `T_ACK` and a
+  repeated answer, and those cases are now handled;
+- `[V]` cEMI framing, APCI packing and 3 s acknowledge timing, end to end
+  against a real device on those paths.
+
+Everything else below still holds unchanged for the property-based
+procedures (complete, one-part and partial download, unload, recovery).
+Those have run only against the simulator.
 
 **Limitation.** The download protocol of
 [docs/superpowers/specs/2026-09-13-commissioning-download-design.md](superpowers/specs/2026-09-13-commissioning-download-design.md)
@@ -6090,6 +6134,8 @@ finds is a finding rather than a fix. Fully, never by testing alone — a
 download that has been observed to succeed on one manufacturer's device is
 evidence about that device. This entry narrows with each observed device
 and does not close.
+*Narrowed 2026-09-28* by one device and two operations (see the correction
+at the top).
 
 <a id="93-knx-cores-declarative-procedure-model-still-writes-pid_program_version-unconditionally-for-every-part--parked-deferred-to-task-c11"></a>
 

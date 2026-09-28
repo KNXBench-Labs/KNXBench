@@ -8271,6 +8271,16 @@ the bus (RESEARCH §19.4). What stays open is listed under §7's memory
 download entries: an unacknowledged closing `A_Restart`, `[A]` rules not in
 any PDF read, one product family verified on one device.
 
+**Narrowed 2026-09-28 (K2).** The unacknowledged closing `A_Restart` is now
+its own outcome: `RestartOutcome::Unconfirmed`, returned inside an `Ok`
+together with the verified data and load states. It is no longer reported as
+a failed download. Still open: **whether the device restarts** when its
+`T_ACK` stays away. The Standard allows both (MP §3.7.1.1.2, p. 78). Only a
+frame trace of a closing restart on `1.1.67` can show what this device does,
+and that is a restart, so it needs a go (K2 step 2). Until then the report
+says "restart unconfirmed: power-cycle or restart on purpose", and KNXBench
+never repeats the restart itself.
+
 Resolution of the five items below:
 
 1. Load state machine transport: in `ManagementSession`, used by

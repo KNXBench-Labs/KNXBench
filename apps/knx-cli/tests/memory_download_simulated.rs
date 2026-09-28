@@ -15,7 +15,9 @@ use knx_core::commissioning::load_state::LoadState;
 use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
 use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID};
 use knx_core::{GroupAddress, IndividualAddress};
-use knx_net::commissioning::memory_download::run_memory_download;
+use knx_net::commissioning::memory_download::{
+    run_memory_download, MemoryDownloadReport, RestartOutcome,
+};
 use knx_net::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
 use knx_net::commissioning::{ManagementSession, SessionTiming};
 use knx_productdb::download_plan::plan_memory_download;
@@ -78,9 +80,13 @@ fn fast() -> SessionTiming {
 /// individual address in memory, and the shutter configuration's first
 /// octets still in the tables.
 fn mdt_device() -> SimulatedDevice {
+    mdt_device_with(SimulatorConfig::default())
+}
+
+fn mdt_device_with(config: SimulatorConfig) -> SimulatedDevice {
     let device = SimulatedDevice::with_config(SimulatorConfig {
         mask_version: 0x0701,
-        ..SimulatorConfig::default()
+        ..config
     });
     device.preset_property(0, PID_MANUFACTURER_ID, &[0x00, 0x83]);
     device.preset_property(0, PID_HARDWARE_TYPE, &[0, 0, 0, 0, 0x01, 0x27]);
@@ -94,6 +100,11 @@ fn mdt_device() -> SimulatedDevice {
 }
 
 fn run(device: &SimulatedDevice, image: &DownloadImage) {
+    let report = download(device, image);
+    assert!(report.restart.is_confirmed(), "{}", report.restart);
+}
+
+fn download(device: &SimulatedDevice, image: &DownloadImage) -> MemoryDownloadReport {
     let plan = plan_memory_download(image).expect("plans");
     let authorisation = WriteAuthorisation::for_simulator(device.address(), WriteScope::Download)
         .expect("not excluded");
@@ -120,6 +131,7 @@ fn run(device: &SimulatedDevice, image: &DownloadImage) {
             ),
         ]
     );
+    report
 }
 
 #[test]
@@ -186,4 +198,45 @@ fn the_same_image_twice_leaves_the_same_memory() {
         .map(|segment| device.memory(segment.address, segment.octets.len()))
         .collect();
     assert_eq!(first, second);
+}
+
+/// `1.1.67`, run 3, in the simulator: every octet lands, every machine is
+/// `Loaded`, and the closing Basic Restart goes unacknowledged. That is a
+/// loaded download with an unconfirmed restart, not a failed one, and the
+/// restart is sent as one request (TL's own repetitions of it aside),
+/// never again on the executor's initiative.
+#[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
+fn option_c_with_an_unacknowledged_restart_is_loaded_but_unconfirmed() {
+    let image = option_c();
+    let device = mdt_device_with(SimulatorConfig {
+        restart_unanswered: true,
+        ..SimulatorConfig::default()
+    });
+
+    let report = download(&device, &image);
+
+    assert!(
+        matches!(report.restart, RestartOutcome::Unconfirmed { .. }),
+        "{}",
+        report.restart
+    );
+    for segment in &image.segments {
+        let stored: Vec<u8> = device
+            .memory(segment.address, segment.octets.len())
+            .into_iter()
+            .map(|octet| octet.unwrap_or_default())
+            .collect();
+        let mut expected = segment.octets.clone();
+        if segment.address == 0x4000 {
+            expected[1..3].copy_from_slice(&INDIVIDUAL_ADDRESS);
+        }
+        assert_eq!(stored, expected, "segment {}", segment.id);
+    }
+    let seqs = device.unanswered_restart_seqs();
+    assert!(!seqs.is_empty());
+    assert!(
+        seqs.iter().all(|seq| *seq == seqs[0]),
+        "one restart request, repeated only by TL: {seqs:?}"
+    );
 }

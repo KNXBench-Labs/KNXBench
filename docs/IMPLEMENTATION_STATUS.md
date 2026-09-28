@@ -1,5 +1,34 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Download to the device: unconfirmed restart, live progress, one meaning of "download"
+
+*`goal-commission.md` K2, plus the user's standing requirements R1/R2.*
+
+- **Unconfirmed restart (K2).** `MemoryDownloadReport::restart` is a
+  `RestartOutcome`: `Acknowledged`, `Unconfirmed { error }` or `NotInPlan`.
+  `run_memory_download` now returns `Ok` with `Unconfirmed` when the closing
+  Basic Restart went out and nothing acknowledged it. It does this only
+  when every load state machine is `Loaded` and nothing but the disconnect
+  follows. A restart that never left the machine (refused, not connected),
+  or one before the end of the plan, still fails. Nothing sends a second
+  restart. `[D]` MP §3.7.1.1.2 p. 78 (*"may not react at all"*), §3.7.1.1.3
+  p. 80 (no AL confirmation), §3.7.3 p. 89 (the `T_Disconnect` may not reach
+  the bus).
+- **Live progress (R1).** `run_memory_download_observed` reports `Progress`
+  as it happens: start (target, steps, octets), each step started and
+  finished, and every data chunk sent to the device (address, octets,
+  running total). It is read-back-verified before it is reported. The
+  observer cannot change what is sent (test: identical frames with and
+  without one). The live test prints it.
+- **Direction (R2).** `docs/GLOSSARY.md` fixes "download" to **KNXBench →
+  device**, with PDF evidence (Architecture p. 19, Glossary p. 9, CP
+  §3.7.5.5.2 p. 62). The File menu's "Download project" is a save/export and
+  is handed to the goal.md session.
+- Simulator: `unanswered_restart_seqs()` shows that one restart request was
+  only repeated by TL, never sent a second time.
+- 8 new unit tests, 1 corpus-backed simulator test (option C, unconfirmed
+  restart). 6 mutants of the restart logic, all caught.
+
 ## 2026-09-28 — Transport Layer: lost `T_ACK`s and repeated answers
 
 - `ManagementSession` now keeps TL §5's `SeqNoRcv`. A device's

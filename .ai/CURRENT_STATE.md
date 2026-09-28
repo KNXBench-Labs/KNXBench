@@ -1,4 +1,23 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 18:54 CEST
+- **Completed:** `goal-commission.md` **K2** (offline part) plus the user's new standing requirements **R1/R2**. Log: `.ai/logs/2026-09-28_claude_iaw-k2-restart-progress.md`.
+  - K2: `MemoryDownloadReport::restart: RestartOutcome` (`Acknowledged` / `Unconfirmed { error }` / `NotInPlan`). An unacknowledged closing Basic Restart is `Ok` + `Unconfirmed` only if all machines are `Loaded`, only a disconnect follows, and the error is a silence (not a refusal or `NotConnected`). Never a second restart. Spec (MP PDF): §3.7.1.1.2 p. 78, §3.7.1.1.3 p. 80, §3.7.3 p. 89.
+  - R1 (user): `run_memory_download_observed` + `Progress` (Started / StepStarted n/m / DataWritten address+octets+running total, after read-back / StepDone). The live test prints it.
+  - R2 (user): new `docs/GLOSSARY.md`: "download" = KNXBench → device only, with PDF evidence. File to the user = save/export. Device → KNXBench = read-back.
+  - `goal-commission.md`: R1/R2 as standing requirements, woven into K4/K5.
+  - Gate: fmt, clippy, **2325 passed / 0 failed**, layering, headers, anchors, corpus-gates, diff-check; corpus sim 3/3 (incl. option C with unconfirmed restart). 6/6 restart mutants caught.
+- **Pending/Next Steps:**
+  1. K2 step 2 **[W]**: frame trace of a closing `A_Restart` on `1.1.67`. **Needs a go.**
+  2. K3: download configuration from the project, not from the test.
+  3. ROADMAP decision row "v1.0.0 writes to real hardware": user decision still open.
+- **For the goal.md session:**
+  - File menu `toolbar.downloadProject` ("Download project" / "Projekt herunterladen") is a save/export per `docs/GLOSSARY.md` and should be renamed (web work, yours).
+  - `docs/manual/*` still out of date on "never written to hardware" (see the K1 entry below).
+- **Notes for Codex or Claude:** Worktree `iaw-k2-restart` is deleted after the merge. No bus traffic in K2.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 18:36 CEST
 - **Completed:** `goal-commission.md` **K1**: the commissioning documents are true again (docs only, no code). Log: `.ai/logs/2026-09-28_claude_iaw-k1-docs.md`.
   - KNOWN_LIMITATIONS §7: "does not program devices" got a dated correction (IA write 2026-09-26, download 2026-09-28, both on `1.1.67`, both only from `live_*` tests). The phase-2 sentence "None of this has been run against a real device" and the Lifted-when "first real write" paragraph were corrected in place.

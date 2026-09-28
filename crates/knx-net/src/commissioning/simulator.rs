@@ -692,6 +692,9 @@ struct State {
     /// How many reads of `PID_DEVICE_CONTROL` have arrived, counted the same
     /// way: one per transmission, not one per connection.
     device_control_reads: u32,
+    /// The sequence number of every `A_Restart` transmission that
+    /// [`SimulatorConfig::restart_unanswered`] swallowed, in arrival order.
+    unanswered_restart_seqs: Vec<u8>,
     /// How many `T_Connect` frames have arrived, answered or not — what
     /// [`SimulatorConfig::unanswered_connects`] counts against.
     connects: u32,
@@ -792,6 +795,7 @@ impl SimulatedDevice {
             dropped: false,
             load_state_reads: 0,
             device_control_reads: 0,
+            unanswered_restart_seqs: Vec::new(),
             connects: 0,
             numbered_data_frames: 0,
             level: config.free_access_level,
@@ -945,6 +949,14 @@ impl SimulatedDevice {
     /// makes a re-established connection countable from the device's side.
     pub fn device_control_reads(&self) -> u32 {
         self.lock().device_control_reads
+    }
+
+    /// The sequence numbers of the `A_Restart` transmissions
+    /// [`SimulatorConfig::restart_unanswered`] swallowed. One request that
+    /// TL repeated shows the same number several times; a second request
+    /// would show the next one.
+    pub fn unanswered_restart_seqs(&self) -> Vec<u8> {
+        self.lock().unanswered_restart_seqs.clone()
     }
 
     /// Tears the connection down from the device's side, as a real one does
@@ -1404,9 +1416,12 @@ impl SimulatedDevice {
                     )
                 {
                     // Same shape as `unacknowledged_load_state_reads`: no
-                    // `T_ACK`, nothing recorded, so the client's four
+                    // `T_ACK`, nothing in `seen`, so the client's four
                     // transmissions and TL's own release afterwards are
-                    // what the test is watching, not this drop.
+                    // what the test is watching, not this drop. Only the
+                    // sequence number is kept, so that a test can tell
+                    // TL's repetitions of one request from a second one.
+                    self.lock().unanswered_restart_seqs.push(seq);
                     return;
                 }
                 if self.load_state_read_in(&service, &self.config.unacknowledged_load_state_reads) {

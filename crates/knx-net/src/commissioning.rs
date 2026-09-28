@@ -2616,12 +2616,30 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         limit: WriteLimit,
         scope: WriteScope,
     ) -> Result<usize, SessionError> {
+        self.write_memory_region_observed(base, data, limit, scope, |_, _| {})
+            .await
+    }
+
+    /// [`Self::write_memory_region`], telling `written` about each chunk
+    /// once it has been written and read back: its address and the octets
+    /// that went to the device. The memory download executor shows the
+    /// operator what is being transferred this way; nothing here changes
+    /// what is sent.
+    pub(crate) async fn write_memory_region_observed(
+        &mut self,
+        base: u32,
+        data: &[u8],
+        limit: WriteLimit,
+        scope: WriteScope,
+        mut written: impl FnMut(u32, &[u8]),
+    ) -> Result<usize, SessionError> {
         self.authorise_write(scope)?;
         let plan = chunks(base, data, limit)?;
         for chunk in &plan {
             let slice = &data[chunk.offset..chunk.offset + usize::from(chunk.length)];
             self.write_one_chunk(chunk.address, slice, chunk.service, scope)
                 .await?;
+            written(chunk.address, slice);
         }
         Ok(plan.len())
     }

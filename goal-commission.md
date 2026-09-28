@@ -36,6 +36,23 @@ how work is handed across.
 
 ---
 
+## Standing requirements (user, 2026-09-28)
+
+These apply to every package below that writes to a device, and to the
+product commands in K4 to K6 in particular.
+
+- **R1 — Status and data are shown while programming.** A download or
+  programming run shows what it is doing while it does it: the current step
+  (n of m), and every block of data that goes to the device (address and
+  octets), with a running count against the total. A run that says nothing
+  until it ends is not acceptable. The library side is
+  `run_memory_download_observed` / `Progress` (K2); K4 prints it, K5
+  shows it.
+- **R2 — "Download" names its direction.** "Download" means **to the
+  device**, and every output says so and names the target device. A file
+  going from KNXBench to the user is *saved/exported*, never "downloaded".
+  Definition and evidence: `docs/GLOSSARY.md`.
+
 ## 0. Scope: what this goal owns
 
 1. **T30 phase 3.** Individual-address programming, application download,
@@ -213,6 +230,10 @@ from a project device:
    refused before the first socket opens.
 3. Test against the simulator end to end.
 4. Pitfalls: report `wrote: true` honestly, and include K2's outcome.
+5. R1 and R2: while writing, print each step and each data block sent to
+   the device; name the command and its output as a download **to the
+   device** (e.g. `knx device download <address>`), with the target in
+   every heading.
 
 ### K5 — Download in server and UI
 
@@ -221,6 +242,11 @@ from a project device:
    route.
 2. A server route or job for plan, execution and progress. The UI calls
    `useProgrammingConsent` and writes only on `true`.
+   - R1: the progress view shows step n of m, the data blocks sent (address,
+     octets) and octets sent against the total, live.
+   - R2: the UI labels this "Download to device" / "In Gerät laden" and
+     names the device. The File menu's "Download project" is renamed to
+     *save/export* by the goal.md session (handed over, see GLOSSARY).
 3. **Web boundary.** `goal.md` runs all `apps/knx-web` work as one serial
    chain (§12.3). Before starting K5's web part, announce it in your handover
    and check that the goal.md session is not in a web task. Otherwise wait.

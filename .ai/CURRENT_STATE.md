@@ -1,4 +1,82 @@
 - **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 13:55 CEST
+- **Completed:**
+  - **PDB-11 delivered.** Merge `7844590` on `main`, pushed; `origin/main` = `7844590`. Branch commits: `e22b83a` (implementation, rebased onto `3ab20b1`), `968c3c3` (review fixes), `59e51b2` (catch-up merge with CT-2, one append-only conflict in IMPLEMENTATION_STATUS, both entries kept).
+  - `3ab20b1` (before PDB-11): the project drive is ext4 now. KNOWN_LIMITATIONS §119 is marked lifted as history, LIMITATION_TRIAGE moved it to done, and goal.md rule 7 keeps only the filesystem-neutral freshness check.
+  - Independent review (deleg_1814c151): accept with follow-ups, no CRITICAL. All code findings fixed in `968c3c3`:
+    - I-1: every digest now begins with the context the parser stores from outside the element (manufacturer, parent section, parent hardware).
+    - M-1: an exact agreement rule on a blob's first parse.
+    - M-2: the v16->v17 backfill checks historical rows and degrades a disagreement to `unavailable`.
+    - M-4: six `source_sha256` indexes.
+    - M-5: `IDENTITY_SCANNER` version column, fail closed.
+    - M-6: a measured winner without a candidate is named.
+    - M-3/M-7: doc wording and mutation evidence.
+    - M-8: `InstallReport.source_names` public field accepted unchanged; no external constructor exists.
+  - Lead-verified gates on `968c3c3`, fresh `CARGO_TARGET_DIR`:
+    - fmt, clippy `-D warnings` (knx-productdb really rebuilt).
+    - Workspace tests: 2151 passed, 0 failed, 115 ignored, 115 suites.
+    - Headers 161≤161, anchors, layering, corpus-gates, diff-check.
+  - Private Gira+MDT matrix on the review-fix digests: pass, 979 s. Aggregates and baseline commitment are identical to the pre-review pin, so the context token changes nothing in this corpus.
+  - Mutation evidence:
+    - 23/23 killed on the original guards.
+    - 12/13 on the review fixes. Two survivors exposed test gaps and got tests: an `End`-closed section, and the exact rule wired into the ingest.
+    - R3 (the `0` no-parent flag) is equivalent: the next token byte already separates the cases.
+  - `stats.md` regenerated; goal.md §12.3 updated (PDB chain done; §4 web residues: only §57 left, queued as CT-6).
+  - The catalog_section 49-vs-52 difference stays documented as inferred (PRODUCT_DATABASE_CORPUS); nothing contradicts it.
+- **Pending/Next Steps:**
+  - PDB chain (§2.8) is complete. The cloud entry below owns the web chain (CT-6 to CT-10, serial, merged locally). CT-3/CT-5 were gated on PDB-11 being merged, and it now is.
+  - goal.md order from here:
+    1. ISSUE items not in the cloud queue: ISSUE-12 (hardware; diagnosis only), ISSUE-07/08 (corpus), ISSUE-05 (site, after ISSUE-06), ISSUE-09, ISSUE-02/03.
+    2. §8 doc hygiene.
+    3. Manual (T23).
+    4. Alpha decision (a user decision, do not tag).
+    5. Final review.
+- **Notes for Codex or Claude:**
+  - Scratch for PDB-11 (`~/.hermes/profiles/knxbench/cache/scratch/pdb11/`) can go once nobody needs the gate logs. Do not touch `scratch/iaw/`, branch or worktree `iaw-settling-delay`, or `docs/paperclip-shutdown/`.
+  - The cloud session's entry below was left uncommitted in the root file; it is committed here unchanged.
+
+---
+
+- **Last Agent:** Claude (Hermes chat session "cloud credit", **not** the goal.md session: this is a short, separate entry)
+- **Timestamp:** 2026-09-28 13:50 CEST
+- **Completed:**
+  - Cloud setup: `f37f55b`, then the setup fix `cba8aa7` (status file plus a hook fallback). Details: `docs/CLOUD_SESSIONS.md`, `.ai/logs/2026-09-28_claude_cloud-sessions-setup.md`.
+  - **CT-1 (web diff panel, §59 lifted, §60 narrowed)** was delivered by the first cloud session as PR #1. Reviewed and gated locally as non-root:
+    - Workspace fmt, clippy and test incl. `knx-desktop`: 2107 passed, 0 failed.
+    - The four xtask gates, `tsc`, 1069 Vitest tests and the build.
+    - Merged as `313489e`, with a tree identical to the branch. GitHub shows PR #1 as MERGED.
+  - `6ce330f`: the `knx-cli` read-only-store test now skips visibly when the read-only bit is not enforced, i.e. as root. Cloud VMs run as root.
+    - Mutant check: without the probe it fails under `unshare -r`; with it, it skips and the non-root path still runs.
+    - `CLOUD_SESSIONS.md` §5/§6 record the cost (3 $ for CT-1) and this lesson.
+  - `95bd57d` (11:20): `setup-env.sh` runs `dpkg --configure -a` first and no longer lets a failed `apt-get update` (403 PPAs) stop the install.
+    - Reason: the CT-2 VM image had an interrupted dpkg run, so the fallback reported `apt=failed`.
+    - Docker probe: the setup succeeds and WebKit is present.
+  - **CT-2 (documentation dialog, §49/§50 lifted)** was delivered by the cloud as PR #2. Cost about 4 $; balance 243/250 $. The environment repair worked: WebKit was present and no `--exclude` was needed.
+    - Local review added `dff0ef4`: on close, focus returns to the File menu's `<summary>` instead of `<body>`. Regression test red without the fix.
+    - Local gates as non-root: workspace fmt, clippy and test incl. `knx-desktop` (2107 passed, 0 failed), xtask gates, `tsc`, 1087 Vitest tests, build.
+    - Sandbox behaviour re-checked in headless Chromium: the script is blocked, `print()` is ignored without `allow-modals`, and the host title is untouched.
+    - Merged as `d9ff0db`, tree equal to the branch. PR #2 shows as MERGED.
+  - `2670c38` (13:50): new cloud briefs CT-6 to CT-10 in `docs/CLOUD_SESSIONS.md`. SESSION_RULES now say to stop after the draft PR.
+    - CT-6: §57, raw `.knxproj` diff in the web UI.
+    - CT-7: ISSUE-13, session-log search and export.
+    - CT-8: ISSUE-10, structured 422 errors and topic help.
+    - CT-9: ISSUE-01, zoom and pane widths.
+    - CT-10: ISSUE-11, bus-monitor pause, export and statistics.
+  - `origin/main` = `2670c38`. The local `main` ref is equal.
+- **Pending/Next Steps:**
+  - Web chain in the cloud: CT-6, then CT-7, CT-8, CT-9 and CT-10, **serially**. Start the next one only after the previous PR is merged locally.
+    - These ISSUE items belong to the cloud chain: do not start them locally in parallel.
+    - Deliberately not queued: ISSUE-12 (hardware), ISSUE-07/08 (corpus), ISSUE-05 (ADR-0039/site), ISSUE-09 address editor (standard check), ISSUE-02/03 (later).
+  - CT-3 and CT-5 start only after PDB-11 is merged. CT-4 (read-only review) can run any time.
+  - Cloud PRs are always reviewed and merged **locally**; the cloud session does not watch or merge its own PR.
+- **Notes for the goal.md session:**
+  - `pdb-11-package-identity` is based on `701bf33` and needs `origin/main` (now `2670c38`) merged before delivery.
+  - Expected overlaps: the new top entries in `docs/IMPLEMENTATION_STATUS.md`, and CT-1/CT-2's edits to `docs/KNOWN_LIMITATIONS.md` §48–§50, §59/§60 and `docs/manual/*`. Keep both sides.
+  - A cloud session counts as one of the ≤2 implementers from goal §9, and the cloud CT-1/CT-2 run *is* the serial web chain. Do not start a parallel local web task while one is open.
+
+---
+
+- **Last Agent:** Claude (goal.md session)
 - **Timestamp:** 2026-09-28 09:36 CEST
 - **Completed:**
   - Read and adopted the commissioning session's ownership notice below; it stays in this file as the record. Added its line to goal.md as §12.4 "Parallel tracks outside this goal" (former §12.4 "Lessons" is now §12.5; nothing referenced the old number).

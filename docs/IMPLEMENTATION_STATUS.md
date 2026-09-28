@@ -44,7 +44,7 @@ Packages and members stay keyed by the SHA-256 of their bytes. New:
 The winner rule is unchanged (first installed) and now visible; see
 KNOWN_LIMITATIONS §135.
 
-Evidence: `package_identity.rs` 13 tests (retry records only the name and
+Evidence: `package_identity.rs` 17 tests (retry records only the name and
 changes no other table; candidates named with packages and same/differs;
 install order changes the winner but not the recorded rows; undispatched
 programs are not candidates; duplicate id → occurrences 1 and 2 and the
@@ -52,10 +52,23 @@ conflict names 2; an unreadable blob is `unavailable` and still ingests; a
 candidate set missing a parsed row fails the ingest and leaves every table
 unchanged; v16→v17 equals a fresh install; damaged retained bytes →
 `unavailable` and the database still opens; families, `ReplacesVersions`
-and order numbers; producer facts; corrupted identity rows fail closed);
-21 `identity::` unit tests (digest invariances and sensitivities, markers,
-dispatch mirror, agreement rules a/b/c); `cli_product_identity.rs` 2 CLI
-tests; a mutation sweep over the check, digest and query guards. The
+and order numbers; producer facts; corrupted identity rows fail closed;
+historical rows that disagree with the backfill scan → `unavailable` and
+the blob re-ingests; a first parse whose scan adds a candidate fails and
+rolls back; the six `source_sha256` indexes are used; a measured
+winner without a candidate is named); 25 `identity::` unit tests (digest
+invariances and sensitivities, stored context from outside the element,
+markers, dispatch mirror, agreement rules a/b/c and the exact rule of a
+first parse, scanner version); `cli_product_identity.rs` 2 CLI tests.
+Mutation sweeps: 23 mutants over the check, digest and query guards, then
+13 over the review fixes (context token, section stack, exact rule,
+backfill check, scanner version, indexes, unmeasured winner). All 23 and
+12 of the 13 were killed at once; two survivors exposed test gaps (a
+section closed by `End`, the exact rule wired into the ingest) that got
+tests. The 13th, dropping the `0` no-parent flag, is equivalent: the next
+token byte already tells the cases apart. The independent review (no CRITICAL; one IMPORTANT: equal
+element bytes under another parent reported as the same element although
+the stored row differs) led to the context token. The
 115-instance corpus matrix re-pinned with every v16 outcome, report total
 and table count unchanged (the v16 projection commitment still equals the
 PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.

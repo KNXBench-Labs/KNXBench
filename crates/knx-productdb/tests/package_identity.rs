@@ -439,7 +439,7 @@ fn a_recorded_candidate_set_that_misses_a_parsed_row_fails_the_ingest_and_rolls_
     )
     .unwrap();
     conn.execute(
-        "INSERT INTO source_identity_scan (source_sha256, status) VALUES (?1, 'measured')",
+        "INSERT INTO source_identity_scan (source_sha256, status, scanner) VALUES (?1, 'measured', 1)",
         [&sha],
     )
     .unwrap();
@@ -464,6 +464,39 @@ fn a_recorded_candidate_set_that_misses_a_parsed_row_fails_the_ingest_and_rolls_
     );
 }
 
+#[test]
+fn a_first_parse_whose_scan_adds_a_candidate_fails_the_ingest() {
+    // The exact rule of a first parse, wired into the ingest: a recorded
+    // candidate whose id another blob holds passes rules a-c, but no row or
+    // conflict of this parse produced it. Simulated by a stray candidate
+    // row planted before the blob's first ingest (foreign keys off, as no
+    // valid database holds such a row).
+    let (_dir, conn) = db();
+    let other = hardware_file(NS11, r#"<Hardware Id="H-OTHER"/>"#);
+    ingest_file(&conn, "M-0001/Other.xml", other.as_bytes()).unwrap();
+    let xml = hardware_file(NS11, r#"<Hardware Id="H-1"/>"#);
+    let sha = sha256_hex(xml.as_bytes());
+    conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
+    conn.execute(
+        "INSERT INTO source_identity VALUES (?1, 'hardware', 'H-OTHER', 1, ?2)",
+        rusqlite::params![sha, "0".repeat(64)],
+    )
+    .unwrap();
+    let before = table_counts(&conn);
+    let error = ingest_file(&conn, "M-0001/Hardware.xml", xml.as_bytes()).unwrap_err();
+    assert!(
+        error.to_string().contains(
+            "candidate hardware \"H-OTHER\" occurrence 1 matches no row or conflict of this parse"
+        ),
+        "{error}"
+    );
+    assert_eq!(
+        table_counts(&conn),
+        before,
+        "the failed ingest left nothing behind"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 8. v16 -> v17
 // ---------------------------------------------------------------------------
@@ -471,7 +504,10 @@ fn a_recorded_candidate_set_that_misses_a_parsed_row_fails_the_ingest_and_rolls_
 fn identity_tables(conn: &Connection) -> Vec<Vec<Vec<Option<String>>>> {
     vec![
         rows(conn, "SELECT package_sha256, source_name FROM package_source_name ORDER BY 1, 2"),
-        rows(conn, "SELECT source_sha256, status, reason FROM source_identity_scan ORDER BY 1"),
+        rows(
+            conn,
+            "SELECT source_sha256, status, reason, CAST(scanner AS TEXT) FROM source_identity_scan ORDER BY 1",
+        ),
         rows(
             conn,
             "SELECT source_sha256, table_name, logical_id, CAST(occurrence AS TEXT), digest FROM source_identity ORDER BY 1, 2, 3, 4",
@@ -561,6 +597,102 @@ fn v16_to_v17_records_a_blob_whose_bytes_no_longer_match_as_unavailable() {
         .query_row("SELECT count(*) FROM source_producer", [], |r| r.get(0))
         .unwrap();
     assert_eq!(masters, 1);
+}
+
+#[test]
+fn v16_to_v17_records_historical_rows_that_disagree_with_the_scan_as_unavailable() {
+    // Review M-2: rows an earlier build wrote are checked during the
+    // backfill; a disagreement degrades that blob to `unavailable` instead
+    // of making every later re-parse of it fail.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let xml = hardware_file(
+        NS11,
+        r#"<Hardware Id="H-1"><Products><Product Id="P-1"/></Products></Hardware>"#,
+    );
+    let sha = sha256_hex(xml.as_bytes());
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        ingest_file(&conn, "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
+        v17_rewind::rewind_to_v16(&conn);
+        // A row the scan will not find, as an older parser might have kept.
+        conn.execute(
+            "INSERT INTO product (id, hardware_id, manufacturer_id, source_sha256) VALUES ('P-OLD', 'H-1', 'M-0001', ?1)",
+            [&sha],
+        )
+        .unwrap();
+    }
+    let conn = open_and_migrate(&path).unwrap();
+    let (status, reason): (String, String) = conn
+        .query_row(
+            "SELECT status, reason FROM source_identity_scan WHERE source_sha256 = ?1",
+            [&sha],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(status, "unavailable");
+    assert!(
+        reason.contains("v17 backfill: stored rows disagree with the scan")
+            && reason.contains("product row \"P-OLD\""),
+        "{reason}"
+    );
+    assert!(candidates_of(&conn, &sha).is_empty());
+    // Re-ingesting the blob does not trip over the historical row.
+    ingest_file(&conn, "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
+    let report = identity_candidates(&conn, IdentityKind::Product, "P-OLD").unwrap();
+    assert_eq!(report.unmeasured.len(), 1);
+    assert_eq!(report.unmeasured[0].source_sha256, sha);
+}
+
+#[test]
+fn v17_indexes_the_identity_tables_by_source() {
+    let (_dir, conn) = db();
+    for table in [
+        "catalog_section",
+        "catalog_item",
+        "hardware",
+        "product",
+        "hardware2program",
+        "application_program",
+    ] {
+        let plan: String = conn
+            .query_row(
+                &format!("EXPLAIN QUERY PLAN SELECT id FROM {table} WHERE source_sha256 = 'x'"),
+                [],
+                |r| r.get(3),
+            )
+            .unwrap();
+        assert!(
+            plan.contains(&format!("INDEX {table}_source")),
+            "{table}: {plan}"
+        );
+    }
+}
+
+#[test]
+fn a_measured_winner_without_a_first_candidate_is_named_as_unmeasured() {
+    // Review M-6: otherwise every candidate reads `same_as_winner: None`
+    // with no explanation.
+    let (_dir, conn) = db();
+    let xml = hardware_file(NS11, r#"<Hardware Id="H-1"/>"#);
+    let sha = sha256_hex(xml.as_bytes());
+    ingest_file(&conn, "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
+    conn.execute(
+        "DELETE FROM source_identity WHERE source_sha256 = ?1",
+        [&sha],
+    )
+    .unwrap();
+    let report = identity_candidates(&conn, IdentityKind::Hardware, "H-1").unwrap();
+    assert_eq!(report.winner.as_deref(), Some(sha.as_str()));
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.unmeasured.len(), 1);
+    assert!(
+        report.unmeasured[0]
+            .reason
+            .contains("records no first occurrence"),
+        "{:?}",
+        report.unmeasured
+    );
 }
 
 // ---------------------------------------------------------------------------

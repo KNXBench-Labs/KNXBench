@@ -1,3 +1,9 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-28 19:19
+- **Completed:** K2 closed. (1) `b434808`: frame trace of a closing Basic Restart on `1.1.67` (RESEARCH §19.4). 4× `A_Restart`, no `T_ACK`/`T_NAK`/`T_Disconnect` for 9 s, device back unchanged after 38 s. Also fixed the label "no T_ACK for T_ACK for" (RED/GREEN). (2) This commit: Master Reset, Erase Code `01h` (Confirmed Restart, resets nothing) tried once with the user's go. No `A_Restart_Response`, same silence, device unchanged (`4001h` `11 43`, `B6EAh` `01 01 01 00`, `4400h` identical). So there is no confirmed restart for mask `0701h` MDT, and `RestartOutcome::Unconfirmed` is final. Traces are in `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-28_{restart-trace,master-reset-01h-trace,master-reset-01h-attempt1-lost-disconnect}.txt`.
+- **Pending/Next Steps:** K3 (the download config comes from the project instead of the hard-coded test), then K4 CLI / K5 UI with R1 progress display and R2 "download = to the device". New open point (KL §136): a lost `T_Disconnect` makes the device NAK the next session for ~6 s; `ManagementSession::disconnect` discards the send error (`let _ =`). Web File menu "Download project" → "Save project" is still owned by the other session.
+- **Notes for Codex or Claude:** Do NOT offer a Master Reset for mask `0701h` (MP §3.7.3 requires verified support, `0701h` has no means for it, and live it gets no response). Wait ≥7 s before a second management session to the same device. Real restart/reset tests went only to `1.1.67`, a test device, with the user's go. Never guess an access key.
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 18:54 CEST
 - **Completed:** `goal-commission.md` **K2** (offline part) plus the user's new standing requirements **R1/R2**. Log: `.ai/logs/2026-09-28_claude_iaw-k2-restart-progress.md`.

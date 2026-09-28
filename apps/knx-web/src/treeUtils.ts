@@ -28,7 +28,7 @@ export function flattenBuildingParts(
 // building — the same id, same fields, since both come from one
 // `build_device_node` call in knx-projection. Deduplicated by id so the
 // search index lists it once.
-function collectDevices(tree: ProjectTree): Map<number, DeviceNode> {
+export function collectDevices(tree: ProjectTree): Map<number, DeviceNode> {
   const devices = new Map<number, DeviceNode>();
   const addAll = (list: DeviceNode[]) => {
     for (const d of list) devices.set(d.id, d);

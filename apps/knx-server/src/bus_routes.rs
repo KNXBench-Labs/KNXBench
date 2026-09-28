@@ -172,6 +172,15 @@ async fn start_scan(
     let (plan, policy, estimate, range) = build_scan(&body)?;
     let response_estimate = estimate_response(&plan, &policy, estimate);
     let mut guard = state.line_scan_session.lock().await;
+    // Checked while holding this session's lock, never before it: a
+    // download start holds its own lock and then waits for this one, so
+    // this `try_lock` sees it (ADR-0045 §4).
+    if crate::device_download_routes::download_in_progress(&state) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "a download to a device is running: the gateway serves one tunnel",
+        ));
+    }
     if let Some(existing) = guard.as_mut() {
         if existing.status() == LineScanStatus::Running {
             return Err(ApiError::with_status(
@@ -507,6 +516,15 @@ async fn start_monitor(
         .map_err(|_| ApiError::bad_request(format!("not a gateway address: {:?}", body.gateway)))?;
 
     let mut guard = state.bus_session.lock().await;
+    // Checked while holding this session's lock, never before it: a
+    // download start holds its own lock and then waits for this one, so
+    // this `try_lock` sees it (ADR-0045 §4).
+    if crate::device_download_routes::download_in_progress(&state) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "a download to a device is running: the gateway serves one tunnel",
+        ));
+    }
     if let Some(existing) = guard.as_ref() {
         // Design spec §4.3 / brief item 2: the `409` body must *name* the
         // existing session, not just say "one exists" — `ApiError` only

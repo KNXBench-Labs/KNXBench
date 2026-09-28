@@ -1334,6 +1334,100 @@ export function cancelLineScan(sessionId: number): Promise<LineScanResultsRespon
   return request(`/api/bus/scan/cancel?sessionId=${sessionId}`, { method: "POST" });
 }
 
+// ---- Download to a device (KNXBench → device over the bus; ADR-0045) ----
+
+/** One memory segment the plan writes: `written` of its `size` octets. */
+export interface DeviceDownloadSegment {
+  id: string;
+  address: number;
+  size: number;
+  written: number;
+}
+
+/** What `POST /api/device-download/plan` prepared. Nothing is sent yet. */
+export interface DeviceDownloadPlan {
+  planId: number;
+  address: string;
+  deviceId: number;
+  deviceName: string;
+  programId: string;
+  maskVersion: number;
+  manufacturer: number;
+  parameterValues: number;
+  groupLinks: number;
+  segments: DeviceDownloadSegment[];
+  dataOctets: number;
+  steps: string[];
+  /** The phrase `start` demands; names this device and this scope. */
+  confirmationPhrase: string;
+}
+
+export type DeviceDownloadEvent =
+  | { kind: "stepStarted"; number: number; of: number; step: string }
+  | {
+      kind: "dataWritten";
+      number: number;
+      address: number;
+      octets: number[];
+      written: number;
+      of: number;
+    }
+  | { kind: "stepDone"; number: number; observed: string | null };
+
+export type DeviceDownloadWritten = "yes" | "no" | "partially";
+
+export type DeviceDownloadStatus =
+  | { state: "running" }
+  | {
+      state: "finished";
+      written: DeviceDownloadWritten;
+      restart: "acknowledged" | "notInPlan" | "unconfirmed";
+      restartNote: string | null;
+    }
+  | {
+      state: "failed";
+      written: DeviceDownloadWritten;
+      stoppedInStep: number | null;
+      error: string;
+    };
+
+export interface DeviceDownloadStatusResponse {
+  downloadId: number;
+  address: string;
+  deviceName: string;
+  steps: number;
+  dataOctets: number;
+  status: DeviceDownloadStatus;
+  nextSince: number;
+  events: DeviceDownloadEvent[];
+}
+
+export function planDeviceDownload(address: string): Promise<DeviceDownloadPlan> {
+  return request("/api/device-download/plan", {
+    method: "POST",
+    body: JSON.stringify({ address }),
+  });
+}
+
+export function startDeviceDownload(
+  planId: number,
+  gateway: string,
+  confirmation: string,
+): Promise<{ downloadId: number }> {
+  return request("/api/device-download/start", {
+    method: "POST",
+    body: JSON.stringify({ planId, gateway, confirmation }),
+  });
+}
+
+export function pollDeviceDownload(
+  since: number,
+  downloadId?: number,
+): Promise<DeviceDownloadStatusResponse> {
+  const expected = downloadId === undefined ? "" : `&downloadId=${downloadId}`;
+  return request(`/api/device-download/status?since=${since}${expected}`);
+}
+
 export function compareLineScan(sessionId: number): Promise<LineScanComparison> {
   return request(`/api/bus/scan/comparison?sessionId=${sessionId}`);
 }

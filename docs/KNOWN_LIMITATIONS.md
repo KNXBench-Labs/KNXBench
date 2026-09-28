@@ -8281,6 +8281,17 @@ and that is a restart, so it needs a go (K2 step 2). Until then the report
 says "restart unconfirmed: power-cycle or restart on purpose", and KNXBench
 never repeats the restart itself.
 
+**Narrowed again 2026-09-28 (K2 trace).** The frame trace exists (RESEARCH
+§19.4). `1.1.67` acknowledged none of four `A_Restart` transmissions, and
+its Transport Layer answered nothing at all for 9 s, although TL §5.4.1
+makes a running TL answer every `T_DATA_CONNECTED`. 38 s later it answered
+again, unchanged. For this device an unconfirmed restart is therefore the
+normal outcome. That the restart really happens is well supported
+(`[A]`), but not provable from the bus. What remains open is only that
+inside view. It would take a confirmed alternative such as a Master Reset
+with an Erase Code for a confirmed restart (MP §3.7.1.2, Table 4, p. 81),
+whose support on mask `0701h` has not been checked.
+
 Resolution of the five items below:
 
 1. Load state machine transport: in `ManagementSession`, used by

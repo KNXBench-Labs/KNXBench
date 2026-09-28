@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — K2 live: frame trace of a closing restart on `1.1.67`
+
+- `[V]` With the user's go, one Basic Restart went to `1.1.67` through the
+  shipped executor (`Connect → Restart → Disconnect`, first run in the
+  simulator). The device acknowledged none of the 4 transmissions and sent
+  nothing at all for 9 s (no `T_ACK`/`T_NAK`/`T_Disconnect`), while other
+  devices' traffic kept arriving. 38 s later it answered again, unchanged:
+  `11 43`, all load states `Loaded`. RESEARCH §19.4, trace in
+  `OriginalData/DeviceBackups/…_restart-trace.txt`.
+- `RestartOutcome::Unconfirmed` is therefore this device's normal outcome.
+- Fixed: the error text said "no T_ACK for T_ACK for …"; the three
+  `send_acknowledged` labels now name only the request (RED/GREEN test).
+- knx-net: 291 passed, 0 failed.
+
 ## 2026-09-28 — Download to the device: unconfirmed restart, live progress, one meaning of "download"
 
 *`goal-commission.md` K2, plus the user's standing requirements R1/R2.*

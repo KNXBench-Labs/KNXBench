@@ -5004,6 +5004,45 @@ alternative the Standard names, a Master Reset with Erase Code `00h`, is a
 different service. Whether mask `0701h` supports it has not been checked,
 so it is not used.
 
+**`[V]` Frame trace of a closing restart (K2, 2026-09-28 19:00 CEST,
+`1.1.67_MDT-0701_2026-09-28_restart-trace.txt`).** With the user's go,
+`run_memory_download_observed` ran the plan `Connect → Restart →
+Disconnect` against `1.1.67`. That is a Download-scoped session on mask
+`0701h`, exactly like run 3's, so there is no Verify Mode and no memory
+write. The same plan was first run in the simulator to list what it sends:
+three reads, one `A_Restart` and the disconnects. The trace:
+
+| t (s) | Frame |
+|---|---|
+| 0.12–0.42 | `T_Connect`, three reads. Every request is acknowledged (`T_ACK` seq 0–2) and answered: mask `0701h`, manufacturer `0083h` |
+| 0.46 | `A_Restart` (Basic Restart, seq 3), positive `L_Data.con` |
+| 3.45, 6.45, 9.45 | the same frame repeated by TL clause 4, each with a positive `L_Data.con` |
+| 0.42 → 38.5 | **nothing at all from `1.1.67`**: no `T_ACK`, no `T_NAK`, no `T_Disconnect` |
+| 3.7–36.5 | group telegrams from `1.1.7`, `1.1.10`, `1.1.25`, `1.1.28`, `1.1.220`, `1.1.251` received throughout, so the receive path was working |
+| 12.46, 12.48 | two `T_Disconnect`s from the client: TL's `A6` after the fourth time-out, then MP §3.7.3's explicit `DM_Disconnect` |
+| 38.5 | fresh read-only connection: answered within 30 ms, mask `0701h`, `4001h` = `11 43`, `B6EAh` = `01 01 01 00` |
+
+What this shows:
+
+- `[V]` The device does not acknowledge a Basic Restart in any of the four
+  transmissions. That makes two observations (run 3 step 23, and this
+  trace), so for this device it is the normal case, not a fault.
+  `RestartOutcome::Unconfirmed` is the outcome to expect from it.
+- `[D]` TL §5.4.1, p. 21: a `T_DATA_CONNECTED` in `OPEN_IDLE`/`OPEN_WAIT`
+  gets `A2`/`A3`/`A4` (`T_ACK` or `T_NAK`), and in `CLOSED` it gets `A10` (a
+  `T_Disconnect` back to the sender). A Transport Layer that is running
+  answers every one of the four transmissions somehow. This one answered
+  none of them over 9 s.
+- `[A]` So the device's Transport Layer was not running for at least 9 s
+  after the first transmission, which is how a device that starts
+  restarting before it acknowledges looks. That is strong circumstantial
+  evidence that the restart happens. It is not proof: nothing on the bus
+  marks a restart from the inside.
+- `[V]` Afterwards the device is back, with its address, and all three
+  load states still `Loaded`. The restart undid nothing.
+- Cosmetic, fixed with it: the error read "no T_ACK for T_ACK for A_Restart".
+  The three `send_acknowledged` labels now name only the request.
+
 **`[O]` Open: did the device restart?** MP §3.7.1.1.3 says the server does
 not confirm a Basic Restart at the Application Layer, and MP §3.7.3
 exception (5) tells the client to ignore everything the server sends after

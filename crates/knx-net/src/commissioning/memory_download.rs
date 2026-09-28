@@ -985,6 +985,14 @@ mod tests {
             report.restart
         );
         assert!(!report.restart.is_confirmed());
+        // `1.1.67`'s trace (2026-09-28) printed "no T_ACK for T_ACK for
+        // A_Restart": the message must name the request once.
+        let shown = report.restart.to_string();
+        assert!(
+            shown.contains("no T_ACK for A_Restart (Basic Restart)"),
+            "{shown}"
+        );
+        assert!(!shown.contains("T_ACK for T_ACK"), "{shown}");
         let seqs = device.unanswered_restart_seqs();
         assert_eq!(
             seqs.len(),

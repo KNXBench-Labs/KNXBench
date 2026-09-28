@@ -49,6 +49,12 @@ with `origin/main`, clean checkout, no extra worktrees. Product version
 
 ## 0. What this goal deliberately excludes
 
+**Update 2026-09-28: commissioning has its own goal file,
+[`goal-commission.md`](goal-commission.md).** It owns exactly what this
+section excludes, plus KNOWN_LIMITATIONS §136, in the separate commissioning
+session. The two files do not overlap; `goal-commission.md` §5 is the
+boundary table. Items it hands over reach this file through §12.4.
+
 **Commissioning and every write to real KNX hardware is out of scope for this
 run.** Not cancelled, not downgraded — the user ruled on 2026-09-11 that
 commissioning must work, and the ROADMAP's 2026-09-20 ruling defers phase 3
@@ -839,6 +845,13 @@ The PDB (backend) chain and the web chain may run in parallel, with at most two 
 
 - Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself.
   - Done 2026-09-28: the commissioning session merged it itself (`95a862c`) and removed branch and worktree. Its scratch `scratch/iaw/` still belongs to that session.
+- **Commissioning track, from 2026-09-28: [`goal-commission.md`](goal-commission.md)** (T30 phase 3, K1–K10).
+  - Its worktrees `KNXBench.worktrees/iaw-*`, branches `iaw-*` and `scratch/iaw/` belong to that session. Do not merge, rebase, clean up or `worktree prune` them; it merges into `main` itself.
+  - Do not start a workspace gate while its gate is running (`pgrep -af cargo`).
+  - Before K5 it announces its web part in its handover. Do not start a web task of the §12.3 chain in parallel.
+- **Received from the commissioning session** (its handover entries under "For the goal.md session:"; this session adopts them here and confirms in its next handover):
+  - 2026-09-28, from merge `95a862c`: `stats.md` predated that merge (last refresh `cf791b0`). **Done:** refreshed in the commit that adds `goal-commission.md`.
+  - 2026-09-28: KNOWN_LIMITATIONS gained §134–§136 (and now counts 139 `##` headings, versus the triage's 119). Add them to the LIMITATION_TRIAGE recount in §12.3 (§8.5). §136 is commissioning-owned: triage classifies it, and only `goal-commission.md` changes its text.
 
 ### 12.5 Lessons from the Paperclip run
 

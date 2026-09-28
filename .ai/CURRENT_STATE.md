@@ -1,3 +1,11 @@
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 21:31
+- Web lock: released
+- **Completed:** `goal-ui.md` U0 baseline in `ui-baseline` (log: `.ai/logs/2026-09-28_codex_ui-baseline.md`). Fresh-worktree web build, TypeScript, 71 Vitest files / 1105 tests; workspace fmt, Clippy, 121 suites / 2350 passed / 0 failed / 135 ignored; layering, headers, anchors and corpus gates green. Initial Clippy failed only because fresh worktree had no web `dist`; built it and reran successfully. No product changes or KNX traffic.
+- **Pending/Next Steps:** U1 independent ADR-0038 review, report findings and request user acceptance before setting its status to Accepted. U2 discovery diagnosis and address-editor research follow. Web lock remains free.
+- **Notes for Codex or Claude:** U0 default tests did not execute ignored corpus cases. `apps/knx-web/dist` must be built before workspace Clippy/test in a fresh worktree. `docs/paperclip-shutdown/` in root belongs to another session and was not touched.
+
+---
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 21:30
 - Web lock: released

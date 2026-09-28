@@ -23,7 +23,7 @@ Run once against `1.1.67`: 180 reads, all answered.
 values over a segment's base data.
 
 - **Placement:** at `Offset`/`BitOffset`, where `BitOffset` counts MSB to
-  MSB (Project Schema 23 `BitOffset_t`). Multi-octet values go high octet
+  MSB (*Project Schema23 v01.00.00.pdf* §1.1.3.17 `BitOffset_t`, pp. 29–30). Multi-octet values go high octet
   first (`ParameterByteOrder="BigEndian"` on all 20 mask-`0701h` `Options`
   elements in the corpus projects).
 - **Refusals:** unsupported shapes, fields past the segment end, values

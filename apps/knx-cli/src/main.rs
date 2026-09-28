@@ -283,11 +283,7 @@ fn run_import(args: &[String]) -> ExitCode {
 /// Report entries that are genuine errors, not warnings — `ImportReport`
 /// keeps both in one `errors` Vec, told apart by their `Severity`.
 fn error_count(report: &knx_etsproj::ImportReport) -> usize {
-    report
-        .errors
-        .iter()
-        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
-        .count()
+    report.error_count()
 }
 
 fn print_summary(file: &str, imported: &knx_app::ImportedProject) {

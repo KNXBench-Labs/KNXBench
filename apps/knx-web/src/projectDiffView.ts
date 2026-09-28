@@ -13,10 +13,12 @@ import type {
   GroupRangeKey,
   InstallationDiff,
   LineKey,
+  LogEntry,
   MatchKind,
   ParameterKey,
 } from "./api";
 import type { MessageKey } from "./messages/en";
+import type { Translate } from "./i18n";
 
 /** How many entity rows a table shows before its "show more" control. */
 export const DIFF_PAGE_SIZE = 50;
@@ -189,4 +191,38 @@ export function installationTables(installation: InstallationDiff, format: KeyFo
     }),
   ];
   return views.filter((view) => view.entries.length > 0);
+}
+
+/** One file-dialog filter, the shape `pickOpenPath` takes. */
+export interface CompareFilter {
+  name: string;
+  extensions: string[];
+}
+
+/**
+ * The comparison picker's filters: both accepted kinds first, so neither
+ * the native dialog nor the mount picker hides one by default, then each
+ * kind on its own. Built per call because the names follow the UI language.
+ */
+export function compareFilters(t: Translate): CompareFilter[] {
+  return [
+    { name: t("projectDiff.anyFilterName"), extensions: ["knxdb", "knxproj"] },
+    { name: t("projectDiff.compareFilterName"), extensions: ["knxdb"] },
+    { name: t("projectDiff.etsFilterName"), extensions: ["knxproj"] },
+  ];
+}
+
+/**
+ * The import-diagnostics summary line: the total, then error and warning
+ * counts when non-zero. Info entries (preserved opaque data) count toward
+ * the total only.
+ */
+export function importDiagnosticsSummary(t: Translate, diagnostics: LogEntry[]): string {
+  const errors = diagnostics.filter((entry) => entry.severity === "error").length;
+  const warnings = diagnostics.filter((entry) => entry.severity === "warning").length;
+  const parts: string[] = [];
+  if (errors > 0) parts.push(t("projectDiff.importErrors", { count: errors }));
+  if (warnings > 0) parts.push(t("projectDiff.importWarnings", { count: warnings }));
+  const total = t("projectDiff.importSummary", { count: diagnostics.length });
+  return parts.length === 0 ? total : `${total} (${parts.join(", ")})`;
 }

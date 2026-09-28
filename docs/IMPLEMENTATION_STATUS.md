@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — Download image assembly (`knx_productdb::image`)
+
+- **`knx_productdb::image::build_download_image`** turns a program, its
+  chosen parameter values and group address links into every segment
+  image a download writes (RESEARCH §19.2). It works in three steps:
+  1. the `Dynamic` evaluation picks the active parameters and objects;
+  2. those parameters are written into the product's base `Data`;
+  3. the GrOT *Easy 3*, the address table and the association table are
+     written into their placements.
+
+  Each segment keeps its `Mask`, and a change to a masked octet is
+  refused.
+- **`knx_productdb::code`** now also reads each parameter's placement
+  from the blob, including a union member's own `Offset`/`BitOffset`,
+  which the database does not store.
+- `[V]` For `1.1.67`'s own configuration the image equals the device's
+  read-back in all 394 octets of `AS-4400`, and in its address and
+  association tables. Option C (button 1 toggles `2/0/53`) changes
+  exactly eight parameter octets. Both are ignored corpus tests.
+- 24 image-builder and 26 `code` unit tests. All 20 image-builder mutants
+  were caught.
+- **Still not built:** the load-procedure executor (sequence + simulator
+  end-to-end) and `WriteScope::Download` on hardware. Nothing has been
+  written to a device's application memory.
+
 ## 2026-09-28 — Group object table encoder and product download data (ADR-0044)
 
 - **`knx_core::commissioning::group_object_table`** writes a mask-`0701h`

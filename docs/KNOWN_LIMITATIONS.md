@@ -647,12 +647,24 @@ What remains open here:
 - `LdCtrlMerge`/`MergedProcedure` programs (40 of 310) are not expanded.
 - 59 programs contain steps nothing executes yet.
 - No download has been run against a device.
-- `[V]` A union member's own `Offset`/`BitOffset` is not stored, and nothing
-  reports it. `parameter` rows hold the *union's* `Memory` placement.
-  `A-0027-15-0BAC` has 16 unions: 51 members sit at `0/0`, but six sit at
-  `Offset=1` with `BitOffset` 5–7. An image builder must take a member's
-  position from the source blob (union placement plus member offset), not
-  from the row.
+- `[V]` Union members: the `parameter` row still holds only the *union's*
+  `Memory` placement. `knx_productdb::code` now reads each member's own
+  `Offset`/`BitOffset` from the blob (`ParameterPlacement::UnionMember`),
+  and the image builder uses that.
+- **Image builder (RESEARCH §19.2): what it refuses rather than guesses.**
+  It builds only from what the product, the Schema23 PDF, or `1.1.67`'s
+  read-back back up; anything else is refused by name:
+  - module instances;
+  - parameters placed by `Property` (176 in the corpus) or in a union
+    that starts mid-octet (936);
+  - parameter types other than an enumeration over `Value` or an
+    unsigned `TypeNumber`;
+  - com-object priority `High`/`Alert` and an enabled `ReadOnInitFlag`;
+  - any evaluation diagnostic, except a legal value that no `when`
+    covers;
+  - a change to a masked octet other than the individual-address slot.
+- The image is checked against a real device for one program only
+  (`A-0027-15-0BAC`). Nothing in the image builder writes to a bus.
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 

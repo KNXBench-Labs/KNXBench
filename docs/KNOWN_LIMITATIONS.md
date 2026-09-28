@@ -3379,25 +3379,46 @@ merge behavior additionally waits for §55. T15 does not pretend that
 running two unrelated two-way comparisons creates a three-way result.
 
 <a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a>
-## 57. Raw `.knxproj` comparison is available on the CLI, not the web route
+## 57. Raw `.knxproj` comparison is available on the CLI and in the web UI
 
-**Limitation.** `knx diff` accepts `.knxdb` and `.knxproj` on either side,
-but `POST /api/project/diff {path}` and the web file picker still compare
-the open project only against a `.knxdb` path.
+**Status.** Lifted (CT-6, 2026-09-28). `POST /api/project/diff` accepts a
+`.knxdb` or a `.knxproj` path and an optional `inputKind`
+(`"knxdb"` | `"knxproj"`). Without it the server detects the kind from the
+extension; with it the kind must match the extension. An unknown value, an
+unsupported extension or a contradicting kind is a `400`. Every response
+names the `inputKind` it used.
 
-**Cause.** `knx-diff` correctly remains independent of formats. T15 added
-a `knx-app` loader that normalizes either format and preserves the full ETS
-import report; the CLI can present that report without changing the HTTP
-route's current mounted-path contract. Extending the browser picker/API is
-owned by the later UI slice.
+Both kinds load through `knx_app::comparison::load_comparison_input`, the
+loader `knx diff` uses, so there is one comparison import path. For a
+`.knxproj` the response carries the full `ImportReport` (`importReport`,
+serialized as `knx diff` prints it) and the same report flattened into
+session-log entries (`importDiagnostics`). A report with error-level
+diagnostics is refused with a `422` that carries that report, not a diff,
+matching `knx diff`'s refusal.
 
-**Impact.** Scripts and terminal users can compare raw ETS exports directly
-and see every import diagnostic on stderr. Application users must still
-import the archive or use the CLI.
+The web panel's picker offers both kinds. Its paths come from the existing
+mount picker or `/api/fs/upload` (`crate::paths` confines relative paths
+to the data directory). The import diagnostics are shown collapsed above
+the diff, their total, error and warning counts in the summary line; a
+refused import shows its diagnostics in the panel instead of a diff.
 
-**Lifted when.** The project-diff HTTP request and picker gain an explicit
-input-kind/upload contract and expose the same import report; silently
-normalizing a browser path without those diagnostics is not acceptable.
+**Verified.** HTTP tests with synthetic archives (no corpus): clean
+import, import with a warning, import with an error (refused), unknown and
+contradicting input kinds, an unsupported extension, and an uploaded
+relative path. Vitest covers the picker filters and the diagnostics block
+in English and German.
+
+**What remains.**
+
+- Warning-level diagnostics do not block a comparison, as on the CLI. The
+  user sees them only by opening the collapsed block.
+- `importDiagnostics` inherits `session_log::from_import_report`'s
+  omissions: inferred values and a namespace disagreement are not listed
+  there. They remain in the raw `importReport`, which the panel does not
+  render.
+- The comparison's diagnostics are not written to the session log.
+- Not verified against real ETS exports in the cloud session (no corpus),
+  and not in a browser or the desktop shell's native file dialog.
 
 <a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a>
 ## 58. Project diff has an opt-in CI exit-code contract
@@ -3475,8 +3496,8 @@ string. Escape still closes the report first, as before.
   reproduce the browser's rule (an uncancelled Enter/Space keydown on a
   focused `<button>` clicks it). No Playwright run covers the panel yet,
   and no screen reader was used to check it.
-- The panel still accepts `.knxdb` only (§57); it never applies or
-  merges a diff (§55) and has no three-way mode (§56).
+- The panel never applies or merges a diff (§55) and has no three-way
+  mode (§56). Raw `.knxproj` inputs are accepted since CT-6 (§57).
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 

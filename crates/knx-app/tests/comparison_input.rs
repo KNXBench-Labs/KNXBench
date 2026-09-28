@@ -50,3 +50,23 @@ fn missing_and_unsupported_inputs_are_explicit_and_create_nothing() {
         Err(ComparisonInputError::UnsupportedFormat(path)) if path == unsupported
     ));
 }
+
+#[test]
+fn the_input_kind_is_named_by_the_extension_alone_ignoring_case() {
+    use knx_app::comparison::ComparisonInputKind;
+    use std::path::Path;
+
+    assert_eq!(
+        ComparisonInputKind::of_path(Path::new("a/b.knxdb")),
+        Some(ComparisonInputKind::NativeStore)
+    );
+    assert_eq!(
+        ComparisonInputKind::of_path(Path::new("B.KnxProj")),
+        Some(ComparisonInputKind::EtsProject)
+    );
+    assert_eq!(
+        ComparisonInputKind::of_path(Path::new("b.knxproj.zip")),
+        None
+    );
+    assert_eq!(ComparisonInputKind::of_path(Path::new("knxproj")), None);
+}

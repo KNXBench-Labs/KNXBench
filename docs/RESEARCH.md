@@ -5121,6 +5121,79 @@ downloaded image is correct and a device restart activates it.
 
 ---
 
+## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)
+
+### 20.1 Discovery comparison on one Linux host
+
+**[V] Same source, same host and interface.** At `48cc48e`, built the configured
+AppImage with `APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 cargo tauri build --bundles
+appimage --ci` and an unpackaged debug `knx-server` in an isolated worktree.
+The AppImage is an executable 106,936,824-byte `x86_64` ELF. Its WebView
+requested `POST /api/bus/discover` from the bundled loopback server during a
+bounded launch. The unpackaged server's same route returned HTTP 200 with
+`interfaces: []` after 10.003 seconds. No project was loaded, no tunnel was
+opened, and no device, including excluded address `1.1.220`, was contacted.
+
+**[V] Syscall capture, not a wire capture.** An unprivileged `strace -ff` of
+each process recorded exactly one successful 14-byte `SEARCH_REQUEST` UDP
+`sendto` syscall to `224.0.23.12:3671`:
+
+| Build | Request (network identifiers redacted) | HPAI IPv4 | Response observed by process |
+|---|---|---|---|
+| AppImage | `06 10 02 01 00 0e 08 01` + 6-byte HPAI address/port | host LAN interface | none |
+| Unpackaged debug server | same 8-byte header/HPAI prefix + 6-byte HPAI address/port | same host LAN interface | none; HTTP 200, empty list |
+
+Both HPAI ports were nonzero and different ephemeral ports; the code obtains
+the port from the wildcard-bound discovery socket. `ip route get 224.0.23.12`
+selected the physical `eno1` interface with that same host source address;
+the route to the configured unicast gateway selected `eno1` too. A working
+manual connection is the user's report, not a fresh verification here.
+The AppImage reached its embedded server and emitted the same search as the
+unpackaged process, so an AppImage-only missing API route or missing network
+syscall is **ruled out for this host**.
+The WebView also printed two GBM-buffer errors, but still reached the route;
+those rendering messages are not evidence of a discovery transport failure.
+
+**[A] Remaining cause.** No response was visible to either process. A multicast
+routing/switch/firewall issue or the gateway not answering this search is more
+plausible than an AppImage-specific bundle defect, but neither is proven.
+This unprivileged session cannot open an `AF_PACKET` socket, read the nftables
+ruleset, or run privileged `tcpdump`; `sendto` success proves the call, **not**
+that a datagram crossed the NIC or reached the gateway. The 10-second timeout
+is `SEARCH_TIMEOUT_SECS` in `knx-net/src/client.rs`. A wire capture on the
+host and gateway-side evidence are needed before changing protocol logic or
+claiming a network fix. The manually entered unicast endpoint remains the
+supported fallback. See KNOWN_LIMITATIONS §79.
+
+### 20.2 Line membership and the individual-address editor
+
+**[D]** *Architecture v03.00.02 AS* §3.1, PDF p. 10 (page footer 10/26):
+the 16-bit individual-address space mirrors the area/line/device logical
+topology, with 256 device slots per line. *Project Schema23 v01.00.00*, PDF
+pp. 40–43 (footers match PDF pages): `Topology_t/Area/@Address` is the
+area [0…15], `Area/Line/@Address` is the line [0…15], and the nested
+`Area/Line/Segment/DeviceInstance` has its own optional `@Address`,
+documented as the device address [0…255]. `UnassignedDevices` is a separate
+container. This is stronger than an editor convenience guess: for an assigned
+device the containing line supplies the area and line parts.
+
+**[V]** The importer already composes the full address from the enclosing
+area/line and the device's one-octet `@Address`
+(`knx-etsproj/src/map.rs::compose_individual_address`). The current
+`Command::SetIndividualAddress` checks global uniqueness but does not check
+line membership (`knx-core/src/command.rs`); `MoveDeviceToLine` explicitly
+leaves the device's address unchanged. **[I]** A future editor may
+show only the device octet for a line-assigned device, but must reconstruct the
+full address and validate it in the core against the actual containing area
+and line, duplicates, and reserved values. **[A]** The one-octet input
+is a KNXBench UX choice, not a prescribed ETS screen; there is no verified
+rule that moving a device automatically changes its address. An unassigned
+device still needs full-address editing. A line move is a separate intent and
+must not silently rewrite the address; reject or explicitly resolve a
+mismatch. U11/ISSUE-09 owns the tests and implementation, not U2's research.
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

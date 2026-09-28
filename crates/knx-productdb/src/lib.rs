@@ -9,6 +9,7 @@ pub mod blob;
 pub mod code;
 pub mod dynamic;
 pub mod enrich;
+pub mod image;
 pub mod ingest;
 pub mod migration;
 pub mod package;

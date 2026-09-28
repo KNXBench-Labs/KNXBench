@@ -4,7 +4,9 @@
 //! this one is `#[ignore]`d and runs with `KNXBENCH_PRODUCT_CORPUS` (default:
 //! `OriginalData/ProductDatabases` of the root checkout).
 
+use knx_core::{GroupAddress, IndividualAddress};
 use knx_productdb::code::{load_program_code, LoadStep, TablePlacement};
+use knx_productdb::image::{build_download_image, ImageRequest, Link};
 use knx_productdb::{install_package, open_and_migrate, sha256_hex};
 
 const FILE: &str = "MDT_KP_BE_01_Push_Button_V15a.knxprod";
@@ -175,4 +177,175 @@ fn an_unknown_program_is_none_not_an_error() {
     assert!(load_program_code(&conn, "M-0000_A-NONE")
         .expect("no error")
         .is_none());
+}
+
+/// `AS-4400` of `1.1.67` (`A-0027-15-0BAC`) as read back from the device on
+/// 2026-09-28 (read-only; docs/IMPLEMENTATION_STATUS.md), 394 octets: its
+/// group object table and parameters for two shutter buttons and a status
+/// LED.
+const DEVICE_AS_4400: &str = concat!(
+    "40070007404f0007484f000750db000758db000760db000744db03074cdb0307",
+    "54db00075cdb000761db000762db000764db000766db000763db000765db0007",
+    "67db000768db000769db00076ad700076bdb00076cdb00076ddb00076edb0007",
+    "6fdb000770db000771db000772db000773db000774db000775db000776db0007",
+    "77db000778db000779db00077adb00077bdb00077cdb00077ddb00077edb0007",
+    "7fdb000780db000781db000782db000783db000784db000785db000786db0007",
+    "87db000788db000789db00078adb00078bdb00078cdb00078ddb00078edb0007",
+    "8fdb000790db000791db000792db000793db000794db000795db000796db0007",
+    "97db000000320190000200000000000001000000010000000100000000000000",
+    "0000000000000007000001000100000000000000000000020001000000000100",
+    "0000010000000100000000000000000000000000000700000100010000000000",
+    "000000000101ff0000000000000000ff00000000000000000000010001060001",
+    "00000000000000000200",
+);
+
+fn hex(text: &str) -> Vec<u8> {
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).expect("hex"))
+        .collect()
+}
+
+fn installed() -> (tempfile::TempDir, rusqlite::Connection) {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    let path = knx_testsupport::find_corpus_file(&root, FILE).unwrap_or_else(|| {
+        panic!(
+            "corpus fixture {FILE} unavailable under {}; set KNXBENCH_PRODUCT_CORPUS",
+            root.display()
+        )
+    });
+    let bytes = std::fs::read(&path).expect("readable fixture");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).expect("database");
+    install_package(&conn, FILE, &bytes).expect("installs");
+    (dir, conn)
+}
+
+fn image_request(values: &[(&str, &str)], links: Vec<Link>) -> ImageRequest {
+    ImageRequest {
+        program_id: PROGRAM.to_string(),
+        individual_address: IndividualAddress::new(1, 1, 67).expect("valid"),
+        values: values
+            .iter()
+            .map(|(short, value)| (format!("{PROGRAM}_{short}"), value.to_string()))
+            .collect(),
+        links,
+    }
+}
+
+fn link(object: u8, raw: u16, sending: bool) -> Link {
+    Link {
+        object,
+        group_address: GroupAddress::from_raw(raw),
+        sending,
+    }
+}
+
+/// The device's configuration as ETS left it: buttons 1/2 as one shutter
+/// pair on 2/1/15 and 2/1/16, the LED object 18 on 0/4/6 and 0/4/7. The
+/// five values are the ones that differ from the product defaults.
+const DEVICE_VALUES: &[(&str, &str)] = &[
+    ("P-1007_R-1007", "1"),
+    ("P-1014_R-1014", "2"),
+    ("P-27_R-27", "2"),
+    ("P-326_R-326", "1"),
+    ("P-95_R-95", "1"),
+];
+
+#[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
+fn the_image_rebuilds_the_devices_parameter_segment_octet_for_octet() {
+    let (_dir, conn) = installed();
+    let links = vec![
+        link(0, 0x110F, true),
+        link(1, 0x1110, true),
+        link(18, 0x0406, true),
+        link(18, 0x0407, false),
+    ];
+    let image = build_download_image(&conn, &image_request(DEVICE_VALUES, links)).expect("builds");
+
+    let parameters = &image
+        .segment(&segment_id("AS-4400"))
+        .expect("AS-4400")
+        .octets;
+    let device = hex(DEVICE_AS_4400);
+    let differing: Vec<usize> = (0..device.len())
+        .filter(|&i| parameters[i] != device[i])
+        .collect();
+    assert_eq!(
+        differing,
+        Vec::<usize>::new(),
+        "octets differing from the device"
+    );
+
+    // The tables, as far as they reach; the device keeps stale octets
+    // after them (docs/RESEARCH.md §19.1).
+    let addresses = &image
+        .segment(&segment_id("AS-4000"))
+        .expect("AS-4000")
+        .octets;
+    assert_eq!(&addresses[..11], &hex("05114304060407110f1110")[..]);
+    let associations = &image
+        .segment(&segment_id("AS-4201"))
+        .expect("AS-4201")
+        .octets;
+    assert_eq!(&associations[..9], &hex("040300040101120212")[..]);
+}
+
+#[test]
+#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]
+fn option_c_toggles_2_0_53_from_button_1_and_changes_only_what_it_must() {
+    let (_dir, conn) = installed();
+    // Button 1 a single toggle switch, button 2 inactive; 2/0/53 = 1035h.
+    let request = image_request(
+        &[
+            ("P-1007_R-1007", "2"),
+            ("UP-5500_R-5500", "0"),
+            ("UP-5501_R-5501", "1"),
+        ],
+        vec![link(0, 0x1035, true)],
+    );
+    let image = build_download_image(&conn, &request).expect("builds");
+
+    let numbers: Vec<u8> = image.objects.iter().map(|object| object.number).collect();
+    assert_eq!(numbers, vec![0, 1], "Switch and Value for toggle");
+
+    let parameters = &image
+        .segment(&segment_id("AS-4400"))
+        .expect("AS-4400")
+        .octets;
+    let device = hex(DEVICE_AS_4400);
+    let changed: Vec<(usize, u8)> = (0..device.len())
+        .filter(|&i| parameters[i] != device[i])
+        .map(|i| (i, parameters[i]))
+        .collect();
+    assert_eq!(
+        changed,
+        vec![
+            (9, 0xD7),   // object 1: now written by the bus, no longer sending
+            (77, 0xDB),  // object 18 (LED) inactive
+            (265, 0x00), // button 1: switch
+            (267, 0x01), // subfunction: toggle
+            (311, 0xFF), // button 2: inactive
+            (313, 0x04),
+            (381, 0x00),
+            (392, 0x00),
+        ]
+    );
+
+    let addresses = &image
+        .segment(&segment_id("AS-4000"))
+        .expect("AS-4000")
+        .octets;
+    assert_eq!(&addresses[..5], &hex("0211431035")[..]);
+    let associations = &image
+        .segment(&segment_id("AS-4201"))
+        .expect("AS-4201")
+        .octets;
+    assert_eq!(&associations[..3], &hex("010100")[..]);
 }

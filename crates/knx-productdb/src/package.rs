@@ -1122,6 +1122,52 @@ fn validate_central_directory(
     })
 }
 
+/// Directory metadata of one member of a ZIP that passed
+/// [`validate_central_directory`]. Nothing is decompressed.
+pub(crate) struct ZipEntryMeta {
+    pub name: Vec<u8>,
+    pub flags: u16,
+    pub uncompressed_size: u64,
+}
+
+/// The package validator applied to a nested archive, reduced to the
+/// checked central-directory metadata.
+pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, PackageError> {
+    // An empty archive is only its end-of-directory record (no entries, no
+    // directory, optional comment). A package cannot be empty; a nested
+    // archive can, and is then read as zero entries rather than unreadable.
+    if bytes.len() >= 22
+        && bytes[..4] == *b"PK\x05\x06"
+        && bytes[4..20].iter().all(|&b| b == 0)
+        && 22 + usize::from(u16::from_le_bytes([bytes[20], bytes[21]])) == bytes.len()
+    {
+        return Ok(Vec::new());
+    }
+    let directory = preflight_zip(bytes)?;
+    let validated = validate_central_directory(bytes, directory)?;
+    validated
+        .entries
+        .iter()
+        .map(|entry| {
+            let at = usize::try_from(entry.central_offset).map_err(zip_error)?;
+            let header = bytes
+                .get(at..at + 46)
+                .ok_or_else(|| zip_error("truncated central directory"))?;
+            let flags = u16::from_le_bytes([header[8], header[9]]);
+            let name_len = usize::from(u16::from_le_bytes([header[28], header[29]]));
+            let name = bytes
+                .get(at + 46..at + 46 + name_len)
+                .ok_or_else(|| zip_error("truncated central directory name"))?
+                .to_vec();
+            Ok(ZipEntryMeta {
+                name,
+                flags,
+                uncompressed_size: entry.uncompressed_size,
+            })
+        })
+        .collect()
+}
+
 fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
     let mut reader = quick_xml::NsReader::from_reader(bytes);
     loop {

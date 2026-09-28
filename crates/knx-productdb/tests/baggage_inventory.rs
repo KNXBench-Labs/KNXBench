@@ -315,6 +315,13 @@ fn a_tampered_inventory_is_rejected_on_reload() {
         "UPDATE package_baggage_inventory SET status = 'unavailable'",
         "DELETE FROM package_baggage_declaration; DELETE FROM package_baggage_payload; DELETE FROM package_baggage_inventory",
         "UPDATE package_baggage_payload SET nested_entries = nested_entries + 1 WHERE member_path LIKE '%tools.zip'",
+        // Lexemes that do not change a resolution must still match the index.
+        "UPDATE package_baggage_declaration SET baggage_id = 'forged' WHERE baggage_id = 'M-0001_BG-logo'",
+        "UPDATE package_baggage_declaration SET install_on_import = 'false' WHERE baggage_id = 'M-0001_BG-tools'",
+        "UPDATE package_baggage_declaration SET time_info = '1999-01-01T00:00:00Z' WHERE baggage_id = 'M-0001_BG-gone'",
+        "UPDATE package_baggage_declaration SET name = 'other.pdf' WHERE baggage_id = 'M-0001_BG-gone'",
+        // A payload row pointing at a different retained blob.
+        "UPDATE package_baggage_payload SET sha256 = (SELECT source_sha256 FROM package_member WHERE path LIKE '%logo.png') WHERE member_path LIKE '%README'",
     ];
     for (case, sql) in corruptions.iter().enumerate() {
         let (_dir, conn) = db();
@@ -378,12 +385,28 @@ fn v15_to_v16_upgrade_merges_index_unknowns_like_a_fresh_install() {
         ("M-0001/Baggages.xml", odd_index.as_bytes()),
         ("M-0001/Baggages/Icons/logo.png", BMP),
     ]);
-    let (fresh, fresh_ingest_unknown) = {
+    let (fresh, fresh_ingest_unknown, fresh_unknown_count) = {
         let conn = open_and_migrate(&path).unwrap();
         let fresh = install_package(&conn, "odd.knxprod", &bytes).unwrap();
         let rows = ingest_unknown_rows(&conn);
         assert!(rows.iter().any(|row| row.2 == "Signature"));
-        // v15 had no index parser unknowns: strip them before rewinding.
+        let count = package_unknown_count(&conn);
+        assert_eq!(count, i64::try_from(fresh.unknown).unwrap());
+        // v15 had no index parser unknowns: strip them before rewinding,
+        // including the one they added to `package.unknown_count`.
+        let index_rows = rows
+            .iter()
+            .filter(|row| {
+                row.1
+                    .starts_with("/KNX/ManufacturerData/Manufacturer/Baggages")
+            })
+            .count();
+        assert_eq!(index_rows, 1);
+        conn.execute(
+            "UPDATE package SET unknown_count = unknown_count - ?1",
+            [i64::try_from(index_rows).unwrap()],
+        )
+        .unwrap();
         conn.execute_batch(
             "DELETE FROM ingest_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
              DELETE FROM package_install_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
@@ -397,12 +420,51 @@ fn v15_to_v16_upgrade_merges_index_unknowns_like_a_fresh_install() {
         )
         .unwrap();
         v16_rewind::rewind_to_v15(&conn);
-        (fresh, rows)
+        (fresh, rows, count)
     };
     let conn = open_and_migrate(&path).unwrap();
     assert_eq!(ingest_unknown_rows(&conn), fresh_ingest_unknown);
+    assert_eq!(
+        package_unknown_count(&conn),
+        fresh_unknown_count,
+        "the upgrade restores the package's unknown count too"
+    );
     let retried = install_package(&conn, "retry.knxprod", &bytes).unwrap();
     assert_eq!(retried.facts, fresh.facts);
+    assert_eq!(retried.unknown, fresh.unknown);
+}
+
+fn package_unknown_count(conn: &Connection) -> i64 {
+    conn.query_row("SELECT unknown_count FROM package", [], |r| r.get(0))
+        .unwrap()
+}
+
+#[test]
+fn a_prefixed_attribute_is_foreign_even_when_its_local_name_is_known() {
+    let (_dir, conn) = db();
+    let prefixed = String::from_utf8(INDEX.to_vec()).unwrap().replace(
+        "<Baggage Id=\"M-0001_BG-gone\" Name=\"gone.pdf\"",
+        "<Baggage xmlns:x=\"urn:example\" x:Name=\"shadow\" Id=\"M-0001_BG-gone\" Name=\"gone.pdf\"",
+    );
+    assert_ne!(prefixed.as_bytes(), INDEX);
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages.xml", prefixed.as_bytes()),
+    ]);
+    let report = install_package(&conn, "prefixed.knxprod", &bytes).unwrap();
+    let gone = report
+        .baggage
+        .as_ref()
+        .unwrap()
+        .declarations
+        .iter()
+        .find(|d| d.declaration.id.as_deref() == Some("M-0001_BG-gone"))
+        .unwrap();
+    assert_eq!(gone.declaration.name.as_deref(), Some("gone.pdf"));
+    assert!(ingest_unknown_rows(&conn)
+        .iter()
+        .any(|row| row.2 == "x:Name" && row.1.ends_with("/Baggages/Baggage")));
 }
 
 fn ingest_unknown_rows(conn: &Connection) -> Vec<(String, String, String, i64)> {
@@ -465,4 +527,68 @@ fn v15_to_v16_marks_an_unreadable_index_unavailable_and_keeps_opening() {
     let inventory = other.baggage.expect("a healthy package stays measured");
     assert_eq!(inventory.undeclared().count(), 1);
     assert!(other.facts.is_some());
+}
+
+#[test]
+fn v15_to_v16_downgrades_a_corrupt_report_instead_of_refusing_to_open() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bytes = package();
+    let healthy = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages/solo.bin", b"lonely"),
+    ]);
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "baggage.knxprod", &bytes).unwrap();
+        install_package(&conn, "healthy.knxprod", &healthy).unwrap();
+        v16_rewind::rewind_to_v15(&conn);
+        // The report's own member count no longer matches its members.
+        conn.execute(
+            "UPDATE package_install_count SET count = count + 1
+             WHERE category = 'archive_member' AND disposition = 'read'
+               AND package_sha256 = ?1",
+            [knx_productdb::sha256_hex(&bytes)],
+        )
+        .unwrap();
+    }
+    let conn = open_and_migrate(&path).expect("one corrupt report does not lock the database");
+    let rotten = install_package(&conn, "retry.knxprod", &bytes).unwrap();
+    assert!(rotten.skipped);
+    assert_eq!(rotten.facts, None, "the corrupt report is unavailable");
+    assert_eq!(rotten.baggage, None);
+    let recorded: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown
+             WHERE kind = 'InstallReportBackfillError' AND name = 'baggage_inventory_backfill'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(recorded, 1);
+    let other = install_package(&conn, "healthy-retry.knxprod", &healthy).unwrap();
+    assert!(other.facts.is_some() && other.baggage.is_some());
+}
+
+#[test]
+fn a_payload_row_swapped_to_a_same_shaped_blob_is_rejected_on_reload() {
+    // Two payloads that measure identically (same size, same class): only
+    // the member-to-blob binding (checked by the loader) tells them apart.
+    let twins = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages/a.txt", b"left twin"),
+        ("M-0001/Baggages/b.txt", b"rightwin!"),
+    ]);
+    let (_dir, conn) = db();
+    install_package(&conn, "twins.knxprod", &twins).unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = OFF;").unwrap();
+    conn.execute(
+        "UPDATE package_baggage_payload SET sha256 = ?1 WHERE member_path LIKE '%b.txt'",
+        [knx_productdb::sha256_hex(b"left twin")],
+    )
+    .unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+    assert!(install_package(&conn, "again.knxprod", &twins).is_err());
 }

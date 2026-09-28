@@ -72,6 +72,26 @@ pub fn ingest_file(
     Ok(outcome)
 }
 
+/// `ingest_unknown.kind` of a stored `Baggages.xml` that could not be parsed.
+pub(crate) const UNREADABLE_BAGGAGE_INDEX: &str = "BaggageIndexParseError";
+
+/// Records why a stored baggage index has no typed declarations, with the
+/// parser's reason as the sample. Shared by fresh ingest and the v15 -> v16
+/// backfill so both leave the same row.
+pub(crate) fn record_unreadable_baggage_index(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    error: &ProductDbError,
+) -> Result<(), ProductDbError> {
+    conn.execute(
+        "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+         VALUES (?1, NULL, ?2, ?3, 'Baggages.xml', 1, ?4)",
+        rusqlite::params![sha256, source_path, UNREADABLE_BAGGAGE_INDEX, error.to_string()],
+    )?;
+    Ok(())
+}
+
 pub(crate) fn ingest_file_in_transaction(
     conn: &Connection,
     source_path: &str,
@@ -170,13 +190,37 @@ pub(crate) fn ingest_file_in_transaction(
                 entities,
             )
         }
-        // Baggages.xml lists the blobs; the blobs themselves and anything
-        // unrecognized are stored and not parsed. `knx_master.xml` is
+        // Baggages.xml's declarations are typed per package by
+        // `package.rs` (PDB-10); here only what the index parser does not
+        // model is reported, like every other parser's unknowns.
+        //
+        // An index that does not parse is still stored: before PDB-10 this
+        // path kept it as an opaque blob, and a project import must not start
+        // failing on it. The refusal is recorded instead of dropped. Inside a
+        // package, `package.rs` re-parses the index and refuses the install.
+        FileKind::Baggages => {
+            let unknown = match crate::parse::baggage::parse_baggage_index(source_path, bytes) {
+                Ok(index) => index.unknown,
+                Err(error @ ProductDbError::Xml { .. }) => {
+                    record_unreadable_baggage_index(conn, &sha256, source_path, &error)?;
+                    Vec::new()
+                }
+                Err(error) => return Err(error),
+            };
+            (
+                unknown,
+                Vec::new(),
+                TranslationCounts::default(),
+                crate::report::EntityCounts::default(),
+            )
+        }
+        // The blobs themselves and anything unrecognized are stored and not
+        // parsed. `knx_master.xml` is
         // ingested through `ingest_master_data` instead (its three call
         // sites — `package.rs`, `knx-app`'s importer, `knx-cli` — stay
         // unchanged), so a `MasterData` blob reaching this generic path is
         // stored, not parsed, exactly like `Unrecognized`.
-        FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => (
+        FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => (
             Vec::new(),
             Vec::new(),
             TranslationCounts::default(),

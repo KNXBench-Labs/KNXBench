@@ -6511,6 +6511,16 @@ as a hard progress bound (none does yet, per entry 97) — at which point
 either the bound must be widened to reflect the true worst case, or the
 extra attempt's own cost must be capped independently of `MAX_TRANSMISSIONS`
 and `response_timeout`.
+
+**Status 2026-09-28 (K5).** Still open, now with a bound on where it shows.
+The first UI that runs a download, the **Download to device** tab
+(`DeviceDownloadPanel`), renders no time bound at all: its progress is
+steps started out of the plan's steps, and octets read back out of the
+plan's octets, both counted from events the executor actually reported. A
+load-state wait that runs the extra attempt therefore shows as one step
+that takes longer. Nothing claims to finish at `max_transition`, so nothing
+appears to hang against a promise. The limitation still applies to any
+future surface that shows a countdown.
 ## 102. The write echo's decode-failure branch has no known real trigger
 
 **Limitation.** `POST /api/bus/write`'s `decodedEcho` (task 27) carries a

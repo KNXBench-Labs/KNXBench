@@ -753,6 +753,16 @@ impl SimulatedDevice {
         Self::with_config(SimulatorConfig::default())
     }
 
+    /// A device configured by `config` that lives at `address` from the
+    /// start, for a test whose target is fixed by a saved project rather
+    /// than by the simulator (the K5 route test downloads the project's
+    /// `1.1.67`). Nothing else differs from [`Self::with_config`].
+    pub fn with_config_at(address: IndividualAddress, config: SimulatorConfig) -> Self {
+        let device = Self::with_config(config);
+        device.lock().address = address;
+        device
+    }
+
     /// A device configured to misbehave in the ways `config` names.
     pub fn with_config(config: SimulatorConfig) -> Self {
         let (area, line, device) = SIMULATED_DEVICE_ADDRESS;

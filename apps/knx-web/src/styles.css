@@ -1361,6 +1361,94 @@ main {
   accent-color: var(--knx-accent);
 }
 
+/* Download to a device (DeviceDownloadPanel): plan, then live progress. */
+.device-download-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.device-download-panel header h2,
+.device-download-panel header p {
+  margin: 4px 0;
+}
+
+.device-download-config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.device-download-config label,
+.device-download-progress label {
+  display: grid;
+  gap: 4px;
+  color: var(--knx-muted);
+  font-size: 12px;
+}
+
+.device-download-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.device-download-plan,
+.device-download-progress {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  padding: 14px;
+  background: var(--knx-surface);
+}
+
+.device-download-plan h3,
+.device-download-progress h3 {
+  margin: 0;
+}
+
+.device-download-plan dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.device-download-plan dt {
+  color: var(--knx-muted);
+}
+
+.device-download-plan dd {
+  margin: 0;
+}
+
+.device-download-progress progress {
+  width: 100%;
+  accent-color: var(--knx-accent);
+}
+
+.device-download-written[data-written="yes"] {
+  color: var(--knx-success-color);
+}
+
+.device-download-written[data-written="partially"],
+.device-download-progress .form-warning {
+  color: var(--knx-warning-color);
+  font-weight: 600;
+}
+
+.device-download-blocks {
+  max-height: 320px;
+  overflow: auto;
+  display: block;
+}
+
+.device-download-blocks td code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .line-scan-results [data-scan-outcome] {
   display: inline-block;
   border-left: 4px solid var(--knx-border);

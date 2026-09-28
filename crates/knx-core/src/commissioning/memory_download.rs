@@ -72,6 +72,19 @@ pub struct MemoryDownloadPlan {
     pub steps: Vec<MemoryDownloadStep>,
 }
 
+impl MemoryDownloadStep {
+    /// Whether running this step changes the device: a load-state event,
+    /// segment data, or a restart. Connect, compare and disconnect only
+    /// read or manage the connection. A run that stopped after a step for
+    /// which this is `true` may have left the device partially written.
+    pub fn changes_device(&self) -> bool {
+        matches!(
+            self,
+            Self::LoadRecord(_) | Self::WriteMemory { .. } | Self::Restart
+        )
+    }
+}
+
 impl MemoryDownloadPlan {
     /// How many octets the plan writes as segment data.
     pub fn data_octets(&self) -> usize {
@@ -196,6 +209,24 @@ pub fn machines(plan: &MemoryDownloadPlan) -> Vec<MemoryLoadStateMachine> {
 mod tests {
     use super::*;
     use crate::commissioning::load_control_memory::event_record;
+
+    #[test]
+    fn only_load_records_data_and_restart_change_the_device() {
+        assert!(!MemoryDownloadStep::Connect.changes_device());
+        assert!(!MemoryDownloadStep::Disconnect.changes_device());
+        assert!(!MemoryDownloadStep::CompareProperty {
+            object_index: 0,
+            property_id: 78,
+            inline_data: vec![0]
+        }
+        .changes_device());
+        assert!(MemoryDownloadStep::WriteMemory {
+            address: 0x4000,
+            octets: vec![1]
+        }
+        .changes_device());
+        assert!(MemoryDownloadStep::Restart.changes_device());
+    }
 
     #[test]
     fn the_device_octets_are_the_start_of_the_data_and_the_rest_is_zero() {

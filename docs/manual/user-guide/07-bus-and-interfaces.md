@@ -155,6 +155,37 @@ A session can also end without you: the interface can close it — the panel add
 bus session was ended elsewhere."* There is one session at a time; starting a new one
 replaces the old one and clears its rows.
 
+## Downloading to a device
+
+*Download* here means KNXBench → device over the bus: the device's configuration
+changes, the project does not. Saving or exporting a project file is something else
+(see the [glossary](../../GLOSSARY.md)).
+
+1. Open the project that contains the device, then **Bus monitor** in the navigation
+   sidebar and its **Download to device** tab (German: **In Gerät laden**), beside the
+   monitor and the line scan. Only devices that have an individual address are offered.
+2. Choose the device and the gateway, then **Show what would be written**. The plan
+   names the application program, the mask and manufacturer the device must report
+   before the first write, the parameter values and group links taken from the project,
+   every memory segment with the octets written, and every step. Nothing has been sent.
+   Any edit to the project discards the plan; ask for it again.
+3. **Download to 1.1.67** (with your device's address) asks for confirmation in the
+   programming dialog. Only after you confirm does the server open a tunnel. It refuses
+   if the bus monitor or a line scan holds the gateway's tunnel, and it refuses a plan the
+   project no longer yields.
+4. While it runs the tab shows step *n* of *m*, the octets written and read back against
+   the total, and every data block with its address and octets, each one only after the
+   device read it back unchanged.
+5. It ends with one of three lines. **Written to the device: yes** means every block was
+   read back unchanged. **No** means the device was not changed. **Partially** means the
+   device may be partly loaded; download again. If the device did not acknowledge the
+   closing restart, the tab says **Restart: NOT confirmed** next to "yes": the data is in
+   the device, and some devices restart without answering, so check that it works.
+
+There is no stop button: stopping between steps would leave the device in an undefined
+state. The server cannot tell a person from a script; like the command, it only checks
+that the request names the device it was shown.
+
 ## What KNXBench does and does not do on a bus
 
 This section is deliberately plain.
@@ -171,25 +202,27 @@ device-descriptor read, a disconnect — to each candidate address. Those are tr
 the bus, and they occupy the addressed device briefly, but they do not change anything
 in it.
 
-**What KNXBench writes to a device.** One command, and nothing in the user interface:
-`knx device download` downloads a project device's configuration *to the device*
-(application tables and parameters). By default it only prints the plan; it writes
-only with the exact confirmation phrase for that one device. It has been verified on one
-product family on one device so far. See
+**What KNXBench writes to a device.** A download of a project device's configuration
+*to the device* (application tables and parameters), from two places: the
+`knx device download` command and the **Download to device** tab described
+[below](#downloading-to-a-device). Both show the plan first and write only with the
+confirmation for that one device. It has been verified on one product family on one
+device so far. See
 [`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 
 **What KNXBench does not do.** Programming an individual address, unloading a device,
-secure devices, and any download from the user interface. If you need to commission an
-installation today, you need a tool that does commissioning; KNXBench is not yet one.
+and secure devices. If you need to commission an installation today, you need a tool
+that does commissioning; KNXBench is not yet one.
 
 **The guard rails that actually exist in the code.**
 
 - Writes to a device go through a management-session layer in the networking crate. A
   session that was not handed a write authorisation returns an error before touching the
   transport. An authorisation for real hardware exists only with the operator's phrase
-  naming that device, and only for the kinds of write that have been verified. The one
-  command that reaches this layer is `knx device download`; no HTTP route and no button
-  does.
+  naming that device, and only for the kinds of write that have been verified. Two
+  entry points reach this layer: `knx device download` and the Download to device tab.
+  The tab's server route demands the same phrase, and refuses a plan the project no
+  longer gives (ADR-0045).
 - KNXBench compiles in a list of individual addresses that must never be contacted. The
   scan planner never generates them into a candidate list in the first place, and the
   address type used for probing cannot be constructed without passing that check — so

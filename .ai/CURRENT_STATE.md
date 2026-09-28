@@ -1,3 +1,20 @@
+- **Last Agent:** Claude (goal.md session)
+- **Timestamp:** 2026-09-28 18:10 CEST
+- **Completed:** Housekeeping (user request), no product change.
+  - Removed 11 stale worktrees: 7 `.paperclip-worktrees/KNXBench/DIN-*`, plus `pdb3-install-reports`, `pdb4-scheme13`, `t14-report-residue` and `.worktrees/t13-ui-residue-b`. About 72 GB were freed on `/mnt/daten-i`, which is now at 45 %. The empty parent directories are gone.
+  - Deleted 12 local branches with `git branch -d`: every one was already contained in `main`.
+  - Deleted 5 remote branches: `claude/*` ×3, `pdb-9-parameter-dynamic-fidelity` and `t13-ui-residue-b`. All were ancestors of `main`.
+  - Only `main` and `origin/main` remain.
+  - Archived the untracked leftovers before removal to `.superpowers/sdd/archived-worktrees-2026-09-28/` (gitignored, 22 files):
+    - the t13 SDD review notes;
+    - the t14 task brief;
+    - `pdb3-install-reports`' uncommitted `.ai/CURRENT_STATE.md` diff (a 2026-09-24 Hermes note, superseded by PDB-3 on `main`).
+  - `iaw-settling-delay` had already been merged and removed by the commissioning session. goal.md §12.4 now says so. `scratch/iaw/` is untouched.
+- **Pending/Next Steps:** unchanged from the entries below. The next goal package waits for the user's "go", because the Claude session limit was at 87 %.
+- **Notes for Codex or Claude:** no subagents (see the entry from 14:30).
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 17:59 CEST
 - **Completed:** Branch `iaw-settling-delay` merged into `main` and pushed. It contains the first real application download with KNXBench: MDT `1.1.67` (mask 0701h), option C, button 1 toggles `2/0/53`, verified with a bus monitor (RESEARCH §19.4).

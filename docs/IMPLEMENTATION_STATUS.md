@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28 — U3: browser project export wording
+
+- The File menu now says **Export project… / Projekt exportieren…** rather
+  than "Download project". The label differs from Save As (which writes to
+  the server); the browser export still uses `/api/project/download` and
+  `project.knxdb`, and remains hidden in Tauri. No persistence behavior or
+  wire contract changed.
+- RED/GREEN: `App.test.tsx` proves the File-menu order, both translations,
+  disabled-without-project state, existing HTTP route and filename, and Tauri
+  omission. The tests failed against the previous label, then passed after
+  the rename. `docs/GLOSSARY.md` and the user manual now use "export" for
+  the server-to-browser file direction; "download" remains device-directed.
+
 ## 2026-09-28 — U2: AppImage discovery diagnosis and address-editor evidence
 
 - Built and launched the exact AppImage on this Linux host, and built an

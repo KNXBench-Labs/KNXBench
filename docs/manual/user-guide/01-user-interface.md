@@ -33,7 +33,7 @@ The top row, left to right:
 - **The gear** — opens Settings. See
   [Settings, themes and languages](09-settings-and-appearance.md).
 
-The web File menu includes **Download project** for a local `.knxdb` copy of
+The web File menu includes **Export project…** for a local `.knxdb` copy of
 the open project. The desktop build instead has native file dialogs and adds
 **Quit**; a browser tab cannot close itself. Neither build exports `.knxproj`.
 

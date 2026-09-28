@@ -772,7 +772,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     await refreshSavedProject();
   }
 
-  function downloadProject() {
+  function exportProject() {
     const anchor = document.createElement("a");
     anchor.href = "/api/project/download";
     anchor.download = "project.knxdb";
@@ -916,7 +916,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         {t("toolbar.saveAs")}
       </button>
       {!isTauri() && (
-        <button onClick={downloadProject} disabled={!tree}>{t("toolbar.downloadProject")}</button>
+        <button onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</button>
       )}
       <GroupAddressCsvButtons
         tree={tree}

@@ -1,4 +1,13 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 23:56
+- Web lock: released (U3 merged File-menu rename)
+- **Completed:** U3: browser File menu now says “Export project…” / “Projekt exportieren…”; `toolbar.exportProject` and `exportProject` name the behavior honestly while the existing `/api/project/download` route remains unchanged. The label differs from server-side Save As, stays disabled without a project, and remains omitted from Tauri. RED: 3 targeted failures against the old label; GREEN: 5 focused tests, full web 72 files / 1116 passed, TypeScript and build, Rust 122 suites / 2376 passed, fmt, clippy, layering, headers, anchors, corpus gates and diff-check. Manual, glossary, implementation status and log `.ai/logs/2026-09-28_codex_ui-file-menu-rename.md` updated. No KNX device operations.
+- **Pending/Next Steps:** U4 ISSUE-13 session-log search/export in a fresh worktree, after checking the web lock afresh. Continue U5–U12 per `goal-ui.md`; U13 needs the user's closing review choice.
+- **Notes for Codex or Claude:** `GET /api/log` has a 1000-entry cap and a pinned synthetic drop marker; U4 must not describe any export as a lifetime audit. The File-menu route name is retained for existing HTTP consumers. U3 test changes do not affect the commissioning UI.
+- **For the goal.md session:** No new KNOWN_LIMITATIONS entry; refresh `stats.md` after U3 merge. R2's open glossary note is resolved. The manual's T23 acceptance remains with your session.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 23:46
 - Web lock: taken by UI session for U3 File-menu rename
 - **Completed:** U2 merged and pushed as `e637b76` after branch and merged-main gates (Rust 122 suites/2376 passed; web 72 files/1115 passed); isolated worktree and scratch removed. This entry reserves only the web lock; no U3 implementation yet.

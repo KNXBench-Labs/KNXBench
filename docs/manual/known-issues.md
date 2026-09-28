@@ -378,7 +378,7 @@ published, and the version number is not a promise that anything is finished.
 - **Affected:** saving a `.knxdb` from the web build.
 - **Limitation:** Save As targets the server's permitted directory, not the
   browser's Downloads folder.
-- **Workaround:** use File → Download project for a local copy of the open
+- **Workaround:** use File → Export project… for a local copy of the open
   in-memory project. Save separately if you want the server-side file updated.
 - **Details:** [Projects](user-guide/02-projects.md)
 

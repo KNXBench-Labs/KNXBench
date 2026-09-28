@@ -207,6 +207,9 @@ pub struct ProgramCode {
     /// `Static/Parameters` placements by parameter id. A parameter with
     /// no placement (it lives nowhere in memory) has no entry.
     pub parameters: BTreeMap<String, ParameterPlacement>,
+    /// Every `ApplicationProgram` attribute, verbatim (`ApplicationNumber`,
+    /// `ApplicationVersion`, `PeiType`, ...).
+    pub program_attributes: BTreeMap<String, String>,
 }
 
 impl ProgramCode {
@@ -397,6 +400,7 @@ impl<'a> Parser<'a> {
                 .get("LoadProcedureStyle")
                 .map(str::to_string),
             mask_version: program.attributes.get("MaskVersion").map(str::to_string),
+            program_attributes: verbatim(&program.attributes),
             ..ProgramCode::default()
         };
         if program.empty {
@@ -855,6 +859,11 @@ mod tests {
         assert_eq!(
             code.load_procedure_style.as_deref(),
             Some("ProductProcedure")
+        );
+        assert_eq!(
+            code.program_attributes.get("Id").map(String::as_str),
+            Some(ID),
+            "every attribute, verbatim"
         );
         assert_eq!(code.segments.len(), 2);
         let s1 = code.segment("S1").expect("S1");

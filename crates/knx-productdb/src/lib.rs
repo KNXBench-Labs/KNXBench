@@ -7,6 +7,7 @@
 
 pub mod blob;
 pub mod code;
+pub mod download_plan;
 pub mod dynamic;
 pub mod enrich;
 pub mod image;

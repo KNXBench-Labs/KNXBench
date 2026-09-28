@@ -24,6 +24,7 @@
 
 pub mod download;
 pub mod individual_address_write;
+pub mod memory_download;
 pub mod simulator;
 
 use std::convert::Infallible;
@@ -2603,7 +2604,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// [`Self::disconnect_after_restart`] runs whether the wait below for
     /// it succeeds or times out.
     pub async fn restart_basic(&mut self) -> Result<(), SessionError> {
-        self.authorise_write(WriteScope::Restart)?;
+        self.restart_basic_as(WriteScope::Restart).await
+    }
+
+    /// [`Self::restart_basic`] as the last step of a download.
+    ///
+    /// `[D]` CP §3.9.2.2.2, p. 68, ends the BIM M112 download with
+    /// `DMP_Restart_R_Co()`, so the restart belongs to the download's own
+    /// authorisation rather than to a second one. Crate-internal: the memory
+    /// download executor is its one caller.
+    pub(crate) async fn restart_basic_as(&mut self, scope: WriteScope) -> Result<(), SessionError> {
+        self.authorise_write(scope)?;
         let outcome = self
             .send_acknowledged(
                 ApplicationService::Restart {

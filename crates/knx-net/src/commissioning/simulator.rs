@@ -813,6 +813,14 @@ impl SimulatedDevice {
         }
     }
 
+    /// Puts a property value in place, as a device's own identity would be:
+    /// a later read answers it verbatim.
+    pub fn preset_property(&self, object_index: u8, property_id: u8, data: &[u8]) {
+        self.lock()
+            .properties
+            .insert((object_index, property_id), data.to_vec());
+    }
+
     /// Puts a Memory Control Block in place for one object, so that a
     /// partial download has a CRC to compare against.
     pub fn preset_mcb(&self, object_index: ObjectIndex, octets: &[u8]) {

@@ -345,3 +345,18 @@ Task CT-4 from docs/CLOUD_SESSIONS.md for branch <BRANCH> against <BASE>.
   is enforced, and skips with a `SKIPPED:` line on stderr when it is not.
   Local and CI runs, which are not root, still exercise the save-error path.
   Any future test that relies on file permissions needs the same probe.
+- **CT-2 start (2026-09-28): the VM image had an interrupted dpkg run.**
+  apt refused every install ("dpkg was interrupted, you must manually run
+  'dpkg --configure -a'"), and the hook fallback reported `apt=failed`.
+  The VM's proxy also answers 403 for the deadsnakes and ondrej/php PPAs,
+  which makes `apt-get update` exit non-zero. `setup-env.sh` now:
+  - runs `dpkg --configure -a` first;
+  - no longer lets the `apt-get update` status gate the install;
+  - waits up to 120 s for the dpkg lock.
+
+  In an `ubuntu:24.04` probe with an interrupted-dpkg journal plus an
+  unreachable repository, WebKit ends up present.
+
+  *Unknown:* why the image was left mid-dpkg. One possibility is that the
+  environment's own setup script was cut off during its install, but this
+  is not verified.

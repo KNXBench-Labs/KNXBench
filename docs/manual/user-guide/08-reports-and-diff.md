@@ -163,9 +163,19 @@ explicit note that its own fields are unchanged.
 
 ### Comparing in the application
 
-Open the **File** menu and choose **Compare with…**. Pick a `.knxdb` file; KNXBench
-compares the project you currently have open (the left side) against the file you
-picked (the right side) and opens a **Comparison result** panel.
+Open the **File** menu and choose **Compare with…**. Pick a KNXBench project (`.knxdb`)
+or a raw ETS project export (`.knxproj`); in the browser you can also upload one from
+your computer in the same picker. KNXBench compares the project you currently have open
+(the left side) against the file you picked (the right side) and opens a **Comparison
+result** panel.
+
+A `.knxproj` is imported for the comparison through the regular importer. The panel
+then shows a collapsed **ETS import report** line above the result, for example
+*"ETS import report: 3 diagnostics (1 warning)"*. Open it to read every diagnostic:
+its severity, message, and where in the archive it was found. If the import reports
+an error, KNXBench does not compare at all: the panel says *"Comparison refused"* and
+shows the diagnostics instead, because a partly misread file would produce a
+misleading comparison. Warnings do not stop the comparison.
 
 The panel lists, per installation, one line per entity kind with the counts in each
 bucket — *Areas*, *Lines*, *Devices*, *Group ranges*, *Group addresses*, *Buildings* —
@@ -230,8 +240,8 @@ already had.
 
 The limits are worth knowing before you rely on it:
 
-- The application panel still accepts only `.knxdb`; raw `.knxproj` comparison is a CLI
-  capability and always discloses its normalization report.
+- A raw `.knxproj` is always compared together with its import report, in the panel
+  and on the command line; an import with errors is refused, not compared.
 - It compares the typed domain model. Anything KNXBench stores as opaque preserved data
   rather than as typed fields is not compared field by field.
 - Parameters are compared by their raw stored value, because KNXBench does not

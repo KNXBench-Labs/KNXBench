@@ -453,7 +453,7 @@ published, and the version number is not a promise that anything is finished.
 - **Affected:** comparing two projects.
 - **Limitation:** the web panel lists entities and before/after values in
   pages of 50 rows per table, with no search inside the result. A
-  comparison cannot read a raw `.knxproj`, cannot merge or apply a
+  comparison cannot merge or apply a
   difference back onto a project, does not do a three-way comparison, and
   has no exit code for use in a pipeline.
 - **Consequence:** a very large comparison is read page by page rather than

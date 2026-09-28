@@ -838,6 +838,7 @@ The PDB (backend) chain and the web chain may run in parallel, with at most two 
 ### 12.4 Parallel tracks outside this goal
 
 - Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself.
+  - Done 2026-09-28: the commissioning session merged it itself (`95a862c`) and removed branch and worktree. Its scratch `scratch/iaw/` still belongs to that session.
 
 ### 12.5 Lessons from the Paperclip run
 

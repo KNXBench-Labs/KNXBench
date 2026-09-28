@@ -814,6 +814,16 @@ export const messages = {
   "projectDiff.key.unaddressed": "unaddressed",
   "projectDiff.shownOf": "Showing {shown} of {total}.",
   "projectDiff.showMore": "Show more ({count})",
+  // CT-6: raw `.knxproj` comparison inputs and their import report.
+  "projectDiff.anyFilterName": "KNXBench or ETS project",
+  "projectDiff.etsFilterName": "ETS project export",
+  "projectDiff.importSummary.one": "ETS import report: {count} diagnostic",
+  "projectDiff.importSummary.other": "ETS import report: {count} diagnostics",
+  "projectDiff.importErrors.one": "{count} error",
+  "projectDiff.importErrors.other": "{count} errors",
+  "projectDiff.importWarnings.one": "{count} warning",
+  "projectDiff.importWarnings.other": "{count} warnings",
+  "projectDiff.importRefused": "Comparison refused: the ETS import reported errors, so the result would not be trustworthy. Fix the export and compare again.",
 
   // `GroupAddressCsvButtons.tsx` — controller ruling after the task 3
   // review: only the native file-dialog filter name is in scope here,

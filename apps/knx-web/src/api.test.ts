@@ -33,6 +33,36 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("diffProject's 422 import refusal keeps its report readable through importRefusal", async () => {
+    const refusal = {
+      error: "comparison refused: the ETS import reported 1 error diagnostic(s)",
+      inputKind: "knxproj",
+      importReport: { errors: [{ severity: "Error" }] },
+      importDiagnostics: [
+        { timestamp: "t", severity: "error", source: "import:validate", message: "DuplicateId", location: null, detail: null },
+      ],
+    };
+    mockFetchOnce(refusal, false, 422);
+    const error = await api.diffProject("uploads/broken.knxproj").catch((e: unknown) => e);
+    expect((error as Error).message).toBe(refusal.error);
+    expect(api.importRefusal(error)).toEqual({
+      inputKind: "knxproj",
+      importReport: refusal.importReport,
+      importDiagnostics: refusal.importDiagnostics,
+    });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ path: "uploads/broken.knxproj" });
+  });
+
+  it("importRefusal ignores every failure that is not a 422 carrying diagnostics", () => {
+    const plain = Object.assign(new Error("nope"), { status: 400, body: { error: "nope" } });
+    const bare422 = Object.assign(new Error("nope"), { status: 422, body: { error: "nope" } });
+    expect(api.importRefusal(plain)).toBeNull();
+    expect(api.importRefusal(bare422)).toBeNull();
+    expect(api.importRefusal(new Error("network"))).toBeNull();
+    expect(api.importRefusal(undefined)).toBeNull();
+  });
+
   it("writeBusValue sends the selected input format explicitly", async () => {
     mockFetchOnce({
       encodedPayload: "[10]",

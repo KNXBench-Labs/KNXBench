@@ -108,6 +108,35 @@ PDB-10 pin); see PRODUCT_DATABASE_CORPUS for the identity aggregates.
 - **Limitations:** KNOWN_LIMITATIONS §49 and §50 lifted; §48 notes that the
   dialog follows the UI language but no separate language selector exists.
 
+## 2026-09-28 — CT-6: project diff against a raw `.knxproj` in the web UI (cloud session)
+
+- **Server:** `POST /api/project/diff` takes `{path, inputKind?}` with
+  `inputKind` `"knxdb"` | `"knxproj"`; absent, the kind is detected from the
+  extension. The response names `inputKind` and, for a `.knxproj`, carries
+  `importReport` (the full `ImportReport`) and `importDiagnostics` (the same
+  report as session-log entries) next to the unchanged diff fields. An
+  import with error-level diagnostics is a `422` carrying the report; an
+  unknown, contradicting or unsupported kind is a `400`.
+- **One loader:** `domain::diff_project_impl` now loads through
+  `knx_app::comparison::load_comparison_input` (also `knx diff`'s), which
+  gains `ComparisonInputKind::of_path`. `ImportReport::error_count` replaces
+  the CLI's private counter. The load runs without the project lock.
+- **Web:** the picker offers `.knxdb` and `.knxproj` (combined filter first);
+  paths still come from the mount picker or `/api/fs/upload`. New
+  `ProjectDiffImportDiagnostics.tsx` shows the diagnostics collapsed above
+  the diff with total/error/warning counts; a refused import shows its
+  diagnostics in the panel instead of an error toast. 9 new EN/DE keys.
+- **Tests:** 9 new HTTP tests in `apps/knx-server/tests/http_project_diff.rs`
+  with synthetic archives (clean, warning, error refused, unknown/contradicting
+  kind, unsupported extension, detected kind, uploaded relative path, `.knxdb`
+  kind); 1 in `crates/knx-app/tests/comparison_input.rs`; 6 in
+  `ProjectDiffPanel.test.tsx` (filters, block, singular, refusal, bare 422,
+  German); 2 in `api.test.ts`.
+- **Not verified:** real ETS exports (no corpus in the cloud), a browser run,
+  the Tauri native dialog's filters.
+- **Limitations:** KNOWN_LIMITATIONS §57 lifted, with the remaining gaps
+  listed there.
+
 ## 2026-09-28 — CT-1: project-diff web panel lists entities and before/after values (cloud session)
 
 - **Scope:** `apps/knx-web` only; no server, crate or CLI change.

@@ -4640,16 +4640,51 @@ above therefore come only from MP §3.31.2 and TSSG.
 
    It rebuilds the product data's own defaults octet for octet (`AS-4000`
    `03 0000 1900 1901`, `AS-4201` `02 0100 0205`).
-   **Open [A]: byte order.** No clause of Resources states the byte order of
-   a two-octet table entry. High octet first is assumed, on three indirect
+   **Byte order, settled `[V]` 2026-09-28:** entries are stored high octet
+   first. No clause of Resources states it. It was assumed from indirect
    sources:
    - §4.16.3.4.2's `DMP_MemWrite_LEmi1(0117h, 0118h, PPPPh)`.
-   - API §1.2.1, which calls the BCU's two-octet EEPROM pointers *"Big
-     Endian"*.
-   - The MDT defaults, which read validly either way (`3/1/0` and `3/1/1`,
-     or `0/0/25` and `0/1/25`).
+   - API §1.2.1's *"Big Endian"* EEPROM pointers.
 
-   One read of a real device's table would settle it.
+   A read-back of the real device then confirmed it (§19.1).
+
+#### 19.1 Live read-back of the device at `1.1.67` (2026-09-28, read-only)
+
+`crates/knx-net/tests/live_memory_readonly.rs` read the three segments a
+download rewrites. It used `read_only` + `AuthorisationPlan::Skip`, so no
+write and no `A_Authorize_Request` was sent.
+- **Coverage:** `AS-4000` (513 octets), `AS-4201` (511) and `AS-4400`
+  (394), plus the load states: 180 `A_Memory_Read`s of at most 8 octets
+  each, all answered. The first attempt read 0 octets on a `u8` overflow in
+  the test. The device dropped the connection on it and the test was fixed;
+  nothing was written.
+- **Backup:** the dump is kept outside the repository, in the gitignored
+  `OriginalData/DeviceBackups/`, as the device's configuration before any
+  download.
+
+What it established `[V]`:
+- **Load states** `B6EA`..`B6ED` = `01 01 01 00`: address table,
+  association table and application are *Loaded*; the PEI is *Unloaded*.
+- **Group Address Table** at `4000h`: `05 1143 0406 0407 110F 1110`. The
+  individual address `1143h` is `1.1.67` read high first, which settles the
+  entry byte order. The group addresses are `0/4/6`, `0/4/7`, `2/1/15` and
+  `2/1/16`, ascending.
+- **Association table** at `4201h`: `04 0300 0401 0112 0212`. That is
+  objects 0 → `2/1/15`, 1 → `2/1/16`, and 18 → `0/4/6` and `0/4/7`.
+  `build_group_tables` produces exactly this layout.
+- **Mask:** `AS-4000`'s `<Mask>` is zero at exactly offsets 1–2, the
+  individual address. A segment download must not overwrite the device's
+  own address with the product default `0000`.
+- **Parameter segment:** `AS-4400` starts with the **group object table**
+  (`ComObjectTable`, `AS-4400` offset 0). The per-object configuration and
+  type octets there differ from `<Data>` (for example `df`→`4f`/`db`, and a
+  type `03`→`00`). They depend on the active `ComObjectRef`s, so the
+  segment image needs a group object table encoder, not only parameters.
+  79 of 394 octets differ from `<Data>`.
+- **The device is configured, not factory-fresh.** Buttons 1/2 are a
+  grouped *Shutter* pair: the union at +264 reads `0002`, with objects 0/1
+  on `2/1/15` and `2/1/16`. The LED orientation light (object 18) listens
+  to `0/4/6` and `0/4/7`. A full download replaces all of this.
 3. *Partly built 2026-09-27:* the parameter-segment image. The **bit
    writer** is built: `knx_core::commissioning::parameter_image`.
    - **Placement:** it places a value at `Offset`/`BitOffset`/`SizeInBit`.

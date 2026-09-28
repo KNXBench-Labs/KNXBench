@@ -1013,6 +1013,53 @@ main {
   gap: 0.5rem;
 }
 
+/* CT-6: a `.knxproj` comparison's import report, collapsed above the diff.
+   Severity is always a word; the colour only reinforces it. */
+.project-diff-panel-refused {
+  color: var(--knx-error-color);
+  font-weight: 600;
+}
+
+.project-diff-import {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.project-diff-import > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.project-diff-import-list {
+  list-style: none;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.project-diff-import-severity {
+  font-weight: 600;
+}
+
+.project-diff-import-error .project-diff-import-severity {
+  color: var(--knx-error-color);
+}
+
+.project-diff-import-warning .project-diff-import-severity {
+  color: var(--knx-warning-color);
+}
+
+.project-diff-import-location,
+.project-diff-import-detail {
+  display: block;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.project-diff-import-location {
+  font-family: var(--knx-font-mono);
+}
+
 /* `ProjectDiffDetails` — collapsed disclosures below the summary. Status is
    always a word plus a symbol; the colour only reinforces it. */
 .project-diff-details {

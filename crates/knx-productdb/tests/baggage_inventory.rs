@@ -392,33 +392,7 @@ fn v15_to_v16_upgrade_merges_index_unknowns_like_a_fresh_install() {
         assert!(rows.iter().any(|row| row.2 == "Signature"));
         let count = package_unknown_count(&conn);
         assert_eq!(count, i64::try_from(fresh.unknown).unwrap());
-        // v15 had no index parser unknowns: strip them before rewinding,
-        // including the one they added to `package.unknown_count`.
-        let index_rows = rows
-            .iter()
-            .filter(|row| {
-                row.1
-                    .starts_with("/KNX/ManufacturerData/Manufacturer/Baggages")
-            })
-            .count();
-        assert_eq!(index_rows, 1);
-        conn.execute(
-            "UPDATE package SET unknown_count = unknown_count - ?1",
-            [i64::try_from(index_rows).unwrap()],
-        )
-        .unwrap();
-        conn.execute_batch(
-            "DELETE FROM ingest_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
-             DELETE FROM package_install_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
-             UPDATE package_install_report SET
-                unknown_distinct = (SELECT count(*) FROM package_install_unknown),
-                unknown_occurrences = (SELECT coalesce(sum(occurrences), 0) FROM package_install_unknown);
-             UPDATE package_install_count SET count = (SELECT coalesce(sum(occurrences), 0) FROM package_install_unknown)
-                WHERE category = 'unknown_construct' AND disposition = 'read';
-             UPDATE package_install_count SET count = (SELECT count(*) FROM package_install_unknown)
-                WHERE category = 'unknown_construct' AND disposition = 'stored';",
-        )
-        .unwrap();
+        assert_eq!(strip_index_unknowns(&conn), 1);
         v16_rewind::rewind_to_v15(&conn);
         (fresh, rows, count)
     };
@@ -432,6 +406,37 @@ fn v15_to_v16_upgrade_merges_index_unknowns_like_a_fresh_install() {
     let retried = install_package(&conn, "retry.knxprod", &bytes).unwrap();
     assert_eq!(retried.facts, fresh.facts);
     assert_eq!(retried.unknown, fresh.unknown);
+}
+
+/// v15 had no index parser unknowns: strips them from a single-package v16
+/// database, including what they added to `package.unknown_count` and the
+/// report, so it can be rewound. Returns how many rows were stripped.
+fn strip_index_unknowns(conn: &Connection) -> usize {
+    let index_rows: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    conn.execute(
+        "UPDATE package SET unknown_count = unknown_count - ?1",
+        [index_rows],
+    )
+    .unwrap();
+    conn.execute_batch(
+        "DELETE FROM ingest_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
+         DELETE FROM package_install_unknown WHERE xpath LIKE '/KNX/ManufacturerData/Manufacturer/Baggages%';
+         UPDATE package_install_report SET
+            unknown_distinct = (SELECT count(*) FROM package_install_unknown),
+            unknown_occurrences = (SELECT coalesce(sum(occurrences), 0) FROM package_install_unknown);
+         UPDATE package_install_count SET count = (SELECT coalesce(sum(occurrences), 0) FROM package_install_unknown)
+            WHERE category = 'unknown_construct' AND disposition = 'read';
+         UPDATE package_install_count SET count = (SELECT count(*) FROM package_install_unknown)
+            WHERE category = 'unknown_construct' AND disposition = 'stored';",
+    )
+    .unwrap();
+    usize::try_from(index_rows).unwrap()
 }
 
 fn package_unknown_count(conn: &Connection) -> i64 {
@@ -660,4 +665,98 @@ fn a_standalone_index_that_does_not_parse_is_stored_with_its_reason() {
         ("M-0001/Baggages.xml", broken),
     ]);
     assert!(install_package(&conn, "broken.knxprod", &bytes).is_err());
+}
+
+#[test]
+fn v15_to_v16_opens_a_package_whose_report_row_is_gone() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bytes = package();
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "baggage.knxprod", &bytes).unwrap();
+        v16_rewind::rewind_to_v15(&conn);
+        let sha = knx_productdb::sha256_hex(&bytes);
+        for table in [
+            "package_install_count",
+            "package_install_unknown",
+            "package_install_diagnostic",
+            "package_install_report",
+        ] {
+            conn.execute(
+                &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                [&sha],
+            )
+            .unwrap();
+        }
+    }
+    let conn = open_and_migrate(&path).expect("a missing report row does not lock the database");
+    let recorded: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown
+             WHERE kind = 'InstallReportBackfillError' AND name = 'baggage_inventory_backfill'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(recorded, 1);
+}
+
+#[test]
+fn v15_to_v16_keeps_index_unknowns_when_only_the_report_is_corrupt() {
+    // The index itself parses and carries an unknown construct; only the
+    // package's stored report is damaged. The unknown describes the index
+    // blob, so it survives the per-package downgrade like on a fresh install.
+    let odd = String::from_utf8(INDEX.to_vec())
+        .unwrap()
+        .replace("<FileInfo TimeInfo=\"2022-01-01T00:00:00Z\"/></Baggage>\n<Baggage Id=\"M-0001_BG-escape\"",
+                 "<FileInfo TimeInfo=\"2022-01-01T00:00:00Z\"/><Signature/></Baggage>\n<Baggage Id=\"M-0001_BG-escape\"");
+    assert!(odd.contains("<Signature/>"));
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001/Baggages.xml", odd.as_bytes()),
+    ]);
+    let signature_rows = |conn: &Connection| -> i64 {
+        conn.query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE name = 'Signature' AND source_sha256 = ?1",
+            [knx_productdb::sha256_hex(odd.as_bytes())],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let unknown_before;
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "odd.knxprod", &bytes).unwrap();
+        assert_eq!(signature_rows(&conn), 1, "a fresh install records it");
+        assert_eq!(strip_index_unknowns(&conn), 1, "v15 never parsed indexes");
+        v16_rewind::rewind_to_v15(&conn);
+        unknown_before = package_unknown_count(&conn);
+        conn.execute(
+            "UPDATE package_install_count SET count = count + 1
+             WHERE category = 'archive_member' AND disposition = 'read'",
+            [],
+        )
+        .unwrap();
+    }
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(
+        signature_rows(&conn),
+        1,
+        "the downgrade keeps the index's unknowns"
+    );
+    assert_eq!(
+        package_unknown_count(&conn),
+        unknown_before,
+        "an unavailable report is not credited with them"
+    );
+    assert_eq!(
+        install_package(&conn, "retry.knxprod", &bytes)
+            .unwrap()
+            .facts,
+        None
+    );
 }

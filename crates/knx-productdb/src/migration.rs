@@ -9,7 +9,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ingest::{classify, FileKind};
 use crate::parse::translation::{ingest_translations, TranslationScope};
@@ -449,12 +449,16 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
             Some((source_sha, path, error)) => {
                 conn.execute_batch("ROLLBACK TO v16_baggage; RELEASE v16_baggage")?;
                 crate::baggage::persist_unavailable(conn, &package)?;
-                let measured: bool = conn.query_row(
-                    "SELECT status = 'measured' FROM package_install_report WHERE package_sha256 = ?1",
-                    [&package],
-                    |r| r.get(0),
-                )?;
-                if measured {
+                // A package with no report row (only a damaged v15 database)
+                // has nothing to downgrade; that must not stop it opening.
+                let measured: Option<bool> = conn
+                    .query_row(
+                        "SELECT status = 'measured' FROM package_install_report WHERE package_sha256 = ?1",
+                        [&package],
+                        |r| r.get(0),
+                    )
+                    .optional()?;
+                if measured == Some(true) {
                     for table in [
                         "package_install_count",
                         "package_install_unknown",
@@ -480,10 +484,50 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
                     "baggage_inventory_backfill",
                     &error,
                 )?;
+                // The rollback also took the index unknowns, but they describe
+                // each index blob, not this package's report: keep those of
+                // every index that still parses. The report stays
+                // `unavailable`, so `package.unknown_count` is not raised.
+                for (sha, rows) in parseable_index_unknowns(conn, &package)? {
+                    insert_unknown(conn, &sha, &rows)?;
+                }
             }
         }
     }
     Ok(())
+}
+
+/// The unknowns of each of `package`'s retained `Baggages.xml` members that
+/// is present, matches its hash and parses. Anything else was already
+/// recorded as the package's backfill failure.
+fn parseable_index_unknowns(
+    conn: &Connection,
+    package: &str,
+) -> Result<Vec<(String, Vec<crate::report::UnknownConstruct>)>, ProductDbError> {
+    let members = conn
+        .prepare(
+            "SELECT path, source_sha256 FROM package_member
+             WHERE package_sha256 = ?1 AND role = 'Baggages' ORDER BY ordinal",
+        )?
+        .query_map([package], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = Vec::new();
+    for (path, sha) in members {
+        let Some(bytes) = crate::load_source_file(conn, &sha)? else {
+            continue;
+        };
+        if crate::sha256_hex(&bytes) != sha {
+            continue;
+        }
+        match crate::baggage::parse_index(&path, &bytes) {
+            Ok((_, unknown)) => out.push((sha, unknown)),
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(_) => {}
+        }
+    }
+    Ok(out)
 }
 
 /// The inventory plus each index member's unknowns, keyed by blob hash.

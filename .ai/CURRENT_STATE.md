@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-28 23:56 UTC
+- Web lock: taken by UI session for U5 ISSUE-10 actionable 422 errors and topic-targeted help
+- **Completed:** U4 (`e15c397`) is merged and pushed, branch and merged-main gates are green (122 Rust suites / 2378 passed, 74 web files / 1127 passed; AppImage built and validated), and its worktree, build target and own scratch files were removed. No hardware operation. U5's issue-plan section and CT-8 brief were read before taking this lock.
+- **Pending/Next Steps:** Implement U5 in a fresh isolated worktree with TDD and a reviewed full branch diff; release this lock on the U5 merge. Subsequent U6–U12 remain.
+- **Notes for Codex or Claude:** The goal.md session owns the root checkout except for this handover-only lock entry. The unrelated untracked `docs/paperclip-shutdown/` must remain untouched. Quota check was requested at the package boundary but the prompt timed out without a reading; pause if a concrete 100% risk emerges.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 22:48
 - Web lock: released (U4 session-log search/export, upon merge)
 - **Completed:** `goal-ui.md` U4 / ISSUE-13: labelled case-insensitive search composed with severity filters, clear/count, explicit all-retained vs matching JSON v1 export. Browser uses a local Blob; desktop uses a native dialog command with validated atomic write, no browser-supplied server path. A previous project's log cannot be exported while the next fetch is pending or failed. Data-loss count and 1000-entry cap are explicit; this is not a lifetime audit. ADR-0047, ARCHITECTURE, IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS §36, manual and issue-plan evidence updated. Tests: web 74 files / 1127 passed; Rust workspace 122 suites / 2378 passed; fmt, clippy, layering, headers, anchors, corpus gate and diff-check green. Release AppImage built and `xtask check-appimage` passed. No bus operation.

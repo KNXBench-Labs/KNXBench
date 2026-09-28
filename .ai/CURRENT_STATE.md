@@ -34,11 +34,12 @@
 - **Notes for Codex or Claude:**
   - Scratch for PDB-11 (`~/.hermes/profiles/knxbench/cache/scratch/pdb11/`) can go once nobody needs the gate logs. Do not touch `scratch/iaw/`, branch or worktree `iaw-settling-delay`, or `docs/paperclip-shutdown/`.
   - The cloud session's entry below was left uncommitted in the root file; it is committed here unchanged.
+  - **Quota rule (user, 2026-09-28 14:30):** the limit that counts for this session is Claude's 5h session and weekly limit, not the Codex/GPT window (GPT is ~99 % used). **No `delegate_task` subagents** from now on (they run on GPT); reviews and implementation happen in the Claude session itself. At handover the session was at 87 %, the week at 25 %.
 
 ---
 
 - **Last Agent:** Claude (Hermes chat session "cloud credit", **not** the goal.md session: this is a short, separate entry)
-- **Timestamp:** 2026-09-28 13:50 CEST
+- **Timestamp:** 2026-09-28 14:35 CEST
 - **Completed:**
   - Cloud setup: `f37f55b`, then the setup fix `cba8aa7` (status file plus a hook fallback). Details: `docs/CLOUD_SESSIONS.md`, `.ai/logs/2026-09-28_claude_cloud-sessions-setup.md`.
   - **CT-1 (web diff panel, §59 lifted, §60 narrowed)** was delivered by the first cloud session as PR #1. Reviewed and gated locally as non-root:
@@ -62,15 +63,29 @@
     - CT-8: ISSUE-10, structured 422 errors and topic help.
     - CT-9: ISSUE-01, zoom and pane widths.
     - CT-10: ISSUE-11, bus-monitor pause, export and statistics.
-  - `origin/main` = `2670c38`. The local `main` ref is equal.
+  - **CT-6 (§57, raw `.knxproj` diff in the web UI)** was delivered by the cloud as PR #3.
+    - The branch was based on `7844590`. Locally it was caught up with `cf791b0` (PDB-11 bookkeeping, no overlap).
+    - The cloud deleted `apps/knx-web/dist/.gitkeep` through a build; restored.
+    - Local gates as non-root on the merged tree: fmt, clippy, workspace test 2161 passed / 0 failed, xtask gates, `tsc`, 1095 Vitest tests, build, `diff --check`.
+    - Checked against the three real ETS demo exports (`OriginalData/DemoProjects`) on a loopback server:
+      - ETS4 export: 200, compared, 2 warnings.
+      - ETS 6.3 export against itself: 200, empty diff.
+      - `KV v2.5 - demo`: 422, refused over `UnresolvedReference Installation/@DefaultLine ""`. `knx diff` refuses the same file (exit 1).
+      - A contradicting `inputKind`: 400.
+    - Merged as `826466a`, tree equal. PR #3 shows as MERGED.
+  - `origin/main` = `826466a`. The root checkout (`main`) is at `826466a` and clean; only `docs/paperclip-shutdown/` is untracked and was not touched.
 - **Pending/Next Steps:**
-  - Web chain in the cloud: CT-6, then CT-7, CT-8, CT-9 and CT-10, **serially**. Start the next one only after the previous PR is merged locally.
+  - Web chain in the cloud: CT-6 done; next CT-7, then CT-8, CT-9 and CT-10, **serially**. Start the next one only after the previous PR is merged locally.
     - These ISSUE items belong to the cloud chain: do not start them locally in parallel.
     - Deliberately not queued: ISSUE-12 (hardware), ISSUE-07/08 (corpus), ISSUE-05 (ADR-0039/site), ISSUE-09 address editor (standard check), ISSUE-02/03 (later).
-  - CT-3 and CT-5 start only after PDB-11 is merged. CT-4 (read-only review) can run any time.
+  - PDB-11 is merged, so CT-3 (fuzzing) and CT-5 (doc hygiene) are unblocked.
+    - CT-3 touches only parser crates and fuzz targets; it may run in parallel with the web chain.
+    - CT-5 edits ROADMAP, LIMITATION_TRIAGE and the plan; better not in parallel with a web task that edits the same docs.
+  - CT-4 (read-only review) can run any time.
+  - Possible follow-up from CT-6: the `KV v2.5 - demo` export has an empty `Installation/@DefaultLine`. Whether the importer should reject it as an error or treat it as "not set" belongs to the importer, not the diff. Leave it as a candidate for the local goal session; nothing was changed.
   - Cloud PRs are always reviewed and merged **locally**; the cloud session does not watch or merge its own PR.
 - **Notes for the goal.md session:**
-  - `pdb-11-package-identity` is based on `701bf33` and needs `origin/main` (now `2670c38`) merged before delivery.
+  - PDB-11 has been delivered (see the entry above); this note is overtaken.
   - Expected overlaps: the new top entries in `docs/IMPLEMENTATION_STATUS.md`, and CT-1/CT-2's edits to `docs/KNOWN_LIMITATIONS.md` §48–§50, §59/§60 and `docs/manual/*`. Keep both sides.
   - A cloud session counts as one of the ≤2 implementers from goal §9, and the cloud CT-1/CT-2 run *is* the serial web chain. Do not start a parallel local web task while one is open.
 

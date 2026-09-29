@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U11 / ISSUE-07 publication and handover)
+- **Timestamp:** 2026-09-29 18:21 CEST
+- **Web lock: released by the UI U11 session** after the catalog feature's fast-forward to remote `main` was read back at `f013bff`. A new package must acquire its own lock.
+- **Completed:** ISSUE-07 is published as feature `67ceebf` and handover `f013bff` on top of independently delivered image work `d7c4e06`. The catalog is a centre workspace with per-project selection, quantity preview, atomic multi-device create/undo, no guessed physical addresses, indexed diagnostics, explicit unknown-outcome handling, and guarded ID allocation. The rebased integration candidate passed 78 web files/1199 tests plus TypeScript/build, Rust fmt/Clippy + 125 suites/2568 passed/0 failed/148 ignored/no `SKIP:`, four xtask gates, two real corpus HTTP tests, diff/security checks, and mocked desktop/mobile Chromium. Remote `main` exactly matched `f013bff`; the root's unrelated dirty files retained their bytes. No live KNX bus or device write was used.
+- **Pending/Next Steps:** Next UI package is ISSUE-09 (readable device flags, send-and-receive links, evidenced line-relative address editing) in a **new isolated worktree and new web lock** after the driving GPT/Codex quota check. U12/U13 come later. Root `main` remains behind remote and has foreign uncommitted stats/research/handover plus two untracked documentation paths; do not stash, reset or pull over them. The optional firewall change for discovery still needs the user's separate decision.
+- **Notes for Codex or Claude:** U11's isolated candidate was tested as the exact future fast-forward result; there was **no merge through the dirty root** and no claim of native WebKitGTK or screen-reader validation. Root checkout users must reconcile their own foreign edits before updating local `main`. Preserve `docs/paperclip-shutdown/`, `docs/AI_STATS_TELEMETRY_PLAN.md`, `stats.md`, `docs/RESEARCH.md` and the root's `.ai/CURRENT_STATE.md`. The catalog batch comes with receipts, not a bus ticket.
+
+---
+
 - **Last Agent:** codex (UI U11 / ISSUE-07 publication candidate)
 - **Timestamp:** 2026-09-29 18:13 CEST
 - **Web lock: held by the UI U11 session until remote publication is verified.** Do not edit `apps/knx-web` in parallel.

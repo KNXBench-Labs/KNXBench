@@ -16,6 +16,23 @@ contains product-data language, UI language and the language-pack manager. Bus &
 diagnostics contains the optional gateway preference and protected line-scan
 exclusions.
 
+## Zoom and pane widths
+
+Use `Ctrl++` to enlarge the whole interface, `Ctrl+-` to reduce it, and
+`Ctrl+0` to return to 100%. Zoom runs from 80% to 150% in 10% steps. These
+shortcuts do not take over while you type in an input, textarea or editable
+field. The desktop shell and the web client share this setting through the
+server's preferences document; it is not a separate browser-only zoom value.
+
+Drag the narrow vertical separator at the edge of **Navigation** or
+**Properties**, or focus it and press the arrow keys (16-pixel steps), `Home`
+(minimum) or `End` (maximum). A width is saved when the drag ends or an arrow
+key is pressed. Hide and show a pane, or restart the app, and its width returns.
+Saved widths are limited to usable bounds on load: Navigation 200–480 px and
+Properties 280–700 px. If both saved widths no longer fit alongside the center
+at the current zoom and window size, Properties moves below the workspace
+instead of disappearing off-screen. A narrow window stacks the panes as well.
+
 ## Theme
 
 Six entries, five of them real palettes:

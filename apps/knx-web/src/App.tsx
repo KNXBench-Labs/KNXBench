@@ -48,6 +48,7 @@ import type { SessionControls } from "./session";
 import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, focusedHelpTopic, opensHelp, requestHelpTopic } from "./help";
 import type { HelpTopicId } from "./help";
 import { useAutosaveSettings } from "./autosaveSettings";
+import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
 import { useAutosave } from "./useAutosave";
 
 // How often the browser asks the server what a running load is doing
@@ -62,6 +63,20 @@ const LOAD_POLL_INTERVAL_MS = 250;
 // a slip of the hand cannot hide the explorer entirely.
 const STACK_BLOCK_MIN_PX = 72;
 const STACK_BLOCK_MAX_PX = 480;
+
+const NAVIGATION_PANE = { defaultWidth: 250, min: 200, max: 480 } as const;
+const INSPECTOR_PANE = { defaultWidth: 360, min: 280, max: 700 } as const;
+const UI_SCALE = { defaultValue: 1, min: 0.8, max: 1.5, step: 0.1 } as const;
+// Match styles.css's inspector stack breakpoint and center minimum: the
+// browser's media queries do not account for root CSS zoom.
+const INSPECTOR_STACK_BREAKPOINT_PX = 1100;
+const WORKBENCH_CENTER_MIN_PX = 200;
+
+function boundedPreference(value: unknown, fallback: number, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(min, Math.min(max, value))
+    : fallback;
+}
 
 // The banner names the file, never the path the user picked it from —
 // same rule the server's snapshot follows, for the same reason.
@@ -257,6 +272,12 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [addressScope, setAddressScope] = useState<number | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [catalogTarget, setCatalogTarget] = useState<{ lineId: number | null } | null>(null);
   // The from-scratch project launcher. Owned here rather than inside the
   // welcome screen because the File menu and the command palette open the
@@ -273,6 +294,17 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [themeId, setThemeId] = useThemeId();
   const appearance = useAppearance();  const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
   const [productLanguage, setProductLanguage] = useProductLanguage();
+  useSettingsRevision();
+  const uiScale = boundedPreference(getSetting("uiScale"), UI_SCALE.defaultValue, UI_SCALE.min, UI_SCALE.max);
+  const navigationWidth = boundedPreference(getSetting("navigationPaneWidth"), NAVIGATION_PANE.defaultWidth, NAVIGATION_PANE.min, NAVIGATION_PANE.max);
+  const inspectorWidth = boundedPreference(getSetting("inspectorPaneWidth"), INSPECTOR_PANE.defaultWidth, INSPECTOR_PANE.min, INSPECTOR_PANE.max);
+  const inspectorVisible = inspectorOpen && !logOpen && !monitorOpen;
+  const stackInspector = inspectorVisible && viewportWidth > INSPECTOR_STACK_BREAKPOINT_PX
+    && (navigationOpen ? navigationWidth : 0) + inspectorWidth + WORKBENCH_CENTER_MIN_PX > viewportWidth / uiScale;
+  useEffect(() => {
+    document.documentElement.style.setProperty("--app-ui-scale", String(uiScale));
+    return () => { document.documentElement.style.removeProperty("--app-ui-scale"); };
+  }, [uiScale]);
   // `[]` both before the fetch resolves and if it fails — SettingsPanel
   // already renders that state honestly (a disabled select explaining "no
   // product database installed"), so a failed fetch needs no separate
@@ -321,6 +353,18 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      const zoomDirection = ["+", "=", "Add"].includes(e.key) ? 1
+        : ["-", "_", "Subtract"].includes(e.key) ? -1 : e.key === "0" ? 0 : null;
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && zoomDirection !== null) {
+        const active = e.target instanceof HTMLElement ? e.target : document.activeElement;
+        if (active instanceof HTMLElement && active.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return;
+        e.preventDefault();
+        const current = boundedPreference(getSetting("uiScale"), UI_SCALE.defaultValue, UI_SCALE.min, UI_SCALE.max);
+        const next = zoomDirection === 0 ? UI_SCALE.defaultValue
+          : Math.round((current + zoomDirection * UI_SCALE.step) * 10) / 10;
+        setSetting("uiScale", boundedPreference(next, UI_SCALE.defaultValue, UI_SCALE.min, UI_SCALE.max));
+        return;
+      }
       if (opensHelp(e)) {
         // F1 is the browser's help key as well as ours, so it has to be
         // taken before anything else looks at it.
@@ -913,7 +957,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   };
 
   return (
-    <main className="workbench">
+    <main className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}`}>
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
@@ -985,7 +1029,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       </div>
       {loadSource && <LoadProgressBanner key={loadKey} source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
-        {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={250} min={200} max={480}>
+        {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
             <button onClick={() => setCatalogTarget({ lineId: selection?.kind === "line" ? selection.id : null })}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
@@ -1014,7 +1058,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button className="primary-action" onClick={startNewProject}>{t("toolbar.newProject")}</button><button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button><button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button></div></section>}
           {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
         </div>
-        {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={360} min={280} max={700}>
+        {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>
           <header className="inspector-heading">{t("workbench.properties")}</header>
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
         </ResizablePane>}

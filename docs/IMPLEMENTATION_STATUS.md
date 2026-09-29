@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — U6: bounded zoom and remembered workbench geometry
+
+- The three application zoom shortcuts (`Ctrl++`, `Ctrl+-`, `Ctrl+0`;
+  equivalent Meta shortcuts where applicable) change whole-window CSS
+  layout through the versioned settings document's `uiScale` preference.
+  The scale is bounded to 0.8–1.5; editable fields retain their own key
+  handling. The shell's viewport height accounts for root zoom.
+- Navigation and Properties widths commit through the existing settings
+  store on pointer release or keyboard resize, return after hide/show and
+  restart, and clamp malformed/out-of-range saved numbers. On an enlarged
+  interface where both saved widths will not fit, Properties stacks rather
+  than being clipped. The server's opaque v1 settings document needs no
+  schema bump; HTTP persistence and a reload from disk were tested.
+- The generic button hover transform was clipped by topology cards;
+  `.diagram-device` keeps its icon, address and object count visible while
+  highlighted. Focused App/Workbench/settings tests, server settings HTTP
+  test and headless Chromium at desktop/narrow/default/enlarged layouts
+  cover the change. Native WebKitGTK GUI behavior remains unverified.
+
 ## 2026-09-29 — U5: actionable 422 errors and targeted help
 
 - Four HTTP editing/creation parsers (individual address, group address,

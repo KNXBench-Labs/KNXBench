@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 04:36 CEST
+- Web lock: released (U6 ISSUE-01 zoom and remembered pane geometry, upon merge)
+- **Completed:** U6: bounded application zoom and pane widths in the versioned settings document; pointer/keyboard resize survives hide/show and reload, scale-aware inspector stacking avoids clipped Properties, and diagram-device hover keeps its icon/address/count. RED/GREEN tests plus four behavioral mutations. Branch gates: TypeScript/build, 74 web files / 1142 tests; Rust fmt/clippy/workspace 123 suites / 2381 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. Real Chromium at narrow/default/enlarged viewports and max widths/reload passed; native WebKitGTK GUI remains unverified. Manual, research, status, §130 and ISSUE-01 plan updated. No device write or tunnel.
+- **Pending/Next Steps:** Rerun merged-main gates, push and clean U6 worktree/branch/own scratch files. U7 ISSUE-11 bus monitor pause/export/decode/statistics is next; reserve the web lock anew and follow CT-10. U8–U12 and U13 closing review remain.
+- **Notes for Codex or Claude:** `settings.rs` v1 stays opaque; no migration is needed. Saved invalid numbers are visually clamped, not discarded. A zoomed root's viewport height must be divided by scale; saved wide panes stack Properties when both no longer fit. Browser proof is not native desktop proof. Root `docs/paperclip-shutdown/` remains unrelated/untracked; previous quota prompt timed out.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 03:53 CEST
 - Web lock: taken by UI session for U6 ISSUE-01 application zoom and persistent workbench geometry
 - **Completed:** U5 `912573c` is merged, pushed, and green on merged `main` (74 web files / 1134 tests; 123 Rust suites / 2380 passed; fmt, clippy, layering, headers, anchors, corpus and diff gates). The U5 worktree, branch and 40 owned scratch files were removed; only foreign untracked `docs/paperclip-shutdown/` remains in root. No KNX operation. Read ISSUE-01 and CT-9, then reserved the web lock for U6.

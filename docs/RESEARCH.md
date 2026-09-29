@@ -5575,6 +5575,34 @@ host and gateway-side evidence are needed before changing protocol logic or
 claiming a network fix. The manually entered unicast endpoint remains the
 supported fallback. See KNOWN_LIMITATIONS §79.
 
+**[V] The missing response, found (2026-09-29).** Without privileged
+capture, the kernel log still records every packet the host firewall drops
+(`journalctl -k`, `[UFW BLOCK]`; `ufw` active, default input policy `DROP`,
+no rule for UDP 3671). A throwaway IP-only probe (nothing sent to the KNX
+bus) sent three 14-octet frames from the LAN interface:
+
+| Request | Destination | Answer received by process | Kernel log |
+|---|---|---|---|
+| `SEARCH_REQUEST` (`0201h`) | `224.0.23.12:3671` | none in 5 s | `[UFW BLOCK]` from the gateway, UDP source port 3671 to the requester's HPAI port, UDP length 84 |
+| `SEARCH_REQUEST` (`0201h`) | gateway `:3671` (unicast) | `SEARCH_RESPONSE` (`0202h`), 76 octets | nothing blocked |
+| `DESCRIPTION_REQUEST` (`0203h`) | gateway `:3671` (unicast) | `DESCRIPTION_RESPONSE` (`0204h`), 68 octets | nothing blocked |
+
+`knx bus discover` itself produced the same empty result during the run.
+So the gateway answers the multicast search as Core requires. Core
+`03_08_02` v01.06.02 §7.4 (p. 10) states: *"Any KNXnet/IP Server receiving a
+SEARCH_REQUEST service shall respond immediately with a SEARCH_RESPONSE frame
+to the given HPAI using its discovery endpoint."* The answer is therefore
+a unicast datagram from the gateway's address, while the host's
+connection tracking only knows the outgoing flow to the multicast group.
+It matches no tracked flow and is dropped by the default policy. The
+unicast requests match their own flows and pass. **[V] cause for this host;
+[A]** that other stateful host firewalls behave alike (common for
+conntrack-based firewalls, not tested here). The U2 AppImage/server
+observation is fully explained by this. KNXBench's request is
+correct, so no protocol change was made; the CLI and web hints name the
+firewall and the rule (incoming UDP from source port 3671 on the LAN).
+Changing the user's firewall is the user's decision and was not done.
+
 **[V] U10 contract review (2026-09-29).** The bus-monitor start route parses
 `SocketAddrV4` (`apps/knx-server/src/bus_routes.rs::start_monitor`) and the
 KNXnet/IP tunnel also takes `SocketAddrV4` (`crates/knx-net/src/client.rs`).

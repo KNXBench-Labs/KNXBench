@@ -44,6 +44,12 @@
   gateway-side evidence remains necessary to identify a narrow network or
   protocol correction. U10/ISSUE-12 therefore remains **partially open**;
   the manual IPv4 connection is the supported fallback.
+- **Update (2026-09-29, later):** the missing response was found: the
+  gateway answers, and the host's `ufw` drops the unicast reply (RESEARCH
+  §20.1, KNOWN_LIMITATIONS §79). No protocol change; the CLI and web
+  empty-result hints now name the host firewall and the UDP source port
+  3671 rule. ISSUE-12's cause is closed; end-to-end discovery through a
+  permitting firewall awaits the user's firewall decision.
 
 ## 2026-09-29 — Commissioning readiness 1–3 (offline only; bus still parked)
 

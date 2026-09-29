@@ -5279,6 +5279,22 @@ tunnel. This improves the manual unicast fallback; it does **not** repair or
 validate discovery on the real LAN. A wire capture or gateway-side evidence
 is still needed to locate the missing multicast response.
 
+**Cause on this host found (2026-09-29, [V], RESEARCH §20.1).** The gateway
+*does* answer the multicast search. Its 84-octet UDP reply (source port 3671
+to the requester's HPAI port) was logged as `[UFW BLOCK]` by the host's
+`ufw` (default input policy `DROP`). A stateful firewall tracks the outgoing
+request as a flow to `224.0.23.12`; the unicast answer comes from the
+gateway's own address, matches no tracked flow, and falls to the default
+policy. A unicast `SEARCH_REQUEST`/`DESCRIPTION_REQUEST` straight to the
+gateway got its reply through the same firewall. No KNXBench protocol defect
+is implicated, so no protocol change was made. The CLI hint and the web
+empty-result hint now name this cause and the remedy (allow incoming UDP
+from source port 3671 on the local network) alongside the container one.
+**Not changed:** the firewall itself, which belongs to the user; discovery
+on this host stays empty until the user adds such a rule, and the manual
+endpoint remains the fallback. Discovery through a permitting firewall has
+not been observed end to end in KNXBench yet.
+
 **Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
 API had no discovery route —
 `grep -rn discover apps/knx-server/src/` finds none — so the shipped

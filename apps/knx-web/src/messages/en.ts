@@ -591,7 +591,8 @@ export const messages = {
   // `busDiscovery.emptyHint` carries the same two facts the CLI's
   // `DISCOVER_EMPTY_HINT` does (`apps/knx-cli/src/main.rs`) — multicast
   // has to reach this network segment, and a container without host
-  // networking is the usual reason it does not.
+  // networking is the usual reason it does not — plus the measured
+  // host-firewall cause (RESEARCH §20.1).
   "busDiscovery.search": "Search",
   "busDiscovery.searching": "Searching…",
   "busDiscovery.searchLabel": "Search for KNX-compatible IP interfaces",
@@ -602,7 +603,7 @@ export const messages = {
   "busDiscovery.tunnelling": "Tunnelling",
   "busDiscovery.empty": "No interfaces answered.",
   "busDiscovery.emptyHint":
-    "The search reaches only as far as IP multicast does on this network segment. An empty result can mean no interface answered, or that the search request never left this machine — running inside a container without host networking is a common cause. Entering the address by hand still works.",
+    "The search reaches only as far as IP multicast does on this network segment. An empty result can mean no interface answered, or that the search request never left this machine — running inside a container without host networking is a common cause. A firewall on this computer can also drop the answers, which come back as unicast from UDP port 3671: allow incoming UDP from source port 3671 on the local network. Entering the address by hand still works.",
   "busDiscovery.failed":
     "The search could not be run. Entering the gateway address by hand still works.",
 

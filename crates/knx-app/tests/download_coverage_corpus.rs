@@ -46,8 +46,17 @@ fn the_corpus_coverage_is_pinned() {
 
     let rows = coverage(&conn, None, &shipped_evidence().unwrap()).unwrap();
     let summary = CoverageSummary::of(&rows);
+    // Printed before the pins, so a failing run still shows every count.
+    eprintln!("coverage: {summary:?}");
+    for row in &rows {
+        if let SupportLevel::Unsupported { category, detail } = &row.level {
+            eprintln!("refused {} {}: {detail}", category.code(), row.program_id);
+        }
+    }
     assert_eq!(summary.programs, 246);
-    assert_eq!((summary.verified, summary.untested), (1, 54));
+    // Signed values at or above zero and text parameters are written since
+    // RESEARCH §19.9: 15 more programs plan (54 -> 69).
+    assert_eq!((summary.verified, summary.untested), (1, 69));
     let unsupported: BTreeMap<&str, usize> = summary
         .unsupported
         .iter()
@@ -56,19 +65,28 @@ fn the_corpus_coverage_is_pinned() {
     assert_eq!(
         unsupported,
         BTreeMap::from([
-            ("not-memory-mapped", 24),
-            ("procedure-style", 41),
-            ("unmodelled-step", 1),
+            // The mask is asked before the procedure style: all 41
+            // MergedProcedure/DefaultProcedure programs have a non-memory
+            // mask, so none is counted under procedure-style any more.
+            ("not-memory-mapped", 65),
+            // One of the newly imaged programs reaches LdCtrlTaskCtrl1.
+            ("unmodelled-step", 2),
             ("parameter-evaluation", 59),
-            ("parameter-value", 33),
-            ("image-structure", 33),
+            // A float default ("5.0E+002") used to fail as "not an
+            // unsigned number" here; it is now refused for its type, under
+            // image-structure. 6 conflicting refs, 3 enumeration values
+            // remain.
+            ("parameter-value", 9),
+            // 19 TypeFloat, 10 ReadOnInitFlag, 9 placed by Property,
+            // 3 Priority High.
+            ("image-structure", 41),
         ])
     );
-    assert_eq!(summary.by_mask.get("MV-0701"), Some(&(40, 28)));
-    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 27)));
+    assert_eq!(summary.by_mask.get("MV-0701"), Some(&(40, 35)));
+    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 35)));
 
-    // Every mask outside 070nh is refused, and none of them for a reason
-    // that sounds like "almost".
+    // Every mask outside 070nh is refused for its mask, and none of them
+    // for a reason that sounds like "almost".
     for row in &rows {
         let mask = row.mask_version.as_deref().unwrap_or("");
         if !matches!(mask, "MV-0701" | "MV-0705") {
@@ -76,8 +94,7 @@ fn the_corpus_coverage_is_pinned() {
                 matches!(
                     row.level,
                     SupportLevel::Unsupported {
-                        category: UnsupportedCategory::NotMemoryMapped
-                            | UnsupportedCategory::ProcedureStyle,
+                        category: UnsupportedCategory::NotMemoryMapped,
                         ..
                     }
                 ),

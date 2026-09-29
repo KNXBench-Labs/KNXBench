@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Download coverage: signed and text parameter values, mask asked first
+
+- The image builder writes signed `TypeNumber` values at or above zero and
+  `TypeText` values (declared ISO-8859-1/-15, or ASCII without a
+  declaration, zero-filled to the field) via the new
+  `ParameterImage::write_octets`. Negative signed values, every
+  `TypeFloat`, unknown text encodings and a non-`BigEndian`
+  `ParameterByteOrder` are refused by name. The encodings are inferred from
+  the products' own base images, since no PDF specifies them (RESEARCH
+  §19.9); none is hardware-tested.
+- `plan_memory_download` asks the mask before the load procedure style.
+  The 41 `procedure-style` refusals were all non-`070nh` masks and are now
+  `not-memory-mapped`.
+- Corpus coverage re-pinned: 246 programs, 1 verified, **69 untested**
+  (was 54), 176 unsupported; `MV-0701` 35/40, `MV-0705` 35/141. Unit tests
+  RED first for mask order, `write_octets`, signed/text encoding and their
+  refusals, then GREEN; the ignored corpus test passed in release mode.
+
 ## 2026-09-29 — U10 / ISSUE-12 partial: gateway host and port, not a discovery fix
 
 - Bus monitor now shows separately labelled host and port fields. Port 3671 is
@@ -57,6 +75,7 @@
   offline default-image plan or the category and full refusal reason. On
   103 installed packages, 55/181 `0701h`/`0705h` applications plan; one
   has cited complete hardware evidence, 54 have none. No other masks plan.
+  *(Superseded by the entry above: 70/181, 69 without evidence.)*
   The ignored corpus regression pins this sample, not universal coverage.
 - Pre-write protection: the common memory executor reads the regions its
   plan will overwrite and the affected load states before its first

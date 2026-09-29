@@ -160,21 +160,30 @@ impl From<MemoryLoadRecordError> for DownloadPlanError {
     }
 }
 
-/// Refuses a program whose kind this module never translates: another
-/// `LoadProcedureStyle`, or a mask that does not load through memory.
+/// Refuses a program whose kind this module never translates: a mask that
+/// does not load through memory, or another `LoadProcedureStyle`.
 /// Cheap, and the first thing to ask: an image of such a program is not
 /// worth building, and its refusal would name a symptom instead of this.
+///
+/// The mask is asked first. `[V]` Every `MergedProcedure` and
+/// `DefaultProcedure` program in the local corpus (41 of 246) has a mask
+/// that does not load through memory (`07B0h`, `0912h`, `091Ah`, `2920h`,
+/// `0012h`, `0001h`); none is a `070nh` program. Naming the style first
+/// would point at a translation that, once written, still could not load
+/// such a device, so the mask is the reason that holds.
 pub fn check_program_kind(code: &ProgramCode) -> Result<MaskVersion, DownloadPlanError> {
+    let mask = code
+        .mask_version
+        .as_deref()
+        .and_then(parse_mask)
+        .filter(|mask| loads_through_memory(*mask))
+        .ok_or_else(|| DownloadPlanError::NotMemoryMapped(code.mask_version.clone()))?;
     if code.load_procedure_style.as_deref() != Some(PRODUCT_PROCEDURE) {
         return Err(DownloadPlanError::NotAProductProcedure(
             code.load_procedure_style.clone(),
         ));
     }
-    code.mask_version
-        .as_deref()
-        .and_then(parse_mask)
-        .filter(|mask| loads_through_memory(*mask))
-        .ok_or_else(|| DownloadPlanError::NotMemoryMapped(code.mask_version.clone()))
+    Ok(mask)
 }
 
 /// Builds the plan for `image`.
@@ -476,6 +485,7 @@ mod tests {
                 },
             ],
             parameters: BTreeMap::new(),
+            texts: BTreeMap::new(),
             objects: Vec::new(),
         }
     }
@@ -559,6 +569,22 @@ mod tests {
             plan_memory_download(&image),
             Err(DownloadPlanError::NotMemoryMapped(_))
         ));
+    }
+
+    /// The mask decides first. Every `MergedProcedure`/`DefaultProcedure`
+    /// program in the corpus has a mask that does not load through memory
+    /// (`07B0h`, `0912h`, `091Ah`, `2920h`, `0012h`, `0001h`), so naming the
+    /// style would point at a translation that, once written, still could
+    /// not load that device. The mask is the reason that holds.
+    #[test]
+    fn a_non_memory_mask_is_named_before_the_procedure_style() {
+        let mut image = image();
+        image.code.mask_version = Some("MV-07B0".into());
+        image.code.load_procedure_style = Some("MergedProcedure".into());
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::NotMemoryMapped(Some("MV-07B0".into())))
+        );
     }
 
     #[test]

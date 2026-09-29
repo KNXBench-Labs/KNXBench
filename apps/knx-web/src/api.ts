@@ -1356,9 +1356,12 @@ export interface DeviceDownloadPlan {
   steps: string[];
   /** The phrase `start` demands; names this device and this scope. */
   confirmationPhrase: string;
+  support: { level: "verified" | "untested"; evidence: string | null };
+  untestedAcknowledgement: string | null;
 }
 
 export type DeviceDownloadEvent =
+  | { kind: "backupTaken"; regions: number; octets: number }
   | { kind: "stepStarted"; number: number; of: number; step: string }
   | {
       kind: "dataWritten";
@@ -1396,6 +1399,7 @@ export interface DeviceDownloadStatusResponse {
   status: DeviceDownloadStatus;
   nextSince: number;
   events: DeviceDownloadEvent[];
+  backupFile: string | null;
 }
 
 export function planDeviceDownload(address: string): Promise<DeviceDownloadPlan> {
@@ -1409,10 +1413,11 @@ export function startDeviceDownload(
   planId: number,
   gateway: string,
   confirmation: string,
+  acceptUntested?: string,
 ): Promise<{ downloadId: number }> {
   return request("/api/device-download/start", {
     method: "POST",
-    body: JSON.stringify({ planId, gateway, confirmation }),
+    body: JSON.stringify({ planId, gateway, confirmation, acceptUntested }),
   });
 }
 

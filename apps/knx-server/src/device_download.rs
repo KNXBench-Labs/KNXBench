@@ -12,13 +12,15 @@
 use std::sync::{Arc, Mutex};
 
 use knx_app::access_key::DownloadKeying;
+use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
 use knx_core::commissioning::authorisation::Authorisation;
+use knx_core::commissioning::device_backup::DeviceBackup;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::mutation::WriteAuthorisation;
 use knx_core::IndividualAddress;
 use knx_net::commissioning::memory_download::{
-    locked_device_hint, run_memory_download_observed, Progress, RestartOutcome,
+    locked_device_hint, run_memory_download_with_backup, Progress, RestartOutcome,
 };
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
 use serde::Serialize;
@@ -64,6 +66,17 @@ pub enum ProgressEvent {
         /// The level is the minimum a wrong key earns (AL §3.5.7).
         suspicious: bool,
     },
+    /// What the plan overwrites was read and kept before the first write.
+    BackupTaken { regions: usize, octets: usize },
+}
+
+/// Where the backup before the first write goes.
+#[derive(Debug, Clone)]
+pub struct BackupDestination {
+    /// The directory, created when missing.
+    pub dir: std::path::PathBuf,
+    /// The time stamp (RFC 3339) the backup is named after.
+    pub taken: String,
 }
 
 /// Whether anything was written to the device, as the CLI says it
@@ -121,6 +134,8 @@ struct Shared {
     last_started: Mutex<Option<usize>>,
     /// What authorisation obtained, once connected.
     granted: Mutex<Option<(Authorisation, bool)>>,
+    /// The backup file, once written.
+    backup_file: Mutex<Option<std::path::PathBuf>>,
 }
 
 /// One download, running or finished. Kept after it ends so the final
@@ -145,12 +160,14 @@ impl DeviceDownloadSession {
         keying: DownloadKeying,
         timing: knx_net::SessionTiming,
         prepared: PreparedDownload,
+        backups: BackupDestination,
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
             events: Mutex::new(Vec::new()),
             last_started: Mutex::new(None),
             granted: Mutex::new(None),
+            backup_file: Mutex::new(None),
         });
         let session = Self {
             id,
@@ -161,7 +178,15 @@ impl DeviceDownloadSession {
             shared: Arc::clone(&shared),
             task: None,
         };
-        let task = tokio::spawn(run(tunnel, authorisation, keying, timing, prepared, shared));
+        let task = tokio::spawn(run(
+            tunnel,
+            authorisation,
+            keying,
+            timing,
+            prepared,
+            backups,
+            shared,
+        ));
         Self {
             task: Some(task),
             ..session
@@ -186,6 +211,15 @@ impl DeviceDownloadSession {
 
     pub fn data_octets(&self) -> usize {
         self.data_octets
+    }
+
+    /// The backup taken before the first write, once it is on disk.
+    pub fn backup_file(&self) -> Option<std::path::PathBuf> {
+        self.shared
+            .backup_file
+            .lock()
+            .expect("download backup poisoned")
+            .clone()
     }
 
     pub fn is_running(&self) -> bool {
@@ -272,6 +306,7 @@ async fn run(
     keying: DownloadKeying,
     timing: knx_net::SessionTiming,
     prepared: PreparedDownload,
+    backups: BackupDestination,
     shared: Arc<Shared>,
 ) {
     let status = {
@@ -291,11 +326,31 @@ async fn run(
                     session
                 };
                 let observer = Arc::clone(&shared);
-                let result =
-                    run_memory_download_observed(&mut session, &prepared.plan, move |progress| {
-                        record(&observer, progress);
-                    })
-                    .await;
+                let keeper = Arc::clone(&shared);
+                let mut keep = |backup: &DeviceBackup| {
+                    let stored = StoredBackup {
+                        backup: backup.clone(),
+                        application: prepared.request.program_id.clone(),
+                        partial: prepared.partial.as_ref().map(|(parts, _)| *parts),
+                        taken: backups.taken.clone(),
+                        plan_steps: prepared
+                            .plan
+                            .steps
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect(),
+                    };
+                    let path = write_backup(&backups.dir, &stored).map_err(|e| e.to_string())?;
+                    *keeper.backup_file.lock().expect("download backup poisoned") = Some(path);
+                    Ok(())
+                };
+                let result = run_memory_download_with_backup(
+                    &mut session,
+                    &prepared.plan,
+                    move |progress| record(&observer, progress),
+                    &mut keep,
+                )
+                .await;
                 match result {
                     Ok(report) => {
                         let (restart, restart_note) = match &report.restart {
@@ -379,6 +434,7 @@ fn record(shared: &Shared, progress: Progress) {
                 suspicious,
             }
         }
+        Progress::BackupTaken { regions, octets } => ProgressEvent::BackupTaken { regions, octets },
     };
     shared
         .events

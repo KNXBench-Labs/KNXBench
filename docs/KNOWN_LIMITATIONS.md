@@ -1,5 +1,28 @@
 # Known limitations
 
+## Commissioning readiness and pre-write backup boundary (ADR-0049)
+
+Offline coverage of 103 locally installed product packages found 55/181
+`0701h`/`0705h` application programs plannable with product **defaults** and
+no group links; 126 were refused with reasons. A plan is not a verified
+hardware download, and a one-device live run does not validate every
+configuration or device revision. `verified` is scoped to application *and*
+download type; `untested` needs a second exact acknowledgement. Other masks
+remain refused. The catalogue is a sample, not an all-device support list.
+
+The automatic backup is read **after** the target identity check but before
+the first mutation, and records only memory regions the plan is about to
+overwrite plus affected load states. It is **not a complete device memory
+dump**, and does not preserve properties, keys held outside those regions,
+masked/unwritten memory or a non-Loaded load state. The JSON can contain
+private device configuration and must be protected and not attached to
+diagnostics. Only a backup with all parts Loaded and a product procedure
+that rederives the same steps and memory shape can become a restore plan.
+Backup creation and restore have simulator tests, not real-hardware evidence;
+neither can be promised as a universal rollback. The existing manual
+read-only baseline required by `goal-commission.md` before live tests is
+separate and still required when live tests are authorised again.
+
 ## PDB-9 parameter and Dynamic coverage boundary
 
 Since schema v15 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md))

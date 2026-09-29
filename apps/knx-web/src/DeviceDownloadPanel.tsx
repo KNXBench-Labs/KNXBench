@@ -43,6 +43,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   const [address, setAddress] = useState("");
   const [gateway, setGateway] = useState(loadPreferredGateway);
   const [plan, setPlan] = useState<api.DeviceDownloadPlan | null>(null);
+  const [untestedAcknowledgement, setUntestedAcknowledgement] = useState("");
   const [planning, setPlanning] = useState(false);
   const [starting, setStarting] = useState(false);
   const [status, setStatus] = useState<api.DeviceDownloadStatusResponse | null>(null);
@@ -56,6 +57,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   // stale, and the server would refuse it anyway (ADR-0045 §3).
   useEffect(() => {
     setPlan(null);
+    setUntestedAcknowledgement("");
   }, [project]);
 
   const running = status?.status.state === "running";
@@ -97,6 +99,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   async function preparePlan() {
     setError(null);
     setPlan(null);
+    setUntestedAcknowledgement("");
     setPlanning(true);
     try {
       setPlan(await api.planDeviceDownload(address.trim()));
@@ -110,17 +113,20 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
   async function start() {
     if (plan === null) return;
     const shown = plan;
+    if (shown.untestedAcknowledgement !== null && untestedAcknowledgement !== shown.untestedAcknowledgement) return;
     setError(null);
     if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
     setStarting(true);
     try {
-      const { downloadId } = await api.startDeviceDownload(
+      const startArgs: [number, string, string, string?] = [
         shown.planId,
         gateway.trim(),
         // Built from the plan's own address by the server: the phrase for
         // exactly the device the user just confirmed.
         shown.confirmationPhrase,
-      );
+      ];
+      if (shown.untestedAcknowledgement !== null) startArgs.push(untestedAcknowledgement);
+      const { downloadId } = await api.startDeviceDownload(...startArgs);
       downloadIdRef.current = downloadId;
       sinceRef.current = 0;
       setEvents([]);
@@ -161,7 +167,7 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
         <form className="device-download-config" onSubmit={(event) => event.preventDefault()}>
           <label>
             {t("deviceDownload.device")}
-            <select value={address} disabled={locked} onChange={(event) => { setAddress(event.target.value); setPlan(null); }}>
+            <select value={address} disabled={locked} onChange={(event) => { setAddress(event.target.value); setPlan(null); setUntestedAcknowledgement(""); }}>
               <option value="">{t("deviceDownload.chooseDevice")}</option>
               {devices.map((device) => (
                 <option key={device.id} value={device.address ?? ""}>
@@ -193,6 +199,12 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             <dd><code>{plan.address}</code> — {plan.deviceName}</dd>
             <dt>{t("deviceDownload.program")}</dt>
             <dd><code>{plan.programId}</code></dd>
+            <dt>{t("deviceDownload.support")}</dt>
+            <dd>
+              {plan.support.level === "verified"
+                ? <>{t("deviceDownload.verified")} {plan.support.evidence}</>
+                : <strong className="form-warning">{t("deviceDownload.untested")}</strong>}
+            </dd>
             <dt>{t("deviceDownload.expectedDevice")}</dt>
             <dd>{t("deviceDownload.expectedDeviceValue", { mask: hex(plan.maskVersion, 4), manufacturer: hex(plan.manufacturer, 4) })}</dd>
             <dt>{t("deviceDownload.fromProject")}</dt>
@@ -216,7 +228,17 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             <summary>{t("deviceDownload.steps", { count: plan.steps.length })}</summary>
             <ol className="device-download-steps">{plan.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
           </details>
-          <button className="primary-action" disabled={locked || gateway.trim() === ""} onClick={() => void start()}>
+          <p>{t("deviceDownload.backupBeforeWrite")}</p>
+          {plan.untestedAcknowledgement !== null && (
+            <label className="device-download-acknowledgement">
+              {t("deviceDownload.untestedPrompt", { phrase: plan.untestedAcknowledgement })}
+              <input data-untested-acknowledgement value={untestedAcknowledgement}
+                autoComplete="off" spellCheck={false}
+                onChange={(event) => setUntestedAcknowledgement(event.target.value)} disabled={locked} />
+            </label>
+          )}
+          <button className="primary-action" disabled={locked || gateway.trim() === "" ||
+            (plan.untestedAcknowledgement !== null && untestedAcknowledgement !== plan.untestedAcknowledgement)} onClick={() => void start()}>
             {t("deviceDownload.start", { address: plan.address })}
           </button>
         </section>
@@ -254,6 +276,12 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             <p>{t("deviceDownload.restartAcknowledged")}</p>
           )}
           {status.status.state === "failed" && <p className="form-error">{status.status.error}</p>}
+          {status.backupFile && (
+            <p>{t("deviceDownload.backupKept", { file: status.backupFile })}</p>
+          )}
+          {events.filter((event) => event.kind === "backupTaken").map((event, index) => (
+            <p key={index}>{t("deviceDownload.backupTaken", { octets: event.octets, regions: event.regions })}</p>
+          ))}
           {observed.length > 0 && (
             <ul className="device-download-observed">
               {observed.map((event) => <li key={event.number}>[{event.number}] {stepNames.get(event.number)}: {event.observed}</li>)}

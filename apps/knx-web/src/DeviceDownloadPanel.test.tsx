@@ -82,6 +82,8 @@ const PLAN = {
   dataOctets: 1416,
   steps: ["connect", "check the mask", "write 4003h"],
   confirmationPhrase: "I confirm download to 1.1.67",
+  support: { level: "verified", evidence: "MDT, 2026-09-29; docs/RESEARCH.md §19.8" },
+  untestedAcknowledgement: null,
 };
 
 function notFound(): Error {
@@ -104,6 +106,7 @@ function response(
     status,
     nextSince,
     events,
+    backupFile: null,
   };
 }
 
@@ -335,4 +338,49 @@ it("sends the phrase the server named, never one it builds itself", async () => 
   await act(async () => button(en["programmingConsent.confirm"], consentDialog()!).click());
   await flush();
   expect(apiMock.startDeviceDownload).toHaveBeenCalledWith(7, "192.0.2.10:3671", "server wording for 1.1.67");
+});
+
+it("warns on an untested plan and requires a separate exact acknowledgement", async () => {
+  apiMock.planDeviceDownload.mockResolvedValueOnce({
+    ...PLAN,
+    support: { level: "untested", evidence: null },
+    untestedAcknowledgement: "I accept an untested download to 1.1.67",
+  });
+  await render();
+  await showPlan();
+  expect(host!.textContent).toContain("Not verified on hardware");
+  const start = button("Download to 1.1.67");
+  expect(start.disabled).toBe(true);
+  const input = host!.querySelector<HTMLInputElement>("[data-untested-acknowledgement]")!;
+  expect(input).not.toBeNull();
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  await act(async () => {
+    setter.call(input, "yes");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(start.disabled).toBe(true);
+  await act(async () => {
+    setter.call(input, "I accept an untested download to 1.1.67");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(start.disabled).toBe(false);
+  await act(async () => start.click());
+  await flush();
+  await act(async () => button(en["programmingConsent.confirm"], consentDialog()!).click());
+  await flush();
+  expect(apiMock.startDeviceDownload).toHaveBeenCalledWith(
+    7, "192.0.2.10:3671", "I confirm download to 1.1.67",
+    "I accept an untested download to 1.1.67",
+  );
+});
+
+it("shows the backup path during a run and on failure", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue({
+    ...response({ state: "failed", written: "partially", stoppedInStep: 7, error: "read-back failed" },
+      [{ kind: "backupTaken", regions: 2, octets: 32 }], 1),
+    backupFile: "device-backups/1.1.67_backup.json",
+  });
+  await render();
+  expect(host!.textContent).toContain("device-backups/1.1.67_backup.json");
+  expect(host!.textContent).toContain("32 octets");
 });

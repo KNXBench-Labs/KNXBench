@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (download coverage session)
+- **Timestamp:** 2026-09-29 20:57 CEST
+- **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.
+- **Completed:** With the user's "go. 172.18.250.1": one read-only session to 1.1.11 (mask `0701h`, app `00 83 00 19 13`, load states `01 01 01 00`). `4B10h..4B17h` = `00 00 01 e6 e6 e6 e6 e6`, so ETS wrote `UP-1227` (1) into the union octet `4B12h`, not `UP-33` (230). Four candidate rules (dynamic order, non-default, deeper nesting, declaration order) agree on this sample, so there is no rule and `A-0019-13-B655` stays refused. Docs: RESEARCH §19.12 and IMPLEMENTATION_STATUS. Log: `OriginalData/DeviceBackups/1.1.11-probe-4b12/read-20260929-205618.log` (private, not committed). The probe test was throwaway and is not in the tree.
+- **Pending/Next Steps:** A discriminating sample: a device whose program has two active union members where the four rules disagree. Nothing further on the house offline.
+- **Notes for Codex or Claude:** No write was sent. Gateway for the house: given by the user per session. Do not store it in code or tests.
+
+---
+
 - **Last Agent:** Claude (download coverage session, offline only)
 - **Timestamp:** 2026-09-29 20:45 CEST
 - **Web lock:** untouched — held by the UI ISSUE-09 session; no `apps/knx-web` change.

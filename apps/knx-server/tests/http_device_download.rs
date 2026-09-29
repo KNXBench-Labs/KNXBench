@@ -26,7 +26,9 @@ use std::time::Duration;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::commissioning::load_state::LoadState;
-use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID};
+use knx_core::commissioning::properties::{
+    ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
+};
 use knx_core::IndividualAddress;
 use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 use knx_net::{
@@ -672,4 +674,88 @@ async fn body_id(h: &Harness) -> Value {
     let (status, body) = send(&h.app, get("/api/device-address/status")).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     body["programmingId"].clone()
+}
+
+/// K15 over HTTP: a partial plan is shown as one, the start runs exactly
+/// the shown partial steps, and the application is never unloaded.
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_partial_download_runs_the_partial_plan_that_was_shown() {
+    let h = harness(SimulatorConfig::default()).await;
+    h.device
+        .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+    let (status, plan) = send(
+        &h.app,
+        post(
+            "/api/device-download/plan",
+            json!({
+                "address": "1.1.67",
+                "partial": { "parameters": true, "groupAddresses": false }
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    assert_eq!(plan["partial"], true);
+    assert_eq!(plan["dataOctets"], 394);
+    let steps: Vec<String> = plan["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|step| step.as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(steps.len(), 11, "{steps:?}");
+    assert!(
+        steps.iter().all(|step| !step.contains("unload")),
+        "{steps:?}"
+    );
+    assert!(
+        steps.contains(&"compare property 3/13 with 00 83 00 27 15".to_string()),
+        "{steps:?}"
+    );
+
+    let (status, body) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, events) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(end["written"], "yes");
+    let started = events.iter().filter(|e| e["kind"] == "stepStarted").count();
+    assert_eq!(started, 11, "the shown steps, no more");
+    for machine in [1, 2, 3] {
+        assert_eq!(
+            h.device.load_state(ObjectIndex::new(machine)),
+            LoadState::Loaded
+        );
+    }
+}
+
+/// Without a `partial` field the plan stays the complete one: the field is
+/// an addition, not a change of the existing request.
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_plan_without_partial_is_still_the_complete_download() {
+    let h = harness(SimulatorConfig::default()).await;
+    let plan = plan(&h).await;
+    assert_eq!(plan["partial"], false);
+    assert_eq!(plan["dataOctets"], 1416);
+    assert_eq!(plan["notWritten"], json!([]));
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_partial_plan_with_nothing_selected_is_refused() {
+    let h = harness(SimulatorConfig::default()).await;
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device-download/plan",
+            json!({
+                "address": "1.1.67",
+                "partial": { "parameters": false, "groupAddresses": false }
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
 }

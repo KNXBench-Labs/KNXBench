@@ -19,6 +19,23 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K15: partial download for mask `070nh`, simulator only
+
+- CP §3.9.2.4's transformation of the complete plan in
+  `knx_core::commissioning::partial_memory_download`, with the parts
+  (parameters, group addresses or both) as input and the ignored
+  non-EEPROM writes reported.
+- Two KNXBench checks before the first write: the application identity
+  (`PID_PROGRAM_VERSION`, object 3) and every part `Loaded`
+  (`MemoryDownloadStep::RequireLoaded`); a failure writes nothing.
+- CLI `knx device download --partial …`, HTTP `partial` field; the
+  server derives the same partial plan again on start and compares it.
+- On the real MDT `A-0027-15-0BAC` plan: 11 steps and 394 octets for
+  parameters only (complete: 25 steps, 1416 octets).
+- 9 core, 5 executor, 3 CLI and 3 HTTP tests; 9/9 mutants killed (one
+  of them: the server forgetting the shown partial and starting the
+  complete plan). Not run on hardware (KL §142).
+
 ## 2026-09-29 — K14: Master Reset, typed and simulated
 
 - MP Tables 4/5 and RES's download-counter table in

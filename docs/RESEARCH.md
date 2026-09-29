@@ -5321,6 +5321,36 @@ class.**
    simulator only (ADR-0048, KL §113). For `070nh`, the product's own
    load procedure decides what a partial download is, and the corpus has
    not been read for that yet.
+   **Done 2026-09-29 (K15, KL §142), simulator only.** Read directly:
+   - CP has no section of its own for mask `070nh`. BIM M112's download is
+     §3.9.2.2 (mask 5705h), which `memory_download` already follows, and
+     its partial download is §3.9.2.4, pp. 69–70, *"Default Partial
+     Download Procedure"*. It is not written out. It is *"generated from
+     the complete download procedure by applying the following
+     transformations"*: drop the `UNLOAD` of the application and PEI
+     programs; without the group-communication part, drop every load
+     control and allocation of the two tables; turn application and PEI
+     segment allocations into memory writes, *"absolute data or stack
+     segments in EEPROM only, all others are simply ignored"*. The extra
+     input is the *"Partial Download Type (Parameters and/or Group
+     Addresses)"*.
+   - Corpus (103 `.knxprod`, 203 application programs of mask `MV-070n`):
+     every one has exactly one `LoadProcedure`, none a `MergeId`, and only
+     two (MDT `A-0255-21-0ECA`, `A-0054-14-0D63`) carry `AppliesTo`, both
+     with the value `full,par`. So the product file does not describe a
+     partial download of its own; the CP transformation is the only
+     documented one. `Project Schema23` lists `AppliesTo`'s values but no
+     default, so KNXBench does not rely on it.
+   - The MDT file also carries `Options/@LegacyAllowPartialDownloadIfAp2Mismatch`,
+     retained and not interpreted. No PDF read defines it.
+   - The transformation does not check that the device carries the
+     application; `DMP_Identify_RCo2` checks the hardware. A partial
+     download to a device with another application would write parameters
+     into memory laid out for something else. KNXBench adds two checks of
+     its own before the first write: `PID_PROGRAM_VERSION` of object 3 must
+     be the plan's task segment identity (the `1.1.67` answered
+     `00 83 00 27 15` in the 2026-09-29 dump), and every part the plan
+     loads must be `Loaded`.
 4. **Access keys on a download** (AL `A_Authorize`/`A_Key_Write`,
    CP §3.5.2 step 11). BIM M112 has 16 levels. `Project Schema23` p. 38:
    `Installation/@BCUKey`, *"The key used to lock devices supporting

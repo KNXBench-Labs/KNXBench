@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
 use knx_app::device_download::{prepare_device_download, PreparedDownload};
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
+use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::{ContactableAddress, IndividualAddress, WriteScope};
 
 use crate::bus_scan::LineScanStatus;
@@ -44,12 +45,35 @@ pub struct ShownPlan {
     pub id: u64,
     pub target: IndividualAddress,
     pub plan: knx_core::commissioning::memory_download::MemoryDownloadPlan,
+    /// The partial download the plan was derived as, if any: `start`
+    /// derives it again and must arrive at the same steps.
+    pub partial: Option<PartialDownloadParts>,
+}
+
+/// CP §3.9.2.4's *"Partial Download Type (Parameters and/or Group
+/// Addresses)"*. Absent: the complete download.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PartialDto {
+    parameters: bool,
+    group_addresses: bool,
+}
+
+impl From<PartialDto> for PartialDownloadParts {
+    fn from(dto: PartialDto) -> Self {
+        PartialDownloadParts {
+            parameters: dto.parameters,
+            group_addresses: dto.group_addresses,
+        }
+    }
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PlanRequest {
     address: String,
+    #[serde(default)]
+    partial: Option<PartialDto>,
 }
 
 #[derive(Serialize)]
@@ -81,6 +105,11 @@ struct PlanResponse {
     confirmation_phrase: String,
     /// Where the access key comes from; never the key.
     access_key: String,
+    /// `true` when this is a CP §3.9.2.4 partial download.
+    partial: bool,
+    /// Application writes the partial download does not make (CP §3.9.2.4
+    /// rule 3: data outside EEPROM), as `[address, octets]`.
+    not_written: Vec<(u16, usize)>,
 }
 
 fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
@@ -110,7 +139,11 @@ fn keying(state: &SharedState, prepared: &PreparedDownload) -> Result<DownloadKe
 
 /// Prepares from the project as it is now. Both locks are released before
 /// this returns; they are never held together.
-fn prepare(state: &SharedState, target: IndividualAddress) -> Result<PreparedDownload, ApiError> {
+fn prepare(
+    state: &SharedState,
+    target: IndividualAddress,
+    partial: Option<PartialDownloadParts>,
+) -> Result<PreparedDownload, ApiError> {
     let Some(products) = state.product_db.as_ref() else {
         return Err(ApiError::with_status(
             StatusCode::CONFLICT,
@@ -125,12 +158,21 @@ fn prepare(state: &SharedState, target: IndividualAddress) -> Result<PreparedDow
         ));
     };
     let products = products.lock().expect("state mutex poisoned");
-    prepare_device_download(&products, project, target).map_err(|e| {
+    let prepared = prepare_device_download(&products, project, target).map_err(|e| {
         ApiError::with_status(
             StatusCode::UNPROCESSABLE_ENTITY,
             format!("no download to device {target} prepared: {e}"),
         )
-    })
+    })?;
+    match partial {
+        None => Ok(prepared),
+        Some(parts) => prepared.into_partial(parts).map_err(|e| {
+            ApiError::with_status(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!("no partial download to device {target} prepared: {e}"),
+            )
+        }),
+    }
 }
 
 async fn plan(
@@ -138,7 +180,8 @@ async fn plan(
     Json(body): Json<PlanRequest>,
 ) -> Result<Json<PlanResponse>, ApiError> {
     let target = parse_target(&body.address)?;
-    let prepared = prepare(&state, target)?;
+    let partial = body.partial.map(PartialDownloadParts::from);
+    let prepared = prepare(&state, target, partial)?;
     let keying = keying(&state, &prepared)?;
     let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
     let response = PlanResponse {
@@ -170,6 +213,12 @@ async fn plan(
             .collect(),
         confirmation_phrase: required_confirmation_phrase(target, WriteScope::Download),
         access_key: keying.source.to_string(),
+        partial: prepared.partial.is_some(),
+        not_written: prepared
+            .partial
+            .as_ref()
+            .map(|(_, ignored)| ignored.clone())
+            .unwrap_or_default(),
     };
     *state
         .device_download_plan
@@ -178,6 +227,7 @@ async fn plan(
         id,
         target,
         plan: prepared.plan,
+        partial,
     });
     Ok(Json(response))
 }
@@ -208,13 +258,13 @@ async fn start(
         .gateway
         .parse()
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
-    let target = {
+    let (target, partial) = {
         let shown = state
             .device_download_plan
             .lock()
             .expect("state mutex poisoned");
         match shown.as_ref() {
-            Some(shown) if shown.id == body.plan_id => shown.target,
+            Some(shown) if shown.id == body.plan_id => (shown.target, shown.partial),
             _ => {
                 return Err(conflict(
                     "that plan is no longer the one shown; ask for the plan again",
@@ -266,7 +316,7 @@ async fn start(
         ));
     }
 
-    let prepared = prepare(&state, target)?;
+    let prepared = prepare(&state, target, partial)?;
     let keying = keying(&state, &prepared)?;
     {
         let shown = state

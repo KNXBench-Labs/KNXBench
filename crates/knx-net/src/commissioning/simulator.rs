@@ -283,6 +283,10 @@ pub struct SimulatorConfig {
     /// none of them answer anything but this one broadcast service, and
     /// none of them can be connected to.
     pub other_programming_mode_devices: Vec<IndividualAddress>,
+    /// The devices of [`Self::other_programming_mode_devices`] stay in
+    /// programming mode through a Basic Restart: a device MP §2.18 cannot
+    /// reset, for the procedure's round cap.
+    pub other_programming_mode_devices_ignore_restart: bool,
     /// One telegram from an unrelated device, emitted inside the
     /// `A_IndividualAddress_Read` window, plus its `L_Data.con` echo.
     ///
@@ -595,6 +599,7 @@ impl Default for SimulatorConfig {
             corrupt_memory_writes: false,
             programming_mode: false,
             other_programming_mode_devices: Vec::new(),
+            other_programming_mode_devices_ignore_restart: false,
             unrelated_traffic_during_broadcast: None,
             device_descriptor_read_gets_disconnect: false,
             device_descriptor_read_unanswered: false,
@@ -1001,6 +1006,16 @@ impl SimulatedDevice {
         self.lock().other_programming_mode_devices = devices;
     }
 
+    /// Whether this device's programming button is pressed.
+    pub fn programming_mode(&self) -> bool {
+        self.lock().programming_mode
+    }
+
+    /// Where the other programming-mode devices are now.
+    pub fn other_programming_mode_devices(&self) -> Vec<IndividualAddress> {
+        self.lock().other_programming_mode_devices.clone()
+    }
+
     /// How many broadcast `A_IndividualAddressSerialNumber_Read` frames
     /// this device answered.
     pub fn serial_number_reads(&self) -> usize {
@@ -1386,11 +1401,14 @@ impl SimulatedDevice {
             // Address shall be set to the new address."* MP §2.3's own
             // exception handling has no "to 3." — step 3 is the one step
             // the clause raises no exception for.
+            // AL §3.2.1: every device in programming mode takes the address,
+            // the other simulated ones too (MP §2.18 resets them together).
             ApplicationService::IndividualAddressWrite { address } => {
                 let mut state = self.lock();
                 if state.programming_mode {
                     state.address = address;
                 }
+                state.other_programming_mode_devices.fill(address);
             }
             // AL §3.2.4, p. 21: *"The application process shall respond …
             // if the KNX Serial Number received is equal to the KNX Serial
@@ -1825,7 +1843,19 @@ impl SimulatedDevice {
                 restart_type: 0,
                 ..
             } => {
-                self.lock().programming_mode = false;
+                let stuck = self.config.other_programming_mode_devices_ignore_restart;
+                let mut state = self.lock();
+                state.programming_mode = false;
+                state.memory.insert(0x0060, 0);
+                // The other devices at this address restart with it (MP
+                // §2.18 addresses them all at `FFFFh`), unless a test holds
+                // one in programming mode.
+                let own = state.address;
+                if !stuck {
+                    state
+                        .other_programming_mode_devices
+                        .retain(|other| *other != own);
+                }
             }
             // MP §3.7.1.1.3, p. 80: *"The Application Layer of the
             // Management Server shall not confirm the A_Restart-service if

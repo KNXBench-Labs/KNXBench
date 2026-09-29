@@ -452,6 +452,9 @@ step (§1.3).
 
 ### K13 — `NM_IndividualAddress_Reset` (item 2)
 
+**Done 2026-09-29, simulator only; refused on hardware (KL §140).** The
+live step needs the user's request.
+
 MP §2.18. Resets every device in programming mode to `FFFFh`. **[W]**
 optional, only on the user's request.
 

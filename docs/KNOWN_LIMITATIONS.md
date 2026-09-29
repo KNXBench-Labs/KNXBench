@@ -8709,6 +8709,32 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §140 The individual-address reset runs in the simulator only, and is refused on hardware
+
+**Status (2026-09-29, K13).** MP §2.18 `NM_IndividualAddress_Reset` is
+implemented in `knx_net::commissioning::individual_address_reset`: broadcast
+`A_IndividualAddress_Write` `FFFFh`; `T_Connect`, Basic Restart and
+`T_Disconnect` to `FFFFh` without waiting on any confirmation (the
+procedure's own rule); broadcast read until nobody answers.
+
+**Refused on hardware.** `WriteScope::IndividualAddressReset` is not in
+`hardware_write_is_authorised`. The procedure changes every device whose
+button is pressed, and no operator has asked for it on the bus
+(goal-commission K13 is **[W]** only on request). There is no CLI or HTTP
+entry point, since both could only refuse.
+
+**Ours, not MP §2.18's.** A first read lists the devices before anything is
+written (none: nothing is sent); the loop stops after 3 rounds and names
+the devices still answering; the read window is MP §2.3's 1 s.
+
+**Simulator changes.** A Basic Restart switches programming mode off (MP
+§3.7.1.1.1, p. 80); a broadcast address write moves the other
+programming-mode devices too.
+
+**Lifted when.** An operator asks for it on named devices, the scope joins
+the allowlist with a test, and the bus monitor shows the sequence and the
+device at `15.15.255`.
+
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified
 
 **Limitation.** Whole-interface zoom is intentionally bounded to 80–150% in

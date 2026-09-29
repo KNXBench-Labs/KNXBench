@@ -305,9 +305,12 @@ unacknowledged closing restart was misreported as a step 4 failure. That is
 fixed (`AddressRestart`; CLI `restart: NOT confirmed`, server
 `restartConfirmed`) and covered by tests plus 7 mutants. Item 2 (the
 settling retry) was not exercised: the device answered on the first connect.
-Open: the way back, `1.1.68` → `1.1.67`, with the fixed build (another
-button press). The web panel does not show `restartConfirmed` yet (web
-lock). RESEARCH §19, "K6 live".
+The way back, `1.1.68` → `1.1.67`, ran on the fixed build at 07:34:
+`finished`, exit 0, restart NOT confirmed. The scan afterwards showed the
+device back at `1.1.67`, and the memory is identical to before, so K6 is
+done live. Still open, outside this goal: the web panel does not show
+`restartConfirmed` yet (web lock, UI session), and the settling retry has
+not been exercised. RESEARCH §19, "K6 live".
 
 ### K7 — Live acceptance of the product path
 

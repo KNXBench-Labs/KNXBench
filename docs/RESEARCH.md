@@ -5242,6 +5242,17 @@ observation that this device restarts without acknowledging.
   §116, status 2026-09-29).
 - `[O]` The settling retry itself is still not live-verified: this device
   answered at the new address on the first connect.
+- `[V]` **The way back with the fix (`6a71162`), 07:33–07:34 CEST
+  (`…k6-back-to-1.1.67-try2.txt`).** The first wait (07:28) expired
+  unpressed: `gave up after 90 rounds … nothing was written`, exit 1, which
+  is the empty path working as designed. On the second wait the user
+  pressed in round 16, and `1.1.68` was found. Result: `finished`, `address
+  written: yes, 1.1.68 -> 1.1.67; the device answered at 1.1.67`, `restart:
+  NOT confirmed (no T_ACK …)`, exit 0. The scan 40 s later
+  (`…k6-postscan-back.txt`) found `1.1.67` occupied (mask `0701h`) and
+  `1.1.68` vacant. A memory dump (`…post-k6.txt`) matches the post-K7
+  dump line for line (180 of 180 lines), so the two address changes left
+  the configuration (option C) untouched.
 - `[V]` No `LoadCompleting` stall and no mid-download drop occurred, so
   §101 and §104 had nothing to measure in either run.
 

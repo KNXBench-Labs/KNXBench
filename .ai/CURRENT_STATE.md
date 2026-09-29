@@ -1,4 +1,11 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 07:40
+- Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
+- **Completed:** K6 way back `1.1.68` → `1.1.67` on the fixed build `6a71162`: `finished`, exit 0, `restart: NOT confirmed`. Post-scan: 1.1.67 occupied (0701h), 1.1.68 vacant. Memory dump `post-k6` matches `post-k7-check` in 180/180 lines (option C unchanged). The first wait expired unpressed (exit 1, nothing written; the empty path works). Docs: RESEARCH §19, KL §116, goal-commission K6. **The device is back at 1.1.67.**
+- **Pending/Next Steps:** K10 final review of goal-commission. For the UI session: show `restartConfirmed` in the Program address panel (see previous entry).
+- **Notes for Codex/Claude:** K6 settling retry (`be91fe3`) still not live-exercised; this MDT answers on the first connect.
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 07:45
 - Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
 - **Completed:** K6 live, `1.1.67` → `1.1.68` (07:12–07:13). The user pressed the button in round 37; steps 1–3 ran, and step 4 read the device at 1.1.68. The unacknowledged closing Basic Restart was misreported as a step 4 failure. The post-scan showed 1.1.68 occupied and 1.1.67 vacant, and the LED was off. **Fix:** `AddressRestart {NotSent, Acknowledged, Unconfirmed}` in `IndividualAddressWriteReport`. Restart silence (`restart_may_have_gone_out`, now `pub(super)` in memory_download) is a success with the restart unconfirmed; a refused restart is still a step 4 failure. CLI prints `restart: acknowledged | NOT confirmed (…)`; the server `finished` status adds `restartConfirmed`. Tests: knx-net +3, CLI +2, HTTP +1; 7/7 mutants killed. Gate: fmt/clippy clean, 2387/0, layering/headers/anchors/diffcheck ok. Docs: KL §116 live status, RESEARCH §19 "K6 live", user guide 07/10, goal-commission K6.

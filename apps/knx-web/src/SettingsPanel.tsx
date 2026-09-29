@@ -321,7 +321,7 @@ export default function SettingsPanel(props: {
   const selectablePacks = packs.filter((pack) => !isShadowedByBuiltIn(pack.tag));
 
   return (
-    <Overlay labelledBy="settings-panel-title" className="settings-panel" onClose={onClose}>
+    <Overlay labelledBy="settings-panel-title" className="settings-panel" resizable={{ width: 860, height: 680 }} onClose={onClose}>
       <h2 className="settings-panel-title" id="settings-panel-title">
         {t("settings.title")}
       </h2>

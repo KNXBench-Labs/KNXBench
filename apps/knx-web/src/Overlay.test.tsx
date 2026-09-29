@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { readFileSync } from "node:fs";
 import { act, useRef } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -89,6 +90,30 @@ describe("Overlay", () => {
     });
     expect(onClose).toHaveBeenCalledTimes(1);
 
+    root.unmount();
+  });
+
+  it("does not dismiss a resizable dialog when a pointer drag starts inside and ends on the backdrop", async () => {
+    const onClose = vi.fn();
+    const root = await mount(
+      <Overlay onClose={onClose} resizable={{ width: 800, height: 640 }}>
+        <p>Resize grip</p>
+      </Overlay>,
+    );
+    const panel = host!.querySelector(".search-panel")!;
+    const backdrop = host!.querySelector(".search-overlay")!;
+    await act(async () => {
+      panel.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      backdrop.dispatchEvent(new Event("pointerup", { bubbles: true }));
+      backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      backdrop.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
     root.unmount();
   });
 
@@ -195,6 +220,66 @@ describe("Overlay", () => {
     expect(document.activeElement).toBe(outside);
 
     outside.remove();
+  });
+
+  it("lets an opted-in dialog resize from the keyboard without losing focus containment or Escape", async () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    outside.focus();
+    const onClose = vi.fn();
+    const root = await mount(
+      <Overlay label="Resizable" onClose={onClose} resizable={{ width: 900, height: 620 }}>
+        <input aria-label="first" />
+      </Overlay>,
+    );
+    const panel = host!.querySelector<HTMLElement>(".search-panel")!;
+    const handle = host!.querySelector<HTMLButtonElement>(".overlay-resize-key")!;
+    expect(panel.classList.contains("search-panel-resizable")).toBe(true);
+    expect(host!.querySelector(".search-overlay")?.classList.contains("search-overlay-resizable")).toBe(true);
+    expect(handle.getAttribute("aria-label")).toMatch(/resize.*arrow/i);
+    expect(document.activeElement).toBe(host!.querySelector("input"));
+
+    vi.spyOn(panel, "getBoundingClientRect")
+      .mockReturnValueOnce({ width: 500, height: 300 } as DOMRect)
+      .mockReturnValue({ width: 524, height: 300 } as DOMRect);
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect(panel.style.width).toBe("524px");
+    expect(panel.style.height).toBe("324px");
+
+    handle.focus();
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(document.activeElement).toBe(host!.querySelector("input"));
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
+  it("clamps keyboard resizing to the viewport and offers a native pointer grip with contained scrolling", async () => {
+    const root = await mount(
+      <Overlay label="Bounds" onClose={vi.fn()} resizable={{ width: 900, height: 620 }}>
+        <p>long content</p>
+      </Overlay>,
+    );
+    const panel = host!.querySelector<HTMLElement>(".search-panel")!;
+    const handle = host!.querySelector<HTMLButtonElement>(".overlay-resize-key")!;
+    vi.spyOn(panel, "getBoundingClientRect")
+      .mockReturnValueOnce({ width: window.innerWidth - 35, height: window.innerHeight - 35 } as DOMRect)
+      .mockReturnValue({ width: window.innerWidth - 32, height: window.innerHeight - 35 } as DOMRect);
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(panel.style.width).toBe(`${window.innerWidth - 32}px`);
+    await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect(panel.style.width).toBe(`${window.innerWidth - 32}px`);
+    expect(panel.style.height).toBe(`${window.innerHeight - 32}px`);
+    const css = readFileSync("src/styles.css", "utf8");
+    const rule = css.match(/\.search-panel-resizable \{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/resize:\s*both/);
+    expect(rule).toMatch(/overflow:\s*auto/);
+    expect(rule).toMatch(/max-width:\s*100%/);
+    expect(rule).toMatch(/max-height:\s*100%/);
+    await act(async () => root.unmount());
   });
 
   it("does not call onClose for Escape fired after unmount", async () => {

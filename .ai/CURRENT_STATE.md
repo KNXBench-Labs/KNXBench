@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U10 session)
+- **Timestamp:** 2026-09-29 15:36 CEST
+- **Web lock: released by the UI U10 session** after the feature merge and confirmed remote publication. The commissioning lock was independently released at 15:04; no UI lock remains in this handover.
+- **Completed:** U10's separate gateway host/port fields, default 3671, IPv4/port validation, unchanged API/preference string, EN/DE help text, responsive layout, guide and screenshot merged as `e8f4808` and were published in root `main` at `78ae0b9` (which also included the separately authorized commissioning docs/handover). The feature push's remote readback matched `78ae0b9`. On rebased branch and merged root: TypeScript/build and 78 web files/1192 tests; Rust fmt/Clippy and 125 suites/2551 passed/0 failed/147 ignored. Root-built `xtask` layering, 308 well-formed headers/161 absent, 397 links/229 Markdown files and corpus gate passed. Local Chromium checked 1440/400 px with mocked responses and no backend. The discovery receive problem was **not** repaired or claimed repaired by U10.
+- **Pending/Next Steps:** U10/ISSUE-12 remains partially open until wire capture or gateway-side evidence can distinguish network, device and protocol behavior; the manual numeric IPv4 endpoint is the fallback. A native WebKitGTK run and real screen-reader checks are not yet verified. U11–U13 remain on `goal-ui.md`; recheck the driving-model quota and take a new lock before the next UI package. Clean only U10-owned worktree, target and scratch after this handover is published. No U10 device or bus operation occurred.
+- **Notes for Codex or Claude:** See `.ai/logs/2026-09-29_codex_ui-gateway-endpoint.md`, `docs/RESEARCH.md` §20.1 and `docs/KNOWN_LIMITATIONS.md` §79. Preserve foreign root `stats.md` (modified by its owner) and untracked `docs/paperclip-shutdown/`; neither belongs to U10. The separate commissioning session did perform a user-authorized live backup/restore, documented in its entry immediately below; do not conflate that with U10's offline UI work.
+
+---
+
 - **Last Agent:** Claude (commissioning live-backup session)
 - **Timestamp:** 2026-09-29 15:31 CEST
 - **Web lock: held by the UI U10 session** (entry below, unchanged; this entry touched no web file).

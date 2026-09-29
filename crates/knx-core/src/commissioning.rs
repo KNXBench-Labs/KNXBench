@@ -3,6 +3,7 @@
 //! because that delta is engineering-critical (DATA_MODEL §7).
 
 pub mod authorisation;
+pub mod device_backup;
 pub mod domain_address;
 pub mod error_code;
 pub mod group_object_table;

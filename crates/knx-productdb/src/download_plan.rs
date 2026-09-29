@@ -40,7 +40,7 @@ use knx_core::commissioning::memory_download::{
     unmasked_runs, MemoryDownloadPlan, MemoryDownloadStep,
 };
 
-use crate::code::LoadStep;
+use crate::code::{LoadStep, ProgramCode};
 use crate::image::DownloadImage;
 
 /// The `LoadProcedureStyle` this module translates.
@@ -160,22 +160,29 @@ impl From<MemoryLoadRecordError> for DownloadPlanError {
     }
 }
 
-/// Builds the plan for `image`.
-pub fn plan_memory_download(
-    image: &DownloadImage,
-) -> Result<MemoryDownloadPlan, DownloadPlanError> {
-    let code = &image.code;
+/// Refuses a program whose kind this module never translates: another
+/// `LoadProcedureStyle`, or a mask that does not load through memory.
+/// Cheap, and the first thing to ask: an image of such a program is not
+/// worth building, and its refusal would name a symptom instead of this.
+pub fn check_program_kind(code: &ProgramCode) -> Result<MaskVersion, DownloadPlanError> {
     if code.load_procedure_style.as_deref() != Some(PRODUCT_PROCEDURE) {
         return Err(DownloadPlanError::NotAProductProcedure(
             code.load_procedure_style.clone(),
         ));
     }
-    let mask = code
-        .mask_version
+    code.mask_version
         .as_deref()
         .and_then(parse_mask)
         .filter(|mask| loads_through_memory(*mask))
-        .ok_or_else(|| DownloadPlanError::NotMemoryMapped(code.mask_version.clone()))?;
+        .ok_or_else(|| DownloadPlanError::NotMemoryMapped(code.mask_version.clone()))
+}
+
+/// Builds the plan for `image`.
+pub fn plan_memory_download(
+    image: &DownloadImage,
+) -> Result<MemoryDownloadPlan, DownloadPlanError> {
+    let code = &image.code;
+    let mask = check_program_kind(code)?;
     let manufacturer = manufacturer_of(&code.program_id)?;
     let application = TaskSegment {
         start: 0,

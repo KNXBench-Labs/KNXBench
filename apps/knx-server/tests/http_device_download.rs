@@ -374,8 +374,10 @@ async fn an_unanswered_restart_is_written_but_unconfirmed() {
 #[tokio::test]
 #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
 async fn a_connection_lost_mid_download_says_partially_and_where() {
+    // Frame 400 lies in the segment writes; frame 12 would now fall in the
+    // backup's reads, which stop the run with nothing written.
     let h = harness(SimulatorConfig {
-        drop_connection_after: Some(12),
+        drop_connection_after: Some(400),
         ..SimulatorConfig::default()
     })
     .await;
@@ -387,6 +389,30 @@ async fn a_connection_lost_mid_download_says_partially_and_where() {
     assert_eq!(end["written"], "partially");
     assert!(end["stoppedInStep"].as_u64().is_some(), "{end}");
     assert!(end["error"].as_str().is_some_and(|e| !e.is_empty()));
+    let (_, status) = send(&h.app, get("/api/device-download/status")).await;
+    assert!(
+        status["backupFile"].is_string(),
+        "the way back is kept: {status}"
+    );
+
+    let early = harness(SimulatorConfig {
+        drop_connection_after: Some(12),
+        ..SimulatorConfig::default()
+    })
+    .await;
+    let plan = self::plan(&early).await;
+    let (status, _) = start(&early, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, _) = finish(&early).await;
+    assert_eq!(end["written"], "no", "{end}");
+    assert!(
+        end["error"]
+            .as_str()
+            .unwrap()
+            .contains("nothing was written"),
+        "{end}"
+    );
+    assert!(!early.device.memory_was_written());
 }
 
 /// A device locked above its free level. Without a key in the project the
@@ -758,4 +784,123 @@ async fn a_partial_plan_with_nothing_selected_is_refused() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+}
+
+/// The plan says how far the download is supported, and the run keeps a
+/// backup of what it overwrites before the first write.
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_verified_download_says_so_and_keeps_a_backup_first() {
+    let h = harness(SimulatorConfig::default()).await;
+    let old: Vec<Option<u8>> = h.device.memory(0x4400, 394);
+    let plan = plan(&h).await;
+    assert_eq!(plan["support"]["level"], "verified", "{plan}");
+    assert!(
+        plan["support"]["evidence"]
+            .as_str()
+            .unwrap()
+            .contains("RESEARCH.md"),
+        "{plan}"
+    );
+    assert_eq!(plan["untestedAcknowledgement"], Value::Null);
+
+    let (status, body) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, events) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    let backup = events
+        .iter()
+        .position(|e| e["kind"] == "backupTaken")
+        .expect("the backup is an event");
+    let first_write = events
+        .iter()
+        .position(|e| e["kind"] == "stepStarted" && e["step"].as_str().unwrap().contains("unload"))
+        .expect("an unload");
+    assert!(backup < first_write, "{events:?}");
+    assert_eq!(events[backup]["octets"], 1416);
+
+    let (_, status) = send(&h.app, get("/api/device-download/status")).await;
+    let file = status["backupFile"]
+        .as_str()
+        .expect("a backup file")
+        .to_owned();
+    assert!(file.starts_with("device-backups/1.1.67_"), "{file}");
+    let stored = knx_app::device_backup::read_backup(&h.state.data_dir.join(&file)).unwrap();
+    assert_eq!(stored.application, plan["programId"].as_str().unwrap());
+    let region = stored
+        .backup
+        .regions
+        .iter()
+        .find(|r| r.address == 0x4400)
+        .expect("the parameter segment");
+    let expected: Vec<u8> = old.into_iter().map(|o| o.unwrap_or(0)).collect();
+    assert_eq!(region.octets, expected, "what the device held before");
+}
+
+/// Group addresses only has not run on hardware: the plan says untested,
+/// and `start` refuses without the exact acknowledgement, before any
+/// tunnel opens.
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
+    let h = harness(SimulatorConfig::default()).await;
+    h.device
+        .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+    let (status, plan) = send(
+        &h.app,
+        post(
+            "/api/device-download/plan",
+            json!({
+                "address": "1.1.67",
+                "partial": { "parameters": false, "groupAddresses": true }
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    assert_eq!(plan["support"]["level"], "untested", "{plan}");
+    assert_eq!(
+        plan["untestedAcknowledgement"],
+        "I accept an untested download to 1.1.67"
+    );
+    for accept in [
+        Value::Null,
+        json!("yes"),
+        json!("I accept an untested download to 1.1.68"),
+    ] {
+        let (status, body) = send(
+            &h.app,
+            post(
+                "/api/device-download/start",
+                json!({
+                    "planId": plan["planId"],
+                    "gateway": GATEWAY,
+                    "confirmation": "I confirm download to 1.1.67",
+                    "acceptUntested": accept,
+                }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body.to_string().contains("untested"), "{body}");
+    }
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0, "no tunnel opened");
+    assert!(!h.device.memory_was_written());
+
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device-download/start",
+            json!({
+                "planId": plan["planId"],
+                "gateway": GATEWAY,
+                "confirmation": "I confirm download to 1.1.67",
+                "acceptUntested": "I accept an untested download to 1.1.67",
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (end, _) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
 }

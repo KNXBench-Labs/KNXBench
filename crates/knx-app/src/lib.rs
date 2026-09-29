@@ -9,8 +9,10 @@
 
 pub mod access_key;
 pub mod comparison;
+pub mod device_backup;
 pub mod device_download;
 pub mod documentation;
+pub mod download_support;
 pub mod import;
 pub mod progress;
 pub mod serial_number;

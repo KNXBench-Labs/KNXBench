@@ -19,6 +19,31 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K12: an individual address by serial number, no button
+
+- **Services.** `A_IndividualAddressSerialNumber_Read/_Response/_Write`
+  (AL §3.2.4/§3.2.5, APCI `3DCh`/`3DDh`/`3DEh`) encode and decode; the bus
+  monitor names them.
+- **Procedures.** MP §2.4 read and MP §2.5 write in
+  `knx_net::commissioning::serial_number_write`: find, uniqueness probe,
+  write, read-back, no restart. `PID_SERIAL_NUMBER` (RES §4.2.11) is
+  readable over a connection.
+- **Serial numbers** from the operator, the project
+  (`DeviceInstance/@SerialNumber`, base64) or the device. New
+  `knx_core::commissioning::serial_number::SerialNumber` and
+  `knx_app::serial_number::project_serial_number`.
+- **CLI and HTTP.** `knx device address-by-serial`, `knx device
+  find-serial`; `POST /api/device-address/by-serial`, `GET
+  /api/device-address/find-serial`. Same phrase, exclusion and
+  gateway-exclusivity rules as K6.
+- **Simulator.** Answers the services, holds a serial number (optionally
+  on a second device), and now switches programming mode off on a Basic
+  Restart (MP §3.7.1.1.1, p. 80).
+- **Refactor.** MP §2.3 step 1's occupancy probe is a shared function;
+  §2.5's uniqueness check uses it.
+- **Tests.** Core, net, app, CLI (10) and HTTP (4); 9/9 mutants killed.
+- **Not live** (KL §139).
+
 ## 2026-09-29 — K11: a download can carry the device's access key
 
 - **Where the key comes from.** The project's `Installation/@BCUKey`, or a

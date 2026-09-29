@@ -18,6 +18,7 @@ pub mod partial_download_variant;
 pub mod procedure;
 pub mod programming_mode;
 pub mod properties;
+pub mod serial_number;
 
 use std::fmt;
 

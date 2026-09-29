@@ -439,6 +439,10 @@ would be a write this goal does not need.
 
 ### K12 — Individual address by serial number, TP (item 1)
 
+**Done 2026-09-29, simulator only.** Encoders, MP §2.4/§2.5,
+`PID_SERIAL_NUMBER`, project serial numbers, CLI and HTTP; 9/9 mutants
+killed. KL §139. The live step below is still open and needs its own go.
+
 `A_IndividualAddressSerialNumber_Read/_Response/_Write` encoders (AL),
 `NM_IndividualAddress_SerialNumber_Read` and `_Write` (MP §2.4/§2.5), the
 serial number read from the project or from `PID_SERIAL_NUMBER`. CLI and

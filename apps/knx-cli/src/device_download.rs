@@ -1062,8 +1062,12 @@ mod tests {
         assert_eq!(written, Written::Partially, "{out}");
         assert!(out.contains("written to the device: partially"), "{out}");
         assert!(
-            out.contains("`knx device restore` writes it back"),
+            out.contains("`knx device restore` can plan an attempted recovery"),
             "the way back is named: {out}"
+        );
+        assert!(
+            out.contains(".backup.json"),
+            "and where the backup is: {out}"
         );
     }
 

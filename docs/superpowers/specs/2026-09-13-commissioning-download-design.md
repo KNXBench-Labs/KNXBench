@@ -15,6 +15,11 @@
   describe. Its §5 load state machine is reached over memory records at
   `0104h`, not over `PID_LOAD_STATE_CONTROL`. The property-based
   procedures specified here have still run only against the simulator.
+- **Status update, 2026-09-29:** the mask-`070nh` path and the
+  individual-address write are product commands (CLI, web; goal-commission
+  K4–K6). Both ran live through them on `1.1.67` (RESEARCH §19). v1 scope
+  is ADR-0048. This document's property-based procedures are not part of
+  v1 and stay simulator-only.
 - **Closes:** nothing on its own. It narrows
   [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md) from "blocked" to
   "specified, unimplemented", and it is the design input for

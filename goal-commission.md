@@ -394,6 +394,16 @@ Recorded in KNOWN_LIMITATIONS §7.
 3. Write a closing handover, including the items for the goal.md session
    (§6).
 
+**Status 2026-09-29: done.** The review covered `a47d168..dafa2b6`
+(37 commits, 62 code files). The hardware paths are sound: the write gate
+allowlist, lock order and one-tunnel exclusion across download,
+programming, monitor and scan, named refusal of non-`070nh` masks in
+productdb, net and CLI, and a tunnel disconnect on every exit. The live
+finding (K6 restart misreport) was fixed in `6a71162`. The remaining
+findings were stale commissioning rows (E1, ROADMAP, §7/§101/§104/§136,
+spec status), corrected in the K10 commit. Handover: `.ai/CURRENT_STATE.md`
+2026-09-29 K10 entry.
+
 ---
 
 ## 4. Completion condition

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U11 / ISSUE-07 session)
+- **Timestamp:** 2026-09-29 16:19 CEST
+- **Web lock: taken by the UI U11 session for ISSUE-07** — Product Catalog in the main workspace and atomic multi-device creation. Do not edit `apps/knx-web` concurrently until this package publishes and releases the lock.
+- **Completed:** Confirmed `main` and `origin/main` at `766303f`, root has only the unrelated untracked `docs/paperclip-shutdown/`, and the preceding web lock is released. Read `goal-ui.md` and the ISSUE-07 plan. U10's discovery cause was traced to host `ufw` by the separate diagnosis session; this UI session will not alter the firewall or touch live KNX hardware on a general "go".
+- **Pending/Next Steps:** Create an isolated `ui-catalog-batch` worktree from current `origin/main`, inspect existing catalog, commands and HTTP routes, add RED tests, implement the smallest atomic quantity-one/batch path, review and run branch/merged gates, publish, release this lock and clean only owned artifacts. U10's end-to-end discovery remains pending the user's separate firewall decision.
+- **Notes for Codex or Claude:** No subagents on this UI goal. Use one command/undo batch for multi-create, preserve diagnostics and metadata, do not guess addresses. `OriginalData` corpus must be present for corpus-backed tests. Preserve the root's unrelated shutdown folder and all other sessions' worktrees.
+
+---
+
 - **Last Agent:** Claude (discovery diagnosis + partial-backup live session)
 - **Timestamp:** 2026-09-29 16:14 CEST
 - **Web lock:** none held (U10 released at 15:38; this session's hint edit was merged and published at `c40b34b`).

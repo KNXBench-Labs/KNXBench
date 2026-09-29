@@ -255,8 +255,12 @@ fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
             crate::bus::DecodedValue::Conflict { text } => {
                 json!({ "kind": "conflict", "text": text })
             }
-            crate::bus::DecodedValue::Error { text, error } => {
-                json!({ "kind": "error", "text": text, "error": error })
+            crate::bus::DecodedValue::Error { dpt, reason, text, error } => {
+                let reason = match reason {
+                    crate::bus::DecodeFailureReason::UnsupportedDpt => "unsupportedDpt",
+                    crate::bus::DecodeFailureReason::DecodeFailed => "decodeFailed",
+                };
+                json!({ "kind": "error", "dpt": dpt, "reason": reason, "text": text, "error": error })
             }
         }),
     })
@@ -306,10 +310,12 @@ mod tests {
         );
         assert_eq!(
             telegram_json(&row(Some(DecodedValue::Error {
+                dpt: "DPST-1-1".into(),
+                reason: crate::bus::DecodeFailureReason::DecodeFailed,
                 text: "raw 0x01".into(),
                 error: "payload too short".into(),
             })))["decoded"],
-            json!({ "kind": "error", "text": "raw 0x01", "error": "payload too short" })
+            json!({ "kind": "error", "dpt": "DPST-1-1", "reason": "decodeFailed", "text": "raw 0x01", "error": "payload too short" })
         );
         assert_eq!(telegram_json(&row(None))["decoded"], Value::Null);
     }

@@ -1,8 +1,7 @@
 //! Atomic native JSON session-log export after an OS save dialog chooses the path.
-use std::io::Write;
 use std::path::Path;
 
-const MAX_EXPORT_BYTES: usize = 16 * 1024 * 1024;
+use crate::native_json_export::{write_atomically, MAX_EXPORT_BYTES};
 
 /// The UI cannot supply an arbitrary destination; only the native dialog does.
 /// Validate before creating any temporary file so invalid output never replaces
@@ -23,18 +22,5 @@ pub(crate) fn write_session_log(path: &Path, contents: &str) -> Result<(), Strin
     {
         return Err("Unsupported session log export document".into());
     }
-    let directory = path
-        .parent()
-        .ok_or("Session log export has no parent directory")?;
-    let mut temporary = tempfile::NamedTempFile::new_in(directory)
-        .map_err(|error| format!("Cannot create session log file: {error}"))?;
-    temporary
-        .write_all(contents.as_bytes())
-        .and_then(|_| temporary.flush())
-        .and_then(|_| temporary.as_file().sync_all())
-        .map_err(|error| format!("Cannot write session log: {error}"))?;
-    temporary
-        .persist(path)
-        .map_err(|error| format!("Cannot finish session log export: {error}"))?;
-    Ok(())
+    write_atomically(path, contents, "session log")
 }

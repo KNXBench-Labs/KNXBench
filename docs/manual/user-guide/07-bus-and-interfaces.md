@@ -95,6 +95,12 @@ The **Decoded** column is the interesting one. If a project is open when you con
 KNXBench takes a snapshot of that project's group addresses and their datapoint types
 and decodes each telegram against it. A raw `0x01` becomes something you can read. See
 [Datapoint types](../knx-basics/04-datapoint-types.md) for what those types are.
+The row and its details distinguish **No DPT assigned** (including no project),
+**Conflicting DPTs**, **Unsupported DPT** (the codec does not implement the resolved
+type) and **Decode failed** (the resolved type could not decode this payload). An
+older server that supplies an error without a structured reason is labelled
+**Decode error (reason unknown)** instead of guessing from its prose. The raw
+payload, resolved DPT where known and original error text remain available.
 
 Changing the group-address style refreshes the running session's complete address
 and decoding context, including a style change made through Undo or Redo. It does
@@ -104,9 +110,37 @@ detects such a mismatch, sending is locked and a notice asks you to reconnect
 against the current project. This browser-profile-local check cannot detect every
 edit from another browser or client; see the [known limitations](../known-issues.md).
 
-A filter box above the table narrows rows by destination or name. If telegrams arrive
-faster than the buffer can keep them, KNXBench reports how many were lost instead of
-hiding the gap.
+**Pause** stops this panel's polling without ending the gateway session or moving its
+server cursor. **Resume** asks for telegrams buffered in the meantime. If either
+the server or the panel has discarded older rows, it reports the losses separately;
+Pause cannot guarantee an unlimited backlog. **Disconnect** ends the session but
+leaves its captured rows available to inspect and export until another session
+starts or the panel is closed. Neither Pause nor filtering blocks a deliberate
+**Send a value** operation; that separate action still writes to the live bus.
+
+The labelled filter box narrows rows by destination or name; service checkboxes
+limit the visible table further. These controls filter already captured rows in
+the browser, without changing the capture, statistics or server cursor. On a
+narrow window, focus the labelled telegram-table region and use Left/Right to
+scroll the columns horizontally rather than squashing the decoded labels.
+The expandable **Statistics** section counts services, busiest destinations and
+most frequent sources from the *currently retained* telegrams only. It excludes
+the synthetic gateway-close marker and shows at most ten entries per category.
+The panel keeps at most 1000 captured rows; older client rows are removed and
+counted separately from the server's dropped-row indicator.
+
+**Export capture** downloads a UTF-8 JSON v1 snapshot, not CSV or an ETS file.
+It includes retained rows (`seq`, `timestamp`, `source`, `destination`, optional
+`destinationName` and `rawPayload`, `service`, and `decoded` with DPT/value or
+error where available) and metadata: `format: "knxbench-bus-monitor"`, `version: 1`,
+`capacity: 1000`, session/process identity, status, export time,
+`serverDroppedBefore`, `clientPrunedCount` and a loss notice. JSON quotes
+formula-looking names as data, rather than creating spreadsheet cells. In a
+browser the file is downloaded locally; in the desktop app the native save
+dialog selects the destination and a validated, atomic write preserves an old
+file if validation fails. Both paths refuse files over 16 MiB. **This is only
+a bounded session snapshot, not a complete bus history.** It contains addresses
+and payloads; treat the exported file as private.
 
 ## Sending a value
 

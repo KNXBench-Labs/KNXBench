@@ -64,14 +64,15 @@ apps/
                    that speaks HTTP.
   knx-desktop/     Tauri v2 shell. src-tauri/ is a thin native wrapper that
                    spawns knx-server locally and points a WebView at it;
-                   one native save-dialog command writes the session-log
-                   JSON export chosen by the user (ADR-0047). No KNX
-                   domain or project mutation lives in the shell.
+                   narrowly scoped native save-dialog commands write
+                   session-log and bus-monitor JSON snapshots chosen by the
+                   user (ADR-0047's local-file boundary). No KNX domain or
+                   project mutation lives in the shell.
   knx-web/         React + Vite frontend (npm package, not a Cargo
                    workspace member) — served by knx-server's static-file
                    fallback and, in dev, by knx-desktop's Tauri WebView.
-                   Project and bus operations use fetch(); the only native
-                   invoke is the desktop session-log file-delivery adapter.
+                   Project and bus operations use fetch(); native invokes
+                   only deliver the two local JSON snapshots.
 
 crates/
   knx-core/        Domain model, addresses, DPT, override resolution, validation.
@@ -185,10 +186,10 @@ These are tests. Each one fails the build.
    Rust build (ADR-0002).
 3. **Project and bus operations communicate through HTTP into `knx-server`**;
    the UI has no path of its own to `knx-app`, `knx-store` or `knx-etsproj`.
-   The one desktop-only exception is the OS save-dialog command for a
-   session-log JSON snapshot (ADR-0047): it writes a local file selected
-   by the dialog and cannot mutate project or KNX state. Originally this
-   rule was stated as "only through Tauri commands into `knx-app`" when
+   The desktop-only exceptions are OS save-dialog commands for local
+   session-log and bus-monitor JSON snapshots (the bounded-file boundary
+   established in ADR-0047). They write dialog-selected files and cannot
+   mutate project or KNX state. Originally this rule was stated as "only through Tauri commands into `knx-app`" when
    `apps/knx-desktop` was the only deployment target (Session 5); the
    web/Docker deployment target moved domain requests to the HTTP API.
    This rule is **still not mechanically enforced**: `check-layering`'s

@@ -5331,6 +5331,46 @@ mismatch. U11/ISSUE-09 owns the tests and implementation, not U2's research.
 
 ---
 
+## 21. U7 bus-monitor decoding and bounded snapshots (2026-09-29)
+
+**[V]** `apps/knx-server/src/bus.rs::GroupAddressContext::decode` already
+separates absent project/DPT (`Unresolved`) from disagreeing linked DPTs
+(`Conflict`). For a single DPT it calls `decode_single`, which delegates to
+`knx_core::decode`. The core's `DptCodecError::UnsupportedDpt` is a distinct
+variant from `WrongLength` and other decode errors
+(`crates/knx-core/src/dpt/codec.rs`). U7 carries that distinction as
+`DecodedValue::Error { dpt, reason, text, error }` and adds `dpt` and
+`reason: unsupportedDpt | decodeFailed` to the HTTP DTO without removing
+the legacy `error` field (`bus_routes.rs::DecodedValueDto`). The UI uses
+only structured `kind`/`reason` values for its status labels; an older
+error DTO with no reason receives an *unknown reason* label, never a guess
+from the human error text. Rust codec/DTO tests and the UI's four-state
+and legacy-state regressions pin these branches.
+
+**[V]** `GET /api/bus/monitor/telegrams?since=` supplies a session identity,
+`nextSince`, `droppedBefore`, source/destination, raw payload and optional
+decode. The panel retains at most 1000 rows and records its own eviction
+count separately from server loss; client Pause does not end the session,
+and a late response after Pause does not advance the held cursor. Concurrent
+slow polls are blocked in the client effect. Statistics include only
+retained real telegrams, excluding `SessionClosed`, with ten entries at most
+for each grouping. The JSON snapshot preserves the row DTO and both loss
+counters; `format: knxbench-bus-monitor`, `version: 1`, `capacity: 1000`,
+process/session identity, status and export time identify its scope.
+Browser export is a local JSON Blob; the desktop shell uses a native save
+dialog and validated, atomic 16 MiB write, not a server path. This reuses
+the local-file boundary of ADR-0047, not its session-log wire format.
+
+**[I]** A snapshot is a *retained-window diagnostic*, not an audit or a
+complete bus trace: a paused client can let the server ring overwrite old
+rows, and continued capture can evict older client rows. Filtered table
+rows do not change either loss count, export scope or server cursor.
+**[A]** No live-bus run, native WebKitGTK layout check or native save-dialog
+interaction has been performed for U7; unit/API and browser tests cannot
+establish those platform behaviours.
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

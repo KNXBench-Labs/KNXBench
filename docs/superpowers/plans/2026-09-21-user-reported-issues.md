@@ -310,11 +310,19 @@
 
 **Interfaces:** UI keeps host and numeric port separate and composes the existing endpoint string only at the API boundary. Discovered endpoints populate both fields. Discovery remains a read-only multicast operation and never auto-connects.
 
-- [ ] Add parsing/validation tests for IPv4, IPv6, hostname, blank/default port, invalid port, and discovered endpoints.
+- [x] Add parsing/validation tests for IPv4, IPv6, hostname, blank/default port, invalid port, and discovered endpoints. (`gatewayEndpoint.test.ts` covers parsing, defaults and rejected unsupported hosts/ports; `BusMonitorPanel.test.tsx` covers the separate fields, preference hydration, discovery selection and the unchanged start payload. IPv6 and hostnames are preserved but explicitly rejected: the server's `SocketAddrV4` tunnel cannot connect to them.)
 - [x] Reproduce discovery from the unpackaged dev build and the exact AppImage on the same host/interface, recording bind address, HPAI, multicast interface, timeout, and firewall/sandbox evidence. (2026-09-28 U2 live syscall comparison, RESEARCH §20.1: both send from the host interface and get no response; firewall-rule inspection is denied, explicitly recorded as unknown.)
 - [x] Rank causes from evidence before editing; do not add retries, sleeps, or a packaging workaround without a demonstrated mechanism. (U2 AppImage-vs-dev comparison, RESEARCH §20.1 and KNOWN_LIMITATIONS §79: a packaging-only fault is unsupported; network/gateway behavior remains unproven.)
 - [ ] Implement the narrow fix at the owning network/packaging layer and retain manual connection as a first-class fallback.
 - [ ] Add loopback tests where possible and document the boundary that still requires a real multicast network.
+
+**U10 scope boundary (2026-09-29):** Separate fields and the manually entered
+IPv4 endpoint can ship without changing the KNXnet/IP protocol. U2 did not
+establish an AppImage-only defect: both packaged and unpackaged servers sent
+the same multicast search and neither received a response. A wire capture or
+gateway-side evidence is still required before declaring or coding a
+discovery fix; the two discovery items above remain open, not silently closed
+by the endpoint UX work.
 
 ### ISSUE-13: Session-log freetext search and export
 

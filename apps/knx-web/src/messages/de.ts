@@ -486,6 +486,10 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.title": "Bus-Monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunneling",
   "busMonitor.gatewayLabel": "Gateway-Adresse",
+  "busMonitor.gatewayHost": "Gateway-Host",
+  "busMonitor.gatewayPort": "Gateway-Port",
+  "busMonitor.invalidHost": "Geben Sie nur einen numerischen IPv4-Host ein; der Port gehört in das eigene Portfeld. Hostnamen und IPv6 werden von diesem Tunnel noch nicht unterstützt.",
+  "busMonitor.invalidPort": "Der Gateway-Port muss zwischen 1 und 65535 liegen.",
   "busMonitor.gatewayLocked":
     "Trennen Sie die laufende Sitzung, bevor Sie die Gateway-Adresse ändern.",
   "busMonitor.connectNeedsGateway": "Geben Sie zuerst eine Gateway-Adresse ein.",
@@ -1203,7 +1207,7 @@ export const messages: Record<MessageKey, string> = {
     "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse, Name oder Datenpunkttyp. Was eine Gruppenadresse ist, erklärt F1.",
   "help.tip.busGateway.label": "Was als Gateway einzutragen ist",
   "help.tip.busGateway.text":
-    "Adresse und Port eines KNXnet/IP-Gateways, etwa 192.0.2.1:3671. Nur Tunneling — diese Anwendung sucht das Netz nicht nach einem Gateway ab.",
+    "Numerischen IPv4-Host und Port in getrennte Felder eingeben (Vorgabe 3671). Die Suche kann Schnittstellen vorschlagen; ein leeres Ergebnis sperrt die manuelle Eingabe nicht. Dieser Monitor nutzt nur Tunneling.",
 
   "workbench.resizeNavigation": "Höhe des Navigationsblocks",
   "workbench.resizeDiagnostics": "Höhe des Diagnoseblocks",

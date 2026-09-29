@@ -522,6 +522,10 @@ export const messages = {
   "busMonitor.title": "Bus monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",
   "busMonitor.gatewayLabel": "Gateway address",
+  "busMonitor.gatewayHost": "Gateway host",
+  "busMonitor.gatewayPort": "Gateway port",
+  "busMonitor.invalidHost": "Enter only a numeric IPv4 host; put the port in the separate port field. Hostnames and IPv6 are not supported by this tunnel yet.",
+  "busMonitor.invalidPort": "Gateway port must be 1–65535.",
   "busMonitor.gatewayLocked":
     "Disconnect the running session before changing the gateway address.",
   "busMonitor.connectNeedsGateway": "Enter a gateway address first.",
@@ -1348,7 +1352,7 @@ export const messages = {
     "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address, by name or by datapoint type. F1 explains what a group address is.",
   "help.tip.busGateway.label": "What to enter as the gateway",
   "help.tip.busGateway.text":
-    "The address and port of a KNXnet/IP gateway, such as 192.0.2.1:3671. Tunnelling only — this application does not search the network for one.",
+    "Enter the numeric IPv4 host and port in separate fields (3671 by default). Search can suggest interfaces, but an empty result never blocks a manual address. This monitor uses tunnelling only.",
 
   // T28, from the user's own hands-on run. The two separator labels name
   // what moves, not where the handle is: a screen reader announcing

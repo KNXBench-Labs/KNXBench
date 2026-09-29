@@ -1,6 +1,6 @@
 # Project Statistics
 
-**Last update:** 2026-09-29 15:34:18 CEST (UTC+02:00)
+**Last update:** 2026-09-29 15:41:02 CEST (UTC+02:00)
 
 Welcome to the numerical engine room of KNXBench: this page counts commits,
 tokens, agents, models, tools, caffeine-adjacent productivity and several things
@@ -11,43 +11,43 @@ Git and session logs; the ants in the fun-fact section remain under observation.
 
 ## 💡 Fun Facts
 ### 📚 Books, Pages & Literary Suffering
-- 📚 **51.716.469 book pages** of code & docs generated and processed (equivalent to reading *The Lord of the Rings* trilogy **43.097 times**).
-- 📜 The entire *Encyclopædia Britannica* contains ~44 million words. This repository processed **352.6 full sets**.
-- 🎭 Shakespeare's complete works contain roughly 884,000 words; this is about **17.550 complete Bards**.
-- 📄 Printed at 300 words per page and 500 sheets per ream, it would consume roughly **103.432 reams of paper**.
+- 📚 **51.729.942 book pages** of code & docs generated and processed (equivalent to reading *The Lord of the Rings* trilogy **43.108 times**).
+- 📜 The entire *Encyclopædia Britannica* contains ~44 million words. This repository processed **352.7 full sets**.
+- 🎭 Shakespeare's complete works contain roughly 884,000 words; this is about **17.555 complete Bards**.
+- 📄 Printed at 300 words per page and 500 sheets per ream, it would consume roughly **103.459 reams of paper**.
 - 📚 Binding those 90,000-word novels at 3 cm each would create about **5.2 kilometers of bookshelf**.
 
 ### ⏱️ Human Time & Manual Effort
-- ⌨️ Average professional coding speed is ~2,000 words/day. The project processed **21253.3 human-years worth of typing**.
-- ☕ At 10,000 tokens per manual coding sprint, completing this via human effort would take **2.068.658 cups of espresso**.
+- ⌨️ Average professional coding speed is ~2,000 words/day. The project processed **21258.9 human-years worth of typing**.
+- ☕ At 10,000 tokens per manual coding sprint, completing this via human effort would take **2.069.197 cups of espresso**.
 - 🗣️ Spoken continuously at 130 words per minute, it would take **227.1 years** to say everything out loud.
-- 👓 Read at 238 words per minute for eight hours a day, it would occupy about **372.1 reader-years**.
-- ⌨️ At roughly four characters per output token, AI generation avoided about **295.725.080 physical keystrokes** (backspace heroics not included).
+- 👓 Read at 238 words per minute for eight hours a day, it would occupy about **372.2 reader-years**.
+- ⌨️ At roughly four characters per output token, AI generation avoided about **295.796.220 physical keystrokes** (backspace heroics not included).
 
 ### 🌍 Scale, Biology & Suspicious Liquids
 - 🧬 Human DNA contains ~3 billion base pairs. This project's token history is **6.90x the length of the human genome**.
-- 🦠 A single gram of soil contains ~40 million bacteria. Token volume equals the bacterial population in **517.2 grams of fertile dirt**.
-- 🐜 An ant colony has ~100,000 ants. Enough tokens were processed to give **206.865 ants** their own full context window.
-- 🌌 If every token were 1 millimeter, the line would stretch **20.686 kilometers** (about **0.52x around Earth**).
-- 💧 If every token were one microliter of water, they would fill about **8.27 Olympic swimming pools**.
+- 🦠 A single gram of soil contains ~40 million bacteria. Token volume equals the bacterial population in **517.3 grams of fertile dirt**.
+- 🐜 An ant colony has ~100,000 ants. Enough tokens were processed to give **206.919 ants** their own full context window.
+- 🌌 If every token were 1 millimeter, the line would stretch **20.691 kilometers** (about **0.52x around Earth**).
+- 💧 If every token were one microliter of water, they would fill about **8.28 Olympic swimming pools**.
 
 ### 💾 Messages & Retro Storage
-- 💾 In plain text ASCII, this represents **77.06 GB of raw source text data**.
-- 🐦 At 280 characters each, the generated and processed text would fill about **295.522.685 maximally packed posts**.
-- 🗂️ At 80 characters per punched card, this would require **1.034.329.399 cards** and a warehouse-sized debugging session.
-- 💽 Stored as plain text on 1.44 MB floppy disks, it would need roughly **54.800 disks** — please label them carefully.
+- 💾 In plain text ASCII, this represents **77.08 GB of raw source text data**.
+- 🐦 At 280 characters each, the generated and processed text would fill about **295.599.672 maximally packed posts**.
+- 🗂️ At 80 characters per punched card, this would require **1.034.598.854 cards** and a warehouse-sized debugging session.
+- 💽 Stored as plain text on 1.44 MB floppy disks, it would need roughly **54.815 disks** — please label them carefully.
 
 ### ⚡ Resources & Emissions
-- ⚡ At the stated inference scenario, the processed tokens represent roughly **2.068 kWh** and **682.7 kg CO₂e**.
+- ⚡ At the stated inference scenario, the processed tokens represent roughly **2.069 kWh** and **682.8 kg CO₂e**.
 
 *No ants were harmed in the making of these statistics — at least none that I know of.*
 
 ## Git Statistics (Current Repository)
-- **Commits:** 1.637
+- **Commits:** 1.641
 - **Merges:** 181
-- **Pushes/Sync:** 1.633
-- **Lines Added (+):** 452.038
-- **Lines Deleted (-):** 89.396
+- **Pushes/Sync:** 1.640
+- **Lines Added (+):** 452.243
+- **Lines Deleted (-):** 89.566
 
 ## Session Time & Execution Analysis
 | Provider | Thinking / Reasoning Time | Generation Time | Executed Tasks |
@@ -66,11 +66,11 @@ for a useful comparison.
 | Provider | Input Tokens | Output Tokens | Cache Read Tokens | Cache Write Tokens |
 | :--- | ---: | ---: | ---: | ---: |
 | **Claude** | 943.378 | 62.706.774 | 14.690.805.858 | 668.330.006 |
-| **Codex** | 1.983.144.265 | 11.224.496 | 3.269.433.216 | 0 |
-| **TOTAL** | **1.984.087.643** | **73.931.270** | **17.960.239.074** | **668.330.006** |
+| **Codex** | 1.983.196.034 | 11.242.281 | 3.274.752.768 | 0 |
+| **TOTAL** | **1.984.139.412** | **73.949.055** | **17.965.558.626** | **668.330.006** |
 
 ### 🚀 GRAND TOTAL CONSUMPTION
-**20.686.587.993 Total Tokens**
+**20.691.977.099 Total Tokens**
 
 ## Agent & System Breakdown
 
@@ -78,7 +78,7 @@ for a useful comparison.
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Claude Code | 14.183.526.293 | 511.880 | 55.189.032 | 13.619.391.516 | 190h 42m 40s | 4.302 | 74.987 |
 | Codex CLI | 3.855.221.595 | 1.958.995.152 | 7.649.291 | 1.888.577.152 | 99h 32m 10s | 443 | 730 |
-| Hermes Agent via Headroom | 2.564.284.949 | 22.756.950 | 10.767.374 | 2.371.281.050 | 48h 2m 23s | 67 | 3.858 |
+| Hermes Agent via Headroom | 2.569.674.055 | 22.808.719 | 10.785.159 | 2.376.600.602 | 48h 2m 23s | 67 | 3.913 |
 | Hermes Agent (direct) | 59.255.761 | 1.815.874 | 197.391 | 57.242.496 | 29h 9m 57s | 6 | 301 |
 | Claude Code Cloud | 24.299.395 | 7.787 | 128.182 | 23.746.860 | 47m 53s | 4 | 177 |
 
@@ -94,9 +94,9 @@ tokens still roll up into the Claude/Codex provider totals above.
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Claude Sonnet 5 (`claude-sonnet-5`) | 10.199.499.647 | 356.049 | 33.161.909 | 9.842.273.676 | 85h 11m 49s | 1.592 | 49.371 |
 | Claude Opus 5 (`claude-opus-5`) | 3.932.069.670 | 136.736 | 21.806.057 | 3.719.638.821 | 101h 51m 24s | 1.338 | 23.265 |
-| GPT-5.6 Sol (`gpt-5.6-sol`) | 3.830.787.824 | 1.622.259.033 | 7.224.471 | 2.201.304.320 | 119h 40m 17s | 227 | 1.007 |
+| GPT-5.6 Sol (`gpt-5.6-sol`) | 3.833.771.299 | 1.622.282.256 | 7.229.843 | 2.204.259.200 | 119h 40m 17s | 227 | 1.033 |
 | Claude Opus 5.5 (`claude-opus-5-5`) | 1.048.921.426 | 387.378 | 6.947.503 | 907.241.848 | 5h 3m 56s | 21 | 1.312 |
-| gpt-6-sol-900k | 400.436.317 | 4.361.444 | 777.593 | 395.297.280 | 0s | 1 | 116 |
+| gpt-6-sol-900k | 402.841.948 | 4.389.990 | 790.006 | 397.661.952 | 0s | 1 | 145 |
 | GPT-5.6 Luna (`gpt-5.6-luna`) | 303.792.963 | 95.846.543 | 1.276.596 | 206.669.824 | 6h 20m 37s | 46 | 2.293 |
 | GPT-6 Astra (`gpt-6-astra`) | 279.231.923 | 121.156.591 | 800.452 | 157.274.880 | 37h 25m 50s | 14 | 169 |
 | GPT-5.6 Terra (`gpt-5.6-terra`) | 268.157.389 | 137.494.936 | 861.493 | 129.800.960 | 8h 6m 6s | 32 | 33 |
@@ -157,7 +157,7 @@ in the integration row, avoiding double-counted tokens.
 
 | Effort | Total tokens | Input | Output | Cache read | Generation time | Tasks | Tool calls |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| high | 15.824.850.745 | 726.063.146 | 58.672.427 | 14.509.323.831 | 203h 21m 49s | 2.833 | 69.253 |
+| high | 15.830.239.851 | 726.114.915 | 58.690.212 | 14.514.643.383 | 203h 21m 49s | 2.833 | 69.308 |
 | medium | 3.321.464.378 | 1.253.053.792 | 8.811.126 | 1.978.811.068 | 135h 15m 48s | 249 | 3.601 |
 | xhigh | 1.305.466.851 | 2.075.428 | 5.627.517 | 1.257.829.693 | 25h 6m 59s | 318 | 4.582 |
 | unknown | 216.504.459 | 644.706 | 518.043 | 199.148.789 | 3h 58m 0s | 1.418 | 2.506 |
@@ -174,19 +174,19 @@ effort value. It is retained rather than guessed from model names or response si
 | Rank | Tool | Calls |
 | ---: | :--- | ---: |
 | 1 | Bash | 55.117 |
-| 2 | terminal | 10.105 |
+| 2 | terminal | 10.134 |
 | 3 | Read | 10.084 |
-| 4 | read_file | 8.166 |
+| 4 | read_file | 8.178 |
 | 5 | Edit | 6.008 |
-| 6 | execute_code | 2.665 |
-| 7 | patch | 2.589 |
-| 8 | search_files | 2.424 |
+| 6 | execute_code | 2.666 |
+| 7 | patch | 2.594 |
+| 8 | search_files | 2.426 |
 | 9 | Write | 1.169 |
 | 10 | tool_call | 1.089 |
 | 11 | Agent | 1.001 |
 | 12 | ToolSearch | 582 |
-| 13 | write_file | 511 |
-| 14 | skill_view | 484 |
+| 13 | write_file | 512 |
+| 14 | skill_view | 489 |
 | 15 | Monitor | 372 |
 | 16 | wait_agent | 368 |
 | 17 | SendMessage | 194 |
@@ -205,10 +205,10 @@ effort value. It is retained rather than guessed from model names or response si
 | 5 | test-driven-development | 35 |
 | 6 | superpowers:finishing-a-development-branch | 31 |
 | 7 | superpowers:brainstorming | 28 |
-| 8 | autonomous-goal-boundaries | 24 |
+| 8 | autonomous-goal-boundaries | 25 |
 | 9 | superpowers:writing-plans | 24 |
-| 10 | requesting-code-review | 22 |
-| 11 | repository-delivery | 21 |
+| 10 | repository-delivery | 23 |
+| 11 | requesting-code-review | 22 |
 | 12 | superpowers:using-git-worktrees | 19 |
 | 13 | codex | 18 |
 | 14 | knx-spec | 16 |
@@ -224,10 +224,10 @@ or older log records remain in the overall tool count without inventing a skill 
 
 | Metric | Value | Interpretation |
 | :--- | ---: | :--- |
-| Tokens per committed added line | 45,762.9 | All selected input/output/cache tokens ÷ historical Git additions |
-| Code churn ratio (added ÷ deleted) | 5.06:1 | Above 1 means the history added more lines than it removed |
+| Tokens per committed added line | 45,754.1 | All selected input/output/cache tokens ÷ historical Git additions |
+| Code churn ratio (added ÷ deleted) | 5.05:1 | Above 1 means the history added more lines than it removed |
 | Output tokens per changed line | 136.5 | AI output ÷ added and deleted Git lines |
-| Git commit density | 12,636,889.4 tokens/commit | Total selected token volume ÷ commits |
+| Git commit density | 12,609,370.6 tokens/commit | Total selected token volume ÷ commits |
 
 > Git `--numstat` measures historical committed additions/deletions, not surviving
 > present-day source lines. Generated files, documentation and vendored changes are
@@ -238,8 +238,8 @@ or older log records remain in the overall tool count without inventing a skill 
 | Provider | Estimated API-equivalent cost | Cache share of logical input | Estimated cache savings |
 | :--- | ---: | ---: | ---: |
 | Claude | $7,856.91 | 95.6% | $39,665.18 |
-| Codex | $5,943.59 | 62.2% | $7,356.22 |
-| **TOTAL** | **$13,800.50** | **87.1%** | **$47,021.40** |
+| Codex | $5,945.31 | 62.3% | $7,368.19 |
+| **TOTAL** | **$13,802.22** | **87.1%** | **$47,033.37** |
 
 Price scenario (retrieved 2026-09-24): Claude uses public Sonnet 4 rates
 ($3 input / $15 output / $0.30 cache read / $3.75 cache write per MTok) from
@@ -255,9 +255,9 @@ the corresponding ordinary-input list rate.
 
 - **Prime hour:** 16:00–17:00 local time (338 logged activity events)
 - **Prime weekday:** Sunday (1.275 logged activity events)
-- **Session velocity:** 3,346.0 output tokens per active generation minute
-- **Autonomy input/output ratio:** 26.84:1 recorded non-cache input tokens per output token
-- **Tool autonomy:** 16.60 logged tool calls per task (80.053 calls)
+- **Session velocity:** 3,346.9 output tokens per active generation minute
+- **Autonomy input/output ratio:** 26.83:1 recorded non-cache input tokens per output token
+- **Tool autonomy:** 16.61 logged tool calls per task (80.108 calls)
 
 ### Activity by Time of Day
 
@@ -287,9 +287,9 @@ not a billing-grade audit.
 
 ## Resource Scenario
 
-- **Estimated inference energy:** 2,068.7 kWh
-- **Estimated CO₂ equivalent:** 682.7 kg CO₂e
-- **Estimated physical keystrokes avoided:** 295.725.080
+- **Estimated inference energy:** 2,069.2 kWh
+- **Estimated CO₂ equivalent:** 682.8 kg CO₂e
+- **Estimated physical keystrokes avoided:** 295.796.220
 
 The environmental estimate is deliberately rough and transparent: **0.1 Wh
 per 1,000 processed tokens** and **330 g CO₂e/kWh**. Real energy varies

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U10 session)
+- **Timestamp:** 2026-09-29 15:19 CEST
+- **Web lock: taken by the UI U10 session now** for `BusMonitorPanel.tsx`, `gatewayEndpoint.ts`, gateway portions of `api.ts` and the `busMonitor.*` / `help.tip.busGateway.*` message keys; the commissioning reservation was released at 15:04. The U10 work before this entry touched only surfaces outside that earlier reservation. Do not edit these files concurrently until this lock is released after publication.
+- **Completed:** U10's separated gateway host/port fields and validation, unchanged `controlEndpoint` API/preference string, responsive styles, EN/DE guidance, manual and screenshot are committed on isolated `ui-gateway-endpoint` at `a32bb10`, rebased onto `a9c3a1d`. The branch passed 78 web files/1190 tests plus build/TypeScript, 124 Rust suites/2526 passed plus fmt/Clippy, worktree-built `xtask` gates and local Chromium at 1440/400 px without a backend. A separate code review found no outstanding critical/important issues. No live bus operation or discovery fix was claimed.
+- **Pending/Next Steps:** Rebase U10 after this lock handover, run final rebased and merged-result gates, publish from root `main`, release the U10 web lock and clean only owned worktree/scratch. U10 discovery remains **open**: U2 AppImage and unpackaged server both sent multicast search without a received answer; request wire capture or gateway-side evidence before a protocol/packaging fix. U11–U13 remain; `goal-ui.md` is incomplete.
+- **Notes for Codex or Claude:** See `.ai/logs/2026-09-29_codex_ui-gateway-endpoint.md`, `docs/RESEARCH.md` §20.1 and `docs/KNOWN_LIMITATIONS.md` §79. Native WebKitGTK and real screen-reader behavior remain untested. Preserve root `docs/paperclip-shutdown/` untracked; commissioning hardware remains parked. No subagents for UI goal review.
+
+---
+
 - **Last Agent:** codex (commissioning readiness session)
 - **Timestamp:** 2026-09-29 15:04 CEST
 - **Web lock: released by commissioning** for `DeviceDownloadPanel.tsx`, its `api.ts` types and `deviceDownload.*` i18n keys; U10 must still check its own driving-provider quota and reserve the files it edits before starting. This newer release supersedes the 13:25 reservation below.

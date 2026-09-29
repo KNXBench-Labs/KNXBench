@@ -18,8 +18,12 @@ masked/unwritten memory or a non-Loaded load state. The JSON can contain
 private device configuration and must be protected and not attached to
 diagnostics. Only a backup with all parts Loaded and a product procedure
 that rederives the same steps and memory shape can become a restore plan.
-Backup creation and restore have simulator tests, not real-hardware evidence;
-neither can be promised as a universal rollback. The existing manual
+Backup creation and restore were confirmed live once, on one device and
+program (MDT `1.1.67`, `0701h`, `A-0027-15-0BAC`, complete download; RESEARCH
+top entry, 2026-09-29): backup before the first write, restore
+byte-identical over 180 dump lines. Partial-download backups, other
+devices and the refuse-before-write path on a failing backup remain
+simulator-only; neither can be promised as a universal rollback. The existing manual
 read-only baseline required by `goal-commission.md` before live tests is
 separate and still required when live tests are authorised again.
 

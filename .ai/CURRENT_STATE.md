@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U11 / ISSUE-09 device-editor session)
+- **Timestamp:** 2026-09-29 18:38 CEST
+- **Web lock: taken by the UI ISSUE-09 session for the device editor.** Do not edit `apps/knx-web` concurrently until this package publishes and releases the lock.
+- **Completed:** ISSUE-07 was published and cleaned at remote `main` `b0b2ddf`; the new isolated `ui-device-editor` worktree starts from that tip. Read the ISSUE-09 issue plan and `docs/RESEARCH.md` §20.2: line membership supplies area/line octets, but an address move is a separate intent and must never silently rewrite the device. The root checkout remains dirty with unrelated statistics/research/handover; no root file was changed. The user now asks us to continue without quota pauses until told otherwise.
+- **Pending/Next Steps:** Inspect Inspector, API, command and address validation before coding. Add RED tests for readable flag controls, atomic directional links, line-relative device octet with full-core validation, and long translated labels; implement only verified behavior. Run branch and fast-forward-result gates, publish, release the web lock, and remove only task-owned worktree/scratch/build artifacts. U12/U13 follow in their own packages.
+- **Notes for Codex or Claude:** No subagents under `goal-ui.md`. Use local mocks/simulator only; no live tunnel, device read or bus write. Preserve the root's foreign `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md`, `docs/AI_STATS_TELEMETRY_PLAN.md` and `docs/paperclip-shutdown/`. Respect `[D]`/`[V]`/`[A]` evidence and do not invent KNX address rules or a combined domain link.
+
+---
+
 - **Last Agent:** codex (UI U11 / ISSUE-07 publication and handover)
 - **Timestamp:** 2026-09-29 18:21 CEST
 - **Web lock: released by the UI U11 session** after the catalog feature's fast-forward to remote `main` was read back at `f013bff`. A new package must acquire its own lock.

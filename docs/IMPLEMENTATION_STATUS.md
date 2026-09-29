@@ -82,6 +82,15 @@
   targeted sensitive-value/unsafe-HTML/eval scan were clean. Root integration
   and publication are still pending for this branch. U11's separate ISSUE-09
   device-editor work is not included in this package.
+- After rebasing the fast-forward candidate onto `origin/main` at `e947175`
+  (including the independently delivered product-data work), the integrated
+  tree again passed 78 web files / 1199 tests, TypeScript and build; Rust
+  fmt/Clippy and 125 suites / 2567 passed, 0 failed, 148 ignored, with no
+  `SKIP:` notices. Both explicitly ignored catalog corpus tests passed again.
+  The rebased tree's layering, headers, anchors and corpus gates passed too.
+  The root checkout carries unrelated tracked and untracked work, so it was
+  not reset, stashed or merged through; publication is pending a safe remote
+  fast-forward and readback.
 
 ## 2026-09-29 — U10 / ISSUE-12 partial: gateway host and port, not a discovery fix
 

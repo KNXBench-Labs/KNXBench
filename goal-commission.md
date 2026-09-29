@@ -480,6 +480,10 @@ documented; otherwise record the boundary. **[W]** optional.
 
 ### K16 — RF domain address (simulator only)
 
+**Done 2026-09-29, simulator only (KL §143, RESEARCH §19.6).**
+`A_DomainAddressSelective_Read` is not implemented: it is PL110-only (AL
+NOTE 6), and so are MP §2.11 (unspecified) and §2.13 (Data Security).
+
 `A_DomainAddress_*`, `A_DomainAddressSelective_Read` and
 `A_DomainAddressSerialNumber_*` (AL), the domain-address procedures of MP
 §2.7–§2.14 for RF, and the cEMI RF additional information they need. A

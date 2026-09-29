@@ -37,6 +37,10 @@ pub enum WriteScope {
     /// (MP §3.7.1.2, Table 4 `02h`–`08h`). Erase Code `01h`, the confirmed
     /// restart, stays under [`WriteScope::Restart`]: it erases nothing.
     MasterReset,
+    /// A Domain Address written to an open-medium device, with or without
+    /// its individual address (MP §2.9/§2.10/§2.12, K16). No RF or PL
+    /// device has been on this project's bus, so hardware refuses it.
+    DomainAddressProgramming,
 }
 
 impl fmt::Display for WriteScope {
@@ -49,6 +53,7 @@ impl fmt::Display for WriteScope {
             WriteScope::ProgrammingModeToggle => "programming-mode toggle",
             WriteScope::IndividualAddressReset => "individual-address reset",
             WriteScope::MasterReset => "master reset",
+            WriteScope::DomainAddressProgramming => "domain-address programming",
         })
     }
 }
@@ -225,6 +230,10 @@ impl WriteAuthorisation {
 /// device's configuration away, and nobody has asked for one on the bus
 /// (KNOWN_LIMITATIONS §141). The confirmed restart (`01h`) needs no new
 /// scope.
+///
+/// And [`WriteScope::DomainAddressProgramming`] (K16): there is no KNX-RF
+/// or PL110 device in this installation, so a domain-address write has
+/// only ever met the simulator (KNOWN_LIMITATIONS §143).
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
         WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
@@ -233,7 +242,8 @@ pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
         WriteScope::Unload
         | WriteScope::ProgrammingModeToggle
         | WriteScope::IndividualAddressReset
-        | WriteScope::MasterReset => false,
+        | WriteScope::MasterReset
+        | WriteScope::DomainAddressProgramming => false,
     }
 }
 

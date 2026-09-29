@@ -1060,6 +1060,12 @@ impl TelegramBuffer {
             | ApplicationService::IndividualAddressSerialNumberRead { .. }
             | ApplicationService::IndividualAddressSerialNumberResponse { .. }
             | ApplicationService::IndividualAddressSerialNumberWrite { .. }
+            | ApplicationService::DomainAddressWrite { .. }
+            | ApplicationService::DomainAddressRead
+            | ApplicationService::DomainAddressResponse { .. }
+            | ApplicationService::DomainAddressSerialNumberRead { .. }
+            | ApplicationService::DomainAddressSerialNumberResponse { .. }
+            | ApplicationService::DomainAddressSerialNumberWrite { .. }
             | ApplicationService::MemoryRead { .. }
             | ApplicationService::MemoryResponse { .. }
             | ApplicationService::MemoryWrite { .. }

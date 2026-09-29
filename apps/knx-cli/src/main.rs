@@ -3067,6 +3067,7 @@ fn format_telegram(
             }
         }
         Destination::Individual(ia) => ia.to_string(),
+        Destination::SystemBroadcast => "system broadcast".to_string(),
     };
     let dpt = match (ga_dpts, telegram.destination) {
         (Some(map), Destination::Group(ga)) => match map.get(&ga.raw()) {
@@ -3126,6 +3127,12 @@ fn format_service(
         | ApplicationService::IndividualAddressSerialNumberRead { .. }
         | ApplicationService::IndividualAddressSerialNumberResponse { .. }
         | ApplicationService::IndividualAddressSerialNumberWrite { .. }
+        | ApplicationService::DomainAddressWrite { .. }
+        | ApplicationService::DomainAddressRead
+        | ApplicationService::DomainAddressResponse { .. }
+        | ApplicationService::DomainAddressSerialNumberRead { .. }
+        | ApplicationService::DomainAddressSerialNumberResponse { .. }
+        | ApplicationService::DomainAddressSerialNumberWrite { .. }
         | ApplicationService::MemoryRead { .. }
         | ApplicationService::MemoryResponse { .. }
         | ApplicationService::MemoryWrite { .. }

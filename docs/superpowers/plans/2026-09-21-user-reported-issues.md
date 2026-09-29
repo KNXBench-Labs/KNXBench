@@ -99,11 +99,11 @@
 
 **Interfaces:** `Overlay` gains one shared opt-in sizing contract with min/max viewport bounds and scroll containment. Content-specific overlays set useful initial sizes; dialogs do not each invent resize behavior.
 
-- [ ] Add tests for resizing without escaping the viewport, preserving focus trap/Escape behavior, and keeping long debug-report text reachable.
-- [ ] Add layout assertions for full-width inputs and a two-column Settings layout that collapses to one column at narrow widths.
-- [ ] Replace the Settings trigger glyph with an accessible gear icon while preserving its translated accessible name.
-- [ ] Implement shared overlay sizing and content overflow; keep pointer resizing supplemented by usable CSS/browser and keyboard behavior.
-- [ ] Inspect every `Overlay` consumer for regressions and run overlay, debug-report, and settings tests.
+- [x] Add tests for resizing without escaping the viewport, preserving focus trap/Escape behavior, and keeping long debug-report text reachable. (`Overlay.test.tsx::clamps keyboard resizing` and `::does not dismiss a resizable dialog`; `DebugReportButton.test.tsx::opens a roomy, scroll-contained shared resizable dialog`; `App.test.tsx::keeps the Debug report readable`.)
+- [x] Add layout assertions for full-width inputs and a two-column Settings layout that collapses to one column at narrow widths. (`SettingsPanel.test.tsx::uses a roomy shared resize shell`; Chromium at 1280×800 and 640×700, with document width confined to the viewport.)
+- [x] Replace the Settings trigger glyph with an accessible gear icon while preserving its translated accessible name. (`App.test.tsx::replaces the settings dialog rather than stacking help on top of it` checks the gear path and existing localized `aria-label`.)
+- [x] Implement shared overlay sizing and content overflow; keep pointer resizing supplemented by usable CSS/browser and keyboard behavior. (`Overlay.test.tsx` covers bounded arrow keys, CSS grip, focus trap, Escape and drag-to-backdrop dismissal; the latter two guards rejected mutations.)
+- [x] Inspect every `Overlay` consumer for regressions and run overlay, debug-report, and settings tests. (Only Settings and Debug report opt in; all other consumers retain their dimensions. Full web suite: 77 files / 1169 passed. Headless Chromium verified the File-menu portal and focus restoration, internal scroll and pointer/keyboard resize; no native WebKitGTK claim.)
 
 ### ISSUE-04: Authoritative dirty state, Save-and-continue, last-save status, and autosave
 

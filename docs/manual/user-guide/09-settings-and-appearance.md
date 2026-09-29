@@ -9,7 +9,11 @@ KNXBench's settings are grouped into **Appearance**, **Language & data**, and
 
 Click the gear button at the right end of the toolbar, or open the command palette with
 `Ctrl+Shift+P` and run **Settings**. The panel opens over the workspace; Escape closes
-it.
+it and returns focus to the control that opened it. On a wide window the groups use
+two columns; on a narrow window they stack, with the remaining controls reachable by
+scrolling inside the panel. Drag the panel's lower-right corner to resize it, or focus
+the labelled resize button at its top right and press the arrow keys (24-pixel steps).
+The panel stays within the current window. Its size is not saved between openings.
 
 The first group contains theme, accent, density and motion. Language & data
 contains product-data language, UI language and the language-pack manager. Bus &

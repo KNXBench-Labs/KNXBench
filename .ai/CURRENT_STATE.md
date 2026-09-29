@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session)
+- **Timestamp:** 2026-09-29 10:12 CEST
+- Web lock: taken by UI session for U8 ISSUE-03 shared overlay sizing, readable forms and Settings glyph
+- **Completed:** U8 in isolated `ui-overlay-geometry`: opt-in bounded pointer/keyboard dialog resizing; Settings two-column responsive form and real gear glyph; roomy Debug report. Chromium exposed that File's closing `<details>` hid its dialog, so the Debug report now uses the existing body-portal/focus-return precedent. TDD plus two rejected guard mutations. Branch Web build + 77 files/1169 tests, Rust fmt/Clippy + 123 suites/2391 passed/0 failed/136 ignored, layering/headers/anchors/corpus and diff gates green; local Chromium desktop/narrow proof without bus traffic. Manual, ISSUE-03 checklist, status, KL §20 and `.ai/logs/2026-09-29_codex_ui-overlay-geometry.md` updated. U8 is not yet committed or merged.
+- **Pending/Next Steps:** Complete final branch review, commit as KNXBench without co-author, fetch and rebase against concurrent `origin/main` preserving both sides' shared docs and handover. Rerun full merged-result gates before pushing; release web lock and remove only U8 worktree, branch, target and scratch. U9–U13 remain.
+- **Notes for Codex or Claude:** Root `main` has advanced beyond U8's `c248e37` base; its `docs/paperclip-shutdown/` is foreign and untracked. Corpus in this worktree is an ignored symlink; gate `xtask` was built with a fresh U8-specific target to avoid a stale-root false green. No live KNX device or native WebKitGTK interaction. The debug report portal must stay outside File's closing `<details>`; its standalone component test alone cannot prove that integration.
+
+---
+
 - **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 08:58 CEST
 - Web lock: taken by UI session for U8 ISSUE-03 shared overlay sizing, readable forms and Settings glyph

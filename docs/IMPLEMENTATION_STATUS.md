@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Commissioning readiness 1–3 (offline only; bus still parked)
+
+- Product coverage: `knx products coverage` reports per application its
+  offline default-image plan or the category and full refusal reason. On
+  103 installed packages, 55/181 `0701h`/`0705h` applications plan; one
+  has cited complete hardware evidence, 54 have none. No other masks plan.
+  The ignored corpus regression pins this sample, not universal coverage.
+- Pre-write protection: the common memory executor reads the regions its
+  plan will overwrite and the affected load states before its first
+  mutation; CLI/server keep a versioned owner-only JSON file on disk,
+  sync and read it back or refuse without writing. CLI defaults to
+  `<project>.backups/`, server to `device-backups/` inside its data dir.
+  CLI restore is plan-first, requires the same download confirmation,
+  checks original procedure/region shape and creates a fresh backup before
+  writing. No general rollback or full-device backup is claimed.
+- Support levels are visible per plan in CLI and HTTP/UI: verified on an
+  identified MDT application and specific download type, offline-plannable
+  but untested (extra exact acknowledgement), or unsupported (named refusal
+  before a tunnel). Product-data evidence is separate from application
+  code. Simulator/corpus tests cover backup failure, roundtrip restore,
+  CLI/HTTP gating and the panel; **no new live bus action** occurred.
+  See [ADR-0049](adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md),
+  [RESEARCH.md](RESEARCH.md) and [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+
 ## 2026-09-29 — U9: an explicit welcome and project-language choice
 
 - The empty workspace now leads with three accessible action cards: create a

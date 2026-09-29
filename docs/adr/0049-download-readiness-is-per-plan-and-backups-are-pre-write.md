@@ -1,0 +1,22 @@
+# ADR 0049: Download readiness is evidence-scoped; pre-write backups fail closed
+
+Date: 2026-09-29
+Status: Accepted
+Session: commissioning follow-up to the user's “1–3 umsetzen”
+
+## Context
+
+ADR-0048 deliberately limits the hardware download path to memory-mapped `070nh` devices. Owning every device and testing every manufacturer/application on a bus is not possible; an offline plan is not itself evidence that a device accepted one. Until this change the CLI/server could write a valid plan after the ordinary device-specific confirmation but did not classify its hardware evidence, and the operator took a separate manual memory dump before a live download.
+
+## Decision
+
+1. **Report coverage by program from an installed product database.** `knx products coverage [--product-db …] [--manufacturer …]` builds a default-value/no-link image and complete plan for each stored application program, then prints its mask, support level and first refusal. It checks procedure style and mask before attempting an image. This is an *offline* diagnostic of those inputs only, not a guarantee that an arbitrary project's values/links will plan or that a physical device will accept the plan. The actual project is separately prepared on each download.
+2. **Scope evidence to an application *and operation*.** `crates/knx-app/data/verified_downloads.json` records a cited live run per application and download scope. `verified` means that specific kind of download worked on at least one identified device, not universal model or manufacturer compatibility. `untested` means the current concrete plan built but has no matching live evidence; CLI/API/UI warn, and writing requires an additional exact device-address acknowledgement alongside the existing download confirmation. If a plan does not build, preparation refuses before a tunnel; corpus rows say `unsupported` with a categorized reason. A successful unreported field operation never automatically promotes evidence.
+3. **Backup before mutation.** The common memory executor, after connecting and checking device identity but before the first step that changes device state, reads every memory region that the plan would overwrite and the load state of affected parts. CLI and server synchronously write a versioned JSON file, read it back, and sync the directory entry. If any read or durable write fails, disconnect and abort **without a device mutation**. A new file is created exclusively (no overwrite), with owner-only permissions on Unix. CLI defaults to `<project>.backups/`, server to `<data_dir>/device-backups/`. The backup path is reported even on a subsequent partial failure. There are no secret values in progress or HTTP status; the file itself is private device data and must not be shared publicly.
+4. **Restore is a separate download, not a magical rollback.** `knx device restore <backup.json>` prints a plan by default; it requires the original download confirmation and gateway to write, and creates its own backup first. The same application program and partial selection must rederive the same step descriptions and memory-region shape, or restore refuses. A backup of a part not `Loaded` refuses restore. Only the overwritten regions can be restored; neither unwritten device memory nor properties nor a changed application/physical address are recreated. Every restore write is read back. This path is simulator-verified, **not** live-verified; the backup creation itself is not live-verified in this package.
+
+## Consequences and limits
+
+- The corpus result applies to the *specific installed packages* and default configuration, not to all KNX products. A row with `untested` needs both the existing plan confirmation and the new risk acknowledgement. `verified` is not a blanket promise for other revisions/devices or even configurations of that application.
+- The backup is intentionally limited to the regions this download overwrites. It is **not** a full memory dump; a full-device read-only baseline remains separate from the product feature where the hardware rule requires it. The file may contain sensitive device configuration, so OS permissions and data-directory access matter. Do not treat the backup as a general credential vault or upload it in diagnostics.
+- No new real bus run was made. The user's earlier “dann parken” remains in force for hardware actions. This ADR changes product safeguards, not permission to use the test device.

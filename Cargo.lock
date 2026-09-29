@@ -1859,6 +1859,8 @@ dependencies = [
  "knx-report",
  "knx-store",
  "knx-testsupport",
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 

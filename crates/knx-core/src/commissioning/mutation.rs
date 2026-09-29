@@ -29,6 +29,10 @@ pub enum WriteScope {
     /// The `0060h` read-modify-write of §4.4, which this project performs
     /// against the simulator only.
     ProgrammingModeToggle,
+    /// MP §2.18 `NM_IndividualAddress_Reset`: every device in programming
+    /// mode goes to `FFFFh` and is restarted there. The target is always
+    /// `FFFFh`, because the devices are whoever has the button pressed.
+    IndividualAddressReset,
 }
 
 impl fmt::Display for WriteScope {
@@ -39,6 +43,7 @@ impl fmt::Display for WriteScope {
             WriteScope::IndividualAddressProgramming => "individual-address programming",
             WriteScope::Restart => "restart",
             WriteScope::ProgrammingModeToggle => "programming-mode toggle",
+            WriteScope::IndividualAddressReset => "individual-address reset",
         })
     }
 }
@@ -206,12 +211,18 @@ impl WriteAuthorisation {
 /// has asked for; and [`WriteScope::ProgrammingModeToggle`], whose `0060h`
 /// octet meaning design spec §15 records as unsourced for a System B mask,
 /// so this project does not write it blind.
+///
+/// Also refused: [`WriteScope::IndividualAddressReset`] (K13, MP §2.18). It
+/// changes every device in programming mode at once, and no operator has
+/// asked for it on the bus yet (KNOWN_LIMITATIONS §140).
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
         WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
             true
         }
-        WriteScope::Unload | WriteScope::ProgrammingModeToggle => false,
+        WriteScope::Unload
+        | WriteScope::ProgrammingModeToggle
+        | WriteScope::IndividualAddressReset => false,
     }
 }
 

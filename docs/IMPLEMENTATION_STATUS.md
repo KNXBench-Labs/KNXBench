@@ -19,6 +19,16 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K13: individual-address reset to `FFFFh`, simulator only
+
+- MP §2.18 in `knx_net::commissioning::individual_address_reset`, with a
+  first read, a 3-round cap and a report. New `WriteScope::IndividualAddressReset`,
+  refused on hardware (KL §140).
+- The simulator resets programming mode on a Basic Restart and moves every
+  pressed device on a broadcast address write.
+- 6 tests; 7/7 mutants killed (a first test run caught a reset authorised
+  for another address that would have programmed that address).
+
 ## 2026-09-29 — K12: an individual address by serial number, no button
 
 - **Services.** `A_IndividualAddressSerialNumber_Read/_Response/_Write`

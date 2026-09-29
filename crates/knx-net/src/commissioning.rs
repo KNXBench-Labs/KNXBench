@@ -23,6 +23,7 @@
 //! the answer.
 
 pub mod download;
+pub mod individual_address_reset;
 pub mod individual_address_write;
 pub mod memory_download;
 pub mod programming_button_wait;
@@ -1615,7 +1616,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// programming of the Individual Address may have failed, or the
     /// system (Router) is not configured correctly."*
     pub async fn broadcast_individual_address_write(&self) -> Result<(), SessionError> {
-        self.authorise_write(WriteScope::IndividualAddressProgramming)?;
+        self.broadcast_individual_address_write_as(WriteScope::IndividualAddressProgramming)
+            .await
+    }
+
+    /// The same broadcast under another scope: MP §2.18 writes `FFFFh` as
+    /// an individual-address reset, not as a programming.
+    pub(crate) async fn broadcast_individual_address_write_as(
+        &self,
+        scope: WriteScope,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(scope)?;
         self.transport
             .send_frame(
                 BROADCAST_DESTINATION,
@@ -2873,6 +2884,41 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// [`Self::disconnect`] is this method's ordinary, patience-free
     /// cousin and stays that way for every other caller: this is the one
     /// path MP §3.7.3 puts a mandatory wait on.
+    /// MP §2.18's middle step: `T_Connect`, a Basic Restart and
+    /// `T_Disconnect` to `FFFFh`, sent and not listened to.
+    ///
+    /// The sequence's closing rule, p. 34: *"Do not evaluate any local
+    /// confirmation, or received telegrams, except the
+    /// A_IndividualAddress_Read.Lcon and the A_IndividualAddress_Response-PDU."*
+    /// Any number of devices may sit at `FFFFh`, so there is no one `T_ACK`
+    /// to wait for; the broadcast read that follows is the only check.
+    pub(crate) async fn restart_at_default_address_unevaluated(
+        &mut self,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::IndividualAddressReset)?;
+        if self.target.address() != IndividualAddress::from_raw(0xFFFF) {
+            return Err(SessionError::Refused(
+                knx_core::commissioning::mutation::AuthorisationRefused::WrongTarget {
+                    authorised: IndividualAddress::from_raw(0xFFFF),
+                    attempted: self.target.address(),
+                },
+            ));
+        }
+        self.send(Tpci::Connect, ApplicationService::NoApplicationPdu)
+            .await?;
+        self.send(
+            Tpci::NumberedData { seq: 0 },
+            ApplicationService::Restart {
+                response: false,
+                restart_type: 0,
+                data: Vec::new(),
+            },
+        )
+        .await?;
+        self.send(Tpci::Disconnect, ApplicationService::NoApplicationPdu)
+            .await
+    }
+
     async fn disconnect_after_restart(&mut self) {
         self.disconnect().await;
         tokio::time::sleep(self.timing.post_restart_disconnect_wait).await;

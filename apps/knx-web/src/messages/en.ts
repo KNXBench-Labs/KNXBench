@@ -689,6 +689,9 @@ export const messages = {
   "catalogDiagnostic.dynamicOrModuleNotEvaluated":
     "Dynamic and module activation was not evaluated for {programId}; only static product data was seeded.",
 
+  // Shared `Overlay.tsx` keyboard resize control.
+  "overlay.resizeHandle": "Resize dialog with arrow keys",
+
   // `Search.tsx`.
   "search.overlayLabel": "Search",
   "search.placeholder": "Search devices, group addresses, building parts…",

@@ -761,9 +761,10 @@ mask `0701h`), each after the operator's explicit go:
   2026-09-28, checked by read-back and by a bus monitor (RESEARCH §19.4,
   §136).
 
-What stays true: neither runs as a product command. Both run only from
-doubly gated `live_*` tests, and nothing in the CLI, server or UI can start
-them. Every other procedure below is still simulator-only.
+*As of 2026-09-28 morning:* neither ran as a product command. Both ran only
+from doubly gated `live_*` tests. **Since K4–K6 (2026-09-28) they are
+product commands**, and both ran through them live on 2026-09-29 (K7, K6;
+RESEARCH §19). Every other procedure below is still simulator-only.
 
 **Cause.** As of 2026-09-13 (superseded below — see the 2026-09-20 update)
 the cause is **implementation and hardware, not research**: there is no
@@ -1256,6 +1257,8 @@ truth — holds down both sides plus the alarm-panel refusal.
    push button (or any other device) has not been measured — the next
    Programming Mode session has to confirm it, and a device that needs longer
    will still produce this limitation's original symptom.
+   *2026-09-29 (K6 live):* still not exercised. `1.1.67` answered at its
+   new address on the first connect, both ways.
 2. **"Wrote but could not confirm" is not a distinct outcome.** The information
    exists — the error carries the report, whose `wrote` flag was `true` — but a
    caller must destructure the error to find it. Anything built on top of this
@@ -1265,7 +1268,9 @@ truth — holds down both sides plus the alarm-panel refusal.
    confirmed` (test `written_but_unconfirmed_says_so`). The web route reports
    `written: "unconfirmed"`, shown as a warning (test
    `written_but_silent_at_the_new_address_is_unconfirmed`). The library type
-   is unchanged.
+   is unchanged. *2026-09-29:* a silent closing restart is no longer part
+   of this. The device has already answered at `IA_new`, so the report
+   carries `AddressRestart::Unconfirmed` inside an `Ok` (§116).
 3. **No rollback exists for a half-completed readdressing.** If the write lands
    and the device then cannot be reached, recovery is another programming-mode
    session by hand. Nothing in this project automates or even detects that state.
@@ -6591,7 +6596,10 @@ future surface that shows a countdown.
 sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
 Only a real device can show whether the extra attempt matters; no surface
 renders the bound (K5 status above). Measured opportunistically in the K7
-live session, otherwise accepted as is.
+live session, otherwise accepted as is. **K7, 2026-09-29: nothing to
+measure.** In all three live downloads each load-state wait was answered
+at once (`Loading` → `Loaded`, no extra attempt; RESEARCH §19). Accepted
+as is.
 ## 102. The write echo's decode-failure branch has no known real trigger
 
 **Limitation.** `POST /api/bus/write`'s `decodedEcho` (task 27) carries a
@@ -6721,7 +6729,9 @@ the peer still honours it — is not available: it is the defect C19 fixed.
 sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
 The lifting condition is itself a hardware measurement; taken along in the
 K7 live session if the device goes quiet mid-`LoadCompleting`, otherwise
-accepted as is.
+accepted as is. **K7, 2026-09-29: it did not go quiet.** No
+`LoadCompleting` silence and no mid-download drop in three live downloads
+(RESEARCH §19). Accepted as is.
 
 
 ## 105. Transport Layer control frames go out at low priority, not `SYSTEM`
@@ -8450,7 +8460,9 @@ databases (ADR-0043 §2).
 **Lifted when.** A specified ordering of package content exists, or a later
 UI slice lets the user pick a winner per id.
 
-## §136 Mask `0701h` (BIM M112) devices cannot receive an application download
+<a id="136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download"></a>
+
+## §136 Mask `0701h` (BIM M112) devices can receive an application download — LIFTED; the restart stays unconfirmed
 
 **Status.** **Lifted 2026-09-28** for the one verified path. Found
 2026-09-27 while evaluating a request to configure button 1 of the MDT
@@ -8490,6 +8502,11 @@ device. "Restart unconfirmed" is the final outcome, and whether it
 restarted internally cannot be settled from the bus. KNXBench offers no
 Master Reset for mask `0701h`, because MP §3.7.3 requires verified support
 first and there is no means to verify it for `0701h`.
+
+**Live, 2026-09-29 (K7/K6):** three more downloads and two address
+changes, all with the same silent restart. After the address change the
+programming LED was off, so the device did restart. That is the one visible
+sign, and the bus still shows nothing.
 
 **New, open:** two management sessions straight after each other can
 collide. In the trace a `T_Disconnect` did not show up (no `L_Data.con`),

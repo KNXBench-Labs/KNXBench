@@ -14,6 +14,11 @@ anything else:
 Everything in this chapter is reachable from the **File** menu, and most of it also
 from the command palette (`Ctrl+Shift+P`).
 
+When no project is open, the welcome workspace offers three separate cards:
+**New project…** starts from scratch; **Open KNXBench project** continues a saved
+`.knxdb`; **Import ETS project** reads a `.knxproj`. Import never turns an ETS
+archive into a file you edit in place. Save the imported work as `.knxdb` later.
+
 ## Starting a new project
 
 **New project…** opens a small dialog with four fields:
@@ -22,13 +27,19 @@ from the command palette (`Ctrl+Shift+P`).
 | --- | --- |
 | Project name | The name of the project. Pre-filled, and selected when you focus it, so you can just type over it. |
 | Installation name | The name of the installation inside the project. |
-| Language | A language tag such as `de-DE`. Checked for well-formedness only — no list of "supported" languages is enforced. |
+| Project language | Starts with your current interface language. Select English, German or an installed language pack, or choose **Another language tag…** and type a well-formed tag such as `de-DE`. This labels the project texts; it does not switch the interface language. There is no restricted list of project languages. |
 | Group address style | `ThreeLevel` (`1/2/3`), `TwoLevel` (`1/2`) or `Free` (a plain number). |
 
-![The New project dialog over the welcome screen, with Project name "Untitled project"
-selected, Installation name "Installation 1", Project language "en", Group address style
+![The New project dialog over the welcome cards, with an explanation that Save chooses
+the .knxdb filename, Project name "Untitled project" selected, Installation name
+"Installation 1", Project language "English" in a dropdown, Group address style
 "Three level (main/middle/sub)", and Cancel and Create project
 buttons](../../assets/screenshots/porcelain-new-project.png)
+
+Creating the project does not choose a filename or write a project file. **Save** or
+**Save As** later chooses the `.knxdb` filename and location; the project and
+installation names are not paths. At narrow window sizes the dialog scrolls to
+keep every field and action reachable.
 
 The group-address style is a project-wide decision and it is made here. See
 [Working with group addresses](04-group-addresses.md) for what that choice means in
@@ -36,10 +47,9 @@ daily use.
 
 > **Warning**
 >
-> The dialog's own hint says the project properties can restyle it later. They cannot —
-> no such control exists in the interface today. Treat the style you pick here as fixed
-> for the life of the project, and see [Known issues](../known-issues.md) for the
-> details.
+> The dialog's hint is deliberate: no control exists to change this style after
+> creating the project today. Choose carefully, and see [Known issues](../known-issues.md)
+> for the current limitation.
 
 > **Warning**
 >

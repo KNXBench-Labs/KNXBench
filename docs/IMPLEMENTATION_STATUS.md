@@ -1,5 +1,42 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — U9: an explicit welcome and project-language choice
+
+- The empty workspace now leads with three accessible action cards: create a
+  project, reopen a KNXBench `.knxdb`, or import an ETS `.knxproj`. The latter
+  two retain the existing separate file-picker routes. Cards are announced
+  with title and description; on a narrow viewport, the welcome precedes the
+  navigation pane in both visible and Tab order. A project, log or monitor
+  keeps the previous workbench structure.
+- The New project dialog offers English, German and installed language packs
+  from the existing UI-language source, plus a custom well-formed tag. Its
+  initial choice follows the current UI language, including an installed or
+  custom tag. Removing a pack while selected does not erase that project tag;
+  a duplicate built-in pack does not duplicate a choice. The filename note
+  explains that Save/Save As later chooses `.knxdb`, not the project or
+  installation name. The note appears before the fields so it stays visible
+  before scrolling. The language selector and custom-tag error have linked
+  accessible descriptions. At narrow sizes and application zoom, only this dialog
+  adjusts its width/height to the available viewport; it scrolls internally
+  when necessary, and the actions wrap instead of clipping at 320 px,
+  without changing the shared Overlay contract. The group-address-style hint
+  no longer promises a Project properties restyle that the UI cannot perform.
+- TDD: the card-route, language-pack, filename-first and truthful-style-hint assertions failed
+  before their UI changes and then passed. Additional pack and German
+  welcome tests are green; removed-pack and duplicate-option mutations
+  failed as expected and were restored. Focused App/NewProjectDialog suites:
+  2 files / 124 passed. On the branch: TypeScript/build and 77 web test files
+  / 1179 passed, Rust fmt/Clippy and 124 suites / 2468 passed, 0 failed,
+  143 ignored. A fresh worktree-built `xtask` checked layering, headers
+  (298/161), 397 links in 214 Markdown files and the corpus gate;
+  `git diff --check` passed. Headless Chromium against the local Vite page
+  (no backend or KNX connection) checked 1280×800, 640×700, 400×700 and the
+  640×700 dialog at 150% zoom; at 320×568 and 150%, wrapped actions remain
+  inside the scrollable panel without horizontal overflow. Custom `de-DE`
+  enabled Create; Escape returned focus to the launcher. Native WebKitGTK
+  and a real screen reader remain untested (KNOWN_LIMITATIONS §20).
+  Merged-result gates are pending this package's integration.
+
 ## 2026-09-29 — U8: usable, bounded dialogs and a recognizable Settings control
 
 - `Overlay.tsx` has one opt-in size contract. A native lower-right grip and a

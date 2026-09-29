@@ -22,7 +22,7 @@ import type { LogEntry } from "./api";
 import { messages as enMessages } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
-import { resetUiLanguageForTests } from "./uiLanguage";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
@@ -137,7 +137,7 @@ vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMo
 
 import App from "./App";
 import type { SessionControls } from "./session";
-import { resetSettingsForTests, setSetting } from "./settingsStore";
+import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
 // F9's client half: every load generates its own token via
 // `crypto.randomUUID()` before the POST. Pinning it to a fixed value
@@ -1162,18 +1162,58 @@ describe("App — browser project export", () => {
 // someone whose first act is installing a device from the product
 // catalogue.
 describe("App — starting a project from scratch", () => {
-  it("offers the from-scratch launcher first on the welcome screen, as the primary action", async () => {
+  it("explains the three distinct empty-workspace routes as accessible cards", async () => {
     const root = await renderApp();
 
-    const actions = [...host!.querySelectorAll<HTMLButtonElement>(".welcome-workspace button")];
-    expect(actions.map((b) => b.textContent)).toEqual([
+    const actions = [...host!.querySelectorAll<HTMLButtonElement>(".welcome-actions button")];
+    expect(actions.map((button) => document.getElementById(button.getAttribute("aria-labelledby")!)?.textContent)).toEqual([
       "New project…",
-      "Open project…",
-      "Open (.knxdb)…",
+      "Open KNXBench project",
+      "Import ETS project",
     ]);
-    // It is the one action that does not presuppose a file, so it is the
-    // one that reads as primary.
-    expect(actions[0].className).toBe("primary-action");
+    expect(actions.map((button) => document.getElementById(button.getAttribute("aria-describedby")!)?.textContent)).toEqual([
+      "Start an empty project and build its structure here.",
+      "Continue a saved KNXBench .knxdb project.",
+      "Read an ETS .knxproj archive. Save your work as .knxdb later.",
+    ]);
+    expect(actions.every((button) => button.getAttribute("type") === "button")).toBe(true);
+    expect(actions[0].classList.contains("primary-action")).toBe(true);
+    expect(host!.querySelector(".welcome-workspace h1")?.id).toBe("welcome-title");
+    // At narrow widths the center stacks before the explorer. DOM order
+    // must match that visual order so Tab reaches the cards before the
+    // navigation buttons that are below them, not the other way around.
+    expect(host!.querySelector(".workbench")?.classList.contains("workbench--welcome")).toBe(true);
+    expect(host!.querySelector(".workbench-body")?.firstElementChild?.classList.contains("workbench-center")).toBe(true);
+
+    // The card itself, not the File menu, must keep the native and ETS
+    // file routes separate. Cancel the picker so the welcome stays open.
+    filePickerMock.pickOpenPath.mockResolvedValue(null);
+    await act(async () => actions[1].click());
+    await act(async () => actions[2].click());
+    expect(filePickerMock.pickOpenPath.mock.calls.map(([filters]) => filters[0].extensions)).toEqual([
+      ["knxdb"],
+      ["knxproj"],
+    ]);
+
+    await act(async () => root.unmount());
+  });
+
+  it("translates the welcome route names and their format explanations", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    resetUiLanguageForTests();
+    const root = await renderApp();
+    const actions = [...host!.querySelectorAll<HTMLButtonElement>(".welcome-actions button")];
+
+    expect(actions.map((button) => document.getElementById(button.getAttribute("aria-labelledby")!)?.textContent)).toEqual([
+      "Neues Projekt…",
+      "KNXBench-Projekt öffnen",
+      "ETS-Projekt importieren",
+    ]);
+    expect(actions.map((button) => document.getElementById(button.getAttribute("aria-describedby")!)?.textContent)).toEqual([
+      "Ein leeres Projekt anlegen und seine Struktur hier aufbauen.",
+      "Ein gespeichertes KNXBench-Projekt (.knxdb) weiterbearbeiten.",
+      "Ein ETS-Archiv (.knxproj) einlesen. Änderungen später als .knxdb speichern.",
+    ]);
 
     await act(async () => root.unmount());
   });
@@ -1200,6 +1240,7 @@ describe("App — starting a project from scratch", () => {
     // The dialog is gone, and so is the welcome screen it was opened from.
     expect(host!.querySelector('[role="dialog"]')).toBeNull();
     expect(host!.querySelector(".welcome-workspace")).toBeNull();
+    expect(host!.querySelector(".workbench")?.classList.contains("workbench--welcome")).toBe(false);
 
     await act(async () => root.unmount());
   });

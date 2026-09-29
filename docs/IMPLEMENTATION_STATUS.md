@@ -25,10 +25,10 @@
   before their UI changes and then passed. Additional pack and German
   welcome tests are green; removed-pack and duplicate-option mutations
   failed as expected and were restored. Focused App/NewProjectDialog suites:
-  2 files / 124 passed. On the branch: TypeScript/build and 77 web test files
-  / 1179 passed, Rust fmt/Clippy and 124 suites / 2468 passed, 0 failed,
-  143 ignored. A fresh worktree-built `xtask` checked layering, headers
-  (298/161), 397 links in 214 Markdown files and the corpus gate;
+  2 files / 124 passed. On the branch rebased over K16–K18: TypeScript/build
+  and 77 web test files / 1179 passed, Rust fmt/Clippy and 124 suites /
+  2526 passed, 0 failed, 143 ignored. A worktree-built `xtask` checked
+  layering, headers (302/161), 397 links in 214 Markdown files and the corpus gate;
   `git diff --check` passed. Headless Chromium against the local Vite page
   (no backend or KNX connection) checked 1280×800, 640×700, 400×700 and the
   640×700 dialog at 150% zoom; at 320×568 and 150%, wrapped actions remain

@@ -19,6 +19,24 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K11: a download can carry the device's access key
+
+- **Where the key comes from.** The project's `Installation/@BCUKey`, or a
+  CLI `--key-file`. The default `FFFFFFFFh` means no key. There is no
+  `--key` flag and no key in the HTTP API.
+- **What it does.** Mask `070nh` runs MP §3.5.2 (free key first, the key
+  only if the free level is not the highest). Other masks run §3.5.1.
+- **Without a key.** A refused download says a missing key is one possible
+  cause, and sends nothing extra. No key is guessed.
+- **Visible.** The plan names the key's source, never the value. A new
+  `authorised` progress event shows the granted level.
+- **Correction.** `with_two_key_extension` sent the key after a free level
+  of 0 too. The MP p. 76 diagram says it is sent only when the free level
+  is not the highest. Fixed; the old test had pinned the wrong reading.
+- **Tests.** New module `knx_app::access_key`; simulator, CLI and HTTP
+  tests against a locked device. 9/9 mutants killed.
+- **Not live.** The test device has no key (KL §137).
+
 ## 2026-09-29 — Recovery and settling checked against the PDFs, both parked
 
 - **Interrupted download:** MP §3.1, RES Table 94 and CP §3.4.1.2.1 give no

@@ -387,6 +387,74 @@ async fn a_connection_lost_mid_download_says_partially_and_where() {
     assert!(end["error"].as_str().is_some_and(|e| !e.is_empty()));
 }
 
+/// A device locked above its free level. Without a key in the project the
+/// route stops with a hint and sends no key; with the project's
+/// `Installation/@BCUKey` the same route unlocks it through MP §3.5.2 and
+/// the key appears in no response.
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn a_locked_device_takes_the_projects_key_and_no_response_shows_it() {
+    let locked = SimulatorConfig {
+        free_access_level: 3,
+        key: Some(0x0BAD_CAFE),
+        key_level: 1,
+        write_requires_level: 2,
+        ..SimulatorConfig::default()
+    };
+
+    let h = harness(locked.clone()).await;
+    let plan_body = plan(&h).await;
+    assert_eq!(
+        plan_body["accessKey"], "none (the device's free access level)",
+        "{plan_body}"
+    );
+    let (status, _) = start(&h, &plan_body["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, events) = finish(&h).await;
+    assert_eq!(end["state"], "failed", "{end}");
+    assert!(
+        end["hint"]
+            .as_str()
+            .is_some_and(|hint| hint.contains("never guess")),
+        "{end}"
+    );
+    assert!(events
+        .iter()
+        .any(|e| e["kind"] == "authorised" && e["level"].is_null()));
+    assert_eq!(h.device.authorize_requests(), 0, "nothing was guessed");
+
+    let h = harness(locked).await;
+    h.state
+        .opaque
+        .lock()
+        .unwrap()
+        .push(knx_store::StoredOpaqueEntry {
+            source_path: "P-0001/0.xml".into(),
+            xpath: "/KNX/Project/Installations/Installation".into(),
+            kind: "RetainedAttribute".into(),
+            name: "BCUKey".into(),
+            bytes: b"195939070".to_vec(),
+            sha256: String::new(),
+        });
+    let plan_body = plan(&h).await;
+    assert_eq!(
+        plan_body["accessKey"],
+        "from the project (Installation/@BCUKey)"
+    );
+    let (status, _) = start(&h, &plan_body["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, events) = finish(&h).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(h.device.authorize_requests(), 2, "free key, then the key");
+    assert!(events
+        .iter()
+        .any(|e| e["kind"] == "authorised" && e["level"] == 1));
+    let everything = format!("{plan_body}{end}{}", Value::Array(events));
+    for shown in ["195939070", "0BADCAFE", "0badcafe"] {
+        assert!(!everything.contains(shown), "the key leaked");
+    }
+}
+
 #[tokio::test]
 #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
 async fn another_device_type_stops_before_the_first_write() {

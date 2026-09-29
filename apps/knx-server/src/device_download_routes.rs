@@ -21,6 +21,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
+use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
 use knx_app::device_download::{prepare_device_download, PreparedDownload};
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
 use knx_core::{ContactableAddress, IndividualAddress, WriteScope};
@@ -78,6 +79,8 @@ struct PlanResponse {
     /// The phrase `start` demands. It names this device and this scope;
     /// it is not proof that a person read anything (ADR-0045 §2).
     confirmation_phrase: String,
+    /// Where the access key comes from; never the key.
+    access_key: String,
 }
 
 fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
@@ -86,6 +89,23 @@ fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
         .map_err(|e| ApiError::bad_request(format!("invalid device address {address:?}: {e}")))?;
     ContactableAddress::new(parsed).map_err(|e| ApiError::bad_request(e.to_string()))?;
     Ok(parsed)
+}
+
+/// The keying for `prepared`, from the open project's `Installation/@BCUKey`.
+///
+/// The HTTP API takes no key: a key in a request body is a key in a
+/// browser's memory and a proxy's log. A device locked with a key the
+/// project does not carry is downloaded through the CLI's `--key-file`.
+fn keying(state: &SharedState, prepared: &PreparedDownload) -> Result<DownloadKeying, ApiError> {
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let project_key = project_access_key(&opaque).map_err(|e| {
+        ApiError::with_status(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("no download to device {} prepared: {e}", prepared.target),
+        )
+    })?;
+    let (key, source) = choose_key(None, project_key);
+    Ok(download_keying(prepared.plan.mask, key, source))
 }
 
 /// Prepares from the project as it is now. Both locks are released before
@@ -119,6 +139,7 @@ async fn plan(
 ) -> Result<Json<PlanResponse>, ApiError> {
     let target = parse_target(&body.address)?;
     let prepared = prepare(&state, target)?;
+    let keying = keying(&state, &prepared)?;
     let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
     let response = PlanResponse {
         plan_id: id,
@@ -148,6 +169,7 @@ async fn plan(
             .map(ToString::to_string)
             .collect(),
         confirmation_phrase: required_confirmation_phrase(target, WriteScope::Download),
+        access_key: keying.source.to_string(),
     };
     *state
         .device_download_plan
@@ -245,6 +267,7 @@ async fn start(
     }
 
     let prepared = prepare(&state, target)?;
+    let keying = keying(&state, &prepared)?;
     {
         let shown = state
             .device_download_plan
@@ -270,6 +293,7 @@ async fn start(
         id,
         tunnel,
         authorisation,
+        keying,
         state.device_download_timing,
         prepared,
     ));

@@ -426,6 +426,10 @@ Rules on top of §1/§2:
 
 ### K11 — Access keys on a download (RESEARCH §19.5 item 4, offline)
 
+**Done 2026-09-29.** Project `BCUKey` and CLI `--key-file` (no key in argv
+or HTTP); MP §3.5.2 for `070nh`, §3.5.1 otherwise; a hint on refusal.
+Simulator, CLI and HTTP tests; 9/9 mutants killed. KL §137.
+
 The download path authorises with an operator key (CLI option and server
 field, never logged) or with a non-default `Installation/@BCUKey` from the
 project. A `MemoryRefused`/`PropertyRefused` after `Skip` names a missing

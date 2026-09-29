@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 08:25
+- Web lock: held by the UI session for U7; not touched by this entry.
+- **Completed:** PDF sweep for commissioning topics KNXBench lacks (user request), written up as RESEARCH §19.5. `0701h` is BIM M112 (Profiles p. 13). Its profile makes serial-number addressing mandatory (Table 4.4, p. 44) and gives 16 access levels (Table 4.2, p. 37); its TL is Style 3 (p. 36). Gaps, ranked: IA by serial number (MP §2.4/2.5), `NM_IndividualAddress_Reset` (§2.18), partial download for `070nh`, access key from `Installation/@BCUKey` or operator (never guessed), Master Reset. No open blocker is resolved or created.
+- **Correction:** the timestamps of the three previous iaw entries were written without checking the clock. The matching commits landed at 07:28 (K6 fix), 07:51 (K10) and 08:06 (recovery test).
+- **Pending/Next Steps:** stats.md refresh after the UI session pushes its U7 commits (`911a499`, `de697c7`, local on root main). Any of the §19.5 gaps is a new goal item, and serial-number addressing would need a new live approval.
+- **Notes for Codex/Claude:** Profiles tables need the rendered page (`pdftoppm`); the `-layout` text columns shift.
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 09:05
 - Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
 - **Completed:** User asked to check the PDFs for how to handle and recover, otherwise park. Result: interrupted download means running the same download again (MP §3.1 p. 68, RES Table 94 p. 296, CP §3.4.1.2.1 p. 38). Simulator test from Loading/Error added; the no-unload mutant was killed. The settling retry has no MP figure; §2.12/§2.13 use 1 s and user-confirmed repeats, matching ours. Both live tests **parked**. KL §7, IMPLEMENTATION_STATUS.

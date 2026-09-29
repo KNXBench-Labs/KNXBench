@@ -681,6 +681,16 @@ application does, on any platform.
 
 ## 7. Commissioning and device download are required, but blocked
 
+**v1 scope decided, 2026-09-28 (goal-commission K9, ADR-0048).** User
+decision: *"das was am sinnvollsten ist"*, i.e. the recommendation. For v1,
+a device download means the memory path (`run_memory_download`) for mask
+`070nh`, verified on one device (`1.1.67`, option C). Everything listed
+below that the image builder or executor refuses stays refused **by
+name**, and the `[A]` rules stay as documented; none of them is a v1
+gap. The property-based `Downloader` stays in the tree as simulator-only
+(it still refuses hardware). Further families are added only with corpus
+evidence plus a real device.
+
 **Updated, 2026-09-28 (download data readable, ADR-0044).** The storage
 half of the gap below is closed for downloads without a schema change.
 `knx_productdb::code::load_program_code` reads a program's
@@ -6238,6 +6248,13 @@ Lifted when a task is opened for it and makes that call, or when
 `knx-core` gains its own concept for "does this part kind carry a program
 version" that `PartKind` could be expressed in terms of instead.
 
+**Kept parked, 2026-09-28 (goal-commission K8).** User decision 2026-09-28,
+asked for each K8 entry to fix it or accept it: *"das was am sinnvollsten
+ist"* (whatever makes the most sense), i.e. the recommendation. Parked stays
+parked: the v1 path (K9) uses `run_memory_download`, not the declarative
+procedure model, so this does not reach a device. It reopens with any
+feature that runs `procedure.rs` against hardware.
+
 ## 95. Six places where the KNX Standard's printed text must not be followed literally
 
 **Limitation.** None — this is a pointer, not a cost. `03_05_03 Configuration
@@ -6453,6 +6470,12 @@ reordered, only relabelled.
 tool, or explicit bit-numbered spec text for Table 12 (matching Table 13's
 style) settles the nibble order, or a real device's read/write-access
 behaviour is observed to disagree with this project's current labelling.
+
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+The nibble order stays inferred and labelled as such; the "Lifted when"
+condition above still applies, and a device that disagrees reopens it.
 ## 100. Help prose lives in the message catalogue, one paragraph per key
 
 **Limitation.** T28's help text (ADR-0024) is stored the same way every other
@@ -6562,6 +6585,13 @@ load-state wait that runs the extra attempt therefore shows as one step
 that takes longer. Nothing claims to finish at `max_transition`, so nothing
 appears to hang against a promise. The limitation still applies to any
 future surface that shows a countdown.
+
+**Deferred to hardware, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+Only a real device can show whether the extra attempt matters; no surface
+renders the bound (K5 status above). Measured opportunistically in the K7
+live session, otherwise accepted as is.
 ## 102. The write echo's decode-failure branch has no known real trigger
 
 **Limitation.** `POST /api/bus/write`'s `decodedEcho` (task 27) carries a
@@ -6685,6 +6715,13 @@ mistake.
 **Lifted when.** A measurement on real hardware says the reconnect cost
 matters. The cheaper alternative — keeping a released connection and hoping
 the peer still honours it — is not available: it is the defect C19 fixed.
+
+**Deferred to hardware, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+The lifting condition is itself a hardware measurement; taken along in the
+K7 live session if the device goes quiet mid-`LoadCompleting`, otherwise
+accepted as is.
 
 
 ## 105. Transport Layer control frames go out at low priority, not `SYSTEM`
@@ -6957,6 +6994,12 @@ what disagrees with itself. This entry closes if a future edition of MP
 §2.3 removes the contradiction, or if `docs/RESEARCH.md`'s knowledge-base
 audit turns up an erratum for v02.01.02 AS that resolves it.
 
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+The contradiction is in the clause itself; this project keeps following the
+exception text, and a later edition or erratum reopens it.
+
 ## 109. Two loadable parts of the same `PartKind` have no defined relative order, so `DownloadPlan::new` refuses them both
 
 **Limitation.** `[C8]` `DownloadPlan::new`
@@ -6999,6 +7042,12 @@ states a relative order for two same-kind objects, or a real product
 database entry is found that requires more than one object of the same
 `PartKind` in a single download — at which point the order for that case
 can be added deliberately, cited, and tested, rather than inferred here.
+
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+Refusing both parts stays the behaviour; no order is invented. A cited order
+or a real product that needs it reopens this.
 
 ## 110. `PID_GROUP_RESPONSER_TABLE` stays unimplemented on every medium
 
@@ -7063,6 +7112,12 @@ which point step 07 gets its own guarded implementation, cited against CP
 §3.5.4, rather than riding in as one more step of a procedure named for
 something else.
 
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+No use case for making a device unaddressable exists; step 07 stays
+unimplemented until one does.
+
 ## 112. A download plan that needs `A_Key_Write` is refused outright, not carried out
 
 **Limitation.** CP §3.5.2 Nr. 11, p. 44, and CP §3.5.3 AP2 Nr. 13, p. 47,
@@ -7098,6 +7153,13 @@ the whole download is refused rather than partially honoured.
 `ManagementSession` gains a way to send it — at which point
 `modify_access_keys` (`crates/knx-net/src/commissioning/download.rs`) can
 carry out a `Required` declaration instead of refusing it.
+
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+A plan that needs `A_Key_Write` keeps being refused by name; no access key
+is ever guessed. A project that needs keys (together with KNX Secure, §8)
+reopens this.
 
 ## 113. An escalation only reloads the segments a shortened plan actually carries
 
@@ -7139,6 +7201,13 @@ oversight).
 partial-download plan with every segment CP §3.5.3 says an escalation may
 need, sourced from the device's actual Interface Object list rather than
 left to each call site to remember.
+
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+Partial downloads are not offered by any surface (the v1 path, K9, is a full
+application download), so the shortened-plan case has no caller; it reopens
+with the first partial-download feature.
 
 ## 114. The Download Counter refusal is this project's own conservative rule, not a System B obligation
 
@@ -7233,6 +7302,12 @@ implemented as its own `Procedure`, distinct from the CP §3.5.3 one this
 module runs today. Per-part Download Counter instance mapping, for the
 second simplification above, can be lifted independently of either.
 
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+The conservative Download Counter refusal stays; a device-profile model that
+can tell Coupler Model 2.0 from System B reopens it.
+
 ## 115. `MasterResetResponse::recovery_wait` and `SessionTiming::restart_basic_t1` compute durations nobody waits on yet
 
 **Limitation.** `[C15]` `ManagementSession::restart_master_reset`
@@ -7297,6 +7372,13 @@ recovery from a Basic Restart or Master Reset needs more than "restart,
 then let a fresh session reconnect" — at which point that procedure's own
 retry loop, not a speculative one built ahead of it, waits out the
 relevant timing value and implements MP §3.7.1.2.2's "one last time" retry.
+
+**Accepted boundary, 2026-09-28 (goal-commission K8).** User decision
+2026-09-28, asked for each K8 entry to fix it or accept it: *"das was am
+sinnvollsten ist"* (whatever makes the most sense), i.e. the recommendation.
+The live K2 traces showed the fresh-session reconnect is enough on the v1
+device (about 38 s unreachable, then readable); no procedure needs the
+computed waits yet.
 
 ## 116. `NM_IndividualAddress_Write` does not loop for the operator, and reads one Transport Layer release as MP §2.3 never quite says
 

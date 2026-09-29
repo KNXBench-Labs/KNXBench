@@ -325,6 +325,18 @@ to the user as an accepted boundary.
 - **Needs a use case or a feature:** §111 (unload IA), §112 (`A_Key_Write`),
   §113, §115.
 
+**Status 2026-09-28: decided.** The user answered the K8 question with
+*"das was am sinnvollsten ist"*: take the recommendation.
+
+- §105 is lifted (`6a7f03d`).
+- §99, §108, §109 and §114 are accepted boundaries.
+- §111, §112, §113 and §115 are accepted until a use case exists.
+- §93 stays parked: the v1 path does not run `procedure.rs`.
+- §101 and §104 are deferred to hardware: measured in the K7 live session
+  if they occur, otherwise accepted.
+
+Each entry carries its own dated note in KNOWN_LIMITATIONS.
+
 ### K9 — Scope boundary v1: [A] rules and device coverage (user decision)
 
 KNOWN_LIMITATIONS §7 lists what the image builder refuses by name (modules,
@@ -339,6 +351,14 @@ recommendation is: mask `070nh` verified on one device, everything else
 refused by name and documented. Also decide whether to keep the
 property-based `Downloader` as simulator-only or retire it. Implement
 further families only with corpus evidence plus a device.
+
+**Status 2026-09-28: decided (ADR-0048).** The recommendation is taken:
+- v1 is the memory path for mask `070nh`, verified on `1.1.67`;
+- everything else is refused by name;
+- the `[A]` rules stay documented assumptions;
+- the property-based `Downloader` stays in the tree, simulator-only.
+
+Recorded in KNOWN_LIMITATIONS §7.
 
 ### K10 — Close the commissioning track
 

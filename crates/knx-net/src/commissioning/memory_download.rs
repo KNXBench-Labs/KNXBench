@@ -268,6 +268,17 @@ pub enum MemoryDownloadError {
         /// What the device answered.
         found: Vec<u8>,
     },
+    /// A partial download found a part that is not `Loaded`: it replaces
+    /// parts of a loaded application and cannot stand in for a complete
+    /// download.
+    NotLoaded {
+        /// The step.
+        index: usize,
+        /// The machine.
+        machine: MemoryLoadStateMachine,
+        /// Its state.
+        found: LoadState,
+    },
     /// A load record ended in another state than the one its event aims at.
     UnexpectedState {
         /// The step.
@@ -319,6 +330,15 @@ impl fmt::Display for MemoryDownloadError {
             } => write!(
                 f,
                 "step {index}: property {object_index}/{property_id} is {found:02X?}, which the product does not accept"
+            ),
+            MemoryDownloadError::NotLoaded {
+                index,
+                machine,
+                found,
+            } => write!(
+                f,
+                "step {index}: the {machine} is {found:?}, not Loaded; a partial download only \
+                 replaces parts of a loaded application, so run the complete download"
             ),
             MemoryDownloadError::UnexpectedState {
                 index,
@@ -393,8 +413,10 @@ fn check_shape(plan: &MemoryDownloadPlan) -> Result<(), MemoryDownloadError> {
         )
     });
     let late_check = plan.steps.iter().enumerate().position(|(index, step)| {
-        matches!(step, MemoryDownloadStep::CompareProperty { .. })
-            && first_write.is_some_and(|first| index > first)
+        matches!(
+            step,
+            MemoryDownloadStep::CompareProperty { .. } | MemoryDownloadStep::RequireLoaded(_)
+        ) && first_write.is_some_and(|first| index > first)
     });
     match late_check {
         Some(index) => Err(MemoryDownloadError::CheckAfterWrite { index }),
@@ -502,6 +524,18 @@ pub async fn run_memory_download_observed<T: ManagementTransport>(
                 }
                 Some(hex(&found))
             }
+            MemoryDownloadStep::RequireLoaded(machine) => {
+                let found = session.read_memory_load_state(*machine).await.map_err(at)?;
+                if found != LoadState::Loaded {
+                    session.disconnect().await;
+                    return Err(MemoryDownloadError::NotLoaded {
+                        index,
+                        machine: *machine,
+                        found,
+                    });
+                }
+                Some(format!("{found:?}"))
+            }
             MemoryDownloadStep::LoadRecord(record) => {
                 let found = session
                     .write_memory_load_record(*record)
@@ -604,10 +638,15 @@ mod tests {
     use knx_core::commissioning::authorisation::AuthorisationPlan;
     use knx_core::commissioning::load_control_memory::{
         abs_data_segment, abs_task_segment, event_record, AbsoluteSegment, SegmentMemoryType,
-        TaskSegment,
+        TaskSegment, MANAGEMENT_CONTROL_ADDRESS, MEMORY_LOAD_RECORD_OCTETS,
     };
     use knx_core::commissioning::mutation::WriteAuthorisation;
-    use knx_core::commissioning::properties::{PID_HARDWARE_TYPE, PID_MANUFACTURER_ID};
+    use knx_core::commissioning::partial_memory_download::{
+        derive_partial_plan, PartialDownloadParts,
+    };
+    use knx_core::commissioning::properties::{
+        PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
+    };
 
     use super::*;
     use crate::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
@@ -1442,6 +1481,203 @@ mod tests {
         .await
         .expect("runs");
         assert_eq!(quiet.seen(), watched.seen());
+    }
+
+    /// K15: a device already carrying `A-0027-15` with all three parts
+    /// loaded, and the partial plan CP §3.9.2.4 derives from [`plan`] plus
+    /// an application part.
+    fn loaded_device() -> SimulatedDevice {
+        let device = device(SimulatorConfig::default());
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+        for machine in MemoryLoadStateMachine::ALL {
+            device.preset_load_state(ObjectIndex::new(machine.type_number()), LoadState::Loaded);
+        }
+        device
+    }
+
+    fn complete_with_application() -> MemoryDownloadPlan {
+        let application = MemoryLoadStateMachine::ApplicationProgram;
+        let mut plan = plan();
+        let tail = plan.steps.split_off(plan.steps.len() - 2);
+        plan.steps.insert(3, record(application, LoadEvent::Unload));
+        plan.steps.extend([
+            record(application, LoadEvent::StartLoading),
+            MemoryDownloadStep::LoadRecord(
+                abs_data_segment(
+                    application,
+                    AbsoluteSegment {
+                        start: 0x4400,
+                        length: 8,
+                        access: 0xFF,
+                        memory_type: SegmentMemoryType::Eeprom,
+                        checksum_control: true,
+                    },
+                )
+                .expect("a segment record"),
+            ),
+            MemoryDownloadStep::WriteMemory {
+                address: 0x4400,
+                octets: vec![0xA5; 8],
+            },
+            MemoryDownloadStep::LoadRecord(abs_task_segment(
+                application,
+                TaskSegment {
+                    start: 0x4400,
+                    pei_type: 1,
+                    manufacturer: MANUFACTURER,
+                    application: 0x0027,
+                    version: 0x15,
+                },
+            )),
+            record(application, LoadEvent::LoadCompleted),
+        ]);
+        plan.steps.extend(tail);
+        plan
+    }
+
+    fn partial(parts: PartialDownloadParts) -> MemoryDownloadPlan {
+        derive_partial_plan(&complete_with_application(), parts)
+            .expect("a partial plan")
+            .plan
+    }
+
+    const PARAMETERS: PartialDownloadParts = PartialDownloadParts {
+        parameters: true,
+        group_addresses: false,
+    };
+
+    fn events_sent(device: &SimulatedDevice) -> Vec<u8> {
+        memory_writes(device)
+            .into_iter()
+            .filter(|(address, data)| {
+                *address == u32::from(MANAGEMENT_CONTROL_ADDRESS)
+                    && data.len() == MEMORY_LOAD_RECORD_OCTETS
+            })
+            .map(|(_, data)| data[0])
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn a_parameters_partial_download_rewrites_only_the_parameters() {
+        let device = loaded_device();
+        let mut session = session(&device, WriteScope::Download);
+        let report = run_memory_download(&mut session, &partial(PARAMETERS))
+            .await
+            .expect("the partial download runs");
+        // Start Loading (31h) and Load Completed (32h) of the application
+        // only: no unload (34h), no allocation (33h), no table event.
+        assert_eq!(events_sent(&device), vec![0x31, 0x32]);
+        let data: Vec<_> = memory_writes(&device)
+            .into_iter()
+            .filter(|(address, _)| *address != u32::from(MANAGEMENT_CONTROL_ADDRESS))
+            .collect();
+        assert_eq!(data, vec![(0x4400, vec![0xA5; 8])]);
+        assert_eq!(
+            report.final_states,
+            vec![(
+                MemoryLoadStateMachine::ApplicationProgram,
+                LoadState::Loaded
+            )]
+        );
+        for machine in MemoryLoadStateMachine::ALL {
+            assert_eq!(
+                device.load_state(ObjectIndex::new(machine.type_number())),
+                LoadState::Loaded,
+                "{machine}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_partial_download_to_another_application_writes_nothing() {
+        let device = loaded_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x14]);
+        let mut session = session(&device, WriteScope::Download);
+        let error = run_memory_download(&mut session, &partial(PARAMETERS))
+            .await
+            .expect_err("another application version");
+        assert!(
+            matches!(
+                error,
+                MemoryDownloadError::PropertyMismatch {
+                    object_index: 3,
+                    property_id: PID_PROGRAM_VERSION,
+                    ..
+                }
+            ),
+            "{error}"
+        );
+        assert!(memory_writes(&device).is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_partial_download_over_an_unloaded_part_writes_nothing() {
+        for state in [LoadState::Unloaded, LoadState::Loading, LoadState::Error] {
+            let device = loaded_device();
+            device.preset_load_state(ObjectIndex::new(1), state);
+            let mut session = session(&device, WriteScope::Download);
+            let error = run_memory_download(
+                &mut session,
+                &partial(PartialDownloadParts {
+                    parameters: true,
+                    group_addresses: true,
+                }),
+            )
+            .await
+            .expect_err("a part that is not loaded");
+            assert!(
+                matches!(
+                    error,
+                    MemoryDownloadError::NotLoaded {
+                        machine: MemoryLoadStateMachine::AddressTable,
+                        found,
+                        ..
+                    } if found == state
+                ),
+                "{state:?}: {error}"
+            );
+            assert!(memory_writes(&device).is_empty(), "{state:?}");
+            assert!(error.to_string().contains("run the complete download"));
+        }
+    }
+
+    #[tokio::test]
+    async fn a_group_address_partial_download_leaves_the_application_loaded() {
+        let device = loaded_device();
+        let mut session = session(&device, WriteScope::Download);
+        run_memory_download(
+            &mut session,
+            &partial(PartialDownloadParts {
+                parameters: false,
+                group_addresses: true,
+            }),
+        )
+        .await
+        .expect("the partial download runs");
+        assert!(events_sent(&device).iter().all(|octet| octet >> 4 == 1));
+        assert!(memory_writes(&device)
+            .iter()
+            .all(|(address, _)| *address < 0x4400));
+        assert_eq!(device.load_state(ObjectIndex::new(3)), LoadState::Loaded);
+    }
+
+    #[tokio::test]
+    async fn a_require_loaded_after_a_write_is_refused_before_connecting() {
+        let device = loaded_device();
+        let mut plan = partial(PARAMETERS);
+        plan.steps.insert(
+            plan.steps.len() - 2,
+            MemoryDownloadStep::RequireLoaded(MemoryLoadStateMachine::AddressTable),
+        );
+        let mut session = session(&device, WriteScope::Download);
+        let error = run_memory_download(&mut session, &plan)
+            .await
+            .expect_err("a late check");
+        assert!(
+            matches!(error, MemoryDownloadError::CheckAfterWrite { .. }),
+            "{error}"
+        );
+        assert!(device.seen().is_empty());
     }
 
     #[test]

@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (download coverage session, offline only)
+- **Timestamp:** 2026-09-29 19:50 CEST
+- **Web lock:** untouched — still held by the UI ISSUE-09 session above; this package changed no `apps/knx-web` file.
+- **Completed:** Answered "which of *my* devices are modular / plannable" from the maintainer's own "Unser Zuhause ets 6.3.0" project: none of its 12 programs has a `ModuleDef`; 17 of 32 devices plan (all Untested), per-device table in RESEARCH §19.12. Found and fixed an importer bug on the way: schema ≥21 `ComObjectInstanceRef/@Links` is positional per Project Schema23 v01.00.00 ("The first group address in the list is always the sending one"); `knx-etsproj/src/map.rs` mapped every entry to `Send`, so 1.1.22 and 1.1.24 were refused for a phantom second sender. Now entry 0 = `Send`, the rest `Receive`; verified against the ETS4 export of the same house (543/543 senders agree, `tests/links_direction.rs`). RESEARCH §5 amendment corrects the old "presumably space-separated / direction from flags" note.
+- **Pending/Next Steps:** Next house-relevant item: 1.1.11–13 (AMS-1216, older program `A-0019-13-B655`) refused on a union at `AS-4400` offset 1810 whose two members `UP-33` (default) and `UP-1227` (`Access="None"`) are both written — settle from direct PDFs/product data which member is active; do not pick one. Then presence detectors 1.1.1–9 (`LsmIdx 5`) and Merten 1.1.24 (`LdCtrlTaskCtrl1`).
+- **Notes for Codex or Claude:** **For the UI ISSUE-09 session (directional links):** after this lands, schema ≥21 imports carry `Receive` links for every `Links` entry after the first. Previously everything imported from an ETS 5/6 file was `Send`. Rebase before relying on link direction in the device editor. Schema 11 (`Send`/`Receive` elements) is unchanged. No bus access in this package.
+
+---
+
 - **Last Agent:** codex (UI U11 / ISSUE-09 device-editor session)
 - **Timestamp:** 2026-09-29 18:38 CEST
 - **Web lock: taken by the UI ISSUE-09 session for the device editor.** Do not edit `apps/knx-web` concurrently until this package publishes and releases the lock.

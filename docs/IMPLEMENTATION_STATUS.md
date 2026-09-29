@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Schema ≥21 `Links`: the first address sends, the rest receive
+
+- `knx-etsproj` maps `ComObjectInstanceRef/@Links` positionally, per Project
+  Schema23 v01.00.00 ("The first group address in the list is always the
+  sending one"): entry 0 is `Send`, every later entry `Receive`. Before, every
+  entry was `Send`, so an object with two links looked like it sent on two
+  addresses and the download planner refused the device.
+- Verified against the maintainer's house exported twice: all 543 objects the
+  ETS4 file (explicit `Send`/`Receive`) and the ETS 6.3.0 file (`Links`) can
+  compare name the same sender (`tests/links_direction.rs`, corpus-gated).
+- Effect on the house (RESEARCH §19.12): 1.1.22 and 1.1.24 no longer fail on a
+  phantom second sender; they now reach their real program-level refusals.
+  17 of the house's 32 devices plan, all Untested; none of its devices is
+  modular.
+
 ## 2026-09-29 — Download coverage: parameter fields across an octet boundary
 
 - `ParameterImage::write` writes any 1–64-bit field at bit offset 0–7,

@@ -55,8 +55,10 @@ fn the_corpus_coverage_is_pinned() {
     }
     assert_eq!(summary.programs, 246);
     // Signed values at or above zero and text parameters are written since
-    // RESEARCH §19.9: 15 more programs plan (54 -> 69).
-    assert_eq!((summary.verified, summary.untested), (1, 69));
+    // RESEARCH §19.9: 15 more programs plan (54 -> 69). A Rename /
+    // ParameterBlockRename leaf no longer holds up the image (§19.10): 4
+    // more plan (69 -> 73).
+    assert_eq!((summary.verified, summary.untested), (1, 73));
     let unsupported: BTreeMap<&str, usize> = summary
         .unsupported
         .iter()
@@ -71,19 +73,22 @@ fn the_corpus_coverage_is_pinned() {
             ("not-memory-mapped", 65),
             // One of the newly imaged programs reaches LdCtrlTaskCtrl1.
             ("unmodelled-step", 2),
-            ("parameter-evaluation", 59),
+            // 8 programs were held up only by Rename leaves; 4 of them now
+            // plan, 4 reach a field the writer refuses (below).
+            ("parameter-evaluation", 51),
             // A float default ("5.0E+002") used to fail as "not an
             // unsigned number" here; it is now refused for its type, under
             // image-structure. 6 conflicting refs, 3 enumeration values
-            // remain.
-            ("parameter-value", 9),
+            // remain. The 4 former Rename programs add a 6-bit field at
+            // bit 5, which crosses an octet and stays refused.
+            ("parameter-value", 13),
             // 19 TypeFloat, 10 ReadOnInitFlag, 9 placed by Property,
             // 3 Priority High.
             ("image-structure", 41),
         ])
     );
     assert_eq!(summary.by_mask.get("MV-0701"), Some(&(40, 35)));
-    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 35)));
+    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(141, 39)));
 
     // Every mask outside 070nh is refused for its mask, and none of them
     // for a reason that sounds like "almost".

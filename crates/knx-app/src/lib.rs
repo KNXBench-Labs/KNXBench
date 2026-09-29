@@ -13,6 +13,7 @@ pub mod device_download;
 pub mod documentation;
 pub mod import;
 pub mod progress;
+pub mod serial_number;
 
 pub use import::{
     import_ets_project, import_ets_project_observed, import_ets_project_with, AppError,

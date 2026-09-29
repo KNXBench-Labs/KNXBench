@@ -14,6 +14,8 @@ knx-productdb.workspace = true
 knx-report.workspace = true
 knx-store.workspace = true
 chrono.workspace = true
+# Decodes `DeviceInstance/@SerialNumber` (xs:base64Binary) in `serial_number`.
+base64.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

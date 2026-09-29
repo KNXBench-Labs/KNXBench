@@ -1057,6 +1057,9 @@ impl TelegramBuffer {
             ref service @ (ApplicationService::IndividualAddressWrite { .. }
             | ApplicationService::IndividualAddressRead
             | ApplicationService::IndividualAddressResponse
+            | ApplicationService::IndividualAddressSerialNumberRead { .. }
+            | ApplicationService::IndividualAddressSerialNumberResponse { .. }
+            | ApplicationService::IndividualAddressSerialNumberWrite { .. }
             | ApplicationService::MemoryRead { .. }
             | ApplicationService::MemoryResponse { .. }
             | ApplicationService::MemoryWrite { .. }

@@ -5306,6 +5306,14 @@ class.**
    Nothing in `knx-net` encodes `A_IndividualAddressSerialNumber_*`.
    **Largest gap for real-world commissioning.** It needs a device whose
    serial number is known, plus user approval for a new live test.
+   **Done 2026-09-29 (K12, KL §139), simulator only.** AL Figures 12–14
+   (pp. 21–23): read = 6 serial octets; response = 6 serial + 2 domain
+   address + 2 reserved, the address being the frame's source; write = 6
+   serial + 2 new address + 4 reserved. APCI `3DCh`/`3DDh`/`3DEh`. MP §2.4
+   and §2.5 give no response time-out. RES §4.22.1.3: a device with interface
+   objects and these services also has `PID_SERIAL_NUMBER` (PID 11), which
+   is how to learn a serial number the project lacks. The serial number is
+   2 octets of manufacturer code and 4 more (RES §4.22.1.2, DPT 221.001).
 2. **`NM_IndividualAddress_Reset`** (MP §2.18, p. 33): write `FFFFh` to
    every device in programming mode, restart at `FFFFh`, repeat until no
    answer. Small, but it writes to hardware.

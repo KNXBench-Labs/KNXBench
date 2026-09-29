@@ -93,9 +93,53 @@ pub enum Occupancy {
 }
 
 impl Occupancy {
-    fn is_occupied(self) -> bool {
+    pub(crate) fn is_occupied(self) -> bool {
         !matches!(self, Occupancy::NotOccupied)
     }
+}
+
+/// MP §2.3 step 1: whether any device answers at `address`.
+///
+/// Also the uniqueness check MP §2.5 requires of the serial-number write
+/// (*"The procedure shall ensure that the assigned Individual Address is
+/// unique"*) and names no procedure for, so it borrows this one.
+pub(crate) async fn probe_occupancy<T: ManagementTransport>(
+    transport: &T,
+    address: IndividualAddress,
+    timing: SessionTiming,
+) -> Result<Occupancy, SessionError> {
+    let mut probe =
+        ManagementSession::read_only(transport, address, AuthorisationPlan::Skip, timing)?;
+    let occupancy = match probe.connect().await {
+        Ok(()) => match probe.probe_device_descriptor().await {
+            Ok(()) => Occupancy::OccupiedWithResponse,
+            // The connection went away in place of an answer. p. 14: *"if
+            // A_Disconnect-PDU is received then IA_new shall be regarded
+            // as occupied"*.
+            Err(SessionError::ConnectionLost { .. } | SessionError::ConnectionReleased { .. }) => {
+                Occupancy::OccupiedAfterDisconnect
+            }
+            // The connection is still open and nothing came. p. 14: *"If
+            // no A_DeviceDescriptor_Response-PDU is received after
+            // time-out ⇒ IA_new is not occupied"*.
+            Err(SessionError::NoAnswer { .. }) => Occupancy::NotOccupied,
+            Err(err) => {
+                probe.disconnect().await;
+                return Err(err);
+            }
+        },
+        // p. 14, the clause's own first line: *"if negative A_Connect.Lcon
+        // ⇒ IA_new is not occupied"*. A free address earns no Layer-2
+        // acknowledge, which is exactly what produces the negative
+        // confirmation, so this is the ordinary case and not an exception.
+        // Silence is the same verdict for the same reason.
+        Err(SessionError::ConnectRejected { .. } | SessionError::NoAnswer { .. }) => {
+            Occupancy::NotOccupied
+        }
+        Err(err) => return Err(err),
+    };
+    probe.disconnect().await;
+    Ok(occupancy)
 }
 
 /// What became of step 4's closing Basic Restart.
@@ -265,38 +309,9 @@ pub async fn individual_address_write<T: ManagementTransport>(
 
     // ---- Step 1: is IA_new occupied? ----
     record(&mut report, 1, "check whether the new address is occupied");
-    let mut probe =
-        ManagementSession::read_only(transport, new_address, AuthorisationPlan::Skip, timing)
-            .map_err(|err| at_step(1, &report, err))?;
-    let occupancy = match probe.connect().await {
-        Ok(()) => match probe.probe_device_descriptor().await {
-            Ok(()) => Occupancy::OccupiedWithResponse,
-            // The connection went away in place of an answer. p. 14: *"if
-            // A_Disconnect-PDU is received then IA_new shall be regarded
-            // as occupied"*.
-            Err(SessionError::ConnectionLost { .. } | SessionError::ConnectionReleased { .. }) => {
-                Occupancy::OccupiedAfterDisconnect
-            }
-            // The connection is still open and nothing came. p. 14: *"If
-            // no A_DeviceDescriptor_Response-PDU is received after
-            // time-out ⇒ IA_new is not occupied"*.
-            Err(SessionError::NoAnswer { .. }) => Occupancy::NotOccupied,
-            Err(err) => {
-                probe.disconnect().await;
-                return Err(at_step(1, &report, err));
-            }
-        },
-        // p. 14, the clause's own first line: *"if negative A_Connect.Lcon
-        // ⇒ IA_new is not occupied"*. A free address earns no Layer-2
-        // acknowledge, which is exactly what produces the negative
-        // confirmation, so this is the ordinary case and not an exception.
-        // Silence is the same verdict for the same reason.
-        Err(SessionError::ConnectRejected { .. } | SessionError::NoAnswer { .. }) => {
-            Occupancy::NotOccupied
-        }
-        Err(err) => return Err(at_step(1, &report, err)),
-    };
-    probe.disconnect().await;
+    let occupancy = probe_occupancy(transport, new_address, timing)
+        .await
+        .map_err(|err| at_step(1, &report, err))?;
     report.occupancy = occupancy;
 
     // ---- Step 2: count devices in Programming Mode ----

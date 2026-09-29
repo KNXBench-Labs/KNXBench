@@ -9,6 +9,7 @@ use std::process::ExitCode;
 
 mod device_address;
 mod device_download;
+mod device_serial;
 mod scan;
 
 const USAGE: &str =
@@ -65,6 +66,15 @@ const USAGE: &str =
      \x20         waits up to --wait seconds (default 120) for exactly one pressed button and\n\
      \x20         says when to press or release; ends with a restart. Without --confirm it\n\
      \x20         prints the steps and opens no connection)\n\
+     \x20     knx device address-by-serial <area.line.device>\n\
+     \x20                  (--serial MMMM:NNNNNNNN | --project <p.knxdb> --device <DeviceInstance Id>)\n\
+     \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
+     \x20         (gives the device with this KNX Serial Number the address, no button, MP §2.5;\n\
+     \x20         checks the address is free, verifies by reading back, sends no restart.\n\
+     \x20         Without --confirm it prints the steps and opens no connection)\n\
+     \x20     knx device find-serial (<MMMM:NNNNNNNN> | --address <a.l.d>) --gateway <host:port>\n\
+     \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
+     \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
      \x20     knx --version\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
@@ -1682,6 +1692,8 @@ fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),
+        Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
+        Some("find-serial") => run_device_find_serial(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1909,6 +1921,144 @@ fn run_device_program_address(args: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE
+        }
+    })
+}
+
+/// `knx device address-by-serial`. The address, exclusion list, serial
+/// number and phrase are checked before a socket opens; without the phrase
+/// only the steps are printed.
+fn run_device_address_by_serial(args: &[String]) -> ExitCode {
+    let parsed = match device_serial::parse_address_by_serial_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let serial = match device_serial::resolve_serial(&parsed.source) {
+        Ok(serial) => serial,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let (target, mode) = match device_serial::check(&parsed) {
+        Ok(checked) => checked,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let new_address = target.address();
+    print!("{}", device_serial::format_plan(serial, new_address));
+    let (gateway, authorisation) = match mode {
+        device_serial::Mode::Plan => {
+            println!(
+                "address written: no (plan only; add --gateway and --confirm {:?} to write)",
+                knx_core::commissioning::mutation::required_confirmation_phrase(
+                    new_address,
+                    knx_core::WriteScope::IndividualAddressProgramming
+                )
+            );
+            return ExitCode::SUCCESS;
+        }
+        device_serial::Mode::Write {
+            gateway,
+            authorisation,
+        } => (gateway, authorisation),
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                println!("address written: no");
+                return ExitCode::FAILURE;
+            }
+        };
+        let written = device_serial::execute(
+            &tunnel,
+            serial,
+            authorisation,
+            knx_net::SessionTiming::default(),
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        if written {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        }
+    })
+}
+
+/// `knx device find-serial`: MP §2.4 or `PID_SERIAL_NUMBER`, read-only.
+fn run_device_find_serial(args: &[String]) -> ExitCode {
+    let (query, gateway) = match device_serial::parse_find_serial_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway: std::net::SocketAddrV4 = match gateway.parse() {
+        Ok(gateway) => gateway,
+        Err(_) => {
+            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+            return ExitCode::FAILURE;
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let found = device_serial::find(&tunnel, &query, knx_net::SessionTiming::default()).await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        match found {
+            Ok(Some(line)) => {
+                println!("{line}");
+                ExitCode::SUCCESS
+            }
+            Ok(None) => {
+                println!("no answer (MP §2.4: no device with that serial number on this network)");
+                ExitCode::FAILURE
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::FAILURE
+            }
         }
     })
 }
@@ -2957,6 +3107,9 @@ fn format_service(
         service @ (ApplicationService::IndividualAddressWrite { .. }
         | ApplicationService::IndividualAddressRead
         | ApplicationService::IndividualAddressResponse
+        | ApplicationService::IndividualAddressSerialNumberRead { .. }
+        | ApplicationService::IndividualAddressSerialNumberResponse { .. }
+        | ApplicationService::IndividualAddressSerialNumberWrite { .. }
         | ApplicationService::MemoryRead { .. }
         | ApplicationService::MemoryResponse { .. }
         | ApplicationService::MemoryWrite { .. }

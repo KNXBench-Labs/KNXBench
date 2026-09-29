@@ -73,7 +73,8 @@
   code. Simulator/corpus tests cover backup failure, roundtrip restore,
   CLI/HTTP gating and the panel. Live on `1.1.67` (2026-09-29): backup
   before the first write, download, then `knx device restore` back to a
-  byte-identical device (180/180 dump lines); see RESEARCH top entry.
+  byte-identical device (180/180 dump lines), for the complete download and
+  for the parameters-only partial download; see RESEARCH top entry.
   See [ADR-0049](adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md),
   [RESEARCH.md](RESEARCH.md) and [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 

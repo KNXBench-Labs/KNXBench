@@ -60,6 +60,22 @@ Every statement below is tagged:
   backup-live-download,post-backup-live-download,backup-live-restore,
   post-backup-live-restore}.txt` and the two JSON files under
   `1.1.67-prewrite/` and `1.1.67-prerestore/` (gitignored).
+- **[V] Live roundtrip, partial download (parameters), 2026-09-29
+  16:02–16:12.** Pre-dump = option C. (1) `--partial parameters` with the
+  option C project: backup (1 region, `4400h`, 394 octets; `partial`
+  recorded as parameters only; load state of the application `Loaded`) was
+  written after the identity and all-`Loaded` checks (steps 1–6) and before
+  step 7; 0 differing octets against the pre-dump; dump after the write
+  unchanged; `knx device restore` of it wrote 394/394, dump unchanged
+  (180/180). (2) The discriminating case: `--partial parameters` with the K7
+  project: backup 394 octets, 0 differing against the device; after the
+  write the dump equals `post-k7-cli` (3 dump lines changed, the K7
+  parameters). `knx device restore` of that backup (own pre-write backup
+  first) wrote 394/394; after ~40 s the dump is **byte-identical to the
+  pre-dump in 180/180 lines**, load states `01 01 01`. Restart unconfirmed
+  every time, as usual. Logs `…_{pre-backup-partial,backup-partial-*,
+  post-backup-partial-*}.txt`, JSON under `1.1.67-prewrite-partial*/` and
+  `1.1.67-prerestore-partial*/`.
 
 ---
 

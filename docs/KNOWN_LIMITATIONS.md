@@ -21,8 +21,10 @@ that rederives the same steps and memory shape can become a restore plan.
 Backup creation and restore were confirmed live once, on one device and
 program (MDT `1.1.67`, `0701h`, `A-0027-15-0BAC`, complete download; RESEARCH
 top entry, 2026-09-29): backup before the first write, restore
-byte-identical over 180 dump lines. Partial-download backups, other
-devices and the refuse-before-write path on a failing backup remain
+byte-identical over 180 dump lines; the parameters-only partial download
+likewise (backup of `4400h`, K7 parameters written, restore to a
+byte-identical dump). The group-address partial download, other devices
+and the refuse-before-write path on a failing backup remain
 simulator-only; neither can be promised as a universal rollback. The existing manual
 read-only baseline required by `goal-commission.md` before live tests is
 separate and still required when live tests are authorised again.

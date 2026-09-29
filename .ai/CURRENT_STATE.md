@@ -1,3 +1,15 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 10:33 CEST
+- Web lock: held by the UI session (U8); not touched by this entry. `DeviceDownloadPanel.tsx` unchanged.
+- **Completed:** Second commissioning stage K13–K15 on `origin/main`, all simulator-only, no bus action:
+  - K13 `0606660` MP §2.18 IA reset to `FFFFh`; `WriteScope::IndividualAddressReset` refused on hardware (KL §140). 7/7 mutants.
+  - K14 `c0fe236` Master Reset, MP §3.7.1.2 Tables 4/5 typed, support probe first; erasing codes now need `WriteScope::MasterReset`, refused on hardware (KL §141). Closed a hole: `restart_master_reset` used to send every erase code under the hardware-permitted restart scope. 9/9 mutants; gate 2453/0.
+  - K15 `f5d5822` partial download for `070nh`: CP §3.9.2.4 transformation of the complete plan plus our application-identity and all-`Loaded` checks before the first write. CLI `--partial`, HTTP `partial` (server re-derives on start). Real MDT plan 11 steps/394 octets vs 25/1416. 9/9 mutants; gate 2468/0 over 124 suites (KL §142).
+- **Pending/Next Steps:** K16 RF domain address (simulator only): AL §3.3.3–§3.3.7 read from the PDF, APCIs `3E0h` write, `3E1h` read, `3E2h` response, `3E3h` selective read (2-octet DoA only, NOTE 6: not for RF), `3ECh`/`3EDh`/`3EEh` serial-number read/response/write; RF uses the 6-octet DoA; write/read go by `T_Data_SystemBroadcast` and only a device in programming mode answers. Still to read: MP §2.7–§2.14 procedures and the cEMI RF additional info. Branch `iaw-k16-rf` exists in worktree `iaw-k11-key`, no code yet. Then K17 (CP §2.3/§3.6/§3.7), K18 closing review, `stats.md`, scratch cleanup.
+- **Notes for Codex/Claude:** Stopped at the user's session quota (82%), not at a blocker. No RF hardware exists: never claim an RF live check. Live runs of K13/K14/K15 each need the user's device-specific go (K15: pre-run dump and option-C re-download ready). Mutation scripts must `touch` the restored file, or Cargo reuses the mutant build.
+
+---
+
 - **Last Agent:** codex (UI session)
 - **Timestamp:** 2026-09-29 10:12 CEST
 - Web lock: taken by UI session for U8 ISSUE-03 shared overlay sizing, readable forms and Settings glyph

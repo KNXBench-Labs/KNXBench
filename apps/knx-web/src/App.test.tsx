@@ -2022,6 +2022,10 @@ describe("App — in-application help (T23)", () => {
     const gear = Array.from(host!.querySelectorAll("button")).find(
       (b) => b.getAttribute("aria-label") === enMessages["toolbar.settings"],
     );
+    const glyph = gear?.querySelector("svg");
+    expect(glyph?.getAttribute("aria-hidden")).toBe("true");
+    expect(glyph?.querySelector("path")).not.toBeNull();
+    expect(glyph?.querySelectorAll("line")).toHaveLength(0); // not the old sun's rays
     await act(async () => {
       gear!.click();
     });
@@ -2270,6 +2274,27 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     expect(document.body.querySelector(".documentation-dialog")).toBeNull();
     expect(document.activeElement).toBe(host!.querySelector(".file-menu summary"));
 
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the Debug report readable after its File menu closes and returns focus to File", async () => {
+    const root = await renderApp();
+    const menu = await openMenu();
+    const summary = menu.querySelector("summary")!;
+    await act(async () => {
+      findButton("Debug report…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(menu.open).toBe(false);
+    const panel = document.body.querySelector<HTMLElement>(".debug-report-panel")!;
+    expect(panel).not.toBeNull();
+    expect(panel.closest(".file-menu")).toBeNull();
+    expect(document.activeElement).toBe(panel.querySelector("textarea"));
+
+    const close = [...panel.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent === "Close")!;
+    await act(async () => close.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(document.body.querySelector(".debug-report-panel")).toBeNull();
+    expect(document.activeElement).toBe(summary);
     await act(async () => root.unmount());
   });
 

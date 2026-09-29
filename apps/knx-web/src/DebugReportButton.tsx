@@ -1,5 +1,6 @@
 /** File-menu entry and dialog collecting a debug report into a local zip or a GitHub issue. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import * as api from "./api";
 import { buildIssueUrl } from "./githubIssue";
 import { isTauri, pickSavePath } from "./filePicker";
@@ -54,10 +55,20 @@ export default function DebugReportButton(props: {
   const { onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const wasOpen = useRef(false);
+  // The File menu closes on activation, hiding the opening button. Restore
+  // focus to its visible summary after Overlay restores its previous focus.
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      buttonRef.current?.closest("details")?.querySelector("summary")?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   return (
     <>
-      <button onClick={() => setOpen(true)}>{t("debugReport.button")}</button>
+      <button ref={buttonRef} onClick={() => setOpen(true)}>{t("debugReport.button")}</button>
       {open && (
         <DebugReportDialog
           onClose={() => setOpen(false)}
@@ -154,10 +165,13 @@ function DebugReportDialog(props: {
     }
   }
 
-  return (
+  // This button lives in File's closing <details>. Keep the shared overlay
+  // outside that hidden subtree, as the documentation dialog already does.
+  return createPortal(
     <Overlay
       labelledBy="debug-report-title"
       className="debug-report-panel"
+      resizable={{ width: 820, height: 640 }}
       onClose={onClose}
       initialFocusRef={descriptionRef}
     >
@@ -224,7 +238,8 @@ function DebugReportDialog(props: {
           {busy ? t("debugReport.busy") : t("debugReport.save")}
         </button>
       </div>
-    </Overlay>
+    </Overlay>,
+    document.body,
   );
 }
 

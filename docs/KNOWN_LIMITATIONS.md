@@ -1925,8 +1925,8 @@ device cases, and manual-selection preservation. **[V]**
 
 **Resolved (2026-09-12, T31)** — for the shell and the keyboard defect;
 not for accessibility conformance in general, which is not a thing this
-entry can ever claim closed by fiat. `apps/knx-web/src/Overlay.tsx` (new,
-94 lines, no new dependency) is now the one component behind
+entry can ever claim closed by fiat. `apps/knx-web/src/Overlay.tsx` is
+now the one component behind
 `.search-overlay`/`.search-panel`, and all four former hand-rolled
 copies — `Search.tsx`, `CommandPalette.tsx`, `CatalogBrowser.tsx` (T2)
 and `SettingsPanel.tsx` (T27) — render it instead of their own overlay
@@ -1982,6 +1982,16 @@ wired to the right elements — it says nothing about what NVDA, JAWS,
 Orca or VoiceOver actually announce. No conformance to WCAG or any other
 accessibility standard is claimed; no audit of any kind has been
 performed. Design: `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
+
+**U8 update (2026-09-29).** The shared shell now offers opt-in viewport-bounded
+pointer and keyboard resizing. Settings and Debug report use it; the other
+overlays retain their existing sizes. Focus containment, Escape and backdrop
+dismissal are covered by regression tests, including a pointer drag that ends
+on the backdrop. Headless Chromium exercised the Settings layout, arrow-key
+resize and internal scroll at 640 px, including 150% application zoom; the
+zoomed dialog's rendered dimensions must be converted back to layout pixels
+before a keyboard step. Native WebKitGTK sizing and real screen reader
+announcements remain unverified; this is not an accessibility audit.
 
 **Originally.** Four components shared `styles.css`'s
 `.search-overlay`/`.search-panel` shape with no shared component behind

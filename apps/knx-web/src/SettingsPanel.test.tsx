@@ -112,6 +112,27 @@ async function renderPanel(onClose = vi.fn(), productLanguages?: readonly Produc
 }
 
 describe("SettingsPanel", () => {
+  it("uses a roomy shared resize shell with a two-column layout that stacks on narrow windows", async () => {
+    const { root } = await renderPanel();
+    const panel = host!.querySelector<HTMLElement>(".settings-panel")!;
+    expect(panel.classList.contains("search-panel-resizable")).toBe(true);
+    expect(panel.style.width).toBe("860px");
+    expect(panel.style.height).toBe("680px");
+    expect(panel.querySelector(".overlay-resize-key")).not.toBeNull();
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "styles.css"), "utf8");
+    const desktop = css.match(/\.settings-panel \{([^}]*)\}/)?.[1] ?? "";
+    expect(desktop).toMatch(/grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+    expect(css).toMatch(/@media \(max-width: 48rem\) \{\s*\.settings-panel \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    const input = css.match(/\.settings-field input:not\(\[type="checkbox"\]\) \{([^}]*)\}/)?.[1] ?? "";
+    expect(input).toMatch(/width:\s*100%/);
+    expect(input).toMatch(/box-sizing:\s*border-box/);
+    const checkbox = css.match(/\.search-panel input\[type="checkbox"\] \{([^}]*)\}/)?.[1] ?? "";
+    expect(checkbox).toMatch(/width:\s*1rem/);
+    expect(checkbox).toMatch(/min-height:\s*1rem/);
+    expect(checkbox).toMatch(/padding:\s*0/);
+    root.unmount();
+  });
+
   it("groups appearance, language/data, and consumed bus preferences", async () => {
     const { root } = await renderPanel();
     const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(

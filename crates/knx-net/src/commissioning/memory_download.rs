@@ -43,6 +43,7 @@
 
 use std::fmt;
 
+use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory_download::{
@@ -107,6 +108,65 @@ pub enum Progress {
     },
     /// A step finished.
     StepDone(StepDone),
+    /// The connection is open and the device's identity checked; this is
+    /// the access the device granted, before the first write.
+    Authorised {
+        /// What authorisation obtained. `FreeLevelUnknown` when no key was
+        /// sent (MP §3.5.1's guard skips the exchange).
+        authorisation: Authorisation,
+        /// Whether the level is the minimum a wrong key earns (AL §3.5.7).
+        /// A suspicion, not a diagnosis.
+        suspicious: bool,
+    },
+}
+
+/// What to tell the operator when a download failed in a way a locked
+/// device also produces.
+///
+/// `[D]` AL §3.5.3/§3.5.4 answer an access-rights refusal with `number = 0`,
+/// and §3.4.4.2 a property refusal with `nr_of_elem = 0`; on mask `070nh`,
+/// where Verify Mode is forbidden (MP §3.31.2), a refused write shows up
+/// only as a read-back that still holds the old octets, or as a load state
+/// that did not move. None of those says *why*, so this is a hint and
+/// never a diagnosis.
+///
+/// `[D]` AL §3.5.7: a wrong key selects the minimal level with no negative
+/// response, so every hint asks for the key to be supplied or checked,
+/// never for another one to be tried.
+pub fn locked_device_hint(
+    error: &MemoryDownloadError,
+    authorisation: Option<Authorisation>,
+    suspicious: bool,
+) -> Option<String> {
+    let refusal_shaped = matches!(
+        error,
+        MemoryDownloadError::UnexpectedState { .. }
+            | MemoryDownloadError::Session {
+                error: SessionError::MemoryRefused { .. }
+                    | SessionError::PropertyRefused { .. }
+                    | SessionError::ReadBackMismatch { .. }
+                    | SessionError::MemoryLoadNotSettled { .. },
+                ..
+            }
+    );
+    if !refusal_shaped {
+        return None;
+    }
+    Some(match authorisation? {
+        Authorisation::FreeLevelUnknown => "no access key was sent, so the device granted \
+             its free level; if it is locked, supply its key (the project's \
+             Installation/@BCUKey, or a key file). A wrong key leaves less access than \
+             none, so never guess one"
+            .to_owned(),
+        Authorisation::Granted { level } if suspicious => format!(
+            "the key earned {level}, the minimum a wrong key earns (AL §3.5.7); check the \
+             key rather than trying others"
+        ),
+        Authorisation::Granted { level } => format!(
+            "the session held {level}; if the device is locked, that was not enough to \
+             write: check the key rather than trying others"
+        ),
+    })
 }
 
 /// What a completed run did.
@@ -410,6 +470,12 @@ pub async fn run_memory_download_observed<T: ManagementTransport>(
                 }
                 let negotiated = session.write_limit(None).await.map_err(at)?;
                 limit = Some(negotiated);
+                if let Some(state) = session.connection() {
+                    observe(Progress::Authorised {
+                        authorisation: state.authorisation,
+                        suspicious: session.authorisation_is_suspicious(),
+                    });
+                }
                 Some(format!(
                     "mask {:04X}h, manufacturer {manufacturer:04X}h, {} octets per write",
                     found.0,
@@ -1153,6 +1219,110 @@ mod tests {
             each: Duration::from_millis(1),
             attempts: 1,
         }));
+    }
+
+    /// A device locked above its free level refuses the download that
+    /// carries no key, and the operator learns why without a key being
+    /// guessed.
+    #[tokio::test]
+    async fn a_locked_device_refuses_the_free_level_and_the_hint_says_why() {
+        let device = device(SimulatorConfig {
+            free_access_level: 3,
+            key: Some(0x1234_5678),
+            key_level: 1,
+            write_requires_level: 2,
+            ..SimulatorConfig::default()
+        });
+        let mut session = session(&device, WriteScope::Download);
+        let mut granted = None;
+        let error = run_memory_download_observed(&mut session, &plan(), |p| {
+            if let Progress::Authorised {
+                authorisation,
+                suspicious,
+            } = p
+            {
+                granted = Some((authorisation, suspicious));
+            }
+        })
+        .await
+        .expect_err("the free level may not write");
+        let (authorisation, suspicious) = granted.expect("reported before the first write");
+        assert_eq!(authorisation, Authorisation::FreeLevelUnknown);
+        let hint = locked_device_hint(&error, Some(authorisation), suspicious)
+            .expect("a refusal-shaped failure without a key earns the hint");
+        assert!(hint.contains("never guess"), "{hint}");
+        assert!(!hint.contains("305419896") && !hint.contains("12345678"));
+        assert_ne!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+    }
+
+    /// The same locked device, with its key: MP §3.5.2 on a BIM M112 asks
+    /// for the free level, finds it is not the highest, sends the key and
+    /// keeps it, and the download completes.
+    #[tokio::test]
+    async fn the_right_key_unlocks_the_same_device_through_the_two_key_procedure() {
+        let device = device(SimulatorConfig {
+            free_access_level: 3,
+            key: Some(0x1234_5678),
+            key_level: 1,
+            write_requires_level: 2,
+            ..SimulatorConfig::default()
+        });
+        let authorisation =
+            WriteAuthorisation::for_simulator(device.address(), WriteScope::Download)
+                .expect("not excluded");
+        let key = knx_core::commissioning::authorisation::AccessKey::new(0x1234_5678)
+            .expect("not the sentinel");
+        let mut session = ManagementSession::authorised(
+            &device,
+            AuthorisationPlan::WithKey(key),
+            fast(),
+            authorisation,
+        )
+        .expect("a simulator session")
+        .with_two_key_extension();
+        let mut granted = None;
+        let report = run_memory_download_observed(&mut session, &plan(), |p| {
+            if let Progress::Authorised { authorisation, .. } = p {
+                granted = Some(authorisation);
+            }
+        })
+        .await
+        .expect("the key's level may write");
+        assert_eq!(device.authorize_requests(), 2, "free key, then the key");
+        assert_eq!(
+            granted,
+            Some(Authorisation::Granted {
+                level: knx_core::commissioning::authorisation::AccessLevel::from_octet(1)
+            })
+        );
+        assert_eq!(
+            report.final_states,
+            vec![(MemoryLoadStateMachine::AddressTable, LoadState::Loaded)]
+        );
+    }
+
+    #[test]
+    fn the_hint_only_answers_refusal_shaped_failures() {
+        let refused = MemoryDownloadError::Session {
+            index: Some(5),
+            error: SessionError::MemoryRefused { address: 0x4000 },
+        };
+        let not_refused = MemoryDownloadError::MaskMismatch {
+            expected: MaskVersion(0x0701),
+            found: MaskVersion(0x07B0),
+        };
+        let free = Some(Authorisation::FreeLevelUnknown);
+        assert!(locked_device_hint(&refused, free, false).is_some());
+        assert!(locked_device_hint(&not_refused, free, false).is_none());
+        assert!(
+            locked_device_hint(&refused, None, false).is_none(),
+            "never connected"
+        );
+        let minimum = Some(Authorisation::Granted {
+            level: knx_core::commissioning::authorisation::AccessLevel::MINIMUM_OF_SIXTEEN,
+        });
+        let hint = locked_device_hint(&refused, minimum, true).expect("a hint");
+        assert!(hint.contains("wrong key") && hint.contains("rather than trying others"));
     }
 
     /// The operator sees every step start and finish, and every octet that

@@ -1644,7 +1644,15 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         Ok(())
     }
 
-    /// MP §3.5.2 `DM_Authorize2_RCo`, transcribed from spec §10.4.
+    /// MP §3.5.2 `DM_Authorize2_RCo`, as its sequence diagram on p. 76
+    /// nests it.
+    ///
+    /// The key is sent only inside *"If the free access level is not the
+    /// highest level (lowest numerical value, maximum access rights)"*: a
+    /// device whose free level is already `0` has nothing a key could add,
+    /// and the diagram's closing `endif endif` puts both the key and the
+    /// reselection inside that block. (An earlier reading here sent both
+    /// exchanges unconditionally; the rendered page says otherwise.)
     ///
     /// The comparison is on access, not on the octet: `client_level >
     /// free_level` in the clause is numeric and therefore means *worse*,
@@ -1655,10 +1663,9 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             .authorize_request(FREE_ACCESS_KEY.to_be_bytes())
             .await?;
         self.record_level(free_level);
-        // No short-cut for `free_level == MAXIMUM`, tempting though it is:
-        // the clause performs both exchanges unconditionally, and an
-        // optimisation that changes how many frames a documented procedure
-        // puts on the wire is a deviation, not an optimisation.
+        if free_level == AccessLevel::MAXIMUM {
+            return Ok(());
+        }
         let client_level = self.authorize_request(key).await?;
         self.record_level(client_level);
         if free_level.is_more_powerful_than(client_level) {
@@ -4370,15 +4377,43 @@ mod tests {
         );
     }
 
-    /// §10.4 / §14 item 14: the opt-in extension, in both directions. Three
-    /// exchanges when the free level was the better one, two when the key's
-    /// level was.
+    /// MP §3.5.2, p. 76, in all three directions. The key is sent only
+    /// inside *"If the free access level is not the highest level"* (the
+    /// diagram closes that block with the second `endif`), and the free key
+    /// is sent again only when it was the better one.
     #[tokio::test]
     async fn the_two_key_extension_reselects_the_free_key_only_when_it_was_better() {
         let key = AccessKey::new(0x0000_00AA).expect("not the sentinel");
 
-        let free_is_better = SimulatedDevice::with_config(SimulatorConfig {
+        let free_is_maximum = SimulatedDevice::with_config(SimulatorConfig {
             free_access_level: 0,
+            key: Some(0x0000_00AA),
+            key_level: 3,
+            ..SimulatorConfig::default()
+        });
+        let mut session = ManagementSession::read_only(
+            &free_is_maximum,
+            free_is_maximum.address(),
+            AuthorisationPlan::WithKey(key),
+            fast(),
+        )
+        .expect("contactable")
+        .with_two_key_extension();
+        session.connect().await.expect("connect");
+        assert_eq!(
+            free_is_maximum.authorize_requests(),
+            1,
+            "the free level is already the highest: the key is never sent"
+        );
+        assert_eq!(
+            session.connection().expect("connected").authorisation,
+            Authorisation::Granted {
+                level: AccessLevel::MAXIMUM
+            }
+        );
+
+        let free_is_better = SimulatedDevice::with_config(SimulatorConfig {
+            free_access_level: 2,
             key: Some(0x0000_00AA),
             key_level: 3,
             ..SimulatorConfig::default()
@@ -4400,7 +4435,7 @@ mod tests {
         assert_eq!(
             session.connection().expect("connected").authorisation,
             Authorisation::Granted {
-                level: AccessLevel::MAXIMUM
+                level: AccessLevel::from_octet(2)
             }
         );
 

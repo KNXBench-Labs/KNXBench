@@ -7478,7 +7478,9 @@ is now `AddressRestart::Unconfirmed` inside a successful report, as in the
 download path. Only a restart refused before sending is still a step 4
 failure. The CLI prints `restart: NOT confirmed`, and the server's
 `finished` status carries `restartConfirmed: false`; the web panel does not
-show that field yet (web lock held by the UI session). The
+show that field yet (web lock held by the UI session). Verified live on the
+fixed build: `1.1.68` → `1.1.67` ended `finished`, exit 0, restart NOT
+confirmed, and the device answered at `1.1.67` afterwards (RESEARCH §19). The
 occupancy-reading half of this entry is unchanged. The occupancy reading is revisited if
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.

@@ -40,7 +40,8 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex, RwLock};
 
 use knx_core::{
-    DptRef, GroupAddress, GroupAddressDpt, GroupAddressStyle, GroupValue, IndividualAddress,
+    DptCodecError, DptRef, GroupAddress, GroupAddressDpt, GroupAddressStyle, GroupValue,
+    IndividualAddress,
 };
 use knx_net::{
     ApplicationService, BusConnection, BusError, Destination, DiscoveredGateway, KnxNetIpClient,
@@ -742,12 +743,21 @@ pub enum DecodedValue {
     /// (`GroupAddressDpt::Conflict`) — `text` names every candidate, mirroring
     /// `format_decoded_value`'s `"conflicting DPTs: ..."` wording.
     Conflict { text: String },
-    /// Exactly one DPT resolved, but `knx_core::decode` itself failed
-    /// against it (wrong payload length, or a main type this codec slice
-    /// does not implement — `docs/KNOWN_LIMITATIONS.md` §61, unchanged and
-    /// inherited, never fixed inside this branch: `crates/knx-core/src/dpt/`
-    /// is not touched by this task).
-    Error { text: String, error: String },
+    /// Exactly one DPT resolved, but `knx_core::decode` refused it. The
+    /// machine-readable reason separates an unsupported codec from a bad
+    /// payload without asking clients to parse the human error message.
+    Error {
+        dpt: String,
+        reason: DecodeFailureReason,
+        text: String,
+        error: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecodeFailureReason {
+    UnsupportedDpt,
+    DecodeFailed,
 }
 
 /// One coherent project-derived group-address style, DPT-resolution map and
@@ -853,6 +863,12 @@ pub(crate) fn decode_single(dpt: DptRef, value: &GroupValue) -> DecodedValue {
             text: v.format(dpt),
         },
         Err(e) => DecodedValue::Error {
+            dpt: dpt.to_string(),
+            reason: if matches!(e, DptCodecError::UnsupportedDpt(_)) {
+                DecodeFailureReason::UnsupportedDpt
+            } else {
+                DecodeFailureReason::DecodeFailed
+            },
             text: e.to_string(),
             error: e.to_string(),
         },
@@ -2065,7 +2081,14 @@ mod tests {
 
         let ctx = GroupAddressContext::from_project(Some(&project));
         match ctx.decode(GroupAddress::from_raw(1), &GroupValue::Bytes(vec![1, 2])) {
-            DecodedValue::Error { text, error } => {
+            DecodedValue::Error {
+                dpt,
+                reason,
+                text,
+                error,
+            } => {
+                assert_eq!(dpt, "DPST-1-1");
+                assert_eq!(reason, DecodeFailureReason::DecodeFailed);
                 assert_eq!(text, error);
                 assert!(!text.is_empty());
             }

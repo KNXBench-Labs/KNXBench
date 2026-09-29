@@ -57,6 +57,23 @@
 ---
 
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 07:51 CEST
+- Web lock: taken by UI session for U7 ISSUE-11 bus-monitor pause, export, decode visibility and bounded statistics
+- **Completed:** U7 in isolated `ui-bus-monitor-ux` is branch-gated, not yet merged. Client Pause/Resume holds the server cursor and drops stale replies without overlapping polls; the server adds structured DPT decode reasons without removing legacy fields. Capture retains 1000 rows, reports server/client loss separately, shows bounded statistics, and exports versioned JSON locally through browser Blob or native Tauri dialog/validated atomic writer. On a 640 px local-fixture Chromium viewport the filter, Resume, export and stats remain reachable; a focusable 928 px table scrolls internally by keyboard. RED/GREEN plus five targeted guard mutations completed. Branch gates passed: web TypeScript/build, 77 files / 1163 tests; Rust fmt/Clippy, 123 suites / 2384 passed / 0 failed / 136 ignored; layering, headers, 397 Markdown anchors and corpus gate; diff check clean. No KNX hardware, productive bus, tunnel or device writes.
+- **Pending/Next Steps:** Final review and focused commit, fetch/rebase against current `origin/main`, merge to `main` preserving other sessions' handovers, rerun full merged-main gates, push, release the web lock and clean U7-owned worktree/scratch. U8–U12 and U13 remain.
+- **Notes for Codex or Claude:** Root `docs/paperclip-shutdown/` is foreign/untracked; do not stage it. Native WebKitGTK GUI and save-dialog runtime remain untested (KNOWN_LIMITATIONS §137). `OriginalData` in the worktree is an ignored symlink for local corpus gates. Do not claim the browser fixture proves a live bus or native GUI. `docs/KNOWN_LIMITATIONS.md` number 137 must be checked against the current `main` before merging.
+
+---
+
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 06:47 CEST
+- Web lock: taken by UI session for U7 ISSUE-11 bus-monitor pause, export, decode visibility and bounded statistics
+- **Completed:** U7 remains in isolated `ui-bus-monitor-ux` at `bece8a4` with 20 uncommitted changed/new files. Pause/resume retains the server cursor and ignores stale replies; a RED/GREEN regression also prevents overlapping slow polls. Server decode errors now expose structured DPT/reason additively; UI renders unresolved, conflict, unsupported, failed and legacy unknown-reason states. The client bounds captures at 1000 rows, reports client pruning separately from server loss, and computes bounded statistics from retained telegrams. Browser JSON download and native Tauri save-dialog/validated atomic export adapters plus focused tests exist. Focused panel/delivery tests, TypeScript/build, native writer tests (2 passed) and header gate passed at intermediate stages; no complete U7 gates have run. No live bus/device operations.
+- **Pending/Next Steps:** The newest export-UI test is intentionally RED: add a retained-capture label and a privacy/loss note beside the export button, then rerun focused tests. Add size/row-boundary and error/cancel regressions, review the whole diff, run full Web/Rust/project gates, update ISSUE-11/manual/status/limitations and this handover, commit, merge, rerun merged gates, push and clean the worktree. U8–U12 and U13 remain.
+- **Notes for Codex or Claude:** `docs/paperclip-shutdown/` in root is foreign and untracked. Keep native export behind the Tauri dialog; no browser-supplied server file path. The last RED is in `BusMonitorPanel.test.tsx::exports retained raw and decoded rows after disconnect`; the missing `.bus-monitor-retained` and `.bus-monitor-export-note` are not a green failure to report as a completed feature. Root `main` has advanced to `d2b9799`; rebase/merge current `origin/main` before integrating, preserving both sides of shared docs. No full U7 gate/desktop GUI check yet.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 05:48 CEST
 - Web lock: taken by UI session for U7 ISSUE-11 bus-monitor pause, export, decode visibility and bounded statistics
 - **Completed:** U6 `a62e45a` was fast-forward merged and pushed. On merged `main`: TypeScript/build and 74 web files / 1142 tests; Rust fmt/clippy/workspace 123 suites / 2381 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. Its isolated worktree, branch, and 42 owned scratch artifacts are removed; only foreign untracked `docs/paperclip-shutdown/` remains in root. CT-10/ISSUE-11 preflight confirmed existing service/text filters and a typed decode DTO; no bus operations.

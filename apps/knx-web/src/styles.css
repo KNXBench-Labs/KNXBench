@@ -1184,12 +1184,44 @@ main {
    `BusMonitorPanel.tsx`'s own comment on `droppedBefore`. Styled like
    `.field-error` on purpose: a gap in what the user is shown is not a
    cosmetic note. */
-.bus-monitor-gap-notice {
+.bus-monitor-gap-notice,
+.bus-monitor-client-pruned {
   display: block;
   color: var(--knx-error-color);
   font-weight: bold;
   margin: 0.5rem 0;
 }
+
+.bus-monitor-paused,
+.bus-monitor-retained,
+.bus-monitor-export-note {
+  color: var(--knx-muted);
+  margin: 0.5rem 0;
+}
+
+.bus-monitor-export-note { font-size: 0.85rem; }
+
+.bus-monitor-statistics {
+  border-top: 1px solid var(--knx-border);
+  border-bottom: 1px solid var(--knx-border);
+  margin: 0.75rem 0;
+  padding: 0.5rem 0;
+}
+
+.bus-monitor-statistics summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bus-monitor-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 1rem;
+}
+
+.bus-monitor-stats-grid h3 { font-size: 0.9rem; margin-bottom: 0.35rem; }
+.bus-monitor-stats-grid ol { list-style: none; margin: 0; padding: 0; }
+.bus-monitor-stats-grid li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.2rem 0; border-bottom: 1px solid var(--knx-border); }
 
 /* Task 4's stale lock. Same visual weight as `.bus-monitor-gap-notice`
    above, and for the same reason: both say "what you are looking at is not
@@ -1235,6 +1267,14 @@ main {
   align-items: center;
   margin: 0.75rem 0;
 }
+
+.bus-monitor-filters input[type="text"] {
+  flex: 1 1 18rem;
+  min-width: min(100%, 18rem);
+}
+
+.bus-monitor-pause { margin-inline-start: auto; }
+.bus-monitor-export { white-space: nowrap; }
 
 .bus-diagnostics-tabs {
   display: flex;
@@ -1727,6 +1767,7 @@ main {
 
 .bus-monitor-table {
   width: 100%;
+  min-width: 58rem; /* keep decoded states readable; the parent scrolls on narrow panes */
   border-collapse: collapse;
   font-size: 0.9em;
 }
@@ -1771,6 +1812,17 @@ main {
 }
 
 /* Incoming telegrams do not animate: steady tables during live traffic. */
+/* These labels carry the decode outcome in words, not in colour alone. */
+.bus-monitor-decode-state {
+  display: inline-block;
+  margin-right: 0.45rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid currentColor;
+  border-radius: var(--knx-radius-input);
+  font-size: 0.78em;
+  font-weight: 600;
+}
+
 .bus-monitor-decoded-conflict {
   color: var(--knx-warning-color);
 }

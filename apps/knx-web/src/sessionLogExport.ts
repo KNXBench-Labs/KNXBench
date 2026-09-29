@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { LogEntry } from "./api";
 import { isTauri } from "./filePicker";
+import { downloadLocalJson } from "./localJsonDownload";
 
 export type LogExportScope = "all" | "filtered";
 
@@ -38,17 +39,6 @@ export async function saveSessionLog(all: LogEntry[], selected: LogEntry[], scop
     // travels through JS to a file-writing API or the HTTP server.
     return invoke<boolean>("save_session_log", { contents });
   }
-  const url = URL.createObjectURL(new Blob([contents], { type: "application/json;charset=utf-8" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "session-log.json";
-  document.body.append(anchor);
-  try {
-    anchor.click();
-  } finally {
-    anchor.remove();
-    // Some browsers do not begin the download until after the click returns.
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
+  downloadLocalJson(contents, "session-log.json");
   return true;
 }

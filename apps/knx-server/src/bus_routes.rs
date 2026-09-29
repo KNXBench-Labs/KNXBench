@@ -39,8 +39,8 @@ use knx_net::{
 };
 
 use crate::bus::{
-    self, decode_single, BusSession, BusSessionError, DecodedValue, GroupAddressContext,
-    SessionStatus, TelegramRow,
+    self, decode_single, BusSession, BusSessionError, DecodeFailureReason, DecodedValue,
+    GroupAddressContext, SessionStatus, TelegramRow,
 };
 use crate::bus_scan::{LineScanResult, LineScanSession, LineScanStatus};
 use crate::domain;
@@ -643,6 +643,8 @@ struct DecodedValueDto {
     kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     dpt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<&'static str>,
     text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
@@ -654,28 +656,75 @@ impl From<&DecodedValue> for DecodedValueDto {
             DecodedValue::Value { dpt, text } => Self {
                 kind: "value",
                 dpt: Some(dpt.clone()),
+                reason: None,
                 text: text.clone(),
                 error: None,
             },
             DecodedValue::Unresolved { text } => Self {
                 kind: "unresolved",
                 dpt: None,
+                reason: None,
                 text: text.clone(),
                 error: None,
             },
             DecodedValue::Conflict { text } => Self {
                 kind: "conflict",
                 dpt: None,
+                reason: None,
                 text: text.clone(),
                 error: None,
             },
-            DecodedValue::Error { text, error } => Self {
+            DecodedValue::Error {
+                dpt,
+                reason,
+                text,
+                error,
+            } => Self {
                 kind: "error",
-                dpt: None,
+                dpt: Some(dpt.clone()),
+                reason: Some(match reason {
+                    DecodeFailureReason::UnsupportedDpt => "unsupportedDpt",
+                    DecodeFailureReason::DecodeFailed => "decodeFailed",
+                }),
                 text: text.clone(),
                 error: Some(error.clone()),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod decoded_value_dto_tests {
+    use super::*;
+
+    #[test]
+    fn codec_failures_keep_the_dpt_and_distinguish_unsupported_from_malformed_payloads() {
+        let unsupported = decode_single(
+            knx_core::DptRef {
+                main: 40,
+                sub: Some(1),
+            },
+            &knx_core::GroupValue::Short(1),
+        );
+        let malformed = decode_single(
+            knx_core::DptRef {
+                main: 1,
+                sub: Some(1),
+            },
+            &knx_core::GroupValue::Bytes(vec![1, 2]),
+        );
+        let unsupported = serde_json::to_value(DecodedValueDto::from(&unsupported)).unwrap();
+        let malformed = serde_json::to_value(DecodedValueDto::from(&malformed)).unwrap();
+        assert_eq!(unsupported["kind"], "error");
+        assert_eq!(unsupported["dpt"], "DPST-40-1");
+        assert_eq!(unsupported["reason"], "unsupportedDpt");
+        assert_eq!(malformed["kind"], "error");
+        assert_eq!(malformed["dpt"], "DPST-1-1");
+        assert_eq!(malformed["reason"], "decodeFailed");
+        assert!(malformed["error"]
+            .as_str()
+            .unwrap()
+            .contains("wrong payload length"));
     }
 }
 

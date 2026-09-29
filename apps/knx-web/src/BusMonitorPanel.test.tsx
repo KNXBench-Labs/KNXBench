@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { readFileSync } from "node:fs";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +34,14 @@ vi.mock("./api", () => ({
       : undefined,
 }));
 
+const captureMock = vi.hoisted(() => ({ saveBusCapture: vi.fn() }));
+vi.mock("./busMonitorCapture", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./busMonitorCapture")>(),
+  saveBusCapture: captureMock.saveBusCapture,
+}));
+
 import BusMonitorPanel from "./BusMonitorPanel";
+import { CAPTURE_CAPACITY } from "./busMonitorCapture";
 // Not mocked: `busContext` is the unit under test here as much as the
 // panel is. Its whole job is a pair of `localStorage` records, which
 // happy-dom implements for real, so a mock would only prove that the mock
@@ -177,6 +185,7 @@ async function connect(gateway = "192.0.2.1:3671") {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  captureMock.saveBusCapture.mockResolvedValue(true);
   // Cross-window context records outlive a component; without this a
   // session record written by one test would decide the next one's lock.
   window.localStorage.clear();
@@ -406,6 +415,77 @@ describe("BusMonitorPanel", () => {
     expect(host!.querySelectorAll(".bus-monitor-table tbody tr")).toHaveLength(2);
   });
 
+  it("labels unresolved, conflicting, unsupported and malformed decoded payloads without inferring from prose", async () => {
+    await renderPanel();
+    await flushReattach();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 4, telegrams: [
+      row({ seq: 0, decoded: { kind: "unresolved", text: "no project open" } }),
+      row({ seq: 1, decoded: { kind: "conflict", text: "conflicting DPTs: DPST-1-1, DPST-5-1" } }),
+      row({ seq: 2, decoded: { kind: "error", dpt: "DPST-40-1", reason: "unsupportedDpt", text: "unsupported datapoint type", error: "unsupported datapoint type" } }),
+      row({ seq: 3, decoded: { kind: "error", dpt: "DPST-1-1", reason: "decodeFailed", text: "wrong payload length", error: "wrong payload length" } }),
+    ] }));
+    await connect();
+    const states = Array.from(host!.querySelectorAll(".bus-monitor-decode-state"), (node) => node.textContent);
+    expect(states).toEqual(["No DPT assigned", "Conflicting DPTs", "Unsupported DPT", "Decode failed"]);
+    expect(host!.querySelectorAll(".bus-monitor-decoded-error")).toHaveLength(2);
+    expect(host!.textContent).toContain("DPST-40-1");
+    expect(host!.textContent).toContain("wrong payload length");
+  });
+
+  it("does not guess the cause of a legacy decode error without a structured reason", async () => {
+    await renderPanel();
+    await flushReattach();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [
+      row({ seq: 0, decoded: { kind: "error", text: "unsupported datapoint type", error: "unsupported datapoint type" } }),
+    ] }));
+    await connect();
+    expect(host!.querySelector(".bus-monitor-decode-state")!.textContent).toBe("Decode error (reason unknown)");
+    expect(host!.textContent).toContain("unsupported datapoint type");
+  });
+
+  it("exports retained raw and decoded rows after disconnect without fetching or supplying a file path", async () => {
+    const retained = [
+      row({ seq: 0, rawPayload: "0x01 (6-bit)", decoded: null }),
+      row({ seq: 1, decoded: { kind: "value", dpt: "DPST-1-1", text: "On" } }),
+      row({ seq: 2, decoded: { kind: "error", dpt: "DPST-1-1", reason: "decodeFailed", text: "wrong length", error: "wrong length" } }),
+    ];
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 3, droppedBefore: 4, telegrams: retained }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    // Disconnect's context signal checks for a surviving session. Model the
+    // stopped server's 404, not the previous live poll's canned response.
+    apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
+    await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+    expect(host!.querySelectorAll(".bus-monitor-table tbody tr")).toHaveLength(3);
+    expect(host!.querySelector(".bus-monitor-retained")?.textContent).toContain("Retained capture from a closed session");
+    expect(host!.querySelector(".bus-monitor-export-note")?.textContent).toContain("addresses and payloads");
+    const polls = apiMock.pollBusTelegrams.mock.calls.length;
+    await act(async () => { clickButton("Export capture"); await vi.advanceTimersByTimeAsync(0); });
+    expect(captureMock.saveBusCapture).toHaveBeenCalledWith(retained, expect.objectContaining({
+      sessionId: 1, serverIncarnation: "process-a", status: "closed",
+      serverDroppedBefore: 4, clientPrunedCount: 0, exportedAt: expect.any(String),
+    }));
+    expect(apiMock.pollBusTelegrams).toHaveBeenCalledTimes(polls);
+  });
+
+  it("treats a cancelled export quietly and reports a save failure without losing the capture", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    captureMock.saveBusCapture.mockResolvedValueOnce(false).mockRejectedValueOnce(new Error("disk full"));
+    await act(async () => { clickButton("Export capture"); await vi.advanceTimersByTimeAsync(0); });
+    expect(host!.querySelector(".field-error")).toBeNull();
+    expect(host!.querySelector<HTMLButtonElement>(".bus-monitor-export")!.disabled).toBe(false);
+    await act(async () => { clickButton("Export capture"); await vi.advanceTimersByTimeAsync(0); });
+    expect(host!.querySelector(".field-error")!.textContent).toContain("disk full");
+    expect(host!.querySelectorAll(".bus-monitor-table tbody tr")).toHaveLength(1);
+    expect(host!.querySelector<HTMLButtonElement>(".bus-monitor-export")!.disabled).toBe(false);
+  });
+
   it("clicking a row prefills the compose form's destination above the table", async () => {
     await renderPanel();
     await flushReattach();
@@ -426,6 +506,23 @@ describe("BusMonitorPanel", () => {
     expect(destinationInput.value).toBe("1/2/3");
     const dptInput = host!.querySelector<HTMLInputElement>(".bus-compose-dpt")!;
     expect(dptInput.value).toBe("DPST-1-1");
+  });
+
+  it("keeps the existing text and service filters labelled and wide enough to reach", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    const search = host!.querySelector<HTMLInputElement>(".bus-monitor-filters input[type=text]")!;
+    expect(search.getAttribute("aria-label")).toBe("Filter by destination or name");
+    expect(host!.querySelectorAll(".bus-monitor-filter input[type=checkbox]")).toHaveLength(4);
+    const scroll = host!.querySelector<HTMLElement>(".monitor-table-scroll")!;
+    expect(scroll.getAttribute("role")).toBe("region");
+    expect(scroll.getAttribute("aria-label")).toBe("Telegram table; scroll horizontally");
+    expect(scroll.tabIndex).toBe(0);
+    const css = readFileSync("src/styles.css", "utf8");
+    expect(css).toMatch(/\.bus-monitor-filters input\[type="text"\]\s*\{[^}]*flex:\s*1 1 18rem;[^}]*min-width:\s*min\(100%, 18rem\);/s);
   });
 
   it("filters rows client-side, without re-fetching", async () => {
@@ -449,15 +546,19 @@ describe("BusMonitorPanel", () => {
     await act(async () => {
       setInputValue(".bus-monitor-filters input[type=text]", "1/2/3");
     });
-    expect(host!.textContent).toContain("1/2/3");
-    expect(host!.textContent).not.toContain("4/5/6");
+    // Statistics deliberately cover all retained rows, independently of
+    // the current table filter. Assert on the filtered table, not the
+    // collapsed statistics disclosure's hidden textContent.
+    const table = () => host!.querySelector(".bus-monitor-table")!.textContent;
+    expect(table()).toContain("1/2/3");
+    expect(table()).not.toContain("4/5/6");
     expect(apiMock.pollBusTelegrams.mock.calls.length).toBe(pollCallsBefore);
 
     // Clearing it brings the other row back.
     await act(async () => {
       setInputValue(".bus-monitor-filters input[type=text]", "");
     });
-    expect(host!.textContent).toContain("4/5/6");
+    expect(table()).toContain("4/5/6");
     expect(apiMock.pollBusTelegrams.mock.calls.length).toBe(pollCallsBefore);
 
     // The service checkbox filter hides a row by service instead.
@@ -467,8 +568,8 @@ describe("BusMonitorPanel", () => {
     await act(async () => {
       writeCheckbox.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(host!.textContent).not.toContain("1/2/3");
-    expect(host!.textContent).toContain("4/5/6");
+    expect(table()).not.toContain("1/2/3");
+    expect(table()).toContain("4/5/6");
     expect(apiMock.pollBusTelegrams.mock.calls.length).toBe(pollCallsBefore);
   });
 
@@ -670,6 +771,122 @@ describe("BusMonitorPanel and the shared session's context", () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     });
   }
+
+  describe("pause without losing the server cursor", () => {
+    it("does not overlap slow polls or duplicate rows while the server is still answering", async () => {
+      apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+      let finishPoll!: (response: BusMonitorTelegramsResponse) => void;
+      apiMock.pollBusTelegrams.mockImplementationOnce(() => new Promise((resolve) => { finishPoll = resolve; }));
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1 }));
+      await renderPanel();
+      await flushReattach();
+      await connect();
+      await tick();
+      await tick();
+      expect(apiMock.pollBusTelegrams).toHaveBeenCalledTimes(2); // mount 404 and one outstanding poll
+      await act(async () => finishPoll(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] })));
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+      await tick();
+      expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(1);
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+    });
+
+    it("stops polling and resumes from the held cursor with buffered rows and a visible dropped gap", async () => {
+      apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
+        nextSince: 1, telegrams: [row({ seq: 0 })],
+      }));
+      await renderPanel();
+      await flushReattach();
+      await connect();
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+      const count = apiMock.pollBusTelegrams.mock.calls.length;
+
+      await act(async () => clickButton("Pause"));
+      expect(host!.querySelector(".bus-monitor-paused")?.textContent).toContain("server's finite buffer");
+      await tick();
+      await tick();
+      expect(apiMock.pollBusTelegrams).toHaveBeenCalledTimes(count);
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+      expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+
+      apiMock.pollBusTelegrams.mockResolvedValueOnce(telegramsResponse({
+        nextSince: 5,
+        droppedBefore: 3,
+        telegrams: [row({ seq: 4, destination: "1/2/4" })],
+      }));
+      await act(async () => {
+        clickButton("Resume");
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(1);
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(2);
+      expect(host!.querySelector(".bus-monitor-gap-notice")!.textContent).toContain("3");
+    });
+
+    it("ignores an in-flight reply after pausing, then sees a gateway-close marker on resume", async () => {
+      apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] }));
+      await renderPanel();
+      await flushReattach();
+      await connect();
+      let resolvePoll!: (response: BusMonitorTelegramsResponse) => void;
+      apiMock.pollBusTelegrams.mockImplementationOnce(() => new Promise((resolve) => { resolvePoll = resolve; }));
+      await tick();
+      await act(async () => clickButton("Pause"));
+      await act(async () => resolvePoll(telegramsResponse({ nextSince: 2, telegrams: [row({ seq: 1 })] })));
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+      apiMock.pollBusTelegrams.mockResolvedValueOnce(telegramsResponse({
+        nextSince: 3, status: "closed", telegrams: [row({ seq: 1 }), row({ seq: 2, service: "SessionClosed", decoded: null })],
+      }));
+      await act(async () => { clickButton("Resume"); await vi.advanceTimersByTimeAsync(0); });
+      expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(1);
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(3);
+      expect(host!.querySelector(".bus-monitor-session")!.textContent).toContain("closed by gateway");
+    });
+
+    it("disconnects while paused and starts a later session from a fresh cursor", async () => {
+      apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] }));
+      await renderPanel();
+      await flushReattach();
+      await connect();
+      await act(async () => clickButton("Pause"));
+      await tick();
+      const pollsWhilePaused = apiMock.pollBusTelegrams.mock.calls.length;
+      apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
+      await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+      expect(apiMock.stopBusMonitor).toHaveBeenCalledTimes(1);
+      await tick();
+      expect(apiMock.pollBusTelegrams.mock.calls.length).toBe(pollsWhilePaused + 1); // reattach check only
+      apiMock.startBusMonitor.mockResolvedValueOnce({ sessionId: 2, serverIncarnation: "process-a", assignedAddress: "1.1.5" });
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 2, nextSince: 0 }));
+      await connect();
+      expect(host!.querySelector(".bus-monitor-pause")!.textContent).toBe("Pause");
+      expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(0);
+      expect(host!.querySelectorAll("tbody tr")).toHaveLength(0);
+    });
+  });
+
+  it("bounds a large captured batch and its statistics without stalling the next server cursor", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    const batch = Array.from({ length: CAPTURE_CAPACITY * 5 }, (_, seq) => row({
+      seq, destination: `1/${seq % 20}/${seq % 200}`, source: `1.1.${seq % 100}`,
+      service: `Service-${seq % 80}`,
+    }));
+    apiMock.pollBusTelegrams.mockResolvedValueOnce(telegramsResponse({ nextSince: batch.length, telegrams: batch }));
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: batch.length }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    expect(host!.querySelectorAll(".bus-monitor-table tbody tr")).toHaveLength(CAPTURE_CAPACITY);
+    expect(host!.querySelector(".bus-monitor-client-pruned")!.textContent).toContain(String(batch.length - CAPTURE_CAPACITY));
+    expect(host!.querySelectorAll(".bus-monitor-stats-services li").length).toBeLessThanOrEqual(10);
+    expect(host!.querySelectorAll(".bus-monitor-stats-destinations li").length).toBeLessThanOrEqual(10);
+    expect(host!.querySelectorAll(".bus-monitor-stats-sources li").length).toBeLessThanOrEqual(10);
+    await tick();
+    expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(batch.length);
+  });
 
   it("locks the table and the compose form when the project changes under a running session", async () => {
     publishProjectContext(projectTree("Kitchen ceiling"));

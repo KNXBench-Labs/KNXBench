@@ -41,6 +41,49 @@
   (UI session). K6 item 1's settling retry is not live-exercised.
   §136's collision note (`disconnect` drops a send error) stands.
 
+## 2026-09-29 — U7: bounded bus-monitor capture, export and decode states
+
+- The monitor can pause polling without disconnecting or advancing the
+  server cursor. A pending reply from before Pause is ignored; Resume reads
+  from the held cursor and displays the server's dropped-row gap. A slow
+  response cannot trigger overlapping polls. Disconnect while paused and
+  gateway closure are covered by fake-timer tests, not live hardware.
+- The server's DPT resolution still distinguishes absent/conflicting types.
+  For a resolved DPT, the decode DTO now adds the DPT and a structured
+  `unsupportedDpt` or `decodeFailed` reason, while preserving legacy
+  `kind`/`text`/`error`. The panel displays the four states and labels a
+  legacy error with no reason as unknown instead of parsing its prose
+  (`bus.rs`, `bus_routes.rs`, `BusMonitorPanel.test.tsx`).
+- Client capture holds at most 1000 rows. Its eviction count is separate
+  from the server's `droppedBefore`. Filters still act on retained rows
+  without changing the cursor or statistics. A collapsed, keyboard-operable
+  statistics panel counts only real retained telegrams (not the synthetic
+  close marker) and shows at most ten services, destinations and sources.
+- Export serializes the retained rows and their sequence, time, source,
+  destination, service, raw payload and decoded result as open, versioned
+  `knxbench-bus-monitor` JSON. It records session/process identity, status,
+  server and client loss, cap and export time. Browser delivery is a local
+  download; desktop delivery uses a Tauri-owned save dialog and a validated
+  atomic write with a 16 MiB limit. Neither path supplies a server file
+  path. The UI warns about limited coverage and private addresses/payloads.
+  This is not an ETS export or a lifetime bus audit.
+- Focused tests: `BusMonitorPanel.test.tsx`, `busMonitorCapture.test.ts`,
+  `busMonitorCaptureDelivery.test.ts`, `busMonitorStatistics.test.ts`,
+  `DiagnosticsCompanion.test.tsx`, `diagnosticShell.test.ts`,
+  `bus_routes.rs` DTO and native `bus_capture_export_tests`. Rebased branch
+  checks passed: TypeScript/build and 77 web files / 1163 tests; Rust fmt,
+  Clippy and 123 suites / 2390 passed, 0 failed, 136 ignored. Five
+  targeted guard mutations (slow-poll overlap, browser size limit, client
+  pruning, desktop row cap and codec reason) were rejected by their tests.
+  In headless Chromium with local API fixtures, the 640 px viewport had
+  no document overflow; the 928 px telegram table scrolled inside a 606 px
+  region, whose focus and Right key advanced the scroll position. Filter,
+  Resume, export and the 5-row statistics remained reachable. Native
+  WebKitGTK interaction, save-dialog GUI and live bus behaviour have not
+  been tested. Layering, headers (287 with header, 161 without), 397
+  Markdown anchors and the corpus gate passed on the U7 worktree; merged-main
+  gates remain pending.
+
 ## 2026-09-29 — U6: bounded zoom and remembered workbench geometry
 
 - The three application zoom shortcuts (`Ctrl++`, `Ctrl+-`, `Ctrl+0`;

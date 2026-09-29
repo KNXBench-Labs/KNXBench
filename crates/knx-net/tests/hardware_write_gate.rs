@@ -85,6 +85,11 @@ fn only_the_three_procedure_scopes_are_authorised_on_hardware() {
     assert!(!hardware_write_is_authorised(
         WriteScope::ProgrammingModeToggle
     ));
+    // K13: MP §2.18 resets every pressed device at once; not on hardware
+    // until an operator asks for it (KNOWN_LIMITATIONS §140).
+    assert!(!hardware_write_is_authorised(
+        WriteScope::IndividualAddressReset
+    ));
 }
 
 /// The permitting side: the address write MP §2.3 performs does build a
@@ -133,7 +138,11 @@ fn the_download_scope_builds_a_writing_session() {
 /// toggle, is still refused. The operator authorised a download, not those.
 #[test]
 fn an_unload_or_a_programming_mode_toggle_on_hardware_is_still_refused() {
-    for scope in [WriteScope::Unload, WriteScope::ProgrammingModeToggle] {
+    for scope in [
+        WriteScope::Unload,
+        WriteScope::ProgrammingModeToggle,
+        WriteScope::IndividualAddressReset,
+    ] {
         let phrase = required_confirmation_phrase(target(), scope);
         let authorisation = WriteAuthorisation::for_hardware(target(), scope, &phrase)
             .expect("the phrase is the required one");

@@ -1258,7 +1258,15 @@ truth — holds down both sides plus the alarm-panel refusal.
    Programming Mode session has to confirm it, and a device that needs longer
    will still produce this limitation's original symptom.
    *2026-09-29 (K6 live):* still not exercised. `1.1.67` answered at its
-   new address on the first connect, both ways.
+   new address on the first connect, both ways. **PDF check, 2026-09-29:**
+   MP §2.3 (pp. 14–15) gives no settling time after
+   `A_IndividualAddress_Write`. Its "to 4." only says the programming *"may
+   have failed"*. The closest figure in MP is the *"waits 1 second"* before
+   verifying in the serial-number procedures, §2.12 step 3 (p. 25) and §2.13
+   step 5 (p. 26). Those procedures also say to repeat the procedure *"only
+   after indication or confirmation by the user"*, never automatically. The
+   borrowed 1 s and the single retry match both. **Parked** (user decision
+   2026-09-29) until a device that needs it shows up.
 2. **"Wrote but could not confirm" is not a distinct outcome.** The information
    exists — the error carries the report, whose `wrote` flag was `true` — but a
    caller must destructure the error to find it. Anything built on top of this
@@ -1274,6 +1282,27 @@ truth — holds down both sides plus the alarm-panel refusal.
 3. **No rollback exists for a half-completed readdressing.** If the write lands
    and the device then cannot be reached, recovery is another programming-mode
    session by hand. Nothing in this project automates or even detects that state.
+   *2026-09-29:* the PDFs give no rollback either. MP §2.12/§2.13 say a
+   failed procedure is repeated only after the user confirms it. A two-way
+   `knx bus scan` of the old and new address settles which state the
+   device is in (RESEARCH §19, K6 live).
+
+**Interrupted download: how to recover, checked against the PDFs
+2026-09-29.** There is no separate recovery procedure. MP §3.1 (p. 68):
+*"if an error is detected, the download shall be interrupted and an
+error-message shall be raised"*. RES Table 94 (p. 296) says a device
+restart in `Loading` leads to `Error` (recommended) or stays `Loading`
+(optional), and `Unload` leads from every state to `Unloaded`. CP
+§3.4.1.2.1 step 6 (p. 38) opens the complete download with *"Unload all
+loadable Objects"*. So recovery means running the same download again: the
+product plan starts with an unload of each machine (steps 3–5 in every
+live trace). Test
+`the_same_plan_run_again_recovers_a_part_left_loading_or_in_error` shows
+this in the simulator from both `Loading` and `Error`. A mutation check
+confirmed it: without the unload, it fails. **The live test (cutting off a
+real download on purpose) is parked** (user decision 2026-09-29). The
+mechanism it would exercise is the one every live download already ran
+through.
 
 **Still not claimed:** no `A_Restart` was verifiably delivered on this run (step
 4 never completed), no download, no KNX Secure, no ETS parity, and no CLI, server

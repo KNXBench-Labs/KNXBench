@@ -57,6 +57,15 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — Live run on `1.1.67`: K12 reads, K15 partial download
+
+- K15 partial download (parameters) live: 394 octets written and read
+  back, dump before/after identical (KL §142 lifted).
+- K12: `find-serial` both ways live; the serial-number write is ignored by
+  this device, whose `PID_SERVICE_CONTROL` bit 2 is clear (KL §139). The
+  error message now names that bit.
+- K13/K14 stay refused on hardware; RF has no hardware (RESEARCH §19.8).
+
 ## 2026-09-29 — K17: RF device configuration, simulator only
 
 - AL §3.4.7's function-property PDUs in `knx_net::cemi`.

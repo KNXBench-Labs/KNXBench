@@ -113,7 +113,9 @@ impl std::fmt::Display for SerialNumberWriteError {
             } => write!(
                 f,
                 "MP §2.5 step 2: the device still answers from {address}, not from the \
-                 new address"
+                 new address; a device whose PID_SERVICE_CONTROL bit 2 is clear \
+                 (RES §4.2.8: \"it shall not be possible to change the Individual \
+                 Address\") ignores the write exactly like this"
             ),
             Self::NotVerified {
                 answered_from: None,

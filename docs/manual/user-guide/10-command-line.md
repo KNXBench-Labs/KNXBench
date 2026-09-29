@@ -487,8 +487,14 @@ you what to do whenever the answer changes:
   found 1.1.5 in programming mode; programming 1.1.30
 == program individual address 1.1.30: finished ==
 1.1.30 was free before
-address written: yes, 1.1.5 -> 1.1.30; the device answered at 1.1.30 and was restarted
+address written: yes, 1.1.5 -> 1.1.30; the device answered at 1.1.30
+restart: acknowledged
 ```
+
+Some devices never acknowledge the closing restart, and restart anyway (a real MDT push
+button does). The last line then reads `restart: NOT confirmed (…)`. The address itself is
+confirmed: the device answered at it before the restart was sent. If its programming LED is
+still on, press the button once to end programming mode.
 
 Then it runs the four steps of the KNX procedure (MP §2.3): it checks that no *other*
 device already has the new address and stops if one does; counts again; writes the

@@ -44,6 +44,7 @@ use knx_core::commissioning::programming_mode::ProgrammingModeCountError;
 use knx_core::{ContactableAddress, IndividualAddress};
 
 use super::download::StepRecord;
+use super::memory_download::restart_may_have_gone_out;
 use super::{ManagementSession, SessionError, SessionTiming};
 use crate::management::ManagementTransport;
 
@@ -97,6 +98,30 @@ impl Occupancy {
     }
 }
 
+/// What became of step 4's closing Basic Restart.
+///
+/// The device has already answered at `IA_new` by the time the restart goes
+/// out (step 4 connects and reads it first), so neither outcome says
+/// anything about the address. MP §3.7.1.1.3, p. 80 forbids the server an
+/// AL confirmation of a Basic Restart and §3.7.1.1.2, p. 78 lets it *"not
+/// react at all"*: a real mask `0701h` device never acknowledges one
+/// (RESEARCH §19), and on 2026-09-29 it restarted anyway — its programming
+/// LED went out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AddressRestart {
+    /// The procedure did not get as far as the restart.
+    NotSent,
+    /// The device acknowledged the `A_Restart` at the Transport Layer.
+    Acknowledged,
+    /// The `A_Restart` went out and nothing acknowledged it. Whether the
+    /// device restarted is not observable from the bus; programming mode
+    /// ending (the LED) is the visible sign.
+    Unconfirmed {
+        /// The silence, as the session reported it.
+        error: String,
+    },
+}
+
 /// What happened, step by step, running `NM_IndividualAddress_Write`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndividualAddressWriteReport {
@@ -107,6 +132,9 @@ pub struct IndividualAddressWriteReport {
     /// Whether step 3 actually broadcast `A_IndividualAddress_Write`, or
     /// skipped it because the responder already held `IA_new`.
     pub wrote: bool,
+    /// Step 4's restart. Read this before telling anyone the device
+    /// restarted; the address itself is confirmed either way.
+    pub restart: AddressRestart,
 }
 
 impl IndividualAddressWriteReport {
@@ -115,6 +143,7 @@ impl IndividualAddressWriteReport {
             steps: Vec::new(),
             occupancy: Occupancy::NotOccupied,
             wrote: false,
+            restart: AddressRestart::NotSent,
         }
     }
 }
@@ -352,10 +381,18 @@ pub async fn individual_address_write<T: ManagementTransport>(
         finishing.disconnect().await;
         return Err(at_step(4, &report, err));
     }
-    finishing
-        .restart_basic()
-        .await
-        .map_err(|err| at_step(4, &report, err))?;
+    // The device has answered at `IA_new`; only the restart is left. Its
+    // silence is not MP §2.3's "to 4." (that clause is about the Device
+    // Descriptor read, which just succeeded) — see [`AddressRestart`].
+    // `restart_basic` disconnects on every path out, so nothing is left
+    // open either way.
+    report.restart = match finishing.restart_basic().await {
+        Ok(()) => AddressRestart::Acknowledged,
+        Err(err) if restart_may_have_gone_out(&err) => AddressRestart::Unconfirmed {
+            error: err.to_string(),
+        },
+        Err(err) => return Err(at_step(4, &report, err)),
+    };
 
     Ok(report)
 }
@@ -504,6 +541,119 @@ mod tests {
             "step 4 must restart the device, not just verify it: {:?}",
             device.seen()
         );
+    }
+
+    /// The live case of 2026-09-29 (`1.1.67` → `1.1.68`, RESEARCH §19): the
+    /// write landed, step 4 connected to the new address and read the device
+    /// there, and only the closing Basic Restart went unacknowledged. MP
+    /// §3.7.1.1.3, p. 80 forbids the server an AL confirmation of a Basic
+    /// Restart and §3.7.1.1.2, p. 78 lets it *"not react at all"*, so the
+    /// silence is not the "to 4." failure: the address is confirmed, only the
+    /// restart is not.
+    #[tokio::test]
+    async fn an_unacknowledged_restart_after_a_verified_write_is_not_a_failure() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            restart_unanswered: true,
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        let (programming, restart) = authorisations(new_address);
+
+        let report = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect("the device answered at the new address; only the restart is unconfirmed");
+
+        assert!(report.wrote);
+        assert_eq!(device.address(), new_address);
+        assert!(
+            matches!(report.restart, AddressRestart::Unconfirmed { .. }),
+            "{:?}",
+            report.restart
+        );
+        assert_eq!(
+            device.unanswered_restart_seqs().len(),
+            4,
+            "TL sent it four times"
+        );
+    }
+
+    /// Only silence becomes [`AddressRestart::Unconfirmed`]. A restart this
+    /// side refused to send (here: an authorisation for the wrong scope)
+    /// never left the machine, and is still step 4's failure.
+    #[tokio::test]
+    async fn a_restart_refused_before_sending_is_still_a_step_four_failure() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        let (programming, _) = authorisations(new_address);
+        let wrong_scope = WriteAuthorisation::for_simulator(new_address, WriteScope::Download)
+            .expect("the target is not an excluded address");
+
+        let err = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            wrong_scope,
+        )
+        .await
+        .expect_err("a restart that was never sent is not an unconfirmed one");
+
+        assert!(
+            matches!(
+                err,
+                IndividualAddressWriteError::Session {
+                    step: 4,
+                    source: SessionError::Refused(_),
+                    ..
+                }
+            ),
+            "{err:?}"
+        );
+        assert!(
+            !device
+                .seen()
+                .iter()
+                .any(|entry| matches!(entry, Seen::Restart { .. })),
+            "nothing may reach the device: {:?}",
+            device.seen()
+        );
+    }
+
+    /// The other side: an acknowledged restart is reported as such, so a
+    /// caller can never mistake "unconfirmed" for the ordinary case.
+    #[tokio::test]
+    async fn an_acknowledged_restart_is_reported_as_acknowledged() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        let (programming, restart) = authorisations(new_address);
+
+        let report = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect("the ordinary case succeeds");
+
+        assert_eq!(report.restart, AddressRestart::Acknowledged);
     }
 
     /// MP §2.3's own re-assignment case: `IA_new` already answers, and the

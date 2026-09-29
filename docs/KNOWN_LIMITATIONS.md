@@ -769,8 +769,16 @@ What remains open here:
   - module instances;
   - parameters placed by `Property` (176 in the corpus) or in a union
     that starts mid-octet (936);
-  - parameter types other than an enumeration over `Value` or an
-    unsigned `TypeNumber`;
+  - parameter types other than an enumeration over `Value`, a
+    `TypeNumber`, or a `TypeText`; in particular every `TypeFloat` (19
+    programs), since the corpus's non-zero float fields contradict `DPT 9`
+    (RESEARCH §19.9);
+  - a **negative** signed `TypeNumber` value: no PDF and no product image
+    shows how one is stored (RESEARCH §19.9). Two's complement is likely, not
+    sourced;
+  - a text value in a `TextParameterEncoding` other than `iso-8859-1`/
+    `iso-8859-15`, or a non-ASCII one where the program declares none;
+  - a program declaring a `ParameterByteOrder` other than `BigEndian`;
   - com-object priority `High`/`Alert` and an enabled `ReadOnInitFlag`;
   - any evaluation diagnostic, except a legal value that no `when`
     covers;

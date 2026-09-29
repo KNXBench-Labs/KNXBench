@@ -33,9 +33,24 @@
 //!   plus its own `@Offset`/`@BitOffset`. No PDF states this. The rule
 //!   rebuilds a real device's parameter segment octet for octet
 //!   (docs/RESEARCH.md §19.1).
-//! - **Values.** Only `TypeRestriction` and unsigned `TypeNumber` parameters
-//!   are written, and only a value that parses as an unsigned number. Every
-//!   other type is refused by name.
+//! - **Values.** `TypeRestriction` (base `Value`) and unsigned `TypeNumber`
+//!   values are written as numbers. A signed `TypeNumber` is written only at
+//!   or above zero: `[V]` 213 signed fields of the corpus's `070nh` base
+//!   images hold their non-negative default high octet first and none low
+//!   octet first, but no base image holds a negative default and no PDF
+//!   says how one is stored (RESEARCH §19.9). `TypeText` is written as its
+//!   characters' octets in the program's `Options/@TextParameterEncoding`,
+//!   first character first, zero-filled to the field: `[V]` 262 text fields
+//!   of those base images hold their default exactly so, 8 of them filling
+//!   the field with no terminator. Only `iso-8859-1` and `iso-8859-15`, the
+//!   two those programs declare, are understood; without a declaration only
+//!   ASCII, whose octets every declared encoding shares, is written.
+//!   `TypeFloat` is refused: 48 `DPT 9` fields match that encoding only at
+//!   zero, and the 15 non-zero ones contradict it. Every other type is
+//!   refused by name.
+//! - **Byte order.** A program whose `Options/@ParameterByteOrder` is
+//!   anything but `BigEndian` is refused: numbers are written high octet
+//!   first (`knx_core::commissioning::parameter_image`).
 //! - **Priority.** `[A]` *Project Schema23* lists `Low`, `High` and `Alert`
 //!   (§1.1.2.4), and *Resources* lists `System`, `Urgent`, `Normal` and
 //!   `Low` (§4.18.3.1.2.1). No PDF maps one set onto the other, so only an
@@ -113,8 +128,12 @@ pub struct DownloadImage {
     pub code: ProgramCode,
     /// One image per segment with `Data`.
     pub segments: Vec<SegmentImage>,
-    /// The parameters written, by `ParameterRef` id, with their values.
+    /// The numeric parameters written, by `ParameterRef` id, with their
+    /// values.
     pub parameters: BTreeMap<String, u64>,
+    /// The text parameters written, by `ParameterRef` id, with their
+    /// values.
+    pub texts: BTreeMap<String, String>,
     /// The active group objects, by number.
     pub objects: Vec<ActiveObject>,
 }
@@ -245,7 +264,16 @@ pub fn build_download_image(
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
-    let types = ParameterTypes::load(conn, program_id)?;
+    if let Some(order) = code
+        .options
+        .get("ParameterByteOrder")
+        .filter(|order| *order != "BigEndian")
+    {
+        return Err(ImageError::Unsupported {
+            what: format!("ParameterByteOrder {order:?}: numbers are written high octet first"),
+        });
+    }
+    let types = ParameterTypes::load(conn, program_id, &code)?;
 
     // Every chosen value is checked before evaluation, so that a value the
     // type does not allow is reported as such, not as an undecided branch.
@@ -295,8 +323,9 @@ pub fn build_download_image(
 
     // 1. Parameters.
     let group_objects = com_object_span(&code)?;
-    let mut written: BTreeMap<String, (String, u64)> = BTreeMap::new();
+    let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
     let mut parameters = BTreeMap::new();
+    let mut texts = BTreeMap::new();
     for active in &activation.parameter_refs {
         let parameter_ref = active.ref_id.as_str();
         let parameter = types.parameter_of(parameter_ref)?;
@@ -321,8 +350,8 @@ pub fn build_download_image(
         }
         let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
         let field_start = field.offset as usize;
-        let field_end = field_start
-            + (usize::from(field.bit_offset) + usize::from(field.size_in_bit)).div_ceil(8);
+        let field_end =
+            field_start + (u32::from(field.bit_offset) + field.size_in_bit).div_ceil(8) as usize;
         if group_objects.as_ref().is_some_and(|(id, start, end)| {
             id == segment_id && field_start < *end && *start < field_end
         }) {
@@ -337,14 +366,22 @@ pub fn build_download_image(
             .ok_or_else(|| ImageError::Unsupported {
                 what: format!("{parameter}: segment {segment_id} ships no Data"),
             })?;
-        image
-            .write(field, value)
-            .map_err(|error| ImageError::Parameter {
-                parameter_ref: parameter_ref.to_string(),
-                error,
-            })?;
+        match &value {
+            Encoded::Number(number) => image.write(field, *number),
+            Encoded::Text { octets, .. } => image.write_octets(field, octets),
+        }
+        .map_err(|error| ImageError::Parameter {
+            parameter_ref: parameter_ref.to_string(),
+            error,
+        })?;
+        match &value {
+            Encoded::Number(number) => parameters.insert(parameter_ref.to_string(), *number),
+            Encoded::Text { text, .. } => {
+                texts.insert(parameter_ref.to_string(), text.clone());
+                None
+            }
+        };
         written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
-        parameters.insert(parameter_ref.to_string(), value);
     }
     let mut segments: Vec<SegmentImage> = images
         .into_iter()
@@ -432,6 +469,7 @@ pub fn build_download_image(
         code,
         segments,
         parameters,
+        texts,
         objects,
     })
 }
@@ -440,7 +478,7 @@ pub fn build_download_image(
 fn field_of<'a>(
     parameter: &str,
     placement: &'a ParameterPlacement,
-    size_in_bit: u8,
+    size_in_bit: u32,
 ) -> Result<(&'a str, ParameterField), ImageError> {
     let field = |memory: &MemoryPlacement, offset: u32, bit_offset: u8| ParameterField {
         offset: memory.offset + offset,
@@ -661,6 +699,20 @@ fn object_size_bits(size: &str) -> Option<u32> {
     }
 }
 
+/// A value as it goes into memory.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Encoded {
+    /// A number, written by width ([`ParameterImage::write`]).
+    Number(u64),
+    /// A text, written as `octets` ([`ParameterImage::write_octets`]).
+    Text {
+        /// The value as chosen.
+        text: String,
+        /// Its encoding, zero-filled to the field.
+        octets: Vec<u8>,
+    },
+}
+
 /// What a value check needs to know about one `ParameterRef`.
 struct RefType {
     parameter: String,
@@ -677,10 +729,62 @@ struct RefType {
 struct ParameterTypes {
     refs: BTreeMap<String, RefType>,
     enums: BTreeMap<String, BTreeSet<String>>,
+    /// `Options/@TextParameterEncoding`, if declared.
+    text_encoding: Option<String>,
+}
+
+/// A text encoding this module writes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TextEncoding {
+    /// ISO/IEC 8859-1: every character up to `U+00FF` is its own octet.
+    Latin1,
+    /// ISO/IEC 8859-15: ISO/IEC 8859-1 with eight positions replaced.
+    Latin9,
+}
+
+impl TextEncoding {
+    /// The encoding a declared name stands for. Encoding names are
+    /// case-insensitive (RFC 2978).
+    fn named(name: &str) -> Option<TextEncoding> {
+        if name.eq_ignore_ascii_case("iso-8859-1") {
+            Some(TextEncoding::Latin1)
+        } else if name.eq_ignore_ascii_case("iso-8859-15") {
+            Some(TextEncoding::Latin9)
+        } else {
+            None
+        }
+    }
+
+    /// The octet for `c`, if the encoding has one.
+    fn octet(self, c: char) -> Option<u8> {
+        // ISO/IEC 8859-15 reassigns A4h, A6h, A8h, B4h, B8h, BCh, BDh, BEh.
+        const LATIN_9: [(char, u8); 8] = [
+            ('€', 0xA4),
+            ('Š', 0xA6),
+            ('š', 0xA8),
+            ('Ž', 0xB4),
+            ('ž', 0xB8),
+            ('Œ', 0xBC),
+            ('œ', 0xBD),
+            ('Ÿ', 0xBE),
+        ];
+        let code = u32::from(c);
+        match self {
+            TextEncoding::Latin1 => u8::try_from(code).ok(),
+            TextEncoding::Latin9 => {
+                if let Some((_, octet)) = LATIN_9.iter().find(|(known, _)| *known == c) {
+                    return Some(*octet);
+                }
+                u8::try_from(code)
+                    .ok()
+                    .filter(|octet| !LATIN_9.iter().any(|(_, taken)| taken == octet))
+            }
+        }
+    }
 }
 
 impl ParameterTypes {
-    fn load(conn: &Connection, program_id: &str) -> Result<Self, ImageError> {
+    fn load(conn: &Connection, program_id: &str, code: &ProgramCode) -> Result<Self, ImageError> {
         let mut stmt = conn.prepare(
             "SELECT pr.id, p.id, pt.kind, pt.size_in_bit, pt.base, pt.number_type,
                     pt.min_inclusive, pt.max_inclusive, pt.id
@@ -718,7 +822,11 @@ impl ParameterTypes {
             let (parameter_type, value) = row?;
             enums.entry(parameter_type).or_default().insert(value);
         }
-        Ok(ParameterTypes { refs, enums })
+        Ok(ParameterTypes {
+            refs,
+            enums,
+            text_encoding: code.options.get("TextParameterEncoding").cloned(),
+        })
     }
 
     fn get(&self, parameter_ref: &str) -> Result<&RefType, ImageError> {
@@ -734,36 +842,45 @@ impl ParameterTypes {
         Ok(self.get(parameter_ref)?.parameter.as_str())
     }
 
-    fn size(&self, parameter_ref: &str) -> Result<u8, ImageError> {
+    /// The field width: 1 to 64 bits for a number, whole octets for a text.
+    fn size(&self, parameter_ref: &str) -> Result<u32, ImageError> {
         let found = self.get(parameter_ref)?;
+        let text = found.kind.as_deref() == Some("Text");
         found
             .size_in_bit
-            .and_then(|size| u8::try_from(size).ok())
-            .filter(|size| (1..=64).contains(size))
+            .and_then(|size| u32::try_from(size).ok())
+            .filter(|size| {
+                if text {
+                    *size > 0 && size.is_multiple_of(8)
+                } else {
+                    (1..=64).contains(size)
+                }
+            })
             .ok_or_else(|| ImageError::Unsupported {
                 what: format!("{}: SizeInBit {:?}", found.parameter, found.size_in_bit),
             })
     }
 
-    /// The value `raw` stands for, if the ref's type allows it. Only
-    /// `TypeRestriction` (base `Value`) and unsigned `TypeNumber` values are
-    /// understood; every other type is refused by name.
-    fn value(&self, parameter_ref: &str, raw: &str) -> Result<u64, ImageError> {
+    /// The value `raw` stands for, if the ref's type allows it (module
+    /// documentation, *Values*). Every other type is refused by name.
+    fn value(&self, parameter_ref: &str, raw: &str) -> Result<Encoded, ImageError> {
         let found = self.get(parameter_ref)?;
         let invalid = |cause: String| ImageError::Value {
             parameter_ref: parameter_ref.to_string(),
             cause,
         };
-        let value: u64 = raw
-            .trim()
-            .parse()
-            .map_err(|_| invalid(format!("{raw:?} is not an unsigned number")))?;
+        let unsigned = || -> Result<u64, ImageError> {
+            raw.trim()
+                .parse()
+                .map_err(|_| invalid(format!("{raw:?} is not an unsigned number")))
+        };
         match (
             found.kind.as_deref(),
             found.base.as_deref(),
             found.number_type.as_deref(),
         ) {
             (Some("Restriction"), Some("Value"), _) => {
+                let value = unsigned()?;
                 let allowed = found
                     .parameter_type
                     .as_ref()
@@ -775,8 +892,10 @@ impl ParameterTypes {
                         "{value} is not one of the enumeration's values"
                     )));
                 }
+                Ok(Encoded::Number(value))
             }
             (Some("Number"), _, Some("unsignedInt")) => {
+                let value = unsigned()?;
                 let bound = |text: &Option<String>| {
                     text.as_deref().and_then(|t| t.trim().parse::<u64>().ok())
                 };
@@ -788,17 +907,105 @@ impl ParameterTypes {
                         found.min, found.max
                     )));
                 }
+                Ok(Encoded::Number(value))
             }
-            (kind, base, number_type) => {
-                return Err(ImageError::Unsupported {
-                    what: format!(
-                        "{}: parameter type {kind:?} (base {base:?}, number type {number_type:?})",
-                        found.parameter
-                    ),
-                })
+            (Some("Number"), _, Some("signedInt")) => {
+                let value: i64 = raw
+                    .trim()
+                    .parse()
+                    .map_err(|_| invalid(format!("{raw:?} is not an integer")))?;
+                let bound = |text: &Option<String>| {
+                    text.as_deref().and_then(|t| t.trim().parse::<i64>().ok())
+                };
+                if bound(&found.min).is_some_and(|min| value < min)
+                    || bound(&found.max).is_some_and(|max| value > max)
+                {
+                    return Err(invalid(format!(
+                        "{value} is outside {:?}..={:?}",
+                        found.min, found.max
+                    )));
+                }
+                if value < 0 {
+                    return Err(invalid(format!(
+                        "{value} is negative: no source says how a signed parameter is \
+                         stored, and no product image shows one (RESEARCH §19.9)"
+                    )));
+                }
+                // At or above zero every sign representation agrees, as long
+                // as the sign bit stays clear.
+                let size = self.size(parameter_ref)?;
+                if size < 64 && value >> (size - 1) != 0 {
+                    return Err(invalid(format!(
+                        "{value} does not fit a signed {size}-bit field"
+                    )));
+                }
+                Ok(Encoded::Number(value as u64))
             }
+            (Some("Text"), _, _) => self.text(parameter_ref, found, raw),
+            (kind, base, number_type) => Err(ImageError::Unsupported {
+                what: format!(
+                    "{}: parameter type {kind:?} (base {base:?}, number type {number_type:?})",
+                    found.parameter
+                ),
+            }),
         }
-        Ok(value)
+    }
+
+    /// A `TypeText` value in the program's declared encoding, zero-filled
+    /// to its field.
+    fn text(&self, parameter_ref: &str, found: &RefType, raw: &str) -> Result<Encoded, ImageError> {
+        let invalid = |cause: String| ImageError::Value {
+            parameter_ref: parameter_ref.to_string(),
+            cause,
+        };
+        let encoding = match self.text_encoding.as_deref() {
+            None => None,
+            Some(name) => {
+                Some(
+                    TextEncoding::named(name).ok_or_else(|| ImageError::Unsupported {
+                        what: format!(
+                            "{}: TextParameterEncoding {name:?} is not one this crate writes",
+                            found.parameter
+                        ),
+                    })?,
+                )
+            }
+        };
+        let mut octets = Vec::with_capacity(raw.len());
+        for c in raw.chars() {
+            if c == '\0' {
+                return Err(invalid(
+                    "a NUL character would end the text early".to_string(),
+                ));
+            }
+            let octet = match encoding {
+                Some(encoding) => encoding.octet(c).ok_or_else(|| {
+                    invalid(format!(
+                        "{c:?} has no octet in {}",
+                        self.text_encoding.as_deref().unwrap_or_default()
+                    ))
+                })?,
+                None if c.is_ascii() => c as u8,
+                None => {
+                    return Err(invalid(format!(
+                        "{c:?} is not ASCII, and the program declares no TextParameterEncoding"
+                    )))
+                }
+            };
+            octets.push(octet);
+        }
+        let field = (self.size(parameter_ref)? / 8) as usize;
+        if octets.len() > field {
+            return Err(invalid(format!(
+                "{} octets do not fit the {field}-octet field",
+                octets.len()
+            )));
+        }
+        octets.resize(field, 0);
+        Ok(Encoded::Text {
+            text: raw.to_string(),
+            octets,
+        })
     }
 }
 
@@ -1259,6 +1466,234 @@ mod tests {
             build_download_image(&conn, &request),
             Err(ImageError::UnknownProgram(_))
         ));
+    }
+
+    // ---- Signed numbers and text ------------------------------------------
+
+    /// `PROGRAM` plus a 12-octet segment `AS-4600` (base `EEh` throughout)
+    /// holding `S8`/`S16`, signed numbers at 0 and 1, and `T`, a 6-octet
+    /// text at 3, all shown unconditionally. `extra_types`/`extra_params`/
+    /// `extra_refs` add more; `options` becomes the program's `Options`.
+    fn kinds_program_with(
+        options: &str,
+        text_default: &str,
+        extra_types: &str,
+        extra_params: &str,
+        extra_refs: &str,
+    ) -> String {
+        PROGRAM
+            .replace(
+                r#"<AbsoluteSegment Id="AS-0700""#,
+                r#"<AbsoluteSegment Id="AS-4600" Address="17920" Size="12"><Data>7u7u7u7u7u7u7u7u</Data></AbsoluteSegment>
+  <AbsoluteSegment Id="AS-0700""#,
+            )
+            .replace(
+                "</ParameterTypes>",
+                &format!(
+                    r#"<ParameterType Id="PT-S8" Name="S8"><TypeNumber SizeInBit="8" Type="signedInt" minInclusive="-100" maxInclusive="100" /></ParameterType>
+  <ParameterType Id="PT-S16" Name="S16"><TypeNumber SizeInBit="16" Type="signedInt" minInclusive="-30000" maxInclusive="30000" /></ParameterType>
+  <ParameterType Id="PT-T" Name="T"><TypeText SizeInBit="48" /></ParameterType>
+  {extra_types}
+</ParameterTypes>"#
+                ),
+            )
+            .replace(
+                "</Parameters>",
+                &format!(
+                    r#"<Parameter Id="P-S8" Name="S8" ParameterType="PT-S8" Value="2"><Memory CodeSegment="AS-4600" Offset="0" BitOffset="0" /></Parameter>
+  <Parameter Id="P-S16" Name="S16" ParameterType="PT-S16" Value="300"><Memory CodeSegment="AS-4600" Offset="1" BitOffset="0" /></Parameter>
+  <Parameter Id="P-T" Name="T" ParameterType="PT-T" Value="{text_default}"><Memory CodeSegment="AS-4600" Offset="3" BitOffset="0" /></Parameter>
+  {extra_params}
+</Parameters>"#
+                ),
+            )
+            .replace(
+                "</ParameterRefs>",
+                &format!(
+                    r#"<ParameterRef Id="P-S8_R-1" RefId="P-S8" />
+  <ParameterRef Id="P-S16_R-1" RefId="P-S16" />
+  <ParameterRef Id="P-T_R-1" RefId="P-T" />
+  {extra_refs}
+</ParameterRefs>
+{options}"#
+                ),
+            )
+            .replace(
+                r#"<ParameterRefRef RefId="P-1_R-1" />"#,
+                r#"<ParameterRefRef RefId="P-1_R-1" />
+  <ParameterRefRef RefId="P-S8_R-1" /><ParameterRefRef RefId="P-S16_R-1" />
+  <ParameterRefRef RefId="P-T_R-1" />"#,
+            )
+    }
+
+    fn kinds_program(options: &str) -> String {
+        kinds_program_with(options, "Grüß", "", "", "")
+    }
+
+    const LATIN_9: &str = r#"<Options TextParameterEncoding="iso-8859-15" />"#;
+
+    /// A signed number at or above zero, high octet first; the text in the
+    /// declared ISO-8859-15, zero-filled to its field.
+    #[test]
+    fn signed_numbers_and_text_are_encoded_into_the_image() {
+        let image = build(&kinds_program(LATIN_9), &[], vec![]).expect("builds");
+        assert_eq!(
+            octets(&image, "AS-4600"),
+            &[
+                0x02, // S8 = 2
+                0x01, 0x2C, // S16 = 300
+                b'G', b'r', 0xFC, 0xDF, 0x00, 0x00, // T = "Grüß"
+                0xEE, 0xEE, 0xEE, // untouched
+            ][..]
+        );
+        assert_eq!(image.parameters.get("P-S16_R-1"), Some(&300));
+        assert_eq!(image.parameters.get("P-T_R-1"), None, "not a number");
+        assert_eq!(image.texts.get("P-T_R-1").map(String::as_str), Some("Grüß"));
+    }
+
+    #[test]
+    fn a_chosen_signed_or_text_value_is_encoded() {
+        let image = build(
+            &kinds_program(LATIN_9),
+            &[
+                ("P-S8_R-1", "100"),
+                ("P-S16_R-1", "30000"),
+                ("P-T_R-1", "5 € ok"),
+            ],
+            vec![],
+        )
+        .expect("builds");
+        assert_eq!(
+            octets(&image, "AS-4600"),
+            &[
+                0x64, 0x75, 0x30, // 100, 30000
+                b'5', b' ', 0xA4, b' ', b'o',
+                b'k', // exactly fills, no terminator; € is A4h
+                0xEE, 0xEE, 0xEE,
+            ][..]
+        );
+    }
+
+    #[test]
+    fn values_a_signed_or_text_field_cannot_hold_are_refused() {
+        let xml = kinds_program(LATIN_9);
+        for (parameter_ref, value) in [
+            ("P-S8_R-1", "101"),    // above maxInclusive
+            ("P-S8_R-1", "-1"),     // below zero: see the test below
+            ("P-S16_R-1", "1.5"),   // not an integer
+            ("P-T_R-1", "abcdefg"), // longer than the field
+            ("P-T_R-1", "Ω"),       // no ISO-8859-15 octet
+            ("P-T_R-1", "½"),       // ISO-8859-1 has it, ISO-8859-15 does not
+            ("P-T_R-1", "a\u{0}b"), // a NUL would end the text early
+        ] {
+            let error = build(&xml, &[(parameter_ref, value)], vec![]).unwrap_err();
+            assert!(
+                matches!(&error, ImageError::Value { parameter_ref: r, .. } if r == parameter_ref),
+                "{parameter_ref} = {value:?}: {error}"
+            );
+        }
+    }
+
+    /// `[V]` 213 signed fields in the corpus's `070nh` base images hold
+    /// their non-negative default high octet first, but none holds a
+    /// negative one, and no PDF says how a signed parameter is stored. A
+    /// value at or above zero has one pattern under every sign
+    /// representation; a negative one is refused rather than guessed.
+    #[test]
+    fn a_negative_signed_value_is_refused_until_a_source_fixes_its_form() {
+        let xml = kinds_program(LATIN_9);
+        let error = build(&xml, &[("P-S16_R-1", "-300")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { parameter_ref, cause } if parameter_ref == "P-S16_R-1" && cause.contains("negative")),
+            "{error}"
+        );
+        let xml = xml.replace(
+            r#"ParameterType="PT-S8" Value="2""#,
+            r#"ParameterType="PT-S8" Value="-2""#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { parameter_ref, .. } if parameter_ref == "P-S8_R-1"),
+            "a negative default as well: {error}"
+        );
+    }
+
+    /// ISO-8859-1 and ISO-8859-15 are the two encodings the corpus's
+    /// `070nh` programs declare. Without a declaration only a value whose
+    /// octets are the same under every declared encoding (ASCII) is
+    /// written; anything else is refused rather than guessed.
+    #[test]
+    fn a_text_value_is_encoded_as_declared_and_ascii_needs_no_declaration() {
+        let latin_1 = kinds_program(r#"<Options TextParameterEncoding="iso-8859-1" />"#);
+        build(&latin_1, &[("P-T_R-1", "½")], vec![]).expect("ISO-8859-1 has ½");
+        let error = build(&latin_1, &[("P-T_R-1", "5 €")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { .. }),
+            "€ is not in ISO-8859-1: {error}"
+        );
+
+        let undeclared = kinds_program_with("", "Licht", "", "", "");
+        let image = build(&undeclared, &[], vec![]).expect("ASCII needs no declaration");
+        assert_eq!(&octets(&image, "AS-4600")[3..9], b"Licht\0");
+        let error = build(&undeclared, &[("P-T_R-1", "Grüß")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { cause, .. } if cause.contains("TextParameterEncoding")),
+            "{error}"
+        );
+
+        let utf_8 = kinds_program_with(
+            r#"<Options TextParameterEncoding="utf-8" />"#,
+            "Licht",
+            "",
+            "",
+            "",
+        );
+        let error = build(&utf_8, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Unsupported { what } if what.contains("utf-8")),
+            "{error}"
+        );
+    }
+
+    /// `[V]` The corpus's `DPT 9` float fields match that encoding only at
+    /// zero; the non-zero ones contradict it (RESEARCH §19.9). So a float
+    /// is still refused by name, for its type, not its value's spelling.
+    #[test]
+    fn a_float_parameter_is_refused_for_its_type() {
+        let xml = kinds_program_with(
+            LATIN_9,
+            "Grüß",
+            r#"<ParameterType Id="PT-F9" Name="F9"><TypeFloat Encoding="DPT 9" /></ParameterType>"#,
+            r#"<Parameter Id="P-F9" Name="F9" ParameterType="PT-F9" Value="5.000000000000000E+002"><Memory CodeSegment="AS-4600" Offset="10" BitOffset="0" /></Parameter>"#,
+            r#"<ParameterRef Id="P-F9_R-1" RefId="P-F9" />"#,
+        )
+        .replace(
+            r#"<ParameterRefRef RefId="P-T_R-1" />"#,
+            r#"<ParameterRefRef RefId="P-T_R-1" /><ParameterRefRef RefId="P-F9_R-1" />"#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Unsupported { what } if what.contains("P-F9") && what.contains("Float")),
+            "{error}"
+        );
+    }
+
+    /// `parameter_image` writes high octet first and leaves it to its
+    /// caller to refuse another declared order; this is that caller.
+    #[test]
+    fn a_program_declaring_another_byte_order_is_refused() {
+        let xml = kinds_program(
+            r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="LittleEndian" />"#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Unsupported { what } if what.contains("ParameterByteOrder")),
+            "{error}"
+        );
+        let big = kinds_program(
+            r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="BigEndian" />"#,
+        );
+        build(&big, &[], vec![]).expect("the order this crate writes");
     }
 
     #[test]

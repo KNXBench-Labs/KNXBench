@@ -1223,9 +1223,34 @@ main {
 .bus-monitor-connect {
   display: flex;
   gap: 0.5rem;
-  align-items: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
   margin: 0.5rem 0;
 }
+
+.bus-monitor-endpoint-fields {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bus-monitor-endpoint-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: var(--knx-muted);
+  font-size: 0.8rem;
+}
+
+.bus-monitor-host-field { flex: 1 1 11rem; min-width: 0; }
+.bus-monitor-port-field { flex: 0 1 6rem; }
+.bus-monitor-endpoint-fields input { box-sizing: border-box; max-width: 100%; width: 100%; }
+.bus-monitor-host,
+.bus-monitor-port { min-width: 0; }
+.bus-monitor-host-error,
+.bus-monitor-port-error { margin: 0.2rem 0 0.5rem; }
 
 .bus-monitor-session,
 .bus-monitor-stop-summary {

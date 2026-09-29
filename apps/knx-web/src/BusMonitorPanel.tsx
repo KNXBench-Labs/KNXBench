@@ -16,6 +16,7 @@ import {
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
+import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { loadPreferredGateway } from "./gatewayPreference";
 import HelpTip from "./HelpTip";
 import { useSettingsState } from "./settingsStore";
@@ -137,7 +138,15 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const settingsState = useSettingsState();
-  const [gatewayInput, setGatewayInput] = useState(loadPreferredGateway);
+  const [gatewayFields, setGatewayFields] = useState(() => splitGatewayEndpoint(loadPreferredGateway()));
+  const gatewayValidation = validateGatewayFields(gatewayFields);
+  const gatewayValidationHint = gatewayValidation.ok
+    ? undefined
+    : t(gatewayValidation.reason === "hostRequired"
+      ? "busMonitor.connectNeedsGateway"
+      : gatewayValidation.reason === "invalidPort"
+        ? "busMonitor.invalidPort"
+        : "busMonitor.invalidHost");
   const gatewayTouchedRef = useRef(false);
   const gatewaySeedResolvedRef = useRef(settingsState.hydration === "hydrated");
   // T25. The search itself lives in a module-level store, not here: it is
@@ -259,7 +268,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   useEffect(() => {
     if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
     if (!gatewayTouchedRef.current && sessionRef.current === null) {
-      setGatewayInput(loadPreferredGateway());
+      setGatewayFields(splitGatewayEndpoint(loadPreferredGateway()));
     }
     gatewaySeedResolvedRef.current = true;
   }, [settingsState.hydration]);
@@ -471,8 +480,10 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   async function connect() {
     gatewaySeedResolvedRef.current = true;
     setConnectError(null);
+    const validation = validateGatewayFields(gatewayFields);
+    if (!validation.ok) return;
     try {
-      const started = await api.startBusMonitor(gatewayInput);
+      const started = await api.startBusMonitor(validation.endpoint);
       sinceRef.current = 0;
       setCapture({ rows: [], pruned: 0 });
       setPaused(false);
@@ -601,33 +612,65 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           <h1>{t("busMonitor.title")}</h1>
         </div>
         <div className="bus-monitor-connect">
-          {/* The placeholder is the only visible hint at what this field is,
-              and a placeholder is not a label; `aria-label` gives it a name
-              that survives being filled in. The `title` on the disabled
-              states is the reason, not decoration: a disabled control is out
-              of the tab order, so the prose elsewhere on the page never
-              reaches anyone arriving at it. */}
-          <input
-            type="text"
-            placeholder="192.0.2.1:3671"
-            aria-label={t("busMonitor.gatewayLabel")}
-            value={gatewayInput}
-              onChange={(e) => {
-                gatewayTouchedRef.current = true;
-                gatewaySeedResolvedRef.current = true;
-                setGatewayInput(e.target.value);
-              }}
-            disabled={!!session}
-            title={session ? t("busMonitor.gatewayLocked") : undefined}
-          />
+          {/* Host and port remain separate until the existing start request.
+              The server's tunnel is IPv4-only; a legacy hostname or IPv6
+              preference stays visible for correction rather than being
+              silently dropped or sent as though it could connect. */}
+          <div className="bus-monitor-endpoint-fields">
+            <label className="bus-monitor-host-field">
+              <span>{t("busMonitor.gatewayHost")}</span>
+              <input
+                className="bus-monitor-host"
+                type="text"
+                placeholder="192.0.2.1"
+                aria-label={t("busMonitor.gatewayHost")}
+                aria-invalid={!gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost"}
+                aria-describedby={
+                  !gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost"
+                    ? "bus-monitor-host-error" : undefined
+                }
+                value={gatewayFields.host}
+                onChange={(e) => {
+                  gatewayTouchedRef.current = true;
+                  gatewaySeedResolvedRef.current = true;
+                  setGatewayFields((fields) => ({ ...fields, host: e.target.value }));
+                }}
+                disabled={!!session}
+                title={session ? t("busMonitor.gatewayLocked") : undefined}
+              />
+            </label>
+            <label className="bus-monitor-port-field">
+              <span>{t("busMonitor.gatewayPort")}</span>
+              <input
+                className="bus-monitor-port"
+                type="text"
+                inputMode="numeric"
+                placeholder="3671"
+                aria-label={t("busMonitor.gatewayPort")}
+                aria-invalid={!gatewayValidation.ok && gatewayValidation.reason === "invalidPort"}
+                aria-describedby={
+                  !gatewayValidation.ok && gatewayValidation.reason === "invalidPort"
+                    ? "bus-monitor-port-error" : undefined
+                }
+                value={gatewayFields.port}
+                onChange={(e) => {
+                  gatewayTouchedRef.current = true;
+                  gatewaySeedResolvedRef.current = true;
+                  setGatewayFields((fields) => ({ ...fields, port: e.target.value }));
+                }}
+                disabled={!!session}
+                title={session ? t("busMonitor.gatewayLocked") : undefined}
+              />
+            </label>
+          </div>
           {session ? (
             <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
           ) : (
             <>
               <button
                 onClick={connect}
-                disabled={!gatewayInput}
-                title={gatewayInput ? undefined : t("busMonitor.connectNeedsGateway")}
+                disabled={!gatewayValidation.ok}
+                title={gatewayValidationHint}
               >
                 {t("busMonitor.connect")}
               </button>
@@ -673,6 +716,16 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" topicId="busMonitor" />
         </div>
       </header>
+      {!gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost" && gatewayFields.host.trim() && (
+        <p id="bus-monitor-host-error" className="field-error bus-monitor-host-error" role="alert">
+          {t("busMonitor.invalidHost")}
+        </p>
+      )}
+      {!gatewayValidation.ok && gatewayValidation.reason === "invalidPort" && (
+        <p id="bus-monitor-port-error" className="field-error bus-monitor-port-error" role="alert">
+          {t("busMonitor.invalidPort")}
+        </p>
+      )}
       {/* T25 — what the interface search found. Rendered only while no
           session is attached, for the same reason the Search button is:
           once connected, the gateway is decided and a list of alternatives
@@ -715,7 +768,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                     onClick={() => {
                       gatewayTouchedRef.current = true;
                       gatewaySeedResolvedRef.current = true;
-                      setGatewayInput(iface.controlEndpoint);
+                      setGatewayFields(splitGatewayEndpoint(iface.controlEndpoint));
                     }}
                     >
                       <span className="bus-discovery-name">{iface.friendlyName}</span>

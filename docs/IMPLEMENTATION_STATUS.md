@@ -1,5 +1,40 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — U10 / ISSUE-12 partial: gateway host and port, not a discovery fix
+
+- Bus monitor now shows separately labelled host and port fields. Port 3671 is
+  the default, including for an empty port field; an invalid port or a host
+  unsupported by the existing `SocketAddrV4` tunnel disables Connect with a
+  specific inline, accessible explanation. The unchanged start API still
+  receives a single `host:port` string. Existing single-string preferences
+  and discovered control endpoints seed **both** fields without changing the
+  saved preference or connecting automatically. Unsupported legacy hostname
+  and IPv6 preferences remain visible for correction, never silently erased.
+- TDD RED/GREEN: the separate-field request-payload test, endpoint parser
+  tests, stale gateway help text and pasted-combined-endpoint hint were
+  observed failing before their fixes. A removed IPv4-octet range guard
+  accepted `999.0.0.1`; the focused test failed and the guard was restored.
+  Headless Chromium against a local Vite server with mocked API responses
+  checked 1440×900 and 400×700 layouts, separate labels, default port,
+  no horizontal overflow, invalid-port/hostname feedback and zero monitor
+  start requests for invalid fields. The manual screenshot depicts this
+  local UI fixture, not a real KNX discovery result.
+- After correcting two integration test expectations for the new pure helper
+  and its CSS hooks, the complete branch web gate passed: build, TypeScript,
+  78 Vitest files / 1190 tests. Rust fmt, all-target Clippy and workspace
+  tests passed in the isolated worktree: 124 suites / 2526 passed, 0 failed,
+  143 ignored. The corpus symlink was present; these are local/simulator
+  gates, not evidence of native GUI or live multicast reception. A worktree-
+  built `xtask` checked layering, 304 well-formed headers / 161 absent at
+  the ceiling, 397 links across 214 Markdown files and the corpus gate;
+  `git diff --check` was clean.
+- The U2 AppImage and unpackaged server both sent the search and received no
+  response (RESEARCH §20.1, KNOWN_LIMITATIONS §79). This package neither
+  changes KNXnet/IP discovery nor claims to fix it. A wire capture or
+  gateway-side evidence remains necessary to identify a narrow network or
+  protocol correction. U10/ISSUE-12 therefore remains **partially open**;
+  the manual IPv4 connection is the supported fallback.
+
 ## 2026-09-29 — Commissioning readiness 1–3 (offline only; bus still parked)
 
 - Product coverage: `knx products coverage` reports per application its

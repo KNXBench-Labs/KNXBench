@@ -269,5 +269,8 @@ fn print_progress(progress: Progress) {
             authorisation,
             suspicious,
         } => println!("        access: {authorisation:?}, suspicious: {suspicious}"),
+        Progress::BackupTaken { regions, octets } => {
+            println!("        backup: {octets} octets in {regions} regions kept before write")
+        }
     }
 }

@@ -19,15 +19,19 @@
   `DebugReportDialog` now uses the same body portal and post-close summary
   focus restoration as Documentation export. `App.test.tsx` pins this
   integration; component-only tests previously missed it.
-- Branch evidence: TypeScript/build and 77 web test files / 1169 tests;
-  Rust fmt/Clippy and 123 suites / 2391 passed, 0 failed, 136 ignored.
-  Targeted TDD regressions include backdrop-drag and File-menu integration;
-  the pointer-origin and viewport-width guard mutations were rejected, then
-  restored. Headless Chromium against a local Vite page (no KNX connection)
-  verified Settings at 1280×800 and 640×700, pointer/arrow resizing, internal
-  scroll, Escape focus restoration, and the portalled Debug report's reachable
-  Save action and return to File. Native WebKitGTK behavior and a real screen
-  reader remain untested (KNOWN_LIMITATIONS §20).
+- Branch evidence after rebasing onto the concurrent commissioning changes:
+  TypeScript/build and 77 web test files / 1170 tests; Rust fmt/Clippy and
+  124 suites / 2453 passed, 0 failed, 138 ignored. Targeted TDD
+  regressions include backdrop-drag, File-menu integration and resize under
+  application zoom; the pointer-origin and viewport-width guard mutations
+  were rejected, then restored. Headless Chromium against a local Vite page
+  (no KNX connection) verified Settings at 1280×800 and 640×700, including
+  150% application zoom: ArrowLeft then visibly shrank the zoomed dialog
+  instead of merely changing its clipped CSS width. Pointer resizing,
+  internal scroll, Escape focus restoration and the portalled Debug report's
+  reachable Save action and return to File were also exercised. Native
+  WebKitGTK behavior and a real screen reader remain untested
+  (KNOWN_LIMITATIONS §20).
 
 ## 2026-09-28: K8/K9 decided, the commissioning boundaries on paper
 

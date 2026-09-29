@@ -257,6 +257,31 @@ describe("Overlay", () => {
     outside.remove();
   });
 
+  it("uses layout pixels when resizing under application zoom", async () => {
+    const previous = document.documentElement.style.getPropertyValue("--app-ui-scale");
+    document.documentElement.style.setProperty("--app-ui-scale", "1.5");
+    const root = await mount(
+      <Overlay onClose={vi.fn()} resizable={{ width: 900, height: 620 }}>
+        <p>zoomed dialog</p>
+      </Overlay>,
+    );
+    try {
+      const panel = host!.querySelector<HTMLElement>(".search-panel")!;
+      const handle = host!.querySelector<HTMLButtonElement>(".overlay-resize-key")!;
+      vi.spyOn(panel, "getBoundingClientRect")
+        .mockReturnValueOnce({ width: 600, height: 450 } as DOMRect)
+        .mockReturnValue({ width: 564, height: 450 } as DOMRect);
+      await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+      expect(panel.style.width).toBe("376px"); // 600 visual px / 1.5 - 24 layout px
+      await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
+      expect(panel.style.height).toBe("276px"); // 450 / 1.5 - 24
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) document.documentElement.style.setProperty("--app-ui-scale", previous);
+      else document.documentElement.style.removeProperty("--app-ui-scale");
+    }
+  });
+
   it("clamps keyboard resizing to the viewport and offers a native pointer grip with contained scrolling", async () => {
     const root = await mount(
       <Overlay label="Bounds" onClose={vi.fn()} resizable={{ width: 900, height: 620 }}>

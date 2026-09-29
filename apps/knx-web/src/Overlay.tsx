@@ -72,12 +72,18 @@ export default function Overlay(props: {
     e.stopPropagation();
     // Read the rendered box, not the initial prop: native pointer resizing
     // changes the element's used size without updating React state.
+    // The application's root CSS zoom scales DOMRect measurements, but style
+    // widths and viewport caps are layout pixels. Keep those units together.
+    const configuredScale = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"),
+    );
+    const scale = Number.isFinite(configuredScale) && configuredScale > 0 ? configuredScale : 1;
     const box = panelRef.current.getBoundingClientRect();
-    const maxWidth = Math.max(1, window.innerWidth - 2 * VIEWPORT_PADDING);
-    const maxHeight = Math.max(1, window.innerHeight - 2 * VIEWPORT_PADDING);
+    const maxWidth = Math.max(1, window.innerWidth / scale - 2 * VIEWPORT_PADDING);
+    const maxHeight = Math.max(1, window.innerHeight / scale - 2 * VIEWPORT_PADDING);
     setSize({
-      width: Math.min(maxWidth, Math.max(Math.min(MIN_RESIZE_WIDTH, maxWidth), (box.width || size.width) + delta[0])),
-      height: Math.min(maxHeight, Math.max(Math.min(MIN_RESIZE_HEIGHT, maxHeight), (box.height || size.height) + delta[1])),
+      width: Math.min(maxWidth, Math.max(Math.min(MIN_RESIZE_WIDTH, maxWidth), (box.width / scale || size.width) + delta[0])),
+      height: Math.min(maxHeight, Math.max(Math.min(MIN_RESIZE_HEIGHT, maxHeight), (box.height / scale || size.height) + delta[1])),
     });
   }
 

@@ -25,6 +25,7 @@
 pub mod download;
 pub mod individual_address_reset;
 pub mod individual_address_write;
+pub mod master_reset;
 pub mod memory_download;
 pub mod programming_button_wait;
 pub mod serial_number_write;
@@ -2827,12 +2828,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// [`Self::disconnect_after_restart`] runs on every path out of this
     /// method — success, a timed-out `exchange`, or a malformed response —
     /// before the error (or answer) is handed back to the caller.
+    ///
+    /// The scope follows the Erase Code: `01h` erases nothing and is a
+    /// [`WriteScope::Restart`]; every other code needs
+    /// [`WriteScope::MasterReset`] (K14), which hardware refuses. A restart
+    /// phrase therefore never covers a Factory Reset.
     pub async fn restart_master_reset(
         &mut self,
         erase_code: u8,
         channel_number: u8,
     ) -> Result<MasterResetResponse, SessionError> {
-        self.authorise_write(WriteScope::Restart)?;
+        self.authorise_write(if erase_code == ERASE_CODE_CONFIRMED_RESTART {
+            WriteScope::Restart
+        } else {
+            WriteScope::MasterReset
+        })?;
         let outcome = self
             .exchange(
                 ApplicationService::Restart {
@@ -5869,6 +5879,33 @@ mod tests {
     /// own answer and not MP §3.7.3 exception (4)'s Error Code `03h`.
     /// Without this test, widening the rejection to every Erase Code goes
     /// unnoticed (C15 re-review, invented mutation).
+    /// K14: the restart phrase covers the confirmed restart and nothing
+    /// that erases. Before, any Erase Code went out under
+    /// `WriteScope::Restart`, which hardware permits.
+    #[tokio::test]
+    async fn a_restart_authorisation_cannot_send_an_erasing_master_reset() {
+        let device = SimulatedDevice::new();
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+        for erase_code in 0x02..=0x08 {
+            let err = session
+                .restart_master_reset(erase_code, 0)
+                .await
+                .expect_err("an erasing code needs the master-reset scope");
+            assert!(
+                matches!(err, SessionError::Refused(_)),
+                "code {erase_code:02X}h: {err}"
+            );
+        }
+        assert!(
+            !device
+                .seen()
+                .iter()
+                .any(|seen| matches!(seen, Seen::Restart { .. })),
+            "nothing reached the device"
+        );
+    }
+
     #[tokio::test]
     async fn a_non_zero_channel_number_is_legal_for_an_erase_code_that_does_not_fix_it() {
         /// Table 4, MP p. 82: Factory Reset, one of the four Erase Codes
@@ -5880,7 +5917,7 @@ mod tests {
             restart_process_time: Duration::from_secs(9),
             ..SimulatorConfig::default()
         });
-        let mut session = writer(&device, WriteScope::Restart);
+        let mut session = writer(&device, WriteScope::MasterReset);
         session.connect().await.expect("connect");
 
         let response = session

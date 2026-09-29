@@ -22,6 +22,7 @@
 //! This layer knows how to ask one device one thing and how to disbelieve
 //! the answer.
 
+pub mod domain_address;
 pub mod download;
 pub mod individual_address_reset;
 pub mod individual_address_write;
@@ -38,6 +39,7 @@ use std::time::Duration;
 use knx_core::commissioning::authorisation::{
     AccessLevel, Authorisation, AuthorisationPlan, LevelCount, FREE_ACCESS_KEY,
 };
+use knx_core::commissioning::domain_address::DomainAddress;
 use knx_core::commissioning::error_code::{read_error_code, ErrorCodeReadError, SystemErrorClass};
 use knx_core::commissioning::load_control::{
     event_payload, LoadControlPayload, LOAD_CONTROL_NR_OF_ELEM, LOAD_CONTROL_START_INDEX,
@@ -1542,10 +1544,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         &self,
         timeout: Duration,
     ) -> Result<ProgrammingModeResponders, SessionError> {
+        self.broadcast_individual_address_read_to(BROADCAST_DESTINATION, timeout)
+            .await
+    }
+
+    /// [`Self::broadcast_individual_address_read`] on a chosen broadcast:
+    /// MP §2.10 step 1 reads on the system broadcast (RF, K16).
+    pub(crate) async fn broadcast_individual_address_read_to(
+        &self,
+        destination: Destination,
+        timeout: Duration,
+    ) -> Result<ProgrammingModeResponders, SessionError> {
         let mut events = self.transport.subscribe();
         self.transport
             .send_frame(
-                BROADCAST_DESTINATION,
+                destination,
                 Tpci::UnnumberedData,
                 ApplicationService::IndividualAddressRead,
             )
@@ -1627,10 +1640,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         &self,
         scope: WriteScope,
     ) -> Result<(), SessionError> {
+        self.broadcast_individual_address_write_to(BROADCAST_DESTINATION, scope)
+            .await
+    }
+
+    /// The same broadcast on a chosen broadcast: MP §2.10 step 3 writes on
+    /// the system broadcast (RF, K16).
+    pub(crate) async fn broadcast_individual_address_write_to(
+        &self,
+        destination: Destination,
+        scope: WriteScope,
+    ) -> Result<(), SessionError> {
         self.authorise_write(scope)?;
         self.transport
             .send_frame(
-                BROADCAST_DESTINATION,
+                destination,
                 Tpci::UnnumberedData,
                 ApplicationService::IndividualAddressWrite {
                     address: self.target.address(),
@@ -1659,6 +1683,48 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 ApplicationService::IndividualAddressSerialNumberWrite {
                     serial_number: serial_number.octets(),
                     address: self.target.address(),
+                },
+            )
+            .await
+            .map_err(SessionError::Transport)
+    }
+
+    /// AL §3.3.3 `A_DomainAddress_Write` on `destination` (the system
+    /// broadcast, or the plain broadcast CP §2.3.1.4 allows): every device
+    /// in programming mode takes `domain_address`. Unconfirmed; the
+    /// procedure's read-back proves it (K16).
+    pub(crate) async fn broadcast_domain_address_write(
+        &self,
+        destination: Destination,
+        domain_address: DomainAddress,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::DomainAddressProgramming)?;
+        self.transport
+            .send_frame(
+                destination,
+                Tpci::UnnumberedData,
+                ApplicationService::DomainAddressWrite { domain_address },
+            )
+            .await
+            .map_err(SessionError::Transport)
+    }
+
+    /// AL §3.3.7 `A_DomainAddressSerialNumber_Write`: the device with
+    /// `serial_number` takes `domain_address`, programming mode or not.
+    pub(crate) async fn broadcast_domain_address_serial_number_write(
+        &self,
+        destination: Destination,
+        serial_number: SerialNumber,
+        domain_address: DomainAddress,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::DomainAddressProgramming)?;
+        self.transport
+            .send_frame(
+                destination,
+                Tpci::UnnumberedData,
+                ApplicationService::DomainAddressSerialNumberWrite {
+                    serial_number: serial_number.octets(),
+                    domain_address,
                 },
             )
             .await

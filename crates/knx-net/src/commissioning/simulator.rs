@@ -35,7 +35,7 @@ use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
     verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER, PID_ERROR_CODE,
     PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
-    PID_PROGRAM_VERSION, PID_TABLE_REFERENCE,
+    PID_PROGRAM_VERSION, PID_SERIAL_NUMBER, PID_TABLE_REFERENCE,
 };
 use knx_core::{GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
@@ -443,6 +443,31 @@ pub struct SimulatorConfig {
     /// How long the device waits before repeating an answer whose `T_ACK`
     /// was lost. TL clause 4's acknowledge time-out on a real device.
     pub answer_repeat_after: Duration,
+    /// The device's KNX Serial Number. `None` is a device that does not
+    /// support the serial-number services and so answers none of them
+    /// (RES §4.22.1.3, p. 291: they are tied to the serial number's
+    /// realisation).
+    pub serial_number: Option<[u8; 6]>,
+    /// Whether an `A_IndividualAddressSerialNumber_Write` naming this
+    /// device changes its address. RES §4.2.8 `PID_SERVICE_CONTROL` bit 2,
+    /// *"If this bit is cleared, it shall not be possible to change the
+    /// Individual Address of the device."* `false` models that device: it
+    /// ignores the write in silence, and MP §2.5 step 2's verify is what
+    /// notices.
+    pub serial_number_write_enabled: bool,
+    /// A second device on the bus, standing at its own address, holding
+    /// `serial_number` instead of the simulated device. Its answers carry
+    /// its address as their source; it takes serial-number writes like the
+    /// simulated device would. Models *"the serial-numbered device is
+    /// somebody other than whoever sits at the new address"*, which one
+    /// simulated device alone cannot. `None`: the simulated device holds
+    /// `serial_number` itself.
+    pub serial_number_holder: Option<IndividualAddress>,
+    /// A device that answers every serial-number read with its own serial
+    /// number and address, first. On a bus shared with another client, an
+    /// answer to somebody else's question looks exactly like this; a reader
+    /// that takes the first answer rather than the matching one takes it.
+    pub foreign_serial_number_answer: Option<([u8; 6], IndividualAddress)>,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -587,6 +612,10 @@ impl Default for SimulatorConfig {
             restart_unanswered: false,
             lost_ack_for_answer: None,
             answer_repeat_after: Duration::ZERO,
+            serial_number: None,
+            serial_number_write_enabled: true,
+            serial_number_holder: None,
+            foreign_serial_number_answer: None,
         }
     }
 }
@@ -738,6 +767,10 @@ struct State {
     properties: HashMap<(u8, u8), Vec<u8>>,
     memory: HashMap<u32, u8>,
     seen: Vec<Seen>,
+    /// Where [`SimulatorConfig::serial_number_holder`] currently stands.
+    serial_number_holder_address: IndividualAddress,
+    serial_number_reads: usize,
+    serial_number_writes: usize,
 }
 
 /// An answer whose `T_ACK` has not arrived yet.
@@ -794,6 +827,12 @@ impl SimulatedDevice {
         if config.application_program_objects.contains(&0) {
             properties.insert((0, PID_PROGRAM_VERSION), vec![0x00, 0x02, 0x12, 0x34, 0x01]);
         }
+        // RES §4.22.1.3 rule 1: interface objects plus the serial-number
+        // services mean `PID_SERIAL_NUMBER` is present, and it holds the same
+        // six octets the services answer with.
+        if let Some(serial_number) = config.serial_number {
+            properties.insert((0, PID_SERIAL_NUMBER), serial_number.to_vec());
+        }
         if let Some(length) = config.max_apdu_length {
             properties.insert((0, PID_MAX_APDU_LENGTH), length.to_be_bytes().to_vec());
         }
@@ -835,6 +874,9 @@ impl SimulatedDevice {
             properties,
             memory,
             seen: Vec::new(),
+            serial_number_holder_address: config.serial_number_holder.unwrap_or(address),
+            serial_number_reads: 0,
+            serial_number_writes: 0,
         };
 
         Self {
@@ -957,6 +999,23 @@ impl SimulatedDevice {
     /// their operators pressed or released their buttons.
     pub fn set_other_programming_mode_devices(&self, devices: Vec<IndividualAddress>) {
         self.lock().other_programming_mode_devices = devices;
+    }
+
+    /// How many broadcast `A_IndividualAddressSerialNumber_Read` frames
+    /// this device answered.
+    pub fn serial_number_reads(&self) -> usize {
+        self.lock().serial_number_reads
+    }
+
+    /// How many `A_IndividualAddressSerialNumber_Write` frames this device
+    /// (or its [`SimulatorConfig::serial_number_holder`]) accepted.
+    pub fn serial_number_writes(&self) -> usize {
+        self.lock().serial_number_writes
+    }
+
+    /// Where [`SimulatorConfig::serial_number_holder`] currently stands.
+    pub fn serial_number_holder_address(&self) -> IndividualAddress {
+        self.lock().serial_number_holder_address
     }
 
     /// How many broadcast `A_IndividualAddress_Read` frames arrived.
@@ -1333,6 +1392,57 @@ impl SimulatedDevice {
                     state.address = address;
                 }
             }
+            // AL §3.2.4, p. 21: *"The application process shall respond …
+            // if the KNX Serial Number received is equal to the KNX Serial
+            // Number of the device."* Programming mode plays no part. On
+            // TP the domain address is `0000h` (MP §2.4: it is contained in
+            // the response *"if the device is on Powerline"*).
+            ApplicationService::IndividualAddressSerialNumberRead { serial_number } => {
+                if let Some((foreign, from)) = self.config.foreign_serial_number_answer {
+                    self.emit_from(
+                        from,
+                        Tpci::UnnumberedData,
+                        ApplicationService::IndividualAddressSerialNumberResponse {
+                            serial_number: foreign,
+                            domain_address: 0x0000,
+                        },
+                    );
+                }
+                if self.config.serial_number == Some(serial_number) {
+                    let answering = {
+                        let mut state = self.lock();
+                        state.serial_number_reads += 1;
+                        match self.config.serial_number_holder {
+                            Some(_) => state.serial_number_holder_address,
+                            None => state.address,
+                        }
+                    };
+                    self.emit_from(
+                        answering,
+                        Tpci::UnnumberedData,
+                        ApplicationService::IndividualAddressSerialNumberResponse {
+                            serial_number,
+                            domain_address: 0x0000,
+                        },
+                    );
+                }
+            }
+            // AL §3.2.5 and MP §2.5 step 1, p. 17: *"The server shall set
+            // its Individual Address according to the received value"*,
+            // with no restart afterwards (the NOTE under the sequence).
+            ApplicationService::IndividualAddressSerialNumberWrite {
+                serial_number,
+                address,
+            } if self.config.serial_number == Some(serial_number)
+                && self.config.serial_number_write_enabled =>
+            {
+                let mut state = self.lock();
+                state.serial_number_writes += 1;
+                match self.config.serial_number_holder {
+                    Some(_) => state.serial_number_holder_address = address,
+                    None => state.address = address,
+                }
+            }
             _ => {}
         }
     }
@@ -1707,12 +1817,21 @@ impl SimulatedDevice {
                     });
                 }
             }
+            // MP §3.7.1.1.1, p. 80: *"To perform a Basic Restart the
+            // Management Server shall - switch off Programming Mode"*. Still
+            // unconfirmed (§3.7.1.1.3), so nothing is emitted.
+            ApplicationService::Restart {
+                response: false,
+                restart_type: 0,
+                ..
+            } => {
+                self.lock().programming_mode = false;
+            }
             // MP §3.7.1.1.3, p. 80: *"The Application Layer of the
             // Management Server shall not confirm the A_Restart-service if
             // a Basic Restart is called"* — so `restart_type: 0` earns no
-            // arm here and falls to the catch-all below; the T_ACK
-            // `handle` already sent is this device's only word on the
-            // matter.
+            // answer above; the T_ACK `handle` already sent is this
+            // device's only word on the matter.
             ApplicationService::Restart {
                 response: false,
                 restart_type: 1,

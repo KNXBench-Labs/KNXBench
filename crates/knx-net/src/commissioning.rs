@@ -26,6 +26,7 @@ pub mod download;
 pub mod individual_address_write;
 pub mod memory_download;
 pub mod programming_button_wait;
+pub mod serial_number_write;
 pub mod simulator;
 
 use std::convert::Infallible;
@@ -59,8 +60,9 @@ use knx_core::commissioning::programming_mode::{
 use knx_core::commissioning::properties::{
     verify_mode_active, with_verify_mode, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER,
     PID_ERROR_CODE, PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH,
-    PID_MCB_TABLE, PID_TABLE_REFERENCE,
+    PID_MCB_TABLE, PID_SERIAL_NUMBER, PID_TABLE_REFERENCE,
 };
+use knx_core::commissioning::serial_number::SerialNumber;
 use knx_core::{ContactableAddress, ExcludedAddress, GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
 
@@ -1626,6 +1628,31 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             .map_err(SessionError::Transport)
     }
 
+    /// MP §2.5 step 1's broadcast `A_IndividualAddressSerialNumber_Write`:
+    /// the device with `serial_number` takes this session's target as its
+    /// individual address.
+    ///
+    /// Needs the individual-address-programming scope for the new address,
+    /// like the programming-mode write. Unconfirmed at the application
+    /// layer: step 2's read-back, not this call, proves it landed.
+    pub async fn broadcast_serial_number_write(
+        &self,
+        serial_number: SerialNumber,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::IndividualAddressProgramming)?;
+        self.transport
+            .send_frame(
+                BROADCAST_DESTINATION,
+                Tpci::UnnumberedData,
+                ApplicationService::IndividualAddressSerialNumberWrite {
+                    serial_number: serial_number.octets(),
+                    address: self.target.address(),
+                },
+            )
+            .await
+            .map_err(SessionError::Transport)
+    }
+
     /// MP §3.5.1 `DMP_Authorize_RCo`, plus §10.4's extension when it was
     /// opted into.
     async fn authorise(&mut self) -> Result<(), SessionError> {
@@ -1880,6 +1907,26 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 object_index: ObjectIndex::DEVICE,
                 property_id: PID_MANUFACTURER_ID,
                 expected: 2,
+                got: octets.len(),
+            }),
+        }
+    }
+
+    /// `PID_SERIAL_NUMBER` of the Device Object: RES §4.2.11, p. 33
+    /// (PID 11, `PDT_GENERIC_06`, DPT_SerNum 221.001). Read-only. RES
+    /// §4.22.1.3 rule 1: a device with interface objects that supports the
+    /// serial-number services has this property, so it is how to learn a
+    /// device's serial number from its current address.
+    pub async fn read_serial_number(&mut self) -> Result<SerialNumber, SessionError> {
+        let octets = self
+            .read_property(ObjectIndex::DEVICE, PID_SERIAL_NUMBER, 1, 1)
+            .await?;
+        match <[u8; 6]>::try_from(octets.as_slice()) {
+            Ok(octets) => Ok(SerialNumber::from_octets(octets)),
+            Err(_) => Err(SessionError::MalformedProperty {
+                object_index: ObjectIndex::DEVICE,
+                property_id: PID_SERIAL_NUMBER,
+                expected: 6,
                 got: octets.len(),
             }),
         }
@@ -2941,6 +2988,72 @@ fn reestablishment_may_be_retried(err: &SessionError) -> bool {
             | SessionError::ConnectRejected { .. }
             | SessionError::ConnectionLost { .. }
     )
+}
+
+/// MP §2.4 `NM_IndividualAddress_SerialNumber_Read`: the individual
+/// address of the one device with this serial number, or `None` when
+/// nobody answered within `timeout`.
+///
+/// `[D]` AL §3.2.4 p. 21: only the device whose serial number matches
+/// answers. MP §2.4 p. 16: *"The Individual Address is contained as
+/// the Source Address of the A_IndividualAddressSerialNumber_Response-
+/// PDU"*, and *"If no answer is received, there is no device present in
+/// the network with the given KNX Serial Number."* MP §2.4 gives no
+/// time-out figure; the caller chooses one.
+///
+/// Connectionless and read-only: no authorisation is needed. A response
+/// that carries a different serial number is not an answer (another
+/// client may be asking about another device at the same time). The
+/// first matching answer ends the wait.
+pub async fn broadcast_serial_number_read<T: ManagementTransport>(
+    transport: &T,
+    serial_number: SerialNumber,
+    timeout: Duration,
+) -> Result<Option<IndividualAddress>, SessionError> {
+    let mut events = transport.subscribe();
+    transport
+        .send_frame(
+            BROADCAST_DESTINATION,
+            Tpci::UnnumberedData,
+            ApplicationService::IndividualAddressSerialNumberRead {
+                serial_number: serial_number.octets(),
+            },
+        )
+        .await
+        .map_err(SessionError::Transport)?;
+    let deadline = tokio::time::Instant::now() + timeout;
+    loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return Ok(None);
+        }
+        match tokio::time::timeout(remaining, events.recv()).await {
+            Ok(Ok(TunnelEvent::Telegram(frame))) => {
+                if frame.kind == LDataMessageKind::Indication
+                    && matches!(
+                        frame.service,
+                        ApplicationService::IndividualAddressSerialNumberResponse {
+                            serial_number: answered,
+                            ..
+                        } if answered == serial_number.octets()
+                    )
+                {
+                    return Ok(Some(frame.source));
+                }
+            }
+            Ok(Ok(TunnelEvent::Closed)) | Ok(Err(broadcast::error::RecvError::Closed)) => {
+                return Err(SessionError::ConnectionLost {
+                    during: "A_IndividualAddressSerialNumber_Response (broadcast)",
+                });
+            }
+            Ok(Err(broadcast::error::RecvError::Lagged(_))) => {
+                return Err(SessionError::Lagged {
+                    waiting_for: "A_IndividualAddressSerialNumber_Response (broadcast)",
+                });
+            }
+            Err(_) => {}
+        }
+    }
 }
 
 #[cfg(test)]

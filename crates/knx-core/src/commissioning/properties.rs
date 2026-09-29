@@ -42,6 +42,11 @@ pub const PID_TABLE_REFERENCE: u8 = 7;
 /// PropRead(DeviceObj, PID_MANUFACTURER_ID (PID = 12)"*.
 pub const PID_MANUFACTURER_ID: u8 = 12;
 
+/// `PID_SERIAL_NUMBER`: RES §4.2.11, p. 33, *"This Property shall contain
+/// the KNX Serial Number of the device in which it is contained."*
+/// `PDT_GENERIC_06`.
+pub const PID_SERIAL_NUMBER: u8 = 11;
+
 /// `PID_PROGRAM_VERSION`, written by design spec §7.2 step 5.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row

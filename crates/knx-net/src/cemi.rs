@@ -29,6 +29,16 @@ pub const APCI_INDIVIDUAL_ADDRESS_READ: u16 = 0x100;
 /// all — the answering device is named by the frame's source address
 /// (spec §4.2), which is why this variant has no fields.
 pub const APCI_INDIVIDUAL_ADDRESS_RESPONSE: u16 = 0x140;
+/// `A_IndividualAddressSerialNumber_Read-PDU` (`1111011100`), broadcast.
+/// AL §3.2.4, Figure 12, p. 21: six octets of KNX Serial Number follow.
+pub const APCI_IA_SERIAL_NUMBER_READ: u16 = 0x3DC;
+/// `A_IndividualAddressSerialNumber_Response-PDU` (`1111011101`). AL
+/// Figure 13, p. 22: serial number (6), domain address (2), reserved (2).
+/// The answering device's individual address is the frame's source.
+pub const APCI_IA_SERIAL_NUMBER_RESPONSE: u16 = 0x3DD;
+/// `A_IndividualAddressSerialNumber_Write-PDU` (`1111011110`). AL §3.2.5,
+/// Figure 14, p. 23: serial number (6), new address (2), reserved (4).
+pub const APCI_IA_SERIAL_NUMBER_WRITE: u16 = 0x3DE;
 /// `A_Memory_Read-PDU` (`1000nnnnnn`), `number` in the low six bits.
 pub const APCI_MEMORY_READ: u16 = 0x200;
 /// `A_Memory_Response-PDU` (`1001nnnnnn`).
@@ -219,6 +229,27 @@ pub enum ApplicationService {
     /// being reported is the frame's `source` — reading it from anywhere
     /// else is the mistake this fieldless variant makes impossible.
     IndividualAddressResponse,
+    /// `A_IndividualAddressSerialNumber_Read-PDU` (AL §3.2.4): broadcast.
+    /// Only the device with this KNX Serial Number answers.
+    IndividualAddressSerialNumberRead {
+        serial_number: [u8; 6],
+    },
+    /// `A_IndividualAddressSerialNumber_Response-PDU` (AL Figure 13). The
+    /// individual address is the frame's `source` (MP §2.4, p. 16:
+    /// *"The Individual Address is contained as the Source Address"*).
+    /// `domain_address` is meaningful on open media only; the two
+    /// reserved octets are not kept.
+    IndividualAddressSerialNumberResponse {
+        serial_number: [u8; 6],
+        domain_address: u16,
+    },
+    /// `A_IndividualAddressSerialNumber_Write-PDU` (AL §3.2.5): broadcast;
+    /// the device with this serial number takes `address`, programming
+    /// mode or not. The four reserved octets go out as zero.
+    IndividualAddressSerialNumberWrite {
+        serial_number: [u8; 6],
+        address: IndividualAddress,
+    },
     /// `A_Memory_Read-PDU`: `number` octets from `address` (AL §3.4.4
     /// Figure 74). `number` is the request's own field, so it is explicit
     /// here; 1 to 63 on encode.
@@ -752,6 +783,11 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
 /// `Other` would hide exactly the misbehaviour spec §9.2 wants named.
 fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
     let be16 = |a: u8, b: u8| u16::from_be_bytes([a, b]);
+    let serial = |extra: &[u8]| -> [u8; 6] {
+        let mut serial_number = [0; 6];
+        serial_number.copy_from_slice(&extra[..6]);
+        serial_number
+    };
     // `A_UserMemory_*`: octet 8 is the address extension (bits 7-4) and
     // `number` (bits 3-0), octets 9-10 the 16-bit address (Figure 79).
     let user_memory = |extra: &[u8]| -> (u8, u32) {
@@ -770,6 +806,25 @@ fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
         }
         APCI_INDIVIDUAL_ADDRESS_RESPONSE if extra.is_empty() => {
             Some(ApplicationService::IndividualAddressResponse)
+        }
+        // Shape as the figures draw it. A longer PDU is not this service;
+        // reserved octets are not judged (see the function's docs).
+        APCI_IA_SERIAL_NUMBER_READ if extra.len() == 6 => {
+            Some(ApplicationService::IndividualAddressSerialNumberRead {
+                serial_number: serial(extra),
+            })
+        }
+        APCI_IA_SERIAL_NUMBER_RESPONSE if extra.len() == 10 => {
+            Some(ApplicationService::IndividualAddressSerialNumberResponse {
+                serial_number: serial(extra),
+                domain_address: be16(extra[6], extra[7]),
+            })
+        }
+        APCI_IA_SERIAL_NUMBER_WRITE if extra.len() == 12 => {
+            Some(ApplicationService::IndividualAddressSerialNumberWrite {
+                serial_number: serial(extra),
+                address: IndividualAddress::from_raw(be16(extra[6], extra[7])),
+            })
         }
         APCI_USER_MEMORY_READ if extra.len() == 3 => {
             let (number, address) = user_memory(extra);
@@ -1010,6 +1065,9 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         service @ (ApplicationService::IndividualAddressWrite { .. }
         | ApplicationService::IndividualAddressRead
         | ApplicationService::IndividualAddressResponse
+        | ApplicationService::IndividualAddressSerialNumberRead { .. }
+        | ApplicationService::IndividualAddressSerialNumberResponse { .. }
+        | ApplicationService::IndividualAddressSerialNumberWrite { .. }
         | ApplicationService::MemoryRead { .. }
         | ApplicationService::MemoryResponse { .. }
         | ApplicationService::MemoryWrite { .. }
@@ -1087,6 +1145,27 @@ fn encode_management(service: &ApplicationService) -> Result<Option<(u16, Vec<u8
         ApplicationService::IndividualAddressRead => (APCI_INDIVIDUAL_ADDRESS_READ, Vec::new()),
         ApplicationService::IndividualAddressResponse => {
             (APCI_INDIVIDUAL_ADDRESS_RESPONSE, Vec::new())
+        }
+        ApplicationService::IndividualAddressSerialNumberRead { serial_number } => {
+            (APCI_IA_SERIAL_NUMBER_READ, serial_number.to_vec())
+        }
+        ApplicationService::IndividualAddressSerialNumberResponse {
+            serial_number,
+            domain_address,
+        } => {
+            let mut extra = serial_number.to_vec();
+            extra.extend_from_slice(&domain_address.to_be_bytes());
+            extra.extend_from_slice(&[0, 0]);
+            (APCI_IA_SERIAL_NUMBER_RESPONSE, extra)
+        }
+        ApplicationService::IndividualAddressSerialNumberWrite {
+            serial_number,
+            address,
+        } => {
+            let mut extra = serial_number.to_vec();
+            extra.extend_from_slice(&address.raw().to_be_bytes());
+            extra.extend_from_slice(&[0, 0, 0, 0]);
+            (APCI_IA_SERIAL_NUMBER_WRITE, extra)
         }
         ApplicationService::MemoryRead { number, address } => {
             if *number == 0 || *number > MEMORY_MAX_OCTETS {
@@ -1226,6 +1305,23 @@ impl ApplicationService {
     pub fn payload_summary(&self) -> Option<String> {
         match self {
             ApplicationService::IndividualAddressWrite { address } => Some(format!("{address}")),
+            ApplicationService::IndividualAddressSerialNumberRead { serial_number } => {
+                Some(format!("sn={}", format_serial_number(serial_number)))
+            }
+            ApplicationService::IndividualAddressSerialNumberResponse {
+                serial_number,
+                domain_address,
+            } => Some(format!(
+                "sn={} domain={domain_address:#06x}",
+                format_serial_number(serial_number)
+            )),
+            ApplicationService::IndividualAddressSerialNumberWrite {
+                serial_number,
+                address,
+            } => Some(format!(
+                "sn={} new={address}",
+                format_serial_number(serial_number)
+            )),
             ApplicationService::MemoryRead { number, address } => {
                 Some(format!("{number} octets at {address:#06x}"))
             }
@@ -1288,6 +1384,21 @@ impl ApplicationService {
     }
 }
 
+/// A KNX Serial Number as `MMMM:NNNNNNNN`. RES §4.22.1.2, Figure 61,
+/// p. 291 (DPT_SerNum 221.001): two octets of manufacturer code, then
+/// four octets *"incremented with each BAU"*.
+pub fn format_serial_number(serial_number: &[u8; 6]) -> String {
+    format!(
+        "{:02X}{:02X}:{:02X}{:02X}{:02X}{:02X}",
+        serial_number[0],
+        serial_number[1],
+        serial_number[2],
+        serial_number[3],
+        serial_number[4],
+        serial_number[5]
+    )
+}
+
 fn application_service_variant_name(service: &ApplicationService) -> &'static str {
     match service {
         ApplicationService::GroupValueRead => "GroupValueRead",
@@ -1298,6 +1409,15 @@ fn application_service_variant_name(service: &ApplicationService) -> &'static st
         ApplicationService::IndividualAddressWrite { .. } => "IndividualAddressWrite",
         ApplicationService::IndividualAddressRead => "IndividualAddressRead",
         ApplicationService::IndividualAddressResponse => "IndividualAddressResponse",
+        ApplicationService::IndividualAddressSerialNumberRead { .. } => {
+            "IndividualAddressSerialNumberRead"
+        }
+        ApplicationService::IndividualAddressSerialNumberResponse { .. } => {
+            "IndividualAddressSerialNumberResponse"
+        }
+        ApplicationService::IndividualAddressSerialNumberWrite { .. } => {
+            "IndividualAddressSerialNumberWrite"
+        }
         ApplicationService::MemoryRead { .. } => "MemoryRead",
         ApplicationService::MemoryResponse { .. } => "MemoryResponse",
         ApplicationService::MemoryWrite { .. } => "MemoryWrite",
@@ -2203,6 +2323,10 @@ mod tests {
         assert_eq!(APCI_INDIVIDUAL_ADDRESS_WRITE, 0b00_1100_0000);
         assert_eq!(APCI_INDIVIDUAL_ADDRESS_READ, 0b01_0000_0000);
         assert_eq!(APCI_INDIVIDUAL_ADDRESS_RESPONSE, 0b01_0100_0000);
+        // AL Figures 12–14, pp. 21–23.
+        assert_eq!(APCI_IA_SERIAL_NUMBER_READ, 0b11_1101_1100);
+        assert_eq!(APCI_IA_SERIAL_NUMBER_RESPONSE, 0b11_1101_1101);
+        assert_eq!(APCI_IA_SERIAL_NUMBER_WRITE, 0b11_1101_1110);
         assert_eq!(APCI_MEMORY_READ, 0b10_0000_0000);
         assert_eq!(APCI_MEMORY_RESPONSE, 0b10_0100_0000);
         assert_eq!(APCI_MEMORY_WRITE, 0b10_1000_0000);
@@ -2623,6 +2747,68 @@ mod tests {
                 address: IndividualAddress::from_raw(0x1118),
             }
         );
+    }
+
+    /// The three serial-number PDUs, octet for octet against AL Figures
+    /// 12–14 (pp. 21–23). The write's four reserved octets go out as zero;
+    /// the response's individual address is the frame's source.
+    #[test]
+    fn the_serial_number_services_are_the_figures_octet_for_octet() {
+        let sn = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
+        // Broadcast, connectionless: TPCI `00000000`, so the NPDU starts
+        // `03` (the top APCI bits), not `43` as a numbered frame would.
+        let frame = |service| LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: BROADCAST_DESTINATION,
+            transport: Tpci::UnnumberedData,
+            service,
+        };
+        let npdu_of = |service| encode_l_data(&frame(service)).unwrap()[9..].to_vec();
+        let round_trip = |service| {
+            decode_l_data(&encode_l_data(&frame(service)).unwrap())
+                .unwrap()
+                .service
+        };
+        let read = ApplicationService::IndividualAddressSerialNumberRead { serial_number: sn };
+        assert_eq!(
+            npdu_of(read.clone()),
+            vec![0x03, 0xDC, 0x00, 0x83, 0x12, 0x34, 0x56, 0x78]
+        );
+        assert_eq!(
+            round_trip(read),
+            ApplicationService::IndividualAddressSerialNumberRead { serial_number: sn }
+        );
+
+        let write = ApplicationService::IndividualAddressSerialNumberWrite {
+            serial_number: sn,
+            address: IndividualAddress::from_raw(0x1144),
+        };
+        assert_eq!(
+            npdu_of(write.clone()),
+            vec![0x03, 0xDE, 0x00, 0x83, 0x12, 0x34, 0x56, 0x78, 0x11, 0x44, 0, 0, 0, 0]
+        );
+        assert_eq!(round_trip(write.clone()), write);
+
+        let response = ApplicationService::IndividualAddressSerialNumberResponse {
+            serial_number: sn,
+            domain_address: 0x0000,
+        };
+        assert_eq!(
+            npdu_of(response.clone()),
+            vec![0x03, 0xDD, 0x00, 0x83, 0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0]
+        );
+        assert_eq!(round_trip(response.clone()), response);
+
+        // A PDU of the wrong length is not the service; it stays `Other`.
+        let mut short = encode_l_data(&frame(write)).unwrap();
+        short.truncate(short.len() - 1);
+        short[8] -= 1;
+        assert!(matches!(
+            decode_l_data(&short).unwrap().service,
+            ApplicationService::Other { apci: 0x3DE, .. }
+        ));
+        assert_eq!(format_serial_number(&sn), "0083:12345678");
     }
 
     /// `A_Restart`: type 0 is the unconfirmed Basic Restart, type 1 the

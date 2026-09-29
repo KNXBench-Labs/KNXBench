@@ -8668,6 +8668,47 @@ event kind, so nothing breaks.
 live, the trace shows two `A_Authorize_Request`s, and the key appears in
 no log or output.
 
+## §139 A device can be addressed by its serial number, and nothing has done it live
+
+**Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
+and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the
+three AL PDUs, the procedures, a simulator device that answers them, the
+CLI (`knx device address-by-serial`, `knx device find-serial`) and the HTTP
+routes (`POST /api/device-address/by-serial`, `GET
+/api/device-address/find-serial`). **Not run on hardware.**
+
+**Where the serial number comes from.** The operator (`MMMM:NNNNNNNN`, the
+device label), the project (`DeviceInstance/@SerialNumber`, base64, Project
+Schema 23), or the device itself over a connection (`PID_SERIAL_NUMBER`,
+RES §4.2.11; `find-serial --address`). A project that records none is an
+error that asks for it; nothing is guessed, padded or truncated.
+
+**What the procedure does, and does not.**
+
+- Finds the device by broadcast; no answer stops it (MP §2.4). An answer
+  carrying another serial number is not taken.
+- Refuses a device found at an excluded address.
+- Checks the new address is free with MP §2.3 step 1's probe. MP §2.5
+  requires uniqueness and names no method; the borrowed probe is ours.
+- Writes, then reads back by serial number. *"Different or no answer ⇒
+  Error"*. A silent first read is repeated once after `restart_basic_t1`.
+- Sends **no restart** (MP §2.5 NOTE). The operator confirms with the
+  individual-address-programming phrase only.
+
+**Borrowed figures.** MP §2.4/§2.5 give no response time-out; the read waits
+`SessionTiming::response_timeout` (3 s).
+
+**Why no live test.** `1.1.67` (MDT, `0701h`) must support it (Profiles
+Table 4.4), but its serial number is unknown here: the corpus project does
+not record it. A read-only `knx device find-serial --address 1.1.67` would
+learn it. The live write needs its own go (goal-commission §1.2).
+
+**Web UI.** No panel yet; the routes exist.
+
+**Lifted when.** `find-serial --address 1.1.67` reads the serial number,
+`address-by-serial 1.1.68` moves the device and back, and the bus monitor
+shows the three PDUs with no `A_Restart`.
+
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified
 
 **Limitation.** Whole-interface zoom is intentionally bounded to 80–150% in

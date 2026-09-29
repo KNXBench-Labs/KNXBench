@@ -7,6 +7,7 @@
 //! other APCI is preserved as raw bytes (`ApplicationService::Other`),
 //! never silently dropped.
 
+use knx_core::commissioning::domain_address::DomainAddress;
 use knx_core::{GroupAddress, IndividualAddress};
 // Re-exported (not just imported) so `crate::cemi::GroupValue` keeps
 // resolving for call sites that named this module directly — `GroupValue`
@@ -39,6 +40,23 @@ pub const APCI_IA_SERIAL_NUMBER_RESPONSE: u16 = 0x3DD;
 /// `A_IndividualAddressSerialNumber_Write-PDU` (`1111011110`). AL §3.2.5,
 /// Figure 14, p. 23: serial number (6), new address (2), reserved (4).
 pub const APCI_IA_SERIAL_NUMBER_WRITE: u16 = 0x3DE;
+/// `A_DomainAddress_Write-PDU` (`1111100000`). AL §3.3.3, Figures 20/21,
+/// p. 34: two octets (PL110) or six (RF) of domain address follow.
+pub const APCI_DOMAIN_ADDRESS_WRITE: u16 = 0x3E0;
+/// `A_DomainAddress_Read-PDU` (`1111100001`). AL §3.3.4, Figure 22: no data.
+pub const APCI_DOMAIN_ADDRESS_READ: u16 = 0x3E1;
+/// `A_DomainAddress_Response-PDU` (`1111100010`). AL Figures 23/24.
+pub const APCI_DOMAIN_ADDRESS_RESPONSE: u16 = 0x3E2;
+/// `A_DomainAddressSerialNumber_Read-PDU` (`1111101100`). AL §3.3.6,
+/// Figure 26: six octets of KNX Serial Number.
+pub const APCI_DOA_SERIAL_NUMBER_READ: u16 = 0x3EC;
+/// `A_DomainAddressSerialNumber_Response-PDU` (`1111101101`). AL Figures
+/// 27/28: serial number (6), then the domain address (2 or 6).
+pub const APCI_DOA_SERIAL_NUMBER_RESPONSE: u16 = 0x3ED;
+/// `A_DomainAddressSerialNumber_Write-PDU` (`1111101110`). AL §3.3.7,
+/// Figures 29/30: serial number (6), then the new domain address (2 or 6).
+/// The KNX IP forms of Figures 31/32 (4 and 21 octets) are not decoded.
+pub const APCI_DOA_SERIAL_NUMBER_WRITE: u16 = 0x3EE;
 /// `A_Memory_Read-PDU` (`1000nnnnnn`), `number` in the low six bits.
 pub const APCI_MEMORY_READ: u16 = 0x200;
 /// `A_Memory_Response-PDU` (`1001nnnnnn`).
@@ -108,6 +126,15 @@ pub enum LDataMessageKind {
 pub enum Destination {
     Individual(IndividualAddress),
     Group(GroupAddress),
+    /// The system broadcast: group address `0000h` with cEMI Ctrl1's SB
+    /// flag at `0` (EMI_IMI v01.04.02 AS §4.1.5.3.2, p. 76: *"0: system
+    /// broadcast, 1: broadcast"*). DLL General §2.3: *"The Destination
+    /// Address shall be the system broadcast address (Domain Address =
+    /// 0000h and destination address = 0000h and address_type =
+    /// multicast)"*. The domain-address services travel on it (AL §3.3).
+    /// On RF, SB also says the frame carries a KNX Serial Number rather
+    /// than a Domain Address (EMI_IMI §4.1.4.3.9).
+    SystemBroadcast,
 }
 
 /// The broadcast destination `0/0/0`, used by `A_IndividualAddress_Read` and
@@ -125,6 +152,14 @@ pub enum Destination {
 /// the client and the simulator both read this constant and would agree
 /// with each other on any wrong value.
 pub const BROADCAST_DESTINATION: Destination = Destination::Group(GroupAddress::from_raw(0));
+
+/// The system broadcast (see [`Destination::SystemBroadcast`]).
+pub const SYSTEM_BROADCAST_DESTINATION: Destination = Destination::SystemBroadcast;
+
+/// cEMI Ctrl1 bit 4, System Broadcast (EMI_IMI v01.04.02 AS §4.1.5.3.2):
+/// set means *broadcast*, clear means *system broadcast*. Every frame this
+/// crate sent before K16 had it set (Ctrl1 `0xBC`, `0xB2`, `0xB0`).
+const CTRL1_SB_BROADCAST: u8 = 0x10;
 
 /// Octet 6 of the `L_Data` frame (the TPDU's Transport Control Field).
 /// Bit layout `[D]`: `03_03_04 Transport Layer v01.02.03 AS`, clause 2
@@ -249,6 +284,35 @@ pub enum ApplicationService {
     IndividualAddressSerialNumberWrite {
         serial_number: [u8; 6],
         address: IndividualAddress,
+    },
+    /// `A_DomainAddress_Write-PDU` (AL §3.3.3): system broadcast; only a
+    /// device in programming mode takes it.
+    DomainAddressWrite {
+        domain_address: DomainAddress,
+    },
+    /// `A_DomainAddress_Read-PDU` (AL §3.3.4): system broadcast; every
+    /// device in programming mode answers.
+    DomainAddressRead,
+    /// `A_DomainAddress_Response-PDU`. The answering device's individual
+    /// address is the frame's source (MP §2.7: *"source_address = IAn"*).
+    DomainAddressResponse {
+        domain_address: DomainAddress,
+    },
+    /// `A_DomainAddressSerialNumber_Read-PDU` (AL §3.3.6).
+    DomainAddressSerialNumberRead {
+        serial_number: [u8; 6],
+    },
+    /// `A_DomainAddressSerialNumber_Response-PDU` (AL Figures 27/28).
+    DomainAddressSerialNumberResponse {
+        serial_number: [u8; 6],
+        domain_address: DomainAddress,
+    },
+    /// `A_DomainAddressSerialNumber_Write-PDU` (AL §3.3.7, Figures 29/30):
+    /// the device with this serial number takes the domain address,
+    /// programming mode or not.
+    DomainAddressSerialNumberWrite {
+        serial_number: [u8; 6],
+        domain_address: DomainAddress,
     },
     /// `A_Memory_Read-PDU`: `number` octets from `address` (AL §3.4.4
     /// Figure 74). `number` is the request's own field, so it is explicit
@@ -542,6 +606,92 @@ impl std::fmt::Display for CemiError {
 
 impl std::error::Error for CemiError {}
 
+/// The cEMI Additional Information type 'RF medium information' (`02h`).
+const ADD_INFO_RF_MEDIUM: u8 = 0x02;
+
+/// The 'RF medium information' of an RF frame, EMI_IMI v01.04.02 AS
+/// §4.1.4.3.2, p. 61: Type ID `02h`, Len `08h`, then RF-Info (1), SN/DoA
+/// (6), LFN (1). *"'RF medium information' is mandatory for RF frames."*
+///
+/// `[D]` The same PDF's own frame examples (§4.1.4.3.10, p. 74) draw `Len
+/// = 7`, without the LFN octet — the pre-AN168 layout. Both are read; a
+/// seven-octet one has `lfn: None`. Written, it is always the eight-octet
+/// form the clause defines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RfMediumInfo {
+    /// RF-Info (formerly RF-Ctrl): Route Last (b7), signal strength
+    /// (b5-4, b3-2), battery state (b1), unidirectional (b0). Kept whole.
+    pub info: u8,
+    /// A KNX Serial Number when the frame is a system broadcast (Ctrl1 SB
+    /// `0`), otherwise the RF Domain Address (§4.1.4.3.9). All zero on a
+    /// request means *"insert your own"* (the RF-'SN' table, p. 62).
+    pub serial_or_domain: [u8; 6],
+    /// The Data Link Layer frame number, `0..=7`, or `255` for *"insert
+    /// your own"*. `None` for the seven-octet form.
+    pub lfn: Option<u8>,
+}
+
+/// The RF-LFN value that asks the cEMI Server for its own frame number
+/// (EMI_IMI §4.1.4.3.2, p. 63: *"if LFN = 255 (void): The cEMI Server shall
+/// insert its own local Data Link Layer frame number"*).
+pub const RF_LFN_VOID: u8 = 0xFF;
+
+/// Walks the Additional Information TLVs (EMI_IMI §4.1.4.3.1: *"Each
+/// Additional Information Type shall be accompanied by a length
+/// information"*) and returns the RF medium information, if any. A TLV
+/// list that runs past its own end yields `None`: before K16 this decoder
+/// skipped additional information unread, and it still does for every
+/// type but this one.
+fn rf_medium_info(add_info: &[u8]) -> Option<RfMediumInfo> {
+    let mut rest = add_info;
+    while let [type_id, len, tail @ ..] = rest {
+        let len = *len as usize;
+        if tail.len() < len {
+            return None;
+        }
+        let (value, next) = tail.split_at(len);
+        if *type_id == ADD_INFO_RF_MEDIUM && (len == 7 || len == 8) {
+            let mut serial_or_domain = [0; 6];
+            serial_or_domain.copy_from_slice(&value[1..7]);
+            return Some(RfMediumInfo {
+                info: value[0],
+                serial_or_domain,
+                lfn: value.get(7).copied(),
+            });
+        }
+        rest = next;
+    }
+    None
+}
+
+/// The RF medium information of a cEMI `L_Data` message, or `None` for a
+/// frame of another medium (or a message too short to have any).
+pub fn decode_rf_medium_info(buf: &[u8]) -> Option<RfMediumInfo> {
+    let add_info_len = *buf.get(1)? as usize;
+    rf_medium_info(buf.get(2..2 + add_info_len)?)
+}
+
+/// [`encode_l_data`] for KNX RF: the same frame with the mandatory 'RF
+/// medium information' in front and `L` void (`00h`), EMI_IMI §4.1.5.4.1:
+/// *"The corresponding 'L' field in the cEMI L_Data structure shall be void
+/// and the cEMI Client shall insert the value 00h."*
+pub fn encode_l_data_rf(frame: &LDataFrame, rf: &RfMediumInfo) -> Result<Vec<u8>, CemiError> {
+    let plain = encode_l_data(frame)?;
+    let mut buf = Vec::with_capacity(plain.len() + 10);
+    buf.push(plain[0]);
+    buf.push(10); // AddIL: Type ID + Len + 8 octets
+    buf.push(ADD_INFO_RF_MEDIUM);
+    buf.push(8);
+    buf.push(rf.info);
+    buf.extend_from_slice(&rf.serial_or_domain);
+    buf.push(rf.lfn.unwrap_or(RF_LFN_VOID));
+    // `plain` has no additional information of its own (AddIL `00h`).
+    buf.extend_from_slice(&plain[2..8]);
+    buf.push(0x00); // L void on RF
+    buf.extend_from_slice(&plain[9..]);
+    Ok(buf)
+}
+
 /// Decodes an `L_Data.req`/`.con`/`.ind` cEMI frame (EMI_IMI v01.04.02 AS
 /// §4.1.5.3.2, generic layout shared by all three services).
 pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
@@ -583,13 +733,28 @@ pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
     let dest_raw = u16::from_be_bytes([buf[fixed_part_start + 4], buf[fixed_part_start + 5]]);
     // Ctrl2 bit 7: Address Type — 0 individual, 1 group (EMI_IMI v01.04.02
     // AS §4.1.5.3.2).
+    // A group frame to `0000h` with SB clear is the system broadcast
+    // (see `Destination::SystemBroadcast`); SB means nothing on any other
+    // destination and is not judged there.
     let destination = if ctrl2 & 0x80 != 0 {
-        Destination::Group(GroupAddress::from_raw(dest_raw))
+        if dest_raw == 0 && ctrl1 & CTRL1_SB_BROADCAST == 0 {
+            Destination::SystemBroadcast
+        } else {
+            Destination::Group(GroupAddress::from_raw(dest_raw))
+        }
     } else {
         Destination::Individual(IndividualAddress::from_raw(dest_raw))
     };
-    let length = buf[fixed_part_start + 6] as usize;
     let tpci_apci_start = fixed_part_start + 7;
+    // EMI_IMI §4.1.5.4.1/§4.1.5.4.3: an RF frame's `L` is void (`00h`),
+    // because the RF frame carries no NPDU length; the NPDU runs to the
+    // end of the message. An RF frame is one with the mandatory 'RF
+    // medium information' (§4.1.4.3.2).
+    let length = if rf_medium_info(&buf[2..fixed_part_start]).is_some() {
+        buf.len().saturating_sub(tpci_apci_start + 1)
+    } else {
+        buf[fixed_part_start + 6] as usize
+    };
     // Every TPDU has at least a TPCI octet; a control PDU
     // (`Connect`/`Disconnect`/`Ack`/`Nak`) has nothing else, so that much
     // is the minimum this function can demand up front.
@@ -826,6 +991,32 @@ fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
                 address: IndividualAddress::from_raw(be16(extra[6], extra[7])),
             })
         }
+        APCI_DOMAIN_ADDRESS_WRITE => DomainAddress::from_octets(extra)
+            .map(|domain_address| ApplicationService::DomainAddressWrite { domain_address }),
+        APCI_DOMAIN_ADDRESS_READ if extra.is_empty() => Some(ApplicationService::DomainAddressRead),
+        APCI_DOMAIN_ADDRESS_RESPONSE => DomainAddress::from_octets(extra)
+            .map(|domain_address| ApplicationService::DomainAddressResponse { domain_address }),
+        APCI_DOA_SERIAL_NUMBER_READ if extra.len() == 6 => {
+            Some(ApplicationService::DomainAddressSerialNumberRead {
+                serial_number: serial(extra),
+            })
+        }
+        APCI_DOA_SERIAL_NUMBER_RESPONSE if extra.len() > 6 => {
+            DomainAddress::from_octets(&extra[6..]).map(|domain_address| {
+                ApplicationService::DomainAddressSerialNumberResponse {
+                    serial_number: serial(extra),
+                    domain_address,
+                }
+            })
+        }
+        // The 4-octet KNX IP form falls to `Other`, octets intact.
+        APCI_DOA_SERIAL_NUMBER_WRITE if extra.len() > 6 => DomainAddress::from_octets(&extra[6..])
+            .map(
+                |domain_address| ApplicationService::DomainAddressSerialNumberWrite {
+                    serial_number: serial(extra),
+                    domain_address,
+                },
+            ),
         APCI_USER_MEMORY_READ if extra.len() == 3 => {
             let (number, address) = user_memory(extra);
             Some(ApplicationService::UserMemoryRead { number, address })
@@ -946,6 +1137,12 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     let (address_type_bit, dest_raw) = match frame.destination {
         Destination::Group(addr) => (0x80, addr.raw()),
         Destination::Individual(addr) => (0x00, addr.raw()),
+        Destination::SystemBroadcast => (0x80, 0x0000),
+    };
+    let ctrl1 = if frame.destination == Destination::SystemBroadcast {
+        ctrl1 & !CTRL1_SB_BROADCAST
+    } else {
+        ctrl1
     };
     let ctrl2 = address_type_bit | 0x60; // hop count 6, standard EFF (0000)
     let source_raw = frame.source.raw();
@@ -1068,6 +1265,12 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         | ApplicationService::IndividualAddressSerialNumberRead { .. }
         | ApplicationService::IndividualAddressSerialNumberResponse { .. }
         | ApplicationService::IndividualAddressSerialNumberWrite { .. }
+        | ApplicationService::DomainAddressWrite { .. }
+        | ApplicationService::DomainAddressRead
+        | ApplicationService::DomainAddressResponse { .. }
+        | ApplicationService::DomainAddressSerialNumberRead { .. }
+        | ApplicationService::DomainAddressSerialNumberResponse { .. }
+        | ApplicationService::DomainAddressSerialNumberWrite { .. }
         | ApplicationService::MemoryRead { .. }
         | ApplicationService::MemoryResponse { .. }
         | ApplicationService::MemoryWrite { .. }
@@ -1166,6 +1369,32 @@ fn encode_management(service: &ApplicationService) -> Result<Option<(u16, Vec<u8
             extra.extend_from_slice(&address.raw().to_be_bytes());
             extra.extend_from_slice(&[0, 0, 0, 0]);
             (APCI_IA_SERIAL_NUMBER_WRITE, extra)
+        }
+        ApplicationService::DomainAddressWrite { domain_address } => {
+            (APCI_DOMAIN_ADDRESS_WRITE, domain_address.octets())
+        }
+        ApplicationService::DomainAddressRead => (APCI_DOMAIN_ADDRESS_READ, Vec::new()),
+        ApplicationService::DomainAddressResponse { domain_address } => {
+            (APCI_DOMAIN_ADDRESS_RESPONSE, domain_address.octets())
+        }
+        ApplicationService::DomainAddressSerialNumberRead { serial_number } => {
+            (APCI_DOA_SERIAL_NUMBER_READ, serial_number.to_vec())
+        }
+        ApplicationService::DomainAddressSerialNumberResponse {
+            serial_number,
+            domain_address,
+        } => {
+            let mut extra = serial_number.to_vec();
+            extra.extend(domain_address.octets());
+            (APCI_DOA_SERIAL_NUMBER_RESPONSE, extra)
+        }
+        ApplicationService::DomainAddressSerialNumberWrite {
+            serial_number,
+            domain_address,
+        } => {
+            let mut extra = serial_number.to_vec();
+            extra.extend(domain_address.octets());
+            (APCI_DOA_SERIAL_NUMBER_WRITE, extra)
         }
         ApplicationService::MemoryRead { number, address } => {
             if *number == 0 || *number > MEMORY_MAX_OCTETS {
@@ -1322,6 +1551,24 @@ impl ApplicationService {
                 "sn={} new={address}",
                 format_serial_number(serial_number)
             )),
+            ApplicationService::DomainAddressWrite { domain_address }
+            | ApplicationService::DomainAddressResponse { domain_address } => {
+                Some(format!("domain={domain_address}"))
+            }
+            ApplicationService::DomainAddressSerialNumberRead { serial_number } => {
+                Some(format!("sn={}", format_serial_number(serial_number)))
+            }
+            ApplicationService::DomainAddressSerialNumberResponse {
+                serial_number,
+                domain_address,
+            }
+            | ApplicationService::DomainAddressSerialNumberWrite {
+                serial_number,
+                domain_address,
+            } => Some(format!(
+                "sn={} domain={domain_address}",
+                format_serial_number(serial_number)
+            )),
             ApplicationService::MemoryRead { number, address } => {
                 Some(format!("{number} octets at {address:#06x}"))
             }
@@ -1417,6 +1664,16 @@ fn application_service_variant_name(service: &ApplicationService) -> &'static st
         }
         ApplicationService::IndividualAddressSerialNumberWrite { .. } => {
             "IndividualAddressSerialNumberWrite"
+        }
+        ApplicationService::DomainAddressWrite { .. } => "DomainAddressWrite",
+        ApplicationService::DomainAddressRead => "DomainAddressRead",
+        ApplicationService::DomainAddressResponse { .. } => "DomainAddressResponse",
+        ApplicationService::DomainAddressSerialNumberRead { .. } => "DomainAddressSerialNumberRead",
+        ApplicationService::DomainAddressSerialNumberResponse { .. } => {
+            "DomainAddressSerialNumberResponse"
+        }
+        ApplicationService::DomainAddressSerialNumberWrite { .. } => {
+            "DomainAddressSerialNumberWrite"
         }
         ApplicationService::MemoryRead { .. } => "MemoryRead",
         ApplicationService::MemoryResponse { .. } => "MemoryResponse",
@@ -3010,5 +3267,245 @@ mod tests {
         let mut ind = request(Tpci::Ack { seq: 0 }, none());
         ind.kind = LDataMessageKind::Indication;
         assert_eq!(ctrl1(ind), 0xBC);
+    }
+}
+
+/// K16: the domain-address services, the system broadcast and the RF medium
+/// information, each against the figure it comes from.
+#[cfg(test)]
+mod domain_address_tests {
+    use super::*;
+    use knx_core::commissioning::domain_address::DomainAddress;
+
+    const RF_DOA: [u8; 6] = [0x00, 0xFA, 0x12, 0x34, 0x56, 0x78];
+    const SERIAL: [u8; 6] = [0x00, 0x83, 0x01, 0x02, 0x03, 0x04];
+
+    fn frame(destination: Destination, service: ApplicationService) -> LDataFrame {
+        LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x11FA),
+            destination,
+            transport: Tpci::UnnumberedData,
+            service,
+        }
+    }
+
+    fn round_trip(frame: &LDataFrame) -> LDataFrame {
+        decode_l_data(&encode_l_data(frame).expect("encodes")).expect("decodes")
+    }
+
+    #[test]
+    fn the_apcis_are_the_table_1_bits() {
+        // AL §2.2 Table 1, p. 13: 1111100000/…01/…10 and 1111101100/…01/…10.
+        assert_eq!(APCI_DOMAIN_ADDRESS_WRITE, 0b11_1110_0000);
+        assert_eq!(APCI_DOMAIN_ADDRESS_READ, 0b11_1110_0001);
+        assert_eq!(APCI_DOMAIN_ADDRESS_RESPONSE, 0b11_1110_0010);
+        assert_eq!(APCI_DOA_SERIAL_NUMBER_READ, 0b11_1110_1100);
+        assert_eq!(APCI_DOA_SERIAL_NUMBER_RESPONSE, 0b11_1110_1101);
+        assert_eq!(APCI_DOA_SERIAL_NUMBER_WRITE, 0b11_1110_1110);
+    }
+
+    #[test]
+    fn a_system_broadcast_clears_sb_and_a_broadcast_keeps_it() {
+        let system = encode_l_data(&frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressRead,
+        ))
+        .unwrap();
+        // Ctrl1 0xBC with bit 4 cleared; Ctrl2 group, hop count 6;
+        // destination 0000h (DLL General §2.3).
+        assert_eq!(system[2], 0xAC);
+        assert_eq!(system[3], 0xE0);
+        assert_eq!(&system[6..8], &[0x00, 0x00]);
+        // Figure 22: TPCI octet with APCI bits 9-8, then 0xE1. L = 1.
+        assert_eq!(&system[8..], &[0x01, 0x03, 0xE1]);
+
+        let plain = encode_l_data(&frame(
+            BROADCAST_DESTINATION,
+            ApplicationService::IndividualAddressRead,
+        ))
+        .unwrap();
+        assert_eq!(plain[2], 0xBC);
+    }
+
+    #[test]
+    fn the_decoder_tells_the_two_broadcasts_apart() {
+        let system = frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressRead,
+        );
+        assert_eq!(round_trip(&system), system);
+        let plain = frame(
+            BROADCAST_DESTINATION,
+            ApplicationService::IndividualAddressRead,
+        );
+        assert_eq!(round_trip(&plain), plain);
+        // SB clear on a group address that is not 0000h is not a system
+        // broadcast: the flag is judged only where DLL §2.3 gives it meaning.
+        let mut bytes = encode_l_data(&frame(
+            Destination::Group(GroupAddress::from_raw(0x0903)),
+            ApplicationService::GroupValueRead,
+        ))
+        .unwrap();
+        bytes[2] &= !0x10;
+        assert_eq!(
+            decode_l_data(&bytes).unwrap().destination,
+            Destination::Group(GroupAddress::from_raw(0x0903))
+        );
+    }
+
+    #[test]
+    fn the_domain_address_pdus_have_the_figures_shapes() {
+        let write_rf = encode_l_data(&frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressWrite {
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+        ))
+        .unwrap();
+        // Figure 21: APCI, then six octets of domain address. L = 7.
+        assert_eq!(write_rf[8], 7);
+        assert_eq!(&write_rf[9..11], &[0x03, 0xE0]);
+        assert_eq!(&write_rf[11..], &RF_DOA);
+
+        let write_pl = encode_l_data(&frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressWrite {
+                domain_address: DomainAddress::Powerline(0xBEEF),
+            },
+        ))
+        .unwrap();
+        // Figure 20: two octets, high first.
+        assert_eq!(&write_pl[9..], &[0x03, 0xE0, 0xBE, 0xEF]);
+
+        let sn_write = encode_l_data(&frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressSerialNumberWrite {
+                serial_number: SERIAL,
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+        ))
+        .unwrap();
+        // Figure 30: serial number (octets 8-13), domain address (14-19).
+        assert_eq!(&sn_write[9..11], &[0x03, 0xEE]);
+        assert_eq!(&sn_write[11..17], &SERIAL);
+        assert_eq!(&sn_write[17..], &RF_DOA);
+    }
+
+    #[test]
+    fn every_domain_address_service_survives_its_round_trip() {
+        for service in [
+            ApplicationService::DomainAddressWrite {
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+            ApplicationService::DomainAddressWrite {
+                domain_address: DomainAddress::Powerline(0x0102),
+            },
+            ApplicationService::DomainAddressRead,
+            ApplicationService::DomainAddressResponse {
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+            ApplicationService::DomainAddressSerialNumberRead {
+                serial_number: SERIAL,
+            },
+            ApplicationService::DomainAddressSerialNumberResponse {
+                serial_number: SERIAL,
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+            ApplicationService::DomainAddressSerialNumberResponse {
+                serial_number: SERIAL,
+                domain_address: DomainAddress::Powerline(0x0102),
+            },
+            ApplicationService::DomainAddressSerialNumberWrite {
+                serial_number: SERIAL,
+                domain_address: DomainAddress::Rf(RF_DOA),
+            },
+        ] {
+            let sent = frame(SYSTEM_BROADCAST_DESTINATION, service);
+            assert_eq!(round_trip(&sent), sent);
+        }
+    }
+
+    #[test]
+    fn the_knx_ip_domain_address_forms_stay_undecoded_and_intact() {
+        // Figure 31: a 4-octet multicast address. Not modelled, so `Other`
+        // with every octet kept.
+        let mut data = SERIAL.to_vec();
+        data.extend_from_slice(&[224, 0, 23, 12]);
+        let sent = frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::Other {
+                apci: APCI_DOA_SERIAL_NUMBER_WRITE,
+                data: data.clone(),
+            },
+        );
+        assert_eq!(round_trip(&sent), sent);
+        // A domain-address write of a length no medium uses is not one.
+        let odd = frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::Other {
+                apci: APCI_DOMAIN_ADDRESS_WRITE,
+                data: vec![1, 2, 3],
+            },
+        );
+        assert_eq!(round_trip(&odd), odd);
+    }
+
+    #[test]
+    fn an_rf_frame_carries_its_medium_information_and_a_void_length() {
+        let sent = frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DomainAddressSerialNumberRead {
+                serial_number: SERIAL,
+            },
+        );
+        let rf = RfMediumInfo {
+            info: 0x02, // battery ok, bidirectional
+            serial_or_domain: [0; 6],
+            lfn: None,
+        };
+        let bytes = encode_l_data_rf(&sent, &rf).unwrap();
+        // EMI_IMI §4.1.4.3.2: AddIL 10, Type 02h, Len 08h, Info, SN (6),
+        // LFN (255 = "insert your own").
+        assert_eq!(&bytes[1..4], &[10, 0x02, 0x08]);
+        assert_eq!(bytes[4], 0x02);
+        assert_eq!(bytes[11], RF_LFN_VOID);
+        // §4.1.5.4.1: L void.
+        assert_eq!(bytes[12 + 6], 0x00);
+        assert_eq!(decode_l_data(&bytes).unwrap(), sent);
+        assert_eq!(
+            decode_rf_medium_info(&bytes),
+            Some(RfMediumInfo {
+                lfn: Some(RF_LFN_VOID),
+                ..rf
+            })
+        );
+    }
+
+    #[test]
+    fn the_seven_octet_example_of_page_74_is_read_too() {
+        // §4.1.4.3.10's example: `29h 9 02h 7 RF-Ctrl DoA6 … DoA1`, the
+        // layout without LFN, then an RF L_Data.ind with L void.
+        let mut bytes = vec![0x29, 9, 0x02, 7, 0x00];
+        bytes.extend_from_slice(&RF_DOA);
+        bytes.extend_from_slice(&[0xBC, 0xE0, 0x11, 0x05, 0x00, 0x00, 0x00, 0x03, 0xE1]);
+        let decoded = decode_l_data(&bytes).unwrap();
+        assert_eq!(decoded.service, ApplicationService::DomainAddressRead);
+        assert_eq!(decoded.destination, BROADCAST_DESTINATION);
+        let rf = decode_rf_medium_info(&bytes).unwrap();
+        assert_eq!(rf.serial_or_domain, RF_DOA);
+        assert_eq!(rf.lfn, None);
+    }
+
+    #[test]
+    fn a_tp_frame_has_no_rf_medium_information() {
+        let bytes = encode_l_data(&frame(
+            BROADCAST_DESTINATION,
+            ApplicationService::IndividualAddressRead,
+        ))
+        .unwrap();
+        assert_eq!(decode_rf_medium_info(&bytes), None);
+        // A TLV list that runs past its own end is not trusted.
+        assert_eq!(decode_rf_medium_info(&[0x29, 3, 0x02, 8, 0x00]), None);
     }
 }

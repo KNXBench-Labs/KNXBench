@@ -24,6 +24,7 @@ use std::ops::Range;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use knx_core::commissioning::domain_address::DomainAddress;
 use knx_core::commissioning::load_control::LoadControlSubtype;
 use knx_core::commissioning::load_control_memory::{
     loads_through_memory, MemoryLoadStateMachine, MANAGEMENT_CONTROL_ADDRESS,
@@ -473,6 +474,14 @@ pub struct SimulatorConfig {
     /// answer to somebody else's question looks exactly like this; a reader
     /// that takes the first answer rather than the matching one takes it.
     pub foreign_serial_number_answer: Option<([u8; 6], IndividualAddress)>,
+    /// The device's Domain Address (K16). `None` is a TP1 device, which
+    /// has none and answers no domain-address service. Only KNX-RF and
+    /// PL110 devices carry one (AL §3.3.3).
+    pub domain_address: Option<DomainAddress>,
+    /// Whether a domain-address write actually changes it. `false` models a
+    /// device that ignores the write in silence, so a procedure's verify
+    /// step is what has to notice.
+    pub domain_address_write_enabled: bool,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -622,6 +631,8 @@ impl Default for SimulatorConfig {
             serial_number_write_enabled: true,
             serial_number_holder: None,
             foreign_serial_number_answer: None,
+            domain_address: None,
+            domain_address_write_enabled: true,
         }
     }
 }
@@ -779,6 +790,12 @@ struct State {
     serial_number_holder_address: IndividualAddress,
     serial_number_reads: usize,
     serial_number_writes: usize,
+    domain_address: Option<DomainAddress>,
+    domain_address_writes: usize,
+    /// Whether the request being answered came connectionless, so its
+    /// answer goes back connectionless too (MP §2.10 step 4's
+    /// `A_DeviceDescriptor_Read`, *"connectionless"*).
+    answering_connectionless: bool,
 }
 
 /// An answer whose `T_ACK` has not arrived yet.
@@ -886,6 +903,9 @@ impl SimulatedDevice {
             serial_number_holder_address: config.serial_number_holder.unwrap_or(address),
             serial_number_reads: 0,
             serial_number_writes: 0,
+            domain_address: config.domain_address,
+            domain_address_writes: 0,
+            answering_connectionless: false,
         };
 
         Self {
@@ -1039,6 +1059,16 @@ impl SimulatedDevice {
         self.lock().serial_number_reads
     }
 
+    /// The device's domain address as it stands now (K16).
+    pub fn domain_address(&self) -> Option<DomainAddress> {
+        self.lock().domain_address
+    }
+
+    /// How many domain-address writes changed it (K16).
+    pub fn domain_address_writes(&self) -> usize {
+        self.lock().domain_address_writes
+    }
+
     /// How many `A_IndividualAddressSerialNumber_Write` frames this device
     /// (or its [`SimulatorConfig::serial_number_holder`]) accepted.
     pub fn serial_number_writes(&self) -> usize {
@@ -1133,6 +1163,10 @@ impl SimulatedDevice {
     }
 
     fn emit_answer(&self, service: ApplicationService) {
+        if self.lock().answering_connectionless {
+            self.emit(Tpci::UnnumberedData, service);
+            return;
+        }
         let (seq, repeat) = {
             let mut state = self.lock();
             if state.unacknowledged.is_some() {
@@ -1476,6 +1510,84 @@ impl SimulatedDevice {
                 match self.config.serial_number_holder {
                     Some(_) => state.serial_number_holder_address = address,
                     None => state.address = address,
+                }
+            }
+            // K16. AL §3.3.4: every device in programming mode answers an
+            // `A_DomainAddress_Read`; a device without a domain address
+            // (TP1) has nothing to answer with.
+            ApplicationService::DomainAddressRead => {
+                let answer = {
+                    let state = self.lock();
+                    state.domain_address.filter(|_| state.programming_mode)
+                };
+                if let Some(domain_address) = answer {
+                    self.emit(
+                        Tpci::UnnumberedData,
+                        ApplicationService::DomainAddressResponse { domain_address },
+                    );
+                }
+            }
+            // AL §3.3.3: *"only accepted by devices in programming mode"*,
+            // and only in the device's own medium format.
+            ApplicationService::DomainAddressWrite { domain_address } => {
+                let mut state = self.lock();
+                let takes = state.programming_mode
+                    && self.config.domain_address_write_enabled
+                    && state
+                        .domain_address
+                        .is_some_and(|own| own.same_format(&domain_address));
+                if takes {
+                    state.domain_address = Some(domain_address);
+                    state.domain_address_writes += 1;
+                }
+            }
+            // AL §3.3.6: answered when the serial number is the device's
+            // own, programming mode or not.
+            ApplicationService::DomainAddressSerialNumberRead { serial_number } => {
+                // The same stranger as for the individual-address read,
+                // answering first with its own serial number.
+                if let Some((foreign, from)) = self.config.foreign_serial_number_answer {
+                    if let Some(domain_address) = self.lock().domain_address {
+                        self.emit_from(
+                            from,
+                            Tpci::UnnumberedData,
+                            ApplicationService::DomainAddressSerialNumberResponse {
+                                serial_number: foreign,
+                                domain_address,
+                            },
+                        );
+                    }
+                }
+                let answer = {
+                    let state = self.lock();
+                    state
+                        .domain_address
+                        .filter(|_| self.config.serial_number == Some(serial_number))
+                };
+                if let Some(domain_address) = answer {
+                    self.emit(
+                        Tpci::UnnumberedData,
+                        ApplicationService::DomainAddressSerialNumberResponse {
+                            serial_number,
+                            domain_address,
+                        },
+                    );
+                }
+            }
+            // AL §3.3.7.
+            ApplicationService::DomainAddressSerialNumberWrite {
+                serial_number,
+                domain_address,
+            } if self.config.serial_number == Some(serial_number)
+                && self.config.domain_address_write_enabled =>
+            {
+                let mut state = self.lock();
+                if state
+                    .domain_address
+                    .is_some_and(|own| own.same_format(&domain_address))
+                {
+                    state.domain_address = Some(domain_address);
+                    state.domain_address_writes += 1;
                 }
             }
             _ => {}
@@ -2126,7 +2238,11 @@ impl ManagementTransport for SimulatedDevice {
         transport: Tpci,
         service: ApplicationService,
     ) -> Result<(), BusError> {
-        if destination == BROADCAST_DESTINATION {
+        // Both broadcasts reach every device (CP §2.3.1.4 lets a client use
+        // the plain one for the domain services too); on the system
+        // broadcast only a device with a domain address, i.e. an open-medium
+        // one, is modelled as listening to anything but the domain services.
+        if destination == BROADCAST_DESTINATION || destination == Destination::SystemBroadcast {
             self.handle_broadcast(transport, service);
             return Ok(());
         }
@@ -2165,7 +2281,9 @@ impl ManagementTransport for SimulatedDevice {
             }
             self.emit_connect_confirmation(false);
         }
+        self.lock().answering_connectionless = transport == Tpci::UnnumberedData;
         self.handle(transport, service);
+        self.lock().answering_connectionless = false;
         Ok(())
     }
 

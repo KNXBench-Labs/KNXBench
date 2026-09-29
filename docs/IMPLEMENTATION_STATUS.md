@@ -57,6 +57,22 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K16: RF domain addresses, simulator only
+
+- AL §3.3.3–§3.3.7's six PDUs, the system broadcast (cEMI Ctrl1 SB clear,
+  `Destination::SystemBroadcast`) and the cEMI 'RF medium information'
+  (`RfMediumInfo`, `encode_l_data_rf`, void `L`) in `knx_net::cemi`;
+  `DomainAddress` (2 or 6 octets) in `knx_core::commissioning`.
+- MP §2.7, §2.8, §2.9, §2.10 and §2.12 in
+  `knx_net::commissioning::domain_address`; §2.11/§2.13/§2.14 recorded as
+  not applicable (KL §143).
+- New `WriteScope::DomainAddressProgramming`, refused on hardware. The
+  simulator carries a domain address and answers all six services.
+- 9 cEMI, 4 core and 18 procedure tests; 10/10 mutants killed (one
+  first survived — a serial read taking a stranger's answer — and got its
+  test). No RF hardware: nothing here has met a real device (RESEARCH
+  §19.6).
+
 ## 2026-09-29 — K15: partial download for mask `070nh`, simulator only
 
 - CP §3.9.2.4's transformation of the complete plan in

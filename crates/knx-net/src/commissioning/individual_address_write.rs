@@ -441,7 +441,7 @@ pub async fn individual_address_write<T: ManagementTransport>(
 /// long retry loop would hide a real misconfiguration behind a delay. A
 /// *rejected* connect is not retried: somebody is there and said no, which
 /// settling does not explain.
-async fn verify_before_restart<T: ManagementTransport>(
+pub(crate) async fn verify_before_restart<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     timing: SessionTiming,
 ) -> Result<(), SessionError> {

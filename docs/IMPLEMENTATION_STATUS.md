@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — The house read back against KNXBench's images (read-only)
+
+With the maintainer's go, every house device except 1.1.220 was identified
+and, where an image builds, its image octets were read and compared (RESEARCH
+§19.13). No write, no code change. 32 of 34 answered (1.1.16, 1.1.253 reject
+connections). On 25 compared devices the group object table's pointer and
+type octets match everywhere; parameters match on 11 of 16 plannable devices
+and tables on 11 of 16, the rest differ because the device is older than the
+project. New defect: instance-level flag overrides are not written into the
+image (KNOWN_LIMITATIONS §145). Nothing changes status to Verified.
+
 ## 2026-09-29 — One live read: which union member ETS wrote on 1.1.11
 
 Read-only, with the maintainer's go: `4B12h` on 1.1.11 (`A-0019-13-B655`) is

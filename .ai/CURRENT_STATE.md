@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (download coverage session, offline only)
+- **Timestamp:** 2026-09-29 20:45 CEST
+- **Web lock:** untouched — held by the UI ISSUE-09 session; no `apps/knx-web` change.
+- **Completed:** Traced the house's remaining download refusals to evidence (docs only, RESEARCH §19.12 follow-ups). 1.1.11–13: union at `AS-4400`+1810 has two *active* members in the house's configuration (`UP-33`=230 via `P-1019`/`P-32`, `UP-1227`=1 via `P-40`=2); no PDF says which wins; MDT's successor `-16` removed the union. 1.1.1–9, 1.1.24, 1.1.250/253: `LsmIdx 5` has no memory-mapped definition on `070nh` (Management Procedures §3.31.1/§3.31.2 list four machines; Configuration Procedures uses 5 only as System B's `OIDX_APPLICATION_PROGRAM_2`). Corrected §19.12's count: 35 devices, incl. 1.1.220 (exclusion list) and the IP interfaces 1.1.250/253.
+- **Pending/Next Steps:** Offline, nothing left for the house's devices without a new source. Next evidence would be (a) one read-only `A_Memory_Read` of `4B12h` on 1.1.11, 1.1.12 or 1.1.13 — needs the user's explicit go and the gateway address from the user; (b) an ETS download trace for a presence detector. Do not translate `LsmIdx 5` by analogy to System B.
+- **Notes for Codex or Claude:** No bus access in this package. 1.1.220 stays excluded (hard-coded exclusion list, not to be contacted).
+
+---
+
+- **Last Agent:** Claude (download coverage session, offline only)
 - **Timestamp:** 2026-09-29 19:50 CEST
 - **Web lock:** untouched — still held by the UI ISSUE-09 session above; this package changed no `apps/knx-web` file.
 - **Completed:** Answered "which of *my* devices are modular / plannable" from the maintainer's own "Unser Zuhause ets 6.3.0" project: none of its 12 programs has a `ModuleDef`; 17 of 32 devices plan (all Untested), per-device table in RESEARCH §19.12. Found and fixed an importer bug on the way: schema ≥21 `ComObjectInstanceRef/@Links` is positional per Project Schema23 v01.00.00 ("The first group address in the list is always the sending one"); `knx-etsproj/src/map.rs` mapped every entry to `Send`, so 1.1.22 and 1.1.24 were refused for a phantom second sender. Now entry 0 = `Send`, the rest `Receive`; verified against the ETS4 export of the same house (543/543 senders agree, `tests/links_direction.rs`). RESEARCH §5 amendment corrects the old "presumably space-separated / direction from flags" note.

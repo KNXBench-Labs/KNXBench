@@ -1214,9 +1214,9 @@ export type DptInputFormat = "canonical" | "decimal" | "hexadecimal" | "binary" 
 
 // `DiscoveredInterfaceDto`/`DiscoverResponse` (bus_routes.rs, T25). One
 // entry per KNX-compatible interface that answered the multicast
-// `SEARCH_REQUEST`. `controlEndpoint` is already in the `host:port` shape
-// `startBusMonitor` wants, so a found interface goes straight into the
-// gateway field with no reassembly.
+// `SEARCH_REQUEST`. `controlEndpoint` is the `host:port` shape
+// `startBusMonitor` wants. The monitor separates it into host and port
+// fields without changing this wire contract.
 export interface BusDiscoveredInterface {
   controlEndpoint: string;
   individualAddress: string;

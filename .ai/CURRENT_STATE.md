@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (download coverage session)
+- **Timestamp:** 2026-09-29 21:55 CEST
+- **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.
+- **Completed:** With the user's "frage alle ausser 1.1.220 ab": read-only session per house device via the user-given gateway, identity + `A_Memory_Read` of every image run, compared with the ETS 6.3.0 image. 32/34 answered; 1.1.16 and 1.1.253 reject T-connect. Results in RESEARCH §19.13: encoding matches wherever device and project agree; drift on 1.1.15/18–21/29/31/32 is the device being older than the project; defect: instance-level flag overrides (`ComObjectInstanceRef/@*Flag`) are not written into the group object table (KNOWN_LIMITATIONS §145). Logs private in `OriginalData/DeviceBackups/house-readback-2026-09-29/`. Probe test was throwaway, not in the tree.
+- **Pending/Next Steps:** Fix §145: `knx-productdb` image builder applies instance flag overrides from the project (request needs them; `image_request.rs` already sees `ComObjectInstance.flags`), with tests from the 1.1.20 case. Then decide whether to clear C on unlinked active objects like ETS (behaviour-neutral). Open parameter questions in §19.13 (PIR `4194h`, 1.1.15 union `4593h`, 1.1.20 `P-8` default) need no guess.
+- **Notes for Codex or Claude:** No write was sent. 1.1.220 not contacted. Gateway is given by the user per session; do not store it.
+
+---
+
+- **Last Agent:** Claude (download coverage session)
 - **Timestamp:** 2026-09-29 20:57 CEST
 - **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.
 - **Completed:** With the user's "go. 172.18.250.1": one read-only session to 1.1.11 (mask `0701h`, app `00 83 00 19 13`, load states `01 01 01 00`). `4B10h..4B17h` = `00 00 01 e6 e6 e6 e6 e6`, so ETS wrote `UP-1227` (1) into the union octet `4B12h`, not `UP-33` (230). Four candidate rules (dynamic order, non-default, deeper nesting, declaration order) agree on this sample, so there is no rule and `A-0019-13-B655` stays refused. Docs: RESEARCH §19.12 and IMPLEMENTATION_STATUS. Log: `OriginalData/DeviceBackups/1.1.11-probe-4b12/read-20260929-205618.log` (private, not committed). The probe test was throwaway and is not in the tree.

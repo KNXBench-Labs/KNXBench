@@ -8846,6 +8846,23 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §145 Instance-level flag overrides are not written into the group object table
+
+**Found live (2026-09-29, read-only, RESEARCH §19.13).** The download image
+takes each active object's flags from the application program
+(`ComObject`/`ComObjectRef`) and ignores `ComObjectInstanceRef`'s own
+`ReadFlag`/`WriteFlag`/`TransmitFlag`/`UpdateFlag`/`CommunicationFlag`. The
+importer keeps them (`ResolvedFlags`), the image builder does not read them.
+In the maintainer's house 12 linked objects on 1.1.5, 1.1.20 and 1.1.21 carry
+such an override and the devices hold it; a KNXBench download would drop it
+(1.1.20 object 0 would stop accepting group writes). Until the image applies
+instance overrides — or refuses a device that has one — a download to such a
+device changes its behaviour without saying so.
+
+Related, not a defect: for an active object without any link ETS clears the
+communication-enable bit; KNXBench sets it. With no association the object
+neither sends nor receives either way.
+
 ## §144 RF device configuration exists in the simulator only
 
 **Status (2026-09-29, K17).** CP §3.6 and §3.7 in

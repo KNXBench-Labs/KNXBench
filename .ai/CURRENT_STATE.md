@@ -1,4 +1,11 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 07:05
+- Web lock: released (not touched by this package)
+- **Completed:** goal-commission **K7 done**. Function check: the K7 project was downloaded again (06:52). A read-only monitor ran while the user pressed button 1: 11 telegrams from 1.1.67, all `GroupValueWrite 0` to `2/0/53`, none elsewhere, so the K7 config is active. There was no power cycle, so the unacknowledged Basic Restart does restart this device (RESEARCH §19's open question answered). Option C was restored at 06:55; an independent read-back showed 0 differing octets. Traces: `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-29_k7-check-{download,monitor,restore-optionC}.txt`, `…post-k7-check.txt`. Docs only.
+- **Pending/Next Steps:** K6 live readdress (needs the user's go plus a physical button press), then the K10 review. K7 recovery (interrupted download) stays optional.
+- **Notes for Codex/Claude:** `1.1.67` holds option C (byte-exact). `knx bus monitor` without `--project` prints 1-bit values as `0x00 (6-bit)`: small-payload decoding, not a bug in the download.
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 06:35
 - Web lock: released (not touched by this package)
 - **Completed:** goal-commission **K7 live, both downloads**. After *"go k7"*: (1) CLI `knx device download` of a new project (`OriginalData/DemoProjects/KNXBench 1.1.67 K7 switch-by-push off.knxdb`, gitignored: button 1 "Switch by push", Off, `2/0/53`; 4 octets different from option C) at 06:11. 1416/1416 octets read back; an independent dump showed 0 differing octets. (2) Web tab "Download to device" (Vite dev + local knx-server, Playwright headless, consent dialog) restored option C at 06:25. Again 1416/1416 and 0 differing. Restart `NOT confirmed` both times (expected for mask 0701h). Traces in `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-29_{pre-k7,k7-cli-download,post-k7-cli,post-k7-web}.txt`. Docs: RESEARCH §19 "K7 live acceptance", KNOWN_LIMITATIONS §105 status (first real exposure OK; priority bits on the wire not traced), goal-commission K7 status, implementation-status row. No code change.

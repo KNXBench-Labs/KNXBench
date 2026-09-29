@@ -309,6 +309,18 @@ IMPLEMENTATION_STATUS 2026-09-28 "K6 UI".
   deliberately interrupted download. KNOWN_LIMITATIONS §7 says "a failed run
   undoes nothing".
 
+**Status 2026-09-29: both downloads done and read back; function check
+open.** CLI at 06:11: the new project `KNXBench 1.1.67 K7 switch-by-push
+off.knxdb` (button 1 "Switch by push", Off, 4 octets different from
+option C). 1416/1416 octets were read back and an independent dump shows 0
+differing octets. Web UI at 06:25: option C back again through the real
+front end (Playwright, consent dialog, one `start` with the plan's own
+phrase); again 1416/1416 and 0 differing octets. Restart `NOT confirmed`
+both times, as expected (RESEARCH §19). **Open:** the function check with a
+monitor while someone presses button 1. It needs the K7 project on the
+device again (a third download) so that the telegrams can tell it from
+option C. Recovery (interrupted download) is still optional and not done.
+
 ### K8 — Rule on the excluded KNOWN_LIMITATIONS entries
 
 For each of §93, §99, §101, §104, §105, §108, §109, §111, §112, §113, §114

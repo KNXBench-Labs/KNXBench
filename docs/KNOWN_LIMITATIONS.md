@@ -6784,6 +6784,14 @@ live session with `1.1.67` is the first real exposure; the ack-request bit
 on TP1 is "requested" either way (EMI §4.1.5.3.3 a-flag table), so only
 the priority is a behavioural change on the wire.
 
+**Status 2026-09-29 (K7 live).** The first real exposure went through: two
+downloads to `1.1.67` over a real KNXnet/IP interface, with every
+`T_Connect`, `T_Disconnect` and `T_ACK` at system priority. The interface
+accepted every control frame and the device acknowledged every data
+request except the closing restart (RESEARCH §19, "K7 live acceptance"). Still
+unverified: whether the priority bits survive onto the wire. No bus monitor
+traced them.
+
 
 ## 106. The debug report redacts four pattern classes, and nothing else
 

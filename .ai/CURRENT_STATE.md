@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 13:25 CEST
+- **Web lock: reserved by the commissioning session** for `apps/knx-web/src/DeviceDownloadPanel.tsx`, its `api.ts` types and the `deviceDownload.*` i18n keys only (support-level badge + untested acknowledgement). U10 may proceed in other files; please do not edit those three spots until this handover releases them.
+- **Completed:** nothing yet in this package; started on the user's request "1-3 umsetzen": (1) offline download-coverage of the product corpus, (2) automatic device backup before every download write, (3) support level per application in CLI/API/UI.
+- **Pending/Next Steps:** see above; commissioning live track stays parked (no bus action in this package).
+- **Notes for Codex/Claude:** work happens in worktree `KNXBench.worktrees/iaw-support`, branch `iaw-support`.
+
+---
+
 - **Last Agent:** codex (UI session)
 - **Timestamp:** 2026-09-29 13:03 CEST
 - Web lock: released for U9 ISSUE-02 by this handover once published; held until then.

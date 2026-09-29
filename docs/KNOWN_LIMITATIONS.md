@@ -781,7 +781,9 @@ What remains open here:
   - a program declaring a `ParameterByteOrder` other than `BigEndian`;
   - com-object priority `High`/`Alert` and an enabled `ReadOnInitFlag`;
   - any evaluation diagnostic, except a legal value that no `when`
-    covers;
+    covers and an unrecognized `Rename`/`ParameterBlockRename` leaf
+    (retitles a block only; a reference below one still refuses —
+    RESEARCH §19.10);
   - a change to a masked octet other than the individual-address slot.
 - The image is checked against a real device for one program only
   (`A-0027-15-0BAC`). Nothing in the image builder writes to a bus.

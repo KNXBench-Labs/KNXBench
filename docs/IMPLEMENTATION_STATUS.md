@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Download coverage: Rename leaves no longer block the image
+
+- The image builder lets an unrecognized `Rename`/`ParameterBlockRename`
+  leaf pass (they only retitle a `ParameterBlock`; the image holds no
+  titles). A reference below one still refuses. The evaluator still
+  reports them, since the UI does not apply renames.
+- Corpus re-pinned: 246 programs, 1 verified, **73 untested** (was 69),
+  172 unsupported. Priority `High`, `ReadOnInitFlag` and `Property`
+  placement were re-checked against the direct PDFs and stay refused
+  (RESEARCH §19.10). None of the new plans is hardware-tested.
+
 ## 2026-09-29 — Download coverage: signed and text parameter values, mask asked first
 
 - The image builder writes signed `TypeNumber` values at or above zero and

@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (download coverage session, offline only)
+- **Timestamp:** 2026-09-29 (late evening) CEST
+- **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.
+- **Completed:** `Rename`/`ParameterBlockRename` leaves (326, all retitle a `ParameterBlock`) no longer refuse a download image; the evaluator still reports them as unrecognized (UI does not apply renames). Corpus: 246 programs, 1 verified, **73 untested** (was 69), 172 unsupported (`parameter-evaluation` 51, `parameter-value` 13). The remaining `image-structure` refusals (priority `High`, `ReadOnInitFlag`, `Property` placement) were re-checked against the direct PDFs and stay refused with reasons (RESEARCH §19.10). Log: `.ai/logs/2026-09-29_claude_download-coverage-renames.md`.
+- **Pending/Next Steps:** None of the new plans is hardware-tested. Largest remaining lever: module instances (the 51 `parameter-evaluation` programs are diagnostics inside modules, and the image builder refuses module instances). Next smaller one: octet-crossing bit fields (4 former Rename programs). Priority/ReadOnInit/Property need a source or a property-write step.
+- **Notes for Codex or Claude:** No bus action in this package. `1.1.67` still holds option C.
+
+---
+
+- **Last Agent:** Claude (download coverage session, offline only)
 - **Timestamp:** 2026-09-29 (evening) CEST
 - **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.
 - **Completed:** The 41 `procedure-style` refusals were all non-`070nh` masks; the planner now asks the mask first (`not-memory-mapped` 65). Image builder writes signed `TypeNumber` ≥ 0 and `TypeText` (declared ISO-8859-1/-15, ASCII without declaration) via new `ParameterImage::write_octets`; negative signed, every `TypeFloat`, unknown text encodings and non-`BigEndian` byte order refused by name. No PDF specifies these layouts; the evidence is the products' own base images (RESEARCH §19.9). Corpus re-pinned: 246 programs, 1 verified, **69 untested** (was 54), 176 unsupported. Log: `.ai/logs/2026-09-29_claude_download-coverage-values.md`.

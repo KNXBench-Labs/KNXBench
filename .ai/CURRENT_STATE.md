@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal.md session, ISSUE-08 data half)
+- **Timestamp:** 2026-09-29 22:40 CEST
+- **Web lock:** untouched — no `apps/knx-web` change in this package.
+- **Completed:** ISSUE-08 data half **P1** pushed as `a2ff938`. The schema-≥21 import read a missing `ComObjectInstanceRef/@IsActive` as `false`, so every overridden object came in inactive: ETS 6.3.0 691/867, KV 26/75. Now missing means active (Project Schema23 §1.2.5.13 has no such attribute; ADR-0014 amendment, IMPORT_EXPORT §9.3). A malformed value is reported and stays inactive. Pinned by `crates/knx-etsproj/tests/com_object_activity.rs` and 4 `map::tests`; 2 mutations caught. Gates: workspace 2,579 passed/0 failed; `--ignored` 139 passed, the 11 "failures" are all live/private-corpus env gates (`KNX_*`, `KNXBENCH_PRODUCT_CORPUS`), with no bus contact; fmt, clippy, headers 161/161, anchors, layering, corpus-gates and diff-check green.
+- **Pending/Next Steps:** ISSUE-08 data half, P2+: (a) channel ownership plus label per active com-object/parameter ref from the `Dynamic` tree (corpus: every `ComObjectRefRef` sits under exactly one channel, 5,630/5,630/8); (b) `NoBranchMatched` measured as ETS4 1,016, ETS6 978, KV 64; of these, 997/959/64 are legal enum values that no `when` covers, and only 19 per ETS project have a non-enum control. Downgrade or reword the panel diagnostic without changing the download planner's refusal. After that, the handover for the UI half (grouping/collapse).
+- **Notes for Codex or Claude:** Worktree `KNXBench.worktrees/issue08-data` needs `OriginalData` + `project_dump.json` symlinks and `npm ci && npm run build` in `apps/knx-web` before `cargo test --workspace` (knx-desktop embeds `dist`). `stats.md` left alone because another session has it uncommitted in the root checkout.
+
+---
+
 - **Last Agent:** Claude (download coverage session)
 - **Timestamp:** 2026-09-29 21:55 CEST
 - **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.

@@ -1,3 +1,25 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-28 23:55
+- **Completed:** goal-commission **K8 and K9 decided** (docs only). The user answered with "das was am sinnvollsten ist", so the recommendation was taken.
+  - K8: every §0.2 entry has a dated note:
+    - §99, §108, §109, §114: accepted boundaries;
+    - §111, §112, §113, §115: accepted until a use case exists;
+    - §93: parked;
+    - §101, §104: deferred to the K7 hardware session;
+    - §105: lifted (`6a7f03d`).
+  - K9: ADR-0048. v1 is the memory path for mask `070nh`, verified on `1.1.67`. Everything else is refused by name. The `Downloader` stays simulator-only.
+- **Pending/Next Steps:**
+  - K6 item 2 **[W]**: a live readdress. Needs a go and a person at the button.
+  - K7 **[W]**: a live download to `1.1.67`. Needs a device-specific go; watch for §101/§104 behaviour and for the first system-priority control frames (§105).
+  - K10: the whole-track review, after K6/K7 have run or been explicitly deferred.
+- **Notes for Codex or Claude:**
+  - Web lock not touched.
+  - **For the goal.md session:**
+    - `docs/adr/0047-session-log-export-is-a-versioned-local-json-snapshot.md` exists but has no row in `docs/adr/README.md`. Finding only, not fixed here: it is not a commissioning ADR.
+    - KNOWN_LIMITATIONS §7/§93/§99/§101/§104/§105/§108/§109/§111–§115 got new dated notes (for the LIMITATION_TRIAGE recount); no entries were renumbered.
+
+---
+
 - **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 05:48 CEST
 - Web lock: taken by UI session for U7 ISSUE-11 bus-monitor pause, export, decode visibility and bounded statistics

@@ -1,3 +1,13 @@
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 08:22 CEST
+- Web lock: released (U7 ISSUE-11 bus-monitor UX, after reviewed merge and merged-result gates)
+- **Completed:** U7 pause/resume, structured decode states, bounded 1000-row capture, ten-entry retained-only statistics, local versioned JSON export and focusable horizontally scrollable table landed as `911a499`; the concurrent commissioning simulator recovery test was integrated in `de697c7`, with final U7 status in `f191f9d`. On merged `main`: TypeScript/build and 77 web files / 1163 tests; Rust fmt/Clippy and 123 suites / 2391 passed, 0 failed, 136 ignored; layering, headers (287/161), 397 anchors across 228 Markdown files, corpus and diff gates all passed. Five U7 guard mutations failed as intended. Local-fixture Chromium verified 640 px layout and keyboard scroll; no live bus or device write, and native WebKitGTK/save-dialog runtime remains unverified (KNOWN_LIMITATIONS §137).
+- **Pending/Next Steps:** Push the reviewed U7 merge and this handover, remove only U7-owned worktree/build/scratch artifacts. Next UI package is U8 / ISSUE-03 resizable dialogs and readable forms; reserve the web lock again in a fresh handover-only commit after the package-boundary quota check. U9–U12 and U13 closing review remain; the overall `goal-ui.md` is not complete.
+- **For the goal.md session:** Include new KNOWN_LIMITATIONS §137 in the triage recount and refresh `stats.md` after U7 (`911a499`, `de697c7`, `f191f9d`). The native dialog needs a GUI-capable Linux check before claiming desktop end-to-end export; browser fixtures were not live-bus evidence.
+- **Notes for Codex or Claude:** Root `docs/paperclip-shutdown/` remains unrelated and untracked; do not stage or delete it. U7 tests used local fixtures only. The U7 branch log is `.ai/logs/2026-09-29_codex_ui-bus-monitor-ux.md`; its ignored corpus symlink is owned by the worktree. The web lock is free for the next package after this release is pushed.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 09:05
 - Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.

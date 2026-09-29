@@ -33,6 +33,10 @@ pub enum WriteScope {
     /// mode goes to `FFFFh` and is restarted there. The target is always
     /// `FFFFh`, because the devices are whoever has the button pressed.
     IndividualAddressReset,
+    /// `A_Restart` Master Reset with an Erase Code that erases something
+    /// (MP §3.7.1.2, Table 4 `02h`–`08h`). Erase Code `01h`, the confirmed
+    /// restart, stays under [`WriteScope::Restart`]: it erases nothing.
+    MasterReset,
 }
 
 impl fmt::Display for WriteScope {
@@ -44,6 +48,7 @@ impl fmt::Display for WriteScope {
             WriteScope::Restart => "restart",
             WriteScope::ProgrammingModeToggle => "programming-mode toggle",
             WriteScope::IndividualAddressReset => "individual-address reset",
+            WriteScope::MasterReset => "master reset",
         })
     }
 }
@@ -215,6 +220,11 @@ impl WriteAuthorisation {
 /// Also refused: [`WriteScope::IndividualAddressReset`] (K13, MP §2.18). It
 /// changes every device in programming mode at once, and no operator has
 /// asked for it on the bus yet (KNOWN_LIMITATIONS §140).
+///
+/// And [`WriteScope::MasterReset`] (K14): an erasing Master Reset takes the
+/// device's configuration away, and nobody has asked for one on the bus
+/// (KNOWN_LIMITATIONS §141). The confirmed restart (`01h`) needs no new
+/// scope.
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
         WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
@@ -222,7 +232,8 @@ pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
         }
         WriteScope::Unload
         | WriteScope::ProgrammingModeToggle
-        | WriteScope::IndividualAddressReset => false,
+        | WriteScope::IndividualAddressReset
+        | WriteScope::MasterReset => false,
     }
 }
 

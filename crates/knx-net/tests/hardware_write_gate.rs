@@ -90,6 +90,8 @@ fn only_the_three_procedure_scopes_are_authorised_on_hardware() {
     assert!(!hardware_write_is_authorised(
         WriteScope::IndividualAddressReset
     ));
+    // K14: an erasing Master Reset (KNOWN_LIMITATIONS §141).
+    assert!(!hardware_write_is_authorised(WriteScope::MasterReset));
 }
 
 /// The permitting side: the address write MP §2.3 performs does build a
@@ -142,6 +144,7 @@ fn an_unload_or_a_programming_mode_toggle_on_hardware_is_still_refused() {
         WriteScope::Unload,
         WriteScope::ProgrammingModeToggle,
         WriteScope::IndividualAddressReset,
+        WriteScope::MasterReset,
     ] {
         let phrase = required_confirmation_phrase(target(), scope);
         let authorisation = WriteAuthorisation::for_hardware(target(), scope, &phrase)

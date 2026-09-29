@@ -349,7 +349,7 @@ Frequency of instance-level overrides in this project [V]: `DatapointType` 758×
 Same diff as §2.4, one level down, on `0.xml` itself. These are real, load-bearing format changes, not noise:
 
 * **`RefId` is no longer self-contained.** Schema 11 writes the full compound key (`M-0083_A-0019-16-ECA7_O-59_R-149`); schema 23 writes only the local part (`O-59_R-149`). The application-program identity must now be recovered from the owning `DeviceInstance/@Hardware2ProgramRefId`, not from the reference string itself. A parser that treats `RefId` as globally unique and self-describing (reasonable for schema 11) breaks silently on schema 23.
-* **Group address links move from child elements to an attribute, and gain a device-wide index.** Schema 11: `ComObjectInstanceRef` nests `Connectors/Send` and `Connectors/Receive` elements, each with `@GroupAddressRefId` (fully qualified, `P-0512-0_GA-373`). Schema 23: the link is a `Links` attribute directly on `ComObjectInstanceRef` (short id, `GA-373`; presumably space-separated for multiple links, unverified here since every observed instance has exactly one), **and** every `DeviceInstance` gains a `GroupObjectTree/@GroupObjectInstances` attribute — a space-separated list of every communication-object `RefId` on that device, including ones with no override and no link. Send vs. Receive direction is no longer encoded positionally; it must come from the application program's `ComObject/@ReadFlag`/`WriteFlag` defaults (or the instance-level flag overrides), which schema 23 still carries as before.
+* **Group address links move from child elements to an attribute, and gain a device-wide index.** Schema 11: `ComObjectInstanceRef` nests `Connectors/Send` and `Connectors/Receive` elements, each with `@GroupAddressRefId` (fully qualified, `P-0512-0_GA-373`). Schema 23: the link is a `Links` attribute directly on `ComObjectInstanceRef` (short id, `GA-373`; presumably space-separated for multiple links, unverified here since every observed instance has exactly one), **and** every `DeviceInstance` gains a `GroupObjectTree/@GroupObjectInstances` attribute — a space-separated list of every communication-object `RefId` on that device, including ones with no override and no link. Send vs. Receive direction is no longer encoded positionally; it must come from the application program's `ComObject/@ReadFlag`/`WriteFlag` defaults (or the instance-level flag overrides), which schema 23 still carries as before. **Amendment 2026-09-29 — both guesses in this bullet were wrong.** Project Schema23 v01.00.00 (the direct PDF), `ComObjectInstanceRef/@Links`: "The list of (shortened) group address ids that are linked with this object. The first group address in the list is always the sending one." So the list *is* space-separated, and direction *is* positional: the first entry sends, every later one receives. The same house's ETS 6.3.0 export has multi-link objects after all (e.g. 1.1.22 object 6 `Links="GA-96 GA-200"`, 1.1.24 object 56 `Links="GA-232 GA-700"`), and against its ETS4 export — which states direction with explicit `Send`/`Receive` elements — all 543 objects with one ETS4 sender and an identical address set agree on that sender, 2 of them with more than one link (`crates/knx-etsproj/tests/links_direction.rs`). The importer used to map every `Links` entry to `Send`, which made both objects look like they send on two addresses and the download planner refused both devices (§19.12).
 * **`ComObjectInstanceRef` elements are omitted when they would carry no information.** Count drops from 907 to 691 for the same 35 devices: objects with neither an override nor a link are no longer written as elements at all — they exist only as an id in `GroupObjectTree/@GroupObjectInstances`. **An importer that equates "device's communication objects" with "device's `ComObjectInstanceRef` elements" will undercount by ~24% on schema 23.** `GroupObjectTree` must be read as the authoritative object list; `ComObjectInstanceRefs` as the overrides/links on top of it.
 * **Booleans switch from `"1"`/`"0"` to `"true"`/`"false"`** across the board (`ApplicationProgramLoaded`, `IndividualAddressLoaded`, `Central`, `Unfiltered`, …). Verified on `GroupAddress/@Central` and `@Unfiltered`: the values are unchanged (2 group addresses carry both flags in both exports), only the literal spelling changed. A parser that string-matches `"1"` instead of parsing as boolean will misread every flag on schema 23 as false.
 * **Amendment, found during Session 3 implementation (Task 14): a third boolean spelling exists *within* schema 11 itself, not just across the 11→23 boundary.** `ComObjectInstanceRef`'s five flag attributes — `ReadFlag`, `WriteFlag`, `TransmitFlag`, `UpdateFlag`, `CommunicationFlag` — write `"Enabled"`/`"Disabled"` on schema 11, not `"1"`/`"0"`. Verified against the full reference project: every one of these five attributes is exclusively `"Enabled"` or `"Disabled"`, while every *other* schema-11 boolean attribute checked (`IsActive`, `Central`, `Unfiltered`, `Broken`, the four `*Loaded` flags, `IsCommunicationObjectVisibilityCalculated`, `DomainAddressIsChecked`) is exclusively `"1"`/`"0"` as expected. A boolean converter scoped to "schema version" rather than "schema version and attribute" will misread every communication-object flag on schema 11. Not yet verified whether schema 23 keeps `"Enabled"`/`"Disabled"` for these same five attributes or switches them to `"true"`/`"false"` like everything else — check against the ETS6 reference project before relying on either assumption.
@@ -5778,6 +5778,55 @@ PDFs and the product files: parameter fields across an octet boundary (the
   are the reason it is modular.
 
 : AppImage interface discovery and line-relative addresses (2026-09-28)
+
+
+### 19.12 The maintainer's own house, device by device (2026-09-29)
+
+The download-coverage numbers so far are over the 246-program corpus; the
+question the maintainer asked is narrower: *which of my devices* can
+KNXBench plan a download for. Measured by importing "Unser Zuhause ets
+6.3.0 - 2026-09-02.knxproj" into a scratch store, ingesting the same file's
+embedded product data into a scratch product database, and running
+`knx device download 1.1.<n> --project … --product-db …` (plan only,
+nothing sent) for every address.
+
+**None of the house's devices is modular.** Its 12 application programs
+contain 0 `ModuleDef`s between them, so the module-instance refusal
+(§19.11) does not touch this installation.
+
+| Devices | Product | Result |
+|---|---|---|
+| 1.1.10 | MDT AMS-1216 (`A-0019-16`) | plan |
+| 1.1.14–15 | MDT push button 4f (`A-0026-15`) | plan |
+| 1.1.16–21, 1.1.32 | MDT push button 8f (`A-0024-15`) | plan |
+| 1.1.25–26 | MDT binary input 16f/8f (`A-0030-20`, `A-0031-20`) | plan |
+| 1.1.27–31 | MDT dimming actuator AKD-0401 (`A-001B-13`) | plan¹ |
+| 1.1.1–9 | Presence detectors (`M-006A_A-0001-22`) | refused: load procedure uses `LsmIdx 5` |
+| 1.1.11–13 | MDT AMS-1216 (`A-0019-13-B655`) | refused: two members of one union at offset 1810 |
+| 1.1.22–23 | Gira SmartSensor (`MV-0012`) | refused: not memory-mapped |
+| 1.1.24 | Merten blind actuator (`A-5701-10`) | refused: `LdCtrlTaskCtrl1` |
+
+¹ The corpus coverage refuses this program in its *default*
+configuration (`UP-5001`'s default `0` is not in its empty enumeration);
+the house's own parameter values leave that parameter inactive, so the
+device plan does not reach it.
+
+17 of 32 plan; every plan is **Untested** — only 1.1.67 (the test device,
+not in this project) is Verified. Two findings came out of the run:
+
+1. **1.1.22 and 1.1.24 used to be refused for the wrong reason**, "object
+   sends on 2 group addresses". That was an importer bug: every schema ≥21
+   `Links` entry was mapped to `Send`. Project Schema23 v01.00.00 states
+   "The first group address in the list is always the sending one" (see the
+   amendment in §5), and the ETS4 export of the same house agrees on all 543
+   comparable senders. Fixed in `knx-etsproj/src/map.rs`; the two devices
+   now reach their real, program-level refusals above.
+2. **1.1.11–13 are the same product as the plannable 1.1.10 but an older
+   program version** whose union at `AS-4400` offset 1810 holds `UP-33`
+   (`Factor`, the default member) and `UP-1227` (`Access="None"`). Both are
+   written, so the image refuses the overlap. Whether only one member may be
+   active, and how the choice is made, is the next item to settle from the
+   direct PDFs and the product data — not by picking one.
 
 ### 20.1 Discovery comparison on one Linux host
 

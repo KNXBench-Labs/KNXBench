@@ -53,11 +53,11 @@
 
 **Interfaces:** Persist bounded `uiScale`, `navigationPaneWidth`, and `inspectorPaneWidth` preferences through the existing versioned settings document. `ResizablePane` becomes controlled or reports committed width without creating a second persistence mechanism.
 
-- [ ] Add failing tests for `Ctrl`+`+`, `Ctrl`+`-`, and `Ctrl`+`0`, including editable-field handling and bounded scale.
-- [ ] Add failing tests that resize the navigation pane, hide it, show it, remount the app, and recover the same clamped width.
-- [ ] Add a CSS regression test proving `.diagram-device:hover` does not hide its icon, address, or `.device-object-count`.
-- [ ] Implement zoom and persisted pane geometry using the shared settings store; retain pointer and arrow-key resizing.
-- [ ] Verify at narrow, default, and enlarged scales and run the focused App/Workbench/settings tests.
+- [x] Add failing tests for `Ctrl`+`+`, `Ctrl`+`-`, and `Ctrl`+`0`, including editable-field handling and bounded scale. (`App.test.tsx::uses Ctrl+Plus` and `::clamps persisted and repeatedly changed zoom`, RED on absent CSS scale.)
+- [x] Add failing tests that resize the navigation pane, hide it, show it, remount the app, and recover the same clamped width. (`App.test.tsx::keeps a resized navigation pane`; `::stacks the inspector`; `Workbench.test.tsx::commits the clamped pointer width`; `http_settings.rs::geometry_preferences_round_trip_from_a_v1_document_without_the_new_keys`.)
+- [x] Add a CSS regression test proving `.diagram-device:hover` does not hide its icon, address, or `.device-object-count`. (`Workbench.test.tsx::keeps diagram device content visible`; headless Chromium hover checked the three descendants' computed visibility and `transform: none`.)
+- [x] Implement zoom and persisted pane geometry using the shared settings store; retain pointer and arrow-key resizing. (`settingsStore.test.ts::adds geometry preferences`; `Workbench.test.tsx::resizes a pane with the keyboard`; four UI mutation controls failed before restoration.)
+- [x] Verify at narrow, default, and enlarged scales and run the focused App/Workbench/settings tests. (Chromium 640×700 and 1280×720 at scale 1 and 1.5, including max widths/reload; `App.test.tsx`, `Workbench.test.tsx`, `settingsStore.test.ts`, and `http_settings.rs`.)
 
 ### ISSUE-02: Welcome surface and new-project clarity
 

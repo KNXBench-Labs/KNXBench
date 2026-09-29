@@ -287,6 +287,23 @@ describe("adopting what a browser already has", () => {
 });
 
 describe("writing", () => {
+  it("adds geometry preferences to an older versioned document without losing its existing fields", async () => {
+    respond([{ status: "ok", schemaVersion: 1, settings: { theme: "graphite" } }]);
+    await initSettings();
+    setSetting("uiScale", 1.2);
+    setSetting("navigationPaneWidth", 320);
+    setSetting("inspectorPaneWidth", 410);
+    await vi.waitFor(() => expect(calls).toHaveLength(4));
+    expect(calls.slice(1)).toEqual([
+      ["/api/settings", "PUT", { settings: { uiScale: 1.2 } }],
+      ["/api/settings", "PUT", { settings: { navigationPaneWidth: 320 } }],
+      ["/api/settings", "PUT", { settings: { inspectorPaneWidth: 410 } }],
+    ]);
+    expect(JSON.parse(window.localStorage.getItem(SETTINGS_CACHE_KEY)!).settings).toEqual({
+      theme: "graphite", uiScale: 1.2, navigationPaneWidth: 320, inspectorPaneWidth: 410,
+    });
+  });
+
   it("sends one key at a time, as a patch", async () => {
     respond([{ status: "ok", settings: { theme: "porcelain" } }]);
     await initSettings();

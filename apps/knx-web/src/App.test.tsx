@@ -175,6 +175,7 @@ afterEach(() => {
   apiMock.currentProject.mockReset();
   resetSettingsForTests();
   resetProductLanguageForTests();
+  document.documentElement.style.removeProperty("--app-ui-scale");
   document.documentElement.removeAttribute("lang");
   document.title = "";
   resetUiLanguageForTests();
@@ -326,6 +327,84 @@ function findButton(text: string): HTMLButtonElement {
   if (!button) throw new Error(`button "${text}" not found`);
   return button;
 }
+
+describe("App — bounded workbench zoom", () => {
+  function zoomKey(key: string, target: EventTarget = window): KeyboardEvent {
+    const event = new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  }
+
+  it("uses Ctrl+Plus, Ctrl+Minus and Ctrl+0 without stealing editable-field keys", async () => {
+    const root = await renderApp();
+    await act(async () => { zoomKey("+"); });
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1.1");
+    await act(async () => { zoomKey("-"); });
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1");
+    await act(async () => { zoomKey("+"); zoomKey("0"); });
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1");
+    const input = document.createElement("input");
+    host!.append(input);
+    input.focus();
+    let editableEvent!: KeyboardEvent;
+    await act(async () => { editableEvent = zoomKey("+", input); });
+    expect(editableEvent.defaultPrevented).toBe(false);
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1");
+    input.remove();
+    await act(async () => root.unmount());
+  });
+
+  it("clamps persisted and repeatedly changed zoom to safe bounds", async () => {
+    setSetting("uiScale", 20);
+    const root = await renderApp();
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1.5");
+    for (let i = 0; i < 12; i++) await act(async () => { zoomKey("-"); });
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("0.8");
+    await act(async () => { zoomKey("0"); });
+    expect(document.documentElement.style.getPropertyValue("--app-ui-scale")).toBe("1");
+    await act(async () => root.unmount());
+  });
+});
+
+describe("App — remembered workbench geometry", () => {
+  it("stacks the inspector before enlarged saved widths can clip it", async () => {
+    const original = Object.getOwnPropertyDescriptor(window, "innerWidth")!;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });
+    try {
+      setSetting("navigationPaneWidth", 480);
+      setSetting("inspectorPaneWidth", 700);
+      setSetting("uiScale", 1.5);
+      const root = await renderApp();
+      expect(host!.querySelector(".workbench")?.classList.contains("workbench--stacked-inspector")).toBe(true);
+      await act(async () => root.unmount());
+    } finally {
+      Object.defineProperty(window, "innerWidth", original);
+    }
+  });
+
+  it("keeps a resized navigation pane across hide/show and remount; clamps both persisted widths", async () => {
+    setSetting("navigationPaneWidth", 10000);
+    setSetting("inspectorPaneWidth", -1);
+    let root = await renderApp();
+    const navigation = () => host!.querySelector<HTMLElement>(".workbench-pane-left")!;
+    const inspector = () => host!.querySelector<HTMLElement>(".workbench-pane-right")!;
+    expect(navigation().style.width).toBe("480px");
+    expect(inspector().style.width).toBe("280px");
+    const resizer = navigation().querySelector<HTMLElement>('[role="separator"]')!;
+    await act(async () => resizer.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(navigation().style.width).toBe("200px");
+    await act(async () => findButton("Navigation").click());
+    expect(host!.querySelector(".workbench-pane-left")).toBeNull();
+    await act(async () => findButton("Navigation").click());
+    expect(navigation().style.width).toBe("200px");
+    await act(async () => root.unmount());
+    host?.remove();
+    root = await renderApp();
+    expect(navigation().style.width).toBe("200px");
+    expect(inspector().style.width).toBe("280px");
+    await act(async () => root.unmount());
+  });
+});
 
 function treeLabel(text: string): HTMLElement {
   const label = Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))

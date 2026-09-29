@@ -8469,3 +8469,23 @@ reviewed.
 including the TSSG examples as golden vectors. Items 4 and 5 are then decided
 explicitly, and one real download of a known configuration is verified by
 observing the resulting group telegram on the bus.
+
+## 130. Application zoom is browser-verified, not native WebKitGTK-verified
+
+**Limitation.** Whole-interface zoom is intentionally bounded to 80–150% in
+10% steps; pane widths are bounded as documented in the user manual. The
+interaction and responsive stack were exercised in system Chromium, not in a
+running Tauri/WebKitGTK window. No desktop-rendering parity is claimed.
+
+**Cause.** `zoom` participates in browser layout, so a change of rendering
+engine can expose different viewport or font metrics. Headless browser tests
+cannot prove native focus, resize or accessibility behaviour.
+
+**Cost.** A Linux desktop installation may need a layout adjustment beyond
+the Chromium evidence. The server still retains the raw, versioned settings
+record; an out-of-range saved value is visually clamped rather than silently
+overwritten or discarded.
+
+**Lifted when.** A GUI-capable Linux run checks zoom shortcuts, pointer and
+keyboard pane resize, hide/show and restart, and topology-device hover at
+narrow, default and enlarged scales. No KNX hardware traffic is required.

@@ -12,6 +12,28 @@ Every statement below is tagged:
 
 ---
 
+## 2026-09-29 — U6 root zoom and persisted pane geometry
+
+- **[D]** CSS `zoom` changes layout dimensions as well as the rendering of
+  descendants; it is not the same as `transform: scale(...)`, which leaves
+  surrounding layout unchanged. MDN's property reference:
+  https://developer.mozilla.org/en-US/docs/Web/CSS/zoom . The CSS Viewport
+  specification defines the property:
+  https://drafts.csswg.org/css-viewport/#zoom-property .
+- **[V]** With system Chromium `/usr/bin/chromium` at a 1280×720 viewport,
+  applying `zoom: 1.5` to `:root` while leaving `.workbench` at `100dvh`
+  initially stretched the shell to 1080 physical pixels. Dividing its
+  CSS `height` by the scale restored a 720-pixel shell; at 640×700 the
+  responsive panes stack and vertical scrolling remains intentional. At
+  1280 pixels with saved panes at 480+700 pixels, the old three-column
+  layout clipped Properties at 2070 pixels on zoom 1.5. The responsive
+  stack now keeps its right edge at 1280, before and after reload.
+- **[A]** Headless Chromium verifies this browser layout, not native
+  WebKitGTK/Tauri font rendering or input behaviour; test the Linux shell
+  on a GUI-capable machine before claiming desktop parity.
+
+---
+
 ## 2026-09-29 — U5 validation and help routing research
 
 - **[D]** RFC 5646 §2.1 defines BCP-47 language-tag subtags separated by

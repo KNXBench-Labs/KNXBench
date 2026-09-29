@@ -53,6 +53,7 @@ import { publishProjectContext, recordSessionContext } from "./busContext";
 // `resetBusDiscoveryForTests`'s own comment on why module state outlives
 // a component.
 import { resetBusDiscoveryForTests } from "./busDiscovery";
+import { splitGatewayEndpoint } from "./gatewayEndpoint";
 import { savePreferredGateway } from "./gatewayPreference";
 import { getSetting, initSettings, resetSettingsForTests } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -174,8 +175,10 @@ function setInputValue(selector: string, value: string) {
 // inside `act()` are not enough to observe the initial, immediate poll
 // `BusMonitorPanel`'s effect fires as soon as `session` is set.
 async function connect(gateway = "192.0.2.1:3671") {
+  const fields = splitGatewayEndpoint(gateway);
   await act(async () => {
-    setInputValue(".bus-monitor-connect input", gateway);
+    setInputValue(".bus-monitor-host", fields.host);
+    setInputValue(".bus-monitor-port", fields.port);
   });
   await act(async () => {
     clickButton("Connect");
@@ -223,12 +226,86 @@ afterEach(() => {
   resetSettingsForTests();
 });
 
+it("edits host and port separately and composes the existing start payload", async () => {
+  await renderPanel();
+  const hostInput = host!.querySelector<HTMLInputElement>(".bus-monitor-host")!;
+  const portInput = host!.querySelector<HTMLInputElement>(".bus-monitor-port")!;
+  expect(hostInput.getAttribute("aria-label")).toBe("Gateway host");
+  expect(portInput.getAttribute("aria-label")).toBe("Gateway port");
+  expect(portInput.value).toBe("3671");
+  await act(async () => {
+    setInputValue(".bus-monitor-host", "192.0.2.17");
+    setInputValue(".bus-monitor-port", "4750");
+  });
+  await act(async () => {
+    clickButton("Connect");
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(apiMock.startBusMonitor).toHaveBeenCalledWith("192.0.2.17:4750");
+});
+
+it("explains both endpoint fields and does not claim discovery is absent", async () => {
+  await renderPanel();
+  const hint = host!.querySelector<HTMLElement>(".bus-monitor-connect [role='tooltip']")!;
+  expect(hint.textContent).toContain("separate");
+  expect(hint.textContent).toContain("Search");
+  expect(hint.textContent).not.toContain("does not search");
+});
+
+it("shows a port validation error and does not contact the gateway", async () => {
+  await renderPanel();
+  await act(async () => {
+    setInputValue(".bus-monitor-host", "192.0.2.17");
+    setInputValue(".bus-monitor-port", "65536");
+  });
+  expect(host!.querySelector<HTMLButtonElement>(".bus-monitor-connect button")!.disabled).toBe(true);
+  expect(host!.querySelector(".bus-monitor-port-error")!.textContent).toContain("1–65535");
+  expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+});
+
+it("retains unsupported hostname preferences but refuses to open a tunnel", async () => {
+  savePreferredGateway("gateway.local:4921");
+  await renderPanel();
+  const hostInput = host!.querySelector<HTMLInputElement>(".bus-monitor-host")!;
+  expect(hostInput.value).toBe("gateway.local");
+  expect(hostInput.getAttribute("aria-invalid")).toBe("true");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("4921");
+  expect(host!.querySelector(".bus-monitor-host-error")!.textContent).toContain("Hostnames and IPv6");
+  expect(host!.querySelector<HTMLButtonElement>(".bus-monitor-connect button")!.disabled).toBe(true);
+  expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+  expect(getSetting("preferredGateway")).toBe("gateway.local:4921");
+});
+
+it("explains where a pasted combined endpoint's port belongs", async () => {
+  await renderPanel();
+  await act(async () => setInputValue(".bus-monitor-host", "192.0.2.17:3671"));
+  expect(host!.querySelector(".bus-monitor-host-error")!.textContent).toContain("separate port field");
+  expect(host!.querySelector<HTMLButtonElement>(".bus-monitor-connect button")!.disabled).toBe(true);
+  expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+});
+
+it("separates a discovered endpoint without connecting automatically", async () => {
+  apiMock.discoverBusInterfaces.mockResolvedValue({
+    interfaces: [{
+      controlEndpoint: "192.0.2.40:4921",
+      individualAddress: "1.1.1",
+      friendlyName: "Test interface",
+      supportsTunnelling: true,
+    }],
+  } satisfies BusDiscoverResponse);
+  await renderPanel();
+  const option = host!.querySelector<HTMLButtonElement>(".bus-discovery-option")!;
+  await act(async () => option.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.value).toBe("192.0.2.40");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("4921");
+  expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+});
+
 it("seeds a fresh gateway field from the cached preference without writing it back", async () => {
   savePreferredGateway("192.0.2.10:3671");
   await renderPanel();
-  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
-    "192.0.2.10:3671",
-  );
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.value).toBe("192.0.2.10");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("3671");
   expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
   expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
 });
@@ -250,9 +327,8 @@ it("adopts the authoritative gateway after a normal 404 reattach", async () => {
     }),
   } as Response);
   await act(async () => { await hydration; });
-  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
-    "192.0.2.20:3671",
-  );
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.value).toBe("192.0.2.20");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("3671");
 });
 
 it("keeps manual gateway input typed before authoritative hydration", async () => {
@@ -260,7 +336,7 @@ it("keeps manual gateway input typed before authoritative hydration", async () =
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveGet = resolve; })));
   const hydration = initSettings();
   await renderPanel();
-  await act(async () => setInputValue(".bus-monitor-connect input", "192.0.2.30:3671"));
+  await act(async () => setInputValue(".bus-monitor-host", "192.0.2.30"));
   resolveGet({
     ok: true,
     status: 200,
@@ -271,9 +347,8 @@ it("keeps manual gateway input typed before authoritative hydration", async () =
     }),
   } as Response);
   await act(async () => { await hydration; });
-  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
-    "192.0.2.30:3671",
-  );
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.value).toBe("192.0.2.30");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("3671");
   expect(getSetting("preferredGateway")).toBe("192.0.2.20:3671");
 });
 
@@ -303,9 +378,8 @@ it("keeps a discovered gateway selected before authoritative hydration", async (
     }),
   } as Response);
   await act(async () => { await hydration; });
-  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!.value).toBe(
-    "192.0.2.40:3671",
-  );
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.value).toBe("192.0.2.40");
+  expect(host!.querySelector<HTMLInputElement>(".bus-monitor-port")!.value).toBe("3671");
   expect(getSetting("preferredGateway")).toBe("192.0.2.20:3671");
 });
 
@@ -1044,7 +1118,11 @@ describe("BusMonitorPanel and the shared session's context", () => {
     }
 
     function gatewayField() {
-      return host!.querySelector<HTMLInputElement>(".bus-monitor-connect input")!;
+      return host!.querySelector<HTMLInputElement>(".bus-monitor-host")!;
+    }
+
+    function portField() {
+      return host!.querySelector<HTMLInputElement>(".bus-monitor-port")!;
     }
 
     async function click(button: HTMLButtonElement) {
@@ -1088,9 +1166,10 @@ describe("BusMonitorPanel and the shared session's context", () => {
       const input = gatewayField();
       expect(input.disabled).toBe(false);
       await act(async () => {
-        setInputValue(".bus-monitor-connect input", "192.0.2.50:3671");
+        setInputValue(".bus-monitor-host", "192.0.2.50");
       });
-      expect(gatewayField().value).toBe("192.0.2.50:3671");
+      expect(gatewayField().value).toBe("192.0.2.50");
+      expect(portField().value).toBe("3671");
       const connectButton = Array.from(host!.querySelectorAll("button")).find(
         (b) => b.textContent === "Connect",
       )!;
@@ -1148,7 +1227,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       await flushReattach();
 
       await click(options()[1]!);
-      expect(gatewayField().value).toBe("192.0.2.12:3671");
+      expect(gatewayField().value).toBe("192.0.2.12");
+      expect(portField().value).toBe("3671");
       // Selecting fills the field. It does not connect.
       expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
 
@@ -1156,9 +1236,9 @@ describe("BusMonitorPanel and the shared session's context", () => {
       // is still allowed, because multicast not reaching a subnet says
       // nothing about whether a unicast address works.
       await act(async () => {
-        setInputValue(".bus-monitor-connect input", "203.0.113.7:3671");
+        setInputValue(".bus-monitor-host", "203.0.113.7");
       });
-      expect(gatewayField().value).toBe("203.0.113.7:3671");
+      expect(gatewayField().value).toBe("203.0.113.7");
     });
   });
 });

@@ -2,6 +2,13 @@
 
 **Last update:** 2026-09-28 19:33:39 CEST (UTC+02:00)
 
+**Snapshot note (2026-09-29):** These generated figures end at the timestamp
+above; subsequent commits (including the download-readiness work) are not
+included. The statistics generator is not part of this repository, so the
+underlying token/session totals cannot be refreshed here without inventing
+data. Regenerate from the original local logs and generator before presenting
+these numbers as current.
+
 Welcome to the numerical engine room of KNXBench: this page counts commits,
 tokens, agents, models, tools, caffeine-adjacent productivity and several things
 no reasonable person would normally measure. It explains where the project's AI

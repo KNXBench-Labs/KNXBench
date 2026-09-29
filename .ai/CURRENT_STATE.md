@@ -1,3 +1,13 @@
+- **Last Agent:** codex (UI session)
+- **Timestamp:** 2026-09-29 13:03 CEST
+- Web lock: released for U9 ISSUE-02 by this handover once published; held until then.
+- **Completed:** U9's three accessible welcome routes, project-language selector (installed packs plus custom tags), explicit Save/Save As filename explanation and responsive dialog landed as `9292d09` with a source/branch-gate correction in `919043c`. Reviewed U9 merged into root `main` as `074f3ca`; the separately delivered commissioning handover `2470c4e` was reconciled in `f42fac4` without changing U9 code. On actual merged `main` at `f42fac4`: TypeScript/build and 77 web files/1179 tests; Rust fmt/Clippy and 124 suites/2526 passed, 0 failed, 143 ignored; fresh root-built layering, headers (302/161), 397 links over 228 Markdown files, corpus and diff checks green. Two guard mutations failed as intended. Local Chromium exercised 1280/640/400/320-pixel layouts and 150% zoom without any backend or KNX connection. Manual screenshot, ISSUE-02 checklist, U9 status and `.ai/logs/2026-09-29_codex_ui-welcome-clarity.md` updated. Native WebKitGTK and real screen-reader behavior remain untested.
+- **Pending/Next Steps:** U10/ISSUE-12 (separate host/port fields and the discovery fix from U2) follows a fresh driving-provider quota check and a new web-lock reservation. U11–U13 remain; `goal-ui.md` is not complete.
+- **For the goal.md session:** Refresh `stats.md` after the U9 source merge `074f3ca` and the final UI handover publication. U9 introduced no new numbered KNOWN_LIMITATIONS entry; native GUI and screen-reader checks remain unverified under §20.
+- **Notes for Codex or Claude:** Commissioning's separate live track is parked by its user decision; this UI package performed no device action. Preserve the root's unrelated `docs/paperclip-shutdown/` untracked. No subagents on this goal session; no full accessibility or ETS compatibility claim. Publish only U9-owned commits from the root after verifying the outgoing range, and use a fresh target for root-gate `xtask` so it audits this checkout.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 12:45 CEST
 - Web lock: held by the UI session (U9); not touched.

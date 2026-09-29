@@ -35,7 +35,12 @@
   inside the scrollable panel without horizontal overflow. Custom `de-DE`
   enabled Create; Escape returned focus to the launcher. Native WebKitGTK
   and a real screen reader remain untested (KNOWN_LIMITATIONS §20).
-  Merged-result gates are pending this package's integration.
+  On merged `main` at `f42fac4` (including the separately delivered
+  commissioning handover), TypeScript/build and 77 web files / 1179 tests,
+  Rust fmt/Clippy and 124 suites / 2526 passed, 0 failed, 143 ignored.
+  A fresh root-specific `xtask` checked layering, headers (302/161),
+  397 links across 228 Markdown files and the corpus gate; diff checks
+  passed. This is not evidence of native WebKitGTK or a real KNX bus.
 
 ## 2026-09-29 — U8: usable, bounded dialogs and a recognizable Settings control
 

@@ -2450,6 +2450,12 @@ struct CreateDeviceBody {
     line_id: Option<u32>,
     catalog_item_id: String,
     name: String,
+    #[serde(default = "default_catalog_quantity")]
+    quantity: u32,
+}
+
+fn default_catalog_quantity() -> u32 {
+    1
 }
 
 #[derive(serde::Serialize)]
@@ -2525,6 +2531,27 @@ impl From<domain::CreationDiagnostic> for CreationDiagnosticDto {
 struct CreateDeviceResponseDto {
     tree: knx_projection::ProjectTree,
     diagnostics: Vec<CreationDiagnosticDto>,
+    items: Vec<CreatedCatalogDeviceDto>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CreatedCatalogDeviceDto {
+    index: u32,
+    device_id: u32,
+    name: String,
+    diagnostics: Vec<CreationDiagnosticDto>,
+}
+
+impl From<domain::CreatedCatalogDevice> for CreatedCatalogDeviceDto {
+    fn from(value: domain::CreatedCatalogDevice) -> Self {
+        Self {
+            index: value.index,
+            device_id: value.device_id.0,
+            name: value.name,
+            diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
+        }
+    }
 }
 
 impl From<domain::CreateDeviceResponse> for CreateDeviceResponseDto {
@@ -2532,6 +2559,7 @@ impl From<domain::CreateDeviceResponse> for CreateDeviceResponseDto {
         Self {
             tree: value.tree,
             diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
+            items: value.items.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -2540,10 +2568,16 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_device_impl(&state, body.line_id, body.catalog_item_id, body.name)
-        .map(CreateDeviceResponseDto::from)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_devices_impl(
+        &state,
+        body.line_id,
+        body.catalog_item_id,
+        body.name,
+        body.quantity,
+    )
+    .map(CreateDeviceResponseDto::from)
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_device(

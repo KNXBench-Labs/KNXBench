@@ -1,5 +1,38 @@
 # Known limitations
 
+## U11 catalog batch scope (ISSUE-07)
+
+The product catalog can request 1–32 devices in one project command/undo
+step. Generated names use the entered base followed by a one-based index for
+multiple devices; the application does not deduplicate against pre-existing
+names. A selected line places the devices in that topology line, but **no
+physical addresses are allocated** (including when no device octets remain).
+Addresses must be assigned separately and validated by the address editor.
+This is a local project edit, not a KNX download or ETS-compatibility claim.
+
+An older server may ignore the additive `quantity` field and return a legacy
+single-device response. The web client then refreshes the returned project,
+warns that the requested batch was not confirmed, and does not retry. It
+cannot roll back a partial change already made by a different server. For a
+current server, quantity/name/line refusal happens before IDs are reserved;
+the core `Batch` command rolls back project changes if one child fails.
+If a response is lost after the request was sent or the server responds with
+an internal error, the client cannot know whether the batch was committed;
+it blocks a blind retry and directs the user to inspect or reload the project.
+Successful batch responses carry per-device diagnostics; a late core batch
+failure carries the zero-based child command index and its typed cause, which
+the catalog maps to the one-based device number (the reservation is child 0).
+
+Catalog creation checks the available `u32` device and communication-object
+ID ranges for the full requested quantity before calling the core allocator.
+The shared core allocator (`crates/knx-core/src/project.rs`) still uses unchecked
+`u32` increments for other mutation paths; this scoped catalog safeguard does
+not claim to harden every project operation at the maximum representable ID.
+
+Headless Chromium checked the catalog at 1440×900 and 400×700 against a
+local Vite page with mock catalog data, not a real manufacturer package. A
+native WebKitGTK run and real screen-reader announcements are not verified.
+
 ## Commissioning readiness and pre-write backup boundary (ADR-0049)
 
 Offline coverage of 103 locally installed product packages found 55/181

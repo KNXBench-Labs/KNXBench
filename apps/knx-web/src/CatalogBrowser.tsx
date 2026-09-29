@@ -1,4 +1,4 @@
-/** Overlay for browsing the product catalogue, installing packages, and creating devices. */
+/** Workbench view for browsing the product catalogue, installing packages, and creating devices. */
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import * as api from "./api";
@@ -10,9 +10,10 @@ import type {
   CatalogInstallCount,
   CatalogUnknownConstruct,
   CreationDiagnostic,
+  CreatedCatalogDevice,
 } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import Overlay from "./Overlay";
+
 import { useProductLanguage } from "./productLanguage";
 import { useTranslate } from "./i18n";
 import type { MessageKey, Translate } from "./i18n";
@@ -131,19 +132,19 @@ function describeCreationDiagnostic(t: Translate, diagnostic: CreationDiagnostic
   }
 }
 
-// T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog browser. Feeds T1's
-// `Command::CreateDevice` (backend-only since 2026-09-08). Built on the
-// shared `Overlay` shell (T31). The catalog search input is a combobox
+// T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
+// `Command::CreateDevice` (backend-only since 2026-09-08). The search input is a combobox
 // over the results list: ArrowUp/ArrowDown move a highlight and Enter
 // picks the highlighted item, pre-filling the name field exactly as
 // clicking the row does — it does not create the device, since creation
 // stays behind the name field's own Enter/Create.
 export default function CatalogBrowser(props: {
   lineId: number | null;
+  active?: boolean;
   onCreated: (tree: ProjectTree) => void;
   onClose: () => void;
 }) {
-  const { lineId, onCreated, onClose } = props;
+  const { lineId, active = true, onCreated, onClose } = props;
   const t = useTranslate();
   const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
@@ -154,12 +155,15 @@ export default function CatalogBrowser(props: {
   const [highlight, setHighlight] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [name, setName] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [error, setError] = useState<string | null>(null);
   const [installReport, setInstallReport] = useState<CatalogInstallReport | null>(null);
   const [diagnostics, setDiagnostics] = useState<CreationDiagnostic[]>([]);
+  const [createdItems, setCreatedItems] = useState<CreatedCatalogDevice[]>([]);
   const [installing, setInstalling] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdWithDiagnostics, setCreatedWithDiagnostics] = useState(false);
+  const [batchOutcomeUnconfirmed, setBatchOutcomeUnconfirmed] = useState(false);
   // Guards against a slower, earlier request's response landing after a
   // faster, later one's — the same stale-reply hazard `App.tsx`'s
   // `selectedDeviceIdRef` guards for device selection, applied here to a
@@ -168,6 +172,12 @@ export default function CatalogBrowser(props: {
   const filtersRef = useRef({ manufacturer: "", search: "" });
   const createInFlightRef = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const quantityNumber = Number(quantity);
+  const validQuantity = /^\d+$/.test(quantity) && quantityNumber >= 1 && quantityNumber <= 32;
+
+  useEffect(() => {
+    if (active) searchRef.current?.focus();
+  }, [active]);
 
   useEffect(() => {
     api.catalogManufacturers().then(setManufacturers).catch((e) => setError(api.errorMessage(e)));
@@ -199,10 +209,13 @@ export default function CatalogBrowser(props: {
   }, [manufacturer, search, language]);
 
   function pick(item: CatalogItem) {
+    if (batchOutcomeUnconfirmed) return; // Inspect/reload the project before another request.
     setSelected(item);
     setName(item.name ?? "");
+    setQuantity("1");
     setError(null);
     setDiagnostics([]);
+    setCreatedItems([]);
     setCreatedWithDiagnostics(false);
   }
 
@@ -260,21 +273,37 @@ export default function CatalogBrowser(props: {
   }
 
   async function create() {
-    if (!selected || name.trim() === "" || createInFlightRef.current || createdWithDiagnostics) return;
+    if (!selected || name.trim() === "" || !validQuantity || createInFlightRef.current || createdWithDiagnostics) return;
     createInFlightRef.current = true;
     setCreating(true);
     setError(null);
     try {
-      const response = await api.createDevice(lineId, selected.id, name.trim());
+      const response = await api.createDevice(lineId, selected.id, name.trim(), quantityNumber);
       onCreated(response.tree);
       setDiagnostics(response.diagnostics);
-      if (response.diagnostics.length === 0) {
+      setCreatedItems(response.items ?? []);
+      if (quantityNumber > 1 && response.items?.length !== quantityNumber) {
+        // An older server may ignore `quantity` and create just one device.
+        // The returned tree is real; never retry silently or claim success.
+        setError(t("catalog.batchUnsupported"));
+        setBatchOutcomeUnconfirmed(true);
+        setCreatedWithDiagnostics(true);
+      } else if (quantityNumber === 1 && response.diagnostics.length === 0) {
         onClose();
       } else {
         setCreatedWithDiagnostics(true);
       }
     } catch (e) {
-      setError(api.errorMessage(e));
+      const status = (e as { status?: unknown } | null)?.status;
+      if (quantityNumber > 1 && (typeof status !== "number" || status >= 500)) {
+        // A lost response does not prove the server rolled back. Never invite
+        // a blind retry that could make a second batch of the same devices.
+        setError(`${api.errorMessage(e)} ${t("catalog.unconfirmedBatch")}`);
+        setBatchOutcomeUnconfirmed(true);
+        setCreatedWithDiagnostics(true);
+      } else {
+        setError(api.errorMessage(e));
+      }
     } finally {
       createInFlightRef.current = false;
       setCreating(false);
@@ -282,7 +311,11 @@ export default function CatalogBrowser(props: {
   }
 
   return (
-    <Overlay label={t("catalog.title")} onClose={onClose} initialFocusRef={searchRef}>
+    <section className="catalog-workspace" aria-label={t("catalog.title")} hidden={!active}>
+      <header className="catalog-workspace-heading">
+        <h1>{t("catalog.title")}</h1>
+        <button type="button" onClick={onClose}>{t("catalog.close")}</button>
+      </header>
       <label className="catalog-install">
         {installing ? t("catalog.installing") : t("catalog.installLabel")}
         <input
@@ -404,7 +437,8 @@ export default function CatalogBrowser(props: {
             id={`catalog-option-${i}`}
             role="option"
             aria-selected={selected?.id === item.id}
-            className={selected?.id === item.id ? "search-result selected" : "search-result"}
+            aria-disabled={batchOutcomeUnconfirmed}
+            className={`${selected?.id === item.id ? "search-result selected" : "search-result"}${batchOutcomeUnconfirmed ? " disabled" : ""}`}
             onClick={() => pick(item)}
           >
             {item.name ?? item.id}
@@ -414,21 +448,52 @@ export default function CatalogBrowser(props: {
         ))}
       </ul>
       {selected && !createdWithDiagnostics && (
-        <div className="catalog-create-row">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void create();
-            }}
-            placeholder={t("catalog.deviceNamePlaceholder")}
-          />
-          <button onClick={create} disabled={name.trim() === "" || creating}>
-            {creating ? t("catalog.creating") : t("catalog.create")}
-          </button>
-        </div>
+        <>
+          <div className="catalog-create-row">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void create();
+              }}
+              placeholder={t("catalog.deviceNamePlaceholder")}
+              aria-label={t("catalog.deviceNamePlaceholder")}
+            />
+            <label>{t("catalog.quantity")}
+              <input type="number" min="1" max="32" step="1" value={quantity}
+                aria-label={t("catalog.quantity")} onChange={(e) => setQuantity(e.target.value)} />
+            </label>
+            <button onClick={create} disabled={name.trim() === "" || !validQuantity || creating}>
+              {creating ? t("catalog.creating") : t("catalog.create")}
+            </button>
+          </div>
+          <section className="catalog-create-preview" aria-live="polite">
+            <h3>{t("catalog.preview")}</h3>
+            {!validQuantity ? <p>{t("catalog.quantityInvalid")}</p> : (
+              <ul>{Array.from({ length: quantityNumber }, (_, index) => (
+                <li key={index}>{quantityNumber === 1 ? name.trim() : `${name.trim()} ${index + 1}`}</li>
+              ))}</ul>
+            )}
+            <p>{lineId === null ? t("catalog.noTargetLine") : t("catalog.targetLine", { lineId })}</p>
+            <p>{t("catalog.addressUnassigned")}</p>
+          </section>
+        </>
       )}
-      {diagnostics.length > 0 && (
+      {createdItems.length > 1 ? (
+        <section className="catalog-diagnostics" aria-live="polite">
+          <h3>{t("catalog.diagnosticsHeading")}</h3>
+          <ul>{createdItems.map((item) => (
+            <li className="catalog-created-item" key={item.deviceId}>
+              <strong>{t("catalog.itemLabel", { index: item.index, name: item.name })}</strong>
+              {item.diagnostics.length > 0 ? (
+                <ul>{item.diagnostics.map((diagnostic, index) => (
+                  <li key={`${diagnostic.kind}-${index}`}>{describeCreationDiagnostic(t, diagnostic)}</li>
+                ))}</ul>
+              ) : <span> — {t("catalog.noDiagnostics")}</span>}
+            </li>
+          ))}</ul>
+        </section>
+      ) : diagnostics.length > 0 && (
         <section className="catalog-diagnostics" aria-live="polite">
           <h3>{t("catalog.diagnosticsHeading")}</h3>
           <ul>
@@ -440,11 +505,11 @@ export default function CatalogBrowser(props: {
       )}
       {createdWithDiagnostics && (
         <div className="catalog-create-row">
-          <span>{t("catalog.createdWithDiagnostics")}</span>
+          <span>{error ? t("catalog.creationNeedsReview") : quantityNumber > 1 ? t("catalog.createdMany") : t("catalog.createdWithDiagnostics")}</span>
           <button onClick={onClose}>{t("catalog.done")}</button>
         </div>
       )}
       {error && <span className="field-error">{error}</span>}
-    </Overlay>
+    </section>
   );
 }

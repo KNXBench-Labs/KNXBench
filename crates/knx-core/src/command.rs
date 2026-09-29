@@ -30,10 +30,9 @@ use crate::validation::{
 };
 use crate::{GroupAddress, IndividualAddress};
 
-/// A single reversible mutation. `apply` performs the mutation on
-/// `installations[0]` — the model supports multiple installations, but no
-/// current command targets any other; routing a command to a specific
-/// installation is future work, not silently assumed solved here.
+/// A single reversible mutation. Most commands target the first installation;
+/// `CreateDevice` can explicitly target the installation owning a selected
+/// line. Other commands still need per-installation routing.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     SetIndividualAddress {
@@ -418,6 +417,13 @@ pub enum CommandError {
         kind: IdKind,
         id: u32,
     },
+    /// A child of an atomic batch failed. The zero-based index includes
+    /// internal commands such as `ReserveIds`; callers can map it to their
+    /// own item numbering without losing the typed underlying error.
+    BatchItem {
+        index: usize,
+        source: Box<CommandError>,
+    },
     NothingToUndo,
     NothingToRedo,
 }
@@ -528,6 +534,9 @@ impl fmt::Display for CommandError {
                 f,
                 "{kind} id {id} is already in use; refusing to create a second entity under it"
             ),
+            CommandError::BatchItem { index, source } => {
+                write!(f, "batch command {}: {source}", index + 1)
+            }
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
             CommandError::NothingToRedo => write!(f, "nothing to redo"),
         }
@@ -1652,13 +1661,13 @@ impl Command {
                 // create does not consume an id).
                 let ids_before = project.ids.clone();
                 let mut inverses = Vec::with_capacity(commands.len());
-                for cmd in commands {
+                for (index, cmd) in commands.iter().enumerate() {
                     match cmd.apply(project) {
                         Ok(inverse) => inverses.push(inverse),
                         Err(e) => {
                             // Roll back everything this batch already
                             // applied, in reverse order, before surfacing
-                            // the original error — `apply`'s contract is
+                            // the original error with its child index — `apply`'s contract is
                             // "leave `project` untouched on `Err`", and that
                             // contract is per-`Command`, including `Batch`
                             // itself.
@@ -1668,7 +1677,10 @@ impl Command {
                                 );
                             }
                             project.ids = ids_before;
-                            return Err(e);
+                            return Err(CommandError::BatchItem {
+                                index,
+                                source: Box::new(e),
+                            });
                         }
                     }
                 }
@@ -4112,7 +4124,13 @@ mod tests {
             },
         ]);
         let result = stack.do_command(&mut project, batch);
-        assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
+        assert_eq!(
+            result,
+            Err(CommandError::BatchItem {
+                index: 1,
+                source: Box::new(CommandError::DeviceNotFound(DeviceId(99))),
+            })
+        );
         assert_eq!(project, before);
         assert!(!stack.can_undo());
     }
@@ -4844,9 +4862,12 @@ mod id_integrity_tests {
         );
         assert_eq!(
             result,
-            Err(CommandError::IdInUse {
-                kind: IdKind::GroupAddress,
-                id: 1,
+            Err(CommandError::BatchItem {
+                index: 0,
+                source: Box::new(CommandError::IdInUse {
+                    kind: IdKind::GroupAddress,
+                    id: 1,
+                }),
             })
         );
         assert_eq!(format!("{p:#?}"), before);
@@ -4939,7 +4960,11 @@ mod id_integrity_tests {
             Command::CreateArea { area: area(1, 2) },
         ])
         .apply(&mut p);
-        assert!(matches!(result, Err(CommandError::IdInUse { .. })));
+        assert!(matches!(
+            result,
+            Err(CommandError::BatchItem { index: 1, source })
+                if matches!(*source, CommandError::IdInUse { .. })
+        ));
         assert_eq!(format!("{p:#?}"), before);
     }
 }

@@ -33,6 +33,20 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("posts catalog quantities additively without changing the single-device contract", async () => {
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(null, "cat-1", "Actuator");
+    let [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/devices");
+    expect(JSON.parse(init.body as string)).toEqual({ catalogItemId: "cat-1", name: "Actuator" });
+
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(9, "cat-1", "Actuator", 3);
+    [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/devices");
+    expect(JSON.parse(init.body as string)).toEqual({ lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3 });
+  });
+
   it("preserves structured 422 diagnostics and includes syntax in the toast text without rewriting raw detail", async () => {
     const refusal = { error: "malformed individual address", detail: "malformed individual address", kind: "individual_address", syntax: "area.line.device", example: "1.1.10" };
     mockFetchOnce(refusal, false, 422);

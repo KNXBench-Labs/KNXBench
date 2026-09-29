@@ -2289,6 +2289,15 @@ pub fn install_catalog_package_impl(
 pub struct CreateDeviceResponse {
     pub tree: ProjectTree,
     pub diagnostics: Vec<CreationDiagnostic>,
+    pub items: Vec<CreatedCatalogDevice>,
+}
+
+#[derive(Debug)]
+pub struct CreatedCatalogDevice {
+    pub index: u32,
+    pub device_id: knx_core::DeviceId,
+    pub name: String,
+    pub diagnostics: Vec<CreationDiagnostic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2378,11 +2387,48 @@ pub fn create_device_impl(
     catalog_item_id: String,
     name: String,
 ) -> Result<CreateDeviceResponse, String> {
+    create_devices_impl(state, line_id, catalog_item_id, name, 1)
+}
+
+/// The first batch child reserves IDs, so child index 1 is catalog item 1.
+/// Keep the underlying typed error's wording while identifying a late
+/// failure's exact device; do not report an ID reservation as a device.
+fn catalog_creation_error(quantity: u32, error: knx_core::CommandError) -> String {
+    match error {
+        knx_core::CommandError::BatchItem { index, source }
+            if quantity > 1 && index > 0 && index <= quantity as usize =>
+        {
+            format!("item {index}: {source}")
+        }
+        other => other.to_string(),
+    }
+}
+
+/// Creates one or more devices as a single undoable command. No physical
+/// addresses are inferred: placement and individual addressing are distinct
+/// operations, even when the requested line has no available address.
+pub fn create_devices_impl(
+    state: &AppState,
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    quantity: u32,
+) -> Result<CreateDeviceResponse, String> {
+    const MAX_CATALOG_QUANTITY: u32 = 32;
+    if !(1..=MAX_CATALOG_QUANTITY).contains(&quantity) {
+        return Err(format!(
+            "catalog quantity must be between 1 and {MAX_CATALOG_QUANTITY}"
+        ));
+    }
+    let base_name = name.trim();
+    if base_name.is_empty() {
+        return Err("device name must not be blank".into());
+    }
     // Step 1 (design doc §3.1): everything the product database can tell
     // us, gathered while only `product_db` is locked — dropped before
     // `project` is locked below, so the two mutexes are never held at
     // once.
-    let (product_ref, program_ref, seeds, mut diagnostics) = {
+    let (product_ref, program_ref, seeds, base_diagnostics) = {
         let products = state
             .product_db
             .as_ref()
@@ -2438,55 +2484,126 @@ pub fn create_device_impl(
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
 
-    let device_id = project.ids.next_device_id();
-    let mut com_objects = Vec::with_capacity(seeds.len());
-    let mut enrich_inputs = Vec::with_capacity(seeds.len());
-    for (ref_id, view) in &seeds {
-        let com_id = project.ids.next_com_object_instance_id();
-        com_objects.push(knx_core::ComObjectInstance {
-            id: com_id,
-            source: knx_core::SourceRef {
-                path: ref_id.clone(),
-                ets_id: ref_id.clone(),
-            },
-            device: device_id,
-            number: view.number.unwrap_or(0) as u16,
-            text: knx_core::Override::Absent,
-            description: knx_core::Override::Absent,
-            dpt: knx_core::Override::Absent,
-            flags: knx_core::ResolvedFlags::none(),
-            size: None,
-            is_active: true,
-            links: vec![],
-            module_instance: None,
-        });
-        enrich_inputs.push((com_id, ref_id.clone(), view.clone()));
-    }
-    let device = knx_core::DeviceInstance {
-        id: device_id,
-        source: knx_core::SourceRef {
-            path: format!("KB-DEV-{}", device_id.0),
-            ets_id: format!("KB-DEV-{}", device_id.0),
-        },
-        name,
-        description: None,
-        address: None,
-        product_ref,
-        program_ref,
-        commissioning: knx_core::CommissioningState::default(),
-        visibility_calculated: true,
-        com_objects: com_objects.iter().map(|c| c.id).collect(),
-        binary_data: vec![],
+    // Locate the owning installation first. A line in the second installation
+    // must not be forced into the first one, and an unknown line must not
+    // consume IDs or create any devices.
+    let installation = line_id
+        .map(|id| {
+            project
+                .installations
+                .iter()
+                .find(|i| {
+                    i.topology
+                        .lines
+                        .iter()
+                        .any(|line| line.id == knx_core::LineId(id))
+                })
+                .map(|i| i.id)
+                .ok_or_else(|| format!("item 1: target line {id} not found"))
+        })
+        .transpose();
+    let installation = match installation {
+        Ok(installation) => installation,
+        Err(reason) => {
+            // This used to fail inside `CreateDevice::apply`, which logged the
+            // refusal. Keep that audit trail even though we now reject before
+            // reserving IDs and building the batch.
+            let source = if quantity == 1 {
+                "CreateDevice"
+            } else {
+                "Batch"
+            };
+            log_outcome(
+                state,
+                source,
+                source.into(),
+                None,
+                &Err::<(), _>(reason.clone()),
+            );
+            return Err(reason);
+        }
     };
-    let cmd = knx_core::Command::CreateDevice {
-        device,
-        com_objects,
-        // A genuine creation, not an undo: nothing has been enriched yet,
-        // so there are no program defaults to restore. The enrichment pass
-        // below is what puts the first ones there.
-        program_defaults: Vec::new(),
-        installation: None,
-        line: line_id.map(knx_core::LineId),
+    let mut ids = project.ids.clone();
+    // The core allocator increments u32 counters. Check the complete batch
+    // before touching any counter: an imported project may already be close
+    // to exhaustion, and wrapping would risk duplicate IDs in a release build.
+    let max_id = u128::from(u32::MAX);
+    if u128::from(ids.peek_device()) + u128::from(quantity) > max_id
+        || u128::from(ids.peek_com_object_instance()) + (seeds.len() as u128) * u128::from(quantity)
+            > max_id
+    {
+        return Err("catalog ID range exhausted".into());
+    }
+    let mut commands = Vec::with_capacity(quantity as usize);
+    let mut created = Vec::with_capacity(quantity as usize);
+    for index in 1..=quantity {
+        let device_id = ids.next_device_id();
+        let device_name = if quantity == 1 {
+            // The original single-create API stores the caller's exact name.
+            // The web UI trims its own input, but direct clients may have
+            // deliberate spacing that a new batch feature must not erase.
+            name.clone()
+        } else {
+            format!("{base_name} {index}")
+        };
+        let mut com_objects = Vec::with_capacity(seeds.len());
+        let mut enrich_inputs = Vec::with_capacity(seeds.len());
+        for (ref_id, view) in &seeds {
+            let com_id = ids.next_com_object_instance_id();
+            com_objects.push(knx_core::ComObjectInstance {
+                id: com_id,
+                source: knx_core::SourceRef {
+                    path: ref_id.clone(),
+                    ets_id: ref_id.clone(),
+                },
+                device: device_id,
+                number: view.number.unwrap_or(0) as u16,
+                text: knx_core::Override::Absent,
+                description: knx_core::Override::Absent,
+                dpt: knx_core::Override::Absent,
+                flags: knx_core::ResolvedFlags::none(),
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            });
+            enrich_inputs.push((com_id, ref_id.clone(), view.clone()));
+        }
+        commands.push(knx_core::Command::CreateDevice {
+            device: knx_core::DeviceInstance {
+                id: device_id,
+                source: knx_core::SourceRef {
+                    path: format!("KB-DEV-{}", device_id.0),
+                    ets_id: format!("KB-DEV-{}", device_id.0),
+                },
+                name: device_name.clone(),
+                description: None,
+                address: None,
+                product_ref: product_ref.clone(),
+                program_ref: program_ref.clone(),
+                commissioning: knx_core::CommissioningState::default(),
+                visibility_calculated: true,
+                com_objects: com_objects.iter().map(|c| c.id).collect(),
+                binary_data: vec![],
+            },
+            com_objects,
+            program_defaults: Vec::new(),
+            installation,
+            line: line_id.map(knx_core::LineId),
+        });
+        created.push((index, device_id, device_name, enrich_inputs));
+    }
+    let cmd = if quantity == 1 {
+        commands.pop().expect("exactly one device requested")
+    } else {
+        // Reserve and create as one undoable command. The core's Batch
+        // rollback restores the complete project if any item fails.
+        let mut batch = Vec::with_capacity(commands.len() + 1);
+        batch.push(knx_core::Command::ReserveIds {
+            through: ids.clone(),
+        });
+        batch.extend(commands);
+        knx_core::Command::Batch(batch)
     };
     // Captured before `do_command` consumes `cmd` below — same convention
     // `apply()` uses, whose `log_outcome` helper this reuses so device
@@ -2494,14 +2611,25 @@ pub fn create_device_impl(
     // itself: this function's return type carries creation diagnostics
     // `apply()` doesn't produce, and needs the enrichment pass below run
     // under the same `project` lock before releasing it).
-    let cmd_desc = format!("{cmd:?}");
+    let cmd_desc = if quantity == 1 {
+        format!("{cmd:?}")
+    } else {
+        format!("Catalog batch create: {quantity} devices")
+    };
     let cmd_name = command_name(&cmd);
     let result = {
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-        stack.do_command(project, cmd).map_err(|e| e.to_string())
+        stack
+            .do_command(project, cmd)
+            .map_err(|error| catalog_creation_error(quantity, error))
     };
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
     result?;
+    if quantity == 1 {
+        // Retain the legacy single-command undo/log shape, without leaking
+        // allocator IDs when that command was rejected.
+        project.ids = ids;
+    }
 
     // Step 3 (design doc §3.3): seed enrichment once, same mapping
     // `knx_productdb::enrich()` uses on import, not pushed onto the undo
@@ -2511,12 +2639,23 @@ pub fn create_device_impl(
     // inside `ComObjectInstance`, the ADR-0027 side-table entries travel
     // in `CreateDevice::program_defaults`. `issues` (ambiguous DPT lists)
     // are returned as creation diagnostics.
-    let mut issues = Vec::new();
-    for (com_id, ref_id, view) in &enrich_inputs {
-        knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
+    let mut diagnostics = Vec::new();
+    let mut items = Vec::with_capacity(created.len());
+    for (index, device_id, name, enrich_inputs) in created {
+        let mut issues = Vec::new();
+        for (com_id, ref_id, view) in &enrich_inputs {
+            knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
+        }
+        let mut item_diagnostics = base_diagnostics.clone();
+        item_diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
+        diagnostics.extend(item_diagnostics.iter().cloned());
+        items.push(CreatedCatalogDevice {
+            index,
+            device_id,
+            name,
+            diagnostics: item_diagnostics,
+        });
     }
-
-    diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
@@ -2532,6 +2671,7 @@ pub fn create_device_impl(
             last_saved_at.as_deref(),
         ),
         diagnostics,
+        items,
     })
 }
 
@@ -4865,6 +5005,44 @@ mod tests {
     }
 
     #[test]
+    fn catalog_batch_refuses_out_of_range_quantity_and_empty_name_before_database_access() {
+        let state = state_with_one_installation();
+        for quantity in [0, 33] {
+            let error =
+                create_devices_impl(&state, None, "item".into(), "Actuator".into(), quantity)
+                    .unwrap_err();
+            assert_eq!(error, "catalog quantity must be between 1 and 32");
+        }
+        assert_eq!(
+            create_devices_impl(&state, None, "item".into(), "  ".into(), 2).unwrap_err(),
+            "device name must not be blank"
+        );
+        assert_eq!(
+            create_devices_impl(&state, None, "item".into(), "Actuator".into(), 32).unwrap_err(),
+            "no product database configured"
+        );
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().unwrap();
+        assert!(project.installations[0].topology.unassigned.is_empty());
+        assert_eq!(project.ids.peek_device(), 0);
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+    }
+
+    #[test]
+    fn catalog_batch_error_reports_the_failed_device_index_without_losing_its_cause() {
+        let error = knx_core::CommandError::BatchItem {
+            index: 2, // internal command 0 reserves IDs, device 2 is command 2
+            source: Box::new(knx_core::CommandError::DeviceNotFound(knx_core::DeviceId(
+                7,
+            ))),
+        };
+        assert_eq!(
+            catalog_creation_error(3, error),
+            "item 2: device 7 not found"
+        );
+    }
+
+    #[test]
     fn scan_reconciliation_uses_a_matching_line_in_a_later_installation() {
         let state = state_with_one_installation();
         {
@@ -5032,6 +5210,36 @@ mod tests {
         let (_dir, state) = state_with_product_db();
         let result = create_device_impl(&state, None, "nope".into(), "D".into());
         assert_eq!(result.unwrap_err(), "catalog item not found");
+    }
+
+    #[test]
+    fn quantity_one_preserves_the_existing_api_name_exactly() {
+        let (_dir, state) = state_with_product_db();
+        let created =
+            create_device_impl(&state, None, "M-1_CI-1".into(), "  Actuator  ".into()).unwrap();
+        assert_eq!(
+            created.tree.installations[0].unassigned[0].name,
+            "  Actuator  "
+        );
+    }
+
+    #[test]
+    fn catalog_batch_refuses_exhausted_device_or_communication_object_ids_without_mutation() {
+        for (device, com_object) in [(u32::MAX, 0), (0, u32::MAX)] {
+            let (_dir, state) = state_with_product_db();
+            {
+                let mut project = state.project.lock().unwrap();
+                project.as_mut().unwrap().ids =
+                    knx_core::IdAllocators::from_counts(device, 0, 0, com_object, 0, 0, 0, 0, 0);
+            }
+            let before = state.project.lock().unwrap().clone();
+            assert_eq!(
+                create_devices_impl(&state, None, "M-1_CI-1".into(), "Actuator".into(), 2)
+                    .unwrap_err(),
+                "catalog ID range exhausted"
+            );
+            assert_eq!(*state.project.lock().unwrap(), before);
+        }
     }
 
     // Regression for fix-round-1 finding 1: `create_device_impl` calls

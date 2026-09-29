@@ -195,11 +195,11 @@
 
 **Interfaces:** Catalog is a workbench view, not an `Overlay`. Multi-create submits one bounded batch request and applies one atomic `Command::Batch`; diagnostics identify the item/index that failed.
 
-- [ ] Add navigation tests proving Catalog occupies the centre workspace and retains search/selection while switching ordinary project views.
-- [ ] Define and validate quantity bounds, generated names, target line, and address allocation; do not guess addresses when the line has no free valid slot.
-- [ ] Add server tests proving all-or-nothing creation and one undo removes the full batch.
-- [ ] Implement quantity and preview in the catalog before submission, then render per-device diagnostics without hiding successful metadata.
-- [ ] Verify single-device creation remains the quantity-one path, not a separate implementation.
+- [x] Add navigation tests proving Catalog occupies the centre workspace and retains search/selection while switching ordinary project views. (`App.test.tsx`, including narrow-screen navigation.)
+- [x] Define and validate quantity bounds, generated names, target line, and address allocation; do not guess addresses when the line has no free valid slot. (1–32; no automatic physical address; `domain.rs`, HTTP corpus test and guide.)
+- [x] Add server tests proving all-or-nothing creation and one undo removes the full batch. (`http_catalog_to_device.rs`; `command.rs` also identifies and rolls back a late failing child.)
+- [x] Implement quantity and preview in the catalog before submission, then render per-device diagnostics without hiding successful metadata. (`CatalogBrowser.test.tsx`; old-server partial result is reported without retry.)
+- [x] Verify single-device creation remains the quantity-one path, not a separate implementation. (`create_device_impl` delegates to `create_devices_impl(..., 1)`; API omission test preserves the old body.)
 
 ### ISSUE-08: Product-data fidelity and communication-object organization
 

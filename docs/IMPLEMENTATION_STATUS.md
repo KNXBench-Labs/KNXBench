@@ -28,6 +28,16 @@
   built `xtask` checked layering, 304 well-formed headers / 161 absent at
   the ceiling, 397 links across 214 Markdown files and the corpus gate;
   `git diff --check` was clean.
+- After rebasing over commissioning readiness, the branch passed build,
+  TypeScript and 78 web files / 1192 tests, Rust fmt/Clippy and 125 suites /
+  2551 passed, 0 failed, 147 ignored, plus its worktree-built `xtask` gates.
+  The feature merged at `e8f4808`; on root `main` at `78ae0b9` (which also
+  includes separately authorized commissioning documentation and handover),
+  the same web and Rust totals passed again (no `SKIP:` notices). Root-built
+  `xtask` checked layering, headers
+  (308 well-formed / 161 absent), 397 links in 229 Markdown files and the
+  corpus gate. The remote readback matched `78ae0b9`, including the U10 merge.
+  Native WebKitGTK and live KNX discovery were **not** verified.
 - The U2 AppImage and unpackaged server both sent the search and received no
   response (RESEARCH §20.1, KNOWN_LIMITATIONS §79). This package neither
   changes KNXnet/IP discovery nor claims to fix it. A wire capture or

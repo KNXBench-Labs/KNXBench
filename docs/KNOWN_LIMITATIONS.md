@@ -5265,6 +5265,16 @@ privileges this session lacks. The network/gateway reason for the empty
 result remains open, and a manually entered endpoint is the fallback. No
 protocol retry or packaging workaround is justified by this result alone.
 
+**U10 endpoint UI boundary (2026-09-29).** The bus monitor now exposes a
+separate host and port (default 3671), preserving the existing single-string
+request and stored preference. It validates the port before calling the API
+and explains that its current tunnel accepts numeric IPv4 only
+(`bus_routes.rs::start_monitor` parses `SocketAddrV4`). Legacy hostname or
+IPv6 preferences remain visible, not silently discarded, but cannot start a
+tunnel. This improves the manual unicast fallback; it does **not** repair or
+validate discovery on the real LAN. A wire capture or gateway-side evidence
+is still needed to locate the missing multicast response.
+
 **Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
 API had no discovery route —
 `grep -rn discover apps/knx-server/src/` finds none — so the shipped

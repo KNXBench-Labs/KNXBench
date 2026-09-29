@@ -5557,6 +5557,18 @@ host and gateway-side evidence are needed before changing protocol logic or
 claiming a network fix. The manually entered unicast endpoint remains the
 supported fallback. See KNOWN_LIMITATIONS §79.
 
+**[V] U10 contract review (2026-09-29).** The bus-monitor start route parses
+`SocketAddrV4` (`apps/knx-server/src/bus_routes.rs::start_monitor`) and the
+KNXnet/IP tunnel also takes `SocketAddrV4` (`crates/knx-net/src/client.rs`).
+The UI can safely split a stored or discovered `host:port` into two labelled
+fields and recompose it only for the unchanged start request, but must reject
+IPv6 and hostnames explicitly rather than imply the transport supports them.
+`gatewayEndpoint.test.ts` and `BusMonitorPanel.test.tsx` cover this contract
+with documentation-range addresses and mocked APIs; they are **not** a real
+discovery round trip. U2's multicast send/no-response observation remains
+unchanged. No evidence justifies a packaging-specific patch, protocol retry,
+or a claimed discovery fix. The manual IPv4 endpoint remains first-class.
+
 ### 20.2 Line membership and the individual-address editor
 
 **[D]** *Architecture v03.00.02 AS* §3.1, PDF p. 10 (page footer 10/26):

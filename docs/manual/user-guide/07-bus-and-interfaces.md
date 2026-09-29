@@ -58,22 +58,29 @@ through `knx bus route-monitor` and `knx bus route-send`, both described in
 
 ## Connecting the bus monitor
 
-Open **Bus monitor** from the navigation sidebar. Type your interface's address into
-the **Gateway address** field as `host:port` and press **Connect**.
+Open **Bus monitor** from the navigation sidebar. Enter the interface's numeric
+IPv4 address in **Gateway host** and its UDP port in **Gateway port** (3671 by
+default), then press **Connect**. A blank port uses 3671; a port outside 1–65535
+is rejected before any connection. This tunnel currently accepts IPv4 only:
+hostnames and IPv6 addresses remain visible if they were saved previously, but
+the form explains why it cannot connect to them.
 
 If you saved a preferred gateway in Settings, a newly opened monitor starts with
 that address. You can replace it without changing the saved preference. **Discover
 gateways** lets you select a discovered endpoint; the selection does not connect
 until you press Connect.
 
-![The KNXBench bus monitor before a session starts, with the gateway address field and the Connect button](../../assets/screenshots/porcelain-bus-monitor.png)
+![The KNXBench bus monitor before a session starts, with separate gateway host and port fields and the Connect button](../../assets/screenshots/porcelain-bus-monitor.png)
+
+The pictured empty discovery result uses a local UI test fixture, not a live
+measurement of a KNX network.
 
 Notice the eyebrow above the title: *KNXnet/IP · Tunnelling*. That is the panel
 telling you which transport it uses, and it is the only one it offers. The telegram
 table below is empty because no session is running yet.
 
-While a session runs, the gateway field is locked — KNXBench tells you to *"Disconnect
-the running session before changing the gateway address."* Once connected, the panel
+While a session runs, both gateway fields are locked — KNXBench tells you to
+*"Disconnect the running session before changing the gateway address."* Once connected, the panel
 shows `Session <id>`, followed by the individual address the interface assigned to
 your session.
 

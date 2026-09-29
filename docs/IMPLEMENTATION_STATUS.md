@@ -1,5 +1,12 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — One live read: which union member ETS wrote on 1.1.11
+
+Read-only, with the maintainer's go: `4B12h` on 1.1.11 (`A-0019-13-B655`) is
+`01h`, the conditional member `UP-1227`, not `UP-33` (230). Four candidate
+rules all predict that octet, so no rule is implemented and the program stays
+refused (RESEARCH §19.12). No write; no code change.
+
 ## 2026-09-29 — The house's remaining refusals, traced to their evidence (docs only)
 
 No code change. RESEARCH §19.12 now explains each refusal left in the

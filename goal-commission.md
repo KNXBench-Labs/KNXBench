@@ -404,12 +404,97 @@ findings were stale commissioning rows (E1, ROADMAP, §7/§101/§104/§136,
 spec status), corrected in the K10 commit. Handover: `.ai/CURRENT_STATE.md`
 2026-09-29 K10 entry.
 
+## 3b. Second stage: the PDF findings (user, 2026-09-29)
+
+User decision 2026-09-29: *"alle Findings sollen bearbeitet werden. funk knx
+geraete habe ich nicht, daher kann ich sie nicht testen. trotzdem sollte es
+implementiert werden."* Scope, chosen the same day: the five gaps of
+RESEARCH §19.5 **plus RF** (domain address, RF serial number and
+configuration). Everything else in the "not relevant" list of §19.5 becomes
+a later goal (§3c).
+
+Rules on top of §1/§2:
+
+- **RF is simulator-only.** The user has no RF device. Every RF result is
+  labelled "simulator-verified, never run on RF hardware" in code, docs and
+  CLI output. Claim no RF compatibility.
+- **Every [W] step still needs its own go** (§1.2). Master Reset and
+  address reset are destructive: offer them for `1.1.67` only if the user
+  asks, and plan the re-download that restores option C afterwards.
+- **No access key is ever guessed.** A key comes from the operator or from
+  the project, never from a default list or a search.
+
+### K11 — Access keys on a download (RESEARCH §19.5 item 4, offline)
+
+The download path authorises with an operator key (CLI option and server
+field, never logged) or with a non-default `Installation/@BCUKey` from the
+project. A `MemoryRefused`/`PropertyRefused` after `Skip` names a missing
+key as one possible cause. RED tests in the simulator against a device with
+protected memory. No live step: the test device has no key, and setting one
+would be a write this goal does not need.
+
+### K12 — Individual address by serial number, TP (item 1)
+
+`A_IndividualAddressSerialNumber_Read/_Response/_Write` encoders (AL),
+`NM_IndividualAddress_SerialNumber_Read` and `_Write` (MP §2.4/§2.5), the
+serial number read from the project or from `PID_SERIAL_NUMBER`. CLI and
+server command next to K6's. **[W]** one live write on `1.1.67`, to a free
+address and back, like K6. Reading its serial number first is a read-only
+step (§1.3).
+
+### K13 — `NM_IndividualAddress_Reset` (item 2)
+
+MP §2.18. Resets every device in programming mode to `FFFFh`. **[W]**
+optional, only on the user's request.
+
+### K14 — Master Reset (item 5)
+
+`A_Restart` with the master-reset type and erase code (AL, MP `DM_Restart`).
+Simulator first. **[W]** only on the user's request, followed by the
+option C re-download.
+
+### K15 — Partial download for `070nh` (item 3)
+
+Research first: what the product file's load procedures say about a partial
+download for mask `070nh`, against CP §3.5.3. Implement only what is
+documented; otherwise record the boundary. **[W]** optional.
+
+### K16 — RF domain address (simulator only)
+
+`A_DomainAddress_*`, `A_DomainAddressSelective_Read` and
+`A_DomainAddressSerialNumber_*` (AL), the domain-address procedures of MP
+§2.7–§2.14 for RF, and the cEMI RF additional information they need. A
+simulated RF device answers them.
+
+### K17 — RF device configuration (simulator only)
+
+CP §2.3 (RF domain), §3.6 (RF bidirectional: identification,
+individualisation, parameter download) and §3.7 (RF unidirectional:
+identification, individualisation, group-address calculation), on top of
+K12 and K16.
+
+### K18 — Close the second stage
+
+Like K10: review all packages, gates on the merged `main`, the
+commissioning rows updated, handover.
+
+## 3c. Later goals (not this stage)
+
+Each gets its own goal file when the user asks for it: Powerline (PL110,
+PL132), KNX IP device configuration (CP §3.9, masks `5705h`/`57B0h`),
+coupler filter tables (masks `0912h`/`091Ah`, CP §3.10–§3.12),
+`NM_Router_Scan`/`NM_SubnetworkDevices_Scan`, KNX Data Secure
+(`DM_SecureSync_*`, CP §1.5), Easy Modes (PB §5, Ctrl §6), USB interface
+configuration (CP §3.13).
+
 ---
 
 ## 4. Completion condition
 
 Finish only when:
 
+- The second stage (§3b, K11–K18) is done the same way: every package
+  with evidence, RF labelled simulator-only, every [W] run or deferred.
 - K1–K7 are done with evidence. Every **[W]** step has run with the user's
   go, or the user has explicitly deferred it.
 - Every entry from §0.2 is lifted with evidence or accepted by the user as a

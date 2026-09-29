@@ -295,6 +295,14 @@ pub fn build_download_image(
                 // an illegal one is refused here.
                 types.value(param_ref, observed_value)?;
             }
+            // A `Rename`/`ParameterBlockRename` leaf only retitles a
+            // `ParameterBlock` (corpus: 326 of them, every one an empty
+            // leaf under a `when` naming a `ParameterBlock`). The image
+            // holds no titles, so the walk leaving it unrecognized decides
+            // nothing here. Anything *below* one is still named by its own
+            // `RefBelowSkippedNode` and still refuses the image.
+            Diagnostic::UnrecognizedNode { kind, .. }
+                if kind == "Rename" || kind == "ParameterBlockRename" => {}
             _ => undecided.push(scoped.clone()),
         }
     }
@@ -1362,6 +1370,33 @@ mod tests {
         // P-1 at octet 11 is the first octet after the table: allowed.
         let image = build(PROGRAM, &[], vec![]).expect("builds");
         assert_eq!(image.parameters.get("P-1_R-1"), Some(&1));
+    }
+
+    #[test]
+    fn a_rename_does_not_hold_up_the_image_but_a_reference_below_one_does() {
+        for kind in ["Rename", "ParameterBlockRename"] {
+            let renamed = PROGRAM.replace(
+                r#"<when test="1">"#,
+                &format!(r#"<when test="1"><{kind} Id="PR-1" RefId="PB-1" Text="Other title" />"#),
+            );
+            build(&renamed, &[], vec![]).unwrap_or_else(|e| panic!("{kind}: {e}"));
+
+            let hiding = PROGRAM.replace(
+                r#"<when test="1">"#,
+                &format!(
+                    r#"<when test="1"><{kind} Id="PR-1" RefId="PB-1" Text="x"><ParameterRefRef RefId="P-2_R-2" /></{kind}>"#
+                ),
+            );
+            match build(&hiding, &[], vec![]).unwrap_err() {
+                ImageError::Evaluation(diagnostics) => assert!(
+                    diagnostics
+                        .iter()
+                        .all(|d| matches!(d.diagnostic, Diagnostic::RefBelowSkippedNode { .. })),
+                    "{kind}: {diagnostics:?}"
+                ),
+                other => panic!("{kind}: expected Evaluation, got {other}"),
+            }
+        }
     }
 
     #[test]

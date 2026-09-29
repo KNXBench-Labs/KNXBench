@@ -52,10 +52,13 @@ const USAGE: &str =
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
      \x20         opening a connection)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
-     \x20                  [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
+     \x20                  [--key-file <path>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (a download TO the device over the bus; without --confirm it prints the\n\
      \x20         plan (segments, octets, steps) and opens no connection. The phrase must\n\
-     \x20         name this device; excluded addresses are refused before anything opens)\n\
+     \x20         name this device; excluded addresses are refused before anything opens.\n\
+     \x20         The access key is the project's Installation/@BCUKey unless --key-file\n\
+     \x20         names a file holding one (decimal or 0x hex); it is never printed and\n\
+     \x20         never guessed)\n\
      \x20     knx device program-address <area.line.device> [--wait <seconds>]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
      \x20         (gives the one device in programming mode this individual address, MP §2.3;\n\
@@ -1711,16 +1714,41 @@ fn run_device_download(args: &[String]) -> ExitCode {
         eprintln!("project not found: {}", parsed.project);
         return ExitCode::FAILURE;
     }
-    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+    let (project, opaque) = match knx_store::open_and_migrate(Path::new(&parsed.project))
         .map_err(|e| e.to_string())
-        .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
-    {
-        Ok(project) => project,
+        .and_then(|conn| {
+            let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
+            let opaque = knx_store::load_opaque(&conn).map_err(|e| e.to_string())?;
+            Ok((project, opaque))
+        }) {
+        Ok(read) => read,
         Err(e) => {
             eprintln!("could not read project {}: {e}", parsed.project);
             return ExitCode::FAILURE;
         }
     };
+    let project_key = match knx_app::access_key::project_access_key(&opaque) {
+        Ok(key) => key,
+        Err(e) => {
+            eprintln!("project {}: {e}", parsed.project);
+            return ExitCode::FAILURE;
+        }
+    };
+    let operator_key = match parsed.key_file.as_deref() {
+        None => None,
+        Some(path) => match std::fs::read_to_string(path)
+            .map_err(|e| e.to_string())
+            .and_then(|text| {
+                knx_app::access_key::parse_operator_key(&text).map_err(|e| e.to_string())
+            }) {
+            Ok(key) => Some(key),
+            Err(e) => {
+                eprintln!("--key-file {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+    };
+    let (key, source) = knx_app::access_key::choose_key(operator_key, project_key);
     let products = match open_products_db(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
@@ -1739,7 +1767,8 @@ fn run_device_download(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    print!("{}", device_download::format_plan(&prepared));
+    let keying = knx_app::access_key::download_keying(prepared.plan.mask, key, source);
+    print!("{}", device_download::format_plan(&prepared, &keying));
 
     let (gateway, confirmation) = match mode {
         device_download::Mode::Plan => {
@@ -1792,6 +1821,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
         let written = device_download::execute(
             &tunnel,
             authorisation,
+            keying,
             knx_net::SessionTiming::default(),
             &prepared,
             &mut std::io::stdout(),

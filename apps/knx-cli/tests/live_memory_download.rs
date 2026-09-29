@@ -265,5 +265,9 @@ fn print_progress(progress: Progress) {
                 println!("        done: {observed}");
             }
         }
+        Progress::Authorised {
+            authorisation,
+            suspicious,
+        } => println!("        access: {authorisation:?}, suspicious: {suspicious}"),
     }
 }

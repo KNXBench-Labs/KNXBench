@@ -11,13 +11,14 @@
 
 use std::sync::{Arc, Mutex};
 
+use knx_app::access_key::DownloadKeying;
 use knx_app::device_download::PreparedDownload;
-use knx_core::commissioning::authorisation::AuthorisationPlan;
+use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::mutation::WriteAuthorisation;
 use knx_core::IndividualAddress;
 use knx_net::commissioning::memory_download::{
-    run_memory_download_observed, Progress, RestartOutcome,
+    locked_device_hint, run_memory_download_observed, Progress, RestartOutcome,
 };
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
 use serde::Serialize;
@@ -54,6 +55,14 @@ pub enum ProgressEvent {
     StepDone {
         number: usize,
         observed: Option<String>,
+    },
+    /// The access the device granted, before the first write. `level` is
+    /// `None` when no key was sent (the free level, value unknown). Never
+    /// carries the key.
+    Authorised {
+        level: Option<u8>,
+        /// The level is the minimum a wrong key earns (AL §3.5.7).
+        suspicious: bool,
     },
 }
 
@@ -98,6 +107,9 @@ pub enum DownloadStatus {
         /// 1-based step the run stopped in, when it had started one.
         stopped_in_step: Option<usize>,
         error: String,
+        /// When the failure is one a locked device also produces: what to
+        /// check. Never a key, never a suggestion to try another.
+        hint: Option<String>,
     },
 }
 
@@ -107,6 +119,8 @@ struct Shared {
     events: Mutex<Vec<ProgressEvent>>,
     /// The last step that started, 0-based.
     last_started: Mutex<Option<usize>>,
+    /// What authorisation obtained, once connected.
+    granted: Mutex<Option<(Authorisation, bool)>>,
 }
 
 /// One download, running or finished. Kept after it ends so the final
@@ -128,6 +142,7 @@ impl DeviceDownloadSession {
         id: u64,
         tunnel: Box<dyn BusTunnel>,
         authorisation: WriteAuthorisation,
+        keying: DownloadKeying,
         timing: knx_net::SessionTiming,
         prepared: PreparedDownload,
     ) -> Self {
@@ -135,6 +150,7 @@ impl DeviceDownloadSession {
             status: Mutex::new(DownloadStatus::Running),
             events: Mutex::new(Vec::new()),
             last_started: Mutex::new(None),
+            granted: Mutex::new(None),
         });
         let session = Self {
             id,
@@ -145,7 +161,7 @@ impl DeviceDownloadSession {
             shared: Arc::clone(&shared),
             task: None,
         };
-        let task = tokio::spawn(run(tunnel, authorisation, timing, prepared, shared));
+        let task = tokio::spawn(run(tunnel, authorisation, keying, timing, prepared, shared));
         Self {
             task: Some(task),
             ..session
@@ -203,6 +219,7 @@ impl DeviceDownloadSession {
                         written,
                         stopped_in_step: None,
                         error: "the download task stopped unexpectedly".to_string(),
+                        hint: None,
                     };
             }
         }
@@ -252,24 +269,27 @@ fn written_so_far(shared: &Shared, plan: Option<&[MemoryDownloadStep]>) -> Writt
 async fn run(
     tunnel: Box<dyn BusTunnel>,
     authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
     timing: knx_net::SessionTiming,
     prepared: PreparedDownload,
     shared: Arc<Shared>,
 ) {
     let status = {
         let transport = TunnelTransport(tunnel.as_ref());
-        match ManagementSession::authorised(
-            &transport,
-            AuthorisationPlan::Skip,
-            timing,
-            authorisation,
-        ) {
+        match ManagementSession::authorised(&transport, keying.plan, timing, authorisation) {
             Err(e) => DownloadStatus::Failed {
                 written: Written::No,
                 stopped_in_step: None,
                 error: e.to_string(),
+                hint: None,
             },
-            Ok(mut session) => {
+            Ok(session) => {
+                let session = session.with_level_count(keying.level_count);
+                let mut session = if keying.two_key {
+                    session.with_two_key_extension()
+                } else {
+                    session
+                };
                 let observer = Arc::clone(&shared);
                 let result =
                     run_memory_download_observed(&mut session, &prepared.plan, move |progress| {
@@ -296,10 +316,16 @@ async fn run(
                             .last_started
                             .lock()
                             .expect("download progress poisoned");
+                        let granted = *shared.granted.lock().expect("download progress poisoned");
                         DownloadStatus::Failed {
                             written: written_so_far(&shared, Some(&prepared.plan.steps)),
                             stopped_in_step: stopped.map(|index| index + 1),
                             error: e.to_string(),
+                            hint: locked_device_hint(
+                                &e,
+                                granted.map(|(authorisation, _)| authorisation),
+                                granted.is_some_and(|(_, suspicious)| suspicious),
+                            ),
                         }
                     }
                 }
@@ -342,6 +368,17 @@ fn record(shared: &Shared, progress: Progress) {
             number: done.index + 1,
             observed: done.observed,
         },
+        Progress::Authorised {
+            authorisation,
+            suspicious,
+        } => {
+            *shared.granted.lock().expect("download progress poisoned") =
+                Some((authorisation, suspicious));
+            ProgressEvent::Authorised {
+                level: authorisation.level().map(|level| level.octet()),
+                suspicious,
+            }
+        }
     };
     shared
         .events

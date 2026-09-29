@@ -14,15 +14,17 @@
 use std::fmt::Write as _;
 use std::io::Write;
 
+use knx_app::access_key::DownloadKeying;
 use knx_app::device_download::PreparedDownload;
-use knx_core::commissioning::authorisation::AuthorisationPlan;
+use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::mutation::{
     required_confirmation_phrase, WriteAuthorisation, WriteScope,
 };
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::memory_download::{
-    run_memory_download_observed, MemoryDownloadReport, Progress, RestartOutcome,
+    locked_device_hint, run_memory_download_observed, MemoryDownloadReport, Progress,
+    RestartOutcome,
 };
 use knx_net::{ManagementSession, ManagementTransport, SessionTiming};
 
@@ -34,6 +36,9 @@ pub struct DownloadArgs {
     pub product_db: Option<String>,
     pub gateway: Option<String>,
     pub confirm: Option<String>,
+    /// A file holding the access key. Never the key itself on the command
+    /// line: argv is visible to every user through `ps`.
+    pub key_file: Option<String>,
 }
 
 pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
@@ -42,6 +47,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut product_db = None;
     let mut gateway = None;
     let mut confirm = None;
+    let mut key_file = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -64,6 +70,10 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 confirm = Some(crate::take_value(args, i + 1, "--confirm")?);
                 i += 1;
             }
+            "--key-file" => {
+                key_file = Some(crate::take_value(args, i + 1, "--key-file")?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown flag {flag}")),
             positional => {
                 if target.replace(positional.to_string()).is_some() {
@@ -84,6 +94,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         product_db,
         gateway,
         confirm,
+        key_file,
     })
 }
 
@@ -130,7 +141,7 @@ pub fn check_target(args: &DownloadArgs) -> Result<(ContactableAddress, Mode), S
 
 /// The plan, as printed before anything is sent (and as all a dry run
 /// prints).
-pub fn format_plan(prepared: &PreparedDownload) -> String {
+pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> String {
     let target = prepared.target;
     let mut out = String::new();
     let _ = writeln!(
@@ -170,6 +181,16 @@ pub fn format_plan(prepared: &PreparedDownload) -> String {
         "octets written to the device: {} (every one is read back)",
         prepared.plan.data_octets()
     );
+    let _ = writeln!(
+        out,
+        "access key: {}{}",
+        keying.source,
+        if keying.two_key {
+            ", MP §3.5.2 (free key first, the key only if it is better)"
+        } else {
+            ""
+        }
+    );
     let _ = writeln!(out, "steps: {}", prepared.plan.steps.len());
     for (index, step) in prepared.plan.steps.iter().enumerate() {
         let _ = writeln!(out, "  {:2}: {step}", index + 1);
@@ -208,6 +229,18 @@ pub fn format_progress(progress: &Progress) -> Option<String> {
             .observed
             .as_ref()
             .map(|observed| format!("        done: {observed}")),
+        Progress::Authorised {
+            authorisation,
+            suspicious,
+        } => Some(match authorisation {
+            Authorisation::FreeLevelUnknown => {
+                "        access: no key sent, the device's free level".to_owned()
+            }
+            Authorisation::Granted { level } if *suspicious => {
+                format!("        access: {level} — the minimum a wrong key earns (AL §3.5.7)")
+            }
+            Authorisation::Granted { level } => format!("        access: {level}"),
+        }),
     }
 }
 
@@ -227,29 +260,41 @@ pub enum Written {
 pub async fn execute<T: ManagementTransport>(
     transport: &T,
     authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
     timing: SessionTiming,
     prepared: &PreparedDownload,
     out: &mut impl Write,
 ) -> Written {
     let target = authorisation.target().address();
     let plan = &prepared.plan;
-    let mut session = match ManagementSession::authorised(
-        transport,
-        AuthorisationPlan::Skip,
-        timing,
-        authorisation,
-    ) {
-        Ok(session) => session,
-        Err(e) => {
-            let _ = writeln!(out, "== download to device {target}: refused: {e} ==");
-            let _ = writeln!(out, "written to the device: no");
-            return Written::No;
-        }
-    };
+    let mut session =
+        match ManagementSession::authorised(transport, keying.plan, timing, authorisation) {
+            Ok(session) => {
+                let session = session.with_level_count(keying.level_count);
+                if keying.two_key {
+                    session.with_two_key_extension()
+                } else {
+                    session
+                }
+            }
+            Err(e) => {
+                let _ = writeln!(out, "== download to device {target}: refused: {e} ==");
+                let _ = writeln!(out, "written to the device: no");
+                return Written::No;
+            }
+        };
     let mut last_started = None;
+    let mut granted = None;
     let result = run_memory_download_observed(&mut session, plan, |progress| {
         if let Progress::StepStarted { index, .. } = &progress {
             last_started = Some(*index);
+        }
+        if let Progress::Authorised {
+            authorisation,
+            suspicious,
+        } = &progress
+        {
+            granted = Some((*authorisation, *suspicious));
         }
         if let Some(line) = format_progress(&progress) {
             let _ = writeln!(out, "{line}");
@@ -268,6 +313,13 @@ pub async fn execute<T: ManagementTransport>(
         }
         Err(e) => {
             let _ = writeln!(out, "== download to device {target}: FAILED: {e} ==");
+            if let Some(hint) = locked_device_hint(
+                &e,
+                granted.map(|(authorisation, _)| authorisation),
+                granted.is_some_and(|(_, suspicious)| suspicious),
+            ) {
+                let _ = writeln!(out, "hint: {hint}");
+            }
             if wrote_something {
                 let _ = writeln!(
                     out,
@@ -312,6 +364,8 @@ fn summarise(out: &mut impl Write, target: IndividualAddress, report: &MemoryDow
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knx_app::access_key::{download_keying, KeySource};
+    use knx_core::commissioning::authorisation::AccessKey;
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
@@ -321,6 +375,28 @@ mod tests {
     fn the_default_is_a_plan() {
         let parsed = parse_download_args(&args(&["1.1.67", "--project", "p.knxdb"])).unwrap();
         assert_eq!(check_target(&parsed).unwrap().1, Mode::Plan);
+        assert_eq!(parsed.key_file, None);
+    }
+
+    /// The key travels in a file, never as an argument `ps` would show.
+    #[test]
+    fn a_key_file_is_a_path_and_there_is_no_key_flag() {
+        let parsed = parse_download_args(&args(&[
+            "1.1.67",
+            "--project",
+            "p.knxdb",
+            "--key-file",
+            "/run/user/1000/knx.key",
+        ]))
+        .unwrap();
+        assert_eq!(parsed.key_file.as_deref(), Some("/run/user/1000/knx.key"));
+        for flag in ["--key", "--bcu-key", "--access-key"] {
+            assert!(
+                parse_download_args(&args(&["1.1.67", "--project", "p", flag, "1"])).is_err(),
+                "{flag}"
+            );
+        }
+        assert!(parse_download_args(&args(&["1.1.67", "--project", "p", "--key-file"])).is_err());
     }
 
     #[test]
@@ -475,15 +551,69 @@ mod tests {
     }
 
     fn run(device: &SimulatedDevice, prepared: &PreparedDownload) -> (Written, String) {
+        run_keyed(device, prepared, None)
+    }
+
+    fn run_keyed(
+        device: &SimulatedDevice,
+        prepared: &PreparedDownload,
+        key: Option<AccessKey>,
+    ) -> (Written, String) {
         let authorisation =
             WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap();
+        let source = if key.is_some() {
+            KeySource::Project
+        } else {
+            KeySource::None
+        };
+        let keying = download_keying(prepared.plan.mask, key, source);
         let mut out = Vec::new();
         let written = tokio::runtime::Builder::new_current_thread()
             .enable_time()
             .build()
             .unwrap()
-            .block_on(execute(device, authorisation, fast(), prepared, &mut out));
+            .block_on(execute(
+                device,
+                authorisation,
+                keying,
+                fast(),
+                prepared,
+                &mut out,
+            ));
         (written, String::from_utf8(out).unwrap())
+    }
+
+    /// A device locked above its free level: without the key the run
+    /// stops with a hint and no guess; with the project's key it lands.
+    #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+    fn a_locked_device_needs_its_key_and_the_output_never_shows_it() {
+        let (_dir, prepared) = prepared();
+        let locked = || {
+            mdt(SimulatorConfig {
+                free_access_level: 3,
+                key: Some(0x0BAD_CAFE),
+                key_level: 1,
+                write_requires_level: 2,
+                ..SimulatorConfig::default()
+            })
+        };
+        let device = locked();
+        let (written, out) = run(&device, &prepared);
+        assert_ne!(written, Written::Yes, "{out}");
+        assert!(out.contains("access: no key sent"), "{out}");
+        assert!(out.contains("hint: no access key was sent"), "{out}");
+        assert_eq!(device.authorize_requests(), 0, "nothing was guessed");
+
+        let device = locked();
+        let key = AccessKey::new(0x0BAD_CAFE).unwrap();
+        let (written, out) = run_keyed(&device, &prepared, Some(key));
+        assert_eq!(written, Written::Yes, "{out}");
+        assert!(out.contains("access: level 1"), "{out}");
+        assert_eq!(device.authorize_requests(), 2);
+        for shown in ["0BADCAFE", "0badcafe", "195939070"] {
+            assert!(!out.contains(shown), "the key leaked: {out}");
+        }
     }
 
     #[test]

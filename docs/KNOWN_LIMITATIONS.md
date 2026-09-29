@@ -1988,8 +1988,10 @@ pointer and keyboard resizing. Settings and Debug report use it; the other
 overlays retain their existing sizes. Focus containment, Escape and backdrop
 dismissal are covered by regression tests, including a pointer drag that ends
 on the backdrop. Headless Chromium exercised the Settings layout, arrow-key
-resize and internal scroll at 640 px. Native WebKitGTK sizing and real screen
-reader announcements remain unverified; this is not an accessibility audit.
+resize and internal scroll at 640 px, including 150% application zoom; the
+zoomed dialog's rendered dimensions must be converted back to layout pixels
+before a keyboard step. Native WebKitGTK sizing and real screen reader
+announcements remain unverified; this is not an accessibility audit.
 
 **Originally.** Four components shared `styles.css`'s
 `.search-overlay`/`.search-panel` shape with no shared component behind

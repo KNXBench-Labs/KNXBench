@@ -35,7 +35,7 @@
   is not the highest. Fixed; the old test had pinned the wrong reading.
 - **Tests.** New module `knx_app::access_key`; simulator, CLI and HTTP
   tests against a locked device. 9/9 mutants killed.
-- **Not live.** The test device has no key (KL §137).
+- **Not live.** The test device has no key (KL §138).
 
 ## 2026-09-29 — Recovery and settling checked against the PDFs, both parked
 

@@ -1,4 +1,11 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 09:05
+- Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
+- **Completed:** User asked to check the PDFs for how to handle and recover, otherwise park. Result: interrupted download means running the same download again (MP §3.1 p. 68, RES Table 94 p. 296, CP §3.4.1.2.1 p. 38). Simulator test from Loading/Error added; the no-unload mutant was killed. The settling retry has no MP figure; §2.12/§2.13 use 1 s and user-confirmed repeats, matching ours. Both live tests **parked**. KL §7, IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:** none in goal-commission; both [W] extras parked by the user.
+- **Notes for Codex/Claude:** PDFs converted with `pdftotext -layout` straight from `knx-spec-kb/sources/` (not `extracted/`).
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 08:30
 - Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
 - **Completed:** goal-commission **K10, the track is closed.** Whole-track review `a47d168..dafa2b6`: no code defect in the hardware paths (gate, lock order, one-tunnel exclusion, named mask refusal, disconnect on all paths). Doc drift fixed: GAP E1, ROADMAP Session 7 + T30 decision row, KL §7 (product commands, K6 item 1/2 notes), §101/§104 (K7: nothing to measure, accepted), §136 (heading says lifted; old anchor kept; live note), spec status, IMPLEMENTATION_STATUS entry. Live this track: K7 (CLI+web download, button check), K6 (1.1.67 ↔ 1.1.68), both with a go.

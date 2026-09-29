@@ -19,6 +19,19 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — Recovery and settling checked against the PDFs, both parked
+
+- **Interrupted download:** MP §3.1, RES Table 94 and CP §3.4.1.2.1 give no
+  separate recovery procedure. The recovery is the same download run again,
+  starting with an unload of every part. New simulator test
+  `the_same_plan_run_again_recovers_a_part_left_loading_or_in_error` (from
+  `Loading` and from `Error`); a mutant without the unload fails it. The
+  live test is parked.
+- **K6 settling retry:** MP §2.3 gives no figure. The serial-number
+  procedures (§2.12/§2.13) wait 1 s before verifying and repeat only after
+  the user confirms, which matches the borrowed `t1` and the single retry.
+  Parked until a device needs it. KNOWN_LIMITATIONS §7.
+
 ## 2026-09-29 — Commissioning track closed (goal-commission K6 live, K7, K10)
 
 - **K7 [W]:** CLI and web download to `1.1.67`, 1416/1416 octets read back

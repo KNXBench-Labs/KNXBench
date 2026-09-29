@@ -909,6 +909,42 @@ mod tests {
         assert!(device.seen().is_empty());
     }
 
+    /// Recovery after an interrupted download is running the whole download
+    /// again, and the plan's opening unload is what makes that work.
+    ///
+    /// `[D]` MP §3.1, p. 68: *"if an error is detected, the download shall be
+    /// interrupted and an error-message shall be raised"*. There is no
+    /// separate recovery procedure for it. RES Table 94, p. 296: a *Device
+    /// Restart* in `Loading` leads to `Error` (recommended) or stays in
+    /// `Loading` (optional), and `Unload` leads from every state, `Error`
+    /// and `Loading` included, to `Unloaded`. CP §3.4.1.2.1 step 6, p. 38,
+    /// opens the complete download with *"Unload all loadable Objects"*.
+    /// So an interruption leaves `Loading` or `Error`, and the same plan run
+    /// again ends `Loaded`.
+    #[tokio::test]
+    async fn the_same_plan_run_again_recovers_a_part_left_loading_or_in_error() {
+        for left_in in [LoadState::Loading, LoadState::Error] {
+            let device = device(SimulatorConfig::default());
+            device.preset_load_state(ObjectIndex::new(1), left_in);
+            let mut session = session(&device, WriteScope::Download);
+
+            let report = run_memory_download(&mut session, &plan())
+                .await
+                .unwrap_or_else(|e| panic!("left in {left_in:?}: {e}"));
+
+            assert_eq!(
+                device.load_state(ObjectIndex::new(1)),
+                LoadState::Loaded,
+                "left in {left_in:?}: {report:?}"
+            );
+            assert_eq!(
+                device.memory(0x4003, 27),
+                (0..27).map(Some).collect::<Vec<_>>(),
+                "left in {left_in:?}: the table is written again in full"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn a_permitted_state_that_is_not_the_aim_stops_the_run() {
         // RES Table 94: `Start Loading` from `Error` stays in `Error`. The

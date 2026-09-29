@@ -1,4 +1,13 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 08:58 CEST
+- Web lock: taken by UI session for U8 ISSUE-03 shared overlay sizing, readable forms and Settings glyph
+- **Completed:** U7 `911a499` and documentation follow-up `f191f9d` are merged, verified, and published in `main` at `8a2e859`; its worktree, branch, owned targets and scratch are removed. Only the unrelated `docs/paperclip-shutdown/` remains untracked. Package-boundary GPT/Codex quota was checked with the user: 22/100 used. U8/ISSUE-03 plan and current `Overlay.tsx`/dialog/style baseline were read; no U8 source changes yet.
+- **Pending/Next Steps:** Create isolated `ui-overlay-geometry` from current `origin/main`, install web dependencies, write RED tests for one opt-in bounded resize contract, keyboard/focus/Escape, long debug-report content, full-width form controls, responsive Settings and a labelled gear icon; implement, run branch and merged-main gates, document, review, publish, release lock and clean own artifacts. U9–U12 and U13 remain.
+- **Notes for Codex or Claude:** The web lock is U8-only; do not edit shared `apps/knx-web` from another session. Keep `Overlay`'s existing focus trap/restoration and shared shell. No KNX bus, tunnel or device writes are involved. Root's `docs/paperclip-shutdown/` is foreign and must not be staged.
+
+---
+
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 08:22 CEST
 - Web lock: released (U7 ISSUE-11 bus-monitor UX, after reviewed merge and merged-result gates)
 - **Completed:** U7 pause/resume, structured decode states, bounded 1000-row capture, ten-entry retained-only statistics, local versioned JSON export and focusable horizontally scrollable table landed as `911a499`; the concurrent commissioning simulator recovery test was integrated in `de697c7`, with final U7 status in `f191f9d`. On merged `main`: TypeScript/build and 77 web files / 1163 tests; Rust fmt/Clippy and 123 suites / 2391 passed, 0 failed, 136 ignored; layering, headers (287/161), 397 anchors across 228 Markdown files, corpus and diff gates all passed. Five U7 guard mutations failed as intended. Local-fixture Chromium verified 640 px layout and keyboard scroll; no live bus or device write, and native WebKitGTK/save-dialog runtime remains unverified (KNOWN_LIMITATIONS §137).

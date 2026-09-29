@@ -439,6 +439,9 @@ would be a write this goal does not need.
 
 ### K12 — Individual address by serial number, TP (item 1)
 
+**Live 2026-09-29:** reads verified on `1.1.67`; the write is ignored by
+the device (`PID_SERVICE_CONTROL` bit 2 clear, KL §139, RESEARCH §19.8).
+
 **Done 2026-09-29, simulator only.** Encoders, MP §2.4/§2.5,
 `PID_SERIAL_NUMBER`, project serial numbers, CLI and HTTP; 9/9 mutants
 killed. KL §139. The live step below is still open and needs its own go.
@@ -469,6 +472,9 @@ Simulator first. **[W]** only on the user's request, followed by the
 option C re-download.
 
 ### K15 — Partial download for `070nh` (item 3)
+
+**Live 2026-09-29:** parameters-only partial download on `1.1.67`, 394
+octets read back, dump unchanged (KL §142 lifted, RESEARCH §19.8).
 
 **Done 2026-09-29, simulator only (KL §142).** CP §3.9.2.4's transformation
 of the complete plan, plus an application and load-state check before the

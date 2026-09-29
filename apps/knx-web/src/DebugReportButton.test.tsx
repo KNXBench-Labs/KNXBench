@@ -25,8 +25,11 @@ import DebugReportButton from "./DebugReportButton";
 import { messages as en } from "./messages/en";
 
 let host: HTMLDivElement | undefined;
+let activeRoot: ReturnType<typeof createRoot> | undefined;
 
-afterEach(() => {
+afterEach(async () => {
+  if (activeRoot) await act(async () => activeRoot!.unmount());
+  activeRoot = undefined;
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
@@ -55,6 +58,7 @@ async function render() {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
+  activeRoot = root;
   await act(async () => {
     root.render(
       <DebugReportButton onSummary={onSummary} onError={onError} onClearErrors={onClearErrors} />,
@@ -127,6 +131,19 @@ describe("DebugReportButton", () => {
     expect(document.querySelector(".debug-report-panel")).toBeNull();
     await click(en["debugReport.button"]);
     expect(document.querySelector(".debug-report-panel")).not.toBeNull();
+  });
+
+  it("opens a roomy, scroll-contained shared resizable dialog with its actions still reachable", async () => {
+    await openDialog();
+    const panel = document.querySelector<HTMLElement>(".debug-report-panel")!;
+    expect(panel.classList.contains("search-panel-resizable")).toBe(true);
+    expect(panel.style.width).toBe("820px");
+    expect(panel.style.height).toBe("640px");
+    expect(panel.querySelector<HTMLButtonElement>(".overlay-resize-key")?.getAttribute("aria-label"))
+      .toMatch(/resize.*arrow/i);
+    await toggle(en["debugReport.include.busTelegrams.label"]);
+    expect(panel.contains(document.querySelector(".debug-report-warning"))).toBe(true);
+    expect(panel.contains(button(en["debugReport.save"]))).toBe(true);
   });
 
   it("lists the two mandatory files and the session log, and nothing else, by default", async () => {

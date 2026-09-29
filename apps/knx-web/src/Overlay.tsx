@@ -1,5 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
+import { useTranslate } from "./i18n";
+
+const VIEWPORT_PADDING = 16;
+const RESIZE_STEP = 24;
+const MIN_RESIZE_WIDTH = 320;
+const MIN_RESIZE_HEIGHT = 256;
+
+export interface OverlayResize {
+  width: number;
+  height: number;
+}
 
 /**
  * The one modal overlay shell (T31, closing D9 / KNOWN_LIMITATIONS.md §20).
@@ -26,11 +37,16 @@ export default function Overlay(props: {
   label?: string;
   className?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Opt-in shared dimensions. CSS also caps the panel at the viewport edge. */
+  resizable?: OverlayResize;
   onClose: () => void;
   children: ReactNode;
 }) {
-  const { labelledBy, label, className, initialFocusRef, onClose, children } = props;
+  const { labelledBy, label, className, initialFocusRef, resizable, onClose, children } = props;
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const pointerStartedInsideRef = useRef(false);
+  const t = useTranslate();
+  const [size, setSize] = useState(() => ({ width: resizable?.width ?? 0, height: resizable?.height ?? 0 }));
 
   // Initial focus on mount, restoration on unmount. The dependency list is
   // deliberately empty: this runs once per open, and re-running it on a
@@ -45,6 +61,31 @@ export default function Overlay(props: {
       previous?.focus?.();
     };
   }, []);
+
+  function resizeFromKeyboard(e: KeyboardEvent<HTMLButtonElement>) {
+    const delta = {
+      ArrowLeft: [-RESIZE_STEP, 0], ArrowRight: [RESIZE_STEP, 0],
+      ArrowUp: [0, -RESIZE_STEP], ArrowDown: [0, RESIZE_STEP],
+    }[e.key];
+    if (!delta || !panelRef.current) return; // Tab and Escape still reach the shared focus trap.
+    e.preventDefault();
+    e.stopPropagation();
+    // Read the rendered box, not the initial prop: native pointer resizing
+    // changes the element's used size without updating React state.
+    // The application's root CSS zoom scales DOMRect measurements, but style
+    // widths and viewport caps are layout pixels. Keep those units together.
+    const configuredScale = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"),
+    );
+    const scale = Number.isFinite(configuredScale) && configuredScale > 0 ? configuredScale : 1;
+    const box = panelRef.current.getBoundingClientRect();
+    const maxWidth = Math.max(1, window.innerWidth / scale - 2 * VIEWPORT_PADDING);
+    const maxHeight = Math.max(1, window.innerHeight / scale - 2 * VIEWPORT_PADDING);
+    setSize({
+      width: Math.min(maxWidth, Math.max(Math.min(MIN_RESIZE_WIDTH, maxWidth), (box.width / scale || size.width) + delta[0])),
+      height: Math.min(maxHeight, Math.max(Math.min(MIN_RESIZE_HEIGHT, maxHeight), (box.height / scale || size.height) + delta[1])),
+    });
+  }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Escape") {
@@ -75,10 +116,20 @@ export default function Overlay(props: {
   }
 
   return (
-    <div className="search-overlay" onClick={onClose}>
+    <div
+      className={resizable ? "search-overlay search-overlay-resizable" : "search-overlay"}
+      onPointerDownCapture={(e) => { pointerStartedInsideRef.current = e.target !== e.currentTarget; }}
+      onClick={(e) => {
+        // A native resize drag can release on the backdrop. Its ensuing click
+        // is not an intentional dismissal, even though the click targets us.
+        if (e.target === e.currentTarget && !pointerStartedInsideRef.current) onClose();
+        pointerStartedInsideRef.current = false;
+      }}
+    >
       <div
         ref={panelRef}
-        className={className ? `search-panel ${className}` : "search-panel"}
+        className={["search-panel", className, resizable && "search-panel-resizable"].filter(Boolean).join(" ")}
+        style={resizable ? { width: `${size.width}px`, height: `${size.height}px` } : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
@@ -88,6 +139,15 @@ export default function Overlay(props: {
         onKeyDown={handleKeyDown}
       >
         {children}
+        {resizable && (
+          <button
+            type="button"
+            className="overlay-resize-key"
+            aria-label={t("overlay.resizeHandle")}
+            title={t("overlay.resizeHandle")}
+            onKeyDown={resizeFromKeyboard}
+          ><span aria-hidden="true">⤢</span></button>
+        )}
       </div>
     </div>
   );

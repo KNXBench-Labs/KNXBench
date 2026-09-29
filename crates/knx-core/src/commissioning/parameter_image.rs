@@ -25,14 +25,26 @@
 //! module has no little-endian mode, because no source says how a bit
 //! offset combines with it.
 //!
-//! Supported fields are the two shapes whose layout the definition above
-//! fixes without interpretation:
+//! Supported fields are 1 to 64 bits at a bit offset of 0–7, laid out as
+//! the definition above states: the value's most significant bit sits
+//! `bit_offset` bits below the first octet's MSB, and every further bit
+//! follows MSB-first, continuing into the next octet's MSB when one octet
+//! is full. That covers a field inside one octet, whole octets, and a field
+//! that crosses an octet boundary alike.
 //!
-//! - inside one octet: `bit_offset + size_in_bit <= 8`;
-//! - whole octets: `bit_offset == 0` and `size_in_bit` a multiple of 8, up
-//!   to 64 bits.
+//! `[D]` A field across an octet boundary is written that way because the
+//! KNX Standard numbers bit offsets on through consecutive octets, MSB
+//! first: *Configuration Procedures* `03_05_03` v02.01.01 §8.5.4
+//! (pp. 197–198) — *"The position of the parameters inside the parameter
+//! block are not restricted to the boundary of the parameters itself"*,
+//! with a two-octet block whose offsets run `0…7` through octet 0 and
+//! `8…15` through octet 1 — and *Resources* `03_05_01` v01.10.01
+//! §4.18.5.2.5 `PID_EXT_GRPOBJREFERENCE` (p. 268): *"Bit offset shall start from "left" / MSB"*, where
+//! bit 0 of the third octet of a `U16B8` is *"Bit Offset = 23"*. A field
+//! of the product's `Memory` is the same bit string; no PDF shows one that
+//! crosses a boundary, and no device has confirmed it (RESEARCH §19.11).
 //!
-//! Any other shape is refused as unsupported rather than guessed at.
+//! Wider than 64 bits, zero width, and a bit offset above 7 are refused.
 
 use std::fmt;
 
@@ -140,14 +152,10 @@ impl ParameterField {
         (start, start + u64::from(self.size_in_bit))
     }
 
-    /// Whether [`ParameterImage::write`] supports the shape.
+    /// Whether [`ParameterImage::write`] supports the shape: 1 to 64 bits
+    /// at a bit offset of 0–7.
     fn is_integer_shape(self) -> bool {
-        let in_one_octet =
-            self.size_in_bit >= 1 && u32::from(self.bit_offset) + self.size_in_bit <= 8;
-        let whole_octets = self.bit_offset == 0
-            && self.size_in_bit.is_multiple_of(8)
-            && (8..=64).contains(&self.size_in_bit);
-        in_one_octet || whole_octets
+        self.bit_offset <= 7 && (1..=64).contains(&self.size_in_bit)
     }
 
     /// The octets the field touches.
@@ -197,17 +205,19 @@ impl ParameterImage {
         }
 
         let first = field.offset as usize;
-        if field.bit_offset == 0 && field.size_in_bit.is_multiple_of(8) {
-            let octets = (field.size_in_bit / 8) as usize;
-            let bytes = value.to_be_bytes();
-            self.octets[first..first + octets].copy_from_slice(&bytes[8 - octets..]);
-        } else {
-            // In one octet (`is_integer_shape`), so the width is at most 8.
-            let size = field.size_in_bit as u8;
-            let shift = 8 - field.bit_offset - size;
-            let mask = (((1u16 << size) - 1) as u8) << shift;
-            let octet = &mut self.octets[first];
-            *octet = (*octet & !mask) | ((value as u8) << shift);
+        // Bit `i` of the field (0 = its most significant) is segment bit
+        // `bit_offset + i`, counted MSB-first from the octet at `offset`.
+        let size = field.size_in_bit;
+        for i in 0..size {
+            let bit = (value >> (size - 1 - i)) & 1;
+            let at = u32::from(field.bit_offset) + i;
+            let octet = &mut self.octets[first + (at / 8) as usize];
+            let mask = 0x80u8 >> (at % 8);
+            *octet = if bit == 1 {
+                *octet | mask
+            } else {
+                *octet & !mask
+            };
         }
         self.written.push(field);
         Ok(())
@@ -366,21 +376,58 @@ mod tests {
         );
     }
 
-    /// Shapes the schema's definition does not settle are refused, not
-    /// guessed: across an octet boundary unaligned, a whole-octet width at
-    /// a bit offset, a bit offset above 7, zero width, and more than 64
-    /// bits.
+    /// A field that crosses an octet boundary continues in the next octet's
+    /// most significant bits: bit offsets count on from the first octet's
+    /// MSB (module documentation). 6 bits at bit 5: the value's upper three
+    /// bits end octet 0, its lower three start octet 1; the neighbours keep
+    /// their bits.
+    #[test]
+    fn a_field_across_an_octet_boundary_continues_in_the_next_octets_msbs() {
+        let mut image = ParameterImage::new(vec![0xFF, 0xFF]);
+        image.write(field(0, 5, 6), 0b101_011).unwrap();
+        assert_eq!(image.octets(), &[0b1111_1101, 0b0111_1111]);
+    }
+
+    /// 11 bits at bit 5 end on the octet boundary; 16 bits at bit 4 touch
+    /// three octets. Both are written high bits first.
+    #[test]
+    fn wider_fields_across_octet_boundaries_are_written_high_bits_first() {
+        let mut image = ParameterImage::new(vec![0; 2]);
+        image.write(field(0, 5, 11), 0x5A5).unwrap();
+        assert_eq!(image.octets(), &[0b0000_0101, 0xA5]);
+        let mut image = ParameterImage::new(vec![0; 3]);
+        image.write(field(0, 4, 16), 0xABCD).unwrap();
+        assert_eq!(image.octets(), &[0x0A, 0xBC, 0xD0]);
+        let mut image = ParameterImage::new(vec![0; 2]);
+        image.write(field(0, 0, 12), 0xABC).unwrap();
+        assert_eq!(image.octets(), &[0xAB, 0xC0]);
+    }
+
+    /// A crossing field shares the overlap check: it may not claim a bit a
+    /// field written before holds, on either side of the boundary.
+    #[test]
+    fn a_field_across_an_octet_boundary_is_checked_for_overlap() {
+        let mut image = ParameterImage::new(vec![0; 2]);
+        image.write(field(1, 2, 1), 1).unwrap();
+        let before = image.clone();
+        assert_eq!(
+            image.write(field(0, 5, 6), 0),
+            Err(ParameterImageError::Overlap {
+                field: field(0, 5, 6),
+                earlier: field(1, 2, 1)
+            })
+        );
+        assert_eq!(image, before);
+        // The bits beside it are free.
+        image.write(field(0, 5, 5), 0b11111).unwrap();
+        assert_eq!(image.octets(), &[0b0000_0111, 0b1110_0000]);
+    }
+
+    /// Shapes the schema's definition excludes are refused, not guessed: a
+    /// bit offset above 7, zero width, and more than 64 bits.
     #[test]
     fn unsupported_shapes_are_refused() {
-        for shape in [
-            field(0, 4, 8),
-            field(0, 6, 4),
-            field(0, 1, 16),
-            field(0, 8, 1),
-            field(0, 0, 0),
-            field(0, 0, 12),
-            field(0, 0, 72),
-        ] {
+        for shape in [field(0, 8, 1), field(0, 0, 0), field(0, 0, 72)] {
             let mut image = ParameterImage::new(vec![0; 16]);
             assert_eq!(
                 image.write(shape, 0),

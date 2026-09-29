@@ -26,6 +26,15 @@
 ---
 
 - **Last Agent:** Claude (download coverage session, offline only)
+- **Timestamp:** 2026-09-29 (night) CEST
+- **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.
+- **Completed:** `ParameterImage::write` now writes any 1–64-bit field at bit offset 0–7, MSB-first on across octet boundaries (`[D]` *Configuration Procedures* §8.5.4, *Resources* §4.18.5.2.5 number bit offsets that way; no PDF shows a crossing parameter). The 4 remaining former-Rename programs (`A-008A/B-25/28`, `UP-290`: 6 bits at bit 5) now plan; refusal lists diffed before/after, no other change. Corpus: 246 programs, 1 verified, **77 untested** (was 73), 168 unsupported (`parameter-value` 9). Module instances measured and **left refused**: `BaseOffset`/`NumericArg` are in no direct PDF, and *argument + offset* rebuilds only 53 % of module defaults in the base images (52 % at another instance's base), so the placement rule is not settled (RESEARCH §19.11). Log: `.ai/logs/2026-09-29_claude_octet-crossing-fields.md`.
+- **Pending/Next Steps:** None of the new plans is hardware-tested. Module instances need a device read-back of a modular product (or a PDF) before any write; the 51 `parameter-evaluation` refusals stay. Remaining small levers: 6 conflicting refs and 3 enumeration defaults (`parameter-value`), priority/ReadOnInit/Property (need a source or a property-write step).
+- **Notes for Codex or Claude:** No bus action in this package. `1.1.67` still holds option C.
+
+---
+
+- **Last Agent:** Claude (download coverage session, offline only)
 - **Timestamp:** 2026-09-29 (late evening) CEST
 - **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.
 - **Completed:** `Rename`/`ParameterBlockRename` leaves (326, all retitle a `ParameterBlock`) no longer refuse a download image; the evaluator still reports them as unrecognized (UI does not apply renames). Corpus: 246 programs, 1 verified, **73 untested** (was 69), 172 unsupported (`parameter-evaluation` 51, `parameter-value` 13). The remaining `image-structure` refusals (priority `High`, `ReadOnInitFlag`, `Property` placement) were re-checked against the direct PDFs and stay refused with reasons (RESEARCH §19.10). Log: `.ai/logs/2026-09-29_claude_download-coverage-renames.md`.

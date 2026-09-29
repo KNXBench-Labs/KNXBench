@@ -26,6 +26,10 @@ const USAGE: &str =
      \x20     knx products identity <table> <id> [--product-db <path>]\n\
      \x20     knx products family <program-id> [--product-db <path>]\n\
      \x20     knx products order-number <manufacturer-id> <order-number> [--product-db <path>]\n\
+     \x20     knx products coverage [--manufacturer M-xxxx] [--product-db <path>]\n\
+     \x20         (per application program: verified (downloaded on hardware), untested (the\n\
+     \x20         load procedure plans completely offline) or unsupported (with the refusal);\n\
+     \x20         offline, product defaults, no connection)\n\
      \x20     knx bus discover\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      \x20         (with --project, decodes against each address's resolved DPT)\n\
@@ -62,7 +66,16 @@ const USAGE: &str =
      \x20         names a file holding one (decimal or 0x hex); it is never printed and\n\
      \x20         never guessed. --partial derives CP §3.9.2.4's partial download from the\n\
      \x20         complete one: no unload of the application, and it first checks that the\n\
-     \x20         device carries this application with every part loaded)\n\
+     \x20         device carries this application with every part loaded.\n\
+     \x20         Before the first write it reads what the plan overwrites into a backup\n\
+     \x20         file (--backup-dir, default <project>.backups/); no backup, no write.\n\
+     \x20         An application nobody has downloaded this way on hardware is UNTESTED\n\
+     \x20         and needs --accept-untested \"I accept an untested download to <address>\".\n\
+     \x20     knx device restore <backup.json> [--product-db <path>] [--key-file <path>]\n\
+     \x20                  [--backup-dir <dir>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
+     \x20         (writes a backup back through the same load procedure; without --confirm\n\
+     \x20         it prints the plan. It backs up the current state first, too. An\n\
+     \x20         untested restore also needs --accept-untested as above.)\n\
      \x20     knx device program-address <area.line.device> [--wait <seconds>]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
      \x20         (gives the one device in programming mode this individual address, MP §2.3;\n\
@@ -1126,6 +1139,7 @@ fn run_products(args: &[String]) -> ExitCode {
         Some("identity") => run_products_identity(&args[1..]),
         Some("family") => run_products_family(&args[1..]),
         Some("order-number") => run_products_order_number(&args[1..]),
+        Some("coverage") => run_products_coverage(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1155,6 +1169,90 @@ fn open_products_db(explicit: Option<&str>) -> Result<knx_productdb::Connection,
     let path = resolve_product_db_path(explicit)?;
     knx_productdb::open_and_migrate(&path)
         .map_err(|e| format!("failed to open product database at {}: {e}", path.display()))
+}
+
+/// `knx products coverage`: the download support level of every program
+/// (`knx_app::download_support`), offline.
+fn run_products_coverage(args: &[String]) -> ExitCode {
+    let (product_db, rest) = match split_product_db_flag(args) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let manufacturer = match rest.as_slice() {
+        [] => None,
+        [flag, value] if flag == "--manufacturer" => Some(value.clone()),
+        _ => {
+            eprintln!("unexpected arguments: {}\n{USAGE}", rest.join(" "));
+            return ExitCode::FAILURE;
+        }
+    };
+    let conn = match open_products_db(product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let evidence = match knx_app::download_support::shipped_evidence() {
+        Ok(evidence) => evidence,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let rows = match knx_app::download_support::coverage(&conn, manufacturer.as_deref(), &evidence)
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    print!("{}", format_coverage(&rows));
+    ExitCode::SUCCESS
+}
+
+/// The coverage report: one line per program, then the counts.
+fn format_coverage(rows: &[knx_app::download_support::ProgramSupport]) -> String {
+    use knx_app::download_support::{CoverageSummary, SupportLevel};
+    use std::fmt::Write as _;
+    let mut out = String::new();
+    for row in rows {
+        let detail = match &row.level {
+            SupportLevel::Verified { steps, octets, .. }
+            | SupportLevel::Untested { steps, octets } => {
+                format!("{steps} steps, {octets} octets")
+            }
+            SupportLevel::Unsupported { category, detail } => format!("{category}: {detail}"),
+        };
+        let _ = writeln!(
+            out,
+            "{:<11} {}  {}  {}  {detail}",
+            row.level.code(),
+            row.program_id,
+            row.mask_version.as_deref().unwrap_or("?"),
+            row.name.as_deref().unwrap_or(""),
+        );
+    }
+    let summary = CoverageSummary::of(rows);
+    let _ = writeln!(
+        out,
+        "\n{} programs: {} verified, {} untested, {} unsupported",
+        summary.programs,
+        summary.verified,
+        summary.untested,
+        summary.programs - summary.verified - summary.untested
+    );
+    for (category, count) in &summary.unsupported {
+        let _ = writeln!(out, "  unsupported {category}: {count}");
+    }
+    for (mask, (programs, plan)) in &summary.by_mask {
+        let _ = writeln!(out, "  {mask}: {plan} of {programs} plan");
+    }
+    out
 }
 
 fn run_products_list(args: &[String]) -> ExitCode {
@@ -1697,6 +1795,7 @@ fn run_device(args: &[String]) -> ExitCode {
         Some("program-address") => run_device_program_address(&args[1..]),
         Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
         Some("find-serial") => run_device_find_serial(&args[1..]),
+        Some("restore") => run_device_restore(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1797,6 +1896,24 @@ fn run_device_download(args: &[String]) -> ExitCode {
     };
     let keying = knx_app::access_key::download_keying(prepared.plan.mask, key, source);
     print!("{}", device_download::format_plan(&prepared, &keying));
+    let evidence = match knx_app::download_support::shipped_evidence() {
+        Ok(evidence) => evidence,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let partial_parts = prepared.partial.as_ref().map(|(parts, _)| *parts);
+    let level = knx_app::download_support::download_level(
+        &prepared.request.program_id,
+        partial_parts,
+        &prepared.plan,
+        &evidence,
+    );
+    print!(
+        "{}",
+        device_download::format_support(&level, target.address())
+    );
 
     let (gateway, confirmation) = match mode {
         device_download::Mode::Plan => {
@@ -1814,6 +1931,20 @@ fn run_device_download(args: &[String]) -> ExitCode {
             confirmation,
         } => (gateway, confirmation),
     };
+    if let Err(e) = device_download::check_acknowledgement(
+        &level,
+        target.address(),
+        parsed.accept_untested.as_deref(),
+    ) {
+        eprintln!("{e}");
+        println!("written to the device: no");
+        return ExitCode::FAILURE;
+    }
+    let backup_dir = device_download::backup_dir(&parsed);
+    println!(
+        "backup: what the plan overwrites is read and kept in {} before the first write",
+        backup_dir.display()
+    );
     let authorisation = match knx_core::WriteAuthorisation::for_hardware(
         target.address(),
         knx_core::WriteScope::Download,
@@ -1851,7 +1982,232 @@ fn run_device_download(args: &[String]) -> ExitCode {
             authorisation,
             keying,
             knx_net::SessionTiming::default(),
-            &prepared,
+            &prepared.plan,
+            &device_download::BackupTarget {
+                dir: &backup_dir,
+                application: &prepared.request.program_id,
+                partial: partial_parts,
+                taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+            },
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        match written {
+            device_download::Written::Yes => ExitCode::SUCCESS,
+            device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        }
+    })
+}
+
+/// `knx device restore`: a backup written back. The same load procedure as
+/// the download it was taken for, with the backed-up octets; the same
+/// phrase as a download, because it is one. It takes a backup of its own
+/// first, so a restore can be undone like any download.
+fn run_device_restore(args: &[String]) -> ExitCode {
+    let mut file = None;
+    let mut product_db = None;
+    let mut key_file = None;
+    let mut backup_dir = None;
+    let mut gateway = None;
+    let mut confirm = None;
+    let mut accept_untested = None;
+    let mut i = 0;
+    while i < args.len() {
+        let slot = match args[i].as_str() {
+            "--product-db" => &mut product_db,
+            "--key-file" => &mut key_file,
+            "--backup-dir" => &mut backup_dir,
+            "--gateway" => &mut gateway,
+            "--confirm" => &mut confirm,
+            "--accept-untested" => &mut accept_untested,
+            flag if flag.starts_with("--") => {
+                eprintln!("unknown flag {flag}\n{USAGE}");
+                return ExitCode::FAILURE;
+            }
+            positional => {
+                if file.replace(positional.to_owned()).is_some() {
+                    eprintln!("give exactly one backup file\n{USAGE}");
+                    return ExitCode::FAILURE;
+                }
+                i += 1;
+                continue;
+            }
+        };
+        match take_value(args, i + 1, &args[i]) {
+            Ok(value) => *slot = Some(value),
+            Err(e) => {
+                eprintln!("{e}\n{USAGE}");
+                return ExitCode::FAILURE;
+            }
+        }
+        i += 2;
+    }
+    let Some(file) = file else {
+        eprintln!("missing the backup file\n{USAGE}");
+        return ExitCode::FAILURE;
+    };
+    if confirm.is_some() && gateway.is_none() {
+        eprintln!("--confirm writes to a device and needs --gateway <host:port>");
+        return ExitCode::FAILURE;
+    }
+    let stored = match knx_app::device_backup::read_backup(std::path::Path::new(&file)) {
+        Ok(stored) => stored,
+        Err(e) => {
+            eprintln!("{file}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let address = stored.backup.target;
+    let target = match knx_core::ContactableAddress::new(address) {
+        Ok(target) => target,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let expected = knx_core::commissioning::mutation::required_confirmation_phrase(
+        address,
+        knx_core::WriteScope::Download,
+    );
+    if let Some(given) = &confirm {
+        if *given != expected {
+            eprintln!(
+                "not written: the confirmation for a download to device {address} must read exactly {expected:?}"
+            );
+            return ExitCode::FAILURE;
+        }
+    }
+    let products = match open_products_db(product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let plan = match knx_app::device_backup::prepare_restore(&products, &stored) {
+        Ok(plan) => plan,
+        Err(e) => {
+            eprintln!("no restore of {file} prepared: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let evidence = match knx_app::download_support::shipped_evidence() {
+        Ok(evidence) => evidence,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let level = knx_app::download_support::download_level(
+        &stored.application,
+        stored.partial,
+        &plan,
+        &evidence,
+    );
+    let operator_key = match key_file.as_deref() {
+        None => None,
+        Some(path) => match std::fs::read_to_string(path)
+            .map_err(|e| e.to_string())
+            .and_then(|text| {
+                knx_app::access_key::parse_operator_key(&text).map_err(|e| e.to_string())
+            }) {
+            Ok(key) => Some(key),
+            Err(e) => {
+                eprintln!("--key-file {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+    };
+    // No project here, so no project key: the operator's or none.
+    let (key, source) = knx_app::access_key::choose_key(operator_key, None);
+    let keying = knx_app::access_key::download_keying(plan.mask, key, source);
+    println!("== restore of device {address}: plan (nothing sent yet) ==");
+    println!("backup:  {file}, taken {}", stored.taken);
+    println!("program: {}", stored.application);
+    print!("{}", device_download::format_support(&level, address));
+    println!(
+        "octets written to the device: {} (every one is read back)",
+        plan.data_octets()
+    );
+
+    println!("access key: {}", keying.source);
+    println!("steps: {}", plan.steps.len());
+    for (index, step) in plan.steps.iter().enumerate() {
+        println!("  {:2}: {step}", index + 1);
+    }
+    let (Some(gateway), Some(confirmation)) = (gateway, confirm) else {
+        println!(
+            "written to the device: no (plan only; add --gateway and --confirm {expected:?} to write)"
+        );
+        return ExitCode::SUCCESS;
+    };
+    if let Err(e) =
+        device_download::check_acknowledgement(&level, address, accept_untested.as_deref())
+    {
+        eprintln!("{e}");
+        println!("written to the device: no");
+        return ExitCode::FAILURE;
+    }
+    let gateway: std::net::SocketAddrV4 = match gateway.parse() {
+        Ok(gateway) => gateway,
+        Err(_) => {
+            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+            return ExitCode::FAILURE;
+        }
+    };
+    let authorisation = match knx_core::WriteAuthorisation::for_hardware(
+        target.address(),
+        knx_core::WriteScope::Download,
+        &confirmation,
+    ) {
+        Ok(authorisation) => authorisation,
+        Err(e) => {
+            eprintln!("{e}");
+            println!("written to the device: no");
+            return ExitCode::FAILURE;
+        }
+    };
+    let backup_dir: std::path::PathBuf = match backup_dir {
+        Some(dir) => dir.into(),
+        None => std::path::Path::new(&file)
+            .parent()
+            .map_or_else(|| ".".into(), std::path::Path::to_path_buf),
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                println!("written to the device: no");
+                return ExitCode::FAILURE;
+            }
+        };
+        let written = device_download::execute(
+            &tunnel,
+            authorisation,
+            keying,
+            knx_net::SessionTiming::default(),
+            &plan,
+            &device_download::BackupTarget {
+                dir: &backup_dir,
+                application: &stored.application,
+                partial: stored.partial,
+                taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+            },
             &mut std::io::stdout(),
         )
         .await;

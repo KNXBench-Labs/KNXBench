@@ -15,16 +15,19 @@ use std::fmt::Write as _;
 use std::io::Write;
 
 use knx_app::access_key::DownloadKeying;
+use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
+use knx_app::download_support::{untested_acknowledgement, SupportLevel};
 use knx_core::commissioning::authorisation::Authorisation;
-use knx_core::commissioning::memory_download::MemoryDownloadStep;
+use knx_core::commissioning::device_backup::DeviceBackup;
+use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
 use knx_core::commissioning::mutation::{
     required_confirmation_phrase, WriteAuthorisation, WriteScope,
 };
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::memory_download::{
-    locked_device_hint, run_memory_download_observed, MemoryDownloadReport, Progress,
+    locked_device_hint, run_memory_download_with_backup, MemoryDownloadReport, Progress,
     RestartOutcome,
 };
 use knx_net::{ManagementSession, ManagementTransport, SessionTiming};
@@ -43,6 +46,12 @@ pub struct DownloadArgs {
     /// `--partial`: CP §3.9.2.4's partial download instead of the complete
     /// one.
     pub partial: Option<PartialDownloadParts>,
+    /// `--backup-dir`: where the backup taken before the first write goes.
+    /// Default: `<project>.backups/` beside the project.
+    pub backup_dir: Option<String>,
+    /// `--accept-untested`: the phrase that accepts a download to an
+    /// application no one has verified on hardware.
+    pub accept_untested: Option<String>,
 }
 
 /// `--partial parameters|group-addresses|both`.
@@ -71,6 +80,8 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut confirm = None;
     let mut key_file = None;
     let mut partial = None;
+    let mut backup_dir = None;
+    let mut accept_untested = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -105,6 +116,14 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 )?)?);
                 i += 1;
             }
+            "--backup-dir" => {
+                backup_dir = Some(crate::take_value(args, i + 1, "--backup-dir")?);
+                i += 1;
+            }
+            "--accept-untested" => {
+                accept_untested = Some(crate::take_value(args, i + 1, "--accept-untested")?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown flag {flag}")),
             positional => {
                 if target.replace(positional.to_string()).is_some() {
@@ -127,7 +146,73 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         confirm,
         key_file,
         partial,
+        backup_dir,
+        accept_untested,
     })
+}
+
+/// Where a write's backup goes: `--backup-dir`, or `<project>.backups/`
+/// beside the project file.
+pub fn backup_dir(args: &DownloadArgs) -> std::path::PathBuf {
+    match &args.backup_dir {
+        Some(dir) => dir.into(),
+        None => format!("{}.backups", args.project).into(),
+    }
+}
+
+/// The support level as printed under the plan.
+pub fn format_support(level: &SupportLevel, target: IndividualAddress) -> String {
+    match level {
+        SupportLevel::Verified { evidence, .. } => format!(
+            "support: verified — this application was downloaded this way on hardware \
+             ({}, {}; {})\n",
+            evidence.device, evidence.date, evidence.reference
+        ),
+        SupportLevel::Untested { .. } => format!(
+            "support: UNTESTED — the plan is complete and built from the product data alone, \
+             but no download of this application this way has been verified on hardware.\n\
+             \x20        A write needs --accept-untested {:?} as well.\n",
+            untested_acknowledgement(target)
+        ),
+        SupportLevel::Unsupported { category, detail } => {
+            format!("support: unsupported ({}): {detail}\n", category.code())
+        }
+    }
+}
+
+/// Refuses a write of an untested download without its acknowledgement.
+/// Runs before any socket.
+pub fn check_acknowledgement(
+    level: &SupportLevel,
+    target: IndividualAddress,
+    given: Option<&str>,
+) -> Result<(), String> {
+    if !level.needs_acknowledgement() {
+        return Ok(());
+    }
+    let expected = untested_acknowledgement(target);
+    match given {
+        Some(given) if given == expected => Ok(()),
+        Some(_) => Err(format!(
+            "not written: --accept-untested must read exactly {expected:?}"
+        )),
+        None => Err(format!(
+            "not written: this download is untested on hardware; add --accept-untested {expected:?} \
+             to accept that"
+        )),
+    }
+}
+
+/// What a backup is kept as, besides its octets.
+pub struct BackupTarget<'a> {
+    /// The directory.
+    pub dir: &'a std::path::Path,
+    /// The application program.
+    pub application: &'a str,
+    /// The partial selection, if any.
+    pub partial: Option<PartialDownloadParts>,
+    /// The time stamp (RFC 3339) the file is named after.
+    pub taken: String,
 }
 
 /// What the operator asked for, after the checks that need no project.
@@ -285,6 +370,9 @@ pub fn format_progress(progress: &Progress) -> Option<String> {
             .observed
             .as_ref()
             .map(|observed| format!("        done: {observed}")),
+        Progress::BackupTaken { regions, octets } => Some(format!(
+            "        backup: {octets} octets in {regions} regions read before the first write"
+        )),
         Progress::Authorised {
             authorisation,
             suspicious,
@@ -318,11 +406,11 @@ pub async fn execute<T: ManagementTransport>(
     authorisation: WriteAuthorisation,
     keying: DownloadKeying,
     timing: SessionTiming,
-    prepared: &PreparedDownload,
+    plan: &MemoryDownloadPlan,
+    backup: &BackupTarget<'_>,
     out: &mut impl Write,
 ) -> Written {
     let target = authorisation.target().address();
-    let plan = &prepared.plan;
     let mut session =
         match ManagementSession::authorised(transport, keying.plan, timing, authorisation) {
             Ok(session) => {
@@ -341,21 +429,46 @@ pub async fn execute<T: ManagementTransport>(
         };
     let mut last_started = None;
     let mut granted = None;
-    let result = run_memory_download_observed(&mut session, plan, |progress| {
-        if let Progress::StepStarted { index, .. } = &progress {
-            last_started = Some(*index);
-        }
-        if let Progress::Authorised {
-            authorisation,
-            suspicious,
-        } = &progress
-        {
-            granted = Some((*authorisation, *suspicious));
-        }
-        if let Some(line) = format_progress(&progress) {
-            let _ = writeln!(out, "{line}");
-        }
-    })
+    // Shared by the backup closure (which sets it) and the observer (which
+    // prints it when the backup's progress arrives, right after).
+    let kept_at = std::cell::RefCell::new(None);
+    let mut keep = |taken: &DeviceBackup| {
+        let stored = StoredBackup {
+            backup: taken.clone(),
+            application: backup.application.to_owned(),
+            partial: backup.partial,
+            taken: backup.taken.clone(),
+            plan_steps: plan.steps.iter().map(ToString::to_string).collect(),
+        };
+        let path = write_backup(backup.dir, &stored).map_err(|e| e.to_string())?;
+        *kept_at.borrow_mut() = Some(path);
+        Ok(())
+    };
+    let result = run_memory_download_with_backup(
+        &mut session,
+        plan,
+        |progress| {
+            if let Progress::StepStarted { index, .. } = &progress {
+                last_started = Some(*index);
+            }
+            if let Progress::Authorised {
+                authorisation,
+                suspicious,
+            } = &progress
+            {
+                granted = Some((*authorisation, *suspicious));
+            }
+            if let Some(line) = format_progress(&progress) {
+                let _ = writeln!(out, "{line}");
+            }
+            if matches!(progress, Progress::BackupTaken { .. }) {
+                if let Some(path) = kept_at.borrow().as_ref() {
+                    let _ = writeln!(out, "        backup kept in {}", path.display());
+                }
+            }
+        },
+        &mut keep,
+    )
     .await;
     let wrote_something = last_started.is_some_and(|last| {
         plan.steps[..=last]
@@ -383,6 +496,13 @@ pub async fn execute<T: ManagementTransport>(
                      the device may not run until a complete download",
                     last_started.map_or(0, |index| index + 1)
                 );
+                if let Some(path) = kept_at.borrow().as_ref() {
+                    let _ = writeln!(
+                        out,
+                        "what it held before is in {}; `knx device restore` can plan an attempted recovery",
+                        path.display()
+                    );
+                }
                 Written::Partially
             } else {
                 let _ = writeln!(out, "written to the device: no");
@@ -616,6 +736,16 @@ mod tests {
         prepared: &PreparedDownload,
         key: Option<AccessKey>,
     ) -> (Written, String) {
+        let dir = tempfile::tempdir().unwrap();
+        run_into(device, prepared, key, dir.path())
+    }
+
+    fn run_into(
+        device: &SimulatedDevice,
+        prepared: &PreparedDownload,
+        key: Option<AccessKey>,
+        backups: &std::path::Path,
+    ) -> (Written, String) {
         let authorisation =
             WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap();
         let source = if key.is_some() {
@@ -634,10 +764,169 @@ mod tests {
                 authorisation,
                 keying,
                 fast(),
-                prepared,
+                &prepared.plan,
+                &BackupTarget {
+                    dir: backups,
+                    application: &prepared.request.program_id,
+                    partial: prepared.partial.as_ref().map(|(parts, _)| *parts),
+                    taken: "2026-09-29T15:00:00+02:00".into(),
+                },
                 &mut out,
             ));
         (written, String::from_utf8(out).unwrap())
+    }
+
+    /// The backup is on disk before the first write, and writing it back
+    /// through `knx device restore`'s plan returns the device's old memory.
+    #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+    fn the_backup_is_kept_before_the_first_write_and_restores_the_old_memory() {
+        let (dir, prepared) = prepared();
+        let device = mdt(SimulatorConfig::default());
+        // An older configuration: other octets than the plan writes.
+        for segment in &prepared.image.segments {
+            let old: Vec<u8> = (0..segment.octets.len())
+                .map(|i| (i % 251) as u8 ^ 0x5A)
+                .collect();
+            device.preset_memory(segment.address, &old);
+        }
+        device.preset_memory(0x4001, &[0x11, 0x43]);
+        let regions: Vec<_> = prepared
+            .image
+            .segments
+            .iter()
+            .map(|s| (s.address, device.memory(s.address, s.octets.len())))
+            .collect();
+        let backups = dir.path().join("backups");
+        let (written, out) = run_into(&device, &prepared, None, &backups);
+        assert_eq!(written, Written::Yes, "{out}");
+        let backup_line = out.find("backup: ").expect("the backup is reported");
+        assert!(backup_line < out.find("[ 5/25]").unwrap(), "{out}");
+        assert!(out.contains("backup kept in "), "{out}");
+        let files: Vec<_> = std::fs::read_dir(&backups).unwrap().collect();
+        assert_eq!(files.len(), 1);
+        let path = files.into_iter().next().unwrap().unwrap().path();
+        let stored = knx_app::device_backup::read_backup(&path).unwrap();
+        assert_eq!(stored.application, prepared.request.program_id);
+        assert_ne!(
+            regions,
+            prepared
+                .image
+                .segments
+                .iter()
+                .map(|s| (s.address, device.memory(s.address, s.octets.len())))
+                .collect::<Vec<_>>(),
+            "the download changed the device"
+        );
+
+        let products = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let mut altered = stored.clone();
+        altered.plan_steps[0] = "different load procedure".into();
+        assert!(matches!(
+            knx_app::device_backup::prepare_restore(&products, &altered),
+            Err(knx_app::device_backup::RestorePrepareError::DifferentProcedure)
+        ));
+        let restore = knx_app::device_backup::prepare_restore(&products, &stored).unwrap();
+        let authorisation =
+            WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap();
+        let mut out = Vec::new();
+        let written = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(execute(
+                &device,
+                authorisation,
+                download_keying(restore.mask, None, KeySource::None),
+                fast(),
+                &restore,
+                &BackupTarget {
+                    dir: &backups,
+                    application: &stored.application,
+                    partial: None,
+                    taken: "2026-09-29T15:05:00+02:00".into(),
+                },
+                &mut out,
+            ));
+        let out = String::from_utf8(out).unwrap();
+        assert_eq!(written, Written::Yes, "{out}");
+        for (address, before) in &regions {
+            let now = device.memory(*address, before.len());
+            for (index, (now, before)) in now.iter().zip(before).enumerate() {
+                let written_here = stored.backup.regions.iter().any(|r| {
+                    (r.address as usize..r.address as usize + r.octets.len())
+                        .contains(&(*address as usize + index))
+                });
+                if written_here {
+                    assert_eq!(now, before, "{address:04X}h + {index}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn an_untested_download_needs_its_exact_acknowledgement() {
+        let target: IndividualAddress = "1.1.70".parse().unwrap();
+        let untested = SupportLevel::Untested {
+            steps: 25,
+            octets: 1416,
+        };
+        let error = check_acknowledgement(&untested, target, None).unwrap_err();
+        assert!(
+            error.contains("--accept-untested \"I accept an untested download to 1.1.70\""),
+            "{error}"
+        );
+        assert!(check_acknowledgement(&untested, target, Some("yes")).is_err());
+        assert!(check_acknowledgement(
+            &untested,
+            "1.1.71".parse().unwrap(),
+            Some("I accept an untested download to 1.1.70")
+        )
+        .is_err());
+        assert!(check_acknowledgement(
+            &untested,
+            target,
+            Some("I accept an untested download to 1.1.70")
+        )
+        .is_ok());
+        let verified = SupportLevel::Verified {
+            evidence: knx_app::download_support::VerifiedEvidence {
+                program_id: "P".into(),
+                scopes: vec!["complete".into()],
+                device: "1.1.67".into(),
+                date: "2026-09-29".into(),
+                reference: "docs".into(),
+            },
+            steps: 25,
+            octets: 1416,
+        };
+        assert!(check_acknowledgement(&verified, target, None).is_ok());
+        assert!(format_support(&untested, target).contains("UNTESTED"));
+        assert!(format_support(&verified, target).starts_with("support: verified"));
+    }
+
+    #[test]
+    fn the_backup_goes_beside_the_project_unless_told_otherwise() {
+        let parsed = parse_download_args(&args(&["1.1.67", "--project", "/p/x.knxdb"])).unwrap();
+        assert_eq!(
+            backup_dir(&parsed),
+            std::path::PathBuf::from("/p/x.knxdb.backups")
+        );
+        let parsed = parse_download_args(&args(&[
+            "1.1.67",
+            "--project",
+            "/p/x.knxdb",
+            "--backup-dir",
+            "/b",
+            "--accept-untested",
+            "I accept an untested download to 1.1.67",
+        ]))
+        .unwrap();
+        assert_eq!(backup_dir(&parsed), std::path::PathBuf::from("/b"));
+        assert_eq!(
+            parsed.accept_untested.as_deref(),
+            Some("I accept an untested download to 1.1.67")
+        );
     }
 
     /// A device locked above its free level: without the key the run
@@ -754,13 +1043,28 @@ mod tests {
     #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
     fn a_connection_lost_mid_download_is_reported_as_partial() {
         let (_dir, prepared) = prepared();
-        let device = mdt(SimulatorConfig {
+        // Frame 12 now falls in the backup's reads: stopped there, with
+        // nothing written. Frame 400 falls in the segment writes.
+        let early = mdt(SimulatorConfig {
             drop_connection_after: Some(12),
+            ..SimulatorConfig::default()
+        });
+        let (written, out) = run(&early, &prepared);
+        assert_eq!(written, Written::No, "{out}");
+        assert!(out.contains("nothing was written"), "{out}");
+        assert!(!early.memory_was_written(), "{out}");
+
+        let device = mdt(SimulatorConfig {
+            drop_connection_after: Some(400),
             ..SimulatorConfig::default()
         });
         let (written, out) = run(&device, &prepared);
         assert_eq!(written, Written::Partially, "{out}");
         assert!(out.contains("written to the device: partially"), "{out}");
+        assert!(
+            out.contains("`knx device restore` writes it back"),
+            "the way back is named: {out}"
+        );
     }
 
     #[test]

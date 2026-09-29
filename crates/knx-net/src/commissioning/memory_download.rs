@@ -44,10 +44,12 @@
 use std::fmt;
 
 use knx_core::commissioning::authorisation::Authorisation;
+use knx_core::commissioning::device_backup::{written_regions, BackupRegion, DeviceBackup};
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
+use knx_core::commissioning::memory::WriteLimit;
 use knx_core::commissioning::memory_download::{
-    property_matches, MemoryDownloadPlan, MemoryDownloadStep,
+    machines, property_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::properties::ObjectIndex;
@@ -118,6 +120,14 @@ pub enum Progress {
         /// A suspicion, not a diagnosis.
         suspicious: bool,
     },
+    /// Everything the plan is about to overwrite was read and kept
+    /// ([`run_memory_download_with_backup`]); the first write follows.
+    BackupTaken {
+        /// Regions read.
+        regions: usize,
+        /// Octets read.
+        octets: usize,
+    },
 }
 
 /// What to tell the operator when a download failed in a way a locked
@@ -184,6 +194,9 @@ pub struct MemoryDownloadReport {
     /// What became of the plan's Basic Restart. Read this before telling
     /// anyone the device runs the new program.
     pub restart: RestartOutcome,
+    /// What the device held before the first write, when the run took a
+    /// backup ([`run_memory_download_with_backup`]).
+    pub backup: Option<DeviceBackup>,
 }
 
 /// What became of the plan's Basic Restart.
@@ -299,6 +312,26 @@ pub enum MemoryDownloadError {
         /// The failure.
         error: SessionError,
     },
+    /// The backup before the first write could not be read. Nothing was
+    /// written.
+    BackupRead {
+        /// The step the backup preceded.
+        index: usize,
+        /// The failure.
+        error: SessionError,
+    },
+    /// A backup read answered fewer octets than it asked for. Nothing was
+    /// written.
+    BackupShortRead {
+        /// Where.
+        address: u32,
+        /// Asked for.
+        asked: u8,
+        /// Got.
+        got: usize,
+    },
+    /// The caller could not keep the backup. Nothing was written.
+    BackupNotKept(String),
 }
 
 impl std::error::Error for MemoryDownloadError {}
@@ -354,6 +387,24 @@ impl fmt::Display for MemoryDownloadError {
                 Some(index) => write!(f, "step {index}: {error}"),
                 None => write!(f, "{error}"),
             },
+            MemoryDownloadError::BackupRead { index, error } => write!(
+                f,
+                "before step {index}: the backup of what the plan overwrites could not be \
+                 read ({error}); nothing was written"
+            ),
+            MemoryDownloadError::BackupShortRead {
+                address,
+                asked,
+                got,
+            } => write!(
+                f,
+                "the backup read at {address:04X}h asked for {asked} octets and got {got}; \
+                 nothing was written"
+            ),
+            MemoryDownloadError::BackupNotKept(why) => write!(
+                f,
+                "the backup could not be kept ({why}); nothing was written"
+            ),
         }
     }
 }
@@ -439,7 +490,82 @@ pub async fn run_memory_download<T: ManagementTransport>(
 pub async fn run_memory_download_observed<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &MemoryDownloadPlan,
+    observe: impl FnMut(Progress),
+) -> Result<MemoryDownloadReport, MemoryDownloadError> {
+    run(
+        session,
+        plan,
+        observe,
+        None::<fn(&DeviceBackup) -> Result<(), String>>,
+    )
+    .await
+}
+
+/// [`run_memory_download_observed`], with a backup first.
+///
+/// After the identity checks and before the first step that changes the
+/// device, this reads every region the plan writes and the load state of
+/// every machine it touches ([`DeviceBackup`]), in the same connection, and
+/// hands it to `keep`. The first write happens only once `keep` returned
+/// `Ok`: a backup that could not be read or kept stops the run with
+/// nothing written. Reads only; the backup adds no write of its own.
+///
+/// `keep` is where the backup goes: `Ok` once it is kept (on disk, say),
+/// `Err` with the reason when it could not be.
+pub async fn run_memory_download_with_backup<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+    observe: impl FnMut(Progress),
+    keep: impl FnMut(&DeviceBackup) -> Result<(), String>,
+) -> Result<MemoryDownloadReport, MemoryDownloadError> {
+    run(session, plan, observe, Some(keep)).await
+}
+
+/// Reads what `plan` is about to overwrite, `limit` octets at a time.
+async fn take_backup<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+    limit: WriteLimit,
+    index: usize,
+) -> Result<DeviceBackup, MemoryDownloadError> {
+    let at = |error| MemoryDownloadError::BackupRead { index, error };
+    let mut load_states = Vec::new();
+    for machine in machines(plan) {
+        let state = session.read_memory_load_state(machine).await.map_err(at)?;
+        load_states.push((machine, state));
+    }
+    let mut regions = Vec::new();
+    for (address, length) in written_regions(plan) {
+        let mut octets = Vec::with_capacity(length);
+        while octets.len() < length {
+            let from = u32::from(address) + octets.len() as u32;
+            let asked = usize::from(limit.max_octets()).min(length - octets.len()) as u8;
+            let got = session.read_memory(from, asked).await.map_err(at)?;
+            if got.len() != usize::from(asked) {
+                return Err(MemoryDownloadError::BackupShortRead {
+                    address: from,
+                    asked,
+                    got: got.len(),
+                });
+            }
+            octets.extend_from_slice(&got);
+        }
+        regions.push(BackupRegion { address, octets });
+    }
+    Ok(DeviceBackup {
+        target: session.target(),
+        mask: plan.mask,
+        manufacturer: plan.manufacturer,
+        load_states,
+        regions,
+    })
+}
+
+async fn run<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(), String>>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
     mut observe: impl FnMut(Progress),
+    mut keep: Option<K>,
 ) -> Result<MemoryDownloadReport, MemoryDownloadError> {
     check_shape(plan)?;
     let of = plan.steps.len();
@@ -459,9 +585,31 @@ pub async fn run_memory_download_observed<T: ManagementTransport>(
         final_states: Vec::new(),
         data_octets: 0,
         restart: RestartOutcome::NotInPlan,
+        backup: None,
     };
     let mut limit = None;
     for (index, step) in plan.steps.iter().enumerate() {
+        if step.changes_device() {
+            if let Some(mut keep) = keep.take() {
+                let limit = limit.expect("check_shape puts Connect first");
+                let backup = match take_backup(session, plan, limit, index).await {
+                    Ok(backup) => backup,
+                    Err(error) => {
+                        session.disconnect().await;
+                        return Err(error);
+                    }
+                };
+                if let Err(why) = keep(&backup) {
+                    session.disconnect().await;
+                    return Err(MemoryDownloadError::BackupNotKept(why));
+                }
+                observe(Progress::BackupTaken {
+                    regions: backup.regions.len(),
+                    octets: backup.octets(),
+                });
+                report.backup = Some(backup);
+            }
+        }
         let at = |error| MemoryDownloadError::Session {
             index: Some(index),
             error,
@@ -651,6 +799,7 @@ mod tests {
     use super::*;
     use crate::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
     use crate::commissioning::SessionTiming;
+    use knx_core::commissioning::device_backup::BackupRegion;
 
     const MANUFACTURER: u16 = 0x0083;
     const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
@@ -1689,5 +1838,205 @@ mod tests {
             LoadState::Loading
         );
         assert_eq!(aimed_at(LoadEvent::LoadCompleted), LoadState::Loaded);
+    }
+
+    // ------------------------------------------------------------ backup
+
+    /// The device before the download: an old address-table image and a
+    /// loaded machine.
+    fn old_device() -> SimulatedDevice {
+        let device = device(SimulatorConfig::default());
+        device.preset_memory(0x4000, &[0x07, 0x11, 0x43]);
+        device.preset_memory(0x4003, &(100..127).collect::<Vec<u8>>());
+        device.preset_load_state(ObjectIndex::new(1), LoadState::Loaded);
+        device
+    }
+
+    fn memory_reads(device: &SimulatedDevice) -> Vec<(u32, u8)> {
+        device
+            .seen()
+            .into_iter()
+            .filter_map(|seen| match seen {
+                Seen::MemoryRead {
+                    address, number, ..
+                } => Some((address, number)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn the_backup_holds_the_old_octets_and_is_kept_before_the_first_write() {
+        let device = old_device();
+        let mut session = session(&device, WriteScope::Download);
+        let mut kept = Vec::new();
+        let mut seen = Vec::new();
+        let writes_when_kept = std::cell::Cell::new(usize::MAX);
+        let report = run_memory_download_with_backup(
+            &mut session,
+            &plan(),
+            |p| seen.push(p),
+            &mut |backup: &DeviceBackup| {
+                writes_when_kept.set(memory_writes(&device).len());
+                kept.push(backup.clone());
+                Ok(())
+            },
+        )
+        .await
+        .expect("the download runs");
+
+        assert_eq!(writes_when_kept.get(), 0, "kept before any write");
+        assert_eq!(kept.len(), 1, "one backup per run");
+        let backup = &kept[0];
+        assert_eq!(report.backup.as_ref(), Some(backup));
+        assert_eq!(backup.target, device.address());
+        assert_eq!(
+            backup.load_states,
+            vec![(MemoryLoadStateMachine::AddressTable, LoadState::Loaded)]
+        );
+        assert_eq!(
+            backup.regions,
+            vec![
+                BackupRegion {
+                    address: 0x4000,
+                    octets: vec![0x07],
+                },
+                BackupRegion {
+                    address: 0x4003,
+                    octets: (100..127).collect(),
+                },
+            ]
+        );
+        // 27 octets at 12 per read: 12 + 12 + 3, never past the region.
+        let reads: Vec<_> = memory_reads(&device)
+            .into_iter()
+            .filter(|(address, _)| (0x4000..0x4100).contains(address))
+            .take(4)
+            .collect();
+        assert_eq!(
+            reads,
+            vec![(0x4000, 1), (0x4003, 12), (0x400F, 12), (0x401B, 3)]
+        );
+        let taken = seen
+            .iter()
+            .position(|p| {
+                matches!(
+                    p,
+                    Progress::BackupTaken {
+                        regions: 2,
+                        octets: 28
+                    }
+                )
+            })
+            .expect("the backup is reported");
+        let first_write = seen
+            .iter()
+            .position(|p| matches!(p, Progress::StepStarted { index: 2, .. }))
+            .expect("the unload starts");
+        assert!(taken < first_write, "{seen:?}");
+    }
+
+    #[tokio::test]
+    async fn restoring_the_backup_brings_the_old_octets_back() {
+        use knx_core::commissioning::device_backup::restore_plan;
+        let device = old_device();
+        let before: Vec<Option<u8>> = device.memory(0x4000, 30);
+        let mut kept = None;
+        run_memory_download_with_backup(
+            &mut session(&device, WriteScope::Download),
+            &plan(),
+            |_| {},
+            &mut |backup: &DeviceBackup| {
+                kept = Some(backup.clone());
+                Ok(())
+            },
+        )
+        .await
+        .expect("the download runs");
+        assert_ne!(device.memory(0x4000, 30), before, "the download changed it");
+
+        let restore = restore_plan(&plan(), device.address(), &kept.unwrap()).unwrap();
+        run_memory_download(&mut session(&device, WriteScope::Download), &restore)
+            .await
+            .expect("the restore runs");
+        assert_eq!(device.memory(0x4000, 30), before);
+        assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+    }
+
+    #[tokio::test]
+    async fn a_backup_that_cannot_be_kept_stops_the_run_with_nothing_written() {
+        let device = old_device();
+        let error = run_memory_download_with_backup(
+            &mut session(&device, WriteScope::Download),
+            &plan(),
+            |_| {},
+            &mut |_: &DeviceBackup| Err("disk full".into()),
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(&error, MemoryDownloadError::BackupNotKept(why) if why == "disk full"),
+            "{error}"
+        );
+        assert!(error.to_string().contains("nothing was written"), "{error}");
+        assert!(memory_writes(&device).is_empty(), "no write at all");
+        assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+    }
+
+    #[tokio::test]
+    async fn a_backup_that_cannot_be_read_stops_the_run_with_nothing_written() {
+        let device = device(SimulatorConfig {
+            protected_memory: Some((0x4003, 0x4004)),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::new(1), LoadState::Loaded);
+        let mut called = false;
+        let error = run_memory_download_with_backup(
+            &mut session(&device, WriteScope::Download),
+            &plan(),
+            |_| {},
+            &mut |_: &DeviceBackup| {
+                called = true;
+                Ok(())
+            },
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                MemoryDownloadError::BackupRead {
+                    index: 2,
+                    error: SessionError::MemoryRefused { address: 0x4003 }
+                }
+            ),
+            "{error}"
+        );
+        assert!(!called, "nothing to keep");
+        assert!(memory_writes(&device).is_empty(), "no write at all");
+    }
+
+    #[tokio::test]
+    async fn without_a_backup_the_run_reads_nothing_extra() {
+        let plain = old_device();
+        let report = run_memory_download(&mut session(&plain, WriteScope::Download), &plan())
+            .await
+            .expect("the download runs");
+        assert!(report.backup.is_none());
+        let backed_up = old_device();
+        run_memory_download_with_backup(
+            &mut session(&backed_up, WriteScope::Download),
+            &plan(),
+            |_| {},
+            &mut |_: &DeviceBackup| Ok(()),
+        )
+        .await
+        .expect("the download runs");
+        // The backup adds one load-state read and one read per chunk of
+        // each region: 1 + (1 + 3). The read-backs are the same in both.
+        assert_eq!(
+            memory_reads(&backed_up).len(),
+            memory_reads(&plain).len() + 5
+        );
     }
 }

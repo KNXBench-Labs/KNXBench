@@ -1,4 +1,13 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 05:48 CEST
+- Web lock: taken by UI session for U7 ISSUE-11 bus-monitor pause, export, decode visibility and bounded statistics
+- **Completed:** U6 `a62e45a` was fast-forward merged and pushed. On merged `main`: TypeScript/build and 74 web files / 1142 tests; Rust fmt/clippy/workspace 123 suites / 2381 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. Its isolated worktree, branch, and 42 owned scratch artifacts are removed; only foreign untracked `docs/paperclip-shutdown/` remains in root. CT-10/ISSUE-11 preflight confirmed existing service/text filters and a typed decode DTO; no bus operations.
+- **Pending/Next Steps:** Create `ui-bus-monitor-ux` from current `origin/main` under this lock; TDD for pause/cursor/dropped gap, deterministic export, distinct decode states, visible filters and bounded stats; branch and merged-main gates, review, docs, release lock, push and cleanup. U8–U12 and U13 closing review remain.
+- **Notes for Codex or Claude:** User quota prompt timed out. Standalone Codex app-server reported its own weekly window at 15% used; this is not proof of this Hermes session's 5h limit, and no concrete 100% risk is known. The server's decode model has `value/unresolved/conflict/error`; avoid inventing an unsupported-DPT distinction not present in the DTO without tracing codec evidence. Do not touch the live bus or the foreign root directory.
+- **For the goal.md session:** U6 added KNOWN_LIMITATIONS §130 (native WebKitGTK zoom/pane GUI verification is still open). Refresh `stats.md` after U6.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 04:36 CEST
 - Web lock: released (U6 ISSUE-01 zoom and remembered pane geometry, upon merge)
 - **Completed:** U6: bounded application zoom and pane widths in the versioned settings document; pointer/keyboard resize survives hide/show and reload, scale-aware inspector stacking avoids clipped Properties, and diagram-device hover keeps its icon/address/count. RED/GREEN tests plus four behavioral mutations. Branch gates: TypeScript/build, 74 web files / 1142 tests; Rust fmt/clippy/workspace 123 suites / 2381 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. Real Chromium at narrow/default/enlarged viewports and max widths/reload passed; native WebKitGTK GUI remains unverified. Manual, research, status, §130 and ISSUE-01 plan updated. No device write or tunnel.

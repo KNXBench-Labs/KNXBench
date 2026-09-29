@@ -1,3 +1,12 @@
+- **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 11:21 CEST
+- Web lock: taken by UI session for U9 ISSUE-02 welcome surface and new-project clarity
+- **Completed:** U8 ISSUE-03 was merged at `c1015f7`, tested on final `main` (77 web files/1170 tests; 124 Rust suites/2468 passed, 0 failed, 143 ignored; layering, headers, anchors and corpus green), and its lock-release handover plus separately authorized commissioning handover were pushed through `e02188e` (remote readback matched). Removed only the U8 worktree/branch, its two Cargo targets and 146 `ui-u8-*` scratch artifacts. Read U9's issue plan and verified the root has no tracked changes before taking this lock. No bus action.
+- **Pending/Next Steps:** Create one isolated `ui-welcome-clarity` worktree from current `origin/main`, install web dependencies, inspect current App/NewProjectDialog and language source, add RED accessibility/language/save-name tests, implement the smallest UI-only change, verify keyboard/translation/narrow layout, run branch and merged-result gates, review, push, release lock and clean owned artifacts. U10–U13 remain.
+- **Notes for Codex or Claude:** User reported 20/100 used of this GPT/Codex quota at the U8 boundary. Commissioning K16 is in its own `iaw-k11-key` worktree and may run concurrently; it must not edit shared web code while this lock is held. Root's `docs/paperclip-shutdown/` remains untracked and foreign. Use the existing supported-project-language source rather than inventing a second language list. No hardware, tunnel or native WebKitGTK claims.
+
+---
+
 - **Last Agent:** codex (UI session)
 - **Timestamp:** 2026-09-29 11:12 CEST
 - Web lock: released after U8 ISSUE-03 merge and full merged-result gates

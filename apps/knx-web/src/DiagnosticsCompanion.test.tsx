@@ -248,6 +248,8 @@ describe("one editing workspace", () => {
     // passive string through the already-allowed settings store. It imports
     // no API and cannot discover, connect, scan, or mutate a project; the
     // exact API-call assertion below keeps that boundary explicit.
+    // U10 adds `gatewayEndpoint.ts`: pure host/port parsing and validation,
+    // with no IO or project mutation. The server API remains unchanged.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -264,6 +266,7 @@ describe("one editing workspace", () => {
       "diagnosticsWindow.ts",
       "filePicker.ts",
       "gaNotation.ts",
+      "gatewayEndpoint.ts",
       "gatewayPreference.ts",
       "help.ts",
       "i18n.ts",

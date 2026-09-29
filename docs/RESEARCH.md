@@ -5788,7 +5788,10 @@ KNXBench plan a download for. Measured by importing "Unser Zuhause ets
 6.3.0 - 2026-09-02.knxproj" into a scratch store, ingesting the same file's
 embedded product data into a scratch product database, and running
 `knx device download 1.1.<n> --project … --product-db …` (plan only,
-nothing sent) for every address.
+nothing sent) for every address. The project has 35 devices: the 32 bus
+devices 1.1.1–1.1.32 below, the two IP interfaces 1.1.250 and 1.1.253, and
+1.1.220 (a Gira alarm panel, `A-C004-03`), which is on KNXBench's exclusion
+list and is refused before any planning ("must never be contacted").
 
 **None of the house's devices is modular.** Its 12 application programs
 contain 0 `ModuleDef`s between them, so the module-instance refusal
@@ -5804,14 +5807,16 @@ contain 0 `ModuleDef`s between them, so the module-instance refusal
 | 1.1.1–9 | Presence detectors (`M-006A_A-0001-22`) | refused: load procedure uses `LsmIdx 5` |
 | 1.1.11–13 | MDT AMS-1216 (`A-0019-13-B655`) | refused: two members of one union at offset 1810 |
 | 1.1.22–23 | Gira SmartSensor (`MV-0012`) | refused: not memory-mapped |
-| 1.1.24 | Merten blind actuator (`A-5701-10`) | refused: `LdCtrlTaskCtrl1` |
+| 1.1.24 | Merten blind actuator (`A-5701-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
+| 1.1.250, 1.1.253 | EIBMARKT IP interface (`A-0702-10`) | refused: `LdCtrlTaskCtrl1`, then `LsmIdx 5` |
+| 1.1.220 | Gira alarm panel (`A-C004-03`) | excluded: never contacted |
 
 ¹ The corpus coverage refuses this program in its *default*
 configuration (`UP-5001`'s default `0` is not in its empty enumeration);
 the house's own parameter values leave that parameter inactive, so the
 device plan does not reach it.
 
-17 of 32 plan; every plan is **Untested** — only 1.1.67 (the test device,
+17 of the 32 bus devices plan (17 of 35 overall); every plan is **Untested** — only 1.1.67 (the test device,
 not in this project) is Verified. Two findings came out of the run:
 
 1. **1.1.22 and 1.1.24 used to be refused for the wrong reason**, "object
@@ -5827,6 +5832,65 @@ not in this project) is Verified. Two findings came out of the run:
    written, so the image refuses the overlap. Whether only one member may be
    active, and how the choice is made, is the next item to settle from the
    direct PDFs and the product data — not by picking one.
+
+**Follow-up on 1.1.11–13 (same day).** The overlap is real, not an evaluator
+error. In `A-0019-13-B655` the union at `AS-4400` (address `4400h`) offset
+1810 holds `UP-33` (`Factor`, `DefaultUnionParameter="1"`, default 230) and
+`UP-1227` (`DPT_Switch`, `Access="None"`, `DefaultUnionParameter="0"`,
+default 1). `UP-33` is shown in `PB-13` whenever `P-1019`=1 and `P-32`=1;
+`UP-1227` is referenced only under `P-40`'s `when test="2"` in the same
+block. The house sets `P-1019`=1, `P-32`=1 and `P-40`=2 on all three
+devices, so both members are active at once and want different values
+(230 vs 1) in the same octet `4B12h`.
+
+- No direct PDF mentions `Union`, `DefaultUnionParameter` or the rule for
+  two active members (full-text search of every PDF under
+  `knx-spec-kb/sources/`, and of Project Schema23).
+- The product data is silent too: the segment's base image holds `00h` at
+  1810, the default of neither member.
+- MDT's own successor `A-0019-16-CA9D` (1.1.10, plannable) replaces the
+  union by a plain `P-33` at offset 1810 and drops `UP-1227` from
+  `P-40`'s `when test="2"`. That suggests the hidden member was a mistake,
+  but it is a hint, not evidence of what ETS writes for `-13`.
+
+The refusal stays. One read settles it without guessing: 1.1.11–13 were
+downloaded by ETS with exactly this configuration, so octet `4B12h` of any
+of them holds ETS's choice — `E6h` (230) if `UP-33` wins, `01h` if
+`UP-1227` wins, and the house's `UP-33` has no override. That is a
+one-octet, read-only `A_Memory_Read` on a device in service and needs the
+maintainer's go and gateway; it has not been done.
+
+**Follow-up on 1.1.1–9 and 1.1.24: `LsmIdx 5` on a `0701h` device.** Three
+of the house's programs name a fifth load state machine:
+
+- presence detectors `M-006A_A-0001-22-617E` (1.1.1–9):
+  `<LdCtrlTaskSegment LsmIdx="5" Address="16628" />` between the
+  application program's task segment and its `LoadCompleted`;
+- Merten `M-000C_A-5701-10-DCC4` (1.1.24) and the IP interfaces
+  `M-006A_A-0702-10-7779` (1.1.250, 1.1.253): after
+  `LdCtrlRestart`, `<LdCtrlTaskSegment LsmIdx="5" …/>` and
+  `<LdCtrlLoad LsmIdx="5" />` — plus `LdCtrlTaskCtrl1`, refused first.
+
+What the direct PDFs say:
+
+- *Management Procedures* v02.01.02 §3.31.1 lists `stateMachineType` 1–4
+  (address table, association table, application program, PEI program),
+  and §3.31.2 — the memory-mapped procedure for mask `070nh` — gives a load
+  state address for exactly those four (`B6EAh`–`B6EDh`) and "shall
+  support only one state machine of each type". There is no fifth.
+- *Configuration Procedures* v02.01.01 uses `LsmIdx="5"` only in §3.9.3
+  (System B), where `OIDX_APPLICATION_PROGRAM_2 = 5` is an **interface
+  object index** loaded through properties (`DMP_LoadStateMachineWrite_RCo_IO`),
+  not a memory-mapped machine. Carrying that meaning over to a BIM M112
+  would be a guess.
+
+So `LsmIdx 5` on `0701h` has no definition to translate, and all three
+programs (12 of the house's devices) stay refused (`DownloadPlanError::Lsm(5)`). What ETS does with it — skip it,
+address a manufacturer-specific machine, or something else — can only be
+learned from a trace of a real ETS download to one of these devices; none
+exists in the corpus. The TaskCtrl1 event itself *is* documented (§3.31.2,
+segment type 04h: address + interface-object count) but translating it alone
+would still leave 1.1.24 on `LsmIdx 5`.
 
 ### 20.1 Discovery comparison on one Linux host
 

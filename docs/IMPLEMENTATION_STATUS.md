@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — The house's remaining refusals, traced to their evidence (docs only)
+
+No code change. RESEARCH §19.12 now explains each refusal left in the
+maintainer's own project and corrects its device count (35 devices: 32 bus
+devices, two IP interfaces, and 1.1.220, which is on the exclusion list):
+
+- 1.1.11–13 (`A-0019-13-B655`): two union members are active in the house's
+  configuration and want 230 and 1 in octet `4B12h`; no PDF defines which
+  wins. One read-only `A_Memory_Read` of that octet on any of the three
+  would show ETS's choice. Not done (needs the maintainer's go).
+- 1.1.1–9, 1.1.24, 1.1.250/253: `LsmIdx 5`. *Management Procedures*
+  §3.31.2 defines four memory-mapped load state machines on `070nh`; the
+  only `LsmIdx 5` in the PDFs is System B's interface-object index. Refused.
+
 ## 2026-09-29 — Schema ≥21 `Links`: the first address sends, the rest receive
 
 - `knx-etsproj` maps `ComObjectInstanceRef/@Links` positionally, per Project

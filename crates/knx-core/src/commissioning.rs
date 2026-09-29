@@ -21,6 +21,7 @@ pub mod partial_memory_download;
 pub mod procedure;
 pub mod programming_mode;
 pub mod properties;
+pub mod rf_configuration;
 pub mod serial_number;
 
 use std::fmt;

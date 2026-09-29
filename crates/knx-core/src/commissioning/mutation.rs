@@ -41,6 +41,11 @@ pub enum WriteScope {
     /// its individual address (MP §2.9/§2.10/§2.12, K16). No RF or PL
     /// device has been on this project's bus, so hardware refuses it.
     DomainAddressProgramming,
+    /// KNX RF device configuration (CP §3.6/§3.7, K17): the serial-number
+    /// individualisation of MP §2.6, and parameters and links written
+    /// through `PID_PARAMETER`/`PID_OBJECTLINK`. No RF device has been on
+    /// this project's bus, so hardware refuses it (KNOWN_LIMITATIONS §144).
+    RfConfiguration,
 }
 
 impl fmt::Display for WriteScope {
@@ -54,6 +59,7 @@ impl fmt::Display for WriteScope {
             WriteScope::IndividualAddressReset => "individual-address reset",
             WriteScope::MasterReset => "master reset",
             WriteScope::DomainAddressProgramming => "domain-address programming",
+            WriteScope::RfConfiguration => "RF device configuration",
         })
     }
 }
@@ -234,6 +240,9 @@ impl WriteAuthorisation {
 /// And [`WriteScope::DomainAddressProgramming`] (K16): there is no KNX-RF
 /// or PL110 device in this installation, so a domain-address write has
 /// only ever met the simulator (KNOWN_LIMITATIONS §143).
+///
+/// And [`WriteScope::RfConfiguration`] (K17), for the same reason
+/// (KNOWN_LIMITATIONS §144).
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
         WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
@@ -243,7 +252,8 @@ pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
         | WriteScope::ProgrammingModeToggle
         | WriteScope::IndividualAddressReset
         | WriteScope::MasterReset
-        | WriteScope::DomainAddressProgramming => false,
+        | WriteScope::DomainAddressProgramming
+        | WriteScope::RfConfiguration => false,
     }
 }
 

@@ -491,6 +491,10 @@ simulated RF device answers them.
 
 ### K17 — RF device configuration (simulator only)
 
+**Done 2026-09-29, simulator only (KL §144, RESEARCH §19.7).** The
+link-sequence start of MP §2.6 and the unidirectional parameter view are
+PB-Mode and stay with the Easy-mode goal.
+
 CP §2.3 (RF domain), §3.6 (RF bidirectional: identification,
 individualisation, parameter download) and §3.7 (RF unidirectional:
 identification, individualisation, group-address calculation), on top of

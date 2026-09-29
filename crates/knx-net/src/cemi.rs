@@ -86,6 +86,15 @@ pub const APCI_PROPERTY_VALUE_READ: u16 = 0x3D5;
 pub const APCI_PROPERTY_VALUE_RESPONSE: u16 = 0x3D6;
 /// `A_PropertyValue_Write-PDU` (`1111010111`).
 pub const APCI_PROPERTY_VALUE_WRITE: u16 = 0x3D7;
+/// `A_FunctionPropertyCommand-PDU` (`1011000111`), AL §3.4.7.1 Figure 59:
+/// object index, property id, data (K17).
+pub const APCI_FUNCTION_PROPERTY_COMMAND: u16 = 0x2C7;
+/// `A_FunctionPropertyState_Read-PDU` (`1011001000`), Figure 60.
+pub const APCI_FUNCTION_PROPERTY_STATE_READ: u16 = 0x2C8;
+/// `A_FunctionPropertyState_Response-PDU` (`1011001001`), Figure 61:
+/// object index, property id, return code, data. §3.4.7.3: a property
+/// that is not `PDT_Function` answers without return code and data.
+pub const APCI_FUNCTION_PROPERTY_STATE_RESPONSE: u16 = 0x2C9;
 
 /// The four-bit selector shared by services whose low six bits are a data
 /// field (the memory trio, `A_Restart`).
@@ -399,6 +408,26 @@ pub enum ApplicationService {
         start_index: u16,
         data: Vec<u8>,
     },
+    /// `A_FunctionPropertyCommand-PDU` (AL §3.4.7.1).
+    FunctionPropertyCommand {
+        object_index: u8,
+        property_id: u8,
+        data: Vec<u8>,
+    },
+    /// `A_FunctionPropertyState_Read-PDU` (AL §3.4.7.2).
+    FunctionPropertyStateRead {
+        object_index: u8,
+        property_id: u8,
+        data: Vec<u8>,
+    },
+    /// `A_FunctionPropertyState_Response-PDU`. `return_code: None` is AL
+    /// §3.4.7.3's answer for a property that is not a function.
+    FunctionPropertyStateResponse {
+        object_index: u8,
+        property_id: u8,
+        return_code: Option<u8>,
+        data: Vec<u8>,
+    },
     /// `A_PropertyValue_Write-PDU` — the service every load-state event
     /// of spec §7.3 travels on, ten octets of payload at a time.
     PropertyValueWrite {
@@ -459,6 +488,9 @@ pub enum CemiError {
     /// is a 10-bit field (Application Layer v02.01.01 AS §2.2 Table 1's
     /// APCI column). Rejected on encode rather than masked.
     InvalidApci(u16),
+    /// An `A_FunctionPropertyState_Response` with data but no return code:
+    /// AL §3.4.7.3 drops both together, so no such PDU exists.
+    FunctionResponseDataWithoutReturnCode,
     /// The encoded NPDU is longer than the `L` octet can name — `L` is one
     /// octet holding `npdu.len() - 1` (EMI_IMI v01.04.02 AS §4.1.5.3.2), so
     /// 256 octets still fits and 257 is the first length that does not. `got` is the
@@ -537,6 +569,11 @@ impl std::fmt::Display for CemiError {
             CemiError::UnsupportedMessageCode(code) => {
                 write!(f, "unsupported cEMI message code {code:#04x}")
             }
+            CemiError::FunctionResponseDataWithoutReturnCode => write!(
+                f,
+                "an A_FunctionPropertyState_Response carries data only after a return code \
+                 (AL §3.4.7.3)"
+            ),
             CemiError::InvalidSequenceNumber(seq) => {
                 write!(f, "TPCI sequence number {seq} does not fit 4 bits (0-15)")
             }
@@ -1041,6 +1078,28 @@ fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
         APCI_AUTHORIZE_RESPONSE if extra.len() == 1 => {
             Some(ApplicationService::AuthorizeResponse { level: extra[0] })
         }
+        APCI_FUNCTION_PROPERTY_COMMAND if extra.len() >= 2 => {
+            Some(ApplicationService::FunctionPropertyCommand {
+                object_index: extra[0],
+                property_id: extra[1],
+                data: extra[2..].to_vec(),
+            })
+        }
+        APCI_FUNCTION_PROPERTY_STATE_READ if extra.len() >= 2 => {
+            Some(ApplicationService::FunctionPropertyStateRead {
+                object_index: extra[0],
+                property_id: extra[1],
+                data: extra[2..].to_vec(),
+            })
+        }
+        APCI_FUNCTION_PROPERTY_STATE_RESPONSE if extra.len() >= 2 => {
+            Some(ApplicationService::FunctionPropertyStateResponse {
+                object_index: extra[0],
+                property_id: extra[1],
+                return_code: extra.get(2).copied(),
+                data: extra.get(3..).unwrap_or_default().to_vec(),
+            })
+        }
         APCI_PROPERTY_VALUE_READ if extra.len() == 4 => {
             Some(ApplicationService::PropertyValueRead {
                 object_index: extra[0],
@@ -1265,6 +1324,9 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         | ApplicationService::IndividualAddressSerialNumberRead { .. }
         | ApplicationService::IndividualAddressSerialNumberResponse { .. }
         | ApplicationService::IndividualAddressSerialNumberWrite { .. }
+        | ApplicationService::FunctionPropertyCommand { .. }
+        | ApplicationService::FunctionPropertyStateRead { .. }
+        | ApplicationService::FunctionPropertyStateResponse { .. }
         | ApplicationService::DomainAddressWrite { .. }
         | ApplicationService::DomainAddressRead
         | ApplicationService::DomainAddressResponse { .. }
@@ -1369,6 +1431,40 @@ fn encode_management(service: &ApplicationService) -> Result<Option<(u16, Vec<u8
             extra.extend_from_slice(&address.raw().to_be_bytes());
             extra.extend_from_slice(&[0, 0, 0, 0]);
             (APCI_IA_SERIAL_NUMBER_WRITE, extra)
+        }
+        ApplicationService::FunctionPropertyCommand {
+            object_index,
+            property_id,
+            data,
+        } => {
+            let mut extra = vec![*object_index, *property_id];
+            extra.extend_from_slice(data);
+            (APCI_FUNCTION_PROPERTY_COMMAND, extra)
+        }
+        ApplicationService::FunctionPropertyStateRead {
+            object_index,
+            property_id,
+            data,
+        } => {
+            let mut extra = vec![*object_index, *property_id];
+            extra.extend_from_slice(data);
+            (APCI_FUNCTION_PROPERTY_STATE_READ, extra)
+        }
+        ApplicationService::FunctionPropertyStateResponse {
+            object_index,
+            property_id,
+            return_code,
+            data,
+        } => {
+            // Without a return code there is no data either (§3.4.7.3), so
+            // data without one is not a PDU this service has.
+            if return_code.is_none() && !data.is_empty() {
+                return Err(CemiError::FunctionResponseDataWithoutReturnCode);
+            }
+            let mut extra = vec![*object_index, *property_id];
+            extra.extend(return_code.iter());
+            extra.extend_from_slice(data);
+            (APCI_FUNCTION_PROPERTY_STATE_RESPONSE, extra)
         }
         ApplicationService::DomainAddressWrite { domain_address } => {
             (APCI_DOMAIN_ADDRESS_WRITE, domain_address.octets())
@@ -1551,6 +1647,31 @@ impl ApplicationService {
                 "sn={} new={address}",
                 format_serial_number(serial_number)
             )),
+            ApplicationService::FunctionPropertyCommand {
+                object_index,
+                property_id,
+                data,
+            }
+            | ApplicationService::FunctionPropertyStateRead {
+                object_index,
+                property_id,
+                data,
+            } => Some(format!(
+                "obj {object_index} pid {property_id} data {}",
+                hex_octets(data)
+            )),
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index,
+                property_id,
+                return_code,
+                data,
+            } => Some(match return_code {
+                Some(code) => format!(
+                    "obj {object_index} pid {property_id} rc {code:#04x} data {}",
+                    hex_octets(data)
+                ),
+                None => format!("obj {object_index} pid {property_id} not a function"),
+            }),
             ApplicationService::DomainAddressWrite { domain_address }
             | ApplicationService::DomainAddressResponse { domain_address } => {
                 Some(format!("domain={domain_address}"))
@@ -1646,6 +1767,14 @@ pub fn format_serial_number(serial_number: &[u8; 6]) -> String {
     )
 }
 
+fn hex_octets(octets: &[u8]) -> String {
+    octets
+        .iter()
+        .map(|o| format!("{o:02X}"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn application_service_variant_name(service: &ApplicationService) -> &'static str {
     match service {
         ApplicationService::GroupValueRead => "GroupValueRead",
@@ -1665,6 +1794,9 @@ fn application_service_variant_name(service: &ApplicationService) -> &'static st
         ApplicationService::IndividualAddressSerialNumberWrite { .. } => {
             "IndividualAddressSerialNumberWrite"
         }
+        ApplicationService::FunctionPropertyCommand { .. } => "FunctionPropertyCommand",
+        ApplicationService::FunctionPropertyStateRead { .. } => "FunctionPropertyStateRead",
+        ApplicationService::FunctionPropertyStateResponse { .. } => "FunctionPropertyStateResponse",
         ApplicationService::DomainAddressWrite { .. } => "DomainAddressWrite",
         ApplicationService::DomainAddressRead => "DomainAddressRead",
         ApplicationService::DomainAddressResponse { .. } => "DomainAddressResponse",
@@ -3507,5 +3639,111 @@ mod domain_address_tests {
         assert_eq!(decode_rf_medium_info(&bytes), None);
         // A TLV list that runs past its own end is not trusted.
         assert_eq!(decode_rf_medium_info(&[0x29, 3, 0x02, 8, 0x00]), None);
+    }
+}
+
+/// K17: the function-property PDUs of AL §3.4.7 and the InfoReport.
+#[cfg(test)]
+mod function_property_tests {
+    use super::*;
+
+    fn frame(destination: Destination, service: ApplicationService) -> LDataFrame {
+        LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x11FA),
+            destination,
+            transport: Tpci::UnnumberedData,
+            service,
+        }
+    }
+
+    #[test]
+    fn the_apcis_are_the_table_1_bits() {
+        assert_eq!(APCI_FUNCTION_PROPERTY_COMMAND, 0b10_1100_0111);
+        assert_eq!(APCI_FUNCTION_PROPERTY_STATE_READ, 0b10_1100_1000);
+        assert_eq!(APCI_FUNCTION_PROPERTY_STATE_RESPONSE, 0b10_1100_1001);
+    }
+
+    #[test]
+    fn a_command_has_figure_59s_shape_and_survives() {
+        let sent = frame(
+            Destination::Individual(IndividualAddress::from_raw(0x1105)),
+            ApplicationService::FunctionPropertyCommand {
+                object_index: 0,
+                property_id: 65,
+                data: vec![1, 2, 0xAB],
+            },
+        );
+        let bytes = encode_l_data(&sent).unwrap();
+        assert_eq!(&bytes[9..], &[0x02, 0xC7, 0x00, 65, 1, 2, 0xAB]);
+        assert_eq!(decode_l_data(&bytes).unwrap(), sent);
+    }
+
+    #[test]
+    fn every_response_shape_survives_including_not_a_function() {
+        for service in [
+            ApplicationService::FunctionPropertyStateRead {
+                object_index: 0,
+                property_id: 65,
+                data: vec![1, 2],
+            },
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index: 0,
+                property_id: 65,
+                return_code: Some(0x00),
+                data: vec![0x00, 0x12],
+            },
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index: 0,
+                property_id: 65,
+                return_code: Some(0xFF),
+                data: vec![],
+            },
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index: 0,
+                property_id: 65,
+                return_code: None,
+                data: vec![],
+            },
+        ] {
+            let sent = frame(
+                Destination::Individual(IndividualAddress::from_raw(0x1105)),
+                service,
+            );
+            assert_eq!(decode_l_data(&encode_l_data(&sent).unwrap()).unwrap(), sent);
+        }
+    }
+
+    #[test]
+    fn data_without_a_return_code_is_refused() {
+        let sent = frame(
+            Destination::Individual(IndividualAddress::from_raw(0x1105)),
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index: 0,
+                property_id: 65,
+                return_code: None,
+                data: vec![1],
+            },
+        );
+        assert_eq!(
+            encode_l_data(&sent),
+            Err(CemiError::FunctionResponseDataWithoutReturnCode)
+        );
+    }
+
+    #[test]
+    fn an_info_report_is_a_descriptor_response_on_the_system_broadcast() {
+        // AL §3.3.2 NOTE 5 and Figure 19: APCI 1101, descriptor type, DD.
+        let sent = frame(
+            SYSTEM_BROADCAST_DESTINATION,
+            ApplicationService::DeviceDescriptorResponse {
+                descriptor_type: 2,
+                data: vec![0; 14],
+            },
+        );
+        let bytes = encode_l_data(&sent).unwrap();
+        assert_eq!(bytes[2] & 0x10, 0, "system broadcast");
+        assert_eq!(&bytes[9..11], &[0x03, 0x42]);
+        assert_eq!(decode_l_data(&bytes).unwrap(), sent);
     }
 }

@@ -482,6 +482,23 @@ pub struct SimulatorConfig {
     /// device that ignores the write in silence, so a procedure's verify
     /// step is what has to notice.
     pub domain_address_write_enabled: bool,
+    /// The device's Device Descriptor Type 2 (RES §4.1.3), answered to
+    /// `A_DeviceDescriptor_Read` type 2. `None` is a device without DD2,
+    /// which answers such a read with type 0 instead (MP §3.2.2 allows the
+    /// type to differ). K17.
+    pub device_descriptor_2: Option<[u8; 14]>,
+    /// Whether the Device Object's `PID_PARAMETER` and `PID_OBJECTLINK` are
+    /// function properties here (an RF bidirectional device). `false`
+    /// answers them without return code (AL §3.4.7.3).
+    pub rf_function_properties: bool,
+    /// The highest group object number `PID_OBJECTLINK` accepts; above it
+    /// the answer is `FEh`, *"Group Object does not exist"*.
+    pub rf_group_objects: u16,
+    /// Another device that answers every function-property request first,
+    /// from this address, with return code `00h` and value `EEh`. On a
+    /// shared bus that is somebody else's answer; a client that takes the
+    /// first answer rather than the one from its device takes it (K17).
+    pub foreign_function_answer: Option<IndividualAddress>,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -633,6 +650,10 @@ impl Default for SimulatorConfig {
             foreign_serial_number_answer: None,
             domain_address: None,
             domain_address_write_enabled: true,
+            device_descriptor_2: None,
+            rf_function_properties: false,
+            rf_group_objects: 0,
+            foreign_function_answer: None,
         }
     }
 }
@@ -792,6 +813,10 @@ struct State {
     serial_number_writes: usize,
     domain_address: Option<DomainAddress>,
     domain_address_writes: usize,
+    /// `PID_PARAMETER` values by (channel, parameter).
+    rf_parameters: HashMap<(u8, u8), Vec<u8>>,
+    /// `PID_OBJECTLINK` links: (group object, SN, group address, sending).
+    rf_links: Vec<(u16, [u8; 6], u16, bool)>,
     /// Whether the request being answered came connectionless, so its
     /// answer goes back connectionless too (MP §2.10 step 4's
     /// `A_DeviceDescriptor_Read`, *"connectionless"*).
@@ -905,6 +930,8 @@ impl SimulatedDevice {
             serial_number_writes: 0,
             domain_address: config.domain_address,
             domain_address_writes: 0,
+            rf_parameters: HashMap::new(),
+            rf_links: Vec::new(),
             answering_connectionless: false,
         };
 
@@ -1062,6 +1089,47 @@ impl SimulatedDevice {
     /// The device's domain address as it stands now (K16).
     pub fn domain_address(&self) -> Option<DomainAddress> {
         self.lock().domain_address
+    }
+
+    /// Presets a `PID_PARAMETER` value (K17).
+    pub fn preset_rf_parameter(&self, channel: u8, parameter: u8, value: &[u8]) {
+        self.lock()
+            .rf_parameters
+            .insert((channel, parameter), value.to_vec());
+    }
+
+    /// A `PID_PARAMETER` value as it stands (K17).
+    pub fn rf_parameter(&self, channel: u8, parameter: u8) -> Option<Vec<u8>> {
+        self.lock()
+            .rf_parameters
+            .get(&(channel, parameter))
+            .cloned()
+    }
+
+    /// The `PID_OBJECTLINK` links: (group object, SN, group address,
+    /// sending) (K17).
+    pub fn rf_links(&self) -> Vec<(u16, [u8; 6], u16, bool)> {
+        self.lock().rf_links.clone()
+    }
+
+    /// Sends this device's `A_DeviceDescriptor_InfoReport` on the system
+    /// broadcast, as an RF unidirectional device does *"upon a
+    /// manufacturer-specific user action"* (CP §3.7.2, MP §3.2.7).
+    pub fn press_info_report_button(&self) {
+        let Some(dd2) = self.config.device_descriptor_2 else {
+            return;
+        };
+        let source = self.lock().address;
+        let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
+            kind: LDataMessageKind::Indication,
+            source,
+            destination: Destination::SystemBroadcast,
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::DeviceDescriptorResponse {
+                descriptor_type: 2,
+                data: dd2.to_vec(),
+            },
+        }));
     }
 
     /// How many domain-address writes changed it (K16).
@@ -2046,7 +2114,123 @@ impl SimulatedDevice {
                     }
                 }
             }
+            // K17, MP §3.2.2: DD2 when the device has one; otherwise it
+            // answers with the type it does have.
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 2 } => {
+                let (descriptor_type, data) = match self.config.device_descriptor_2 {
+                    Some(dd2) => (2, dd2.to_vec()),
+                    None => (0, self.config.mask_version.to_be_bytes().to_vec()),
+                };
+                self.emit_answer(ApplicationService::DeviceDescriptorResponse {
+                    descriptor_type,
+                    data,
+                });
+            }
+            ApplicationService::FunctionPropertyCommand {
+                object_index,
+                property_id,
+                data,
+            } => {
+                self.emit_foreign_function_answer(object_index, property_id);
+                let (return_code, out) =
+                    self.function_property(object_index, property_id, &data, true);
+                self.emit_answer(ApplicationService::FunctionPropertyStateResponse {
+                    object_index,
+                    property_id,
+                    return_code,
+                    data: out,
+                });
+            }
+            ApplicationService::FunctionPropertyStateRead {
+                object_index,
+                property_id,
+                data,
+            } => {
+                self.emit_foreign_function_answer(object_index, property_id);
+                let (return_code, out) =
+                    self.function_property(object_index, property_id, &data, false);
+                self.emit_answer(ApplicationService::FunctionPropertyStateResponse {
+                    object_index,
+                    property_id,
+                    return_code,
+                    data: out,
+                });
+            }
             _ => {}
+        }
+    }
+
+    fn emit_foreign_function_answer(&self, object_index: u8, property_id: u8) {
+        let Some(source) = self.config.foreign_function_answer else {
+            return;
+        };
+        self.emit_from(
+            source,
+            Tpci::UnnumberedData,
+            ApplicationService::FunctionPropertyStateResponse {
+                object_index,
+                property_id,
+                return_code: Some(0x00),
+                data: vec![0x00, 0xEE],
+            },
+        );
+    }
+
+    /// RES §4.3.14/§4.3.16 as an RF bidirectional device runs them (K17).
+    /// Returns the return code (`None`: not a function, AL §3.4.7.3) and
+    /// the data after it.
+    fn function_property(
+        &self,
+        object_index: u8,
+        property_id: u8,
+        data: &[u8],
+        command: bool,
+    ) -> (Option<u8>, Vec<u8>) {
+        use knx_core::commissioning::rf_configuration::{PID_OBJECTLINK, PID_PARAMETER};
+        if object_index != 0 || !self.config.rf_function_properties {
+            return (None, Vec::new());
+        }
+        let mut state = self.lock();
+        match (property_id, command, data) {
+            (PID_PARAMETER, true, [channel, parameter, value @ ..]) if !value.is_empty() => {
+                state
+                    .rf_parameters
+                    .insert((*channel, *parameter), value.to_vec());
+                (Some(0x00), Vec::new())
+            }
+            (PID_PARAMETER, false, [channel, parameter]) => {
+                match state.rf_parameters.get(&(*channel, *parameter)) {
+                    Some(value) => {
+                        let mut out = vec![0x00];
+                        out.extend_from_slice(value);
+                        (Some(0x00), out)
+                    }
+                    // RES: *"the … Response-PDU shall end at octet 10"*.
+                    None => (Some(0xFF), Vec::new()),
+                }
+            }
+            (PID_PARAMETER, _, _) => (Some(0xFF), Vec::new()),
+            (PID_OBJECTLINK, true, [flags, 0x00, rest @ ..]) if rest.len() == 10 => {
+                let mut serial = [0; 6];
+                serial.copy_from_slice(&rest[..6]);
+                let group = u16::from_be_bytes([rest[6], rest[7]]);
+                let object = u16::from_be_bytes([rest[8], rest[9]]);
+                let (sending, delete, aet) = (flags & 1 != 0, flags & 2 != 0, flags & 4 != 0);
+                if aet && serial != [0; 6] {
+                    return (Some(0xFD), Vec::new());
+                }
+                if object == 0 || object > self.config.rf_group_objects {
+                    return (Some(0xFE), Vec::new());
+                }
+                state
+                    .rf_links
+                    .retain(|(o, s, g, _)| !(*o == object && *s == serial && *g == group));
+                if !delete {
+                    state.rf_links.push((object, serial, group, sending));
+                }
+                (Some(0x00), Vec::new())
+            }
+            _ => (Some(0xFC), Vec::new()),
         }
     }
 

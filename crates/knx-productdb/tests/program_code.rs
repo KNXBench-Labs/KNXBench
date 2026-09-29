@@ -237,6 +237,7 @@ fn image_request(values: &[(&str, &str)], links: Vec<Link>) -> ImageRequest {
             .map(|(short, value)| (format!("{PROGRAM}_{short}"), value.to_string()))
             .collect(),
         links,
+        flag_overrides: Default::default(),
     }
 }
 

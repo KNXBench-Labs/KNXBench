@@ -41,13 +41,13 @@ use std::fmt;
 
 use knx_core::{
     DeviceId, Direction, GroupAddress, GroupAddressId, GroupAddressStyle, IndividualAddress,
-    Project,
+    Override, Project,
 };
 use rusqlite::Connection;
 
 use crate::dynamic::{evaluate, load_program_trees, resolve_values};
 use crate::enrich::com_object_lookup_id;
-use crate::image::{ImageRequest, Link};
+use crate::image::{FlagOverrides, ImageRequest, Link};
 use crate::query::resolve_program;
 use crate::ProductDbError;
 
@@ -101,6 +101,15 @@ pub enum ProjectRequestError {
         device: DeviceId,
         number: u16,
         group_address: GroupAddressId,
+    },
+    /// A communication flag the project states, but empty or unreadable
+    /// (`Override::Empty`/`Override::Malformed`). Neither says whether the
+    /// flag is on, and the product's own value would silently replace
+    /// what the file said.
+    UnreadableFlag {
+        device: DeviceId,
+        number: u16,
+        flag: &'static str,
     },
 }
 
@@ -182,6 +191,15 @@ impl fmt::Display for ProjectRequestError {
                 f,
                 "device {}: object {number} links group address id {}, which the project does not have",
                 device.0, group_address.0
+            ),
+            Self::UnreadableFlag {
+                device,
+                number,
+                flag,
+            } => write!(
+                f,
+                "device {}: object {number} states {flag}, but not as Enabled or Disabled",
+                device.0
             ),
         }
     }
@@ -331,7 +349,63 @@ pub fn image_request_from_project(
         individual_address,
         values: parameter_values(project, device, program_id)?,
         links: links(project, device)?,
+        flag_overrides: flag_overrides(project, device, program_id)?,
     })
+}
+
+/// Every flag an object instance states itself, at `Layer::Instance` (read
+/// from the project file) or `Layer::UserEdit`, by the instance's
+/// `ComObjectRef` id. `Program`/`ProgramRef` values are enrichment's copy
+/// of the product's own flags and are left out, so the builder keeps
+/// taking those from the product database.
+fn flag_overrides(
+    project: &Project,
+    device: DeviceId,
+    program_id: &str,
+) -> Result<BTreeMap<String, FlagOverrides>, ProjectRequestError> {
+    let instance = project
+        .devices
+        .get(device)
+        .ok_or(ProjectRequestError::UnknownDevice(device))?;
+    let mut overrides = BTreeMap::new();
+    for id in &instance.com_objects {
+        let object =
+            project
+                .devices
+                .com_object(*id)
+                .ok_or(ProjectRequestError::MissingComObject {
+                    device,
+                    com_object: id.0,
+                })?;
+        let stated = |flag: &'static str, slot: &Override<bool>| match slot {
+            Override::Absent => Ok(None),
+            Override::Value(resolved) if resolved.layer.is_exported() => Ok(Some(resolved.value)),
+            Override::Value(_) => Ok(None),
+            Override::Empty | Override::Malformed(_) => Err(ProjectRequestError::UnreadableFlag {
+                device,
+                number: object.number,
+                flag,
+            }),
+        };
+        let flags = &object.flags;
+        let object_overrides = FlagOverrides {
+            read: stated("ReadFlag", &flags.read)?,
+            write: stated("WriteFlag", &flags.write)?,
+            transmit: stated("TransmitFlag", &flags.transmit)?,
+            update: stated("UpdateFlag", &flags.update)?,
+            communication: stated("CommunicationFlag", &flags.communication)?,
+        };
+        if object_overrides.is_empty() {
+            continue;
+        }
+        let com_object_ref = com_object_lookup_id(
+            program_id,
+            &object.source.ets_id,
+            object.module_instance.is_some(),
+        );
+        overrides.insert(com_object_ref, object_overrides);
+    }
+    Ok(overrides)
 }
 
 fn parameter_values(
@@ -444,10 +518,11 @@ fn links(project: &Project, device: DeviceId) -> Result<Vec<Link>, ProjectReques
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::image::FlagOverrides;
     use knx_core::{
         ComObjectInstance, ComObjectInstanceId, CompletionStatus, DeviceInstance,
-        GroupAddressEntry, GroupLink, Installation, InstallationId, Language, Override,
-        ParameterInstance, ParameterInstanceId, ResolvedFlags, SourceRef, Topology,
+        GroupAddressEntry, GroupLink, Installation, InstallationId, Language, Layer, Override,
+        ParameterInstance, ParameterInstanceId, Resolved, ResolvedFlags, SourceRef, Topology,
     };
 
     const PROGRAM: &str = "M-0083_A-0027-15-0BAC";
@@ -740,6 +815,101 @@ mod tests {
                 com_object: 42,
             })
         );
+    }
+
+    fn stated(value: bool, layer: Layer) -> Override<bool> {
+        Override::Value(Resolved { value, layer })
+    }
+
+    /// Object 0 (instance 10) with `flags`.
+    fn object_with_flags(flags: ResolvedFlags) -> Project {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![send(1)]);
+        p.devices
+            .com_object_mut(ComObjectInstanceId(10))
+            .unwrap()
+            .flags = flags;
+        p
+    }
+
+    #[test]
+    fn an_instance_flag_becomes_an_override_for_its_com_object_ref() {
+        // The house's 1.1.20 object 0: write and update enabled by the
+        // instance, the other flags left to the product.
+        let p = object_with_flags(ResolvedFlags {
+            write: stated(true, Layer::Instance),
+            update: stated(true, Layer::Instance),
+            ..ResolvedFlags::none()
+        });
+        let request = map(&p).unwrap();
+        assert_eq!(
+            request.flag_overrides,
+            [(
+                format!("{PROGRAM}_O-0_R-10"),
+                FlagOverrides {
+                    write: Some(true),
+                    update: Some(true),
+                    ..FlagOverrides::default()
+                }
+            )]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn a_user_edit_is_an_override_too_and_can_switch_a_flag_off() {
+        let p = object_with_flags(ResolvedFlags {
+            transmit: stated(false, Layer::UserEdit),
+            ..ResolvedFlags::none()
+        });
+        let overrides = &map(&p).unwrap().flag_overrides[&format!("{PROGRAM}_O-0_R-10")];
+        assert_eq!(overrides.transmit, Some(false));
+    }
+
+    #[test]
+    fn product_flags_filled_in_by_enrichment_are_not_overrides() {
+        // Enrichment writes the program's own flags into absent slots at
+        // `Program`/`ProgramRef`; they are the product's, not the project's.
+        let p = object_with_flags(ResolvedFlags {
+            read: stated(true, Layer::Program),
+            write: stated(false, Layer::ProgramRef),
+            ..ResolvedFlags::none()
+        });
+        assert!(map(&p).unwrap().flag_overrides.is_empty());
+    }
+
+    #[test]
+    fn an_unlinked_objects_instance_flag_is_carried_as_well() {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![]);
+        p.devices
+            .com_object_mut(ComObjectInstanceId(10))
+            .unwrap()
+            .flags = ResolvedFlags {
+            read: stated(true, Layer::Instance),
+            ..ResolvedFlags::none()
+        };
+        assert_eq!(map(&p).unwrap().flag_overrides.len(), 1);
+    }
+
+    #[test]
+    fn an_empty_or_unreadable_flag_is_refused_rather_than_guessed() {
+        for state in [Override::Empty, Override::Malformed("Perhaps".into())] {
+            let p = object_with_flags(ResolvedFlags {
+                write: state.clone(),
+                ..ResolvedFlags::none()
+            });
+            assert_eq!(
+                map(&p),
+                Err(ProjectRequestError::UnreadableFlag {
+                    device: DeviceId(1),
+                    number: 0,
+                    flag: "WriteFlag",
+                }),
+                "{state:?}"
+            );
+        }
     }
 
     #[test]

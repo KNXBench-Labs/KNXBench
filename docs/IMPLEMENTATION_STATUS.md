@@ -1,5 +1,17 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Instance flags reach the group object table (§145 lifted)
+
+`ImageRequest` gained `flag_overrides`; `image_request_for_device` fills it
+from each object instance's own flags (`Instance`/`UserEdit` layers only,
+never enrichment's copy of the product's), and the image builder writes
+them over the product's flags. An empty or unreadable flag attribute is
+refused (`ProjectRequestError::UnreadableFlag`). Tests: 3 builder, 5
+request, and one corpus test that compares 12 house objects' config octets
+with the octets read from the devices on 2026-09-29 — equal, and red
+without the fix. Linked objects only; the unlinked-communication-bit
+difference (RESEARCH §19.13, cause 2) is unchanged. No live write.
+
 ## 2026-09-29 — ISSUE-08 data half, P1: schema-≥21 objects stop importing as inactive
 
 - The schema-≥21 mapper read a missing `ComObjectInstanceRef/@IsActive`

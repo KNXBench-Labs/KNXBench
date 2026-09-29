@@ -1,18 +1,18 @@
+- **Last Agent:** Claude (download coverage session)
+- **Timestamp:** 2026-09-29 23:10 CEST
+- **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.
+- **Completed:** KNOWN_LIMITATIONS §145 lifted. `ImageRequest::flag_overrides` (`BTreeMap<ComObjectRef id, FlagOverrides>`); `image_request_for_device` fills it from `ComObjectInstance.flags` at `Layer::Instance`/`UserEdit` only (enrichment's `Program`/`ProgramRef` copies are the product's and stay out); `Empty`/`Malformed` → `ProjectRequestError::UnreadableFlag`; `build_download_image` applies it to the activated object (inactive entries: nothing). Tests: 3 in `image.rs`, 5 in `image_request.rs`, corpus `crates/knx-app/tests/house_instance_flags.rs` (12 house objects' config octets = device read-back; red without the fix: 1.1.5 obj 0 `4Fh` vs `5Fh`). Gates: fmt, clippy -D warnings, workspace tests, web build, xtask anchors/headers/layering, corpus `--ignored` of productdb/app/cli/server green (live tests skipped; the 2 `KNXBENCH_PRODUCT_CORPUS` tests are unconfigured here; the golden-oracle test needs `project_dump.json` at the worktree root and is green with it).
+- **Pending/Next Steps:** Decide whether to clear C on unlinked active objects like ETS (behaviour-neutral; RESEARCH §19.13 cause 2). Open parameter questions in §19.13 (PIR `4194h`, 1.1.15 union `4593h`, 1.1.20 `P-8` default) need no guess. Flag edits made in the UI (`Layer::UserEdit`) now reach the image; the UI session may want to show that.
+- **Notes for Codex or Claude:** No write to the bus. `offline_plan` (product defaults, no instance) deliberately carries no overrides.
+
+---
+
 - **Last Agent:** Claude (goal.md session, ISSUE-08 data half)
 - **Timestamp:** 2026-09-29 22:40 CEST
 - **Web lock:** untouched — no `apps/knx-web` change in this package.
 - **Completed:** ISSUE-08 data half **P1** pushed as `a2ff938`. The schema-≥21 import read a missing `ComObjectInstanceRef/@IsActive` as `false`, so every overridden object came in inactive: ETS 6.3.0 691/867, KV 26/75. Now missing means active (Project Schema23 §1.2.5.13 has no such attribute; ADR-0014 amendment, IMPORT_EXPORT §9.3). A malformed value is reported and stays inactive. Pinned by `crates/knx-etsproj/tests/com_object_activity.rs` and 4 `map::tests`; 2 mutations caught. Gates: workspace 2,579 passed/0 failed; `--ignored` 139 passed, the 11 "failures" are all live/private-corpus env gates (`KNX_*`, `KNXBENCH_PRODUCT_CORPUS`), with no bus contact; fmt, clippy, headers 161/161, anchors, layering, corpus-gates and diff-check green.
 - **Pending/Next Steps:** ISSUE-08 data half, P2+: (a) channel ownership plus label per active com-object/parameter ref from the `Dynamic` tree (corpus: every `ComObjectRefRef` sits under exactly one channel, 5,630/5,630/8); (b) `NoBranchMatched` measured as ETS4 1,016, ETS6 978, KV 64; of these, 997/959/64 are legal enum values that no `when` covers, and only 19 per ETS project have a non-enum control. Downgrade or reword the panel diagnostic without changing the download planner's refusal. After that, the handover for the UI half (grouping/collapse).
 - **Notes for Codex or Claude:** Worktree `KNXBench.worktrees/issue08-data` needs `OriginalData` + `project_dump.json` symlinks and `npm ci && npm run build` in `apps/knx-web` before `cargo test --workspace` (knx-desktop embeds `dist`). `stats.md` left alone because another session has it uncommitted in the root checkout.
-
----
-
-- **Last Agent:** Claude (download coverage session)
-- **Timestamp:** 2026-09-29 21:55 CEST
-- **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.
-- **Completed:** With the user's "frage alle ausser 1.1.220 ab": read-only session per house device via the user-given gateway, identity + `A_Memory_Read` of every image run, compared with the ETS 6.3.0 image. 32/34 answered; 1.1.16 and 1.1.253 reject T-connect. Results in RESEARCH §19.13: encoding matches wherever device and project agree; drift on 1.1.15/18–21/29/31/32 is the device being older than the project; defect: instance-level flag overrides (`ComObjectInstanceRef/@*Flag`) are not written into the group object table (KNOWN_LIMITATIONS §145). Logs private in `OriginalData/DeviceBackups/house-readback-2026-09-29/`. Probe test was throwaway, not in the tree.
-- **Pending/Next Steps:** Fix §145: `knx-productdb` image builder applies instance flag overrides from the project (request needs them; `image_request.rs` already sees `ComObjectInstance.flags`), with tests from the 1.1.20 case. Then decide whether to clear C on unlinked active objects like ETS (behaviour-neutral). Open parameter questions in §19.13 (PIR `4194h`, 1.1.15 union `4593h`, 1.1.20 `P-8` default) need no guess.
-- **Notes for Codex or Claude:** No write was sent. 1.1.220 not contacted. Gateway is given by the user per session; do not store it.
 
 ---
 

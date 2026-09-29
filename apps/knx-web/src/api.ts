@@ -505,6 +505,15 @@ export interface CreationDiagnostic {
 export interface CreateDeviceResponse {
   tree: ProjectTree;
   diagnostics: CreationDiagnostic[];
+  /** Additive batch result; older servers may omit it for single-device responses. */
+  items?: CreatedCatalogDevice[];
+}
+
+export interface CreatedCatalogDevice {
+  index: number;
+  deviceId: number;
+  name: string;
+  diagnostics: CreationDiagnostic[];
 }
 
 export function catalogManufacturers(): Promise<CatalogManufacturer[]> {
@@ -609,10 +618,12 @@ export function createDevice(
   lineId: number | null,
   catalogItemId: string,
   name: string,
+  quantity = 1,
 ): Promise<CreateDeviceResponse> {
   return request("/api/devices", {
     method: "POST",
-    body: JSON.stringify(lineId === null ? { catalogItemId, name } : { lineId, catalogItemId, name }),
+    body: JSON.stringify({ ...(lineId === null ? {} : { lineId }), catalogItemId, name,
+      ...(quantity === 1 ? {} : { quantity }) }),
   });
 }
 

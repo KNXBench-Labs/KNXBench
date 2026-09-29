@@ -29,6 +29,60 @@
   RED first for mask order, `write_octets`, signed/text encoding and their
   refusals, then GREEN; the ignored corpus test passed in release mode.
 
+## 2026-09-29 — U11 / ISSUE-07 catalog workspace and atomic quantity creation (branch verification)
+
+- The catalog is now a centre workbench view rather than a modal overlay.
+  It keeps search, manufacturer filter and selected product mounted while
+  ordinary project views are visited; narrow viewports collapse navigation
+  on entry so the catalog is visible at once. Closing the catalog resets its
+  transient state. The name field, bounded quantity (1–32), generated-name
+  preview, target-line and intentionally unassigned physical-address note
+  appear before Create.
+- The existing `POST /api/devices` accepts an additive `quantity` (omitted
+  defaults to 1); the original single-device path still submits one
+  `CreateDevice`. Multiple devices reserve IDs and create all instances in
+  one `Command::Batch`, with one undo/redo. A missing target line and invalid
+  quantity/name are rejected without changing the project or allocator;
+  valid line placement selects its owning installation. The response retains
+  legacy `tree`/flat `diagnostics` and adds per-device `items` with index,
+  ID, name and diagnostics. Older servers that ignore quantity are detected
+  from the missing item list, surfaced as a partial/uncertain result without
+  silently retrying. A lost response or server-side internal error also
+  blocks blind batch retry until the project is inspected or reloaded.
+  Project replacement clears catalog selection and target-line state, while
+  ordinary view switching keeps them. Quantity-one direct API callers keep
+  their original, untrimmed name bytes. Catalog device/communication-object
+  ID exhaustion is rejected before mutation. `CommandError::BatchItem`
+  preserves a failing child index and typed error after rollback; the catalog maps that
+  index past `ReserveIds` to the failed device number. Missing-line preflight
+  still logs the refused create, preserving the previous audit trail.
+- TDD RED before implementation: catalogue centre/retention, narrow-screen
+  visibility, quantity preview and server quantity rejection tests failed
+  as expected. A second RED/GREEN cycle verified that late-batch failures
+  name their child while preserving rollback; the full Rust gate caught an
+  existing failed-create audit test, which now passes after preflight logging
+  was restored. Focused Rust corpus HTTP test exercised creation of three
+  devices with 104 communication objects each, invalid quantity/line,
+  one-step undo/redo and two line-placed devices; the two ignored corpus
+  tests ran explicitly and passed. Focused web App/CatalogBrowser/API tests
+  and TypeScript passed. Local headless Chromium at 1440×900 and 400×700
+  (mock item, no production server) found no document overflow; on mobile
+  the catalog starts 202 px below the top toolbar. The guide screenshot is
+  explicitly labelled an illustrative local fixture. The mock deliberately
+  returns 404 for unrelated endpoints; those resource errors do not verify
+  any backend behavior. Native WebKitGTK and a real screen reader remain
+  untested.
+- Full reviewed branch web gate: 78 Vitest files / 1199 tests passed,
+  TypeScript and production build passed. Rust fmt/Clippy and workspace
+  tests passed: 125 suites, 2556 passed, 0 failed, 148 ignored, no `SKIP:`
+  notices. The two ignored catalog corpus tests ran explicitly from the
+  linked, read-only corpus (2 passed). Worktree-built `xtask` verified
+  layering, headers (308 well-formed, 161 absent at the ceiling), anchors
+  (397 links across 215 Markdown files) and corpus gates. Diff check and
+  targeted sensitive-value/unsafe-HTML/eval scan were clean. Root integration
+  and publication are still pending for this branch. U11's separate ISSUE-09
+  device-editor work is not included in this package.
+
 ## 2026-09-29 — U10 / ISSUE-12 partial: gateway host and port, not a discovery fix
 
 - Bus monitor now shows separately labelled host and port fields. Port 3671 is

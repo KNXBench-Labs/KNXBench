@@ -16,16 +16,16 @@ device panel.
 
 Open it from the navigation pane (**Product catalog**), from the `+ Add device` row
 under a line in the project explorer, or from the `+` button on a line in the Topology
-view. The three routes open the same overlay; only the target line differs.
+view. All three open the same centre workspace; only the target line differs.
 
-![The device catalog overlay over the Topology view: an Install product database file
-picker, an "All manufacturers" select, a search field, and a result list with entries
-such as "Alarmzentrale (1) — Alarmzentrale C00403", "SmartSensor V2 (16)" and
-"Jalousie-/Schaltaktor REG-K/12x/24x/10 m. HB (1) —
-649912"](../../assets/screenshots/porcelain-product-catalog.png)
+![The product catalog in the main workspace: an install file picker, manufacturer
+filter, search and result, then a device name, quantity of three, and a preview
+of the generated names and unassigned addresses. This is an illustrative local
+UI fixture, not an installed manufacturer's data.](../../assets/screenshots/porcelain-product-catalog.png)
 
-Notice two things in that list. Each row is `name (number) — description`, and the same
-product can appear more than once — one row per catalog item in the database, including
+In an installed catalog a row can show `name (number) — description` (the
+illustrative screenshot has only a name), and the same product can appear more
+than once — one row per catalog item in the database, including
 several entries that differ only in a number. KNXBench shows what the database
 contains; it does not deduplicate on your behalf.
 
@@ -36,7 +36,7 @@ is not creating.
 
 ### Installing a product database
 
-The file picker at the top of the overlay takes a `.knxprod` file, the package format
+The file picker at the top of the workspace takes a `.knxprod` file, the package format
 manufacturers publish. Installing reports what happened in one line: whether the
 package was new or already installed, which scheme it used, and how many members,
 unknown entries and conflicts it contained. The catalog list refreshes immediately
@@ -64,21 +64,40 @@ See [The command line](10-command-line.md).
 2. Open the catalog.
 3. Filter by manufacturer, search, and click the product.
 4. Correct the name if you want — it is pre-filled from the catalog entry.
-5. Press Enter or click **Create**.
+5. Set **Quantity** from 1 to 32 and check the preview. One device keeps the
+   entered name; multiple devices are named `<name> 1`, `<name> 2`, etc.
+6. Click **Create** (or press Enter in the name field).
 
 The device appears in the line, with one communication object per communication-object
 reference its application program declares.
 
+The catalog occupies the centre workspace, not a modal dialog. Switching to a
+normal project view and back preserves your filter, search and selection; closing
+the catalog resets them. On narrow screens the navigation pane collapses after
+you open the catalog so the work area is visible immediately; use **Navigation**
+in the toolbar to reopen it. If no line is selected, devices stay unassigned.
+For multiple devices the server performs **one atomic action**: a refusal adds
+none, and one **Undo** removes the entire batch. Created devices and their
+individual diagnostics remain visible for review until you close the catalog.
+An older server that ignores the quantity may create only one device: the UI
+refreshes the returned project, warns you and **does not automatically retry**.
+If a batch request loses its response or the server reports an internal error,
+its outcome cannot be confirmed from that response. The catalog asks you to
+inspect or reload the project before another attempt rather than offering an
+immediate duplicate-producing retry.
+
 Two things it does not have:
 
-- **No individual address.** You assign one in the properties pane. See
+- **No individual address.** Placement on a line does not reserve or invent a
+  physical address, even if every device slot is already occupied. Assign an
+  address separately in the properties pane. See
   [Buildings and topology](03-buildings-and-topology.md).
 - **No name change afterwards.** Devices cannot be renamed in KNXBench yet, so the
-  name you type in this dialog is the one you keep.
+  name you type in this workspace is the one you keep.
 
 ### Creation diagnostics
 
-If anything about the product was less than perfectly clear, the overlay stays open and
+If anything about the product was less than perfectly clear, the catalog stays open and
 lists it under **Creation diagnostics**. The device is created either way — the
 diagnostics describe it, they do not block it. You will see at least one of them every
 time, and it is the honest one:
@@ -94,7 +113,8 @@ object list depends on its parameters, and that evaluation is not run at creatio
 Expect a fresh device to list more communication objects than the physical product
 would show in ETS.
 
-Other diagnostics you may meet: a product with no application program (created without
+For a batch, each device's warning is labelled with its name/index. Other
+diagnostics you may meet: a product with no application program (created without
 communication objects), a datapoint type the database states as several alternatives
 (filled with none, alternatives listed), and a reference the installed program does not
 contain.

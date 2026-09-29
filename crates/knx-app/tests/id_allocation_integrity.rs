@@ -81,9 +81,12 @@ fn a_stale_csv_plan_can_no_longer_make_save_drop_a_group_address() {
     let refused = stale_plan.apply(&mut project);
     assert_eq!(
         refused.unwrap_err(),
-        CommandError::IdInUse {
-            kind: IdKind::GroupAddress,
-            id: user_id.0,
+        CommandError::BatchItem {
+            index: 0,
+            source: Box::new(CommandError::IdInUse {
+                kind: IdKind::GroupAddress,
+                id: user_id.0,
+            }),
         }
     );
     assert_eq!(project, before, "a refused batch must leave no trace");

@@ -533,6 +533,72 @@ describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () =
   });
 });
 
+describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {
+  it("keeps the chosen product and search while switching to Overview and back", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    apiMock.catalogItems.mockResolvedValue([{ id: "cat-1", manufacturerId: "M-1", name: "Actuator",
+      number: null, visibleDescription: null, productRefId: "P-1", hardware2programRefId: "HP-1" }]);
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").click());
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+
+    const workspace = host!.querySelector<HTMLElement>(".workbench-center .catalog-workspace");
+    expect(workspace).not.toBeNull();
+    expect(workspace!.closest('[role="dialog"]')).toBeNull();
+    const search = workspace!.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => {
+      setter.call(search, "Act");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => workspace!.querySelector<HTMLElement>(".search-result")!.click());
+    expect(workspace!.querySelector<HTMLInputElement>(".catalog-create-row input")?.value).toBe("Actuator");
+
+    await act(async () => findButton(enMessages["workbench.overview"]).click());
+    expect(workspace!.hidden).toBe(true);
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    expect(workspace!.hidden).toBe(false);
+    expect(workspace!.querySelector<HTMLInputElement>('input[role="combobox"]')?.value).toBe("Act");
+    expect(workspace!.querySelector<HTMLInputElement>(".catalog-create-row input")?.value).toBe("Actuator");
+    await act(async () => root.unmount());
+  });
+
+  it("forgets a previous project's catalog selection when another project loads", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    apiMock.catalogItems.mockResolvedValue([{ id: "cat-1", manufacturerId: "M-1", name: "Actuator",
+      number: null, visibleDescription: null, productRefId: "P-1", hardware2programRefId: "HP-1" }]);
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").click());
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".catalog-workspace .search-result")!.click());
+    expect(host!.querySelector(".catalog-create-row")).not.toBeNull();
+
+    await act(async () => findButton("Open project…").click());
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    expect(host!.querySelector(".catalog-create-row")).toBeNull();
+    expect(host!.querySelector<HTMLInputElement>('.catalog-workspace input[role="combobox"]')?.value).toBe("");
+    await act(async () => root.unmount());
+  });
+
+  it("shows the catalogue immediately on narrow screens instead of below a full-height navigation", async () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+    try {
+      const root = await renderApp();
+      await act(async () => findButton(enMessages["workbench.catalog"]).click());
+      expect(findButton(enMessages["workbench.navigation"]).getAttribute("aria-expanded")).toBe("false");
+      expect(host!.querySelector<HTMLElement>(".catalog-workspace")?.hidden).toBe(false);
+      await act(async () => root.unmount());
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+    }
+  });
+});
+
 // Stage 5 audit: the workbench shell moved the Log and Bus monitor
 // buttons into the left `ResizablePane`, which the Navigation toggle can
 // collapse — at which point the panels had no entry point at all, since

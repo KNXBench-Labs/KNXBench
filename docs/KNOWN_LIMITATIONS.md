@@ -818,6 +818,11 @@ What remains open here:
     (retitles a block only; a reference below one still refuses —
     RESEARCH §19.10);
   - a change to a masked octet other than the individual-address slot.
+- `[D]`, untested: a numeric field that crosses an octet boundary (up to
+  64 bits at bit offset 0–7) is written MSB-first on through the next
+  octet, as *Configuration Procedures* §8.5.4 and *Resources* §4.18.5.2.5
+  number bit offsets (RESEARCH §19.11). Neither PDF shows a crossing field,
+  and no crossing field has been read back from a device.
 - The image is checked against a real device for one program only
   (`A-0027-15-0BAC`). Nothing in the image builder writes to a bus.
 

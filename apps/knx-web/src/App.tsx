@@ -956,8 +956,44 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
   };
 
+  // With no project, the welcome routes should precede the navigation in
+  // DOM/Tab order. At wide widths the explorer still sits visually left;
+  // at narrow widths the welcome stays above its tall diagnostics block.
+  const welcomeVisible = !tree && !logOpen && !monitorOpen;
+  const centerWorkspace = (
+    <div className="workbench-center">
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : tree ? (
+        view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+          rangeScope={addressScope} onRangeScope={setAddressScope}
+          multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
+          addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
+          onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
+      ) : (
+        <section className="welcome-workspace" aria-labelledby="welcome-title">
+          <h1 id="welcome-title">{t("workbench.welcome")}</h1>
+          <p>{t("workbench.openHint")}</p>
+          <div className="welcome-actions">
+            <button type="button" className="welcome-card primary-action" onClick={startNewProject} aria-labelledby="welcome-new-title" aria-describedby="welcome-new-description">
+              <span id="welcome-new-title" className="welcome-card-title">{t("toolbar.newProject")}</span>
+              <span id="welcome-new-description" className="welcome-card-description">{t("workbench.newDescription")}</span>
+            </button>
+            <button type="button" className="welcome-card" onClick={openNativeProject} disabled={loading} aria-labelledby="welcome-native-title" aria-describedby="welcome-native-description">
+              <span id="welcome-native-title" className="welcome-card-title">{t("workbench.openNativeTitle")}</span>
+              <span id="welcome-native-description" className="welcome-card-description">{t("workbench.openNativeDescription")}</span>
+            </button>
+            <button type="button" className="welcome-card" onClick={pickProject} disabled={loading} aria-labelledby="welcome-ets-title" aria-describedby="welcome-ets-description">
+              <span id="welcome-ets-title" className="welcome-card-title">{t("workbench.importEtsTitle")}</span>
+              <span id="welcome-ets-description" className="welcome-card-description">{t("workbench.importEtsDescription")}</span>
+            </button>
+          </div>
+        </section>
+      )}
+      {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
+    </div>
+  );
+
   return (
-    <main className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}`}>
+    <main className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
@@ -1029,6 +1065,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       </div>
       {loadSource && <LoadProgressBanner key={loadKey} source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
+        {welcomeVisible && centerWorkspace}
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
@@ -1048,16 +1085,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
             <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
           </nav>
         </ResizablePane>}
-        <div className="workbench-center">
-          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : tree ? (
-            view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
-              rangeScope={addressScope} onRangeScope={setAddressScope}
-              multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
-              addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
-              onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
-          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button className="primary-action" onClick={startNewProject}>{t("toolbar.newProject")}</button><button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button><button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button></div></section>}
-          {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
-        </div>
+        {!welcomeVisible && centerWorkspace}
         {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>
           <header className="inspector-heading">{t("workbench.properties")}</header>
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}

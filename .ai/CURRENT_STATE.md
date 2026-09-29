@@ -1,3 +1,13 @@
+- **Last Agent:** codex (UI session)
+- **Timestamp:** 2026-09-29 14:18 CEST
+- **Web lock: held by the commissioning session** for `DeviceDownloadPanel.tsx`, its `api.ts` types and `deviceDownload.*` i18n keys; not touched by this entry. U10 may edit other files as the preceding reservation explicitly permits.
+- **Completed:** U9 was published at `963edfe` (confirmed by remote readback). Removed only its merged `ui-welcome-clarity` worktree/branch, its untracked `.playwright-cli/`, two dedicated U9 Cargo targets, and 225 `ui-u9-*` scratch files. Root status afterward contained only the foreign untracked `docs/paperclip-shutdown/`, preserved unchanged. Read the U10/ISSUE-12 plan and U2 diagnosis: AppImage and unpackaged server both sent discovery but received no response, so no packaging-specific fix has evidence yet. This entry changes no application code, UI or bus state.
+- **Pending/Next Steps:** GPT/Codex app-server showed the weekly window at 31% **used**; it exposed no 5-hour value, and the user quota clarification returned no figure. Do not start U10 implementation until the current driving-provider 5-hour **used** percentage is known and headroom is sufficient. Then create `ui-<topic>` from fresh `origin/main`, reserve only the web files not already reserved by commissioning, write RED tests for separate endpoint fields, and retain the manually entered endpoint while investigating discovery without speculative retries or package workarounds. U11–U13 remain; `goal-ui.md` is not complete.
+- **For the goal.md session:** The U9 handover requested `stats.md` refresh after `963edfe`; no new numbered limitation was added during closeout.
+- **Notes for Codex or Claude:** No U10 worktree or source edit has begun. The commissioning reservation in the entry immediately below remains authoritative for its three named surfaces; do not write a generic released lock line. Preserve root `docs/paperclip-shutdown/` and the commissioning `iaw-support` worktree. Native WebKitGTK and real screen-reader claims remain unverified.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 13:25 CEST
 - **Web lock: reserved by the commissioning session** for `apps/knx-web/src/DeviceDownloadPanel.tsx`, its `api.ts` types and the `deviceDownload.*` i18n keys only (support-level badge + untested acknowledgement). U10 may proceed in other files; please do not edit those three spots until this handover releases them.

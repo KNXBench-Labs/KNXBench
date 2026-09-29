@@ -89,7 +89,7 @@ impl DomainAddressReadReport {
 
 /// Sends `service` on `destination` and collects, for the whole `window`,
 /// every indication `matcher` accepts. The window is always waited out.
-async fn collect<T: ManagementTransport, R>(
+pub(crate) async fn collect<T: ManagementTransport, R>(
     transport: &T,
     destination: Destination,
     service: ApplicationService,

@@ -5258,6 +5258,84 @@ observation that this device restarts without acknowledging.
 
 ---
 
+### 19.5 Commissioning topics in the PDFs that KNXBench does not cover (2026-09-29)
+
+Read with `pdftotext -layout` straight from `knx-spec-kb/sources/` (not
+`extracted/`), page numbers from the PDF footers. Sources: Profiles
+(`06 Profiles v02.01.01`), MP (`03_05_02`), CP (`03_05_03`), RES (`03_05_01`),
+AL (`03_03_07`), TL (`03_03_04`), `Project Schema23 v01.00.00`. Two
+Profiles tables were checked as rendered pages, because the text columns
+do not line up.
+
+**What the Profiles say about our device class.** `0701h` is **BIM M112**
+(Profiles p. 13: *"System 7 · 0700h, 0701h · BIM M112"*), not System 1.
+- Table 4.2, p. 37, column `mask 0701h`:
+  - Interface Object Handling M.
+  - Load State Machine Realisation Type 1 M and Type 2 M.
+  - Run State Machine Type 1 M and Type 2 M.
+  - Restart: connectionless O, connection-oriented M, Master Reset O.
+  - Authorization M, with **16** access levels.
+  - The download path uses Realisation Type 1 (memory-mapped load
+    controls), and both are mandatory, so that matches.
+- Table 4.4, p. 44, column BIM M112:
+  - Programming Mode connection-oriented M.
+  - KNX Serial Number, client initiated: **M**.
+- Profiles p. 42, note 13: *"New implementations of BIM M112 should not use
+  mask 0700h or mask 0701h. Implementations of mask 0701h should foresee
+  functionality to avoid execution of an incompatible application."* The
+  compare-property step (device object PID 78) before the first unload is
+  that check, from the device side.
+- TL: BIM M112 implements the connection-oriented state machine as
+  **Style 3** (Profiles p. 36, TL §5.4.3, p. 24). The acknowledge
+  time-out note in IMPLEMENTATION_STATUS cites the Style 1 table. The
+  Style 3 cell it relies on is the same: `E18` in `OPEN_WAIT` leads to
+  `CLOSED` with `A6`. TL §5.4.4.1 says the styles are *"identical in the
+  operation of the TL"* and differ only in error handling.
+
+**Topics not implemented, in order of use for a TP installation of this
+class.**
+
+1. **Individual address by serial number** (MP §2.4
+   `NM_IndividualAddress_SerialNumber_Read`, §2.5 `..._Write`, pp. 16–17).
+   Mandatory for BIM M112 (Profiles Table 4.4). No programming button
+   needed. MP §2.5's own note: unlike `NM_IndividualAddress_Write`, it
+   *"does not reset the device after assigning the Individual Address"*.
+   Prerequisite: the serial number, which `.knxproj` carries as
+   `DeviceInstance/@SerialNumber`. It is retained on import (§34), but in
+   the corpus only 5 of 75 devices have one, and none is an MDT device.
+   Nothing in `knx-net` encodes `A_IndividualAddressSerialNumber_*`.
+   **Largest gap for real-world commissioning.** It needs a device whose
+   serial number is known, plus user approval for a new live test.
+2. **`NM_IndividualAddress_Reset`** (MP §2.18, p. 33): write `FFFFh` to
+   every device in programming mode, restart at `FFFFh`, repeat until no
+   answer. Small, but it writes to hardware.
+3. **Partial download** (CP §3.5.3, p. 44). The property path has it in the
+   simulator only (ADR-0048, KL §113). For `070nh`, the product's own
+   load procedure decides what a partial download is, and the corpus has
+   not been read for that yet.
+4. **Access keys on a download** (AL `A_Authorize`/`A_Key_Write`,
+   CP §3.5.2 step 11). BIM M112 has 16 levels. `Project Schema23` p. 38:
+   `Installation/@BCUKey`, *"The key used to lock devices supporting
+   authentication"*, default `4294967295` (`FFFFFFFFh`, i.e. no key). All
+   three corpus projects carry the default. The download path uses
+   `AuthorisationPlan::Skip`, and a locked device answers memory accesses
+   with `number = 0` (AL p. 111/112), which already surfaces as
+   `MemoryRefused` ("unreachable, protected, or an illegal octet count").
+   What is missing: taking the key from the project (`BCUKey`) or from the
+   operator, and a message that names a key as one possible cause. **No key
+   may ever be guessed**; the ruling in `authorisation.rs` stays as it is.
+5. **Master Reset** (Restart type, Profiles Table 4.2: optional for
+   `0701h`). Not needed for v1.
+
+**Not relevant to this project's setup:** Domain address procedures (open
+media only, Profiles Table 4.4 `C*`), RF/PL/IP configuration, coupler
+filter tables (`0912h`/`091Ah`), `NM_Router_Scan`, KNX Data Security
+(`DM_SecureSync_*`), Easy Modes (PB/Ctrl), USB interface configuration.
+
+**Blockers this resolves:** none of the open ones. The two parked extras
+(interrupted-download recovery, settling retry) were settled in the §7
+entry. The Style 3 finding is a documentation correction, not a blocker.
+
 ## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)
 
 ### 20.1 Discovery comparison on one Linux host

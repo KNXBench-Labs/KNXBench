@@ -8848,13 +8848,30 @@ shows the three PDUs with no `A_Restart`.
 
 ## §145 Instance-level flag overrides are not written into the group object table
 
+**Lifted (2026-09-29).** `image_request_for_device` now carries every flag an
+object instance states itself (`Layer::Instance` from the file, or
+`Layer::UserEdit`) as `ImageRequest::flag_overrides`, keyed by the
+instance's `ComObjectRef` id, and `build_download_image` writes it over the
+product's flag of the activated object. Flags enrichment filled in from the
+program (`Program`/`ProgramRef`) are not overrides. An `Empty` or
+`Malformed` flag attribute refuses the request (`UnreadableFlag`) instead
+of falling back to the product. An override on an object the parameters
+leave inactive changes nothing: that entry keeps communication cleared.
+`crates/knx-app/tests/house_instance_flags.rs` (corpus, `--ignored`)
+checks the config octet of all 12 linked, overridden objects of the
+plannable house devices (1.1.5 object 0; 1.1.20 and 1.1.21 objects 0, 5,
+10, 15; 1.1.32 objects 0, 5, 10) against the octet read from the device:
+all match, and without the fix the first one fails (`4Fh` against `5Fh`).
+Still not written: the second difference below, and nothing is Verified by
+this, as no KNXBench download to these devices has run.
+
 **Found live (2026-09-29, read-only, RESEARCH §19.13).** The download image
 takes each active object's flags from the application program
 (`ComObject`/`ComObjectRef`) and ignores `ComObjectInstanceRef`'s own
 `ReadFlag`/`WriteFlag`/`TransmitFlag`/`UpdateFlag`/`CommunicationFlag`. The
 importer keeps them (`ResolvedFlags`), the image builder does not read them.
-In the maintainer's house 12 linked objects on 1.1.5, 1.1.20 and 1.1.21 carry
-such an override and the devices hold it; a KNXBench download would drop it
+In the maintainer's house 12 linked objects on 1.1.5, 1.1.20, 1.1.21 and
+1.1.32 carry such an override and the devices hold it; a KNXBench download would drop it
 (1.1.20 object 0 would stop accepting group writes). Until the image applies
 instance overrides — or refuses a device that has one — a download to such a
 device changes its behaviour without saying so.

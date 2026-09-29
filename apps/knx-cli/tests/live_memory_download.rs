@@ -73,6 +73,7 @@ fn option_c(target: IndividualAddress) -> DownloadImage {
             group_address: GroupAddress::from_raw(0x1035), // 2/0/53
             sending: true,
         }],
+        flag_overrides: Default::default(),
     };
     build_download_image(&conn, &request).expect("builds")
 }

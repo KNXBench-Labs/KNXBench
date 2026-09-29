@@ -300,6 +300,7 @@ pub fn offline_plan(
             .expect("a valid constant address"),
         values: BTreeMap::new(),
         links: Vec::new(),
+        flag_overrides: BTreeMap::new(),
     };
     let image = build_download_image(conn, &request)
         .map_err(|e| (image_category(&e), format!("memory image: {e}")))?;

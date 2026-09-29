@@ -5965,7 +5965,12 @@ is a change and the device editor should say so.
    product's flags only (`image.rs` builds `ObjectFlags` from the program's
    `ComObject`/`ComObjectRef`). A download would silently drop the user's
    flag, e.g. 1.1.20 object 0 would stop accepting writes. KNOWN_LIMITATIONS
-   §145.
+   §145. *Correction and fix, same day:* the 12 linked ones are 1.1.5
+   object 0, 1.1.20/1.1.21 objects 0, 5, 10, 15 and 1.1.32 objects 0, 5,
+   10, and their overrides are `WriteFlag`/`UpdateFlag`; the `ReadFlag`
+   overrides sit on unlinked objects (device `DBh`: read on, communication
+   off). The image now applies instance flags; all 12 linked octets match
+   the devices (§145, lifted).
 2. **Active objects without a link: ETS clears Communication (bit 2).** 173
    of 173 such objects have it clear on the device; KNXBench sets it. The
    object has no association either way, so nothing is sent or received;

@@ -104,6 +104,48 @@ pub struct ImageRequest {
     pub values: BTreeMap<String, String>,
     /// The group address links.
     pub links: Vec<Link>,
+    /// Flags the project states for one object instance over the
+    /// product's, by the instance's `ComObjectRef` id. Applied to the
+    /// activated `ComObjectRef` with that id; an entry for a ref the
+    /// parameters leave inactive has no octet to go to.
+    pub flag_overrides: BTreeMap<String, FlagOverrides>,
+}
+
+/// The communication flags one object instance states over its product's
+/// (`ComObjectInstanceRef/@ReadFlag` … `@CommunicationFlag`, or a user
+/// edit). `None` keeps the product's flag.
+///
+/// `[V]` a device holds them: on the maintainer's house, every active
+/// object whose instance carries such an attribute has it in its group
+/// object table (RESEARCH §19.13).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FlagOverrides {
+    pub read: Option<bool>,
+    pub write: Option<bool>,
+    pub transmit: Option<bool>,
+    pub update: Option<bool>,
+    pub communication: Option<bool>,
+}
+
+impl FlagOverrides {
+    /// Whether no flag is overridden.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+
+    /// Writes every stated flag over `flags`; the priority is untouched.
+    fn apply(&self, flags: &mut ObjectFlags) {
+        let set = |slot: &mut bool, stated: Option<bool>| {
+            if let Some(value) = stated {
+                *slot = value;
+            }
+        };
+        set(&mut flags.read, self.read);
+        set(&mut flags.write, self.write);
+        set(&mut flags.transmit, self.transmit);
+        set(&mut flags.update, self.update);
+        set(&mut flags.communication, self.communication);
+    }
 }
 
 /// One segment's finished image.
@@ -413,7 +455,11 @@ pub fn build_download_image(
         let view = views.get(*ref_id).ok_or_else(|| ImageError::Unsupported {
             what: format!("{ref_id}: no such ComObjectRef"),
         })?;
-        objects.push(active_object(ref_id, view)?);
+        let mut object = active_object(ref_id, view)?;
+        if let Some(overrides) = request.flag_overrides.get(*ref_id) {
+            overrides.apply(&mut object.flags);
+        }
+        objects.push(object);
     }
     objects.sort_by_key(|object| object.number);
     match &group_objects {
@@ -1122,6 +1168,7 @@ mod tests {
                 .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
             links,
+            flag_overrides: BTreeMap::new(),
         }
     }
 
@@ -1431,6 +1478,74 @@ mod tests {
             matches!(error, ImageError::InactiveObject { object: 1 }),
             "{error}"
         );
+    }
+
+    /// Object 0 (`O-0_R-1`, active with the defaults) with `overrides`.
+    fn with_overrides(overrides: FlagOverrides) -> Result<DownloadImage, ImageError> {
+        let (_dir, conn) = db(PROGRAM);
+        let mut request = request(&[], vec![]);
+        request
+            .flag_overrides
+            .insert("O-0_R-1".to_string(), overrides);
+        build_download_image(&conn, &request)
+    }
+
+    #[test]
+    fn an_instance_flag_override_replaces_the_products_flag() {
+        // The product says read on, write off, update off (`O-0`); the
+        // project's instance says the opposite for write and update, as on
+        // the house's 1.1.20 object 0 (RESEARCH §19.13).
+        let image = with_overrides(FlagOverrides {
+            write: Some(true),
+            update: Some(true),
+            ..FlagOverrides::default()
+        })
+        .expect("builds");
+        let flags = image.objects[0].flags;
+        assert!(flags.write && flags.update, "overridden: {flags:?}");
+        assert!(
+            flags.read && flags.transmit && flags.communication,
+            "kept: {flags:?}"
+        );
+        // The octet in the table, not only the descriptor: object 0's
+        // config octet, update/transmit/write/read/communication and low
+        // priority (segment selector 0 in the base image).
+        assert_eq!(
+            octets(&image, "AS-4400")
+                [knx_core::commissioning::group_object_table::HEADER_OCTETS + 2],
+            0b1101_1111
+        );
+    }
+
+    #[test]
+    fn an_override_can_also_switch_a_flag_off() {
+        let image = with_overrides(FlagOverrides {
+            read: Some(false),
+            communication: Some(false),
+            ..FlagOverrides::default()
+        })
+        .expect("builds");
+        let flags = image.objects[0].flags;
+        assert!(!flags.read && !flags.communication, "{flags:?}");
+        assert!(flags.transmit, "{flags:?}");
+    }
+
+    #[test]
+    fn an_override_on_an_object_the_parameters_leave_inactive_changes_nothing() {
+        // Object 1 (`O-1_R-2`) is inactive with the defaults; its table
+        // entry is the base octet with communication cleared either way.
+        let (_dir, conn) = db(PROGRAM);
+        let plain = build_download_image(&conn, &request(&[], vec![])).expect("builds");
+        let mut request = request(&[], vec![]);
+        request.flag_overrides.insert(
+            "O-1_R-2".to_string(),
+            FlagOverrides {
+                read: Some(true),
+                ..FlagOverrides::default()
+            },
+        );
+        let overridden = build_download_image(&conn, &request).expect("builds");
+        assert_eq!(overridden.segments, plain.segments);
     }
 
     #[test]

@@ -91,6 +91,14 @@
   The root checkout carries unrelated tracked and untracked work, so it was
   not reset, stashed or merged through; publication is pending a safe remote
   fast-forward and readback.
+- A subsequent independent image-data commit `d7c4e06` advanced the base
+  before publication. The rebased fast-forward candidate again passed web
+  78 files / 1199 tests with TypeScript/build, Rust fmt/Clippy and 125 suites /
+  2568 passed, 0 failed, 148 ignored (no `SKIP:` notices); its four `xtask`
+  gates and two explicitly ignored catalog corpus HTTP tests also passed.
+  The candidate was published by remote fast-forward and read back at
+  `f013bff`. The root checkout's foreign dirty files were not changed; a
+  local root merge or native UI/hardware validation is **not** claimed.
 
 ## 2026-09-29 — U10 / ISSUE-12 partial: gateway host and port, not a discovery fix
 

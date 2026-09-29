@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-28: K8/K9 decided, the commissioning boundaries on paper
+
+- **The user's answer.** Asked for the K8 acceptances and the K9 v1 scope,
+  the user answered *"das was am sinnvollsten ist"*, so the recommendation
+  was taken. Documentation only; no code change.
+- **K8.** Every remaining KNOWN_LIMITATIONS entry from goal-commission §0.2
+  now carries a dated note:
+  - §99, §108, §109 and §114: accepted boundaries;
+  - §111, §112, §113 and §115: accepted until a use case exists;
+  - §93: kept parked;
+  - §101 and §104: deferred to the K7 hardware session.
+- **K9, ADR-0048.** v1 is the memory path for mask `070nh`, verified on
+  one device. Everything else is refused by name. The property-based
+  `Downloader` stays simulator-only.
+- **Still open.**
+  - K6 item 2 **[W]**: a live readdress.
+  - K7 **[W]**: a live download.
+  - K10: the whole-track review.
+
 ## 2026-09-29 — U6: bounded zoom and remembered workbench geometry
 
 - The three application zoom shortcuts (`Ctrl++`, `Ctrl+-`, `Ctrl+0`;

@@ -218,6 +218,8 @@ Three more items are covered elsewhere:
   [Documentation export and project comparison](08-reports-and-diff.md).
 - **Debug report…** writes a log-based report for bug reports, with IP addresses
   removed. It still contains group addresses and the names of imported elements, so
-  read it before you attach it to anything public.
+  read it before you attach it to anything public. The larger dialog scrolls inside
+  its window; drag its lower-right corner or focus the top-right resize button and
+  press the arrow keys to make room for the contents and privacy notice.
 
 [Manual index](../README.md) · Next: [Buildings and topology](03-buildings-and-topology.md) →

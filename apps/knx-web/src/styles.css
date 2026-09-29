@@ -663,12 +663,51 @@ main {
   padding: 0.75rem;
 }
 
+/* Opt-in dialogs share one pointer grip and a keyboard resize control. The
+   viewport caps win even after a CSS-native drag or a window resize. */
+.search-overlay-resizable {
+  box-sizing: border-box;
+  padding: 1rem;
+  align-items: flex-start;
+}
+.search-panel-resizable {
+  position: relative;
+  box-sizing: border-box;
+  min-width: min(20rem, 100%);
+  min-height: min(16rem, 100%);
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  resize: both;
+  padding-right: 3rem;
+}
+.overlay-resize-key {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-input);
+  background: var(--knx-surface);
+  color: var(--knx-foreground);
+}
+
 .search-panel input {
   width: 100%;
   box-sizing: border-box;
   font-size: 1rem;
   padding: 0.4rem;
   margin-bottom: 0.5rem;
+}
+.search-panel input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  margin: 0;
+  flex: none;
 }
 
 .search-empty {
@@ -707,7 +746,20 @@ main {
 }
 
 .settings-panel {
-  width: min(32rem, 90vw);
+  width: min(54rem, calc(100vw - 2rem));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+  align-content: start;
+}
+.settings-panel > .settings-panel-title { grid-column: 1 / -1; }
+.settings-panel > .settings-section {
+  min-width: 0;
+  margin-top: 0;
+  align-content: start;
+}
+@media (max-width: 48rem) {
+  .settings-panel { grid-template-columns: minmax(0, 1fr); }
 }
 
 .settings-panel-title {
@@ -742,6 +794,11 @@ main {
   flex-direction: column;
   gap: 0.25rem;
   margin-bottom: 0.75rem;
+}
+.settings-field input:not([type="checkbox"]) {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .settings-field-label {
@@ -2439,11 +2496,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .quit-confirm-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 .quit-confirm-discard { color: var(--knx-warning-color) !important; }
 
-/* The debug-report dialog (`DebugReportButton.tsx`, T29). Wider than the
-   settings panel because the point of it is the contents list — the user
-   is meant to read what the bundle holds before anything is written, and a
-   list squeezed into 22rem does not get read. Tokens only, all five
-   palettes already declare every one of them (ADR-0022). */
+/* Debug-report content uses the shared resizable dialog's initial dimensions;
+   this width remains the fallback if the shell is ever rendered without an
+   explicit size. The contents and privacy notice must scroll within the panel. */
 .debug-report-panel { width: min(34rem, 92vw); }
 .debug-report-intro { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); }
 .debug-report-panel textarea {

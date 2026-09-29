@@ -634,6 +634,8 @@ export const messages: Record<MessageKey, string> = {
   "catalogDiagnostic.dynamicOrModuleNotEvaluated":
     "Dynamische Aktivierung und Modulaktivierung wurden für {programId} nicht ausgewertet; es wurden nur statische Produktdaten übernommen.",
 
+  "overlay.resizeHandle": "Dialoggröße mit den Pfeiltasten ändern",
+
   "search.overlayLabel": "Suche",
   "search.placeholder": "Geräte, Gruppenadressen, Gebäudeteile durchsuchen…",
   "search.noMatches": "Keine Treffer.",

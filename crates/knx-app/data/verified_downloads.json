@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "verified": [
+    {
+      "program_id": "M-0083_A-0027-15-0BAC",
+      "scopes": ["complete", "partial-parameters"],
+      "device": "MDT push button 1.1.67, mask 0701h",
+      "date": "2026-09-29",
+      "reference": "docs/RESEARCH.md §19.4 (complete, 1416 octets read back) and §19.8 (parameters, 394 octets)"
+    }
+  ]
+}

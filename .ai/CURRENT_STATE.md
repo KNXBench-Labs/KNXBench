@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U11 / ISSUE-07 publication candidate)
+- **Timestamp:** 2026-09-29 18:13 CEST
+- **Web lock: held by the UI U11 session until remote publication is verified.** Do not edit `apps/knx-web` in parallel.
+- **Completed:** Catalog now occupies the main workspace with persistent per-project search/selection, a 1–32 quantity preview, and an atomic batch of local project devices. The additive API reports indexed results and diagnostics, and refuses invalid names, lines, quantities and exhausted ID ranges before mutation. Unknown network/legacy-server outcomes cannot trigger a blind retry. Feature commit `b1121c8` is rebased onto `e947175`; the fast-forward candidate passed 78 web files/1199 tests, TypeScript/build, Rust fmt/Clippy + 125 suites/2567 passed/0 failed/148 ignored, four xtask gates and two explicit corpus HTTP tests. No live bus or device write was used.
+- **Pending/Next Steps:** Recheck remote `main`, publish this verified candidate via a safe fast-forward from the isolated worktree, read back the remote tip, and release this web lock in a separate handover commit. Preserve all foreign dirty root files: `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md`, untracked `docs/AI_STATS_TELEMETRY_PLAN.md` and `docs/paperclip-shutdown/`. Next UI work package is ISSUE-09 device editor; U12/U13 follow later. The user's firewall decision for real discovery remains separate.
+- **Notes for Codex or Claude:** Root `main` is behind and dirty; **do not stash, reset or merge through it** merely to publish U11. See `.ai/logs/2026-09-29_codex_ui-catalog-batch.md` and the `docs/IMPLEMENTATION_STATUS.md` U11 section. Existing product corpus was read-only. The one remaining joke is that our batch creates devices, not physical addresses.
+
+---
+
 - **Last Agent:** Claude (download coverage session, offline only)
 - **Timestamp:** 2026-09-29 (late evening) CEST
 - **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.

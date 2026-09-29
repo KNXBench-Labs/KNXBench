@@ -53,13 +53,16 @@ const USAGE: &str =
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
      \x20         opening a connection)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
-     \x20                  [--key-file <path>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
+     \x20                  [--key-file <path>] [--partial parameters|group-addresses|both]\n\
+     \x20                  [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (a download TO the device over the bus; without --confirm it prints the\n\
      \x20         plan (segments, octets, steps) and opens no connection. The phrase must\n\
      \x20         name this device; excluded addresses are refused before anything opens.\n\
      \x20         The access key is the project's Installation/@BCUKey unless --key-file\n\
      \x20         names a file holding one (decimal or 0x hex); it is never printed and\n\
-     \x20         never guessed)\n\
+     \x20         never guessed. --partial derives CP §3.9.2.4's partial download from the\n\
+     \x20         complete one: no unload of the application, and it first checks that the\n\
+     \x20         device carries this application with every part loaded)\n\
      \x20     knx device program-address <area.line.device> [--wait <seconds>]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
      \x20         (gives the one device in programming mode this individual address, MP §2.3;\n\
@@ -1778,6 +1781,19 @@ fn run_device_download(args: &[String]) -> ExitCode {
             eprintln!("no download to device {} prepared: {e}", target.address());
             return ExitCode::FAILURE;
         }
+    };
+    let prepared = match parsed.partial {
+        None => prepared,
+        Some(parts) => match prepared.into_partial(parts) {
+            Ok(partial) => partial,
+            Err(e) => {
+                eprintln!(
+                    "no partial download to device {} prepared: {e}",
+                    target.address()
+                );
+                return ExitCode::FAILURE;
+            }
+        },
     };
     let keying = knx_app::access_key::download_keying(prepared.plan.mask, key, source);
     print!("{}", device_download::format_plan(&prepared, &keying));

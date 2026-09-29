@@ -55,6 +55,11 @@ pub enum MemoryDownloadStep {
         /// The octets, in address order.
         octets: Vec<u8>,
     },
+    /// Read one machine's memory-mapped load state and stop unless it is
+    /// `Loaded`. Never in a product procedure: a partial download
+    /// ([`super::partial_memory_download`]) adds it, because it only
+    /// replaces parts of an application already loaded.
+    RequireLoaded(MemoryLoadStateMachine),
     /// `LdCtrlRestart`: a Basic Restart.
     Restart,
     /// `LdCtrlDisconnect`.
@@ -165,6 +170,9 @@ impl fmt::Display for MemoryDownloadStep {
                 usize::from(*address) + octets.len().saturating_sub(1),
                 octets.len()
             ),
+            MemoryDownloadStep::RequireLoaded(machine) => {
+                write!(f, "check that the {machine} is loaded")
+            }
             MemoryDownloadStep::Restart => f.write_str("A_Restart (basic)"),
             MemoryDownloadStep::Disconnect => f.write_str("disconnect"),
         }

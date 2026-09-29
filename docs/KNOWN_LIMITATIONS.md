@@ -8709,6 +8709,35 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §142 The mask-`070nh` partial download is tested in the simulator only
+
+**Status (2026-09-29, K15).** `knx device download --partial
+parameters|group-addresses|both` and the `partial` field of
+`POST /api/device-download/plan` derive CP §3.9.2.4's partial download
+from the complete plan (`knx_core::commissioning::partial_memory_download`).
+The partial plan is a subset of the complete one: no application unload, no
+application allocation, tables only when group addresses are selected.
+
+- **Not run on hardware.** It runs through `WriteScope::Download`, which is
+  permitted on hardware with the device-specific phrase, like a complete
+  download. It has not been tried on `1.1.67`; the first live run needs
+  the user's request, a pre-run dump and the option-C re-download ready.
+- **Two checks are KNXBench's, not the Standard's.** Before the first
+  write, the device must report the plan's application in
+  `PID_PROGRAM_VERSION` (object 3), and every part the complete plan loads
+  must be `Loaded`. Otherwise nothing is written and the message says to
+  run the complete download. Object index 3 for the application program is
+  the documented default (`ObjectIndex::APPLICATION_PROGRAM`), and it is
+  what `1.1.67` answered to.
+- **Non-EEPROM application data is not written.** CP rule 3 ignores it. The
+  plan lists every such write as "not written"; the MDT products in the
+  corpus have none.
+- **`AppliesTo` and `LegacyAllowPartialDownloadIfAp2Mismatch` are not
+  interpreted.** Only two of 203 `070n` programs carry `AppliesTo`, both
+  `full,par`, and no PDF read defines the option.
+- **The web UI does not offer it yet.** The route accepts it; the panel
+  belongs to the UI session.
+
 ## §141 Master Reset erases in the simulator only; hardware keeps its configuration
 
 **Status (2026-09-29, K14).** MP §3.7.1.2 Tables 4 and 5 are typed

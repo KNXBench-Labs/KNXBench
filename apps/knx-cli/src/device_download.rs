@@ -21,6 +21,7 @@ use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::mutation::{
     required_confirmation_phrase, WriteAuthorisation, WriteScope,
 };
+use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_observed, MemoryDownloadReport, Progress,
@@ -39,6 +40,27 @@ pub struct DownloadArgs {
     /// A file holding the access key. Never the key itself on the command
     /// line: argv is visible to every user through `ps`.
     pub key_file: Option<String>,
+    /// `--partial`: CP §3.9.2.4's partial download instead of the complete
+    /// one.
+    pub partial: Option<PartialDownloadParts>,
+}
+
+/// `--partial parameters|group-addresses|both`.
+fn parse_partial(text: &str) -> Result<PartialDownloadParts, String> {
+    let (parameters, group_addresses) = match text {
+        "parameters" => (true, false),
+        "group-addresses" => (false, true),
+        "both" => (true, true),
+        other => {
+            return Err(format!(
+                "--partial must be parameters, group-addresses or both, not {other:?}"
+            ))
+        }
+    };
+    Ok(PartialDownloadParts {
+        parameters,
+        group_addresses,
+    })
 }
 
 pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
@@ -48,6 +70,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut gateway = None;
     let mut confirm = None;
     let mut key_file = None;
+    let mut partial = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -74,6 +97,14 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 key_file = Some(crate::take_value(args, i + 1, "--key-file")?);
                 i += 1;
             }
+            "--partial" => {
+                partial = Some(parse_partial(&crate::take_value(
+                    args,
+                    i + 1,
+                    "--partial",
+                )?)?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown flag {flag}")),
             positional => {
                 if target.replace(positional.to_string()).is_some() {
@@ -95,6 +126,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         gateway,
         confirm,
         key_file,
+        partial,
     })
 }
 
@@ -167,7 +199,12 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
     );
     let _ = writeln!(
         out,
-        "segments (octets the device keeps itself are not written):"
+        "{} (octets the device keeps itself are not written):",
+        if prepared.partial.is_some() {
+            "segments of the complete image; the partial download writes only those its steps name"
+        } else {
+            "segments"
+        }
     );
     for (id, address, size, written) in prepared.octets_to_write() {
         let _ = writeln!(
@@ -175,6 +212,25 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
             "  {id} at {address:04X}h: {size} octets, {written} written, {} kept",
             size - written
         );
+    }
+    if let Some((parts, ignored)) = &prepared.partial {
+        let _ = writeln!(
+            out,
+            "partial download (CP §3.9.2.4): {}; the device must already carry this \
+             application with every part loaded",
+            match (parts.parameters, parts.group_addresses) {
+                (true, true) => "parameters and group addresses",
+                (true, false) => "parameters only",
+                _ => "group addresses only",
+            }
+        );
+        for (address, octets) in ignored {
+            let _ = writeln!(
+                out,
+                "  not written: {octets} octets at {address:04X}h (application data outside \
+                 EEPROM, which CP §3.9.2.4 ignores in a partial download)"
+            );
+        }
     }
     let _ = writeln!(
         out,
@@ -472,8 +528,9 @@ mod tests {
 
     use knx_core::commissioning::load_state::LoadState;
     use knx_core::commissioning::properties::{
-        ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID,
+        ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
     };
+    use knx_net::commissioning::simulator::Seen;
     use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
     use std::time::Duration;
 
@@ -704,6 +761,147 @@ mod tests {
         let (written, out) = run(&device, &prepared);
         assert_eq!(written, Written::Partially, "{out}");
         assert!(out.contains("written to the device: partially"), "{out}");
+    }
+
+    #[test]
+    fn partial_takes_three_spellings_and_refuses_others() {
+        for (text, parameters, group_addresses) in [
+            ("parameters", true, false),
+            ("group-addresses", false, true),
+            ("both", true, true),
+        ] {
+            let parsed = parse_download_args(&args(&[
+                "1.1.67",
+                "--project",
+                "p.knxdb",
+                "--partial",
+                text,
+            ]))
+            .unwrap();
+            assert_eq!(
+                parsed.partial,
+                Some(PartialDownloadParts {
+                    parameters,
+                    group_addresses
+                })
+            );
+        }
+        assert_eq!(
+            parse_download_args(&args(&["1.1.67", "--project", "p.knxdb"]))
+                .unwrap()
+                .partial,
+            None
+        );
+        let error = parse_download_args(&args(&[
+            "1.1.67",
+            "--project",
+            "p.knxdb",
+            "--partial",
+            "everything",
+        ]))
+        .unwrap_err();
+        assert!(
+            error.contains("parameters, group-addresses or both"),
+            "{error}"
+        );
+    }
+
+    /// The load records a run sent, octet 0 each: machine and event.
+    fn load_events(device: &SimulatedDevice) -> Vec<u8> {
+        device
+            .seen()
+            .into_iter()
+            .filter_map(|seen| match seen {
+                Seen::MemoryWrite { address, data, .. }
+                    if address == 0x0104 && data.len() == 11 =>
+                {
+                    Some(data[0])
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// K15 against the real MDT plan: the partial download of the saved
+    /// project unloads nothing of the application, never allocates its
+    /// segment again, and lands the same parameter octets.
+    #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+    fn a_parameters_partial_download_lands_without_unloading_the_application() {
+        let (_dir, prepared) = prepared();
+        let complete = prepared.plan.clone();
+        let prepared = prepared
+            .into_partial(PartialDownloadParts {
+                parameters: true,
+                group_addresses: false,
+            })
+            .expect("a partial plan");
+        let plan = format_plan(
+            &prepared,
+            &download_keying(prepared.plan.mask, None, KeySource::None),
+        );
+        assert!(
+            plan.contains("partial download (CP §3.9.2.4): parameters only"),
+            "{plan}"
+        );
+        assert!(
+            plan.contains("compare property 3/13 with 00 83 00 27 15"),
+            "the application check is in the printed plan: {plan}"
+        );
+        for step in prepared
+            .plan
+            .steps
+            .iter()
+            .filter(|step| step.changes_device())
+        {
+            assert!(complete.steps.contains(step), "{step}");
+        }
+
+        let device = mdt(SimulatorConfig::default());
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+        let (written, out) = run(&device, &prepared);
+        assert_eq!(written, Written::Yes, "{out}");
+        // Application Program only (type 3): Start Loading, Load Completed.
+        assert_eq!(load_events(&device), vec![0x31, 0x32], "{out}");
+        let application = prepared
+            .image
+            .segments
+            .iter()
+            .find(|segment| segment.address == 0x4400)
+            .expect("the application segment");
+        let stored = device.memory(application.address, application.octets.len());
+        for (index, (found, wanted)) in stored.iter().zip(&application.octets).enumerate() {
+            if application
+                .mask
+                .as_ref()
+                .is_none_or(|mask| mask.get(index) == Some(&0xFF))
+            {
+                assert_eq!(*found, Some(*wanted), "4400h + {index}");
+            }
+        }
+        assert!(
+            device.memory(0x4001, 2) == vec![Some(0x11), Some(0x43)],
+            "the address table is untouched"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+    fn a_partial_download_to_an_unloaded_device_writes_nothing() {
+        let (_dir, prepared) = prepared();
+        let prepared = prepared
+            .into_partial(PartialDownloadParts {
+                parameters: true,
+                group_addresses: true,
+            })
+            .expect("a partial plan");
+        let device = mdt(SimulatorConfig::default());
+        device.preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+        device.preset_load_state(ObjectIndex::new(3), LoadState::Unloaded);
+        let (written, out) = run(&device, &prepared);
+        assert_eq!(written, Written::No, "{out}");
+        assert!(out.contains("run the complete download"), "{out}");
+        assert!(load_events(&device).is_empty(), "{out}");
     }
 
     #[test]

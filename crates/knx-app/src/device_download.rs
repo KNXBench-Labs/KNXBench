@@ -11,6 +11,9 @@
 use std::fmt;
 
 use knx_core::commissioning::memory_download::{unmasked_runs, MemoryDownloadPlan};
+use knx_core::commissioning::partial_memory_download::{
+    derive_partial_plan, PartialDownloadParts, PartialPlanError,
+};
 use knx_core::{DeviceId, IndividualAddress, Project};
 use knx_productdb::download_plan::{plan_memory_download, DownloadPlanError};
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
@@ -32,9 +35,23 @@ pub struct PreparedDownload {
     pub image: DownloadImage,
     /// The steps that put it there.
     pub plan: MemoryDownloadPlan,
+    /// `Some` once [`PreparedDownload::into_partial`] has replaced `plan`
+    /// with a partial one: the parts, and the application writes CP
+    /// §3.9.2.4 rule 3 ignores, as `(address, octets)`.
+    pub partial: Option<(PartialDownloadParts, Vec<(u16, usize)>)>,
 }
 
 impl PreparedDownload {
+    /// Replaces the complete plan with the partial download of `parts`
+    /// CP §3.9.2.4 derives from it
+    /// ([`knx_core::commissioning::partial_memory_download`]).
+    pub fn into_partial(mut self, parts: PartialDownloadParts) -> Result<Self, PartialPlanError> {
+        let partial = derive_partial_plan(&self.plan, parts)?;
+        self.plan = partial.plan;
+        self.partial = Some((parts, partial.ignored_writes));
+        Ok(self)
+    }
+
     /// Octets the plan writes to the device, per segment: masked octets
     /// (the device keeps its own) are not counted.
     pub fn octets_to_write(&self) -> Vec<(String, u32, usize, usize)> {
@@ -130,6 +147,7 @@ pub fn prepare_device_download(
         request,
         image,
         plan,
+        partial: None,
     })
 }
 

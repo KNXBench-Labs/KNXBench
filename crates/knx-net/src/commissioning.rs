@@ -2387,7 +2387,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
 
     /// One read of a memory-mapped load state, at the address MP §3.31.2
     /// names for the machine.
-    async fn read_memory_load_state(
+    pub async fn read_memory_load_state(
         &mut self,
         machine: MemoryLoadStateMachine,
     ) -> Result<LoadState, SessionError> {

@@ -470,6 +470,10 @@ option C re-download.
 
 ### K15 — Partial download for `070nh` (item 3)
 
+**Done 2026-09-29, simulator only (KL §142).** CP §3.9.2.4's transformation
+of the complete plan, plus an application and load-state check before the
+first write. A live run needs the user's request.
+
 Research first: what the product file's load procedures say about a partial
 download for mask `070nh`, against CP §3.5.3. Implement only what is
 documented; otherwise record the boundary. **[W]** optional.

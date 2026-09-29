@@ -46,3 +46,6 @@ data/
 
 # Statusarchive: Momentaufnahmen, kein Quellcode
 Backup/
+
+# TypeScript incremental build state (tsc -b), never source
+*.tsbuildinfo

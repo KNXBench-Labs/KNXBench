@@ -2480,10 +2480,21 @@ fn run_bus_discover(args: &[String]) -> ExitCode {
 /// — there is no such check that would not also misfire on an ordinary
 /// host with a firewalled or wrong-interface multicast route, and an empty
 /// result there deserves the same hint.
+///
+/// The firewall half is measured, not guessed (RESEARCH §20.1, 2026-09-29):
+/// the gateway answered to the requester's port, and the host's stateful
+/// firewall dropped it, because a unicast reply from the gateway's address
+/// matches no tracked connection to the multicast group. Core §7.4 says
+/// the server answers "to the given HPAI using its discovery endpoint",
+/// i.e. from its own address, UDP source port 3671.
 const DISCOVER_EMPTY_HINT: &str = "hint: KNXnet/IP discovery depends on IP multicast \
 reaching this network segment; an empty result can mean no gateway answered, or that \
 the SEARCH_REQUEST never got out — a common cause is running inside a container \
-(e.g. Docker's default bridge network) without host networking";
+(e.g. Docker's default bridge network) without host networking. A host firewall can \
+also drop the gateways' answers: they are unicast from UDP port 3671 and match no \
+connection the firewall tracks for the multicast request; allow incoming UDP from \
+source port 3671 on the local network, or enter the gateway address by hand \
+(--gateway <host:3671>)";
 
 async fn run_bus_discover_async() -> ExitCode {
     use knx_net::BusConnection;
@@ -3568,6 +3579,17 @@ mod tests {
         assert!(DISCOVER_EMPTY_HINT.contains("multicast"));
         assert!(DISCOVER_EMPTY_HINT.contains("container"));
         assert!(DISCOVER_EMPTY_HINT.contains("host networking"));
+    }
+
+    /// Measured 2026-09-29 (RESEARCH §20.1): the gateway answered, and the
+    /// host's own stateful firewall dropped the answer, because a unicast
+    /// reply from the gateway's address matches no tracked connection to
+    /// the multicast group. The hint has to name that cause too.
+    #[test]
+    fn discover_empty_hint_names_a_firewall_dropping_the_answer() {
+        assert!(DISCOVER_EMPTY_HINT.contains("firewall"));
+        assert!(DISCOVER_EMPTY_HINT.contains("UDP port"));
+        assert!(DISCOVER_EMPTY_HINT.contains("3671"));
     }
 
     #[test]

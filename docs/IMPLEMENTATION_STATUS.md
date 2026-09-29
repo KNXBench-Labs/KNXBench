@@ -19,6 +19,28 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — Commissioning track closed (goal-commission K6 live, K7, K10)
+
+- **K7 [W]:** CLI and web download to `1.1.67`, 1416/1416 octets read back
+  each time. Button check with a bus monitor: 11 × `0` on `2/0/53`. Option
+  C restored, with 0 octets different from the image.
+- **K6 [W]:** address `1.1.67` → `1.1.68` → `1.1.67` with a button press
+  each way. Found a bug on the way there: a silent closing restart was
+  reported as a failure, though the device had answered at its new
+  address. Fixed in `6a71162` (`AddressRestart`, CLI `restart: NOT
+  confirmed`, server `restartConfirmed`). The way back ran on the fix:
+  `finished`, exit 0. Memory identical before and after.
+- **K10:** whole-track review of `a47d168..dafa2b6`. No code defect in the
+  hardware paths: the write gate, lock order and one-tunnel exclusion
+  (download, programming, monitor, scan), named refusal of other masks
+  in three layers, and a disconnect on every exit path. Findings were
+  documentation drift: GAP E1, ROADMAP Session 7 and the T30 decision row,
+  KNOWN_LIMITATIONS §7, §101, §104 and §136, and the design spec status.
+  All corrected.
+- Open, not in this goal: the web panel does not show `restartConfirmed`
+  (UI session). K6 item 1's settling retry is not live-exercised.
+  §136's collision note (`disconnect` drops a send error) stands.
+
 ## 2026-09-29 — U6: bounded zoom and remembered workbench geometry
 
 - The three application zoom shortcuts (`Ctrl++`, `Ctrl+-`, `Ctrl+0`;

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 08:30
+- Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
+- **Completed:** goal-commission **K10, the track is closed.** Whole-track review `a47d168..dafa2b6`: no code defect in the hardware paths (gate, lock order, one-tunnel exclusion, named mask refusal, disconnect on all paths). Doc drift fixed: GAP E1, ROADMAP Session 7 + T30 decision row, KL §7 (product commands, K6 item 1/2 notes), §101/§104 (K7: nothing to measure, accepted), §136 (heading says lifted; old anchor kept; live note), spec status, IMPLEMENTATION_STATUS entry. Live this track: K7 (CLI+web download, button check), K6 (1.1.67 ↔ 1.1.68), both with a go.
+- **Pending/Next Steps:** none inside goal-commission. Optional, needs a go: K7 recovery (an interrupted download, then run again); a device that exercises K6's settling retry.
+- **For the goal.md session:** (1) KNOWN_LIMITATIONS: no new numbers. Statuses changed for §7, §101, §104, §116 and §136. The §136 heading changed, and its old anchor is kept via `<a id>`. Please include these in the LIMITATION_TRIAGE recount. (2) `stats.md` refresh after `6a71162`, `dafa2b6` and this commit. (3) Finding, UI: `AddressProgrammingStatus::Finished.restartConfirmed` (server) is not shown by `AddressProgrammingPanel`/`api.ts`. Suggest the same "Restart: NOT confirmed" treatment as the download tab. (4) Finding, knx-net: `ManagementSession::disconnect` still discards a failed `T_Disconnect` send (KL §136 "New, open"); commissioning-owned, left as documented.
+- **Notes for Codex/Claude:** `1.1.67` is on option C at address 1.1.67, verified by memory dump `post-k6`. `1.1.68` is free.
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 07:40
 - Web lock: held by the UI session for U7 (taken 05:48); not touched by this entry.
 - **Completed:** K6 way back `1.1.68` → `1.1.67` on the fixed build `6a71162`: `finished`, exit 0, `restart: NOT confirmed`. Post-scan: 1.1.67 occupied (0701h), 1.1.68 vacant. Memory dump `post-k6` matches `post-k7-check` in 180/180 lines (option C unchanged). The first wait expired unpressed (exit 1, nothing written; the empty path works). Docs: RESEARCH §19, KL §116, goal-commission K6. **The device is back at 1.1.67.**

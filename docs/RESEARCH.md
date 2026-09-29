@@ -5135,7 +5135,9 @@ type 1 [01 00]`, `Disconnect`; no memory write).
   Why the disconnect never showed up is open: `ManagementSession::disconnect`
   discards the send error (`let _ =`).
 
-**`[O]` Open: did the device restart?** MP §3.7.1.1.3 says the server does
+**`[O]` → `[V]` Open: did the device restart?** *(Answered 2026-09-29 by
+the K7 function check below: yes; the new image was active without a
+power cycle.)* MP §3.7.1.1.3 says the server does
 not confirm a Basic Restart at the Application Layer, and MP §3.7.3
 exception (5) tells the client to ignore everything the server sends after
 `A_Restart` *"except negative TL-confirmations"*. That clause does not say
@@ -5202,14 +5204,22 @@ What this shows and what it does not:
   data request except the closing restart. The interface accepts the control frames;
   whether it keeps the priority bits on the wire was not traced (no bus
   monitor was running).
-- `[O]` **Not yet shown: the function.** K7 asks for a read-only bus
-  monitor while the user operates the device. It did not run: both
-  downloads went through without anyone at the device, and the second
-  (option C) restored what it held before, so pressing button 1 now
-  cannot distinguish "the restart activated the new image" from "the
-  device never left option C". A discriminating check needs the K7
-  project on the device and someone pressing button 1: every telegram to
-  `2/0/53` must then be `Off` (`0`), where option C toggles.
+- `[V]` **Function check (06:51–06:59 CEST).** The K7 project was
+  downloaded a third time (`…k7-check-download.txt`: 1416/1416 read back).
+  After the ~38 s restart window, a read-only `knx bus monitor` ran for
+  81 s (`…k7-check-monitor.txt`, 06:53:31–06:54:54) while the user pressed
+  button 1. It recorded **11 telegrams from `1.1.67`, all
+  `GroupValueWrite 0` to `2/0/53`**, and none to any other address. Option C
+  toggles (`1, 0, 1, …`, the 2026-09-28 power-cycle monitor), so the K7
+  configuration was active. The download's own Basic Restart activated it:
+  unlike on 2026-09-28, this time there was **no power cycle**. That answers
+  the `[O]` question above for this device: the unacknowledged restart does
+  restart it. The monitor printed the small-payload value as `0x00 (6-bit)`
+  because it ran without `--project`, so no DPT was resolved.
+- `[V]` Afterwards option C was downloaded again (06:55,
+  `…k7-check-restore-optionC.txt`, 1416/1416), and an independent read-back
+  45 s later (`…post-k7-check.txt`) found **0 differing octets** against it.
+  `1.1.67` is back where it started.
 - `[V]` No `LoadCompleting` stall and no mid-download drop occurred, so
   §101 and §104 had nothing to measure in either run.
 

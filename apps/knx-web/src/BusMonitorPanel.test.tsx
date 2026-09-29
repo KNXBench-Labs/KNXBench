@@ -1162,6 +1162,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       expect(host!.querySelector(".bus-discovery-status")!.textContent).toBe("No interfaces answered.");
       // The reason it might be empty, in the CLI hint's own words.
       expect(host!.querySelector(".bus-discovery-hint")!.textContent).toContain("host networking");
+      // …and the measured host-side cause: a firewall dropping the answer.
+      expect(host!.querySelector(".bus-discovery-hint")!.textContent).toContain("firewall");
       // And the field the user actually needs is untouched.
       const input = gatewayField();
       expect(input.disabled).toBe(false);

@@ -201,6 +201,17 @@ implementation. See
 [Linux setup §Multicast and `knx bus discover`](../getting-started/05-linux-setup.md#multicast-and-knx-bus-discover)
 for the full explanation.
 
+**Not in a container?** Then check your computer's firewall. The interface
+answers the search directly (unicast) from its own address and UDP port
+3671, and a firewall such as `ufw` with a "deny incoming" default drops
+that answer, because it only expects replies from the multicast address
+the request went to. `journalctl -k | grep 'UFW BLOCK'` shows such drops
+with `SPT=3671`. Allow incoming UDP from source port 3671 on your local
+network, for example
+`sudo ufw allow proto udp from 192.168.1.0/24 port 3671` (use your own
+network), or keep entering the gateway address by hand, which is not
+affected.
+
 ## A bus session is refused because one is already running
 
 **You see:** starting a bus monitor session answers with a message naming an existing

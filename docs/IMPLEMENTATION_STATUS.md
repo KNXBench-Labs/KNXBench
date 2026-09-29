@@ -57,6 +57,19 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K17: RF device configuration, simulator only
+
+- AL §3.4.7's function-property PDUs in `knx_net::cemi`.
+- CP §3.6/§3.7 payloads and DD2 in `knx_core::commissioning::rf_configuration`;
+  CP §3.7.2.3's group-address calculation, reproducing Example 16.
+- `knx_net::commissioning::rf_configuration`: `DMP_Connect_RCl`, MP §2.6,
+  Write/Read Parameter, Write Object Link, InfoReport collection.
+- New `WriteScope::RfConfiguration`, refused on hardware; the simulator
+  carries DD2, `PID_PARAMETER` and `PID_OBJECTLINK` (KL §144).
+- 8 core, 5 cEMI and 14 procedure tests; 11/11 mutants killed. No RF
+  hardware (RESEARCH §19.7).
+- Restores RESEARCH's `## 20.` heading, which the K16 commit swallowed.
+
 ## 2026-09-29 — K16: RF domain addresses, simulator only
 
 - AL §3.3.3–§3.3.7's six PDUs, the system broadcast (cEMI Ctrl1 SB clear,

@@ -29,6 +29,7 @@ pub mod individual_address_write;
 pub mod master_reset;
 pub mod memory_download;
 pub mod programming_button_wait;
+pub mod rf_configuration;
 pub mod serial_number_write;
 pub mod simulator;
 
@@ -1687,6 +1688,33 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             )
             .await
             .map_err(SessionError::Transport)
+    }
+
+    /// `A_IndividualAddressSerialNumber_Write` under `scope`: MP §2.6 sends
+    /// the same PDU as §2.5, but for an RF device (K17).
+    pub(crate) async fn broadcast_serial_number_write_as(
+        &self,
+        serial_number: SerialNumber,
+        scope: WriteScope,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(scope)?;
+        self.transport
+            .send_frame(
+                BROADCAST_DESTINATION,
+                Tpci::UnnumberedData,
+                ApplicationService::IndividualAddressSerialNumberWrite {
+                    serial_number: serial_number.octets(),
+                    address: self.target.address(),
+                },
+            )
+            .await
+            .map_err(SessionError::Transport)
+    }
+
+    /// Checks `scope` for a write this session's caller sends itself (the
+    /// connectionless function-property writes of K17).
+    pub(crate) fn authorise_scope(&self, scope: WriteScope) -> Result<(), SessionError> {
+        self.authorise_write(scope)
     }
 
     /// AL §3.3.3 `A_DomainAddress_Write` on `destination` (the system

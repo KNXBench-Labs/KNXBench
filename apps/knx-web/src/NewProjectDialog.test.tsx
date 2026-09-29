@@ -4,7 +4,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { importLanguagePack, removeLanguagePack, resetLanguagePacksForTests } from "./languagePack";
+import { AVAILABLE_UI_LANGUAGES, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   newProject: vi.fn(),
@@ -35,6 +36,7 @@ afterEach(() => {
   window.localStorage.clear();
   resetSettingsForTests();
   resetUiLanguageForTests();
+  resetLanguagePacksForTests();
 });
 
 function tree(): ProjectTree {
@@ -73,6 +75,10 @@ function field(label: string): HTMLInputElement {
   return host!.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
 }
 
+function languageSelect(label = "Project language"): HTMLSelectElement {
+  return host!.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;
+}
+
 /** Goes through the native value setter so React's own change tracking
  * sees the write — the same idiom `BusComposeForm.test.tsx` documents. */
 function setInputValue(input: HTMLInputElement, value: string) {
@@ -108,8 +114,14 @@ describe("NewProjectDialog", () => {
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(field("Project name").value).toBe("Untitled project");
     expect(field("Installation name").value).toBe("Installation 1");
-    expect(field("Project language").value).toBe("en");
-    expect(host!.querySelector("select")!.value).toBe("ThreeLevel");
+    expect(languageSelect().value).toBe("en");
+    expect(languageSelect().getAttribute("aria-describedby")).toBe("new-project-language-hint");
+    expect(host!.querySelector("#new-project-language-hint")?.textContent).toContain("Choose a listed language");
+    expect([...languageSelect().options].map((option) => option.value)).toEqual([
+      ...AVAILABLE_UI_LANGUAGES,
+      "__custom__",
+    ]);
+    expect(host!.querySelector<HTMLSelectElement>('select[aria-label="Group address style"]')!.value).toBe("ThreeLevel");
     expect(button("Create project").disabled).toBe(false);
     expect(host!.querySelector(".field-error")).toBeNull();
 
@@ -141,9 +153,10 @@ describe("NewProjectDialog", () => {
     await act(async () => {
       setInputValue(field("Project name"), "  Workshop  ");
       setInputValue(field("Installation name"), "Cellar");
-      setInputValue(field("Project language"), "de-DE");
-      setSelectValue(host!.querySelector("select")!, "TwoLevel");
+      setSelectValue(languageSelect(), "__custom__");
+      setSelectValue(host!.querySelector<HTMLSelectElement>('select[aria-label="Group address style"]')!, "TwoLevel");
     });
+    await act(async () => setInputValue(field("Custom language tag"), "de-DE"));
     await submitForm();
 
     expect(apiMock.newProject).toHaveBeenCalledWith({
@@ -162,10 +175,108 @@ describe("NewProjectDialog", () => {
     resetUiLanguageForTests();
     const { root } = await renderDialog();
 
-    expect(field("Projektsprache").value).toBe("de");
+    expect(languageSelect("Projektsprache").value).toBe("de");
     expect(field("Projektname").value).toBe("Unbenanntes Projekt");
 
     root.unmount();
+  });
+
+  it("offers installed language packs alongside the shared built-in language choices", async () => {
+    expect(importLanguagePack({ formatVersion: 1, tag: "nl", name: "Nederlands", messages: {} }).ok).toBe(true);
+    const { root } = await renderDialog();
+
+    expect(languageSelect()).not.toBeNull();
+    expect([...languageSelect().options].map((option) => [option.value, option.textContent])).toEqual([
+      ["en", "English"],
+      ["de", "Deutsch"],
+      ["nl", "Nederlands"],
+      ["__custom__", "Another language tag…"],
+    ]);
+
+    root.unmount();
+  });
+
+  it("uses an installed UI-language pack as the project's initial language", async () => {
+    expect(importLanguagePack({ formatVersion: 1, tag: "nl", name: "Nederlands", messages: {} }).ok).toBe(true);
+    saveUiLanguage(settingsStorage, "nl");
+    resetUiLanguageForTests();
+    const { root } = await renderDialog();
+
+    expect(languageSelect().value).toBe("nl");
+    expect(field("Custom language tag")).toBeNull();
+    root.unmount();
+  });
+
+  it("preserves the selected project tag when its UI-language pack is removed", async () => {
+    expect(importLanguagePack({ formatVersion: 1, tag: "nl", name: "Nederlands", messages: {} }).ok).toBe(true);
+    apiMock.newProject.mockResolvedValue(tree());
+    const { root } = await renderDialog();
+
+    await act(async () => setSelectValue(languageSelect(), "nl"));
+    await act(async () => removeLanguagePack("nl"));
+    expect(languageSelect().value).toBe("__custom__");
+    expect(field("Custom language tag").value).toBe("nl");
+    await submitForm();
+    expect(apiMock.newProject.mock.calls[0][0].language).toBe("nl");
+
+    root.unmount();
+  });
+
+  it("does not offer a shadowed installed pack twice for a built-in language", async () => {
+    expect(importLanguagePack({ formatVersion: 1, tag: "en", name: "Shadow English", messages: {} }).ok).toBe(true);
+    const { root } = await renderDialog();
+    expect([...languageSelect().options].map((option) => option.value)).toEqual([
+      ...AVAILABLE_UI_LANGUAGES,
+      "__custom__",
+    ]);
+    root.unmount();
+  });
+
+  it("preserves an active custom UI-language tag as the project default", async () => {
+    saveUiLanguage(settingsStorage, "art-x-sindarin");
+    resetUiLanguageForTests();
+    apiMock.newProject.mockResolvedValue(tree());
+    const { root } = await renderDialog();
+
+    expect(languageSelect().value).toBe("__custom__");
+    expect(field("Custom language tag").value).toBe("art-x-sindarin");
+    await submitForm();
+    expect(apiMock.newProject.mock.calls[0][0].language).toBe("art-x-sindarin");
+
+    root.unmount();
+  });
+
+  it("says that Save or Save As chooses the .knxdb filename, not either name", async () => {
+    const { root } = await renderDialog();
+    expect(host!.querySelector(".new-project-intro")?.nextElementSibling?.classList.contains("new-project-filename-hint")).toBe(true);
+    expect(field("Project name").getAttribute("aria-describedby")).toBe("new-project-filename-hint");
+    expect(field("Installation name").getAttribute("aria-describedby")).toBe("new-project-filename-hint");
+    expect(host!.querySelector(".new-project-filename-hint")?.textContent).toContain(
+      "Save or Save As chooses the .knxdb filename. Project and installation names are not file paths.",
+    );
+    root.unmount();
+  });
+
+  it("explains the filename decision in German too", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await renderDialog();
+    expect(host!.querySelector(".new-project-filename-hint")?.textContent).toContain(
+      "Speichern oder Speichern unter legt den .knxdb-Dateinamen fest. Projekt- und Anlagenname sind keine Dateipfade.",
+    );
+    root.unmount();
+  });
+
+  it("does not promise a group-address restyle that project properties cannot perform", async () => {
+    const { root } = await renderDialog();
+    expect(host!.textContent).toContain("Choose the group-address style now; it cannot currently be changed after creation.");
+    root.unmount();
+
+    saveUiLanguage(settingsStorage, "de");
+    resetUiLanguageForTests();
+    const { root: germanRoot } = await renderDialog();
+    expect(host!.textContent).toContain("Wähle den Gruppenadressstil jetzt; nach dem Anlegen kann er derzeit nicht geändert werden.");
+    germanRoot.unmount();
   });
 
   it("refuses to create a nameless project and says why", async () => {
@@ -185,10 +296,14 @@ describe("NewProjectDialog", () => {
   it("refuses a malformed language tag", async () => {
     const { root } = await renderDialog();
 
-    await act(async () => setInputValue(field("Project language"), "not a tag"));
+    await act(async () => setSelectValue(languageSelect(), "__custom__"));
+    await act(async () => setInputValue(field("Custom language tag"), "not a tag"));
 
     expect(host!.textContent).toContain("Not a well-formed language tag.");
     expect(button("Create project").disabled).toBe(true);
+    expect(field("Custom language tag").getAttribute("aria-invalid")).toBe("true");
+    expect(field("Custom language tag").getAttribute("aria-describedby")).toBe("new-project-language-hint new-project-language-error");
+    expect(host!.querySelector("#new-project-language-error")?.getAttribute("role")).toBe("alert");
     await submitForm();
     expect(apiMock.newProject).not.toHaveBeenCalled();
 

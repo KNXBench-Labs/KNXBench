@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session)
+- **Timestamp:** 2026-09-29 11:12 CEST
+- Web lock: released after U8 ISSUE-03 merge and full merged-result gates
+- **Completed:** U8 opt-in viewport-bounded overlay resizing, two-column responsive Settings, accessible gear glyph and larger Debug report landed as `50c13b8` plus the application-zoom fix `616b69a`; merged with concurrent K15 work at `c1015f7`. Chromium found and verified the File-menu portal/focus defect and zoomed-arrow layout-pixel defect. On merged `main`: Web build and 77 files/1170 tests; Rust fmt/Clippy and 124 suites/2468 passed/0 failed/143 ignored; root-built layering, headers (298/161), 397 anchors/228 Markdown files, corpus and diff gates green. `origin/main` readback matched `c1015f7`. With user approval, the commissioning session's pre-staged handover was committed separately as `f2a0916`, preserving its 10:33 entry. U8 manual, ISSUE-03 checklist, status, KL §20 and `.ai/logs/2026-09-29_codex_ui-overlay-geometry.md` updated. No bus or hardware action.
+- **Pending/Next Steps:** Push this UI lock-release handover; remove only U8-owned worktree, branch, Cargo targets and scratch/browser artifacts; then U9 ISSUE-02 welcome/new-project clarity in a new isolated worktree after a fresh web-lock check. U10–U13 remain.
+- **Notes for Codex or Claude:** User reports this GPT/Codex model's quota as 20/100 used at the U8 boundary. The commissioning handover is a separate, user-authorized commit, not part of U8's feature diff. Root's `docs/paperclip-shutdown/` is unrelated and must remain untracked. Native WebKitGTK and real screen-reader behavior remain unverified. The Debug report must portal outside File's closing `<details>`; keyboard resize must convert CSS-zoomed DOMRect values to layout pixels.
+
+---
+
 - **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 10:33 CEST
 - Web lock: held by the UI session (U8); not touched by this entry. `DeviceDownloadPanel.tsx` unchanged.

@@ -31,7 +31,12 @@
   internal scroll, Escape focus restoration and the portalled Debug report's
   reachable Save action and return to File were also exercised. Native
   WebKitGTK behavior and a real screen reader remain untested
-  (KNOWN_LIMITATIONS §20).
+  (KNOWN_LIMITATIONS §20). On merged `main` at `c1015f7` (including K15's
+  partial-download tests), TypeScript/build and 77 web files / 1170 tests
+  passed; Rust fmt/Clippy and 124 suites / 2468 passed, 0 failed, 143 ignored.
+  A root-built `xtask` checked layering, headers (298/161), 397 Markdown
+  links across 228 files and corpus gate; diff checks passed. These are
+  simulator/local-UI gates, not evidence of native GUI or a live KNX bus.
 
 ## 2026-09-28: K8/K9 decided, the commissioning boundaries on paper
 

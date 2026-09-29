@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — Download coverage: parameter fields across an octet boundary
+
+- `ParameterImage::write` writes any 1–64-bit field at bit offset 0–7,
+  MSB-first on across octet boundaries (`[D]`, RESEARCH §19.11). The 4
+  programs held up by `UP-290` now plan: 1 verified, **77 untested** (was
+  73), 168 unsupported. Untested on hardware.
+- Module instances were measured and stay refused: the argument-offset
+  rule is in no PDF and does not rebuild the products' base images
+  (RESEARCH §19.11).
+
 ## 2026-09-29 — Download coverage: Rename leaves no longer block the image
 
 - The image builder lets an unrecognized `Rename`/`ParameterBlockRename`

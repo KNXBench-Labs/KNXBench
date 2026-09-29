@@ -95,3 +95,11 @@ This rule is schema-version-generic by design: schema 23's flat
 `GroupObjectTree` shape and schema 21's nested `Nodes/Node` shape both feed
 the same authoritative-id-list concept, only the XML shape of *reading* that
 list differs per schema.
+
+**Amendment 2026-09-29 (ISSUE-08).** "Present in `GroupObjectTree` is
+active" now reaches the mapped value too. Until then the schema-≥21 mapper
+read a missing `ComObjectInstanceRef/@IsActive` as `false`. It imported
+every overridden object as inactive: 691 of 867 in the ETS 6.3.0 reference
+project and 26 of 75 in the KV demo. Project Schema23 §1.2.5.13 declares no
+such attribute on that element, and neither sample writes one. A stated
+value is still honoured (IMPORT_EXPORT §9.3).

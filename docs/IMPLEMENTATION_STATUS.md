@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — ISSUE-08 data half, P1: schema-≥21 objects stop importing as inactive
+
+- The schema-≥21 mapper read a missing `ComObjectInstanceRef/@IsActive`
+  as `false`. Project Schema23 declares no such attribute there, and
+  ADR-0014 already made `GroupObjectTree` membership the activity
+  statement. So every overridden object imported as inactive: ETS 6.3.0
+  691/867, KV schema 21 26/75. Now a missing value means active, a stated
+  one is honoured, and a malformed one is reported and not guessed active
+  (IMPORT_EXPORT §9.3, ADR-0014 amendment).
+- RED first: 4 unit tests in `knx-etsproj` `map::tests` and the corpus
+  pin `tests/com_object_activity.rs` (867/867, 75/75, ETS4 control
+  907/907). Two mutations were caught: restoring `required_bool` gives the
+  old `(176, 867)`, and `unwrap_or(true)` fails the malformed-value test.
+- Measured, not yet changed (P2+): the evaluator's `NoBranchMatched`
+  diagnostics number ETS4 1,016, ETS 6.3.0 978 and KV 64. Of these,
+  997/959/64 are a legal enumeration value that no `when` covers, and the
+  other 19 per ETS project have a non-enumeration control. They are the
+  "Parameters often show missing-data issues" symptom, not missing data.
+
 ## 2026-09-29 — The house read back against KNXBench's images (read-only)
 
 With the maintainer's go, every house device except 1.1.220 was identified

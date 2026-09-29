@@ -486,6 +486,30 @@ different device's object — the same rule `KNOWN_LIMITATIONS.md` §34 sets,
 applied on the read side. Evidence base and its limits:
 `KNOWN_LIMITATIONS.md` §125.
 
+### 9.3 A communication object's active state
+
+**Schema 11** reads `ComObjectInstanceRef/@IsActive` exactly as the file
+states it. The ETS4 reference project states it on all 907 of its
+overrides.
+
+**Schema ≥ 21** reads activity from `GroupObjectTree` membership
+([ADR-0014](adr/0014-group-object-tree-authoritative-source.md)). Every
+enumerated id is active unless its override *states* otherwise. Project
+Schema23 §1.2.5.13 (`ComObjectInstanceRef_t`) declares no `IsActive`
+attribute at all, and neither schema-≥21 sample writes one: 0 of 691
+overrides in the ETS 6.3.0 project and 0 of 26 in the KV schema-21 demo.
+
+- A stated `IsActive` is still honoured, and a malformed one is reported as
+  a value problem and imported as inactive rather than guessed active.
+- **Fixed 2026-09-29 (ISSUE-08).** Until then the schema-≥21 path read the
+  absent attribute as `false`. It imported 691 of the ETS 6.3.0 project's
+  867 objects, and 26 of the KV demo's 75, as inactive, without a report.
+- The fix changes only what KNXBench's own model and HTML report say. No
+  exporter writes `IsActive` back, and the download planner evaluates the
+  product's `Dynamic` tree itself.
+- Pinned by `crates/knx-etsproj/tests/com_object_activity.rs`
+  (867/867, 75/75, and the schema-11 control 907/907).
+
 ## 10. Product database ingest
 
 **Implemented (Session 4).** `<M-xxxx>/*` container entries (catalog,

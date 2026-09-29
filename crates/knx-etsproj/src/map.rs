@@ -1338,7 +1338,15 @@ fn map_com_object_v21(
                 // (KNOWN_LIMITATIONS §117).
                 read_on_init: Override::Absent,
             },
-            required_bool(&c.is_active, &xpath, problems),
+            // ISSUE-08: absent means active here, unlike schema 11's
+            // `required_bool`. Project Schema23 §1.2.5.13 declares no
+            // `IsActive` on `ComObjectInstanceRef_t`; the object's presence
+            // in `GroupObjectTree` is what says it is active (ADR-0014).
+            // Measured: all 691 overrides in the ETS 6.3.0 reference
+            // project omit the attribute, and reading that as `false` used
+            // to import every one of them as inactive. A stated value is
+            // still honoured, and a malformed one still reported.
+            optional_bool(&c.is_active, &xpath, problems).unwrap_or(c.is_active.is_none()),
             c.channel_id.clone().map(|v| RetainedAttribute {
                 xpath: xpath.clone(),
                 name: "ChannelId".into(),
@@ -1944,6 +1952,70 @@ mod tests {
     use crate::testutil::{
         minimal_source_document, reference_kv_source_document, reference_source_document,
     };
+
+    /// ISSUE-08: a schema-≥21 `ComObjectInstanceRef` without an `IsActive`
+    /// attribute is still active. Project Schema23 does not declare
+    /// `IsActive` on `ComObjectInstanceRef_t` at all; ADR-0014 makes
+    /// `GroupObjectTree` membership the activity statement. Measured: all
+    /// 691 overrides in the ETS 6.3.0 reference project omit it, and every
+    /// one of them used to be imported as inactive.
+    fn map_one_v21(over: Option<&SourceComObjectInstance>) -> (ComObjectInstance, Vec<MapProblem>) {
+        let mut problems = Vec::new();
+        let (instance, _) = map_com_object_v21(
+            "O-2_R-9",
+            over,
+            ComObjectInstanceId(1),
+            DeviceId(1),
+            "P-0001/0.xml",
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance",
+            &mut problems,
+        );
+        (instance, problems)
+    }
+
+    #[test]
+    fn a_schema_21_override_without_is_active_stays_active() {
+        let over = SourceComObjectInstance {
+            ref_id: "O-2_R-9".into(),
+            text: Some("Named by the project".into()),
+            ..Default::default()
+        };
+        let (instance, problems) = map_one_v21(Some(&over));
+        assert!(instance.is_active);
+        assert!(problems.is_empty(), "{problems:?}");
+    }
+
+    #[test]
+    fn a_schema_21_group_object_tree_id_without_an_override_stays_active() {
+        let (instance, _) = map_one_v21(None);
+        assert!(instance.is_active);
+    }
+
+    #[test]
+    fn a_schema_21_override_stating_is_active_false_is_kept_as_stated() {
+        let over = SourceComObjectInstance {
+            ref_id: "O-2_R-9".into(),
+            is_active: Some("0".into()),
+            ..Default::default()
+        };
+        let (instance, problems) = map_one_v21(Some(&over));
+        assert!(!instance.is_active);
+        assert!(problems.is_empty(), "{problems:?}");
+    }
+
+    #[test]
+    fn a_schema_21_malformed_is_active_is_reported_and_not_guessed_active() {
+        let over = SourceComObjectInstance {
+            ref_id: "O-2_R-9".into(),
+            is_active: Some("sometimes".into()),
+            ..Default::default()
+        };
+        let (instance, problems) = map_one_v21(Some(&over));
+        assert!(!instance.is_active);
+        assert_eq!(problems.len(), 1);
+    }
 
     #[test]
     #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]

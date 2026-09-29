@@ -44,8 +44,9 @@ pub struct ParameterField {
     /// Distance of the value's most significant bit from the most
     /// significant bit of the octet at `offset`, 0–7.
     pub bit_offset: u8,
-    /// Width of the value in bits.
-    pub size_in_bit: u8,
+    /// Width of the value in bits. An integer field has at most 64; an
+    /// octet string ([`ParameterImage::write_octets`]) may be wider.
+    pub size_in_bit: u32,
 }
 
 /// Why a value could not be written. The image is left unchanged.
@@ -132,25 +133,26 @@ pub struct ParameterImage {
 }
 
 impl ParameterField {
-    /// The field's first and one-past-last bit, counted MSB-first from the
-    /// start of the segment, if the shape is supported.
-    fn bit_span(self) -> Option<(u64, u64)> {
-        let size = u64::from(self.size_in_bit);
-        let bit = u64::from(self.bit_offset);
-        let in_one_octet = self.size_in_bit >= 1 && bit + size <= 8;
+    /// The bits the field covers, counted MSB-first from the start of the
+    /// segment.
+    fn span(self) -> (u64, u64) {
+        let start = u64::from(self.offset) * 8 + u64::from(self.bit_offset);
+        (start, start + u64::from(self.size_in_bit))
+    }
+
+    /// Whether [`ParameterImage::write`] supports the shape.
+    fn is_integer_shape(self) -> bool {
+        let in_one_octet =
+            self.size_in_bit >= 1 && u32::from(self.bit_offset) + self.size_in_bit <= 8;
         let whole_octets = self.bit_offset == 0
             && self.size_in_bit.is_multiple_of(8)
             && (8..=64).contains(&self.size_in_bit);
-        if !(in_one_octet || whole_octets) {
-            return None;
-        }
-        let start = u64::from(self.offset) * 8 + bit;
-        Some((start, start + size))
+        in_one_octet || whole_octets
     }
 
     /// The octets the field touches.
     fn octet_len(self) -> usize {
-        usize::from(self.bit_offset + self.size_in_bit).div_ceil(8)
+        (u32::from(self.bit_offset) + self.size_in_bit).div_ceil(8) as usize
     }
 }
 
@@ -163,42 +165,73 @@ impl ParameterImage {
         }
     }
 
-    /// Writes `value` into `field`. Refuses, and leaves the image
-    /// unchanged, if the field is unsupported, out of the segment, too
-    /// narrow for the value, or overlaps a field written before.
-    pub fn write(&mut self, field: ParameterField, value: u64) -> Result<(), ParameterImageError> {
-        let (start, end) = field
-            .bit_span()
-            .ok_or(ParameterImageError::UnsupportedField { field })?;
-        let first = field.offset as usize;
-        if first + field.octet_len() > self.octets.len() {
+    /// Checks what every write needs: the field lies in the segment and
+    /// shares no bit with a field written before.
+    fn check_free(&self, field: ParameterField) -> Result<(), ParameterImageError> {
+        if field.offset as usize + field.octet_len() > self.octets.len() {
             return Err(ParameterImageError::OutOfSegment {
                 field,
                 segment_octets: self.octets.len(),
             });
         }
-        if field.size_in_bit < 64 && value >> field.size_in_bit != 0 {
-            return Err(ParameterImageError::ValueTooWide { field, value });
-        }
+        let (start, end) = field.span();
         if let Some(earlier) = self.written.iter().copied().find(|earlier| {
-            let (s, e) = earlier
-                .bit_span()
-                .expect("only supported fields are recorded");
+            let (s, e) = earlier.span();
             s < end && start < e
         }) {
             return Err(ParameterImageError::Overlap { field, earlier });
         }
+        Ok(())
+    }
 
+    /// Writes `value` into `field`. Refuses, and leaves the image
+    /// unchanged, if the field is unsupported, out of the segment, too
+    /// narrow for the value, or overlaps a field written before.
+    pub fn write(&mut self, field: ParameterField, value: u64) -> Result<(), ParameterImageError> {
+        if !field.is_integer_shape() {
+            return Err(ParameterImageError::UnsupportedField { field });
+        }
+        self.check_free(field)?;
+        if field.size_in_bit < 64 && value >> field.size_in_bit != 0 {
+            return Err(ParameterImageError::ValueTooWide { field, value });
+        }
+
+        let first = field.offset as usize;
         if field.bit_offset == 0 && field.size_in_bit.is_multiple_of(8) {
-            let octets = usize::from(field.size_in_bit / 8);
+            let octets = (field.size_in_bit / 8) as usize;
             let bytes = value.to_be_bytes();
             self.octets[first..first + octets].copy_from_slice(&bytes[8 - octets..]);
         } else {
-            let shift = 8 - field.bit_offset - field.size_in_bit;
-            let mask = (((1u16 << field.size_in_bit) - 1) as u8) << shift;
+            // In one octet (`is_integer_shape`), so the width is at most 8.
+            let size = field.size_in_bit as u8;
+            let shift = 8 - field.bit_offset - size;
+            let mask = (((1u16 << size) - 1) as u8) << shift;
             let octet = &mut self.octets[first];
             *octet = (*octet & !mask) | ((value as u8) << shift);
         }
+        self.written.push(field);
+        Ok(())
+    }
+
+    /// Copies `octets` into `field`, first octet first: a value that is an
+    /// octet string, not a number (a text parameter). The field must start
+    /// on an octet and be exactly as long as `octets`; how the value became
+    /// these octets is the caller's business. Refuses, and leaves the image
+    /// unchanged, like [`Self::write`].
+    pub fn write_octets(
+        &mut self,
+        field: ParameterField,
+        octets: &[u8],
+    ) -> Result<(), ParameterImageError> {
+        if field.bit_offset != 0
+            || field.size_in_bit == 0
+            || field.size_in_bit as usize != octets.len() * 8
+        {
+            return Err(ParameterImageError::UnsupportedField { field });
+        }
+        self.check_free(field)?;
+        let first = field.offset as usize;
+        self.octets[first..first + octets.len()].copy_from_slice(octets);
         self.written.push(field);
         Ok(())
     }
@@ -236,7 +269,7 @@ pub fn signed_bits(value: i64, size_in_bit: u8) -> Result<u64, ParameterImageErr
 mod tests {
     use super::*;
 
-    fn field(offset: u32, bit_offset: u8, size_in_bit: u8) -> ParameterField {
+    fn field(offset: u32, bit_offset: u8, size_in_bit: u32) -> ParameterField {
         ParameterField {
             offset,
             bit_offset,
@@ -402,6 +435,69 @@ mod tests {
         // And a refused field does not block a later, valid one.
         image.write(field(0, 0, 8), 0xFF).unwrap();
         assert_eq!(image.octets(), &[0xFF, 0x34]);
+    }
+
+    /// An octet string (a text value) is copied as is, wider than any
+    /// integer field may be.
+    #[test]
+    fn an_octet_string_is_copied_into_its_whole_octet_field() {
+        let mut image = ParameterImage::new(vec![0xAA; 12]);
+        image
+            .write_octets(field(1, 0, 80), b"Hi\0\0\0\0\0\0\0\0")
+            .unwrap();
+        assert_eq!(
+            image.octets(),
+            &[0xAA, b'H', b'i', 0, 0, 0, 0, 0, 0, 0, 0, 0xAA]
+        );
+    }
+
+    #[test]
+    fn an_octet_string_must_fill_its_field_exactly_and_start_on_an_octet() {
+        let mut image = ParameterImage::new(vec![0; 8]);
+        let before = image.clone();
+        assert_eq!(
+            image.write_octets(field(0, 0, 32), b"abc"),
+            Err(ParameterImageError::UnsupportedField {
+                field: field(0, 0, 32)
+            })
+        );
+        assert_eq!(
+            image.write_octets(field(0, 2, 16), b"ab"),
+            Err(ParameterImageError::UnsupportedField {
+                field: field(0, 2, 16)
+            })
+        );
+        assert_eq!(
+            image.write_octets(field(6, 0, 32), b"abcd"),
+            Err(ParameterImageError::OutOfSegment {
+                field: field(6, 0, 32),
+                segment_octets: 8
+            })
+        );
+        assert_eq!(image, before);
+    }
+
+    /// Octet strings and integers share one overlap check, both ways.
+    #[test]
+    fn an_octet_string_and_an_integer_may_not_overlap() {
+        let mut image = ParameterImage::new(vec![0; 16]);
+        image.write_octets(field(2, 0, 96), &[1; 12]).unwrap();
+        assert_eq!(
+            image.write(field(13, 4, 4), 1),
+            Err(ParameterImageError::Overlap {
+                field: field(13, 4, 4),
+                earlier: field(2, 0, 96)
+            })
+        );
+        image.write(field(0, 0, 16), 7).unwrap();
+        assert_eq!(
+            image.write_octets(field(1, 0, 8), &[9]),
+            Err(ParameterImageError::Overlap {
+                field: field(1, 0, 8),
+                earlier: field(0, 0, 16)
+            })
+        );
+        image.write(field(14, 0, 8), 5).unwrap();
     }
 
     #[test]

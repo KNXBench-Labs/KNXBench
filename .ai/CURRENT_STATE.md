@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (download coverage session, offline only)
+- **Timestamp:** 2026-09-29 (evening) CEST
+- **Web lock:** untouched — still held by the UI U11 session below; this package changed no `apps/knx-web` file.
+- **Completed:** The 41 `procedure-style` refusals were all non-`070nh` masks; the planner now asks the mask first (`not-memory-mapped` 65). Image builder writes signed `TypeNumber` ≥ 0 and `TypeText` (declared ISO-8859-1/-15, ASCII without declaration) via new `ParameterImage::write_octets`; negative signed, every `TypeFloat`, unknown text encodings and non-`BigEndian` byte order refused by name. No PDF specifies these layouts; the evidence is the products' own base images (RESEARCH §19.9). Corpus re-pinned: 246 programs, 1 verified, **69 untested** (was 54), 176 unsupported. Log: `.ai/logs/2026-09-29_claude_download-coverage-values.md`.
+- **Pending/Next Steps:** None of the 15 new plans is hardware-tested. Remaining `image-structure` refusals: 10 `ReadOnInitFlag`, 9 `Property` placement, 3 priority `High`; 59 `parameter-evaluation`. Negative signed values and floats wait for a source that shows their form.
+- **Notes for Codex or Claude:** No bus action in this package. `1.1.67` still holds option C.
+
+---
+
 - **Last Agent:** codex (UI U11 / ISSUE-07 session)
 - **Timestamp:** 2026-09-29 16:19 CEST
 - **Web lock: taken by the UI U11 session for ISSUE-07** — Product Catalog in the main workspace and atomic multi-device creation. Do not edit `apps/knx-web` concurrently until this package publishes and releases the lock.

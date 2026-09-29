@@ -704,6 +704,16 @@ async fn new_project(
     body: Option<Json<NewProjectBody>>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let Json(body) = body.unwrap_or_default();
+    if let Some(language) = body.language.as_deref() {
+        language_tags::LanguageTag::parse(language).map_err(|error| {
+            ApiError::validation(
+                "language_tag",
+                format!("invalid language tag {language:?}: {error}"),
+                "BCP-47 language tag",
+                "en-US",
+            )
+        })?;
+    }
     let group_address_style = body
         .group_address_style
         .as_deref()
@@ -775,6 +785,18 @@ async fn set_individual_address(
     State(state): State<SharedState>,
     Json(body): Json<SetIndividualAddressBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    if let Some(address) = body.address.as_deref() {
+        address
+            .parse::<knx_core::IndividualAddress>()
+            .map_err(|error| {
+                ApiError::validation(
+                    "individual_address",
+                    error.to_string(),
+                    "area.line.device",
+                    "1.1.10",
+                )
+            })?;
+    }
     domain::set_individual_address_impl(&state, body.device_id, body.address)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -807,6 +829,16 @@ async fn set_com_object_dpt(
     State(state): State<SharedState>,
     Json(body): Json<SetComObjectDptBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    if let Some(dpt) = body.dpt.as_deref() {
+        knx_core::DptRef::parse(dpt).map_err(|error| {
+            ApiError::validation(
+                "dpt",
+                error.to_string(),
+                "DPT-<main> or DPST-<main>-<sub>",
+                "DPST-5-1",
+            )
+        })?;
+    }
     domain::set_com_object_dpt_impl(&state, body.com_object_id, body.dpt)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -951,6 +983,24 @@ async fn create_group_address(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupAddressBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    // Classification uses the exact core parser and the project's address
+    // style; domain remains authoritative for applying the command.
+    if let Some(project) = state.project.lock().expect("state mutex poisoned").as_ref() {
+        let style = project.info.group_address_style;
+        let syntax = match style {
+            knx_core::GroupAddressStyle::ThreeLevel => "main/middle/sub",
+            knx_core::GroupAddressStyle::TwoLevel => "main/sub",
+            knx_core::GroupAddressStyle::Free => "0..65535",
+        };
+        let example = match style {
+            knx_core::GroupAddressStyle::ThreeLevel => "1/2/3",
+            knx_core::GroupAddressStyle::TwoLevel => "1/42",
+            knx_core::GroupAddressStyle::Free => "1234",
+        };
+        knx_core::GroupAddress::parse(&body.address, style).map_err(|error| {
+            ApiError::validation("group_address", error.to_string(), syntax, example)
+        })?;
+    }
     domain::create_group_address_impl(&state, body.name, body.address, body.range_id)
         .map(Json)
         .map_err(ApiError::bad_request)

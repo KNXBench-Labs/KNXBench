@@ -12,6 +12,26 @@ Every statement below is tagged:
 
 ---
 
+## 2026-09-29 — U5 validation and help routing research
+
+- **[D]** RFC 5646 §2.1 defines BCP-47 language-tag subtags separated by
+  hyphens. An underscore in `en_US` is not well-formed; `en-US` is. RFC:
+  https://www.rfc-editor.org/rfc/rfc5646.html . Well-formed syntax is not
+  the same as validating every subtag against the registry (§2.2.9).
+- **[D]** `language-tags` 0.3.2 documents `LanguageTag::parse` as a
+  well-formedness parser; it does not require `validate()` unless a
+  registry-validating policy is explicitly wanted:
+  https://docs.rs/language-tags/0.3.2/language_tags/struct.LanguageTag.html .
+  Keep the original tag text rather than canonicalizing project content.
+- **[V]** `crates/knx-core/src/string_table.rs::Language` intentionally
+  stores an unchecked tag for imported ETS data. Validation of a *newly
+  supplied* project language belongs at the HTTP creation boundary, not
+  in that lossless domain handle. The existing `DptRef::parse`,
+  `IndividualAddress::from_str` and `GroupAddress::parse` are the canonical
+  KNX parsers; UI syntax hints should not independently redefine them.
+
+---
+
 ## 1. Evidence base
 
 | Artifact | What it is | Notes |

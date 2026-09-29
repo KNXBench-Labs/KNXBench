@@ -33,6 +33,17 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("preserves structured 422 diagnostics and includes syntax in the toast text without rewriting raw detail", async () => {
+    const refusal = { error: "malformed individual address", detail: "malformed individual address", kind: "individual_address", syntax: "area.line.device", example: "1.1.10" };
+    mockFetchOnce(refusal, false, 422);
+    const error = await api.setIndividualAddress(1, "bad").catch((e: unknown) => e);
+    expect((error as Error).message).toBe(refusal.detail);
+    expect(api.validationHint(error)).toEqual({ kind: refusal.kind, detail: refusal.detail, syntax: refusal.syntax, example: refusal.example });
+    expect(api.errorMessage(error)).toContain("area.line.device");
+    expect(api.errorMessage(error)).toContain("1.1.10");
+    expect(api.validationHint(new Error("network"))).toBeNull();
+  });
+
   it("diffProject's 422 import refusal keeps its report readable through importRefusal", async () => {
     const refusal = {
       error: "comparison refused: the ETS import reported 1 error diagnostic(s)",

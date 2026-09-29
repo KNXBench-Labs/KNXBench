@@ -1114,6 +1114,12 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.groupAddresses.p3":
     "Zu einer Gruppenadresse gehört außerdem ein Datenpunkttyp, der sagt, wie die Bytes auf der Leitung zu lesen sind — 1.001 ist ein Schalter, 5.001 ein Prozentwert. Die Ansicht zeigt den vorhandenen Typ, markiert Adressen ohne Typ und solche, deren Verknüpfungen sich über den Typ uneinig sind.",
 
+  "help.topic.groupRanges.title": "Gruppenadressbereiche",
+  "help.topic.groupRanges.p1":
+    "Ein Bereich ist ein benannter Container für Gruppenadressen. Bereiche können ineinander liegen: Ein Unterbereich muss innerhalb des Adressintervalls seines übergeordneten Bereichs liegen. Die Spalte Bereich zeigt den Pfad dieser Zuordnung, keinen Wert auf dem Bus.",
+  "help.topic.groupRanges.p2":
+    "Anfang und Ende sind Grenzen für Gruppenadressen im Adressstil des Projekts. Sie beschreiben keinen Bereich von Datenpunkttypen oder Nutzwerten; der Datenpunkttyp gehört zu den einzelnen Adressen und ihren Verknüpfungen.",
+
   "help.topic.comObjectFlags.title": "Flags der Kommunikationsobjekte",
   "help.topic.comObjectFlags.p1":
     "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. KNXBench bildet dafür sechs Flags ab — in den Eigenschaften stehen sie als R, W, T, U, C und I — und zusammen legen sie fest, was das Objekt dort darf.",
@@ -1157,6 +1163,9 @@ export const messages: Record<MessageKey, string> = {
   "help.tip.comFlags.label": "Was die Flags der Kommunikationsobjekte bedeuten",
   "help.tip.comFlags.text":
     "R, W, T, U, C und I legen fest, was dieses Objekt am Bus darf. C ist der Hauptschalter — ist es aus, bewirken die anderen fünf nichts. Die ausführliche Erklärung steht unter F1.",
+  "help.tip.groupRange.label": "Was ein Gruppenadressbereich bedeutet",
+  "help.tip.groupRange.text":
+    "Bereiche bilden eine Hierarchie: Jeder Unterbereich liegt innerhalb des Adressintervalls seines übergeordneten Bereichs. Das ist kein Bereich von Datenpunkttypen. F1 öffnet die ausführliche Erklärung.",
   "help.tip.addressTable.label": "Was diese Tabelle zeigt",
   "help.tip.addressTable.text":
     "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse, Name oder Datenpunkttyp. Was eine Gruppenadresse ist, erklärt F1.",

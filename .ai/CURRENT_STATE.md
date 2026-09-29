@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 02:35 CEST
+- Web lock: released (U5 ISSUE-10 actionable errors and contextual help, upon merge)
+- **Completed:** U5: four stable 422 parser envelopes with unchanged legacy error, raw detail, syntax/example; validation toast hint; topic-aware F1 and tip click/Enter; accessible active-heading help panel; bilingual Group address ranges help. TDD RED/GREEN and five mutation checks. Branch gates: TypeScript/build, web 74 files / 1134 tests; Rust fmt/clippy/workspace 123 suites / 2380 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. RFC 5646 well-formedness and registry boundary documented; ADR-0024, manual, status, known limitations §80 and issue plan updated. No KNX operation.
+- **Pending/Next Steps:** U6 ISSUE-01 zoom, remembered pane widths and hover visibility, in a fresh worktree after reserving the web lock anew. U7–U12 and U13 closing review remain. Rerun merged-main gates, push and clean U5 artifacts after this merge.
+- **Notes for Codex or Claude:** Existing import-diff 422 reports keep their own payload. `language-tags` validates syntax for newly supplied project language only; imported language tags are unchanged. The group-address syntax hint follows the active project style, but does not change domain address semantics. GUI hardware keyboard/screen-reader proof is not claimed by headless tests. Quota prompt after U4 timed out; pause only if a concrete 100% risk is known.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-28 23:56 UTC
 - Web lock: taken by UI session for U5 ISSUE-10 actionable 422 errors and topic-targeted help
 - **Completed:** U4 (`e15c397`) is merged and pushed, branch and merged-main gates are green (122 Rust suites / 2378 passed, 74 web files / 1127 passed; AppImage built and validated), and its worktree, build target and own scratch files were removed. No hardware operation. U5's issue-plan section and CT-8 brief were read before taking this lock.

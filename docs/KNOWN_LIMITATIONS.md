@@ -5221,6 +5221,13 @@ the returned tree replaces the welcome screen. The first installation exposes
 its empty "Unassigned" branch and can open the device catalog without any
 area or line.
 
+**U5 validation boundary (2026-09-29).** New-project language input is
+checked for BCP-47 *well-formedness* at the HTTP boundary; this does not
+verify registry assignment or that translations exist for that language.
+Already imported project tags stay lossless and are not retroactively
+rewritten or rejected. The four editor/creation parser errors now carry
+additive 422 syntax hints; the `error` string remains for older clients.
+
 **Verification.** `apps/knx-web/e2e/new-project.e2e.ts` builds the production
 frontend, starts a real `knx-server`, and drives it in system Chromium through
 Playwright. Separate cases for `ThreeLevel`, `TwoLevel` and `Free` assert

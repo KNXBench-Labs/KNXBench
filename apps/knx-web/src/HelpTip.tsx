@@ -6,12 +6,13 @@
 
 import { useId, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { helpTipAnimates } from "./help";
+import { helpTipAnimates, requestHelpTopic } from "./help";
+import type { HelpTopicId } from "./help";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./i18n";
 
-export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageKey }) {
-  const { labelKey, textKey } = props;
+export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageKey; topicId?: HelpTopicId }) {
+  const { labelKey, textKey, topicId } = props;
   const t = useTranslate();
   const [open, setOpen] = useState(false);
   const bubbleId = `help-tip-${useId()}`;
@@ -56,15 +57,14 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
         className="help-tip-trigger"
         aria-label={t(labelKey)}
         aria-describedby={bubbleId}
+        data-help-topic={topicId}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onPointerEnter={() => setOpen(true)}
         onPointerLeave={() => setOpen(false)}
-        // Opens, never toggles. A click is preceded by a pointer-enter and
-        // a focus that have both already opened the bubble, so a toggle
-        // here would read as "clicking the help button hides the help".
-        // Escape, blur and pointer-leave are the three ways it closes.
-        onClick={() => setOpen(true)}
+        // A topic-aware tip keeps its short bubble on focus, while a
+        // deliberate click/Enter opens the long-form topic in the panel.
+        onClick={() => { setOpen(true); if (topicId) requestHelpTopic(topicId); }}
         onKeyDown={handleKeyDown}
       >
         <span aria-hidden="true">?</span>

@@ -154,7 +154,7 @@ export default function GroupAddressTable(props: {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" />
+        <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" topicId="groupAddresses" />
       </div>
       <div className="workspace-table-wrap">
         <table className="workspace-table address-table">
@@ -165,7 +165,7 @@ export default function GroupAddressTable(props: {
               </th>
               <th>{t("workbench.address")}</th>
               <th>{t("workbench.name")}</th>
-              <th>{t("addressTable.range")}</th>
+              <th>{t("addressTable.range")} <HelpTip labelKey="help.tip.groupRange.label" textKey="help.tip.groupRange.text" topicId="groupRanges" /></th>
               <th>{t("addressTable.dpt")}</th>
               <th>{t("addressTable.links")}</th>
             </tr>

@@ -1684,13 +1684,32 @@ export function redo(): Promise<ProjectTree> {
   return request("/api/redo", { method: "POST" });
 }
 
+export interface ValidationHint {
+  kind: string;
+  detail: string;
+  syntax: string;
+  example: string;
+}
+
+/** Parsed only for the additive parser-error envelope; other 422 responses
+ * (such as import diagnostics) keep their existing contract. */
+export function validationHint(e: unknown): ValidationHint | null {
+  if (errorStatus(e) !== 422 || !(e instanceof Error)) return null;
+  const body = (e as Error & { body?: unknown }).body;
+  if (typeof body !== "object" || body === null) return null;
+  const fields = body as Record<string, unknown>;
+  if (["kind", "detail", "syntax", "example"].some((key) => typeof fields[key] !== "string")) return null;
+  return { kind: fields.kind as string, detail: fields.detail as string, syntax: fields.syntax as string, example: fields.example as string };
+}
+
 /// Unwraps the message from an error thrown by `request()` (or anything
 /// else `Error`-shaped); falls back to `String(e)` for non-`Error` throws.
-/// Callers used to do `String(e)` directly, back when Tauri's `invoke()`
-/// rejected with a bare string — now that every API error is a real
-/// `Error`, that produced a doubled `Error: <message>` in the UI.
+/// Caller-readable syntax is appended only for structured parser refusals;
+/// the untouched server detail remains on `Error.message` and `body.detail`.
 export function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+  if (!(e instanceof Error)) return String(e);
+  const hint = validationHint(e);
+  return hint ? `${e.message} — ${hint.syntax}: ${hint.example}` : e.message;
 }
 
 /// The HTTP status `request()` attached to an error it threw (see

@@ -567,7 +567,7 @@ async fn a_new_project_without_a_stated_style_stays_three_level() {
             .await
             .unwrap()
             .status(),
-        StatusCode::BAD_REQUEST
+        StatusCode::UNPROCESSABLE_ENTITY
     );
     let created = app
         .oneshot(post(

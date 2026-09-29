@@ -31,13 +31,33 @@ const paragraphs = () =>
   Array.from(host!.querySelectorAll(".help-panel-topic p")).map((p) => p.textContent);
 
 describe("HelpPanel", () => {
+  it("names the dialog for the active topic, opens a requested topic, and keeps its scrollable prose focused", async () => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => { root.render(<HelpPanel onClose={vi.fn()} initialTopicId="comObjectFlags" />); });
+    expect(dialog().getAttribute("aria-labelledby")).toBe("help-panel-topic-title");
+    expect(host!.querySelector("#help-panel-topic-title")?.textContent).toBe(enMessages["help.topic.comObjectFlags.title"]);
+    expect(document.activeElement).toBe(host!.querySelector(".help-panel-topic"));
+    await act(async () => root.unmount());
+  });
+
+  it("resets prose scroll and focus when switching topics", async () => {
+    await render();
+    const prose = host!.querySelector<HTMLElement>(".help-panel-topic")!;
+    prose.scrollTop = 80;
+    await act(async () => topicButtons()[3].click());
+    expect(prose.scrollTop).toBe(0);
+    expect(document.activeElement).toBe(prose);
+  });
+
   it("is a dialog labelled by a heading that is actually on screen", async () => {
     await render();
     const labelledBy = dialog().getAttribute("aria-labelledby");
-    expect(labelledBy).toBe("help-panel-title");
-    const heading = host!.querySelector("#help-panel-title") as HTMLElement;
-    expect(heading.tagName).toBe("H2");
-    expect(heading.textContent).toBe(enMessages["help.title"]);
+    expect(labelledBy).toBe("help-panel-topic-title");
+    const heading = host!.querySelector("#help-panel-topic-title") as HTMLElement;
+    expect(heading.tagName).toBe("H3");
+    expect(heading.textContent).toBe(enMessages["help.topic.gettingStarted.title"]);
   });
 
   it("lists every topic and marks the open one", async () => {

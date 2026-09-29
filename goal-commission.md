@@ -505,6 +505,21 @@ K12 and K16.
 Like K10: review all packages, gates on the merged `main`, the
 commissioning rows updated, handover.
 
+**Status 2026-09-29: done.** Review over `fc601db^..c04fb53` (K11–K17, 36
+code files). Hardware gate: only individual-address programming, restart
+and download pass `hardware_write_is_authorised`; IA reset, Master Reset,
+domain address and RF configuration are refused by name and pinned in
+`hardware_write_gate.rs`. `AccessKey` has no `Display` and a redacting
+`Debug`; nothing else in the key path carries a value. RF has no CLI or
+HTTP route. Findings: the K16 commit swallowed RESEARCH's `## 20.`
+heading (restored in `c04fb53`); two K17 mutants survived the first run
+and got tests (`a_device_that_ignores_the_write2…`,
+`another_devices_function_answer…`). Gates on merged `main` at `c04fb53`:
+Rust 124 suites 2526 passed 0 failed, web 1170/1170 and build, fmt,
+clippy, layering, headers (302/161), anchors (397), deny. Every stage-two
+result is simulator-verified; the [W] live runs of K12–K15 on `1.1.67`
+are deferred until the user gives a device-specific go.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

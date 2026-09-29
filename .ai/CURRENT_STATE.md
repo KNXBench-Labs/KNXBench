@@ -1,3 +1,16 @@
+- **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 12:50 CEST
+- Web lock: held by the UI session (U9); not touched. `apps/knx-web` unchanged by this track.
+- **Completed:** Commissioning second stage closed (K16–K18), simulator only, no bus action:
+  - K16 `b0f6f8e` RF domain address: AL §3.3.3–§3.3.7, MP §2.7–§2.12 for RF, cEMI system broadcast + RF info; `WriteScope::DomainAddressProgramming` refused on hardware (KL §143, RESEARCH §19.6). 10/10 mutants.
+  - K17 `c04fb53` RF device configuration: AL §3.4.7 function-property PDUs, DD2 + CP §3.7.2.3 GA calculation (Example 16), `DMP_Connect_RCl`, MP §2.6 tail, `PID_PARAMETER`, `PID_OBJECTLINK`, InfoReport; `WriteScope::RfConfiguration` refused on hardware (KL §144, RESEARCH §19.7). 11/11 mutants.
+  - K18 review + gates on merged `main` `c04fb53`: Rust 124 suites 2526/0, web 1170/1170 + build, fmt/clippy/layering/headers 302/161/anchors 397/deny green. This also covers the UI commits `50c13b8`/`616b69a`/`c1015f7`, which this session pushed from the root checkout by mistake at K15 (they were the UI session's own, already gated by it; no rollback).
+- **Pending/Next Steps:** Commissioning goal is complete apart from user-owned decisions: device-specific go for live K12 (serial-number addressing), K15 (partial download) on `1.1.67`; K13/K14 stay refused on hardware unless the user asks. §3c later goals (Powerline, KNX IP config, couplers, Data Secure, Easy modes) each need their own goal file.
+- **For the goal.md session:** new KNOWN_LIMITATIONS §143 (RF domain address) and §144 (RF configuration) for the LIMITATION_TRIAGE recount; `stats.md` refresh after `b0f6f8e` and `c04fb53`. RESEARCH `## 20.` was briefly missing between `b0f6f8e` and `c04fb53`.
+- **Notes for Codex/Claude:** No RF hardware exists; every RF result is simulator-verified only. Push only from the own worktree, never `HEAD:main` from the shared root. New files need a one-sentence `//!` header line (ADR-0018, ceiling 161).
+
+---
+
 - **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 11:21 CEST
 - Web lock: taken by UI session for U9 ISSUE-02 welcome surface and new-project clarity

@@ -94,8 +94,11 @@
   Resume, export and the 5-row statistics remained reachable. Native
   WebKitGTK interaction, save-dialog GUI and live bus behaviour have not
   been tested. Layering, headers (287 with header, 161 without), 397
-  Markdown anchors and the corpus gate passed on the U7 worktree; merged-main
-  gates remain pending.
+  Markdown anchors and the corpus gate passed on the U7 worktree. On merged
+  `main` at `de697c7` (including the commissioning recovery simulator test),
+  TypeScript/build and 77 web files / 1163 tests passed; Rust fmt/Clippy and
+  123 suites / 2391 passed, 0 failed, 136 ignored. Layering, headers,
+  397 anchors across 228 Markdown files, corpus and diff gates also passed.
 
 ## 2026-09-29 — U6: bounded zoom and remembered workbench geometry
 

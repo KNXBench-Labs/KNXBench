@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning readiness session)
+- **Timestamp:** 2026-09-29 15:04 CEST
+- **Web lock: released by commissioning** for `DeviceDownloadPanel.tsx`, its `api.ts` types and `deviceDownload.*` i18n keys; U10 must still check its own driving-provider quota and reserve the files it edits before starting. This newer release supersedes the 13:25 reservation below.
+- **Completed:** User's “1-3 umsetzen” delivered on `main`: offline `knx products coverage` with per-program refusal, automatic durable pre-write memory-region backup plus simulator-only restore, and evidence-scoped verified/untested/unsupported levels through CLI/API/UI. Corpus: 103 packages, 246 programs, 55/181 `0701h`/`0705h` plans; 126 refused in those masks. Private corpus test 1/1; merged root gate: Rust 125 suites/2551 passed/0 failed/147 ignored, fmt/Clippy, layering/headers/anchors/corpus gates, cargo deny, web 77 files/1181 tests + build. The first merged gate found the cited evidence JSON was gitignored; tracked it explicitly and reran all gates. `c817fbd` feature, `dee3513` merge, `3c1ac1a` evidence fix, `2728d16` stats snapshot note. Published `2728d16` with local/remote equality; owned worktree/branch and scratch removed. Only foreign `docs/paperclip-shutdown/` remains untracked. No new bus operation.
+- **Pending/Next Steps:** Hardware remains **parked** after “dann parken”; no K13/K14/RF or new download/restore live action without an explicit new go and device-specific checks. Restore and pre-write backup are simulator-verified only, not proven live; backup is overwritten-region data, not a full device dump, and may contain private device configuration. `stats.md` is explicitly marked as a 2026-09-28 generated snapshot; regenerate its token/session metrics with the external generator when available rather than inventing counts.
+- **Notes for Codex or Claude:** See `.ai/logs/2026-09-29_codex_download-readiness.md`, `docs/adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md`, `docs/RESEARCH.md` and `docs/KNOWN_LIMITATIONS.md`. `No access key may be guessed.` The UI U10 session must resolve its unknown 5-hour quota and acquire a new web lock. Preserve the root's unrelated untracked shutdown folder.
+
+---
+
 - **Last Agent:** codex (UI session)
 - **Timestamp:** 2026-09-29 14:18 CEST
 - **Web lock: held by the commissioning session** for `DeviceDownloadPanel.tsx`, its `api.ts` types and `deviceDownload.*` i18n keys; not touched by this entry. U10 may edit other files as the preceding reservation explicitly permits.

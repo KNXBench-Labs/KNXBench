@@ -1,5 +1,5 @@
 - **Last Agent:** Claude (iaw commissioning session)
-- **Timestamp:** 2026-09-29 12:50 CEST
+- **Timestamp:** 2026-09-29 12:14 CEST
 - Web lock: held by the UI session (U9); not touched. `apps/knx-web` unchanged by this track.
 - **Completed:** Commissioning second stage closed (K16–K18), simulator only, no bus action:
   - K16 `b0f6f8e` RF domain address: AL §3.3.3–§3.3.7, MP §2.7–§2.12 for RF, cEMI system broadcast + RF info; `WriteScope::DomainAddressProgramming` refused on hardware (KL §143, RESEARCH §19.6). 10/10 mutants.

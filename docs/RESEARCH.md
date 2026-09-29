@@ -5324,7 +5324,7 @@ class.**
    What is missing: taking the key from the project (`BCUKey`) or from the
    operator, and a message that names a key as one possible cause. **No key
    may ever be guessed**; the ruling in `authorisation.rs` stays as it is.
-   **Done 2026-09-29 (K11, KL §137).** Project key, `--key-file`, and a
+   **Done 2026-09-29 (K11, KL §138).** Project key, `--key-file`, and a
    hint on refusal. Reading the `DM_Authorize2_RCo` diagram (MP p. 76) for
    this showed the key is sent only *"If the free access level is not the
    highest level"*; the code had also sent it after a free level of 0.

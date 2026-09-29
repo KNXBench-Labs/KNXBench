@@ -8619,7 +8619,7 @@ including the TSSG examples as golden vectors. Items 4 and 5 are then decided
 explicitly, and one real download of a known configuration is verified by
 observing the resulting group telegram on the bus.
 
-## §137 A device's access key comes from the project or a key file, and nothing checks it live
+## §138 A device's access key comes from the project or a key file, and nothing checks it live
 
 **Status (2026-09-29, K11).** A download authorises with a key when one is
 given, and with none otherwise. Implemented and tested in the simulator,

@@ -19,7 +19,9 @@ use std::time::Duration;
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::{ContactableAddress, IndividualAddress};
-use knx_net::commissioning::individual_address_write::{IndividualAddressWriteError, Occupancy};
+use knx_net::commissioning::individual_address_write::{
+    AddressRestart, IndividualAddressWriteError, Occupancy,
+};
 use knx_net::commissioning::programming_button_wait::{
     program_individual_address, write_count, AddressProgrammingAuthorisation, ButtonEvent,
     ButtonProgrammingError, ButtonProgrammingReport, ButtonWait,
@@ -253,14 +255,29 @@ fn summarise(
     if report.procedure.wrote {
         let _ = writeln!(
             out,
-            "address written: yes, {} -> {new_address}; the device answered at {new_address} and was restarted",
+            "address written: yes, {} -> {new_address}; the device answered at {new_address}",
             report.previous_address
         );
     } else {
         let _ = writeln!(
             out,
-            "address written: no need, the device already had {new_address}; it answered and was restarted"
+            "address written: no need, the device already had {new_address}; it answered there"
         );
+    }
+    let _ = writeln!(out, "{}", restart_line(&report.procedure.restart));
+}
+
+/// The restart, told apart from the address: a device may answer at the
+/// new address and still not acknowledge its Basic Restart (MP
+/// §3.7.1.1.3, p. 80; RESEARCH §19).
+fn restart_line(restart: &AddressRestart) -> String {
+    match restart {
+        AddressRestart::Acknowledged => "restart: acknowledged".to_string(),
+        AddressRestart::Unconfirmed { error } => format!(
+            "restart: NOT confirmed ({error}). Some devices restart without answering; \
+             if its programming LED is still on, press the button once to end programming mode"
+        ),
+        AddressRestart::NotSent => "restart: not sent".to_string(),
     }
 }
 
@@ -476,6 +493,73 @@ mod tests {
         assert!(!ok);
         assert!(out.contains("gave up after"), "{out}");
         assert!(out.ends_with("address written: no\n"), "{out}");
+    }
+
+    /// The live case of 2026-09-29: the device answered at the new address
+    /// and only the closing restart went unacknowledged. That is a success
+    /// with the restart honestly unconfirmed, not "FAILED" and not "did not
+    /// answer at the new address" (it just did).
+    #[tokio::test]
+    async fn an_unacknowledged_restart_is_success_with_the_restart_unconfirmed() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            restart_unanswered: true,
+            ..Default::default()
+        });
+        let original = device.address();
+        let new_address: IndividualAddress = "1.1.33".parse().unwrap();
+        let authorisation = simulator_authorisations(new_address);
+        let mut out = Vec::new();
+        let ok = execute(
+            &device,
+            new_address,
+            authorisation,
+            fast(),
+            ButtonWait {
+                give_up_after: Duration::from_secs(5),
+                pause_between_rounds: Duration::from_millis(5),
+            },
+            &mut out,
+        )
+        .await;
+        let out = String::from_utf8(out).unwrap();
+        assert!(ok, "{out}");
+        assert!(!out.contains("FAILED"), "{out}");
+        assert!(
+            out.contains(&format!(
+                "address written: yes, {original} -> {new_address}; the device answered at {new_address}"
+            )),
+            "{out}"
+        );
+        assert!(out.contains("restart: NOT confirmed"), "{out}");
+        assert!(!out.contains("and was restarted"), "{out}");
+    }
+
+    /// The acknowledged case keeps saying so.
+    #[tokio::test]
+    async fn an_acknowledged_restart_says_restarted() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            ..Default::default()
+        });
+        let new_address: IndividualAddress = "1.1.34".parse().unwrap();
+        let authorisation = simulator_authorisations(new_address);
+        let mut out = Vec::new();
+        let ok = execute(
+            &device,
+            new_address,
+            authorisation,
+            fast(),
+            ButtonWait {
+                give_up_after: Duration::from_secs(5),
+                pause_between_rounds: Duration::from_millis(5),
+            },
+            &mut out,
+        )
+        .await;
+        let out = String::from_utf8(out).unwrap();
+        assert!(ok, "{out}");
+        assert!(out.contains("restart: acknowledged"), "{out}");
     }
 
     /// KNOWN_LIMITATIONS §7 item 2: written, then silent at the new

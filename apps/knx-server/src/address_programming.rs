@@ -17,7 +17,9 @@ use std::sync::{Arc, Mutex};
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::IndividualAddress;
-use knx_net::commissioning::individual_address_write::{IndividualAddressWriteError, Occupancy};
+use knx_net::commissioning::individual_address_write::{
+    AddressRestart, IndividualAddressWriteError, Occupancy,
+};
 use knx_net::commissioning::programming_button_wait::{
     program_individual_address, AddressProgrammingAuthorisation, ButtonEvent,
     ButtonProgrammingError, ButtonWait,
@@ -65,6 +67,11 @@ pub enum AddressProgrammingStatus {
         /// Whether the new address was free before (`false`: this device
         /// already held it).
         was_free: bool,
+        /// Whether the device acknowledged step 4's Basic Restart. `false`
+        /// does not weaken `written`: the device answered at the new address
+        /// before the restart went out. Some devices never acknowledge a
+        /// Basic Restart (MP §3.7.1.1.3, p. 80; RESEARCH §19).
+        restart_confirmed: bool,
     },
     /// Stopped by the user while waiting. Nothing was written.
     Stopped { rounds: u32 },
@@ -329,6 +336,7 @@ async fn run(
                 },
                 previous_address: report.previous_address.to_string(),
                 was_free: report.procedure.occupancy == Occupancy::NotOccupied,
+                restart_confirmed: report.procedure.restart == AddressRestart::Acknowledged,
             },
             Err(ButtonProgrammingError::Stopped { rounds }) => {
                 AddressProgrammingStatus::Stopped { rounds }

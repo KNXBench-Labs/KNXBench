@@ -233,6 +233,7 @@ async fn a_button_pressed_while_waiting_gets_the_address() {
     assert_eq!(end["written"], "yes");
     assert_eq!(end["previousAddress"], original.to_string());
     assert_eq!(end["wasFree"], true);
+    assert_eq!(end["restartConfirmed"], true, "{end}");
     assert_eq!(h.device.address().to_string(), NEW);
 
     // Only changes are logged: "nobody" once, then the device, then the find.
@@ -324,6 +325,25 @@ async fn several_buttons_are_asked_to_release_all_but_one() {
         json!([original.to_string(), other.to_string()]),
         "{events:?}"
     );
+    assert_eq!(h.device.address().to_string(), NEW);
+}
+
+/// The live case of 2026-09-29: the device answered at the new address,
+/// only the closing Basic Restart went unacknowledged. Finished, with the
+/// restart flagged, not "failed" with the address "unconfirmed".
+#[tokio::test]
+async fn an_unacknowledged_restart_finishes_with_the_restart_unconfirmed() {
+    let h = harness(SimulatorConfig {
+        programming_mode: true,
+        restart_unanswered: true,
+        ..SimulatorConfig::default()
+    });
+    let (status, _) = start(&h, request(PHRASE, 30)).await;
+    assert_eq!(status, StatusCode::OK);
+    let (end, _) = finish(&h, |_| {}).await;
+    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(end["written"], "yes");
+    assert_eq!(end["restartConfirmed"], false, "{end}");
     assert_eq!(h.device.address().to_string(), NEW);
 }
 

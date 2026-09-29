@@ -27,7 +27,10 @@ use std::sync::Arc;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::DialogExt;
 
+mod bus_monitor_export;
+mod native_json_export;
 mod session_log_export;
+use bus_monitor_export::write_bus_capture;
 use session_log_export::write_session_log;
 
 #[tauri::command]
@@ -52,6 +55,28 @@ async fn save_session_log(app: tauri::AppHandle, contents: String) -> Result<boo
     .map_err(|error| format!("Session log save task failed: {error}"))?
 }
 
+#[tauri::command]
+async fn save_bus_monitor_capture(app: tauri::AppHandle, contents: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let destination = app
+            .dialog()
+            .file()
+            .add_filter("JSON", &["json"])
+            .set_file_name("bus-monitor-capture.json")
+            .blocking_save_file();
+        let Some(destination) = destination else {
+            return Ok(false);
+        };
+        let path = destination
+            .into_path()
+            .map_err(|error| format!("Invalid bus monitor capture destination: {error}"))?;
+        write_bus_capture(&path, &contents)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| format!("Bus monitor capture save task failed: {error}"))?
+}
+
 fn spawn_server(
     listener: TcpListener,
     state: Arc<knx_server::AppState>,
@@ -73,7 +98,10 @@ fn spawn_server(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![save_session_log])
+        .invoke_handler(tauri::generate_handler![
+            save_session_log,
+            save_bus_monitor_capture
+        ])
         // The only window this app ever builds is "main" (see `setup` below).
         // Destroying it must end the process, not just hide it: a File > Quit
         // that leaves the binary running is a bug, and a user closing the
@@ -151,5 +179,63 @@ mod session_log_export_tests {
             r#"{"format":"knxbench-session-log","version":1,"capacity":1000,"entries":[]}"#;
         write_session_log(&path, content).unwrap();
         assert_eq!(std::fs::read_to_string(path).unwrap(), content);
+    }
+}
+
+#[cfg(test)]
+mod bus_capture_export_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn valid_capture() -> serde_json::Value {
+        json!({
+            "format": "knxbench-bus-monitor", "version": 1, "capacity": 1000,
+            "sessionId": 1, "serverIncarnation": "test-process", "status": "closed",
+            "serverDroppedBefore": 2, "clientPrunedCount": 0,
+            "exportedAt": "2026-09-29T01:00:00Z", "notice": "retained only",
+            "rows": [{"seq": 3, "timestamp": "2026-09-29T00:00:00Z",
+                "source": "1.1.5", "destination": "1/2/3", "destinationName": null,
+                "service": "GroupValueWrite", "rawPayload": "0x01 (6-bit)",
+                "decoded": {"kind": "value", "dpt": "DPST-1-1", "text": "On"}}]
+        })
+    }
+
+    #[test]
+    fn writes_the_bus_capture_and_preserves_the_exact_json() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("bus-monitor-capture.json");
+        let document = valid_capture().to_string();
+        write_bus_capture(&path, &document).unwrap();
+        assert_eq!(std::fs::read_to_string(path).unwrap(), document);
+    }
+
+    #[test]
+    fn rejects_foreign_malformed_and_oversized_captures_without_replacing_a_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("bus-monitor-capture.json");
+        std::fs::write(&path, "previous").unwrap();
+        assert!(write_bus_capture(&path, "not json").is_err());
+        assert!(write_bus_capture(&path, &"x".repeat(16 * 1024 * 1024 + 1)).is_err());
+        for (field, wrong) in [
+            ("format", json!("knxbench-session-log")),
+            ("version", json!(2)),
+            ("capacity", json!(5000)),
+            ("serverDroppedBefore", json!(-1)),
+            ("status", json!("unknown")),
+        ] {
+            let mut invalid = valid_capture();
+            invalid[field] = wrong;
+            assert!(
+                write_bus_capture(&path, &invalid.to_string()).is_err(),
+                "{field}"
+            );
+        }
+        let mut invalid = valid_capture();
+        invalid["rows"] = json!([{}]);
+        assert!(write_bus_capture(&path, &invalid.to_string()).is_err());
+        let mut invalid = valid_capture();
+        invalid["rows"] = json!(vec![valid_capture()["rows"][0].clone(); 1001]);
+        assert!(write_bus_capture(&path, &invalid.to_string()).is_err());
+        assert_eq!(std::fs::read_to_string(path).unwrap(), "previous");
     }
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
+import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
+import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
 import {
   type ContextLock,
@@ -68,6 +70,18 @@ function defaultServiceFilters(): ServiceFilters {
 function decodedSummary(row: BusTelegramRow): string {
   if (!row.decoded) return "—";
   return row.decoded.dpt ? `${row.decoded.dpt}: ${row.decoded.text}` : row.decoded.text;
+}
+
+function decodeStateKey(decoded: BusTelegramRow["decoded"]) {
+  switch (decoded?.kind) {
+    case "unresolved": return "busMonitor.decode.unresolved" as const;
+    case "conflict": return "busMonitor.decode.conflict" as const;
+    case "error":
+      if (decoded.reason === "unsupportedDpt") return "busMonitor.decode.unsupported" as const;
+      if (decoded.reason === "decodeFailed") return "busMonitor.decode.failed" as const;
+      return "busMonitor.decode.unknown" as const;
+    default: return null;
+  }
 }
 
 /// `DecodedValue::Conflict`'s wire text is `"conflicting DPTs: <names>"`
@@ -137,11 +151,17 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     ensureBusDiscovery();
   }, []);
   const [session, setSession] = useState<AttachedSession | null>(null);
+  const [captureIdentity, setCaptureIdentity] = useState<AttachedSession | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
   const [stopSummary, setStopSummary] = useState<BusMonitorStopResponse | null>(null);
 
-  const [rows, setRows] = useState<BusTelegramRow[]>([]);
+  const [capture, setCapture] = useState<{ rows: BusTelegramRow[]; pruned: number }>({ rows: [], pruned: 0 });
+  const rows = capture.rows;
+  const statistics = useMemo(() => calculateBusMonitorStatistics(rows), [rows]);
+  const [paused, setPaused] = useState(false);
   const [status, setStatus] = useState<"active" | "closed" | null>(null);
   const [droppedBefore, setDroppedBefore] = useState(0);
 
@@ -247,6 +267,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   function attachTo(next: AttachedSession | null) {
     sessionRef.current = next;
     setSession(next);
+    // Retain provenance for a capture exported after Disconnect or a 404.
+    if (next) setCaptureIdentity(next);
   }
 
   /// Attach to whatever session the server already has, if any. Shared by
@@ -257,7 +279,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       const response = await api.pollBusTelegrams(0);
       if (isCancelled()) return;
       sinceRef.current = response.nextSince;
-      setRows(response.telegrams);
+      const adopted = appendCapturedRows([], response.telegrams);
+      setCapture({ rows: adopted.rows, pruned: adopted.pruned });
       setDroppedBefore(response.droppedBefore);
       setStatus(response.status);
       setEndedElsewhere(false);
@@ -344,12 +367,18 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    // Pausing is strictly a client-side polling decision. The server keeps
+    // its session and ring buffer; an in-flight reply is discarded by the
+    // effect cleanup without advancing sinceRef or the rendered rows.
+    if (!session || paused) return;
     let cancelled = false;
+    let inFlight = false;
 
     const attached = session;
 
     async function poll() {
+      if (inFlight) return;
+      inFlight = true;
       try {
         const response = await api.pollBusTelegrams(sinceRef.current);
         if (cancelled) return;
@@ -370,7 +399,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           response.serverIncarnation !== attached.serverIncarnation
         ) {
           sinceRef.current = 0;
-          setRows([]);
+          setCapture({ rows: [], pruned: 0 });
           setSelectedSequence(null);
           setNewRowThreshold(null);
           setDroppedBefore(0);
@@ -386,7 +415,12 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           return;
         }
         sinceRef.current = response.nextSince;
-        setRows((previous) => [...previous, ...response.telegrams]);
+        if (response.telegrams.length > 0) {
+          setCapture((previous) => {
+            const appended = appendCapturedRows(previous.rows, response.telegrams);
+            return { rows: appended.rows, pruned: previous.pruned + appended.pruned };
+          });
+        }
         // This tick's own batch only — never a running minimum kept across
         // ticks, or the marker would accumulate exactly the way it must not.
         setNewRowThreshold(
@@ -417,6 +451,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           return;
         }
         setPollError(api.errorMessage(e));
+      } finally {
+        inFlight = false;
       }
     }
 
@@ -430,7 +466,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       cancelled = true;
       clearInterval(id);
     };
-  }, [session]);
+  }, [session, paused]);
 
   async function connect() {
     gatewaySeedResolvedRef.current = true;
@@ -438,7 +474,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     try {
       const started = await api.startBusMonitor(gatewayInput);
       sinceRef.current = 0;
-      setRows([]);
+      setCapture({ rows: [], pruned: 0 });
+      setPaused(false);
       setSelectedSequence(null);
       setNewRowThreshold(null);
       setDroppedBefore(0);
@@ -473,6 +510,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     try {
       const summary = await api.stopBusMonitor();
       attachTo(null);
+      setPaused(false);
       setStatus(null);
       setStopSummary(summary);
       setReplacedBy(null);
@@ -484,6 +522,26 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       forgetSessionContext();
     } catch (e) {
       setConnectError(api.errorMessage(e));
+    }
+  }
+
+  async function exportCapture() {
+    if (!captureIdentity || rows.length === 0 || exporting) return;
+    setExportError(null);
+    setExporting(true);
+    try {
+      await saveBusCapture(rows, {
+        sessionId: captureIdentity.sessionId,
+        serverIncarnation: captureIdentity.serverIncarnation,
+        status: status ?? "closed",
+        serverDroppedBefore: droppedBefore,
+        clientPrunedCount: capture.pruned,
+        exportedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      setExportError(api.errorMessage(error));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -733,6 +791,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           {t("busMonitor.gapNotice", { count: droppedBefore })}
         </p>
       )}
+      {capture.pruned > 0 && (
+        <p className="bus-monitor-client-pruned" role="alert">
+          {t("busMonitor.capturePruned", { count: capture.pruned, capacity: CAPTURE_CAPACITY })}
+        </p>
+      )}
       {session && (
         <BusComposeForm
           key={composeSeed.key}
@@ -753,10 +816,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           contextStale={contextLock === "stale"}
         />
       )}
-      {session && (
+      {(session || rows.length > 0) && (
         <div className="bus-monitor-filters">
           <input
             type="text"
+            aria-label={t("busMonitor.filterLabel")}
             placeholder={t("busMonitor.filterPlaceholder")}
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}
@@ -771,16 +835,46 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               {service}
             </label>
           ))}
+          {session && (
+            <button type="button" className="bus-monitor-pause" onClick={() => setPaused((value) => !value)}>
+              {t(paused ? "busMonitor.resume" : "busMonitor.pause")}
+            </button>
+          )}
+          {rows.length > 0 && captureIdentity && (
+            <button type="button" className="bus-monitor-export" onClick={() => void exportCapture()} disabled={exporting}>
+              {t(exporting ? "busMonitor.exporting" : "busMonitor.exportCapture")}
+            </button>
+          )}
         </div>
       )}
-      {session &&
+      {exportError && <p className="field-error" role="alert">{exportError}</p>}
+      {!session && rows.length > 0 && <p className="bus-monitor-retained" role="status">{t("busMonitor.retainedCapture")}</p>}
+      {rows.length > 0 && <p className="bus-monitor-export-note">{t("busMonitor.exportNote")}</p>}
+      {session && paused && <p className="bus-monitor-paused" role="status">{t("busMonitor.pausedNotice")}</p>}
+      {rows.length > 0 && (
+        <details className="bus-monitor-statistics">
+          <summary>{t("busMonitor.stats.title")}</summary>
+          <p>{t("busMonitor.stats.scope", { count: statistics.observedRows, capacity: CAPTURE_CAPACITY })}</p>
+          <div className="bus-monitor-stats-grid">
+            {(["services", "destinations", "sources"] as const).map((kind) => (
+              <section className={`bus-monitor-stats-${kind}`} key={kind}>
+                <h3>{t(`busMonitor.stats.${kind}`)}</h3>
+                <ol>{statistics[kind].map((entry) => (
+                  <li key={entry.label}><span className="mono">{entry.label}</span> <strong>{entry.count}</strong></li>
+                ))}</ol>
+              </section>
+            ))}
+          </div>
+        </details>
+      )}
+      {(session || rows.length > 0) &&
         (rows.length === 0 ? (
           <p className="bus-monitor-empty">{t("busMonitor.emptyNoTelegrams")}</p>
         ) : visibleRows.length === 0 ? (
           <p className="bus-monitor-empty">{t("busMonitor.emptyFiltered")}</p>
         ) : (
           <div className="monitor-data">
-          <div className="monitor-table-scroll">
+          <div className="monitor-table-scroll" role="region" aria-label={t("busMonitor.tableScrollLabel")} tabIndex={0}>
           {/* The second half of the stale lock: the banner says it, and the
               table carries it, so a decoded value read out of context on a
               screenshot still shows it was not current. */}
@@ -808,6 +902,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                 ]
                   .filter((c): c is string => c !== null)
                   .join(" ");
+                const decodeKey = decodeStateKey(row.decoded);
                 return (
                   <tr
                     key={row.seq}
@@ -825,7 +920,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                       }
                     }}
                     onClick={() => selectRow(row)}
-                    title={t("busMonitor.rowTitle")}
+                    title={t(session ? "busMonitor.rowTitle" : "busMonitor.rowDetailTitle")}
                   >
                     <td>{row.seq}</td>
                     <td>{row.timestamp}</td>
@@ -839,6 +934,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                     <td>{row.service}</td>
                     <td>{row.rawPayload ?? "—"}</td>
                     <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
+                      {decodeKey && <span className="bus-monitor-decode-state">{t(decodeKey)}</span>}
                       {decodedSummary(row)}
                     </td>
                   </tr>
@@ -854,7 +950,13 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               <dt>{t("busMonitor.column.source")}</dt><dd className="mono">{selectedTelegram.source}</dd>
               <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono ga-address">{formatGa(selectedTelegram.destination)}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
               <dt>{t("busMonitor.column.service")}</dt><dd>{selectedTelegram.service}</dd>
-              <dt>{t("busMonitor.column.decoded")}</dt><dd>{decodedSummary(selectedTelegram)}{selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}</dd>
+              <dt>{t("busMonitor.column.decoded")}</dt><dd>
+                {decodeStateKey(selectedTelegram.decoded) && (
+                  <span className="bus-monitor-decode-state">{t(decodeStateKey(selectedTelegram.decoded)!)}</span>
+                )}
+                {decodedSummary(selectedTelegram)}
+                {selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}
+              </dd>
               <dt>{t("busMonitor.column.payload")}</dt><dd className="mono">{selectedTelegram.rawPayload ?? "—"}</dd>
             </dl> : <p>{t("workbench.selectTelegram")}</p>}
           </aside>

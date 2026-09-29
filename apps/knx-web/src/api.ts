@@ -1125,18 +1125,14 @@ export function importRefusal(error: unknown): ComparisonImport | null {
 // ---------------------------------------------------------------------
 
 // `DecodedValueDto` (bus_routes.rs, struct `DecodedValueDto`) — D4's
-// four-way decode outcome. `dpt`/`error` are each only ever present for
-// one `kind` (`"value"`/`"error"` respectively) — modelled as always-
-// optional rather than a discriminated union per `kind`, because nothing
-// here needs the narrowing and a union would just move the same
-// `undefined` checks into every call site. `dpt`, when present, is
-// `DptRef`'s `Display` text (`"DPST-1-1"`, not the dotted `"1.001"` the
-// design spec's own §4.3 example shows — confirmed against the shipped
-// encoder, not invented here) — rendered exactly as received, no
-// dotted-notation prettifier added by this task.
+// `dpt` accompanies both successful values and failed decodes. For an
+// error, `reason` distinguishes a codec that does not implement the resolved
+// type from a supported type with invalid payload bytes; old responses may
+// lack it, so consumers must keep a generic failure fallback.
 export interface BusDecodedValue {
   kind: "value" | "unresolved" | "conflict" | "error";
   dpt?: string;
+  reason?: "unsupportedDpt" | "decodeFailed";
   text: string;
   error?: string;
 }

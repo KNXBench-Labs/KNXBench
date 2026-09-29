@@ -84,6 +84,16 @@ describe("diagnostic panels stay inside the shell", () => {
     );
   });
 
+  it("gives a narrow telegram table a horizontal scroll area instead of crushing decode labels", () => {
+    const table = css.match(/\.bus-monitor-table \{([^}]*)\}/);
+    const minimum = table?.[1].match(/min-width:\s*(\d+)rem/);
+    expect(minimum, "the table needs a readable minimum width").not.toBeNull();
+    const rems = Number(minimum![1]);
+    expect(rems).toBeGreaterThanOrEqual(54);
+    expect(rems).toBeLessThanOrEqual(64);
+    expect(css.match(/\.monitor-table-scroll \{([^}]*)\}/)?.[1]).toMatch(/overflow:\s*auto/);
+  });
+
   it("leaves telegram-table cell padding to the density tokens", () => {
     const block = css.match(/\.bus-monitor-table th,\s*\.bus-monitor-table td \{([^}]*)\}/);
     expect(block, "the .bus-monitor-table cell rule moved or was renamed").not.toBeNull();

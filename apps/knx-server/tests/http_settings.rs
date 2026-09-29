@@ -98,6 +98,38 @@ async fn a_patch_is_written_and_read_back() {
 }
 
 #[tokio::test]
+async fn geometry_preferences_round_trip_from_a_v1_document_without_the_new_keys() {
+    let (state, dir) = state();
+    std::fs::write(
+        settings_file(&dir),
+        json!({ "schemaVersion": 1, "settings": { "theme": "graphite" } }).to_string(),
+    )
+    .unwrap();
+    let (status, body) = send(
+        &state,
+        "PUT",
+        "/api/settings",
+        json!({ "settings": {
+            "uiScale": 1.2,
+            "navigationPaneWidth": 320,
+            "inspectorPaneWidth": 410
+        } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["settings"]["theme"], "graphite");
+    let restarted = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let (_, reread) = get(&restarted).await;
+    assert_eq!(
+        reread["settings"],
+        json!({
+            "theme": "graphite", "uiScale": 1.2,
+            "navigationPaneWidth": 320, "inspectorPaneWidth": 410
+        })
+    );
+}
+
+#[tokio::test]
 async fn a_patch_leaves_every_key_it_does_not_name_alone() {
     let (state, _dir) = state();
     send(

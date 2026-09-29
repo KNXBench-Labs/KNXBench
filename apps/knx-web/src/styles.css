@@ -1987,8 +1987,10 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 
 :root { --knx-feedback-duration: 120ms; }
 
+/* Whole-window zoom follows the versioned settings document, not browser-local zoom. */
+:root { zoom: var(--app-ui-scale, 1); }
 /* Three-pane shell. Narrow displays stack panes instead of clipping actions. */
-.workbench { padding: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.workbench { padding: 0; height: calc(100dvh / var(--app-ui-scale, 1)); display: flex; flex-direction: column; overflow: hidden; }
 .workbench-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); flex-wrap: wrap; z-index: 5; }
 .workbench-brand { display: flex; align-items: center; gap: 10px; font-size: 19px; color: var(--knx-foreground); text-decoration: none; margin-right: 16px; }
 .brand-mark { display: grid; place-items: center; background: var(--knx-accent); color: var(--knx-on-accent); width: 34px; height: 34px; border-radius: 7px; font-weight: 700; }
@@ -1996,6 +1998,9 @@ h1, h2, h3 { letter-spacing: -0.025em; }
   background: transparent; color: var(--knx-foreground) !important; box-shadow: none; border: 1px solid transparent; text-align: left; padding: 6px 10px;
 }
 .workbench-toolbar button:hover, .workbench-navigation button:hover, .diagram-device:hover, .diagram-heading:hover { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }
+/* Generic button hover scaling is clipped by the topology card's overflow,
+   hiding edge icons, addresses and counts. Highlight without magnifying. */
+.diagram-device:hover:not(:disabled) { transform: none; box-shadow: none; }
 .workbench-toolbar .primary-action { background: var(--knx-accent); color: var(--knx-on-accent) !important; padding-inline: 20px; }
 .history-actions { display: flex; border-inline: 1px solid var(--knx-border); padding-inline: 8px; }
 .history-actions button { font-size: 23px; line-height: 1; }
@@ -2113,8 +2118,16 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .inspector-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 16px; }
 .inspector-facts dt { color: var(--knx-muted); }
 .inspector-facts dd { margin: 0; }
+/* A persisted pair of wide panes can exceed the effective viewport after
+   root zoom, even when the physical viewport is wider than the media query.
+   Stack the inspector rather than clipping its controls off-screen. */
+.workbench--stacked-inspector { height: auto; min-height: calc(100dvh / var(--app-ui-scale, 1)); overflow: visible; }
+.workbench--stacked-inspector .workbench-body { flex-wrap: wrap; }
+.workbench--stacked-inspector .workbench-pane-right { width: 100% !important; border-top: 1px solid var(--knx-border); }
+.workbench--stacked-inspector .workbench-pane-right .pane-resizer { display: none; }
+.workbench--stacked-inspector .workbench-pane-content { max-height: 75dvh; }
 @media (max-width: 1100px) {
-  .workbench { height: auto; min-height: 100dvh; overflow: visible; }
+  .workbench { height: auto; min-height: calc(100dvh / var(--app-ui-scale, 1)); overflow: visible; }
   .workbench-body { flex-wrap: wrap; }
   .workbench-pane-right { width: 100% !important; border-top: 1px solid var(--knx-border); }
   .workbench-pane-right .pane-resizer { display: none; }

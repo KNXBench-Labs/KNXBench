@@ -5860,6 +5860,32 @@ of them holds ETS's choice — `E6h` (230) if `UP-33` wins, `01h` if
 one-octet, read-only `A_Memory_Read` on a device in service and needs the
 maintainer's go and gateway; it has not been done.
 
+**Live read on 1.1.11 (2026-09-29): ETS wrote the conditional member.** With
+the maintainer's go, one read-only session to 1.1.11 through the house's
+gateway (`ManagementSession::read_only`, `AuthorisationPlan::Skip`; log under
+`OriginalData/DeviceBackups/1.1.11-probe-4b12/`, not committed):
+
+- mask `0701h`; application `PID_PROGRAM_VERSION` `00 83 00 19 13`
+  (MDT, `A-0019-13`), load states `B6EAh`–`B6EDh` = `01 01 01 00`;
+- `4B10h`–`4B17h` = `00 00 01 e6 e6 e6 e6 e6`, so **`4B12h` = `01h`**: the
+  value of `UP-1227` (`currentFactorOne_0`, 1), not of `UP-33`
+  (`currentFactorValue_0`, 230). The neighbouring octets hold 230.
+
+Where the two members sit: `UP-33_R-33` is a direct child of parameter
+block `PB-13`; `UP-1227_R-1227` is in the same block, further down, under
+`<choose P-40><when test="2">`. With `P-40 = 2` both are visible, and ETS
+wrote the second. **[V]** for this one device and configuration.
+
+Why this still does not become a rule: four candidate rules all predict the
+same octet here. The member later in `Dynamic`, the non-default member
+(`DefaultUnionParameter="0"`), the more deeply nested member, and the member
+declared later all point to `UP-1227`. The sample is consistent with each
+and discriminates none, and 1.1.12/13 carry the identical configuration. So
+`A-0019-13-B655` stays refused for an overlap of two active union members.
+The rule is settled only by a device where the candidate rules disagree.
+Before its next download, each of the house's three devices keeps its
+current octet on the device.
+
 **Follow-up on 1.1.1–9 and 1.1.24: `LsmIdx 5` on a `0701h` device.** Three
 of the house's programs name a fifth load state machine:
 

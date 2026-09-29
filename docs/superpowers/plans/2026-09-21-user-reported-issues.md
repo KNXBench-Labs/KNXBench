@@ -75,11 +75,11 @@
 
 **Interfaces:** The language choices come from the application's supported/project-language source rather than a second hard-coded list. A custom well-formed BCP-47 value remains possible only if current project semantics require it.
 
-- [ ] Pin the empty-window actions and explanations in a failing accessibility test: new project, open KNXBench `.knxdb`, and import ETS `.knxproj` are distinct cards with descriptions.
-- [ ] Pin a labelled language selector with common supported choices and the current UI language selected by default.
-- [ ] Add copy explaining that Save/Save As chooses the `.knxdb` filename; project and installation names do not silently become a filesystem path.
-- [ ] Implement the card layout and dialog changes without changing load/import behavior.
-- [ ] Verify keyboard order, translated copy, and narrow-window wrapping.
+- [x] Pin the empty-window actions and explanations in a failing accessibility test: new project, open KNXBench `.knxdb`, and import ETS `.knxproj` are distinct cards with descriptions. (`App.test.tsx::explains the three distinct empty-workspace routes` first RED, then GREEN; verifies descriptions, button types and native/ETS picker filters.)
+- [x] Pin a labelled language selector with common supported choices and the current UI language selected by default. (`NewProjectDialog.test.tsx` checks English/German, installed packs, the active UI language and custom tags; removing an active pack retains the chosen project tag. Two pack guards rejected mutations.)
+- [x] Add copy explaining that Save/Save As chooses the `.knxdb` filename; project and installation names do not silently become a filesystem path. (`NewProjectDialog.test.tsx::says that Save or Save As chooses` first RED, then GREEN; the hint is ahead of the form, associates with both names and is translated.)
+- [x] Implement the card layout and dialog changes without changing load/import behavior. (Existing picker actions remain, now distinct cards; `App.test.tsx` verifies `.knxdb` versus `.knxproj` routing; no server or domain changes.)
+- [x] Verify keyboard order, translated copy, and narrow-window wrapping. (`App.test.tsx` checks welcome-first DOM/Tab order and German copy; Chromium on local Vite at 1280×800, 640×700 and 400×700 showed no horizontal page overflow. The 640 px dialog retained readable filename copy and scrollable actions at 150% zoom; at 320×568/150%, actions wrapped within the scrollable panel. Custom `de-DE`, Escape and focus return were checked without a backend. Native WebKitGTK and real screen reader remain unverified.)
 
 ### ISSUE-03: Resizable dialogs and readable form layouts
 

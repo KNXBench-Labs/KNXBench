@@ -4,15 +4,18 @@ import * as api from "./api";
 import type { GroupAddressStyle } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import Overlay from "./Overlay";
-import { isWellFormedBcp47Tag } from "./languagePack";
+import { isWellFormedBcp47Tag, useLanguagePacks } from "./languagePack";
 import { useTranslate } from "./i18n";
-import { useUiLanguage } from "./uiLanguage";
+import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
 
 // Wire values, in the order a user is most likely to want them: the ETS
 // default first, the rest after. `newProject.style.<value>` is the label
 // key per member (messages/en.ts), so this array and the catalogue cannot
 // drift apart without failing `tsc`.
 const STYLES: readonly GroupAddressStyle[] = ["ThreeLevel", "TwoLevel", "Free"];
+// This is not a language tag (so it cannot collide with a custom BCP-47
+// value). Project text languages are not limited to the UI catalogues.
+const CUSTOM_LANGUAGE_OPTION = "__custom__";
 
 /**
  * The only way to a project that never came from a file — an ETS import
@@ -46,16 +49,32 @@ export default function NewProjectDialog(props: {
   const { onCreated, onClose, onSaveFirst } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
+  const languagePacks = useLanguagePacks().filter(
+    ({ tag }) => !(AVAILABLE_UI_LANGUAGES as readonly string[]).includes(tag),
+  );
+  const listedLanguages: readonly string[] = [
+    ...AVAILABLE_UI_LANGUAGES,
+    ...languagePacks.map(({ tag }) => tag),
+  ];
   // Seeded once, at open. A UI-language switch while the dialog is up must
   // not rewrite a name the user may already have typed over.
   const [name, setName] = useState(() => t("newProject.defaultName"));
   const [installationName, setInstallationName] = useState(() =>
     t("newProject.defaultInstallation"),
   );
-  // The project's own text language, not the chrome's — they merely start
-  // out agreeing, because a user writing German labels is usually reading
-  // a German interface.
-  const [language, setLanguage] = useState(uiLanguage);
+  // The project's text language is not restricted to the UI catalogues.
+  // Keep an arbitrary well-formed tag when one is active, or when the user
+  // chooses "another language"; selecting a preset never discards it.
+  const [languageChoice, setLanguageChoice] = useState(() =>
+    listedLanguages.includes(uiLanguage) ? uiLanguage : CUSTOM_LANGUAGE_OPTION,
+  );
+  const [customLanguage, setCustomLanguage] = useState(() =>
+    listedLanguages.includes(uiLanguage) ? "" : uiLanguage,
+  );
+  const customSelected = languageChoice === CUSTOM_LANGUAGE_OPTION || !listedLanguages.includes(languageChoice);
+  const language = customSelected
+    ? languageChoice === CUSTOM_LANGUAGE_OPTION ? customLanguage : languageChoice
+    : languageChoice;
   const [style, setStyle] = useState<GroupAddressStyle>("ThreeLevel");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +155,9 @@ export default function NewProjectDialog(props: {
         {t("newProject.title")}
       </h2>
       <p className="new-project-intro">{t("newProject.intro")}</p>
+      <p className="new-project-filename-hint" id="new-project-filename-hint">
+        {t("newProject.filenameHint")}
+      </p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -148,6 +170,7 @@ export default function NewProjectDialog(props: {
             ref={nameRef}
             value={name}
             aria-label={t("newProject.name")}
+            aria-describedby="new-project-filename-hint"
             aria-invalid={nameError !== null}
             // Select-on-focus so the seeded default is one keystroke from
             // gone — it exists to make Enter work, not to be deleted by
@@ -162,19 +185,37 @@ export default function NewProjectDialog(props: {
           <input
             value={installationName}
             aria-label={t("newProject.installation")}
+            aria-describedby="new-project-filename-hint"
             onChange={(e) => setInstallationName(e.target.value)}
           />
         </label>
         <label className="settings-field">
           <span className="settings-field-label">{t("newProject.language")}</span>
-          <input
-            value={language}
+          <select
+            value={customSelected ? CUSTOM_LANGUAGE_OPTION : languageChoice}
             aria-label={t("newProject.language")}
-            aria-invalid={languageError !== null}
-            onChange={(e) => setLanguage(e.target.value)}
-          />
-          <span className="settings-field-hint">{t("newProject.languageHint")}</span>
-          {languageError && <span className="field-error">{languageError}</span>}
+            aria-describedby="new-project-language-hint"
+            onChange={(e) => setLanguageChoice(e.target.value)}
+          >
+            {AVAILABLE_UI_LANGUAGES.map((tag) => (
+              <option key={tag} value={tag}>{t(`language.${tag}`)}</option>
+            ))}
+            {languagePacks.map((pack) => (
+              <option key={pack.tag} value={pack.tag}>{pack.name}</option>
+            ))}
+            <option value={CUSTOM_LANGUAGE_OPTION}>{t("newProject.languageOther")}</option>
+          </select>
+          {customSelected && (
+            <input
+              value={language}
+              aria-label={t("newProject.customLanguage")}
+              aria-invalid={languageError !== null}
+              aria-describedby={languageError ? "new-project-language-hint new-project-language-error" : "new-project-language-hint"}
+              onChange={(e) => { setLanguageChoice(CUSTOM_LANGUAGE_OPTION); setCustomLanguage(e.target.value); }}
+            />
+          )}
+          <span className="settings-field-hint" id="new-project-language-hint">{t("newProject.languageHint")}</span>
+          {languageError && <span className="field-error" id="new-project-language-error" role="alert">{languageError}</span>}
         </label>
         <label className="settings-field">
           <span className="settings-field-label">{t("newProject.style")}</span>

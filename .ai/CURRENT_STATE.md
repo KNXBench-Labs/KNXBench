@@ -1,4 +1,12 @@
 - **Last Agent:** Codex (UI session)
+- **Timestamp:** 2026-09-29 03:53 CEST
+- Web lock: taken by UI session for U6 ISSUE-01 application zoom and persistent workbench geometry
+- **Completed:** U5 `912573c` is merged, pushed, and green on merged `main` (74 web files / 1134 tests; 123 Rust suites / 2380 passed; fmt, clippy, layering, headers, anchors, corpus and diff gates). The U5 worktree, branch and 40 owned scratch files were removed; only foreign untracked `docs/paperclip-shutdown/` remains in root. No KNX operation. Read ISSUE-01 and CT-9, then reserved the web lock for U6.
+- **Pending/Next Steps:** In an isolated `ui-workbench-geometry` worktree, write RED tests for bounded zoom shortcuts, settings roundtrip and pane persistence/hide-show, plus hover CSS; implement and run branch/merged-main gates, review, document, release the lock and push. U7–U12 and U13 closing review remain.
+- **Notes for Codex or Claude:** The previous U5 top entry's pending merged-main gates were completed before this lock. The quota prompt timed out; `hermes usage` currently reports an Anthropic profile rather than this GPT session. A read-only standalone Codex CLI rate-limit check reported a weekly window, but it is not proof of this session's Hermes account limit. Pause only at a concrete 100% risk. Do not touch foreign untracked or other-session artifacts.
+
+---
+- **Last Agent:** Codex (UI session)
 - **Timestamp:** 2026-09-29 02:35 CEST
 - Web lock: released (U5 ISSUE-10 actionable errors and contextual help, upon merge)
 - **Completed:** U5: four stable 422 parser envelopes with unchanged legacy error, raw detail, syntax/example; validation toast hint; topic-aware F1 and tip click/Enter; accessible active-heading help panel; bilingual Group address ranges help. TDD RED/GREEN and five mutation checks. Branch gates: TypeScript/build, web 74 files / 1134 tests; Rust fmt/clippy/workspace 123 suites / 2380 passed, 0 failed, 136 ignored; layering, headers, anchors, corpus and diff checks green. RFC 5646 well-formedness and registry boundary documented; ADR-0024, manual, status, known limitations §80 and issue plan updated. No KNX operation.

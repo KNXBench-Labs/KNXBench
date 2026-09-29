@@ -1358,19 +1358,25 @@ fn map_com_object_v21(
 
     let mut links = Vec::new();
     if let Some(c) = over {
-        for target in &c.links {
-            // Direction is not stated at schema ≥21 (Global Constraints
-            // #2) — Send is a documented, flagged assumption, not an
-            // invented fact; it does not affect export (Links is
-            // regenerated from the GA id alone).
+        for (position, target) in c.links.iter().enumerate() {
+            // Project Schema23 v01.00.00, `ComObjectInstanceRef/@Links`:
+            // "The first group address in the list is always the sending
+            // one." — so position, not a guess, decides the direction. A
+            // dangling first entry is dropped (and reported) without
+            // promoting the next one: the file named no other sender.
             //
             // `target` is `Links`'s short group-address id (`"GA-3"`), so
             // `push_link` — unchanged, reused as-is — is handed
             // `short_group_addresses` here rather than the fully-qualified
             // `tables.group_addresses` schema 11's `sends`/`receives` use.
+            let direction = if position == 0 {
+                Direction::Send
+            } else {
+                Direction::Receive
+            };
             push_link(
                 target,
-                Direction::Send,
+                direction,
                 ref_id,
                 short_group_addresses,
                 &xpath,
@@ -2171,19 +2177,22 @@ mod tests {
 
     #[test]
     #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
-    fn schema_21_group_links_default_to_send_direction_documented_assumption() {
+    fn schema_21_group_links_send_on_the_first_address_and_receive_on_the_rest() {
         assert!(
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
-        let com = out
-            .project
-            .devices
-            .com_objects()
-            .find(|c| !c.links.is_empty())
-            .unwrap();
-        assert!(com.links.iter().all(|l| l.direction == Direction::Send));
+        for com in out.project.devices.com_objects() {
+            for (position, link) in com.links.iter().enumerate() {
+                let expected = if position == 0 {
+                    Direction::Send
+                } else {
+                    Direction::Receive
+                };
+                assert_eq!(link.direction, expected);
+            }
+        }
     }
 
     #[test]

@@ -15,7 +15,8 @@ use knx_core::commissioning::partial_memory_download::{
     derive_partial_plan, PartialDownloadParts, PartialPlanError,
 };
 use knx_core::{DeviceId, IndividualAddress, Project};
-use knx_productdb::download_plan::{plan_memory_download, DownloadPlanError};
+use knx_productdb::code::load_program_code;
+use knx_productdb::download_plan::{check_program_kind, plan_memory_download, DownloadPlanError};
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
 use knx_productdb::image_request::{image_request_for_device, DeviceRequestError};
 use knx_productdb::Connection;
@@ -138,6 +139,13 @@ pub fn prepare_device_download(
     };
     let request =
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
+    // A program no download translates is refused for that reason, not for
+    // whatever its image build would trip over first.
+    if let Some(code) = load_program_code(conn, &request.program_id)
+        .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
+    {
+        check_program_kind(&code).map_err(PrepareError::Plan)?;
+    }
     let image = build_download_image(conn, &request).map_err(PrepareError::Image)?;
     let plan = plan_memory_download(&image).map_err(PrepareError::Plan)?;
     Ok(PreparedDownload {

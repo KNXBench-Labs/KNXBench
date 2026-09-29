@@ -16,6 +16,9 @@ knx-store.workspace = true
 chrono.workspace = true
 # Decodes `DeviceInstance/@SerialNumber` (xs:base64Binary) in `serial_number`.
 base64.workspace = true
+# `download_support` reads its shipped evidence file, `data/verified_downloads.json`.
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

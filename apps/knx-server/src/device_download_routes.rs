@@ -23,12 +23,20 @@ use serde::{Deserialize, Serialize};
 
 use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
 use knx_app::device_download::{prepare_device_download, PreparedDownload};
+use knx_app::download_support::{
+    download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
+};
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::{ContactableAddress, IndividualAddress, WriteScope};
 
 use crate::bus_scan::LineScanStatus;
-use crate::device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent};
+use crate::device_download::{
+    BackupDestination, DeviceDownloadSession, DownloadStatus, ProgressEvent,
+};
+
+/// Where the backups before each download go, under the data directory.
+pub const BACKUP_DIR: &str = "device-backups";
 use crate::errors::ApiError;
 use crate::SharedState;
 
@@ -110,6 +118,33 @@ struct PlanResponse {
     /// Application writes the partial download does not make (CP §3.9.2.4
     /// rule 3: data outside EEPROM), as `[address, octets]`.
     not_written: Vec<(u16, usize)>,
+    /// How far this download is supported: verified on hardware, or
+    /// untested (the plan is complete, no hardware has confirmed it).
+    support: SupportDto,
+    /// The phrase `start` also demands, as `acceptUntested`, when
+    /// `support.level` is `untested`; `None` otherwise.
+    untested_acknowledgement: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SupportDto {
+    /// `verified` or `untested` (an unsupported download has no plan).
+    level: &'static str,
+    /// For `verified`: where the hardware run is documented.
+    evidence: Option<String>,
+}
+
+/// The support level of `prepared`, against the evidence this build ships.
+fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
+    let evidence = shipped_evidence()
+        .map_err(|e| ApiError::with_status(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(download_level(
+        &prepared.request.program_id,
+        prepared.partial.as_ref().map(|(parts, _)| *parts),
+        &prepared.plan,
+        &evidence,
+    ))
 }
 
 fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
@@ -183,6 +218,7 @@ async fn plan(
     let partial = body.partial.map(PartialDownloadParts::from);
     let prepared = prepare(&state, target, partial)?;
     let keying = keying(&state, &prepared)?;
+    let level = support_of(&prepared)?;
     let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
     let response = PlanResponse {
         plan_id: id,
@@ -219,6 +255,19 @@ async fn plan(
             .as_ref()
             .map(|(_, ignored)| ignored.clone())
             .unwrap_or_default(),
+        support: SupportDto {
+            level: level.code(),
+            evidence: match &level {
+                SupportLevel::Verified { evidence, .. } => Some(format!(
+                    "{}, {}; {}",
+                    evidence.device, evidence.date, evidence.reference
+                )),
+                _ => None,
+            },
+        },
+        untested_acknowledgement: level
+            .needs_acknowledgement()
+            .then(|| untested_acknowledgement(target)),
     };
     *state
         .device_download_plan
@@ -238,6 +287,9 @@ struct StartRequest {
     plan_id: u64,
     gateway: String,
     confirmation: String,
+    /// The plan's `untestedAcknowledgement`, when it has one.
+    #[serde(default)]
+    accept_untested: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -318,6 +370,17 @@ async fn start(
 
     let prepared = prepare(&state, target, partial)?;
     let keying = keying(&state, &prepared)?;
+    // Recomputed from the plan that will run, not trusted from the shown
+    // one: the evidence is the build's, the plan is checked equal below.
+    if support_of(&prepared)?.needs_acknowledgement() {
+        let expected = untested_acknowledgement(target);
+        if body.accept_untested.as_deref() != Some(expected.as_str()) {
+            return Err(ApiError::bad_request(format!(
+                "not written: this download is untested on hardware; acceptUntested must read \
+                 exactly {expected:?}"
+            )));
+        }
+    }
     {
         let shown = state
             .device_download_plan
@@ -339,6 +402,10 @@ async fn start(
         .await
         .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
     let id = body.plan_id;
+    let backups = BackupDestination {
+        dir: state.data_dir.join(BACKUP_DIR),
+        taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
+    };
     *download = Some(DeviceDownloadSession::start(
         id,
         tunnel,
@@ -346,6 +413,7 @@ async fn start(
         keying,
         state.device_download_timing,
         prepared,
+        backups,
     ));
     drop(scan);
     drop(monitor);
@@ -377,6 +445,9 @@ struct StatusResponse {
     status: DownloadStatus,
     next_since: usize,
     events: Vec<ProgressEvent>,
+    /// The backup taken before the first write, relative to the server's
+    /// data directory, once it is on disk.
+    backup_file: Option<String>,
 }
 
 async fn status(
@@ -413,6 +484,12 @@ async fn status(
         status,
         next_since,
         events,
+        backup_file: session.backup_file().map(|path| {
+            path.strip_prefix(&state.data_dir)
+                .unwrap_or(&path)
+                .display()
+                .to_string()
+        }),
     }))
 }
 

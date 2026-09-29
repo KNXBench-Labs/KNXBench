@@ -8680,6 +8680,30 @@ no log or output.
 
 ## §139 A device can be addressed by its serial number, and nothing has done it live
 
+**Update (2026-09-29, live on `1.1.67`, user go "Freigabe für alle Tasks
+auf der Testhardware").** Both reads work on hardware, the write does not
+take on this device, and the device says why:
+
+- `find-serial --address 1.1.67` → `0083:7A8213CF` (`PID_SERIAL_NUMBER`).
+- `find-serial 0083:7A8213CF` → `1.1.67` (MP §2.4 broadcast): the
+  `A_IndividualAddressSerialNumber_Read`/`_Response` pair is verified.
+- `address-by-serial 1.1.68`: the write went out (12:33:12); the read-back
+  still answered from `1.1.67`, so KNXBench reported *"sent, but NOT
+  confirmed"* and exit 1. Scan afterwards: `1.1.67` occupied, `1.1.68`
+  vacant. Nothing changed on the device.
+- Cause, read read-only afterwards: `PID_SERVICE_CONTROL` (object 0,
+  PID 8) = `00 00h`. Bit 2 is *"Individual Address Write Enable"*,
+  default `0 = disable` (RES §4.2.8 Table 10), and *"If this bit is
+  cleared, it shall not be possible to change the Individual Address of
+  the device"* via programming mode **or** KNX Serial Number services.
+  Yet `1.1.67` has been re-addressed by programming button twice (K6).
+  So the MDT device lets the button path through with the bit clear and
+  refuses only the serial path. `[V]` for this device, not a general rule.
+- KNXBench does not write `PID_SERVICE_CONTROL` to enable it: no procedure
+  in MP asks a client to, and a permanent control field is not something
+  to toggle for a test. The error message now names the bit.
+- The write was one attempt under one go; it was not repeated.
+
 **Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
 and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the
 three AL PDUs, the procedures, a simulator device that answers them, the
@@ -8793,6 +8817,17 @@ read procedures have no CLI or HTTP route.
 the user approves a run.
 
 ## §142 The mask-`070nh` partial download is tested in the simulator only
+
+**Lifted (2026-09-29, live on `1.1.67`, user go for all test-hardware
+tasks).** `knx device download 1.1.67 --partial parameters` with the
+option-C project: steps 1–6 checked mask `0701h`, manufacturer `0083h`,
+property 0/78, `PID_PROGRAM_VERSION` `00 83 00 27 15` and all three parts
+`Loaded`; then 394 octets at `4400h`–`4589h` in 33 writes, each read back,
+application program `Loaded`. The closing `A_Restart` went unacknowledged,
+as on every restart of this device (`RestartOutcome::Unconfirmed`). A
+read-only dump 40 s later is byte-identical to the one before (180 lines;
+the same option-C image was written), load states `01 01 01`. The bullets
+below stay true for everything but "not run on hardware".
 
 **Status (2026-09-29, K15).** `knx device download --partial
 parameters|group-addresses|both` and the `partial` field of

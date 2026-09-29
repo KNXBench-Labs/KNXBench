@@ -1,4 +1,15 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 12:45 CEST
+- Web lock: held by the UI session (U9); not touched.
+- **Completed:** Live run of the second stage on `1.1.67` under the user's go "Freigabe fuer alle Tasks auf der Testhaedware" (RESEARCH §19.8):
+  - K15 partial download (parameters) live: 11 steps, 394 octets read back, restart unconfirmed as usual; dump before/after byte-identical (KL §142 lifted).
+  - K12: `PID_SERIAL_NUMBER` = `0083:7A8213CF`, MP §2.4 broadcast answers from `1.1.67`; the MP §2.5 write to `1.1.68` went out once and was ignored (device still at `1.1.67`, scan confirms). `PID_SERVICE_CONTROL` = `0000h`, bit 2 clear (KL §139). Not repeated. Error message now names the bit.
+- **Pending/Next Steps:** User decisions: (a) whether to open K13 (MP §2.18 reset to `FFFFh`, needs a button press and re-addressing to `1.1.67`) or K14 (Master Reset; `0701h` fails MP §3.7.3's support check) on hardware — both are allowlist changes; (b) K12 write would need `PID_SERVICE_CONTROL` bit 2 set, which KNXBench does not do.
+- **Notes for Codex/Claude:** The default product DB lacks the MDT push-button package; live runs used a scratch DB with `MDT_KP_BE_01_Push_Button_V15a.knxprod` ingested. Gateway comes from `.ai/logs` (not committed in code).
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-29 12:14 CEST
 - Web lock: held by the UI session (U9); not touched. `apps/knx-web` unchanged by this track.
 - **Completed:** Commissioning second stage closed (K16–K18), simulator only, no bus action:

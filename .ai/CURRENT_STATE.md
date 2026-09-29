@@ -1,3 +1,20 @@
+- **Last Agent:** Claude (discovery diagnosis + partial-backup live session)
+- **Timestamp:** 2026-09-29 16:14 CEST
+- **Web lock:** none held (U10 released at 15:38; this session's hint edit was merged and published at `c40b34b`).
+- **Completed:** (1) U10/ISSUE-12 cause found: the gateway answers the multicast search; the host's `ufw` (default input DROP) drops the unicast reply from UDP 3671 (`[UFW BLOCK]` in `journalctl -k`); unicast search/description get answers. No protocol defect. CLI `DISCOVER_EMPTY_HINT` and web `busDiscovery.emptyHint` (EN/DE) name the host firewall and rule; troubleshooting manual, RESEARCH §20.1, KL §79, status updated (`c40b34b`, RED→GREEN tests). A stray `tsconfig.tsbuildinfo` from that commit was removed and `*.tsbuildinfo` ignored (`7c0b5b4`). (2) After the user's "go", live backup/restore of the parameters-only partial download on `1.1.67`: option C twice (no-op), then K7 parameters (3 dump lines changed) and restore from the 394-octet `4400h` backup → dump byte-identical 180/180, load states `01 01 01`. Docs: RESEARCH top entry, KL ADR-0049 section, IMPLEMENTATION_STATUS.
+- **Pending/Next Steps:** The user's firewall was **not** changed; discovery on this host stays empty until the user adds an allow rule (e.g. `ufw allow proto udp from <LAN> port 3671`), then end-to-end discovery can be confirmed. Next per the user's pick: offline download coverage (41 `procedure-style`, 33 `image-structure` refusals). Still simulator-only: group-address partial backup, refuse-before-write on a failing backup, other devices. K13/K14 refused on hardware; no RF hardware.
+- **Notes for Codex or Claude:** The Hermes statistics entry below is intentionally uncommitted by its owner; this entry is committed together with it only because the file cannot be staged partially without clobbering it — its content is unchanged. `1.1.67` holds option C.
+
+---
+
+- **Last Agent:** Hermes Agent (statistics refresh)
+- **Timestamp:** 2026-09-29 15:42 CEST
+- **Completed:** The user-updated `stats.md` was delivered. Initial report commit `d1dcaa4` was published concurrently by the U10 cleanup commit `5c12a41`; that extra commit made its displayed Git count one short. A self-referential correction was therefore regenerated, amended and pushed as `394aac6` (`docs(stats): teach the counter about one last broom`). It contains only `stats.md`, retains exactly 20 Fun Facts plus Claude Code Cloud / Opus 5.5 usage, and displays 1,641 commits, equal to `git rev-list --count HEAD` at the published commit. Author is KNXBench `<github@knxbench.com>`, with no co-author trailer.
+- **Pending/Next Steps:** No statistics delivery work remains. This handover entry is intentionally uncommitted so that a post-statistics bookkeeping commit does not immediately make the self-referential report stale again.
+- **Notes for Codex or Claude:** `HEAD`, `origin/main` and the remote `main` were read back at `394aac6`. Preserve the unrelated untracked `docs/paperclip-shutdown/`. A later product commit will naturally make the snapshot one commit old until the next requested refresh; that is not a reason to rewrite published history.
+
+---
+
 - **Last Agent:** codex (UI U10 session)
 - **Timestamp:** 2026-09-29 15:38 CEST
 - **Web lock: released by the UI U10 session** after the feature merge and confirmed remote publication. The commissioning lock was independently released at 15:04; no UI lock remains in this handover.

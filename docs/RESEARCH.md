@@ -39,9 +39,27 @@ Every statement below is tagged:
   group-address partial has no hardware evidence. The implementation ships
   only these two scoped evidence records. See [ADR-0049](adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md).
 - **[V]** Pre-write region backup, file read-back, failure-before-mutation,
-  restore, and CLI/HTTP support gates passed simulator/corpus tests. No new
-  hardware run was made; backup creation and restore are **not** live
-  confirmed. The hardware action remains parked by the user.
+  restore, and CLI/HTTP support gates passed simulator/corpus tests.
+- **[V] Live roundtrip on `1.1.67` (2026-09-29 15:17–15:26, after the user's
+  "Hardware go").** Read-only dump before: 180 lines, identical to
+  `post-k15` (option C, load states `01 01 01`). (1) `knx device download`
+  of the K7 project wrote the backup JSON (1416 octets in 4 regions:
+  `4000h`/1, `4003h`/510, `4201h`/511, `4400h`/394, all three machines
+  `Loaded`) after the identity checks and **before** step 3 (the first
+  write); 0 of the 1416 backed-up octets differ from the independent
+  pre-run dump. Download 1416/1416 read back, restart unconfirmed as
+  usual; the dump after ~45 s equals `post-k7-cli` (the K7 config).
+  (2) `knx device restore <backup.json>` took its own pre-write backup
+  (again 0 differing octets against the post-download dump), wrote
+  1416/1416; after ~45 s the independent dump is **byte-identical to the
+  pre-run dump in all 180 lines**, load states `01 01 01`. Proves on this
+  one device and program that the backup is taken before the first write
+  and restores the overwritten regions. The failure-before-mutation path
+  stays simulator-only (not provoked on hardware). Logs:
+  `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-29_{pre-backup-live,
+  backup-live-download,post-backup-live-download,backup-live-restore,
+  post-backup-live-restore}.txt` and the two JSON files under
+  `1.1.67-prewrite/` and `1.1.67-prerestore/` (gitignored).
 
 ---
 

@@ -7466,8 +7466,19 @@ before the write. A button released after the wait is caught there (test
 **UI half, same day:** the web's **Program address** tab and
 `/api/device-address/*` (ADR-0046) run the same loop, show the prompt
 whenever the count changes, and can stop the wait (never the procedure).
-Still open: a live run on hardware (**[W]**, needs the user's go and a
-button press). The
+**Live, 2026-09-29 (K6 [W]):** `1.1.67` → `1.1.68` on a real MDT push
+button. The user pressed the button in round 37. Steps 1–3 ran, step 4
+connected to `1.1.68` and read the device there, and only the closing Basic
+Restart went unacknowledged, as on every restart of this device (RESEARCH
+§19). The procedure reported that as a step 4 failure, *"did not answer at
+the new address"*, which was wrong. A read-only scan afterwards found
+`1.1.68` occupied and `1.1.67` vacant, and the programming LED was off, so
+the restart had happened. **Fixed the same day:** step 4's restart silence
+is now `AddressRestart::Unconfirmed` inside a successful report, as in the
+download path. Only a restart refused before sending is still a step 4
+failure. The CLI prints `restart: NOT confirmed`, and the server's
+`finished` status carries `restartConfirmed: false`; the web panel does not
+show that field yet (web lock held by the UI session). The
 occupancy-reading half of this entry is unchanged. The occupancy reading is revisited if
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.

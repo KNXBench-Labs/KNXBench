@@ -294,7 +294,7 @@ fn aimed_at(event: LoadEvent) -> LoadState {
 /// Only the silences qualify: the request was sent and nothing came back.
 /// A refusal, a missing connection or an encoding failure means nothing
 /// left this machine, and that is a failure like any other.
-fn restart_may_have_gone_out(error: &SessionError) -> bool {
+pub(super) fn restart_may_have_gone_out(error: &SessionError) -> bool {
     matches!(
         error,
         SessionError::ConnectionReleased { .. }

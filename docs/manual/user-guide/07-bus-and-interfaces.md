@@ -206,7 +206,8 @@ button pressed. Only the address is written; this is not a download of parameter
 5. It ends with **Address written: yes** (old → new address), **no need** (the device
    already had it), **no**, or **yes, but NOT confirmed**: the address went out, but the
    device did not answer at it afterwards. Check that device with a read before anything
-   else.
+   else. A device that answered at its new address but did not acknowledge the closing
+   restart still counts as **yes**; some devices never acknowledge a restart.
 
 The same procedure is available as
 [`knx device program-address`](10-command-line.md#knx-device-program-address--give-a-device-its-individual-address).

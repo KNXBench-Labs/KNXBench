@@ -5220,6 +5220,28 @@ What this shows and what it does not:
   `…k7-check-restore-optionC.txt`, 1416/1416), and an independent read-back
   45 s later (`…post-k7-check.txt`) found **0 differing octets** against it.
   `1.1.67` is back where it started.
+
+**`[V]` K6 live, individual address `1.1.67` → `1.1.68` (2026-09-29,
+07:12–07:13 CEST, `…k6-to-1.1.68.txt`).** A read-only scan first found
+`1.1.67` occupied (mask `0701h`) and `1.1.68` vacant (`…k6-prescan.txt`).
+`knx device program-address 1.1.68` waited for the button, and the user
+pressed it in round 37, where exactly one device answered (`1.1.67`).
+Steps 1–3 ran. Step 4 connected to `1.1.68` and read the device there;
+the settling retry (`be91fe3`) was not needed, and the output shows no
+second connect. Only the closing Basic Restart went unacknowledged (four
+transmissions, TL released the connection), exactly as in every K7 run.
+A read-only scan 40 s later (`…k6-postscan-1.txt`) found `1.1.68` occupied
+(mask `0701h`) and `1.1.67` vacant, and the user confirmed the programming
+LED was **off**. So the restart did end programming mode: a second
+observation that this device restarts without acknowledging.
+
+- `[V]` Bug found: the procedure reported the restart silence as MP §2.3
+  "to 4." (`FAILED … address written: yes, but NOT confirmed: the device
+  did not answer at the new address`), although step 4 had just read the
+  device at that address. Fixed with `AddressRestart` (KNOWN_LIMITATIONS
+  §116, status 2026-09-29).
+- `[O]` The settling retry itself is still not live-verified: this device
+  answered at the new address on the first connect.
 - `[V]` No `LoadCompleting` stall and no mid-download drop occurred, so
   §101 and §104 had nothing to measure in either run.
 

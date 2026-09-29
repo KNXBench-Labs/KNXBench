@@ -299,6 +299,16 @@ same loop:
 Item 1 is done. Item 2 **[W]** still needs a go and a button press.
 IMPLEMENTATION_STATUS 2026-09-28 "K6 UI".
 
+**Status 2026-09-29: live.** `1.1.67` → `1.1.68` on hardware: button
+pressed, steps 1–3 done, step 4 read the device at `1.1.68`. The
+unacknowledged closing restart was misreported as a step 4 failure. That is
+fixed (`AddressRestart`; CLI `restart: NOT confirmed`, server
+`restartConfirmed`) and covered by tests plus 7 mutants. Item 2 (the
+settling retry) was not exercised: the device answered on the first connect.
+Open: the way back, `1.1.68` → `1.1.67`, with the fixed build (another
+button press). The web panel does not show `restartConfirmed` yet (web
+lock). RESEARCH §19, "K6 live".
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

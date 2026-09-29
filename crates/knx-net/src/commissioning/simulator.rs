@@ -30,6 +30,7 @@ use knx_core::commissioning::load_control_memory::{
     MEMORY_LOAD_RECORD_OCTETS,
 };
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
+use knx_core::commissioning::master_reset::{DownloadCounterEffect, EraseCode};
 use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
@@ -738,6 +739,8 @@ struct State {
     /// The sequence number of every `A_Restart` transmission that
     /// [`SimulatorConfig::restart_unanswered`] swallowed, in arrival order.
     unanswered_restart_seqs: Vec<u8>,
+    /// The Master Resets this device executed, in order.
+    master_resets: Vec<EraseCode>,
     /// How many `T_Connect` frames have arrived, answered or not — what
     /// [`SimulatorConfig::unanswered_connects`] counts against.
     connects: u32,
@@ -861,6 +864,7 @@ impl SimulatedDevice {
             load_state_reads: 0,
             device_control_reads: 0,
             unanswered_restart_seqs: Vec::new(),
+            master_resets: Vec::new(),
             connects: 0,
             numbered_data_frames: 0,
             level: config.free_access_level,
@@ -1004,6 +1008,19 @@ impl SimulatedDevice {
     /// their operators pressed or released their buttons.
     pub fn set_other_programming_mode_devices(&self, devices: Vec<IndividualAddress>) {
         self.lock().other_programming_mode_devices = devices;
+    }
+
+    /// The Master Resets this device executed (positive answers only).
+    pub fn master_resets(&self) -> Vec<EraseCode> {
+        self.lock().master_resets.clone()
+    }
+
+    /// The Device Object's `PID_DOWNLOAD_COUNTER`, if the device has one.
+    pub fn download_counter(&self) -> Option<u16> {
+        match self.lock().properties.get(&(0, PID_DOWNLOAD_COUNTER))?[..] {
+            [high, low] => Some(u16::from_be_bytes([high, low])),
+            _ => None,
+        }
     }
 
     /// Whether this device's programming button is pressed.
@@ -1875,10 +1892,18 @@ impl SimulatedDevice {
                 // ("Invalid Channel Number") for exactly this mismatch, and
                 // Process Time `0` — the device is not about to erase
                 // anything, so it has nothing to time.
+                let requested = match request.as_slice() {
+                    [code, _] => EraseCode::from_octet(*code),
+                    _ => None,
+                };
                 let (error_code, process_time) = match request.as_slice() {
                     [ERASE_CODE_CONFIRMED_RESTART, channel_number] if *channel_number != 0x00 => {
                         (0x03, 0u16)
                     }
+                    // MP Table 4, 09h-FFh (and 00h): *"respond with an
+                    // A_Restart.res with Error Code 'Unsupported Erase
+                    // Code'"*, and neither restart nor reset.
+                    [_, _] if requested.is_none() => (0x02, 0u16),
                     _ => (
                         self.config.restart_error_code,
                         // DPT_TimePeriodSec, big-endian (MP §3.7.1.2.2, pp. 80-81).
@@ -1901,8 +1926,39 @@ impl SimulatedDevice {
                     restart_type: 1,
                     data,
                 });
+                // MP §3.7.1.2.2, p. 81: executed only after the response
+                // is on the bus, and only on a positive one.
+                if error_code == 0x00 {
+                    if let Some(code) = requested {
+                        self.apply_master_reset(code);
+                    }
+                }
             }
             _ => {}
+        }
+    }
+
+    /// What a positive Master Reset does to this device, as far as the
+    /// Standard fixes it: every code ends with a Basic Restart (MP
+    /// §3.7.1.2.1: programming mode off); `02h`/`03h` move the address to
+    /// the TP default `FFFFh` (Table 4, Table 6); the Device Object's
+    /// download counter follows RES's table. What else a Factory Reset
+    /// erases is *"implementation dependent"* and not modelled.
+    fn apply_master_reset(&self, code: EraseCode) {
+        let mut state = self.lock();
+        state.programming_mode = false;
+        state.memory.insert(0x0060, 0);
+        if code.resets_individual_address() {
+            state.address = IndividualAddress::from_raw(0xFFFF);
+        }
+        state.master_resets.push(code);
+        if code.download_counter_effect() == Some(DownloadCounterEffect::Increments) {
+            if let Some(counter) = state.properties.get_mut(&(0, PID_DOWNLOAD_COUNTER)) {
+                if let [high, low] = counter[..] {
+                    let next = u16::from_be_bytes([high, low]).wrapping_add(1);
+                    *counter = next.to_be_bytes().to_vec();
+                }
+            }
         }
     }
 

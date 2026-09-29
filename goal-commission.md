@@ -460,6 +460,10 @@ optional, only on the user's request.
 
 ### K14 — Master Reset (item 5)
 
+**Done 2026-09-29, simulator only; erasing codes refused on hardware (KL
+§141).** A live Master Reset needs the user's request and the option-C
+re-download afterwards.
+
 `A_Restart` with the master-reset type and erase code (AL, MP `DM_Restart`).
 Simulator first. **[W]** only on the user's request, followed by the
 option C re-download.

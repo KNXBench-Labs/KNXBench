@@ -19,6 +19,18 @@
   - K7 **[W]**: a live download.
   - K10: the whole-track review.
 
+## 2026-09-29 — K14: Master Reset, typed and simulated
+
+- MP Tables 4/5 and RES's download-counter table in
+  `knx_core::commissioning::master_reset`.
+- MP §3.7.3 with a Confirmed Restart support probe (ours) in
+  `knx_net::commissioning::master_reset`.
+- New `WriteScope::MasterReset`, refused on hardware; `restart_master_reset`
+  no longer sends erasing codes under the restart scope (KL §141).
+- The simulator executes positive Master Resets: restart, `FFFFh` for
+  `02h`/`03h`, counter increment, reserved codes refused.
+- 13 new tests; 9/9 mutants killed.
+
 ## 2026-09-29 — K13: individual-address reset to `FFFFh`, simulator only
 
 - MP §2.18 in `knx_net::commissioning::individual_address_reset`, with a

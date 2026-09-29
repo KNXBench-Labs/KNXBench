@@ -9,6 +9,7 @@ pub mod group_tables;
 pub mod load_control;
 pub mod load_control_memory;
 pub mod load_state;
+pub mod master_reset;
 pub mod mcb;
 pub mod memory;
 pub mod memory_download;

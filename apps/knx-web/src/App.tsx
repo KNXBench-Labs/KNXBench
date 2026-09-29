@@ -262,7 +262,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [diagnosticsHeight, setDiagnosticsHeight] = useState<number | null>(null);
   const navBlockRef = useRef<HTMLElement | null>(null);
   const diagnosticsBlockRef = useRef<HTMLElement | null>(null);
-  const [view, setView] = useState<"overview" | StructureView>("overview");
+  const [view, setView] = useState<"overview" | "catalog" | StructureView>("overview");
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
   // The group-address view's counterpart of `buildingScope`: which range
   // the address table is scoped to. Owned here, not inside the table, for
@@ -344,6 +344,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       setSettingsOpen(false);
       setNewProjectOpen(false);
       setCatalogTarget(null);
+      setView((current) => current === "catalog" ? "overview" : current);
       setHelpTopicId(topicId);
       setHelpOpen(true);
     }
@@ -528,6 +529,17 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
   }
 
+  function openCatalog(lineId: number | null) {
+    setCatalogTarget({ lineId });
+    setView("catalog");
+    setLogOpen(false);
+    setMonitorOpen(false);
+    // On a stacked viewport the navigation occupies the first screenful.
+    // Collapse it after its own catalog action so the workspace is visible;
+    // the toolbar's Navigation control still reopens it on demand.
+    if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
+
   function selectSearchResult(sel: Selection): void {
     setRevealRequest({ selection: sel, generation: ++revealGenerationRef.current });
     void selectEntity(sel);
@@ -638,6 +650,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // own `store_path` for exactly the same reason (`new_project_impl`).
   function newProjectCreated(newTree: ProjectTree) {
     if (!resetTree(newTree)) return;
+    setCatalogTarget(null); // Never carry a former project's target line into this one.
     setHasStorePath(false);
     // The banner outlives a failed load on purpose, but only until that
     // load stops being the last thing that happened (fix round 6, F-D):
@@ -656,6 +669,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // only thing that differs — an ETS import has no `.knxdb` location yet.
   function finishLoadedProject(loadedTree: ProjectTree, path: string | null, storePath: boolean) {
     if (!resetTree(loadedTree)) return;
+    setCatalogTarget(null); // Product search/selection is scoped to this project lifetime.
     setHasStorePath(storePath);
     setLoadSource(null);
     setLoadSnapshot(null);
@@ -959,15 +973,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // With no project, the welcome routes should precede the navigation in
   // DOM/Tab order. At wide widths the explorer still sits visually left;
   // at narrow widths the welcome stays above its tall diagnostics block.
-  const welcomeVisible = !tree && !logOpen && !monitorOpen;
+  const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
   const centerWorkspace = (
     <div className="workbench-center">
-      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : tree ? (
+      {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : view === "catalog" ? null : tree ? (
         view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
-          onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
+          onSelect={selectEntity} onCatalog={openCatalog} />
       ) : (
         <section className="welcome-workspace" aria-labelledby="welcome-title">
           <h1 id="welcome-title">{t("workbench.welcome")}</h1>
@@ -988,7 +1002,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           </div>
         </section>
       )}
-      {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
+      {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
+        onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }} />}
+      {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
     </div>
   );
 
@@ -1069,7 +1085,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
-            <button onClick={() => setCatalogTarget({ lineId: selection?.kind === "line" ? selection.id : null })}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
+            <button aria-current={!logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
+              onClick={() => openCatalog(selection?.kind === "line" ? selection.id : null)}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
           {/* F3: the two horizontal separators exist only alongside the
               block they hand space to. Without a project there is no
@@ -1111,7 +1128,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           </button>
         </div>
       )}
-      {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
+
       {newProjectOpen && (
         <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject} />
       )}

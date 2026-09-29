@@ -256,6 +256,76 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
+  it("previews bounded quantities and reports diagnostics for each created device", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue({
+      tree: { installations: [] },
+      diagnostics: [{ kind: "programlessProduct", catalogItemId: "cat-1" }],
+      items: [1, 2, 3].map((index) => ({
+        index, deviceId: index, name: `Actuator ${index}`,
+        diagnostics: [{ kind: "programlessProduct", catalogItemId: "cat-1" }],
+      })),
+    });
+    const { root, onCreated, onClose } = await renderBrowser();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
+    const quantity = host!.querySelector<HTMLInputElement>('input[aria-label="Quantity"]')!;
+    expect(quantity).toBeTruthy();
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => { setter.call(quantity, "0"); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
+    expect(host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.disabled).toBe(true);
+    await act(async () => { setter.call(quantity, "3"); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
+    expect(host!.textContent).toContain("Actuator 1");
+    expect(host!.textContent).toContain("Actuator 3");
+    expect(host!.textContent).toContain("Physical addresses remain unassigned");
+    await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 3);
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("Actuator 3");
+    expect(host!.querySelectorAll(".catalog-created-item")).toHaveLength(3);
+    root.unmount();
+  });
+
+  it("does not claim batch success or retry when an older server ignores the quantity", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue({ tree: { installations: [] }, diagnostics: [] });
+    const { root, onCreated, onClose } = await renderBrowser();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
+    const quantity = host!.querySelector<HTMLInputElement>('input[aria-label="Quantity"]')!;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => { setter.call(quantity, "3"); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("The server did not confirm every requested device");
+    expect(host!.textContent).toContain("No automatic retry was made");
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  it("does not invite another batch request after a network error with unknown commit status", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
+    const { root, onCreated, onClose } = await renderBrowser();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
+    const quantity = host!.querySelector<HTMLInputElement>('input[aria-label="Quantity"]')!;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => { setter.call(quantity, "3"); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
+    expect(host!.querySelector(".catalog-create-row")?.textContent).toContain("Done");
+    await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
+    expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
+    expect(host!.querySelector(".catalog-create-row")?.textContent).toContain("Done");
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
   it("locks a successful diagnostic create and offers Done instead of another Create", async () => {
     apiMock.catalogItems.mockResolvedValue([item]);
     const create = deferred<{ tree: { installations: never[] }; diagnostics: [{ kind: "programlessProduct"; catalogItemId: string }] }>();
@@ -472,7 +542,9 @@ describe("CatalogBrowser", () => {
     });
     expect(apiMock.catalogItems).toHaveBeenLastCalledWith(undefined, undefined, null);
 
-    const button = host.querySelector("button")!;
+    const button = Array.from(host.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === "set fr-FR",
+    )!;
     await act(async () => {
       button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await new Promise((resolve) => setTimeout(resolve, 250));

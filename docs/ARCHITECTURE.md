@@ -246,6 +246,12 @@ is bound to its planned revision, so a stale plan is refused and has to be
 re-imported. The nine phase-3 sites still allocate ids outside a command, and
 a collision with them is caught only by the `IdInUse` backstop.
 
+Catalog multi-creation submits `ReserveIds` and each `CreateDevice` as one
+atomic `Batch`; a refused child rolls back both project data and the batch's
+ID reservation. `CommandError::BatchItem` retains the child index and typed
+cause so a caller can name which requested device failed. A quantity-one
+catalog create still uses the original single `CreateDevice` command.
+
 Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,
 and not in the store.

@@ -180,3 +180,182 @@ async fn a_new_project_takes_a_device_from_a_manufacturer_package_with_no_ets_im
     let detail = body_json(response).await;
     assert_eq!(detail["com_objects"].as_array().unwrap().len(), COM_OBJECTS);
 }
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ product corpus; run with --ignored"]
+async fn catalog_quantity_is_one_atomic_creation_with_one_undo_and_no_leaked_ids() {
+    let root = corpus_root();
+    assert!(
+        root.exists(),
+        "product corpus must be present for this regression"
+    );
+    let package = knx_testsupport::find_corpus_file(&root, PACKAGE).unwrap();
+    let bytes = std::fs::read(package).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let state = knx_server::AppState {
+        product_db: Some(std::sync::Mutex::new(
+            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+        )),
+        ..Default::default()
+    };
+    let app = knx_server::app(Arc::new(state), None);
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(multipart(PACKAGE, &bytes))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+
+    // Invalid quantity and line are refused before the first device/ID is committed.
+    let too_many = app
+        .clone()
+        .oneshot(post(
+            "/api/devices",
+            json!({
+                "catalogItemId": CATALOG_ITEM, "name": "Device", "quantity": 33
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(too_many.status(), StatusCode::BAD_REQUEST);
+    let wrong_line = app
+        .clone()
+        .oneshot(post(
+            "/api/devices",
+            json!({
+                "catalogItemId": CATALOG_ITEM, "name": "Device", "quantity": 3, "lineId": 999
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(wrong_line.status(), StatusCode::BAD_REQUEST);
+
+    let created = app
+        .clone()
+        .oneshot(post(
+            "/api/devices",
+            json!({
+                "catalogItemId": CATALOG_ITEM, "name": "Device", "quantity": 3
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let created = body_json(created).await;
+    let items = created["items"]
+        .as_array()
+        .expect("per-device creation results");
+    assert_eq!(items.len(), 3);
+    let devices = created["tree"]["installations"][0]["unassigned"]
+        .as_array()
+        .unwrap();
+    assert_eq!(devices.len(), 3);
+    for (index, device) in devices.iter().enumerate() {
+        assert_eq!(device["id"], (index + 1) as u32);
+        assert_eq!(device["name"], format!("Device {}", index + 1));
+        assert!(
+            device["address"].is_null(),
+            "do not invent physical addresses"
+        );
+        assert_eq!(device["com_object_count"], COM_OBJECTS);
+        assert_eq!(items[index]["index"], (index + 1) as u32);
+        assert_eq!(items[index]["deviceId"], device["id"]);
+        assert!(items[index]["diagnostics"].is_array());
+    }
+    let undone = app
+        .clone()
+        .oneshot(post("/api/undo", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert!(body_json(undone).await["installations"][0]["unassigned"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    let redone = app
+        .clone()
+        .oneshot(post("/api/redo", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(redone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(redone).await["installations"][0]["unassigned"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+
+    let area = app
+        .clone()
+        .oneshot(post("/api/areas", json!({ "name": "Area", "address": 1 })))
+        .await
+        .unwrap();
+    assert_eq!(area.status(), StatusCode::OK);
+    let area_id = body_json(area).await["installations"][0]["topology"][0]["id"]
+        .as_u64()
+        .unwrap();
+    let line = app
+        .clone()
+        .oneshot(post(
+            "/api/lines",
+            json!({
+                "areaId": area_id, "name": "Line", "address": 1, "mediumRef": "MT-0"
+            }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(line.status(), StatusCode::OK);
+    let line_id = body_json(line).await["installations"][0]["topology"][0]["lines"][0]["id"]
+        .as_u64()
+        .unwrap();
+    let placed = app
+        .clone()
+        .oneshot(post("/api/devices", json!({
+            "catalogItemId": CATALOG_ITEM, "name": "Line device", "quantity": 2, "lineId": line_id
+        })))
+        .await
+        .unwrap();
+    assert_eq!(placed.status(), StatusCode::OK);
+    let tree = body_json(placed).await["tree"].clone();
+    let line_devices = tree["installations"][0]["topology"][0]["lines"][0]["devices"]
+        .as_array()
+        .unwrap();
+    assert_eq!(line_devices.len(), 2);
+    assert!(line_devices
+        .iter()
+        .all(|device| device["address"].is_null()));
+    assert_eq!(
+        tree["installations"][0]["unassigned"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    let undo_placed = app.oneshot(post("/api/undo", json!({}))).await.unwrap();
+    assert_eq!(undo_placed.status(), StatusCode::OK);
+    let tree = body_json(undo_placed).await;
+    assert!(
+        tree["installations"][0]["topology"][0]["lines"][0]["devices"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        tree["installations"][0]["unassigned"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+}

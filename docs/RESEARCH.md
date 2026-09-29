@@ -5161,6 +5161,58 @@ open, because the power cycle restarted the device regardless of whether
 the `A_Restart` had already done it. What this check shows is that the
 downloaded image is correct and a device restart activates it.
 
+**`[V]` K7 live acceptance, both product paths (2026-09-29, 06:11–06:29 CEST).**
+With the user's *"go k7"*, `1.1.67` received two downloads built by the
+product path from a project, never from the fixed test image:
+
+1. **CLI, `knx device download`, 06:11:50–06:14:34**
+   (`1.1.67_MDT-0701_2026-09-29_k7-cli-download.txt`). The project is a
+   new one, `KNXBench 1.1.67 K7 switch-by-push off.knxdb` (gitignored):
+   the MDT push button from the product catalog, button 1 in mode
+   "Switch by push", value **Off** (`UP-5501 = 0`, `UP-5517 = 0`), object 0
+   sending to `2/0/53`. Against the fresh read-only dump taken just before
+   (`…pre-k7.txt`), its image differs in exactly **4 octets**
+   (`4409h`, `440Ah`, `450Bh`, `4510h`); against option C it therefore
+   differs, as K7 requires. 25 steps, **1416 octets written, every one read
+   back**, all three load states `Loaded`, restart `NOT confirmed` as
+   expected for this device. An independent read-back on a fresh
+   connection 2 min later (`…post-k7-cli.txt`) found **0 differing
+   unmasked octets** against the K7 image.
+2. **Web UI, Download to device tab, 06:25:18–06:28:04**
+   (screenshots and request log in the session's scratch, not kept). The
+   real front end (Vite dev server against a local `knx-server`), driven
+   headless with Playwright: File → Open (.knxdb) with option C, Bus
+   monitor → Download to device, device `1.1.67`, gateway, "Show what would
+   be written", "Download to 1.1.67", the consent dialog, "Program device".
+   The browser sent exactly one `start` with the plan's own id and phrase,
+   then only polled status. The panel ended with *"Written to the device:
+   yes, 1416 octets, every block read back unchanged"* and *"Restart: NOT
+   confirmed"*. The independent read-back 45 s later
+   (`…post-k7-web.txt`) found **0 differing octets** against option C.
+
+What this shows and what it does not:
+
+- `[V]` Both product paths (CLI and web) write a project's configuration
+  into a real mask `0701h` device, byte-exact, and report the unconfirmed
+  restart honestly. The fixed test image is no longer the only hardware
+  write path.
+- `[V]` The binary carried K8's §105 change: every `T_Connect`,
+  `T_Disconnect` and `T_ACK` in both runs went out at system priority
+  through the real KNXnet/IP interface, and the device acknowledged every
+  data request except the closing restart. The interface accepts the control frames;
+  whether it keeps the priority bits on the wire was not traced (no bus
+  monitor was running).
+- `[O]` **Not yet shown: the function.** K7 asks for a read-only bus
+  monitor while the user operates the device. It did not run: both
+  downloads went through without anyone at the device, and the second
+  (option C) restored what it held before, so pressing button 1 now
+  cannot distinguish "the restart activated the new image" from "the
+  device never left option C". A discriminating check needs the K7
+  project on the device and someone pressing button 1: every telegram to
+  `2/0/53` must then be `Off` (`0`), where option C toggles.
+- `[V]` No `LoadCompleting` stall and no mid-download drop occurred, so
+  §101 and §104 had nothing to measure in either run.
+
 ---
 
 ## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)

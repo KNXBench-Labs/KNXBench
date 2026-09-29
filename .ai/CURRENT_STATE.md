@@ -1,4 +1,11 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-09-29 06:35
+- Web lock: released (not touched by this package)
+- **Completed:** goal-commission **K7 live, both downloads**. After *"go k7"*: (1) CLI `knx device download` of a new project (`OriginalData/DemoProjects/KNXBench 1.1.67 K7 switch-by-push off.knxdb`, gitignored: button 1 "Switch by push", Off, `2/0/53`; 4 octets different from option C) at 06:11. 1416/1416 octets read back; an independent dump showed 0 differing octets. (2) Web tab "Download to device" (Vite dev + local knx-server, Playwright headless, consent dialog) restored option C at 06:25. Again 1416/1416 and 0 differing. Restart `NOT confirmed` both times (expected for mask 0701h). Traces in `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-29_{pre-k7,k7-cli-download,post-k7-cli,post-k7-web}.txt`. Docs: RESEARCH §19 "K7 live acceptance", KNOWN_LIMITATIONS §105 status (first real exposure OK; priority bits on the wire not traced), goal-commission K7 status, implementation-status row. No code change.
+- **Pending/Next Steps:** K7 function check, which needs the user: download the K7 project again, then a read-only bus monitor while someone presses button 1 (expect only `Off`/0 on `2/0/53`; option C toggles). Then download option C back. After that: K6 live readdress (needs the user's go plus a button press), then K10 review.
+- **Notes for Codex/Claude:** `1.1.67` now holds option C again (verified byte-exact). The K7 project needs the MDT push button installed in the product DB: the CLI needs `--product-db` pointing at a DB where `MDT_KP_BE_01_Push_Button_V15a.knxprod` is installed. The web UI serves only through the Vite dev server (`knx-server` is API-only; the dev proxy expects port 4777), and a project opened via the API is not picked up by an already-loaded front end: open it through File → Open (.knxdb).
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-09-28 23:55
 - **Completed:** goal-commission **K8 and K9 decided** (docs only). The user answered with "das was am sinnvollsten ist", so the recommendation was taken.
   - K8: every §0.2 entry has a dated note:

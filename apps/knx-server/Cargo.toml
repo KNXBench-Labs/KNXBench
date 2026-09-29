@@ -46,6 +46,7 @@ base64.workspace = true
 # source of randomness instead of a hand-rolled one.
 getrandom.workspace = true
 tempfile.workspace = true
+language-tags = "0.3.2"
 zip.workspace = true
 
 [dev-dependencies]

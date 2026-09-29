@@ -36,6 +36,23 @@ const trigger = () => host!.querySelector("button")!;
 const bubble = () => host!.querySelector('[role="tooltip"]') as HTMLElement;
 
 describe("HelpTip", () => {
+  it("registers its topic for F1 and dispatches the same topic on click", async () => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const received = vi.fn();
+    window.addEventListener("knxbench:open-help", received);
+    try {
+      await act(async () => root.render(<HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" topicId="comObjectFlags" />));
+      expect(trigger().getAttribute("data-help-topic")).toBe("comObjectFlags");
+      await act(async () => trigger().click());
+      expect((received.mock.calls[0][0] as CustomEvent).detail).toEqual({ topicId: "comObjectFlags" });
+    } finally {
+      window.removeEventListener("knxbench:open-help", received);
+      await act(async () => root.unmount());
+    }
+  });
+
   it("names itself and describes itself with the catalogue text", async () => {
     await render();
     expect(trigger().getAttribute("aria-label")).toBe(enMessages["help.tip.comFlags.label"]);

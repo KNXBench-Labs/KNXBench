@@ -81,6 +81,12 @@ export const HELP_TOPICS = [
     standardNote: true,
   },
   {
+    id: "groupRanges",
+    titleKey: "help.topic.groupRanges.title",
+    bodyKeys: ["help.topic.groupRanges.p1", "help.topic.groupRanges.p2"],
+    standardNote: true,
+  },
+  {
     id: "comObjectFlags",
     titleKey: "help.topic.comObjectFlags.title",
     bodyKeys: [
@@ -125,6 +131,20 @@ export const HELP_STANDARD_NOTE_KEY = "help.standardNote" satisfies MessageKey;
 
 /** The topic the panel opens on when nothing else is chosen. */
 export const DEFAULT_HELP_TOPIC_ID = HELP_TOPICS[0].id;
+export type HelpTopicId = (typeof HELP_TOPICS)[number]["id"];
+
+/** A focused contextual trigger wins; an unregistered control gets the
+ * workbench overview rather than an arbitrary first topic. */
+export function focusedHelpTopic(active: Element | null): HelpTopicId {
+  const id = active?.closest("[data-help-topic]")?.getAttribute("data-help-topic");
+  return HELP_TOPICS.find((topic) => topic.id === id)?.id ?? "workbench";
+}
+
+/** Crosses component boundaries without threading an onOpen prop through
+ * the inspector, table and workspace: this event carries only a known topic. */
+export function requestHelpTopic(topicId: HelpTopicId): void {
+  window.dispatchEvent(new CustomEvent("knxbench:open-help", { detail: { topicId } }));
+}
 
 /** The paragraph keys of `id`, with the shared standard note appended when
  * the topic asks for it — the one place that expansion happens, so the

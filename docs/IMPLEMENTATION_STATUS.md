@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — U5: actionable 422 errors and targeted help
+
+- Four HTTP editing/creation parsers (individual address, group address,
+  DPT reference and newly supplied project language) return a 422 with
+  stable `kind`, unchanged `error`/`detail`, `syntax` and `example`. The
+  group-address hint follows the project's current style; the domain's
+  existing parsers remain authoritative for applying commands. A language
+  tag is checked for BCP-47 well-formedness only on new project creation,
+  not on losslessly imported ETS text (`http_validation_errors.rs`,
+  `docs/RESEARCH.md`). Existing import-diff 422 report semantics remain.
+- The HTTP client retains the raw server detail while adding the syntax
+  and example to error toasts. Focused F1 opens a tip's registered topic;
+  ordinary F1 opens the workbench overview. Click/Enter on a tip opens its
+  own long-form topic. The dialog names the active heading and focuses its
+  scrollable prose. The Range column explains nested containment in English
+  and German, explicitly not a datapoint range (`api.test.ts`,
+  `HelpTip.test.tsx`, `HelpPanel.test.tsx`, `App.test.tsx`,
+  `GroupAddressTable.test.tsx`). This does not add device or bus operations.
+
 ## 2026-09-28 UTC — U4: session-log search and versioned JSON export
 
 - The Log panel now has labelled case-insensitive search across operation,

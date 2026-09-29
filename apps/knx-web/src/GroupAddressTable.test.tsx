@@ -191,6 +191,16 @@ async function click(el: HTMLElement, opts: { ctrlKey?: boolean; shiftKey?: bool
   });
 }
 
+it("explains that Range groups addresses by containment, and routes its tip to group ranges", async () => {
+  const root = await render();
+  const rangeTip = host!.querySelector<HTMLButtonElement>('[data-help-topic="groupRanges"]');
+  expect(rangeTip?.getAttribute("aria-label")).toBe("What a group address range means");
+  expect(rangeTip?.getAttribute("aria-describedby")).toBeTruthy();
+  expect(rangeTip!.parentElement!.querySelector('[role="tooltip"]')?.textContent).toMatch(/contain|hierarch/i);
+  expect(rangeTip!.parentElement!.querySelector('[role="tooltip"]')?.textContent).toMatch(/not a datapoint range/i);
+  await act(async () => root.unmount());
+});
+
 it("shows each address with its range path, resolved DPT and link directions", async () => {
   const root = await render();
   const cells = [...row("1/0/1").querySelectorAll("td")].map((td) => td.textContent?.trim());

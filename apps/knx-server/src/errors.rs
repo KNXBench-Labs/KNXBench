@@ -48,6 +48,14 @@ use serde_json::json;
 pub struct ApiError {
     status: StatusCode,
     message: String,
+    validation: Option<ValidationHint>,
+}
+
+#[derive(Debug)]
+struct ValidationHint {
+    kind: &'static str,
+    syntax: &'static str,
+    example: &'static str,
 }
 
 impl ApiError {
@@ -55,6 +63,7 @@ impl ApiError {
         Self {
             status: StatusCode::BAD_REQUEST,
             message: message.into(),
+            validation: None,
         }
     }
 
@@ -62,28 +71,58 @@ impl ApiError {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message: message.into(),
+            validation: None,
         }
     }
 
     /// Escape hatch for the cases the two constructors above cannot
-    /// express. Two exist: an axum extractor that already classified its
-    /// own failure (`MultipartError` distinguishes 413 "too large" from
-    /// 400 "malformed"), and a session-state conflict the caller could
-    /// have avoided — `bus_routes.rs`'s 409s, and `/api/project/new`
-    /// refusing to discard an open project's unsaved edits (a state
-    /// conflict the caller can resolve by saving first, not a malformed
-    /// request). Everything else goes through the two constructors above
-    /// and the split documented on this type.
+    /// express: extractor-specific failures and state conflicts (for
+    /// example, a 409 when unsaved project edits would be discarded).
+    /// Parser-level 422 refusals use `validation` instead, keeping syntax
+    /// hints separate from the legacy error text.
     pub fn with_status(status: StatusCode, message: impl Into<String>) -> Self {
         Self {
             status,
             message: message.into(),
+            validation: None,
+        }
+    }
+
+    /// Parser-level rejection. Preserve the legacy `error` text while
+    /// exposing a stable kind and actionable syntax separately.
+    pub fn validation(
+        kind: &'static str,
+        detail: impl Into<String>,
+        syntax: &'static str,
+        example: &'static str,
+    ) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            message: detail.into(),
+            validation: Some(ValidationHint {
+                kind,
+                syntax,
+                example,
+            }),
         }
     }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (self.status, Json(json!({ "error": self.message }))).into_response()
+        match self.validation {
+            Some(hint) => (
+                self.status,
+                Json(json!({
+                    "error": self.message,
+                    "detail": self.message,
+                    "kind": hint.kind,
+                    "syntax": hint.syntax,
+                    "example": hint.example,
+                })),
+            )
+                .into_response(),
+            None => (self.status, Json(json!({ "error": self.message }))).into_response(),
+        }
     }
 }

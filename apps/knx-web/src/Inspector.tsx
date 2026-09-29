@@ -302,7 +302,7 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
       {/* The six `title` attributes below stay — they are a fine mouse
           affordance for a one-word flag name. The tip is the keyboard's
           way in, and carries the sentence the letters cannot (ADR-0024). */}
-      <HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" />
+      <HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" topicId="comObjectFlags" />
       {flags.map((f) => (
         <label key={f.name} title={t(f.titleKey)}>
           <input

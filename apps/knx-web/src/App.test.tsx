@@ -1841,7 +1841,26 @@ describe("App — in-application help (T23)", () => {
 
     expect(helpPanel()).not.toBeNull();
     expect(host!.querySelector("#help-panel-title")?.textContent).toBe(enMessages["help.title"]);
+    expect(host!.querySelector("#help-panel-topic-title")?.textContent).toBe(enMessages["help.topic.workbench.title"]);
 
+    await act(async () => root.unmount());
+  });
+
+  it("routes F1 from a focused flag tip to communication-object flags", async () => {
+    const root = await renderApp();
+    const tip = document.createElement("button");
+    tip.dataset.helpTopic = "comObjectFlags";
+    host!.appendChild(tip);
+    tip.focus();
+    await pressKey({ key: "F1" });
+    expect(host!.querySelector("#help-panel-topic-title")?.textContent).toBe(enMessages["help.topic.comObjectFlags.title"]);
+    await act(async () => root.unmount());
+  });
+
+  it("opens the group-range topic requested by a range tip", async () => {
+    const root = await renderApp();
+    await act(async () => window.dispatchEvent(new CustomEvent("knxbench:open-help", { detail: { topicId: "groupRanges" } })));
+    expect(host!.querySelector("#help-panel-topic-title")?.textContent).toBe(enMessages["help.topic.groupRanges.title"]);
     await act(async () => root.unmount());
   });
 

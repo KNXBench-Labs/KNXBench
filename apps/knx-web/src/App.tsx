@@ -45,7 +45,8 @@ import AboutDialog from "./AboutDialog";
 import Overlay from "./Overlay";
 import { canQuit, onWindowCloseRequested, quitApp } from "./quit";
 import type { SessionControls } from "./session";
-import { opensHelp } from "./help";
+import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, focusedHelpTopic, opensHelp, requestHelpTopic } from "./help";
+import type { HelpTopicId } from "./help";
 import { useAutosaveSettings } from "./autosaveSettings";
 import { useAutosave } from "./useAutosave";
 
@@ -221,6 +222,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpTopicId, setHelpTopicId] = useState<HelpTopicId>(DEFAULT_HELP_TOPIC_ID);
   const [aboutOpen, setAboutOpen] = useState(false);
   // F4. Only ever true inside the Tauri shell, and only with edits the
   // command stack can still undo — see `quitRequested` below for why that
@@ -301,25 +303,33 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const deviceDetailRequestIdRef = useRef(0);
 
   useEffect(() => {
+    function openTopic(event: Event) {
+      const requested = (event as CustomEvent<{ topicId?: string }>).detail?.topicId;
+      const topicId = HELP_TOPICS.find((topic) => topic.id === requested)?.id ?? DEFAULT_HELP_TOPIC_ID;
+      if (document.querySelector(".fs-picker")) return;
+      setSearchOpen(false);
+      setPaletteOpen(false);
+      setSettingsOpen(false);
+      setNewProjectOpen(false);
+      setCatalogTarget(null);
+      setHelpTopicId(topicId);
+      setHelpOpen(true);
+    }
+    window.addEventListener("knxbench:open-help", openTopic);
+    return () => window.removeEventListener("knxbench:open-help", openTopic);
+  }, []);
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (opensHelp(e)) {
         // F1 is the browser's help key as well as ours, so it has to be
         // taken before anything else looks at it.
         e.preventDefault();
-        // Two `aria-modal` dialogs at once is undefined for assistive
-        // technology, and `Overlay`'s backdrop is fixed and full-viewport,
-        // so the one rendered later simply buries the other. Help
-        // therefore *replaces* every overlay this component owns rather
-        // than stacking on one — and stays away entirely while the file
-        // picker is up, because that one mounts its own React root
-        // (`filePicker.ts`) and cannot be closed from here.
+        // Replace other overlays through the shared topic-opening path.
+        // The native file picker owns a separate React root and cannot be
+        // replaced from here.
         if (document.querySelector(".fs-picker")) return;
-        setSearchOpen(false);
-        setPaletteOpen(false);
-        setSettingsOpen(false);
-        setNewProjectOpen(false);
-        setCatalogTarget(null);
-        setHelpOpen(true);
+        requestHelpTopic(focusedHelpTopic(document.activeElement));
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -899,7 +909,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     openBusMonitor: () => { setLogOpen(false); setMonitorOpen(true); },
     openSettings: () => setSettingsOpen(true),
     openCompanion: () => void openCompanion(),
-    openHelp: () => setHelpOpen(true),
+    openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
   };
 
   return (
@@ -957,7 +967,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <button className="workbench-search" onClick={() => tree && setSearchOpen(true)} disabled={!tree}>{t("toolbar.search")}<kbd>Ctrl K</kbd></button>
         <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
         <button className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
-        <button onClick={() => setHelpOpen(true)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
+        <button onClick={() => requestHelpTopic(DEFAULT_HELP_TOPIC_ID)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
         <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
@@ -1037,7 +1047,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
-      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {quitConfirmOpen && (
         <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={dismissQuitConfirm}>

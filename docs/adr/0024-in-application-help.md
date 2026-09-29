@@ -233,6 +233,18 @@ means the bubble appears without a transition. A runtime with no
 `matchMedia` is not a runtime asking for stillness, so an absent API
 resolves to "animate" — the same reading, for the same reason.
 
+### 2026-09-29: U5 contextual routing extension
+
+A tip may now register the existing long-form topic it points to. F1 on
+its focused trigger opens that exact topic, and click/Enter on the tip
+opens the same topic deliberately; ordinary F1 falls back to the workbench
+overview. `HelpPanel` labels its dialog with the active topic heading and
+focuses/resets the scrollable prose when the topic changes. A new Group
+address ranges topic explains nested containment separately from the
+per-address datapoint type. The short `Range` tip in the table points to
+it. The catalogue and the `MessageKey` gate remain the only help-text
+store; no external help route or extra modal is introduced.
+
 ## Alternatives considered
 
 **`title` attributes everywhere, and nothing else.** Free, zero

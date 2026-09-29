@@ -612,7 +612,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               </button>
             </>
           )}
-          <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" />
+          <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" topicId="busMonitor" />
         </div>
       </header>
       {/* T25 — what the interface search found. Rendered only while no

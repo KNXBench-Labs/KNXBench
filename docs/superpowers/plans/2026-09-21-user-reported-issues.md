@@ -265,11 +265,11 @@
 
 **Interfaces:** Validation responses carry a stable machine-readable kind plus human detail and syntax/example fields where applicable. Help opening accepts a topic id; global F1 uses the focused control's registered topic, falling back to the normal overview.
 
-- [ ] Add 422 tests for malformed individual address, group address, DPT, and BCP-47 language with exact expected syntax examples.
-- [ ] Add contextual-help tests: flag tip → communication-object flags, range help → group ranges, ordinary F1 → workbench overview.
-- [ ] Implement structured errors at the parsing boundary and keep raw server detail available for diagnostics.
-- [ ] Implement topic-targeted HelpPanel focus/scroll and make the active heading the announced dialog context.
-- [ ] Add concise Range help describing hierarchy/containment without implying a datapoint range.
+- [x] Add 422 tests for malformed individual address, group address, DPT, and BCP-47 language with exact expected syntax examples. (`http_validation_errors.rs::malformed_editor_values_have_stable_kinds_and_exact_syntax_hints`; `api.test.ts` preserves raw detail.)
+- [x] Add contextual-help tests: flag tip → communication-object flags, range help → group ranges, ordinary F1 → workbench overview. (`App.test.tsx::routes F1 from a focused flag tip`, `App.test.tsx::opens the group-range topic requested`, `App.test.tsx::opens the help panel on F1`, `HelpTip.test.tsx`.)
+- [x] Implement structured errors at the parsing boundary and keep raw server detail available for diagnostics. (`http_validation_errors.rs`; `api.test.ts::preserves structured 422 diagnostics`.)
+- [x] Implement topic-targeted HelpPanel focus/scroll and make the active heading the announced dialog context. (`HelpPanel.test.tsx::names the dialog for the active topic`; `App.test.tsx`.)
+- [x] Add concise Range help describing hierarchy/containment without implying a datapoint range. (`GroupAddressTable.test.tsx::explains that Range`; `help.test.ts` checks both languages.)
 
 ### ISSUE-11: Bus-monitor pause, export, decoding visibility, and statistics
 

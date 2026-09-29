@@ -122,7 +122,7 @@ async fn creating_then_deleting_a_group_address_round_trips() {
 }
 
 #[tokio::test]
-async fn creating_a_malformed_group_address_is_a_400() {
+async fn creating_a_malformed_group_address_is_a_422() {
     let state = Arc::new(state_with_one_installation());
     let app = knx_server::app(state, None);
 
@@ -140,7 +140,10 @@ async fn creating_a_malformed_group_address_is_a_400() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let body = body_json(response).await;
+    assert_eq!(body["kind"], "group_address");
+    assert_eq!(body["syntax"], "main/middle/sub");
 }
 
 #[tokio::test]

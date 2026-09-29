@@ -178,19 +178,28 @@ them](../../assets/screenshots/porcelain-command-palette.png)
 Undo and Redo are gray here because this project has no history yet. The palette shows
 each command's shortcut where it has one, which makes it a decent way to learn them.
 
-**Help** (`F1`, or the `?` button) is ten short topics about this window and the KNX
-terms behind it: Getting started, The window, Buildings floors and rooms, Areas lines
-and devices, Group addresses, Communication object flags, Bus monitor, Import,
-Keyboard, and What this does not do.
+**Help** (`F1`, or the `?` button) has eleven short topics about this window
+and the KNX terms behind it: Getting started, The window, Buildings floors
+and rooms, Areas lines and devices, Group addresses, Group address ranges,
+Communication object flags, Bus monitor, Import, Keyboard, and What this
+does not do. A tip's `?` button opens its own full topic on click or Enter;
+F1 while that tip is focused opens the same topic. Elsewhere F1 starts at
+**The window** overview. The topic heading names the dialog for a screen
+reader and its prose can be reached by keyboard. In the Group addresses
+table, the **Range** tip explains nested address containment: ranges are
+not datapoint types or payload-value intervals. A validation toast for a
+malformed address, DPT or project language also shows the expected syntax
+and one example; the original server detail remains available for diagnostics.
 
 ![The help panel with its ten topics listed and the "Getting started" topic
 open](../../assets/screenshots/porcelain-help-panel.png)
 
 > **Note**
 >
-> The eighth topic was called "Import and export" when this screenshot was taken. It is
-> called "Import" now, because there is no `.knxproj` export any more
-> ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
+> The screenshot shows ten topics and the earlier “Import and export” label.
+> The live panel now has eleven topics, including **Group address ranges**;
+> the import topic is named **Import**, because KNXBench does not export
+> `.knxproj` ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
 
 The help panel is deliberately short. It answers "what is this thing on my screen",
 not "how does KNX work" — that part is this manual's job, starting at

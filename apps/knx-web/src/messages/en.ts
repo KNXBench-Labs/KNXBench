@@ -1258,6 +1258,12 @@ export const messages = {
   "help.topic.groupAddresses.p3":
     "A group address also carries a datapoint type, which says how to read the bytes on the wire — 1.001 is a switch, 5.001 a percentage. The Group addresses view shows the type it has, marks the ones that have none, and marks the ones whose links disagree about it.",
 
+  "help.topic.groupRanges.title": "Group address ranges",
+  "help.topic.groupRanges.p1":
+    "A range is a named container for group addresses. Ranges can nest: a child range must fit inside its parent's address interval. The Range column shows the containing path, not a value sent on the bus.",
+  "help.topic.groupRanges.p2":
+    "The start and end are group-address boundaries in the project's chosen address style. They do not describe a range of datapoint types or payload values; the datapoint type belongs to each address and its links.",
+
   "help.topic.comObjectFlags.title": "Communication object flags",
   "help.topic.comObjectFlags.p1":
     "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. KNXBench models six flags for it — shown as R, W, T, U, C and I in the Properties inspector — and together they decide what the object may do there.",
@@ -1301,6 +1307,9 @@ export const messages = {
   "help.tip.comFlags.label": "What the communication object flags mean",
   "help.tip.comFlags.text":
     "R, W, T, U, C and I decide what this object may do on the bus. C is the master switch — with it off, the other five do nothing. F1 has the full explanation.",
+  "help.tip.groupRange.label": "What a group address range means",
+  "help.tip.groupRange.text":
+    "Ranges form a hierarchy: each child is contained within its parent's group-address interval. This is not a datapoint range. F1 opens the full explanation.",
   "help.tip.addressTable.label": "What this table shows",
   "help.tip.addressTable.text":
     "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address, by name or by datapoint type. F1 explains what a group address is.",

@@ -4,15 +4,21 @@
 // trap, Escape and focus restoration are the shell's problem and not
 // this file's.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_HELP_TOPIC_ID, HELP_TOPICS, helpTopicParagraphs } from "./help";
+import type { HelpTopicId } from "./help";
 import Overlay from "./Overlay";
 import { useTranslate } from "./i18n";
 
-export default function HelpPanel(props: { onClose: () => void }) {
-  const { onClose } = props;
+export default function HelpPanel(props: { onClose: () => void; initialTopicId?: HelpTopicId }) {
+  const { onClose, initialTopicId = DEFAULT_HELP_TOPIC_ID } = props;
   const t = useTranslate();
-  const [topicId, setTopicId] = useState<string>(DEFAULT_HELP_TOPIC_ID);
+  const [topicId, setTopicId] = useState<HelpTopicId>(initialTopicId);
+  const proseRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const prose = proseRef.current;
+    if (prose) { prose.scrollTop = 0; prose.focus(); }
+  }, [topicId]);
   // `HELP_TOPICS` is never empty and `topicId` only ever comes from a
   // button built out of it, so the fallback is unreachable — it exists so
   // this component has no non-null assertion in it.
@@ -20,7 +26,7 @@ export default function HelpPanel(props: { onClose: () => void }) {
   const paragraphs = helpTopicParagraphs(topic.id) ?? [];
 
   return (
-    <Overlay labelledBy="help-panel-title" className="help-panel" onClose={onClose}>
+    <Overlay labelledBy="help-panel-topic-title" className="help-panel" onClose={onClose}>
       <header className="help-panel-header">
         <h2 id="help-panel-title">{t("help.title")}</h2>
         <p className="help-panel-intro">{t("help.intro")}</p>
@@ -43,6 +49,7 @@ export default function HelpPanel(props: { onClose: () => void }) {
             read. It lands in `Overlay`'s focus trap by the same attribute. */}
         <article
           className="help-panel-topic"
+          ref={proseRef}
           aria-labelledby="help-panel-topic-title"
           tabIndex={0}
         >

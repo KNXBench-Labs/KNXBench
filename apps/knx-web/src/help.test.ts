@@ -107,7 +107,7 @@ describe("HELP_TOPICS", () => {
 
   it("carries the standard note on the topics that explain a KNX concept", () => {
     const noted = HELP_TOPICS.filter((t) => t.standardNote).map((t) => t.id);
-    expect(noted).toEqual(["buildings", "topology", "groupAddresses", "comObjectFlags"]);
+    expect(noted).toEqual(["buildings", "topology", "groupAddresses", "groupRanges", "comObjectFlags"]);
   });
 
   it("has no paragraphs for an unknown topic id", () => {

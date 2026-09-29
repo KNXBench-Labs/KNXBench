@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (commissioning live-backup session)
+- **Timestamp:** 2026-09-29 15:31 CEST
+- **Web lock: held by the UI U10 session** (entry below, unchanged; this entry touched no web file).
+- **Completed:** After the user's "Hardware go": live backup/restore roundtrip on `1.1.67` (MDT `0701h`, `A-0027-15-0BAC`). Pre-dump = `post-k15` (option C). `knx device download` (K7 project) wrote the backup JSON before step 3, whose 1416 octets in 4 regions matched the pre-dump with 0 differences; 1416/1416 written; post-dump = K7 config. `knx device restore <json>` (own pre-write backup, 0 differences) wrote 1416/1416; post-dump byte-identical to pre-dump in 180/180 lines, load states `01 01 01`. Restart unconfirmed both times, as usual. Docs: RESEARCH top entry, KNOWN_LIMITATIONS ADR-0049 section, IMPLEMENTATION_STATUS; commit `19e0dba`. Logs under `OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-29_*backup-live*`.
+- **Pending/Next Steps:** `19e0dba` is **not pushed**: local `main` also holds the UI session's unpublished U10 commits `84aa8a5`/`e8f4808`, which that session publishes after its own gates (its push carries this docs commit along). The device is back on option C. Still not live: the refusal before the first write when a backup fails, backups of partial downloads, other devices. K13/K14 stay refused on hardware; RF has no hardware.
+- **Notes for Codex or Claude:** `stats.md` was regenerated in the working tree at 15:27 by another session and is left uncommitted for its owner. Needs a product DB containing `MDT_KP_BE_01_Push_Button_V15a.knxprod`; the default DB lacks it.
+
+---
+
 - **Last Agent:** codex (UI U10 session)
 - **Timestamp:** 2026-09-29 15:19 CEST
 - **Web lock: taken by the UI U10 session now** for `BusMonitorPanel.tsx`, `gatewayEndpoint.ts`, gateway portions of `api.ts` and the `busMonitor.*` / `help.tip.busGateway.*` message keys; the commissioning reservation was released at 15:04. The U10 work before this entry touched only surfaces outside that earlier reservation. Do not edit these files concurrently until this lock is released after publication.

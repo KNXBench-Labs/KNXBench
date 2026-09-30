@@ -11,6 +11,7 @@ mod device_address;
 mod device_compare;
 mod device_download;
 mod device_readiness;
+mod device_reset_address;
 mod device_serial;
 mod device_service_control;
 mod scan;
@@ -96,6 +97,11 @@ const USAGE: &str =
      \x20         waits up to --wait seconds (default 120) for exactly one pressed button and\n\
      \x20         says when to press or release; ends with a restart. Without --confirm it\n\
      \x20         prints the steps and opens no connection)\n\
+     \x20     knx device reset-address <area.line.device>...\n\
+     \x20                  [--gateway <host:port> --confirm \"I confirm individual-address reset to 15.15.255\"]\n\
+     \x20         (gives every device in programming mode the default address 15.15.255, MP §2.18;\n\
+     \x20         name the pressed devices by their current address: anything else pressed, or\n\
+     \x20         a named one not pressed, writes nothing. Without --confirm it prints the steps)\n\
      \x20     knx device address-by-serial <area.line.device>\n\
      \x20                  (--serial MMMM:NNNNNNNN | --project <p.knxdb> --device <DeviceInstance Id>)\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
@@ -1814,6 +1820,7 @@ fn run_device(args: &[String]) -> ExitCode {
         Some("compare") => run_device_compare(&args[1..]),
         Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),
+        Some("reset-address") => run_device_reset_address(&args[1..]),
         Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
         Some("find-serial") => run_device_find_serial(&args[1..]),
         Some("service-control") => run_device_service_control(&args[1..]),
@@ -2455,6 +2462,77 @@ fn run_device_program_address(args: &[String]) -> ExitCode {
             eprintln!("tunnel disconnect: {e}");
         }
         if programmed {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        }
+    })
+}
+
+/// `knx device reset-address`. The named devices, exclusion list and phrase
+/// are checked before a socket opens; without the phrase only the steps are
+/// printed.
+fn run_device_reset_address(args: &[String]) -> ExitCode {
+    let parsed = match device_reset_address::parse_reset_address_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let (expected, mode) = match device_reset_address::check(&parsed) {
+        Ok(checked) => checked,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    print!("{}", device_reset_address::format_plan(&expected));
+    let (gateway, authorisation) = match mode {
+        device_reset_address::Mode::Plan => {
+            println!(
+                "address written: no (plan only; add --gateway and --confirm {:?} to reset)",
+                device_reset_address::phrase()
+            );
+            return ExitCode::SUCCESS;
+        }
+        device_reset_address::Mode::Reset {
+            gateway,
+            authorisation,
+        } => (gateway, authorisation),
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                println!("address written: no");
+                return ExitCode::FAILURE;
+            }
+        };
+        let reset = device_reset_address::execute(
+            &tunnel,
+            &expected,
+            authorisation,
+            knx_net::SessionTiming::default(),
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        if reset {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE

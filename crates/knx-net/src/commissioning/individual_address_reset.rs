@@ -25,9 +25,17 @@
 //!   on the bus for ever.
 //! - **The read window** is `programming_mode_broadcast_timeout`, MP §2.3
 //!   step 2's 1 s; §2.18 names none.
+//! - **The expected devices** (added for hardware, 2026-09-30): the caller
+//!   names the devices whose buttons it expects to be pressed, and the first
+//!   read must find exactly that set. MP §2.18 resets whoever is in
+//!   programming mode, including a device somebody else is commissioning
+//!   on the same line; a mismatch in either direction writes nothing. An
+//!   excluded address in programming mode is refused even if named.
+
+use std::collections::BTreeSet;
 
 use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
-use knx_core::IndividualAddress;
+use knx_core::{ContactableAddress, ExcludedAddress, IndividualAddress};
 
 use crate::commissioning::{AuthorisationPlan, ManagementSession, SessionError, SessionTiming};
 use crate::management::ManagementTransport;
@@ -57,6 +65,17 @@ pub enum IndividualAddressResetError {
         /// Where they answered from.
         still_answering: Vec<IndividualAddress>,
     },
+    /// The first read did not find exactly the devices the caller expected
+    /// in programming mode. Nothing was written.
+    NotTheExpectedDevices {
+        /// What the caller named, sorted and without repeats.
+        expected: Vec<IndividualAddress>,
+        /// What answered the first read.
+        found: Vec<IndividualAddress>,
+    },
+    /// A device on the project exclusion list is in programming mode.
+    /// Nothing was written.
+    ExcludedDeviceInProgrammingMode(ExcludedAddress),
     /// A session or transport failure in the named step.
     Session {
         step: &'static str,
@@ -79,6 +98,28 @@ impl std::fmt::Display for IndividualAddressResetError {
                     list.join(", ")
                 )
             }
+            Self::NotTheExpectedDevices { expected, found } => {
+                let list = |devices: &[IndividualAddress]| -> String {
+                    if devices.is_empty() {
+                        return "none".to_string();
+                    }
+                    let names: Vec<_> = devices.iter().map(ToString::to_string).collect();
+                    names.join(", ")
+                };
+                write!(
+                    f,
+                    "in programming mode: {}; expected: {}. MP §2.18 would reset every one of \
+                     them, so nothing was written",
+                    list(found),
+                    list(expected)
+                )
+            }
+            Self::ExcludedDeviceInProgrammingMode(excluded) => {
+                write!(
+                    f,
+                    "{excluded}, and it is in programming mode; nothing was written"
+                )
+            }
             Self::Session { step, source } => write!(f, "MP §2.18 {step}: {source}"),
         }
     }
@@ -90,14 +131,19 @@ fn at(step: &'static str) -> impl Fn(SessionError) -> IndividualAddressResetErro
     move |source| IndividualAddressResetError::Session { step, source }
 }
 
-/// Resets every device in programming mode to `FFFFh`.
+/// Resets every device in programming mode to `FFFFh`, provided those are
+/// exactly `expected`.
 ///
-/// `authorisation` must name `FFFFh` and [`WriteScope::IndividualAddressReset`];
-/// on hardware the scope is refused by `hardware_write_is_authorised`.
+/// `authorisation` must name `FFFFh` and [`WriteScope::IndividualAddressReset`].
+/// `expected` lists the devices, by their current address, whose buttons the
+/// operator pressed; order and repeats do not matter. The first read must
+/// find that set and no excluded address, or nothing is written. An empty
+/// `expected` with nobody pressed is a no-op.
 pub async fn individual_address_reset<T: ManagementTransport>(
     transport: &T,
     timing: SessionTiming,
     authorisation: WriteAuthorisation,
+    expected: &[IndividualAddress],
 ) -> Result<IndividualAddressResetReport, IndividualAddressResetError> {
     let mut session =
         ManagementSession::authorised(transport, AuthorisationPlan::Skip, timing, authorisation)
@@ -125,6 +171,18 @@ pub async fn individual_address_reset<T: ManagementTransport>(
         .await
         .map_err(at("who is in programming mode"))?;
     let in_programming_mode: Vec<_> = first.devices().collect();
+    for device in &in_programming_mode {
+        ContactableAddress::new(*device)
+            .map_err(IndividualAddressResetError::ExcludedDeviceInProgrammingMode)?;
+    }
+    let expected: BTreeSet<_> = expected.iter().copied().collect();
+    let found: BTreeSet<_> = in_programming_mode.iter().copied().collect();
+    if expected != found {
+        return Err(IndividualAddressResetError::NotTheExpectedDevices {
+            expected: expected.into_iter().collect(),
+            found: in_programming_mode,
+        });
+    }
     if in_programming_mode.is_empty() {
         return Ok(IndividualAddressResetReport {
             in_programming_mode,
@@ -210,7 +268,7 @@ mod tests {
     async fn one_device_goes_to_ffff_and_leaves_programming_mode() {
         let device = pressed(Vec::new(), false);
         let before = device.address();
-        let report = individual_address_reset(&device, fast(), reset())
+        let report = individual_address_reset(&device, fast(), reset(), &[before])
             .await
             .unwrap();
         assert_eq!(report.in_programming_mode, vec![before]);
@@ -239,7 +297,8 @@ mod tests {
     async fn every_device_in_programming_mode_is_reset_together() {
         let others = vec![addr(1, 1, 40), addr(1, 2, 7)];
         let device = pressed(others.clone(), false);
-        let report = individual_address_reset(&device, fast(), reset())
+        let expected = [device.address(), others[0], others[1]];
+        let report = individual_address_reset(&device, fast(), reset(), &expected)
             .await
             .unwrap();
         assert_eq!(report.in_programming_mode.len(), 3);
@@ -257,7 +316,9 @@ mod tests {
             ..Default::default()
         });
         let before = device.address();
-        let report = individual_address_reset(&device, fast(), reset())
+        // Nobody named and nobody pressed: the no-op. Naming a device that
+        // is not pressed is the guard's case, below.
+        let report = individual_address_reset(&device, fast(), reset(), &[])
             .await
             .unwrap();
         assert!(report.in_programming_mode.is_empty());
@@ -270,7 +331,8 @@ mod tests {
     #[tokio::test]
     async fn a_device_that_stays_in_programming_mode_stops_the_loop_at_the_cap() {
         let device = pressed(vec![addr(1, 1, 40)], true);
-        let err = individual_address_reset(&device, fast(), reset())
+        let expected = [device.address(), addr(1, 1, 40)];
+        let err = individual_address_reset(&device, fast(), reset(), &expected)
             .await
             .unwrap_err();
         match err {
@@ -302,25 +364,127 @@ mod tests {
             WriteAuthorisation::for_simulator(addr(1, 1, 30), WriteScope::IndividualAddressReset)
                 .unwrap(),
         ] {
-            assert!(individual_address_reset(&device, fast(), authorisation)
-                .await
-                .is_err());
+            assert!(
+                individual_address_reset(&device, fast(), authorisation, &[before])
+                    .await
+                    .is_err()
+            );
         }
         assert_eq!(device.address(), before);
         assert!(device.seen().is_empty(), "{:?}", device.seen());
     }
 
+    /// Nothing was written: the address is the old one, no connection was
+    /// opened, and only the first read went out.
+    fn assert_untouched(device: &SimulatedDevice, before: IndividualAddress) {
+        assert_eq!(device.address(), before);
+        assert!(device.programming_mode(), "nothing ended programming mode");
+        assert!(
+            !device.seen().contains(&Seen::Connect),
+            "{:?}",
+            device.seen()
+        );
+        assert_eq!(device.individual_address_read_broadcasts(), 1);
+    }
+
+    /// The hardware guard: MP §2.18 resets whoever has a button pressed, so
+    /// a second pressed device the operator did not name stops the
+    /// procedure before its first write.
+    #[tokio::test]
+    async fn an_unexpected_device_in_programming_mode_stops_before_writing() {
+        let stranger = addr(1, 1, 40);
+        let device = pressed(vec![stranger], false);
+        let before = device.address();
+        let err = individual_address_reset(&device, fast(), reset(), &[before])
+            .await
+            .unwrap_err();
+        match &err {
+            IndividualAddressResetError::NotTheExpectedDevices { expected, found } => {
+                assert_eq!(expected, &vec![before]);
+                assert!(
+                    found.contains(&stranger) && found.contains(&before),
+                    "{err}"
+                );
+            }
+            other => panic!("expected the guard, got {other}"),
+        }
+        assert!(err.to_string().contains("nothing was written"), "{err}");
+        assert_untouched(&device, before);
+        assert_eq!(device.other_programming_mode_devices(), vec![stranger]);
+    }
+
+    /// The other direction: a named device whose button is not pressed.
+    /// Resetting only some of what the operator named is not what they
+    /// confirmed either.
+    #[tokio::test]
+    async fn a_named_device_that_is_not_pressed_stops_before_writing() {
+        let device = pressed(Vec::new(), false);
+        let before = device.address();
+        let err = individual_address_reset(&device, fast(), reset(), &[before, addr(1, 1, 40)])
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                IndividualAddressResetError::NotTheExpectedDevices { .. }
+            ),
+            "{err}"
+        );
+        assert_untouched(&device, before);
+    }
+
+    /// An excluded address in programming mode is never reset, not even
+    /// when the operator lists it.
+    #[tokio::test]
+    async fn an_excluded_device_in_programming_mode_is_never_reset() {
+        let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0];
+        let device = pressed(vec![excluded], false);
+        let before = device.address();
+        let err = individual_address_reset(&device, fast(), reset(), &[before, excluded])
+            .await
+            .unwrap_err();
+        match &err {
+            IndividualAddressResetError::ExcludedDeviceInProgrammingMode(found) => {
+                assert_eq!(found.0, excluded)
+            }
+            other => panic!("expected the exclusion, got {other}"),
+        }
+        assert_untouched(&device, before);
+    }
+
+    /// The order the operator names devices in, and a repeat, do not
+    /// matter: the check compares sets.
+    #[tokio::test]
+    async fn the_expected_devices_are_compared_as_a_set() {
+        let other = addr(1, 2, 7);
+        let device = pressed(vec![other], false);
+        let before = device.address();
+        let report = individual_address_reset(&device, fast(), reset(), &[other, before, other])
+            .await
+            .unwrap();
+        assert_eq!(report.rounds, 1);
+        assert_eq!(device.address(), DEFAULT_INDIVIDUAL_ADDRESS);
+    }
+
+    /// K13 on hardware (2026-09-30): the scope is allowed, on the phrase
+    /// that names `15.15.255`.
     #[test]
-    fn the_scope_is_refused_on_hardware_even_with_the_phrase() {
+    fn the_scope_is_allowed_on_hardware_with_the_phrase() {
         let phrase = required_confirmation_phrase(
             DEFAULT_INDIVIDUAL_ADDRESS,
             WriteScope::IndividualAddressReset,
         );
         assert_eq!(phrase, "I confirm individual-address reset to 15.15.255");
         assert!(
-            !knx_core::commissioning::mutation::hardware_write_is_authorised(
+            knx_core::commissioning::mutation::hardware_write_is_authorised(
                 WriteScope::IndividualAddressReset
             )
         );
+        assert!(WriteAuthorisation::for_hardware(
+            DEFAULT_INDIVIDUAL_ADDRESS,
+            WriteScope::IndividualAddressReset,
+            &phrase
+        )
+        .is_ok());
     }
 }

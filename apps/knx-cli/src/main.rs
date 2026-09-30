@@ -99,9 +99,9 @@ const USAGE: &str =
      \x20         prints the steps and opens no connection)\n\
      \x20     knx device reset-address <area.line.device>...\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address reset to 15.15.255\"]\n\
-     \x20         (gives every device in programming mode the default address 15.15.255, MP §2.18;\n\
-     \x20         name the pressed devices by their current address: anything else pressed, or\n\
-     \x20         a named one not pressed, writes nothing. Without --confirm it prints the steps)\n\
+     \x20         (MP §2.18 plan only; confirmed resets currently fail closed before a tunnel:\n\
+     \x20         a durable pre-write backup of all affected storage for every pressed device\n\
+     \x20         is not implemented. The plan names the expected devices and recovery steps)\n\
      \x20     knx device address-by-serial <area.line.device>\n\
      \x20                  (--serial MMMM:NNNNNNNN | --project <p.knxdb> --device <DeviceInstance Id>)\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
@@ -2491,8 +2491,7 @@ fn run_device_reset_address(args: &[String]) -> ExitCode {
     let (gateway, authorisation) = match mode {
         device_reset_address::Mode::Plan => {
             println!(
-                "address written: no (plan only; add --gateway and --confirm {:?} to reset)",
-                device_reset_address::phrase()
+                "address written: no (plan only; confirmed writes currently fail closed before any tunnel: no verified durable pre-write backup for every affected device)"
             );
             return ExitCode::SUCCESS;
         }
@@ -2501,6 +2500,13 @@ fn run_device_reset_address(args: &[String]) -> ExitCode {
             authorisation,
         } => (gateway, authorisation),
     };
+    if let Err(error) =
+        knx_app::individual_address_reset_recovery::require_persistent_pre_write_recovery()
+    {
+        eprintln!("{error}");
+        println!("address written: no");
+        return ExitCode::FAILURE;
+    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

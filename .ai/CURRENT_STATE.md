@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / K13 reset durable-recovery safety gate)
+- **Timestamp:** 2026-09-30 22:12 UTC
+- **Web lock:** held by the separate UI session; no Web source changed.
+- **Completed:** Public confirmed `knx device reset-address` now fails closed after target/phrase validation and before runtime/tunnel opening because a complete durable pre-write backup for every affected device is not implemented. Plan-only CLI and direct protocol simulator remain; no HTTP/UI reset enabled. Added an application-layer precondition, ADR-0058, RESEARCH §23, current status/limitations and K13 goal correction. TDD RED showed the ungated CLI attempted a connection to the local test endpoint and timed out; GREEN proves no datagram, safe plan and validation-first refusal. Final Rust workspace 138 suites / 2,787 passed / 0 failed / 161 ignored / 0 `SKIP:`; Web build and 82 files / 1,295 tests, strict Clippy, fmt, layering, headers, anchors and corpus gates green. No real gateway/device/credential used. Evidence `.ai/logs/2026-09-30_codex_k13-reset-recovery-gate.md`.
+- **Pending/Next Steps:** K13 is **not** reopened for hardware; determine per-device/mask affected storage and durable pre-send backup/readback with a recovery plan before any new device-specific go. **Next in-scope safety audit:** `run_device_program_address` in `apps/knx-cli/src/main.rs:2399-2452` still opens a tunnel after phrase validation with no visible automatic pre-write backup; check its full contract and fail closed if it cannot prove complete durable recovery. Serial-address writes remain fail-closed; K14 remains blocked. `groupWrite` activity and send semantics belong to `goal.md` (§5 handoff), UI status to the Web lock owner. On publication, clean only this package's private corpus symlinks, worktree and scratch; preserve foreign root changes.
+- **Notes for Codex oder Claude:** No access key may be guessed; never query `1.1.220`. Previous K13 live success and an unchanged application dump are not proof of universal affected-storage coverage. Low-level `knx-net` remains available for simulator tests and custom Rust callers, outside this CLI guarantee. A confirmation phrase and an unacknowledged restart are not recovery evidence; no new live write was authorized.
+
+---
+
 - **Last Agent:** codex (commissioning / group-write ownership boundary audit)
 - **Timestamp:** 2026-09-30 23:44 CEST
 - **Web lock:** held by the separate UI session; no Web file was changed.

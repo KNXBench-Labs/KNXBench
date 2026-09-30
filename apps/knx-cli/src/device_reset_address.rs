@@ -6,18 +6,18 @@
 //! pressed, by their current address, and the first broadcast read must
 //! find exactly those; anything else writes nothing.
 //!
-//! Without `--confirm` it prints what would happen and opens no socket. The
-//! phrase is `required_confirmation_phrase` for `15.15.255` and
-//! `WriteScope::IndividualAddressReset`: the address every reset device ends
-//! up at, the one the procedure writes. Recovery is `knx device
-//! program-address` with the button pressed again.
+//! Without `--confirm` it prints what the protocol procedure would do and
+//! opens no socket. A confirmed production CLI call currently fails closed
+//! before opening a tunnel because it lacks a complete durable pre-write
+//! backup (ADR-0058). The phrase is `required_confirmation_phrase` for
+//! `15.15.255` and `WriteScope::IndividualAddressReset`; it is not itself
+//! recovery evidence. Reprogramming the address with the button pressed
+//! again is only an address-recovery step, not a whole-device backup.
 
 use std::fmt::Write as _;
 use std::io::Write;
 
-use knx_core::commissioning::mutation::{
-    required_confirmation_phrase, WriteAuthorisation, WriteScope,
-};
+use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::individual_address_reset::{
     individual_address_reset, IndividualAddressResetError, DEFAULT_INDIVIDUAL_ADDRESS, MAX_ROUNDS,
@@ -121,14 +121,6 @@ pub fn check(args: &ResetAddressArgs) -> Result<(Vec<IndividualAddress>, Mode), 
         _ => Mode::Plan,
     };
     Ok((expected, mode))
-}
-
-/// The phrase `--confirm` needs.
-pub fn phrase() -> String {
-    required_confirmation_phrase(
-        DEFAULT_INDIVIDUAL_ADDRESS,
-        WriteScope::IndividualAddressReset,
-    )
 }
 
 /// What the command will do, printed before anything is sent.
@@ -256,6 +248,13 @@ mod tests {
     use super::*;
     use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
     use std::time::Duration;
+
+    fn phrase() -> String {
+        knx_core::commissioning::mutation::required_confirmation_phrase(
+            DEFAULT_INDIVIDUAL_ADDRESS,
+            WriteScope::IndividualAddressReset,
+        )
+    }
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()

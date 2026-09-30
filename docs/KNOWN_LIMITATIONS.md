@@ -9183,8 +9183,10 @@ external shell timeout the agent had set too tight (writes took ~6 s each
 that day), leaving the association table `Loading` with the right bytes in
 memory. KNXBench's load-state check and `device compare` showed exactly
 that; the complete option-C download restored `Loaded`/`Loaded`/`Loaded`
-and a byte-identical dump. `group-addresses` and `both` stay unverified on
-hardware; `parameters` stays verified.
+and a byte-identical dump. **Re-run the same day without a shell timeout:
+`--partial group-addresses` completed**, 1022 octets read back, both tables
+`Loaded`, dump byte-identical (RESEARCH §19.15). `parameters` and
+`group-addresses` are verified on `1.1.67`; `both` is untested.
 
 **Lifted (2026-09-29, live on `1.1.67`, user go for all test-hardware
 tasks).** `knx device download 1.1.67 --partial parameters` with the

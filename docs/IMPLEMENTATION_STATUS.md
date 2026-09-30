@@ -49,7 +49,8 @@
   `verified`. `partial-both` stays `untested`; the shipped-evidence test
   pins both (RED before the data change).
 
-## 2026-09-30 — U12 / ISSUE-08 communication-object UI half (isolated branch, pending integration)
+<a id="2026-09-30--u12--issue-08-communication-object-ui-half-isolated-branch-pending-integration"></a>
+## 2026-09-30 — U12 / ISSUE-08 communication-object UI half (published on main)
 
 - The server's four-valued activation, evaluated channel ownership and
   program-vs-instance DPT evidence now cross generated TypeScript bindings
@@ -83,8 +84,21 @@
   Clippy passed, and all four `xtask` gates passed from this worktree:
   layering, headers (332 well-formed, 161 legacy at ceiling, 34 generated
   skipped), anchors (403 links / 218 Markdown files, none dead), and corpus
-  gates. Post-rebase/merged-result verification remains pending.
-  No hardware connection or device write in this UI branch.
+  gates. This snapshot predates the upstream commissioning/legal commits and
+  is superseded by the merged-tree gates below.
+- Final published feature `9040df0f` and review fix `4f06dfba` were pushed
+  normally to `origin/main`, then read back at the identical SHA on
+  2026-09-30. On that merged tree (including upstream K13/K15 and CLA), the
+  corpus-backed Rust workspace passed 136 suites / 2,761 tests / 0 failed /
+  160 ignored / 0 `SKIP:` notices (6 crates rebuilt after the last rebase).
+  Web Vitest passed 78 files / 1,254 tests; TypeScript, production build,
+  Rust fmt, strict Clippy and diff check passed. Ten local mock-only Chromium
+  cases passed; no server or KNX device was involved. All four `xtask` gates
+  passed: layering, headers (333 well-formed, 161 legacy at ceiling, 34
+  generated skipped), anchors (403 links / 220 Markdown files, none dead),
+  and corpus gates. The three negative-evidence guard mutations failed their
+  focused tests before source restoration.
+- No hardware connection or device write occurred in this UI package.
 - Scope and remaining limits: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md#146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined)
   and the ISSUE-08 row in the [issue plan](superpowers/plans/2026-09-21-user-reported-issues.md#issue-08-product-data-fidelity-and-communication-object-organization).
 

@@ -153,11 +153,21 @@
 
 **Interfaces:** New create/rename/move operations are ordinary undoable `Command` variants. Buttons, forms, keyboard actions, and later drag/drop all call those same server routes.
 
-- [ ] Inventory existing commands and add only the missing area/line/building-part/group-range mutations.
-- [ ] Add failing domain tests for duplicate addresses, invalid parents, non-empty deletion, and move-cycle prevention before routes or UI.
-- [ ] Add inline creation and context-aware actions to each centre workspace, with Properties-based rename for selected area/line.
-- [ ] Add move controls with clear source/target labels and keyboard operation; integrate the active B10 drag/drop task through the same commands.
-- [ ] Verify undo/redo and persistence round trips for every new mutation.
+- [x] Inventory existing commands and add only the missing area/line/building-part/group-range mutations.
+- [x] Add failing domain tests for duplicate addresses, invalid parents, non-empty deletion, and move-cycle prevention before routes or UI.
+- [x] Add inline creation and context-aware actions to each centre workspace, with Properties-based rename for selected area/line.
+- [x] Add move controls with clear source/target labels and keyboard operation; integrate the active B10 drag/drop task through the same commands.
+- [x] Verify undo/redo and persistence round trips for every new mutation.
+
+Evidence: `knx-core::command` order/ambiguity/cycle/rollback tests,
+`http_edit_routes` deletion/rename/move/undo regressions, `Inspector` and
+`StructureWorkspace` UI suites, and native `.knxdb` save/reopen tests for
+renamed area/line, reparented building/range and moved line. Device drag/drop
+keeps using its existing validated device commands; structure reparenting
+uses keyboard-accessible selects, not an unverified drag gesture. Scope and
+remaining limits are recorded in
+[IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md#2026-09-30--u12--issue-05-structure-editor-isolated-branch-not-published)
+and [KNOWN_LIMITATIONS.md](../../KNOWN_LIMITATIONS.md#u12-structure-editor-scope-issue-05).
 
 ### ISSUE-06: Site/property hierarchy decision
 

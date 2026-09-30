@@ -63,10 +63,12 @@ pub fn project_routes() -> Router<SharedState> {
             post(import_group_addresses_csv),
         )
         .route("/api/areas", post(create_area))
-        .route("/api/areas/{id}", delete(delete_area))
+        .route("/api/areas/{id}", delete(delete_area).patch(rename_area))
         .route("/api/lines", post(create_line))
-        .route("/api/lines/{id}", delete(delete_line))
+        .route("/api/lines/{id}", delete(delete_line).patch(rename_line))
+        .route("/api/move-line-to-area", post(move_line_to_area))
         .route("/api/move-device", post(move_device_to_line))
+        .route("/api/move-building-part", post(move_building_part))
         .route(
             "/api/move-device-to-building-part",
             post(move_device_to_building_part),
@@ -77,6 +79,7 @@ pub fn project_routes() -> Router<SharedState> {
             delete(delete_building_part).patch(rename_building_part),
         )
         .route("/api/group-ranges", post(create_group_range))
+        .route("/api/move-group-range", post(move_group_range))
         .route(
             "/api/group-ranges/{id}",
             delete(delete_group_range).patch(rename_group_range),
@@ -2184,6 +2187,21 @@ async fn delete_area(
 }
 
 #[derive(Deserialize)]
+struct RenameTopologyBody {
+    name: String,
+}
+
+async fn rename_area(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+    Json(body): Json<RenameTopologyBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_area_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateLineBody {
     area_id: u32,
@@ -2212,6 +2230,33 @@ async fn delete_line(
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::delete_line_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn rename_line(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+    Json(body): Json<RenameTopologyBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_line_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveLineToAreaBody {
+    id: u32,
+    area_id: u32,
+}
+
+async fn move_line_to_area(
+    State(state): State<SharedState>,
+    body: Result<Json<MoveLineToAreaBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::move_line_to_area_impl(&state, body.id, body.area_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -2277,6 +2322,24 @@ async fn rename_group_range(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct MoveGroupRangeBody {
+    id: u32,
+    #[serde(deserialize_with = "required_nullable_u32")]
+    parent_id: Option<u32>,
+}
+
+async fn move_group_range(
+    State(state): State<SharedState>,
+    body: Result<Json<MoveGroupRangeBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::move_group_range_impl(&state, body.id, body.parent_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateBuildingPartBody {
     name: String,
     kind: String,
@@ -2313,6 +2376,32 @@ async fn rename_building_part(
     Json(body): Json<RenameBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::rename_building_part_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+/// A missing destination must not silently mean "make root". Explicit JSON
+/// null is a valid root destination, but omitting `parentId` is an error.
+fn required_nullable_u32<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<u32>, D::Error> {
+    Option::<u32>::deserialize(deserializer)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveBuildingPartBody {
+    id: u32,
+    #[serde(deserialize_with = "required_nullable_u32")]
+    parent_id: Option<u32>,
+}
+
+async fn move_building_part(
+    State(state): State<SharedState>,
+    body: Result<Json<MoveBuildingPartBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::move_building_part_impl(&state, body.id, body.parent_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

@@ -2133,6 +2133,20 @@ pub fn delete_area_impl(state: &AppState, id: u32) -> Result<knx_projection::Pro
     )
 }
 
+pub fn rename_area_impl(
+    state: &AppState,
+    id: u32,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RenameArea {
+            id: knx_core::AreaId(id),
+            name,
+        },
+    )
+}
+
 pub fn create_line_impl(
     state: &AppState,
     area_id: u32,
@@ -2172,6 +2186,34 @@ pub fn delete_line_impl(state: &AppState, id: u32) -> Result<knx_projection::Pro
         state,
         knx_core::Command::DeleteLine {
             id: knx_core::LineId(id),
+        },
+    )
+}
+
+pub fn rename_line_impl(
+    state: &AppState,
+    id: u32,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RenameLine {
+            id: knx_core::LineId(id),
+            name,
+        },
+    )
+}
+
+pub fn move_line_to_area_impl(
+    state: &AppState,
+    id: u32,
+    area_id: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::MoveLineToArea {
+            id: knx_core::LineId(id),
+            area: knx_core::AreaId(area_id),
         },
     )
 }
@@ -2244,6 +2286,20 @@ pub fn rename_group_range_impl(
         knx_core::Command::RenameGroupRange {
             id: knx_core::GroupRangeId(id),
             name,
+        },
+    )
+}
+
+pub fn move_group_range_impl(
+    state: &AppState,
+    id: u32,
+    parent_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::MoveGroupRange {
+            id: knx_core::GroupRangeId(id),
+            parent: parent_id.map(knx_core::GroupRangeId),
         },
     )
 }
@@ -2321,6 +2377,20 @@ pub fn rename_building_part_impl(
         knx_core::Command::RenameBuildingPart {
             id: knx_core::BuildingPartId(id),
             name,
+        },
+    )
+}
+
+pub fn move_building_part_impl(
+    state: &AppState,
+    id: u32,
+    parent_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::MoveBuildingPart {
+            id: knx_core::BuildingPartId(id),
+            parent: parent_id.map(knx_core::BuildingPartId),
         },
     )
 }

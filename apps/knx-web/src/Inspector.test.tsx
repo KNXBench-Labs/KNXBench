@@ -18,11 +18,16 @@ const apiMock = vi.hoisted(() => ({
     diagnostics: [],
   }),
   moveDeviceToLine: vi.fn(),
+  moveLineToArea: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
+  moveBuildingPart: vi.fn(),
+  moveGroupRange: vi.fn(),
   setComObjectFlag: vi.fn(),
   linkComObject: vi.fn(),
   unlinkComObject: vi.fn(),
   setIndividualAddress: vi.fn(),
+  renameArea: vi.fn(),
+  renameLine: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -133,6 +138,301 @@ function setTextInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function movableBuildingTree(): ProjectTree {
+  const tree = twoInstallationTree();
+  tree.installations[0].buildings = [
+    {
+      id: 500, name: "Main", kind: "Building", devices: [],
+      children: [{
+        id: 501, name: "Floor", kind: "Floor", devices: [],
+        children: [{ id: 502, name: "Room", kind: "Room", devices: [], children: [] }],
+      }],
+    },
+    { id: 503, name: "Annex", kind: "Building", devices: [], children: [] },
+  ];
+  return tree;
+}
+
+it("moves a building part from Properties without offering itself or descendants as targets", async () => {
+  const tree = movableBuildingTree();
+  const onApplied = vi.fn();
+  apiMock.moveBuildingPart.mockResolvedValue(tree);
+  await renderInspector({ kind: "building_part", id: 501 }, tree, null, onApplied);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select");
+  expect(select?.value).toBe("500");
+  expect(Array.from(select!.options, (option) => option.value)).toEqual(["", "500", "503"]);
+  await act(async () => {
+    select!.value = "503";
+    select!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveBuildingPart).toHaveBeenCalledExactlyOnceWith(501, 503);
+  expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+});
+
+it("moves a building part to the building root with an explicit null parent", async () => {
+  const tree = movableBuildingTree();
+  apiMock.moveBuildingPart.mockResolvedValue(tree);
+  await renderInspector({ kind: "building_part", id: 501 }, tree);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select")!;
+  await act(async () => {
+    select.value = "";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveBuildingPart).toHaveBeenCalledExactlyOnceWith(501, null);
+});
+
+it("keeps the old building parent and shows a failed move instead of hiding it", async () => {
+  const tree = movableBuildingTree();
+  apiMock.moveBuildingPart.mockRejectedValue(new Error("parent is not available"));
+  await renderInspector({ kind: "building_part", id: 501 }, tree);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select")!;
+  await act(async () => {
+    select.value = "503";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveBuildingPart).toHaveBeenCalledExactlyOnceWith(501, 503);
+  expect(select.value).toBe("500");
+  expect(host!.querySelector(".field-error")?.textContent).toContain("parent is not available");
+});
+
+it("does not offer a building move for a later installation", async () => {
+  const tree = twoInstallationTree();
+  tree.installations[1].buildings = [
+    { id: 501, name: "Later building", kind: "Building", devices: [], children: [] },
+  ];
+  await renderInspector({ kind: "building_part", id: 501 }, tree);
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
+  expect(apiMock.moveBuildingPart).not.toHaveBeenCalled();
+});
+
+it("does not guess a parent when imported building placements are ambiguous", async () => {
+  const tree = movableBuildingTree();
+  tree.installations[0].buildings[1].children.push({
+    id: 501, name: "Duplicate", kind: "Floor", devices: [], children: [],
+  });
+  await renderInspector({ kind: "building_part", id: 501 }, tree);
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("This structure ID occurs more than once");
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+  expect(apiMock.moveBuildingPart).not.toHaveBeenCalled();
+});
+
+function movableRangeTree(): ProjectTree {
+  const tree = twoInstallationTree();
+  tree.installations[0].group_ranges = [
+    groupRange(400, "Main", "0/0/0", "0/7/255"),
+    { ...groupRange(401, "Misplaced", "1/1/0", "1/1/255"), parent: 400 },
+    { ...groupRange(403, "Nested", "1/1/0", "1/1/127"), parent: 401 },
+    groupRange(402, "Target", "1/0/0", "1/7/255"),
+  ];
+  return tree;
+}
+
+it("moves a group range from Properties without offering itself or descendants", async () => {
+  const tree = movableRangeTree();
+  const onApplied = vi.fn();
+  apiMock.moveGroupRange.mockResolvedValue(tree);
+  await renderInspector({ kind: "group_range", id: 401 }, tree, null, onApplied);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select");
+  expect(select?.value).toBe("400");
+  expect(Array.from(select!.options, (option) => option.value)).toEqual(["", "400", "402"]);
+  await act(async () => {
+    select!.value = "402";
+    select!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveGroupRange).toHaveBeenCalledExactlyOnceWith(401, 402);
+  expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+});
+
+it("sends an explicit null when moving a group range to the root", async () => {
+  const tree = movableRangeTree();
+  apiMock.moveGroupRange.mockResolvedValue(tree);
+  await renderInspector({ kind: "group_range", id: 401 }, tree);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select")!;
+  await act(async () => {
+    select.value = "";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveGroupRange).toHaveBeenCalledExactlyOnceWith(401, null);
+});
+
+it("keeps a group range's old parent and shows a rejected move", async () => {
+  const tree = movableRangeTree();
+  apiMock.moveGroupRange.mockRejectedValue(new Error("range outside parent"));
+  await renderInspector({ kind: "group_range", id: 401 }, tree);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select")!;
+  await act(async () => {
+    select.value = "402";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveGroupRange).toHaveBeenCalledExactlyOnceWith(401, 402);
+  expect(select.value).toBe("400");
+  expect(host!.querySelector(".field-error")?.textContent).toContain("range outside parent");
+});
+
+it("does not offer group range moves for later installations", async () => {
+  await renderInspector({ kind: "group_range", id: 301 }, twoInstallationTree());
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
+  expect(apiMock.moveGroupRange).not.toHaveBeenCalled();
+});
+
+it("does not guess a group range parent when ids or parent references are inconsistent", async () => {
+  const tree = movableRangeTree();
+  tree.installations[0].group_ranges.push({ ...groupRange(401, "Duplicate", "0/0/0", "0/0/1") });
+  await renderInspector({ kind: "group_range", id: 401 }, tree);
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("This structure ID occurs more than once");
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+});
+
+it.each([
+  ["area", 10, "Area A"],
+  ["line", 11, "Line A"],
+] as const)("renames a first-installation %s from Properties through one API request", async (kind, id, original) => {
+  const tree = deviceMoveTree();
+  const onApplied = vi.fn();
+  const rename = kind === "area" ? apiMock.renameArea : apiMock.renameLine;
+  rename.mockResolvedValue(tree);
+  await renderInspector({ kind, id }, tree, null, onApplied);
+  const input = host!.querySelector<HTMLInputElement>("label.inspector-field input");
+  expect(input?.value).toBe(original);
+  await act(async () => {
+    setTextInputValue(input!, "Renamed");
+    input!.dispatchEvent(new Event("focusout", { bubbles: true }));
+  });
+  expect(rename).toHaveBeenCalledExactlyOnceWith(id, "Renamed");
+  expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+});
+
+it.each(["area", "line"] as const)("refuses to rename a later-installation %s instead of guessing an owner", async (kind) => {
+  const tree = twoInstallationTree();
+  tree.installations[1].topology = [{ id: 71, name: "Later area", address: 2,
+    lines: [{ id: 72, name: "Later line", address: 1, devices: [] }] }];
+  await renderInspector({ kind, id: kind === "area" ? 71 : 72 }, tree);
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+  expect(host!.textContent).toContain(
+    kind === "line" ? "Rename, Move and Delete are only available" : "Rename and Delete are only available",
+  );
+  expect(apiMock.renameArea).not.toHaveBeenCalled();
+  expect(apiMock.renameLine).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["area", 10], ["line", 11], ["building_part", 501], ["group_range", 401],
+] as const)("refuses ambiguous %s IDs shared with a later installation", async (kind, id) => {
+  const tree = deviceMoveTree();
+  tree.installations[0].group_ranges = [groupRange(401, "First range", "0/0/0", "0/0/255")];
+  const later = twoInstallationTree().installations[1];
+  later.topology = [{ id: 10, name: "Later area", address: 2,
+    lines: [{ id: 11, name: "Later line", address: 2, devices: [] }] }];
+  later.buildings = [{ id: 501, name: "Later building", kind: "Room", children: [], devices: [] }];
+  later.group_ranges = [groupRange(401, "Later range", "1/0/0", "1/0/255")];
+  tree.installations.push(later);
+  await renderInspector({ kind, id }, tree);
+  expect(host!.textContent).toContain("This structure ID occurs more than once");
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.querySelector("button")).toBeNull();
+  expect(apiMock.renameArea).not.toHaveBeenCalled();
+  expect(apiMock.renameLine).not.toHaveBeenCalled();
+  expect(apiMock.moveBuildingPart).not.toHaveBeenCalled();
+  expect(apiMock.moveGroupRange).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["area", 10], ["line", 11], ["building_part", 501], ["group_range", 401],
+] as const)("refuses ambiguous duplicate %s IDs within one installation", async (kind, id) => {
+  const tree = deviceMoveTree();
+  tree.installations[0].group_ranges = [groupRange(401, "First range", "0/0/0", "0/0/255")];
+  if (kind === "area") tree.installations[0].topology.push({ id, name: "Duplicate", address: 2, lines: [] });
+  if (kind === "line") tree.installations[0].topology[0].lines.push({ id, name: "Duplicate", address: 3, devices: [] });
+  if (kind === "building_part") tree.installations[0].buildings.push({ id, name: "Duplicate", kind: "Room", children: [], devices: [] });
+  if (kind === "group_range") tree.installations[0].group_ranges.push(groupRange(id, "Duplicate", "1/0/0", "1/0/255"));
+  await renderInspector({ kind, id }, tree);
+  expect(host!.textContent).toContain("This structure ID occurs more than once");
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.querySelector("button")).toBeNull();
+});
+
+it("retains the original area name and shows the server error when rename fails", async () => {
+  apiMock.renameArea.mockRejectedValue(new Error("unknown area"));
+  const onApplied = await renderInspector({ kind: "area", id: 10 }, deviceMoveTree());
+  const input = host!.querySelector<HTMLInputElement>("label.inspector-field input");
+  expect(input?.value).toBe("Area A");
+  await act(async () => {
+    setTextInputValue(input!, "Other");
+    input!.dispatchEvent(new Event("focusout", { bubbles: true }));
+  });
+  expect(input?.value).toBe("Area A");
+  expect(host!.querySelector(".field-error")?.textContent).toBe("unknown area");
+  expect(onApplied).not.toHaveBeenCalled();
+});
+
+function lineMoveTree(): ProjectTree {
+  const tree = deviceMoveTree();
+  tree.installations[0].topology.push({
+    id: 20, name: "Area B", address: 2,
+    lines: [{ id: 21, name: "Line C", address: 1, devices: [] }],
+  });
+  return tree;
+}
+
+it("moves a selected line to an explicitly labelled area from Properties", async () => {
+  const tree = lineMoveTree();
+  const onApplied = vi.fn();
+  apiMock.moveLineToArea.mockResolvedValue(tree);
+  await renderInspector({ kind: "line", id: 12 }, tree, null, onApplied);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select");
+  expect(select?.value).toBe("10");
+  expect(Array.from(select!.options, (option) => option.value)).toEqual(["10", "20"]);
+  expect(select!.closest("label")?.textContent).toContain("Assigned area");
+  await act(async () => {
+    select!.value = "20";
+    select!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveLineToArea).toHaveBeenCalledExactlyOnceWith(12, 20);
+  expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+});
+
+it("shows why a line move failed and leaves its original area selected", async () => {
+  const tree = lineMoveTree();
+  apiMock.moveLineToArea.mockRejectedValue(new Error("address differs from assigned line"));
+  await renderInspector({ kind: "line", id: 12 }, tree);
+  const select = host!.querySelector<HTMLSelectElement>(".inspector-field select")!;
+  await act(async () => {
+    select.value = "20";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(apiMock.moveLineToArea).toHaveBeenCalledExactlyOnceWith(12, 20);
+  expect(select.value).toBe("10");
+  expect(host!.querySelector(".field-error")?.textContent).toContain("address differs from assigned line");
+});
+
+it("does not offer a line move for a later installation", async () => {
+  const tree = twoInstallationTree();
+  tree.installations[1].topology = [{ id: 71, name: "Later", address: 2,
+    lines: [{ id: 72, name: "Later line", address: 1, devices: [] }] }];
+  await renderInspector({ kind: "line", id: 72 }, tree);
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
+  expect(apiMock.moveLineToArea).not.toHaveBeenCalled();
+});
+
+it("does not guess a source area when a line is projected under multiple areas", async () => {
+  const tree = lineMoveTree();
+  tree.installations[0].topology[1].lines.push({
+    id: 12, name: "Duplicate", address: 2, devices: [],
+  });
+  await renderInspector({ kind: "line", id: 12 }, tree);
+  expect(host!.querySelector(".inspector-field select")).toBeNull();
+  expect(host!.textContent).toContain("This structure ID occurs more than once");
+  expect(host!.querySelector("label.inspector-field input")).toBeNull();
+  expect(apiMock.moveLineToArea).not.toHaveBeenCalled();
+});
+
 function deviceMoveTree(): ProjectTree {
   const device = {
     id: 42,
@@ -203,12 +503,12 @@ describe("Inspector — collapsed delete-restriction message", () => {
     expect(host!.textContent).not.toContain("{entity}");
   });
 
-  it("renders the 'Rename and Delete are only available for group ranges…' variant for a second-installation group range", async () => {
+  it("renders the 'Rename, Move and Delete are only available for group ranges…' variant for a second-installation group range", async () => {
     const tree = twoInstallationTree();
     await renderInspector({ kind: "group_range", id: 301 }, tree);
 
     expect(host!.textContent).toContain(
-      "Rename and Delete are only available for group ranges in the first installation.",
+      "Rename, Move and Delete are only available for group ranges in the first installation.",
     );
   });
 });

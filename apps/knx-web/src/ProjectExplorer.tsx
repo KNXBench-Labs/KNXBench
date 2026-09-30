@@ -255,7 +255,7 @@ function DeviceItem(props: {
 // deliberately does not interpret, see `Line`'s own doc comment) has no
 // dropdown to pick from for the same reason; `"MT-0"` (ETS's own default
 // for twisted-pair) is pre-filled so the common case needs no typing.
-function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => void }) {
+export function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => void }) {
   const { areaId, onCreated } = props;
   const t = useTranslate();
   const [name, setName] = useState("");
@@ -281,6 +281,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
     <li className="tree-new-row">
       <input
         value={address}
+        aria-label={t("workbench.address")}
         placeholder="1"
         onChange={(e) => setAddress(e.target.value)}
         onKeyDown={(e) => {
@@ -289,6 +290,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
       />
       <input
         value={name}
+        aria-label={t("inspector.name")}
         placeholder={t("explorer.newLinePlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
@@ -297,6 +299,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
       />
       <input
         value={mediumRef}
+        aria-label={t("structure.mediumRef")}
         placeholder="MT-0"
         onChange={(e) => setMediumRef(e.target.value)}
         onKeyDown={(e) => {
@@ -311,7 +314,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
   );
 }
 
-function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
+export function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
   const { onCreated } = props;
   const t = useTranslate();
   const [name, setName] = useState("");
@@ -336,6 +339,7 @@ function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
     <li className="tree-new-row">
       <input
         value={address}
+        aria-label={t("workbench.address")}
         placeholder="1"
         onChange={(e) => setAddress(e.target.value)}
         onKeyDown={(e) => {
@@ -344,6 +348,7 @@ function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
       />
       <input
         value={name}
+        aria-label={t("inspector.name")}
         placeholder={t("explorer.newAreaPlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
@@ -573,7 +578,7 @@ function NewGroupAddressRow(props: {
 // nests a third `NewGroupRangeRow` under a middle range, matching the
 // reference project's observed two-level depth (`GroupRange`'s own doc
 // comment in knx-core), even though the model itself doesn't cap nesting.
-function NewGroupRangeRow(props: {
+export function NewGroupRangeRow(props: {
   parentId?: number;
   onCreated: (tree: ProjectTree) => void;
 }) {
@@ -609,6 +614,7 @@ function NewGroupRangeRow(props: {
     <li className="tree-new-row">
       <input
         value={start}
+        aria-label={t("structure.rangeStart")}
         placeholder={formatGa("1/0/0")}
         onChange={(e) => setStart(e.target.value)}
         onKeyDown={(e) => {
@@ -617,6 +623,7 @@ function NewGroupRangeRow(props: {
       />
       <input
         value={end}
+        aria-label={t("structure.rangeEnd")}
         placeholder={formatGa("1/7/255")}
         onChange={(e) => setEnd(e.target.value)}
         onKeyDown={(e) => {
@@ -625,6 +632,7 @@ function NewGroupRangeRow(props: {
       />
       <input
         value={name}
+        aria-label={t("inspector.name")}
         placeholder={
           parentId === undefined
             ? t("explorer.newGroupRangePlaceholder")
@@ -665,7 +673,7 @@ const BUILDING_PART_KINDS = [
 // `BuildingItem` gets its own row, since `BuildingPart` has no depth
 // limit (`building.rs`'s own doc comment), unlike `GroupRange`'s
 // observed two-level depth.
-function NewBuildingPartRow(props: {
+export function NewBuildingPartRow(props: {
   parentId?: number;
   onCreated: (tree: ProjectTree) => void;
 }) {
@@ -690,7 +698,7 @@ function NewBuildingPartRow(props: {
 
   return (
     <li className="tree-new-row">
-      <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+      <select aria-label={t("structure.buildingKind")} value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
         {BUILDING_PART_KINDS.map((k) => (
           <option key={k} value={k}>
             {buildingPartKindLabel(t, k)}
@@ -699,6 +707,7 @@ function NewBuildingPartRow(props: {
       </select>
       <input
         value={name}
+        aria-label={t("inspector.name")}
         placeholder={
           parentId === undefined
             ? t("explorer.newBuildingPlaceholder")

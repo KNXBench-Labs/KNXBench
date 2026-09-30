@@ -145,17 +145,26 @@ pub fn sync_after_command(
             // Internal undo form of device creation/deletion; persistence is
             // covered by the same future incremental-sync work as above.
         }
-        Command::CreateArea { .. } => {
+        Command::CreateArea { .. } | Command::RestoreArea { .. } => {
             // Area persistence layer not yet implemented (Task 2 scope).
         }
         Command::DeleteArea { .. } => {
             // Area persistence layer not yet implemented (Task 2 scope).
         }
-        Command::CreateLine { .. } => {
+        Command::RenameArea { .. } => {
+            // Area name uses the existing whole-project save path, like create/delete.
+        }
+        Command::CreateLine { .. } | Command::RestoreLine { .. } => {
             // Line persistence layer not yet implemented (Task 3 scope).
         }
         Command::DeleteLine { .. } => {
             // Line persistence layer not yet implemented (Task 3 scope).
+        }
+        Command::RenameLine { .. } => {
+            // Line name uses the existing whole-project save path, like create/delete.
+        }
+        Command::MoveLineToArea { .. } | Command::RestoreLinePlacement { .. } => {
+            // Area membership currently persists through the whole-project save path.
         }
         Command::MoveDeviceToLine { .. } => {
             // Line/device-membership persistence layer not yet implemented (Task 4 scope).
@@ -163,7 +172,7 @@ pub fn sync_after_command(
         Command::SetIdAllocators { .. } | Command::ReserveIds { .. } => {
             // Allocators are reconstructed from persisted entity ids on load.
         }
-        Command::CreateGroupRange { .. } => {
+        Command::CreateGroupRange { .. } | Command::RestoreGroupRange { .. } => {
             // Group-range persistence layer not yet implemented (Task 5 scope).
         }
         Command::DeleteGroupRange { .. } => {
@@ -171,6 +180,9 @@ pub fn sync_after_command(
         }
         Command::RenameGroupRange { .. } => {
             // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::MoveGroupRange { .. } | Command::RestoreGroupRangePlacement { .. } => {
+            // Reparenting currently persists through the whole-project save path.
         }
         Command::LinkComObject { .. }
         | Command::UnlinkComObject { .. }
@@ -190,7 +202,7 @@ pub fn sync_after_command(
             // 3 task 2 adds only the `Command` variants and their
             // in-memory `apply` logic).
         }
-        Command::CreateBuildingPart { .. } => {
+        Command::CreateBuildingPart { .. } | Command::RestoreBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).
         }
         Command::DeleteBuildingPart { .. } => {
@@ -198,6 +210,9 @@ pub fn sync_after_command(
         }
         Command::RenameBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::MoveBuildingPart { .. } | Command::RestoreBuildingPartPlacement { .. } => {
+            // Reparenting currently persists through the whole-project save path.
         }
         Command::MoveDeviceToBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).

@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — U12 / ADR-0051 Debug UI paused at the safety boundary
+
+- Read-only review of `service_control_routes.rs` and
+  `knx-net/commissioning/service_control.rs`: the existing `POST` rejects an
+  off/non-boolean/unreadable debug setting before opening a tunnel, checks a
+  device-specific phrase, changes only bit 2 of the two-byte property and
+  reads it back. It does **not** persist the pre-write value/recovery plan.
+- The commissioning UI/status handover requests a backup audit before
+  exposing other UI write paths. Whether a complete device image or a
+  smaller property-specific recovery record is appropriate for this bit is
+  unresolved. No Debug toggle/action was added in this package; the server
+  remains default-off. Next: commissioning owner resolves and tests the
+  recovery policy; the UI owner then implements the explicit action.
+- Independent, read-only monitor control fields remain next in UI order.
+
 ## 2026-09-30 — Commissioning UI/status inventory and handover (no feature shipped)
 
 - Read-only inventory: device download and button-address programming have

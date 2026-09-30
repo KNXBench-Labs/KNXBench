@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / ADR-0051 safety pause)
+- **Timestamp:** 2026-09-30 17:57 CEST
+- **Web lock:** released by the UI session after the read-only ADR-0051 safety preflight; no `apps/knx-web` edits.
+- **Completed:** Audited the existing server gate, target-specific phrase and bit-2 read/modify/write/readback. Neither the route nor executor persists the pre-write property value; the commissioning handover requests a pre-write recovery-policy audit before a UI path exposes the write. Documented the unresolved safety boundary in `goal-ui.md`, KNOWN_LIMITATIONS §139, IMPLEMENTATION_STATUS and `.ai/logs/2026-09-30_codex_ui-service-control-safety.md`. Worktree-built `xtask check-anchors` and diff check passed; no code or live KNX operations.
+- **Pending/Next Steps:** **For the commissioning session:** define/test the property-specific pre-write recovery policy and hand back a safe route contract. **For the UI session:** do not expose the Debug toggle (it opens POST for all HTTP clients) or write action until then; continue with the independent U12 monitor-control display in a fresh worktree/lock, followed by read-only readiness/compare views. Return to Debug after the safety contract is resolved.
+- **Notes for Codex oder Claude:** This is a safety deferral, not rejection of accepted ADR-0051 and not proof that a full device-image backup is universally needed for one property. Concurrent `ui-handover-server` belongs to another session and was not touched; root foreign edits remain protected. Credentials and hardware targets were not logged.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 17:56 CEST
 - **Web lock:** held by Codex for U12 ADR-0051 (17:51 entry below); this handover made no Web-code edits and did not claim the lock.

@@ -163,6 +163,11 @@ The license permits private and commercial use, modification, and redistribution
 terms. Modified versions made available to users over a network must also offer those users
 the corresponding source code as required by the AGPL.
 
+In short: use KNXBench for paid work as much as you like. Building a **closed** product on
+top of it is not possible under the AGPL; for that, ask the maintainer about a commercial
+license. Contributions are accepted under the [Contributor License Agreement](CLA.md),
+which keeps that option open and promises contributors that their work stays AGPL.
+
 ## Before you point it at anything expensive
 
 This is one person's alpha, developed in the open and changing weekly. Imports have been

@@ -1,4 +1,22 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 16:45 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** User request: commercial use allowed, a closed product built
+  on KNXBench not. The license stays `AGPL-3.0-or-later`; new `CLA.md` (license
+  grant incl. proprietary sublicensing, patent license, AGPL-forever promise
+  with a fallback clause, German law), ADR-0053, PR template with the CLA
+  checkbox, README/FAQ/contributing text, KNOWN_LIMITATIONS §148, status entry.
+  `check-anchors` green. Log: `.ai/logs/2026-09-30_claude_contributor-license-agreement.md`.
+- **Pending/Next Steps:** Legal review of `CLA.md`, an organization agreement,
+  and the commercial license text itself (all §148). Review every outside PR
+  for the CLA sentence before merging; nothing checks it automatically.
+- **Notes for Codex oder Claude:** Do not merge an outside contribution without
+  the CLA sentence. Never relicense to a source-available license: CLA §4
+  forbids it for versions with outside contributions.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 16:06 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** `--partial both` live on `1.1.67` (user "starte mit

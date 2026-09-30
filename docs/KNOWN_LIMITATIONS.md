@@ -1,5 +1,43 @@
 # Known limitations
 
+## U12 structure editor scope (ISSUE-05)
+
+Area/line renames and line, building-part and group-range reparenting are
+local, undoable project commands. The centre workspace reuses the same
+creation forms and Inspector commands as the project explorer and Properties.
+All structure mutations still target **only the first installation**; later
+installations remain visible and savable. The centre cannot select an orphaned
+line that has no projected area, although the explicit line-move command can
+attach such an imported line by ID. Installation renaming is also still
+absent (§127).
+
+A line move changes its area relationship, **not** its numeric line address
+or any device's individual address. It refuses a destination with a duplicate
+line number or an addressed device outside the target area.line prefix.
+Duplicate line/area IDs, multiple owners and multiply placed devices are
+not guessed away. Area, line, building-part and group-range IDs repeated in
+one or more installations disable structural editing in the Inspector; direct
+commands refuse ambiguous IDs too. The UI does not repair or renumber
+imported duplicate identities automatically. Building-part moves refuse new
+cycles and ambiguous parent references. Group-range moves additionally
+require destination-span containment and no sibling overlap. The undo-only
+placement commands retain original sibling positions and may restore
+pre-existing imported invalid relationships; they do not permit a new invalid
+forward move. Deleting a non-empty area, line, building part or group range is
+non-cascading. Deletes refuse inconsistent parent/child references that would
+leave an unlisted dependent orphan, and their undo restores the original
+flat-list and parent-child positions rather than appending.
+
+Native `.knxdb` save/reopen is tested for these changes through the existing
+whole-project save path. Several structure commands still have no incremental
+store-sync update; a bare incremental-sync call is **not** a substitute for
+saving the project. No full ETS edit/round-trip parity is claimed. The
+first-installation UI was tested with mocked local API responses and Chromium;
+native WebKitGTK drag/drop, screen-reader operation and live bus behavior are
+not covered. Existing device-to-line/device-to-building drag/drop remains
+bound to its already validated commands; structural moves use labelled native
+select controls, not a new drag gesture.
+
 ## U11 device editor scope (ISSUE-09)
 
 A device placed in a line shows its line-derived area.line prefix and lets the

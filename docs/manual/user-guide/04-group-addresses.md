@@ -58,14 +58,20 @@ back.
 ## Group ranges
 
 A **group range** is the box a set of addresses lives in — the "Lighting" main group
-and its "Ground floor" middle group, in ETS terms. Ranges are created under the
-**Group Ranges** branch of the tree: start address, end address, name. A range created
-directly under the branch is a main range; a range created under a main range is a
-middle range. KNXBench offers those two levels, matching what real projects use.
+and its "Ground floor" middle group, in ETS terms. Under **Group addresses**
+in the main workspace, **Add group range at installation root** creates a
+main range. Select a main range to show **Add subrange inside …**. The same
+start-address, end-address and name fields are in the project explorer under
+**Group Ranges** and each main range. A selected middle range does not offer a
+third nesting level. Creation is limited to the first installation.
 
-Ranges can be renamed and deleted from the properties pane. A range that still
-contains addresses, or still has middle ranges inside it, is not deleted — the refusal
-says which.
+A selected range can be renamed, moved by choosing its parent (or the root),
+and deleted in the centre editor or Properties. A move preserves its address
+span and the addresses linked to it; the core refuses cycles, a destination
+that does not contain its span, and overlap with destination siblings. Imported
+ambiguous references are not used to guess a parent; an explicit repair can be
+undone without losing the imported original. A range that still contains
+addresses or child ranges cannot be deleted — the refusal says which.
 
 Ranges matter beyond tidiness for one reason: a group address that belongs to no range
 cannot be written to a `.knxproj` file. See

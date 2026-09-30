@@ -26,3 +26,6 @@ socket2 = { workspace = true, features = ["all"] }
 # workspace-wide, including for the knx-cli/knx-server bin artifacts it
 # also builds — see knx-core/src/scan.rs's ScanPlan::unchecked_for_tests.
 knx-core = { workspace = true, features = ["test-support"] }
+# K19's private telegram-capture test reads ETS's CommunicationLog XML.
+# Test-only: the library does not import that format.
+quick-xml.workspace = true

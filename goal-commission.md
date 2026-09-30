@@ -545,6 +545,11 @@ user assigned it to the commissioning/readiness session.
   addresses), and only if a decoder gap needs a regression test.
 - KNXBench does not import this capture format; adding an importer is a
   separate decision, not part of K19.
+- **Done 2026-09-30.** 71 of 71 decode, none refused or unknown; all 71
+  re-encode octet for octet past Ctrl1/Ctrl2. Found: the decoder drops
+  the priority (16 normal-priority telegrams), KNOWN_LIMITATIONS §147.
+  RESEARCH §19.14; test `crates/knx-net/tests/private_telegram_log.rs`
+  (`KNXBENCH_TELEGRAM_LOG`). No fixture was needed: no decoder gap.
 
 ## 3c. Later goals (not this stage)
 

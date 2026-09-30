@@ -1,4 +1,13 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 13:30 CEST
+- **Web lock:** untouched; held by the UI session as its newest entry says.
+- **Completed:** K19 done. 71/71 private telegrams decode and re-encode past Ctrl1/Ctrl2; `crates/knx-net/tests/private_telegram_log.rs` (`KNXBENCH_TELEGRAM_LOG`, aggregates only). Found KNOWN_LIMITATIONS §147: the decoder drops priority/repeat/hop count (16 normal-priority telegrams). RESEARCH §19.14.
+- **Pending/Next Steps:** §147 fix (`LDataFrame` carries Ctrl1/Ctrl2 fields) is a cross-cutting `knx-net` change: every `LDataFrame { .. }` literal gains fields. Commissioning lane otherwise: live-verification of a download stays gated on an explicit user go.
+- **Notes for Codex oder Claude:** The capture's path is private and not in the repo; it lies in the off-repo Windows profile. Never print its frames.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 12:40 CEST
 - **Web lock:** untouched; held by the UI session as its newest entry says.
 - **Completed:** `GET /api/device-readiness` (`apps/knx-server/src/device_readiness_routes.rs`), offline, no tunnel lock; 3 route tests without corpus, RED first.

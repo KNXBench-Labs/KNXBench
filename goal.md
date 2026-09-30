@@ -823,8 +823,9 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
   All three came through the cloud chain.
 - **§11 UX/UI issues: moved to [`goal-ui.md`](goal-ui.md) on 2026-09-28 (user decision).** A separate UI session (GPT/Codex) owns ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12 and 13, the UI half of ISSUE-08, the ADR-0038 review (ISSUE-06) and the File-menu rename. Its boundary table is `goal-ui.md` §5; the web lock is `goal-ui.md` §3.
   - The cloud track stopped on 2026-09-28. Its web queue (CT-7 to CT-10) is now `goal-ui.md` U4 to U7.
-- **§11 ISSUE-08 data half (stays here):** reproduce each symptom against installed product data, trace it source XML → database → enrichment → projection, count and classify the diagnostics, add language-aware object/DPT names (keeping canonical DPT ids), and carry evaluated active/visible state and evidenced channel ownership into the projection, with corpus regression counts. See the issue plan's ISSUE-08 checkboxes 1–4 and 6.
-  - It does not edit `apps/knx-web`. When it is merged, hand the UI session the new projection fields and the merge commit ("For the UI session:"); its U12 waits for that.
+- **§11 ISSUE-08 data half: done 2026-09-30.** P1 `a2ff938` (absent `IsActive` is active), P2 `dae6c1a` (evaluated `activation`, `channel`, diagnostic severity; ADR-0050), P3 `9795168` (`program_dpt`, `dpt_text`, `function_text`). Issue-plan checkboxes 1–4 and 6 ticked with evidence. `apps/knx-web` was not edited.
+  - Handed to the UI session under "For the UI session:" in `.ai/CURRENT_STATE.md` (handover `3606371`): the five server-only fields, how to show `program_dpt`, and that the ISSUE-08 UI half may start.
+  - Left open, documented: channel `@Name`/`@Number` for untitled channels (KNOWN_LIMITATIONS §146 — parser, schema migration, re-ingest).
 - **§8.1 to §8.3 and §8.5, doc hygiene:**
   - ROADMAP T37 still reads as open.
   - `ideas.md` still lists shipped work as open.

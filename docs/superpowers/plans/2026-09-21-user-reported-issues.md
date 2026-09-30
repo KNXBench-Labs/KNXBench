@@ -218,12 +218,12 @@
 
 **Interfaces:** Product data remains separate from project data. Generic labels are explicit fallbacks only after language-aware name/DPT resolution fails. Conditional visibility and channel grouping come from parsed/evaluated manufacturer data, never UI name heuristics.
 
-- [ ] Reproduce each symptom against installed product data and trace source XML/database → normalized product model → enrichment → projection → UI.
-- [ ] Count and classify diagnostics; fix resolvable mapping/import defects and document unsupported constructs with preserved source evidence.
-- [ ] Add language-aware object and DPT display-name resolution while retaining canonical DPT identifiers alongside names.
-- [ ] Carry evaluated active/visible state and evidenced channel ownership into the projection.
+- [x] Reproduce each symptom against installed product data and trace source XML/database → normalized product model → enrichment → projection → UI. (Data half, 2026-09-29/30: throwaway corpus probes, aggregates only. The "all inactive" symptom traced to the import boundary — schema ≥21 read an absent `IsActive` as `false` — fixed in P1 `a2ff938`; the rest traced to projection gaps closed in P2/P3. The UI step is the UI half.)
+- [x] Count and classify diagnostics; fix resolvable mapping/import defects and document unsupported constructs with preserved source evidence. (Panel `NoBranchMatched` 1016/978/61 counted and classified `info`, everything else `warning` (P2 `dae6c1a`); the `IsActive` defect fixed (P1); untitled channels and objects with no or multi-DPT product data documented, not guessed — KNOWN_LIMITATIONS §146.)
+- [x] Add language-aware object and DPT display-name resolution while retaining canonical DPT identifiers alongside names. (Names: T33 overlay, 0 corpus objects without one. DPT: `dpt_text` beside the canonical `dpt`/`program_dpt`; product `function_text` with per-instance module arguments — P3 `9795168`.)
+- [x] Carry evaluated active/visible state and evidenced channel ownership into the projection. (`ComObjectNode.activation` four-valued and `channel` from the evaluator's own `ActiveRef` owner — ADR-0050, P2 `dae6c1a`. Server-only `#[ts(skip)]` until the UI half adopts them.)
 - [ ] Render channel groups collapsed by default, preserve a user-expanded group while the device remains selected, and visibly distinguish inactive from unsupported data.
-- [ ] Add corpus regression counts so improved resolution cannot silently reduce another product application's data.
+- [x] Add corpus regression counts so improved resolution cannot silently reduce another product application's data. (`crates/knx-etsproj/tests/com_object_activity.rs` and `apps/knx-server/tests/com_object_activation_corpus.rs`: activation, channel, DPT and function-text counts for ETS4, ETS 6.3.0 and KV.)
 
 ### ISSUE-09: Device editor semantics and compact readable controls
 

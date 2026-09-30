@@ -29,7 +29,7 @@
   (`LsmIdx 5`, the same refusal as a download). 1.1.220 is refused as
   excluded. Nothing was written.
 
-## 2026-09-30 — U11 / ISSUE-09 device editor (branch verification)
+## 2026-09-30 — U11 / ISSUE-09 device editor (published on `main`)
 
 - The Inspector shows KNX flag letters **and** full English/German names in a
   compact 2×3 layout. Its group-link control adds Send + Receive as one
@@ -65,8 +65,16 @@
   125 Rust suites / 2,588 passed / 0 failed / 148 ignored / 0 corpus-skip
   notices, plus four `xtask` checks: layering, headers (311 well formed,
   161 headerless at ceiling), anchors (397 links / 215 Markdown files,
-  none dead) and corpus-gate integrity. The merged-result gates remain
-  before publication.
+  none dead) and corpus-gate integrity. After rebasing on the concurrent
+  ISSUE-08 and device-compare data work, the integration tree passed the
+  78-file web suite / 1,213 tests, TypeScript, production build and six
+  local-only Chromium cases. Its corpus-backed Rust gate passed fmt, strict
+  Clippy, 130 suites / 2,636 passed / 0 failed / 152 ignored / 0 corpus-skip
+  notices. All four `xtask` checks remained green (headers 318 well formed,
+  161 headerless at ceiling; 397 links / 216 Markdown files, none dead).
+  The fast-forward candidate `f8ca043` was published to `main` and read
+  back from the exact remote ref. The branch gate above predates the rebase;
+  the integration gate does not.
 - Sources and scope: `docs/RESEARCH.md` §20.2; `docs/KNOWN_LIMITATIONS.md`
   U11 device-editor section. Later installations can show an address editor,
   but line moves still target the first installation. This is an offline

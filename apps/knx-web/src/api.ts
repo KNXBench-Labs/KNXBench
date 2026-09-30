@@ -1445,6 +1445,49 @@ export interface DeviceDownloadStatusResponse {
   backupFile: string | null;
 }
 
+// Offline GET /api/device-readiness (device_readiness_routes.rs). Codes and
+// categories remain open strings so a new server value stays visible.
+export interface DeviceReadinessRow {
+  address: string | null;
+  name: string;
+  programRef: string;
+  readiness: string;
+  category: string | null;
+  detail: string | null;
+  steps: number | null;
+  octets: number | null;
+}
+
+export interface DeviceReadinessResponse {
+  devices: DeviceReadinessRow[];
+  counts: Record<string, number>;
+}
+
+export function getDeviceReadiness(): Promise<DeviceReadinessResponse> {
+  return request("/api/device-readiness");
+}
+
+// POST /api/device-compare (device_compare_routes.rs): read-only management
+// tunnel. This UI requests the complete plan, without optional `partial`.
+export interface DeviceCompareResponse {
+  address: string;
+  deviceName: string;
+  programId: string;
+  written: boolean;
+  partial: boolean;
+  mask: number;
+  manufacturer: number;
+  loadStates: { machine: string; state: string }[];
+  octets: number;
+  differingOctets: number;
+  same: boolean;
+  changes: { address: number; segment: string | null; device: number[]; project: number[] }[];
+}
+
+export function compareDevice(address: string, gateway: string): Promise<DeviceCompareResponse> {
+  return request("/api/device-compare", { method: "POST", body: JSON.stringify({ address, gateway }) });
+}
+
 export function planDeviceDownload(address: string): Promise<DeviceDownloadPlan> {
   return request("/api/device-download/plan", {
     method: "POST",

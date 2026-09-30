@@ -7,6 +7,15 @@
 
 ---
 
+- **Last Agent:** codex (UI U12 / readiness and compare candidate)
+- **Timestamp:** 2026-09-30 20:15 CEST
+- **Web lock:** held by the UI session for U12 read-only readiness and device-compare until the package is published.
+- **Completed:** Added Bus diagnostics **Device checks** with offline per-device readiness and a two-step read-only comparison of one uniquely addressed, plannable device. Unknown grades, refusal/evidence, zero octets, load states and byte ranges are visible; duplicate addresses and unexpected write/scope/count responses fail closed. New typed clients use the actual `GET /api/device-readiness` and `POST /api/device-compare`; the earlier `/api/readiness` shorthand was corrected. No live tunnel/device action. Candidate evidence: Web 80 files / 1,270 tests, local mocked Chromium 4/4 new + 4/4 monitor + 10/10 existing, TypeScript/build green; pre-upstream Rust 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 SKIP, strict Clippy, fmt/four xtask checks; focused simulator readiness 3/3 and compare 6/6. TDD RED and two safety mutations caught. Detail in `.ai/logs/2026-09-30_codex_ui-readiness-compare.md`.
+- **Pending/Next Steps:** Commit the reviewed candidate, rebase onto `origin/main` (three commissioning commits arrived during this package), preserve their `.ai` and status entries, then run integrated gates and publish with remote readback. Release the Web lock and clean only this package's artifacts. Afterward re-evaluate ADR-0051 Debug UI against the newly published property-specific recovery contract; no write path is authorized by this handover.
+- **Notes for Codex oder Claude:** Upstream `44b42cee`, `6a45fa02`, `afec251d` added the K12 durable property backup/receipt, not a full image; do not silently overwrite that handover. The root checkout remains dirty and behind; it was not modified. No credentials or private device/corpus contents here.
+
+---
+
 - **Last Agent:** codex (commissioning / K12 service-control recovery)
 - **Timestamp:** 2026-09-30 19:48 CEST
 - **Web lock:** untouched; UI session holds it for read-only readiness/compare (see next entry). No Web source was changed here.

@@ -49,6 +49,7 @@ mod errors;
 mod fs_routes;
 mod load_progress;
 pub use load_progress::*;
+mod one_shot_activity;
 mod paths;
 mod routes;
 mod session_log;

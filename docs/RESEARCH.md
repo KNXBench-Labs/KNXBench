@@ -6070,11 +6070,20 @@ gateway `172.18.250.1:3671`. Evidence in
   so `A_IndividualAddressSerialNumber_Write` left as Ctrl1 `BCh` instead of
   `B0h`. Fixed 2026-09-30 (`sent_at_system_priority` in `cemi.rs`), with the
   test first RED on exactly that octet.
-- **[I] Whether the priority is why the write was ignored is not known.**
-  The Read with the same wrong priority *was* answered (K12 find-serial,
-  2026-09-29 and today), so the device does not filter low-priority
-  broadcasts in general. A second live K12 run with the fix answers it;
-  until then it is a hypothesis.
+- **[V] The priority was not why the write was ignored.** Second run at
+  12:40–12:42 with a binary built from `c451fa95` (system priority): scan
+  `1.1.67` occupied / `1.1.68` vacant, bit 2 `0000h` → `0004h` (read back),
+  `address-by-serial 1.1.68` → again *"still answers from 1.1.67"*,
+  `find-serial` → `1.1.67`, scan unchanged, bit 2 back to `0000h` (read
+  back twice), dump 180 lines byte-identical to the morning's. Caveat: this
+  proves what KNXBench *requested* in the cEMI frame; no bus-monitor trace
+  shows the priority the gateway put on the wire.
+- **[I] Remaining explanations, none tested:** the MDT firmware does not
+  implement `A_IndividualAddressSerialNumber_Write` although it answers
+  the Read; it needs a
+  restart or programming mode for the bit to take effect; or the gateway
+  alters the broadcast. The programming-button path (MP §2.3) works on this
+  device and stays the way to re-address it.
 - **[V] A partial download interrupted between two table loads leaves the
   association table `Loading`.** `--partial group-addresses` (21 steps,
   1022 octets, backup of 3 regions kept first) was stopped in step 17 of

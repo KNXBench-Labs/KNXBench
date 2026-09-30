@@ -18,3 +18,8 @@
 - Documentation updated: `goal-ui.md` U12, `docs/IMPLEMENTATION_STATUS.md`, `docs/KNOWN_LIMITATIONS.md` §147 and `docs/manual/user-guide/07-bus-and-interfaces.md`. §147's UI display gap is closed, without claiming a new live-bus test or full ETS compatibility.
 - ADR-0051 Debug toggle/device write remains paused until a cross-route pre-write recovery policy is defined and tested; no part of this package changes that boundary.
 - Next UI package after publishing and releasing the lock: U12 readiness and read-only device-compare views. Work in another isolated worktree with a newly acquired Web lock; no production bus activity.
+
+## Publication
+
+- The reviewed feature `6b2841fe0062c7d0ebdaf2a6c4fc3b06804be681` was fast-forward pushed to `origin/main`; remote readback matched exactly. The root checkout had unrelated dirty files and lagged upstream; it was not merged, reset or edited.
+- On the publishing-equivalent tree, the same corpus-backed Rust suite again reported 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 SKIP; strict Clippy, fmt, four xtask checks, Web 78/1,258, TypeScript/build and mocked browsers 4/4 + 10/10 passed.

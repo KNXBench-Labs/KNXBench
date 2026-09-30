@@ -1,4 +1,25 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 12:45 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** Live on `1.1.67` (user go "1 alle go"; RESEARCH §19.15):
+  bit 2 set/cleared via `service-control` (read back); K12 serial write
+  still ignored with bit 2 set; K15 `--partial group-addresses` stopped in
+  step 17/21 by an agent-set shell timeout → association table `Loading`;
+  repaired with the complete option-C download (all `Loaded`, compare
+  identical, dump byte-identical). Offline fix: address broadcasts now at
+  system priority (AL §3.2.2–§3.2.5, `cemi.rs`), RED→GREEN.
+- **Pending/Next Steps:** User approved a second K12 run after the repair
+  with the priority fix: bit 2 on → `address-by-serial 1.1.68` → back to
+  `1.1.67` → bit 2 off → dump compare. Run it from a binary built from the
+  merged fix. K13/K14 not run (no destructive reset requested).
+- **Notes for Codex oder Claude:** Writes to `1.1.67` took ~6 s each today
+  (1.5 s yesterday); never wrap a download in `timeout` below ~1 h. The
+  scratch product DB for MDT push buttons must be ingested first
+  (`products ingest … --product-db`); the default DB lacks the program.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 11:41 CEST
 - **Web lock:** untouched; docs only.
 - **Completed:** Session end (user). Remaining work handed to the goals:

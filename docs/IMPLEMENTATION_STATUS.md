@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Address broadcasts go out at system priority (AL §3.2.2–§3.2.5)
+
+- `crates/knx-net/src/cemi.rs`: `FrameControl::default_for` now takes the
+  service and gives `A_IndividualAddress_Write/_Read`,
+  `A_IndividualAddressSerialNumber_Read/_Write` and
+  `A_DomainAddressSerialNumber_Read/_Write` system priority (Ctrl1 `B0h`
+  instead of `BCh`), as each AL clause requires. Every other request keeps
+  its previous control field; received frames keep theirs (§147).
+- Found live: with `PID_SERVICE_CONTROL` bit 2 set, `1.1.67` still ignored
+  the serial-number write (RESEARCH §19.15). Whether the priority is why is
+  open until a second live run.
+- Tests: all six services pinned at system priority, first RED on the
+  write's Ctrl1 octet; one older test that pinned `BCh` for
+  `A_IndividualAddress_Read` now pins `B0h` with the SB bit.
+
 ## 2026-09-30 — received control fields reach the monitor (§147 consumers)
 
 - `knx bus monitor --control`: each line gains `[priority <p>, hop count

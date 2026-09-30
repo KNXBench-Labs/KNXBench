@@ -37,6 +37,15 @@
 
 ---
 
+- **Last Agent:** codex (UI U12 / ISSUE-05 closeout)
+- **Timestamp:** 2026-09-30 13:06 CEST
+- **Web lock:** held by this UI session; U12/ISSUE-05 is published, and the next U12 UI work item will take over in a fresh isolated worktree. Do not edit `apps/knx-web` concurrently.
+- **Completed:** The structure editor feature commit `997af0b5053610237af4dbd78a304906a47352da` was rebased on `5783b238`, pushed without force to `origin/main`, and read back as the exact remote SHA. Area/line rename, building/range rename and reparenting, line moves, contextual creation, exact structural delete undo, imported-ID ambiguity guards, Store/HTTP/Web wiring and documentation are included. Post-rebase Rust 136 suites / 2,746 passed / 0 failed / 160 ignored / 0 `SKIP:`; strict fmt/Clippy, Web 78 files / 1,246 tests plus production build, all four xtask gates, six local Chromium regressions and six centre-layout cases passed.
+- **Pending/Next Steps:** Next in `goal-ui.md`: ISSUE-08 UI half (DPT selection data half already merged), then U12 handover items (§146 labels, ADR-0051 Debug toggle, monitor `control` column, readiness/compare). Close out only U12-owned scratch/target/corpus link and this worktree after the documentation handover commit has been published and read back; then reserve a new isolated worktree and move the Web lock to the next item. No live KNX bus connection or device write is authorized in the UI track.
+- **Notes for Codex oder Claude:** Root worktree at `60613033` still has five foreign dirty entries (`.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md`, `docs/paperclip-shutdown/` plus another); do not reset, stash or commit them. Remote `origin/main` is the published integration target; local root may lag until its owner reconciles those changes. `KNXBench.worktrees/k12-live` belongs to the commissioning session and must not be removed. The prior Claude handover below remains intact.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 11:41 CEST
 - **Web lock:** untouched; docs only.

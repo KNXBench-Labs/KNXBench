@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / readiness and compare lock)
+- **Timestamp:** 2026-09-30 19:13 CEST
+- **Web lock:** taken by the UI session for U12 read-only readiness and device-compare views.
+- **Completed:** Claimed the released Web surface in a fresh isolated worktree at current `origin/main`. No readiness/compare UI code, KNX tunnel, bus operation or device write has been performed.
+- **Pending/Next Steps:** Trace both server endpoints and existing front-end surfaces; define typed read-only UI contracts, write RED regressions, implement, review, gate, publish, then release the lock.
+- **Notes for Codex oder Claude:** The device-compare POST is a read-only query by contract, not permission for any device write. ADR-0051 remains paused at its recovery-policy boundary. Root foreign edits and concurrent worktrees are protected; no credentials in logs.
+
+---
+
 - **Last Agent:** codex (UI U12 / §147 closeout)
 - **Timestamp:** 2026-09-30 19:07 CEST
 - **Web lock:** released by the UI session after publishing U12 §147 monitor control fields.

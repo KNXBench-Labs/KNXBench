@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — Active limitations and task backlog reconciled (docs only)
+
+- Removed 38 wholly resolved or withdrawn numbered KNOWN_LIMITATIONS
+  entries and one obsolete corpus-test note. Legacy fragment anchors used by
+  repository links are retained. The active document has 110 numbered
+  headings: 109 classified in LIMITATION_TRIAGE, §105 awaiting on-wire
+  evidence; §130 occurs twice. Partially solved entries retain their actual
+  remaining boundaries rather than disappearing with the finished work.
+- ROADMAP now distinguishes completed Session 0–7 milestones from verified
+  product scope and current safety gates. The goal files no longer dispatch
+  K1–K19, U0–U12 or completed PDB/Paperclip packages. U13's independent
+  review and ISSUE-12's two evidence boxes remain open; the chosen review
+  attempt was service-refused before a verdict. ISSUE-04 is evidenced and
+  checked. Confirmed public K6/serial/K13 address writes remain pre-tunnel
+  refused pending action-specific durable recovery, while `1.1.32` has
+  bounded read-only presence/identity evidence only (RESEARCH §24). The new
+  Debug UI uses a property-only backup; no hardware or full-device recovery
+  claim follows.
+- Documentation only: no source code, device, firewall or product data
+  changed. Anchor, triage-count and diff checks ran on this isolated tree;
+  the native/UI and whole-product test suites were not rerun for the edit.
+
 ## 2026-10-01 — K6 alternate candidate: bounded read-only presence
 
 - A dry run scoped `knx bus scan` to exactly `1.1.32`. One live read-only

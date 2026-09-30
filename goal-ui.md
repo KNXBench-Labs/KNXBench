@@ -276,6 +276,24 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
 - **ISSUE-08 UI half** starts only after the goal.md session has announced
   the ISSUE-08 data half as merged (§6). It uses the projection fields that
   session delivers, and invents no name heuristics.
+- **Handed over 2026-09-30 (goal.md session), each needs the web lock:**
+  1. **§146 channel labels:** show `channel.name` and `channel.number`
+     (ADR-0052, schema v18) verbatim, never composed into `text`, never
+     translated. Lifts KNOWN_LIMITATIONS §146 fully.
+  2. **ADR-0051 Debug toggle:** a clearly marked "Debug" section in
+     Settings with the key `debugIndividualAddressWriteEnable` (default
+     off, warning text), and a device action calling
+     `GET`/`POST /api/device/service-control` with the scope's own phrase
+     `I confirm individual-address write enable to <address>`. The server
+     already refuses with 403 while the key is not `true`; the UI must not
+     be the only gate.
+  3. **Monitor control fields (§147 consumers):** `/api/bus/monitor/telegrams`
+     rows carry `control: {priority, repeated, hopCount}` (`null` on the
+     closed-session marker). Show them as a column or tooltip; `repeated`
+     is `null` on anything but `L_Data.ind` and must stay unshown then.
+  4. **Readiness and device-compare views:** the APIs exist
+     (`/api/readiness` `b72a6b6`, `POST /api/device-compare` `76bcce74`);
+     no view shows them yet.
 
 ### U13 — Close the UI track
 

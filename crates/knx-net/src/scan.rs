@@ -824,6 +824,7 @@ mod tests {
                             destination: Destination::Individual(self.assigned),
                             transport: Tpci::UnnumberedData,
                             service: ApplicationService::NoApplicationPdu,
+                            control: None,
                         }));
                     }
                 }
@@ -841,6 +842,7 @@ mod tests {
                         destination: Destination::Individual(target),
                         transport: Tpci::Connect,
                         service: ApplicationService::NoApplicationPdu,
+                        control: None,
                     };
                     let _ = self.tx.send(TunnelEvent::Telegram(frame));
                 }
@@ -878,6 +880,7 @@ mod tests {
                             descriptor_type: 0,
                             data: bytes.to_vec(),
                         },
+                        control: None,
                     };
                     let _ = self.tx.send(TunnelEvent::Telegram(frame));
                 }
@@ -888,6 +891,7 @@ mod tests {
                         destination: Destination::Individual(self.assigned),
                         transport: Tpci::Disconnect,
                         service: ApplicationService::NoApplicationPdu,
+                        control: None,
                     };
                     let _ = self.tx.send(TunnelEvent::Telegram(frame));
                 }
@@ -1031,6 +1035,7 @@ mod tests {
                 destination: Destination::Individual(addr(1, 1, 1)),
                 transport: Tpci::Disconnect,
                 service: ApplicationService::NoApplicationPdu,
+                control: None,
             },
         );
 

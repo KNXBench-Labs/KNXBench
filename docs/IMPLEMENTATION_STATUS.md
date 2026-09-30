@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — cEMI frames keep their priority, repeat flag and hop count
+
+- `LDataFrame::control: Option<FrameControl>` (`crates/knx-net/src/cemi.rs`):
+  Ctrl1 priority, repeat and ack request, Ctrl2 hop count (EMI_IMI v01.04.02
+  AS §4.1.5.3.2). `decode_l_data` fills it, normalised to `None` when the
+  fields equal the encoder's defaults; `LDataFrame::effective_control()`
+  reads them; `encode_l_data` writes them and refuses a hop count above 7
+  (`CemiError::InvalidHopCount`). `TransmissionPriority::from_bits` in
+  `knx-core` decodes the priority code.
+- Every sender builds its frames with `control: None` and sends the same
+  octets as before, §105's system-priority control frames included (pinned
+  in `without_control_the_encoder_keeps_its_defaults`).
+- KNOWN_LIMITATIONS §147 lifted: the private capture re-encodes 71/71 whole.
+  The bus monitor and the server do not show the fields yet.
+
 ## 2026-09-30 — U10 / ISSUE-12: discovery observed end to end
 
 - After the user added a `ufw` rule for incoming UDP from *source* port

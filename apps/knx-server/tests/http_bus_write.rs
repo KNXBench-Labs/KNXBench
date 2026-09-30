@@ -579,6 +579,7 @@ async fn a_non_three_level_projects_telegram_destination_round_trips_through_wri
                 destination: Destination::Group(GroupAddress::from_raw(1)),
                 transport: knx_net::Tpci::UnnumberedData,
                 service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+                control: None,
             }))
             .unwrap();
 
@@ -641,6 +642,7 @@ async fn style_change_refreshes_the_active_session_without_reconnecting() {
             destination: Destination::Group(GroupAddress::from_raw(1)),
             transport: knx_net::Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            control: None,
         }))
         .unwrap();
 
@@ -702,6 +704,7 @@ async fn undoing_a_style_change_refreshes_monitor_formatting_and_write_parsing()
             destination: Destination::Group(GroupAddress::from_raw(1)),
             transport: knx_net::Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            control: None,
         }))
         .unwrap();
     let destination = poll_until_first_destination(&app).await;
@@ -759,6 +762,7 @@ async fn redoing_a_style_change_refreshes_monitor_formatting_and_write_parsing()
             destination: Destination::Group(GroupAddress::from_raw(1)),
             transport: knx_net::Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            control: None,
         }))
         .unwrap();
     let destination = poll_until_first_destination(&app).await;

@@ -754,6 +754,7 @@ mod tests {
                 descriptor_type: 2,
                 data: EXAMPLE_16.to_vec(),
             },
+            control: None,
         };
         assert_eq!(info_report(&answer), None);
     }

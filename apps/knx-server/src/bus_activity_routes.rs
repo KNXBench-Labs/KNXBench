@@ -1,8 +1,8 @@
 //! Read-only snapshot of the server's retained bus sessions.
 //!
 //! This is deliberately not a universal bus-activity ledger: one-shot
-//! commands have no retained session, and a successful poll cannot reconstruct
-//! an operation that began and ended between polls. `coverage: partial` and
+//! commands are not all tracked, and a server restart loses its in-memory
+//! history. `coverage: partial` and
 //! `untracked` are part of the response contract, not UI decoration.
 use axum::extract::State;
 use axum::routing::get;
@@ -25,11 +25,15 @@ struct ActivitySnapshot {
     coverage: &'static str,
     /// At most one session per kind, in kind order rather than time order.
     sessions: Vec<SessionActivity>,
+    /// Short operations observed during this server lifetime, oldest first.
+    one_shot: Vec<crate::one_shot_activity::OneShotActivity>,
+    /// Oldest completed records evicted by the bounded in-memory ring.
+    one_shot_dropped: u64,
     /// A lock is held; the underlying route may be connecting, writing, or
     /// stopping. No target or operation type can safely be inferred from it.
     busy_locks: Vec<&'static str>,
-    /// One-shot operations are never retained; their past activity is absent.
-    untracked: [&'static str; 5],
+    /// One-shot operations not instrumented yet; their activity is absent.
+    untracked: [&'static str; 4],
 }
 
 #[derive(Serialize)]
@@ -166,13 +170,15 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
         }
         Err(_) => busy_locks.push("lineScan"),
     }
+    let (one_shot, one_shot_dropped) = state.one_shot_activity.snapshot_with_dropped();
     Json(ActivitySnapshot {
         server_incarnation: state.server_incarnation.clone(),
         coverage: "partial",
         sessions,
+        one_shot,
+        one_shot_dropped,
         busy_locks,
         untracked: [
-            "deviceCompare",
             "groupWrite",
             "serialAddress",
             "serialLookup",

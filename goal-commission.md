@@ -611,6 +611,12 @@ step toward the requested global status bar, **not** that status bar or full
 action coverage. Web UI remains with the separate lock owner; no additional
 live write was authorized or performed.
 
+**Backend follow-up, 2026-09-30:** read-only device comparisons now appear as
+bounded, server-lifetime one-shot activity with target, time and
+finished/failed/unknown outcome; aborted requests never become fabricated
+successes. Retention loss is counted. Other one-shot actions remain untracked,
+the API still declares partial coverage, and no UI or hardware was changed.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

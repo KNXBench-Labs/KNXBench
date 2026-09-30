@@ -141,11 +141,21 @@ async fn compare(
         ));
     }
 
-    let tunnel = state
-        .connector
-        .connect_tunnel(gateway)
-        .await
-        .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    // Register only after validation and gateway-conflict checks. A dropped
+    // request leaves `unknown`, never a fabricated successful comparison.
+    let activity = state
+        .one_shot_activity
+        .start("deviceCompare", target.to_string());
+    let tunnel = match state.connector.connect_tunnel(gateway).await {
+        Ok(tunnel) => tunnel,
+        Err(e) => {
+            activity.finish("failed");
+            return Err(ApiError::with_status(
+                StatusCode::BAD_GATEWAY,
+                e.to_string(),
+            ));
+        }
+    };
     let compared = compare_with_plan(
         &TunnelTransport(tunnel.as_ref()),
         contactable,
@@ -154,6 +164,11 @@ async fn compare(
     )
     .await;
     let _ = tunnel.disconnect().await;
+    activity.finish(if compared.is_ok() {
+        "finished"
+    } else {
+        "failed"
+    });
     drop(scan);
     drop(monitor);
     drop(programming);

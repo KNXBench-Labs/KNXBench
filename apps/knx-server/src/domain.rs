@@ -156,6 +156,9 @@ pub struct AppState {
     /// the same reason as `device_download`.
     pub address_programming: tokio::sync::Mutex<Option<crate::AddressProgrammingSession>>,
     pub next_address_programming_id: std::sync::atomic::AtomicU64,
+    /// Server-lifetime, bounded evidence for short bus actions. Never a
+    /// persistent audit trail or a replacement for per-action result routes.
+    pub one_shot_activity: std::sync::Arc<crate::one_shot_activity::OneShotLog>,
     /// The Standard's figures in production; tests shorten them.
     pub address_programming_timing: knx_net::SessionTiming,
     /// Quiet time between two button rounds (`ButtonWait::DEFAULT_PAUSE`
@@ -212,6 +215,7 @@ impl AppState {
             device_download_timing: knx_net::SessionTiming::default(),
             address_programming: tokio::sync::Mutex::new(None),
             next_address_programming_id: std::sync::atomic::AtomicU64::new(1),
+            one_shot_activity: std::sync::Arc::new(crate::one_shot_activity::OneShotLog::default()),
             address_programming_timing: knx_net::SessionTiming::default(),
             address_programming_pause:
                 knx_net::commissioning::programming_button_wait::ButtonWait::DEFAULT_PAUSE,

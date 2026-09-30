@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / §147 closeout)
+- **Timestamp:** 2026-09-30 19:07 CEST
+- **Web lock:** released by the UI session after publishing U12 §147 monitor control fields.
+- **Completed:** Published reviewed feature `6b2841fe0062c7d0ebdaf2a6c4fc3b06804be681` to `origin/main` with matching remote readback. The monitor's Control column/details now show server-supplied priority/hop count and distinguish true/false/null/absent repeat evidence; old servers and the session-closed marker are not guessed. EN/DE and keyboard path covered. On the publishing-equivalent tree: Web 78 files / 1,258 tests, TypeScript/build, mocked Chromium 4/4 new and 10/10 existing; corpus-backed Rust 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 SKIP, strict Clippy, fmt, four xtask gates and diff check green. No live KNX operation. Details in `.ai/logs/2026-09-30_codex_ui-monitor-control.md`.
+- **Pending/Next Steps:** U12 readiness and read-only device-compare views are next. Create a fresh isolated worktree from current `origin/main` and explicitly take the released Web lock before UI edits. ADR-0051 Debug/service-control UI remains deferred at the cross-route recovery-policy boundary.
+- **Notes for Codex oder Claude:** Root `main` lags the remote and carries foreign edits to `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md` and untracked documents; none was modified or reset. This package was published by a normal remote fast-forward from the isolated worktree. Do not claim a root checkout merge. Credentials/private corpus contents were not copied.
+
+---
+
 - **Last Agent:** codex (UI U12 / §147 candidate)
 - **Timestamp:** 2026-09-30 18:58 CEST
 - **Web lock:** held by the UI session for U12 §147 until this reviewed package is published and the release entry lands.

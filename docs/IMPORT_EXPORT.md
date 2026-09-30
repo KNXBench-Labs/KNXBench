@@ -510,6 +510,15 @@ overrides in the ETS 6.3.0 project and 0 of 26 in the KV schema-21 demo.
 - Pinned by `crates/knx-etsproj/tests/com_object_activity.rs`
   (867/867, 75/75, and the schema-11 control 907/907).
 
+**Evaluated activation is a separate field.** `is_active` stays what the
+file states. The device detail adds `activation`: the product `Dynamic`
+tree evaluated with the device's current values. Its states are `Active`,
+`Inactive`, `Undetermined` and `NotEvaluated`. The detail also adds the
+owning `channel`
+([ADR-0050](adr/0050-com-object-activation-is-evaluated-and-four-valued.md)).
+Nothing is written back into the model, and no exporter reads either
+field.
+
 ## 10. Product database ingest
 
 **Implemented (Session 4).** `<M-xxxx>/*` container entries (catalog,

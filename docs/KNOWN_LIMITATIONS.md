@@ -9069,8 +9069,9 @@ encoder writes them when the caller set them, and
   no product translates `@Name`. `@Number` is text: 5 of 1,268 corpus
   channels hold a value that is not a number. What the standard means by
   either attribute is not documented in the schema text available here;
-  KNXBench shows them as written. Until the UI adopts the two fields, it
-  shows a generic label instead of an invented one.
+  KNXBench shows them as written. The UI now uses `@Name` as the heading
+  when `@Text` is absent and shows `@Number` as text, without composing or
+  translating either value.
 - **`Undetermined`.** The evaluation cannot decide in these cases:
   - two module instances with one `RefId` (D40);
   - a scoped activation that no imported instance owns;
@@ -9087,18 +9088,22 @@ encoder writes them when the caller set them, and
   DPT text and function text now have generated TypeScript bindings. The
   device editor groups by the supplied opaque key, shows all four evaluated
   states plus the stored claim, and leaves unmatched objects inspectable.
-  `ComObjectChannel::name` and `number` also reach TypeScript but are not
-  yet displayed; a channel without `@Text` retains the generic **Untitled
-  channel** label until the separate §146 UI step. Missing and multi-choice
-  DPTs still have no chosen identifier.
+  **§146 channel-label follow-up (2026-09-30):** the UI shows `name` and
+  `number` without changing the translated `text`: it uses `name` as the
+  heading only if `text` is absent, shows a separate name fact when text is
+  present, and always shows a present number as an uninterpreted string.
+  The channel-label gap is lifted. Missing and multi-choice DPTs still have
+  no chosen identifier; genuinely undetermined activations remain visible.
 - **No DPT to show (P3).** 495 ETS4 and 456 ETS 6.3.0 objects have neither
   a stated DPT nor a program default. For 473 and 434 of them the product
   states none. For 22 each it states a list of several (`DatapointType`
   with more than one id) and neither the project nor the product picks
   one. KNXBench shows no DPT for them rather than choosing from the list.
 
-**Lifted when.** The UI shows a channel's `name` and `number` (goal-ui.md
-U12). The data half is done (ADR-0052).
+**Channel-label condition lifted (2026-09-30).** The UI displays both
+`name` and `number` when present (`DeviceWorkspace.test.tsx` and local
+EN/DE browser fixture); the data half is ADR-0052. The remaining
+`Undetermined`/missing-DPT conditions above stay explicit, not guessed.
 
 ## §145 Instance-level flag overrides are not written into the group object table
 

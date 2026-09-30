@@ -159,14 +159,19 @@ link](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
 
 One collapsible **channel group** per evaluated channel, initially closed. The
 application program's evaluated ownership determines grouping; neither the
-object's name nor a printed channel number is used to guess it. A
-channel-independent block gets its own group. Objects without evaluated
+object's name nor a printed channel number is used to guess it.
+An evaluated channel shows its translated product **Text** when present and
+its source **Name** as a separate fact. If Text is absent, the source Name
+becomes the heading; if both are absent, the group says **Untitled channel**.
+The source **Number** appears beside either heading as text (it need not be a
+decimal number). Name and Number are shown as supplied, not translated,
+reformatted, used as keys, or joined into an invented label.
+A channel-independent block gets its own group. Objects without evaluated
 channel ownership — including inactive, uncertain and not-evaluated objects —
 remain visible under **Without evaluated channel**, not silently discarded.
-An unnamed channel gets an explicit generic label rather than an invented
-manufacturer name. Opening a group and then an object row is possible by mouse
-or with Enter on the focused headings. Expanded groups stay open when the same
-device's detail refreshes and reset when you select another device.
+Opening a group and then an object row is possible by mouse or with Enter on
+the focused headings. Expanded groups stay open when the same device's detail
+refreshes and reset when you select another device.
 
 Each object row shows its number, name, product function text when available,
 its canonical datapoint type and any translated DPT description, its activation

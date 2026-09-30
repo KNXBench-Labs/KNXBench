@@ -880,7 +880,7 @@ export function DeviceWorkspace(props: {
             ? t("inspector.noEvaluatedChannel")
             : group.channel.kind === "ChannelIndependentBlock"
               ? t("inspector.channelIndependent")
-              : group.channel.text ?? t("inspector.untitledChannel");
+              : group.channel.text || group.channel.name || t("inspector.untitledChannel");
           const open = expandedGroups.deviceId === detail.id && expandedGroups.keys.has(group.key);
           return <details className="com-object-channel" key={group.key} open={open} onToggle={(e) => {
             const nextOpen = e.currentTarget.open;
@@ -892,7 +892,11 @@ export function DeviceWorkspace(props: {
           }}>
             <summary className="com-object-channel-summary">
               <strong>{label}</strong>
-              <span>{t(group.objects.length === 1 ? "inspector.objectCount.one" : "inspector.objectCount.other", { count: group.objects.length })}</span>
+              {group.channel?.kind === "Channel" && group.channel.text && group.channel.name &&
+                <span className="com-object-channel-name">{t("inspector.channelName", { value: group.channel.name })}</span>}
+              {group.channel?.kind === "Channel" && group.channel.number &&
+                <span className="com-object-channel-number">{t("inspector.channelNumber", { value: group.channel.number })}</span>}
+              <span className="com-object-channel-count">{t(group.objects.length === 1 ? "inspector.objectCount.one" : "inspector.objectCount.other", { count: group.objects.length })}</span>
             </summary>
             <ul className="com-object-list">
               {group.objects.map((com) => <ComObjectRow key={com.id} com={com} groupAddresses={groupAddresses} onApplied={onApplied} />)}

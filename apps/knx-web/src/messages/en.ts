@@ -330,6 +330,8 @@ export const messages = {
   "inspector.communicationObjects": "Communication objects",
   "inspector.channelIndependent": "Channel-independent objects",
   "inspector.untitledChannel": "Untitled channel",
+  "inspector.channelName": "Name: {value}",
+  "inspector.channelNumber": "Number: {value}",
   "inspector.noEvaluatedChannel": "Without evaluated channel",
   "inspector.objectCount.one": "{count} object",
   "inspector.objectCount.other": "{count} objects",

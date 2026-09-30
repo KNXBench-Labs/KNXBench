@@ -180,6 +180,44 @@ export function setSetting(key: string, value: unknown): void {
   write(key, value, false);
 }
 
+/** Safety-sensitive booleans use the server record, never the optimistic cache. */
+export async function readPersistedBooleanSetting(key: string): Promise<boolean> {
+  await initSettings();
+  if (state_.hydration !== "hydrated") throw new Error("settings are not available from the server");
+  await queue;
+  const response = await requestJson<SettingsResponse>("/api/settings");
+  if (response.status === "refusedNewer" || response.status === "quarantined") {
+    throw new Error("settings file cannot be used for a debug action");
+  }
+  return response.settings?.[key] === true;
+}
+
+/** Patch and read back a safety setting before reflecting it in the cache.
+ * Keep the write in the store's serialization queue alongside ordinary
+ * preferences; a rejected or contradictory answer leaves the UI disabled. */
+export async function setPersistedBooleanSetting(key: string, value: boolean): Promise<void> {
+  await initSettings();
+  if (state_.hydration !== "hydrated") throw new Error("settings are not available from the server");
+  const operation = queue.then(async () => {
+    const updated = await requestJson<SettingsResponse>("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify({ settings: { [key]: value } }),
+    });
+    if (updated.status === "refusedNewer" || updated.status === "quarantined" ||
+        updated.settings?.[key] !== value) throw new Error("settings write was not confirmed");
+    const readBack = await requestJson<SettingsResponse>("/api/settings");
+    if (readBack.status === "refusedNewer" || readBack.status === "quarantined" ||
+        readBack.settings?.[key] !== value) {
+      throw new Error("settings readback did not confirm the debug preference");
+    }
+    cache().settings[key] = value;
+    writeCache();
+    notify();
+  });
+  queue = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+
 /**
  * [`setSetting`], but a failed cache write is rolled back and rethrown
  * instead of shrugged off.
@@ -406,14 +444,19 @@ function apply(response: SettingsResponse): void {
  *
  * Never throws and never blocks the application: a server that cannot be
  * reached (or refuses, because the session expired) leaves the cache in
- * place and the session running on it. It is called once, from
- * `main.tsx`, inside the authentication gate — every `/api/` route needs
- * a session, this one included.
+ * place and the session running on it. Normally called once from
+ * `main.tsx`, inside the authentication gate; an explicit safety-setting
+ * re-check may retry only after a failed first load. Every `/api/` route
+ * needs a session, this one included.
  */
 export function initSettings(): Promise<void> {
-  // Once per page, even under `StrictMode`'s deliberate double-mount: the
-  // second call would otherwise race the first through adoption, and one
-  // of the two would lose to its own 409.
+  // A failed first read must not permanently lock a safety preference to
+  // stale cache data. A later explicit re-check may retry hydration, still
+  // sharing one in-flight promise with simultaneous callers.
+  if (state_.hydration === "failed") {
+    started = undefined;
+    setSettingsState({ hydration: "cached", diagnostic: undefined, fallbackMessage: undefined });
+  }
   started ??= loadFromServer();
   return started;
 }

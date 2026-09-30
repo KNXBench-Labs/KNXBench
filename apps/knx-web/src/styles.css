@@ -1685,6 +1685,40 @@ main {
 .device-checks-result dt { color: var(--knx-muted); }
 .device-checks-result dd { margin: 0; overflow-wrap: anywhere; }
 
+/* ADR-0051 Debug: opt-in is a verified server setting; the action is separate. */
+.settings-section-debug,
+.service-control-warning,
+.service-control-review {
+  border-left: 3px solid var(--knx-warning-color);
+  background: color-mix(in srgb, var(--knx-warning-color) 7%, var(--knx-surface));
+  padding: 12px;
+}
+.settings-section-debug { border-top: 1px solid var(--knx-border); }
+.settings-debug-warning { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.settings-section-debug .settings-field { margin: 0; }
+.service-control-panel { display: grid; gap: 14px; min-width: 0; }
+.service-control-panel header h2,
+.service-control-panel header p { margin: 4px 0; }
+.service-control-warning { margin: 0; line-height: 1.5; }
+.service-control-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.service-control-fields label,
+.service-control-review label { display: grid; gap: 6px; min-width: 0; }
+.service-control-fields input,
+.service-control-review input { width: 100%; min-width: 0; box-sizing: border-box; }
+.service-control-panel > button { justify-self: start; }
+.service-control-observation,
+.service-control-review { display: grid; gap: 10px; min-width: 0; }
+.service-control-observation p,
+.service-control-review p { margin: 0; overflow-wrap: anywhere; }
+.service-control-review label { overflow-wrap: anywhere; }
+.service-control-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.service-control-result { overflow-wrap: anywhere; }
+
 /* Download to a device (DeviceDownloadPanel): plan, then live progress. */
 .device-download-panel {
   display: grid;

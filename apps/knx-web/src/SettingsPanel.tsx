@@ -10,6 +10,7 @@ import type { Translate } from "./i18n";
 import Overlay from "./Overlay";
 import { usePreferredGateway } from "./gatewayPreference";
 import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
+import ServiceControlDebugSetting from "./ServiceControlDebugSetting";
 import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 import { useSettingsRevision, useSettingsState } from "./settingsStore";
 import { forgetProgrammingConsent, rememberedProgrammingConsentStage } from "./programmingConsent";
@@ -558,6 +559,7 @@ export default function SettingsPanel(props: {
           </p>
         )}
       </section>
+      <ServiceControlDebugSetting />
     </Overlay>
   );
 }

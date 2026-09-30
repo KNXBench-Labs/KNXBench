@@ -61,6 +61,37 @@
   no Web source or live KNX device was touched. Simulated HTTP tests cover
   completed, failed, cancelled and pre-tunnel refused comparisons.
 
+## 2026-09-30 — ADR-0051 Debug service-control UI (scoped property action)
+
+- **Settings → Debug · device control** exposes the default-off
+  `debugIndividualAddressWriteEnable` flag. Unlike ordinary optimistic
+  preferences, this safety setting reads the server record, sends a serialized
+  one-key patch, verifies the server's PUT response and reads the record back
+  before showing it as enabled. A failed or contradictory response disables
+  the control until it can be checked again. The server still refuses both
+  service-control routes with `403` unless the saved key is exactly `true`.
+- **Bus diagnostics → Debug · service control** does not open a tunnel on
+  mount, input or review. An operator must explicitly read an existing
+  individual address via an IPv4 gateway, inspect the two original property
+  octets and mask, review the bit change, type the separate device-specific
+  phrase, then request the write. The response must identify the same target,
+  mask, reviewed pre-value and bit-only change; an actual write must report a
+  recovery path. A mismatch or absent path withholds success and requires a
+  fresh read. Setting the opt-in alone never changes a device or download.
+- This UI consumes the K12 same-session property backup and exact readback;
+  it does not add a generic write-activity receipt (ADR-0056) or create a
+  whole-device image, automatic restore, permission for K13 reset or a live
+  hardware go. Tests use mocked HTTP/local Chromium and
+  the existing simulator route. See ADR-0051, KNOWN_LIMITATIONS §139 and the
+  settings/bus user-guide chapters. Gate evidence: Vitest 82 files / 1,295
+  tests, TypeScript/build green; local mocked Chromium EN/DE at 360/1440 px
+  4/4 for the Debug action, plus 4/4 Device checks, 4/4 monitor and 10/10
+  existing browser checks. Workspace Rust: 137 suites / 2,769 passed /
+  0 failed / 160 ignored / 0 `SKIP:` with the corpus present; strict Clippy,
+  fmt and all four xtask gates passed. Removing the recovery-path or typed
+  phrase UI guard made its corresponding test fail, then both guards were
+  restored. No device was contacted by these gates.
+
 ## 2026-09-30 — Partial read-only bus-activity snapshot (ADR-0055)
 
 - `GET /api/bus/activity` is a guarded, tunnel-free server view of the

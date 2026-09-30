@@ -16,6 +16,15 @@ Service-control read activity stores neither property octets nor mask or key.
 A cancelled read-only action has an unknown completion outcome; it never
 performs a device write. The activity record contains neither memory bytes
 nor keys or full results. A server restart loses this history.
+Write activity needs route-specific evidence (ADR-0056): HTTP success can be
+a no-op for serial-address and property writes; a post-send error can be an
+unverified mutation. Group writes have no receiver readback. The current
+serial-address HTTP write route does not persist its prior address/serial as
+pre-write recovery evidence, so its response cannot substitute for the
+required durable backup before any future live write. The service-control
+property backup covers only that property, not a whole device. All three
+write paths remain untracked in this snapshot; no green write receipt can be
+inferred from a generic terminal state.
 An empty `sessions` list does not prove no bus traffic, and a terminal session
 does not prove the gateway is free. The response declares `coverage: "partial"`.
 The global Web status bar and per-action UI rows are still pending; this

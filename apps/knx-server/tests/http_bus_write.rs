@@ -229,6 +229,12 @@ async fn write_with_an_explicit_dpt_sends_the_encoded_value_through_the_open_tun
         &sent[0].1,
         ApplicationService::GroupValueWrite(v) if *v == knx_core::GroupValue::Short(1)
     ));
+    let activity = body_json(call(&app, "GET", "/api/bus/activity", None).await).await;
+    assert_eq!(activity["oneShot"], json!([]));
+    assert!(activity["untracked"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("groupWrite")));
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Write activity evidence contract (ADR-0056)
+
+- Audited the existing serial-address, service-control and group-write routes
+  against their protocol outcomes and recovery evidence. An HTTP 200 can be a
+  no-op for the first two; a failed or aborted request does not prove that a
+  write was never sent. A group-write payload echo is not a receiver readback.
+  The current generic read activity states cannot safely represent these
+  distinctions, so all three writes stay explicitly `untracked` and the
+  aggregate remains `coverage: partial`.
+- Simulated HTTP regressions cover successful-but-no-op serial/property
+  requests, the property-specific backup on a real simulated change, and a
+  group telegram whose accepted send is not mislabeled as a device receipt.
+  No live hardware or Web source was touched. ADR-0056 defines the typed
+  write-evidence prerequisites; it does **not** implement that API or grant
+  write permission. The serial-address HTTP route has no durable pre-write
+  recovery record and needs one before a future live write can be authorized.
+
 ## 2026-09-30 — Opt-in service-control read activity only
 
 - After the server-side Debug opt-in, address/key-plan checks and gateway

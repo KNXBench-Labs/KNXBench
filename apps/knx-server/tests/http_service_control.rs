@@ -349,6 +349,41 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
 }
 
 #[tokio::test]
+async fn completed_property_change_and_noop_are_not_generic_write_receipts() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let request = write_request(address, &phrase(address), true);
+    let (status, body) = send(&h.app, post("/api/device/service-control", request.clone())).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["written"], true);
+    assert!(body["backupPath"].is_string());
+    let (status, body) = send(&h.app, post("/api/device/service-control", request)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["written"], false);
+    assert_eq!(body["backupPath"], Value::Null);
+
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"], json!([]));
+    assert!(activity["untracked"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("serviceControlWrite")));
+    let writes = h
+        .device
+        .seen()
+        .iter()
+        .filter(|seen| {
+            matches!(
+                seen,
+                knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+            )
+        })
+        .count();
+    assert_eq!(writes, 1);
+}
+
+#[tokio::test]
 async fn a_failed_property_backup_refuses_before_the_write() {
     let h = harness(locked_device());
     enable_debug(&h, json!(true)).await;

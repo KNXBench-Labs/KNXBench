@@ -70,6 +70,7 @@ impl BusTunnel for SimTunnel {
 struct SimConnector {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
+    connect_delay: Duration,
 }
 
 impl GatewayConnector for SimConnector {
@@ -80,7 +81,11 @@ impl GatewayConnector for SimConnector {
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(Arc::clone(&self.device)));
-        Box::pin(async move { Ok(tunnel) })
+        let delay = self.connect_delay;
+        Box::pin(async move {
+            tokio::time::sleep(delay).await;
+            Ok(tunnel)
+        })
     }
 
     fn discover(
@@ -113,6 +118,10 @@ struct Harness {
 }
 
 fn harness(config: SimulatorConfig) -> Harness {
+    harness_with_delay(config, Duration::ZERO)
+}
+
+fn harness_with_delay(config: SimulatorConfig, connect_delay: Duration) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let device = Arc::new(SimulatedDevice::with_config(config));
     let calls = Arc::new(AtomicUsize::new(0));
@@ -121,6 +130,7 @@ fn harness(config: SimulatorConfig) -> Harness {
         connector: Box::new(SimConnector {
             device: Arc::clone(&device),
             calls: Arc::clone(&calls),
+            connect_delay,
         }),
         address_programming_timing: fast(),
         address_programming_pause: Duration::from_millis(10),
@@ -214,6 +224,8 @@ async fn off_by_default_both_routes_refuse_before_a_tunnel() {
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(body.to_string().contains("Settings"), "{body}");
     assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"], json!([]));
 }
 
 #[tokio::test]
@@ -245,6 +257,37 @@ async fn a_wrong_phrase_is_refused_before_a_tunnel() {
 }
 
 #[tokio::test]
+async fn cancelled_debug_read_is_unknown_and_never_reports_property_bytes() {
+    let h = harness_with_delay(locked_device(), Duration::from_secs(30));
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let app = h.app.clone();
+    let task = tokio::spawn(async move { send(&app, get(&read_uri(address))).await });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while h.calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the simulated tunnel was not requested");
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "running");
+    assert_eq!(activity["oneShot"][0]["address"], address.to_string());
+
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "unknown");
+    assert!(activity["oneShot"][0]["finishedAt"].is_string());
+    assert!(activity["oneShot"][0].get("raw").is_none());
+    assert!(activity["oneShot"][0].get("mask").is_none());
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
+}
+
+#[tokio::test]
 async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     let h = harness(locked_device());
     enable_debug(&h, json!(true)).await;
@@ -254,6 +297,12 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["individualAddressWriteEnabled"], false);
     assert_eq!(body["raw"], "0000");
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["kind"], "serviceControlRead");
+    assert_eq!(activity["oneShot"][0]["address"], address.to_string());
+    assert_eq!(activity["oneShot"][0]["state"], "finished");
+    assert!(activity["oneShot"][0].get("raw").is_none());
+    assert!(activity["oneShot"][0].get("mask").is_none());
 
     // Without the bit, the device ignores a serial-number write.
     let serial_phrase = format!("I confirm individual-address programming to {NEW}");
@@ -281,6 +330,9 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["written"], true);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 1);
+    assert_eq!(activity["oneShot"][0]["kind"], "serviceControlRead");
     assert_eq!(body["before"]["raw"], "0000");
     assert_eq!(body["after"], "0004");
     let path = body["backupPath"].as_str().expect("durable backup path");
@@ -329,6 +381,10 @@ async fn a_device_without_the_property_is_named_not_guessed() {
     });
     enable_debug(&h, json!(true)).await;
     let address = h.device.address();
+    let (status, _) = send(&h.app, get(&read_uri(address))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "failed");
     let (status, body) = send(
         &h.app,
         post(
@@ -339,4 +395,6 @@ async fn a_device_without_the_property_is_named_not_guessed() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert!(body.to_string().contains("PID_SERVICE_CONTROL"), "{body}");
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 1);
 }

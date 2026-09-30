@@ -297,6 +297,34 @@ The same procedure is available as
 The tab refuses while the monitor, a line scan or a download holds the gateway's tunnel,
 and those refuse while it runs.
 
+## Debug: Individual Address Write Enable
+
+**Settings → Debug · device control** must first show the server-confirmed
+manual opt-in as enabled. With a project open, choose **Bus monitor → Debug ·
+service control**, type the *existing* address of the intended device and the
+gateway, and click **Read device control now**. Merely opening the tab or
+typing an address does not connect. The read shows Device Object
+`PID_SERVICE_CONTROL` bit 2, the complete two-byte value and the mask. A
+`403` means the server setting is off; this happens before a tunnel opens.
+The gateway serves one tunnel; stop any monitor, scan or download first.
+Leaving this view does not cancel a read or write already started.
+
+Only after checking the returned address, value and mask should you choose
+**Review change**. The next step displays the exact device-specific phrase
+`I confirm individual-address write enable to <address>`. **Type it yourself**;
+the UI does not fill it in. **Write bit after backup** then requests exactly
+that bit be enabled or disabled (the opposite of the state you just read).
+The server checks the setting and phrase again, reads the property in the
+same session, saves its original two octets, mask and target durably before
+the write, changes only bit 2 and reads back the exact value. A failed backup
+refuses before the write. On a write, the UI displays the server-reported
+recovery file path; keep it for **manual** diagnosis. A failed readback or an
+unconfirmed result leaves the device state uncertain: re-read it before
+anything else. A property record is **not** a full device image and cannot
+restore other possible manufacturer side effects. Switching this option on
+never automatically enables it for a download or serial-address write. No
+live bus was contacted to validate this UI.
+
 ## What KNXBench does and does not do on a bus
 
 This section is deliberately plain.
@@ -308,10 +336,9 @@ device descriptor that a device returns when asked. During a deliberately confir
 plus affected load states and device identity. This is read-only management traffic,
 but it still occupies the gateway's tunnel; offline readiness contacts no device.
 
-**What KNXBench writes to a bus.** Group-value writes, and only group-value writes,
-from exactly three places: the `Send a value` form in the bus monitor, the `knx bus
-write` command over tunneling, and the `knx bus route-send` command over routing. A
-line scan additionally sends connection-oriented management frames — a connect, a
+**Group-value writes to a bus.** These come from exactly three places:
+the `Send a value` form in the bus monitor, the `knx bus write` command over
+tunneling, and the `knx bus route-send` command over routing. A line scan additionally sends connection-oriented management frames — a connect, a
 device-descriptor read, a disconnect — to each candidate address. Those are traffic on
 the bus, and they occupy the addressed device briefly, but they do not change anything
 in it.
@@ -329,6 +356,12 @@ device in programming mode, from `knx device program-address` and the **Program
 address** tab ([below](#programming-an-individual-address)). Verified in the simulator
 only so far.
 
+**What KNXBench writes to a device, continued.** A manual Debug action can
+change only the Individual Address Write Enable bit of Device Object
+`PID_SERVICE_CONTROL`, after server-side opt-in, a device-specific phrase and
+a durable property-level backup. This is independent of both download and
+address programming; see [the Debug procedure](#debug-individual-address-write-enable).
+
 **What KNXBench does not do.** Unloading a device, and secure devices. If you need to commission an installation today, you need a tool
 that does commissioning; KNXBench is not yet one.
 
@@ -338,10 +371,15 @@ that does commissioning; KNXBench is not yet one.
   session that was not handed a write authorisation returns an error before touching the
   transport. An authorisation for real hardware exists only with the operator's phrase
   naming that device, and only for the kinds of write that have been verified. Two
-  entry points per write: `knx device download` and the Download to device tab,
-  `knx device program-address` and the Program address tab. The server routes demand
-  the same phrases; the download route refuses a plan the project no longer gives
-  (ADR-0045), and the address route's one phrase covers the closing restart (ADR-0046).
+  entry points for the supported scopes include `knx device download` and
+  the Download to device tab, `knx device program-address` and the Program
+  address tab, plus the explicitly enabled service-control CLI and Debug tab.
+  The server routes demand their separate, device-specific phrases; the
+  service-control route additionally refuses unless its persisted Debug
+  setting is exactly `true` and saves the original property before writing.
+  The download route refuses a plan the project no longer gives
+  (ADR-0045), and the address route's one phrase covers the closing restart
+  (ADR-0046).
 - KNXBench compiles in a list of individual addresses that must never be contacted. The
   scan planner never generates them into a candidate list in the first place, and the
   address type used for probing cannot be constructed without passing that check — so

@@ -7,7 +7,9 @@ import {
   getSetting,
   getSettingsState,
   initSettings,
+  readPersistedBooleanSetting,
   resetSettingsForTests,
+  setPersistedBooleanSetting,
   setSetting,
   settingsStorage,
   type SettingsResponse,
@@ -468,7 +470,6 @@ describe("hydrating around local edits", () => {
         diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 },
       },
     ]);
-
     await initSettings();
 
     expect(getSettingsState()).toEqual({
@@ -476,5 +477,84 @@ describe("hydrating around local edits", () => {
       diagnostic: { kind: "migrated", fromVersion: 0, toVersion: 1 },
       fallbackMessage: "debug fallback",
     });
+  });
+});
+
+describe("server-confirmed safety settings", () => {
+  const key = "debugIndividualAddressWriteEnable";
+
+  it("does not trust an optimistic cache after an ordinary preference write fails", async () => {
+    respond([
+      { settings: { [key]: false } },
+      new Error("settings not saved"),
+      { settings: { [key]: false } },
+    ]);
+    await initSettings();
+    setSetting(key, true);
+    expect(getSetting(key)).toBe(true);
+    expect(await readPersistedBooleanSetting(key)).toBe(false);
+    expect(calls.map(([, method]) => method)).toEqual(["GET", "PUT", "GET"]);
+  });
+
+  it("refuses a contradictory unsafe PUT status even if its body echoes true", async () => {
+    respond([
+      { settings: { [key]: false } },
+      { status: "refusedNewer", settings: { [key]: true } },
+      { settings: { [key]: true } },
+    ]);
+    await initSettings();
+    await expect(setPersistedBooleanSetting(key, true)).rejects.toThrow();
+    expect(getSetting(key)).toBe(false);
+  });
+
+  it("updates the cache only after the server confirms a write and its value", async () => {
+    respond([{ settings: { [key]: false } }, { settings: { [key]: true } }, { settings: { [key]: true } }]);
+    await initSettings();
+    const pending = setPersistedBooleanSetting(key, true);
+    expect(getSetting(key)).toBe(false);
+    await pending;
+    expect(getSetting(key)).toBe(true);
+    expect(calls[1]).toEqual(["/api/settings", "PUT", { settings: { [key]: true } }]);
+    expect(calls[2]).toEqual(["/api/settings", "GET", undefined]);
+  });
+
+  it("refuses a rejected or contradictory write without displaying it as enabled", async () => {
+    respond([{ settings: { [key]: false } }, new Error("409"), { settings: { [key]: false } }]);
+    await initSettings();
+    await expect(setPersistedBooleanSetting(key, true)).rejects.toThrow("409");
+    expect(getSetting(key)).toBe(false);
+    await expect(setPersistedBooleanSetting(key, true)).rejects.toThrow();
+    expect(getSetting(key)).toBe(false);
+  });
+
+  it("rejects a response that claims success when the subsequent server read disagrees", async () => {
+    respond([{ settings: { [key]: false } }, { settings: { [key]: true } }, { settings: { [key]: false } }]);
+    await initSettings();
+    await expect(setPersistedBooleanSetting(key, true)).rejects.toThrow();
+    expect(getSetting(key)).toBe(false);
+    expect(calls.map(([, method]) => method)).toEqual(["GET", "PUT", "GET"]);
+  });
+
+  it("does not enable anything when settings hydration fails", async () => {
+    respond([new Error("offline"), new Error("still offline")]);
+    await expect(setPersistedBooleanSetting(key, true)).rejects.toThrow();
+    expect(calls).toHaveLength(1);
+    await expect(readPersistedBooleanSetting(key)).rejects.toThrow();
+    expect(calls).toHaveLength(2);
+  });
+
+  it("can re-check after a failed first hydration before enabling a debug setting", async () => {
+    respond([
+      new Error("offline"),
+      { settings: { [key]: false } },
+      { settings: { [key]: false } },
+      { settings: { [key]: true } },
+      { settings: { [key]: true } },
+    ]);
+    await expect(readPersistedBooleanSetting(key)).rejects.toThrow();
+    expect(await readPersistedBooleanSetting(key)).toBe(false);
+    await setPersistedBooleanSetting(key, true);
+    expect(getSetting(key)).toBe(true);
+    expect(calls.map(([, method]) => method)).toEqual(["GET", "GET", "GET", "PUT", "GET"]);
   });
 });

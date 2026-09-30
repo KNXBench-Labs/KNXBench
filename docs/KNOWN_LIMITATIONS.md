@@ -8989,9 +8989,18 @@ saves nothing. HTTP returns `backupPath`, and the CLI names its backup
 (default `./device-backups/`, configurable with `--backup-dir`). This is **not**
 a full device image and does not restore possible manufacturer side effects.
 A failed readback after a write leaves an ambiguous device state; compare the
-current property and backup manually, do not blindly retry. The debug action
-may be revisited by the UI owner using this contract, but the server setting
-remains default-off and no UI or new hardware run is claimed here.
+current property and backup manually, do not blindly retry. The Settings
+**Debug · device control** toggle and separate **Debug · service control** tab
+now expose only this narrow property action. The toggle reads the persisted
+server setting and accepts a change only after a successful PUT and GET
+readback; it is not a browser-cache shortcut. The tab opens no tunnel on
+mount or review, requires a prior explicit read and the scope's exact typed
+phrase, and withholds success if the returned address, mask, original bytes,
+bit-only result or recovery path is inconsistent. A write remains possible
+only while the server gate is on, with its own pre-write property record.
+Browser tests use local mocked API responses and the server tests use a
+simulator; **no live hardware operation validated the new UI or recovery
+gate**. Manufacturer side effects and whole-device recovery remain unknown.
 
 **Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
 and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the

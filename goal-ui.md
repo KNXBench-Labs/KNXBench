@@ -294,6 +294,17 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      expose the setting or action until the commissioning/data owner resolves
      and tests that policy; the route already exists and remains default-off.
      This pause does not block the independent monitor/read-only UI items.
+     **Scoped resolution (2026-09-30):** commissioning's `44b42cee`
+     introduced a same-session durable pre-write record for both original
+     property octets, mask and target, read back and synced before the
+     `PID_SERVICE_CONTROL` write; `http_service_control.rs` tests fail-closed
+     backup behavior on a simulator. Only this property action may now be
+     considered for UI exposure. It is **not** a full device backup, recovery
+     for other write routes, or permission for a hardware test. The UI
+     candidate keeps the server gate default-off, verifies the persisted
+     Settings toggle by PUT+GET, demands an explicit device read and the
+     separately typed scope phrase, and withholds inconsistent success.
+     Local mock-browser tests never contact a gateway.
   3. **Monitor control fields (§147 consumers):** `/api/bus/monitor/telegrams`
      rows carry `control: {priority, repeated, hopCount}` (`null` on the
      closed-session marker). Show them as a column or tooltip; `repeated`

@@ -235,11 +235,7 @@ impl WriteAuthorisation {
 /// octet meaning design spec §15 records as unsourced for a System B mask,
 /// so this project does not write it blind.
 ///
-/// Also refused: [`WriteScope::IndividualAddressReset`] (K13, MP §2.18). It
-/// changes every device in programming mode at once, and no operator has
-/// asked for it on the bus yet (KNOWN_LIMITATIONS §140).
-///
-/// And [`WriteScope::MasterReset`] (K14): an erasing Master Reset takes the
+/// [`WriteScope::MasterReset`] (K14): an erasing Master Reset takes the
 /// device's configuration away, and nobody has asked for one on the bus
 /// (KNOWN_LIMITATIONS §141). The confirmed restart (`01h`) needs no new
 /// scope.
@@ -258,15 +254,21 @@ impl WriteAuthorisation {
 /// covers it; its phrase names the device; only bit 2 is changed and the
 /// other fifteen bits are written back as read. The web route is further
 /// gated by an opt-in setting that defaults to off.
+///
+/// **Added 2026-09-30:** [`WriteScope::IndividualAddressReset`] (K13, MP
+/// §2.18), on the operator's request. MP §2.18 resets every device in
+/// programming mode at once, so the procedure takes the list of devices the
+/// operator expects to be pressed and writes nothing unless the first
+/// broadcast read finds exactly those (KNOWN_LIMITATIONS §140).
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
         WriteScope::IndividualAddressProgramming
         | WriteScope::Restart
         | WriteScope::Download
-        | WriteScope::IndividualAddressWriteEnable => true,
+        | WriteScope::IndividualAddressWriteEnable
+        | WriteScope::IndividualAddressReset => true,
         WriteScope::Unload
         | WriteScope::ProgrammingModeToggle
-        | WriteScope::IndividualAddressReset
         | WriteScope::MasterReset
         | WriteScope::DomainAddressProgramming
         | WriteScope::RfConfiguration => false,

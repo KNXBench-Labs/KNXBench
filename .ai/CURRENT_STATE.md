@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / §147 candidate)
+- **Timestamp:** 2026-09-30 18:58 CEST
+- **Web lock:** held by the UI session for U12 §147 until this reviewed package is published and the release entry lands.
+- **Completed:** Implemented the additively typed monitor `control` field in the table and selected-row details without classifying unknown priorities or inventing repeat state for `null`/absent metadata. Added EN/DE labels, capture roundtrip evidence, keyboard and local mock-browser checks at 360/1440 px, manual/status/limitation updates, and `.ai/logs/2026-09-30_codex_ui-monitor-control.md`. RED regressions and a false-repeat mutation guard verified. Candidate gates: Web 78 files / 1,258 tests; new browser 4/4, existing browser 10/10; build/typecheck, corpus-backed Rust 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 SKIP, Clippy, fmt, four xtask gates and diff check green. No live KNX operation.
+- **Pending/Next Steps:** Commit the reviewed candidate as KNXBench, re-fetch/rebase if upstream moved, verify merged result on `main`, push and read back the remote SHA, then release the Web lock and clean only this package's worktree/scratch. Continue with U12 readiness and read-only device-compare views in another isolated worktree.
+- **Notes for Codex oder Claude:** ADR-0051 Debug UI remains paused at its recovery-policy boundary; do not expose a write path. Root foreign changes and the other sessions' worktrees remain untouched. Credentials and private corpus data are absent from this handover.
+
+---
+
 - **Last Agent:** codex (UI U12 / monitor control fields lock)
 - **Timestamp:** 2026-09-30 18:07 CEST
 - **Web lock:** taken by the UI session for U12 §147 monitor control-field display.

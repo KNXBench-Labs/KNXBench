@@ -27,11 +27,11 @@ const provenance = {
 describe("bus-monitor capture JSON v1", () => {
   it("roundtrips raw, decoded, error and closed-marker rows with loss metadata, without spreadsheet cells", () => {
     const rows = [
-      row({ seq: 1 }),
-      row({ seq: 2, decoded: { kind: "value", dpt: "DPST-1-1", text: "On" } }),
-      row({ seq: 3, decoded: { kind: "error", dpt: "DPT-40", reason: "unsupportedDpt", text: "unsupported datapoint type", error: "unsupported datapoint type" } }),
+      row({ seq: 1, control: { priority: "urgent", repeated: true, hopCount: 0 } }),
+      row({ seq: 2, decoded: { kind: "value", dpt: "DPST-1-1", text: "On" }, control: { priority: "normal", repeated: false, hopCount: 6 } }),
+      row({ seq: 3, decoded: { kind: "error", dpt: "DPT-40", reason: "unsupportedDpt", text: "unsupported datapoint type", error: "unsupported datapoint type" }, control: { priority: "low", repeated: null, hopCount: 7 } }),
       row({ seq: 4, decoded: { kind: "error", dpt: "DPST-1-1", reason: "decodeFailed", text: "wrong payload length", error: "wrong payload length" } }),
-      row({ seq: 5, service: "SessionClosed", rawPayload: "gateway closed", decoded: null }),
+      row({ seq: 5, service: "SessionClosed", rawPayload: "gateway closed", decoded: null, control: null }),
     ];
     const contents = serializeBusCapture(rows, provenance);
     const document = JSON.parse(contents);

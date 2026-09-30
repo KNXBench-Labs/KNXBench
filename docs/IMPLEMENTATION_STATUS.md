@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — U12 / §147 received control fields in the web monitor
+
+- The existing additive monitor API field `control` is now typed by the
+  frontend. The telegram table and selected-row details show translated
+  priority, hop count (including zero), and the observed repeat
+  state only where the server supplies a boolean. `null` on other cEMI
+  kinds and the closed-session marker, or absence from an older server,
+  does not become a false claim. Unknown priority values are shown
+  explicitly rather than classified as a known priority.
+- `BusMonitorPanel.test.tsx` failed twice before the new column was added;
+  the focused cases now cover true, false, null, marker, older response,
+  zero hops, unknown priority and DE labels. A mutation that hid the false
+  state failed its guard before restoration. Final Web: 78 Vitest files /
+  1,258 tests; TypeScript/build green; local mocked Chromium 4/4 new and
+  10/10 existing. Corpus-backed Rust: 136 suites / 2,761 passed / 0 failed /
+  160 ignored, no `SKIP:`; strict Clippy, fmt, four xtask gates and diff check
+  green. No live KNX bus was contacted. See KNOWN_LIMITATIONS §147, the
+  bus-monitor manual and `.ai/logs/2026-09-30_codex_ui-monitor-control.md`.
+
 ## 2026-09-30 — U12 / ADR-0051 Debug UI paused at the safety boundary
 
 - Read-only review of `service_control_routes.rs` and

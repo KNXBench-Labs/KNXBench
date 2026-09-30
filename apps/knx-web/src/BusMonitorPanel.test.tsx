@@ -55,7 +55,8 @@ import { publishProjectContext, recordSessionContext } from "./busContext";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { splitGatewayEndpoint } from "./gatewayEndpoint";
 import { savePreferredGateway } from "./gatewayPreference";
-import { getSetting, initSettings, resetSettingsForTests } from "./settingsStore";
+import { getSetting, initSettings, resetSettingsForTests, setSetting } from "./settingsStore";
+import { UI_LANGUAGE_STORAGE_KEY } from "./uiLanguage";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
@@ -100,6 +101,52 @@ it("opens full telegram details from the keyboard without sending a value", asyn
   expect(details.textContent).toContain("0x01 (6-bit)");
   expect(details.textContent).toContain("DPST-1-1");
   expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});
+
+it("shows priority, hop count and repeat evidence without inventing it for other frames", async () => {
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [
+    row({ seq: 1, control: { priority: "urgent", repeated: true, hopCount: 0 } }),
+    row({ seq: 2, control: { priority: "system", repeated: false, hopCount: 7 } }),
+    row({ seq: 3, control: { priority: "normal", repeated: null, hopCount: 6 } }),
+    row({ seq: 4, service: "SessionClosed", control: null }),
+    row({ seq: 5 }), // An older server omits this additive field.
+  ] }));
+  const root = await renderPanel();
+  await flushReattach();
+  expect([...host!.querySelectorAll("thead th")].map((cell) => cell.textContent)).toContain("Control");
+  const rows = [...host!.querySelectorAll("tbody tr")];
+  expect(rows[0].querySelector(".bus-monitor-control")?.textContent).toContain("Urgent");
+  expect(rows[0].querySelector(".bus-monitor-control")?.textContent).toContain("Hop count: 0");
+  expect(rows[0].querySelector(".bus-monitor-control")?.textContent).toContain("Repeated");
+  expect(rows[1].querySelector(".bus-monitor-control")?.textContent).toContain("Not repeated");
+  expect(rows[1].querySelector(".bus-monitor-control")?.textContent).toContain("Hop count: 7");
+  expect(rows[2].querySelector(".bus-monitor-control")?.textContent).toContain("Normal");
+  expect(rows[2].querySelector(".bus-monitor-control")?.textContent).not.toMatch(/repeated/i);
+  expect(rows[3].querySelector(".bus-monitor-control")?.textContent).toBe("—");
+  expect(rows[4].querySelector(".bus-monitor-control")?.textContent).toBe("—");
+  await act(async () => rows[2].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+  const details = host!.querySelector(".telegram-details")!;
+  expect(details.textContent).toContain("Hop count: 6");
+  expect(details.querySelector(".bus-monitor-control-repeat")).toBeNull();
+  expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});
+
+it("localizes monitor control labels but keeps unknown priorities explicit", async () => {
+  setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [
+    row({ seq: 6, control: { priority: "urgent", repeated: false, hopCount: 0 } }),
+    row({ seq: 7, control: { priority: "future-priority", repeated: null, hopCount: 1 } }),
+  ] }));
+  const root = await renderPanel();
+  await flushReattach();
+  const cells = [...host!.querySelectorAll(".bus-monitor-control")];
+  expect(cells[0].textContent).toContain("Dringend");
+  expect(cells[0].textContent).toContain("Hop-Zähler: 0");
+  expect(cells[0].textContent).toContain("Nicht wiederholt");
+  expect(cells[1].textContent).toContain("Unbekannte Priorität (future-priority)");
+  expect(cells[1].textContent).not.toContain("wiederholt");
   await act(async () => root.unmount());
 });
 

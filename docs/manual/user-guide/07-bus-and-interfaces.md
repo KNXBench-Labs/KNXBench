@@ -95,8 +95,17 @@ Every telegram the interface forwards becomes one row, with these columns:
 | Source | The individual address that sent it |
 | Destination | The group address (or individual address) it went to |
 | Service | The KNX service, for example a group-value write |
+| Control | Received priority, hop count, and whether an `L_Data.ind` was repeated |
 | Payload | The raw bytes |
 | Decoded | The value, interpreted as a datapoint type |
+
+**Control** shows priority and hop count as received. A repeat state is
+shown only for an indication: **Repeated** and **Not repeated** mean different
+values; requests and confirmations do not carry that same assertion. A
+session-closed notice is not a frame, so it has no control fields. An older
+server that does not send them is shown without invented defaults. The same
+facts appear in the selected row's details. This is display-only; inspecting
+a row does not send a telegram.
 
 The **Decoded** column is the interesting one. If a project is open when you connect,
 KNXBench takes a snapshot of that project's group addresses and their datapoint types
@@ -138,8 +147,9 @@ counted separately from the server's dropped-row indicator.
 
 **Export capture** downloads a UTF-8 JSON v1 snapshot, not CSV or an ETS file.
 It includes retained rows (`seq`, `timestamp`, `source`, `destination`, optional
-`destinationName` and `rawPayload`, `service`, and `decoded` with DPT/value or
-error where available) and metadata: `format: "knxbench-bus-monitor"`, `version: 1`,
+`destinationName` and `rawPayload`, `service`, `decoded` with DPT/value or
+error where available, and `control` when supplied by the server) and metadata:
+`format: "knxbench-bus-monitor"`, `version: 1`,
 `capacity: 1000`, session/process identity, status, export time,
 `serverDroppedBefore`, `clientPrunedCount` and a loss notice. JSON quotes
 formula-looking names as data, rather than creating spreadsheet cells. In a

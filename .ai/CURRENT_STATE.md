@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ISSUE-06 Site/Property affordance lock)
+- **Timestamp:** 2026-09-30 22:49 CEST
+- **Web lock:** taken by the UI session for the remaining ISSUE-06 Ground-root Site/Property UI affordance and multi-building ownership regression only.
+- **Completed:** Started a clean `ui-site-hierarchy` worktree from published `origin/main`. Read accepted ADR-0038, ISSUE-06's still-open UI checkbox and KNOWN_LIMITATIONS §127. Existing Project Explorer offers `Ground` as a generic building-part kind, but no distinct Site/Property affordance or UI regression for two buildings sharing one installation has yet been verified. No Web source, domain model, device or gateway changed.
+- **Pending/Next Steps:** Trace the existing create/move command and workspace UI paths; add RED regression proving one Ground root with multiple buildings and no duplicate device ownership, then the smallest accessible UI affordance through existing validated commands. Run complete offline gates, update status/manual/limitations and the ISSUE-06 checkbox only with verified evidence; review, publish and release the Web lock. U13 closing review is user-decided and ISSUE-12 discovery still needs external evidence.
+- **Notes for Codex oder Claude:** ADR-0038 is accepted: `Ground` is an existing KNX project-schema root `Space`, not a new `Site` type and not identical to IoT `loc:Site`. Never add a model kind or claim a real ETS Ground export exists. Keep root foreign edits and other worktrees untouched; no live bus or secret content belongs here.
+
+---
+
 - **Last Agent:** codex (UI / ADR-0051 Debug action closeout)
 - **Timestamp:** 2026-09-30 22:38 CEST
 - **Web lock:** released after publishing the scoped Debug setting and service-control UI; the next UI package must take a fresh lock.

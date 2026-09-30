@@ -1,3 +1,12 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 10:40 CEST
+- **Web lock:** untouched; held by the UI session as its newest entry says.
+- **Completed:** `knx device compare` (read-only preview of a download): `download_changes` (knx-core), `read_what_the_plan_overwrites` (knx-net, read-only session, mask/manufacturer checked before any memory read), CLI command with its own parser that refuses every write flag. 12 new tests, RED first, 5 mutations caught. Live read-only on 1.1.20 via 172.18.250.1:3671 (26/1778 octets, 17 runs, matches the 2026-09-29 dump); 1.1.5 refused offline (LsmIdx 5); 1.1.220 refused as excluded. Output in `OriginalData/DeviceBackups/house-readback-2026-09-29/compare-2026-09-30.txt`. No write.
+- **Pending/Next Steps:** Device-editor/HTTP surface for compare (web lock is the UI session's, so not started). RESEARCH §19.13 open parameters stay open. Unlinked-object C bit (cause 2) stays a documented difference.
+- **Notes for Codex oder Claude:** compare exit codes 0 same / 2 differs / 1 not compared. It sends no access key; a read-protected device fails with the session's refusal, never with a guessed key.
+
+---
+
 - **Last Agent:** Claude (goal.md session, ISSUE-08 data half)
 - **Timestamp:** 2026-09-30 06:17 CEST
 - **Web lock:** untouched — no `apps/knx-web` change in this package. The new fields are `#[ts(skip)]` in the bindings for exactly that reason.

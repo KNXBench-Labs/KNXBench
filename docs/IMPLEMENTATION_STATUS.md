@@ -1,5 +1,34 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — `knx device compare`: what a download would change, read only
+
+- `knx device compare <a.l.d> --project … --gateway …` builds the same plan
+  as `knx device download` (project, product file, `--partial`) and reads
+  exactly the regions it would write through a `ManagementSession::read_only`
+  session with `AuthorisationPlan::Skip`: no write path, no Verify Mode write,
+  no access key. It prints the load states and every run of octets where
+  device and project differ, with the segment it lies in. Exit 0 = the device
+  holds the plan, 2 = it differs, 1 = not compared. Write flags (`--confirm`,
+  `--key-file`, `--backup-dir`, `--accept-untested`) are refused as unknown;
+  excluded addresses are refused before a socket opens.
+- Core: `device_backup::download_changes` (shape check now shared with
+  `restore_plan`). Net: `memory_download::read_what_the_plan_overwrites`,
+  the pre-write backup of a download without the download; mask and
+  manufacturer are checked before the first memory read.
+- Tests: 4 core, 3 net (simulator: no write of any kind, device memory
+  unchanged, disconnect on every path), 5 CLI. RED first; five mutations
+  (runs merged, shape check dropped, manufacturer check dropped, no
+  disconnect, `--confirm` accepted) each caught.
+- Live, read only, 2026-09-30, `172.18.250.1:3671`: 1.1.20 reports 26 of
+  1778 octets in 17 runs, the drift and the unlinked-object communication
+  bit of RESEARCH §19.13; spot-checked against the independent 2026-09-29
+  dump (`4000h` `0F`/`0D`, `44F1h` `17`/`DB`, `46DFh`/`46EFh` `01`/`00`).
+  The four `DBh`→`DFh` octets differ only in bit 2 (Communication,
+  `0x04`): unlinked active objects, §19.13 cause 2, unchanged. `44F1h`
+  (`17h` on the device) is not attributed here. 1.1.5 is refused before any frame
+  (`LsmIdx 5`, the same refusal as a download). 1.1.220 is refused as
+  excluded. Nothing was written.
+
 ## 2026-09-29 — ISSUE-08 data half, P2: each object's evaluated activation and channel
 
 - `ComObjectNode` gains `activation` (`Active`/`Inactive`/`Undetermined`/

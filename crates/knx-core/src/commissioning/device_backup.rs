@@ -13,6 +13,10 @@
 //! application, another partial selection, another device), because then
 //! the load procedure's allocations would not describe the old memory.
 //!
+//! [`download_changes`] compares a backup with the plan it was read for:
+//! the octets a download would change, before anything is written. Read
+//! without a download, a backup is that preview.
+//!
 //! What a backup does not hold, and a restore therefore cannot bring back:
 //! memory outside the regions the plan writes (masked octets are never
 //! written, so they need no backup), properties, and a load state other
@@ -131,6 +135,83 @@ fn regions(list: &[(u16, usize)]) -> String {
         .join(", ")
 }
 
+/// One run of consecutive octets a download would change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OctetChange {
+    /// The first address.
+    pub address: u16,
+    /// What the device holds there now.
+    pub device: Vec<u8>,
+    /// What the plan would write.
+    pub planned: Vec<u8>,
+}
+
+/// What a download of `plan` would change on a device that holds `held`:
+/// every run of consecutive octets where the two differ, in plan order.
+/// `held` is read the way a backup is ([`DeviceBackup`]), so the same
+/// device, product and shape are required as for [`restore_plan`].
+pub fn download_changes(
+    plan: &MemoryDownloadPlan,
+    target: IndividualAddress,
+    held: &DeviceBackup,
+) -> Result<Vec<OctetChange>, RestoreError> {
+    check_same_shape(plan, target, held)?;
+    let mut changes = Vec::new();
+    let planned_runs = plan.steps.iter().filter_map(|step| match step {
+        MemoryDownloadStep::WriteMemory { address, octets } => Some((*address, octets)),
+        _ => None,
+    });
+    for ((address, planned), region) in planned_runs.zip(&held.regions) {
+        let mut open: Option<OctetChange> = None;
+        for (offset, (&want, &have)) in planned.iter().zip(&region.octets).enumerate() {
+            if want == have {
+                changes.extend(open.take());
+                continue;
+            }
+            let change = open.get_or_insert_with(|| OctetChange {
+                address: address + offset as u16,
+                device: Vec::new(),
+                planned: Vec::new(),
+            });
+            change.device.push(have);
+            change.planned.push(want);
+        }
+        changes.extend(open);
+    }
+    Ok(changes)
+}
+
+/// The device, product and written regions `held` must share with `plan`
+/// before its octets can stand in for (or be compared with) the plan's.
+fn check_same_shape(
+    plan: &MemoryDownloadPlan,
+    target: IndividualAddress,
+    held: &DeviceBackup,
+) -> Result<(), RestoreError> {
+    if held.target != target {
+        return Err(RestoreError::OtherDevice {
+            plan: target,
+            backup: held.target,
+        });
+    }
+    if held.mask != plan.mask || held.manufacturer != plan.manufacturer {
+        return Err(RestoreError::OtherProduct);
+    }
+    let wanted = written_regions(plan);
+    let have: Vec<(u16, usize)> = held
+        .regions
+        .iter()
+        .map(|region| (region.address, region.octets.len()))
+        .collect();
+    if wanted != have {
+        return Err(RestoreError::OtherShape {
+            plan: wanted,
+            backup: have,
+        });
+    }
+    Ok(())
+}
+
 /// `plan` with the backed-up octets in place of its own. The steps, their
 /// order and every check stay exactly the plan's.
 pub fn restore_plan(
@@ -138,27 +219,7 @@ pub fn restore_plan(
     target: IndividualAddress,
     backup: &DeviceBackup,
 ) -> Result<MemoryDownloadPlan, RestoreError> {
-    if backup.target != target {
-        return Err(RestoreError::OtherDevice {
-            plan: target,
-            backup: backup.target,
-        });
-    }
-    if backup.mask != plan.mask || backup.manufacturer != plan.manufacturer {
-        return Err(RestoreError::OtherProduct);
-    }
-    let wanted = written_regions(plan);
-    let held: Vec<(u16, usize)> = backup
-        .regions
-        .iter()
-        .map(|region| (region.address, region.octets.len()))
-        .collect();
-    if wanted != held {
-        return Err(RestoreError::OtherShape {
-            plan: wanted,
-            backup: held,
-        });
-    }
+    check_same_shape(plan, target, backup)?;
     let mut regions = backup.regions.iter();
     let steps = plan
         .steps
@@ -291,6 +352,66 @@ mod tests {
         moved.regions[0].address = 0x4001;
         assert!(matches!(
             restore_plan(&plan(), address("1.1.67"), &moved),
+            Err(RestoreError::OtherShape { .. })
+        ));
+    }
+
+    #[test]
+    fn the_changes_are_the_runs_where_plan_and_device_differ() {
+        let mut held = backup();
+        held.regions[0].octets = vec![1, 2]; // 4000h: as planned
+        held.regions[1].octets = vec![3, 9, 9]; // 4400h: two octets differ
+        let changes = download_changes(&plan(), address("1.1.67"), &held).unwrap();
+        assert_eq!(
+            changes,
+            vec![OctetChange {
+                address: 0x4401,
+                device: vec![9, 9],
+                planned: vec![4, 5],
+            }]
+        );
+    }
+
+    #[test]
+    fn separate_differences_stay_separate_runs() {
+        let mut held = backup();
+        held.regions[0].octets = vec![0, 2];
+        held.regions[1].octets = vec![0, 4, 0];
+        let changes = download_changes(&plan(), address("1.1.67"), &held).unwrap();
+        let at: Vec<(u16, usize)> = changes
+            .iter()
+            .map(|change| (change.address, change.planned.len()))
+            .collect();
+        assert_eq!(at, vec![(0x4000, 1), (0x4400, 1), (0x4402, 1)]);
+    }
+
+    #[test]
+    fn a_device_that_holds_the_plan_has_no_changes() {
+        let mut held = backup();
+        held.regions[0].octets = vec![1, 2];
+        held.regions[1].octets = vec![3, 4, 5];
+        assert_eq!(
+            download_changes(&plan(), address("1.1.67"), &held),
+            Ok(vec![])
+        );
+    }
+
+    #[test]
+    fn changes_are_only_computed_for_the_same_device_product_and_shape() {
+        assert!(matches!(
+            download_changes(&plan(), address("1.1.68"), &backup()),
+            Err(RestoreError::OtherDevice { .. })
+        ));
+        let mut other = backup();
+        other.mask = MaskVersion(0x0705);
+        assert_eq!(
+            download_changes(&plan(), address("1.1.67"), &other),
+            Err(RestoreError::OtherProduct)
+        );
+        let mut shorter = backup();
+        shorter.regions[1].octets.pop();
+        assert!(matches!(
+            download_changes(&plan(), address("1.1.67"), &shorter),
             Err(RestoreError::OtherShape { .. })
         ));
     }

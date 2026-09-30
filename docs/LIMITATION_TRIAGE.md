@@ -15,8 +15,9 @@ nicht eingestuft.
 **Stand 2026-09-30 (Neuzählung).** Die Fassung vom 2026-09-20 zählte 119
 Einträge. Seitdem sind §121–§146 hinzugekommen, und etliche Einträge sind
 laut ihrem eigenen Status geschlossen oder verengt; nur der Statustext der
-Quelle hat entschieden, nicht der Titel (bei §19, §58 und §120 ist der Titel
-älter als der Text).
+Quelle hat entschieden, nicht der Titel. Titel, die noch das alte Problem
+nannten, tragen seit 2026-09-30 einen „resolved"-/„closed"-Zusatz; ihre alten
+Anker bleiben per `<a id>` gültig.
 
 ## Einstufung
 
@@ -175,7 +176,7 @@ Quelle hat entschieden, nicht der Titel (bei §19, §58 und §120 ist der Titel
 §119 `ntfs3`-Fingerprint (Arbeitskopie seit 2026-09-28 auf ext4) ·
 §4 byte-genauer Roundtrip (Export zurückgezogen) ·
 §5 unsignierte Exporte (Export zurückgezogen) ·
-§19 Suchtreffer im zugeklappten Ast (Titel veraltet, Text beschreibt die Lösung) ·
+§19 Suchtreffer im zugeklappten Ast (T12) ·
 §22 Server-Authentifizierung (ADR-0026) ·
 §30 Download ohne Frontend-Aufrufer ·
 §33 Routing-Roundtrip auf dem LAN ·
@@ -192,7 +193,7 @@ Quelle hat entschieden, nicht der Titel (bei §19, §58 und §120 ist der Titel
 §103 echtes Dirty-Flag ·
 §117 `read_on_init` (T02) ·
 §118 Load-Ansage ·
-§120 Theme-Kontrast (Gate; Titel veraltet) ·
+§120 Theme-Kontrast (Gate) ·
 §122 Einstellungsdiagnosen folgen der UI-Sprache ·
 §123 keine gepunktete GA-Notation mehr ·
 §131 ehrliche Korpus-Gates ·

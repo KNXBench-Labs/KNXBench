@@ -707,7 +707,9 @@ unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
 finding 2), not a documented rule — noted here, not hidden, and unaffected
 by this slice.
 
-## 4. Round trips are semantic, not byte-exact
+<a id="4-round-trips-are-semantic-not-byte-exact"></a>
+
+## 4. Round trips are semantic, not byte-exact — closed 2026-09-20 (export withdrawn)
 
 **Closed 2026-09-20 — export withdrawn.** There is no round trip left to be
 byte-exact or semantic about: KNXBench writes no `.knxproj`
@@ -734,7 +736,9 @@ hash equality of all opaque bytes, and an explicit unsigned-export statement.
 See [ADR-0007](adr/0007-roundtrip-fidelity.md), itself superseded by
 [ADR-0028](adr/0028-no-knxproj-export.md).
 
-## 5. Exports are unsigned, and ETS acceptance is untested
+<a id="5-exports-are-unsigned-and-ets-acceptance-is-untested"></a>
+
+## 5. Exports are unsigned, and ETS acceptance is untested — closed 2026-09-20 (export withdrawn)
 
 **Closed 2026-09-20 — export withdrawn.** No file is written, so no file has
 to be signed and none has to be accepted by ETS. Risk R9 is closed as not
@@ -2019,7 +2023,9 @@ in-memory copies) instead of re-opening the file — see
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
 
-## 19. A search result inside a collapsed tree branch is not revealed
+<a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed"></a>
+
+## 19. A search result inside a collapsed tree branch is not revealed — resolved 2026-09-22 (T12)
 
 Picking a `Ctrl+K` result now records a monotonic external-selection reveal
 generation before preserving `App`'s existing canonical selection path. The
@@ -2144,7 +2150,9 @@ lossy external export is refused until the user assigns a range.
 
 <a id="22-the-webdocker-deployment-target-has-no-authentication"></a>
 
-## 22. `knx-server` authenticates with one password, or refuses to leave loopback
+<a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback"></a>
+
+## 22. `knx-server` authenticates with one password, or refuses to leave loopback — resolved 2026-09-20
 
 **Resolved 2026-09-20** ([ADR-0026](adr/0026-server-authentication-or-loopback.md)).
 The heading and the anchor above are kept so existing links still resolve;
@@ -2410,7 +2418,9 @@ ride along with a feature branch. See
 [§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
-## 30. `/api/project/download` has no frontend caller
+<a id="30-apiprojectdownload-has-no-frontend-caller"></a>
+
+## 30. `/api/project/download` has no frontend caller — resolved 2026-09-22
 
 **Resolved (2026-09-22, T12 task 4).** In the plain web build, the File menu
 now offers localized **Download project** whenever a project is open. It
@@ -5439,7 +5449,9 @@ the HTTP/application boundary by
 `apps/knx-server/tests/http_catalog_to_device.rs`; no browser-level claim is
 made for those later actions.
 
-## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
+<a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty"></a>
+
+## 81. `new_project_impl` refuses on "can undo", not on "is dirty" — resolved
 
 **Resolved.** `AppState.clean_project` keeps a transient snapshot of the last
 project state established by successful native open, ETS import, new project
@@ -6149,7 +6161,9 @@ database was ever installed by more than one package; the third install
 above was constructed specifically to violate that, to make the residual
 measurable rather than asserted.
 
-## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
+<a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import"></a>
+
+## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import — resolved 2026-09-22
 
 **Resolved (T13, 2026-09-22).** `BuildingPartType` now preserves `Stairway`,
 `RoomPart`, `Area`, `Ground` and `Segment` in addition to the six observed
@@ -6249,7 +6263,9 @@ exists so the number stops being re-derived. If a future brief asks for
 "main type 46" again, it means "the remaining main types in some
 `knx_master.xml`", and the right first step is to measure the file in front
 of you.
-## 91. A running bus session keeps rendering group addresses in the style the project had when it started
+<a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started"></a>
+
+## 91. A running bus session keeps rendering group addresses in the style the project had when it started — resolved
 
 **Resolved.** `BusSession` now owns one atomically replaceable
 `GroupAddressContext` shared by the incoming-telegram drain task and outgoing
@@ -6815,7 +6831,9 @@ that asymmetry appears, because none exists to break.
 for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
-## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag
+<a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag"></a>
+
+## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag — resolved
 
 **Resolved.** `ProjectTree.is_modified` publishes the server-owned snapshot
 comparison beside, but independently from, `can_undo` and `can_redo`. Pure
@@ -7804,7 +7822,9 @@ not documentation — but the structure has six fields as of this entry, and
 the ADR's reasoning (one `Override` per attribute, absence distinct from a
 stated value) is exactly what made the sixth field a one-line addition.
 
-## 118. A succeeded project load announces nothing to a screen reader
+<a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader"></a>
+
+## 118. A succeeded project load announces nothing to a screen reader — resolved
 
 **Final-review correction, 2026-09-22.** Direct loads retain the filename notice
 described below. Recovery announces the current project using the EN/DE
@@ -7886,7 +7906,9 @@ address the build outputs but not the source fingerprints. **No build
 configuration was changed in this round** — this entry records the hazard
 and the workaround, and the choice is the maintainer's.
 
-## 120. Nothing checks that a theme is legible
+<a id="120-nothing-checks-that-a-theme-is-legible"></a>
+
+## 120. Nothing checks that a theme is legible — resolved by the role-pair contrast gate
 
 **Limitation.** `themeTokens.test.ts` now enforces the three ADR-0022 role pairs
 for every registered palette and accent variation: foreground on background,

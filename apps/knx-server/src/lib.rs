@@ -27,6 +27,7 @@ mod bus_routes;
 mod bus_scan;
 mod com_object_activation;
 mod debug_report;
+mod device_compare_routes;
 mod device_download;
 pub use device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent, Restart, Written};
 mod device_download_routes;
@@ -154,6 +155,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(bus_routes::bus_routes())
         .merge(device_download_routes::device_download_routes())
         .merge(device_readiness_routes::device_readiness_routes())
+        .merge(device_compare_routes::device_compare_routes())
         .merge(address_programming_routes::address_programming_routes())
         .merge(serial_address_routes::serial_address_routes())
         .merge(service_control_routes::service_control_routes())

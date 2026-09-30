@@ -43,8 +43,10 @@
 
 use std::fmt;
 
-use knx_core::commissioning::authorisation::Authorisation;
-use knx_core::commissioning::device_backup::{written_regions, BackupRegion, DeviceBackup};
+use knx_core::commissioning::authorisation::{Authorisation, AuthorisationPlan};
+use knx_core::commissioning::device_backup::{
+    download_changes, written_regions, BackupRegion, DeviceBackup, OctetChange, RestoreError,
+};
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::WriteLimit;
@@ -54,7 +56,9 @@ use knx_core::commissioning::memory_download::{
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::properties::ObjectIndex;
 
-use super::{ManagementSession, SessionError};
+use knx_core::ContactableAddress;
+
+use super::{ManagementSession, SessionError, SessionTiming};
 use crate::management::ManagementTransport;
 
 /// One step that ran, as the report tells it.
@@ -599,6 +603,83 @@ pub async fn read_what_the_plan_overwrites<T: ManagementTransport>(
     let result = read_after_connect(session, plan).await;
     session.disconnect().await;
     result
+}
+
+/// What a device holds against what a download of the plan would write.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlanComparison {
+    /// Everything the plan would overwrite, as read, with the device's
+    /// mask, manufacturer and load states.
+    pub held: DeviceBackup,
+    /// Every run of octets where the device and the plan differ, in
+    /// address order. Empty when the device holds the plan.
+    pub changes: Vec<OctetChange>,
+}
+
+impl PlanComparison {
+    /// Whether the device holds every octet the plan would write.
+    pub fn is_same(&self) -> bool {
+        self.changes.is_empty()
+    }
+
+    /// Octets a download would change.
+    pub fn differing_octets(&self) -> usize {
+        self.changes.iter().map(|change| change.planned.len()).sum()
+    }
+}
+
+/// Why [`compare_with_plan`] compared nothing. Every variant says, in its
+/// `Display`, that nothing was written, because nothing can be.
+#[derive(Debug)]
+pub enum CompareError {
+    /// No read-only session could be built.
+    Session(SessionError),
+    /// The read failed or was refused.
+    Read(ReadBackError),
+    /// What was read does not fit the plan's shape. The read follows the
+    /// plan's own regions, so this is a defect, reported rather than
+    /// trusted away.
+    Shape(RestoreError),
+}
+
+impl std::error::Error for CompareError {}
+
+impl fmt::Display for CompareError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Session(error) => write!(f, "{error}; nothing was written"),
+            // `ReadBackError` says "nothing was written" itself.
+            Self::Read(error) => write!(f, "{error}"),
+            Self::Shape(error) => write!(f, "{error}; nothing was written"),
+        }
+    }
+}
+
+/// Reads what a download of `plan` would overwrite on `target` and lists
+/// every octet it would change: `knx device compare`, and the server's
+/// `/api/device-compare`.
+///
+/// The session is [`ManagementSession::read_only`], so no write path exists
+/// and no Verify Mode write goes out on connect. No access key is sent
+/// (`AuthorisationPlan::Skip`): a device that protects its memory against
+/// reading at the free level refuses the read, and the error says so; no
+/// key is ever guessed. The comparison is [`download_changes`], the same
+/// plan a download would run.
+pub async fn compare_with_plan<T: ManagementTransport>(
+    transport: &T,
+    target: ContactableAddress,
+    timing: SessionTiming,
+    plan: &MemoryDownloadPlan,
+) -> Result<PlanComparison, CompareError> {
+    let address = target.address();
+    let mut session =
+        ManagementSession::read_only(transport, address, AuthorisationPlan::Skip, timing)
+            .map_err(CompareError::Session)?;
+    let held = read_what_the_plan_overwrites(&mut session, plan)
+        .await
+        .map_err(CompareError::Read)?;
+    let changes = download_changes(plan, address, &held).map_err(CompareError::Shape)?;
+    Ok(PlanComparison { held, changes })
 }
 
 async fn read_after_connect<T: ManagementTransport>(
@@ -2269,5 +2350,78 @@ mod tests {
         );
         assert!(error.to_string().contains("nothing was written"), "{error}");
         assert_eq!(writes_of_any_kind(&device), vec![]);
+    }
+
+    // ------------------------------------------------ compare with a plan
+
+    fn contactable(device: &SimulatedDevice) -> ContactableAddress {
+        ContactableAddress::new(device.address()).expect("not excluded")
+    }
+
+    #[tokio::test]
+    async fn comparing_names_every_differing_run_and_writes_nothing() {
+        let device = old_device();
+        let before = device.memory(0x4000, 30);
+        let compared = compare_with_plan(&device, contactable(&device), fast(), &plan())
+            .await
+            .expect("compared");
+        assert!(!compared.is_same());
+        assert_eq!(compared.held.target, device.address());
+        assert_eq!(
+            compared.changes,
+            download_changes(&plan(), device.address(), &compared.held).unwrap()
+        );
+        assert_eq!(
+            compared.differing_octets(),
+            compared
+                .changes
+                .iter()
+                .map(|c| c.planned.len())
+                .sum::<usize>()
+        );
+        assert!(compared.differing_octets() > 0);
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.memory(0x4000, 30), before);
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn a_device_that_holds_the_plan_compares_the_same() {
+        let device = old_device();
+        run_memory_download(&mut session(&device, WriteScope::Download), &plan())
+            .await
+            .expect("the download runs");
+        let writes = writes_of_any_kind(&device).len();
+        let compared = compare_with_plan(&device, contactable(&device), fast(), &plan())
+            .await
+            .expect("compared");
+        assert!(compared.is_same(), "{:?}", compared.changes);
+        assert_eq!(compared.differing_octets(), 0);
+        assert_eq!(
+            writes_of_any_kind(&device).len(),
+            writes,
+            "the compare wrote nothing"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_compare_that_cannot_read_says_why_and_that_nothing_was_written() {
+        let other_mask = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: 0x0705,
+            ..SimulatorConfig::default()
+        });
+        other_mask.preset_property(0, PID_MANUFACTURER_ID, &MANUFACTURER.to_be_bytes());
+        let error = compare_with_plan(&other_mask, contactable(&other_mask), fast(), &plan())
+            .await
+            .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                CompareError::Read(ReadBackError::MaskMismatch { .. })
+            ),
+            "{error}"
+        );
+        assert!(error.to_string().contains("nothing was written"), "{error}");
+        assert!(memory_reads(&other_mask).is_empty());
     }
 }

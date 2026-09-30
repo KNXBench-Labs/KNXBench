@@ -1,8 +1,8 @@
 //! `knx device compare`: what a download would change on a device, read only.
 //!
 //! The same plan as `knx device download` (the same project, product file
-//! and `--partial` selection), then a [`ManagementSession::read_only`]
-//! session that reads exactly the regions the plan would write and the load
+//! and `--partial` selection), then `knx_net`'s `compare_with_plan`: a
+//! read-only session that reads exactly the regions the plan would write and the load
 //! states of the machines it touches. It prints every run of octets where
 //! the device and the plan differ. It has no phrase because it cannot write:
 //! a read-only session has no authorisation, so every write path is refused
@@ -18,12 +18,11 @@
 
 use std::io::Write;
 
-use knx_core::commissioning::authorisation::AuthorisationPlan;
-use knx_core::commissioning::device_backup::{download_changes, DeviceBackup, OctetChange};
+use knx_core::commissioning::device_backup::{DeviceBackup, OctetChange};
 use knx_core::commissioning::memory_download::MemoryDownloadPlan;
 use knx_core::ContactableAddress;
-use knx_net::commissioning::memory_download::read_what_the_plan_overwrites;
-use knx_net::{ManagementSession, ManagementTransport, SessionTiming};
+use knx_net::commissioning::memory_download::compare_with_plan;
+use knx_net::{ManagementTransport, SessionTiming};
 use knx_productdb::image::SegmentImage;
 
 /// `knx device compare`'s arguments. No `--confirm`, `--key-file` or
@@ -124,34 +123,18 @@ pub async fn compare<T: ManagementTransport>(
         out,
         "== compare device {address} with the project: read only, nothing is written =="
     );
-    let mut session =
-        match ManagementSession::read_only(transport, address, AuthorisationPlan::Skip, timing) {
-            Ok(session) => session,
-            Err(e) => {
-                let _ = writeln!(out, "not compared: {e}");
-                return Compared::Failed;
-            }
-        };
-    let held = match read_what_the_plan_overwrites(&mut session, plan).await {
-        Ok(held) => held,
+    let compared = match compare_with_plan(transport, target, timing, plan).await {
+        Ok(compared) => compared,
         Err(e) => {
             let _ = writeln!(out, "not compared: {e}");
             return Compared::Failed;
         }
     };
-    let changes = match download_changes(plan, address, &held) {
-        Ok(changes) => changes,
-        Err(e) => {
-            // The read follows the plan's own regions, so this is a defect,
-            // but it is reported rather than trusted away.
-            let _ = writeln!(out, "not compared: {e}");
-            return Compared::Failed;
-        }
-    };
-    print_device(out, &held);
-    print_changes(out, &held, &changes, segments);
+    let (held, changes) = (&compared.held, &compared.changes);
+    print_device(out, held);
+    print_changes(out, held, changes, segments);
     let _ = writeln!(out, "written to the device: no (read only)");
-    if changes.is_empty() {
+    if compared.is_same() {
         Compared::Same
     } else {
         Compared::Different

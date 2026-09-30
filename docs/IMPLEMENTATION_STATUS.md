@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — `POST /api/device-compare`: the read-only compare over HTTP
+
+- `knx device compare` as a route: `{ address, gateway, partial? }` →
+  `written: false`, `same`, `mask`, `manufacturer`, `loadStates`, `octets`,
+  `differingOctets` and `changes` (`address`, `segment`, `device`,
+  `project` octets per run). The same plan `/api/device-download/plan`
+  shows, then `knx_net::commissioning::memory_download::compare_with_plan`,
+  which the CLI now calls too (one comparison, two front ends).
+- Read only: a read-only management session, no phrase field, no key
+  field, no key sent (`AuthorisationPlan::Skip`); the excluded address is
+  refused before any tunnel. It holds the gateway's one tunnel while it
+  reads, so it is refused (`409`) while a download, an address programming,
+  the monitor or a scan runs, with `serial_address_routes::find`'s lock
+  order (programming by `try_lock`, then monitor, then scan).
+- Tests: `apps/knx-server/tests/http_device_compare.rs` (1 without corpus,
+  6 against the K3 project and the simulator: differs, same after a
+  download, monitor and download block it, another mask, partial), 3 in
+  `memory_download.rs`; 12 mutants caught. The web UI does not call it
+  yet: `apps/knx-web` is the UI session's.
+
 ## 2026-09-30 — K12 follow-up: Individual Address Write Enable as opt-in debug action
 
 - `PID_SERVICE_CONTROL` bit 2 (RES §4.2.8) can be read and set explicitly:

@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Partial download of parameters and group addresses verified on `1.1.67`
+
+- Live (user "starte mit teildownload"): `knx device download 1.1.67
+  --partial both`, 24 steps, 1416 octets each read back, all three parts
+  `Loaded`, dump byte-identical; backup matches the pre-dump in every octet
+  (RESEARCH §19.17, KL §142).
+- `verified_downloads.json` gains `partial-both`; the shipped-evidence test
+  now requires all four scopes (RED before the data change). Every download
+  scope of `M-0083_A-0027-15-0BAC` is verified on hardware.
+
 ## 2026-09-30 — K13 individual-address reset on hardware, guarded
 
 - `WriteScope::IndividualAddressReset` joins `hardware_write_is_authorised`

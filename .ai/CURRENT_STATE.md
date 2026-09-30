@@ -1,4 +1,19 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 16:06 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** `--partial both` live on `1.1.67` (user "starte mit
+  teildownload"): 24 steps, 1416 octets read back, all three `Loaded`,
+  compare and dump identical. Evidence file gains `partial-both`; test
+  RED→GREEN. All download scopes of the MDT push button are verified.
+- **Pending/Next Steps:** Web UI for partial download and address reset
+  (UI lock). K14 stays unrun (erases; `0701h` cannot confirm support).
+- **Notes for Codex oder Claude:** Evidence under `OriginalData/DeviceBackups/
+  1.1.67_MDT-0701_2026-09-30_kboth-*` and `1.1.67-prewrite-kboth/`
+  (private). Writes were fast this afternoon (<3 min for 1416 octets).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 15:52 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** K13 on the user's request. `IndividualAddressReset` is

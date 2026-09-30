@@ -91,6 +91,14 @@ Yes. It's licensed under the GNU Affero General Public License version 3 or late
 if you run a modified version as a network service, the AGPL requires offering its users
 the corresponding source. See [`LICENSE`](../../../LICENSE) in the repository root.
 
+**May I use KNXBench for paid work, and may I sell a product built on it?**
+
+Paid work, yes: planning and commissioning customer installations with KNXBench is
+commercial use and fully allowed. A product built on KNXBench may only be distributed
+under the AGPL, with its complete source. A closed, proprietary product needs a separate
+commercial license from the maintainer. That is also why contributions need the
+[Contributor License Agreement](../../../CLA.md).
+
 **Does KNXBench send anything over the network on its own?**
 
 Only what you tell it to: talking to a KNX gateway you configured, and — if you build the

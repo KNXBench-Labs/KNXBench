@@ -8979,6 +8979,29 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §148 The contributor license agreement is not reviewed by a lawyer, and nothing enforces it
+
+**Limitation.** [`CLA.md`](../CLA.md) (ADR-0053) was written without legal
+review. Whether its license grant, the fallback clause in section 4, the
+liability limit in section 6 and acceptance by a pull-request sentence plus
+checkbox hold up under German law is **not verified**. There is no template
+for an organization-level agreement yet, and no commercial license text
+exists to offer vendors.
+
+Nothing checks the CLA automatically: no bot, no CI job. The pull request
+template asks for the sentence, and the maintainer checks it in review
+before merging.
+
+**Impact.** As of 2026-09-30 all 1,706 commits on `main` come from the
+maintainer, so no outside rights exist yet and dual licensing is
+unaffected. The first outside contribution merged **without** the CLA
+sentence would make commercial licensing of the code it touches depend on
+that contributor's separate consent.
+
+**Lifted when.** A lawyer has reviewed `CLA.md` (and it is re-issued as a
+new version if needed), an organization agreement exists, and the pull
+request check is either automated or explicitly accepted as manual.
+
 ## §147 A received telegram's priority, repeat flag and hop count are not kept — lifted 2026-09-30
 
 **Lifted 2026-09-30.** `LDataFrame::control: Option<FrameControl>`

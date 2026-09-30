@@ -8909,7 +8909,13 @@ shows the three PDUs with no `A_Restart`.
   the parameter panel, which evaluates identically. There are 0 stale rows
   in the corpus.
 - **Not in the TypeScript bindings yet.** `activation` and `channel` are
-  serialised but `#[ts(skip)]` until the UI session's U12 adopts them.
+  serialised but `#[ts(skip)]` until the UI session's U12 adopts them. The
+  same holds for P3's `program_dpt`, `dpt_text` and `function_text`.
+- **No DPT to show (P3).** 495 ETS4 and 456 ETS 6.3.0 objects have neither
+  a stated DPT nor a program default. For 473 and 434 of them the product
+  states none. For 22 each it states a list of several (`DatapointType`
+  with more than one id) and neither the project nor the product picks
+  one. KNXBench shows no DPT for them rather than choosing from the list.
 
 **Lifted when.** Channel `@Name`/`@Number` are stored and projected, and
 the UI shows both fields.

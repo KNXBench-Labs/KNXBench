@@ -519,6 +519,12 @@ owning `channel`
 Nothing is written back into the model, and no exporter reads either
 field.
 
+**Display-only DPT and function text (ISSUE-08 P3).** The device detail
+also shows `program_dpt` beside a `DatapointType` stated empty, the DPT's
+display text (`dpt_text`) and the product's `FunctionText`. They are
+projection fields only: an empty slot stays empty in the model, and no
+exporter writes any of the three.
+
 ## 10. Product database ingest
 
 **Implemented (Session 4).** `<M-xxxx>/*` container entries (catalog,

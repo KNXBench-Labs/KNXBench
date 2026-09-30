@@ -8,6 +8,8 @@ import { UI_LANGUAGE_STORAGE_KEY } from "../src/uiLanguage";
 import "../src/styles.css";
 
 const language = new URLSearchParams(location.search).get("lang") === "de" ? "de" : "en";
+const withChannels = new URLSearchParams(location.search).get("channels") === "1";
+if (withChannels) document.documentElement.dataset.theme = "porcelain";
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 
 const longName = "Main corridor switching actuator channel with a very long manufacturer-specific designation";
@@ -56,6 +58,11 @@ const detail: DeviceDetail = {
     description: null,
     description_layer: null,
     is_active: true,
+    activation: "NotEvaluated",
+    channel: null,
+    program_dpt: null,
+    dpt_text: null,
+    function_text: null,
     read: false,
     write: true,
     transmit: false,
@@ -69,12 +76,60 @@ const detail: DeviceDetail = {
   }],
 };
 
+// Synthetic, fully local projection evidence. These channel keys are opaque and
+// the deliberately sparse order differs from the communication-object order.
+const channelDetail: DeviceDetail = {
+  ...detail,
+  product: {
+    product_ref: "P-MOCK",
+    program_ref: "H2P-MOCK",
+    resolution: "Resolved",
+    catalog: {
+      manufacturer_id: "M-MOCK",
+      manufacturer_name: null,
+      product_text: null,
+      order_number: null,
+      hardware_name: null,
+      hardware_version: null,
+      hardware_serial_number: null,
+      catalog_item_name: null,
+      catalog_item_number: null,
+      application_program_id: "A-MOCK",
+      application_name: null,
+      application_number: null,
+      application_version: null,
+      mask_version: null,
+    },
+  },
+  com_objects: [
+    {
+      ...detail.com_objects[0],
+      channel: { key: "opaque:hall", kind: "Channel", text: "Hall outputs", name: null, number: "19", order: 42 },
+      activation: "Active",
+      function_text: "Switching lights",
+      dpt_text: "Switch",
+    },
+    {
+      ...detail.com_objects[0],
+      id: 8, number: 2, name: "Thermometer", dpt: null, links: [],
+      channel: { key: "opaque:probe", kind: "Channel", text: null, name: "Raw manufacturer name", number: "A-5", order: 19 },
+      activation: "Active",
+      program_dpt: "DPST-9-1",
+      dpt_text: "Temperature",
+      function_text: "Measured value",
+    },
+    { ...detail.com_objects[0], id: 9, number: 3, name: "Inactive object", dpt: null, links: [], activation: "Inactive", is_active: false },
+    { ...detail.com_objects[0], id: 10, number: 4, name: "Uncertain object", dpt: null, links: [], activation: "Undetermined" },
+    { ...detail.com_objects[0], id: 11, number: 5, name: "Unevaluated object", dpt: null, links: [], activation: "NotEvaluated" },
+  ],
+};
+
 createRoot(document.getElementById("root")!).render(
   <main className="workbench issue09-browser-fixture">
     <Inspector
       selection={{ kind: "device", id: 42 }}
       tree={tree}
-      deviceDetail={detail}
+      deviceDetail={withChannels ? channelDetail : detail}
       onApplied={() => {}}
       onDeleted={() => {}}
     />

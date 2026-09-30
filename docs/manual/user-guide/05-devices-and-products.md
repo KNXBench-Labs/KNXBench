@@ -157,8 +157,31 @@ Description field, the six flag checkboxes R W T U C I with T and C ticked, an e
 Send link to 0/0/1 with an Unlink button, and a row for adding the next
 link](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
 
-One collapsible row per object, showing its number, its name, its datapoint type and
-the group addresses it is linked to. Expanding a row gives you:
+One collapsible **channel group** per evaluated channel, initially closed. The
+application program's evaluated ownership determines grouping; neither the
+object's name nor a printed channel number is used to guess it. A
+channel-independent block gets its own group. Objects without evaluated
+channel ownership — including inactive, uncertain and not-evaluated objects —
+remain visible under **Without evaluated channel**, not silently discarded.
+An unnamed channel gets an explicit generic label rather than an invented
+manufacturer name. Opening a group and then an object row is possible by mouse
+or with Enter on the focused headings. Expanded groups stay open when the same
+device's detail refreshes and reset when you select another device.
+
+Each object row shows its number, name, product function text when available,
+its canonical datapoint type and any translated DPT description, its activation
+state, and linked group addresses. **Active**, **Inactive**, **Undetermined**
+(cannot decide from the available product/parameter evidence), and **Not
+evaluated** (no usable program evaluation) mean different things. The project's
+stored `IsActive` claim remains separate; if it disagrees with an evaluated
+active/inactive state, the row says **Stored active** or **Stored inactive**.
+No status silently rewrites the imported project. An object whose project DPT
+is empty can show a **Program default** DPT for reference; opening the row
+still leaves the editable DPT field empty until you explicitly set one.
+An unknown or ambiguous DPT remains absent instead of being guessed.
+
+The screenshot above predates the channel-group wrapper; the editing controls
+inside each object remain the same. Expanding a row gives you:
 
 | Control | What it does |
 | --- | --- |
@@ -226,8 +249,11 @@ The tab loads the device's parameters when you select the device. What you get:
 - **Fields.** A select for a choice parameter, a number field with the program's own
   minimum and maximum for a numeric one, a text field otherwise. Values commit on blur,
   and Enter is a shortcut for that. A rejected value snaps back with the reason.
-- **An issues banner**, collapsed, counting what went wrong while evaluating this
-  device's program, with a Copy details button per entry.
+- **A diagnostics banner**, collapsed, counting informational notes separately
+  from warnings. An expected unmatched choice is an informational note; a
+  missing or unreadable value remains a warning. Open the banner to read
+  individual messages and copy details. Unknown severity is shown as a
+  warning, not silently treated as informational.
 - **Stale values**, when the project holds parameter values that no longer correspond
   to any parameter in the current program. They are shown separately, never merged into
   the field list and never quietly dropped.
@@ -245,12 +271,10 @@ then re-evaluates the program's dynamic tree with the new value, so fields and
 communication objects that the new setting switches on or off change in the same
 response.
 
-**What it does not do.** It does not talk to any device. Neither the interface nor the
-command line can program a device: there is no download command, no route on the
-server, and no button. The commissioning protocol itself is being built inside the
-KNX core library, but it has only ever been driven against a simulator this project
-wrote, never against real hardware. A parameter you change here is a value in a file
-until ETS, or some other tool, puts it into the device.
+**What it does not do.** Editing a parameter does not itself talk to a
+physical device. It changes the project value and re-evaluates the displayed
+program state; writing configuration to hardware is a separate, explicitly
+gated device-download operation, never a side effect of this field.
 
 > **Note**
 >

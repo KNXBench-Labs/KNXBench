@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
+import type { ComObjectActivation } from "./bindings/ComObjectActivation";
+import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { ProductResolution } from "./bindings/ProductResolution";
@@ -749,14 +751,98 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
+type ComObjectGroup = {
+  key: string;
+  channel: ComObjectChannel | null;
+  objects: ComObjectNode[];
+  order: number;
+  firstIndex: number;
+};
+
+// Channel keys are opaque per ADR-0052. Do not derive identity from text,
+// object names or a parsed channel number; data-half `channel.order` is the
+// evaluated document order, including non-contiguous positions.
+function groupComObjects(objects: ComObjectNode[]): ComObjectGroup[] {
+  const groups = new Map<string, ComObjectGroup>();
+  objects.forEach((com, index) => {
+    const channel = com.activation === "Active" ? com.channel : null;
+    const key = channel === null ? "unassigned" : `channel:${channel.key}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.objects.push(com);
+    } else {
+      groups.set(key, {
+        key, channel, objects: [com],
+        order: channel?.order ?? Number.MAX_SAFE_INTEGER, firstIndex: index,
+      });
+    }
+  });
+  return [...groups.values()].sort((a, b) => a.order - b.order || a.firstIndex - b.firstIndex);
+}
+
+const ACTIVATION_KEYS: Record<ComObjectActivation, MessageKey> = {
+  Active: "inspector.activation.active",
+  Inactive: "inspector.activation.inactive",
+  Undetermined: "inspector.activation.undetermined",
+  NotEvaluated: "inspector.activation.notEvaluated",
+};
+
+function ComObjectRow(props: {
+  com: ComObjectNode;
+  groupAddresses: GroupAddressNode[];
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { com, groupAddresses, onApplied } = props;
+  const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
+  const dpt = com.dpt ?? com.program_dpt;
+  const usesProgramDefault = com.dpt === null && com.program_dpt !== null;
+  // A newer server's unknown state must be visible, never treated as inactive.
+  const statusKey = ACTIVATION_KEYS[com.activation] ?? "inspector.activation.unknown";
+  return <li data-activation={com.activation}>
+    <details className="com-object-detail">
+      <summary className="com-object-summary">
+        <span className="mono">{com.number}</span>
+        <span className="com-object-name">
+          <strong>{com.name ?? t("inspector.unnamed")}</strong>
+          {com.function_text && <small>{com.function_text}</small>}
+          <span className="com-object-status" data-activation={com.activation}>{t(statusKey)}</span>
+          {com.activation === "Active" && !com.is_active && <small className="com-object-stored-status">{t("inspector.storedInactive")}</small>}
+          {com.activation === "Inactive" && com.is_active && <small className="com-object-stored-status">{t("inspector.storedActive")}</small>}
+        </span>
+        <span className="com-object-effective-dpt">
+          {usesProgramDefault && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
+          <span className="mono">{dpt ?? "—"}</span>
+          {com.dpt_text && <small>{com.dpt_text}</small>}
+        </span>
+        <span className="mono ga-address">{com.links.map((link) => (link.address === null ? "—" : formatGa(link.address))).join(", ") || "—"}</span>
+      </summary>
+      <div className="com-object-edit-fields">
+        <DptField com={com} onApplied={onApplied} />
+        {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
+        <ComObjectDescriptionField com={com} onApplied={onApplied} />
+        {com.description_layer && <span className="provenance-badge">{com.description_layer}</span>}
+        <ComObjectFlagsRow com={com} onApplied={onApplied} />
+        <ul className="group-link-list">
+          {com.links.map((link) => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}
+          <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+        </ul>
+      </div>
+    </details>
+  </li>;
+}
+
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, onApplied } = props;
   const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const t = useTranslate();
-  const formatGa = useGroupAddressFormat();
   const [tab, setTab] = useState(0);
+  const [expandedGroups, setExpandedGroups] = useState<{ deviceId: number; keys: Set<string> }>({
+    deviceId: detail.id, keys: new Set(),
+  });
+  const groups = groupComObjects(detail.com_objects);
   // One array, three panels, and index arithmetic derived from its length:
   // the previous `1 - tab` toggle silently encoded "there are exactly two
   // tabs" three times over (it also hardcoded `End` and treated both arrow
@@ -787,35 +873,32 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
-      <ul className="com-object-list">
-        {detail.com_objects.map((com) => (
-          <li key={com.id}>
-            <details className="com-object-detail">
-            <summary className="com-object-summary"><span className="mono">{com.number}</span><strong>{com.name ?? t("inspector.unnamed")}</strong><span className="mono">{com.dpt ?? "—"}</span><span className="mono ga-address">{com.links.map((link) => (link.address === null ? "—" : formatGa(link.address))).join(", ") || "—"}</span></summary>
-            <div className="com-object-edit-fields">
-            <DptField com={com} onApplied={onApplied} />
-            {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
-            <ComObjectDescriptionField com={com} onApplied={onApplied} />
-            {com.description_layer && (
-              <span className="provenance-badge">{com.description_layer}</span>
-            )}
-            <ComObjectFlagsRow com={com} onApplied={onApplied} />
-            <ul className="group-link-list">
-              {com.links.map((link) => (
-                <GroupLinkRow
-                  key={`${link.ga_id}-${link.direction}`}
-                  com={com}
-                  link={link}
-                  onApplied={onApplied}
-                />
-              ))}
-              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+      <div className="com-object-groups">
+        {groups.map((group) => {
+          const label = group.channel === null
+            ? t("inspector.noEvaluatedChannel")
+            : group.channel.kind === "ChannelIndependentBlock"
+              ? t("inspector.channelIndependent")
+              : group.channel.text ?? t("inspector.untitledChannel");
+          const open = expandedGroups.deviceId === detail.id && expandedGroups.keys.has(group.key);
+          return <details className="com-object-channel" key={group.key} open={open} onToggle={(e) => {
+            const nextOpen = e.currentTarget.open;
+            setExpandedGroups((previous) => {
+              const keys = new Set(previous.deviceId === detail.id ? previous.keys : []);
+              if (nextOpen) keys.add(group.key); else keys.delete(group.key);
+              return { deviceId: detail.id, keys };
+            });
+          }}>
+            <summary className="com-object-channel-summary">
+              <strong>{label}</strong>
+              <span>{t(group.objects.length === 1 ? "inspector.objectCount.one" : "inspector.objectCount.other", { count: group.objects.length })}</span>
+            </summary>
+            <ul className="com-object-list">
+              {group.objects.map((com) => <ComObjectRow key={com.id} com={com} groupAddresses={groupAddresses} onApplied={onApplied} />)}
             </ul>
-            </div>
-            </details>
-          </li>
-        ))}
-      </ul>
+          </details>;
+        })}
+      </div>
 
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>

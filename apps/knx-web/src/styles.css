@@ -2407,6 +2407,24 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-tabs { display: flex; flex-wrap: wrap; gap: 4px 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
 .device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; }
 .device-tabs button[aria-selected="true"] { color: var(--knx-accent) !important; border-bottom: 2px solid var(--knx-accent); }
+.com-object-groups { display: grid; gap: 10px; min-width: 0; }
+.com-object-channel { min-width: 0; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); background: var(--knx-surface); }
+.com-object-channel-summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; padding: 10px 12px; cursor: pointer; overflow-wrap: anywhere; }
+.com-object-channel-summary > strong { font-weight: 600; }
+.com-object-channel-summary > span { color: var(--knx-muted); font-size: 0.82rem; }
+.com-object-channel-summary:hover { background: color-mix(in srgb, var(--knx-accent) 8%, transparent); }
+.com-object-channel[open] > summary { border-bottom: 1px solid var(--knx-border); }
+.com-object-channel-summary:focus-visible, .com-object-summary:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: -2px; }
+.device-workspace .com-object-channel .com-object-list { border: 0; border-radius: 0; }
+.com-object-name, .com-object-effective-dpt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.com-object-name small, .com-object-effective-dpt small { color: var(--knx-muted); font-size: 0.8em; }
+.com-object-status { display: inline-block; padding: 2px 6px; border: 1px solid var(--knx-border); border-radius: 999px; font-size: 0.72rem; line-height: 1.3; }
+.com-object-status[data-activation="Active"] { color: var(--knx-accent); border-color: var(--knx-accent); }
+.com-object-status[data-activation="Undetermined"] { color: var(--knx-warning-color); border-color: var(--knx-warning-color); }
+.com-object-dpt-origin { font-weight: 600; }
+.parameter-diagnostics-banner[data-has-warnings="true"] { border-color: var(--knx-warning-color); }
+.parameter-diagnostics-banner li[data-severity="warning"] > strong { color: var(--knx-warning-color); }
+.parameter-diagnostics-banner li[data-severity="info"] > strong { color: var(--knx-muted); }
 .device-workspace .com-object-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--knx-border); border-radius: 6px; overflow: hidden; }
 .device-workspace .com-object-list > li { padding: 0; margin: 0; border-bottom: 1px solid var(--knx-border); }
 .com-object-summary { display: grid; grid-template-columns: 32px minmax(120px, 2fr) minmax(90px, 1fr) minmax(100px, 1fr); gap: 10px; padding: var(--knx-cell-padding); cursor: pointer; }
@@ -2426,7 +2444,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-edit-fields .group-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .com-object-edit-fields .group-link-row > span { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
 .com-object-edit-fields .group-link-row > button { max-width: 100%; white-space: normal; }
-@media (max-width: 650px) { .com-object-summary { grid-template-columns: 24px 1fr; } }
+@media (max-width: 650px) {
+  .com-object-summary { grid-template-columns: 24px minmax(0, 1fr); }
+  /* The first column holds only the object number. Auto-placement used to
+     put the DPT there on row two, breaking a short code into characters. */
+  .com-object-summary > .com-object-effective-dpt,
+  .com-object-summary > .ga-address { grid-column: 2; }
+}
 .workbench .tree-label, .workbench .tree-toggle { background: transparent; color: var(--knx-foreground) !important; border: 0; box-shadow: none; font-weight: 400; text-align: left; white-space: normal; }
 .workbench .tree-toggle { padding: 0; min-width: 18px; flex: 0 0 18px; }
 .workbench .tree-label.selected { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); color: var(--knx-accent) !important; }

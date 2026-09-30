@@ -55,7 +55,7 @@ pub struct DownloadArgs {
 }
 
 /// `--partial parameters|group-addresses|both`.
-fn parse_partial(text: &str) -> Result<PartialDownloadParts, String> {
+pub(crate) fn parse_partial(text: &str) -> Result<PartialDownloadParts, String> {
     let (parameters, group_addresses) = match text {
         "parameters" => (true, false),
         "group-addresses" => (false, true),

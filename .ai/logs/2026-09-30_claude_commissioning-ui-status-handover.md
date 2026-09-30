@@ -1,0 +1,57 @@
+# Übergabe: Bus-Aktionen, globale Statuszeile und eigene Aktionszeile
+
+Stand: 2026-09-30, lesender Abgleich auf `origin/main` nach K13 und `--partial both`.
+Nutzerfrage: „sind alle programmier/do2nload aktionen mit einer Status Bar und zeile im Ui eingebaut?“ Antwort: **nein**. Nutzerauftrag: „ja alles in die uebergabe“. Diese Datei ist eine Aufgabenübergabe, **keine** Implementierung oder Freigabe für Hardware-Schreibzugriffe.
+
+## Ist-Zustand (Code, keine angenommene ETS-Funktion)
+
+| Aktion | API/CLI | Web-UI | Fortschritt und Status |
+| --- | --- | --- | --- |
+| Download auf Gerät, vollständig | `POST /api/device-download/plan`, `/start`, `GET /status`; CLI | `DeviceDownloadPanel.tsx` | Im Panel: Schritt- und Byte-Balken, einzelne gelesene Schreibblöcke, Backup-Pfad, Ergebnis und unbestätigter Restart. **Nicht** in der globalen Statuszeile. |
+| Teildownload: nur Parameter, nur Gruppenadressen, beides | Dieselben Server-Routen unterstützen `partial: { parameters, groupAddresses }`; CLI `--partial`; alle drei MDT-Scopes an `1.1.67` live belegt (RESEARCH §19.8, §19.15, §19.17). | **Keine Auswahl** im `DeviceDownloadPanel`, kein `partial` in `api.ts`'s `planDeviceDownload`. | Nicht über die Web-UI startbar. Fortschrittsmechanik des vorhandenen Download-Panels wiederverwenden, nicht duplizieren. |
+| Individuelle Adresse per Programmiertaste | `/api/device-address/phrase`, `/start`, `/status`, `/stop`; CLI | `AddressProgrammingPanel.tsx` | Phasen „warten“, „programmieren“, Ergebnis; Runden und Wartezeit, Stop nur während des Wartens. **Kein Balken** und **keine globale Zeile**. Bei dieser Prozedur keine erfundenen Byte-Mengen. |
+| Individuelle Adresse per Seriennummer | `/api/device-address/by-serial`, `GET /find-serial`; CLI. Auf MDT `1.1.67` wurde Adresswechsel per Seriennummer ignoriert (RESEARCH §19.15). | Nicht angebunden. | Kein gemeinsamer Aktionsstatus; One-shot-Route nicht einfach als Live-verifiziert ausgeben. |
+| `PID_SERVICE_CONTROL` Bit 2 lesen / explizit ändern | `GET/POST /api/device/service-control`; serverseitig nur mit Debug-Einstellung offen (ADR-0051). | Nicht angebunden. | Keine globale Aktionszeile. Niemals beim Adressprogrammieren implizit setzen; Debug-Gate serverseitig beibehalten. |
+| K13: Adressen auf `15.15.255` zurücksetzen | `knx device reset-address`, Guard verlangt exakt die benannten Geräte im Programmiermodus; live auf `1.1.67` geprüft, zurück auf `1.1.67` programmiert (RESEARCH §19.16). | **Keine HTTP-Route**, kein Panel. | **Nicht** implementiert; Reset-Restart wird nicht bestätigt. Eine stille letzte Abfrage beweist nicht, dass die Programmier-LED aus ist. |
+| Recovery aus Backup | `knx device restore` (CLI). | Keine HTTP-Route, kein Panel. | Sicherung und Recovery-Plan erst als fachlichen Serververtrag festlegen. |
+| Geräte-Bereitschaft | `GET /api/device-readiness`, **offline**. | Nicht angebunden. | Kein Bus-Schreibvorgang; bei der Liste vom Live-Status getrennt anzeigen. |
+| Vergleich Projekt ↔ Live-Gerät | `POST /api/device-compare`, **nur lesend**, kann den einzigen Gateway-Tunnel belegen. | Nicht angebunden. | Als lesenden Bus-Vorgang mit Ziel/Fehler/Ende anzeigen, aber niemals als Download. |
+| K14 Master Reset | Auf `0701h` nicht zur Live-Ausführung freigegeben; löscht das Gerät (KNOWN_LIMITATIONS §140/RESEARCH §19.16). | Nicht anbieten. | Weder generische „Reset“-Schaltfläche noch Bestätigung suggeriert Hardware-Unterstützung. |
+
+`App.tsx`'s `workbench-status` (um Zeile 1111) enthält nur Projektname, Speicherdatum und App-Version. Die zwei vorhandenen Panels pollen nur, solange sie angezeigt werden; der Downloadstatus lässt sich bei erneutem Öffnen abfragen, aber **eine global sichtbare Aktivitäts-/Historienzeile ist nicht implementiert**. `apps/knx-web/src/api.ts` (um Zeilen 1445/1452) sendet bei Download-Plänen keinen `partial`-Wert. Backend: `device_download_routes.rs` um Zeilen 61–85, `serial_address_routes.rs`, `service_control_routes.rs`, `device_readiness_routes.rs`, `device_compare_routes.rs`. Die UI-Sperre war laut `.ai/CURRENT_STATE.md` (Codex-Entry 16:46) freigegeben; vor Web-Änderungen muss die zuständige Session sie erneut explizit übernehmen.
+
+## Priorisierter Arbeitsauftrag und Abnahmekriterien
+
+### 1. Gemeinsamer Bus-Aktionsstatus (Backend-Vertrag zuerst)
+
+- Bestandsaufnahme **aller** Bus-Schreiboperationen im Server und der von ihnen belegten Tunnel/Locks, einschließlich One-shot-Operationen; `GET /api/bus/activity` oder gleichwertige **authentifizierte, nur lesende** Route. Status ohne Tunnel und ohne Blockieren hinter langem `connect_tunnel`: `idle`, `starting`, `running`, `finished`, `failed` bzw. `unknown` bei mehrdeutigem Schreibausgang; Aktion, Ziel, Sitzung/Run-ID, Phase, Zeit, Fortschritt **nur wenn fachlich vorhanden**. Weiterhin getrennte Download- und Programmier-Sitzungen, keine zweite widersprechende Statusquelle.
+- Für Download Schritte n/m, Bytes x/y und Backup-*Status* vom bestehenden Ereignisprotokoll ableiten; keine geheimen Werte/Schlüssel oder kompletten Speicherdumps in der globalen Zeile. Bei One-shot-Schritten Phasen oder indeterminate Anzeige, **keinen** erfundenen Prozentwert. Mehrdeutige Ergebnisse als `UNKNOWN` mit Prüf-/Recovery-Hinweis, nicht automatisch als Erfolg. Der erfolgreiche K13-Lauf hielt die LED nach einem stillen Abschluss-Read noch an.
+- Eine Zeile pro ausgeführter Aktion mit sicherem Ergebnis und Ziel im vorhandenen Session Log/Activity-Verlauf; Client-Wechsel, Panel-Schließen und Reload dürfen aktive Sitzungen nicht unsichtbar machen. Regel für Server-Neustart (persistenter Nachweis vs. ausdrücklich unbekannt) festlegen; keine Protokoll-/Statusdaten still verlieren. Polling mit Session-ID gegen Verwechslung nach Neustart/erneutem Start schützen. Der Statuszugriff darf keine konkurrierenden Tunnel starten und keine Bus-Operationen auslösen.
+- Lock-Reihenfolge aus `device_download_routes.rs` und `address_programming_routes.rs` einhalten; bei `try_lock`-Fehlschlag `busy/starting`, **nicht** `idle`. Tests: gesperrter Gateway-Tunnel, parallele Starts, Ende/Fehler/Mehrdeutigkeit, Reconnect/Reload, Fehlversuch vor dem ersten Schreiben, nach einem Teilschreiben, verschiedene Aktionen in Folge, gesperrte HTTP-Route ohne Auth.
+
+### 2. Globale Statusleiste und Aktionsliste (UI-Session, Web-Lock übernehmen)
+
+- `App.tsx`-Footer um aktuellen Bus-Aktionsstatus erweitern; Status auch außerhalb des Panels sichtbar, mit Zieladresse, Typ, Phase, Fortschritt wo vorhanden. Anklickbar zum zugehörigen Panel/Verlauf; klare Fehler- und Recovery-Anzeige. Eine eigene Zeile pro Programmier-/Download-Aktion in einer für Menschen lesbaren Liste/Log, inklusive abgeschlossen/fehlgeschlagen, und klare Unterscheidung **Download KNXBench → Gerät** vs. Datei speichern/exportieren.
+- Bestehende Panels einbinden statt parallele Poller-/Statusmodelle mit abweichenden Ergebnissen. Kein „100 %“ allein aufgrund übertragenen Bytes, wenn Readback/Restart unbestätigt; Backup vor dem ersten Schreiben sichtbar. Access Keys/Credentials nie im Status oder Log.
+- Komponenten-, API-Contract- und Browser-Tests: Navigationswechsel, Fenster/Reload, zwei Starts/konkurrierender Tunnel, 409/404, unbestätigter Restart, unbekannter Schreibausgang, Tastatur/Screenreader, DE/EN. Der Status muss bei ausgeschalteter Web-Aktionenansicht trotzdem sichtbar sein.
+
+### 3. Teildownload im vorhandenen Download-Panel
+
+- Auswahl „vollständig“, „nur Parameter“, „nur Gruppenadressen“, „beides“; `planDeviceDownload` sendet optional `partial` gemäß `PartialDto`, Backend bleibt alleinige Plan-/Bestätigungsquelle. `start` prüft bereits die identische Neuplanung/Plan-ID. Selection-Wechsel invalidiert alten Plan, Einwilligung, Scope-Hinweis und ungetestet-Akzeptanz; Server berechnet `support` *pro Scope*, nicht aus „Programm schon einmal live gesehen“.
+- Plan zeigt „notWritten“/weggelassene Bereiche, erwartete Bytes und Backup; UI behauptet nicht, alles sei geschrieben. Bestehende Fortschritts- und readback-Anzeige bleibt. Tests für alle vier Scopes, Planwechsel vor Start, veralteten Plan und `untested`-Anerkennung.
+
+### 4. Read-only-Aktionen und weitere Adressierungswege
+
+- Bereitschaft aus `/api/device-readiness` als offline Liste mit verified/untested/unsupported/excluded/no-address und Begründungen anzeigen. Projektvergleich aus `/api/device-compare` gesondert, mit Ziel, partieller Auswahl, fehlenden Bytes/Load-States, Read-only-Kennzeichnung und 409 bei belegtem Tunnel; nicht mit dem Download zusammenwerfen.
+- Seriennummer-Adressen/Find-Serial erst nach Gerätemodell-/Quellprüfung (Projekt oder Typenschild; **nie raten**), Bestätigung, Hardware-Unterstützungs-Hinweis und Fehlerstatus ins UI nehmen. Fehlgeschlagener K12-Test an MDT ist keine generelle Erfolgsgarantie.
+- Bit 2 nur in explizitem Debug-Bereich, Server-Gate nicht umgehen; aktuellen Bitzustand vor/nach kontrolliertem Eingriff anzeigen. Restore nur nach eigenem Backup-/Recovery-Design und Tests anbieten, niemals als „schnelle Wiederherstellung“ ohne passende Geräte-/Versionsprüfung.
+
+### 5. K13 HTTP-/UI-Reset bleibt **gesperrt**, bis die Sicherung trägt
+
+- **Kritischer Blocker:** Die CLI wurde beim Live-Test mit einem *separat angelegten, vollständigen persistenten Backup* des betroffenen Geräts betrieben. Die neue HTTP-Route darf **nicht** bloß `individual_address_reset` aufrufen: Das würde K13 ohne garantierte Sicherung vor dem ersten Broadcast-Schreiben auslösen. Ein sicherer, selbständig prüfender Server-Workflow muss zunächst alle betroffenen Geräte eindeutig bestimmen, alle relevanten Speicherbereiche persistent sichern und Backup-Dateien prüfen, und erst dann atomar gegenüber anderen Bus-Aktionen den Reset erlauben. Bei unbekanntem Produkt, unvollständigem/fehlendem Backup, nicht lesbarem Speicher oder abweichender Geräteliste **vor Schreiben abbrechen**. Kein Schlüssel darf geraten werden.
+- Erst dann: erwartete Adressen (keine ausgeschlossene Adresse, keine `15.15.255`) + echte Programmiertasten-Erkennung genau dieser Menge + eigene geräte-/scope-spezifische Bestätigung + Status `written: no/yes/UNKNOWN`; Recovery-Plan zum Zurückschreiben, LED/Programmiermodus manuell verifizieren, Restart niemals als bestätigt ausgeben. Kein automatisches Reset aufgrund einer UI-Option oder früheren Freigabe. Testfälle für fremde/fehlende Programmiertaste, ungültige/duplizierte Adresse, verweigertes Backup, Backup-Fehler, Gateway-Konflikt, Abbruch nach teilweiser Übertragung, Neustart/Reload.
+- Dieselbe Vor-Schreib-Backup-Regel für andere UI-Schreibwege auditieren (Adressvergabe per Taste/Seriennummer, Bit 2, Restore). Wo ein vollständiges Backup fachlich nicht belegbar ist, **nicht** freischalten; Limitierung explizit dokumentieren. Bestehende HTTP-/CLI-Routen nicht wegen eines grünen UI-Tests als datensicher zertifizieren.
+
+## Grenzen der Übergabe
+
+Kein Web-Code wurde in diesem Paket verändert. Keine KNX-Hardware angesprochen, kein neuer Download, keine stillen Schreibfreigaben. Ein kurzzeitig prototypisierter Server-Reset-/Status-Entwurf wurde verworfen, **nicht** auf `main` veröffentlicht: Der Reset hätte die verpflichtende persistente Sicherung vor dem Schreiben nicht garantiert. Dies ist ein offenes Sicherheits-/Architekturthema, kein fertiger Endpunkt. Die anschließende Server-Implementierung und die UI-Session müssen ihre Verträge gemeinsam festlegen; keine generische grüne Statuszeile ohne echte Zustandsquelle.

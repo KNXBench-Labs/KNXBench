@@ -9261,31 +9261,38 @@ would need the option-C re-download afterwards (goal-commission K14).
 scope joins the allowlist with a test; the bus monitor shows the probe,
 the request, the answer and the device back where the table says.
 
-## §140 The individual-address reset runs in the simulator only, and is refused on hardware
+## §140 The individual-address reset needs the pressed devices named, and its restart is unconfirmed
 
-**Status (2026-09-29, K13).** MP §2.18 `NM_IndividualAddress_Reset` is
-implemented in `knx_net::commissioning::individual_address_reset`: broadcast
+**Status (2026-09-30, K13, live on `1.1.67`).** MP §2.18
+`NM_IndividualAddress_Reset` is implemented in
+`knx_net::commissioning::individual_address_reset`: broadcast
 `A_IndividualAddress_Write` `FFFFh`; `T_Connect`, Basic Restart and
 `T_Disconnect` to `FFFFh` without waiting on any confirmation (the
-procedure's own rule); broadcast read until nobody answers.
+procedure's own rule); broadcast read until nobody answers. The CLI is
+`knx device reset-address <a.l.d>... --gateway <host:port> --confirm "I
+confirm individual-address reset to 15.15.255"`. There is no HTTP route or
+UI yet.
 
-**Refused on hardware.** `WriteScope::IndividualAddressReset` is not in
-`hardware_write_is_authorised`. The procedure changes every device whose
-button is pressed, and no operator has asked for it on the bus
-(goal-commission K13 is **[W]** only on request). There is no CLI or HTTP
-entry point, since both could only refuse.
+**Allowed on hardware since the user's request** (RESEARCH §19.16).
+`WriteScope::IndividualAddressReset` joined `hardware_write_is_authorised`
+with one guard of ours: the caller names the devices it expects in
+programming mode, and the first broadcast read must find exactly that set
+and no excluded address. Anything else — a stranger pressed on the same
+line, a named device not pressed — writes nothing. MP §2.18 itself resets
+whoever is pressed.
 
-**Ours, not MP §2.18's.** A first read lists the devices before anything is
-written (none: nothing is sent); the loop stops after 3 rounds and names
-the devices still answering; the read window is MP §2.3's 1 s.
+**The restart is not evaluated.** On `1.1.67` the device ignored it: the
+LED stayed on at `15.15.255` although nobody answered the closing read. The
+CLI says the restart is unconfirmed and that a lit LED means programming
+mode is still on; the remedy is `knx device program-address` (which gave
+`1.1.67` back) or a button press.
 
-**Simulator changes.** A Basic Restart switches programming mode off (MP
-§3.7.1.1.1, p. 80); a broadcast address write moves the other
-programming-mode devices too.
+**Ours, not MP §2.18's.** The expected-device guard; a first read before
+anything is written; a cap of 3 rounds that names the devices still
+answering; MP §2.3's 1 s read window.
 
-**Lifted when.** An operator asks for it on named devices, the scope joins
-the allowlist with a test, and the bus monitor shows the sequence and the
-device at `15.15.255`.
+**Not covered.** Several devices at once on hardware (simulator only); a bus
+monitor trace of the sequence.
 
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified
 

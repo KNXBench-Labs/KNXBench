@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — K13 individual-address reset on hardware, guarded
+
+- `WriteScope::IndividualAddressReset` joins `hardware_write_is_authorised`
+  on the user's request. `individual_address_reset` takes the devices the
+  operator expects in programming mode; the first read must find exactly
+  those and no excluded address, or nothing is written (4 new simulator
+  tests; 3 mutants of the guard caught).
+- New CLI `knx device reset-address <a.l.d>...` (plan without `--confirm`;
+  phrase `I confirm individual-address reset to 15.15.255`). It reports the
+  restart as unconfirmed, because MP §2.18 never evaluates it.
+- Live on `1.1.67`: reset to `15.15.255`, recovered to `1.1.67` with
+  `program-address`; compare and dump identical (RESEARCH §19.16, KL §140).
+
 ## 2026-09-30 — Group-address partial download verified on `1.1.67`
 
 - Live (user "k15 go"): `knx device download 1.1.67 --partial

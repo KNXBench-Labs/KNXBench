@@ -85,9 +85,10 @@ fn only_the_three_procedure_scopes_are_authorised_on_hardware() {
     assert!(!hardware_write_is_authorised(
         WriteScope::ProgrammingModeToggle
     ));
-    // K13: MP §2.18 resets every pressed device at once; not on hardware
-    // until an operator asks for it (KNOWN_LIMITATIONS §140).
-    assert!(!hardware_write_is_authorised(
+    // K13: allowed since the operator asked for it on 2026-09-30; the
+    // procedure itself refuses unless the pressed devices are exactly the
+    // ones the operator named (KNOWN_LIMITATIONS §140).
+    assert!(hardware_write_is_authorised(
         WriteScope::IndividualAddressReset
     ));
     // K14: an erasing Master Reset (KNOWN_LIMITATIONS §141).
@@ -149,7 +150,6 @@ fn an_unload_or_a_programming_mode_toggle_on_hardware_is_still_refused() {
     for scope in [
         WriteScope::Unload,
         WriteScope::ProgrammingModeToggle,
-        WriteScope::IndividualAddressReset,
         WriteScope::MasterReset,
         WriteScope::DomainAddressProgramming,
         WriteScope::RfConfiguration,

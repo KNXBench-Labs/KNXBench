@@ -477,8 +477,13 @@ clear bit 2 again → read back. Skill `knx-live-bus-operations`.
 
 ### K13 — `NM_IndividualAddress_Reset` (item 2)
 
-**Done 2026-09-29, simulator only; refused on hardware (KL §140).** The
-live step needs the user's request.
+**Live 2026-09-30 on `1.1.67` (user request).** `knx device reset-address
+1.1.67`: exactly `1.1.67` in programming mode (new guard), one round, then
+`1.1.67` vacant and `15.15.255` occupied. The unevaluated restart did not
+end programming mode (LED on). Recovered with `program-address 1.1.67`;
+compare and dump identical before and after (KL §140, RESEARCH §19.16).
+
+**Done 2026-09-29, simulator only.**
 
 MP §2.18. Resets every device in programming mode to `FFFFh`. **[W]**
 optional, only on the user's request.

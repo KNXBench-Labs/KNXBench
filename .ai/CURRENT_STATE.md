@@ -1,3 +1,20 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 15:52 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** K13 on the user's request. `IndividualAddressReset` is
+  allowed on hardware with a guard: the operator names the devices in
+  programming mode and the first read must find exactly those. New CLI
+  `knx device reset-address`. Live on `1.1.67`: reset to `15.15.255`, the
+  LED stayed on (restart not evaluated by MP §2.18), recovered with
+  `program-address 1.1.67`; compare and dump identical.
+- **Pending/Next Steps:** HTTP route/UI for the reset (UI lock). K14 stays
+  unrun (erases). `partial-both` untested.
+- **Notes for Codex oder Claude:** Evidence under `OriginalData/DeviceBackups/
+  1.1.67_MDT-0701_2026-09-30_k13-*` (private). A reset needs the operator
+  at the device twice: press, reset, press again for `program-address`.
+
+---
+
 - **Last Agent:** codex (UI U12 / ISSUE-08 UI half)
 - **Timestamp:** 2026-09-30 13:26 CEST
 - **Web lock:** taken by this UI session for the ISSUE-08 UI half, continuing the UI-owned lock from the published ISSUE-05 package. No other session should edit `apps/knx-web` until this package releases or hands off the lock.

@@ -1,4 +1,28 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 07:18 CEST
+- **Completed:** goal.md §8 documentation hygiene (docs only, no code).
+  `docs/LIMITATION_TRIAGE.md` recounted from the source: 146 numbered
+  entries (`grep -cE '^## (§)?[0-9]'`; the old `'^## [0-9]'` missed the
+  `§`-prefixed headings), 145 classified — K1 5, K2 27, K3 53, K4 16, done
+  44 — §105 still deliberately unclassified, §130 is used twice. Every move
+  to "done" rests on the entry's own Resolved/Closed/Lifted status line, not
+  its title. `docs/ROADMAP.md` T37 heading now says shipped. goal.md §8:
+  items 1/2/3/5 marked done (`codex-goal.md`/`ideas.md` were already retired
+  in `57d7190`), item 4 (F-T30-1) re-checked and still accurate: `Project`
+  fields `pub` at `crates/knx-core/src/project.rs:202-207`, ADR-0039 phases
+  3–5 open. ISSUE-08 data half was delivered before this (goal.md §12.3 /
+  plan updated in `c444ae7`).
+- **Pending/Next Steps:** Next open goal.md work after §8. UI half of
+  ISSUE-08 (grouping, collapse, surfacing the `#[ts(skip)]` fields) stays
+  with the UI session (goal-ui.md); commissioning stays with
+  goal-commission.md.
+- **Notes for Codex or Claude:** The triage must be recounted again whenever
+  KNOWN_LIMITATIONS gains an entry; use the `(§)?` grep. Gates:
+  `check-anchors` 397 links / 216 files, `check-headers` 318/161.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 11:50 CEST
 - **Web lock:** untouched; held by the UI session as its newest entry says.
 - **Completed:** `knx device readiness` (offline, per project device): `knx_app::project_readiness`, new `UnsupportedCategory::Configuration`, CLI module `device_readiness.rs`. House corpus test `crates/knx-app/tests/house_readiness.rs` pins RESEARCH §19.12 (17 untested / 17 unsupported / 1 excluded). 4 mutations caught. No bus traffic.
@@ -7,6 +31,7 @@
 
 ---
 
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 07:06 CEST
 - **Web lock:** held by the UI session (U12 / ISSUE-05) per the entry below; this package made no `apps/knx-web` change — the new fields are `#[ts(skip)]` for that reason.
 - **Completed:** ISSUE-08 data half, P3 (goal.md session). `ComObjectNode`

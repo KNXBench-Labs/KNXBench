@@ -503,8 +503,9 @@ option C re-download.
 **Live 2026-09-30:** `--partial group-addresses` first interrupted by an
 external timeout in step 17/21 and repaired with the complete option-C
 download; re-run on "k15 go" without the timeout: 1022 octets read back,
-both tables `Loaded`, dump identical. Verified (KL §142, RESEARCH §19.15);
-`both` untested.
+both tables `Loaded`, dump identical. Verified (KL §142, RESEARCH §19.15).
+`--partial both` at 16:00: 24 steps, 1416 octets read back, all `Loaded`,
+dump identical (RESEARCH §19.17). All three partial scopes verified.
 
 **Live 2026-09-29:** parameters-only partial download on `1.1.67`, 394
 octets read back, dump unchanged (KL §142 lifted, RESEARCH §19.8).

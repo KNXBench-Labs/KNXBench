@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / write-activity evidence boundary)
+- **Timestamp:** 2026-09-30 22:12 CEST
+- **Web lock:** held by the separate UI session for its scoped Debug/service-control package; no Web source edited.
+- **Completed:** Published ADR-0056 and simulated HTTP safety regressions as `eb3efe96928b39507183d5c27d2ae583797c3048`; exact remote SHA readback matched. Audited serial-address, property and group-write routes: HTTP 200 can be a no-op for the first two; a post-send error or cancellation can leave an unverified mutation; accepted group send is not device readback. Tests assert 200/no-op outcomes and all three write kinds remain explicitly `untracked`, not generic green receipts. ADR-0056 defines phase-aware write evidence and flags the serial-address HTTP route's absent durable pre-write recovery record; no write API or live permission was added. Rust workspace 137 suites / 2,776 passed / 0 failed / 161 ignored / 0 `SKIP:`; Web build / 80 files / 1,270 tests; strict workspace Clippy, fmt, anchors, headers, layering, corpus gates and diff check green. Status, limitations and goal updated; evidence `.ai/logs/2026-09-30_codex_write-activity-evidence-design.md`.
+- **Pending/Next Steps:** Introduce a typed write-evidence state machine with simulated cancellation/phase tests before routing write actions, then instrument each route only once its backup and send/readback boundary are verified. The serial-address HTTP route needs durable pre-write recovery before any future live write; group writes cannot claim receiver verification. `coverage: partial` remains. K13 HTTP reset and K14 stay blocked, and the Web lock remains with the UI owner. Clean only this task's worktree/scratch after the handover is published.
+- **Notes for Codex oder Claude:** No access key may be guessed. K12 property backup covers only that property, not a device image; never infer `notSent` from a generic error or `verified` from HTTP 200. No live KNX action, no Web source edit, no private corpus or credentials were committed. Root dirty changes and other worktrees were untouched.
+
+---
+
 - **Last Agent:** codex (commissioning / gated service-control read activity)
 - **Timestamp:** 2026-09-30 21:58 CEST
 - **Web lock:** held by the separate UI session for its scoped Debug/service-control package; no Web source edited here.

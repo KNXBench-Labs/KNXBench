@@ -1,4 +1,21 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 11:15 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** `knx device service-control` (ADR-0051 on the CLI,
+  `apps/knx-cli/src/device_service_control.rs`): read `PID_SERVICE_CONTROL`
+  bit 2, or `--enable`/`--disable` with the scope's own `--confirm` phrase;
+  without it a plan and no socket. 7 tests, 10 mutants caught. No bus
+  traffic.
+- **Pending/Next Steps:** UI session (web lock): Settings "Debug" toggle for
+  `debugIndividualAddressWriteEnable` and a device action. Hardware run on
+  `1.1.67` (set bit → address-by-serial → clear bit) only with an explicit
+  user go.
+- **Notes for Codex oder Claude:** The CLI has no settings gate on purpose
+  (ADR-0051 alternatives); the phrase is the gate. Do not add one.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 10:55 CEST
 - **Web lock:** untouched; docs only.
 - **Completed:** LIMITATION_TRIAGE recount picks up the commissioning lane's §147 (cEMI priority/repeat/hop count, lifted 2026-09-30) under "Erledigt": 147 numbered entries, 146 classified, §105 still deliberately not; set comparison against KNOWN_LIMITATIONS shows no missing/extra numbers (only the known double §130). goal.md §12.3 notes the re-run. Anchor gate green.

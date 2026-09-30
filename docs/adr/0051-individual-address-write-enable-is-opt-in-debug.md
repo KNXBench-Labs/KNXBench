@@ -53,8 +53,9 @@ explicitly.
   the user. It is a permanent control field, and changing it silently
   changes the device's behaviour beyond the one write.
 - **A CLI command only.** Rejected: the user asked for a Settings option.
-  A CLI command can follow; it would need no setting, as the CLI already
-  demands the typed phrase.
+  A CLI command was added alongside (`knx device service-control`,
+  2026-09-30); it needs no setting, as the CLI already demands the typed
+  phrase.
 - **Gate only in the UI.** Rejected: an HTTP request would reach the write
   without the opt-in.
 

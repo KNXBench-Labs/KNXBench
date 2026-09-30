@@ -12,6 +12,7 @@ mod device_compare;
 mod device_download;
 mod device_readiness;
 mod device_serial;
+mod device_service_control;
 mod scan;
 
 const USAGE: &str =
@@ -103,6 +104,11 @@ const USAGE: &str =
      \x20     knx device find-serial (<MMMM:NNNNNNNN> | --address <a.l.d>) --gateway <host:port>\n\
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
+     \x20     knx device service-control <area.line.device> --gateway <host:port> [--key-file <path>]\n\
+     \x20                  [--enable|--disable [--confirm \"I confirm individual-address write enable to <address>\"]]\n\
+     \x20         (reads PID_SERVICE_CONTROL bit 2, Individual Address Write Enable, RES §4.2.8;\n\
+     \x20         --enable/--disable changes only that bit, ADR-0051. KNXBench never sets it on its\n\
+     \x20         own. Without --confirm it prints the steps and opens no connection)\n\
      \x20     knx --version\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
@@ -1809,6 +1815,7 @@ fn run_device(args: &[String]) -> ExitCode {
         Some("program-address") => run_device_program_address(&args[1..]),
         Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
         Some("find-serial") => run_device_find_serial(&args[1..]),
+        Some("service-control") => run_device_service_control(&args[1..]),
         Some("restore") => run_device_restore(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
@@ -2588,6 +2595,101 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
                 eprintln!("{e}");
                 ExitCode::FAILURE
             }
+        }
+    })
+}
+
+/// `knx device service-control`: `PID_SERVICE_CONTROL` bit 2 (ADR-0051).
+/// Reading needs only `--gateway`; changing needs `--enable`/`--disable`
+/// and the scope's own phrase, checked before a socket opens.
+fn run_device_service_control(args: &[String]) -> ExitCode {
+    let parsed = match device_service_control::parse_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let (target, mode) = match device_service_control::check(&parsed) {
+        Ok(checked) => checked,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let address = target.address();
+    let key = match parsed.key_file.as_deref() {
+        None => None,
+        Some(path) => match std::fs::read_to_string(path)
+            .map_err(|e| e.to_string())
+            .and_then(|text| {
+                knx_app::access_key::parse_operator_key(&text).map_err(|e| e.to_string())
+            }) {
+            Ok(key) => Some(key),
+            Err(e) => {
+                eprintln!("--key-file {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+    };
+    let plan = knx_core::commissioning::authorisation::AuthorisationPlan::from_operator_key(key);
+    let gateway = match &mode {
+        device_service_control::Mode::Plan { enable } => {
+            print!("{}", device_service_control::format_plan(address, *enable));
+            return ExitCode::SUCCESS;
+        }
+        device_service_control::Mode::Read { gateway }
+        | device_service_control::Mode::Write { gateway, .. } => *gateway,
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let timing = knx_net::SessionTiming::default();
+        let mut out = std::io::stdout();
+        let ok = match mode {
+            device_service_control::Mode::Read { .. } => {
+                device_service_control::read(&tunnel, address, plan, timing, &mut out).await
+            }
+            device_service_control::Mode::Write {
+                enable,
+                authorisation,
+                ..
+            } => {
+                device_service_control::execute(
+                    &tunnel,
+                    plan,
+                    timing,
+                    authorisation,
+                    enable,
+                    &mut out,
+                )
+                .await
+            }
+            device_service_control::Mode::Plan { .. } => unreachable!("returned above"),
+        };
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        if ok {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
         }
     })
 }

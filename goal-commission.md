@@ -526,6 +526,26 @@ clippy, layering, headers (302/161), anchors (397), deny. Every stage-two
 result is simulator-verified; the [W] live runs of K12–K15 on `1.1.67`
 are deferred until the user gives a device-specific go.
 
+## 3b+. Added to the readiness work (user, 2026-09-30)
+
+### K19 — Offline check of the 71 private telegrams
+
+A private ETS `CommunicationLog` XML
+(`{http://knx.org/xml/telegrams/01}`, 71 `Telegram` records, hex
+`RawData` starting with `29`, i.e. cEMI `L_Data.ind`) was found read-only
+in the off-repository Windows user profile (2026-09-29 inventory). The
+user assigned it to the commissioning/readiness session.
+
+- Offline only: decode every `RawData` with `knx_net::cemi::decode_l_data`;
+  report decoded / refused / unknown counts and every refusal by reason.
+  No bus traffic, no socket.
+- Private data: frames, addresses, timestamps and connection names never
+  go into Git, docs or logs. Tracked output is aggregate counts only.
+- A tracked fixture only as a sanitized, hand-verified subset (synthetic
+  addresses), and only if a decoder gap needs a regression test.
+- KNXBench does not import this capture format; adding an importer is a
+  separate decision, not part of K19.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

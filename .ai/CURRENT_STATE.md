@@ -1,5 +1,14 @@
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 15:30 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** `POST /api/device-compare` (`apps/knx-server/src/device_compare_routes.rs`): the read-only compare over HTTP, on the new shared `knx_net::commissioning::memory_download::compare_with_plan` (the CLI uses it too). Refused while download/programming/monitor/scan hold the tunnel. 7 route tests (6 corpus-backed, simulator), 3 net tests, 12 mutants caught. No bus traffic; nothing written anywhere.
+- **Pending/Next Steps:** For the UI session: a compare view can call `POST /api/device-compare` (per run: `address`, `segment`, `device`, `project`; `same`, `differingOctets`, `written: false`). Commissioning lane: live steps stay gated on an explicit user go.
+- **Notes for Codex oder Claude:** The route has no phrase/key fields on purpose; do not add them. It never waits on the download's lock (same order as `serial_address_routes::find`).
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 15:30 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit (the Debug toggle needs it).
 - **Completed:** K12 follow-up, user decision 2026-09-30 (ADR-0051):
   `PID_SERVICE_CONTROL` bit 2 "Individual Address Write Enable" stays never

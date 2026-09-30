@@ -204,7 +204,7 @@ fn write_request(confirmation: &str) -> Value {
 }
 
 #[tokio::test]
-async fn writes_by_serial_number_without_a_button() {
+async fn write_refuses_without_durable_pre_write_recovery_before_a_tunnel() {
     let h = harness(with_serial());
     let before = h.device.address();
     let (status, body) = send(
@@ -212,31 +212,29 @@ async fn writes_by_serial_number_without_a_button() {
         post("/api/device-address/by-serial", write_request(PHRASE)),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["serialNumber"], SERIAL);
-    assert_eq!(body["previousAddress"], before.to_string());
-    assert_eq!(body["address"], NEW);
-    assert_eq!(body["wrote"], true);
-    assert_eq!(h.device.address().to_string(), NEW);
-    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(activity["oneShot"], json!([]));
-    assert!(activity["untracked"]
-        .as_array()
-        .unwrap()
-        .contains(&json!("serialAddress")));
-
-    // A second request targets the address it already holds: successful
-    // HTTP completion alone does not prove a write was sent.
-    let (status, body) = send(
-        &h.app,
-        post("/api/device-address/by-serial", write_request(PHRASE)),
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["wrote"], false);
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert!(body.to_string().contains("backup"), "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(h.device.address(), before);
+    assert_eq!(h.device.serial_number_writes(), 0);
     let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
     assert_eq!(activity["oneShot"], json!([]));
+}
+
+#[tokio::test]
+async fn a_possible_noop_is_also_blocked_without_a_durable_backup() {
+    let h = harness(with_serial());
+    let address = h.device.address().to_string();
+    let request = json!({
+        "address": address,
+        "gateway": GATEWAY,
+        "confirmation": format!("I confirm individual-address programming to {address}"),
+        "serialNumber": SERIAL,
+    });
+    let (status, body) = send(&h.app, post("/api/device-address/by-serial", request)).await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(h.device.serial_number_writes(), 0);
 }
 
 #[tokio::test]
@@ -360,13 +358,14 @@ async fn serial_lookup_refuses_an_occupied_scan_holder_before_opening_a_tunnel()
 }
 
 #[tokio::test]
-async fn an_unknown_serial_number_is_not_found_and_writes_nothing() {
+async fn an_unknown_serial_number_does_not_bypass_the_backup_gate() {
     let h = harness(with_serial());
     let before = h.device.address();
     let mut request = write_request(PHRASE);
     request["serialNumber"] = json!("0083:00000001");
     let (status, body) = send(&h.app, post("/api/device-address/by-serial", request)).await;
-    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
     assert_eq!(h.device.address(), before);
     assert_eq!(h.device.serial_number_writes(), 0);
 }

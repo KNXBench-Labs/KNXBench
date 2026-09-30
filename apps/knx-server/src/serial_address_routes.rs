@@ -11,8 +11,10 @@
 //! 3. the serial number is given, or the open project records it for the
 //!    named device (Project Schema `DeviceInstance/@SerialNumber`), never
 //!    guessed;
-//! 4. no download, programming, monitor or scan runs. The programming lock
-//!    is held for the whole run, so they refuse while it lasts.
+//! 4. the durable pre-write recovery gate currently refuses every confirmed
+//!    write (including a possible no-op) before any tunnel opens. Read-only
+//!    serial lookup remains available. The protocol procedure stays in the
+//!    simulator for recovery-gate development.
 
 use std::net::SocketAddrV4;
 
@@ -127,6 +129,11 @@ async fn write(
         body.serial_number.as_deref(),
         body.device.as_deref(),
     )?;
+
+    // A phrase and a project serial are not durable recovery evidence. Refuse
+    // even a possible no-op before opening a tunnel: that cannot be known yet.
+    knx_app::serial_address_recovery::require_persistent_pre_write_recovery()
+        .map_err(|message| ApiError::with_status(StatusCode::PRECONDITION_FAILED, message))?;
 
     // Same lock order as `address_programming_routes::start`.
     let programming = state.address_programming.lock().await;

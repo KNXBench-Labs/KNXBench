@@ -16,6 +16,7 @@ pub mod download_support;
 pub mod import;
 pub mod progress;
 pub mod project_readiness;
+pub mod serial_address_recovery;
 pub mod serial_number;
 pub mod service_control_backup;
 

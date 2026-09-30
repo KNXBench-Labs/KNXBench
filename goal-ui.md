@@ -303,9 +303,15 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      null/absent metadata stays unasserted. `BusMonitorPanel.test.tsx`
      covers both states, the marker and older responses; the local mocked
      `monitor-control.e2e.ts` covers EN/DE at 360/1440 px. No live bus action.
-  4. **Readiness and device-compare views:** the APIs exist
-     (`/api/readiness` `b72a6b6`, `POST /api/device-compare` `76bcce74`);
-     no view shows them yet.
+  4. **Readiness and device-compare views:** the actual mounted routes are
+     `GET /api/device-readiness` (`b72a6b6`; the earlier `/api/readiness`
+     shorthand was not a route) and `POST /api/device-compare` (`76bcce74`).
+     Their UI lives under **Device checks** in Bus diagnostics: offline
+     per-device grades with original evidence and counts, then an explicit
+     two-step, read-only tunnel comparison of one uniquely addressed,
+     plannable device. `DeviceInspectionPanel.test.tsx` and the local mocked
+     `device-checks.e2e.ts` cover the path; no live bus request is part of
+     this UI package.
 
 ### U13 — Close the UI track
 

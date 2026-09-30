@@ -154,6 +154,16 @@ simulator-only; neither can be promised as a universal rollback. The existing ma
 read-only baseline required by `goal-commission.md` before live tests is
 separate and still required when live tests are authorised again.
 
+**Device-checks UI boundary (2026-09-30):** the offline readiness view uses
+only the open project's installed product database; `verified` is evidence
+for one application/download operation, not a general compatibility promise.
+The comparison UI asks for the complete plan only: the API/CLI's partial
+selection is not available there yet. It requires explicit confirmation
+before a read-only management tunnel, and can be refused by a device whose
+memory is protected at the free access level. A compare is neither a backup
+nor proof a later write will work. No live-bus run was made for this view;
+EN/DE browser and simulator-backed server tests provide its current evidence.
+
 ## PDB-9 parameter and Dynamic coverage boundary
 
 Since schema v15 ([ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md))

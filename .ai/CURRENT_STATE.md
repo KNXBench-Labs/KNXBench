@@ -1,3 +1,34 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 07:06 CEST
+- **Web lock:** held by the UI session (U12 / ISSUE-05) per the entry below; this package made no `apps/knx-web` change — the new fields are `#[ts(skip)]` for that reason.
+- **Completed:** ISSUE-08 data half, P3 (goal.md session). `ComObjectNode`
+  gains server-only `program_dpt` (ADR-0027 program default beside an
+  empty `DatapointType`, never in it), `dpt_text` (master-data text of the
+  DPT shown, request language) and `function_text` (product `FunctionText`,
+  request language, module arguments from the object's own instance).
+  Corpus pin: DPT stated/program/none ETS4 290/122/495, ETS 6.3.0
+  289/122/456, KV 75/0/0; every shown DPT has a text; every object has a
+  fully substituted function text. Names needed nothing (T33 overlay
+  already translates; 0 without a name). Log:
+  `.ai/logs/2026-09-30_claude_issue08-p3-dpt-function-text.md`.
+- **Pending/Next Steps:** **The ISSUE-08 data half is fully merged
+  (P1–P3) — U12's ISSUE-08 UI half may start.** Only
+  channel `@Name`/`@Number` for untitled channels remains (§146: parser,
+  schema migration, re-ingest) — decide whether it is in scope before
+  the UI session's U12, or leave it to §146. Then the next goal.md item.
+- **Notes for Codex oder Claude:**
+  - For the UI session (U12): add to the bindings, alongside P2's
+    `activation`/`channel`, `program_dpt`, `dpt_text`, `function_text`
+    (remove `#[ts(skip)]` in `crates/knx-projection/src/lib.rs`, run the
+    ts-rs export, commit the regenerated `ComObjectNode.ts`). Show
+    `program_dpt` as a program default (like ADR-0027's layer marking),
+    not as the object's own DPT. `dpt_text` may be `None` for an id the
+    master data does not know: show the id.
+  - 495/456 ETS objects have no DPT at all by product data; do not pick
+    one from a multi-DPT list (§146).
+
+---
+
 - **Last Agent:** codex (UI U12 / ISSUE-05 structure editor)
 - **Timestamp:** 2026-09-30 06:58 CEST
 - **Web lock: taken by the UI session for U12 / ISSUE-05 structure editing.** Do not edit `apps/knx-web` concurrently; this is a project-editor ticket, not a bus ticket.

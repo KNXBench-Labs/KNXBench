@@ -607,41 +607,34 @@ pub struct ComObjectNode {
     /// server can evaluate (it needs the product database), so
     /// [`build_device_detail`] alone always says `NotEvaluated`.
     ///
-    /// On the wire (serde) since ISSUE-08's data half, but not yet in the
-    /// generated TypeScript bindings: `apps/knx-web` is under the UI
-    /// session's web lock. Its ISSUE-08 UI half (goal-ui.md U12) drops this
-    /// `skip`, and the one on `channel`, adds `export` to the two types
-    /// below, and regenerates the bindings.
-    #[ts(skip)]
+    /// Sent on the wire and exported to TypeScript for the device editor.
+    /// The UI keeps this evaluated state distinct from `is_active`, the
+    /// project's stored claim, so an import is not silently rewritten.
     pub activation: ComObjectActivation,
     /// The `Channel`/`ChannelIndependentBlock` of the `Dynamic` tree this
     /// object was activated under (ISSUE-08). `None` when `activation` is
     /// not `Active`, or the object sits outside every channel element.
-    /// Not yet in the TypeScript bindings; see `activation`.
-    #[ts(skip)]
     pub channel: Option<ComObjectChannel>,
     /// The application program's datapoint type for an object whose own
     /// `DatapointType` is stated empty (ADR-0027's program default). `None`
     /// whenever `dpt` is the value to show, and when the program has none.
-    /// Never exported: an empty slot stays empty in the file (ISSUE-08).
-    #[ts(skip)]
+    /// Display-only: an empty project DPT slot stays empty in the file.
     pub program_dpt: Option<String>,
     /// The display text of the datapoint type the object shows: `dpt`, or
     /// `program_dpt` when `dpt` is `None`. In the requested language when
     /// the master data translates it. The canonical id stays in `dpt`/
     /// `program_dpt`. Server-only: [`build_device_detail`] leaves it `None`.
-    #[ts(skip)]
     pub dpt_text: Option<String>,
     /// The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
     /// the requested language when translated, module arguments of the
     /// object's own module instance substituted. The main-function label
     /// ETS shows next to the name (ISSUE-08). Server-only, like `dpt_text`.
-    #[ts(skip)]
     pub function_text: Option<String>,
 }
 
 /// [`ComObjectNode::activation`]: the evaluated state, or why there is none.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub enum ComObjectActivation {
     /// The evaluated tree activates this object.
     Active,
@@ -660,6 +653,7 @@ pub enum ComObjectActivation {
 
 /// [`ComObjectNode::channel`]: the channel element that owns an object.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub struct ComObjectChannel {
     /// Stable within one device detail: two objects share a channel exactly
     /// when their keys are equal. Opaque; do not parse.

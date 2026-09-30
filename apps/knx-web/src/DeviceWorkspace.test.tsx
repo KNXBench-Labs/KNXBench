@@ -18,8 +18,8 @@ const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo
 
 const NO_REFERENCE: DeviceProductNode = { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" };
 
-function detail(product: DeviceProductNode = NO_REFERENCE): DeviceDetail {
-  return { id: 9, name: "Example", address: null, description: null, com_objects: [], product };
+function detail(product: DeviceProductNode = NO_REFERENCE, comObjects: DeviceDetail["com_objects"] = [], id = 9): DeviceDetail {
+  return { id, name: "Example", address: null, description: null, com_objects: comObjects, product };
 }
 
 // Fictional refs and catalogue values throughout: this file is public, and a
@@ -40,13 +40,17 @@ function catalog(overrides: Partial<DeviceProductCatalog> = {}): DeviceProductCa
 // from what a user actually has on screen — a `hidden` panel still has
 // `textContent`, so asserting against it would pass even if the tab were
 // unreachable.
-async function render(product: DeviceProductNode, selectProductTab = true) {
+async function render(product: DeviceProductNode, selectProductTab = true, comObjects: DeviceDetail["com_objects"] = []) {
   const host = document.createElement("div"); document.body.append(host);
   const root = createRoot(host);
-  await act(async () => root.render(<DeviceWorkspace detail={detail(product)} tree={tree} onApplied={() => {}} />));
+  await act(async () => root.render(<DeviceWorkspace detail={detail(product, comObjects)} tree={tree} onApplied={() => {}} />));
   const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
   if (selectProductTab) await act(async () => tabs[2].click());
-  return { host, tabs, cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
+  return {
+    host, tabs,
+    rerender: async (next: DeviceDetail) => { await act(async () => root.render(<DeviceWorkspace detail={next} tree={tree} onApplied={() => {}} />)); },
+    cleanup: async () => { await act(async () => root.unmount()); host.remove(); },
+  };
 }
 
 it("keeps communication editing and parameters reachable in the central device tabs", async () => {
@@ -58,6 +62,136 @@ it("keeps communication editing and parameters reachable in the central device t
   expect(api.deviceParameters).toHaveBeenCalled();
   await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
   expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+  await cleanup();
+});
+
+type Issue08Object = DeviceDetail["com_objects"][number] & {
+  activation: "Active" | "Inactive" | "Undetermined" | "NotEvaluated";
+  channel: { key: string; kind: "Channel" | "ChannelIndependentBlock"; text: string | null; name: string | null; number: string | null; order: number } | null;
+  is_active: boolean; program_dpt: string | null; dpt_text: string | null; function_text: string | null;
+};
+
+function object(id: number, overrides: Partial<Issue08Object> = {}): Issue08Object {
+  return {
+    id, number: id, name: `Object ${id}`, description: null, description_layer: null, dpt: null, dpt_layer: null,
+    read: false, write: false, communication: true, transmit: false, update: false, read_on_init: false,
+    links: [], activation: "NotEvaluated", channel: null, is_active: true,
+    program_dpt: null, dpt_text: null, function_text: null, ...overrides,
+  };
+}
+
+it("groups by opaque channel key in program order, collapsed by default and stable on refresh", async () => {
+  const alpha = { key: "opaque-a", kind: "Channel" as const, text: "Inputs", name: "Raw A", number: "07", order: 2 };
+  const another = { ...alpha, key: "opaque-a2", order: 3 };
+  const beta = { ...alpha, key: "opaque-b", text: "Outputs", order: 8 };
+  const objects = [
+    object(4, { activation: "Active", channel: beta }),
+    object(1, { activation: "Active", channel: alpha }),
+    object(5, { activation: "NotEvaluated" }),
+    object(2, { activation: "Active", channel: beta }),
+    object(3, { activation: "Active", channel: another }),
+  ];
+  const { host, rerender, cleanup } = await render(NO_REFERENCE, false, objects);
+  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
+  expect(groups).toHaveLength(4);
+  expect(groups.map((g) => g.querySelector("summary")?.textContent)).toEqual([
+    expect.stringContaining("Inputs"), expect.stringContaining("Inputs"),
+    expect.stringContaining("Outputs"), expect.stringContaining("Without evaluated channel"),
+  ]);
+  expect(groups.map((g) => g.querySelectorAll(".com-object-detail").length)).toEqual([1, 1, 2, 1]);
+  expect(groups.every((g) => !g.open)).toBe(true);
+  expect(groups[0].querySelector("summary")!.textContent).not.toContain("Raw A");
+  expect(groups[0].querySelector("summary")!.textContent).not.toContain("07");
+  await act(async () => { groups[0].querySelector("summary")!.click(); });
+  expect(groups[0].open).toBe(true);
+  await rerender(detail(NO_REFERENCE, [...objects], 9));
+  expect(host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")[0].open).toBe(true);
+  await rerender(detail(NO_REFERENCE, objects, 10));
+  expect([...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")].every((g) => !g.open)).toBe(true);
+  await cleanup();
+});
+
+it("keeps channel-independent blocks distinct from objects with no evaluated owner", async () => {
+  const independent = { key: "opaque-independent", kind: "ChannelIndependentBlock" as const, text: null, name: null, number: null, order: 7 };
+  const objects = [
+    object(2, { activation: "NotEvaluated" }),
+    object(1, { activation: "Active", channel: independent }),
+    object(3, { activation: "Active", channel: null }),
+    // A malformed or future server must not place an inactive object under
+    // an owner that only an active evaluation can establish.
+    object(4, { activation: "Inactive", channel: independent }),
+  ];
+  const { host, cleanup } = await render(NO_REFERENCE, false, objects);
+  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
+  expect(groups).toHaveLength(2);
+  expect(groups[0].querySelector("summary")?.textContent).toContain("Channel-independent objects");
+  expect(groups[1].querySelector("summary")?.textContent).toContain("Without evaluated channel");
+  expect(groups.map((g) => g.querySelectorAll("li[data-activation]").length)).toEqual([1, 3]);
+  expect(groups[1].querySelector('li[data-activation="Active"]')).not.toBeNull();
+  expect(groups[1].querySelector('li[data-activation="Inactive"]')).not.toBeNull();
+  await cleanup();
+});
+
+it("keeps inactive, undetermined and unevaluated objects inspectable but visibly distinct", async () => {
+  const channel = { key: "opaque-1", kind: "Channel" as const, text: null, name: "Raw name", number: "4", order: 0 };
+  const objects = [
+    object(1, { activation: "Active", is_active: false, channel }),
+    object(2, { activation: "Inactive", is_active: false }),
+    object(3, { activation: "Undetermined" }),
+    object(4, { activation: "NotEvaluated" }),
+  ];
+  const { host, cleanup } = await render(NO_REFERENCE, false, objects);
+  const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
+  expect(groups[0].querySelector("summary")!.textContent).toContain("Untitled channel");
+  expect(groups[0].querySelector("summary")!.textContent).not.toContain("Raw name");
+  expect(groups[0].querySelector("summary")!.textContent).not.toContain("4");
+  await act(async () => { for (const group of groups) group.querySelector("summary")!.click(); });
+  expect(host.querySelector('[data-activation="Inactive"]')?.textContent).toContain("Inactive");
+  expect(host.querySelector('[data-activation="Undetermined"]')?.textContent).toContain("Undetermined");
+  expect(host.querySelector('[data-activation="NotEvaluated"]')?.textContent).toContain("Not evaluated");
+  expect(host.querySelector('[data-activation="Active"]')?.textContent).toContain("Active");
+  expect(host.textContent).toContain("Stored inactive");
+  await cleanup();
+});
+
+it("does not discard an activation state added by a newer server", async () => {
+  const { host, cleanup } = await render(NO_REFERENCE, false, [
+    object(6, { activation: "FutureActivation" as "NotEvaluated", channel: null }),
+  ]);
+  const group = host.querySelector<HTMLDetailsElement>("details.com-object-channel")!;
+  expect(group.querySelector("summary")?.textContent).toContain("Without evaluated channel");
+  await act(async () => group.querySelector("summary")!.click());
+  const row = group.querySelector('li[data-activation="FutureActivation"]');
+  expect(row?.textContent).toContain("Unknown activation state");
+  await cleanup();
+});
+
+it("shows DPT provenance, canonical ids and function text without editing the program default", async () => {
+  const channel = { key: "opaque-c", kind: "Channel" as const, text: "Lighting", name: null, number: null, order: 0 };
+  const objects = [
+    object(1, { activation: "Active", channel, dpt: "DPST-1-1", dpt_text: "Switch state", function_text: "Toggle relay" }),
+    object(2, { activation: "Active", channel, program_dpt: "DPST-9-1", dpt_text: "Temperature" }),
+    object(3, { activation: "Active", channel, dpt: "DPST-999-999" }),
+    object(4, { activation: "Active", channel }),
+  ];
+  const { host, cleanup } = await render(NO_REFERENCE, false, objects);
+  await act(async () => { host.querySelector<HTMLDetailsElement>("details.com-object-channel summary")!.click(); });
+  const rows = [...host.querySelectorAll<HTMLDetailsElement>(".com-object-detail")];
+  expect(rows[0].querySelector("summary")?.textContent).toContain("Toggle relay");
+  expect(rows[0].querySelector("summary")?.textContent).toContain("DPST-1-1");
+  expect(rows[0].querySelector("summary")?.textContent).toContain("Switch state");
+  expect(rows[1].querySelector("summary")?.textContent).toContain("Program default");
+  expect(rows[1].querySelector("summary")?.textContent).toContain("DPST-9-1");
+  expect(rows[1].querySelector("summary")?.textContent).toContain("Temperature");
+  expect(rows[2].querySelector("summary")?.textContent).toContain("DPST-999-999");
+  expect(rows[3].querySelector("summary")?.textContent).toContain("—");
+  await act(async () => { rows[1].querySelector("summary")!.click(); });
+  expect(rows[1].querySelector<HTMLInputElement>('input[placeholder="DPST-9-1"]')?.value).toBe("");
+  const typed: DeviceDetail["com_objects"][number] = objects[0];
+  expect(typed.activation).toBe("Active"); // TS must see the generated contract, not only this fixture.
+  expect(typed.program_dpt).toBeNull();
+  const defaultTyped: DeviceDetail["com_objects"][number] = objects[1];
+  expect(defaultTyped.program_dpt).toBe("DPST-9-1");
   await cleanup();
 });
 

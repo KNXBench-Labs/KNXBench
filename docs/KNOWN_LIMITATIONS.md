@@ -9078,10 +9078,15 @@ encoder writes them when the caller set them, and
   on the program default. `Active` is not downgraded for it, the same as in
   the parameter panel, which evaluates identically. There are 0 stale rows
   in the corpus.
-- **Not in the TypeScript bindings yet.** `activation` and `channel` are
-  serialised but `#[ts(skip)]` until the UI session's U12 adopts them. The
-  same holds for P3's `program_dpt`, `dpt_text` and `function_text`, and
-  for `channel`'s `name` and `number`.
+- **Typed UI boundary (2026-09-30, U12/ISSUE-08 UI half, branch under review).**
+  The previously skipped activation, owner channel, program DPT, translated
+  DPT text and function text now have generated TypeScript bindings. The
+  device editor groups by the supplied opaque key, shows all four evaluated
+  states plus the stored claim, and leaves unmatched objects inspectable.
+  `ComObjectChannel::name` and `number` also reach TypeScript but are not
+  yet displayed; a channel without `@Text` retains the generic **Untitled
+  channel** label until the separate §146 UI step. Missing and multi-choice
+  DPTs still have no chosen identifier.
 - **No DPT to show (P3).** 495 ETS4 and 456 ETS 6.3.0 objects have neither
   a stated DPT nor a program default. For 473 and 434 of them the product
   states none. For 22 each it states a list of several (`DatapointType`

@@ -269,25 +269,33 @@ function StaleParametersSection(props: { stale: StaleParameter[] }) {
 }
 
 // D26's collapsed, count-headed banner — never a debugger. `detail` sits
-// behind a "copy details" affordance, not printed inline.
+// behind a "copy details" affordance, not printed inline. An unknown
+// severity falls back to warning, never to a silent informational label.
 function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   const { diagnostics } = props;
   const t = useTranslate();
+  const notes = diagnostics.filter((d) => d.severity === "info").length;
+  const warnings = diagnostics.length - notes;
+  const summary = [
+    warnings > 0 ? t(warnings === 1 ? "parameters.warningsCount.one" : "parameters.warningsCount.other", { count: warnings }) : null,
+    notes > 0 ? t(notes === 1 ? "parameters.notesCount.one" : "parameters.notesCount.other", { count: notes }) : null,
+  ].filter((text) => text !== null).join(" · ");
 
   function copyDetail(detail: string) {
     void navigator.clipboard?.writeText(detail);
   }
 
   return (
-    <details className="parameter-diagnostics-banner">
-      <summary>{t("parameters.diagnosticsCount", { count: diagnostics.length })}</summary>
+    <details className="parameter-diagnostics-banner" data-has-warnings={warnings > 0}>
+      <summary>{summary}</summary>
       <ul>
-        {diagnostics.map((d, i) => (
-          <li key={i}>
-            {describeParameterDiagnosticMessage(t, d)}
+        {diagnostics.map((d, i) => {
+          const severity = d.severity === "info" ? "info" : "warning";
+          return <li key={i} data-severity={severity}>
+            <strong>{t(severity === "info" ? "parameters.severity.info" : "parameters.severity.warning")}</strong>: {describeParameterDiagnosticMessage(t, d)}
             <button onClick={() => copyDetail(d.detail)}>{t("parameters.copyDetails")}</button>
-          </li>
-        ))}
+          </li>;
+        })}
       </ul>
     </details>
   );

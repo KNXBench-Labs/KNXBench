@@ -1658,6 +1658,11 @@ export interface ParameterDiagnostic {
    * frontend's `describeParameterDiagnosticMessage` falls back to
    * `message` verbatim (English) rather than rendering nothing. */
   kind: ParameterDiagnosticKind;
+  /** Server-evaluated diagnostic class (`routes.rs`): a non-matching
+   * selection branch is informational; potential data-loss/unsupported
+   * cases stay warnings. Unknown/missing wire values fail closed as warnings
+   * in the UI rather than hiding a diagnostic. */
+  severity: "info" | "warning";
   /** KNOWN_LIMITATIONS.md §66: the banner headline, now translatable —
    * `ParameterPanel.tsx` renders it through `describeParameterDiagnosticMessage`,
    * not verbatim. This field is the untranslated fallback for an

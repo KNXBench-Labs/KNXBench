@@ -21,6 +21,10 @@ for (const language of ["en", "de"] as const) {
       });
       await page.goto(`/e2e/device-editor-fixture.html?lang=${language}`);
       await expect(page.locator(".individual-address-field input")).toHaveValue("12");
+      await expect(page.locator(".com-object-channel > summary")).toContainText(
+        language === "de" ? "Ohne ausgewerteten Kanal" : "Without evaluated channel",
+      );
+      await page.locator(".com-object-channel > summary").click();
       await page.locator(".com-object-detail summary").click();
       await expect(page.locator(".com-object-flags .flag-name")).toHaveText([...translations[language]]);
       await expect(page.locator(".com-object-flags .flag-code")).toHaveText(["R", "W", "T", "U", "C", "I"]);
@@ -54,6 +58,59 @@ for (const language of ["en", "de"] as const) {
       await page.locator(".individual-address-field input").press("Tab");
       await expect.poll(() => writes.length).toBe(1);
       expect(writes).toEqual([{ deviceId: 42, address: "1.1.21" }]);
+    });
+  }
+}
+
+for (const language of ["en", "de"] as const) {
+  for (const width of [360, 1440]) {
+    test(`${language} evaluated channel evidence stays keyboard-accessible at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.route("**/api/**", (route) => route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ programId: "A-MOCK", sections: [], stale: [], diagnostics: [] }),
+      }));
+      await page.goto(`/e2e/device-editor-fixture.html?lang=${language}&channels=1`);
+      const groups = page.locator(".com-object-channel");
+      await expect(groups).toHaveCount(3, { timeout: 2_000 });
+      await expect(groups.nth(0).locator(":scope > summary")).toContainText(
+        language === "de" ? "Kanal ohne Bezeichnung" : "Untitled channel",
+      );
+      await expect(groups.nth(0).locator(":scope > summary")).not.toContainText("Raw manufacturer name");
+      await expect(groups.nth(1).locator(":scope > summary")).toContainText("Hall outputs");
+      await expect(groups.nth(2).locator(":scope > summary")).toContainText(
+        language === "de" ? "Ohne ausgewerteten Kanal" : "Without evaluated channel",
+      );
+      expect(await groups.evaluateAll((nodes) => nodes.every((node) => !(node as HTMLDetailsElement).open))).toBe(true);
+
+      await groups.nth(0).locator(":scope > summary").focus();
+      await page.keyboard.press("Enter");
+      await expect(groups.nth(0)).toHaveAttribute("open", "");
+      const programObject = groups.nth(0).locator(".com-object-detail");
+      await programObject.locator("summary").click();
+      await expect(programObject.locator(".com-object-effective-dpt")).toContainText("DPST-9-1");
+      await expect(programObject.locator(".com-object-dpt-origin")).toContainText(
+        language === "de" ? "Programm-Standardwert" : "Program default",
+      );
+      await expect(programObject.locator(".com-object-effective-dpt")).toContainText("Temperature");
+      const dptLineCounts = await programObject.locator(
+        ".com-object-effective-dpt > .mono, .com-object-effective-dpt > small:not(.com-object-dpt-origin)",
+      ).evaluateAll((elements) => elements.map((element) => {
+        const text = document.createRange();
+        text.selectNodeContents(element);
+        return text.getClientRects().length;
+      }));
+      expect(dptLineCounts, "DPT code and description must stay readable without character-level wrapping").toEqual([1, 1]);
+
+      await groups.nth(1).locator(":scope > summary").click();
+      await expect(groups.nth(1).locator(".com-object-summary")).toContainText("Switching lights");
+      await expect(groups.nth(1).locator(".com-object-effective-dpt")).toContainText("DPST-1-1");
+      await groups.nth(2).locator(":scope > summary").click();
+      await expect(groups.nth(2).locator("li[data-activation='Inactive']")).toHaveCount(1);
+      await expect(groups.nth(2).locator("li[data-activation='Undetermined']")).toHaveCount(1);
+      await expect(groups.nth(2).locator("li[data-activation='NotEvaluated']")).toHaveCount(1);
+      const widthState = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
+      expect(widthState.document, JSON.stringify(widthState)).toBeLessThanOrEqual(widthState.viewport);
     });
   }
 }

@@ -49,6 +49,42 @@
   `verified`. `partial-both` stays `untested`; the shipped-evidence test
   pins both (RED before the data change).
 
+## 2026-09-30 — U12 / ISSUE-08 communication-object UI half (isolated branch, pending integration)
+
+- The server's four-valued activation, evaluated channel ownership and
+  program-vs-instance DPT evidence now cross generated TypeScript bindings
+  into the device Inspector. Object groups use the opaque evaluated channel
+  key/order and start collapsed; their expansion persists across detail
+  refreshes for the selected device but resets on device switch. Channel-
+  independent blocks, inactive objects, undetermined objects and objects
+  without evaluated ownership remain inspectable rather than being filtered
+  by a stored `IsActive` claim. Channel `name`/`number` display remains a
+  separate §146 step; neither field is turned into a guessed name here.
+- Object rows show evaluated state and, when contradictory, the project's
+  stored state; canonical DPT ID, translated DPT label and product function
+  text are shown independently. Program-default DPT is display-only: the
+  editable project DPT slot stays empty. Parameter diagnostics distinguish
+  informational notes from warnings; unknown/missing severity fails closed
+  to warning. No import, core mutation or bus/protocol behavior was changed.
+- Branch gates before integration: corpus-backed Rust workspace
+  `cargo test --workspace --no-fail-fast` 136 suites / 2,748 passed / 0 failed /
+  160 ignored / 0 `SKIP:` notices (285 crates compiled); Web Vitest 78
+  files / 1,254 passed; TypeScript and production build passed; fmt and
+  diff check passed. Local mock-only Chromium 10/10 (EN/DE, widths
+  360/640/1440 for legacy layout and 360/1440 for evaluated channels).
+  A browser screenshot at 360 px exposed DPT character-level breaks in the
+  old two-column auto-placement; a regression failed with 3 lines per token,
+  and the narrow grid fix made the browser suite green. Two reversible
+  mutations proved the negative-evidence tests fail on missing ownership
+  and on unknown/missing severity being treated as informational. Strict
+  Clippy passed, and all four `xtask` gates passed from this worktree:
+  layering, headers (332 well-formed, 161 legacy at ceiling, 34 generated
+  skipped), anchors (403 links / 218 Markdown files, none dead), and corpus
+  gates. Post-rebase/merged-result verification remains pending.
+  No hardware connection or device write in this UI branch.
+- Scope and remaining limits: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md#146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined)
+  and the ISSUE-08 row in the [issue plan](superpowers/plans/2026-09-21-user-reported-issues.md#issue-08-product-data-fidelity-and-communication-object-organization).
+
 ## 2026-09-30 — U12 / ISSUE-05 structure editor (published on main)
 
 - `RenameArea`/`RenameLine`, `RenameBuildingPart`/`MoveBuildingPart`,

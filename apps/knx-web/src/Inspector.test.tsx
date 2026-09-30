@@ -484,6 +484,7 @@ function detailWithComObject(links: DeviceDetail["com_objects"][number]["links"]
   return { ...deviceDetail(), com_objects: [{
     id: 7, number: 1, name: "Switch actuator output", dpt: "DPST-1-1", dpt_layer: null,
     description: null, description_layer: null, is_active: true,
+    activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,
     read: false, write: true, transmit: false, update: false,
     communication: true, read_on_init: false, links,
   }] };

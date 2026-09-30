@@ -105,9 +105,9 @@ const USAGE: &str =
      \x20     knx device address-by-serial <area.line.device>\n\
      \x20                  (--serial MMMM:NNNNNNNN | --project <p.knxdb> --device <DeviceInstance Id>)\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
-     \x20         (gives the device with this KNX Serial Number the address, no button, MP §2.5;\n\
-     \x20         checks the address is free, verifies by reading back, sends no restart.\n\
-     \x20         Without --confirm it prints the steps and opens no connection)\n\
+     \x20         (MP §2.5 plan only; confirmed writes currently fail closed before any tunnel:\n\
+     \x20         a durable pre-write backup of all affected storage is not implemented.\n\
+     \x20         Read-only find-serial remains available; no restart is sent)\n\
      \x20     knx device find-serial (<MMMM:NNNNNNNN> | --address <a.l.d>) --gateway <host:port>\n\
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
@@ -2570,11 +2570,7 @@ fn run_device_address_by_serial(args: &[String]) -> ExitCode {
     let (gateway, authorisation) = match mode {
         device_serial::Mode::Plan => {
             println!(
-                "address written: no (plan only; add --gateway and --confirm {:?} to write)",
-                knx_core::commissioning::mutation::required_confirmation_phrase(
-                    new_address,
-                    knx_core::WriteScope::IndividualAddressProgramming
-                )
+                "address written: no (plan only; serial-address writes are blocked pending a durable pre-write backup, even with --gateway and --confirm)"
             );
             return ExitCode::SUCCESS;
         }

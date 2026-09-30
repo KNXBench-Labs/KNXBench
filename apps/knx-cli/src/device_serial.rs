@@ -7,9 +7,9 @@
 //! for `--serial`.
 //!
 //! Without `--confirm` it prints what would happen and opens no socket. The
-//! phrase is the same one `program-address` takes for the new address
-//! (`WriteScope::IndividualAddressProgramming`): it names the address that
-//! will be written. MP §2.5 sends no restart, so no restart scope is asked.
+//! With `--confirm` the CLI still validates the phrase, then fails closed
+//! before a socket opens: there is no verified durable pre-write backup for
+//! this procedure yet. The simulator procedure remains available for tests.
 
 use std::fmt::Write as _;
 use std::io::Write;
@@ -149,6 +149,8 @@ pub fn check(args: &AddressBySerialArgs) -> Result<(ContactableAddress, Mode), S
                 confirmation,
             )
             .map_err(|e| format!("not written: {e}"))?;
+            knx_app::serial_address_recovery::require_persistent_pre_write_recovery()
+                .map_err(str::to_string)?;
             Mode::Write {
                 gateway,
                 authorisation,
@@ -408,6 +410,10 @@ mod tests {
                 "{wrong}"
             );
         }
+    }
+
+    #[test]
+    fn confirmed_write_refuses_without_durable_backup_before_any_socket() {
         let parsed = parse_address_by_serial_args(&args(&[
             "1.1.30",
             "--serial",
@@ -418,7 +424,8 @@ mod tests {
             "I confirm individual-address programming to 1.1.30",
         ]))
         .unwrap();
-        assert!(matches!(check(&parsed).unwrap().1, Mode::Write { .. }));
+        let error = check(&parsed).unwrap_err();
+        assert!(error.contains("backup"), "{error}");
     }
 
     #[test]

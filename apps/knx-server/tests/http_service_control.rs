@@ -328,7 +328,7 @@ async fn cancelled_debug_read_is_unknown_and_never_reports_property_bytes() {
 }
 
 #[tokio::test]
-async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
+async fn enabled_it_reads_sets_bit_2_but_serial_write_still_requires_recovery() {
     let h = harness(locked_device());
     enable_debug(&h, json!(true)).await;
     let address = h.device.address();
@@ -344,7 +344,8 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     assert!(activity["oneShot"][0].get("raw").is_none());
     assert!(activity["oneShot"][0].get("mask").is_none());
 
-    // Without the bit, the device ignores a serial-number write.
+    // The server refuses serial-address writes without a durable pre-write
+    // recovery record, independently of bit 2's current value.
     let serial_phrase = format!("I confirm individual-address programming to {NEW}");
     let by_serial = json!({
         "address": NEW,
@@ -352,12 +353,12 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
         "confirmation": serial_phrase,
         "serialNumber": SERIAL,
     });
-    let (status, _) = send(
+    let (status, body) = send(
         &h.app,
         post("/api/device-address/by-serial", by_serial.clone()),
     )
     .await;
-    assert_ne!(status, StatusCode::OK);
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
     assert_eq!(h.device.serial_number_writes(), 0);
 
     let (status, body) = send(
@@ -393,9 +394,12 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     assert_eq!(record.octets, "0000");
     assert_eq!(body["individualAddressWriteEnabled"], true);
 
+    let tunnels_before = h.calls.load(Ordering::SeqCst);
     let (status, body) = send(&h.app, post("/api/device-address/by-serial", by_serial)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(h.device.address().to_string(), NEW);
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), tunnels_before);
+    assert_eq!(h.device.address(), address);
+    assert_eq!(h.device.serial_number_writes(), 0);
 }
 
 #[tokio::test]

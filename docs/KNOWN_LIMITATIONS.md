@@ -17,14 +17,18 @@ Service-control read activity stores neither property octets nor mask or key.
 A cancelled read-only action has an unknown completion outcome; it never
 performs a device write. The activity record contains neither memory bytes
 nor keys or full results. A server restart loses this history.
-Write activity needs route-specific evidence (ADR-0056): HTTP success can be
-a no-op for serial-address and property writes; a post-send error can be an
-unverified mutation. Group writes have no receiver readback. The current
-serial-address HTTP write route does not persist its prior address/serial as
-pre-write recovery evidence, so its response cannot substitute for the
-required durable backup before any future live write. The service-control
-property backup covers only that property, not a whole device. A typed
-`serviceControlWrite` entry now distinguishes `noChange`, `notSent`,
+Write activity needs route-specific evidence (ADR-0056): earlier simulated
+serial-address HTTP success could be a no-op, and a post-send error could be
+an unverified mutation; group writes have no receiver readback. The public
+serial-address HTTP and CLI write entry points now **fail closed before any
+tunnel** (ADR-0057): no complete durable pre-write backup of affected storage
+is available, even for a possible no-op or after service-control bit 2 is
+explicitly enabled. The read-only serial lookup and protocol simulator remain
+available. A returned previous address or application-memory dump cannot
+substitute for an action-specific durable backup; an unknown device's entire
+internal storage map must not be inferred from KNX network messages. The
+service-control property backup covers only that property, not a whole device.
+A typed `serviceControlWrite` entry now distinguishes `noChange`, `notSent`,
 `effectUnverified`, `verified` and cancellation `unknown`. Its
 `backupRecorded` and `sendPossible` flags do not prove transmission or a
 device mutation: a transport error after the pre-write callback is

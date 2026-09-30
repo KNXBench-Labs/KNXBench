@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-09-30 — U12 / ISSUE-05 structure editor (isolated branch, not published)
+## 2026-09-30 — U12 / ISSUE-05 structure editor (published on main)
 
 - `RenameArea`/`RenameLine`, `RenameBuildingPart`/`MoveBuildingPart`,
   `RenameGroupRange`/`MoveGroupRange` and `MoveLineToArea` apply through
@@ -26,8 +26,7 @@
   tests, HTTP 26/26 (including deletion/undo order and ambiguous-ID errors),
   Inspector 51/51 and centre 11/11; batch rollback and invalid restore
   positions are regression-tested. Imported ambiguous *old parent* IDs remain
-  undoable after an explicit repair. Final branch and post-rebase gates still
-  need reruns.
+  undoable after an explicit repair; final gates are recorded below.
 - Earlier **pre-review** gate snapshot: Core line, building-part, range and
   rename tests; 24/24 HTTP edit-route tests; native save/reopen of renamed
   area/line, reordered building children, repaired linked group range and
@@ -46,8 +45,17 @@
   tests passed; a separate headless local-only structure probe exercised six
   EN/DE × 360/640/1440 px cases with no overflow. Layering, headers
   (318 well-formed, 161 legacy headerless at ceiling), anchors (401 links in
-  216 Markdown files, none dead), and corpus-gate checks passed. This is
-  still **branch** evidence: post-rebase and merged-main gates remain open.
+  216 Markdown files, none dead), and corpus-gate checks passed. These are
+  historical branch results, superseded by the post-rebase gates below.
+- Post-rebase feature commit `997af0b5` (published to `origin/main` and
+  read back at the identical SHA): strict fmt, diff check and Clippy passed;
+  corpus-backed Rust workspace 136 suites / 2,746 passed / 0 failed /
+  160 ignored / 0 `SKIP:` notices. Web Vitest 78 files / 1,246 passed;
+  TypeScript/production build passed. All four `xtask` gates passed (headers:
+  332 well-formed / 161 legacy headerless at ceiling; anchors: 401 links in
+  218 Markdown files, none dead). A local-only browser run after the first
+  rebase passed six Chromium regression tests and six EN/DE structure layout
+  cases; the subsequent rebase changed no Web files, and Web gates were rerun.
 - Limitations: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md#u12-structure-editor-scope-issue-05),
   including first-installation-only mutations, invisible orphan lines in
   the centre projection, and whole-project native save rather than

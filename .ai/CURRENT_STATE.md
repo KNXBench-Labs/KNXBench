@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / partial bus-activity snapshot)
+- **Timestamp:** 2026-09-30 20:50 CEST
+- **Web lock:** untouched; the UI session holds it for its read-only readiness/compare package. No Web source was edited here.
+- **Completed:** On isolated `commission-activity` worktree, added guarded `GET /api/bus/activity` for retained download, button-programming and scan sessions plus the currently held monitor session. Reports `busyLocks` rather than inventing activity when a holder is locked; `coverage: partial` and `untracked` name one-shot gaps. ADR-0055, KNOWN_LIMITATIONS and goal status updated. Simulated HTTP tests (including private-corpus simulated download) pass; workspace 137 suites / 2,769 passed / 0 failed / 160 ignored / 0 SKIP. Web build / 78 files / 1,258 tests, strict Clippy, fmt, anchors, headers, layering, corpus gates and diff check pass. No live bus access. Evidence: `.ai/logs/2026-09-30_codex_commission-activity-snapshot.md`.
+- **Pending/Next Steps:** Review candidate diff, commit with KNXBench identity, re-fetch/rebase if concurrent main moved, verify gates/readback after merge, push normally and clean only this worktree/scratch. For full global status, instrument short one-shot read/write routes and implement UI under its own lock; the current endpoint is deliberately incomplete. K13 HTTP reset still requires complete persistent multi-device backup and abort design; K14 remains blocked.
+- **Notes for Codex oder Claude:** Empty `sessions` is not proof of idle gateway; stopped monitor sessions disappear, whereas other three session kinds retain terminal state. Lock ownership is unknown and must not be guessed. No access key may be guessed. Root checkout contains foreign changes and must not be reset. Symlink `OriginalData` is task-local and gitignored; no private data or credentials are committed.
+
+---
+
 - **Last Agent:** codex (commissioning / K12 service-control recovery)
 - **Timestamp:** 2026-09-30 19:48 CEST
 - **Web lock:** untouched; UI session holds it for read-only readiness/compare (see next entry). No Web source was changed here.

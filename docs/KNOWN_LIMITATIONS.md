@@ -1,5 +1,19 @@
 # Known limitations
 
+## Partial commissioning bus-activity snapshot (ADR-0055)
+
+The server's read-only `GET /api/bus/activity` reports retained download,
+button-programming, monitor and line-scan sessions, but **not** a complete
+global action history. It identifies held locks without guessing which
+operation or target owns them. One-shot group writes, serial-address actions
+and lookups, service-control reads/writes and live device comparisons have no
+retained activity evidence; short actions may be missed entirely by polling.
+An empty `sessions` list does not prove no bus traffic, and a terminal session
+does not prove the gateway is free. The response declares `coverage: "partial"`.
+The global Web status bar and per-action UI rows are still pending; this
+backend addition must not be presented as their completion. Tests used only
+simulated devices and a local/private corpus; there was no live bus access.
+
 ## U12 structure editor scope (ISSUE-05)
 
 Area/line renames and line, building-part and group-range reparenting are

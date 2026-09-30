@@ -198,6 +198,13 @@ async fn start_opens_a_session_and_returns_session_id_and_assigned_address() {
         .expect("start response carries its server process identity");
     assert!(!incarnation.is_empty());
 
+    let activity = body_json(call(&app, "GET", "/api/bus/activity", None).await).await;
+    assert_eq!(activity["serverIncarnation"], incarnation);
+    assert_eq!(activity["sessions"][0]["kind"], "busMonitor");
+    assert_eq!(activity["sessions"][0]["id"], 1);
+    assert_eq!(activity["sessions"][0]["state"], "active");
+    assert!(activity["sessions"][0].get("gateway").is_none());
+
     let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
     assert_eq!(response.status(), StatusCode::OK);
     let body = body_json(response).await;

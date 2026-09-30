@@ -295,6 +295,18 @@ async fn the_ui_route_writes_the_saved_project_and_shows_every_block() {
     assert_eq!(end["state"], "finished", "{end}");
     assert_eq!(end["written"], "yes");
     assert_eq!(end["restart"], "acknowledged");
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    let session = &activity["sessions"][0];
+    assert_eq!(session["kind"], "deviceDownload");
+    assert_eq!(session["id"], plan["planId"]);
+    assert_eq!(session["address"], "1.1.67");
+    assert_eq!(session["state"], "finished");
+    assert_eq!(session["completedSteps"], 25);
+    assert_eq!(session["totalSteps"], 25);
+    assert_eq!(session["writtenOctets"], 1416);
+    assert_eq!(session["totalOctets"], 1416);
+    assert!(session.get("octets").is_none(), "no raw memory in activity");
 
     let started: Vec<u64> = events
         .iter()

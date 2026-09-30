@@ -38,6 +38,7 @@ pub use address_programming::{
     AddressProgrammingEvent, AddressProgrammingSession, AddressProgrammingStatus, AddressWritten,
 };
 mod address_programming_routes;
+mod bus_activity_routes;
 mod debug_report_routes;
 mod domain;
 mod serial_address_routes;
@@ -153,6 +154,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(routes::project_routes())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
+        .merge(bus_activity_routes::bus_activity_routes())
         .merge(device_download_routes::device_download_routes())
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(device_compare_routes::device_compare_routes())

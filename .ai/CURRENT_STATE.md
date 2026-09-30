@@ -26,6 +26,15 @@
 ---
 
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 17:42 CEST
+- **Web lock:** not taken; no `apps/knx-web` edits. UI session's release is recorded in the 16:46 Codex entry below; next Web package must take the lock explicitly.
+- **Completed:** Read-only inventory of programming/download actions and UI status. Detailed handover at `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`: global activity/status bar, one line per action, partial-download scope selector, K13 recovery, serial address, Debug Bit 2, readiness and read-only device compare. An uncommitted server-route prototype was discarded: it could reset addresses without first guaranteeing a complete persistent pre-write backup. No hardware access or Web-code changes.
+- **Pending/Next Steps:** Design and test a backup-gated server workflow before exposing K13 reset or other risky write actions via HTTP. Agree on one cross-route activity contract, then have the UI session explicitly acquire the Web lock and implement the status bar, action history and the scoped UI panels listed in the log. K14 remains blocked.
+- **Notes for Codex oder Claude:** The log is a requirements handover, not a claim that HTTP reset or the global activity endpoint exists. Do not call the K13 CLI's manual pre-backup procedure an HTTP safety guarantee. Never guess an access key or contact excluded `1.1.220`. No K13/K14/live-bus permission carries over to future UI tests.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 17:20 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** User decision: keep `AGPL-3.0-or-later`, no CLA. Removed

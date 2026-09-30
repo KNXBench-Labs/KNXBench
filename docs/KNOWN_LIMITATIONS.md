@@ -9333,7 +9333,13 @@ anything is written; a cap of 3 rounds that names the devices still
 answering; MP §2.3's 1 s read window.
 
 **Not covered.** Several devices at once on hardware (simulator only); a bus
-monitor trace of the sequence.
+monitor trace of the sequence. **No HTTP/UI reset:** the K13 live run used a
+separately created complete persistent backup of the target before writing.
+An HTTP route that calls the reset library without first guaranteeing and
+verifying such a backup would bypass that safety condition. Do not expose a
+write-capable reset endpoint until a server-owned pre-write backup and
+recovery contract is implemented and tested; see
+`.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`.
 
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified
 

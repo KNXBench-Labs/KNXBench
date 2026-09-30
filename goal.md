@@ -856,6 +856,16 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 - **§146, channel `@Name`/`@Number`: data half delivered 2026-09-30.** ADR-0052 → import parser → v17→v18 migration → real v17 corpus re-ingest check → projection. `dynamic_node` retains both attributes; migration reparses owned trees, retires only known `Channel/@Number` unknown rows, and rewrites measured reports or marks unprovable ones unavailable. The private-corpus check installed 106 files without errors both fresh and after migration; aggregate channel, report and unknown counts matched. The UI session (U12, web lock) must show the fields before §146 can be fully lifted. No invented label and no ETS parity claim.
 - **§8.1 to §8.3 and §8.5, doc hygiene: done 2026-09-30 (`0e6cdf1`).** ROADMAP T37 is marked shipped; `codex-goal.md` was already gone from `main` (`57d7190`); `ideas.md` is gitignored and was marked locally (corrected 2026-09-30, §8.3); LIMITATION_TRIAGE is recounted by command: 146 numbered entries, 145 classified, §105 deliberately not, §92's new title and §134–§146 included; re-run the same day for the commissioning lane's §147 (lifted): 147 entries, 146 classified. §8.4 (F-T30-1) stays parked, re-checked.
 - **§10 doc reconciliation, first pass: done 2026-09-30** (`9d2d017`, `9be8830`, `ec138ba`, `3d41262`). goal.md §12.2 records all eight Paperclip branches as taken over and DIN-26's twelve boundaries in §6; GAP_ANALYSIS rows B10, D6, D8 now match T11, T08/T09, T10 and DIN-12; ROADMAP Sessions 5 and 6 carry status lines; eleven KNOWN_LIMITATIONS headings that still named a solved problem say so, with their old anchors kept. `ideas.md` turned out to be gitignored, not deleted; §8.3 is corrected. IMPLEMENTATION_STATUS is an append-only log with no summary to drift. The final pass belongs to the §10 review, after the UI track.
+- **Handed over 2026-09-30 (end of the Claude session that ran K12/§147):**
+  - To `goal-ui.md` U12: §146 channel labels, ADR-0051 Settings Debug
+    toggle, monitor `control` column, readiness/compare views.
+  - To `goal-commission.md` K12/K13/K14: the live runs on `1.1.67`, each
+    only on the user's device-specific go.
+  - Open user decisions, not agent work: U13's closing-review form, the
+    T18 alpha tag, the root checkout's uncommitted `stats.md` /
+    `docs/RESEARCH.md` / telemetry-plan edits (commit or drop), whether
+    `ai-stats.py` joins the repository, and the foreign worktree
+    `KNXBench.worktrees/k12-live` (not created by this session; left as is).
 - **§5 D12, the user manual (T23):** not accepted. The open points are the location per ADR-0024, removing the screenshots, and a claim-by-claim verification report.
 - **§5 alpha release (T18):** a user decision; do not tag.
 - **§10 final whole-goal review:** last of all.

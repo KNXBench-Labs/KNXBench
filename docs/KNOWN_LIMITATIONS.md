@@ -8939,9 +8939,11 @@ the encoder's previous defaults, so every existing sender, including §105's
 control-frame priorities, sends the same octets as before. The private
 capture now re-encodes 71 of 71 telegrams whole, Ctrl1 and Ctrl2 included
 (RESEARCH §19.14). Tests in `cemi.rs` plus `TransmissionPriority::from_bits`;
-11 mutants caught. What stays open: no consumer shows the fields yet (the
-bus monitor's event and the server's JSON carry no priority); that is a
-display feature, not a decoder gap.
+11 mutants caught. Consumers (2026-09-30): `knx bus monitor --control`
+appends `[priority …, hop count …, repeated]`; the server's monitor rows
+and the debug bundle carry `control` (`priority`, `repeated`, `hopCount`;
+`repeated` only on `L_Data.ind`, `null` on the closed-session marker).
+Still open: the web monitor table does not show them (UI track).
 
 The original entry, kept for the record:
 

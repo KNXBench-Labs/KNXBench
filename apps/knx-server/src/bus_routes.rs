@@ -739,6 +739,29 @@ struct TelegramRowDto {
     service: String,
     raw_payload: Option<String>,
     decoded: Option<DecodedValueDto>,
+    /// KNOWN_LIMITATIONS §147: Ctrl1/Ctrl2 as received; `null` on the
+    /// closed-session marker.
+    control: Option<ReceivedControlDto>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReceivedControlDto {
+    /// `"system"`, `"urgent"`, `"normal"` or `"low"`.
+    priority: &'static str,
+    /// `null` unless the frame is an `L_Data.ind`; see `ReceivedControl`.
+    repeated: Option<bool>,
+    hop_count: u8,
+}
+
+impl From<&crate::bus::ReceivedControl> for ReceivedControlDto {
+    fn from(control: &crate::bus::ReceivedControl) -> Self {
+        Self {
+            priority: crate::bus::priority_name(control.priority),
+            repeated: control.repeated,
+            hop_count: control.hop_count,
+        }
+    }
 }
 
 impl From<&TelegramRow> for TelegramRowDto {
@@ -752,6 +775,7 @@ impl From<&TelegramRow> for TelegramRowDto {
             service: row.service.clone(),
             raw_payload: row.raw_payload.clone(),
             decoded: row.decoded.as_ref().map(DecodedValueDto::from),
+            control: row.control.as_ref().map(ReceivedControlDto::from),
         }
     }
 }

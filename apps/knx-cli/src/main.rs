@@ -34,8 +34,9 @@ const USAGE: &str =
      \x20         load procedure plans completely offline) or unsupported (with the refusal);\n\
      \x20         offline, product defaults, no connection)\n\
      \x20     knx bus discover\n\
-     \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
-     \x20         (with --project, decodes against each address's resolved DPT)\n\
+     \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>] [--control]\n\
+     \x20         (with --project, decodes against each address's resolved DPT;\n\
+     \x20         --control appends priority, hop count and repeat flag)\n\
      \x20     knx bus write --gateway <host:port> [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
      \x20                  [--input-format <canonical|decimal|hexadecimal|binary|text>]\n\
      \x20                  [--dry-run] <main/middle/sub> <value>\n\
@@ -2788,11 +2789,16 @@ async fn run_bus_discover_async() -> ExitCode {
 struct BusMonitorArgs {
     gateway: String,
     project: Option<String>,
+    /// `--control`: append each telegram's priority, hop count and repeat
+    /// flag (KNOWN_LIMITATIONS §147). Off by default, so the line stays
+    /// what it was (spec E4-D8).
+    control: bool,
 }
 
 fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
     let mut gateway = None;
     let mut project = None;
+    let mut control = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -2804,12 +2810,17 @@ fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
                 project = Some(take_value(args, i + 1, "--project")?);
                 i += 2;
             }
+            "--control" => {
+                control = true;
+                i += 1;
+            }
             other => return Err(format!("unrecognized argument: {other}")),
         }
     }
     Ok(BusMonitorArgs {
         gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
         project,
+        control,
     })
 }
 
@@ -2865,13 +2876,19 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
         }
     };
 
-    runtime.block_on(run_bus_monitor_async(gateway, ga_names, ga_dpts))
+    runtime.block_on(run_bus_monitor_async(
+        gateway,
+        ga_names,
+        ga_dpts,
+        parsed.control,
+    ))
 }
 
 async fn run_bus_monitor_async(
     gateway: std::net::SocketAddrV4,
     ga_names: std::collections::HashMap<u16, String>,
     ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
+    show_control: bool,
 ) -> ExitCode {
     use knx_net::BusConnection;
     let client = knx_net::KnxNetIpClient::new();
@@ -2898,7 +2915,12 @@ async fn run_bus_monitor_async(
             }
             received = telegrams.recv() => match received {
                 Ok(knx_net::TunnelEvent::Telegram(telegram)) => {
-                    println!("{}", format_telegram(&telegram, &ga_names, ga_dpts.as_ref()));
+                    let line = format_telegram(&telegram, &ga_names, ga_dpts.as_ref());
+                    if show_control {
+                        println!("{line}{}", format_control(&telegram));
+                    } else {
+                        println!("{line}");
+                    }
                 }
                 Ok(knx_net::TunnelEvent::Closed) => {
                     eprintln!("gateway closed the tunnel");
@@ -3678,6 +3700,28 @@ enum DptAnnotation<'a> {
     Conflict(&'a [knx_core::DptRef]),
 }
 
+/// `bus monitor --control`'s suffix: the Ctrl1/Ctrl2 fields a telegram
+/// arrived with (KNOWN_LIMITATIONS §147; EMI_IMI v01.04.02 AS §4.1.5.3.2).
+/// "repeated" only on an `L_Data.ind`, where R = 0 says the frame is a
+/// repetition on the medium (§4.1.5.3.5); on other message kinds the bit
+/// means something else and is not shown.
+fn format_control(telegram: &knx_net::LDataFrame) -> String {
+    use knx_core::commissioning::group_object_table::TransmissionPriority;
+    let control = telegram.effective_control();
+    let priority = match control.priority {
+        TransmissionPriority::System => "system",
+        TransmissionPriority::Urgent => "urgent",
+        TransmissionPriority::Normal => "normal",
+        TransmissionPriority::Low => "low",
+    };
+    let repeated = matches!(telegram.kind, knx_net::LDataMessageKind::Indication) && control.repeat;
+    format!(
+        " [priority {priority}, hop count {}{}]",
+        control.hop_count,
+        if repeated { ", repeated" } else { "" }
+    )
+}
+
 fn format_telegram(
     telegram: &knx_net::LDataFrame,
     ga_names: &std::collections::HashMap<u16, String>,
@@ -3825,14 +3869,89 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_version_line, load_project_individual_addresses, parse_bus_route_monitor_args,
-        parse_bus_route_send_args, DISCOVER_EMPTY_HINT,
+        format_control, format_version_line, load_project_individual_addresses,
+        parse_bus_monitor_args, parse_bus_route_monitor_args, parse_bus_route_send_args,
+        DISCOVER_EMPTY_HINT,
     };
     use std::path::Path;
 
     /// No socket involved — this only checks the static hint text, so it
     /// runs the same in a sandbox as on a real machine (unlike `discover()`
     /// itself, which needs a multicast-capable network).
+    fn monitor_frame(
+        kind: knx_net::LDataMessageKind,
+        control: Option<knx_net::FrameControl>,
+    ) -> knx_net::LDataFrame {
+        knx_net::LDataFrame {
+            kind,
+            source: knx_core::IndividualAddress::new(1, 1, 9).unwrap(),
+            destination: knx_net::Destination::Group(knx_core::GroupAddress::from_raw(1)),
+            transport: knx_net::Tpci::UnnumberedData,
+            service: knx_net::ApplicationService::GroupValueRead,
+            control,
+        }
+    }
+
+    /// KNOWN_LIMITATIONS §147 on the CLI: the suffix names what the frame
+    /// carried, "repeated" only where the R bit means that.
+    #[test]
+    fn control_suffix_names_priority_hop_count_and_repetition() {
+        use knx_core::commissioning::group_object_table::TransmissionPriority;
+        let sent = knx_net::FrameControl {
+            priority: TransmissionPriority::Urgent,
+            repeat: true,
+            ack_request: true,
+            hop_count: 3,
+        };
+        assert_eq!(
+            format_control(&monitor_frame(
+                knx_net::LDataMessageKind::Indication,
+                Some(sent)
+            )),
+            " [priority urgent, hop count 3, repeated]"
+        );
+        assert_eq!(
+            format_control(&monitor_frame(knx_net::LDataMessageKind::Indication, None)),
+            " [priority low, hop count 6]"
+        );
+        assert_eq!(
+            format_control(&monitor_frame(
+                knx_net::LDataMessageKind::Confirmation { error: false },
+                Some(sent)
+            )),
+            " [priority urgent, hop count 3]"
+        );
+        for (priority, name) in [
+            (TransmissionPriority::System, "system"),
+            (TransmissionPriority::Normal, "normal"),
+        ] {
+            let control = knx_net::FrameControl {
+                priority,
+                repeat: false,
+                ack_request: false,
+                hop_count: 7,
+            };
+            assert_eq!(
+                format_control(&monitor_frame(
+                    knx_net::LDataMessageKind::Indication,
+                    Some(control)
+                )),
+                format!(" [priority {name}, hop count 7]")
+            );
+        }
+    }
+
+    #[test]
+    fn monitor_control_is_off_unless_asked_for() {
+        let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let plain = parse_bus_monitor_args(&args(&["--gateway", "192.0.2.1:3671"])).unwrap();
+        assert!(!plain.control);
+        let asked =
+            parse_bus_monitor_args(&args(&["--control", "--gateway", "192.0.2.1:3671"])).unwrap();
+        assert!(asked.control);
+        assert_eq!(asked.gateway, "192.0.2.1:3671");
+    }
+
     #[test]
     fn discover_empty_hint_names_multicast_and_container_networking() {
         assert!(DISCOVER_EMPTY_HINT.contains("multicast"));

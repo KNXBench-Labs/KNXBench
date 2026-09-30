@@ -25,6 +25,7 @@ pub use bus::*;
 
 mod bus_routes;
 mod bus_scan;
+mod com_object_activation;
 mod debug_report;
 mod device_download;
 pub use device_download::{DeviceDownloadSession, DownloadStatus, ProgressEvent, Restart, Written};

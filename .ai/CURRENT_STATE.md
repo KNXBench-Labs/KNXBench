@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / ISSUE-05 structure editor)
+- **Timestamp:** 2026-09-30 06:58 CEST
+- **Web lock: taken by the UI session for U12 / ISSUE-05 structure editing.** Do not edit `apps/knx-web` concurrently; this is a project-editor ticket, not a bus ticket.
+- **Completed:** U11 / ISSUE-09 was delivered and its worktree, dedicated Cargo target, corpus symlink and 169 task-owned scratch items were cleaned. New isolated branch/worktree `ui-structure-editor` was created from `origin/main=d46f314`; the newest published lock entry said released. ADR-0038 is Accepted after independent review and user acceptance; ISSUE-05's U1 prerequisite is satisfied. No U12 source edits yet.
+- **Pending/Next Steps:** Publish/read back this lock-only commit immediately. Inventory existing Core/Store/Server/UI structure commands and their tests; add RED tests only for missing mutations/invalid parents, duplicate addresses, non-empty deletion and move cycles, then implement the smallest shared command path for Properties and centre workspace. Verify undo/redo, native save/reload and local-only browser UX. Review, full gates on branch and integration tree, docs/manual, release the U12 web lock, clean only U12-owned artifacts. ISSUE-08 UI waits for the entire data half to be announced merged; U13 needs the user's closing-review decision.
+- **Notes for Codex or Claude:** Root checkout has unrelated dirty `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md` and untracked docs; do not edit or stage them. Work exclusively in `KNXBench.worktrees/ui-structure-editor`. No KNX tunnel, live read, device write or real bus traffic; all UI tests use local fixtures/mocks. Do not pause for quota checks or dispatch subagents.
+
+---
+
 - **Last Agent:** codex (UI U11 / ISSUE-09 delivered)
 - **Timestamp:** 2026-09-30 06:52 CEST
 - **Web lock:** The ISSUE-09 lock is released in this handover. U12 must reserve its own lock in a new isolated worktree before editing `apps/knx-web`.

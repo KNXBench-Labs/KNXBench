@@ -1,3 +1,29 @@
+- **Last Agent:** Claude (goal.md session, ISSUE-08 data half)
+- **Timestamp:** 2026-09-30 06:17 CEST
+- **Web lock:** untouched — no `apps/knx-web` change in this package. The new fields are `#[ts(skip)]` in the bindings for exactly that reason.
+- **Completed:** ISSUE-08 P2 (ADR-0050).
+  - `ComObjectNode.activation` (`Active`/`Inactive`/`Undetermined`/`NotEvaluated`) and `ComObjectNode.channel` (`key`, `kind`, `text`, `order`). Both are filled in `device_detail` by the parameter panel's own `evaluate_device`; the mapping is the pure `apps/knx-server/src/com_object_activation.rs`.
+  - Evaluator: `ActiveRef::channel`, `Diagnostic::may_hide_refs`, `query::channel_texts`, public `substitute_text`.
+  - `ParameterDiagnosticDto.severity`: `noBranchMatched` is `info`, everything else `warning`.
+  - KNOWN_LIMITATIONS §146 (untitled channels, `Undetermined` cases).
+  - IMPLEMENTATION_STATUS correction: KV panel `NoBranchMatched` is 61, not 64.
+  - Evidence: 11+5+1 new tests; 10/10 mutations killed; workspace 2,604 passed, 0 failed, 152 ignored; clippy, layering, headers, anchors, corpus gates and the bindings diff green; corpus pins ETS4 907/907, ETS6 867/867, KV 75/75 `Active` and channel-owned. Log: `.ai/logs/2026-09-29_claude_issue08-p2-activation-channel.md`.
+- **For the UI session:** the ISSUE-08 data half for grouping is merged (see the commit of this entry). In `GET /api/device/{id}?language=…` every `com_objects[]` item now has:
+  - `activation`: `"Active"`, `"Inactive"`, `"Undetermined"` or `"NotEvaluated"`. Show `Undetermined` distinctly and do not hide it. Keep `is_active` as the file's own claim.
+  - `channel`: `null` or `{ key, kind: "Channel" | "ChannelIndependentBlock", text: string | null, order }`. Group by `key`, sort by `order`, and use a generic label when `text` is `null`. That is every channel in the house exports (§146).
+  - In the parameter diagnostics, `severity`: `"info"` or `"warning"`.
+  - To adopt: drop the two `#[ts(skip)]`s on `ComObjectNode` in `crates/knx-projection/src/lib.rs`, add `#[ts(export)]` to `ComObjectActivation`/`ComObjectChannel`, regenerate the bindings (CI's `TS_RS_EXPORT_DIR` step), and add `severity` to the TS `ParameterDiagnostic` type.
+  - Generic object/DPT names (P3) are not in this package.
+- **Pending/Next Steps:**
+  - ISSUE-08 P3: generic names and DPTs. The probe counts empty/absent DPTs at 497/120 for ETS4 and 464/114 for ETS6, with 107 multi-DPT lists each.
+  - Optional: store channel `@Name`/`@Number` (parser, migration, re-ingest), which would lift §146's first point.
+- **Notes for Codex or Claude:**
+  - Corpus pins need the root `OriginalData` (a symlink in a worktree).
+  - `com_object_activation_corpus` takes about 105 s in `--release`.
+  - No bus traffic.
+
+---
+
 - **Last Agent:** Claude (download coverage session)
 - **Timestamp:** 2026-09-29 23:10 CEST
 - **Web lock:** untouched — held by the UI session (see the newest entry that changed it); no `apps/knx-web` change.

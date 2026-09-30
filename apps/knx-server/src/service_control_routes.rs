@@ -150,7 +150,7 @@ struct ReadQuery {
 /// The same checks as `serial_address_routes::write`, in the same order,
 /// before any tunnel opens.
 macro_rules! with_tunnel {
-    ($state:expr, $gateway:expr, |$tunnel:ident| $body:expr) => {{
+    ($state:expr, $gateway:expr, $kind:expr, $address:expr, |$tunnel:ident| $body:expr) => {{
         let programming = $state.address_programming.lock().await;
         if crate::device_download_routes::download_in_progress(&$state) {
             return Err(conflict(
@@ -175,14 +175,35 @@ macro_rules! with_tunnel {
                 "a line scan is running: the gateway serves one tunnel",
             ));
         }
-        let connected = $state
-            .connector
-            .connect_tunnel($gateway)
-            .await
-            .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+        // The read path can be observed without changing the separate write
+        // path's authorization, backup or ambiguous-write semantics.
+        let activity = $kind.map(|kind| {
+            $state
+                .one_shot_activity
+                .start(kind, Some($address.to_string()))
+        });
+        let connected = match $state.connector.connect_tunnel($gateway).await {
+            Ok(connected) => connected,
+            Err(e) => {
+                if let Some(activity) = activity {
+                    activity.finish("failed");
+                }
+                return Err(ApiError::with_status(
+                    StatusCode::BAD_GATEWAY,
+                    e.to_string(),
+                ));
+            }
+        };
         let $tunnel = TunnelTransport(connected.as_ref());
         let outcome = $body;
         let _ = connected.disconnect().await;
+        if let Some(activity) = activity {
+            activity.finish(if outcome.is_ok() {
+                "finished"
+            } else {
+                "failed"
+            });
+        }
         drop(scan);
         drop(monitor);
         drop(programming);
@@ -198,9 +219,15 @@ async fn read(
     let gateway = parse_gateway(&query.gateway)?;
     let address = parse_address(&query.address)?;
     let plan = plan(&state)?;
-    let outcome = with_tunnel!(state, gateway, |tunnel| {
-        read_service_control(&tunnel, address, plan, state.address_programming_timing).await
-    });
+    let outcome = with_tunnel!(
+        state,
+        gateway,
+        Some("serviceControlRead"),
+        address,
+        |tunnel| {
+            read_service_control(&tunnel, address, plan, state.address_programming_timing).await
+        }
+    );
     outcome
         .map(|value| Json(ServiceControlDto::new(address, value)))
         .map_err(|e| ApiError::with_status(status_of(&e), e.to_string()))
@@ -243,7 +270,7 @@ async fn write(
     .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
     let plan = plan(&state)?;
     let mut backup_path = None;
-    let outcome = with_tunnel!(state, gateway, |tunnel| {
+    let outcome = with_tunnel!(state, gateway, None::<&'static str>, address, |tunnel| {
         set_individual_address_write_enable(
             &tunnel,
             plan,

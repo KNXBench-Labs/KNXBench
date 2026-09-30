@@ -70,3 +70,19 @@ proof of a result. The lookup also refuses a busy/running scan holder before
 opening another tunnel; the previous route omitted that exclusion. The
 serial-address **write** is not covered by this follow-up; `coverage` stays
 `partial` and the untracked list still names it.
+
+## Follow-up: gated property read, not a write receipt (2026-09-30)
+
+The Debug-gated read of `PID_SERVICE_CONTROL` now records
+`serviceControlRead` only after opt-in, address and gateway checks, and tunnel
+conflict checks. It stores the validated physical address but never the
+property's two octets, mask, backup path or project key. An abandoned request
+records `unknown` completion; a refused request is not a bus attempt.
+
+The write route shares the tunnel helper but opts out of the read observer.
+Its `POST` remains `serviceControlWrite` in `untracked`: a successful HTTP
+request may be a no-op, and an error after a property write may be an
+unverified mutation. A generic finished/failed record must not be presented
+as a write receipt or as proof of no write. The separate property-specific
+backup and confirmation gates of ADR-0051 are unchanged. This observer does
+not imply permission for a live write or make the aggregate snapshot complete.

@@ -178,6 +178,6 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
         one_shot,
         one_shot_dropped,
         busy_locks,
-        untracked: ["groupWrite", "serialAddress", "serviceControl"],
+        untracked: ["groupWrite", "serialAddress", "serviceControlWrite"],
     })
 }

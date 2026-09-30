@@ -8860,8 +8860,11 @@ read back twice), then `address-by-serial 1.1.68`: still answered from
 dump byte-identical. Bit 2 alone does not explain the refusal. Found
 since: KNXBench sent all four `A_IndividualAddress*` broadcasts at low
 priority where AL §3.2.2–§3.2.5 require system priority; fixed in
-`cemi.rs` the same day. Whether that is the cause needs a second live run
-with the fix.
+`cemi.rs` the same day. **It was not the cause:** a second run with the fix
+(bit 2 set, `c451fa95`) was ignored the same way, bit 2 cleared again, dump
+byte-identical. The serial write stays unverified on hardware; on `1.1.67`
+use the programming button (MP §2.3). Lifting this needs a device that
+takes the write, or an MDT statement on support.
 
 **Update (2026-09-29, live on `1.1.67`, user go "Freigabe für alle Tasks
 auf der Testhardware").** Both reads work on hardware, the write does not

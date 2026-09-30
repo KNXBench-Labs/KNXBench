@@ -442,7 +442,9 @@ would be a write this goal does not need.
 **Live 2026-09-30:** bit 2 set and cleared on `1.1.67` (read back); with
 it set the serial write was still ignored. KNXBench had sent the address
 broadcasts at low instead of system priority (AL §3.2.2–§3.2.5); fixed
-offline, second live run pending (RESEARCH §19.15, KL §139).
+(`c451fa95`). Second run with the fix: still ignored, device restored
+(RESEARCH §19.15, KL §139). K12's live write is closed as "not supported by
+this device" until another device is available.
 
 **Live 2026-09-29:** reads verified on `1.1.67`; the write is ignored by
 the device (`PID_SERVICE_CONTROL` bit 2 clear, KL §139, RESEARCH §19.8).

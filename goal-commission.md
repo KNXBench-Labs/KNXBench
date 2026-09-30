@@ -617,6 +617,13 @@ finished/failed/unknown outcome; aborted requests never become fabricated
 successes. Retention loss is counted. Other one-shot actions remain untracked,
 the API still declares partial coverage, and no UI or hardware was changed.
 
+**Read-only lookup follow-up, 2026-09-30:** serial-number lookup now adds
+one-shot evidence without leaking the serial or fabricating a physical
+address: its activity target is `null`. Witnessed negative reads finish;
+cancelled requests remain unknown. Serial-address **writes**, service-control
+and group writes remain outside the ledger. The snapshot is still not a
+global idle signal; no live hardware was touched.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

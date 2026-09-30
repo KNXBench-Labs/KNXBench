@@ -827,11 +827,7 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 - **§11 ISSUE-08 data half: done 2026-09-30.** P1 `a2ff938` (absent `IsActive` is active), P2 `dae6c1a` (evaluated `activation`, `channel`, diagnostic severity; ADR-0050), P3 `9795168` (`program_dpt`, `dpt_text`, `function_text`). Issue-plan checkboxes 1–4 and 6 ticked with evidence. `apps/knx-web` was not edited.
   - Handed to the UI session under "For the UI session:" in `.ai/CURRENT_STATE.md` (handover `3606371`): the five server-only fields, how to show `program_dpt`, and that the ISSUE-08 UI half may start.
   - Left open, documented: channel `@Name`/`@Number` for untitled channels (KNOWN_LIMITATIONS §146 — parser, schema migration, re-ingest).
-- **§8.1 to §8.3 and §8.5, doc hygiene:**
-  - ROADMAP T37 still reads as open.
-  - `ideas.md` still lists shipped work as open.
-  - `codex-goal.md` has already been removed from `main`; verify that.
-  - LIMITATION_TRIAGE is at 119 while KNOWN_LIMITATIONS has 125+ entries. Recount by command after the DIN-9 and DIN-10 merges (§128, §129).
+- **§8.1 to §8.3 and §8.5, doc hygiene: done 2026-09-30 (`0e6cdf1`).** ROADMAP T37 is marked shipped; `codex-goal.md` and `ideas.md` were already gone from `main` (`57d7190`); LIMITATION_TRIAGE is recounted by command: 146 numbered entries, 145 classified, §105 deliberately not, §92's new title and §134–§146 included. §8.4 (F-T30-1) stays parked, re-checked.
 - **§5 D12, the user manual (T23):** not accepted. The open points are the location per ADR-0024, removing the screenshots, and a claim-by-claim verification report.
 - **§5 alpha release (T18):** a user decision; do not tag.
 - **§10 final whole-goal review:** last of all.
@@ -853,9 +849,9 @@ Doc reconciliation, then the manual, then the alpha decision, then the final rev
   - Items it hands over arrive under "For the goal.md session:" and are adopted into this section.
 - **Received from the commissioning session** (its handover entries under "For the goal.md session:"; this session adopts them here and confirms in its next handover):
   - 2026-09-28, from merge `95a862c`: `stats.md` predated that merge (last refresh `cf791b0`). **Done:** refreshed in the commit that adds `goal-commission.md`.
-  - 2026-09-28 (K1/K2): `docs/manual/known-issues.md`, `docs/manual/implementation-status.md` and `docs/manual/reference/02-supported-and-unsupported.md` still say KNXBench never wrote to hardware. That is false since 2026-09-26. Fix it with the §12.3 manual work (T23). KNOWN_LIMITATIONS §92 has a new title; the triage recount must pick it up.
+  - 2026-09-28 (K1/K2): `docs/manual/known-issues.md`, `docs/manual/implementation-status.md` and `docs/manual/reference/02-supported-and-unsupported.md` still say KNXBench never wrote to hardware. That is false since 2026-09-26. Fix it with the §12.3 manual work (T23). KNOWN_LIMITATIONS §92 has a new title; the triage recount must pick it up. **Picked up** (`0e6cdf1`).
   - 2026-09-28 (K2): the File-menu rename "Download project" → save/export (R2, `docs/GLOSSARY.md`) is web work. **Passed on to `goal-ui.md` (U3).**
-  - 2026-09-28: KNOWN_LIMITATIONS gained §134–§136 (and now counts 139 `##` headings, versus the triage's 119). Add them to the LIMITATION_TRIAGE recount in §12.3 (§8.5). §136 is commissioning-owned: triage classifies it, and only `goal-commission.md` changes its text.
+  - 2026-09-28: KNOWN_LIMITATIONS gained §134–§136 (and now counts 139 `##` headings, versus the triage's 119). Add them to the LIMITATION_TRIAGE recount in §12.3 (§8.5). §136 is commissioning-owned: triage classifies it, and only `goal-commission.md` changes its text. **Done** in the 2026-09-30 recount (`0e6cdf1`); §136 classified K3, its text untouched.
 
 ### 12.5 Lessons from the Paperclip run
 

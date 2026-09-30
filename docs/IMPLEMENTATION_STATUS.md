@@ -58,8 +58,8 @@ normalized row fingerprints of `dynamic_node` (3,067,570 rows),
 tables and `package.unknown_count` (102 packages). Auto-increment evidence ids
 are excluded; every other value is included in stable row order. The opt-in
 115-instance package matrix also passes its revised pin: only channel-number
-unknown totals and the two unknown-row tables moved relative to `origin/main`
-(detail in IMPORT_EXPORT). These are aggregate checks, not an ETS compatibility
+unknown totals and the two unknown-row tables moved relative to the pre-v18
+baseline (`76bcce74`; detail in IMPORT_EXPORT). These are aggregate checks, not an ETS compatibility
 assertion. The UI half of §146 remains open until U12 shows both values.
 
 ## 2026-09-30 — cEMI frames keep their priority, repeat flag and hop count

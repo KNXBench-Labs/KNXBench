@@ -17,7 +17,7 @@ Timestamp: 2026-09-30 20:15 CEST
 - On the final rebased branch including K12 and ADR-0055 activity changes, workspace Rust passed 137 suites / 2,769 passed / 0 failed / 160 ignored / 0 `SKIP:`. Strict Clippy, fmt, layering, headers, anchors, corpus gates and `git diff --check` passed. Web passed 80 files / 1,270 tests; TypeScript and Vite build clean; local mocked Chromium 4/4 Device checks, 4/4 monitor control and 10/10 existing.
 - Corpus-backed Rust gate before upstream K12/ADR-0055: 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 `SKIP:`. Focused server contracts: `http_device_readiness.rs` 3/3; ignored-by-default `http_device_compare.rs` 6/6 against the private corpus + simulator (writes asserted absent). No raw private corpus bytes entered this log.
 
-## Delivery to finish
+## Delivery
 
-- Commit as `KNXBench <github@knxbench.com>` with no co-author, rebase onto current `origin/main` without dropping upstream commissioning entries, rerun merged-equivalent gates including the new K12 Rust tests, fast-forward push, read back remote SHA, release the Web lock, remove task-only worktree and scratch.
+- Reviewed candidate `8c829b9db9b68352a08fe515cdff36be1c056cb6` is on `origin/main`; exact remote readback matched. Rebased over commissioning K12 and ADR-0055 without dropping their `.ai` and status entries. Rust and Web gates on the merged-equivalent tree are above. Releasing the Web lock in a separate handover commit.
 - Root `main` is intentionally left alone: it lags upstream and contains foreign edits in `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md` and untracked documents. No root merge/reset, no unrelated cleanup.

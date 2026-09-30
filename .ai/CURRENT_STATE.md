@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / Device checks closeout)
+- **Timestamp:** 2026-09-30 21:01 CEST
+- **Web lock:** released by the UI session after publishing read-only Device checks.
+- **Completed:** Published `8c829b9db9b68352a08fe515cdff36be1c056cb6` to `origin/main` with exact remote SHA readback. Bus diagnostics now shows offline readiness and a two-step read-only device comparison; no live KNX tunnel, device write, settings opt-in or key was used. Merged-equivalent gates after upstream K12 and ADR-0055: Rust 137 suites / 2,769 passed / 0 failed / 160 ignored / 0 `SKIP:`; Web 80 files / 1,270 passed; local mocked Chromium 4/4 new, 4/4 monitor and 10/10 existing; TypeScript/build, fmt, strict Clippy, headers, anchors, layering, corpus gate and diff check passed. The UI review and focused server tests are in `.ai/logs/2026-09-30_codex_ui-readiness-compare.md`.
+- **Pending/Next Steps:** UI owner may take a *new* Web lock to re-evaluate the ADR-0051 Debug toggle and service-control action. Verify the K12 property-specific pre-write record and all route safety gates before any UI write action. ADR-0055 `/api/bus/activity` is partial, not proof that the bus is idle. Keep K13 reset and live hardware out of this UI package. Remove only this task's worktree, symlink and scratch after release readback.
+- **Notes for Codex oder Claude:** K12 persists original property octets, not a device image and not an automatic rollback; no hardware permission follows from shipping this read-only UI. Do not reset the dirty root checkout or remove other sessions' worktrees. No credentials or private corpus contents appear in this handover.
+
+---
+
 - **Last Agent:** codex (commissioning / partial bus-activity snapshot)
 - **Timestamp:** 2026-09-30 20:54 CEST
 - **Web lock:** untouched; the UI session holds it for its read-only readiness/compare package. No Web source was edited here.

@@ -512,6 +512,13 @@ impl ModuleDefArgument {
 }
 
 impl ProgramTrees {
+    /// Whether the program's own `Dynamic` tree has any node at all
+    /// (ISSUE-08). An empty tree activates nothing, which says nothing
+    /// about the program's objects: there was nothing to evaluate.
+    pub fn has_program_tree(&self) -> bool {
+        !self.program.nodes.is_empty()
+    }
+
     /// Builds a `ProgramTrees` from an already-loaded program tree and its
     /// already-loaded `ModuleDef` trees. The database-touching counterpart
     /// is `load_program_trees`.
@@ -938,6 +945,44 @@ pub enum Diagnostic {
     UnresolvedTextPlaceholder { node_id: i64, name: String },
 }
 
+impl Diagnostic {
+    /// Whether this diagnostic can stand between a ref and its activation
+    /// (ISSUE-08): after it, "not activated" may be wrong, not just
+    /// conditional. `false` only for the two that cannot:
+    ///
+    /// - `NoBranchMatched`: the `choose` read a known value and no `when`
+    ///   covers it. Activating nothing is the evaluator's `[A]` rule, and
+    ///   a device read back octet for octet agreed with it (RESEARCH
+    ///   §19.2 "Unmatched `choose`"); the download planner accepts it on
+    ///   the same evidence.
+    /// - `UnresolvedTextPlaceholder`: about label text, never about which
+    ///   refs activate.
+    ///
+    /// Every other variant means some subtree was not walked or not walked
+    /// with a known value, so an object not activated may still be.
+    pub fn may_hide_refs(&self) -> bool {
+        match self {
+            Diagnostic::NoBranchMatched { .. } | Diagnostic::UnresolvedTextPlaceholder { .. } => {
+                false
+            }
+            Diagnostic::UnparsableTest { .. }
+            | Diagnostic::UnresolvedParamRef { .. }
+            | Diagnostic::NonNumericValue { .. }
+            | Diagnostic::UnexpectedTypeNoneShape { .. }
+            | Diagnostic::UnrecognizedNode { .. }
+            | Diagnostic::RefBelowSkippedNode { .. }
+            | Diagnostic::ModuleDefNotFound { .. }
+            | Diagnostic::ModuleCycleDetected { .. }
+            | Diagnostic::ModuleNestingTooDeep { .. }
+            | Diagnostic::ModuleExpansionBudgetExhausted { .. }
+            | Diagnostic::MissingValue { .. }
+            | Diagnostic::ModuleWithoutId { .. }
+            | Diagnostic::ModuleArgumentNotBound { .. }
+            | Diagnostic::UnsupportedModuleArgumentKind { .. } => true,
+        }
+    }
+}
+
 /// Which expansion produced a given activation or diagnostic (design D14).
 /// `None` means the application program's own tree; `Some` names the
 /// `Module` element in that tree whose expansion is being walked. Node ids
@@ -1056,6 +1101,34 @@ impl ModuleScope {
 pub struct ActiveRef {
     pub scope: Option<Rc<ModuleScope>>,
     pub ref_id: String,
+    /// The innermost `Channel` or `ChannelIndependentBlock` this ref was
+    /// activated under (ISSUE-08), or `None` if the walk reached it
+    /// outside every channel element. A `Module` instantiated inside a
+    /// channel passes that channel on to the refs of its `ModuleDef` tree,
+    /// unless that tree opens a channel of its own.
+    pub channel: Option<ChannelOwner>,
+}
+
+/// The channel element that owns an activated ref (ISSUE-08).
+///
+/// Structural, not heuristic: it is the nearest enclosing `Channel`/
+/// `ChannelIndependentBlock` on the evaluation path. Corpus: in the three
+/// corpus projects' programs every `ComObjectRefRef` sits under exactly
+/// one channel element (5,630 / 5,630 / 8), so the owner is unambiguous
+/// there. Its display text is the matching [`ActiveLabel`] (same `scope`
+/// and `node_id`), when the element carries a non-empty `@Text`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelOwner {
+    /// The scope the channel element was found in. Not necessarily the
+    /// ref's own scope: a module that opens no channel inherits the one
+    /// around its `Module` element.
+    pub scope: Option<Rc<ModuleScope>>,
+    /// `dynamic_node.node_id` of the channel element within `scope`'s tree.
+    pub node_id: i64,
+    /// `Channel` or `ChannelIndependentBlock`.
+    pub kind: String,
+    /// The element's `@Id`, as stored.
+    pub element_id: Option<String>,
 }
 
 /// One activated label: the `@Text` of an activated `Channel`,
@@ -1208,6 +1281,7 @@ impl Activation {
         &mut self,
         seen: &mut HashSet<ScopeKey>,
         scope: Option<&Rc<ModuleScope>>,
+        channel: Option<&ChannelOwner>,
         node_id: i64,
         id: String,
     ) {
@@ -1221,6 +1295,7 @@ impl Activation {
         self.parameter_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
+            channel: channel.cloned(),
         });
     }
 
@@ -1228,6 +1303,7 @@ impl Activation {
         &mut self,
         seen: &mut HashSet<ScopeKey>,
         scope: Option<&Rc<ModuleScope>>,
+        channel: Option<&ChannelOwner>,
         node_id: i64,
         id: String,
     ) {
@@ -1241,6 +1317,7 @@ impl Activation {
         self.com_object_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
+            channel: channel.cloned(),
         });
     }
 
@@ -1277,6 +1354,7 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             &mut seen_coms,
             &mut expansions_used,
             None,
+            None,
         );
     }
     activation
@@ -1290,6 +1368,12 @@ fn is_transparent_container(kind: &str) -> bool {
         kind,
         "Dynamic" | "ChannelIndependentBlock" | "Channel" | "ParameterBlock" | "when"
     )
+}
+
+/// The transparent containers that own what is activated below them
+/// (ISSUE-08, [`ChannelOwner`]).
+fn is_channel(kind: &str) -> bool {
+    matches!(kind, "Channel" | "ChannelIndependentBlock")
 }
 
 /// ADR-0041: a `ParameterBlock`'s table layout. Corpus (304 distinct
@@ -1372,12 +1456,22 @@ fn walk(
     seen_coms: &mut HashSet<ScopeKey>,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
+    channel: Option<&ChannelOwner>,
 ) {
     let Some(node) = tree.node(node_id) else {
         return;
     };
     if is_transparent_container(&node.kind) {
         record_label(activation, scope, node);
+        // ISSUE-08: a channel element becomes the owner of everything
+        // activated below it; any other container passes the current one on.
+        let opened = is_channel(&node.kind).then(|| ChannelOwner {
+            scope: scope.cloned(),
+            node_id,
+            kind: node.kind.clone(),
+            element_id: node.element_id.clone(),
+        });
+        let channel = opened.as_ref().or(channel);
         for &child in tree.children_of(Some(node_id)) {
             walk(
                 trees,
@@ -1389,6 +1483,7 @@ fn walk(
                 seen_coms,
                 expansions_used,
                 scope,
+                channel,
             );
         }
         return;
@@ -1404,16 +1499,17 @@ fn walk(
             seen_coms,
             expansions_used,
             scope,
+            channel,
         ),
         "ParameterRefRef" => {
             if let Some(id) = &node.ref_id {
-                activation.activate_parameter_ref(seen_params, scope, node_id, id.clone());
+                activation.activate_parameter_ref(seen_params, scope, channel, node_id, id.clone());
             }
             report_refs_below(tree, node_id, activation, scope);
         }
         "ComObjectRefRef" => {
             if let Some(id) = &node.ref_id {
-                activation.activate_com_object_ref(seen_coms, scope, node_id, id.clone());
+                activation.activate_com_object_ref(seen_coms, scope, channel, node_id, id.clone());
             }
             report_refs_below(tree, node_id, activation, scope);
         }
@@ -1539,6 +1635,7 @@ fn walk(
                             seen_coms,
                             expansions_used,
                             Some(&new_scope),
+                            channel,
                         );
                     }
                 }
@@ -1715,6 +1812,34 @@ fn substitute_arguments(
     node_id: i64,
     activation: &mut Activation,
 ) -> String {
+    substitute_with(raw, scope.map(Rc::as_ref), |name| {
+        activation.diagnose(
+            scope,
+            Diagnostic::UnresolvedTextPlaceholder {
+                node_id,
+                name: name.to_string(),
+            },
+        );
+    })
+}
+
+/// [`substitute_arguments`]' rule for text that is read *outside* the
+/// walk (ISSUE-08): a `ComObject/@FunctionText` or a translated channel
+/// `@Text` inside a `ModuleDef` carries the same `{{Name}}` placeholders as
+/// the labels the walk records. Same three rules — unbound names and
+/// numeric placeholders stay verbatim, nothing is re-scanned — but there is
+/// no `Activation` to report into, so an unbound name is only left
+/// visible, not diagnosed. `scope: None` returns `raw` unchanged apart
+/// from that: the program's own tree binds no arguments.
+pub fn substitute_text(raw: &str, scope: Option<&ModuleScope>) -> String {
+    substitute_with(raw, scope, |_| {})
+}
+
+fn substitute_with(
+    raw: &str,
+    scope: Option<&ModuleScope>,
+    mut unresolved: impl FnMut(&str),
+) -> String {
     if !raw.contains(PLACEHOLDER_OPEN) {
         return raw.to_string();
     }
@@ -1733,13 +1858,7 @@ fn substitute_arguments(
                 out.push_str(PLACEHOLDER_OPEN);
                 out.push_str(name);
                 out.push_str(PLACEHOLDER_CLOSE);
-                activation.diagnose(
-                    scope,
-                    Diagnostic::UnresolvedTextPlaceholder {
-                        node_id,
-                        name: name.to_string(),
-                    },
-                );
+                unresolved(name);
             }
             (false, _) => {
                 out.push_str(PLACEHOLDER_OPEN);
@@ -1779,6 +1898,7 @@ fn evaluate_choose(
     seen_coms: &mut HashSet<ScopeKey>,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
+    channel: Option<&ChannelOwner>,
 ) {
     let Some(control_kind) = node.control_kind else {
         activation.diagnose(
@@ -1820,6 +1940,7 @@ fn evaluate_choose(
                     seen_coms,
                     expansions_used,
                     scope,
+                    channel,
                 ),
                 None => {
                     activation.diagnose(
@@ -1844,6 +1965,7 @@ fn evaluate_choose(
             seen_coms,
             expansions_used,
             scope,
+            channel,
         ),
     }
 }
@@ -1859,6 +1981,7 @@ fn evaluate_comparable_choose(
     seen_coms: &mut HashSet<ScopeKey>,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
+    channel: Option<&ChannelOwner>,
 ) {
     let param_ref = node.ref_id.clone();
     let Some(raw_value) = node
@@ -1955,6 +2078,7 @@ fn evaluate_comparable_choose(
             seen_coms,
             expansions_used,
             scope,
+            channel,
         ),
         None => activation.diagnose(
             scope,

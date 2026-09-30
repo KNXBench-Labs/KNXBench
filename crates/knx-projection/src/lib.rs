@@ -600,6 +600,63 @@ pub struct ComObjectNode {
     /// `knx_core::Command::LinkComObject`/`UnlinkComObject` (2026-09-06)
     /// had no projection field to read or drive from until this cycle.
     pub links: Vec<GroupLinkNode>,
+    /// Whether the device's current parameter values activate this object
+    /// in the application program's `Dynamic` tree (ISSUE-08). Independent
+    /// of `is_active`, which is the project file's own stored claim: a
+    /// device KNXBench created stores `true` for every object. Only the
+    /// server can evaluate (it needs the product database), so
+    /// [`build_device_detail`] alone always says `NotEvaluated`.
+    ///
+    /// On the wire (serde) since ISSUE-08's data half, but not yet in the
+    /// generated TypeScript bindings: `apps/knx-web` is under the UI
+    /// session's web lock. Its ISSUE-08 UI half (goal-ui.md U12) drops this
+    /// `skip`, and the one on `channel`, adds `export` to the two types
+    /// below, and regenerates the bindings.
+    #[ts(skip)]
+    pub activation: ComObjectActivation,
+    /// The `Channel`/`ChannelIndependentBlock` of the `Dynamic` tree this
+    /// object was activated under (ISSUE-08). `None` when `activation` is
+    /// not `Active`, or the object sits outside every channel element.
+    /// Not yet in the TypeScript bindings; see `activation`.
+    #[ts(skip)]
+    pub channel: Option<ComObjectChannel>,
+}
+
+/// [`ComObjectNode::activation`]: the evaluated state, or why there is none.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+pub enum ComObjectActivation {
+    /// The evaluated tree activates this object.
+    Active,
+    /// The evaluated tree does not activate this object, and the
+    /// evaluation met nothing that makes that answer uncertain.
+    Inactive,
+    /// Not activated, but the evaluation reported something that could
+    /// have hidden it (an unknown value, a missing module definition, a
+    /// budget limit, ...), or the object's own module instance cannot be
+    /// told apart. Shown, not hidden: the answer is not known.
+    Undetermined,
+    /// No evaluation ran: no product reference, no product database, the
+    /// program is not installed, or the program has no `Dynamic` tree.
+    NotEvaluated,
+}
+
+/// [`ComObjectNode::channel`]: the channel element that owns an object.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ComObjectChannel {
+    /// Stable within one device detail: two objects share a channel exactly
+    /// when their keys are equal. Opaque; do not parse.
+    pub key: String,
+    /// `Channel` or `ChannelIndependentBlock`.
+    pub kind: String,
+    /// The element's `@Text` in the requested language, module arguments
+    /// substituted. `None` when the element has no text (every
+    /// `ChannelIndependentBlock` in the corpus has none).
+    pub text: Option<String>,
+    /// Sort key: the channel's position in the evaluated tree's document
+    /// order (module expansions in place). Not contiguous: it counts every
+    /// channel with an activated communication object reference, including
+    /// ones that own none of this device's objects.
+    pub order: u32,
 }
 
 /// One directional link from a communication object to a group address,
@@ -690,6 +747,8 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
             .iter()
             .map(|link| build_group_link_node(link, project))
             .collect(),
+        activation: ComObjectActivation::NotEvaluated,
+        channel: None,
     }
 }
 

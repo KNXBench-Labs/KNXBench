@@ -415,8 +415,23 @@ pub(crate) enum ParameterDiagnosticKindDto {
 pub(crate) struct ParameterDiagnosticDto {
     pub(crate) scope: Option<ModuleScopeDto>,
     pub(crate) kind: ParameterDiagnosticKindDto,
+    pub(crate) severity: ParameterDiagnosticSeverityDto,
     pub(crate) message: String,
     pub(crate) detail: String,
+}
+
+/// How much a [`ParameterDiagnosticDto`] asks of the user (ISSUE-08).
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ParameterDiagnosticSeverityDto {
+    /// An expected state of the product data, nothing is missing: a
+    /// `choose` whose current value no `when` covers activates nothing
+    /// (ISSUE-08 measured 1,016/978/64 of these on the corpus projects,
+    /// almost all legal enumeration values). Worth showing, not alarming.
+    Info,
+    /// Something could not be read, matched or evaluated; what the panel
+    /// shows may be incomplete.
+    Warning,
 }
 
 /// The optional display language, shared by both parameter endpoints

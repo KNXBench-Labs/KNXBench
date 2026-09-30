@@ -1270,6 +1270,125 @@ struct ComObjectOverlayInput {
     >,
 }
 
+/// Everything ISSUE-08's activation/channel overlay needs from the project,
+/// gathered while only `project` is locked (same discipline as
+/// [`ComObjectOverlayInput`]). `None` when the device states no program.
+struct ActivationInput {
+    program_ref: String,
+    stored: Vec<(String, String)>,
+    module_instances: Vec<knx_core::ModuleInstance>,
+    /// `ComObjectNode::id` -> (`source.ets_id`, own `ModuleInstanceId`).
+    com_objects: HashMap<u32, (String, Option<knx_core::ModuleInstanceId>)>,
+}
+
+fn activation_input(
+    project: &knx_core::Project,
+    device: knx_core::DeviceId,
+) -> Option<ActivationInput> {
+    let dev = project.devices.get(device)?;
+    if dev.program_ref.is_empty() {
+        return None;
+    }
+    let (stored, module_instances) = device_parameter_inputs(project, device);
+    Some(ActivationInput {
+        program_ref: dev.program_ref.clone(),
+        stored,
+        module_instances,
+        com_objects: dev
+            .com_objects
+            .iter()
+            .filter_map(|id| project.devices.com_object(*id))
+            .map(|com| (com.id.0, (com.source.ets_id.clone(), com.module_instance)))
+            .collect(),
+    })
+}
+
+/// A device's stored parameter values and imported `ModuleInstance`s: the
+/// two project-side inputs of [`evaluate_device`], read the same way for
+/// the parameter panel and the device detail.
+fn device_parameter_inputs(
+    project: &knx_core::Project,
+    device: knx_core::DeviceId,
+) -> (Vec<(String, String)>, Vec<knx_core::ModuleInstance>) {
+    let stored: Vec<(String, String)> = project
+        .installations
+        .first()
+        .map(|installation| {
+            installation
+                .parameters
+                .iter()
+                .filter(|p| p.device == device)
+                .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
+    let module_instances: Vec<knx_core::ModuleInstance> = project
+        .devices
+        .module_instances()
+        .filter(|m| m.device == device)
+        .cloned()
+        .collect();
+    (stored, module_instances)
+}
+
+/// ISSUE-08: evaluates the device's `Dynamic` tree with the same
+/// [`evaluate_device`] the parameter panel uses and sets each
+/// communication object's `activation`/`channel`. Leaves every object
+/// `NotEvaluated` when the program is not installed or has no `Dynamic`
+/// tree: nothing was evaluated, so nothing may be claimed.
+fn apply_com_object_activation(
+    products: &knx_productdb::Connection,
+    detail: &mut knx_projection::DeviceDetail,
+    input: ActivationInput,
+    language: Option<&str>,
+) -> Result<(), String> {
+    let Some(program_id) = knx_productdb::query::resolve_program(products, &input.program_ref)
+        .map_err(|e| e.to_string())?
+    else {
+        return Ok(());
+    };
+    let trees = knx_productdb::dynamic::load_program_trees(products, &program_id)
+        .map_err(|e| e.to_string())?;
+    if !trees.has_program_tree() {
+        return Ok(());
+    }
+    let evaluation = evaluate_device(products, &program_id, input.stored, &input.module_instances)?;
+    let by_id: HashMap<knx_core::ModuleInstanceId, &knx_core::ModuleInstance> =
+        input.module_instances.iter().map(|m| (m.id, m)).collect();
+    let keys: HashMap<u32, crate::com_object_activation::ComObjectKey<'_>> = input
+        .com_objects
+        .iter()
+        .map(|(id, (ets_id, instance))| {
+            let module_instance = instance.and_then(|i| by_id.get(&i).copied());
+            (
+                *id,
+                crate::com_object_activation::ComObjectKey {
+                    lookup_id: knx_productdb::com_object_lookup_id(
+                        &program_id,
+                        ets_id,
+                        instance.is_some(),
+                    ),
+                    module_instance,
+                },
+            )
+        })
+        .collect();
+    let channel_texts = match language {
+        Some(lang) => knx_productdb::query::channel_texts(products, &program_id, lang)
+            .map_err(|e| e.to_string())?,
+        None => HashMap::new(),
+    };
+    crate::com_object_activation::apply(
+        &mut detail.com_objects,
+        &keys,
+        &input.module_instances,
+        &evaluation.activation,
+        &channel_texts,
+        evaluation.stale.is_empty(),
+    );
+    Ok(())
+}
+
 /// Builds one device's detail panel, overlaying two independent things from
 /// the product database on top of what `device_detail_impl` alone can know:
 ///
@@ -1297,10 +1416,11 @@ pub fn device_detail(
     language: Option<&str>,
 ) -> Result<knx_projection::DeviceDetail, String> {
     // Step 1: lock only `project`.
-    let (mut detail, overlay_input) = {
+    let (mut detail, overlay_input, activation_input) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let detail = device_detail_impl(project, device_id)?;
+        let activation_input = activation_input(project, knx_core::DeviceId(device_id));
         let overlay_input = language.and_then(|_| {
             let dev = project.devices.get(knx_core::DeviceId(device_id))?;
             Some(ComObjectOverlayInput {
@@ -1323,7 +1443,7 @@ pub fn device_detail(
                     .collect(),
             })
         });
-        (detail, overlay_input)
+        (detail, overlay_input, activation_input)
     };
 
     // T16: a product/program ref is present, so `resolution` needs a real
@@ -1333,7 +1453,10 @@ pub fn device_detail(
         knx_projection::ProductResolution::NoReference
     );
 
-    if !needs_product_lookup && (language.is_none() || overlay_input.is_none()) {
+    if !needs_product_lookup
+        && activation_input.is_none()
+        && (language.is_none() || overlay_input.is_none())
+    {
         return Ok(detail);
     }
 
@@ -1379,6 +1502,10 @@ pub fn device_detail(
                 detail.product.catalog = None;
             }
         }
+    }
+
+    if let Some(input) = activation_input {
+        apply_com_object_activation(&products, &mut detail, input, language)?;
     }
 
     let (Some(lang), Some(overlay_input)) = (language, overlay_input) else {
@@ -2990,6 +3117,22 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
 
 // --- Parameter editor (T18 slice 3 task 3, design D20-D26) -----------
 
+/// ISSUE-08: `NoBranchMatched` is the one evaluator diagnostic that reports
+/// an expected state rather than a gap (see
+/// `knx_productdb::dynamic::Diagnostic::may_hide_refs`); `Info` for it,
+/// `Warning` for everything else. `UnresolvedTextPlaceholder` hides no ref
+/// either, but leaves a raw `{{Name}}` in visible text, so it stays a warning.
+fn diagnostic_severity(
+    diagnostic: &knx_productdb::dynamic::Diagnostic,
+) -> crate::routes::ParameterDiagnosticSeverityDto {
+    match diagnostic {
+        knx_productdb::dynamic::Diagnostic::NoBranchMatched { .. } => {
+            crate::routes::ParameterDiagnosticSeverityDto::Info
+        }
+        _ => crate::routes::ParameterDiagnosticSeverityDto::Warning,
+    }
+}
+
 /// A `Diagnostic`'s machine-readable tag (KNOWN_LIMITATIONS.md §66) paired
 /// with its fixed, hand-authored English sentence (design D26) — no
 /// `node_id`, no internal identifiers, just what a device-panel user
@@ -3278,95 +3421,31 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
     }
 }
 
-/// Builds a device's parameter panel (design D20-D23, D26): project state
-/// and product database are each locked at most once, never together
-/// (Step 1 below locks only `project`; Step 2 locks only `product_db` —
-/// the reverse order from `create_device_impl`, per this task's own
-/// brief, since here the program reference comes from already-loaded
-/// project state rather than the other way around).
-fn assemble_parameter_panel(
-    state: &AppState,
-    device_id: u32,
-    language: Option<&str>,
-) -> Result<PanelAssembly, String> {
-    let device = knx_core::DeviceId(device_id);
+/// One device's evaluated `Dynamic` tree, from its stored parameter values
+/// (design D21/D42). Shared by the parameter panel and, since ISSUE-08, by
+/// the device detail's communication objects, so both read the same
+/// activation instead of two implementations drifting apart.
+struct DeviceEvaluation {
+    ref_ids: HashSet<String>,
+    supplied: HashMap<String, String>,
+    validated_scoped: HashMap<(String, String), String>,
+    stale: Vec<crate::routes::StaleParameterDto>,
+    /// Pass A/B diagnostics, in the order the panel has always listed them.
+    diagnostics: Vec<crate::routes::ParameterDiagnosticDto>,
+    values: knx_productdb::dynamic::ValueMap,
+    activation: knx_productdb::dynamic::Activation,
+}
 
-    // Step 1: lock only `project`.
-    let (program_ref, stored, module_instances) = {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
-        let dev = project
-            .devices
-            .get(device)
-            .ok_or_else(|| format!("device {device_id} not found"))?;
-        let stored: Vec<(String, String)> = project
-            .installations
-            .first()
-            .map(|installation| {
-                installation
-                    .parameters
-                    .iter()
-                    .filter(|p| p.device == device)
-                    .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        // D39/D40: this device's own imported `ModuleInstance`s — the
-        // project's own answer to "which channel is this," read once here
-        // while `project` is locked, cloned so the lock can drop before
-        // `product_db` is taken (same discipline as `stored` above).
-        let module_instances: Vec<knx_core::ModuleInstance> = project
-            .devices
-            .module_instances()
-            .filter(|m| m.device == device)
-            .cloned()
-            .collect();
-        (dev.program_ref.clone(), stored, module_instances)
-    };
+fn evaluate_device(
+    products: &knx_productdb::Connection,
+    program_id: &str,
+    stored: Vec<(String, String)>,
+    module_instances: &[knx_core::ModuleInstance],
+) -> Result<DeviceEvaluation, String> {
+    let ref_ids =
+        knx_productdb::query::parameter_ref_ids(products, program_id).map_err(|e| e.to_string())?;
 
-    let Some(products_mutex) = state.product_db.as_ref() else {
-        return Ok(empty_assembly(stored));
-    };
-
-    // Step 2: lock only `product_db` (`project`'s lock above is already
-    // dropped — the two mutexes are never held at once).
-    let products = products_mutex.lock().expect("state mutex poisoned");
-    let program_id = knx_productdb::query::resolve_program(&products, &program_ref)
-        .map_err(|e| e.to_string())?;
-    let Some(program_id) = program_id else {
-        return Ok(empty_assembly(stored));
-    };
-
-    let ref_ids = knx_productdb::query::parameter_ref_ids(&products, &program_id)
-        .map_err(|e| e.to_string())?;
-    // `language` is the request-supplied display language (T26 Task 2);
-    // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
-    let views = knx_productdb::query::parameter_views(&products, &program_id, language)
-        .map_err(|e| e.to_string())?;
-    let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
-        views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
-
-    // Coordinator addition: `parameter_views`' inner joins silently drop
-    // a row whose `parameter`/`parameter_type` does not resolve — name
-    // the gap instead of letting it vanish unremarked (measured 543/543
-    // on the current corpus, so this is not expected to fire on real
-    // data; it is here for the day a package does not join cleanly).
     let mut diagnostics: Vec<crate::routes::ParameterDiagnosticDto> = Vec::new();
-    if views.len() != ref_ids.len() {
-        let dropped = ref_ids.len().saturating_sub(views.len());
-        diagnostics.push(crate::routes::ParameterDiagnosticDto {
-            scope: None,
-            kind: crate::routes::ParameterDiagnosticKindDto::ParametersUnreadable,
-            message:
-                "Some declared parameters could not be read from the product database and are not shown."
-                    .to_string(),
-            detail: format!(
-                "parameter_views returned {} row(s) but parameter_ref_ids declares {} id(s) for program '{program_id}' ({dropped} dropped by an unresolved parameter/parameter_type join)",
-                views.len(),
-                ref_ids.len()
-            ),
-        });
-    }
 
     // Pass A (design D21): sort every stored value into unscoped-supplied,
     // a regex candidate awaiting module-id validation, or outright
@@ -3385,6 +3464,7 @@ fn assemble_parameter_panel(
                 diagnostics.push(crate::routes::ParameterDiagnosticDto {
                     scope: None,
                     kind: crate::routes::ParameterDiagnosticKindDto::DuplicateUnscopedValue,
+                    severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                     message:
                         "Two stored values target the same parameter; the later one is ignored."
                             .to_string(),
@@ -3410,9 +3490,9 @@ fn assemble_parameter_panel(
     // reaches — Pass B needs that set before it can validate a single
     // scoped candidate, and `evaluate` is the only place that set is
     // computed (E3: no parallel module-expansion implementation).
-    let mut values = knx_productdb::dynamic::resolve_values(&products, &program_id, &supplied)
+    let mut values = knx_productdb::dynamic::resolve_values(products, program_id, &supplied)
         .map_err(|e| e.to_string())?;
-    let trees = knx_productdb::dynamic::load_program_trees(&products, &program_id)
+    let trees = knx_productdb::dynamic::load_program_trees(products, program_id)
         .map_err(|e| e.to_string())?;
     let provisional_activation = knx_productdb::dynamic::evaluate(&trees, &values);
 
@@ -3442,7 +3522,7 @@ fn assemble_parameter_panel(
             continue;
         }
         if let MiAuthority::Found(authoritative_digits) =
-            resolve_mi_authority(&module_instances, &module_id)
+            resolve_mi_authority(module_instances, &module_id)
         {
             if authoritative_digits != mi_digits {
                 stale.push(crate::routes::StaleParameterDto { ets_id, raw });
@@ -3467,6 +3547,7 @@ fn assemble_parameter_panel(
             diagnostics.push(crate::routes::ParameterDiagnosticDto {
                 scope: scope_dto,
                 kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleScopedValue,
+                severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                 message:
                     "Two stored values target the same module-scoped parameter; the later one is ignored."
                         .to_string(),
@@ -3496,6 +3577,99 @@ fn assemble_parameter_panel(
         }
         knx_productdb::dynamic::evaluate(&trees, &values)
     };
+
+    Ok(DeviceEvaluation {
+        ref_ids,
+        supplied,
+        validated_scoped,
+        stale,
+        diagnostics,
+        values,
+        activation,
+    })
+}
+
+/// Builds a device's parameter panel (design D20-D23, D26): project state
+/// and product database are each locked at most once, never together
+/// (Step 1 below locks only `project`; Step 2 locks only `product_db` —
+/// the reverse order from `create_device_impl`, per this task's own
+/// brief, since here the program reference comes from already-loaded
+/// project state rather than the other way around).
+fn assemble_parameter_panel(
+    state: &AppState,
+    device_id: u32,
+    language: Option<&str>,
+) -> Result<PanelAssembly, String> {
+    let device = knx_core::DeviceId(device_id);
+
+    // Step 1: lock only `project`.
+    let (program_ref, stored, module_instances) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let dev = project
+            .devices
+            .get(device)
+            .ok_or_else(|| format!("device {device_id} not found"))?;
+        // D39/D40: this device's own imported `ModuleInstance`s — the
+        // project's own answer to "which channel is this," read once here
+        // while `project` is locked, cloned so the lock can drop before
+        // `product_db` is taken (same discipline as `stored`).
+        let (stored, module_instances) = device_parameter_inputs(project, device);
+        (dev.program_ref.clone(), stored, module_instances)
+    };
+
+    let Some(products_mutex) = state.product_db.as_ref() else {
+        return Ok(empty_assembly(stored));
+    };
+
+    // Step 2: lock only `product_db` (`project`'s lock above is already
+    // dropped — the two mutexes are never held at once).
+    let products = products_mutex.lock().expect("state mutex poisoned");
+    let program_id = knx_productdb::query::resolve_program(&products, &program_ref)
+        .map_err(|e| e.to_string())?;
+    let Some(program_id) = program_id else {
+        return Ok(empty_assembly(stored));
+    };
+
+    let DeviceEvaluation {
+        ref_ids,
+        supplied,
+        validated_scoped,
+        stale,
+        diagnostics: evaluation_diagnostics,
+        values,
+        activation,
+    } = evaluate_device(&products, &program_id, stored, &module_instances)?;
+    // `language` is the request-supplied display language (T26 Task 2);
+    // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
+    let views = knx_productdb::query::parameter_views(&products, &program_id, language)
+        .map_err(|e| e.to_string())?;
+    let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
+        views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
+
+    // Coordinator addition: `parameter_views`' inner joins silently drop
+    // a row whose `parameter`/`parameter_type` does not resolve — name
+    // the gap instead of letting it vanish unremarked (measured 543/543
+    // on the current corpus, so this is not expected to fire on real
+    // data; it is here for the day a package does not join cleanly).
+    let mut diagnostics: Vec<crate::routes::ParameterDiagnosticDto> = Vec::new();
+    if views.len() != ref_ids.len() {
+        let dropped = ref_ids.len().saturating_sub(views.len());
+        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+            scope: None,
+            kind: crate::routes::ParameterDiagnosticKindDto::ParametersUnreadable,
+            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
+            message:
+                "Some declared parameters could not be read from the product database and are not shown."
+                    .to_string(),
+            detail: format!(
+                "parameter_views returned {} row(s) but parameter_ref_ids declares {} id(s) for program '{program_id}' ({dropped} dropped by an unresolved parameter/parameter_type join)",
+                views.len(),
+                ref_ids.len()
+            ),
+        });
+    }
+    diagnostics.extend(evaluation_diagnostics);
 
     // Group `Activation::parameter_refs` into one section per distinct
     // scope (D23), preserving each ref's document-order position and the
@@ -3573,6 +3747,7 @@ fn assemble_parameter_panel(
                     diagnostics.push(crate::routes::ParameterDiagnosticDto {
                         scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                         kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleId,
+                        severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                         message:
                             "Two or more sections in this program declare the same module id; its fields are read-only."
                                 .to_string(),
@@ -3588,6 +3763,7 @@ fn assemble_parameter_panel(
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             kind: crate::routes::ParameterDiagnosticKindDto::NoModuleInstanceMatch,
+                            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                             message:
                                 "No imported module instance matches this module; its fields are read-only."
                                     .to_string(),
@@ -3604,6 +3780,7 @@ fn assemble_parameter_panel(
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             kind: crate::routes::ParameterDiagnosticKindDto::AmbiguousModuleInstance,
+                            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                             message:
                                 "Two or more imported module instances share this module; its fields are read-only."
                                     .to_string(),
@@ -3621,6 +3798,7 @@ fn assemble_parameter_panel(
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             kind: crate::routes::ParameterDiagnosticKindDto::MalformedModuleInstanceId,
+                            severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
                             message:
                                 "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
                                     .to_string(),
@@ -3712,6 +3890,7 @@ fn assemble_parameter_panel(
         diagnostics.push(crate::routes::ParameterDiagnosticDto {
             scope: scoped.scope.as_ref().map(|s| module_scope_dto(s)),
             kind,
+            severity: diagnostic_severity(&scoped.diagnostic),
             message: message.to_string(),
             detail: format!("{:?}", scoped.diagnostic),
         });
@@ -4152,6 +4331,29 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ISSUE-08: an unmatched `choose` is an expected product-data state and
+    /// reports as `Info`; everything else the evaluator says stays `Warning`.
+    #[test]
+    fn only_an_unmatched_choose_is_informational() {
+        use crate::routes::ParameterDiagnosticSeverityDto::{Info, Warning};
+        use knx_productdb::dynamic::Diagnostic;
+        assert_eq!(
+            diagnostic_severity(&Diagnostic::NoBranchMatched {
+                choose_node: 1,
+                param_ref: None,
+                observed_value: "3".into(),
+            }),
+            Info
+        );
+        assert_eq!(
+            diagnostic_severity(&Diagnostic::UnresolvedTextPlaceholder {
+                node_id: 1,
+                name: "x".into(),
+            }),
+            Warning
+        );
+    }
 
     /// ADR-0039 Decision 4 / KNOWN_LIMITATIONS §129: a *non-destructive* CSV
     /// plan is bound to the revision it was planned against, exactly like a

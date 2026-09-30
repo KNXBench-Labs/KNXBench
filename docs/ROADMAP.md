@@ -382,7 +382,7 @@ left unbuilt.
 
 Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
-### T37 — Visible, honest progress while loading a project
+### T37 — Visible, honest progress while loading a project — shipped 2026-09-19
 
 **Done.** See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
 [adr/0023-load-progress-operation.md](adr/0023-load-progress-operation.md).

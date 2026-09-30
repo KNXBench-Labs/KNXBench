@@ -765,7 +765,8 @@ type ComObjectGroup = {
 function groupComObjects(objects: ComObjectNode[]): ComObjectGroup[] {
   const groups = new Map<string, ComObjectGroup>();
   objects.forEach((com, index) => {
-    const channel = com.activation === "Active" ? com.channel : null;
+    // A missing owner in an older/malformed response is not a channel key.
+    const channel = com.activation === "Active" ? com.channel ?? null : null;
     const key = channel === null ? "unassigned" : `channel:${channel.key}`;
     const existing = groups.get(key);
     if (existing) {

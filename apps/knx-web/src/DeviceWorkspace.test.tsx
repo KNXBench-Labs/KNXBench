@@ -120,13 +120,16 @@ it("keeps channel-independent blocks distinct from objects with no evaluated own
     // A malformed or future server must not place an inactive object under
     // an owner that only an active evaluation can establish.
     object(4, { activation: "Inactive", channel: independent }),
+    // An older or malformed wire response may omit channel even while
+    // activation is Active; that must stay visible, not crash the editor.
+    object(5, { activation: "Active", channel: undefined as unknown as null }),
   ];
   const { host, cleanup } = await render(NO_REFERENCE, false, objects);
   const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
   expect(groups).toHaveLength(2);
   expect(groups[0].querySelector("summary")?.textContent).toContain("Channel-independent objects");
   expect(groups[1].querySelector("summary")?.textContent).toContain("Without evaluated channel");
-  expect(groups.map((g) => g.querySelectorAll("li[data-activation]").length)).toEqual([1, 3]);
+  expect(groups.map((g) => g.querySelectorAll("li[data-activation]").length)).toEqual([1, 4]);
   expect(groups[1].querySelector('li[data-activation="Active"]')).not.toBeNull();
   expect(groups[1].querySelector('li[data-activation="Inactive"]')).not.toBeNull();
   await cleanup();

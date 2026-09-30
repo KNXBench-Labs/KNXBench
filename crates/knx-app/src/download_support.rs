@@ -497,6 +497,12 @@ mod tests {
             .get("M-0083_A-0027-15-0BAC")
             .expect("the push button is verified");
         assert!(mdt.scopes.iter().any(|s| s == "complete"), "{mdt:?}");
+        // Each scope that ran live on 1.1.67 (RESEARCH §19.4, §19.8,
+        // §19.15), and only those: `partial-both` never ran.
+        for ran in ["partial-parameters", "partial-group-addresses"] {
+            assert!(mdt.scopes.iter().any(|s| s == ran), "{ran}: {mdt:?}");
+        }
+        assert!(!mdt.scopes.iter().any(|s| s == "partial-both"), "{mdt:?}");
         assert!(mdt.reference.starts_with("docs/"), "{mdt:?}");
     }
 

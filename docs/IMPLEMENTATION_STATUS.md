@@ -86,9 +86,9 @@
   settings/bus user-guide chapters. Gate evidence: Vitest 82 files / 1,295
   tests, TypeScript/build green; local mocked Chromium EN/DE at 360/1440 px
   4/4 for the Debug action, plus 4/4 Device checks, 4/4 monitor and 10/10
-  existing browser checks. Workspace Rust: 137 suites / 2,769 passed /
-  0 failed / 160 ignored / 0 `SKIP:` with the corpus present; strict Clippy,
-  fmt and all four xtask gates passed. Removing the recovery-path or typed
+  existing browser checks. Integrated workspace Rust after ADR-0056: 137 suites /
+  2,776 passed / 0 failed / 161 ignored / 0 `SKIP:` with the corpus present;
+  strict Clippy, fmt and all four xtask gates passed on the feature candidate. Removing the recovery-path or typed
   phrase UI guard made its corresponding test fail, then both guards were
   restored. No device was contacted by these gates.
 

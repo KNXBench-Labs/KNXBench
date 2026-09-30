@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Opt-in service-control read activity only
+
+- After the server-side Debug opt-in, address/key-plan checks and gateway
+  conflict checks, `GET /api/device/service-control` now records
+  `serviceControlRead` with its validated target before connecting. Completed
+  reads finish, transport or property errors fail, and request cancellation
+  remains unknown. Refused requests never open a tunnel or enter the ledger.
+  The snapshot never contains property octets, mask, project key or host path.
+- `POST /api/device/service-control` is deliberately **untracked** until a
+  write-specific outcome contract distinguishes no-op, backed-up/sent and
+  unverified writes. The existing opt-in, typed confirmation and durable
+  property-specific pre-write backup/readback gate are unchanged. Simulated
+  HTTP tests cover disabled/refused, completed, failed and cancelled reads,
+  and confirm a simulated write does not masquerade as a logged read.
+  `coverage: partial` and all live hardware restrictions still apply.
+
 ## 2026-09-30 — Serial lookup joins the observed one-shot actions
 
 - Read-only `GET /api/device-address/find-serial` now records a per-server

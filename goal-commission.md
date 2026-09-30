@@ -624,6 +624,13 @@ cancelled requests remain unknown. Serial-address **writes**, service-control
 and group writes remain outside the ledger. The snapshot is still not a
 global idle signal; no live hardware was touched.
 
+**Gated property-read follow-up, 2026-09-30:** the Debug-enabled
+`PID_SERVICE_CONTROL` read now reports bounded one-shot evidence, without
+property bytes, mask or project key. Refusal stays pre-tunnel and cancellation
+remains unknown. Its **write** is intentionally still untracked: a no-op or
+unverified write is not a generic success/failure receipt. The pre-write
+backup, separate confirmation and live hardware go are unchanged.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

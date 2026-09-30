@@ -48,7 +48,7 @@ async fn empty_snapshot_does_not_pretend_to_cover_one_shot_operations() {
     assert_eq!(body["oneShotDropped"], 0);
     assert_eq!(
         body["untracked"],
-        json!(["groupWrite", "serialAddress", "serviceControl"])
+        json!(["groupWrite", "serialAddress", "serviceControlWrite"])
     );
 }
 

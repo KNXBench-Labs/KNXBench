@@ -556,6 +556,16 @@ the run its credibility.
   while the Linux-first desktop is unfinished.
 - **The project logo** — the user is handling it. Do not start it and do not
   fold it into packaging.
+- **Twelve documented boundaries from DIN-26** — accepted 2026-09-27 by the
+  user as permanent documented boundaries, no work scheduled
+  ([decision](docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md),
+  `e0c1f37`): §45 native PDF, §48 the full report prose catalogue,
+  §52/§53/§54 diff correlation, §55 applying a diff, §56 three-way compare,
+  §39 CSV ranges and renaming, §41 spreadsheet transforms, §12's remaining
+  manufacturer gaps, §85 signature verification, §2 the missing XSD. Each
+  KNOWN_LIMITATIONS entry stays open as the public record; no ETS parity is
+  claimed. §4's list still names them because it is the original scope, not
+  a to-do list.
 
 ---
 
@@ -756,6 +766,16 @@ Sources for this section:
 
 ### 12.2 Paperclip branches: take them over first, in this order
 
+**Status 2026-09-30: all eight taken over; nothing below is still a to-do.**
+Checked with `git merge-base --is-ancestor` against `main`: `72da572`
+(DIN-9), `cc4012c` (DIN-10/11), `cfe80a1` (DIN-4), `93348bc` (DIN-16),
+`0db4841` (DIN-12) and `70b683e` (DIN-26) are all ancestors of `main`. DIN-11
+landed ADR-0039 phases 1–2 (`43f68a0`, `09beee1`); ADR-0038 was accepted
+2026-09-28 (`7aa4501`); DIN-12 merged as `d135c5e`; DIN-26 was decided
+2026-09-27 (`e0c1f37`, merge `c91eed8`) and is recorded in §6; DIN-3 was not
+merged, as instructed. The Paperclip worktree root no longer exists. The
+text below is kept as the takeover record.
+
 All of these worktrees are under `/mnt/daten-i/Sourcecode/.paperclip-worktrees/KNXBench/<DIN-n>`. Each one had a clean working tree at shutdown. None has been pushed. You can use the worktrees as they are, or check the branch out into a normal worktree under `KNXBench.worktrees/`.
 
 In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author identity. Outside Paperclip this does not apply, but check the author of the wip commits before you build on them.
@@ -798,7 +818,7 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
    - The commit contains `useAutosave.ts`, `autosaveSettings.ts`, SettingsPanel wiring, the dirty-state signal in `App.tsx`, server-side dirty state in `apps/knx-server/src/domain.rs`, and tests.
    - **The tests were not run after the wip commit.** Save-and-continue and the last-save indicator are not finished.
    - No architecture review has been done against AGENTS.md (the UI must not own domain logic). Verify everything before you build on it.
-7. **`din-26-board-oos-acceptance` @ `70b683e`.** This is a draft of an out-of-scope decision (`docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md`), and **there is no verdict yet**. It covers:
+7. **`din-26-board-oos-acceptance` @ `70b683e`.** This is a draft of an out-of-scope decision (`docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md`). **Decided 2026-09-27: all twelve accepted** (`e0c1f37`; see §6). It covers:
    - §45 native PDF
    - §48 the full report prose catalogue
    - §52/§53/§54 diff correlation

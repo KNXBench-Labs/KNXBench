@@ -79,10 +79,13 @@ conflict checks. It stores the validated physical address but never the
 property's two octets, mask, backup path or project key. An abandoned request
 records `unknown` completion; a refused request is not a bus attempt.
 
-The write route shares the tunnel helper but opts out of the read observer.
-Its `POST` remains `serviceControlWrite` in `untracked`: a successful HTTP
-request may be a no-op, and an error after a property write may be an
-unverified mutation. A generic finished/failed record must not be presented
-as a write receipt or as proof of no write. The separate property-specific
-backup and confirmation gates of ADR-0051 are unchanged. This observer does
-not imply permission for a live write or make the aggregate snapshot complete.
+The write route uses the same tunnel reservation order but a distinct typed
+write observer. Its `POST` now records `serviceControlWrite` with `noChange`,
+`notSent`, `effectUnverified`, `verified` or `unknown` (ADR-0056), rather than
+a generic finished/failed receipt. `writeEvidence` reports whether the
+property backup was recorded and whether a send became possible; neither
+flag alone proves device mutation. Only the existing exact-octet property
+readback supports `verified`. A cancelled request is `unknown` even if a
+send had become possible. The separate property-specific backup and
+confirmation gates of ADR-0051 remain unchanged; this observer does not
+imply permission for a live write or make the aggregate snapshot complete.

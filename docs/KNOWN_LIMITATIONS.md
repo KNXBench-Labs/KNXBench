@@ -5,12 +5,13 @@
 The server's read-only `GET /api/bus/activity` reports retained download,
 button-programming, monitor and line-scan sessions, but **not** a complete
 global action history. It identifies held locks without guessing which
-operation or target owns them. One-shot group writes, serial-address **writes**,
-and service-control **writes** still have no retained activity evidence;
-short actions may be missed entirely by polling. Read-only device comparisons,
-serial-number lookups and Debug-gated service-control **reads** are recorded
-in a server-lifetime ring (up to 64 records under ordinary single-tunnel use),
-with `oneShotDropped` reporting evictions. Lookup activity has
+operation or target owns them. One-shot group writes and serial-address
+**writes** still have no retained activity evidence; short actions may be
+missed entirely by polling. Read-only device comparisons, serial-number
+lookups, Debug-gated service-control **reads** and gated service-control
+**writes** are recorded in a server-lifetime ring (up to 64 records under
+ordinary single-tunnel use), with `oneShotDropped` reporting evictions.
+Write activity is still not a durable audit log or a device receipt. Lookup activity has
 `address: null`: it does not publish the device serial or invent an address.
 Service-control read activity stores neither property octets nor mask or key.
 A cancelled read-only action has an unknown completion outcome; it never
@@ -22,9 +23,15 @@ unverified mutation. Group writes have no receiver readback. The current
 serial-address HTTP write route does not persist its prior address/serial as
 pre-write recovery evidence, so its response cannot substitute for the
 required durable backup before any future live write. The service-control
-property backup covers only that property, not a whole device. All three
-write paths remain untracked in this snapshot; no green write receipt can be
-inferred from a generic terminal state.
+property backup covers only that property, not a whole device. A typed
+`serviceControlWrite` entry now distinguishes `noChange`, `notSent`,
+`effectUnverified`, `verified` and cancellation `unknown`. Its
+`backupRecorded` and `sendPossible` flags do not prove transmission or a
+device mutation: a transport error after the pre-write callback is
+`effectUnverified` even if no frame reached the simulator. No property bytes,
+mask, key or host backup path are disclosed. The remaining serial-address
+and group writes are untracked; no green receipt can be inferred from a
+generic read terminal state.
 An empty `sessions` list does not prove no bus traffic, and a terminal session
 does not prove the gateway is free. The response declares `coverage: "partial"`.
 The global Web status bar and per-action UI rows are still pending; this

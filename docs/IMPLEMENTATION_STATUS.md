@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Phase-aware service-control write activity (ADR-0056)
+
+- `POST /api/device/service-control` now records a bounded
+  `serviceControlWrite` one-shot entry only after the existing Debug opt-in,
+  target, confirmation, key-plan and gateway-conflict checks. A typed guard
+  reports `running`, `noChange`, `notSent`, `effectUnverified`, `verified` or
+  cancellation `unknown`. `verified` requires the same-session exact-octet
+  property response; a transport error after the durable backup is only
+  `effectUnverified`, even when the simulated transport rejected the send.
+  `writeEvidence.backupRecorded`/`sendPossible` are flags, not a device receipt.
+- The synchronous pre-write callback marks these flags only after the exact
+  property's durable backup and readback succeeded. No property octets, mask,
+  key, serial, gateway or backup path enter the activity snapshot. The write
+  route still requires its separate confirmation and opt-in; telemetry adds
+  no write capability. Simulated HTTP tests cover no-op, verified change,
+  pre-send backup failure, transport failure both before delivery and after
+  a simulated property mutation, and cancellation both before connection and
+  at the write send boundary. The original property backup and HTTP response
+  remain the recovery record.
+- `serialAddress` and `groupWrite` remain `untracked`; `coverage: partial`,
+  volatile/evictable history, no global UI integration and no live-hardware
+  permission remain explicit. The serial-address HTTP route still needs a
+  durable pre-write recovery design. No Web source or physical bus was touched.
+
 ## 2026-09-30 — Write activity evidence contract (ADR-0056)
 
 - Audited the existing serial-address, service-control and group-write routes
@@ -7,8 +31,9 @@
   no-op for the first two; a failed or aborted request does not prove that a
   write was never sent. A group-write payload echo is not a receiver readback.
   The current generic read activity states cannot safely represent these
-  distinctions, so all three writes stay explicitly `untracked` and the
-  aggregate remains `coverage: partial`.
+  distinctions, so at that design stage all three writes were explicitly
+  `untracked` and the aggregate stayed `coverage: partial`. The newer
+  service-control follow-up above replaces only that route's untracked status.
 - Simulated HTTP regressions cover successful-but-no-op serial/property
   requests, the property-specific backup on a real simulated change, and a
   group telegram whose accepted send is not mislabeled as a device receipt.
@@ -25,12 +50,12 @@
   reads finish, transport or property errors fail, and request cancellation
   remains unknown. Refused requests never open a tunnel or enter the ledger.
   The snapshot never contains property octets, mask, project key or host path.
-- `POST /api/device/service-control` is deliberately **untracked** until a
-  write-specific outcome contract distinguishes no-op, backed-up/sent and
-  unverified writes. The existing opt-in, typed confirmation and durable
-  property-specific pre-write backup/readback gate are unchanged. Simulated
-  HTTP tests cover disabled/refused, completed, failed and cancelled reads,
-  and confirm a simulated write does not masquerade as a logged read.
+- At that stage `POST /api/device/service-control` was deliberately
+  **untracked** pending a write-specific outcome contract. The follow-up
+  above now supplies this contract without changing the existing opt-in,
+  typed confirmation or durable property-specific pre-write backup/readback
+  gate. Simulated HTTP tests covered disabled/refused, completed, failed and
+  cancelled reads, and confirmed writes did not masquerade as reads.
   `coverage: partial` and all live hardware restrictions still apply.
 
 ## 2026-09-30 — Serial lookup joins the observed one-shot actions

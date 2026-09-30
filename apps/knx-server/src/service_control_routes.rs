@@ -42,6 +42,7 @@ use knx_net::commissioning::service_control::{
 use crate::bus_scan::LineScanStatus;
 use crate::device_download::TunnelTransport;
 use crate::errors::ApiError;
+use crate::one_shot_activity::WriteOutcome;
 use crate::settings;
 use crate::SharedState;
 
@@ -147,68 +148,42 @@ struct ReadQuery {
     gateway: String,
 }
 
-/// The same checks as `serial_address_routes::write`, in the same order,
-/// before any tunnel opens.
-macro_rules! with_tunnel {
-    ($state:expr, $gateway:expr, $kind:expr, $address:expr, |$tunnel:ident| $body:expr) => {{
-        let programming = $state.address_programming.lock().await;
-        if crate::device_download_routes::download_in_progress(&$state) {
-            return Err(conflict(
-                "a download to a device is running: the gateway serves one tunnel",
-            ));
-        }
-        if programming.as_ref().is_some_and(|p| p.is_active()) {
-            return Err(conflict("an individual-address programming is running"));
-        }
-        let monitor = $state.bus_session.lock().await;
-        if monitor.is_some() {
-            return Err(conflict(
-                "stop the bus monitor first: the gateway serves one tunnel",
-            ));
-        }
-        let scan = $state.line_scan_session.lock().await;
-        if matches!(
-            scan.as_ref().map(|scan| scan.status()),
-            Some(LineScanStatus::Running)
-        ) {
-            return Err(conflict(
-                "a line scan is running: the gateway serves one tunnel",
-            ));
-        }
-        // The read path can be observed without changing the separate write
-        // path's authorization, backup or ambiguous-write semantics.
-        let activity = $kind.map(|kind| {
-            $state
-                .one_shot_activity
-                .start(kind, Some($address.to_string()))
-        });
-        let connected = match $state.connector.connect_tunnel($gateway).await {
-            Ok(connected) => connected,
-            Err(e) => {
-                if let Some(activity) = activity {
-                    activity.finish("failed");
-                }
-                return Err(ApiError::with_status(
-                    StatusCode::BAD_GATEWAY,
-                    e.to_string(),
-                ));
-            }
-        };
-        let $tunnel = TunnelTransport(connected.as_ref());
-        let outcome = $body;
-        let _ = connected.disconnect().await;
-        if let Some(activity) = activity {
-            activity.finish(if outcome.is_ok() {
-                "finished"
-            } else {
-                "failed"
-            });
-        }
-        drop(scan);
-        drop(monitor);
-        drop(programming);
-        outcome
-    }};
+/// Serialize management operations against retained sessions in the same
+/// lock order as `serial_address_routes::write`, before opening a tunnel.
+/// Hold all guards through disconnect: another operation must not borrow the
+/// gateway while this request still owns it.
+type TunnelReservation<'a> = (
+    tokio::sync::MutexGuard<'a, Option<crate::AddressProgrammingSession>>,
+    tokio::sync::MutexGuard<'a, Option<crate::bus::BusSession>>,
+    tokio::sync::MutexGuard<'a, Option<crate::bus_scan::LineScanSession>>,
+);
+
+async fn reserve_tunnel(state: &SharedState) -> Result<TunnelReservation<'_>, ApiError> {
+    let programming = state.address_programming.lock().await;
+    if crate::device_download_routes::download_in_progress(state) {
+        return Err(conflict(
+            "a download to a device is running: the gateway serves one tunnel",
+        ));
+    }
+    if programming.as_ref().is_some_and(|p| p.is_active()) {
+        return Err(conflict("an individual-address programming is running"));
+    }
+    let monitor = state.bus_session.lock().await;
+    if monitor.is_some() {
+        return Err(conflict(
+            "stop the bus monitor first: the gateway serves one tunnel",
+        ));
+    }
+    let scan = state.line_scan_session.lock().await;
+    if matches!(
+        scan.as_ref().map(|scan| scan.status()),
+        Some(LineScanStatus::Running)
+    ) {
+        return Err(conflict(
+            "a line scan is running: the gateway serves one tunnel",
+        ));
+    }
+    Ok((programming, monitor, scan))
 }
 
 async fn read(
@@ -219,15 +194,29 @@ async fn read(
     let gateway = parse_gateway(&query.gateway)?;
     let address = parse_address(&query.address)?;
     let plan = plan(&state)?;
-    let outcome = with_tunnel!(
-        state,
-        gateway,
-        Some("serviceControlRead"),
-        address,
-        |tunnel| {
-            read_service_control(&tunnel, address, plan, state.address_programming_timing).await
+    let _reservation = reserve_tunnel(&state).await?;
+    let activity = state
+        .one_shot_activity
+        .start("serviceControlRead", Some(address.to_string()));
+    let connected = match state.connector.connect_tunnel(gateway).await {
+        Ok(connected) => connected,
+        Err(e) => {
+            activity.finish("failed");
+            return Err(ApiError::with_status(
+                StatusCode::BAD_GATEWAY,
+                e.to_string(),
+            ));
         }
-    );
+    };
+    let tunnel = TunnelTransport(connected.as_ref());
+    let outcome =
+        read_service_control(&tunnel, address, plan, state.address_programming_timing).await;
+    let _ = connected.disconnect().await;
+    activity.finish(if outcome.is_ok() {
+        "finished"
+    } else {
+        "failed"
+    });
     outcome
         .map(|value| Json(ServiceControlDto::new(address, value)))
         .map_err(|e| ApiError::with_status(status_of(&e), e.to_string()))
@@ -269,28 +258,52 @@ async fn write(
     )
     .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
     let plan = plan(&state)?;
+    let _reservation = reserve_tunnel(&state).await?;
+    let activity = state
+        .one_shot_activity
+        .start_write("serviceControlWrite", Some(address.to_string()));
+    let connected = match state.connector.connect_tunnel(gateway).await {
+        Ok(connected) => connected,
+        Err(e) => {
+            activity.finish(WriteOutcome::NotSent);
+            return Err(ApiError::with_status(
+                StatusCode::BAD_GATEWAY,
+                e.to_string(),
+            ));
+        }
+    };
+    let tunnel = TunnelTransport(connected.as_ref());
     let mut backup_path = None;
-    let outcome = with_tunnel!(state, gateway, None::<&'static str>, address, |tunnel| {
-        set_individual_address_write_enable(
-            &tunnel,
-            plan,
-            state.address_programming_timing,
-            authorisation,
-            body.enable,
-            |before| {
-                let path = write_backup(
-                    &state.data_dir.join("device-backups"),
-                    address,
-                    before.mask.0,
-                    before.raw,
-                )
-                .map_err(|e| e.to_string())?;
-                backup_path = Some(path);
-                Ok(())
-            },
-        )
-        .await
-    });
+    let outcome = set_individual_address_write_enable(
+        &tunnel,
+        plan,
+        state.address_programming_timing,
+        authorisation,
+        body.enable,
+        |before| {
+            let path = write_backup(
+                &state.data_dir.join("device-backups"),
+                address,
+                before.mask.0,
+                before.raw,
+            )
+            .map_err(|e| e.to_string())?;
+            backup_path = Some(path);
+            // The protocol invokes this callback immediately before its
+            // write. A transport failure after here cannot prove no send.
+            activity.mark_send_possible();
+            Ok(())
+        },
+    )
+    .await;
+    let _ = connected.disconnect().await;
+    let write_outcome = match &outcome {
+        Ok(change) if change.written => WriteOutcome::Verified,
+        Ok(_) => WriteOutcome::NoChange,
+        Err(_) if activity.send_possible() => WriteOutcome::EffectUnverified,
+        Err(_) => WriteOutcome::NotSent,
+    };
+    activity.finish(write_outcome);
     match outcome {
         Ok(change) => Ok(Json(WriteResponse {
             before: ServiceControlDto::new(address, change.before),

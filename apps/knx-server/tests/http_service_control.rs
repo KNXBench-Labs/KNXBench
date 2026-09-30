@@ -22,7 +22,7 @@ use knx_net::{
 };
 use knx_server::{BusSessionError, BusTunnel, GatewayConnector};
 use serde_json::{json, Value};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Notify};
 use tower::ServiceExt;
 
 const GATEWAY: &str = "192.0.2.10:3671";
@@ -30,7 +30,13 @@ const NEW: &str = "1.1.30";
 const SERIAL: &str = "0083:12345678";
 const SERIAL_OCTETS: [u8; 6] = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
 
-struct SimTunnel(Arc<SimulatedDevice>);
+enum WriteTrap {
+    Fail,
+    SendThenFail,
+    Block { entered: Notify, resume: Notify },
+}
+
+struct SimTunnel(Arc<SimulatedDevice>, Option<Arc<WriteTrap>>);
 
 impl BusTunnel for SimTunnel {
     fn assigned_address(&self) -> IndividualAddress {
@@ -56,6 +62,29 @@ impl BusTunnel for SimTunnel {
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         Box::pin(async move {
+            if matches!(
+                service,
+                ApplicationService::PropertyValueWrite { property_id: 8, .. }
+            ) {
+                match self.1.as_deref() {
+                    Some(WriteTrap::Fail) => return Err(BusError::Timeout),
+                    Some(WriteTrap::SendThenFail) => {
+                        ManagementTransport::send_frame(
+                            self.0.as_ref(),
+                            destination,
+                            transport,
+                            service,
+                        )
+                        .await?;
+                        return Err(BusError::Timeout);
+                    }
+                    Some(WriteTrap::Block { entered, resume }) => {
+                        entered.notify_one();
+                        resume.notified().await;
+                    }
+                    None => {}
+                }
+            }
             ManagementTransport::send_frame(self.0.as_ref(), destination, transport, service).await
         })
     }
@@ -71,6 +100,7 @@ struct SimConnector {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
     connect_delay: Duration,
+    write_trap: Option<Arc<WriteTrap>>,
 }
 
 impl GatewayConnector for SimConnector {
@@ -80,7 +110,8 @@ impl GatewayConnector for SimConnector {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
-        let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(Arc::clone(&self.device)));
+        let tunnel: Box<dyn BusTunnel> =
+            Box::new(SimTunnel(Arc::clone(&self.device), self.write_trap.clone()));
         let delay = self.connect_delay;
         Box::pin(async move {
             tokio::time::sleep(delay).await;
@@ -122,6 +153,14 @@ fn harness(config: SimulatorConfig) -> Harness {
 }
 
 fn harness_with_delay(config: SimulatorConfig, connect_delay: Duration) -> Harness {
+    harness_with_trap(config, connect_delay, None)
+}
+
+fn harness_with_trap(
+    config: SimulatorConfig,
+    connect_delay: Duration,
+    write_trap: Option<Arc<WriteTrap>>,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let device = Arc::new(SimulatedDevice::with_config(config));
     let calls = Arc::new(AtomicUsize::new(0));
@@ -131,6 +170,7 @@ fn harness_with_delay(config: SimulatorConfig, connect_delay: Duration) -> Harne
             device: Arc::clone(&device),
             calls: Arc::clone(&calls),
             connect_delay,
+            write_trap,
         }),
         address_programming_timing: fast(),
         address_programming_pause: Duration::from_millis(10),
@@ -331,8 +371,18 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["written"], true);
     let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
-    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 1);
+    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 2);
     assert_eq!(activity["oneShot"][0]["kind"], "serviceControlRead");
+    assert_eq!(activity["oneShot"][1]["kind"], "serviceControlWrite");
+    assert_eq!(activity["oneShot"][1]["state"], "verified");
+    assert_eq!(
+        activity["oneShot"][1]["writeEvidence"]["backupRecorded"],
+        true
+    );
+    assert_eq!(
+        activity["oneShot"][1]["writeEvidence"]["sendPossible"],
+        true
+    );
     assert_eq!(body["before"]["raw"], "0000");
     assert_eq!(body["after"], "0004");
     let path = body["backupPath"].as_str().expect("durable backup path");
@@ -364,8 +414,17 @@ async fn completed_property_change_and_noop_are_not_generic_write_receipts() {
     assert_eq!(body["backupPath"], Value::Null);
 
     let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
-    assert_eq!(activity["oneShot"], json!([]));
-    assert!(activity["untracked"]
+    let entries = activity["oneShot"].as_array().unwrap();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0]["kind"], "serviceControlWrite");
+    assert_eq!(entries[0]["state"], "verified");
+    assert_eq!(entries[0]["writeEvidence"]["backupRecorded"], true);
+    assert_eq!(entries[0]["writeEvidence"]["sendPossible"], true);
+    assert_eq!(entries[1]["kind"], "serviceControlWrite");
+    assert_eq!(entries[1]["state"], "noChange");
+    assert_eq!(entries[1]["writeEvidence"]["backupRecorded"], false);
+    assert_eq!(entries[1]["writeEvidence"]["sendPossible"], false);
+    assert!(!activity["untracked"]
         .as_array()
         .unwrap()
         .contains(&json!("serviceControlWrite")));
@@ -406,6 +465,183 @@ async fn a_failed_property_backup_refuses_before_the_write() {
         knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
     )));
     assert_eq!(h.device.serial_number_writes(), 0);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["kind"], "serviceControlWrite");
+    assert_eq!(activity["oneShot"][0]["state"], "notSent");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        false
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        false
+    );
+}
+
+#[tokio::test]
+async fn cancelled_service_control_write_during_connect_is_unknown_and_never_verified() {
+    let h = harness_with_delay(locked_device(), Duration::from_secs(30));
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let app = h.app.clone();
+    let task = tokio::spawn(async move {
+        send(
+            &app,
+            post(
+                "/api/device/service-control",
+                write_request(address, &phrase(address), true),
+            ),
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while h.calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the simulated tunnel was not requested");
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "running");
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "unknown");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        false
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        false
+    );
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
+}
+
+#[tokio::test]
+async fn a_transport_failure_after_the_backup_is_not_a_verified_write() {
+    let h = harness_with_trap(
+        locked_device(),
+        Duration::ZERO,
+        Some(Arc::new(WriteTrap::Fail)),
+    );
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{body}");
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "effectUnverified");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        true
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        true
+    );
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
+}
+
+#[tokio::test]
+async fn a_property_changed_before_transport_failure_stays_effect_unverified() {
+    let h = harness_with_trap(
+        locked_device(),
+        Duration::ZERO,
+        Some(Arc::new(WriteTrap::SendThenFail)),
+    );
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY, "{body}");
+    assert!(h.device.seen().iter().any(|seen| matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "effectUnverified");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        true
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        true
+    );
+}
+
+#[tokio::test]
+async fn cancellation_after_the_backup_retains_unknown_possible_write_evidence() {
+    let trap = Arc::new(WriteTrap::Block {
+        entered: Notify::new(),
+        resume: Notify::new(),
+    });
+    let h = harness_with_trap(locked_device(), Duration::ZERO, Some(Arc::clone(&trap)));
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let app = h.app.clone();
+    let task = tokio::spawn(async move {
+        send(
+            &app,
+            post(
+                "/api/device/service-control",
+                write_request(address, &phrase(address), true),
+            ),
+        )
+        .await
+    });
+    let WriteTrap::Block { entered, .. } = trap.as_ref() else {
+        unreachable!()
+    };
+    tokio::time::timeout(Duration::from_secs(1), entered.notified())
+        .await
+        .expect("the write send boundary was not reached");
+    let backups = std::fs::read_dir(h._dir.path().join("device-backups"))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(backups.len(), 1);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "running");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        true
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        true
+    );
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "unknown");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        true
+    );
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
 }
 
 #[tokio::test]
@@ -431,5 +667,11 @@ async fn a_device_without_the_property_is_named_not_guessed() {
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert!(body.to_string().contains("PID_SERVICE_CONTROL"), "{body}");
     let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
-    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 1);
+    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 2);
+    assert_eq!(activity["oneShot"][1]["kind"], "serviceControlWrite");
+    assert_eq!(activity["oneShot"][1]["state"], "notSent");
+    assert_eq!(
+        activity["oneShot"][1]["writeEvidence"]["sendPossible"],
+        false
+    );
 }

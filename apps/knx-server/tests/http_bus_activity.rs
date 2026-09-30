@@ -46,10 +46,7 @@ async fn empty_snapshot_does_not_pretend_to_cover_one_shot_operations() {
     assert_eq!(body["busyLocks"], json!([]));
     assert_eq!(body["oneShot"], json!([]));
     assert_eq!(body["oneShotDropped"], 0);
-    assert_eq!(
-        body["untracked"],
-        json!(["groupWrite", "serialAddress", "serviceControlWrite"])
-    );
+    assert_eq!(body["untracked"], json!(["groupWrite", "serialAddress"]));
 }
 
 #[tokio::test]

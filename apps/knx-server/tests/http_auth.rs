@@ -101,6 +101,7 @@ const GUARDED_ROUTES: &[(&str, &str)] = &[
     ("GET", "/api/project/load-progress"),
     ("GET", "/api/fs/list"),
     ("GET", "/api/bus/monitor/telegrams"),
+    ("GET", "/api/bus/activity"),
     ("POST", "/api/debug-report"),
     ("GET", "/api/version"),
 ];

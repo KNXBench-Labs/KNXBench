@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / §146 closeout)
+- **Timestamp:** 2026-09-30 17:46 CEST
+- **Web lock:** released by the UI session after publishing U12 §146 channel labels.
+- **Completed:** Published `e8a3c56f2a4c35e40c4148c5479c8b94f17282a4` to `origin/main` and read back the same SHA. `channel.name` and `channel.number` are visible without parsing or composing a label; channel ownership and independent/unassigned groups are unchanged. TDD 2 RED, 21 focused GREEN; mutation of name fallback RED and restored. After review fixes, Web 78 files / 1,256 tests, local mock Chromium 10/10, corpus-backed Rust 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 SKIP, Clippy, fmt and four xtask gates passed on candidate and publishing-equivalent tree. No live KNX or device write.
+- **Pending/Next Steps:** U12 next is ADR-0051 Debug toggle and explicit device service-control action, then monitor control fields and readiness/device-compare views. Acquire the released Web lock in a new worktree before editing. Do not operate a real device; test with mock/simulator only.
+- **Notes for Codex oder Claude:** Root's foreign edits remain untouched. The older ISSUE-09 branch-ordered heartbeat alone showed fmt/clippy; its process handle was not retained, while the later integrated ISSUE-09 gate completed exit 0 (2,636 Rust passed). No credentials or private corpus contents belong in handover.
+
+---
+
 - **Last Agent:** codex (UI U12 / §146 lock)
 - **Timestamp:** 2026-09-30 17:15 CEST
 - **Web lock:** taken by the UI session for U12 §146 channel labels.

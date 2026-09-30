@@ -660,6 +660,19 @@ volatile, bounded telemetry, not recovery storage or permission for a live
 write. Serial-address and group writes remain untracked; `coverage: partial`
 and the Web-lock boundary remain.
 
+**Group-write ownership handoff, 2026-09-30 (offline audit only).**
+`bus_routes::write_value` encodes a group value and awaits
+`BusSession::send`, which forwards to the held tunnel. Its HTTP 200 payload
+is a codec echo, not receiver readback. The existing write-activity guard
+has a documented pre-write-backup precondition, but its call sets both
+`backupRecorded` and `sendPossible`; without a real backup that would falsely
+assert recovery evidence. No receiver identity, complete affected-storage
+scope or durable backup is established by that route. Under §5, group-value
+sends belong to `goal.md`: send semantics, backup policy and route-specific
+activity require that session's decision and implementation. This commissioning
+track hands over the finding (§6) and keeps `groupWrite` untracked; no bus or
+Web changes were made.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

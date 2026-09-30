@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / group-write ownership boundary audit)
+- **Timestamp:** 2026-09-30 23:44 CEST
+- **Web lock:** held by the separate UI session; no Web file was changed.
+- **Completed:** Read-only audit of `POST /api/bus/write`, `BusSession::send` and the typed write observer. A successful group send/HTTP 200 supplies no receiver-effect readback, physical receiver identity or verified durable affected-storage backup; the current `WriteGuard` would falsely imply backup evidence if reused without one. `goal-commission.md` §5 assigns group-value sends to `goal.md`; documented a scoped ownership handoff in `.ai/logs/2026-09-30_codex_group-write-activity-boundary.md` and the commissioning goal. `groupWrite` stays untracked and activity coverage partial. No bus, route, UI, credential or device change.
+- **Pending/Next Steps:** For the goal.md session: decide/document group-write backup/recovery and honest send/receiver-effect evidence before changing the route or instrumenting it. For commissioning: investigate K13's complete durable pre-write address-reset recovery scope offline; do not enable HTTP reset, serial-address write or K14. The Web lock and one-tunnel discipline remain active.
+- **Notes for Codex oder Claude:** No access key may be guessed; never query `1.1.220`. A group address does not identify all receivers. The encoded `decodedEcho` is not receiver readback. Do not call `WriteGuard::mark_send_possible` without its real durable backup witness. Preserve root foreign edits and other worktrees.
+
+---
+
 - **Last Agent:** codex (commissioning / serial-address durable-recovery safety gate)
 - **Timestamp:** 2026-09-30 23:40 CEST
 - **Web lock:** held by the separate UI session for its scoped ISSUE-06 Ground-root Site/Property affordance; this package edited no Web source.

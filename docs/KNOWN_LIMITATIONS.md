@@ -9078,7 +9078,7 @@ encoder writes them when the caller set them, and
   on the program default. `Active` is not downgraded for it, the same as in
   the parameter panel, which evaluates identically. There are 0 stale rows
   in the corpus.
-- **Typed UI boundary (2026-09-30, U12/ISSUE-08 UI half, branch under review).**
+- **Typed UI boundary (2026-09-30, U12/ISSUE-08 UI half, published on main).**
   The previously skipped activation, owner channel, program DPT, translated
   DPT text and function text now have generated TypeScript bindings. The
   device editor groups by the supplied opaque key, shows all four evaluated

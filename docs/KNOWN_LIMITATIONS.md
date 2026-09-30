@@ -8908,6 +8908,37 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §147 A received telegram's priority, repeat flag and hop count are not kept
+
+**Limitation.** `decode_l_data` (`crates/knx-net/src/cemi.rs`) reads Ctrl1
+and Ctrl2 for what it needs (address type, system broadcast, the
+confirmation's error bit) and keeps nothing else: `LDataFrame` has no field
+for the priority, the repeat flag, the ack request or the hop count. A
+decoded frame therefore cannot say at which priority it travelled, and
+re-encoding it writes the crate's own defaults (Ctrl1 `BCh`, low priority;
+Ctrl2 hop count 6). Consumers of decoded frames (bus monitor, capture
+exports, commissioning replies) cannot show or check these fields.
+
+**Evidence.** K19, 2026-09-30: all 71 telegrams of the maintainer's private
+ETS `CommunicationLog` decode and re-encode octet for octet past Ctrl1 and
+Ctrl2, but 16 of them were sent at normal priority (Ctrl1 `B4h`, priority
+`01b`) and come back at low (`11b`). The other 55 carry `BCh`, which is what
+the encoder writes anyway. Aggregate counts only; the capture stays
+private. Field layout `[D]` EMI_IMI v01.04.02 AS §4.1.5.3.2, priority codes
+`[D]` Data Link Layer General v01.03.02 AS §2.2.3.
+
+**Impact.** Display and diagnostics only; no outgoing frame is affected,
+since every sender builds its own `LDataFrame` and §105's control-frame
+priorities are set from the transport, not from a decoded frame. A monitor
+cannot show that a device sent a telegram at urgent or normal priority,
+nor distinguish a repeated frame, nor show how many hops it has left.
+
+**Lifted when.** `LDataFrame` carries the received Ctrl1/Ctrl2 fields (at
+least priority, repeat and hop count), `decode_l_data` fills them, the
+encoder writes them when the caller set them, and
+`crates/knx-net/tests/private_telegram_log.rs`'s pinned
+`control_not_carried: {"priority": 16}` becomes empty.
+
 ## §146 A channel without `@Text` has no name of its own, and some activations are `Undetermined`
 
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**

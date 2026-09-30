@@ -87,10 +87,24 @@ root, and every crate in the workspace inherits that license from `Cargo.toml`.
 
 For a contributor, the practical consequences are:
 
-- Your contribution is licensed under the same terms. There is no separate contributor
-  license agreement and no copyright assignment.
 - Anyone may use, modify, and redistribute KNXBench, commercially included, under the
-  AGPL's terms.
+  AGPL's terms. Planning and commissioning paid customer installations with it is
+  explicitly fine.
+- A closed product built on KNXBench is not possible under the AGPL. A vendor who wants
+  one needs a separate commercial license from the maintainer.
+- **Every contribution needs the [Contributor License Agreement](../../../CLA.md).** It
+  grants the maintainer a license to your contribution, including the right to license
+  it commercially, so that such a commercial license can be offered at all. You keep
+  your copyright. In return, the agreement promises that your contribution always stays
+  available under the AGPL. You agree by putting this sentence in the pull request
+  description and ticking the box in the template:
+
+  > I have read the KNXBench Contributor License Agreement, version 1.0, and I agree to
+  > it for this and all my future contributions to KNXBench.
+
+  Pull requests without it are not merged. If you contribute for an employer, ask first:
+  that needs a separate agreement signed by the organization. The reasoning is in
+  [ADR-0053](../../adr/0053-contributions-come-with-a-license-grant-for-dual-licensing.md).
 - The "Affero" part is the one people miss: if you modify KNXBench and let other people
   use your modified version **over a network** — which the `knx-server` web deployment
   makes easy — those users must be offered the corresponding source code.

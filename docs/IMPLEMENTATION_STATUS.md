@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Contributor License Agreement (ADR-0053)
+
+- The license stays `AGPL-3.0-or-later`. New [`CLA.md`](../CLA.md): each
+  contributor grants the maintainer a non-exclusive license, including the
+  right to license proprietary terms, so KNXBench can be dual-licensed. The
+  contributor keeps the copyright. The maintainer promises the contribution
+  stays available under the AGPL (fallback clause).
+- Agreed by a fixed sentence and a checkbox in the new
+  `.github/pull_request_template.md`. Checked in review; no bot.
+- README, FAQ and contributing guide explain it: commercial use is allowed,
+  a closed product needs a commercial license. The guide's old "no CLA"
+  sentence is gone.
+- Not reviewed by a lawyer; no organization agreement, no commercial license
+  text yet (KNOWN_LIMITATIONS §148).
+
 ## 2026-09-30 — Partial download of parameters and group addresses verified on `1.1.67`
 
 - Live (user "starte mit teildownload"): `knx device download 1.1.67

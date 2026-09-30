@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / §146 lock)
+- **Timestamp:** 2026-09-30 17:15 CEST
+- **Web lock:** taken by the UI session for U12 §146 channel labels.
+- **Completed:** Claimed the free web surface from `origin/main` in an isolated worktree; no UI code has changed yet.
+- **Pending/Next Steps:** Display the existing `channel.name` and `channel.number` verbatim without composing or translating them; test, review, gate and publish this package, then release the lock.
+- **Notes for Codex oder Claude:** The root checkout's foreign edits are protected. No live KNX operation belongs to this UI-only package. Preserve all other handover entries.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 17:20 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.

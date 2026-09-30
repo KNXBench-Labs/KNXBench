@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — `GET /api/device-readiness`: readiness over HTTP
+
+- The open project's devices, graded as `knx device readiness` grades them
+  (`knx_app::project_readiness`): `address`, `name`, `programRef`,
+  `readiness` (`verified`/`untested`/`unsupported`/`excluded`/`no-address`),
+  `category` and `detail` for a refusal, `steps`/`octets` for a plan, and
+  `counts` per readiness. `409` without an open project or product database.
+- Offline: no gateway field, no tunnel, so no tunnel lock; it takes the
+  project lock, then the product lock, as `/api/device-download/plan` does.
+  `GET` only.
+- Tests: `apps/knx-server/tests/http_device_readiness.rs`, no corpus (3,
+  red before the route was mounted). The grades are `project_readiness`'s,
+  pinned against the house in `crates/knx-app/tests/house_readiness.rs`.
+  The web UI does not call it yet: `apps/knx-web` is the UI session's.
+
 ## 2026-09-30 — `knx device readiness`: the project's devices, graded offline
 
 - `knx device readiness --project … [--product-db …]` lists every project

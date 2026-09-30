@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / one-shot read-only device-compare activity)
+- **Timestamp:** 2026-09-30 21:22 CEST
+- **Web lock:** held by the parallel UI session for the scoped ADR-0051 Debug setting and service-control action. No Web source edited by this package.
+- **Completed:** Published reviewed server-only `POST /api/device-compare` one-shot evidence as `042e86b564c5a31cb75b59fcd09cb7bdd4ee8f96` to `origin/main`; exact remote SHA readback matched. `GET /api/bus/activity` now returns bounded `oneShot` records and `oneShotDropped` alongside retained sessions; aborted compare futures remain `unknown`, never success. Simulated/corpus tests include completion, failures, cancellation and eviction. After rebase over the UI Device checks and Debug-lock handover: Rust workspace 137 suites / 2,771 passed / 0 failed / 161 ignored / 0 `SKIP:`, Web build and 80 files / 1,270 tests, strict workspace Clippy, fmt, anchors, headers, layering, corpus gates and diff check green. ADR-0055, status, limitations and goal updated. Evidence: `.ai/logs/2026-09-30_codex_device-compare-activity.md`. No live bus access, device write or credentials.
+- **Pending/Next Steps:** Add bounded evidence to the remaining one-shot read/write routes with distinct authorization and aborted-request semantics; the current endpoint remains partial, volatile and not proof that the bus is idle. Global UI status requires the Web-lock owner's scoped work. K13 HTTP reset and K14 remain blocked by hardware gates; no new live permission is implied. Clean only this package's worktree, ignored corpus symlink and scratch after its handover is published; preserve root/other-session changes.
+- **Notes for Codex oder Claude:** No access key may be guessed. The UI session's Web lock and opt-in work are separate; do not edit its files or infer hardware permission. `oneShotDropped` counts evicted terminal records, not completion of a dropped future. `unknown` means the compare completion was not witnessed; compare is read-only. The local corpus symlink was never staged.
+
+---
+
 - **Last Agent:** codex (UI / ADR-0051 Debug action lock)
 - **Timestamp:** 2026-09-30 21:06 CEST
 - **Web lock:** taken by the UI session for the scoped ADR-0051 Debug setting and service-control action.

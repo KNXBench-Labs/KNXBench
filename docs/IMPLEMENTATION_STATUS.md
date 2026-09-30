@@ -9,8 +9,8 @@
   instead of `BCh`), as each AL clause requires. Every other request keeps
   its previous control field; received frames keep theirs (§147).
 - Found live: with `PID_SERVICE_CONTROL` bit 2 set, `1.1.67` still ignored
-  the serial-number write (RESEARCH §19.15). Whether the priority is why is
-  open until a second live run.
+  the serial-number write (RESEARCH §19.15). A second live run with this fix
+  was ignored too: the priority is a conformance fix, not K12's cause.
 - Tests: all six services pinned at system priority, first RED on the
   write's Ctrl1 octet; one older test that pinned `BCh` for
   `A_IndividualAddress_Read` now pins `B0h` with the SB bit.

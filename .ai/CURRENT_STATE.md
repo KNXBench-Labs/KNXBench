@@ -1,4 +1,22 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 12:43 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** Second K12 live run on `1.1.67` with the system-priority
+  fix (`c451fa95`, pushed): bit 2 on (read back) → `address-by-serial
+  1.1.68` still ignored → `find-serial`/scan confirm `1.1.67` → bit 2 off
+  (read back twice) → dump byte-identical. Priority was not the cause
+  (RESEARCH §19.15, KL §139). Device is in the morning's state.
+- **Pending/Next Steps:** K12 live write closed as unsupported on this
+  device; K13/K14 not run (destructive, no request). Group-address partial
+  download (K15) remains unverified on hardware; a retry needs its own go
+  and no shell timeout.
+- **Notes for Codex oder Claude:** Evidence: `OriginalData/DeviceBackups/
+  1.1.67_MDT-0701_2026-09-30_k12c-*` (private). No bus-monitor trace of the
+  wire priority exists yet.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 12:45 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** Live on `1.1.67` (user go "1 alle go"; RESEARCH §19.15):

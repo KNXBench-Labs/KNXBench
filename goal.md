@@ -593,33 +593,34 @@ that artifact is a legitimate deliverable; producing code is not.
 
 ## 8. Documentation hygiene and parked findings
 
-Small, real, and each one currently misleads a reader:
+Small, real, and each one currently misleads a reader.
 
-1. **`docs/ROADMAP.md`'s T37 section still reads as open.** T37 shipped
-   2026-09-19 (ADR-0023, branch `t37-load-progress`,
-   `IMPLEMENTATION_STATUS.md:6337`), and its residues are §97 (phase labels
-   rather than percentages, by design) and §118. Verify against the code, then
-   mark it shipped the way T38's section is.
-2. **`codex-goal.md` is stale.** Its last six execution checkboxes are
-   unticked, but the redesign shipped: `Workbench`, `StructureWorkspace`,
-   `DeviceWorkspace`, `DiagnosticsCompanion`, `PaneSplitter`/`ResizablePane`,
-   five themes, two motion styles. Verify the coverage matrix it demands
-   against the current `apps/knx-web/src`, then either tick what is genuinely done or
-   retire the file — it currently reads as a second, contradicting backlog.
-3. **`ideas.md` still lists shipped work as pending.** Animations, themes, the
-   status dashboard, device discovery and the humour templates (30+ per part)
-   all shipped. Mark them; keep MCP, automation, "who talks to whom", project
-   notes, mobile and multi-OS as the genuinely open entries.
-4. **Parked finding F-T30-1** (confirmed 2026-09-20). ADR-0039 has been
-   written, approved (see §12) and merged, but no
-   implementation exists. The finding itself:
+**Status 2026-09-30 (checked against `main`).** Items 1, 2, 3 and 5 are done;
+item 4 stays parked, still accurate.
+
+1. ~~**`docs/ROADMAP.md`'s T37 section still reads as open.**~~ **Done.** The
+   section already said **Done** with its ADR, implementation and tests; its
+   heading now also carries "shipped 2026-09-19", the way T38's does. The
+   residues stay §97 (phase labels, by design); §118 is resolved.
+2. ~~**`codex-goal.md` is stale.**~~ **Done — retired.** The file was deleted
+   in `57d7190`; there is no second backlog left to contradict this one.
+3. ~~**`ideas.md` still lists shipped work as pending.**~~ **Done — retired.**
+   Deleted in the same commit. The genuinely open ideas it held (MCP,
+   automation, "who talks to whom", project notes, mobile, multi-OS) have no
+   file of their own now; `IDEA.md` is the one-line project pitch.
+4. **Parked finding F-T30-1** (confirmed 2026-09-20, re-checked 2026-09-30).
+   ADR-0039 is written, approved (see §12) and merged; its phases 1–2 landed
+   2026-09-27 (colliding ids are refused, counters never rewind — see
+   KNOWN_LIMITATIONS §129). Phases 3–5 are not implemented. The finding itself:
    `Project`'s six fields are all `pub`
-   (`crates/knx-core/src/project.rs:181-186`), so "every mutation goes through
+   (`crates/knx-core/src/project.rs:202-207`), so "every mutation goes through
    `Command::apply`" is an invariant held by review, not by the type system.
    Belongs to whoever next touches `knx-core`'s public surface.
 5. **`docs/LIMITATION_TRIAGE.md` must be re-counted, not edited by hand,**
    whenever `KNOWN_LIMITATIONS.md` gains an entry. It drifted three times
-   before. 119 entries / 118 classified as of 2026-09-20.
+   before. **Recounted 2026-09-30:** 146 numbered entries
+   (`grep -cE '^## (§)?[0-9]'` — the old `'^## [0-9]'` misses the `§`-prefixed
+   headings and gave 130), 145 classified, §105 still deliberately not.
 
 ---
 

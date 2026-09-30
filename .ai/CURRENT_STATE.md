@@ -1,4 +1,25 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 11:41 CEST
+- **Web lock:** untouched; docs only.
+- **Completed:** Session end (user). Remaining work handed to the goals:
+  `goal-ui.md` U12 (§146 labels, ADR-0051 Debug toggle, monitor `control`
+  column, readiness/compare views), `goal-commission.md` K12 (live bit-2 run
+  on `1.1.67`, user go only; status of `e05e9e1`/`30580fad`/`542fb56a`),
+  `goal.md` §12.3 (open user decisions list).
+- **Pending/Next Steps:** UI session: the four U12 items above.
+  Commissioning session: K12–K14 live runs only after a device-specific go.
+  goal.md session: T23 after U13, then T18 decision, then §10 review.
+- **Notes for Codex oder Claude:** Worktree `KNXBench.worktrees/k12-live`
+  is not from this session; do not remove it without asking its owner.
+
+For the UI session: see `goal-ui.md` U12 "Handed over 2026-09-30".
+
+For the commissioning session: see `goal-commission.md` K12 "Follow-up
+2026-09-30".
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 11:40 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** §147 consumers: `knx bus monitor --control` appends

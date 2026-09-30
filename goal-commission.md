@@ -453,6 +453,21 @@ server command next to K6's. **[W]** one live write on `1.1.67`, to a free
 address and back, like K6. Reading its serial number first is a read-only
 step (§1.3).
 
+**Follow-up 2026-09-30 (user: "so lassen, aber Option in Settings").**
+KNXBench never sets `PID_SERVICE_CONTROL` bit 2 on its own. An opt-in
+action exists (ADR-0051): `crates/knx-net/src/commissioning/service_control.rs`
+(read-modify-write of bit 2 only, read-back, mask `0021h` and missing
+property refused), `WriteScope::IndividualAddressWriteEnable`,
+`/api/device/service-control` behind the Settings key
+`debugIndividualAddressWriteEnable` (403 unless `true`), and
+`knx device service-control` on the CLI (`e05e9e1`, `30580fad`). Simulator,
+route and CLI tested; **not run on hardware**. The Settings toggle is with
+`goal-ui.md` U12.
+
+**Still open, needs the user's device-specific go:** on `1.1.67` read
+bit 2 → set it → address by serial number to a free address and back →
+clear bit 2 again → read back. Skill `knx-live-bus-operations`.
+
 ### K13 — `NM_IndividualAddress_Reset` (item 2)
 
 **Done 2026-09-29, simulator only; refused on hardware (KL §140).** The
@@ -552,7 +567,9 @@ user assigned it to the commissioning/readiness session.
   (`KNXBENCH_TELEGRAM_LOG`). No fixture was needed: no decoder gap.
 - **Follow-up done 2026-09-30.** §147 lifted: `LDataFrame::control`
   carries priority, repeat, ack request and hop count; 71 of 71 now
-  re-encode whole. The fields are not shown by the monitor yet.
+  re-encode whole. **Shown 2026-09-30** (`542fb56a`): `knx bus monitor
+  --control`, server monitor rows and debug bundle carry `control`. The
+  web table column is with `goal-ui.md` U12.
 
 ## 3c. Later goals (not this stage)
 

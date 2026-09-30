@@ -62,7 +62,7 @@ pub struct ShownPlan {
 /// Addresses)"*. Absent: the complete download.
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PartialDto {
+pub(crate) struct PartialDto {
     parameters: bool,
     group_addresses: bool,
 }
@@ -147,7 +147,7 @@ fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
     ))
 }
 
-fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
+pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {
     let parsed: IndividualAddress = address
         .parse()
         .map_err(|e| ApiError::bad_request(format!("invalid device address {address:?}: {e}")))?;
@@ -174,7 +174,7 @@ fn keying(state: &SharedState, prepared: &PreparedDownload) -> Result<DownloadKe
 
 /// Prepares from the project as it is now. Both locks are released before
 /// this returns; they are never held together.
-fn prepare(
+pub(crate) fn prepare(
     state: &SharedState,
     target: IndividualAddress,
     partial: Option<PartialDownloadParts>,

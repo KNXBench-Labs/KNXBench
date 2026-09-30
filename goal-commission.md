@@ -635,10 +635,21 @@ backup, separate confirmation and live hardware go are unchanged.
 `finished`/`failed` cannot represent a write. Simulated serial-address and
 service-control calls can return 200 without sending a write; a failed send
 may have changed the target. Group writes have no receiver readback. Keep all
-three write routes untracked until phase-aware, recovery-linked evidence is
-verified. The serial-address HTTP path still lacks a durable pre-write
-recovery record; do not infer that its response satisfies the backup policy
-or grants a live hardware go.
+three write routes untracked at that stage until phase-aware,
+recovery-linked evidence is verified. The serial-address HTTP path still
+lacks a durable pre-write recovery record; do not infer that its response
+satisfies the backup policy or grants a live hardware go.
+
+**Service-control write evidence, 2026-09-30:** only the Debug-gated
+`PID_SERVICE_CONTROL` POST now has typed one-shot activity. Verified means
+the existing exact-octet property response was witnessed; no-op and
+pre-send failures have their own states. A transport error after the backed-up
+write boundary is `effectUnverified`, not a green receipt, and cancellation
+is `unknown` even if a send became possible. The optional `writeEvidence`
+flags reveal neither property bytes, mask, key nor backup path. This is
+volatile, bounded telemetry, not recovery storage or permission for a live
+write. Serial-address and group writes remain untracked; `coverage: partial`
+and the Web-lock boundary remain.
 
 ## 3c. Later goals (not this stage)
 

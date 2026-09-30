@@ -1,5 +1,34 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-29 — ISSUE-08 data half, P2: each object's evaluated activation and channel
+
+- `ComObjectNode` gains `activation` (`Active`/`Inactive`/`Undetermined`/
+  `NotEvaluated`) and `channel` (`key`, `kind`, translated `text`, tree
+  `order`) (ADR-0050). `device_detail` evaluates with the parameter panel's
+  own `evaluate_device`, and the mapping is the pure module
+  `apps/knx-server/src/com_object_activation.rs`. The stored `is_active` is
+  unchanged.
+- The evaluator's `ActiveRef` now names the `Channel`/
+  `ChannelIndependentBlock` it was activated under, module expansions
+  included. `query::channel_texts` reads the translated channel `@Text`.
+  `substitute_text` is public, so that the server does not reimplement it.
+- Parameter diagnostics carry `severity`: `NoBranchMatched` is `info`,
+  everything else `warning`. The download, image and evaluator semantics
+  are unchanged.
+- Tests:
+  - 11 unit tests in `com_object_activation` (Active/Inactive/Undetermined,
+    D39/D40, orphaned scoped hit, tree order, translation);
+  - 5 in `knx-productdb/tests/dynamic_channel_owner.rs`;
+  - 1 severity test;
+  - the corpus pin `apps/knx-server/tests/com_object_activation_corpus.rs`:
+    ETS4 907/907, ETS 6.3.0 867/867 and KV 75/75 `Active`, each owned by a
+    channel (34/33/32 channels). The house exports' channels all have an
+    empty `@Text`, and every KV text is present and substituted.
+- Not done:
+  - `@Name`/`@Number` for untitled channels (KNOWN_LIMITATIONS §146);
+  - generic names and DPTs (P3);
+  - the TypeScript bindings (`#[ts(skip)]` until the UI session's U12).
+
 ## 2026-09-29 — Instance flags reach the group object table (§145 lifted)
 
 `ImageRequest` gained `flag_overrides`; `image_request_for_device` fills it
@@ -30,6 +59,10 @@ difference (RESEARCH §19.13, cause 2) is unchanged. No live write.
   997/959/64 are a legal enumeration value that no `when` covers, and the
   other 19 per ETS project have a non-enumeration control. They are the
   "Parameters often show missing-data issues" symptom, not missing data.
+  (Correction, P2: KV's 64 came from a probe that evaluated without the
+  module-scoped values the parameter panel feeds per instance (D39). The
+  panel reports 61. The difference appears only in this module-based
+  project, and the ETS counts agree on both paths.)
 
 ## 2026-09-29 — The house read back against KNXBench's images (read-only)
 

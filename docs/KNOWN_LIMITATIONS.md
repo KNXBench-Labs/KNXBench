@@ -8846,6 +8846,34 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
+## §146 A channel without `@Text` has no name of its own, and some activations are `Undetermined`
+
+**Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
+
+- **Channel names.** `ComObjectChannel::text` is the element's `@Text`, and
+  `None` when that is empty. In the corpus, 24 of 29 `Channel` elements
+  have an empty `@Text`, including every one in the two house exports.
+  They do state `@Name` and a numeric `@Number`, but `dynamic_node` does
+  not store either attribute. Storing them needs a parser change, a schema
+  migration and a re-ingest. Until then the UI shows a generic label
+  instead of an invented one.
+- **`Undetermined`.** The evaluation cannot decide in these cases:
+  - two module instances with one `RefId` (D40);
+  - a scoped activation that no imported instance owns;
+  - a value or definition the evaluation could not use.
+  Objects in these cases stay `Undetermined`. None occur in the corpus
+  (0 of 1,849).
+- **Stale module rows.** A stored module row whose `_MI-` digits disagree
+  with the imported instance is set aside as stale. Its parameter then runs
+  on the program default. `Active` is not downgraded for it, the same as in
+  the parameter panel, which evaluates identically. There are 0 stale rows
+  in the corpus.
+- **Not in the TypeScript bindings yet.** `activation` and `channel` are
+  serialised but `#[ts(skip)]` until the UI session's U12 adopts them.
+
+**Lifted when.** Channel `@Name`/`@Number` are stored and projected, and
+the UI shows both fields.
+
 ## §145 Instance-level flag overrides are not written into the group object table
 
 **Lifted (2026-09-29).** `image_request_for_device` now carries every flag an

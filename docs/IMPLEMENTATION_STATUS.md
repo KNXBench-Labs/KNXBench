@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — K19: the private telegram capture decodes, 71 of 71
+
+- `crates/knx-net/tests/private_telegram_log.rs` decodes an ETS
+  `CommunicationLog` with `decode_l_data`, re-encodes every frame and
+  counts outcomes, refusals, destinations, transports, services and the
+  Ctrl1/Ctrl2 fields the round trip does not carry. `#[ignore]`d; the path
+  comes from `KNXBENCH_TELEGRAM_LOG` only, and only counts are printed.
+- Result on the maintainer's capture: 71/71 decoded, 0 refused, 0 unknown,
+  71/71 identical past Ctrl1/Ctrl2 (RESEARCH §19.14). New limitation
+  §147: `LDataFrame` has no priority, repeat or hop-count field, and 16
+  telegrams sent at normal priority re-encode at low.
+- `quick-xml` is a `knx-net` dev-dependency only; the library does not
+  import the format.
+
 ## 2026-09-30 — `GET /api/device-readiness`: readiness over HTTP
 
 - The open project's devices, graded as `knx device readiness` grades them

@@ -1945,6 +1945,7 @@ name = "knx-net"
 version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
+ "quick-xml 0.42.0",
  "socket2",
  "tokio",
 ]

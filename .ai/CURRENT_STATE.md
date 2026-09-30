@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / gated service-control read activity)
+- **Timestamp:** 2026-09-30 21:58 CEST
+- **Web lock:** held by the separate UI session for its scoped Debug/service-control package; no Web source edited here.
+- **Completed:** Published server-only read telemetry as `87e948e6164c890f663846a5f9ddba04e0b0dcb6` to `origin/main`, with exact remote SHA readback. `GET /api/device/service-control` now records `serviceControlRead` only after server Debug opt-in, valid address/key plan and conflict checks; witnessed results finish/fail and cancelled requests stay unknown. No property octets, mask, access key or backup path enter the activity record. The shared tunnel helper's `POST` path explicitly opts out; its consent and durable property-specific backup/readback gates are unchanged. Simulated HTTP tests cover off/refused, finished, property failure and cancellation, and confirm write requests do not masquerade as reads. Rust workspace 137 suites / 2,775 passed / 0 failed / 161 ignored / 0 `SKIP:`; Web build / 80 files / 1,270 tests; strict workspace Clippy, fmt, anchors, headers, layering, corpus gates and diff check green. ADR-0055, status, limitations and goal updated; evidence `.ai/logs/2026-09-30_codex_service-read-activity.md`. No live bus operation or additional write.
+- **Pending/Next Steps:** `serviceControlWrite`, `serialAddress` and `groupWrite` remain untracked until write-specific semantics can distinguish no-op, a durable backup, sent-but-unverified mutation and verified completion. The aggregate snapshot is still volatile/partial and not proof of idle. K13 HTTP reset/K14 hardware gates remain blocked; no live permission follows. Respect the UI Web lock; clean only this task's worktree and scratch after publication.
+- **Notes for Codex oder Claude:** No access key may be guessed. A failed write request does not prove no write; do not model it as generic `failed` without recovery evidence. K12's property backup is not a full device image or automatic restore. Root dirty changes and other worktrees remained untouched.
+
+---
+
 - **Last Agent:** codex (commissioning / serial-lookup one-shot evidence)
 - **Timestamp:** 2026-09-30 21:44 CEST
 - **Web lock:** held by the separate UI session for its scoped ADR-0051 Debug/service-control package; no Web source edited here.

@@ -5981,6 +5981,9 @@ is a change and the device editor should say so.
    then instance overrides, then C cleared if unlinked reproduces the device
    on 450 of 454 active objects; the 4 others (1.1.18) are linked in the
    project to addresses the device does not have (drift above).
+   **User decision 2026-09-30: keep.** KNXBench keeps setting C on unlinked
+   active objects; this stays a documented, behaviour-neutral difference
+   from ETS. Do not reopen without a new user decision.
 3. **Inactive objects: C clear on both sides, other bits differ.** For
    `A-0001`, `A-0019-16`, `A-0026`, `A-0030`, `A-0031` the device holds the
    `ComObject`'s own flags with C cleared; KNXBench keeps the base segment's

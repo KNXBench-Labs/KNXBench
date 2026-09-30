@@ -1,4 +1,26 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 12:10 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** User decisions recorded (docs only, no code, no bus):
+  (1) C flag on unlinked active objects: **keep** KNXBench's behaviour —
+  RESEARCH §19.13 cause 2 marked as decided. (2) KNOWN_LIMITATIONS §146
+  channel `@Name`/`@Number`: **in goal.md scope**, planned in §12.3 (ADR
+  first). (3) The 71 private `CommunicationLog` telegrams: new
+  goal-commission **K19** (offline decode, aggregate counts only, no private
+  data in Git). (4) ETS restore points: **dropped**, not needed — do not
+  pursue the export experiment. (5) U10: the user opens the host firewall
+  (`ufw` rule for UDP source port 3671 from the LAN); end-to-end discovery
+  check is then the UI session's.
+- **Pending/Next Steps:** goal.md lane: §146 ADR → parser → migration →
+  re-ingest. Commissioning lane: K19. UI lane: U10 end-to-end discovery once
+  the user confirms the rule is in place.
+- **Notes for Codex or Claude:** The root checkout's uncommitted RESEARCH
+  inventory (ETS installation/user-profile data, incl. the telegram file's
+  description) was left untouched; K19 is self-contained without it.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 07:27 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** goal.md §10 doc reconciliation, first pass (docs only).

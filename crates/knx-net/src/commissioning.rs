@@ -31,6 +31,7 @@ pub mod memory_download;
 pub mod programming_button_wait;
 pub mod rf_configuration;
 pub mod serial_number_write;
+pub mod service_control;
 pub mod simulator;
 
 use std::convert::Infallible;

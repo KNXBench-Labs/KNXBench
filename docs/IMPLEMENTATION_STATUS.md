@@ -1,5 +1,58 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — U12 / ISSUE-05 structure editor (isolated branch, not published)
+
+- `RenameArea`/`RenameLine`, `RenameBuildingPart`/`MoveBuildingPart`,
+  `RenameGroupRange`/`MoveGroupRange` and `MoveLineToArea` apply through
+  `Command`/`CommandStack`, with typed inverse placement commands preserving
+  parent/child links and sibling positions for undo, redo and batch rollback.
+  Moves refuse duplicate line addresses, mismatched device prefixes, invalid
+  range spans, sibling overlap, cycles, unknown IDs and ambiguous imported
+  placements before mutation. Only an undo-only restore may recover an
+  original imported invalid placement. No device address is silently changed.
+- HTTP PATCH/POST routes, Web API wrappers and the Inspector expose the same
+  commands. The centre Buildings, Topology and Group-address workspaces reuse
+  the explorer's creation forms and the Inspector's edit controls, with
+  explicit root/parent actions, accessible labels and native keyboard-select
+  move controls. Later installations remain read-only. Device drag/drop
+  continues through the pre-existing validated move commands (B10).
+- Pre-integration review found and fixed two data-integrity defects before
+  publication: duplicate imported IDs could select another installation's
+  structure in the Inspector, and structural deletion undid by appending
+  instead of restoring exact order. The Core now rejects ambiguous forward
+  edits and preserves original area/line/child positions with typed
+  undo-only restore commands. Malformed parent-child references refuse
+  deletion rather than panic or leave orphans. Core 655/655 focused library
+  tests, HTTP 26/26 (including deletion/undo order and ambiguous-ID errors),
+  Inspector 51/51 and centre 11/11; batch rollback and invalid restore
+  positions are regression-tested. Imported ambiguous *old parent* IDs remain
+  undoable after an explicit repair. Final branch and post-rebase gates still
+  need reruns.
+- Earlier **pre-review** gate snapshot: Core line, building-part, range and
+  rename tests; 24/24 HTTP edit-route tests; native save/reopen of renamed
+  area/line, reordered building children, repaired linked group range and
+  moved line; Web Inspector 43/43 and StructureWorkspace 8/8. Rust
+  130 suites / 2,665 passed / 0 failed / 152 ignored / 0 `SKIP:` notices,
+  strict Clippy and fmt; Web 78 files / 1,235 tests and production build;
+  six local/mock Chromium layout cases; four `xtask` gates and `git diff
+  --check` green. The clippy-first run exposed a test-only `len > 0` lint;
+  it was corrected and the strict rerun passed. These figures predate the
+  review fixes above; they are **not** final, post-rebase or merged-main gates.
+- Reviewed pre-rebase branch gates (after the corrective pass): strict
+  `cargo fmt --all --check`, `git diff --check` and Clippy passed;
+  corpus-backed Rust workspace 130 suites / 2,681 passed / 0 failed /
+  152 ignored / 0 `SKIP:` notices. Web Vitest 78 files / 1,246 passed;
+  TypeScript/production build passed. Six local mocked Chromium regression
+  tests passed; a separate headless local-only structure probe exercised six
+  EN/DE × 360/640/1440 px cases with no overflow. Layering, headers
+  (318 well-formed, 161 legacy headerless at ceiling), anchors (401 links in
+  216 Markdown files, none dead), and corpus-gate checks passed. This is
+  still **branch** evidence: post-rebase and merged-main gates remain open.
+- Limitations: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md#u12-structure-editor-scope-issue-05),
+  including first-installation-only mutations, invisible orphan lines in
+  the centre projection, and whole-project native save rather than
+  incremental structure sync. No KNXnet/IP connection or device write.
+
 ## 2026-09-30 — Address broadcasts go out at system priority (AL §3.2.2–§3.2.5)
 
 - `crates/knx-net/src/cemi.rs`: `FrameControl::default_for` now takes the

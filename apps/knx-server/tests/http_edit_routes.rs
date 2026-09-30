@@ -3,7 +3,8 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::{
-    Area, AreaId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
+    Area, AreaId, BuildingPart, BuildingPartId, BuildingPartType, CommissioningState,
+    CompletionStatus, DeviceId, DeviceInstance, GroupAddress, GroupRange, GroupRangeId,
     IndividualAddress, Installation, InstallationId, Language, Line, LineId, Project, SourceRef,
     Topology,
 };
@@ -69,6 +70,77 @@ fn state_with_one_installation_and_device() -> knx_server::AppState {
     });
     let state = knx_server::AppState::default();
     *state.project.lock().unwrap() = Some(project);
+    state
+}
+
+fn state_with_movable_lines(address: Option<IndividualAddress>) -> knx_server::AppState {
+    let state = if address.is_some() {
+        state_with_one_installation_and_device()
+    } else {
+        state_with_one_installation()
+    };
+    let mut guard = state.project.lock().unwrap();
+    let project = guard.as_mut().unwrap();
+    let line = |id: u32, number: u8, devices: Vec<DeviceId>| Line {
+        id: LineId(id),
+        source: SourceRef {
+            path: format!("line-{id}"),
+            ets_id: format!("line-{id}"),
+        },
+        name: format!("Line {id}"),
+        address: number,
+        medium_ref: "TP".into(),
+        domain_address: None,
+        domain_address_is_checked: None,
+        ip_routing_multicast_address: None,
+        multicast_ttl: None,
+        completion: CompletionStatus::FinishedDesign,
+        devices,
+    };
+    project.installations[0].topology = Topology {
+        areas: vec![
+            Area {
+                id: AreaId(10),
+                source: SourceRef {
+                    path: "area-10".into(),
+                    ets_id: "area-10".into(),
+                },
+                name: "Source".into(),
+                address: 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![LineId(11), LineId(12)],
+            },
+            Area {
+                id: AreaId(20),
+                source: SourceRef {
+                    path: "area-20".into(),
+                    ets_id: "area-20".into(),
+                },
+                name: "Target".into(),
+                address: 2,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![LineId(21)],
+            },
+        ],
+        lines: vec![
+            line(11, 1, vec![]),
+            line(
+                12,
+                2,
+                if address.is_some() {
+                    vec![DeviceId(1)]
+                } else {
+                    vec![]
+                },
+            ),
+            line(21, 1, vec![]),
+        ],
+        unassigned: vec![],
+    };
+    if let Some(address) = address {
+        project.devices.get_mut(DeviceId(1)).unwrap().address = Some(address);
+    }
+    drop(guard);
     state
 }
 
@@ -376,6 +448,142 @@ async fn creating_a_line_nests_it_under_its_area_then_deletes() {
 }
 
 #[tokio::test]
+async fn renaming_area_and_line_via_properties_routes_preserves_addresses_and_undoes() {
+    let app = knx_server::app(Arc::new(state_with_one_installation()), None);
+    let area = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/areas")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Area 1", "address": 1 }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(area.status(), StatusCode::OK);
+    let area_id = body_json(area).await["installations"][0]["topology"][0]["id"]
+        .as_u64()
+        .unwrap();
+    let line = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/lines")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "areaId": area_id, "name": "Line 1", "address": 2, "mediumRef": "MT-0" })
+                        .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(line.status(), StatusCode::OK);
+    let line_id = body_json(line).await["installations"][0]["topology"][0]["lines"][0]["id"]
+        .as_u64()
+        .unwrap();
+
+    let area_renamed = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/areas/{area_id}"))
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "name": "North" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(area_renamed.status(), StatusCode::OK);
+    let tree = body_json(area_renamed).await;
+    assert_eq!(tree["installations"][0]["topology"][0]["name"], "North");
+    assert_eq!(tree["installations"][0]["topology"][0]["address"], 1);
+
+    let line_renamed = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/lines/{line_id}"))
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "name": "Main" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(line_renamed.status(), StatusCode::OK);
+    let tree = body_json(line_renamed).await;
+    assert_eq!(tree["installations"][0]["topology"][0]["name"], "North");
+    assert_eq!(
+        tree["installations"][0]["topology"][0]["lines"][0]["name"],
+        "Main"
+    );
+    assert_eq!(
+        tree["installations"][0]["topology"][0]["lines"][0]["address"],
+        2
+    );
+
+    for (area_name, line_name) in [("North", "Line 1"), ("Area 1", "Line 1")] {
+        let undo = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/undo")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(undo.status(), StatusCode::OK);
+        let tree = body_json(undo).await;
+        assert_eq!(tree["installations"][0]["topology"][0]["name"], area_name);
+        assert_eq!(
+            tree["installations"][0]["topology"][0]["lines"][0]["name"],
+            line_name
+        );
+    }
+    for (area_name, line_name) in [("North", "Line 1"), ("North", "Main")] {
+        let redo = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/redo")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(redo.status(), StatusCode::OK);
+        let tree = body_json(redo).await;
+        assert_eq!(tree["installations"][0]["topology"][0]["name"], area_name);
+        assert_eq!(
+            tree["installations"][0]["topology"][0]["lines"][0]["name"],
+            line_name
+        );
+    }
+    let unknown = app
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/lines/999")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "name": "No line" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unknown.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn moving_a_device_between_unassigned_and_a_line() {
     let state = Arc::new(state_with_one_installation_and_device());
     let app = knx_server::app(state, None);
@@ -474,6 +682,515 @@ async fn moving_a_device_between_unassigned_and_a_line() {
             .len(),
         1
     );
+}
+
+#[tokio::test]
+async fn moving_a_line_between_areas_preserves_order_and_rejects_duplicate_addresses() {
+    let state = Arc::new(state_with_movable_lines(None));
+    let app = knx_server::app(state.clone(), None);
+    let moved = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-line-to-area")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "id": 12, "areaId": 20 }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved.status(), StatusCode::OK);
+    let tree = body_json(moved).await;
+    let areas = tree["installations"][0]["topology"].as_array().unwrap();
+    assert_eq!(
+        areas[0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|line| line["id"].as_u64().unwrap())
+            .collect::<Vec<_>>(),
+        vec![11]
+    );
+    assert_eq!(
+        areas[1]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|line| line["id"].as_u64().unwrap())
+            .collect::<Vec<_>>(),
+        vec![21, 12]
+    );
+    assert_eq!(areas[1]["lines"][1]["address"], 2);
+
+    let undone = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(undone).await["installations"][0]["topology"][0]["lines"][1]["id"],
+        12
+    );
+    let redone = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/redo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(redone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(redone).await["installations"][0]["topology"][1]["lines"][1]["id"],
+        12
+    );
+
+    let unchanged = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .installations[0]
+        .topology
+        .clone();
+    for payload in [
+        json!({ "id": 11, "areaId": 20 }), // line 21 already owns this address in area 20
+        json!({ "id": 12, "areaId": 99 }),
+        json!({ "id": 99, "areaId": 20 }),
+        json!({ "id": 12 }),
+    ] {
+        let refused = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/move-line-to-area")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .installations[0]
+                .topology,
+            unchanged
+        );
+    }
+}
+
+#[tokio::test]
+async fn deleting_structure_over_http_undoes_to_the_original_area_and_line_order() {
+    let state = Arc::new(state_with_movable_lines(None));
+    {
+        let mut guard = state.project.lock().unwrap();
+        let topology = &mut guard.as_mut().unwrap().installations[0].topology;
+        let mut middle = topology.areas[0].clone();
+        middle.id = AreaId(15);
+        middle.address = 3;
+        middle.name = "Middle".into();
+        middle.lines.clear();
+        topology.areas.insert(1, middle);
+        let mut last = topology.lines[1].clone();
+        last.id = LineId(13);
+        last.address = 3;
+        last.name = "Line 13".into();
+        topology.lines.insert(2, last);
+        topology.areas[0].lines.push(LineId(13));
+    }
+    let app = knx_server::app(state, None);
+    let line_ids = |tree: &Value| {
+        tree["installations"][0]["topology"][0]["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|line| line["id"].as_u64().unwrap())
+            .collect::<Vec<_>>()
+    };
+    let area_ids = |tree: &Value| {
+        tree["installations"][0]["topology"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|area| area["id"].as_u64().unwrap())
+            .collect::<Vec<_>>()
+    };
+    let deleted = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/lines/12")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(deleted.status(), StatusCode::OK);
+    assert_eq!(line_ids(&body_json(deleted).await), [11, 13]);
+    let undo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    assert_eq!(line_ids(&body_json(undo).await), [11, 12, 13]);
+    let redo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/redo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(redo.status(), StatusCode::OK);
+    assert_eq!(line_ids(&body_json(redo).await), [11, 13]);
+    let undo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    assert_eq!(line_ids(&body_json(undo).await), [11, 12, 13]);
+
+    let deleted = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/areas/15")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(deleted.status(), StatusCode::OK);
+    assert_eq!(area_ids(&body_json(deleted).await), [10, 20]);
+    let undo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    let tree = body_json(undo).await;
+    assert_eq!(area_ids(&tree), [10, 15, 20]);
+    assert_eq!(line_ids(&tree), [11, 12, 13]);
+}
+
+#[tokio::test]
+async fn ambiguous_imported_structure_ids_are_refused_by_http_without_mutation() {
+    let state = Arc::new(state_with_movable_lines(None));
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let mut later = project.installations[0].clone();
+        later.id = InstallationId(2);
+        project.installations.push(later);
+    }
+    let before = format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap());
+    let app = knx_server::app(state.clone(), None);
+    for (method, uri, payload) in [
+        ("PATCH", "/api/areas/10", json!({ "name": "Wrong area" })),
+        ("PATCH", "/api/lines/11", json!({ "name": "Wrong line" })),
+        ("DELETE", "/api/lines/11", Value::Null),
+        (
+            "POST",
+            "/api/move-line-to-area",
+            json!({ "id": 11, "areaId": 20 }),
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(if payload.is_null() {
+                        Body::empty()
+                    } else {
+                        Body::from(payload.to_string())
+                    })
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{method} {uri}");
+        assert_eq!(
+            format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap()),
+            before
+        );
+    }
+}
+
+#[tokio::test]
+async fn moving_an_addressed_line_refuses_a_new_mismatch_but_undoes_an_imported_one() {
+    let original = IndividualAddress::new(1, 2, 9).unwrap();
+    let repaired = IndividualAddress::new(2, 2, 9).unwrap();
+    let state = Arc::new(state_with_movable_lines(Some(original)));
+    let app = knx_server::app(state.clone(), None);
+    let request = || {
+        Request::builder()
+            .method("POST")
+            .uri("/api/move-line-to-area")
+            .header("content-type", "application/json")
+            .body(Body::from(json!({ "id": 12, "areaId": 20 }).to_string()))
+            .unwrap()
+    };
+    let rejected = app.clone().oneshot(request()).await.unwrap();
+    assert_eq!(rejected.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .installations[0]
+            .topology
+            .areas[0]
+            .lines,
+        vec![LineId(11), LineId(12)]
+    );
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .address,
+        Some(original)
+    );
+    // Reproduce an imported mismatch whose raw address already matches the
+    // desired destination. Reparenting repairs its placement, not its bytes.
+    state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .devices
+        .get_mut(DeviceId(1))
+        .unwrap()
+        .address = Some(repaired);
+    let moved = app.clone().oneshot(request()).await.unwrap();
+    assert_eq!(moved.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(moved).await["installations"][0]["topology"][1]["lines"][1]["devices"][0]
+            ["address"],
+        "2.2.9"
+    );
+    let undone = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(undone).await["installations"][0]["topology"][0]["lines"][1]["devices"][0]
+            ["address"],
+        "2.2.9"
+    );
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .address,
+        Some(repaired)
+    );
+}
+
+#[tokio::test]
+async fn moving_a_group_range_repairs_a_misplaced_import_with_lossless_undo() {
+    let state = Arc::new(state_with_one_installation());
+    {
+        let mut guard = state.project.lock().unwrap();
+        let installation = &mut guard.as_mut().unwrap().installations[0];
+        let range =
+            |id: u32, start: u16, end: u16, parent: Option<u32>, children: Vec<u32>| GroupRange {
+                id: GroupRangeId(id),
+                source: SourceRef {
+                    path: format!("range-{id}"),
+                    ets_id: format!("range-{id}"),
+                },
+                name: format!("Range {id}"),
+                start: GroupAddress::from_raw(start),
+                end: GroupAddress::from_raw(end),
+                parent: parent.map(GroupRangeId),
+                children: children.into_iter().map(GroupRangeId).collect(),
+            };
+        installation.group_ranges = vec![
+            range(1, 0, 2047, None, vec![2, 3, 4]),
+            range(2, 0, 255, Some(1), vec![]),
+            range(3, 2560, 2815, Some(1), vec![]),
+            range(4, 512, 767, Some(1), vec![]),
+            range(5, 2048, 4095, None, vec![]),
+        ];
+    }
+    let app = knx_server::app(state.clone(), None);
+    let moved = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-group-range")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "id": 3, "parentId": 5 }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved.status(), StatusCode::OK);
+    let tree = body_json(moved).await;
+    assert_eq!(tree["installations"][0]["group_ranges"][2]["parent"], 5);
+    {
+        let guard = state.project.lock().unwrap();
+        let ranges = &guard.as_ref().unwrap().installations[0].group_ranges;
+        assert_eq!(ranges[0].children, vec![GroupRangeId(2), GroupRangeId(4)]);
+        assert_eq!(ranges[4].children, vec![GroupRangeId(3)]);
+    }
+    let undone = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(undone).await["installations"][0]["group_ranges"][2]["parent"],
+        1
+    );
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .installations[0]
+            .group_ranges[0]
+            .children,
+        vec![GroupRangeId(2), GroupRangeId(3), GroupRangeId(4)]
+    );
+    let redone = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/redo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(redone.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(redone).await["installations"][0]["group_ranges"][2]["parent"],
+        5
+    );
+
+    let unchanged = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .installations[0]
+        .group_ranges
+        .clone();
+    for payload in [
+        json!({ "id": 1, "parentId": 2 }),
+        json!({ "id": 3, "parentId": 2 }),
+        json!({ "id": 3, "parentId": null }),
+        json!({ "id": 3, "parentId": 99 }),
+        json!({ "id": 3 }),
+    ] {
+        let refused = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/move-group-range")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .installations[0]
+                .group_ranges,
+            unchanged
+        );
+    }
 }
 
 #[tokio::test]
@@ -706,6 +1423,179 @@ async fn creating_a_nested_building_part_then_renaming_and_deleting_it() {
         .as_array()
         .unwrap()
         .is_empty());
+}
+
+#[tokio::test]
+async fn moving_a_building_part_preserves_child_order_and_requires_an_explicit_parent() {
+    let state = Arc::new(state_with_one_installation());
+    {
+        let mut guard = state.project.lock().unwrap();
+        let installation = &mut guard.as_mut().unwrap().installations[0];
+        let part = |id: u32, parent: Option<u32>, children: Vec<u32>| BuildingPart {
+            id: BuildingPartId(id),
+            source: SourceRef {
+                path: format!("fixture-{id}"),
+                ets_id: format!("fixture-{id}"),
+            },
+            name: format!("Part {id}"),
+            number: None,
+            kind: BuildingPartType::Building,
+            default_line: None,
+            completion: CompletionStatus::FinishedDesign,
+            children: children.into_iter().map(BuildingPartId).collect(),
+            devices: vec![],
+            parent: parent.map(BuildingPartId),
+        };
+        installation.buildings = vec![
+            part(1, None, vec![2, 3, 4]),
+            part(2, Some(1), vec![]),
+            part(3, Some(1), vec![]),
+            part(4, Some(1), vec![]),
+            part(5, None, vec![]),
+        ];
+    }
+    let app = knx_server::app(state.clone(), None);
+    let moved = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-building-part")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "id": 3, "parentId": 5 }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved.status(), StatusCode::OK);
+    let tree = body_json(moved).await;
+    let children: Vec<_> = tree["installations"][0]["buildings"][0]["children"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|part| part["id"].as_u64().unwrap())
+        .collect();
+    assert_eq!(children, vec![2, 4]);
+    assert_eq!(
+        tree["installations"][0]["buildings"][1]["children"][0]["id"],
+        3
+    );
+
+    let undo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    let tree = body_json(undo).await;
+    let children: Vec<_> = tree["installations"][0]["buildings"][0]["children"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|part| part["id"].as_u64().unwrap())
+        .collect();
+    assert_eq!(children, vec![2, 3, 4]);
+
+    let redo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/redo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(redo.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(redo).await["installations"][0]["buildings"][1]["children"][0]["id"],
+        3
+    );
+
+    let to_root = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-building-part")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "id": 3, "parentId": null }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(to_root.status(), StatusCode::OK);
+    let tree = body_json(to_root).await;
+    let roots: Vec<_> = tree["installations"][0]["buildings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|part| part["id"].as_u64().unwrap())
+        .collect();
+    assert_eq!(roots, vec![1, 3, 5]);
+    let undo_root = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo_root.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(undo_root).await["installations"][0]["buildings"][1]["children"][0]["id"],
+        3
+    );
+
+    let unchanged = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .installations[0]
+        .buildings
+        .clone();
+    for payload in [
+        json!({ "id": 3, "parentId": 99 }),
+        json!({ "id": 1, "parentId": 4 }),
+        json!({ "id": 3 }),
+    ] {
+        let rejected = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/move-building-part")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(rejected.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .installations[0]
+                .buildings,
+            unchanged
+        );
+    }
 }
 
 #[tokio::test]

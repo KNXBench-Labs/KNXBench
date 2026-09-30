@@ -10,7 +10,18 @@ import WorkbenchIcon from "./WorkbenchIcon";
 import GroupAddressTable from "./GroupAddressTable";
 import { rangePath } from "./groupAddressView";
 import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
+import { NewAreaRow, NewBuildingPartRow, NewGroupRangeRow, NewLineRow } from "./ProjectExplorer";
+import Inspector from "./Inspector";
+
 export type StructureView = "buildings" | "topology" | "addresses";
+
+function CreateDisclosure(props: { kind: string; parentId?: number; label: string; children: ReactNode }) {
+  return <details className="structure-create" data-structure-create={props.kind} data-parent-id={props.parentId}>
+    <summary>{props.label}</summary>
+    <ul>{props.children}</ul>
+  </details>;
+}
+
 export default function StructureWorkspace(props: {
   tree: ProjectTree; view: StructureView; selection: Selection | null;
   buildingScope?: number | null;
@@ -25,6 +36,7 @@ export default function StructureWorkspace(props: {
   multiSelection: MultiSelection | null;
   onItemClick: ItemClickHandler;
   onTreeUpdate: (tree: ProjectTree) => void;
+  onDeleted: (tree: ProjectTree) => void;
   // Group-address CSV export/import, mounted by `App` so this view owns no
   // toast or error plumbing of its own. The design inventory puts CSV
   // "directly at the group addresses"; the File menu keeps its copy too,
@@ -40,6 +52,28 @@ export default function StructureWorkspace(props: {
     ? tree.installations.flatMap((i) => i.group_ranges).find((r) => r.id === props.rangeScope) : undefined;
   const scopedRangePath = scopedRange
     ? rangePath(tree.installations.flatMap((i) => i.group_ranges), scopedRange.id) : null;
+  const first = tree.installations[0];
+  const selectedArea = selection?.kind === "area" &&
+    tree.installations.flatMap((i) => i.topology).filter((area) => area.id === selection.id).length === 1
+    ? first?.topology.find((area) => area.id === selection.id) : undefined;
+  const buildingParentId = props.buildingScope ?? (selection?.kind === "building_part" ? selection.id : null);
+  const buildingMatches = buildingParentId == null ? [] : tree.installations.flatMap((i) => flattenBuildingParts(i.buildings, []))
+    .filter(({ node }) => node.id === buildingParentId);
+  const buildingParent = buildingMatches.length === 1 && first &&
+    flattenBuildingParts(first.buildings, []).some(({ node }) => node.id === buildingParentId)
+    ? buildingMatches[0].node : undefined;
+  const rangeParentId = props.rangeScope ?? (selection?.kind === "group_range" ? selection.id : null);
+  const rangeMatches = rangeParentId == null ? [] : tree.installations.flatMap((i) => i.group_ranges)
+    .filter((range) => range.id === rangeParentId);
+  // The existing create command allows a root group range to contain a
+  // subrange, not a third level. Never infer a parent from duplicate ids.
+  const rangeParent = rangeMatches.length === 1 && rangeMatches[0].parent == null &&
+    first?.group_ranges.some((range) => range.id === rangeParentId) ? rangeMatches[0] : undefined;
+  const editingSelection = selection && (
+    (view === "topology" && (selection.kind === "area" || selection.kind === "line")) ||
+    (view === "buildings" && selection.kind === "building_part") ||
+    (view === "addresses" && selection.kind === "group_range")
+  );
   const selected = (kind: Selection["kind"], id: number) => selection?.kind === kind && selection.id === id;
   function devices(nodes: DeviceNode[]) {
     return <div className="diagram-devices">{nodes.map((device) => <button key={device.id} className="diagram-device" aria-pressed={selected("device", device.id)} onClick={() => onSelect({ kind: "device", id: device.id })}>
@@ -72,14 +106,25 @@ export default function StructureWorkspace(props: {
     <header className="workspace-heading"><div><p className="eyebrow">{focusedBuilding?.path ?? (scopedRangePath ? `${t("workbench.addresses")} / ${scopedRangePath}` : tree.installations.map((i) => i.name).join(" / "))}</p><h1>{focusedBuilding?.node.name ?? scopedRange?.name ?? t(`workbench.${view}`)}</h1></div>
       {view === "addresses" ? props.addressActions : <button onClick={() => onCatalog(selection?.kind === "line" ? selection.id : null)}>+ {t("workbench.device")}</button>}
     </header>
+    {editingSelection && <section className="structure-context-editor" aria-label={t("structure.editSelection")}>
+      <Inspector key={`${selection.kind}-${selection.id}`} propertiesOnly selection={selection} tree={tree}
+        deviceDetail={null} onApplied={onTreeUpdate} onDeleted={props.onDeleted} />
+    </section>}
     {focusedBuilding && <button className="building-overview-button" onClick={() => props.onBuildingScope?.(null)}>← {t("workbench.buildings")}</button>}
     {scopedRange && <button className="address-overview-button" onClick={() => props.onRangeScope?.(null)}>← {t("workbench.addresses")}</button>}
     {tree.installations.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
+        {installation === first && <CreateDisclosure kind="area" label={t("structure.addArea")}>
+          <NewAreaRow onCreated={onTreeUpdate} />
+        </CreateDisclosure>}
         {installation.topology.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
         {installation.topology.map((area) => <section className="topology-area" key={area.id}>
           <button className="diagram-heading" aria-pressed={selected("area", area.id)} onClick={() => onSelect({ kind: "area", id: area.id })}><WorkbenchIcon name="topology" />{area.address} · {area.name}</button>
+          {installation === first && selectedArea?.id === area.id && <CreateDisclosure kind="line" parentId={area.id}
+            label={t("structure.addLineIn", { name: area.name })}>
+            <NewLineRow areaId={area.id} onCreated={onTreeUpdate} />
+          </CreateDisclosure>}
           <div className="topology-lines">{area.lines.map((line) => <section className="topology-line" key={line.id}>
             <div className="diagram-line-heading"><button className="diagram-heading" aria-pressed={selected("line", line.id)} onClick={() => onSelect({ kind: "line", id: line.id })}>{area.address}.{line.address} · {line.name}</button>
               <button data-catalog-line={line.id} aria-label={`${t("workbench.device")} · ${line.name}`} onClick={() => onCatalog(line.id)}>+</button></div>
@@ -89,15 +134,35 @@ export default function StructureWorkspace(props: {
         {installation.unassigned.length > 0 && <section className="topology-line"><h2>{t("workbench.unassigned")}</h2>{devices(installation.unassigned)}</section>}
       </>}
       {view === "buildings" && <>
+        {installation === first && <>
+          <CreateDisclosure kind="building-root" label={t("structure.addRootBuilding")}>
+            <NewBuildingPartRow onCreated={onTreeUpdate} />
+          </CreateDisclosure>
+          {buildingParent && <CreateDisclosure kind="building-child" parentId={buildingParent.id}
+            label={t("structure.addBuildingIn", { name: buildingParent.name })}>
+            <NewBuildingPartRow parentId={buildingParent.id} onCreated={onTreeUpdate} />
+          </CreateDisclosure>}
+        </>}
         {installation.buildings.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
         {focusedBuilding ? <>
           {deviceTable(focusedBuilding.node.devices)}
           <div className="building-diagram scoped-building-children">{focusedBuilding.node.children.map(building)}</div>
         </> : <div className="building-diagram">{installation.buildings.map(building)}</div>}
       </>}
-      {view === "addresses" && <GroupAddressTable installation={installation} selection={selection}
-        multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
-        rangeScope={props.rangeScope ?? null} />}
+      {view === "addresses" && <>
+        {installation === first && <>
+          <CreateDisclosure kind="range-root" label={t("structure.addRootRange")}>
+            <NewGroupRangeRow onCreated={onTreeUpdate} />
+          </CreateDisclosure>
+          {rangeParent && <CreateDisclosure kind="range-child" parentId={rangeParent.id}
+            label={t("structure.addRangeIn", { name: rangeParent.name })}>
+            <NewGroupRangeRow parentId={rangeParent.id} onCreated={onTreeUpdate} />
+          </CreateDisclosure>}
+        </>}
+        <GroupAddressTable installation={installation} selection={selection}
+          multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
+          rangeScope={props.rangeScope ?? null} />
+      </>}
     </section>)}
   </section>;
 }

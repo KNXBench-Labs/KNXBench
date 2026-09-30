@@ -34,39 +34,44 @@ line, not hidden.
 "+ Device" button in the header](../../assets/screenshots/porcelain-buildings.png)
 
 The Buildings view draws building parts as nested cards with their devices inside.
-The demo project has exactly one building part, which is why this view looks quiet.
 Clicking a card focuses it: the view then shows that part's devices as a table and its
 child parts below, with a back link to the overview.
 
-Both views are read-and-select surfaces. The structure itself is created in the project
-explorer on the left.
+Both views offer **Add** disclosures in the main workspace as well as creation rows in
+the project explorer. Select an area to reveal its **Add line** action; select a
+building part to reveal **Add building part inside …**. A selected area's, line's
+or building part's editor appears in the workspace and in Properties on the right;
+both use the same validated project command, not separate edits.
 
 ## Creating structure
 
-Everything is created inline in the tree. No dialogs, except for devices, which come
-from the product catalog.
+Create from a disclosure in the main workspace or from the corresponding inline
+row in the project explorer. No dialog is needed for structure; devices use
+the product catalog.
 
 | To create | Where | Fields |
 | --- | --- | --- |
-| Area | Under Topology | Address (a number), name |
-| Line | Under an area | Address (a number), name, medium (for example `MT-0`) |
-| Device | The "+ Add device" button under a line, or `+` on a line in the Topology view | Opens the product catalog — see [Devices and products](05-devices-and-products.md) |
-| Building part | Under Buildings, or under an existing part | Kind (Building, Floor, Room, Corridor, Distribution Board, Building Part), name |
+| Area | **Add area** in Topology, or under Topology in the explorer | Address (a number), name |
+| Line | Select an area, then **Add line in …**, or create under that area in the explorer | Address (a number), name, medium reference (for example `MT-0`) |
+| Device | The "+ Add device" button under a line, or `+` on a line in Topology | Opens the product catalog — see [Devices and products](05-devices-and-products.md) |
+| Building part | **Add building part at installation root** or select a part and choose **Add building part inside …**; the explorer has the same two levels of action | Kind, name |
 
-Type into the row and press Enter, or click **Add**. If the server refuses — a
-duplicate area address, for example — the reason appears next to the row and nothing
-is created.
+Open the disclosure with Enter or Space, type the fields and press Enter in a
+field or click **Add**. A refused duplicate address or invalid parent appears
+beside the form; nothing is created. The parent is explicit in each action:
+creating at the installation root does not silently choose the selected part.
 
 > **Note**
 >
-> The creation rows only appear under the first installation. Nearly every edit
-> command in KNXBench targets the first installation, so offering the rows elsewhere
-> would be a promise the application cannot keep. Almost every project has exactly one
-> installation, so this rarely comes up.
+> Creation and structure edits are available only for the first installation.
+> Later installations remain visible and savable but cannot be mutated by these
+> commands. Imported duplicate IDs are not used to guess a parent.
 
 ## Editing
 
 Select something, and the properties pane on the right shows what can be changed.
+Areas, lines and building parts also have a contextual editor in the centre
+workspace; changing either copy uses the same undoable command.
 
 **A device** has an address field, a line, a building part, a description, and a
 Delete button.
@@ -75,28 +80,19 @@ Delete button.
 Building part "(none)" and an empty Description
 field](../../assets/screenshots/porcelain-device-inspector.png)
 
-Note what is not there: a name field. Devices, areas and lines cannot be renamed in
-KNXBench today. Building parts and group ranges can. This is a gap in the command set,
-not a hidden menu — see [Known issues](../known-issues.md).
-
-Text fields commit when they lose focus, and Enter is a shortcut for that. A rejected
-value snaps back to what it was and shows the reason.
+Areas, lines and building parts can be renamed. Device renaming is still not
+available. Text fields commit when they lose focus, and Enter is a shortcut
+for that. A rejected value snaps back and shows the reason.
 
 ### Individual addresses
 
-The **Address** field takes the usual `area.line.device` form, for example `1.1.5`.
-Leaving it empty is allowed; a device without an address shows as Unassigned.
-
-Two things are worth knowing:
-
-- **A new device starts with no individual address.** Creating a device from the
-  catalog places it in a line but does not invent an address for it. You assign one.
-- **Nothing checks the address against the line it sits in.** KNXBench refuses two
-  devices with the same individual address, two areas with the same address, and two
-  lines with the same address inside one area. It does not refuse a device addressed
-  `1.0.1` sitting in line `2.3`. Real installations sometimes want exactly that during
-  a rebuild, and the KNX rule that would forbid it is a rule about the running bus,
-  not about the file. Keep an eye on it yourself.
+For a device on an unambiguous line, the area.line prefix comes from that line;
+only the device number (1–255) is editable. A device not assigned to a line
+instead offers the complete address. Duplicate addresses, an out-of-line
+prefix and newly assigning device number `0` are refused. Existing imported
+mismatches or `.0` values are displayed intact so they can be repaired
+explicitly. See [Devices and products](05-devices-and-products.md#address-and-line)
+for the address editor and ambiguous-import cases.
 
 ### Moving a device
 
@@ -110,10 +106,10 @@ a move-to-line select, a move-to-building-part select, and a delete button.
 
 > **Warning**
 >
-> Moving a device never changes its individual address. A line move and a re-address
-> are two separate actions in KNXBench, and doing one does not imply the other. After
-> moving a device to a different line, check whether its address still says what you
-> mean.
+> Moving a device never changes its individual address. An addressed device
+> whose address does not match the destination line is refused: clear its
+> address first, move it, then assign an address under the target prefix.
+> Undo restores the original project placement, not a bus state.
 
 In the Project Explorer you can also drag an eligible **single device** onto a
 line or building part in the first installation. The drop uses the same
@@ -121,6 +117,29 @@ validated, undoable move as the Inspector selects; it does not change the
 individual address. The Inspector selects remain the keyboard-accessible way
 to perform either move. Group-address links need an explicit send/receive
 direction and cannot be created by dragging.
+
+### Moving lines and building parts
+
+Select a **line** to see its current **Assigned area** and choose another area
+from the native select, in the centre workspace or Properties. The line keeps
+its own numeric address and every device keeps its individual address; the
+move is refused if the target already has that line number or any placed
+device's address would not match the new area.line prefix. An orphaned imported
+line can be attached explicitly, but a line with multiple owners or duplicate
+references cannot be moved by guessing. Undo restores the previous area and
+sibling position, including an original imported orphan placement.
+
+Select a **building part** and choose its parent, or **installation root**,
+with the parent select. The part's children and devices stay attached. Cycles,
+ambiguous imported references and unknown parents are refused; changing parent
+is one undoable step, and undo restores its former sibling order. These selects
+work with a keyboard. Existing device drag/drop remains a separate gesture;
+structure reparenting uses these explicit controls, not an unverified drag target.
+
+If an imported structure ID occurs more than once in a project, KNXBench
+disables its rename, move and delete controls instead of guessing which
+installation you meant. Correct duplicate identities at the source; no
+automatic renumbering or cross-installation structure editor exists here.
 
 ## Deleting
 
@@ -133,8 +152,12 @@ else:
 | A line | It still has devices |
 | A device | Any of its communication objects is still linked to a group address |
 | A building part | It still has child parts or devices in it |
+| A group range | It still has subranges or group addresses assigned to it |
 
-Empty it first, then delete it. The refusal names the reason.
+Empty it first, then delete it. If an imported child points at a parent that
+does not list it, the parent cannot be deleted until that inconsistency is
+repaired; deleting it would leave an orphan. Undo restores the original
+sibling order as well as the deleted structure.
 
 > **Warning**
 >

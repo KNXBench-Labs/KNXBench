@@ -979,7 +979,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : view === "catalog" ? null : tree ? (
         view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
-          multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
+          multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
           onSelect={selectEntity} onCatalog={openCatalog} />
       ) : (

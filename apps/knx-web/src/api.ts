@@ -299,6 +299,13 @@ export function renameGroupRange(id: number, name: string): Promise<ProjectTree>
   return request(`/api/group-ranges/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
+export function moveGroupRange(id: number, parentId: number | null): Promise<ProjectTree> {
+  return request("/api/move-group-range", {
+    method: "POST",
+    body: JSON.stringify({ id, parentId }),
+  });
+}
+
 export function createBuildingPart(
   name: string,
   kind: string,
@@ -318,6 +325,13 @@ export function renameBuildingPart(id: number, name: string): Promise<ProjectTre
   return request(`/api/building-parts/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ name }),
+  });
+}
+
+export function moveBuildingPart(id: number, parentId: number | null): Promise<ProjectTree> {
+  return request("/api/move-building-part", {
+    method: "POST",
+    body: JSON.stringify({ id, parentId }),
   });
 }
 
@@ -365,6 +379,10 @@ export function deleteArea(id: number): Promise<ProjectTree> {
   return request(`/api/areas/${id}`, { method: "DELETE" });
 }
 
+export function renameArea(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/areas/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
+}
+
 export function createLine(
   areaId: number,
   name: string,
@@ -379,6 +397,17 @@ export function createLine(
 
 export function deleteLine(id: number): Promise<ProjectTree> {
   return request(`/api/lines/${id}`, { method: "DELETE" });
+}
+
+export function renameLine(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/lines/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
+}
+
+export function moveLineToArea(id: number, areaId: number): Promise<ProjectTree> {
+  return request("/api/move-line-to-area", {
+    method: "POST",
+    body: JSON.stringify({ id, areaId }),
+  });
 }
 
 export function moveDeviceToLine(deviceId: number, lineId: number | null): Promise<ProjectTree> {

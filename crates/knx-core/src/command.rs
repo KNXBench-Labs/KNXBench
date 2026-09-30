@@ -3,11 +3,13 @@
 //! §6). Validation lives here, not in the UI and not in storage. Any command
 //! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
+use std::collections::HashSet;
 use std::fmt;
 
 use crate::address::GroupAddressStyle;
 use crate::building::BuildingPart;
 use crate::device::{ComObjectInstance, DeviceInstance, ProgramDefaults};
+use crate::devices::Devices;
 use crate::dpt::DptRef;
 use crate::flags::{ComFlagKind, Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
@@ -192,6 +194,15 @@ pub enum Command {
     DeleteArea {
         id: AreaId,
     },
+    /// Undo-only restore preserving the original area-list position.
+    RestoreArea {
+        area: Area,
+        position: usize,
+    },
+    RenameArea {
+        id: AreaId,
+        name: String,
+    },
     /// `line.id` is pre-allocated by the caller via
     /// `Project::ids::next_line_id`. `area` names the owning area, which
     /// must already exist.
@@ -201,6 +212,31 @@ pub enum Command {
     },
     DeleteLine {
         id: LineId,
+    },
+    /// Undo-only restore preserving both the flat line order and area child order.
+    RestoreLine {
+        area: AreaId,
+        line: Line,
+        line_position: usize,
+        area_position: usize,
+    },
+    RenameLine {
+        id: LineId,
+        name: String,
+    },
+    /// Moves a line between areas without rewriting its device addresses.
+    /// Addressed devices must already match the destination's prefix.
+    MoveLineToArea {
+        id: LineId,
+        area: AreaId,
+    },
+    /// Internal inverse restoring the exact area child-list position. An
+    /// imported invalid original placement must remain undoable.
+    RestoreLinePlacement {
+        id: LineId,
+        area: Option<AreaId>,
+        /// Unused when restoring an orphan line (no owning area).
+        position: usize,
     },
     /// Moves a device to `line`, or to `Topology::unassigned` if `None`.
     /// Does not touch `DeviceInstance::address` — a line move and a
@@ -281,9 +317,28 @@ pub enum Command {
     DeleteBuildingPart {
         id: BuildingPartId,
     },
+    /// Undo-only restore retaining the flat row and parent's child position.
+    RestoreBuildingPart {
+        part: BuildingPart,
+        position: usize,
+        child_position: Option<usize>,
+    },
     RenameBuildingPart {
         id: BuildingPartId,
         name: String,
+    },
+    /// Reparents a part without changing its identity or its referenced devices.
+    /// `None` makes it a root building part; the target's child list appends it.
+    MoveBuildingPart {
+        id: BuildingPartId,
+        parent: Option<BuildingPartId>,
+    },
+    /// Internal undo/redo form, retaining the original sibling position.
+    RestoreBuildingPartPlacement {
+        id: BuildingPartId,
+        parent: Option<BuildingPartId>,
+        /// Unused for a root part, whose order is the flat `buildings` order.
+        position: usize,
     },
     /// Moves a device into `part`, or out of any building part entirely
     /// if `None` — independent of `MoveDeviceToLine`'s topology
@@ -304,9 +359,28 @@ pub enum Command {
     DeleteGroupRange {
         id: GroupRangeId,
     },
+    /// Undo-only restore retaining the flat row and parent's child position.
+    RestoreGroupRange {
+        range: GroupRange,
+        position: usize,
+        child_position: Option<usize>,
+    },
     RenameGroupRange {
         id: GroupRangeId,
         name: String,
+    },
+    /// Reparents a range while retaining its span, identity and group addresses.
+    MoveGroupRange {
+        id: GroupRangeId,
+        parent: Option<GroupRangeId>,
+    },
+    /// Internal inverse restoring the original child-list position. Undo may
+    /// recover an imported out-of-bounds or cyclic original hierarchy.
+    RestoreGroupRangePlacement {
+        id: GroupRangeId,
+        parent: Option<GroupRangeId>,
+        /// Unused for a root range; flat `group_ranges` order is unchanged.
+        position: usize,
     },
     /// Adds a directional link from a communication object instance to a
     /// group address. `direction` distinguishes a send link from a
@@ -366,6 +440,8 @@ pub enum CommandError {
     /// address that is already gone).
     GroupAddressInUse(GroupAddressId),
     AreaNotFound(AreaId),
+    /// Numeric ID does not identify one area across the project.
+    AreaPlacementAmbiguous(AreaId),
     /// A `DeleteArea` was refused because it still owns at least one line.
     AreaNotEmpty(AreaId),
     LineNotFound(LineId),
@@ -376,6 +452,19 @@ pub enum CommandError {
     /// A `DeleteLine` was refused because it still owns at least one
     /// device.
     LineNotEmpty(LineId),
+    /// Source/target topology has duplicate line ids or multiple owners.
+    LinePlacementAmbiguous(LineId),
+    /// An internal undo position exceeds the target area's line list.
+    InvalidLinePosition {
+        area: AreaId,
+        position: usize,
+    },
+    /// Undo-only flat-list position exceeds the number of remaining rows.
+    InvalidStructurePosition {
+        kind: IdKind,
+        id: u32,
+        position: usize,
+    },
     /// A `DeleteDevice` was refused because at least one of the device's
     /// communication object instances still links to a group address —
     /// deleting it now would leave a dangling `GroupLink`, the device
@@ -388,6 +477,18 @@ pub enum CommandError {
     /// A `DeleteBuildingPart` was refused because it still has a child
     /// part or a device located in it.
     BuildingPartNotEmpty(BuildingPartId),
+    /// Reparenting a part under itself or one of its descendants would cycle.
+    BuildingPartCycle {
+        id: BuildingPartId,
+        parent: BuildingPartId,
+    },
+    /// Imported parent and children references disagree or name multiple owners.
+    BuildingPartPlacementAmbiguous(BuildingPartId),
+    /// An internal undo position exceeds the target parent's child list.
+    InvalidBuildingPartPosition {
+        parent: BuildingPartId,
+        position: usize,
+    },
     GroupRangeNotFound(GroupRangeId),
     /// A `DeleteGroupRange` was refused because it still has nested
     /// (middle) ranges.
@@ -395,6 +496,18 @@ pub enum CommandError {
     /// A `DeleteGroupRange` was refused because at least one group
     /// address still names it as its `range`.
     GroupRangeInUse(GroupRangeId),
+    /// Reparenting under self or a descendant would create a cycle.
+    GroupRangeCycle {
+        id: GroupRangeId,
+        parent: GroupRangeId,
+    },
+    /// The stored parent field and children lists disagree or duplicate ownership.
+    GroupRangePlacementAmbiguous(GroupRangeId),
+    /// An internal undo position exceeds the target range's child list.
+    InvalidGroupRangePosition {
+        parent: GroupRangeId,
+        position: usize,
+    },
     LinkAlreadyExists {
         com_object: ComObjectInstanceId,
         ga: GroupAddressId,
@@ -496,6 +609,7 @@ impl fmt::Display for CommandError {
                 )
             }
             CommandError::AreaNotFound(id) => write!(f, "area {id} not found"),
+            CommandError::AreaPlacementAmbiguous(id) => write!(f, "area {id} has duplicate identities; select an unambiguous area before editing it"),
             CommandError::AreaNotEmpty(id) => {
                 write!(f, "area {id} still has lines, cannot delete")
             }
@@ -506,6 +620,15 @@ impl fmt::Display for CommandError {
             ),
             CommandError::LineNotEmpty(id) => {
                 write!(f, "line {id} still has devices, cannot delete")
+            }
+            CommandError::LinePlacementAmbiguous(id) => {
+                write!(f, "line {id} has ambiguous ownership or duplicate references; repair the topology before editing it")
+            }
+            CommandError::InvalidLinePosition { area, position } => {
+                write!(f, "line position {position} is invalid for area {area}")
+            }
+            CommandError::InvalidStructurePosition { kind, id, position } => {
+                write!(f, "position {position} is invalid while restoring {kind} {id}")
             }
             CommandError::DeviceHasLinks(id) => {
                 write!(f, "device {id} still has linked communication objects, cannot delete")
@@ -518,6 +641,15 @@ impl fmt::Display for CommandError {
             CommandError::BuildingPartNotEmpty(id) => {
                 write!(f, "building part {id} still has children or devices, cannot delete")
             }
+            CommandError::BuildingPartCycle { id, parent } => {
+                write!(f, "building part {id} cannot move under {parent}: that would create a cycle")
+            }
+            CommandError::BuildingPartPlacementAmbiguous(id) => {
+                write!(f, "building part {id} has inconsistent parent/child references; repair the hierarchy before editing it")
+            }
+            CommandError::InvalidBuildingPartPosition { parent, position } => {
+                write!(f, "child position {position} is invalid for building part {parent}")
+            }
             CommandError::GroupRangeNotFound(id) => write!(f, "group range {id} not found"),
             CommandError::GroupRangeNotEmpty(id) => {
                 write!(f, "group range {id} still has nested ranges, cannot delete")
@@ -526,6 +658,15 @@ impl fmt::Display for CommandError {
                 f,
                 "group range {id} still has group addresses assigned to it"
             ),
+            CommandError::GroupRangeCycle { id, parent } => {
+                write!(f, "group range {id} cannot move under {parent}: that would create a cycle")
+            }
+            CommandError::GroupRangePlacementAmbiguous(id) => {
+                write!(f, "group range {id} has inconsistent parent/child references; repair the hierarchy before editing it")
+            }
+            CommandError::InvalidGroupRangePosition { parent, position } => {
+                write!(f, "child position {position} is invalid for group range {parent}")
+            }
             CommandError::LinkAlreadyExists {
                 com_object,
                 ga,
@@ -616,6 +757,97 @@ fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), Command
     }
 }
 
+/// Commands addressed only by a numeric id must not select the first of
+/// several imported rows. The UI projection may show these ids in several
+/// installations; the core still has to refuse a direct HTTP caller.
+fn require_unique_area(project: &Project, id: AreaId) -> Result<(), CommandError> {
+    let first = project
+        .installations
+        .first()
+        .ok_or(CommandError::InstallationNotFound)?;
+    if !first.topology.areas.iter().any(|area| area.id == id) {
+        return Err(CommandError::AreaNotFound(id));
+    }
+    if project
+        .installations
+        .iter()
+        .flat_map(|i| &i.topology.areas)
+        .filter(|area| area.id == id)
+        .take(2)
+        .count()
+        != 1
+    {
+        return Err(CommandError::AreaPlacementAmbiguous(id));
+    }
+    Ok(())
+}
+
+fn require_unique_line(project: &Project, id: LineId) -> Result<(), CommandError> {
+    let first = project
+        .installations
+        .first()
+        .ok_or(CommandError::InstallationNotFound)?;
+    if !first.topology.lines.iter().any(|line| line.id == id) {
+        return Err(CommandError::LineNotFound(id));
+    }
+    if project
+        .installations
+        .iter()
+        .flat_map(|i| &i.topology.lines)
+        .filter(|line| line.id == id)
+        .take(2)
+        .count()
+        != 1
+    {
+        return Err(CommandError::LinePlacementAmbiguous(id));
+    }
+    Ok(())
+}
+
+fn require_unique_building_part(project: &Project, id: BuildingPartId) -> Result<(), CommandError> {
+    let first = project
+        .installations
+        .first()
+        .ok_or(CommandError::InstallationNotFound)?;
+    if !first.buildings.iter().any(|part| part.id == id) {
+        return Err(CommandError::BuildingPartNotFound(id));
+    }
+    if project
+        .installations
+        .iter()
+        .flat_map(|i| &i.buildings)
+        .filter(|part| part.id == id)
+        .take(2)
+        .count()
+        != 1
+    {
+        return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+    }
+    Ok(())
+}
+
+fn require_unique_group_range(project: &Project, id: GroupRangeId) -> Result<(), CommandError> {
+    let first = project
+        .installations
+        .first()
+        .ok_or(CommandError::InstallationNotFound)?;
+    if !first.group_ranges.iter().any(|range| range.id == id) {
+        return Err(CommandError::GroupRangeNotFound(id));
+    }
+    if project
+        .installations
+        .iter()
+        .flat_map(|i| &i.group_ranges)
+        .filter(|range| range.id == id)
+        .take(2)
+        .count()
+        != 1
+    {
+        return Err(CommandError::GroupRangePlacementAmbiguous(id));
+    }
+    Ok(())
+}
+
 /// A malformed topology may attach the same line to two areas. Never let
 /// `Topology::area_of` silently choose the first for an address write.
 fn unique_line_owner(topology: &Topology, line: LineId) -> Result<&Area, CommandError> {
@@ -630,6 +862,50 @@ fn unique_line_owner(topology: &Topology, line: LineId) -> Result<&Area, Command
         return Err(ValidationError::LineWithMultipleAreas { line }.into());
     }
     Ok(first)
+}
+
+/// Identify a line and its one owning area without choosing arbitrarily from
+/// duplicate imported references. Orphan lines have no area but can be moved
+/// into a valid one; their inverse must recover that original orphan state.
+fn line_placement(
+    topology: &Topology,
+    id: LineId,
+) -> Result<(usize, Option<(AreaId, usize)>), CommandError> {
+    let line_index = topology
+        .lines
+        .iter()
+        .position(|line| line.id == id)
+        .ok_or(CommandError::LineNotFound(id))?;
+    if topology.lines.iter().filter(|line| line.id == id).count() != 1 {
+        return Err(CommandError::LinePlacementAmbiguous(id));
+    }
+    let references: Vec<_> = topology
+        .areas
+        .iter()
+        .flat_map(|area| {
+            area.lines
+                .iter()
+                .enumerate()
+                .filter_map(move |(position, &line)| (line == id).then_some((area.id, position)))
+        })
+        .collect();
+    let previous = match references.as_slice() {
+        [] => None,
+        [(owner, position)] => Some((*owner, *position)),
+        _ => return Err(CommandError::LinePlacementAmbiguous(id)),
+    };
+    if let Some((owner, _)) = previous {
+        if topology
+            .areas
+            .iter()
+            .filter(|area| area.id == owner)
+            .count()
+            != 1
+        {
+            return Err(CommandError::LinePlacementAmbiguous(id));
+        }
+    }
+    Ok((line_index, previous))
 }
 
 /// Look across all installations before editing an individual address or
@@ -709,6 +985,104 @@ fn remove_device_from_topology(
     }
 }
 
+/// Reparent a line without touching its flat line row or any device address.
+/// Forward moves verify the target area/line address prefix; the undo-only
+/// restore may recover a pre-existing imported mismatch or duplicate.
+fn relocate_line(
+    installation: &mut Installation,
+    devices: &Devices,
+    id: LineId,
+    area: Option<AreaId>,
+    position: Option<usize>,
+    validate_new_area: bool,
+) -> Result<(Option<AreaId>, usize), CommandError> {
+    let topology = &mut installation.topology;
+    let (line_index, previous) = line_placement(topology, id)?;
+    let previous_area = previous.map(|(owner, _)| owner);
+    let previous_position = previous.map_or(0, |(_, index)| index);
+    let destination_index = if let Some(target) = area {
+        let index = topology
+            .areas
+            .iter()
+            .position(|candidate| candidate.id == target)
+            .ok_or(CommandError::AreaNotFound(target))?;
+        if topology
+            .areas
+            .iter()
+            .filter(|candidate| candidate.id == target)
+            .count()
+            != 1
+        {
+            return Err(CommandError::LinePlacementAmbiguous(id));
+        }
+        let mut seen = HashSet::new();
+        for &member in &topology.areas[index].lines {
+            if !seen.insert(member)
+                || topology
+                    .lines
+                    .iter()
+                    .filter(|line| line.id == member)
+                    .count()
+                    != 1
+            {
+                return Err(CommandError::LinePlacementAmbiguous(id));
+            }
+        }
+        Some(index)
+    } else {
+        None
+    };
+    if let (Some(index), Some(position)) = (destination_index, position) {
+        let max_position = topology.areas[index].lines.len() - usize::from(previous_area == area);
+        if position > max_position {
+            return Err(CommandError::InvalidLinePosition {
+                area: area.unwrap(),
+                position,
+            });
+        }
+    }
+    if previous_area == area && (position.is_none() || position == Some(previous_position)) {
+        return Ok((previous_area, previous_position));
+    }
+
+    if validate_new_area {
+        let index = destination_index.ok_or(CommandError::LinePlacementAmbiguous(id))?;
+        let destination = &topology.areas[index];
+        let line = &topology.lines[line_index];
+        check_no_duplicate_line_address(destination, &topology.lines, id, line.address)?;
+        for &device_id in &line.devices {
+            let device = devices
+                .get(device_id)
+                .ok_or(CommandError::DeviceNotFound(device_id))?;
+            if let Some(address) = device.address {
+                check_individual_address_on_line(
+                    device_id,
+                    address,
+                    destination.address,
+                    line.address,
+                    true, // unchanged imported .0 addresses are still reversible
+                )?;
+            }
+        }
+    }
+
+    if let Some((old_area, old_position)) = previous {
+        topology
+            .areas
+            .iter_mut()
+            .find(|area| area.id == old_area)
+            .unwrap()
+            .lines
+            .remove(old_position);
+    }
+    if let Some(index) = destination_index {
+        let destination = &mut topology.areas[index].lines;
+        let insertion = position.unwrap_or(destination.len());
+        destination.insert(insertion, id);
+    }
+    Ok((previous_area, previous_position))
+}
+
 /// Removes `device` from whichever building part currently lists it, if
 /// any, returning that part's id. Unlike `remove_device_from_topology`,
 /// absence is not an error: a device with no building placement at all
@@ -726,6 +1100,226 @@ fn remove_device_from_buildings(
         part.devices.remove(pos);
         Some(part.id)
     })
+}
+
+/// Reparent a building part only after checking both sides of the flat
+/// parent/children relation. Return its old parent and child-list position so
+/// the inverse can restore ordering, including after an atomic batch fails.
+/// Undo may restore an imported cycle: rejecting that inverse would turn a
+/// successful repair into an irreversible edit of the imported project.
+fn relocate_building_part(
+    installation: &mut Installation,
+    id: BuildingPartId,
+    parent: Option<BuildingPartId>,
+    position: Option<usize>,
+    validate_new_parent: bool,
+) -> Result<(Option<BuildingPartId>, usize), CommandError> {
+    let parts = &mut installation.buildings;
+    let part_index = parts
+        .iter()
+        .position(|part| part.id == id)
+        .ok_or(CommandError::BuildingPartNotFound(id))?;
+    if parts.iter().filter(|part| part.id == id).count() != 1 {
+        return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+    }
+    let references: Vec<_> = parts
+        .iter()
+        .flat_map(|part| {
+            part.children
+                .iter()
+                .enumerate()
+                .filter_map(move |(index, &child)| (child == id).then_some((part.id, index)))
+        })
+        .collect();
+    let (previous_parent, previous_position) =
+        match (parts[part_index].parent, references.as_slice()) {
+            (None, []) => (None, 0),
+            (Some(expected), [(actual, index)]) if expected == *actual => (Some(expected), *index),
+            _ => return Err(CommandError::BuildingPartPlacementAmbiguous(id)),
+        };
+    if let Some(previous) = previous_parent {
+        if parts.iter().filter(|part| part.id == previous).count() != 1 {
+            return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+        }
+    }
+    if let Some(target) = parent {
+        let count = parts.iter().filter(|part| part.id == target).count();
+        if count == 0 {
+            return Err(CommandError::BuildingPartNotFound(target));
+        }
+        if count > 1 {
+            return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+        }
+    }
+
+    if validate_new_parent {
+        // Bound the walk even for an imported hierarchy that already cycles.
+        let mut ancestor = parent;
+        for _ in 0..=parts.len() {
+            let Some(ancestor_id) = ancestor else { break };
+            if ancestor_id == id {
+                return Err(CommandError::BuildingPartCycle {
+                    id,
+                    parent: parent.unwrap(),
+                });
+            }
+            let mut matches = parts.iter().filter(|part| part.id == ancestor_id);
+            let candidate = matches
+                .next()
+                .ok_or(CommandError::BuildingPartNotFound(ancestor_id))?;
+            if matches.next().is_some() {
+                return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+            }
+            ancestor = candidate.parent;
+        }
+        if ancestor.is_some() {
+            return Err(CommandError::BuildingPartPlacementAmbiguous(id));
+        }
+    }
+    if let (Some(target), Some(position)) = (parent, position) {
+        let destination = parts.iter().find(|part| part.id == target).unwrap();
+        let max_position = destination.children.len() - usize::from(previous_parent == parent);
+        if position > max_position {
+            return Err(CommandError::InvalidBuildingPartPosition {
+                parent: target,
+                position,
+            });
+        }
+    }
+    if previous_parent == parent && (position.is_none() || position == Some(previous_position)) {
+        return Ok((previous_parent, previous_position));
+    }
+
+    if let Some(old_parent) = previous_parent {
+        parts
+            .iter_mut()
+            .find(|part| part.id == old_parent)
+            .unwrap()
+            .children
+            .remove(previous_position);
+    }
+    parts[part_index].parent = parent;
+    if let Some(target) = parent {
+        let destination = parts.iter_mut().find(|part| part.id == target).unwrap();
+        let position = position.unwrap_or(destination.children.len());
+        destination.children.insert(position, id);
+    }
+    Ok((previous_parent, previous_position))
+}
+
+/// Move a range's parent reference and both child lists together. Forward
+/// edits check address spans; inverse restores may recover an imported invalid
+/// placement so repairing a project does not make its undo lossy.
+fn relocate_group_range(
+    installation: &mut Installation,
+    id: GroupRangeId,
+    parent: Option<GroupRangeId>,
+    position: Option<usize>,
+    validate_new_parent: bool,
+) -> Result<(Option<GroupRangeId>, usize), CommandError> {
+    let ranges = &mut installation.group_ranges;
+    let range_index = ranges
+        .iter()
+        .position(|range| range.id == id)
+        .ok_or(CommandError::GroupRangeNotFound(id))?;
+    if ranges.iter().filter(|range| range.id == id).count() != 1 {
+        return Err(CommandError::GroupRangePlacementAmbiguous(id));
+    }
+    let references: Vec<_> = ranges
+        .iter()
+        .flat_map(|range| {
+            range
+                .children
+                .iter()
+                .enumerate()
+                .filter_map(move |(index, &child)| (child == id).then_some((range.id, index)))
+        })
+        .collect();
+    let (previous_parent, previous_position) =
+        match (ranges[range_index].parent, references.as_slice()) {
+            (None, []) => (None, 0),
+            (Some(expected), [(actual, index)]) if expected == *actual => (Some(expected), *index),
+            _ => return Err(CommandError::GroupRangePlacementAmbiguous(id)),
+        };
+    if let Some(previous) = previous_parent {
+        if ranges.iter().filter(|range| range.id == previous).count() != 1 {
+            return Err(CommandError::GroupRangePlacementAmbiguous(id));
+        }
+    }
+    if let Some(target) = parent {
+        let count = ranges.iter().filter(|range| range.id == target).count();
+        if count == 0 {
+            return Err(CommandError::GroupRangeNotFound(target));
+        }
+        if count > 1 {
+            return Err(CommandError::GroupRangePlacementAmbiguous(id));
+        }
+    }
+    if let (Some(target), Some(position)) = (parent, position) {
+        let destination = ranges.iter().find(|range| range.id == target).unwrap();
+        let max_position = destination.children.len() - usize::from(previous_parent == parent);
+        if position > max_position {
+            return Err(CommandError::InvalidGroupRangePosition {
+                parent: target,
+                position,
+            });
+        }
+    }
+    if previous_parent == parent && (position.is_none() || position == Some(previous_position)) {
+        return Ok((previous_parent, previous_position));
+    }
+
+    if validate_new_parent {
+        let mut ancestor = parent;
+        for _ in 0..=ranges.len() {
+            let Some(ancestor_id) = ancestor else { break };
+            if ancestor_id == id {
+                return Err(CommandError::GroupRangeCycle {
+                    id,
+                    parent: parent.unwrap(),
+                });
+            }
+            let mut matches = ranges.iter().filter(|range| range.id == ancestor_id);
+            let candidate = matches
+                .next()
+                .ok_or(CommandError::GroupRangeNotFound(ancestor_id))?;
+            if matches.next().is_some() {
+                return Err(CommandError::GroupRangePlacementAmbiguous(id));
+            }
+            ancestor = candidate.parent;
+        }
+        if ancestor.is_some() {
+            return Err(CommandError::GroupRangePlacementAmbiguous(id));
+        }
+        let range = &ranges[range_index];
+        check_group_range_is_well_ordered(id, range.start, range.end)?;
+        if let Some(target) = parent {
+            let destination = ranges.iter().find(|range| range.id == target).unwrap();
+            check_group_range_nests_in_parent(destination, id, range.start, range.end)?;
+        }
+        check_no_overlapping_group_range(
+            ranges.iter().filter(|sibling| sibling.parent == parent),
+            id,
+            range.start,
+            range.end,
+        )?;
+    }
+
+    if let Some(old_parent) = previous_parent {
+        ranges
+            .iter_mut()
+            .find(|range| range.id == old_parent)
+            .unwrap()
+            .children
+            .remove(previous_position);
+    }
+    ranges[range_index].parent = parent;
+    if let Some(target) = parent {
+        let destination = ranges.iter_mut().find(|range| range.id == target).unwrap();
+        let position = position.unwrap_or(destination.children.len());
+        destination.children.insert(position, id);
+    }
+    Ok((previous_parent, previous_position))
 }
 
 /// Finds `(device, ets_id)` in `installation.parameters` and overwrites its
@@ -1114,6 +1708,7 @@ impl Command {
             }
             Command::DeleteArea { id } => {
                 let id = *id;
+                require_unique_area(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1128,10 +1723,46 @@ impl Command {
                     return Err(CommandError::AreaNotEmpty(id));
                 }
                 let area = installation.topology.areas.remove(pos);
-                Ok(Command::CreateArea { area })
+                Ok(Command::RestoreArea {
+                    area,
+                    position: pos,
+                })
+            }
+            Command::RestoreArea { area, position } => {
+                check_id_free(project, IdKind::Area, area.id.0)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if *position > installation.topology.areas.len() {
+                    return Err(CommandError::InvalidStructurePosition {
+                        kind: IdKind::Area,
+                        id: area.id.0,
+                        position: *position,
+                    });
+                }
+                installation.topology.areas.insert(*position, area.clone());
+                Ok(Command::DeleteArea { id: area.id })
+            }
+            Command::RenameArea { id, name } => {
+                let id = *id;
+                require_unique_area(project, id)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let area = installation
+                    .topology
+                    .areas
+                    .iter_mut()
+                    .find(|area| area.id == id)
+                    .ok_or(CommandError::AreaNotFound(id))?;
+                let previous = std::mem::replace(&mut area.name, name.clone());
+                Ok(Command::RenameArea { id, name: previous })
             }
             Command::CreateLine { area, line } => {
                 check_id_free(project, IdKind::Line, line.id.0)?;
+                require_unique_area(project, *area)?;
                 let area_id = *area;
                 let installation = project
                     .installations
@@ -1163,36 +1794,144 @@ impl Command {
             }
             Command::DeleteLine { id } => {
                 let id = *id;
+                require_unique_line(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
                     .ok_or(CommandError::InstallationNotFound)?;
-                let area_id = installation
-                    .topology
-                    .area_of(id)
-                    .map(|a| a.id)
-                    .ok_or(CommandError::LineNotFound(id))?;
-                let pos = installation
-                    .topology
-                    .lines
-                    .iter()
-                    .position(|l| l.id == id)
-                    .ok_or(CommandError::LineNotFound(id))?;
+                let (pos, placement) = line_placement(&installation.topology, id)?;
+                let (area_id, area_position) = placement.ok_or(CommandError::LineNotFound(id))?;
                 if !installation.topology.lines[pos].devices.is_empty() {
                     return Err(CommandError::LineNotEmpty(id));
                 }
                 let line = installation.topology.lines.remove(pos);
-                installation
+                let area = installation
                     .topology
                     .areas
                     .iter_mut()
-                    .find(|a| a.id == area_id)
-                    .unwrap()
-                    .lines
-                    .retain(|&l| l != id);
-                Ok(Command::CreateLine {
+                    .find(|area| area.id == area_id && area.lines.get(area_position) == Some(&id))
+                    .expect("line_placement verified the owning area");
+                area.lines.remove(area_position);
+                Ok(Command::RestoreLine {
                     area: area_id,
                     line,
+                    line_position: pos,
+                    area_position,
+                })
+            }
+            Command::RestoreLine {
+                area,
+                line,
+                line_position,
+                area_position,
+            } => {
+                check_id_free(project, IdKind::Line, line.id.0)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if *line_position > installation.topology.lines.len() {
+                    return Err(CommandError::InvalidStructurePosition {
+                        kind: IdKind::Line,
+                        id: line.id.0,
+                        position: *line_position,
+                    });
+                }
+                let areas = &mut installation.topology.areas;
+                let mut owners = areas
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, candidate)| candidate.id == *area);
+                let index = owners
+                    .next()
+                    .map(|(index, _)| index)
+                    .ok_or(CommandError::AreaNotFound(*area))?;
+                if owners.next().is_some() {
+                    return Err(CommandError::AreaPlacementAmbiguous(*area));
+                }
+                if areas
+                    .iter()
+                    .any(|candidate| candidate.lines.contains(&line.id))
+                {
+                    return Err(CommandError::LinePlacementAmbiguous(line.id));
+                }
+                if *area_position > areas[index].lines.len() {
+                    return Err(CommandError::InvalidLinePosition {
+                        area: *area,
+                        position: *area_position,
+                    });
+                }
+                installation
+                    .topology
+                    .lines
+                    .insert(*line_position, line.clone());
+                installation.topology.areas[index]
+                    .lines
+                    .insert(*area_position, line.id);
+                Ok(Command::DeleteLine { id: line.id })
+            }
+            Command::RenameLine { id, name } => {
+                let id = *id;
+                require_unique_line(project, id)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let line = installation
+                    .topology
+                    .lines
+                    .iter_mut()
+                    .find(|line| line.id == id)
+                    .ok_or(CommandError::LineNotFound(id))?;
+                let previous = std::mem::replace(&mut line.name, name.clone());
+                Ok(Command::RenameLine { id, name: previous })
+            }
+            Command::MoveLineToArea { id, area } => {
+                require_unique_line(project, *id)?;
+                require_unique_area(project, *area)?;
+                let installation = project
+                    .installations
+                    .first()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (line_index, previous) = line_placement(&installation.topology, *id)?;
+                if previous.map(|(owner, _)| owner) != Some(*area) {
+                    for &device in &installation.topology.lines[line_index].devices {
+                        project
+                            .devices
+                            .get(device)
+                            .ok_or(CommandError::DeviceNotFound(device))?;
+                        // Refuse a second placement in another line or in
+                        // `unassigned` before changing the area relationship.
+                        assigned_line_prefix(project, device)?;
+                    }
+                }
+                let devices = &project.devices;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_area, position) =
+                    relocate_line(installation, devices, *id, Some(*area), None, true)?;
+                Ok(Command::RestoreLinePlacement {
+                    id: *id,
+                    area: old_area,
+                    position,
+                })
+            }
+            Command::RestoreLinePlacement { id, area, position } => {
+                require_unique_line(project, *id)?;
+                // Undo may restore an imported area id that also exists in another installation.
+                let devices = &project.devices;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_area, old_position) =
+                    relocate_line(installation, devices, *id, *area, Some(*position), false)?;
+                Ok(Command::RestoreLinePlacement {
+                    id: *id,
+                    area: old_area,
+                    position: old_position,
                 })
             }
             Command::MoveDeviceToLine { device, line } => {
@@ -1457,6 +2196,9 @@ impl Command {
             }
             Command::CreateBuildingPart { part } => {
                 check_id_free(project, IdKind::BuildingPart, part.id.0)?;
+                if let Some(parent) = part.parent {
+                    require_unique_building_part(project, parent)?;
+                }
                 let installation = project
                     .installations
                     .first_mut()
@@ -1481,6 +2223,7 @@ impl Command {
             }
             Command::DeleteBuildingPart { id } => {
                 let id = *id;
+                require_unique_building_part(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1492,23 +2235,94 @@ impl Command {
                     .ok_or(CommandError::BuildingPartNotFound(id))?;
                 if !installation.buildings[pos].children.is_empty()
                     || !installation.buildings[pos].devices.is_empty()
+                    || installation
+                        .buildings
+                        .iter()
+                        .any(|part| part.parent == Some(id))
                 {
                     return Err(CommandError::BuildingPartNotEmpty(id));
                 }
+                let parent = installation.buildings[pos].parent;
+                let (_, child_position) =
+                    relocate_building_part(installation, id, parent, None, false)?;
                 let part = installation.buildings.remove(pos);
-                if let Some(parent_id) = part.parent {
+                if let Some(parent_id) = parent {
                     installation
                         .buildings
                         .iter_mut()
-                        .find(|p| p.id == parent_id)
-                        .unwrap()
+                        .find(|candidate| candidate.id == parent_id)
+                        .expect("relocate_building_part verified the parent")
                         .children
-                        .retain(|&c| c != id);
+                        .remove(child_position);
                 }
-                Ok(Command::CreateBuildingPart { part })
+                Ok(Command::RestoreBuildingPart {
+                    part,
+                    position: pos,
+                    child_position: parent.map(|_| child_position),
+                })
+            }
+            Command::RestoreBuildingPart {
+                part,
+                position,
+                child_position,
+            } => {
+                check_id_free(project, IdKind::BuildingPart, part.id.0)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if *position > installation.buildings.len() {
+                    return Err(CommandError::InvalidStructurePosition {
+                        kind: IdKind::BuildingPart,
+                        id: part.id.0,
+                        position: *position,
+                    });
+                }
+                let parent_position = match (part.parent, child_position) {
+                    (None, None) => None,
+                    (Some(parent_id), Some(child_position)) => {
+                        let matches: Vec<_> = installation
+                            .buildings
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, candidate)| candidate.id == parent_id)
+                            .collect();
+                        if matches.len() != 1 {
+                            return Err(CommandError::BuildingPartPlacementAmbiguous(part.id));
+                        }
+                        let index = matches[0].0;
+                        if *child_position > installation.buildings[index].children.len() {
+                            return Err(CommandError::InvalidBuildingPartPosition {
+                                parent: parent_id,
+                                position: *child_position,
+                            });
+                        }
+                        Some((parent_id, *child_position))
+                    }
+                    _ => return Err(CommandError::BuildingPartPlacementAmbiguous(part.id)),
+                };
+                if installation
+                    .buildings
+                    .iter()
+                    .any(|candidate| candidate.children.contains(&part.id))
+                {
+                    return Err(CommandError::BuildingPartPlacementAmbiguous(part.id));
+                }
+                installation.buildings.insert(*position, part.clone());
+                if let Some((parent_id, child_position)) = parent_position {
+                    installation
+                        .buildings
+                        .iter_mut()
+                        .find(|candidate| candidate.id == parent_id)
+                        .expect("preflight verified the parent")
+                        .children
+                        .insert(child_position, part.id);
+                }
+                Ok(Command::DeleteBuildingPart { id: part.id })
             }
             Command::RenameBuildingPart { id, name } => {
                 let id = *id;
+                require_unique_building_part(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1520,6 +2334,42 @@ impl Command {
                     .ok_or(CommandError::BuildingPartNotFound(id))?;
                 let previous = std::mem::replace(&mut part.name, name.clone());
                 Ok(Command::RenameBuildingPart { id, name: previous })
+            }
+            Command::MoveBuildingPart { id, parent } => {
+                require_unique_building_part(project, *id)?;
+                if let Some(parent_id) = parent {
+                    require_unique_building_part(project, *parent_id)?;
+                }
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_parent, position) =
+                    relocate_building_part(installation, *id, *parent, None, true)?;
+                Ok(Command::RestoreBuildingPartPlacement {
+                    id: *id,
+                    parent: old_parent,
+                    position,
+                })
+            }
+            Command::RestoreBuildingPartPlacement {
+                id,
+                parent,
+                position,
+            } => {
+                require_unique_building_part(project, *id)?;
+                // Restoring an imported parent reference must not become a new edit.
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_parent, old_position) =
+                    relocate_building_part(installation, *id, *parent, Some(*position), false)?;
+                Ok(Command::RestoreBuildingPartPlacement {
+                    id: *id,
+                    parent: old_parent,
+                    position: old_position,
+                })
             }
             Command::MoveDeviceToBuildingPart { device, part } => {
                 let device = *device;
@@ -1553,6 +2403,9 @@ impl Command {
             }
             Command::CreateGroupRange { range } => {
                 check_id_free(project, IdKind::GroupRange, range.id.0)?;
+                if let Some(parent) = range.parent {
+                    require_unique_group_range(project, parent)?;
+                }
                 let installation = project
                     .installations
                     .first_mut()
@@ -1590,6 +2443,7 @@ impl Command {
             }
             Command::DeleteGroupRange { id } => {
                 let id = *id;
+                require_unique_group_range(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1599,7 +2453,12 @@ impl Command {
                     .iter()
                     .position(|r| r.id == id)
                     .ok_or(CommandError::GroupRangeNotFound(id))?;
-                if !installation.group_ranges[pos].children.is_empty() {
+                if !installation.group_ranges[pos].children.is_empty()
+                    || installation
+                        .group_ranges
+                        .iter()
+                        .any(|range| range.parent == Some(id))
+                {
                     return Err(CommandError::GroupRangeNotEmpty(id));
                 }
                 if installation
@@ -1609,20 +2468,87 @@ impl Command {
                 {
                     return Err(CommandError::GroupRangeInUse(id));
                 }
+                let parent = installation.group_ranges[pos].parent;
+                let (_, child_position) =
+                    relocate_group_range(installation, id, parent, None, false)?;
                 let range = installation.group_ranges.remove(pos);
-                if let Some(parent_id) = range.parent {
+                if let Some(parent_id) = parent {
                     installation
                         .group_ranges
                         .iter_mut()
-                        .find(|r| r.id == parent_id)
-                        .unwrap()
+                        .find(|candidate| candidate.id == parent_id)
+                        .expect("relocate_group_range verified the parent")
                         .children
-                        .retain(|&c| c != id);
+                        .remove(child_position);
                 }
-                Ok(Command::CreateGroupRange { range })
+                Ok(Command::RestoreGroupRange {
+                    range,
+                    position: pos,
+                    child_position: parent.map(|_| child_position),
+                })
+            }
+            Command::RestoreGroupRange {
+                range,
+                position,
+                child_position,
+            } => {
+                check_id_free(project, IdKind::GroupRange, range.id.0)?;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if *position > installation.group_ranges.len() {
+                    return Err(CommandError::InvalidStructurePosition {
+                        kind: IdKind::GroupRange,
+                        id: range.id.0,
+                        position: *position,
+                    });
+                }
+                let parent_position = match (range.parent, child_position) {
+                    (None, None) => None,
+                    (Some(parent_id), Some(child_position)) => {
+                        let matches: Vec<_> = installation
+                            .group_ranges
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, candidate)| candidate.id == parent_id)
+                            .collect();
+                        if matches.len() != 1 {
+                            return Err(CommandError::GroupRangePlacementAmbiguous(range.id));
+                        }
+                        let index = matches[0].0;
+                        if *child_position > installation.group_ranges[index].children.len() {
+                            return Err(CommandError::InvalidGroupRangePosition {
+                                parent: parent_id,
+                                position: *child_position,
+                            });
+                        }
+                        Some((parent_id, *child_position))
+                    }
+                    _ => return Err(CommandError::GroupRangePlacementAmbiguous(range.id)),
+                };
+                if installation
+                    .group_ranges
+                    .iter()
+                    .any(|candidate| candidate.children.contains(&range.id))
+                {
+                    return Err(CommandError::GroupRangePlacementAmbiguous(range.id));
+                }
+                installation.group_ranges.insert(*position, range.clone());
+                if let Some((parent_id, child_position)) = parent_position {
+                    installation
+                        .group_ranges
+                        .iter_mut()
+                        .find(|candidate| candidate.id == parent_id)
+                        .expect("preflight verified the parent")
+                        .children
+                        .insert(child_position, range.id);
+                }
+                Ok(Command::DeleteGroupRange { id: range.id })
             }
             Command::RenameGroupRange { id, name } => {
                 let id = *id;
+                require_unique_group_range(project, id)?;
                 let installation = project
                     .installations
                     .first_mut()
@@ -1634,6 +2560,42 @@ impl Command {
                     .ok_or(CommandError::GroupRangeNotFound(id))?;
                 let previous = std::mem::replace(&mut range.name, name.clone());
                 Ok(Command::RenameGroupRange { id, name: previous })
+            }
+            Command::MoveGroupRange { id, parent } => {
+                require_unique_group_range(project, *id)?;
+                if let Some(parent_id) = parent {
+                    require_unique_group_range(project, *parent_id)?;
+                }
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_parent, position) =
+                    relocate_group_range(installation, *id, *parent, None, true)?;
+                Ok(Command::RestoreGroupRangePlacement {
+                    id: *id,
+                    parent: old_parent,
+                    position,
+                })
+            }
+            Command::RestoreGroupRangePlacement {
+                id,
+                parent,
+                position,
+            } => {
+                require_unique_group_range(project, *id)?;
+                // Undo may recover an imported parent id shared with another installation.
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let (old_parent, old_position) =
+                    relocate_group_range(installation, *id, *parent, Some(*position), false)?;
+                Ok(Command::RestoreGroupRangePlacement {
+                    id: *id,
+                    parent: old_parent,
+                    position: old_position,
+                })
             }
             Command::UpdateGroupAddress {
                 id,
@@ -2993,6 +3955,378 @@ mod tests {
     }
 
     #[test]
+    fn deleting_the_middle_area_restores_its_position_on_undo_and_redo() {
+        let mut project = test_project_with_one_device(None);
+        let area = |id: u32| Area {
+            id: AreaId(id),
+            source: source(),
+            name: format!("Area {id}"),
+            address: id as u8,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        };
+        project.installations[0].topology.areas = vec![area(1), area(2), area(3)];
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(&mut project, Command::DeleteArea { id: AreaId(2) })
+            .unwrap();
+        assert_eq!(
+            project.installations[0]
+                .topology
+                .areas
+                .iter()
+                .map(|a| a.id)
+                .collect::<Vec<_>>(),
+            [AreaId(1), AreaId(3)],
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0]
+                .topology
+                .areas
+                .iter()
+                .map(|a| a.id)
+                .collect::<Vec<_>>(),
+            [AreaId(1), AreaId(2), AreaId(3)],
+        );
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0]
+                .topology
+                .areas
+                .iter()
+                .map(|a| a.id)
+                .collect::<Vec<_>>(),
+            [AreaId(1), AreaId(3)],
+        );
+    }
+
+    #[test]
+    fn structure_commands_refuse_ids_duplicated_across_installations_without_mutation() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 1, vec![]));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Building,
+            None,
+        ));
+        project.installations[0]
+            .group_ranges
+            .push(test_range(GroupRangeId(1), 0, 2047, None));
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(2);
+        project.installations.push(second);
+
+        let cases = vec![
+            (
+                Command::DeleteArea { id: AreaId(1) },
+                CommandError::AreaPlacementAmbiguous(AreaId(1)),
+            ),
+            (
+                Command::RenameArea {
+                    id: AreaId(1),
+                    name: "Other".into(),
+                },
+                CommandError::AreaPlacementAmbiguous(AreaId(1)),
+            ),
+            (
+                Command::CreateLine {
+                    area: AreaId(1),
+                    line: test_line(LineId(2), 2, vec![]),
+                },
+                CommandError::AreaPlacementAmbiguous(AreaId(1)),
+            ),
+            (
+                Command::DeleteLine { id: LineId(1) },
+                CommandError::LinePlacementAmbiguous(LineId(1)),
+            ),
+            (
+                Command::RenameLine {
+                    id: LineId(1),
+                    name: "Other".into(),
+                },
+                CommandError::LinePlacementAmbiguous(LineId(1)),
+            ),
+            (
+                Command::MoveLineToArea {
+                    id: LineId(1),
+                    area: AreaId(1),
+                },
+                CommandError::LinePlacementAmbiguous(LineId(1)),
+            ),
+            (
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(1),
+                },
+                CommandError::BuildingPartPlacementAmbiguous(BuildingPartId(1)),
+            ),
+            (
+                Command::RenameBuildingPart {
+                    id: BuildingPartId(1),
+                    name: "Other".into(),
+                },
+                CommandError::BuildingPartPlacementAmbiguous(BuildingPartId(1)),
+            ),
+            (
+                Command::MoveBuildingPart {
+                    id: BuildingPartId(1),
+                    parent: None,
+                },
+                CommandError::BuildingPartPlacementAmbiguous(BuildingPartId(1)),
+            ),
+            (
+                Command::CreateBuildingPart {
+                    part: test_building_part(
+                        BuildingPartId(2),
+                        BuildingPartType::Room,
+                        Some(BuildingPartId(1)),
+                    ),
+                },
+                CommandError::BuildingPartPlacementAmbiguous(BuildingPartId(1)),
+            ),
+            (
+                Command::DeleteGroupRange {
+                    id: GroupRangeId(1),
+                },
+                CommandError::GroupRangePlacementAmbiguous(GroupRangeId(1)),
+            ),
+            (
+                Command::RenameGroupRange {
+                    id: GroupRangeId(1),
+                    name: "Other".into(),
+                },
+                CommandError::GroupRangePlacementAmbiguous(GroupRangeId(1)),
+            ),
+            (
+                Command::MoveGroupRange {
+                    id: GroupRangeId(1),
+                    parent: None,
+                },
+                CommandError::GroupRangePlacementAmbiguous(GroupRangeId(1)),
+            ),
+            (
+                Command::CreateGroupRange {
+                    range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+                },
+                CommandError::GroupRangePlacementAmbiguous(GroupRangeId(1)),
+            ),
+        ];
+        for (command, error) in cases {
+            let mut candidate = project.clone();
+            let before = format!("{candidate:#?}");
+            let label = format!("{command:?}");
+            let mut stack = CommandStack::new();
+            assert_eq!(
+                stack.do_command(&mut candidate, command),
+                Err(error),
+                "{label}"
+            );
+            assert_eq!(format!("{candidate:#?}"), before, "{label}");
+            assert!(!stack.can_undo(), "{label}");
+        }
+    }
+
+    #[test]
+    fn failed_batch_restores_deleted_structure_and_all_original_orders() {
+        let mut project = test_project_with_one_device(None);
+        let area = |id: u32, lines: Vec<LineId>| Area {
+            id: AreaId(id),
+            source: source(),
+            name: format!("A{id}"),
+            address: id as u8,
+            completion: CompletionStatus::FinishedDesign,
+            lines,
+        };
+        project.installations[0].topology.areas = vec![
+            area(1, vec![]),
+            area(2, vec![LineId(1), LineId(2), LineId(3)]),
+            area(3, vec![]),
+        ];
+        project.installations[0].topology.lines = (1..=3)
+            .map(|id| test_line(LineId(id), id as u8, vec![]))
+            .collect();
+        let mut parent = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
+        parent.children = vec![BuildingPartId(2), BuildingPartId(3), BuildingPartId(4)];
+        project.installations[0].buildings = vec![parent];
+        for id in 2..=4 {
+            project.installations[0].buildings.push(test_building_part(
+                BuildingPartId(id),
+                BuildingPartType::Room,
+                Some(BuildingPartId(1)),
+            ));
+        }
+        let mut parent = test_range(GroupRangeId(1), 0, 2047, None);
+        parent.children = vec![GroupRangeId(2), GroupRangeId(3), GroupRangeId(4)];
+        project.installations[0].group_ranges = vec![
+            parent,
+            test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(3), 100, 199, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(4), 200, 299, Some(GroupRangeId(1))),
+        ];
+        let original = format!("{project:#?}");
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::Batch(vec![
+                Command::DeleteLine { id: LineId(2) },
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(3),
+                },
+                Command::DeleteGroupRange {
+                    id: GroupRangeId(3),
+                },
+                Command::DeleteArea { id: AreaId(1) },
+                Command::DeleteLine { id: LineId(99) },
+            ]),
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BatchItem {
+                index: 4,
+                source: Box::new(CommandError::LineNotFound(LineId(99))),
+            })
+        );
+        assert_eq!(format!("{project:#?}"), original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn invalid_deleted_structure_restore_positions_leave_every_list_untouched() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        });
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Building,
+            None,
+        ));
+        project.installations[0]
+            .group_ranges
+            .push(test_range(GroupRangeId(1), 0, 2047, None));
+        let area = Area {
+            id: AreaId(2),
+            source: source(),
+            name: "B".into(),
+            address: 2,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        };
+        let cases = vec![
+            (
+                Command::RestoreArea { area, position: 3 },
+                CommandError::InvalidStructurePosition {
+                    kind: IdKind::Area,
+                    id: 2,
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreLine {
+                    area: AreaId(1),
+                    line: test_line(LineId(2), 2, vec![]),
+                    line_position: 3,
+                    area_position: 0,
+                },
+                CommandError::InvalidStructurePosition {
+                    kind: IdKind::Line,
+                    id: 2,
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreLine {
+                    area: AreaId(1),
+                    line: test_line(LineId(2), 2, vec![]),
+                    line_position: 0,
+                    area_position: 3,
+                },
+                CommandError::InvalidLinePosition {
+                    area: AreaId(1),
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreBuildingPart {
+                    part: test_building_part(
+                        BuildingPartId(2),
+                        BuildingPartType::Room,
+                        Some(BuildingPartId(1)),
+                    ),
+                    position: 3,
+                    child_position: Some(0),
+                },
+                CommandError::InvalidStructurePosition {
+                    kind: IdKind::BuildingPart,
+                    id: 2,
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreBuildingPart {
+                    part: test_building_part(
+                        BuildingPartId(2),
+                        BuildingPartType::Room,
+                        Some(BuildingPartId(1)),
+                    ),
+                    position: 1,
+                    child_position: Some(3),
+                },
+                CommandError::InvalidBuildingPartPosition {
+                    parent: BuildingPartId(1),
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreGroupRange {
+                    range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+                    position: 3,
+                    child_position: Some(0),
+                },
+                CommandError::InvalidStructurePosition {
+                    kind: IdKind::GroupRange,
+                    id: 2,
+                    position: 3,
+                },
+            ),
+            (
+                Command::RestoreGroupRange {
+                    range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+                    position: 1,
+                    child_position: Some(3),
+                },
+                CommandError::InvalidGroupRangePosition {
+                    parent: GroupRangeId(1),
+                    position: 3,
+                },
+            ),
+        ];
+        let original = format!("{project:#?}");
+        let mut stack = CommandStack::new();
+        for (command, error) in cases {
+            assert_eq!(stack.do_command(&mut project, command), Err(error));
+            assert_eq!(format!("{project:#?}"), original);
+            assert!(!stack.can_undo());
+        }
+    }
+
+    #[test]
     fn create_area_rejects_a_duplicate_address_and_leaves_the_stack_untouched() {
         let mut project = test_project_with_one_device(None);
         project.installations[0].topology.areas.push(Area {
@@ -3051,6 +4385,47 @@ mod tests {
         assert_eq!(result, Err(CommandError::AreaNotFound(AreaId(99))));
     }
 
+    #[test]
+    fn rename_area_changes_only_its_name_and_round_trips_through_undo_redo() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "Existing area".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        });
+        let original = project.installations[0].topology.clone();
+        let mut expected = original.clone();
+        expected.areas[0].name = "North wing".into();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::RenameArea {
+                    id: AreaId(1),
+                    name: "North wing".into(),
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].topology, expected);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, expected);
+
+        let result = stack.do_command(
+            &mut project,
+            Command::RenameArea {
+                id: AreaId(99),
+                name: "Not an area".into(),
+            },
+        );
+        assert_eq!(result, Err(CommandError::AreaNotFound(AreaId(99))));
+        assert_eq!(project.installations[0].topology, expected);
+    }
+
     fn test_line(id: LineId, address: u8, devices: Vec<DeviceId>) -> Line {
         Line {
             id,
@@ -3065,6 +4440,271 @@ mod tests {
             completion: CompletionStatus::FinishedDesign,
             devices,
         }
+    }
+
+    fn project_with_movable_lines() -> Project {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology = Topology {
+            areas: vec![
+                Area {
+                    id: AreaId(1),
+                    source: source(),
+                    name: "Source".into(),
+                    address: 1,
+                    completion: CompletionStatus::FinishedDesign,
+                    lines: vec![LineId(10), LineId(11), LineId(12)],
+                },
+                Area {
+                    id: AreaId(2),
+                    source: source(),
+                    name: "Target".into(),
+                    address: 2,
+                    completion: CompletionStatus::FinishedDesign,
+                    lines: vec![LineId(13)],
+                },
+            ],
+            lines: vec![
+                test_line(LineId(10), 1, vec![]),
+                test_line(LineId(11), 2, vec![]),
+                test_line(LineId(12), 3, vec![]),
+                test_line(LineId(13), 4, vec![]),
+            ],
+            unassigned: vec![],
+        };
+        project
+    }
+
+    #[test]
+    fn move_line_to_area_preserves_sibling_order_through_undo_and_redo() {
+        let mut project = project_with_movable_lines();
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(2),
+                },
+            )
+            .unwrap();
+        let moved = project.installations[0].topology.clone();
+        assert_eq!(moved.areas[0].lines, vec![LineId(10), LineId(12)]);
+        assert_eq!(moved.areas[1].lines, vec![LineId(13), LineId(11)]);
+        assert_eq!(moved.lines, original.lines);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, moved);
+    }
+
+    #[test]
+    fn move_line_to_area_rejects_duplicate_address_and_unknown_area_without_mutation() {
+        let mut project = project_with_movable_lines();
+        project.installations[0].topology.lines[3].address = 2;
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(2),
+                }
+            ),
+            Err(CommandError::Validation(
+                ValidationError::DuplicateLineAddress {
+                    address: 2,
+                    existing: LineId(13),
+                    new: LineId(11),
+                }
+            ))
+        );
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(99),
+                }
+            ),
+            Err(CommandError::AreaNotFound(AreaId(99)))
+        );
+        assert_eq!(project.installations[0].topology, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn move_line_to_area_refuses_a_device_address_outside_target_prefix() {
+        let mut project = project_with_movable_lines();
+        let stored = IndividualAddress::new(1, 2, 9).unwrap();
+        project.devices.get_mut(DeviceId(1)).unwrap().address = Some(stored);
+        project.installations[0].topology.lines[1]
+            .devices
+            .push(DeviceId(1));
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        assert!(
+            matches!(stack.do_command(&mut project, Command::MoveLineToArea {
+            id: LineId(11), area: AreaId(2),
+        }), Err(CommandError::Validation(ValidationError::AddressOutsideAssignedLine {
+            device: DeviceId(1), address, area: 2, line: 2,
+        })) if address == stored)
+        );
+        assert_eq!(project.installations[0].topology, original);
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(stored)
+        );
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn move_line_to_area_repairs_imported_address_prefix_and_undo_restores_it() {
+        for device_number in [0, 9] {
+            let mut project = project_with_movable_lines();
+            let stored = IndividualAddress::new(2, 2, device_number).unwrap();
+            project.devices.get_mut(DeviceId(1)).unwrap().address = Some(stored);
+            project.installations[0].topology.lines[1]
+                .devices
+                .push(DeviceId(1));
+            let original = project.installations[0].topology.clone();
+            let mut stack = CommandStack::new();
+            stack
+                .do_command(
+                    &mut project,
+                    Command::MoveLineToArea {
+                        id: LineId(11),
+                        area: AreaId(2),
+                    },
+                )
+                .unwrap();
+            let moved = project.installations[0].topology.clone();
+            assert_eq!(
+                project.devices.get(DeviceId(1)).unwrap().address,
+                Some(stored)
+            );
+            stack.undo(&mut project).unwrap();
+            assert_eq!(project.installations[0].topology, original);
+            assert_eq!(
+                project.devices.get(DeviceId(1)).unwrap().address,
+                Some(stored)
+            );
+            stack.redo(&mut project).unwrap();
+            assert_eq!(project.installations[0].topology, moved);
+        }
+    }
+
+    #[test]
+    fn move_line_to_area_refuses_ambiguous_source_membership_before_mutation() {
+        let mut project = project_with_movable_lines();
+        project.installations[0].topology.areas[1]
+            .lines
+            .push(LineId(11));
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(2),
+                }
+            ),
+            Err(CommandError::LinePlacementAmbiguous(LineId(11)))
+        );
+        assert_eq!(project.installations[0].topology, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn failed_line_move_batch_and_invalid_restore_leave_original_order_intact() {
+        let mut project = project_with_movable_lines();
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::RestoreLinePlacement {
+                    id: LineId(11),
+                    area: Some(AreaId(2)),
+                    position: 2,
+                }
+            ),
+            Err(CommandError::InvalidLinePosition {
+                area: AreaId(2),
+                position: 2
+            })
+        );
+        assert_eq!(project.installations[0].topology, original);
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::Batch(vec![
+                    Command::MoveLineToArea {
+                        id: LineId(11),
+                        area: AreaId(2)
+                    },
+                    Command::MoveLineToArea {
+                        id: LineId(12),
+                        area: AreaId(99)
+                    },
+                ])
+            ),
+            Err(CommandError::BatchItem {
+                index: 1,
+                source: Box::new(CommandError::AreaNotFound(AreaId(99))),
+            })
+        );
+        assert_eq!(project.installations[0].topology, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn line_move_can_repair_orphan_membership_and_undo_it_without_loss() {
+        let mut project = project_with_movable_lines();
+        project.installations[0].topology.areas[0].lines.remove(1);
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(2),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.installations[0].topology.areas[1].lines,
+            vec![LineId(13), LineId(11)]
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
+    }
+
+    #[test]
+    fn line_move_undo_restores_an_imported_area_id_repeated_in_another_installation() {
+        let mut project = project_with_movable_lines();
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(2);
+        second.topology.areas.retain(|area| area.id == AreaId(1));
+        second.topology.areas[0].lines.clear();
+        second.topology.lines.clear();
+        project.installations.push(second);
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveLineToArea {
+                    id: LineId(11),
+                    area: AreaId(2),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
     }
 
     #[test]
@@ -3103,6 +4743,34 @@ mod tests {
         assert_eq!(project.installations[0].topology.lines.len(), 1);
         stack.undo(&mut project).unwrap();
         assert!(project.installations[0].topology.lines.is_empty());
+    }
+
+    #[test]
+    fn deleting_the_middle_line_restores_both_line_and_area_sibling_order() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1), LineId(2), LineId(3)],
+        });
+        project.installations[0].topology.lines = (1..=3)
+            .map(|id| test_line(LineId(id), id as u8, vec![]))
+            .collect();
+        let original = project.installations[0].topology.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(&mut project, Command::DeleteLine { id: LineId(2) })
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0].topology.areas[0].lines,
+            [LineId(1), LineId(3)]
+        );
     }
 
     #[test]
@@ -3177,6 +4845,51 @@ mod tests {
         let mut stack = CommandStack::new();
         let result = stack.do_command(&mut project, Command::DeleteLine { id: LineId(99) });
         assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
+    }
+
+    #[test]
+    fn rename_line_changes_only_its_name_and_round_trips_through_undo_redo() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "Existing area".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 2, vec![]));
+        let original = project.installations[0].topology.clone();
+        let mut expected = original.clone();
+        expected.lines[0].name = "Main line".into();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::RenameLine {
+                    id: LineId(1),
+                    name: "Main line".into(),
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].topology, expected);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology, expected);
+
+        let result = stack.do_command(
+            &mut project,
+            Command::RenameLine {
+                id: LineId(99),
+                name: "Not a line".into(),
+            },
+        );
+        assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
+        assert_eq!(project.installations[0].topology, expected);
     }
 
     fn project_with_line_and_unassigned_device() -> Project {
@@ -3697,6 +5410,87 @@ mod tests {
     }
 
     #[test]
+    fn deleting_nested_group_range_restores_flat_and_parent_child_order() {
+        let mut project = test_project_with_one_device(None);
+        let mut parent = test_range(GroupRangeId(1), 0, 2047, None);
+        parent.children = vec![GroupRangeId(2), GroupRangeId(3), GroupRangeId(4)];
+        project.installations[0].group_ranges = vec![
+            parent,
+            test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(3), 100, 199, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(4), 200, 299, Some(GroupRangeId(1))),
+        ];
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::DeleteGroupRange {
+                    id: GroupRangeId(3),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0].group_ranges[0].children,
+            [GroupRangeId(2), GroupRangeId(4)]
+        );
+    }
+
+    #[test]
+    fn deleting_group_range_with_missing_parent_refuses_without_panic_or_mutation() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].group_ranges.push(test_range(
+            GroupRangeId(2),
+            0,
+            99,
+            Some(GroupRangeId(999)),
+        ));
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::DeleteGroupRange {
+                    id: GroupRangeId(2)
+                }
+            ),
+            Err(CommandError::GroupRangePlacementAmbiguous(GroupRangeId(2))),
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn deleting_group_range_with_an_unlisted_child_refuses_without_mutation() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_ranges
+            .push(test_range(GroupRangeId(1), 0, 2047, None));
+        project.installations[0].group_ranges.push(test_range(
+            GroupRangeId(2),
+            0,
+            99,
+            Some(GroupRangeId(1)),
+        ));
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::DeleteGroupRange {
+                    id: GroupRangeId(1)
+                }
+            ),
+            Err(CommandError::GroupRangeNotEmpty(GroupRangeId(1))),
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
     fn create_nested_group_range_registers_with_its_parent_and_undo_deregisters_it() {
         let mut project = test_project_with_one_device(None);
         project.installations[0]
@@ -3879,6 +5673,231 @@ mod tests {
             result,
             Err(CommandError::GroupRangeNotFound(GroupRangeId(99)))
         );
+    }
+
+    // A misplaced imported range whose span actually belongs under range 5.
+    // The editor may repair it, but undo must preserve the original bytes.
+    fn project_with_misplaced_group_range() -> Project {
+        let mut project = test_project_with_one_device(None);
+        let mut root = test_range(GroupRangeId(1), 0, 2047, None);
+        root.children = vec![GroupRangeId(2), GroupRangeId(3), GroupRangeId(4)];
+        project.installations[0].group_ranges = vec![
+            root,
+            test_range(GroupRangeId(2), 0, 255, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(3), 2560, 2815, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(4), 512, 767, Some(GroupRangeId(1))),
+            test_range(GroupRangeId(5), 2048, 4095, None),
+        ];
+        project
+    }
+
+    #[test]
+    fn move_group_range_repairs_a_misplaced_import_without_losing_undo_order() {
+        let mut project = project_with_misplaced_group_range();
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveGroupRange {
+                    id: GroupRangeId(3),
+                    parent: Some(GroupRangeId(5)),
+                },
+            )
+            .unwrap();
+        let moved = project.installations[0].group_ranges.clone();
+        assert_eq!(moved[0].children, vec![GroupRangeId(2), GroupRangeId(4)]);
+        assert_eq!(moved[4].children, vec![GroupRangeId(3)]);
+        assert_eq!(moved[2].parent, Some(GroupRangeId(5)));
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, moved);
+    }
+
+    #[test]
+    fn group_range_move_undo_restores_an_imported_parent_id_repeated_later() {
+        let mut project = project_with_misplaced_group_range();
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(2);
+        second
+            .group_ranges
+            .retain(|range| range.id == GroupRangeId(1));
+        second.group_ranges[0].children.clear();
+        project.installations.push(second);
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveGroupRange {
+                    id: GroupRangeId(3),
+                    parent: Some(GroupRangeId(5)),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, original);
+    }
+
+    #[test]
+    fn move_group_range_rejects_unknown_parent_cycle_and_overlapping_or_outside_spans() {
+        let mut project = project_with_misplaced_group_range();
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        for (id, parent, expected) in [
+            (
+                GroupRangeId(3),
+                Some(GroupRangeId(99)),
+                CommandError::GroupRangeNotFound(GroupRangeId(99)),
+            ),
+            (
+                GroupRangeId(1),
+                Some(GroupRangeId(2)),
+                CommandError::GroupRangeCycle {
+                    id: GroupRangeId(1),
+                    parent: GroupRangeId(2),
+                },
+            ),
+            (
+                GroupRangeId(3),
+                Some(GroupRangeId(2)),
+                CommandError::Validation(ValidationError::GroupRangeOutsideParent {
+                    range: GroupRangeId(3),
+                    parent: GroupRangeId(2),
+                }),
+            ),
+            (
+                GroupRangeId(3),
+                None,
+                CommandError::Validation(ValidationError::OverlappingGroupRange {
+                    range: GroupRangeId(3),
+                    existing: GroupRangeId(5),
+                }),
+            ),
+        ] {
+            assert_eq!(
+                stack.do_command(&mut project, Command::MoveGroupRange { id, parent }),
+                Err(expected)
+            );
+            assert_eq!(project.installations[0].group_ranges, original);
+            assert!(!stack.can_undo());
+        }
+        let mut destination = test_range(GroupRangeId(6), 2500, 3000, Some(GroupRangeId(5)));
+        destination.name = "Overlapping child".into();
+        project.installations[0].group_ranges[4]
+            .children
+            .push(GroupRangeId(6));
+        project.installations[0].group_ranges.push(destination);
+        let original = project.installations[0].group_ranges.clone();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveGroupRange {
+                    id: GroupRangeId(3),
+                    parent: Some(GroupRangeId(5)),
+                }
+            ),
+            Err(CommandError::Validation(
+                ValidationError::OverlappingGroupRange {
+                    range: GroupRangeId(3),
+                    existing: GroupRangeId(6),
+                }
+            ))
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+    }
+
+    #[test]
+    fn failed_group_range_batch_and_direct_restore_keep_original_children() {
+        let mut project = project_with_misplaced_group_range();
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::RestoreGroupRangePlacement {
+                    id: GroupRangeId(3),
+                    parent: Some(GroupRangeId(5)),
+                    position: 1,
+                }
+            ),
+            Err(CommandError::InvalidGroupRangePosition {
+                parent: GroupRangeId(5),
+                position: 1,
+            })
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::Batch(vec![
+                    Command::MoveGroupRange {
+                        id: GroupRangeId(3),
+                        parent: Some(GroupRangeId(5))
+                    },
+                    Command::MoveGroupRange {
+                        id: GroupRangeId(1),
+                        parent: Some(GroupRangeId(2))
+                    },
+                ])
+            ),
+            Err(CommandError::BatchItem {
+                index: 1,
+                source: Box::new(CommandError::GroupRangeCycle {
+                    id: GroupRangeId(1),
+                    parent: GroupRangeId(2),
+                }),
+            })
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn move_group_range_refuses_ambiguous_imported_parent_without_mutation() {
+        let mut project = project_with_misplaced_group_range();
+        project.installations[0].group_ranges[4]
+            .children
+            .push(GroupRangeId(3));
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveGroupRange {
+                    id: GroupRangeId(3),
+                    parent: Some(GroupRangeId(5)),
+                }
+            ),
+            Err(CommandError::GroupRangePlacementAmbiguous(GroupRangeId(3)))
+        );
+        assert_eq!(project.installations[0].group_ranges, original);
+    }
+
+    #[test]
+    fn moving_out_of_an_imported_group_range_cycle_can_be_undone() {
+        let mut project = project_with_misplaced_group_range();
+        project.installations[0].group_ranges[0].parent = Some(GroupRangeId(2));
+        project.installations[0].group_ranges[1]
+            .children
+            .push(GroupRangeId(1));
+        let original = project.installations[0].group_ranges.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveGroupRange {
+                    id: GroupRangeId(1),
+                    parent: None,
+                },
+            )
+            .unwrap();
+        let repaired = project.installations[0].group_ranges.clone();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_ranges, repaired);
     }
 
     #[test]
@@ -4577,6 +6596,91 @@ mod tests {
     }
 
     #[test]
+    fn deleting_nested_building_part_restores_flat_and_parent_child_order() {
+        let mut project = test_project_with_one_device(None);
+        let mut parent = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
+        parent.children = vec![BuildingPartId(2), BuildingPartId(3), BuildingPartId(4)];
+        project.installations[0].buildings.push(parent);
+        for id in 2..=4 {
+            project.installations[0].buildings.push(test_building_part(
+                BuildingPartId(id),
+                BuildingPartType::Room,
+                Some(BuildingPartId(1)),
+            ));
+        }
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(3),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0].buildings[0].children,
+            [BuildingPartId(2), BuildingPartId(4)]
+        );
+    }
+
+    #[test]
+    fn deleting_building_part_with_missing_parent_refuses_without_panic_or_mutation() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(2),
+            BuildingPartType::Room,
+            Some(BuildingPartId(999)),
+        ));
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(2)
+                }
+            ),
+            Err(CommandError::BuildingPartPlacementAmbiguous(
+                BuildingPartId(2)
+            )),
+        );
+        assert_eq!(project.installations[0].buildings, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn deleting_building_part_with_an_unlisted_child_refuses_without_mutation() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Building,
+            None,
+        ));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(2),
+            BuildingPartType::Room,
+            Some(BuildingPartId(1)),
+        ));
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(1)
+                }
+            ),
+            Err(CommandError::BuildingPartNotEmpty(BuildingPartId(1))),
+        );
+        assert_eq!(project.installations[0].buildings, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
     fn creating_a_nested_building_part_links_it_into_its_parents_children() {
         let mut project = test_project_with_one_device(None);
         project.installations[0].buildings.push(test_building_part(
@@ -4724,6 +6828,248 @@ mod tests {
             result,
             Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
         );
+    }
+
+    fn project_with_reparentable_buildings() -> Project {
+        let mut project = test_project_with_one_device(None);
+        let mut source = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
+        source.children = vec![BuildingPartId(2), BuildingPartId(3), BuildingPartId(4)];
+        project.installations[0].buildings = vec![
+            source,
+            test_building_part(
+                BuildingPartId(2),
+                BuildingPartType::Floor,
+                Some(BuildingPartId(1)),
+            ),
+            test_building_part(
+                BuildingPartId(3),
+                BuildingPartType::Room,
+                Some(BuildingPartId(1)),
+            ),
+            test_building_part(
+                BuildingPartId(4),
+                BuildingPartType::Room,
+                Some(BuildingPartId(1)),
+            ),
+            test_building_part(BuildingPartId(5), BuildingPartType::Building, None),
+        ];
+        project
+    }
+
+    #[test]
+    fn move_building_part_preserves_sibling_order_through_undo_and_redo() {
+        let mut project = project_with_reparentable_buildings();
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveBuildingPart {
+                    id: BuildingPartId(3),
+                    parent: Some(BuildingPartId(5)),
+                },
+            )
+            .unwrap();
+        let moved = project.installations[0].buildings.clone();
+        assert_eq!(
+            moved[0].children,
+            vec![BuildingPartId(2), BuildingPartId(4)]
+        );
+        assert_eq!(moved[4].children, vec![BuildingPartId(3)]);
+        assert_eq!(moved[2].parent, Some(BuildingPartId(5)));
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, moved);
+    }
+
+    #[test]
+    fn building_move_undo_restores_an_imported_parent_id_repeated_later() {
+        let mut project = project_with_reparentable_buildings();
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(2);
+        second.buildings.retain(|part| part.id == BuildingPartId(1));
+        second.buildings[0].children.clear();
+        project.installations.push(second);
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveBuildingPart {
+                    id: BuildingPartId(3),
+                    parent: Some(BuildingPartId(5)),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, original);
+    }
+
+    #[test]
+    fn move_building_part_refuses_missing_parent_self_and_descendant_without_mutation() {
+        let mut project = project_with_reparentable_buildings();
+        project.installations[0].buildings[2]
+            .children
+            .push(BuildingPartId(6));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(6),
+            BuildingPartType::Room,
+            Some(BuildingPartId(3)),
+        ));
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        for (parent, expected) in [
+            (
+                BuildingPartId(99),
+                CommandError::BuildingPartNotFound(BuildingPartId(99)),
+            ),
+            (
+                BuildingPartId(3),
+                CommandError::BuildingPartCycle {
+                    id: BuildingPartId(3),
+                    parent: BuildingPartId(3),
+                },
+            ),
+            (
+                BuildingPartId(6),
+                CommandError::BuildingPartCycle {
+                    id: BuildingPartId(1),
+                    parent: BuildingPartId(6),
+                },
+            ),
+        ] {
+            let id = if parent == BuildingPartId(6) {
+                BuildingPartId(1)
+            } else {
+                BuildingPartId(3)
+            };
+            assert_eq!(
+                stack.do_command(
+                    &mut project,
+                    Command::MoveBuildingPart {
+                        id,
+                        parent: Some(parent),
+                    }
+                ),
+                Err(expected)
+            );
+            assert_eq!(project.installations[0].buildings, original);
+            assert!(!stack.can_undo());
+        }
+    }
+
+    #[test]
+    fn move_building_part_refuses_ambiguous_imported_parent_without_mutation() {
+        let mut project = project_with_reparentable_buildings();
+        project.installations[0].buildings[4]
+            .children
+            .push(BuildingPartId(3));
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::MoveBuildingPart {
+                    id: BuildingPartId(3),
+                    parent: Some(BuildingPartId(5)),
+                }
+            ),
+            Err(CommandError::BuildingPartPlacementAmbiguous(
+                BuildingPartId(3)
+            ))
+        );
+        assert_eq!(project.installations[0].buildings, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn failed_building_part_batch_restores_original_sibling_order() {
+        let mut project = project_with_reparentable_buildings();
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::Batch(vec![
+                    Command::MoveBuildingPart {
+                        id: BuildingPartId(3),
+                        parent: Some(BuildingPartId(5))
+                    },
+                    Command::MoveBuildingPart {
+                        id: BuildingPartId(1),
+                        parent: Some(BuildingPartId(4))
+                    },
+                ])
+            ),
+            Err(CommandError::BatchItem {
+                index: 1,
+                source: Box::new(CommandError::BuildingPartCycle {
+                    id: BuildingPartId(1),
+                    parent: BuildingPartId(4),
+                }),
+            })
+        );
+        assert_eq!(project.installations[0].buildings, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn building_part_restore_rejects_out_of_bounds_position_before_mutation() {
+        let mut project = project_with_reparentable_buildings();
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::RestoreBuildingPartPlacement {
+                    id: BuildingPartId(3),
+                    parent: Some(BuildingPartId(5)),
+                    position: 2,
+                }
+            ),
+            Err(CommandError::InvalidBuildingPartPosition {
+                parent: BuildingPartId(5),
+                position: 2,
+            })
+        );
+        assert_eq!(project.installations[0].buildings, original);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn moving_out_of_an_imported_building_cycle_can_be_undone_losslessly() {
+        let mut project = test_project_with_one_device(None);
+        let mut first = test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Building,
+            Some(BuildingPartId(2)),
+        );
+        first.children = vec![BuildingPartId(2)];
+        let mut second = test_building_part(
+            BuildingPartId(2),
+            BuildingPartType::Building,
+            Some(BuildingPartId(1)),
+        );
+        second.children = vec![BuildingPartId(1)];
+        project.installations[0].buildings = vec![first, second];
+        let original = project.installations[0].buildings.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveBuildingPart {
+                    id: BuildingPartId(1),
+                    parent: None,
+                },
+            )
+            .unwrap();
+        let repaired = project.installations[0].buildings.clone();
+        assert_ne!(repaired, original);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, original);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings, repaired);
     }
 
     #[test]

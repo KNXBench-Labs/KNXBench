@@ -1,4 +1,14 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 12:40 CEST
+- **Web lock:** untouched; held by the UI session as its newest entry says.
+- **Completed:** `GET /api/device-readiness` (`apps/knx-server/src/device_readiness_routes.rs`), offline, no tunnel lock; 3 route tests without corpus, RED first.
+- **Pending/Next Steps:** For the UI session: a readiness view (per device: grade, category, refusal text; counts) can call `GET /api/device-readiness`; `knx device compare` has no HTTP route yet (it opens a tunnel, so it would join the download → programming → monitor → scan lock order).
+- **Notes for Codex oder Claude:** Response DTO fields are camelCase; `category` is `UnsupportedCategory::code()` (now including `configuration`).
+
+---
+
+---
+
 - **Timestamp:** 2026-09-30 12:10 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** User decisions recorded (docs only, no code, no bus):

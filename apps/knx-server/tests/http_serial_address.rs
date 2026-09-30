@@ -218,6 +218,25 @@ async fn writes_by_serial_number_without_a_button() {
     assert_eq!(body["address"], NEW);
     assert_eq!(body["wrote"], true);
     assert_eq!(h.device.address().to_string(), NEW);
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activity["oneShot"], json!([]));
+    assert!(activity["untracked"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("serialAddress")));
+
+    // A second request targets the address it already holds: successful
+    // HTTP completion alone does not prove a write was sent.
+    let (status, body) = send(
+        &h.app,
+        post("/api/device-address/by-serial", write_request(PHRASE)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["wrote"], false);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"], json!([]));
 }
 
 #[tokio::test]

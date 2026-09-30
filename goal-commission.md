@@ -631,6 +631,15 @@ remains unknown. Its **write** is intentionally still untracked: a no-op or
 unverified write is not a generic success/failure receipt. The pre-write
 backup, separate confirmation and live hardware go are unchanged.
 
+**Write-evidence prerequisite, 2026-09-30 (ADR-0056):** a generic read
+`finished`/`failed` cannot represent a write. Simulated serial-address and
+service-control calls can return 200 without sending a write; a failed send
+may have changed the target. Group writes have no receiver readback. Keep all
+three write routes untracked until phase-aware, recovery-linked evidence is
+verified. The serial-address HTTP path still lacks a durable pre-write
+recovery record; do not infer that its response satisfies the backup policy
+or grants a live hardware go.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

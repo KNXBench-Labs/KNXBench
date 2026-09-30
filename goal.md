@@ -614,10 +614,16 @@ item 4 stays parked, still accurate.
    residues stay §97 (phase labels, by design); §118 is resolved.
 2. ~~**`codex-goal.md` is stale.**~~ **Done — retired.** The file was deleted
    in `57d7190`; there is no second backlog left to contradict this one.
-3. ~~**`ideas.md` still lists shipped work as pending.**~~ **Done — retired.**
-   Deleted in the same commit. The genuinely open ideas it held (MCP,
-   automation, "who talks to whom", project notes, mobile, multi-OS) have no
-   file of their own now; `IDEA.md` is the one-line project pitch.
+3. ~~**`ideas.md` still lists shipped work as pending.**~~ **Done, corrected
+   2026-09-30.** `ideas.md` was never deleted: it is **gitignored**
+   (`.gitignore:9`) and exists only in the root checkout, so no commit can
+   change it. It was edited locally, and each shipped entry now says so with
+   its evidence: animations (T27, `motion.ts`), themes (five plus System,
+   `theme.ts`), the status dashboard (cycle 8, `Dashboard.tsx`), device
+   discovery (`busDiscovery.ts`, `/api/bus/discover`) and the humour
+   templates (30 error wrappers and 30 late-night lines in `toastCopy.ts`).
+   MCP, automation, "who talks to whom", project notes, mobile and multi-OS
+   stay the open entries. `IDEA.md` is the tracked one-line project pitch.
 4. **Parked finding F-T30-1** (confirmed 2026-09-20, re-checked 2026-09-30).
    ADR-0039 is written, approved (see §12) and merged; its phases 1–2 landed
    2026-09-27 (colliding ids are refused, counters never rewind — see
@@ -847,7 +853,7 @@ In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author
 - **§11 ISSUE-08 data half: done 2026-09-30.** P1 `a2ff938` (absent `IsActive` is active), P2 `dae6c1a` (evaluated `activation`, `channel`, diagnostic severity; ADR-0050), P3 `9795168` (`program_dpt`, `dpt_text`, `function_text`). Issue-plan checkboxes 1–4 and 6 ticked with evidence. `apps/knx-web` was not edited.
   - Handed to the UI session under "For the UI session:" in `.ai/CURRENT_STATE.md` (handover `3606371`): the five server-only fields, how to show `program_dpt`, and that the ISSUE-08 UI half may start.
   - Left open, documented: channel `@Name`/`@Number` for untitled channels (KNOWN_LIMITATIONS §146 — parser, schema migration, re-ingest).
-- **§8.1 to §8.3 and §8.5, doc hygiene: done 2026-09-30 (`0e6cdf1`).** ROADMAP T37 is marked shipped; `codex-goal.md` and `ideas.md` were already gone from `main` (`57d7190`); LIMITATION_TRIAGE is recounted by command: 146 numbered entries, 145 classified, §105 deliberately not, §92's new title and §134–§146 included. §8.4 (F-T30-1) stays parked, re-checked.
+- **§8.1 to §8.3 and §8.5, doc hygiene: done 2026-09-30 (`0e6cdf1`).** ROADMAP T37 is marked shipped; `codex-goal.md` was already gone from `main` (`57d7190`); `ideas.md` is gitignored and was marked locally (corrected 2026-09-30, §8.3); LIMITATION_TRIAGE is recounted by command: 146 numbered entries, 145 classified, §105 deliberately not, §92's new title and §134–§146 included. §8.4 (F-T30-1) stays parked, re-checked.
 - **§5 D12, the user manual (T23):** not accepted. The open points are the location per ADR-0024, removing the screenshots, and a claim-by-claim verification report.
 - **§5 alpha release (T18):** a user decision; do not tag.
 - **§10 final whole-goal review:** last of all.

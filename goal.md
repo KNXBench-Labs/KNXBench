@@ -1,89 +1,29 @@
 # KNXBench goal — everything still open, minus commissioning
 
-Written 2026-09-20. Use this file as the instruction passed to `/goal`. Its
-creation alone starts no run.
-
-**Handback from Paperclip (2026-09-27): read §12 first.** From 2026-09-25 to
-2026-09-27 the backlog ran as a Paperclip experiment (company "DingsBumbs
-Labs", issues DIN-1 to DIN-53). That experiment has now stopped, and all of its
-agents are paused. This file is once again the only backlog, and the standing
-goal returns to the Hermes `knxbench` profile. §12 has the verified status map,
-the unmerged Paperclip branches and the order in which to take them over. The
-2026-09-23 pause boundary described below, and rule 15, are superseded by the
-user's handback. Paperclip's DIN-3 plan meant to cut this file down to a
-25-line pointer (branch `din-3-goal-migration`, `90add0c`). **Do not merge
-that branch.** It is obsolete.
-
-**Execution boundary (2026-09-23, superseded 2026-09-27 by §12):** User requested completion of the already
-open T13 through verified merge, then a pause. T14 and every subsequent task
-remain unstarted; the read-only T14 survey is not implementation approval.
-Do not resume the standing goal without a new explicit user instruction.
-T13 is now merged as `7f9c8c4`; all eleven merged-main gates passed. The standing
-Hermes goal remains paused, not completed.
-
-**Backlog amendment (2026-09-23, no resume):** The user supplied a new local
-Gira/MDT product-database corpus and explicitly asked that its verified import
-findings become future goal work. Section 2.8 now owns PDB-1 through PDB-11;
-the legacy `.pr5` prerequisite is in §7. This amendment changes the backlog and
-the prior product-scheme exclusion, but does not itself resume the paused goal.
-
-Drive KNXBench toward a trustworthy v1 on every front **except** commissioning.
-Work autonomously and persist across turns until every item below is either
-resolved with evidence, or explicitly accepted out of scope by the user.
-
-The previous version of this file (git history, commit `7f08b59` and earlier)
-drove the 2026-09-13 goal-completion run. That run finished: thirty tasks plus
-nineteen commissioning-conformance tasks merged, the documentation
-reconciliation (T24) landed, and the single closing Fable review ran on
-2026-09-20 and had its findings fixed (`bb1fa66`, `a927691`, `85b5783`). This
-file replaces it with what is left over, taken from `docs/ROADMAP.md`,
-`docs/GAP_ANALYSIS_ETS.md`, `docs/KNOWN_LIMITATIONS.md`,
-`docs/LIMITATION_TRIAGE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/adr/`,
-`ideas.md`, `codex-goal.md` and the 2026-09-20 status audits.
-
-**Repository state this file was written against:** `main` at `7f08b59`, level
-with `origin/main`, clean checkout, no extra worktrees. Product version
-`0.1.0-alpha.1` everywhere, no release tag.
+Current open work outside commissioning and the UI-owned track. The old
+Paperclip takeover, T01–T17 and PDB-1–PDB-11 have been completed or retired;
+§12 names the remaining acceptance and decision points. Consult current
+source/tests, `docs/IMPLEMENTATION_STATUS.md` and the top of
+`.ai/CURRENT_STATE.md` before acting; this is not a snapshot of `main`.
+The dated history is available in Git and the implementation log. No alpha
+release tag is authorized.
 
 ---
 
 ## 0. What this goal deliberately excludes
 
-**Update 2026-09-28: commissioning has its own goal file,
-[`goal-commission.md`](goal-commission.md).** It owns exactly what this
-section excludes, plus KNOWN_LIMITATIONS §136, in the separate commissioning
-session. The two files do not overlap; `goal-commission.md` §5 is the
-boundary table. Items it hands over reach this file through §12.4.
+This file excludes commissioning and every real-device write; those are
+owned by [`goal-commission.md`](goal-commission.md). UI work and the Web lock
+are owned by [`goal-ui.md`](goal-ui.md). See §12.3 for current handover.
 
-**Update 2026-09-28: the UX/UI issues of §11 have their own goal file too,
-[`goal-ui.md`](goal-ui.md)**, run by a separate GPT/Codex session. It owns
-the web chain and the web lock. What stays here is listed in §12.3.
+Commissioning has a narrow live-verified `070nh` path on one MDT device,
+not a general device-support claim. No approval from that track transfers to
+this one. This goal does not open a socket that writes, does not "prepare" a
+live run under another name, and does not alter commissioning-owned
+limitations. In particular `1.1.220` is an alarm panel: never read, write or
+scan it. Historic read permissions on `1.1.24`–`1.1.32` were operation-specific,
+not blanket permission for new experiments.
 
-**Commissioning and every write to real KNX hardware is out of scope for this
-run.** Not cancelled, not downgraded — the user ruled on 2026-09-11 that
-commissioning must work, and the ROADMAP's 2026-09-20 ruling defers phase 3
-only until dedicated test hardware exists. This file simply does not schedule
-it, so a runner working from here never has a reason to open a socket that
-writes.
-
-Concretely out of scope here: T30 phase 3 (hardware verification of
-individual-address programming, download, unload, recovery), and the
-limitations that only a real write can close or that only apply to the write
-path — `KNOWN_LIMITATIONS.md` §7, §92, §93, §99, §101, §104, §105, §108, §109,
-§111, §112, §113, §114, §115, §116. Leave every one of them exactly as
-documented. Do not "prepare" them, do not fold a piece of them into another
-task, and do not relax the hardware rules below because nothing in this file
-needs hardware.
-
-**Hardware rules still bind, because read-only bus work does appear here (the
-T17 diagnostics UI, group-monitor regressions):**
-
-- Individual address `1.1.220` is an alarm panel. Never read it, never write
-  it, never include it in a scan range.
-- `1.1.24`-`1.1.32` are approved for active *reads* only.
-- No write of any kind reaches a real device in this run. Not with a
-  confirmation prompt, not "just once", not in a test that happens to be
-  pointed at the gateway. Simulated transports only.
 
 ---
 
@@ -94,10 +34,9 @@ T17 diagnostics UI, group-monitor regressions):**
    `docs/ROADMAP.md`, `docs/GAP_ANALYSIS_ETS.md` and the source of truth for
    the item at hand. Re-measure counts rather than quoting them; several have
    drifted and were only caught by counting again.
-2. **No `.ai/` handover bookkeeping.** `.ai/CURRENT_STATE.md` and `.ai/logs/`
-   stay suspended by user ruling. Note that Codex still commits to `main` and
-   writes the newest entry at the *top* of `.ai/CURRENT_STATE.md` — read it
-   before starting anything, but do not maintain it.
+2. Maintain the repository's `.ai/` handover: read the newest entry first,
+   append an accurate newest-first state entry at the end of a task and log
+   significant blocks. A dated entry is evidence, not a permanent work lock.
 3. Work from the highest-risk correctness, data-integrity, compatibility or
    user-visible gap downward. Prefer a small coherent vertical slice over
    broad speculative work.
@@ -118,7 +57,8 @@ T17 diagnostics UI, group-monitor regressions):**
    `ABSENT_CEILING` is 162 with zero slack (verified 2026-09-23) — a new headerless file fails the
    gate. Markdown is not counted at all.
 7. **Freshness check.** The former `ntfs3` mount once served a stale binary
-   from a current fingerprint (`KNOWN_LIMITATIONS.md` §119). The working copy
+   from a current fingerprint (documented in the dated implementation log).
+   The working copy
    is on ext4 since 2026-09-28, so that hazard is lifted, but a green gate is
    still not proof on its own: confirm the log shows the changed crate being
    compiled (a shared target directory can replay a cached result), and settle
@@ -135,29 +75,14 @@ T17 diagnostics UI, group-monitor regressions):**
 12. A sweep for one known literal is not a sweep. Grep by pattern class (RFC
     1918 ranges, not one remembered address). The repository's history was
     already rewritten twice for this; do not put it back.
-13. **Weekly usage pause threshold: 95%** (user amendment 2026-09-24,
-    replacing the earlier 80% threshold). Check usage read-only before starting a task; at or above 95%,
-    finish the running task safely and pause before starting another.
-    Do not consume reset credits merely to check usage. All hardware and
-    verification constraints remain unchanged.
-14. **Review model policy (user amendment 2026-09-23):** ordinary task,
-    branch, pre-merge and follow-up reviews use `gpt-5.6-sol` with `medium`
-    or `high` effort, chosen by risk. Reserve the strongest available model
-    exclusively for the very last whole-goal review after all goal tasks have
-    been achieved and all other completion prerequisites pass. This supersedes
-    the earlier Opus branch rule and temporary Astra exception; historical
-    review evidence remains valid. Pin and verify the actual model and effort,
-    not merely the model name in a prompt. Review scope and quality gates stay.
-15. **Superseded on 2026-09-27.** The user handed the goal back to Hermes;
-    see §12 for what to do next. The old text is kept for history.
-    *Execution boundary (user amendment 2026-09-23):* finish the
-    already-open T13 task, including review fixes, Sol re-review, verification
-    and merge. Then stop the goal before T14 or any new task. This limited
-    resumption does not authorize the final whole-goal review.
-    After the second correction/re-review cycle, the user explicitly authorized
-    another targeted restart-lifetime correction round on 2026-09-23; the
-    same verification, merge and subsequent pause boundary still applies.
-16. **Refresh project statistics after every completed task** (user amendment
+13. The user monitors quota directly (2026-09-29); do not pause at package
+    boundaries to check or ask about it. An explicit user pause holds until
+    their explicit "go". Hardware authorization remains operation-specific.
+14. Review code and evidence at the scope warranted by risk. The final
+    whole-goal review remains separate from routine branch review and occurs
+    only after its completion prerequisites; never present a self-review as
+    independent verification.
+15. **Refresh project statistics after every completed task** (user amendment
     2026-09-24). Once a task has passed review and verification and is integrated
     into `main`, but before starting the next task, run
     `python /mnt/daten-i/Sourcecode/ai-stats.py` from the root checkout
@@ -169,346 +94,60 @@ T17 diagnostics UI, group-monitor regressions):**
 
 ---
 
-## 2. Priority 1 — data integrity, safety and correctness
+## 2. Data-integrity and format work
 
-### 2.1 §22 — the web/Docker target has no authentication at all
-
-`docs/LIMITATION_TRIAGE.md` ranks this K1: no login, no session, no
-authorization. Whoever reaches the port owns the project, including its
-bus-facing surfaces. This is the single highest-risk non-commissioning item in
-the repository.
-
-Decide and document the deployment stance first (an ADR, since it touches
-`apps/knx-server`'s public surface and the Docker target's whole premise):
-either the server gains real authentication and authorization, or the
-container is confined to a loopback/trusted-network deployment that the
-product refuses to start outside of. A README paragraph is not a stance.
-Whatever is chosen, the bus-facing routes and project mutation must not be
-reachable by an unauthenticated caller on a LAN.
-
-### 2.2 §117 — `read_on_init_flag` is parsed, stored, then dropped
-
-The sixth communication-object flag exists in the product database and in the
-import path, and does not exist in the domain model, so it is lost at the
-`knx-core` boundary. That is a data-integrity gap of the kind CLAUDE.md names
-explicitly. Carry it into the model, the projection and the flag UI alongside
-the other five, or — if there is a real reason it cannot be a peer of the
-others — record that reason with evidence instead.
-
-### 2.3 §34 — schema-≥21 export drops known, unmapped attributes — WITHDRAWN
-
-**Withdrawn by the user on 2026-09-20: export back to `.knxproj` is out of
-scope for good.** Import stays; once a project is imported, it lives in
-KNXBench's own format and never goes back. The export side of §34 therefore has
-nothing to protect, and the retained-attribute machinery built for it no longer
-has a consumer. See §6's ruling. The import-side work this task also carried —
-schema-≥21 communication-object flags reaching the model instead of being
-parsed and dropped — stands on its own and is kept.
-
-### 2.4 §12 — three remaining gaps in manufacturer-data resolution
-
-Product → application-program resolution still has three documented holes.
-Read the entry, re-measure against the installed corpus, and close what the
-corpus can prove. Do not synthesize a sample to close the rest.
-
-### 2.5 §85 — `.signature` is stored and never checked
-
-The file is kept and no code ever reads it. Either verify it where
-verification is defined, or state in the entry that verification is impossible
-without the KNX Association's own key material — with the evidence for that
-claim, not an assumption.
-
-### 2.6 §2 — import is tolerant rather than validating
-
-No public XSD exists, so the parser accepts and later surprises. Add an
-explicit validation stage between parse and normalization, in the data-flow
-position `CLAUDE.md` already prescribes, reporting structural violations as
-import diagnostics instead of letting them surface as odd behaviour three
-layers later. Scope it to what the corpus can actually attest.
-
-### 2.7 §61 — the DPT codec infers its input format, several encodings are rulings
-
-K1, and it is a bus-facing correctness risk: a wrongly encoded value looks
-valid on the wire. The 200-series main types are explicitly out (see §6). What
-is in scope is the guessing and the rulings for main types 1-30: make the
-input format explicit at the call sites, and cite the Standard for every
-encoding currently justified by a project ruling — or record the ruling as a
-ruling, visibly, at the API boundary.
-
-### 2.8 Product-database corpus follow-up — measured Gira/MDT import gaps
-
-The local ignored corpora under `OriginalData/ProductDatabases/Gira` and `MDT`
-now provide direct evidence for 115 modern package instances (113 unique
-hashes) across product master schemes 11, 12, 13, 14, 20 and 21, plus one
-encrypted legacy MDT `.pr5`. The reproducible inventory and exact boundaries
-are in `docs/PRODUCT_DATABASE_CORPUS.md`; use
-`tools/inspect_product_corpus.py` instead of re-reading millions of XML nodes
-into an agent context.
-
-The real standalone installer accepted 93 inputs. Eleven otherwise-modern
-packages failed at the ZIP-name safety boundary, eleven at the namespace gate,
-and the `.pr5` belongs to the separate legacy format. Accepted packages still
-reported 19,291 unknown constructs. A successful install is therefore not a
-losslessness claim. Work through the following slices in order unless a focused
-test proves a later slice is the prerequisite:
-
-1. **PDB-1 — safe legacy ZIP member names.** Support the observed legacy/
-   CP437-style names only through an explicit decoding policy. Decode before
-   normalization, then retain traversal, absolute-path, NUL, size and
-   normalized-name-collision rejection. RED tests need UTF-8, legacy umlauts,
-   malicious paths and post-normalization collisions; the eleven gated corpus
-   packages are regressions, not fixtures to commit.
-2. **PDB-2 — a durable corpus compatibility matrix.** Replace the temporary
-   probe with an ignored integration test/tool requiring an explicit corpus
-   environment variable. Install every package both in isolation and in
-   deterministic shared order. Emit machine-readable package hash, scheme,
-   outcome, report counts and final DB counts. Absence of `OriginalData` must
-   be a visible skip, never a false pass.
-3. **PDB-3 — honest, countable install reports.** Separate `read`, `stored`,
-   `deduplicated`, `retained-but-uninterpreted`, `unsupported` and `dropped`.
-   Report product/program/parameter/com-object/dynamic/module/baggage counts and
-   unsupported master sections. Do not reduce the 19,291 unknowns with a broad
-   suppression list; classify them by capability and preserve source paths.
-4. **PDB-4 — scheme 13.** It has the smallest observed grammar delta. Add a
-   synthetic frozen fixture plus a gated real-package regression, atomic
-   failure tests and explicit loss accounting before widening the namespace
-   gate.
-5. **PDB-5 — schemes 12 and 14.** Cover the observed
-   `LdCtrlWriteProp/@AppliesTo`, `Property/@Occurrence`, separator metadata and
-   scheme-14 `LdCtrlDeclarePropDesc`. Model or explicitly retain/report every
-   new semantic field; namespace acceptance alone does not complete the task.
-6. **PDB-6 — scheme 21.** Cover `LdCtrlDeclarePropDesc`, variable/null-
-   terminated data, optional resources, access policies, RF/coupler
-   capabilities and `ApplicationProgram/@HardwareType`. Keep product-scheme
-   support separate from `.knxproj` project-schema compatibility.
-7. **PDB-7 — secure and version metadata.** Persist and query
-   `IsSecureEnabled`, the observed `MaxSecurity*`, tunnelling/user capacities,
-   `MinEtsVersion` and `ReplacesVersions`. This is catalogue metadata only; it
-   must not imply KNX Data Secure commissioning or runtime support.
-8. **PDB-8 — master-data coverage without silence.** For interface-object/
-   property, property-data-type, medium, mask, functional-block, datapoint-role,
-   resource/access and public-key sections, either add typed storage needed by
-   a proven feature or emit section-level retained/unsupported diagnostics.
-   Whole-source blob retention is necessary but not a substitute for reporting.
-9. **PDB-9 — parameter and Dynamic fidelity.** Add typed/raw coverage for all
-   observed parameter kinds (`Restriction`, `Number`, `Picture`, `Float`,
-   `Text`, `Color`, `RawData`, `None`, `IPAddress`, `Time`) and synthetic tests
-   for Rows/Columns, rename/button nodes, repeat/module nesting,
-   transformations and allocator arguments. Unknown Dynamic containers must
-   not make their descendants disappear; evaluation semantics and UI layout
-   stay separate.
-10. **PDB-10 — safe baggage inventory.** Model `Baggages.xml` references and
-    report hash, declared/expanded size, media classification, nesting and
-    encryption. Images, PDF, MSI, extensionless files and nested ZIPs remain
-    opaque and are never executed or blindly extracted. Include bounded-memory
-    coverage for the observed 24.2/54.8 MB XML members.
-11. **PDB-11 — package identity and versions.** Distinguish byte-identical
-    packages, same logical ID with different bytes, product families,
-    `ReplacesVersions`, same order number with a different program/scheme and
-    deterministic winner/loser sources. Content hashes, not filenames, own
-    exact deduplication.
-
-For every slice update `docs/PRODUCT_DATABASE_CORPUS.md`, compatibility and
-limitations with what was actually verified. Do not claim ETS-version support
-from filenames: the package namespace, `CreatedBy`, `ToolVersion` and
-`MinEtsVersion` are separate facts.
+T01–T07 and PDB-1–PDB-11 have landed; do not run their original
+implementation checklists again. Verified boundaries, rather than new work,
+remain in [COMPATIBILITY](docs/COMPATIBILITY.md),
+[KNOWN_LIMITATIONS](docs/KNOWN_LIMITATIONS.md) (§1, §2, §3, §11–§13,
+§61, §85, §92) and [PRODUCT_DATABASE_CORPUS](docs/PRODUCT_DATABASE_CORPUS.md).
+The user's accepted exclusions are in §6; the open command-invariant finding
+(ADR-0039 phases 3–5) stays in §8. Any new manufacturer scheme or hardware
+claim needs independent evidence and a separate scoped decision.
 
 ---
 
-## 3. Priority 2 — user-visible gaps in the application
+## 3. User-visible residue outside the UI goal
 
-### 3.1 T17's missing UI — bus and line diagnostics (gap D6)
+The diagnostics UI, scan reconciliation, settings, drag/drop, discovery,
+project creation and the closed search/accessibility bugs have shipped. The
+remaining user-facing backlog is in [`goal-ui.md`](goal-ui.md), not in old
+T08–T13 checklists. Two narrower items still lack an accepted disposition:
 
-The line scan shipped backend-first on 2026-09-13: `ScanPlan`/`ScanPlanBuilder`
-in `knx-core`, `probe_address`/`scan_line` in `knx-net`, and the
-`knx bus scan` CLI. **There is no frontend for any of it**, and D6 ("no
-bus/line diagnostics UI") is the last wholly-unbuilt UI gap in the
-gap analysis.
-
-Build it against the existing server API, with the scan's six `ProbeOutcome`
-variants shown as six distinct outcomes — never folded into
-occupied/vacant. The exclusion list is part of the UI, not a hidden default:
-the forbidden address must be visible, pre-filled and impossible to remove by
-accident. Show the real cost before starting (a full line is tens of minutes,
-`KNOWN_LIMITATIONS.md` §72) and make cancellation work. Everything stays
-read-only.
-
-### 3.2 E2 residue — a scan result reconciled back into the project
-
-A scan finds what is really on the line; nothing carries that back into the
-project as a diff the user can act on. This was explicitly out of scope for
-T17 and is the natural second half. Read-only against the bus, a normal
-undoable `Command` against the project.
-
-**Closed 2026-09-21 (T09).** Completed scan evidence is compared with the
-current project in three explicit groups. Nothing is selected by default;
-excluded and scanner-self addresses stay non-actionable. Only chosen
-unexpected/missing findings enter one undoable batch, and no product or
-application data is inferred from a bus response. Placement resolves matching
-lines across all installations; a removal is refused while dependent project
-data still references the device. Project-tree changes refresh the comparison
-and clear any stale UI selection.
-
-### 3.3 D8 — settings beyond theme, motion and language
-
-The settings panel covers appearance and language. Everything else ETS-shaped
-(defaults for new entities, group-address style handling, bus/gateway
-preferences, paths) has no home. Design the settings surface once, then move
-the scattered state into it; do not grow a second parallel mechanism beside
-`SettingsPanel.tsx`.
-
-### 3.4 B10 — no drag and drop anywhere
-
-`CLAUDE.md`'s UI/UX section names drag & drop as a target capability, and the
-application has none: every structural move (device → line, device → building
-part, group address → communication object) is form-driven only. Pick the two
-or three gestures that carry real weight, implement them through the same
-validated commands the forms use, and keep a keyboard-equivalent for each.
-
-### 3.5 Small UI residues, each cheap on its own
-
-Fix as a batch or fold into neighbouring work; they keep losing to larger
-items, which is why they are listed:
-
-- **§19** — a search hit inside a collapsed tree branch is never revealed.
-- **§24** — `FsPicker` has no drag-and-drop and no multi-selection.
-- **§30 / §23** — `/api/project/download` has no frontend caller at all, and
-  buffers the whole file in memory when it is called.
-- **§96** — a browser that misses the import response can only reach the
-  project again by reloading.
-- **§118** — a *successful* project load is not announced to screen readers
-  (failure already is).
-- **§103** — "unsaved" is inferred from the undo stack rather than a real
-  dirty flag; **§81** — `new_project_impl` checks "can undo" rather than "is
-  modified".
-- **§91** — a running bus session keeps the group-address style it started
-  with.
-- **§89** — five documented `Space/@Type` values are coarsened to
-  `BuildingPart` on import; the `MapProblem` is reported, the variants are not
-  modelled.
-- **§120** — nothing tests whether a theme is readable. The five shipped
-  palettes were measured by hand; the sixth will not be. ADR-0022's contrast
-  invariant wants a gate, not a paragraph.
-
-### 3.6 KNXnet/IP interface discovery is CLI-only
-
-`crates/knx-net/src/discovery.rs` encodes `SEARCH_REQUEST` and decodes
-`SEARCH_RESPONSE`, and `knx bus discover` uses it. The application does not:
-`apps/knx-server/src/bus_routes.rs` exposes four bus endpoints and none of them
-is discovery, so `BusMonitorPanel`'s gateway field is a bare text input that the
-user has to fill from memory.
-
-Give the application the discovery the CLI already has. Two halves: a server
-endpoint over the existing `client.discover()`, and a UI that runs it once when
-the application starts and offers a button to run it again. Found interfaces
-become choices for the gateway field rather than something to retype. A machine
-with no interface on the network, or one where multicast does not leave the
-container, must degrade to today's manual entry without an error wall — that is
-the common case on a developer's laptop, not an exception.
-
-### 3.7 Group-address notation is not selectable
-
-`GroupAddressStyle` (`crates/knx-core/src/address.rs:84`) chooses how many levels
-a group address has — Free, TwoLevel, ThreeLevel — and `GroupAddress::format`
-(`:168`) always joins them with `/`. Some installations, and some people, write
-the same address as `1.1.1`.
-
-Make the separator selectable — `1/1/1` or `1.1.1` — and have the choice apply
-to every group address the UI shows: tables, tree, inspector, bus monitor,
-search, dialogs. It is a display preference, not project data: what is persisted,
-imported and exported stays canonical, so the choice can never change a file's
-contents. Address input accepts both notations whatever is selected.
-
-One thing to get right rather than discover later: `1.1.1` is also how an
-individual address is written. Dotted group addresses are visually identical to
-physical ones, so the UI has to keep the two distinguishable by something other
-than punctuation.
+- **§23:** `/api/project/download` buffers the entire `.knxdb` in memory.
+  Measure a large project and decide whether streaming is needed before
+  describing this as solved.
+- **§24:** the file picker still has no multi-select or drag-and-drop.
+  Do not conflate structural drag/drop (already shipped) with file input.
 
 ---
 
-## 4. Priority 3 — reporting, diff and CSV residue
+## 4. Reporting, diff and CSV residue
 
-None of these is a correctness risk; together they are most of what separates
-the application from a tool someone would use daily.
+CT-1/CT-2/CT-6 closed the originally scheduled report-preview and diff-UI
+work. The twelve DIN-26 decisions in §6 explicitly accept PDF, full report
+prose, diff correlation/merge and CSV range/spreadsheet limitations. ETS
+parity is unverified; it is not an implicit feature target.
 
-- **Documentation export** (`knx-report`): §45 no native PDF, §46 manufacturer
-  /product/program names unresolved, §47 parameter values and module
-  arguments missing, §48 single-language only, §49 no print preview, §50 no
-  section selection. §44 (ETS report parity) is explicitly *not* a target —
-  parity is not measurable without an ETS sample.
-- **Project diff** (`knx-diff`): §59 shows which fields changed but usually
-  not the values, §60's web panel shows grouped counters only, §55 a diff
-  cannot be applied back, §56 no three-way compare, §57 no comparison against
-  a raw `.knxproj`, §58 no CI-usable non-zero exit. §52/§53/§54 are
-  correlation gaps (devices with neither address nor `ets_id`, two same-named
-  sibling building parts, regenerated `RefId`s after a re-import). §51 parity
-  with ETS's compare is not a target, same reason as §44.
-- **Group-address CSV**: §39 (no re-addressing, no deletion, no ranges), §40
-  (export-only columns never applied on import), §41 (German-locale Excel
-  surprises). §38's ETS interoperability stays an untested assumption and is
-  not a task.
-
-### 3.8 Settings live in `localStorage` with no version and no migration
-
-Eight preferences — theme, accent, density, motion level, motion style, UI
-language, language packs, product language — are `knx-desktop:` keys in the
-browser's `localStorage`, written one key at a time with no schema version
-anywhere. Three more keys in the same namespace (`project-context`,
-`bus-session-context`, `context-changed`) are session state, not settings, and
-should not be confused with them.
-
-Give settings a real home: one versioned file in the server's `data_dir`
-(`apps/knx-server/src/paths.rs` already owns that directory and its containment
-rule), JSON, with a schema version and a migration chain the way project
-storage has one. A newer application version must be able to read an older
-settings file and say what it changed; an older application must refuse a newer
-file rather than silently discarding what it does not understand.
-
-
-### Export to `.knxproj` — withdrawn 2026-09-20
-
-The user's ruling: *"drop export zu ets. das brauchen wir nicht. einmal
-importiert bleibt es beim KNXBench file format."*
-
-KNXBench reads `.knxproj` and never writes it. The direction of travel is
-one-way by design: a project is imported once, and from then on KNXBench's own
-storage is the only format that matters. This retires, in one stroke, the whole
-class of problems that came from pretending a round trip was a goal — retained
-attributes keyed so they land back on the right element, export warnings for
-what could not be reconstructed, `CreatedBy`/`ToolVersion` residue, and
-ADR-0015's untested question of whether ETS would accept what we wrote.
-
-Import keeps every obligation it had. Nothing about this ruling weakens the
-rule that import must not silently discard information: what the opaque store
-preserves, it still preserves, and what import cannot map is still reported.
-The store's passthrough (ADR-0006) keeps its value as *evidence of what the
-source file said* — it simply no longer feeds an exporter.
-
-Out of scope from here: `.knxproj` writing in any schema, ETS re-import
-compatibility, and round-trip parity of any kind.
+**Not yet explicitly accepted or implemented:** §40 (editable CSV-derived
+columns and Description/Comment fields) and the residual §60 large-diff
+paging boundary. Review these with the user before marking this section
+complete; neither was in DIN-26's accepted twelve. Product-dependent report
+names and incomplete parameter semantics (§46/§47) remain documented
+evidence limits, not claims that a new renderer can recover absent data.
 
 ---
 
 ## 5. Priority 4 — platform, packaging and the manual
 
-- **D12, the user manual — still explicitly last.** The help half shipped
-  2026-09-19 (T28, ADR-0024: `HelpTip`, a ten-topic `F1` panel, prose in the
-  message catalogue). ADR-0024 rules `docs/` out as user documentation, so the
-  manual is a new document written for users that nobody has written. Start it
-  only when the UI-touching items above have settled — the original reason for
-  scheduling it last has not changed.
-- **Release the alpha.** `0.1.0-alpha.1` is consistent across all 15 Rust
-  packages and the web manifest; the x86_64 AppImage was built, inspected and
-  launched (ADR-0021). There is no git tag and no published release. Decide
-  whether to tag, and say plainly what the AppImage does and does not claim
-  (one Arch/XWayland host, no Ubuntu CI, no signature, no auto-update, no
-  arm64). Never gate this on GitHub Actions.
-- **§16 — Tauri v2 hangs on archived GTK3 bindings under Linux.** `cargo deny`
-  reports it; the dependency is unmaintained. Record the exposure, watch the
-  upstream, and decide whether the desktop shell can move.
-- **§79 — discovery needs IP multicast, which Docker's default bridge does not
-  carry.** Already resolved by documentation. Verify the documentation is
-  still true; do not reopen the design.
+- **D12, user manual acceptance — after UI U13.** A manual already exists in
+  [`docs/manual/`](docs/manual/README.md). It still needs the ADR-0024
+  location decision, screenshot decision and claim-by-claim verification on
+  the finished UI; do not describe it as unwritten.
+- **Alpha release — user decision.** An x86_64 AppImage has been built and
+  inspected (ADR-0021), but no v1 alpha tag/release was authorized. Decide
+  whether to tag only after the remaining evidence and manual review; state
+  the tested Linux boundary rather than claiming broad distribution support.
 
 ---
 
@@ -536,15 +175,16 @@ the run its credibility.
   an invention presented as data).
 - **§13's AES half** — blocked on a real ETS6 AES-protected sample, not on a
   decision. ZipCrypto already works. A synthesized sample proves nothing.
-- **§1 / project-schema evidence** — `.knxproj` schemas 12-19 and 22 still rest
-  on no project evidence; product-package schemes with the same numbers are a
+- **§1 / project-schema evidence** — `.knxproj` schemas 12–14, 20 and 22,
+  and an independent module-using schema-23 installation, still rest on no
+  independent project evidence; product-package schemes are a
   different format boundary. Do not use the new `.knxprod` samples to claim
   `.knxproj` compatibility.
 - **`.vd2` and unobserved `.knxprod` schemes 15-19/22** remain out of scope.
   The user reopened the now-evidenced standalone product schemes 12/13/14/21
   on 2026-09-23 through §2.8; no further sample-hunting is needed for those.
 - **ETS re-import of KNXBench-written projects** — dropped as a goal by
-  ADR-0015; §5's unsigned-export exposure follows from it.
+  ADR-0015; `.knxproj` export itself was withdrawn (ADR-0028).
 - **§6 — devices behind manufacturer plug-in DLLs.** No verified semantics
   exist across that boundary; do not invent them.
 - **A plugin API** — ADR-0025: extension stays data-shaped (language packs,
@@ -564,136 +204,40 @@ the run its credibility.
   §39 CSV ranges and renaming, §41 spreadsheet transforms, §12's remaining
   manufacturer gaps, §85 signature verification, §2 the missing XSD. Each
   KNOWN_LIMITATIONS entry stays open as the public record; no ETS parity is
-  claimed. §4's list still names them because it is the original scope, not
-  a to-do list.
+  claimed. These accepted limits are not implementation tasks.
 
 ---
 
-## 7. Research before design — no implementation
+## 7. Research requiring a new decision
 
-Each of these needs a written research or decision artifact *first*. Producing
-that artifact is a legitimate deliverable; producing code is not.
+Research for MCP/natural-language interaction, task automation, project
+notes and a "who talks to whom" view is recorded in `docs/RESEARCH.md`
+§13/§14/§16 and ADR-0031. None is a scheduled v1 implementation. The
+legacy `.vd`/`.pr` design prerequisite is in
+[`docs/VD4_PRODUCT_DATABASE_IMPORT.md`](docs/VD4_PRODUCT_DATABASE_IMPORT.md)
+and the reviewed format spec; modern `.knxprod` is a different format.
+Do not dispatch completed research as implementation without a new scope
+and data-integrity decision.
 
-- **LLM / natural-language interaction and MCP capability** (`ROADMAP.md:585`,
-  `ideas.md`). Two halves of one prerequisite: a mature, near-complete
-  `Command` layer. First deliverable is a `docs/RESEARCH.md` section covering
-  capability scope, authorization against a live project, how natural language
-  maps onto `Command`, which model and whether local or remote, and what it
-  must never be allowed to do unsupervised to project data. Design spec after
-  that, never before.
-- **Automation of repetitive tasks / a macro layer.** Same foundation, same
-  order.
-- **In-app project notes and documentation** (`ideas.md`). A new domain
-  concept absent from `docs/DATA_MODEL.md`; needs its own ADR before any
-  implementation. It is *not* T28's help and *not* `knx-report`'s export.
-- **"Who talks to whom"** — group addresses animated to the devices they
-  reach, with the reason visible. Needs the mature UI base it now has, plus
-  live telegrams from the bus monitor to be worth more than a static group-link
-  diagram. Deferred, not designed, not started.
-- **Legacy VD/PR product import.** The supplied encrypted MDT `.pr5` is a
-  legacy `ets.pr_`/EX-IM container, not a malformed `.knxprod`. Reconcile it
-  with `docs/VD4_PRODUCT_DATABASE_IMPORT.md` and first produce an independent
-  format/security/legal design: user-supplied lawful input, no embedded
-  password, bounded decryption/parsing, synthetic fixtures, atomic publication
-  and explicit mapping-loss reports. Only that reviewed artifact may authorize
-  implementation; do not route PR/VD bytes through the modern XML-package
-  parser.
+## 8. Parked structural finding
+
+ADR-0039 phases 1–2 closed duplicate-id data loss. Its phases 3–5 are not
+implemented: `Project` fields remain publicly mutable, so "all mutation
+goes through `Command::apply`" is still a review convention, not a type
+invariant (KNOWN_LIMITATIONS §129). Revisit when changing the core public
+surface. LIMITATION_TRIAGE was recounted alongside the limitation cleanup;
+recount it by command after any future entry change.
 
 ---
 
-## 8. Documentation hygiene and parked findings
+## 9. Delivery and review
 
-Small, real, and each one currently misleads a reader.
-
-**Status 2026-09-30 (checked against `main`).** Items 1, 2, 3 and 5 are done;
-item 4 stays parked, still accurate.
-
-1. ~~**`docs/ROADMAP.md`'s T37 section still reads as open.**~~ **Done.** The
-   section already said **Done** with its ADR, implementation and tests; its
-   heading now also carries "shipped 2026-09-19", the way T38's does. The
-   residues stay §97 (phase labels, by design); §118 is resolved.
-2. ~~**`codex-goal.md` is stale.**~~ **Done — retired.** The file was deleted
-   in `57d7190`; there is no second backlog left to contradict this one.
-3. ~~**`ideas.md` still lists shipped work as pending.**~~ **Done, corrected
-   2026-09-30.** `ideas.md` was never deleted: it is **gitignored**
-   (`.gitignore:9`) and exists only in the root checkout, so no commit can
-   change it. It was edited locally, and each shipped entry now says so with
-   its evidence: animations (T27, `motion.ts`), themes (five plus System,
-   `theme.ts`), the status dashboard (cycle 8, `Dashboard.tsx`), device
-   discovery (`busDiscovery.ts`, `/api/bus/discover`) and the humour
-   templates (30 error wrappers and 30 late-night lines in `toastCopy.ts`).
-   MCP, automation, "who talks to whom", project notes, mobile and multi-OS
-   stay the open entries. `IDEA.md` is the tracked one-line project pitch.
-4. **Parked finding F-T30-1** (confirmed 2026-09-20, re-checked 2026-09-30).
-   ADR-0039 is written, approved (see §12) and merged; its phases 1–2 landed
-   2026-09-27 (colliding ids are refused, counters never rewind — see
-   KNOWN_LIMITATIONS §129). Phases 3–5 are not implemented. The finding itself:
-   `Project`'s six fields are all `pub`
-   (`crates/knx-core/src/project.rs:202-207`), so "every mutation goes through
-   `Command::apply`" is an invariant held by review, not by the type system.
-   Belongs to whoever next touches `knx-core`'s public surface.
-5. **`docs/LIMITATION_TRIAGE.md` must be re-counted, not edited by hand,**
-   whenever `KNOWN_LIMITATIONS.md` gains an entry. It drifted three times
-   before. **Recounted 2026-09-30:** 146 numbered entries
-   (`grep -cE '^## (§)?[0-9]'` — the old `'^## [0-9]'` misses the `§`-prefixed
-   headings and gave 130), 145 classified, §105 still deliberately not.
-
----
-
-## 9. Parallel, subagent-driven delivery
-
-Use Subagent-Driven Development for planned work. Decompose into small,
-testable items; give each agent a narrow brief, an isolated worktree when it
-will edit files, explicit acceptance criteria, and a report path. Keep a
-durable ledger (`.superpowers/sdd/<date>-<name>/progress.md`, git-ignored) so
-completed work is never redispatched after a context compaction, ending in a
-`RESUME HERE` block.
-
-Subagents in this environment **cannot reliably write report files** — ask for
-findings as returned text and persist them yourself.
-
-Every dispatch carries a task counter in both its description and the first
-line of its prompt: `Task x von y` and `Txx, rest N offen`. Status lines and
-ledger headings carry a real timestamp read from `date` in the same call that
-writes them.
-
-At most **two** subagents active alongside the coordinator. Queue the third;
-never kill a running one.
-
-Name the model and reasoning effort explicitly on every dispatch; never inherit
-the coordinator's default. Cheapest tier that carries the item's risk:
-
-| Work type | Model | Effort |
-| --- | --- | --- |
-| Mechanical, fully specified 1-2-file edit; focused test | `claude-haiku-4-5` | low |
-| Multi-file implementation, integration, ordinary debugging | `claude-sonnet-5` | medium |
-| Architecture/domain decisions, data-integrity or bus-facing work, UI and design work, difficult debugging | `claude-opus-5` | high |
-| Task, branch, pre-merge and follow-up reviews | `gpt-5.6-sol` | medium or high by risk |
-
-The implementation tiers above do not override the review policy. For ordinary
-reviews use medium effort for bounded routine changes and high effort for
-cross-layer, concurrency, data-integrity or other high-risk changes. A failed
-review/fix round may increase Sol effort from medium to high, but never consumes
-the strongest model reserved for the final whole-goal review. Implementation
-escalation and design/UI implementation tiers otherwise remain unchanged.
-
-Two distinct review scopes:
-
-- **Per branch, before merging: a whole-branch review on `gpt-5.6-sol` with
-  medium or high effort.** Every branch still requires independent review;
-  follow-up reviews use the same model policy. Fix and verify findings before
-  integration. A branch's closing review is not the final whole-goal review.
-- **Only at the very end: one review over the finished whole goal using the
-  strongest available model.** Select and verify that model when this final
-  stage is reached, not by inheriting the coordinator's default. Dispatch only
-  after all goal tasks are achieved (or explicitly accepted out of scope), all
-  branches have been reviewed, and every other completion prerequisite passes.
-  No individual task or branch review uses this reserved strongest-model slot.
-  Findings prevent completion; verification/follow-up uses Sol medium/high.
-
-Before integration, the coordinator reviews each subagent's diff, test
-evidence, documentation and report. Do not take a subagent's summary at face
-value — verify the claim, especially a green one.
+Work incrementally in isolated worktrees; no KNXBench subagents (user decision
+2026-09-28). Check each diff, test and documentation claim before integration.
+Do a distinct whole-branch review; fix findings and repeat relevant gates.
+The final whole-goal review is separate and only begins after all actionable
+items have been delivered or explicitly accepted as boundaries. A green
+focused test or self-review is not an independent acceptance verdict.
 
 ---
 
@@ -710,32 +254,26 @@ Finish only when:
 - all nine gates pass, with the freshness check from rule 7 done;
 - every remaining exception carries the user's explicit out-of-scope
   acceptance;
-- and the final strongest-model review has run over the finished whole and its findings
+- and the final whole-goal review has run over the finished whole and its findings
   are resolved. It is the last thing that happens, not a formality on the way
   out — if it opens something, the goal is not done.
 
 Report the completed work, the verification evidence, the remaining external
 blockers, and the next required user decision, if any. Commissioning stays
-where section 0 left it: excluded from this run, still owed, waiting on test
-hardware.
-## 11. User-reported UX and workflow issues — amendment 2026-09-21
+where section 0 left it: excluded from this run; its verified narrow hardware
+path and unresolved safety boundaries belong to `goal-commission.md`.
 
-The observations formerly collected in `docs/Issues.md` are now normalized into
-thirteen independently testable tasks in
-`docs/superpowers/plans/2026-09-21-user-reported-issues.md`. They are part of
-this goal's backlog. Where that plan names overlap with an existing item
-(dirty state, settings, drag/drop, discovery), extend the existing owner and
-deliver one coherent implementation rather than creating a competing path.
+## 11. User-reported UX and workflow issues
 
-The issue plan also records which reports describe already-present behavior:
-bus-monitor text/service filters, KNXnet/IP discovery, and separate Send and
-Receive group links exist today. Those tasks reproduce reachability or
-packaging failures and add the missing behavior; they do not reimplement the
-existing core. Evidence-gated KNX/domain questions remain investigation-first.
+The thirteen original reports have an evidence checklist in
+[`docs/superpowers/plans/2026-09-21-user-reported-issues.md`](docs/superpowers/plans/2026-09-21-user-reported-issues.md).
+Delivered slices are not pending tasks. `goal-ui.md` owns the remaining UI
+checks; ISSUE-04's unticked acceptance rows require verification before being
+closed (§12.2). New domain or compatibility questions remain investigation-first.
 
 ---
 
-## 12. Status after the Paperclip handback (2026-09-27)
+## 12. Current completion and handover
 
 Sources for this section:
 
@@ -747,151 +285,43 @@ Sources for this section:
 
 "Board" in the Paperclip sources means the user. A Board approval listed below is therefore a user decision. Do not ask for it again.
 
-### 12.1 What was already done before Paperclip (check it, do not redo it)
+### 12.1 Completed foundations
 
-| goal.md item | State | Evidence |
-| --- | --- | --- |
-| §2.1 §22 server auth (T01/T01b) | done | `af12fa2`, `0f28c1e`, ADR-0026 |
-| §2.2 §117 read_on_init (T02) | done | `1e74075` |
-| §2.3 §34 export | withdrawn | ADR-0028, `a619c13` |
-| §2.4 §12 manufacturer data (T04, T29) | done; remaining gaps documented | `8856486`, `240792b` |
-| §2.5 §85 signature (T05) | done, as an evidenced boundary | `d8fc36a` |
-| §2.6 §2 validation (T06) | done | `258feee` |
-| §2.7 §61 DPT (T07) | done | `03c1316` |
-| §2.8 PDB-1 to PDB-7 | done | `21e22fa`, `d8f58dd`, `ce6f339`, `6503c97`, `b65cdfa`, `badcc33`, `16ee372` |
-| §3.1 D6 diagnostics UI (T08) | done | `bc6e53e` |
-| §3.2 E2 reconcile (T09) | done | `3bf8ce7` |
-| §3.3 D8 settings (T10), §3.8 settings file | done | `7a874b8`, `d31dd75` |
-| §3.4 B10 drag & drop (T11) | done (two gestures) | `02237eb` |
-| §3.5 UI residue A/B (T12/T13) | done | `ff73ab9`, `7f9c8c4` |
-| §3.6 discovery in the app (T25) | done | `62ff969` |
-| §3.7 GA notation (T26) | done, as a fixed slash notation | ADR-0030, `fcf4563` |
-| §4 report (T14), diff (T15), CSV (T16) | backend done; web residues open (see 12.3) | `cd10132`, `2403c63`, `0e278f0` |
-| §5 §16 Tauri/GTK3, §79 docs (T17) | done | KNOWN_LIMITATIONS §16 |
-| §7 MCP/NL, macros, notes ADR, who-talks-to-whom | done, as research artifacts | RESEARCH §13, §14, §16; ADR-0031 |
+T01–T17 and PDB-1–PDB-11, the Paperclip DIN-9/10/11/4/16/12/26
+takeovers and the dated UI delivery through U11 are already integrated.
+DIN-3 was rejected, not an item to merge. Evidence is in
+`docs/IMPLEMENTATION_STATUS.md`, ADR-0038/0039 and Git history. Do not
+repeat the former takeover and verification instructions. DIN-26's twelve
+accepted limits are recorded in §6.
 
-### 12.2 Paperclip branches: take them over first, in this order
+### 12.2 Work still requiring a decision or delivery
 
-**Status 2026-09-30: all eight taken over; nothing below is still a to-do.**
-Checked with `git merge-base --is-ancestor` against `main`: `72da572`
-(DIN-9), `cc4012c` (DIN-10/11), `cfe80a1` (DIN-4), `93348bc` (DIN-16),
-`0db4841` (DIN-12) and `70b683e` (DIN-26) are all ancestors of `main`. DIN-11
-landed ADR-0039 phases 1–2 (`43f68a0`, `09beee1`); ADR-0038 was accepted
-2026-09-28 (`7aa4501`); DIN-12 merged as `d135c5e`; DIN-26 was decided
-2026-09-27 (`e0c1f37`, merge `c91eed8`) and is recorded in §6; DIN-3 was not
-merged, as instructed. The Paperclip worktree root no longer exists. The
-text below is kept as the takeover record.
+1. §3's file-download memory cost and file-picker gestures (§23/§24);
+   §4's CSV-derived columns and large-diff paging (§40/§60) need a scoped
+   decision, not an invented acceptance.
+2. `goal-ui.md` U0–U12's bounded UI slices are delivered. U13 still needs
+   the user's chosen independent read-only review and findings fixes. The
+   2026-10-01 Claude service refusal occurred before a review verdict.
+   ISSUE-12 retains two discovery evidence boxes: the host-firewall fix
+   enabled CLI/HTTP discovery but no wire capture or full loopback multicast
+   test was run. Native WebKitGTK Search remains unverified.
+3. ISSUE-04's saved-baseline and locale-aware last-save acceptance rows are
+   now tested and ticked; do not dispatch them again.
+4. The manual's location/screenshots/claim-by-claim acceptance (T23), then
+   the user's alpha tag choice (T18), then the final whole-goal review (§10).
+   No release tag has been authorized.
+5. Commissioning K6/serial/K13 confirmed address writes currently refuse
+   before any tunnel, pending verified device-specific durable recovery;
+   `1.1.32` has bounded read-only presence/partial identity evidence only;
+   the exact model, installed application and recovery remain unverified.
+   ADR-0039 phases 3–5
+   remain parked (§8); AES project support remains artifact-blocked (§6).
 
-All of these worktrees are under `/mnt/daten-i/Sourcecode/.paperclip-worktrees/KNXBench/<DIN-n>`. Each one had a clean working tree at shutdown. None has been pushed. You can use the worktrees as they are, or check the branch out into a normal worktree under `KNXBench.worktrees/`.
+### 12.3 Parallel tracks and handover
 
-In the Paperclip runtime, `git` on `$PATH` was a wrapper that blanked the author identity. Outside Paperclip this does not apply, but check the author of the wip commits before you build on them.
-
-1. **`din-9-legacy-pr-design` @ `72da572` (docs only, +727 lines).** This is the §7 legacy VD/PR `.pr5` design: RESEARCH §18, KNOWN_LIMITATIONS §128 and the spec `docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md`.
-   - Independent review DIN-34 gave **APPROVE** and reproduced the measurements.
-   - The user **accepted B-1 to B-6 as recommended and approved the merge as-is** (approval `57d5c7a1`, 2026-09-26 17:49Z).
-   - To do: fast-forward merge, then run `ai-stats.py` (rule 16).
-2. **`din-10-command-apply-adr` @ `cc4012c` (docs only).** This is ADR-0039, "Project mutation goes through commands", which answers §8.4 F-T30-1. It adds KNOWN_LIMITATIONS §129.
-   - Review DIN-35 gave **APPROVE**.
-   - The user **accepted B-1 to B-5 and approved the merge** (approval `ef64a57b`, 2026-09-26 17:27Z).
-   - To do: merge it.
-   - The branch edits goal.md §8.4. Keep main's text when that conflicts.
-   - At merge time, recount LIMITATION_TRIAGE by command. The branch raised K1 from 7 to 8 by hand.
-   - Run `ai-stats.py`.
-   - Review nit, not a blocker: goal.md cites `project.rs:181-186`, but the fields are now at 184-190.
-3. **`din-11-command-apply-phase1` @ `cc4012c`.** Same commit as DIN-10. There is **no implementation yet**.
-   - ADR-0039 phases 1 and 2 close §129 (data loss). This is the next real §8.4 work, and it is now approved.
-   - The first implementation commit flips ADR-0039 from `Proposed` to `Accepted`.
-   - B-2 changes a documented undo guarantee. The phase-2 commit must rewrite the matching sentences in IMPLEMENTATION_STATUS and in GAP_ANALYSIS E2.
-   - It touches `knx-core`'s public surface. Serialize it against any PDB slice that also touches `knx-core`.
-4. **`din-4-corpus-manufacturer-dirs` @ `cfe80a1` (2 wip commits).** This fixes the gate blocker "Seven corpus tests assume a flat local corpus directory" (KNOWN_LIMITATIONS). It is a **prerequisite for PDB-8 to PDB-11**.
-   - What was done:
-     - It adds `knx_testsupport::walk_corpus_files` and `find_corpus_file`.
-     - It rewires `dynamic_tree.rs`, `parameter_views_corpus.rs` and `standalone_packages.rs` to use them.
-     - It removes assertions that pinned counts.
-   - Current state: 8 of 9 corpus tests pass against the real corpus.
-   - To do:
-     - `a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs` fails with `duplicate column name: is_secure_enabled`. The manual schema rewind in the test is missing the column added in `migration.rs:297`. This was a pre-existing gap that the old path bug had hidden.
-     - Run fmt and clippy.
-     - Update the KNOWN_LIMITATIONS entry.
-     - Audit the three files for any remaining count pins.
-     - Get a review.
-   - Always run with `KNXBENCH_PRODUCT_CORPUS=<root>/OriginalData/ProductDatabases`. Otherwise the tests take the skip path and pass for the wrong reason. `corpus_nested_module_measurement_task_11` takes about 400 s, so run it in the background.
-5. **`din-16-site-hierarchy-decision` @ `93348bc`.** This is ADR-0038 for §11 ISSUE-06. A site or property is a `Space`/`BuildingPartType::Ground` root, with no new `Site` kind. It adds characterization tests and changes no production code or schema. Its status is `Proposed`.
-   - **No review yet.** Paperclip review DIN-33 never started, because of provider errors.
-   - To do: an independent review (the scope is in the old DIN-33: spec evidence Project Schema23 §1.1.2.3/§1.2.6.3, 3/10/3 §1.2.3.5, 3/10/4 Table 10, 3/10/2 Table 1; the tests; KNOWN_LIMITATIONS §127; the gates). Then ask the user for approval and merge.
-   - It blocks ISSUE-05.
-6. **`din-12-dirty-state-autosave` @ `0db4841` (1 wip commit).** §11 ISSUE-04, together with the §3.5 residues §103 and §81.
-   - The commit contains `useAutosave.ts`, `autosaveSettings.ts`, SettingsPanel wiring, the dirty-state signal in `App.tsx`, server-side dirty state in `apps/knx-server/src/domain.rs`, and tests.
-   - **The tests were not run after the wip commit.** Save-and-continue and the last-save indicator are not finished.
-   - No architecture review has been done against AGENTS.md (the UI must not own domain logic). Verify everything before you build on it.
-7. **`din-26-board-oos-acceptance` @ `70b683e`.** This is a draft of an out-of-scope decision (`docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md`). **Decided 2026-09-27: all twelve accepted** (`e0c1f37`; see §6). It covers:
-   - §45 native PDF
-   - §48 the full report prose catalogue
-   - §52/§53/§54 diff correlation
-   - §55 applying a diff
-   - §56 three-way compare
-   - §39 CSV ranges and renaming
-   - §41 spreadsheet transforms
-   - §12 remaining manufacturer gaps
-   - §85 signature verification
-   - §2 XSD
-
-   To do: put it to the user for a decision. Whatever is accepted goes into §6.
-8. **`din-3-goal-migration` @ `90add0c`: do not merge it** (see the header). You may delete the branch and its worktree.
-
-### 12.3 Still open (not started)
-
-- **§2.8 PDB-8 to PDB-11:** done. PDB-8 `abf35d3`, PDB-9 `3643e90`, PDB-10 `15b4c56`, PDB-11 `7844590` (ADR-0043, schema v17), all merged and pushed.
-- **§4 web residues:** done.
-  - §49/§50 lifted by CT-2 (`d9ff0db`).
-  - §59 lifted and §60 narrowed by CT-1 (`313489e`).
-  - §57 lifted by CT-6 (`826466a`).
-
-  All three came through the cloud chain.
-- **§11 UX/UI issues: moved to [`goal-ui.md`](goal-ui.md) on 2026-09-28 (user decision).** A separate UI session (GPT/Codex) owns ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12 and 13, the UI half of ISSUE-08, the ADR-0038 review (ISSUE-06) and the File-menu rename. Its boundary table is `goal-ui.md` §5; the web lock is `goal-ui.md` §3.
-  - The cloud track stopped on 2026-09-28. Its web queue (CT-7 to CT-10) is now `goal-ui.md` U4 to U7.
-- **§11 ISSUE-08 data half: done 2026-09-30.** P1 `a2ff938` (absent `IsActive` is active), P2 `dae6c1a` (evaluated `activation`, `channel`, diagnostic severity; ADR-0050), P3 `9795168` (`program_dpt`, `dpt_text`, `function_text`). Issue-plan checkboxes 1–4 and 6 ticked with evidence. `apps/knx-web` was not edited.
-  - Handed to the UI session under "For the UI session:" in `.ai/CURRENT_STATE.md` (handover `3606371`): the five server-only fields, how to show `program_dpt`, and that the ISSUE-08 UI half may start.
-  - The data half of KNOWN_LIMITATIONS §146 now stores and projects `Channel/@Name` and `@Number` as separate verbatim fields (ADR-0052, schema v18). The UI half stays with U12; `apps/knx-web` source remains untouched.
-- **§146, channel `@Name`/`@Number`: data half delivered 2026-09-30.** ADR-0052 → import parser → v17→v18 migration → real v17 corpus re-ingest check → projection. `dynamic_node` retains both attributes; migration reparses owned trees, retires only known `Channel/@Number` unknown rows, and rewrites measured reports or marks unprovable ones unavailable. The private-corpus check installed 106 files without errors both fresh and after migration; aggregate channel, report and unknown counts matched. The UI session (U12, web lock) must show the fields before §146 can be fully lifted. No invented label and no ETS parity claim.
-- **§8.1 to §8.3 and §8.5, doc hygiene: done 2026-09-30 (`0e6cdf1`).** ROADMAP T37 is marked shipped; `codex-goal.md` was already gone from `main` (`57d7190`); `ideas.md` is gitignored and was marked locally (corrected 2026-09-30, §8.3); LIMITATION_TRIAGE is recounted by command: 146 numbered entries, 145 classified, §105 deliberately not, §92's new title and §134–§146 included; re-run the same day for the commissioning lane's §147 (lifted): 147 entries, 146 classified. §8.4 (F-T30-1) stays parked, re-checked.
-- **§10 doc reconciliation, first pass: done 2026-09-30** (`9d2d017`, `9be8830`, `ec138ba`, `3d41262`). goal.md §12.2 records all eight Paperclip branches as taken over and DIN-26's twelve boundaries in §6; GAP_ANALYSIS rows B10, D6, D8 now match T11, T08/T09, T10 and DIN-12; ROADMAP Sessions 5 and 6 carry status lines; eleven KNOWN_LIMITATIONS headings that still named a solved problem say so, with their old anchors kept. `ideas.md` turned out to be gitignored, not deleted; §8.3 is corrected. IMPLEMENTATION_STATUS is an append-only log with no summary to drift. The final pass belongs to the §10 review, after the UI track.
-- **Handed over 2026-09-30 (end of the Claude session that ran K12/§147):**
-  - To `goal-ui.md` U12: §146 channel labels, ADR-0051 Settings Debug
-    toggle, monitor `control` column, readiness/compare views.
-  - To `goal-commission.md` K12/K13/K14: the live runs on `1.1.67`, each
-    only on the user's device-specific go.
-  - Open user decisions, not agent work: U13's closing-review form, the
-    T18 alpha tag, the root checkout's uncommitted `stats.md` /
-    `docs/RESEARCH.md` / telemetry-plan edits (commit or drop), whether
-    `ai-stats.py` joins the repository, and the foreign worktree
-    `KNXBench.worktrees/k12-live` (not created by this session; left as is).
-- **§5 D12, the user manual (T23):** not accepted. The open points are the location per ADR-0024, removing the screenshots, and a claim-by-claim verification report.
-- **§5 alpha release (T18):** a user decision; do not tag.
-- **§10 final whole-goal review:** last of all.
-
-Doc reconciliation, then the manual, then the alpha decision, then the final review come last, in that order. The manual and everything after it wait for the end of the UI track (`goal-ui.md` U13), because the manual describes the finished UI. §10's completion condition includes the UI track's result.
-
-### 12.4 Parallel tracks outside this goal
-
-- Parallel track `iaw-settling-delay` (commissioning 1.1.67, worktree `KNXBench.worktrees/iaw-settling-delay`): do not merge, rebase, clean up or `worktree prune` it. It merges into `main` itself.
-  - Done 2026-09-28: the commissioning session merged it itself (`95a862c`) and removed branch and worktree. Its scratch `scratch/iaw/` still belongs to that session.
-- **Commissioning track, from 2026-09-28: [`goal-commission.md`](goal-commission.md)** (T30 phase 3, K1–K10).
-  - Its worktrees `KNXBench.worktrees/iaw-*`, branches `iaw-*` and `scratch/iaw/` belong to that session. Do not merge, rebase, clean up or `worktree prune` them; it merges into `main` itself.
-  - Do not start a workspace gate while its gate is running (`pgrep -af cargo`).
-  - Before K5 it announces its web part in its handover. Do not start a web task of the §12.3 chain in parallel.
-- **UI track, from 2026-09-28: [`goal-ui.md`](goal-ui.md)** (UX/UI issues, U0–U13), run by a GPT/Codex session.
-  - Its worktrees `KNXBench.worktrees/ui-*`, branches `ui-*` and `scratch/ui/` belong to that session. It merges into `main` itself.
-  - This session no longer edits `apps/knx-web`. If it ever must, it takes the web lock (`goal-ui.md` §3) first.
-  - Do not start a workspace gate while another session's gate runs (`pgrep -af cargo`).
-  - Items it hands over arrive under "For the goal.md session:" and are adopted into this section.
-- **Received from the commissioning session** (its handover entries under "For the goal.md session:"; this session adopts them here and confirms in its next handover):
-  - 2026-09-28, from merge `95a862c`: `stats.md` predated that merge (last refresh `cf791b0`). **Done:** refreshed in the commit that adds `goal-commission.md`.
-  - 2026-09-28 (K1/K2): `docs/manual/known-issues.md`, `docs/manual/implementation-status.md` and `docs/manual/reference/02-supported-and-unsupported.md` still say KNXBench never wrote to hardware. That is false since 2026-09-26. Fix it with the §12.3 manual work (T23). KNOWN_LIMITATIONS §92 has a new title; the triage recount must pick it up. **Picked up** (`0e6cdf1`).
-  - 2026-09-28 (K2): the File-menu rename "Download project" → save/export (R2, `docs/GLOSSARY.md`) is web work. **Passed on to `goal-ui.md` (U3).**
-  - 2026-09-28: KNOWN_LIMITATIONS gained §134–§136 (and now counts 139 `##` headings, versus the triage's 119). Add them to the LIMITATION_TRIAGE recount in §12.3 (§8.5). §136 is commissioning-owned: triage classifies it, and only `goal-commission.md` changes its text. **Done** in the 2026-09-30 recount (`0e6cdf1`); §136 classified K3, its text untouched.
-
-### 12.5 Lessons from the Paperclip run
-
-- Provider errors (HTTP 400 thinking block, HTTP 429) ate every review run on 2026-09-26. An automatic error comment is not a review verdict.
-- Every Paperclip result above that says "not run" or "wip" is unverified. Rule 6 applies without exception: gates by exit status, plus the freshness check from rule 7.
+`goal-ui.md` owns the remaining Web work and the live Web lock protocol.
+`goal-commission.md` owns programming and every bus mutation; no prior go
+transfers to a different operation. This goal does not edit `apps/knx-web`
+without its lock and does not merge, clean or rebase another session's
+worktree. For current ownership and in-flight work, read the top of
+`.ai/CURRENT_STATE.md`, not a historical status paragraph.

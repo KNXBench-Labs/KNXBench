@@ -2,45 +2,19 @@
 
 ## Partial commissioning bus-activity snapshot (ADR-0055)
 
-The server's read-only `GET /api/bus/activity` reports retained download,
-button-programming, monitor and line-scan sessions, but **not** a complete
-global action history. It identifies held locks without guessing which
-operation or target owns them. One-shot group writes and serial-address
-**writes** still have no retained activity evidence; short actions may be
-missed entirely by polling. Read-only device comparisons, serial-number
-lookups, Debug-gated service-control **reads** and gated service-control
-**writes** are recorded in a server-lifetime ring (up to 64 records under
-ordinary single-tunnel use), with `oneShotDropped` reporting evictions.
-Write activity is still not a durable audit log or a device receipt. Lookup activity has
-`address: null`: it does not publish the device serial or invent an address.
-Service-control read activity stores neither property octets nor mask or key.
-A cancelled read-only action has an unknown completion outcome; it never
-performs a device write. The activity record contains neither memory bytes
-nor keys or full results. A server restart loses this history.
-Write activity needs route-specific evidence (ADR-0056): earlier simulated
-serial-address HTTP success could be a no-op, and a post-send error could be
-an unverified mutation; group writes have no receiver readback. The public
-serial-address HTTP and CLI write entry points now **fail closed before any
-tunnel** (ADR-0057): no complete durable pre-write backup of affected storage
-is available, even for a possible no-op or after service-control bit 2 is
-explicitly enabled. The read-only serial lookup and protocol simulator remain
-available. A returned previous address or application-memory dump cannot
-substitute for an action-specific durable backup; an unknown device's entire
-internal storage map must not be inferred from KNX network messages. The
-service-control property backup covers only that property, not a whole device.
-A typed `serviceControlWrite` entry now distinguishes `noChange`, `notSent`,
-`effectUnverified`, `verified` and cancellation `unknown`. Its
-`backupRecorded` and `sendPossible` flags do not prove transmission or a
-device mutation: a transport error after the pre-write callback is
-`effectUnverified` even if no frame reached the simulator. No property bytes,
-mask, key or host backup path are disclosed. The remaining serial-address
-and group writes are untracked; no green receipt can be inferred from a
-generic read terminal state.
-An empty `sessions` list does not prove no bus traffic, and a terminal session
-does not prove the gateway is free. The response declares `coverage: "partial"`.
-The global Web status bar and per-action UI rows are still pending; this
-backend addition must not be presented as their completion. Tests used only
-simulated devices and a local/private corpus; there was no live bus access.
+`GET /api/bus/activity` is a read-only **partial**, server-lifetime snapshot,
+not an audit log or proof of device mutation. It reports retained download,
+button-programming, monitor and line-scan sessions plus bounded one-shot
+read and service-control-write records. Short actions can be missed by polling;
+an empty session list does not prove the gateway is idle. Held locks need not
+identify an operation or target. The one-shot ring can evict records and
+reports `oneShotDropped`; restart loses them. Serial-address and group writes
+do not supply durable activity receipts. A `serviceControlWrite` entry
+distinguishes no-change, not-sent, verified, unverified and unknown outcomes;
+its backup/send flags do not prove transmission or a whole-device recovery.
+No property octets, keys or host backup paths are disclosed. The global Web
+status bar and per-action history remain open (ADR-0055/0056); simulator
+evidence is not a live bus check.
 
 ## U12 structure editor scope (ISSUE-05)
 
@@ -176,21 +150,20 @@ program (MDT `1.1.67`, `0701h`, `A-0027-15-0BAC`, complete download; RESEARCH
 top entry, 2026-09-29): backup before the first write, restore
 byte-identical over 180 dump lines; the parameters-only partial download
 likewise (backup of `4400h`, K7 parameters written, restore to a
-byte-identical dump). The group-address partial download, other devices
-and the refuse-before-write path on a failing backup remain
-simulator-only; neither can be promised as a universal rollback. The existing manual
-read-only baseline required by `goal-commission.md` before live tests is
-separate and still required when live tests are authorised again.
+byte-identical dump). The backup/restore path for a group-address partial plan, other devices
+and the refuse-before-write path on a failing backup remain simulator-only;
+none can be promised as a universal rollback. The existing manual read-only
+baseline required by `goal-commission.md` before live tests is separate and
+still required when live tests are authorised again.
 
-**Device-checks UI boundary (2026-09-30):** the offline readiness view uses
-only the open project's installed product database; `verified` is evidence
-for one application/download operation, not a general compatibility promise.
-The comparison UI asks for the complete plan only: the API/CLI's partial
-selection is not available there yet. It requires explicit confirmation
-before a read-only management tunnel, and can be refused by a device whose
-memory is protected at the free access level. A compare is neither a backup
-nor proof a later write will work. No live-bus run was made for this view;
-EN/DE browser and simulator-backed server tests provide its current evidence.
+**Device-checks UI boundary (2026-09-30).** Readiness uses only the open
+project's installed product database; `verified` applies to one application
+and download operation, not general device compatibility. Comparison uses
+the complete plan only (the CLI/API partial option is not shown there),
+requires an explicit read-only tunnel confirmation and may be refused by a
+read-protected device. It is neither a backup nor proof that a later write
+will work. Web evidence is mocked/EN-DE and server evidence simulated, not a
+live test of this view.
 
 ## PDB-9 parameter and Dynamic coverage boundary
 
@@ -298,51 +271,14 @@ being partially interpreted. All 115 corpus instances pass this check; a
 hypothetical vendor file that ETS tolerates but XML forbids would now be
 refused rather than half-read.
 
-## Ten corpus tests assumed a flat local corpus directory (resolved 2026-09-27)
+## Closed entries and historical links
 
-**Resolved (verified 2026-09-27).** The corpus-dependent tests now resolve
-fixtures recursively through `knx_testsupport::find_corpus_file` /
-`walk_corpus_files` instead of joining a filename onto the corpus root, and the
-"exactly four archives" assertion is gone. Verification on the reorganized
-local corpus: `standalone_packages` 42 passed, `parameter_views_corpus` 1
-passed, `dynamic_tree` 54 passed, 0 failed. A repository-wide search for
-`product_corpus_root().join(` returns no remaining call sites.
+Resolved/withdrawn limitations are no longer listed below. Their evidence remains
+in Git history and the dated [implementation log](IMPLEMENTATION_STATUS.md);
+the following empty anchors keep old documentation links from breaking. They
+are **not** open issues. The numbers are intentionally not reused.
 
-**Correction to the original count.** This entry said "seven tests"; the true
-number is ten. The seven came from the first failing workspace run, which stops
-at the first failing binary — suites sharing the fixture fail in separate
-binaries and were never reached. Counting test functions that call a corpus
-resolver gives ten: six in `dynamic_tree.rs`, one in
-`parameter_views_corpus.rs`, three in `standalone_packages.rs`.
-
-**Historical record.** The limitation below is kept because the cause is a
-recurring trap, not because the defect is open.
-
-**Limitation (was).** Ten tests resolved fixtures such as
-`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` directly beneath
-`OriginalData/ProductDatabases`, and one asserted that the directory contains
-exactly four archives. The local corpus had since been reorganized into
-per-manufacturer subdirectories, so these tests failed on a machine that has the
-full corpus present.
-
-**Cause.** `OriginalData/` is gitignored and local-only, so its layout is not
-version-controlled and no CI run exercises it. The tests were written against
-the flat layout and were never updated when the corpus grew subdirectories.
-
-**Cost.** `cargo test --workspace` failed on a developer machine holding the
-reorganized corpus, even though nothing in the product was broken. On a machine
-without the corpus the same tests silently took their skip path, which hid the
-problem rather than reporting it — a green result that proved nothing. **The
-recursive resolution and the honest `#[ignore]` gating fixed that for these ten
-tests only. The same silent-pass idiom remains at 72 other sites repo-wide; see
-§131.**
-
-**Evidence that it was pre-existing.** The identical failing set appeared at
-base commit `3fb910a` when run with `KNXBENCH_PRODUCT_CORPUS` pointed at the
-present corpus — equal before and after the PDB-7 merge, so no part of it was
-caused by the catalogue-metadata work. The other corpus gates
-(`corpus_compatibility_matrix`, and the scheme suites) passed throughout
-because they already walked the tree recursively.
+<a id="10-project-licence--resolved-2026-09-16"></a> <a id="10-the-project-licence-is-not-decided"></a> <a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag"></a> <a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag--resolved"></a> <a id="11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly"></a> <a id="117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core"></a> <a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader"></a> <a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader--resolved"></a> <a id="119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself"></a> <a id="120-nothing-checks-that-a-theme-is-legible"></a> <a id="120-nothing-checks-that-a-theme-is-legible--resolved-by-the-role-pair-contrast-gate"></a> <a id="122-resolved-settings-file-diagnostics-follow-the-ui-language"></a> <a id="122-settings-file-notices-reach-the-user-in-english-only"></a> <a id="123-resolved-group-addresses-no-longer-use-dotted-display-notation"></a> <a id="131-seventy-two-corpus-gates-repo-wide-still-pass-when-the-corpus-is-absent"></a> <a id="132-the-window-managers-close-button-quits-the-desktop-app-without-the-unsaved-changes-prompt"></a> <a id="147-a-received-telegrams-priority-repeat-flag-and-hop-count-are-not-kept--lifted-2026-09-30"></a> <a id="148-the-contributor-license-agreement-is-not-reviewed-by-a-lawyer-and-nothing-enforces-it--withdrawn-2026-09-30"></a> <a id="17-deleting-a-group-address-can-leave-a-dangling-grouplink--resolved"></a> <a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed"></a> <a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed--resolved-2026-09-22-t12"></a> <a id="21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved"></a> <a id="21-resolved-export-refuses-a-group-address-without-a-range"></a> <a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback"></a> <a id="22-the-webdocker-deployment-target-has-no-authentication"></a> <a id="25-resolved-the-web-package-and-docker-frontend-stage-use-node-22"></a> <a id="27-tunnelclient-heartbeat-retry-has-a-narrow-race-condition--resolved"></a> <a id="28-tunnelclient-subscribers-receive-no-signal-when-the-tunnel-closes--resolved"></a> <a id="30-apiprojectdownload-has-no-frontend-caller"></a> <a id="30-apiprojectdownload-has-no-frontend-caller--resolved-2026-09-22"></a> <a id="32-routing_busy-is-logged-not-honored-by-routingclient--resolved"></a> <a id="33-routingclients-round-trip-test-transmitted-on-the-physical-lan-not-on-loopback--resolved-2026-09-20"></a> <a id="34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20"></a> <a id="35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10"></a> <a id="4-round-trips-are-semantic-not-byte-exact"></a> <a id="4-round-trips-are-semantic-not-byte-exact--closed-2026-09-20-export-withdrawn"></a> <a id="49-project-documentation-export-has-an-in-application-preview-and-print-action"></a> <a id="49-project-documentation-export-has-no-in-application-print-preview"></a> <a id="5-exports-are-unsigned-and-ets-acceptance-is-untested"></a> <a id="5-exports-are-unsigned-and-ets-acceptance-is-untested--closed-2026-09-20-export-withdrawn"></a> <a id="50-project-documentation-export-has-no-section-selection"></a> <a id="50-project-documentation-export-has-section-selection-in-the-web-ui"></a> <a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a> <a id="57-raw-knxproj-comparison-is-available-on-the-cli-and-in-the-web-ui"></a> <a id="58-project-diff-has-an-opt-in-ci-exit-code-contract"></a> <a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a> <a id="59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet"></a> <a id="59-project-diff-shows-beforeafter-values-in-cli-api-and-web-panel"></a> <a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a> <a id="60-project-diffs-web-panel-shows-grouped-counts-only"></a> <a id="67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14"></a> <a id="80-a-project-can-be-created-from-scratch-in-the-ui--resolved-2026-09-16-goal-task-17"></a> <a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty"></a> <a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty--resolved"></a> <a id="83-the-from-scratch-launcher-is-browser-verified--resolved-2026-09-16-goal-task-17"></a> <a id="84-a-projects-group-address-style-can-be-chosen-and-afterwards-never-seen--resolved-2026-09-14-t4"></a> <a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import"></a> <a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import--resolved-2026-09-22"></a> <a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started"></a> <a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started--resolved"></a> <a id="92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device"></a> <a id="96-a-browser-that-loses-the-import-response-cannot-get-the-project-back-without-reloading"></a>
 
 ## 1. Single-sample bias
 
@@ -797,68 +733,6 @@ unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
 finding 2), not a documented rule — noted here, not hidden, and unaffected
 by this slice.
 
-<a id="4-round-trips-are-semantic-not-byte-exact"></a>
-
-## 4. Round trips are semantic, not byte-exact — closed 2026-09-20 (export withdrawn)
-
-**Closed 2026-09-20 — export withdrawn.** There is no round trip left to be
-byte-exact or semantic about: KNXBench writes no `.knxproj`
-([ADR-0028](adr/0028-no-knxproj-export.md)). The entry is kept because it
-records why byte-exactness was never promised, and because the underlying
-facts — signatures cannot be regenerated, attribute order is not stable,
-ETS owns its internal identifiers — are still true of any file this project
-reads. What replaces the three guarantees is the import-fidelity statement
-in [IMPORT_EXPORT.md](IMPORT_EXPORT.md) section 9. The original entry
-follows, unedited.
-
-**Limitation.** An exported file is not byte-identical to the imported one
-(risk R4).
-
-**Cause.** Signatures cannot be regenerated, attribute ordering is not
-guaranteed stable, and ETS assigns internal identifiers.
-
-**Impact.** Comparing an export against the original with `cmp` will show
-differences. That is expected and is not evidence of data loss.
-
-**Lifted when.** Never — this one is structural. What replaces it are the three
-guarantees in [IMPORT_EXPORT.md](IMPORT_EXPORT.md): semantic model equality,
-hash equality of all opaque bytes, and an explicit unsigned-export statement.
-See [ADR-0007](adr/0007-roundtrip-fidelity.md), itself superseded by
-[ADR-0028](adr/0028-no-knxproj-export.md).
-
-<a id="5-exports-are-unsigned-and-ets-acceptance-is-untested"></a>
-
-## 5. Exports are unsigned, and ETS acceptance is untested — closed 2026-09-20 (export withdrawn)
-
-**Closed 2026-09-20 — export withdrawn.** No file is written, so no file has
-to be signed and none has to be accepted by ETS. Risk R9 is closed as not
-applicable rather than answered ([ADR-0028](adr/0028-no-knxproj-export.md)).
-Signature entries found in an imported container are still preserved
-byte-exact and still never verified — that part lives on as §85. The
-original entry follows, unedited.
-
-**Limitation.** Every file this application writes is unsigned, and whether ETS
-re-imports it is unknown (risk R9).
-
-**Cause.** Signatures are RSA over manufacturer and project data; the signing
-keys are KNX's.
-
-**Impact.** An export may or may not open in ETS. The application says so at
-export time rather than implying it will work.
-
-**Session 3 status.** Every export carries `ExportWarning::Unsigned` — always
-constructed before anything else can fail, so no export is produced without
-it. Every `*.signature` entry (one per manufacturer plus one for the
-project — five in the reference project) is copied through unchanged and
-reported as `ExportWarning::StaleSignature { source_path }` per entry: it
-no longer matches the content it signs, since it cannot be regenerated
-without KNX's signing keys.
-
-**Lifted when.** Never. ADR-0015 already dropped ETS reimport as a goal;
-[ADR-0028](adr/0028-no-knxproj-export.md) then removed the exporter
-outright. The native `.knxdb` file (ADR-0003) is the only format this
-application writes a project into.
-
 ## 6. Devices behind vendor plug-in DLLs
 
 **Limitation.** Devices whose configuration depends on a vendor plug-in DLL
@@ -875,653 +749,49 @@ simply cannot be edited here.
 **Lifted when.** Never by us. Executing vendor binaries is not something this
 application does, on any platform.
 
-## 7. Commissioning and device download are required, but blocked
+<a id="7-commissioning-and-device-download-are-required-but-blocked"></a>
+## 7. Commissioning: a verified `070nh` memory path, not general device support
 
-**v1 scope decided, 2026-09-28 (goal-commission K9, ADR-0048).** User
-decision: *"das was am sinnvollsten ist"*, i.e. the recommendation. For v1,
-a device download means the memory path (`run_memory_download`) for mask
-`070nh`, verified on one device (`1.1.67`, option C). Everything listed
-below that the image builder or executor refuses stays refused **by
-name**, and the `[A]` rules stay as documented; none of them is a v1
-gap. The property-based `Downloader` stays in the tree as simulator-only
-(it still refuses hardware). Further families are added only with corpus
-evidence plus a real device.
+**Scope (ADR-0048/0049, verified 2026-09-29/30).** `knx device download`
+and the Web download tab, plus individual-address programming, are real
+product commands. They require the identified target, a plan, a
+device-specific confirmation phrase and exclusive gateway access. Complete
+and all three partial download scopes were exercised on one MDT `1.1.67`
+(`0701h`, `A-0027-15-0BAC`) with read-back; an address change and return,
+and an address reset with guarded recovery, were also exercised there.
+A successful byte read-back does **not** confirm the closing Basic Restart:
+that device does not acknowledge it; the result is explicitly
+`RestartOutcome::Unconfirmed`. Other devices, application versions and
+masks have not acquired this evidence. The property-based `Downloader`
+remains simulator-only. Full traces and the chronological corrections are
+in [RESEARCH §19](RESEARCH.md) and the
+[implementation log](IMPLEMENTATION_STATUS.md), not an open task list here.
 
-**Updated, 2026-09-28 (download data readable, ADR-0044).** The storage
-half of the gap below is closed for downloads without a schema change.
-`knx_productdb::code::load_program_code` reads a program's
-`AbsoluteSegment`s (with `Data`/`Mask`), table placements, `LoadProcedures`
-and `Options` from the stored blob on demand.
+**What still limits a download.** The product-database coverage probe could
+plan 55 of 181 `0701h`/`0705h` application programs at their defaults from
+103 packages; a plan is not a live verification. Other masks and unsupported
+procedures are refused by name. `Mask` semantics and parts of the
+BIM-M112 memory-procedure interpretation remain inference, identified as
+`[A]` in RESEARCH §19.1–§19.3. `LdCtrlMerge`/`MergedProcedure`, unsupported
+procedure steps, property-placed/unaligned parameter values, unsupported
+parameter encodings and types, ambiguous object priority/ReadOnInit and
+other unproved image shapes are refused rather than guessed.
+`PID_GROUP_RESPONSER_TABLE`, `A_Key_Write`, some master resets and RF writes
+have separate boundaries below (§110, §112, §141, §143–§144).
 
-What remains open here:
+**Backup is bounded.** Before a permitted memory download's first mutation,
+the executor persists the overwritten memory regions and affected load
+states. A complete and parameters-only backup/restore roundtrip ran on
+`1.1.67`; failing-backup refusal and group-address-partial restore remain
+simulator-only. This is not a full image and cannot recover property values,
+keys outside those regions, or arbitrary non-Loaded states. See the
+commissioning-readiness section above and [ADR-0049](adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md).
 
-- `Mask` semantics are undefined in every KNX PDF read. Treating it as
-  "do not overwrite" is `[A]` (RESEARCH §19.1).
-- `LdCtrlMerge`/`MergedProcedure` programs (40 of 310) are not expanded.
-- 59 programs contain steps nothing executes yet.
-- `[V]` Two live download runs on `1.1.67` (2026-09-28) stopped early, at
-  steps 13 and 8, on a `T_ACK` of this client's that never reached the bus
-  (RESEARCH §19.4). Fixed in the session's Transport Layer handling. A
-  third run wrote and verified every octet, and all load states read
-  Loaded. Its final Basic Restart got no `T_ACK`, so the executor reported
-  failure. Whether the device restarted is unverified, and the executor
-  cannot yet tell "restart unconfirmed" from a failed download. After a
-  power cycle, a bus monitor confirmed option C (button 1 toggles
-  `2/0/53`, 33 telegrams, nothing else).
-  `WriteScope::Download` is allowed on hardware only for this path
-  (`run_memory_download`); the property-based `Downloader` still refuses
-  hardware.
-- `[A]` An acknowledged request waits up to 12 s (four acknowledge
-  time-outs) for its answer, the device's own repetition ladder. No PDF
-  read gives a client-side figure.
-- **Memory download (RESEARCH §19.3): `[A]` rules not in any PDF read.**
-  - How `LdCtrlCompareProp` compares a property with longer `InlineData`:
-    the device's octets must start the data, and the rest must be zero.
-  - That the data write follows `LdCtrlAbsSegment`. CP's own BIM M112
-    procedure does this; the product procedure has no write step.
-  - The application task segment's identity is taken from `PeiType`,
-    `ApplicationNumber`, `ApplicationVersion` and the `M-hhhh` prefix.
-  - A load record is accepted only in the state its event aims at, which is
-    stricter than RES Table 94. A device that legitimately answers `Error`
-    stops the download.
-  - A failed run undoes nothing: the machines stay where the failure left
-    them, and unloaded parts stay unloaded until the next download.
-- `[V]` Union members: the `parameter` row still holds only the *union's*
-  `Memory` placement. `knx_productdb::code` now reads each member's own
-  `Offset`/`BitOffset` from the blob (`ParameterPlacement::UnionMember`),
-  and the image builder uses that.
-- **Image builder (RESEARCH §19.2): what it refuses rather than guesses.**
-  It builds only from what the product, the Schema23 PDF, or `1.1.67`'s
-  read-back back up; anything else is refused by name:
-  - module instances;
-  - parameters placed by `Property` (176 in the corpus) or in a union
-    that starts mid-octet (936);
-  - parameter types other than an enumeration over `Value`, a
-    `TypeNumber`, or a `TypeText`; in particular every `TypeFloat` (19
-    programs), since the corpus's non-zero float fields contradict `DPT 9`
-    (RESEARCH §19.9);
-  - a **negative** signed `TypeNumber` value: no PDF and no product image
-    shows how one is stored (RESEARCH §19.9). Two's complement is likely, not
-    sourced;
-  - a text value in a `TextParameterEncoding` other than `iso-8859-1`/
-    `iso-8859-15`, or a non-ASCII one where the program declares none;
-  - a program declaring a `ParameterByteOrder` other than `BigEndian`;
-  - com-object priority `High`/`Alert` and an enabled `ReadOnInitFlag`;
-  - any evaluation diagnostic, except a legal value that no `when`
-    covers and an unrecognized `Rename`/`ParameterBlockRename` leaf
-    (retitles a block only; a reference below one still refuses —
-    RESEARCH §19.10);
-  - a change to a masked octet other than the individual-address slot.
-- `[D]`, untested: a numeric field that crosses an octet boundary (up to
-  64 bits at bit offset 0–7) is written MSB-first on through the next
-  octet, as *Configuration Procedures* §8.5.4 and *Resources* §4.18.5.2.5
-  number bit offsets (RESEARCH §19.11). Neither PDF shows a crossing field,
-  and no crossing field has been read back from a device.
-- The image is checked against a real device for one program only
-  (`A-0027-15-0BAC`). Nothing in the image builder writes to a bus.
-
-**Limitation.** The application does not program devices (RESEARCH §8.3).
-
-**Corrected 2026-09-28.** The sentence above is no longer true as written.
-Two operations have written to one real device, `1.1.67` (MDT push button,
-mask `0701h`), each after the operator's explicit go:
-
-- `[V]` the individual-address write `1.0.71` → `1.1.67` on 2026-09-26
-  (RESEARCH §8.8.6);
-- `[V]` the memory download of program `A-0027-15-0BAC` (option C) on
-  2026-09-28, checked by read-back and by a bus monitor (RESEARCH §19.4,
-  §136).
-
-*As of 2026-09-28 morning:* neither ran as a product command. Both ran only
-from doubly gated `live_*` tests. **Since K4–K6 (2026-09-28) they are
-product commands**, and both ran through them live on 2026-09-29 (K7, K6;
-RESEARCH §19). Every other procedure below is still simulator-only.
-
-**Cause.** As of 2026-09-13 (superseded below — see the 2026-09-20 update)
-the cause is **implementation and hardware, not research**: there is no
-commissioning code, nothing has been *written* to a
-device (a read-only pass has run, 2026-09-14, see below), bricking a real
-device is a real outcome of getting it wrong, and a short, named list of
-things genuinely remains undocumented (see the 2026-09-13 phase-1 update
-below). The product database still does not store the load procedures it
-already reads. **[V]**
-
-**Impact.** Planning and documentation happen here; downloading happens in
-ETS, for now.
-
-**Ruling, 2026-09-11.** Asked whether commissioning is permanently out of
-scope, the user said no: it must work too, but the work waits until the KNX
-specification database is finished. This is **not** a scope exclusion — see
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E1**, which stays open, and
-the new backlog task **T30**. The bricking risk, the undocumented `Legacy*`
-matrix and the vendor-DLL involvement above are unchanged; they are the
-reason it has not started, not a reason it never will.
-
-**Updated, 2026-09-11 (R5 research spike, RESEARCH §8.4).** The KNX
-specification database referenced above now exists and has been queried
-against all nine open commissioning questions. Result: the *generic*
-complete/partial download, unload, reset (Master Reset) and memory-write
-procedures, and the Load State Machine, are documented in the KNX Standard
-and are now cited in full in RESEARCH §8.4 — that part of the "Cause" above
-is resolved as a *research* matter. What is **not** resolved, and is
-confirmed absent from both KNX specification databases searched (not just
-under-searched): the product-specific `Legacy*` compatibility-flag matrix
-and vendor `Baggage` DLL involvement in download for specific devices. Those
-two, plus the bricking risk on real hardware and KNX Secure key handling
-(§9), are why this limitation stands unchanged below. Documented is not
-verified: nothing in this update has been run against a device.
-
-**Updated, 2026-09-13 (T30 spike, RESEARCH §8.6).** The `Legacy*`/vendor-DLL
-research pass asked for below has been run against the product corpus, and it
-changes the shape of this limitation rather than lifting it. **No vendor DLL
-is required** to reconstruct a download sequence **[V]**: the 12 `Legacy*`
-flags are plain boolean attributes on `ApplicationProgram/Static/Options` in
-packages the importer already opens, project exports materialise the full set
-so every default is directly observable, and the ordered sequence is
-declarative `LdCtrl*` data — the mask-default procedure for System B in
-`knx_master.xml` reproduces the 34-row load-control table of `03_05_03
-Configuration Procedures` §3.9.3.4 row for row, including the two rows that
-table marks as mask-17B0h-only **[D]** **[V]**. Vendor DLLs appear only as an
-optional `EtsDownloadPlugin` hook on 5 of 35 corpus application programs, and
-in none of them do they supply the step list **[V]**. Three things genuinely
-remain. First, the *meaning* of each individual flag: all 13 program-level
-names (the 12 on `Options` plus `Parameter/@LegacyPatchAlways`) return zero
-hits across the entire extracted KNX Standard corpus, and the Standard
-acknowledges only the category — *"For the common tool ETS®, this can be
-controlled via a flag in the database entry for the product"* **[D]**
-(`03_05_03` §3.4.1.2.1, footnote 6). Second, `knx-productdb` stores
-`load_procedure_style` but drops `Options`, `LoadProcedures` and every
-`LdCtrl*` element without storing them — the bytes survive in `source_file`,
-but nothing is queryable **[V]**. As of 2026-09-13 they are at least no
-longer invisible. `program.rs`'s catch-all reports every one of them through
-the same `UnknownCollector` an unrecognised attribute already used, instead
-of the bare `_ => {}` it fell into before, so an ingest report shows
-`Options`, `LoadProcedures`, each `LdCtrl*` variant, `AddressTable`,
-`AssociationTable` and the rest of the load-procedure grammar as `Element`
-rows — name, parent path and occurrence count **[V]**. The same date's
-second pass added their *attributes*: the catch-all now also calls
-`report_unknown_attrs` for every element it reaches, with no known-attribute
-list at all, so `AbsoluteSegment/@Size`/`@MemoryType`/`@Address`,
-`LdCtrlCompareProp/@InlineData`/`@ObjIdx`/`@PropId` and the `Legacy*` flags
-on `Options` land as `Attribute` rows carrying name, owning-element path,
-count and one sample value — the substance of the load procedures, not just
-the shape (pinned by
-`a_load_procedure_steps_attributes_are_reported_not_just_its_name`) **[V]**.
-Two wrapper elements in the same tree joined that report on the same date,
-after the first attempt at the fix allowlisted them into silence instead:
-`ComObjectTable` carries the com-object table's memory placement
-(`@CodeSegment` and `@Offset`, on 279 of the 336 application-program files
-swept on this machine) and `ModuleDef` carries `@Id`/`@Name` (91 files)
-**[V]**. `@CodeSegment` is read for `Parameter`'s `Memory` and nowhere else,
-and `ModuleDef/@Name` is stored by nothing at all — `@Id` is at least
-recovered by the separate `Dynamic` pass as `dynamic_node.module_def_id` —
-so all four are now `ingest_unknown` attribute rows: parsed, reported, and
-not stored. So for this file kind the *reporting* half of the gap is closed for
-elements and for attributes both, and the *storage* half is not: an ingest
-report can tell a reader that `<AbsoluteSegment Size="513"
-MemoryType="EEPROM" Address="16384">` was present and where — the report even
-carries `"513"` as its sample — but no *modelled* table or column holds it,
-and no query resolves a download sequence from it **[V]**. Exactly two reporting exemptions remain, both deliberate, both
-narrow, and neither of them attribute-shaped rot. First, the document's own
-spine (`KNX`, `ManufacturerData`, `ApplicationPrograms`, `Languages`,
-`TranslationUnit`): neither those elements nor their attributes are
-reported, so an ingest does not describe the parser walking past its own
-ancestors. The attributes that exemption swallows are named here instead,
-so they are recorded somewhere: `KNX/@ToolVersion`, `KNX/@CreatedBy`,
-`KNX/@xmlns:xsd` and `KNX/@xmlns:xsi` (their sibling `@xmlns` *is* read, by
-`package.rs`, for the schema version), and `TranslationUnit/@RefId` (all 336
-files) plus `TranslationUnit/@Version` (39) **[V]** — that is the whole list, and
-`the_document_spines_own_attributes_stay_out_of_the_report` fails if the
-exemption ever widens past it. Second, `ComObject`, `ComObjectRef` and
-`ParameterRef` reach the catch-all only on a *duplicate* program, whose
-first ingest already stored element and attributes both; suppressing them
-there reports deduplication as nothing rather than as a compatibility gap
-(`a_duplicate_programs_modelled_elements_are_not_reported_as_unknown`)
-**[V]**. The seven structural wrappers the catch-all still keeps off the
-*element* report (`Static`, `Parameters`, `ParameterTypes`, `ParameterRefs`,
-`ComObjectRefs`, `ComObjects`, `ModuleDefs`) are no longer an exemption for
-their attributes: if a manufacturer ever puts one there, it is reported, and
-`an_attribute_on_a_supposedly_attribute_free_wrapper_is_still_reported`
-proves it rather than leaving the corpus claim unfalsifiable **[V]**.
-Everything unstored survives whole as bytes in `source_file` regardless
-(ADR-0011). (The companion `bool_flag` defect this
-spike found — only
-`"1"`/`"0"` were accepted, so schema-20/21 `true`/`false` landed as `NULL`,
-measured across all six ingested programs — was fixed on 2026-09-13 and is no
-longer outstanding **[V]**.) Third, hardware. Nothing in this update has been
-run against a device, and no bus was contacted to produce it.
-
-**Updated, 2026-09-13 (T30 phase 1 — the specification pass, RESEARCH §8.7).**
-An implementable written specification now exists:
-[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](superpowers/specs/2026-09-13-commissioning-download-design.md),
-16 sections and 49 subsections, every protocol claim quoted from one of **eight** source PDFs
-(`03_03_07 Application Layer`, `03_05_01 Resources`, `03_05_02 Management
-Procedures`, `03_05_03 Configuration Procedures`, `03_03_04 Transport Layer`,
-`03_07_02 Datapoint Types`, `AN194 v02 Master Reset of Resources`,
-`06 Profiles v02.01.01`). No code was written and no bus was contacted to produce
-it. This narrows the limitation to its two real causes and shortens the unknown
-list to **six** named items, plus one narrowed to a delegation (the count was
-seven until the 2026-09-14 fix round reclassified the `60h` parity item; see
-below).
-
-*Documented, cited and specified* **[D]**: individual-address programming by
-programming button, including the four-step `NM_IndividualAddress_Write`
-sequence, the responder-counting rules, and the fact that the response PDU
-carries no data (the address arrives as the frame's source); the Load State
-Machine's six states, five events **and the complete transition table**
-(`03_05_01` Table 94 — §8.4 previously had states and events but not
-transitions); memory read/write with its 1–63-octet service limit, its
-read-back rule — **this project's design rule and not the Standard's obligation on
-the client**, corrected 2026-09-14: `03_03_07` §3.5.4's *"shall be explicitly read
-back"* sentence sits inside the active-Verify-Mode paragraph and constrains the
-**device**, and with Verify Mode inactive the device *"shall not respond"* at all —
-the `DM_MemWrite` 12-octet cap for devices without
-`L_Data_Extended`, and the `base + length > FFFFh` rule that selects
-`A_UserMemory_Write`; Verify Mode via `PID_DEVICE_CONTROL` bit 2 and the fact
-that it is auto-disabled when the Transport Layer connection closes; the
-complete-download, partial-download and unload step lists; the 10-octet
-`Additional Load Control` payloads including the allocation subtypes; the full
-Master Reset Erase Code table; and — the question that mattered most — what an
-interrupted download leaves behind: load state is non-volatile, only `Loaded` is
-valid, a restart during `Loading` yields `Loading` or `Error`, and `Error` is
-escapable only by `Unload`, which makes the data explicitly undefined.
-
-Added by the same day's fix round, closing four items that had been recorded as
-"documented but not read" — a formulation that is unfinished work rather than a
-finding: the **authorisation** model in full (4-octet unsigned32 keys; access
-levels where 0 is maximum rights and the range is 0–3 or 0–15; validity *"until
-the connection is released"*, so per connection and re-done on every reconnect;
-not authorising grants the `FFFFFFFFh` level while a **wrong** key drops the
-partner to the *minimum* level with no negative response, which is why no guessed
-key may ever be sent; `DM_Authorize2_RCo`'s authorise-twice-and-keep-the-better
-algorithm — which, corrected 2026-09-14, is **profile-scoped** to *System 2* and
-*BIM M112* by its own *Use • Profiles* row, so for the System B download this
-project specifies the default is the unscoped `DMP_Authorize_RCo` of `03_05_02`
-§3.5.1 and the two-key comparison is an opt-in defensive extension; and a failed
-authorisation failing *"the entire Configuration Procedure"*, which is the safe
-direction because it happens before the first destructive step) **[D]**; the complete `DPT_ErrorClass_System` **20.011**
-enumeration, values 0–18 with 19–255 *"reserved, shall not be used"*, quoted from
-`03_07_02 Datapoint Types` and reusable by the DPT main-type-20 codec **[D]**;
-`AN194`'s per-resource reset semantics, which independently confirm that the load
-state and error code are *"not influenced"* by Basic Restart, Confirmed Restart
-or Power Cycle, and add that Verify Mode and programming mode are *"KNX default"*
-in **all six columns** of AN194's tables — six columns of which only three are
-Erase Codes (`02h`, `07h`, `01h`), the others being Local Reset, Basic Restart and
-Power Cycle, so "all six Erase Codes" was the wrong paraphrase and is corrected
-here — that `PID_TABLE_REFERENCE` must be re-read after **any restart, not merely
-after a reset** (it is *"recalculate"* in the `-` Local Reset column of all five
-Interface Objects read — `-` being a reset kind and not an Erase Code — and in
-the `02h` and `07h` Erase Code columns as well; what differs per object is the
-remaining three columns, `01h` Confirmed Restart, Basic Restart and Power Cycle:
-*"not influenced"* for the Address Table and Group Object Table, *"recalculate"*
-for the Association Table and both Application Program objects), that
-*"ex-factory"* means
-"a default state" and not "the delivery state", and that a device may legitimately
-be running an application after a Master Reset **[D, corpus]**; and `06 Profiles`,
-which states **no** cross-LSM ordering requirement — so the one concrete System B
-order in `03_05_03` §3.5.2 stands and may not be generalised, though corrected
-2026-09-14 this is a *delegation* rather than a silence: `03_05_01` §4.23.2.4.1
-says dependencies between multiple Load State Machines *"have to be defined in the
-Profiles … of these devices"*, and the per-mask Profile documents where such a rule
-would live were not read — while it does
-constrain which Load Controls a mask must support (Annex A Table 7), forbids mask
-`0912h` couplers the optional `Loaded`→`Error` transition, makes authorisation
-mandatory for some profiles and optional for others with 4 or 16 levels, requires
-a device without protected areas to grant level 0 to any key at all, and requires
-that *"If Verify Mode is not implemented, it shall always be off."* **[D, corpus]**
-
-*Genuinely undocumented*, each searched for in both KNX specification knowledge
-bases and, where relevant, the extracted Standard corpus. The identifiers are the
-stable `GAP-T30-nn` names defined in the design spec §12 and used verbatim in
-RESEARCH §8.7.15; the plain ordinals this list used before 2026-09-14 are mapped
-in that section, because all three files had renumbered independently:
-`GAP-T30-01` per-`Legacy*`-flag semantics; `GAP-T30-02` the `LdCtrl*`-name →
-load-control-subtype mapping for 13 of the 25 `knx_master.xml` kinds — note the
-payload *layouts* **are** documented, which narrows the earlier claim, and that a
-wrong subtype drives the Load State Machine to `Error` rather than returning an
-error; `GAP-T30-03` what an `EtsDownloadPlugin` DLL does (compiled code; not
-documentable from either base); `GAP-T30-04` the "differential download
-algorithm" named by `03_05_03` §3.5.3, p. 46 — **narrowed 2026-09-19**: the
-trigger, goal, required client-side state and consistency argument are
-documented in three further places (`03_01_02 Glossary` p. 9, RES §4.2.27.1.2
-p. 39, `Project Schema23` `DeviceInstance` attributes p. 44); only the
-diffing/chunk-selection strategy remains absent, and the Glossary's own "may
-for instance" marks that as implementation-defined rather than unspecified —
-see design spec §12 item 4 and
-[COMPATIBILITY.md §7](COMPATIBILITY.md#7-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow)
-for the related printed-text notes; `GAP-T30-07` the unquantified "delay for programming
-the memory in the device" of `03_05_02` §3.16 and four sibling procedures — chased
-to the footnote's own reference (`03_07_02 Datapoint Types`), which yields only
-`DPT_Time_Delay` 20.013's 26 coarse labels and no formula, so the gap survives;
-and `GAP-T30-08` LSM Realisation Type 2, which `03_05_01` §4.23.3 states outright
-is *"not specified in this version of this document"*. Counted separately because
-it is neither open nor closed: `GAP-T30-09`, cross-Load-State-Machine ordering,
-narrowed to the delegation described above.
-
-**`GAP-T30-06` is no longer on that list, and this is the one reclassification
-with a safety consequence.** The parity computation for the programming-mode octet
-at `0060h` **is** documented — `03_05_01` §4.26.3.1, *"if the value of prog_mode is
-changed from "0" to "1" or from "1" to "0" then the variable p_parity shall be
-inverted"*, repeated as a client obligation in §4.26.3.4.1 — so the octet is
-`old XOR 0b1000_0001`: invert bit 0, invert bit 7, carry bits 1 to 6 through
-untouched. Because the derivation *inverts* rather than recomputes, whether a
-device uses odd or even parity never has to be known, so that residual unknown is
-not a gap either. Writing the derivation down removed an accidental protection:
-the write used to be impossible to specify, and now it is merely forbidden. The
-prohibition is therefore explicit and deliberate — design spec §13 **R11** is now
-*"writing to `60h` at all on a real device"* rather than *"writing with a guessed
-parity"*, §15 keeps `DM_ProgMode_Switch`'s write half a non-goal in **every**
-phase including phase 3, and phase 2 exercises it against the simulator only,
-behind the mutation API's per-operation authorisation value.
-
-**Scope of that derivation, corrected 2026-09-14 (fix round 3, narrowed in round
-4).** `03_05_01` §4.26.3 scopes itself in a header the previous revision did not
-read: *"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h 0020h,
-0021h, 0701h in E-Mode"*, which names neither System B nor any of the
-`07B0h`/`17B0h`/`57B0h` masks the download spec targets — and `06 Profiles`
-§4.4.1.1 assigns *"Realisation Type 1 - Property based"* to *"• System B • Mask
-57B0h"* and *"Realisation Type 2 – Memory mapped"* to *"• System 1 • System 2
-• BCU 1 • BCU 2 • BIM M112"*. That assignment is scoped to §4.4.1.1's own title,
-*"connection oriented"*: §4.4.1.2 profiles the **connectionless** path onto
-*"§4.26.3 “Programming Mode – Realisation Type 2”"* as well, and §4.4's feature
-table marks *"1.b Connectionless"* as `O` for `System B` and `Mask 57B0h`. So
-programming mode on a System B device is specified at `PID_PROGMODE` (§4.3.5) for
-its mandatory path, `0060h` is neither its mandatory location nor excluded, and
-the meaning of whatever a System B device keeps at `0060h` is unestablished for
-this project **[A]**. The phase-3 permission for a one-octet
-`A_Memory_Read(60h, 1)` inside `1.1.24`–`1.1.32` is unchanged; its
-*interpretation* is not, and the design spec §4.4 and §15 now require the result
-to be recorded as a raw octet of unknown meaning rather than as programming-mode
-state. This is a scoping limitation, not a new gap: which Realisation Type a given
-device uses is a per-device property, and per-device properties are not counted
-as documentation gaps — so the count stays at six.
-
-The list lost an item to a **correction**, not to a discovery: how a client
-discovers `L_Data_Extended` support **is** documented — `03_05_01` §4.3.7
-`PID_MAX_APDU_LENGTH`, range 15–254, *"A Management Client supporting the
-L_Data_Extended-frame has to check this value before starting download"*, absent
-⇒ standard frames with a 15-octet APDU, which is exactly where `DM_MemWrite`'s
-12-octet cap comes from (15 − 3) **[D]**. It was listed as a gap on 2026-09-13 and
-should not have been.
-
-Two things the specification also settled that are corrections rather than
-findings: RESEARCH §8.4's claim that no APCI value can be read out of
-`03_03_07` Table 1 applies to the Markdown extraction only — `pdftotext
--layout` on the PDF renders it legibly, cross-checked against this project's
-own `cemi.rs` **[V]**; and §8.4's description of `PID_OBJECT_INDEX` (PID 29) as
-the mechanism addressing which LSM an access targets is wrong — it is a
-read-only property reporting an Interface Object's *own* index, while the
-selector is the `object_index` field of the property services **[D]**.
-
-The specification also fixes the hardware-safety rules as **design
-requirements** rather than operating advice: `1.1.220` (an alarm panel) is never
-read, never written and never included in any scan or address range, enforced
-structurally by exclusion-by-construction shared with `knx_core::scan::ScanPlan`,
-at the lowest layer that knows what an individual address is, with a test that
-proves the refusal for a single read, a single write, a plan, a spanning range
-and a retry list — phase 2 is not complete without that test;
-`1.1.24`–`1.1.32` are the only addresses approved
-for active reads; read and write entry points are separated in the type system;
-and because `A_IndividualAddress_Write` is a *broadcast* that no address filter
-can constrain, the programming-mode responder count must be exactly one before
-it may be issued.
-
-**Updated, 2026-09-14 (T30 phase 3 — read-only verification against the real
-installation, RESEARCH §8.8).** Ran, against real hardware behind the gateway
-R-SAFE-2 approves, on all nine addresses `1.1.24`–`1.1.32`; `1.1.220` was
-never contacted (checked structurally, at the exclusion set, before the first
-frame). No write of any kind reached the wire: every session was
-`ManagementSession::read_only` with `AuthorisationPlan::Skip`, so neither a
-write path nor `A_Authorize_Request` existed to use. Findings, both from real
-devices and both corrections to how this project verifies them rather than to
-the protocol facts §8.7 established:
-
-- **The device-property reads were different from design spec §14's phase 3
-  checklist** — three of §14's properties were skipped and two it does not
-  name were added: `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and
-  `PID_OBJECT_INDEX` were not read against real hardware this pass, only
-  Device Descriptor Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`,
-  `PID_PROGRAM_VERSION` and `PID_LOAD_STATE_CONTROL` on the three loadable
-  Interface Objects. Carried forward as a residual coverage gap, not closed
-  here.
-- **`ManagementSession`'s own connect-then-read cannot be trusted to report a
-  device absent.** The independent scan probe found eight of nine addresses
-  occupied with mask `0701h`; the original shared-tunnel session obtained a
-  usable answer only from first target `1.1.24`. A 2026-09-18 read-only
-  comparison reversed the order: first target `1.1.32` then answered and all
-  later shared-tunnel sessions timed out, proving a first-session effect rather
-  than a device-specific one. One fresh tunnel per target restored answers only
-  on alternating targets (`.32`, `.30`, `.28`, `.26`, `.24`), implicating
-  immediate tunnel teardown/recreation or gateway channel lifecycle without
-  identifying the exact missing delay, sequence or acknowledgement. A subsequent
-  Standard audit found one concrete mismatch: KNXnet/IP Core §5.5 defines
-  `DISCONNECT_RESPONSE` as the final channel-termination signal, while
-  `TunnelClient::disconnect` stopped its receive loop immediately after sending
-  `DISCONNECT_REQUEST` and never observed that response. This protocol defect
-  is now fixed: a real UDP loopback regression proves graceful disconnect waits
-  for the matching successful response. A bounded real-gateway rerun then
-  received a successful final response for every tunnel but reproduced exactly
-  the same alternating device answers. Incomplete IP-channel teardown is
-  therefore ruled out as the cause on this gateway, and the fix cannot explain
-  the shared-tunnel result either. A full ascending pass over all 34 `devices.md`
-  targets then produced exactly 17 odd-position answers and 17 even-position
-  timeouts, reversing the earlier result for `.24` through `.32` and ruling out
-  address, manufacturer and mask version as selectors. A frame-level follow-up
-  then ruled out tunnel-address allocation and KNXnet/IP receive-sequence
-  rejection: the failed session had no current-target `T_Connect` `L_Data.con`
-  but proceeded with descriptor reads because `ManagementSession::connect()`
-  completes on the gateway's earlier `TUNNELLING_ACK`. RESEARCH §8.8.3a–e records
-  the diagnosis. The fix now waits up to the specification-defined six-second
-  connection timeout for the matching positive `L_Data.con`, rejects a matching
-  negative confirmation immediately, and creates session state only afterward.
-  A final all-device run removed the alternation: 33 positive connects produced
-  33 descriptor answers; `1.1.253` explicitly rejected its connect. R20's
-  false-connected mechanism is fixed. A later management read timeout remains
-  ambiguous and must never by itself prove that the target is absent; RESEARCH
-  §8.8.3f records the verification.
-- **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
-  `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
-  `nr_of_elem = 0`, all under no authorisation — is a live confirmation of
-  design spec §10.2's prediction, not a new problem**: an unauthorised client
-  gets whatever the device's Profile grants the `FFFFFFFFh` key, and that can
-  differ by property.
-- **The mask `0701h` result is consistent with §8.5 Finding 4's earlier scan
-  of this same installation** (2026-09-13, nine consecutive occupied
-  addresses, same mask, addresses unnamed there). This section names its own
-  nine because they are the already-approved range from spec §2.2, not
-  because the broader-inventory redaction policy changed.
-
-**Updated, 2026-09-20.** T30 phase 2 is no longer future work: C1 through
-C13, C15, C16, C18 and C19 (nine of the ten C10-C19 numbers merged since this
-section was last revised, plus earlier C1-C9) implemented all six
-`ProcedureKind` procedures — individual-address write, complete download,
-load-one-part, partial download, unload, recovery — in
-`crates/knx-core/src/commissioning/` and `crates/knx-net/src/commissioning/`,
-each driven end to end against `crates/knx-net/src/commissioning/
-simulator.rs`, including `ManagementSession`'s presence-detection gap
-(design spec §13 R20), which C15/C16's occupancy handling now works around
-rather than trusts. (C14 delivered the same run's differential-download
-data preservation in `knx-etsproj`/`knx-server` instead — see
-[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20) and the `KV v2.5` fixture. C17, a stopgap against advertising an
-unimplemented procedure, was ruled obsolete once C16 shipped the real
-execution path it existed to guard.) None of this has been run against a
-real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
-*Corrected 2026-09-28:* of these six, the individual-address write has run
-on a real device (2026-09-26). The download that ran (2026-09-28) is the
-separate mask-`070nh` memory path (`run_memory_download`), not the
-property-based complete download listed here, which still refuses
-hardware.
-
-**Lifted when.** Research no longer blocks this, phase 2's simulator-driven
-implementation is substantially delivered (above), and T30 phase 3's
-read-only pass has now run twice (2026-09-14 and 2026-09-18, both above)
-without exhausting what it could check. What remains, in the order it can be
-done: a second phase-3 pass covering the properties §14 names and the two
-read-only passes did not; the parsing addition described (and deliberately
-not built) in RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); and
-only then any write at all, on a device we can afford to destroy, on a line
-isolated from anything that matters, and only with a fresh explicit
-go-ahead naming the device and the operation. Per-flag semantics would be
-closed by the MT6 XSD `KNX-Project-Schema-v23.xsd` (KNX-member distribution,
-updates via `gitlab.knx.org`) or by differential testing against ETS.
-Products setting flags the implementation cannot interpret, and products
-carrying an `EtsDownloadPlugin`, must be **refused** rather than guessed at
-— refusing is safe. Architecturally nothing blocks the first real write
-today except the go-ahead itself: load procedures, memory layout and mask
-data already live in the product database, `knx-net` already carries every
-frame the specification needs, and phase 2's simulator coverage is what
-that first write would be checked against before and after.
-
-*Overtaken 2026-09-28:* the "first real write" this paragraph waits for
-has happened, on the operator's own device and with a go naming it (see
-*Corrected 2026-09-28* above). The dedicated-test-hardware condition was not
-met; the operator chose `1.1.67` as the test device. The condition that
-still holds is the per-write go: each write names its device and
-operation, and a go covers one attempt.
-
-**Updated, 2026-09-26 (first programming-mode search against real hardware).**
-An operator put a device into Programming Mode and asked this application to
-find it, then to assign it the free address `1.1.67`. The search half now exists
-and ran: `crates/knx-net/tests/live_programming_mode.rs` broadcasts MP §2.2's
-`A_IndividualAddress_Read`, waits out the full 3 s time-out, and identifies
-whoever answered read-only. It reported exactly one responder, `1.0.71`, mask
-`0701h`, `PID_MANUFACTURER_ID` `0083` (MDT technologies, resolved from the
-corpus `knx_master.xml`, not from memory), `PID_HARDWARE_TYPE`
-`000000000127`; `PID_PROGRAM_VERSION` answered with zero elements, as it already
-did for `1.1.24` in the entry above. RESEARCH §8.8.5 records the run.
-
-**The address assignment was refused, and that refusal is the point.** No write
-was attempted, because none can be: `ManagementSession::authorised` rejects any
-session where the transport or the authorisation is hardware, and `TunnelClient`
-reports `TargetKind::Hardware`. That was previously an argument from reading the
-source; it is now a test that needs no gateway,
-`crates/knx-net/tests/hardware_write_is_refused.rs`, which presents a *correctly
-confirmed* hardware `WriteAuthorisation` and still gets
-`SessionError::NotASimulator` before a frame can exist. So `NM_IndividualAddress_
-Write` against real hardware remains blocked exactly as design spec §15 and §13
-R11 require, and the operator's go-ahead for one address does not change that:
-what is missing is not permission but the verified write path, its
-`ProgrammingModeWitness`-gated broadcast against real hardware, and a rollback
-story for a device whose address change half-succeeded.
-
-Two honest gaps this run exposed, neither of them closed here. First, **the
-found address was on a different line than expected** (`1.0.71`, not `1.1.x`) —
-a programming-mode search is a search, and the current address is an observation.
-Second, **`PID_HARDWARE_TYPE` does not by itself identify a product.** The
-observed `000000000127` matches `LdCtrlCompareProp` `PropId="78"` `InlineData` in
-one local MDT push-button database whose order numbers are the `BE-TA55*.01`
-generation, while the operator named a `BE-TA55P2.G1` that appears nowhere in the
-local corpus. It is consistent with an MDT 2-fold push button and is **not** proof
-of the model or generation; `Hardware/@SerialNumber` is a different number
-entirely, and `PID_ORDER_INFO` was not read. Product identification from a live
-device is therefore still an open question.
-
-**Updated, 2026-09-26 (the first write to real hardware succeeded — and §7's
-headline is now wrong in one specific way).** The operator authorised assigning
-`1.1.67` to the device above, explicitly as a test of whether writing works. It
-does. `1.0.71` is now vacant and `1.1.67` answers with the same mask `0701h`,
-manufacturer `0083` and hardware type `000000000127`, confirmed with the
-independent scan probe rather than by the procedure vouching for itself.
-RESEARCH §8.8.6 has the before/after table and the full reasoning.
-
-So **"blocked" no longer describes individual-address programming.** What is
-still blocked, and deliberately so:
-
-- `WriteScope::Unload` against hardware. It leaves a device without an
-  application, and no operator has asked for it. It is refused even with a
-  correctly typed confirmation phrase.
-- **Addendum 2026-09-28:** `WriteScope::Download` is allowed on hardware for
-  the memory download of mask `070nh` (`run_memory_download`). The operator
-  named `1.1.67` and its option-C download. The property-path `Downloader`
-  (CP §3.5.2) still refuses any non-simulator transport before it sends a
-  frame (`DownloadError::NotOnHardware`), because it has never run against
-  a device.
-- `WriteScope::ProgrammingModeToggle` against hardware — design spec §15 records
-  the `0060h` octet's meaning as unsourced for a System B mask, and this project
-  does not write octets whose meaning it cannot cite.
-
-The gate is `knx_core::commissioning::mutation::hardware_write_is_authorised`,
-an allowlist of three scopes (two until 2026-09-28), checked by `check_write_target()` only when transport
-*and* authorisation are both hardware. A simulator authorisation still cannot be
-pointed at hardware (the confirmation phrase was never typed) and a hardware
-authorisation still cannot be spent on the simulator (that would make a hardware
-confirmation look exercised when no device was involved).
-`crates/knx-net/tests/hardware_write_gate.rs` — renamed from
-`hardware_write_is_refused.rs`, because the old name is no longer the whole
-truth — holds down both sides plus the alarm-panel refusal.
-
-**Three limitations this first write exposed (item 1 partly lifted 2026-09-27; items 2 and 3 open):**
-
-1. **`individual_address_write` returned `Err` on a write that succeeded.** Step 4
-   (connect to the new address, read the descriptor, restart) failed immediately
-   after the broadcast write with `SessionError::ConnectionReleased`, while the
-   device demonstrably answers at the new address seconds later. The procedure
-   went straight from step 3's broadcast to step 4's `T_Connect` with no settling
-   allowance, and MP §2.3 states no figure. MP §2.3's own "to 4." exception text
-   anticipates this ambiguity and declines to resolve it.
-   **Partly lifted, 2026-09-27 (simulator-verified, not hardware-verified).**
-   Step 4 now retries a single unanswered or released `T_Connect` after
-   `SessionTiming::restart_basic_t1` (1 s). That figure is borrowed from MP
-   §3.7.1.1.2's Basic Restart timing, not specified for this situation; a
-   rejected connect is not retried, and a second silence still fails step 4
-   with `wrote: true`. What remains open: whether 1 s is enough for the MDT
-   push button (or any other device) has not been measured — the next
-   Programming Mode session has to confirm it, and a device that needs longer
-   will still produce this limitation's original symptom.
-   *2026-09-29 (K6 live):* still not exercised. `1.1.67` answered at its
-   new address on the first connect, both ways. **PDF check, 2026-09-29:**
-   MP §2.3 (pp. 14–15) gives no settling time after
-   `A_IndividualAddress_Write`. Its "to 4." only says the programming *"may
-   have failed"*. The closest figure in MP is the *"waits 1 second"* before
-   verifying in the serial-number procedures, §2.12 step 3 (p. 25) and §2.13
-   step 5 (p. 26). Those procedures also say to repeat the procedure *"only
-   after indication or confirmation by the user"*, never automatically. The
-   borrowed 1 s and the single retry match both. **Parked** (user decision
-   2026-09-29) until a device that needs it shows up.
-2. **"Wrote but could not confirm" is not a distinct outcome.** The information
-   exists — the error carries the report, whose `wrote` flag was `true` — but a
-   caller must destructure the error to find it. Anything built on top of this
-   (CLI, server, UI) must not present the `Err` as "nothing happened".
-   **Status 2026-09-28 (K6):** both surfaces built on it destructure it.
-   `knx device program-address` ends with `address written: yes, but NOT
-   confirmed` (test `written_but_unconfirmed_says_so`). The web route reports
-   `written: "unconfirmed"`, shown as a warning (test
-   `written_but_silent_at_the_new_address_is_unconfirmed`). The library type
-   is unchanged. *2026-09-29:* a silent closing restart is no longer part
-   of this. The device has already answered at `IA_new`, so the report
-   carries `AddressRestart::Unconfirmed` inside an `Ok` (§116).
-3. **No rollback exists for a half-completed readdressing.** If the write lands
-   and the device then cannot be reached, recovery is another programming-mode
-   session by hand. Nothing in this project automates or even detects that state.
-   *2026-09-29:* the PDFs give no rollback either. MP §2.12/§2.13 say a
-   failed procedure is repeated only after the user confirms it. A two-way
-   `knx bus scan` of the old and new address settles which state the
-   device is in (RESEARCH §19, K6 live).
-
-**Interrupted download: how to recover, checked against the PDFs
-2026-09-29.** There is no separate recovery procedure. MP §3.1 (p. 68):
-*"if an error is detected, the download shall be interrupted and an
-error-message shall be raised"*. RES Table 94 (p. 296) says a device
-restart in `Loading` leads to `Error` (recommended) or stays `Loading`
-(optional), and `Unload` leads from every state to `Unloaded`. CP
-§3.4.1.2.1 step 6 (p. 38) opens the complete download with *"Unload all
-loadable Objects"*. So recovery means running the same download again: the
-product plan starts with an unload of each machine (steps 3–5 in every
-live trace). Test
-`the_same_plan_run_again_recovers_a_part_left_loading_or_in_error` shows
-this in the simulator from both `Loading` and `Error`. A mutation check
-confirmed it: without the unload, it fails. **The live test (cutting off a
-real download on purpose) is parked** (user decision 2026-09-29). The
-mechanism it would exercise is the one every live download already ran
-through.
-
-**Still not claimed:** no `A_Restart` was verifiably delivered on this run (step
-4 never completed), no download, no KNX Secure, no ETS parity, and no CLI, server
-or UI surface exposes any of this — every hardware write so far has happened
-through an explicitly opt-in `#[ignore]`d test requiring two environment
-variables. *(Historical, as of that first write. Since then `knx device
-download` (K4), the Download to device tab (K5) and `knx device
-program-address` (K6) are such surfaces; see IMPLEMENTATION_STATUS.)*
+**Live safety and compatibility remain narrow.** `1.1.220` is an excluded
+alarm panel. No prior approval carries over to a new target, write scope or
+experiment. The gateway allows one tunnel; a refused plan sends nothing.
+No general ETS commissioning parity, every-vendor download claim, automatic
+rollback or RF hardware support is established by one device.
 
 ## 8. KNX Secure is not implemented
 
@@ -1559,25 +829,6 @@ between two versions requires the application.
 
 **Lifted when.** A textual export and import format is added, if a demonstrated
 need arises. It is deliberately not built speculatively.
-
-<a id="10-the-project-licence-is-not-decided"></a>
-
-## 10. Project licence — resolved 2026-09-16
-
-**Resolution.** KNXBench is licensed under `AGPL-3.0-or-later`. The canonical
-licence text is tracked in [`LICENSE`](../LICENSE), and the workspace metadata
-and README carry the same licence decision.
-
-**Effect.** Everyone may use KNXBench privately or commercially, modify it, and
-redistribute it under the AGPL's terms. The AGPL also requires corresponding
-source availability when a modified version is made available to users over a
-network.
-
-The separate constraint that no GPL crate enters the runtime dependency graph
-remains unchanged. It governs *incoming* dependencies and is independent of
-KNXBench's own licence ([ADR-0002](adr/0002-own-knxproj-parser.md)).
-
-<a id="11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly"></a>
 
 ## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
 
@@ -2054,28 +1305,6 @@ backend and becomes the default on Linux.
 
 </details>
 
-## 17. Deleting a group address can leave a dangling `GroupLink` — resolved
-
-**Resolved (Session 5, cycle 9).** `knx_core::command::Command::
-DeleteGroupAddress` now scans `Devices::com_objects()` for any
-`ComObjectInstance.links` entry naming the group address being deleted,
-and refuses the whole command (`CommandError::GroupAddressInUse`) if one
-exists, rather than removing the entry and leaving the link dangling.
-This is the "surface them as ... finding first" resolution this entry
-originally anticipated, in its strictest form: the delete simply does not
-happen until the user removes the link first. A future cycle could soften
-this into removing/flagging the links automatically instead of refusing
-outright — that remains a design choice, not a defect.
-
-**Originally.** `DeleteGroupAddress` removed the `GroupAddressEntry` from
-`Installation::group_addresses` without scanning `Devices` for any
-`ComObjectInstance.links` entry that pointed at it, so a communication
-object could end up with a `GroupLink` naming a group address id that no
-longer existed. In memory nothing visibly broke; a later full
-`save_project` re-derived every `group_link` row from
-`ComObjectInstance.links` and failed with a foreign-key violation against
-`group_address(id)`.
-
 ## 18. `open_project` does not clear the previous `.knxdb` `store_path`
 
 **Limitation.** `AppState.store_path` (the `.knxdb` file a subsequent plain
@@ -2112,27 +1341,6 @@ reading `AppState.opaque`/`AppState.manufacturer_refs` (the live,
 in-memory copies) instead of re-opening the file — see
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
-
-<a id="19-a-search-result-inside-a-collapsed-tree-branch-is-not-revealed"></a>
-
-## 19. A search result inside a collapsed tree branch is not revealed — resolved 2026-09-22 (T12)
-
-Picking a `Ctrl+K` result now records a monotonic external-selection reveal
-generation before preserving `App`'s existing canonical selection path. The
-Project Explorer opens only the topology, building-part, group-address, or
-group-range ancestors that contain that requested selection, then scrolls the
-selected row with `scrollIntoView({ block: "nearest" })`. Another search pick
-of the same result has a new generation, so it reveals again after a user has
-collapsed the branch manually. Ordinary explorer selections never create a
-generation and therefore preserve ordinary manual collapse.
-
-Devices rendered in both a building branch and their canonical topology (or
-unassigned) occurrence scroll exactly once at that canonical occurrence; the
-building copy is not a second competing destination. A device that genuinely
-has neither canonical occurrence instead reveals and scrolls its first
-depth-first building occurrence exactly once. Component and App tests cover
-nested topology, building, and group-range paths, repeated reveals, both
-device cases, and manual-selection preservation. **[V]**
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 
@@ -2215,34 +1423,8 @@ handling); no result list anywhere carried `role="listbox"`/`role="option"`;
 nothing backing it; and `CatalogBrowser.tsx`'s rows had no keyboard path
 into the list at all.
 
-<a id="21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved"></a>
-
-## 21. Resolved: export refuses a group address without a range
-
-**Closed 2026-09-20 — export withdrawn.** The refusal and the error it
-returned went with the writer ([ADR-0028](adr/0028-no-knxproj-export.md)).
-The ruling behind it stands and is worth keeping in sight: a range-less
-group address is a legitimate thing to hold in `.knxdb` and was never
-something KNXBench would fake a representation for. The original entry
-follows, unedited.
-
-**Resolution, 2026-09-17.** Schema 11 and schema 21 encode group addresses
-inside their `GroupRange` tree. KNXBench has no verified faithful external
-representation for a range-less address, so both writers now return the typed
-`ExportError::UnrangedGroupAddress` instead of producing a successful archive
-that omits it. The error identifies the installation, internal group-address
-ID, and raw address. Focused tests cover both schema writers.
-
-Range membership remains optional in the normalized model and at the HTTP/UI
-creation boundary. This preserves native `.knxdb` projects and imported oddities
-without inventing a range or changing existing authoring semantics; only the
-lossy external export is refused until the user assigns a range.
-
-<a id="22-the-webdocker-deployment-target-has-no-authentication"></a>
-
-<a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback"></a>
-
-## 22. `knx-server` authenticates with one password, or refuses to leave loopback — resolved 2026-09-20
+<a id="22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback--resolved-2026-09-20"></a>
+## 22. One shared server password, no per-user rights or internet-security claim
 
 **Resolved 2026-09-20** ([ADR-0026](adr/0026-server-authentication-or-loopback.md)).
 The heading and the anchor above are kept so existing links still resolve;
@@ -2359,15 +1541,6 @@ completed count. It does not announce batch success. During protected-mode
 dragover the picker inspects only `DataTransfer.types`; it reads dropped files
 only at drop time.
 
-## 25. Resolved: the web package and Docker frontend stage use Node 22
-
-**Resolution, 2026-09-17.** `apps/knx-web/package.json` declares
-`engines.node: ">=22.12.0"`, and `apps/knx-server/Dockerfile` now builds the
-frontend from `node:22-alpine`. This removes the previous Node 20 `EBADENGINE`
-warning and makes the Docker artifact use the same supported Node major as
-local development and CI. The runtime image remains `debian:bookworm-slim`;
-Node is present only in the disposable frontend build stage.
-
 ## 26. `BusConnection` does not yet support KNX IP Secure
 
 **Limitation.** `crates/knx-net`'s `BusConnection` trait implements
@@ -2414,49 +1587,6 @@ Secure + IP Secure + keyring). The user's 2026-09-11 ruling on T19 —
 deferred, documented as a limitation, not rejected — applies here too; this
 2026-09-06 shelving decision and T19's ruling stand together, not as two
 separate calls.
-
-## 27. `TunnelClient` heartbeat retry has a narrow race condition — resolved
-
-**Resolved (Session 6, cycle 5).** `crates/knx-net`'s heartbeat and
-`TunnelClient::send`'s ack wait both used the same pattern — reset a
-shared `Mutex<Option<T>>` reply slot, send a request, `timeout(...,
-notify.notified())` once, then check the slot — which is exactly what
-made the race possible: a `Notify` permit left over from a reply that
-arrived just after a previous attempt gave up would wake this attempt
-immediately with nothing useful in the slot, burning it without waiting
-out its real budget. The shared `wait_for_reply` helper both call sites
-now use loops on the same deadline instead of waiting once: a stale or
-non-matching wakeup is discarded and waited past, so only a genuine
-timeout or a matching reply ends the wait. Covered by
-`wait_for_reply_survives_a_stale_non_matching_wakeup` and
-`wait_for_reply_times_out_when_nothing_ever_matches` in `client.rs`.
-
-**Originally.** `crates/knx-net`'s `TunnelClient` managed heartbeat
-timeouts with a `tokio::select!` and a `tokio::time::sleep`. A stale
-wakeup from a cancelled sleep could race the timeout branch, burning one
-retry attempt unnecessarily before the real retry fired on the next cycle.
-
-## 28. `TunnelClient` subscribers receive no signal when the tunnel closes — resolved
-
-**Resolved (Session 6, cycle 5).** `subscribe()` now returns
-`broadcast::Receiver<TunnelEvent>` instead of `Receiver<LDataFrame>`, where
-`TunnelEvent` is `Telegram(LDataFrame)` or `Closed`. `receive_loop` sends
-exactly one `TunnelEvent::Closed` as its last action, right after its
-`select!` loop exits — reached from every exit path (explicit
-`disconnect()`, the heartbeat loop exhausting its retries, a dead socket,
-or a server-initiated `DISCONNECT_REQUEST`) since they all funnel through
-that same loop. `apps/knx-cli`'s `bus monitor` matches on it and prints
-"gateway closed the tunnel" instead of sitting in indefinite silence.
-Chosen over closing the channel itself (the `Sender` lives inside the
-`Arc<TunnelState>` shared by the client and the receive loop, so there is
-no single owner that could drop it) or a second dedicated status channel
-(one enum keeps subscribers to a single `recv()` loop).
-
-**Originally.** `crates/knx-net`'s `TunnelClient::subscribe()` returned a
-broadcast receiver that yielded telegrams. When the tunnel died — either
-because the heartbeat loop exhausted its retries or the gateway went
-silent — subscribers received no signal; `telegrams.recv()` simply stopped
-yielding anything forever, indistinguishable from a quiet KNX bus.
 
 ## 29. `apps/knx-cli bus monitor` has formatting limitations
 
@@ -2508,25 +1638,8 @@ ride along with a feature branch. See
 [§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
-<a id="30-apiprojectdownload-has-no-frontend-caller"></a>
-
-## 30. `/api/project/download` has no frontend caller — resolved 2026-09-22
-
-**Resolved (2026-09-22, T12 task 4).** In the plain web build, the File menu
-now offers localized **Download project** whenever a project is open. It
-creates a native browser anchor for `/api/project/download` with
-`download="project.knxdb"`; the browser consumes the server's streaming
-response directly, without a frontend `Blob`, object URL, or full-file buffer.
-The command is disabled while no project is open and absent inside Tauri.
-
-This deliberately differs from **Save As…** in a browser: Save As continues to
-write to the server's mounted `data_dir` through `saveMountPicker`, whereas
-Download saves a local browser download. Tauri keeps its native Save As flow
-and therefore does not show the browser-only command. `App.test.tsx` covers
-the web/Tauri boundary, disabled state, endpoint, filename, and File-menu
-keyboard/close behavior.
-
-## 31. KNXnet/IP routing has no custom multicast address override — resolved (routing half)
+<a id="31-knxnetip-routing-has-no-custom-multicast-address-override--resolved-routing-half"></a>
+## 31. Routing multicast override exists; discovery and real custom-group traffic unverified
 
 **Resolved (2026-09-13, E6, branch `e6-routing-multicast`).**
 `BusConnection` gained `connect_routing_to_group(own_address, group)`
@@ -2585,343 +1698,8 @@ different group. Session 6 Cycle 4's design spec deliberately hardcoded
 it, the same call as Cycle 3's discovery multicast address — no
 environment at the time needed a non-default group.
 
-## 32. `ROUTING_BUSY` is logged, not honored, by `RoutingClient` — resolved
-
-**Resolved (Session 6, cycle 5).** `RoutingState` gained a `busy_until:
-Mutex<Option<Instant>>` deadline. On receiving `ROUTING_BUSY`,
-`routing_receive_loop` merges its `wait_time_ms` into that deadline via
-`merge_busy_deadline` — the higher of the remaining time on any deadline
-already in effect and the new frame's `tw`, exactly as Routing v01.05.02
-AS §2.3.5's "device receiving ROUTING_BUSY" rule requires. `send()` now
-calls `wait_out_routing_busy()` first, which sleeps until the deadline
-clears (re-checking after waking, in case a later `ROUTING_BUSY` extended
-it meanwhile) before transmitting. The spec's additional random back-off
-after `tw` (`trandom`, driven by a moving count of recent `ROUTING_BUSY`
-frames) is a `MAY`, not a `SHALL`, and is not implemented — the mandatory
-stop-and-wait behavior is. Covered by
-`merge_busy_deadline_keeps_the_later_of_the_two` and
-`routing_client_send_waits_out_a_routing_busy_deadline` in `client.rs`.
-
-**Originally.** Routing v01.05.02 AS §2.3.5 requires any KNX IP device to
-stop sending `ROUTING_INDICATION` for a received `tw` after a
-`ROUTING_BUSY` frame. `RoutingClient` decoded and logged `ROUTING_BUSY`
-(and `ROUTING_LOST_MESSAGE`) but never reacted to either.
-
-## 33. `RoutingClient`'s round-trip test transmitted on the physical LAN, not on loopback — resolved (2026-09-20)
-
-**Limitation.** `routing_client_sends_and_receives_a_group_value_write`
-(`crates/knx-net/src/client.rs`) sends a real telegram between two
-`RoutingClient`s over UDP multicast on loopback and asserts the receiver
-decoded it correctly. In a sandbox or CI runner whose network namespace
-does not deliver multicast loopback locally, the test detects the
-timeout and skips gracefully (logs to stderr, returns `Ok`) rather than
-failing — but that skip fires *after* `connect`/`send` have already run,
-so it cannot tell "this environment has no multicast loopback" apart
-from "there's a real regression in `RoutingClient`'s send/receive path."
-A `cargo test` pass in such an environment does not, by itself, prove
-the routing round trip actually works.
-
-**Cause.** Confirmed during Session 6 Cycle 4 implementation: this
-project's own dev sandbox does not deliver multicast loopback traffic at
-all (`ip route get 224.0.23.12` resolves via the physical interface, not
-`lo`; reproduced independently with plain Python UDP sockets outside any
-Rust code), regardless of the `IP_MULTICAST_LOOP` socket option. This is
-an environment property, not a `RoutingClient` bug.
-
-**Impact.** A real regression in `RoutingClient` could pass CI silently
-in any similarly network-restricted runner. Check the test's stderr
-output (a skip message is logged) or run it on a host with working
-loopback multicast delivery before trusting a green `cargo test -p
-knx-net` as proof that routing round-trips still work.
-
-**Lifted when.** A `#[ignore]`-style marker or a CI capability probe
-distinguishes "skipped, no proof either way" from "passed, proof
-obtained" in tooling/reporting — no fixed cycle.
-
-**Updated, 2026-09-20 (B1).** Everything above is kept for the record, and
-the headline half of it was wrong. Until this date this section was titled
-"`RoutingClient`'s loopback round-trip test cannot prove correctness in
-every environment", and its "Limitation" paragraph said the test ran "over
-UDP multicast on loopback". It did not. The "Cause" paragraph, four lines
-further down, already contained the true fact — *`ip route get 224.0.23.12`
-resolves via the physical interface, not `lo`* — and the document drew the
-wrong conclusion from its own evidence.
-
-**What actually happened.** The test built its sockets through
-`connect_routing`, which asks for no particular interface:
-`IP_ADD_MEMBERSHIP` joined on `INADDR_ANY` and `IP_MULTICAST_IF` was never
-set, so the kernel picked the outgoing interface from the routing table. On
-the machine this was developed on that is `multicast 224.0.23.12 dev eno1
-src <redacted>` — the physical LAN interface, on the same /16 as the
-installation's KNXnet/IP gateway. Every `cargo test --workspace` therefore
-put one real KNXnet/IP `ROUTING_INDICATION` on that network: a
-`GroupValueWrite(1)` to group address `1/2/3`, source individual address
-`1.1.1`, alongside IGMP membership reports for `224.0.23.12` and
-`239.0.2.1`. **What became of that frame is not known.** Whether any
-KNXnet/IP router on the LAN accepted it and forwarded it to TP, and whether
-`1/2/3` or `1.1.1` mean anything in the installation, was never measured;
-this document claims neither that something was actuated nor that nothing
-was.
-
-**And it proved nothing while doing it.** Production sets
-`IP_MULTICAST_LOOP` to `false`, so the host never got a copy of its own
-datagram, and a switch does not reflect a multicast frame back out the port
-it came in on. The receiving half of the round trip could therefore never
-run: the test reached its five-second timeout and took the "this sandbox
-does not deliver multicast locally" skip path on every run. It transmitted
-on a live installation's network and asserted nothing — the worst of both
-halves.
-
-**What happens now.** The test sockets are built through
-`RoutingClient::connect_with`/`connect_to_group_with` with
-`RoutingSocketOptions::LOOPBACK_ONLY`, which sets `IP_MULTICAST_IF` to
-`127.0.0.1`, joins on `127.0.0.1`, sets `IP_MULTICAST_TTL` to 0 and
-`IP_MULTICAST_LOOP` to `true`. Two independent mechanisms keep the datagram
-on the machine: the outgoing interface is named explicitly rather than
-looked up in the routing table, and a multicast datagram with TTL 0 is not
-transmitted on any link even if that first mechanism failed. `loopback_only_options_actually_reach_the_socket` reads all three
-options back off the live socket, so a future change that quietly reverts
-to the production options fails a test instead of resuming transmission.
-Measured on this host and in a bare `unshare -rn` namespace holding only
-`lo`: the round trip now genuinely completes (0.15 s) instead of timing out
-(5 s), so the assertions at the end of the test run for the first time.
-
-> **The "two independent mechanisms" sentence in the paragraph above is
-> wrong.** It is left standing because this section is a record. See
-> **Corrected, 2026-09-20 (B1 fix round 1)** at the end of this section.
-
-**Production is untouched.** `connect_routing` and
-`connect_routing_to_group` pass `RoutingSocketOptions::PRODUCTION`, which
-joins on `Ipv4Addr::UNSPECIFIED`, keeps `IP_MULTICAST_LOOP` off, and makes
-no `IP_MULTICAST_IF` or `IP_MULTICAST_TTL` call at all — byte for byte the
-behaviour described above, which is the correct default for a real
-installation. `production_routing_socket_options_leave_the_network_to_the_kernel`
-guards that constant.
-
-**The skip also stopped hiding regressions.** The "Impact" paragraph above
-warned that a real regression could pass silently, because the test could
-not tell "this sandbox has no multicast loopback" from "`RoutingClient` is
-broken". Measured, not suspected: deleting the `send_to` call from
-`RoutingClient::send` outright left the test *passing* (it timed out and
-skipped). The timeout arm now calls `loopback_multicast_is_deliverable()`
-first — two plain `socket2`/`tokio` sockets, no `RoutingClient` involved,
-pinned the same way on `239.0.2.1` — and fails instead of skipping when
-those two do reach each other. With that in place the same deleted
-`send_to` fails the test. `the_loopback_probe_agrees_with_an_actual_loopback_round_trip`
-asserts the probe and the real round trip always reach the same verdict,
-so the probe cannot quietly start answering "not deliverable" for
-everybody.
-
-**What of the original limitation survives.** The narrow version: a sandbox
-that delivers no multicast whatsoever, even on `lo`, still takes the skip
-path, and a green `cargo test` there still proves nothing about the round
-trip. That is now the only case the skip covers, and it is now a measured
-property of the machine rather than an assumption.
-
-Two more things the loopback fix does not cover, both reported rather than
-fixed:
-
-- `connect_routing_joins_the_standard_group_by_default` now enters at
-  `RoutingClient::connect_with`, so the one-line
-  `KnxNetIpClient::connect_routing` → `RoutingClient::connect` delegation is
-  untested in any suite that runs by default. Exercising it means joining
-  the real group on the real interface, which is the whole of this section.
-  Said honestly in the test's own doc comment; said here too, because that
-  is where someone counting coverage will look.
-- `local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port`
-  (pre-existing, older than this fix) skips only when `probe.connect()`
-  *fails*. In a namespace that has a multicast route on `lo` — `unshare -rn`
-  plus `ip route add 224.0.0.0/4 dev lo` — the `connect()` succeeds, the
-  resolved HPAI is `0.0.0.0`, and the test hard-fails on the wildcard
-  assertion rather than skipping. Measured. A bare `unshare -rn` with only
-  `lo up` and no such route is not affected: the `connect()` gets
-  `ENETUNREACH`, the skip fires, and all 19 `client::tests::` pass there.
-
-**Corrected, 2026-09-20 (B1 fix round 1).** The "What happens now" paragraph
-above says two independent mechanisms keep the datagram on the machine, "and
-a multicast datagram with TTL 0 is not transmitted on any link even if that
-first mechanism failed". **That is false on Linux, and it is the kind of
-false this whole section exists to warn about — a confident conclusion its
-own evidence does not support.**
-
-Measured in an isolated namespace on a `dummy0` interface, Linux 7.2.5:
-
-```text
-readback IP_MULTICAST_TTL = 0
-readback IP_MULTICAST_LOOP = 0
-  asked TTL=0: 10 frames on dummy0, 660 bytes
-  FRAME SEEN ON dummy0: dst_mac=01:00:5e:00:17:0c ip_ttl=0 proto=17 dst=224.0.23.12
-  asked TTL=1: 10 frames on dummy0, 660 bytes
-```
-
-Ten sends at TTL 0 and ten at TTL 1 moved the same ten frames and the same
-660 bytes, captured with an `AF_PACKET` socket bound to `dummy0`; the branch
-review measured the same thing independently with a different payload size.
-A TTL-0 multicast datagram is put on the link as a real Ethernet frame,
-addressed to the group's own multicast MAC. A switch forwards L2
-by MAC and never reads the IP TTL, so a TTL-0 `ROUTING_INDICATION` would
-still reach every other port in the group, a KNXnet/IP router included. Only
-an IP *router* declines to forward it.
-
-**There is one lock, and it is `IP_MULTICAST_IF`.** TTL 0 stops IP-level
-forwarding and is not a containment mechanism on a switched LAN; it is kept
-as defence against an IP-level mistake and is worth exactly that much. The
-one lock is asserted from both ends:
-
-- `loopback_only_options_actually_reach_the_socket` reads `IP_MULTICAST_IF`
-  back off the live socket.
-- `the_loopback_join_lands_on_lo_and_nowhere_else` (new, B1 fix round 1)
-  reads `/proc/net/igmp` before and after and asserts no device other than
-  `lo` gained a membership for `224.0.23.12`. `socket2` exposes no getter
-  for the interface a join used, so until this test existed the interface
-  argument to `join_multicast_v4` could be reverted to `UNSPECIFIED` with
-  the entire suite staying green — measured, and measured again as the
-  mutation proof for the new test, in a namespace with no physical
-  interface in it.
-
-`IP_MULTICAST_LOOP` is also weaker than it looks, in the harmless
-direction: measured on this kernel, a socket pair pinned to `lo` with
-`IP_MULTICAST_LOOP` read back as 0 still delivers to itself, because
-delivery on `lo` goes through the device path regardless. `LOOPBACK_ONLY`
-keeps `loop_back: true` because it is the portable way to ask, not because
-anything here depends on it.
-
-**One flaky test, introduced by this fix and now closed.** Pinning
-`IP_MULTICAST_IF` to `lo` — not turning `IP_MULTICAST_LOOP` on, which is
-inert here, per above — made local delivery real for the first time, and a
-UDP socket bound to the wildcard address is handed every multicast datagram
-the host accepts on its port — the membership decides what the *host*
-accepts, not which socket gets a copy. Three tests send on
-`224.0.23.12:3671` concurrently (`1.1.1`, `1.1.5`, `1.1.3`), so
-`telegrams.recv()` returned whichever arrived first. Measured: 2 failures in
-100 runs of `client::tests::`, each one `1.1.5` surfacing in `1.1.1`'s
-receiver. Separate multicast groups would not have fixed it, for the same
-reason — a wildcard-bound socket receives datagrams for groups it never
-joined. Both round-trip tests now wait for their own sender's individual
-address (`recv_from_source`). Measured after: 0 failures in 150 runs.
-
-A second flake, this one in the new `/proc/net/igmp` test, is worth
-recording because it will bite anyone else reading procfs from a test:
-`std::fs::read_to_string` cannot learn a procfs file's length and so issues
-several growing reads, and `/proc/net/igmp` is a `seq_file` whose iterator
-re-seeks by *index* between reads. With the suite joining and dropping the
-same group concurrently, that re-seek lands past records that were there a
-moment earlier — 5 failures in 120 runs, every one a snapshot showing no
-membership at all for a group a re-read microseconds later showed held by
-five sockets. One `read(2)` into a buffer large enough for the file is one
-pass of the iterator, and one consistent answer: 0 failures in 150 runs.
-
-## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes — RESOLVED (2026-09-20)
-
-**Closed 2026-09-20 — export withdrawn.** Resolved in the morning, made moot
-in the afternoon: the exporter this entry describes was deleted the same day
-([ADR-0028](adr/0028-no-knxproj-export.md)), together with
-`retained_v21_measurement.rs` and `retained_ambiguity.rs`. The measurement
-below is preserved because it is the only quantified statement of how much
-of a source file the *importer* holds on to, and the instance-exact key
-module it describes (`knx_etsproj::xpath`) is still in use — it is now how
-the import report says where a preserved value came from. The one remaining
-import-side gap it names is real and unchanged: an `Installation/@Name` or
-`@DefaultLine` that is the empty string in the source cannot be told apart
-from an absent one by the domain model. The original entry follows,
-unedited.
-
-**Resolved (2026-09-20).** Retained attributes are keyed by the element's
-own ETS id rather than by a schema-shaped path, and both exporters write
-them back onto the element they came from. The key shapes live in one
-module (`knx_etsproj::xpath`) because three writers had already drifted
-into three incompatible spellings of the same device path.
-
-Measured by importing each corpus project and exporting it again
-(`crates/knx-etsproj/tests/retained_v21_measurement.rs`, which compares
-every element of both documents keyed by its ancestors' own ids):
-
-| Project | Attributes lost on export | Values changed |
-| --- | --- | --- |
-| ETS4, schema 11 | none | `KNX/@CreatedBy`, `@ToolVersion` (deliberate) |
-| KV, schema 21 | `Installation/@Name`, `@DefaultLine` | the two above, plus `DeviceInstance/@LastDownload` and `@LastModified` |
-| ETS 6.3.0, schema 23 | `Installation/@Name` | the same four |
-
-Before the change, the same measurement counted `SerialNumber`, `Puid`,
-`Comment`, `IsActivityCalculated`, the `Segment` attributes, the
-communication-object flags, `BinaryData`, `BusAccess` and
-`Space/DeviceInstanceRef` among the losses — 514 group-address `Puid`s in
-the ETS6 project alone — and found `GroupAddress/@Central` and
-`@Unfiltered` coming back as `"0"` whatever the source said, which was the
-worse class of defect: a wrong value rather than a missing one.
-
-**What remains.** Three things, none of them user data:
-
-1. `Installation/@Name` and `@DefaultLine` where the source value is the
-   empty string. `knx_core` cannot distinguish an empty value from an
-   absent one, so the writer omits the attribute. A project whose
-   installation actually has a name keeps it.
-2. `DeviceInstance/@LastDownload` and `@LastModified` are reformatted:
-   same instant, fewer fractional-second digits, because the value makes
-   a round trip through a typed timestamp rather than staying text.
-3. `KNX/@CreatedBy` and `@ToolVersion` name this application, on purpose.
-   It is not ETS and does not claim to be.
-
-**The rule that stays.** Where an element has no identity of its own in
-the domain model — two `Segment`s under one `Line`, since `knx_core` has
-lines and not segments — two source values collapse onto one key, and the
-exporter drops the attribute rather than writing one segment's value onto
-both. Corruption is worse than loss; that ruling is unchanged, it simply
-now applies to a rare case instead of to every attribute. Each drop is
-announced as an `ExportWarning::RetainedAttributeNotExported` (or
-`RetainedElementNotExported` for a whole element), one warning per
-`(element, attribute)` class with the number of instances behind it, and
-reaches the UI through the same channel import diagnostics use. The values
-themselves are, as before, preserved byte-exact in the project's opaque
-store (ADR-0006) and named in the import report.
-
-`crates/knx-etsproj/tests/retained_ambiguity.rs` is the test for that
-rule: a line with two segments carrying distinct `Puid`s, neither of which
-appears in the exported file, and a warning that says why.
-
-## 35. Device-creation `EnrichmentIssue`s are silently dropped — RESOLVED (2026-09-10)
-
-**Resolved.** `POST /api/devices` now returns
-`CreateDeviceResponse { tree, diagnostics }`. `resolve_catalog_item_program`
-(`knx-productdb::query`) validates the full catalog item → product →
-hardware → hardware2program → program chain before `create_device_impl`
-builds a `Command::CreateDevice` at all — only a hardware row that
-explicitly declares itself programless may skip program seeding; every
-other dangling relation is a typed 400 before any command is applied. The
-`EnrichmentIssue`s produced by seeding the ones that do go through are
-mapped to typed `CreationDiagnostic`s (`ProgramlessProduct`/`AmbiguousDpt`/
-`ComObjectRefMissing`/`ProgramRefMissing`/`DynamicOrModuleNotEvaluated`),
-each carrying a server-computed `.detail()` string, and `CatalogBrowser.tsx`
-renders them in-modal with a "Done" button instead of auto-closing when
-diagnostics exist. The original limitation text is kept below for context.
-
-**Limitation (as it stood before 2026-09-10).** `apps/knx-server`'s `create_device_impl` seeds a newly
-created device's communication objects from the product database via
-`knx_productdb::enrich::apply`, exactly like import's own `enrich()`
-pass — except the `Vec<EnrichmentIssue>` it collects (ambiguous DPT
-lists, a `ComObjectRef` id the resolved program doesn't have) is
-discarded rather than surfaced anywhere. A device created against an
-application program with an ambiguous DPT list on one of its
-communication objects gets that communication object with no DPT set
-and no visible warning.
-
-**Cause.** Import has `ImportReport` as an existing, already-wired
-channel for this; `POST /api/devices` has no equivalent yet — building
-one was out of scope for this slice (see
-[docs/superpowers/specs/2026-09-07-device-create-delete-design.md](superpowers/specs/2026-09-07-device-create-delete-design.md)).
-
-**Impact.** Silent: the affected communication object is
-indistinguishable, from the API's response alone, from one whose DPT
-was never set on purpose. Recoverable by hand via the existing
-`SetComObjectDpt` command/UI once a user notices, but nothing prompts
-them to look.
-
-**Lifted when.** Done, 2026-09-10: `create_device_impl` returns its
-`diagnostics` alongside the projected `tree`, and `CatalogBrowser.tsx`
-surfaces them in-modal — the same role import's own report screen (T11,
-still open) would play for import.
-
-## 36. Session log (T11): the Log tab was unreachable without an open project, and had no growth cap — resolved (2026-09-10)
+<a id="36-session-log-t11-the-log-tab-was-unreachable-without-an-open-project-and-had-no-growth-cap--resolved-2026-09-10"></a>
+## 36. Session-log export is a bounded retained window, not a lifetime audit
 
 **U4 export boundary (2026-09-28 UTC).** The Log view now searches the
 retained entries locally and exports either all retained entries or the
@@ -3015,7 +1793,8 @@ saw (a single server process, one project at a time, log never
 persisted), but nothing stopped it from becoming one over a very long
 session.
 
-## 37. Imported translations are stored but never read, and the UI is English-only — partially resolved (2026-09-12)
+<a id="37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12"></a>
+## 37. Translations reach selected surfaces, not every imported text or UI output
 
 **Resolved.** Parameter text, parameter-ref text, and enum option labels
 are read from the `translation` table at exactly one surface: the device
@@ -3342,7 +2121,8 @@ every no-op stub arm, including T12's new one, would need a real
 implementation too). Neither is scheduled; flagged here so the gap is
 findable without re-deriving it from a grep.
 
-## 43. Animations have no in-app switch; only the OS reduced-motion preference
+<a id="43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference"></a>
+## 43. Animation controls exist; some motion surfaces remain outside their guard
 
 **Limitation.** Resolved for the two axes T27 (2026-09-12) shipped,
 enforced structurally rather than by convention, and still limited in
@@ -3572,47 +2352,6 @@ language pack exists. The web documentation dialog (CT-2) requests the
 report in the UI language (`de` for German, `en` otherwise); a separate report
 language selector is still absent.
 
-<a id="49-project-documentation-export-has-no-in-application-print-preview"></a>
-## 49. Project documentation export has an in-application preview and print action
-
-**Status.** Lifted (CT-2, 2026-09-28). *Export documentation…* in the File
-menu opens a dialog that calls `POST /api/project/documentation-preview`
-and shows the returned HTML in an `<iframe srcdoc>` with
-`sandbox="allow-same-origin allow-modals"`. No `allow-scripts`: nothing in
-the document runs. The preview's warnings are listed next to it, a preview
-failure is shown as an alert in the dialog, and *Print…* calls `print()` on
-the frame's window, so the browser prints the embedded print stylesheet's
-rendering of the document, not the application.
-
-**Verified.** Vitest covers the sandbox attribute, `srcdoc`, warnings, the
-error alert and that print targets the frame. A headless Chromium check in
-the cloud session confirmed the two sandbox tokens are both needed: without
-`allow-same-origin` the frame's `print` is a cross-origin access error;
-without `allow-modals` Chromium ignores the call ("The document is
-sandboxed, and the 'allow-modals' keyword is not set"). A script in the
-document was blocked.
-
-**Not verified.** The visible print dialog itself (headless), Firefox, and
-the Tauri desktop shell's WebKitGTK webview. Printing there may behave
-differently and needs a manual check.
-
-<a id="50-project-documentation-export-has-no-section-selection"></a>
-## 50. Project documentation export has section selection in the web UI
-
-**Status.** Lifted (CT-2, 2026-09-28). `ReportOptions::sections` is an
-ordered set of Summary, Topology, Buildings, Group addresses and Devices.
-Header, filtered Contents, and Limits/warnings always remain. Preview and
-export accept the matching JSON names `summary`, `topology`, `buildings`,
-`groupAddresses`, and `devices`; unknown names are rejected. Input order and
-duplicates cannot change canonical document order.
-
-The documentation dialog offers one checkbox per section, all ticked by
-default. One `DocumentationOptions` object
-(`apps/knx-web/src/documentationOptions.ts`) feeds both the preview request
-and the export request, so the written file is the previewed selection. An
-empty selection is sent as `[]`, which yields header, contents and limits
-only; it is never omitted, because an absent `sections` means "all".
-
 ## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured
 
 **Limitation.** `crates/knx-diff`'s output — a "KNXBench project diff" —
@@ -3767,91 +2506,6 @@ twice, once against each candidate.
 merge behavior additionally waits for §55. T15 does not pretend that
 running two unrelated two-way comparisons creates a three-way result.
 
-<a id="57-project-diff-cannot-compare-against-a-raw-knxproj"></a>
-## 57. Raw `.knxproj` comparison is available on the CLI and in the web UI
-
-**Status.** Lifted (CT-6, 2026-09-28). `POST /api/project/diff` accepts a
-`.knxdb` or a `.knxproj` path and an optional `inputKind`
-(`"knxdb"` | `"knxproj"`). Without it the server detects the kind from the
-extension; with it the kind must match the extension. An unknown value, an
-unsupported extension or a contradicting kind is a `400`. Every response
-names the `inputKind` it used.
-
-Both kinds load through `knx_app::comparison::load_comparison_input`, the
-loader `knx diff` uses, so there is one comparison import path. For a
-`.knxproj` the response carries the full `ImportReport` (`importReport`,
-serialized as `knx diff` prints it) and the same report flattened into
-session-log entries (`importDiagnostics`). A report with error-level
-diagnostics is refused with a `422` that carries that report, not a diff,
-matching `knx diff`'s refusal.
-
-The web panel's picker offers both kinds. Its paths come from the existing
-mount picker or `/api/fs/upload` (`crate::paths` confines relative paths
-to the data directory). The import diagnostics are shown collapsed above
-the diff, their total, error and warning counts in the summary line; a
-refused import shows its diagnostics in the panel instead of a diff.
-
-**Verified.** HTTP tests with synthetic archives (no corpus): clean
-import, import with a warning, import with an error (refused), unknown and
-contradicting input kinds, an unsupported extension, and an uploaded
-relative path. Vitest covers the picker filters and the diagnostics block
-in English and German.
-
-**What remains.**
-
-- Warning-level diagnostics do not block a comparison, as on the CLI. The
-  user sees them only by opening the collapsed block.
-- `importDiagnostics` inherits `session_log::from_import_report`'s
-  omissions: inferred values and a namespace disagreement are not listed
-  there. They remain in the raw `importReport`, which the panel does not
-  render.
-- The comparison's diagnostics are not written to the session log.
-- Not verified against real ETS exports in the cloud session (no corpus),
-  and not in a browser or the desktop shell's native file dialog.
-
-<a id="58-project-diff-has-no-ci-friendly-exit-nonzero-on-any-difference-flag"></a>
-## 58. Project diff has an opt-in CI exit-code contract
-
-**Limitation.** Ordinary `knx diff` still exits `0` whenever it successfully
-produces output, even when the projects differ. CI callers must opt into
-`knx diff --exit-code`.
-
-**Contract.** With `--exit-code`, 0 means equal; 1 means any reported
-difference, including ambiguity; and 2 means argument, file, native-store,
-or ETS-import failure, including a recoverable import whose report contains
-error-level diagnostics. Without the flag, the backward-compatible success/
-failure behavior remains; such an error-bearing partial import is still a
-failure rather than a valid comparison.
-
-**Impact.** Scripts can gate without parsing prose. Existing interactive
-scripts are not broken by a newly nonzero result they did not request.
-
-**Lifted when.** Resolved for the CLI. The exit-code table is also in
-`knx --help` output and the user manual.
-
-<a id="59-project-diffs-text-and-web-renderers-show-which-fields-changed-not-their-beforeafter-values-for-most-entity-types"></a>
-<a id="59-project-diff-exposes-beforeafter-values-but-the-web-panel-does-not-render-them-yet"></a>
-## 59. Project diff shows before/after values in CLI, API and web panel
-
-**Status.** Lifted (CT-1, 2026-09-28). `knx diff` prints one ordered line
-per changed field with its old and new display values; the HTTP response
-carries `fieldChanges` on every generic/device change; and the web panel
-now renders each changed entity's `fieldChanges` as a *Field / Before /
-After* table, plus the project-info and installation-info changes the
-same way.
-
-**Cause of the former limit.** T15 added one pure `FieldDiff` projection
-in `knx-diff`, so CLI and HTTP cannot disagree about value formatting;
-the frontend rendering was deliberately left to a separate UI task.
-
-**What remains.** Field names are shown as the `knx-diff` identifiers
-(`product_ref`, `name`, …), untranslated and in monospace, because the
-response carries no display label for them. Values are the server's
-pre-formatted strings (`-` for an absent value; enums and structured
-values use the explicit `Debug` fallback T15 recorded). The web view
-has no inline character-level highlighting inside a value.
-
-<a id="60-project-diffs-web-panel-shows-grouped-counts-only"></a>
 ## 60. Project diff's web panel lists entities, but pages large tables
 
 **Status.** Largely lifted (CT-1, 2026-09-28). `ProjectDiffPanel.tsx`
@@ -4743,7 +3397,8 @@ in. Absence is the intended failure direction; a false number is the one
 this section, and the ADR, exist to rule out.
 
 <a id="66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14"></a>
-## 66. Server-composed prose and documentation are only partly localized — PARTIALLY RESOLVED (2026-09-23, T14)
+<a id="66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14"></a>
+## 66. Server-composed prose is only partly localized
 
 **Resolved, one surface.** `ParameterDiagnostic.message` — the parameter
 panel's own diagnostic headline — now follows the `CreationDiagnostic`
@@ -4887,70 +3542,6 @@ this section previously said would be needed. On 2026-09-23 the report gained
 an injected EN/DE choice and localized primary chrome, but not a complete
 catalogue or language-pack integration. The remaining surfaces above stay
 open for the stated reasons; none is scheduled.
-
-## 67. A rejected language pack's own reason was shown untranslated, inside a translated sentence — RESOLVED (2026-09-14, T14)
-
-**Resolved.** `apps/knx-web/src/languagePack.ts` now exports
-`LanguagePackRejectionReason`, a discriminated union (one variant per
-`parseLanguagePack` failure mode, plus `storageFailure` for a
-`localStorage.setItem` throw) — the `CreationDiagnostic` pattern
-(§66) applied to language packs. `fail()` builds both the untranslated
-`error` string (unchanged, still what a non-UI caller or a test that
-doesn't care about translation sees) and the structured `reason`;
-`LanguagePackParseResult`/`LanguagePackImportResult` carry both.
-`SettingsPanel.tsx`'s new `describeRejectionReason` switches on
-`reason.kind` and returns one of twelve new
-`languagePack.rejection.*` catalogue keys (English and German), falling
-back to the untranslated `error` only for a `kind` this switch has never
-heard of — which cannot happen today, since both sides of the union live
-in the same build, but the fallback costs nothing and matches
-`describeCreationDiagnostic`'s own precedent. The one rejection that
-never reaches `languagePack.ts` at all — the uploaded file failing
-`JSON.parse` before `importLanguagePack` is even called — reuses the
-already-existing `languagePack.importReport.invalidJson` key through the
-same switch, so both paths compose the same translated sentence.
-`SettingsPanel.test.tsx`'s "§67: a rejected pack's own reason is
-translated too, inside the translated sentence" test switches the UI
-language to German, rejects a pack for a malformed `tag`, and asserts on
-the *whole rendered sentence*: both "Import abgelehnt:" and the German
-reason clause are present, and the old English clause
-(`/is not a well-formed/i`) is not. The original limitation text is kept
-below for context.
-
-**Limitation (as it stood before 2026-09-14).** When the Settings panel
-rejects an imported language pack, the surrounding sentence is translated
-(`languagePack.importReport.rejected`: `"Import rejected: {reason}"` /
-`"Import abgelehnt: {reason}"`) but `{reason}` is not: it is
-`apps/knx-web/src/languagePack.ts`'s own English validation message,
-e.g. `"tag" is required and must be a non-empty string.` or `"tag"
-("xx-not-a-language") is not a well-formed BCP 47 tag, e.g. "nl-NL",
-"tlh" (Klingon), "bar" (Bavarian), or "art-x-sindarin" (a private-use tag
-for anything unregistered).`. A German (or any non-English) UI user
-therefore sees a German sentence with an English clause describing why
-their own pack failed to import.
-
-**Cause.** Deliberate, for now — surfaced and ruled on during T25 Task 7's
-review (2026-09-12). Every rejection reason in `languagePack.ts` goes
-through the same `fail(...)` helper, whether it comes from
-`parseLanguagePack`'s validation or from `describeStorageFailure` when a
-write to `localStorage` fails; all of them return a
-free-form English string, not a discriminated `kind` the frontend could
-map to its own catalogue key the way `CatalogBrowser.tsx`'s
-`describeCreationDiagnostic` does for `CreationDiagnostic` (see
-[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)).
-Giving each of `parseLanguagePack`'s roughly dozen failure modes its own
-message key was judged not worth doing for a first cut of the feature.
-
-**Impact.** Narrow: only the rejection path, and only its diagnostic
-text — a rejected pack is never installed regardless of language, so no
-functional behaviour depends on this string, only its readability to a
-non-English speaker debugging their own pack file.
-
-**Lifted when.** Done, 2026-09-14 (T14): `languagePack.ts`'s `fail()`
-call sites return a structured discriminant, and `SettingsPanel.tsx`
-maps it to its own catalogue keys — exactly the restructuring this
-section used to say §66 would also need for server-composed prose,
-except this one was entirely frontend-side and needed no Rust change.
 
 ## 68. Repeated module instantiation is refused, not supported
 
@@ -5385,198 +3976,30 @@ three such endpoints among 35 occupied addresses on one gateway.
 signal, is verified against more than one gateway/client combination —
 not scheduled as part of T17.
 
-## 79. Discovery needs IP multicast, which Docker's default bridge network does not carry
+<a id="79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry"></a>
+## 79. Discovery needs reachable multicast and permitted unicast replies
 
-**Limitation.** `KnxNetIpClient::discover()` (`crates/knx-net/src/client.rs:146`)
-sends `SEARCH_REQUEST` to the standard discovery/routing multicast group
-`224.0.23.12:3671` and waits for unicast `SEARCH_RESPONSE`s. A container
-started on Docker's default bridge network gets an empty result, not an
-error — indistinguishable from "no gateways on this network" unless the
-operator already knows to suspect the network layer.
+`KnxNetIpClient::discover()` sends `SEARCH_REQUEST` to
+`224.0.23.12:3671` and awaits a unicast response. Docker's default bridge
+does not provide the required multicast path; the documented Linux
+deployment uses host networking when discovery is needed. A manually entered
+numeric IPv4 endpoint remains the fallback and can work over unicast even
+when multicast discovery cannot. Host routing, firewall and gateway support
+still matter with host networking.
 
-**Cause.** Docker's bridge driver source-NATs (masquerades) a container's
-outbound traffic and requires an explicit `-p`/`--publish` for anything to
-be reachable from outside — a unicast, port-oriented model with no
-provision for multicast group membership or for routing an unsolicited
-unicast reply back to a masqueraded container address. **[D]**
-[docs.docker.com, bridge network driver](https://docs.docker.com/engine/network/drivers/bridge/):
-"containers connected to different bridge networks can only communicate
-with each other using published ports" and outbound traffic uses
-"masquerading to give containers external network access." The host
-network driver's own docs describe the alternative in contrasting terms —
-**[D]** [docs.docker.com, host network driver](https://docs.docker.com/engine/network/drivers/host/):
-with `--network host` a "container's network stack isn't isolated from
-the Docker host," it "doesn't get its own IP-address allocated," and the
-driver "only works on Linux hosts" (excluded for Windows containers;
-Docker Desktop's host networking, from 4.34, is a separate, more limited
-feature gated behind a settings toggle). Neither page states in so many
-words that bridge networking blocks multicast; that inference is now
-**[V]**, locally verified (2026-09-13, this task, n=1 per condition, one
-Linux Docker host): `tcpdump` on the host's real LAN interface during
-`knx bus discover` run inside a plain (bridge) `debian:bookworm-slim`
-container captured nothing on that interface, while `tcpdump` on
-`docker0` captured the `SEARCH_REQUEST` leaving the container
-(`192.0.2.4.57836 > 224.0.23.12.3671`, 14-byte UDP payload, the container's
-own bridge address rewritten to an RFC 5737 literal the same way the host's is
-below) — the
-datagram reaches the bridge and goes no further. The identical container
-started with `--network host` instead put the same request straight onto
-the LAN interface, source-addressed as the host itself
-(`192.0.2.10.47827 > 224.0.23.12.3671`, the host's own LAN address rewritten
-to an RFC 5737 literal), matching a bare-host (no
-container at all) run byte-for-byte. No real KNXnet/IP gateway answered
-in any of the three runs (bridge, host, bare-host) on this network
-segment, so this confirms the request half of discovery, not a full
-round trip against hardware — corroborating, non-authoritative community
-reports (Docker Community Forums, GitHub issues) describe the same
-failure mode with other multicast-dependent software, consistent with
-what was measured here. `discover()` itself does no interface selection: it binds `0.0.0.0:0` and
-lets the OS routing table pick both the send path and the local address
-reported inside `SEARCH_REQUEST` (`local_discovery_hpai`,
-`crates/knx-net/src/client.rs:706`) — so `--network host` is necessary,
-and, on a host whose default route already reaches the KNX LAN (the
-common single-NIC case), also sufficient; a multi-homed host with no
-default route to that LAN would still need its own routing fixed
-regardless of Docker. **[A]**, not verified against a real multi-homed
-host.
+**Host cause resolved (2026-09-30, RESEARCH §20.1).** The host `ufw` had
+dropped the gateway's unicast UDP reply from *source* port 3671. The user
+allowed that source port from the LAN; `knx bus discover` and
+`POST /api/bus/discover` then both found the gateway. A rule for the
+multicast destination alone was insufficient. No protocol or AppImage
+workaround was needed; an unpackaged server and the AppImage had sent the
+same request. The CLI and Web empty-result hints still name host firewall
+and container networking as plausible causes on other installations.
 
-**Impact (updated 2026-09-22).** The shipped server exposes
-`POST /api/bus/discover`, and the web bus monitor calls it. **[V]**
-The documented Docker image therefore reaches this multicast code path: on
-the default bridge its **Discover gateways** action can return an empty result
-even when gateways exist. Project work and tunnelling to a manually entered
-unicast endpoint remain usable through the bridge. The Dockerfile, README and
-manual direct Linux users who need discovery to `--network host`.
-
-**Host AppImage comparison (2026-09-28, [V], RESEARCH §20.1).** On this host,
-a built AppImage's embedded server and an unpackaged debug server both sent
-one 14-byte multicast search from the same LAN interface and observed no
-response. The unpackaged route returned HTTP 200 with an empty interface
-list. The AppImage's WebView reached the route. This **does not show an
-AppImage-only packaging fault**; it also does not prove the packets crossed
-the NIC, because a wire capture and firewall-rule inspection required
-privileges this session lacks. The network/gateway reason for the empty
-result remains open, and a manually entered endpoint is the fallback. No
-protocol retry or packaging workaround is justified by this result alone.
-
-**U10 endpoint UI boundary (2026-09-29).** The bus monitor now exposes a
-separate host and port (default 3671), preserving the existing single-string
-request and stored preference. It validates the port before calling the API
-and explains that its current tunnel accepts numeric IPv4 only
-(`bus_routes.rs::start_monitor` parses `SocketAddrV4`). Legacy hostname or
-IPv6 preferences remain visible, not silently discarded, but cannot start a
-tunnel. This improves the manual unicast fallback; it does **not** repair or
-validate discovery on the real LAN. A wire capture or gateway-side evidence
-is still needed to locate the missing multicast response.
-
-**Cause on this host found (2026-09-29, [V], RESEARCH §20.1).** The gateway
-*does* answer the multicast search. Its 84-octet UDP reply (source port 3671
-to the requester's HPAI port) was logged as `[UFW BLOCK]` by the host's
-`ufw` (default input policy `DROP`). A stateful firewall tracks the outgoing
-request as a flow to `224.0.23.12`; the unicast answer comes from the
-gateway's own address, matches no tracked flow, and falls to the default
-policy. A unicast `SEARCH_REQUEST`/`DESCRIPTION_REQUEST` straight to the
-gateway got its reply through the same firewall. No KNXBench protocol defect
-is implicated, so no protocol change was made. The CLI hint and the web
-empty-result hint now name this cause and the remedy (allow incoming UDP
-from source port 3671 on the local network) alongside the container one.
-**Not changed:** the firewall itself, which belongs to the user; discovery
-on this host stays empty until the user adds such a rule, and the manual
-endpoint remains the fallback. Discovery through a permitting firewall has
-not been observed end to end in KNXBench yet.
-
-**Observed end to end (2026-09-30, [V], RESEARCH §20.1).** After the user
-added an incoming rule for UDP *source* port 3671 from the LAN, `knx bus
-discover` and `POST /api/bus/discover` both found the gateway, and no reply
-was dropped. A rule for destination `224.0.23.12:3671` alone does not help.
-What remains of this entry: Docker's default bridge network, and any host
-whose firewall has no such rule (the hints say so). A native WebKitGTK click
-on **Search** has not been observed.
-
-**Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
-API had no discovery route —
-`grep -rn discover apps/knx-server/src/` finds none — so the shipped
-`apps/knx-server/Dockerfile` image (which does not build or ship the
-`knx` CLI either, only `knx-server`) cannot reach this code path at all
-via the documented `docker run` deployment in `README.md`. The gap is
-reachable only by running `apps/knx-cli`'s `bus discover` directly inside
-some container — a development container, CI image, or any future image
-that bundles the CLI or gains an HTTP discovery route (ROADMAP.md,
-Session 6, already anticipates the latter). `run_bus_discover_async`
-(`apps/knx-cli/src/main.rs:1413`) now prints a fixed stderr hint
-alongside "no gateways responded" naming multicast and container
-networking as a common cause, so the failure at least explains itself
-where it is reachable; the hint is unconditional, not gated on any
-"am I in a container" check, since no such check is both reliable and
-free of false negatives on an ordinary host with its own multicast
-routing/firewall problem.
-
-**Lifted when.** Not something to "lift" — this is a property of Docker's
-default network driver, not a bug in this project. `--network host` removes
-this container-network boundary; discovery still needs a suitable host route,
-firewall policy and responding gateway. Bridge mode remains supported without
-discovery.
-
-## 80. A project can be created from scratch in the UI — RESOLVED (2026-09-16, Goal Task 17)
-
-**Resolved.** The welcome screen, File menu and command palette expose the
-same "New project" flow. The dialog sends the chosen name, installation
-name, project language and group-address style to `POST /api/project/new`;
-the returned tree replaces the welcome screen. The first installation exposes
-its empty "Unassigned" branch and can open the device catalog without any
-area or line.
-
-**U5 validation boundary (2026-09-29).** New-project language input is
-checked for BCP-47 *well-formedness* at the HTTP boundary; this does not
-verify registry assignment or that translations exist for that language.
-Already imported project tags stay lossless and are not retroactively
-rewritten or rejected. The four editor/creation parser errors now carry
-additive 422 syntax hints; the `error` string remains for older clients.
-
-**Verification.** `apps/knx-web/e2e/new-project.e2e.ts` builds the production
-frontend, starts a real `knx-server`, and drives it in system Chromium through
-Playwright. Separate cases for `ThreeLevel`, `TwoLevel` and `Free` assert
-the dialog's defaults and empty-project statement, the exact HTTP request, the
-server's one-installation response with no topology or unassigned devices, the
-style shown in project properties, and the catalog dialog opened from
-"Unassigned" **[V]**. Run it with `cd apps/knx-web && npm run test:e2e`.
-
-**Boundary.** This browser check stops when the empty catalog opens. Installing
-a manufacturer package and creating its device remain covered end to end at
-the HTTP/application boundary by
-`apps/knx-server/tests/http_catalog_to_device.rs`; no browser-level claim is
-made for those later actions.
-
-<a id="81-new_project_impl-refuses-on-can-undo-not-on-is-dirty"></a>
-
-## 81. `new_project_impl` refuses on "can undo", not on "is dirty" — resolved
-
-**Resolved.** `AppState.clean_project` keeps a transient snapshot of the last
-project state established by successful native open, ETS import, new project
-creation, Save, or Save As. `new_project_impl` compares the live project with
-that snapshot; a failed save leaves the previous snapshot untouched. The
-snapshot is process state, not `.knxdb` data, so native store schema version 9
-is unchanged.
-
-The dirty predicate and New's replacement now share one project-led
-transaction. Save chooses its path after acquiring that leading lock and
-keeps the path, project, opaque passthrough and manufacturer manifest coherent
-through clean-baseline publication. Open/import/new replace those collections
-under the same boundary; an intervening accepted edit cannot disappear in a
-gap between New's check and replacement.
-
-`Project::same_user_content_as` clones both projects, replaces both synthetic
-`IdAllocators` high-water marks with defaults, and then uses structural
-equality. An edit followed by undo is therefore clean even though allocation
-counters advanced, while every other existing and future `Project` field
-participates without a hand-maintained field list.
-
-**Verification.** Server regressions cover both disagreement directions:
-edit then undo yields `can_redo == true` and `is_modified == false`; direct
-mutation outside the command stack yields `can_undo == false` and
-`is_modified == true` and is refused by the new-project guard. HTTP tests
-prove successful Save and Save As replace the snapshot while a failed Save
-retains dirty state.
+**Remaining verification boundary.** A native WebKitGTK click on Search
+was not observed. The successful CLI/HTTP test on this host is not proof of
+all container networks or multi-homed LANs, and a missing gateway remains
+a network diagnostic, not proof that the KNX device is absent.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
@@ -5714,89 +4137,6 @@ fingerprint still does not move.
    visible to the next reader. The check that settles it is a search of
    `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
    none. **[V]**
-
-## 83. The from-scratch launcher is browser-verified — RESOLVED (2026-09-16, Goal Task 17)
-
-**Resolved.** The earlier evidence ended at Vitest components with a mocked
-`./api`. The committed Playwright suite now clicks the production build in a
-real Chromium process while the real Rust server owns project state. All three
-group-address styles complete the dialog-to-workbench path, and the resulting
-line-free installation opens the unassigned device catalog **[V]**
-(`apps/knx-web/e2e/new-project.e2e.ts`).
-
-**Reproduction.** From `apps/knx-web`, run `npm run test:e2e`. The command
-builds the frontend first, then Playwright starts `cargo run -p knx-server`
-with that build as its static directory and executes Chromium at
-`/usr/bin/chromium`. No API response is mocked and no existing project file
-is used.
-
-**Boundary.** The suite proves project creation and catalog reachability. It
-does not install a product package or create a device through the browser;
-`http_catalog_to_device.rs` remains the end-to-end proof for that downstream
-server path.
-
-## 84. A project's group address style can be chosen, and afterwards never seen — RESOLVED (2026-09-14, T4)
-
-**Resolved.** All three of the "Lifted when" conditions below are now met.
-`knx_projection::ProjectTree` carries `group_address_style` (a plain
-`"Free"`/`"TwoLevel"`/`"ThreeLevel"` string, `crates/knx-projection/src/
-lib.rs`), the properties inspector shows it read-only on the project node
-(`apps/knx-web/src/Inspector.tsx`), and `knx_core::Command::
-SetGroupAddressStyle` restyles a project — undoable/redoable like every
-other command, wired through `knx-store`'s `command_sync` and a new `POST
-/api/project/group-address-style` route. The restyle command checks every
-existing group address against the target style *before* mutating anything
-and refuses the whole change, naming the offending address, if even one
-does not fit (`CommandError::GroupAddressDoesNotFitStyle`).
-
-One thing this cycle's own boundary testing found and is recorded here
-rather than left implicit: that refusal path is, as far as this codebase's
-own address encoding goes, unreachable. `TwoLevel`'s 5+11-bit split and
-`ThreeLevel`'s 5+3+8-bit split each partition the full 16 bits of a
-`GroupAddress`'s raw `u16` with no remainder, so `GroupAddress::fits_style`
-— which renders an address in the target style and parses it back, and
-answers `true` only when that round trip returns the original address — is
-`true` for all 65536 possible raw values under every style, proved
-exhaustively by `crates/knx-core/src/address.rs`'s own
-`group_address_format_parse_round_trips_for_every_possible_raw_value` test,
-not merely asserted. The check still runs on every restyle: because it is a
-round trip through the real `format`/`parse` pair rather than a bounds
-comparison restating the same partition, it is the guard against a future
-change to this bit layout silently making one style narrower than another
-— it fails the moment `format` and `parse` disagree about the bit split —
-not dead code. `knx-store`'s `style_from_str` was
-also hardened while this was open: an unrecognized persisted style now
-returns `StoreError::UnknownGroupAddressStyle` instead of silently
-defaulting to `ThreeLevel`, the same rule `POST /api/project/new` already
-applied at creation time, now applied at load time too. The original
-limitation text is kept below for context.
-
-**Limitation (as it stood before 2026-09-14).** `POST /api/project/new` now accepts `groupAddressStyle` and
-the creation dialog asks for it, so a project can be started two-level, free
-or three-level **[V]** (`http_project_routes.rs`, three tests). After that
-moment the UI never mentions the style again: `knx_projection::ProjectTree`
-has no field for it (`crates/knx-projection/src/lib.rs`, `ProjectTree`), so
-no panel can display it, and no route can change it — nothing in `knx-core`
-restyles a project at all **[D]**.
-
-**Cause.** The projection carries group addresses already *formatted* per the
-project's style (`GroupAddressNode::address`), which was enough for every
-consumer that existed before a project could be created empty. An empty
-project has no addresses, so it has nothing to infer the style from either:
-the one place the setting is visible is the dialog that set it.
-
-**Impact.** A user who picks the wrong style finds out when the first group
-address is rejected or renders unexpectedly, and the only remedy is to
-create the project again. The dialog's own hint says the choice is
-effectively permanent, which is true, but "permanent" and "invisible" is a
-worse pair than "permanent" alone. The server-side refusal of an unknown
-style value (a `400`, never a silent fall back to three-level) at least
-means the style a project ends up with is always one that was asked for.
-
-**Lifted when.** Done, 2026-09-14: `ProjectTree` carries the style, the
-properties inspector shows it for the project node, and a command in
-`knx-core` can restyle a project whose addresses all still fit the target
-style.
 
 ## 85. A `.signature` package member is stored with role `Signature`, never verified
 
@@ -6259,39 +4599,6 @@ database was ever installed by more than one package; the third install
 above was constructed specifically to violate that, to make the residual
 measurable rather than asserted.
 
-<a id="89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import"></a>
-
-## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import — resolved 2026-09-22
-
-**Resolved (T13, 2026-09-22).** `BuildingPartType` now preserves `Stairway`,
-`RoomPart`, `Area`, `Ground` and `Segment` in addition to the six observed
-legacy values. Parser/mapper, native storage, projection, creation API,
-localized EN/DE creation and Inspector labels, and report rendering retain
-each exact kind. Unknown ETS values still produce a mapping error and the
-reported `BuildingPart` fallback; unknown persisted kinds instead refuse load
-with `StoreError::UnknownBuildingPartType`, including the offending value.
-
-**Evidence boundary.** The locally checked *Project Schema23 v01.00.00.pdf*
-§1.1.2.3 (PDF page 7) enumerates ten values including `Segment` but excluding
-`RoomPart`. §§1.2.6.3–1.2.6.4 (PDF pages 54–55) describe the space hierarchy;
-the §1.2.6.4 Type attribute table names eleven values, including **both**
-`RoomPart` and `Segment`. The earlier claim that the table omitted `Segment`
-was a transcription error: the continuation “and Segment” is present.
-Only `RoomPart` differs between the enumeration and attribute prose.
-The implementation accepts both documented literals without claiming that
-`RoomPart` belongs to the enumerated XSD type.
-
-**Verification and remaining limits.** Synthetic schema-23 mapping tests cover
-all five additions plus a genuinely unknown token. Native save/load/re-save
-retains every kind and hierarchy; the unconstrained `kind TEXT NOT NULL`
-column requires no migration or schema bump (still v9). Older six-kind readers
-cannot faithfully reopen native files using the additions: their unknown-kind
-fallback substitutes `Building`. The three local
-reference projects contain none of the five added values, so real-project
-evidence for them remains absent. There is no ETS project exporter after
-[ADR-0028](adr/0028-no-knxproj-export.md); round-trip proof concerns native
-`.knxdb` files only.
-
 ## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file
 
 **Limitation.** Not a limitation of the code — a limitation of a number that
@@ -6361,45 +4668,6 @@ exists so the number stops being re-derived. If a future brief asks for
 "main type 46" again, it means "the remaining main types in some
 `knx_master.xml`", and the right first step is to measure the file in front
 of you.
-<a id="91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started"></a>
-
-## 91. A running bus session keeps rendering group addresses in the style the project had when it started — resolved
-
-**Resolved.** `BusSession` now owns one atomically replaceable
-`GroupAddressContext` shared by the incoming-telegram drain task and outgoing
-write path. After `POST /api/project/group-address-style` successfully applies
-the domain command, the handler rebuilds the complete context from the current
-project and replaces it in an active session. Style, names and resolved DPTs
-therefore stay one coherent snapshot rather than acquiring separate refresh
-rules.
-
-The project mutex is held only while building that new context and is released
-before the async bus-session mutex is acquired. Refreshing interpretation
-metadata neither reconnects nor restarts the tunnel and sends no bus frame.
-One application-layer transaction mutex is acquired before the domain command
-and held through fresh snapshot and session publication. Direct restyles and
-Undo/Redo share this boundary, so history cannot overtake a pending publication.
-History refreshes the session when it changes the project style; unrelated
-history operations do not rebuild the context. The project and bus locks remain
-separate phases inside that serialized transaction.
-`style_change_refreshes_the_active_session_without_reconnecting` verifies
-through the public route that the next monitored telegram uses the new style,
-its displayed address round-trips through `/api/bus/write`, the session ID is
-unchanged and the fake tunnel remains connected **[V]**.
-
-Additional fake-session regressions cover Undo and Redo monitor formatting and
-write parsing, plus deterministic ordering between a pending style publication
-and Undo. The controller observed the stale-style/order failures before the fix
-and all corresponding cases passed afterwards. No physical bus was used.
-
-**Notation boundary.** This resolution concerns the project's address level:
-`Free`, `TwoLevel` or `ThreeLevel`. User-facing group addresses remain in the
-fixed slash-based representation for the chosen level; no slash/dot notation
-selector was added.
-
-
-<a id="92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device"></a>
-
 ## 92. Commissioning phase 2 is verified against a simulator this project wrote; one device has been written since
 
 **Corrected 2026-09-28.** This entry used to say the code *"has never
@@ -6599,89 +4867,6 @@ mistaking correct behaviour for a bug.
 lifting. It would only need revisiting if a later KNX Standard erratum or
 edition corrects one of the six clauses, at which point the corresponding
 list item names which one no longer applies.
-
-## 96. A browser that loses the import response cannot get the project back without reloading
-
-**Historical baseline (superseded 2026-09-22).** ADR-0023 made a project load
-an operation the server owns:
-`POST /api/project/import` (or `/open`) runs on a blocking task that
-finishes whether or not the client is still listening, and
-`GET /api/project/load-progress` reports what it is doing. A client that
-loses the POST's response — a closed tab, a dropped connection, a reverse
-proxy timing the request out — therefore learns from the next poll that the
-load *succeeded*, and still has no `ProjectTree` to render. There is no
-`GET /api/project`, so nothing can re-fetch the tree it missed. The only
-recovery is to reload the page, which re-renders from a server whose
-project is already the new one.
-
-**Historical cause.** The `ProjectTree` was returned by the POST and nowhere
-else. That was harmless while the request *was* the operation; making the
-operation outlive the request is what created the gap. Adding a read route for the
-open project is a small change and a deliberate non-goal of T37, which
-changed no existing response shape.
-
-**Historical consequence.** A user who closed the tab mid-import did not lose
-the import — the project was loaded server-side — but had to reload to see it.
-Nothing was silently discarded, and the snapshot said plainly whether the
-operation finished or failed.
-
-**Narrowed, 2026-09-19 (T37 fix round 1).** The client now owns its
-operation id (ADR-0023, "the client half of the id"), so a lost response
-no longer leaves a banner claiming the load is still running: the final
-snapshot is accepted only when it is this load's *and* says `failed`, and
-our own operation reporting `succeeded` to a client that never received
-the tree is reported as the failure it is for that client. The staleness
-itself is unchanged — the page still has no project and still needs a
-reload — because there is still no route that hands out the current tree.
-
-**Narrowed further, 2026-09-19 (T37 fix round 2, F8).** Round 1's ownership
-test was id-only: a foreign operation that started *after* the client's
-pre-flight baseline read but *before* its own POST was refused could carry
-a higher id than the baseline and be adopted anyway. Round 2 added a
-`source` check — the polled snapshot also had to name the same file this
-load submitted — which closed that particular race but left an
-acknowledged residual: two clients loading files with the same base name
-from different directories, inside the same baseline-to-adoption window,
-were still indistinguishable by id-and-source alone. The banner could show
-a stranger's phase, or a stranger's failure, under a file name that merely
-happened to match.
-
-**Closed, 2026-09-19 (T37 fix round 3, F9).** The id-and-source heuristic
-is deleted, not patched again: the client now generates an opaque token
-with `crypto.randomUUID()` before its POST, sends it as `clientToken`, and
-the server echoes it verbatim on every snapshot of that operation.
-Ownership is exact equality on that token — no baseline read, no id
-comparison, no `source` comparison, and therefore no window for a
-same-named stranger to fall into, regardless of directory or timing. This
-closes round 2's residual gap entirely; it does not touch the limitation
-itself, which is unchanged: there is still no `GET /api/project`, so a
-browser that loses its own POST's response still has nothing to re-fetch
-the tree from and still needs a reload.
-
-**One more hole in the same wall, 2026-09-19 (T37 fix round 6, F-C).**
-Ownership answered *whose* operation a snapshot describes, never whether
-the load watching it was still running. A POST dying at transport level —
-the same dropped connection this entry is about — left the poll interval
-armed across the `await` in `runLoad`'s catch, and the effect's `cancelled`
-latch is closed by React's cleanup rather than by `finally`, so a poll
-resolving in between passed every filter and painted a `running` phase over
-the failure. Polling then stopped, and the banner stayed on that phase, with
-a moving shuttle, for the rest of the session. A generation counter bumped
-in `finally` and compared by every poll across its own fetch closes it. The
-limitation itself is still unchanged: no route hands out the current tree.
-
-**Resolved, 2026-09-22 (T12 Task 5).** Authenticated `GET /api/project` now
-builds a fresh `ProjectTree` from the project currently held by the server,
-including the current command-stack undo/redo state and import error/warning
-counts; no open project is a `400 Bad Request`. When a load POST loses its
-response, the browser defers its error toast until it has read the final load
-snapshot. Only exact `clientToken` ownership plus `status: "succeeded"` may
-recover: the client fetches the current server tree, resets its projection,
-reads stored-path state from the same current-tree response, and clears the load
-banner without an alert. The read is deliberately current-server truth, not a
-cached copy of the lost POST response. A foreign or missing token never earns
-that read, so another client's success cannot replace this client's failure.
-If the recovery GET itself fails, its error becomes the visible local failure.
 
 ## 97. Progress is a phase label far more often than it is a percentage
 
@@ -6929,42 +5114,6 @@ that asymmetry appears, because none exists to break.
 for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
-<a id="103-unsaved-is-inferred-from-the-undo-stack-not-a-real-dirty-flag"></a>
-
-## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag — resolved
-
-**Resolved.** `ProjectTree.is_modified` publishes the server-owned snapshot
-comparison beside, but independently from, `can_undo` and `can_redo`. Pure
-`knx-projection` output defaults it to `false`; the application overlay derives
-the live value while holding the same project-led lock order used for project,
-command-stack, import-count, store-path, clean-snapshot, opaque and manufacturer
-manifest publication.
-
-The desktop Quit guard consumes only `is_modified`. Undo and redo buttons
-continue to consume history availability. Frontend regressions prove both
-important disagreements: `can_undo == true` with `is_modified == false` quits
-without a prompt, while `can_undo == false` with `is_modified == true` opens
-the confirmation dialog. Successful Save and Save As operations then consume
-a fresh `GET /api/project` tree rather than patching the dirty bit locally;
-if that authoritative refresh fails, the error is reported and the prior
-dirty tree remains in force.
-
-Public snapshots carry application-owned `server_incarnation` and
-`snapshot_revision` metadata. Every publication path rejects superseded trees
-before changing selection or save metadata, covering delayed Save→Edit,
-Edit→Save and Load→Edit responses. A new process's low revision is accepted;
-responses from a retired incarnation cannot switch the UI back. These guards
-control response ownership, not the server's dirty-state value. Pure/offline
-projections omit runtime metadata; no native schema migration is involved.
-
-Browser context records retain incarnation retirement across reloads and
-same-profile windows. Bus session matching additionally requires the server
-incarnation, so a reused numeric session ID cannot verify/rebase an old
-record. Missing legacy identity remains `unverified`, and legacy tree metadata
-cannot replace an accepted modern incarnation. This is not cross-client push
-or optimistic write-conflict detection; §82's browser-profile visibility
-boundary remains. See [ADR-0032](adr/0032-application-snapshot-ordering.md).
-
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 
 **Limitation.** Since C19, a connected request whose four transmissions
@@ -7032,74 +5181,17 @@ accepted as is. **K7, 2026-09-29: it did not go quiet.** No
 (RESEARCH §19). Accepted as is.
 
 
-## 105. Transport Layer control frames go out at low priority, not `SYSTEM`
+<a id="105-transport-layer-control-frames-go-out-at-low-priority-not-system"></a>
+## 105. System-priority control frames sent; on-wire priority unmeasured
 
-**Limitation.** Every frame this crate sends carries Ctrl1 `0xBC` —
-`encode_l_data` in `crates/knx-net/src/cemi.rs` hard-codes it for all
-outbound `L_Data`, the only exception being `0xBD` for a negative
-confirmation. `0xBC` means low priority and `ack_request = false`. The
-Transport Layer's connection-oriented control frames are specified
-otherwise, and this crate sends all of them: `T_CONNECT_REQ_PDU`,
-`T_DISCONNECT_REQ_PDU`, `T_ACK_PDU` and `T_NAK_PDU`.
-
-**Cause.** `[D]` TL §3.7, p. 13 on `T_Connect`: *"the priority shall be set
-to 'system'; the ack_request shall be set to true; the octet_count shall be
-set to 6"*. `[D]` TL §3.8, p. 14 says the same for `T_Disconnect`: *"the
-priority shall be set to 'system'; the ack_request shall be set to true"*.
-`[D]` The state machine's actions repeat it per frame — TL §5.3, p. 19: `A2`
-and `A3` *"Send a N_Data_Individual.req with T_ACK_PDU, priority = SYSTEM"*,
-`A4` the same with `T_NAK_PDU`, and `A6` *"Send a N_Data_Individual.req with
-T_DISCONNECT_REQ_PDU, priority = SYSTEM"*. The crate has one outbound Ctrl1
-and no per-frame priority at all, so there is nowhere for `SYSTEM` to be
-set.
-
-**Impact.** Unknown on real hardware and untested. Priority affects bus
-arbitration, not frame semantics, so a control frame that wins the bus
-anyway is indistinguishable from a conforming one; on a loaded line a
-`T_ACK` sent at low priority may be delayed behind group traffic, and the
-peer's acknowledge timer does not care why the acknowledgement was late.
-`ack_request = false` on a control frame likewise removes a link-layer
-retransmission the Standard asks for. Every commissioning result this
-project has produced so far came from the simulator, which does not
-arbitrate.
-
-**Not caused by C19.** This predates every commissioning task; C19 is
-merely the first code whose correctness argument quotes `A6` in full,
-which is how it surfaced. C19 deliberately did not fix it: a per-frame
-priority is a behavioural change to every frame the crate emits, including
-group communication, and it belongs in its own change with its own tests.
-
-**Lifted when.** `encode_l_data` takes a priority (and an `ack_request`)
-from its caller, the Transport Layer control paths in
-`crates/knx-net/src/commissioning.rs` pass `SYSTEM`/true, and a cEMI
-encoding test pins the Ctrl1 octet of each of the four control frames
-against the clauses above.
-
-**Status 2026-09-28 (K8): lifted in the encoder, simulator-verified only.**
-`encode_l_data` derives Ctrl1 from the frame instead of taking it from the
-caller: every Transport Layer control *request* now leaves at system
-priority. `T_CONNECT`/`T_DISCONNECT` carry `0xB2` (priority `00b`, ack
-requested, §3.7/§3.8); `T_ACK`/`T_NAK` carry `0xB0` (priority `00b`, ack
-bit clear: A2–A4 name only the priority). Data frames, group traffic and
-indications keep `0xBC`; a negative confirmation keeps `0xBD`. The priority
-codes are from Data Link Layer General v01.03.02 AS §2.2.3 (`00b` system,
-`11b` low), the Ctrl1 layout from EMI_IMI v01.04.02 AS §4.1.5.3.2. Test
-`control_frames_request_system_priority_and_data_frames_stay_low`; 7
-mutants caught. Unverified: whether a real KNXnet/IP interface honours
-the priority bits of a tunnelled `L_Data.req` (EMI §4.1.5.3.3 says it
-shall), and whether the change is measurable on a loaded line. The next
-live session with `1.1.67` is the first real exposure; the ack-request bit
-on TP1 is "requested" either way (EMI §4.1.5.3.3 a-flag table), so only
-the priority is a behavioural change on the wire.
-
-**Status 2026-09-29 (K7 live).** The first real exposure went through: two
-downloads to `1.1.67` over a real KNXnet/IP interface, with every
-`T_Connect`, `T_Disconnect` and `T_ACK` at system priority. The interface
-accepted every control frame and the device acknowledged every data
-request except the closing restart (RESEARCH §19, "K7 live acceptance"). Still
-unverified: whether the priority bits survive onto the wire. No bus monitor
-traced them.
-
+Transport Layer `T_CONNECT`/`T_DISCONNECT` requests now request SYSTEM
+priority and acknowledgement (Ctrl1 `0xB2`); `T_ACK`/`T_NAK` use SYSTEM
+priority without the ack bit (`0xB0`). Data traffic remains unchanged.
+This is spec-grounded in TL §3.7/§3.8/§5.3 and verified by
+`control_frames_request_system_priority_and_data_frames_stay_low`. A live
+MDT `1.1.67` accepted subsequent download sessions, but no independent
+bus trace established whether the priority survived tunnelling onto TP1.
+The residual is *wire-level evidence*, not the old low-priority encoder bug.
 
 ## 106. The debug report redacts four pattern classes, and nothing else
 
@@ -7793,24 +5885,16 @@ occupancy-reading half of this entry is unchanged. The occupancy reading is revi
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.
 
-**Current availability, 2026-10-01 (ADR-0059).** The previous live K6
-round trip does not prove complete, durable pre-write recovery for the
-button-selected device on a later call. Public confirmed CLI and HTTP starts
-now fail before opening a tunnel. Offline plan/phrase calls, protocol code
-and directly injected simulated session tests remain; this is a new safety
-boundary, not a retroactive claim that the prior test failed. A new hardware
-run needs a verified per-device pre-send backup/readback and new permission
-(RESEARCH §24). KNX's documented Device Reader takes selected memory ranges;
-its property export may leave arrays over 64 bytes blank unless loaded on
-demand. Even a saved diagnostic file is not proof that every address-programming
-side effect was captured. Manufacturer-/application-specific affected storage
-for the button-selected target is not yet established (RESEARCH §24).
-The Web tab now reads the same server recovery precondition through the
-read-only `GET /api/device-address/availability` route and disables Program
-before consent when blocked, unknown or malformed; a later `412` also closes
-the affordance. This improves the UI warning but does **not** provide a
-backup, open a tunnel or authorize a write. The server POST remains the
-independent fail-closed authority.
+**Current availability (2026-10-01, ADR-0059).** The historical live K6
+round trip does not establish complete durable recovery for a later
+button-selected address write. Public confirmed CLI/HTTP starts now fail
+before opening a tunnel, pending verified device-specific affected storage,
+durable pre-send backup/readback, abort plan and a fresh go. A diagnostic
+dump of selected memory or a property-only backup is not proof of that
+coverage. The Web tab uses the read-only availability endpoint to disable
+Program before consent on blocked/unknown status and again after a 412;
+the server POST remains the independent fail-closed authority. Simulated
+protocol exercises do not reopen the production write path (RESEARCH §24).
 
 **Not a limitation any more.** An earlier draft of this section claimed MP
 §2.3 *"does not consider a `T_Connect` refusal, or a connection that opens
@@ -7820,249 +5904,6 @@ claim: *"if negative A_Connect.Lcon ⇒ IA_new is not occupied"* and *"If no
 A_DeviceDescriptor_Response-PDU is received after time-out ⇒ IA_new is not
 occupied"*. Both now follow the text, and the two `Occupancy` variants
 invented to hold them are gone.
-
-## 117. `read_on_init_flag` is parsed and stored, then discarded before it reaches `knx-core`
-
-**Limitation.** KNX's sixth communication-object flag, Read-on-Init, is
-parsed from `.knxprod`/`.knxproj` XML in `crates/knx-productdb`
-(`read_on_init_flag` in `src/migration.rs` and `src/parse/comobject.rs`) and
-stored in `knx-productdb`'s own schema. It goes no further:
-`grep -rn read_on_init_flag crates/` finds it in exactly those two files, in
-one crate. `knx-core`'s communication-object model
-(`crates/knx-core/src/`) has fields for Communication, Read, Write,
-Transmit and Update — five of the six standard flags — and no sixth. When a
-product carries the flag, this project reads it, keeps it in the product
-database, and then drops it at the boundary where product data becomes
-project data; nothing downstream — export, the GUI, a diagnostic report —
-can see it again.
-
-**Cause.** `knx-core`'s communication-object type predates the discovery
-that the product database's own parser carried a sixth flag; adding it to
-one crate and not propagating it to the other was never a decision, just an
-omission nobody closed afterward.
-
-**Impact.** Data integrity, not merely display: a device whose object
-initialises its group-address value from the bus on startup looks, once
-imported, identical to one that does not. Nothing about this is silent in
-the ordinary sense — `apps/knx-web`'s help topic on limits already
-discloses it in prose (`messages/en.ts`'s `help.topic.limits.p2`: "KNX's
-sixth communication-object flag, Read-on-Init (I), is not part of the
-project model") — but disclosure in a help panel is not the same as the
-value surviving import, and no export can re-emit a flag the project model
-never held.
-
-**Lifted when.** `knx-core`'s communication-object type gains a sixth
-field and every consumer of the five-flag set — the GUI's flag row, the
-command layer, export — is updated together, so the flag is modelled
-rather than merely parsed. Nobody has scheduled this; it sits alongside
-`docs/DATA_MODEL.md`'s communication-object section as an acknowledged gap
-rather than a task with a number.
-
-**Closed, 2026-09-20 (T02, branch `t02-read-on-init`).** The sixth flag is
-now a peer of the other five, end to end. `ComFlags`, `ResolvedFlags` and
-`ComFlagKind` each gained a `read_on_init` member, so
-`Command::SetComObjectFlag` edits, undoes and redoes it through the same
-generic path the other five already used. `knx-productdb`'s `ComObjectView`
-carries `read_on_init`/`read_on_init_layer` through the same `pick()`
-three-layer resolution as every other attribute, and `enrich.rs` merges it
-into the project model at `Layer::Program`/`Layer::ProgramRef` — the
-handoff that used to drop it. Persistence needed no DDL: `com_object_override`
-is keyed by `(com_object_instance_id, attr)`, so the flag is a new `attr`
-string (`"read_on_init"`) and nothing else. The store version still moved
-to 7 (`migrate_v6_to_v7`, deliberately empty), because a v7 project may
-carry rows a pre-v7 build would meet as `StoreError::UnknownOverrideAttr`;
-with the version moved, that build stops at
-`MigrationError::FutureSchemaVersion` and says why. A pre-v7 project is not
-backfilled: its sixth flag reads as `Override::Absent`, never
-`Override::Value(false)` — "not stated" and "stated false" stay different
-facts (`a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false`).
-`knx-diff`, `knx-projection`, `apps/knx-server`'s DTOs and
-`parse_com_flag_kind`, `knx-report`'s object table (a sixth `I` column) and
-`apps/knx-web`'s flag row (a sixth checkbox, labelled `I`, wired to
-`"ReadOnInit"`) all carry it. `help.topic.limits.p2`, which said in prose
-that the flag "is not part of the project model", says something true again
-in both languages.
-
-**Amendment, 2026-09-20 — export withdrawn.** The two paragraphs below were
-written while a `.knxproj` writer existed. It does not
-([ADR-0028](adr/0028-no-knxproj-export.md)):
-`ExportWarning::ReadOnInitNotExported` and its two message-catalogue strings
-are gone with it, and there is no longer any case in which a project-layer
-Read-on-Init value fails to be written somewhere — `.knxdb` holds it like
-any other flag. What survives is the measurement, which is import-side
-evidence: ETS, as measured here, does not write a per-instance Read-on-Init
-attribute, so `map_com_object` leaves the field `Override::Absent` rather
-than inventing a value.
-
-**Residue: no instance-level attribute to import or export.** The name
-`ReadOnInitFlag` is measured 2533 times in the local corpus and every
-single occurrence is on an application program's `ComObject` element —
-never on a `ComObjectRef`, and never on a `ComObjectInstanceRef` in any
-project file. That holds across all three demo projects: the ETS4
-schema-11 project (907 `ComObjectInstanceRef` elements, carrying `ReadFlag`
-39×, `UpdateFlag` 30×, `TransmitFlag` 27×, `WriteFlag` 18×,
-`CommunicationFlag` 8×, `ReadOnInitFlag` 0×), the ETS 6.3.0 schema-23
-project (691 elements, same five attributes, same zero), and the KV
-schema-21 demo (26 elements, no flag attributes at all). So ETS, as
-measured here, does not write a per-instance Read-on-Init attribute, and
-this application does not invent one: `map_com_object` leaves the field
-`Override::Absent`, and neither exporter writes it. What the exporter does
-instead of dropping it quietly is say so —
-`ExportWarning::ReadOnInitNotExported { com_objects }` names how many
-communication objects carry a project-layer Read-on-Init that the written
-`.knxproj` cannot hold. A product-layer value raises no warning, because it
-was never the project's to export. Should a real ETS file ever turn up with
-the attribute on a `ComObjectInstanceRef`, the tolerant parser records it
-as an unknown attribute (§34's machinery) and this entry gets its evidence;
-guessing ahead of that evidence would be worse than the gap.
-
-**The warning counts `true` only, and why.** `ExportWarning::ReadOnInitNotExported`
-fires for an exported-layer `Override::Value(true)` and stays silent for an
-exported-layer `Override::Value(false)`. The reason is that a `false` is not
-a loss in any case measured here: every one of those 2533 program-level
-`ReadOnInitFlag` occurrences reads `"Disabled"`, so a re-import resolves the
-flag back to `false` from the product database and the container and the
-project agree. Counting it would produce a warning nobody can clear — the
-Inspector's flag row has no "clear to inherited" gesture, so a user who
-switches I on and then off again is left with `Value(false)` at
-`Layer::UserEdit` for good, and would see the same complaint on every export
-forever. The case this does not cover: a user `false` against an application
-program that states `Enabled`. No such program has been measured, and if one
-turns up the counting rule needs the product-layer value to compare against,
-which the exporter does not have today. Recorded here rather than papered
-over.
-
-**Supersedes ADR-0010's five-flag prose.** `docs/adr/0010-per-attribute-override-representation.md`
-describes `ResolvedFlags` as a five-flag structure. That was accurate when it
-was written and the ADR is left as it stands — a decision record is history,
-not documentation — but the structure has six fields as of this entry, and
-the ADR's reasoning (one `Override` per attribute, absence distinct from a
-stated value) is exactly what made the sixth field a one-line addition.
-
-<a id="118-a-succeeded-project-load-announces-nothing-to-a-screen-reader"></a>
-
-## 118. A succeeded project load announces nothing to a screen reader — resolved
-
-**Final-review correction, 2026-09-22.** Direct loads retain the filename notice
-described below. Recovery announces the current project using the EN/DE
-`loadProgress.recovered` message, because another client may have replaced the
-earlier load before the recovery GET. Its tree and `has_store_path` metadata
-are coherent; the old operation's kind and filename are never used to label
-that current project. The Task 6 description below records the initial behavior.
-
-**Resolved (T12 task 6).** `App.tsx` now completes direct loads and the
-exact-token §96 recovered-load path through one local success tail. It
-updates the current tree and stored-path state, clears the progress banner,
-then adds the localized source filename to the existing `ToastStack` non-error
-toast. That toast is the durable `role="status"` / polite live region; it
-remains after the banner unmounts, unlike the banner's deliberately quiet
-progress sub-elements.
-
-`App.test.tsx` covers direct ETS import, direct native `.knxdb` open in the
-active German locale, and owned recovered success. Each asserts exactly one
-`.toast--fun[role="status"]` success notice with the basename; recovery also
-asserts that it does not produce an error alert. The two catalogues provide
-`loadProgress.succeeded`, so no user-facing success string bypasses i18n.
-
-## 119. On this machine's `ntfs3` mount, cargo has rebuilt from a stale fingerprint — a green gate is not evidence by itself
-
-**Limitation.** The repository sits on an `ntfs3` mount (`findmnt`: `ntfs3
-/dev/sdc1 /mnt/daten-i`), and cargo's freshness check has been observed
-deciding a source file was unchanged when it had just been edited. The
-practical consequence is blunt: **on this machine a green `cargo test` is
-not, by itself, evidence that the code you are looking at was the code that
-ran.**
-
-**Cause.** Cargo's fingerprinting compares filesystem mtimes. Observed
-twice, on 2026-09-20, in the B1 fix round:
-
-- `sed -i` rewrote `crates/knx-net/src/client.rs` at 12:00:19; the previous
-  build had finished two minutes earlier; `cargo test -p knx-net --lib
-  --no-run` printed `Finished` with no `Compiling knx-net` line at all.
-  `touch` on the same file made the next invocation recompile it.
-- Worse, and measured by the B1 branch review rather than here: three
-  `cargo test --workspace` invocations silently executed a *pre-branch*
-  binary at a path whose mtime and md5 both said it was current. Being
-  pre-branch code, that binary transmitted `ROUTING_INDICATION` frames on
-  the physical LAN interface — precisely what §33 exists to stop.
-
-This is one observation on one filesystem. It is not a general claim about
-cargo, and it is not a claim that `ntfs3` reports mtimes incorrectly in
-general — only that the combination has, repeatedly, produced a stale
-freshness decision here.
-
-**Impact.** Every gate run on this machine needs an independent check that
-the binary under test is the current one. For `knx-net` the cheap first check
-is the test count, re-enumerated from current source rather than frozen in a
-handover. **2026-09-23: 253 lib tests**, verified against 253 source test
-attributes and a fresh `cargo clean -p knx-net` rebuild. The older 252-test
-checkpoint predates the scan-comparison regression; a mismatch must stop the
-run for investigation, not be accepted as proof of freshness. `touch` the source, or
-`cargo clean -p <crate>`, and rebuild rather than trusting mtime; do not
-trust a file's mtime or checksum as proof that a *build output* is current,
-because the output's own mtime was equally unreliable in the measured case.
-
-**Lifted 2026-09-28: the working copy moved to ext4.** `findmnt -T
-/mnt/daten-i/Sourcecode/KNXBench` now reports `/dev/sdc1 ext4 rw,relatime`, so
-the first lifting condition below is met and the `ntfs3`-specific hazard no
-longer applies to this machine. The entry stays as history. Two things are
-unchanged and remain good practice: a target directory shared with another run
-can still replay a cached result, so confirm the log shows the changed crate
-being compiled, and a disputed result is settled with a fresh
-`CARGO_TARGET_DIR`. No stale-fingerprint event has been observed on ext4; that
-is an absence of observations, not a proof.
-
-**Lifted when (original condition).** Either the working copy moves to a
-filesystem whose mtimes cargo can rely on, or cargo's checksum-based freshness
-stabilises:
-`-Z checksum-freshness` ("Use a checksum to determine if output is fresh
-rather than filesystem mtime", listed by `cargo -Z help` on cargo 1.98.0)
-exists for exactly this situation but is nightly-only and unstable.
-Pointing `build.target-dir`/`CARGO_TARGET_DIR` at a non-`ntfs3` path would
-address the build outputs but not the source fingerprints. **No build
-configuration was changed in this round** — this entry records the hazard
-and the workaround, and the choice is the maintainer's.
-
-<a id="120-nothing-checks-that-a-theme-is-legible"></a>
-
-## 120. Nothing checks that a theme is legible — resolved by the role-pair contrast gate
-
-**Limitation.** `themeTokens.test.ts` now enforces the three ADR-0022 role pairs
-for every registered palette and accent variation: foreground on background,
-foreground on surface, and on-accent on accent. Each pair must meet the exact
-WCAG AA normal-text threshold of 4.5:1. The gate supports the concrete opaque
-hex and `rgb()`/`rgba(..., 1)` forms used by these roles and recursive
-`var(--knx-...)` references. Unsupported notation, unresolved or cyclic
-references, and non-opaque alpha are named failures containing the theme, pair,
-and offending value rather than being skipped.
-
-Duplicate theme/accent blocks are rejected, and variation tests inspect the
-actual block rather than the first matching name. RGB channels, including both
-numeric helper inputs, must be finite and within `[0,255]`. The luminance
-calculation uses WCAG's current `0.04045` sRGB breakpoint, with fractional
-reference tests as well as the shipped integer palette values.
-
-This remains a bounded role-pair invariant, not a claim that every arbitrary
-component composition, browser rendering difference, or assistive technology
-has been audited. The literal-colour guard also still does not model CSS system
-colour keywords such as `Canvas`, `AccentColor`, and `ButtonBorder` in
-component rules; those remain outside the shipped stylesheet and outside this
-contrast gate.
-
-**Cause.** Contrast is a property of a foreground/background pair, so token
-completeness alone was insufficient. The gate now resolves the named role pairs
-from each theme block, overlays a variation's accent pair on its base theme,
-computes relative luminance, and rejects any value it cannot evaluate safely.
-
-**Impact.** New or changed registered palettes and accent variations receive a
-precise build-time diagnostic naming the theme, role pair, and offending value.
-The gate does not claim to cover roles outside the three pairs named by
-ADR-0022, nor does it add runtime or browser dependencies.
-
-**Lifted when.** The role-pair contrast gate is the enforced build-time
-invariant for this limitation. It would be broader only if the application
-formally declares additional semantic pairs and extends the evaluator for their
-color notations in the same change.
 
 ## 121. Two open windows do not see each other's preference changes until one reloads
 
@@ -8095,131 +5936,6 @@ would still leave the browser-versus-desktop case open, which is the case
 worth solving; both wait for a server-side change feed, which nothing else
 needs yet.
 
-<a id="122-settings-file-notices-reach-the-user-in-english-only"></a>
-
-## 122. Resolved: settings-file diagnostics follow the UI language
-
-**Resolved 2026-09-22.** `SettingsDto` and the matching settings session-log
-entry carry the same tagged `SettingsDiagnostic`: migration, browser-era
-adoption, newer-file refusal, or quarantine with stable reason and relevant
-parameters. `settingsDiagnostic.ts` maps these once into the English and
-German catalogues for both Settings and Log panels **[V]**. The server keeps
-an English fallback for older or unknown diagnostics and debug output.
-Regression tests cover every variant in both languages and the fallback.
-This does not change [§121](#121-two-open-windows-do-not-see-each-others-preference-changes-until-one-reloads),
-which remains open.
-
-**Historical record (resolved).** The remainder describes the former
-English-only behavior and its planned lift condition.
-
-**Limitation.** The sentence a user reads when the settings file was
-migrated, refused as too new, or moved aside is English whatever the UI
-language says **[V]**.
-
-**Cause.** `SettingsDto::notice` (`apps/knx-server/src/settings_routes.rs`)
-is a finished English sentence built server-side, and both places that show
-it — `console.warn` in `settingsStore.ts` and the Log panel, which renders
-`SessionLogEntry.message` verbatim — pass it through untouched **[V]**.
-There is no code plus parameters for a catalogue to translate against.
-
-**Impact.** Small and rare: three statuses, none of them reachable on a
-healthy installation, and the English still says what happened and which
-file it happened to. A German user gets an English line in the Log panel.
-
-**Lifted when.** The settings surface (T10) gives these notices a
-machine-readable status code with its parameters, and `messages/de.ts`
-gets the keys. Doing it here instead would mean inventing a wire shape for
-one string that T10 would immediately rework **[A]**.
-
-## 123. Resolved: group addresses no longer use dotted display notation
-
-**Resolved 2026-09-21.** ADR-0030 was amended: group addresses now always
-render with slashes and the notation selector was removed. Dotted text remains
-accepted only at explicit group-address input and search boundaries, then is
-canonicalised immediately. The display ambiguity described below therefore no
-longer exists **[V]**.
-
-**Historical record (superseded).** The remainder of this section records the
-trade-off of the short-lived selectable-notation implementation; it is not a
-current limitation.
-
-**Why it is here anyway.** The separator carries no information, and the
-request was for exactly this notation. Refusing it, or refusing it in the one
-place both kinds appear together, would be the dishonest fix — the ambiguity
-is inherent to the notation, not introduced by the implementation.
-
-**What carries the distinction instead.** Structure, which is on screen
-already and does not depend on punctuation: the bus monitor labels its two
-columns `Source` and `Destination` and only `Destination` is a group address;
-the Project Explorer puts group addresses under their own branch; the
-Inspector heads each kind with its own section; the search overlay groups hits
-by kind. The supplementary cue is typographic — group addresses carry a
-`.ga-address` class taking `--knx-accent-tertiary`, individual addresses keep
-the body colour (`apps/knx-web/src/styles.css`, a theme token per ADR-0022).
-
-**Residue a user can still hit.**
-
-- Colour alone is not an accessible distinction, and the structural cues are
-  the accessible ones. A screen-reader user hears `1.2.3` with whatever the
-  surrounding label says and nothing more; where the label is the only cue,
-  the label is doing all the work.
-- Copied out of the application into a text file, a chat message or a
-  spreadsheet, a dotted group address loses every cue it had. The application
-  reads it back correctly — input accepts both notations — but a human, or
-  another tool, cannot tell it from an individual address.
-- Text a user types themselves is not classified: the bus compose form's
-  destination field accepts `1.2.3` and sends `1/2/3`, which is right for a
-  group address and would be wrong for an individual address, but that field
-  only ever addressed group addresses, so nothing is mis-sent. The same
-  acceptance also sits in two fields that are not telegrams: the
-  new-group-address and new-group-range rows in `ProjectExplorer.tsx`
-  (`:330`, create address; `:402`–`:403`, create range) run the typed text
-  through the same `canonicalGroupAddress` conversion before writing it into
-  the project. Before this notation preference existed, typing `1.1.13`
-  there was rejected outright — `GroupAddress::parse` only recognises `/`
-  (`crates/knx-core/src/address.rs:113,135`), while the `.`-splitting belongs
-  to `IndividualAddress::from_str` (`:69`) — so a string shaped like an
-  individual address could not enter the group-address model at all. Now it
-  can: typing `1.1.13` into either field creates a real group address the
-  user may have meant as someone's individual address, and the project keeps
-  it. That is the correct trade, not a defect — the brief requires both
-  notations at every input seam a user types into, and a create field is
-  exactly such a seam — but it is a sharper cost than "nothing is mis-sent"
-  covers, since these two fields write project data rather than one
-  telegram. **[V]**
-- No cue, and no *notation*, is applied to addresses inside free text — an
-  error message from the server, a log line, a flavour string. Those are
-  sentences, not fields, and the renderer deliberately does not walk them
-  (ADR-0030). The clearest place to watch this is the Log panel
-  (`LogPanel.tsx`): CSV diagnostics format the address themselves, in the
-  canonical `/` notation, before the detail string ever leaves the server
-  (`crates/knx-csv/src/plan.rs:79-82`, `crates/knx-csv/src/write.rs:63-68`),
-  so a session with dots selected can show the same address as `1.2.3` in a
-  table and `1/2/3` in a log entry about that same table, in the same
-  window. ADR-0030's refusal to have the renderer parse sentences is still
-  the right call; this is what that refusal costs, spelled out rather than
-  left as a general disclaimer.
-
-**Not affected.** Nothing persisted, exported or transmitted changes: the
-canonical `/` is what `knx-core` formats, what every DTO carries and what
-every write goes out as, whichever notation is displayed **[V]**.
-
-**Interaction with [§91](#91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started).**
-Neither worse nor harder to fix. §91 is about the *level* style a bus session
-snapshots at `/start`, and the notation preference never changes a level
-count — the conversion maps `n` levels to `n` levels or declines. §91's safety
-argument, that a string written in one style is refused rather than parsed as
-a different address because the field counts differ, therefore survives
-unchanged. The mismatch §91 describes still looks the same under dots: a
-`Free`-style address has no separator for the preference to act on, and a
-two- or three-level one keeps its field count. The fix §91 waits for is
-server-side and does not meet this code.
-
-**Lifted when.** There is a reason to go further than labelling. An icon or a
-prefix glyph on every address, or a wire-level distinction that lets the
-frontend classify a string rather than trusting its call site, would both
-work; neither is worth doing before someone reports being confused by the
-one this replaces.
 ## 124. The interface search shows four facts about an interface; the protocol carries more
 
 **Limitation.** `POST /api/bus/discover` (`apps/knx-server/src/bus_routes.rs`)
@@ -8376,12 +6092,11 @@ An undocumented `Space/@Type` such as `Site` is **not** read as `Ground`. It
 stays an `UnknownEnumValue` map problem with the existing reported
 `BuildingPart` fallback (§89), and a test pins that.
 
-The Buildings workspace now offers **Add site / property**, a fixed-`Ground`
-root in the first installation, and uses the existing parent select to move
-buildings beneath it. The UI test exercises two buildings on one installation
-and the existing create/move routes without duplicating device projections;
-this does **not** supply real ETS `Ground` export evidence or make later
-installations editable.
+The Buildings workspace now offers **Add site / property**, a fixed `Ground`
+root in the first installation; existing buildings can move beneath it.
+Mocked UI tests cover two buildings under one root without duplicated
+devices. This does not supply independent ETS `Ground` export evidence or
+make later installations editable.
 
 Found on the way and not addressed: no command renames an `Installation`
 after creation. `Installation.name` comes only from `NewProjectDialog` or
@@ -8530,151 +6245,6 @@ up: exit code 0 is not evidence that work happened.
 or stale binary cannot silently check a foreign path, and each check fails
 loudly when it discovers zero files.
 
-## §131 Seventy-two corpus gates repo-wide still pass when the corpus is absent
-
-**Status.** Resolved 2026-09-27 (branch `din-131-honest-corpus-gates`). The
-real population was larger than recorded below: `xtask check-corpus-gates`
-also found **18 sites under `apps/`** (`knx-cli`, `knx-server`) that the
-original `crates/`-only count missed. One of them,
-`http_catalog_to_device.rs`, gated on its own `package.exists()` and was
-found in review, not by the first version of the lint. It is also the proof
-that §131 was never cosmetic: it built its path as
-`ProductDatabases/<file>`, while the corpus files the package under
-`ProductDatabases/MDT/`. So it had **never run once** since it was written
-(2026-09-13); every run, with the corpus or without, took the early return
-and was counted as a pass. It now looks the package up with
-`find_corpus_file` and passes on its first real run. In total **90
-early-return sites** on a missing corpus were converted: 71 bare `return`s in
-`crates/`, 18 in `apps/`, and the `return None` in
-`enrichment_gap_measurement.rs`'s shared `import()` helper, which its four
-tests turned into a `return` of their own. Every one of them now `assert!`s
-its probe, and **93 tests** gained an `#[ignore = "requires …; run with
---ignored"]` (70 + 4 + 1 in `crates/`, 18 in `apps/`). A machine without the
-corpus therefore reports them as *ignored*, and `--ignored` without the
-corpus fails by name. The review also found a second-level instance: six
-already-ignored tests (five in `oracle_xknxproject.rs`, one in
-`golden_reference_products.rs`) returned early when the second local-only
-artefact, the `project_dump.json` oracle at the workspace root, was absent.
-Under `--ignored` they would have passed without comparing anything. They
-now assert it too, and their ignore reason names it.
-`diff_correlation_measurement.rs`, already `#[ignore]`d, only lost its early
-return. `perf_baseline.rs` was left as is: it is `#[ignore]`d already
-and times the corpus import only as an optional extra over a synthetic
-project. `knx_testsupport::walk_corpus_files` now panics on `read_dir`,
-directory-entry and `file_type` errors instead of treating them as an empty
-subtree (unit-tested with `#[should_panic]`). `cargo run -p xtask --
-check-corpus-gates` (also a CI step) rejects a negated corpus or oracle probe
-whose block returns early (same line or within six), and also a `"skip…"`
-message naming `OriginalData`, `corpus` or `project_dump` that is followed by
-a `return`. That second rule catches probes it does not know by name. Run on
-the pre-review tree, it flags exactly the seven sites the review found. It
-is textual and cannot prove a test honest: a guard phrased with neither a
-known probe nor such a message would still slip past it. The historical record follows.
-
-**Limitation.** The pattern
-
-```rust
-if !reference_ets4_path().exists() {
-    eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-    return;
-}
-```
-
-appears at **73 sites across 25 files**, and in **72 of them the enclosing
-`#[test]` carries no `#[ignore]`**. A plain `return` from a test function is a
-**pass**, so on any machine without the private corpus — which is every CI
-machine — those tests report success while exercising nothing. Only one site is
-honestly gated. Affected crates: `knx-etsproj` (14 files), `knx-app` (9),
-`knx-productdb` (1), `knx-store` (1).
-
-**Evidence [V]** (2026-09-27, `a04f9fc`). Pointing the fixture at a
-non-existent path and running one suite:
-
-```
-KNXBENCH_REFERENCE_PROJECT=$TMPDIR/does-not-exist.knxproj \
-  cargo test -p knx-app --test import_service
-test importing_persists_the_opaque_entries ... ok
-test the_persisted_bytes_are_the_bytes_that_were_read ... ok
-test a_failed_import_leaves_the_store_untouched ... ok
-test result: ok. 3 passed; 0 failed; 0 ignored; finished in 0.00s
-```
-
-Three passes in 0.00 s over a file that does not exist. `0 ignored` is the tell:
-nothing was skipped, three assertions-free bodies were counted as evidence.
-
-**Cause.** The idiom predates the rule that absent private data must never be
-green. It was applied consistently and therefore spread; DIN-4 only converted
-the ten tests inside its own scope to
-`#[ignore = "requires the private product corpus; set KNXBENCH_PRODUCT_CORPUS"]`
-plus hard assertions.
-
-**Cost.** Every workspace-wide test total quoted in this repository's history is
-inflated by up to 72 tests that may never have run. A real regression in ETS
-project import, opaque-entry persistence or store round-tripping can reach
-`main` with a green `cargo test --workspace`, because the tests that would
-catch it pass by returning early.
-
-**Related.** `knx_testsupport::walk_corpus_files`
-(`crates/knx-testsupport/src/lib.rs:197-217`) compounds this: `let Ok(read_dir)
-= std::fs::read_dir(dir) else { return; }` and `let Ok(file_type) = ... else {
-continue; }` treat permission-denied and I/O errors as an empty subtree, so an
-unreadable manufacturer directory silently shrinks the corpus instead of
-failing.
-
-**Lifted when.** Every corpus-gated test carries `#[ignore]` with a reason and
-asserts its fixture exists rather than returning, and the traversal helper
-reports errors instead of swallowing them. A lint or `xtask` check that rejects
-a bare `return` after a corpus-presence test would keep the idiom from
-returning.
-
-## §132 The window manager's close button quits the desktop app without the unsaved-changes prompt
-
-**Status.** Closed 2026-09-27. `App.tsx` registers `quit.ts`
-`onWindowCloseRequested` in the Tauri shell. The pinned `tauri` 2.11.5 then
-calls `prevent_close()` itself while a JS `tauri://close-requested` listener
-exists (`manager/window.rs` `on_window_event`, read from source **[V]**).
-`@tauri-apps/api` 2.11.1 `onCloseRequested` destroys the window after the
-handler unless it called `preventDefault()` (read from
-`node_modules/@tauri-apps/api/window.js` **[V]**). A modified project keeps the
-window and opens the same quit-confirm dialog as File › Quit. A clean project
-closes as before. `quitApp()` now calls `destroy()` rather than `close()`, so
-"discard" does not re-trigger the check; the capability changed from
-`core:window:allow-close` to `core:window:allow-destroy`. Vitest covers the
-modified, clean and browser cases, and the new tests fail with the listener
-registration removed **[V]**. **Not verified on a running desktop build or on
-a real window manager** (no GUI session was driven). The mechanism depends on
-the Tauri contract quoted above, not on a click test. The close is now a JS round trip,
-not a native one, and that has a cost recorded as
-[§133](#133-a-dead-webview-cannot-be-closed-with-the-window-managers-close-button).
-The dirty signal is the same one File › Quit uses (`is_modified` from the last
-fetched tree), so a mutation still in flight or an inline edit that has not
-been committed is not seen by either path.
-
-**Original limitation.** File › Quit asks before discarding unsaved changes
-(`App.tsx` `quitRequested` → quit-confirm dialog). The window manager's own
-close button (title-bar ×, Alt+F4, a compositor's close keybinding) does
-not. `apps/knx-desktop/src-tauri/src/lib.rs` `run()` handles only
-`tauri::WindowEvent::Destroyed` for the `main` window and turns it into
-`AppHandle::exit(0)`; nothing intercepts `WindowEvent::CloseRequested`, so
-the frontend is never asked and the process ends with the edits still in
-`knx-server`'s in-memory `AppState`.
-
-**Cost.** Unsaved edits since the last save or autosave are lost without a
-question — exactly the case the Quit dialog exists to prevent, reached by
-the most common way of closing a window. The browser build is not affected
-in the same way: there the project lives in the server process, not in the
-tab.
-
-**Why it is this way.** The `Destroyed` clause was written to make File ›
-Quit end the process (`quit.ts` documents that the close button "quits the
-whole application" as a feature). Routing `CloseRequested` through the
-frontend's dirty check was never part of that change.
-
-**Lifted when.** The desktop shell intercepts `CloseRequested` for `main`
-(`api.prevent_close()`), asks the frontend to run the same check as File ›
-Quit, and closes only on confirmation — with a test that the prompt appears
-for a modified project and does not for a clean one.
-
 ## §133 A dead webview cannot be closed with the window manager's close button
 
 **Status.** Open (documented 2026-09-27; follows from the §132 fix, read
@@ -8790,133 +6360,17 @@ UI slice lets the user pick a winner per id.
 
 <a id="136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download"></a>
 
-## §136 Mask `0701h` (BIM M112) devices can receive an application download — LIFTED; the restart stays unconfirmed
+<a id="136-mask-0701h-bim-m112-devices-can-receive-an-application-download--lifted-the-restart-stays-unconfirmed"></a>
+## §136 `0701h` download verified once; restart remains unconfirmed
 
-**Status.** **Lifted 2026-09-28** for the one verified path. Found
-2026-09-27 while evaluating a request to configure button 1 of the MDT
-*Taster 2-fach Plus* at `1.1.67` as an ON/OFF toggle on `2/0/53` (RESEARCH
-§19). The *Lifted when* condition below is met: a real download of a known
-configuration (option C) was verified by the group telegrams it produces on
-the bus (RESEARCH §19.4). What stays open is listed under §7's memory
-download entries: an unacknowledged closing `A_Restart`, `[A]` rules not in
-any PDF read, one product family verified on one device.
-
-**Narrowed 2026-09-28 (K2).** The unacknowledged closing `A_Restart` is now
-its own outcome: `RestartOutcome::Unconfirmed`, returned inside an `Ok`
-together with the verified data and load states. It is no longer reported as
-a failed download. Still open: **whether the device restarts** when its
-`T_ACK` stays away. The Standard allows both (MP §3.7.1.1.2, p. 78). Only a
-frame trace of a closing restart on `1.1.67` can show what this device does,
-and that is a restart, so it needs a go (K2 step 2). Until then the report
-says "restart unconfirmed: power-cycle or restart on purpose", and KNXBench
-never repeats the restart itself.
-
-**Narrowed again 2026-09-28 (K2 trace).** The frame trace exists (RESEARCH
-§19.4). `1.1.67` acknowledged none of four `A_Restart` transmissions, and
-its Transport Layer answered nothing at all for 9 s, although TL §5.4.1
-makes a running TL answer every `T_DATA_CONNECTED`. 38 s later it answered
-again, unchanged. For this device an unconfirmed restart is therefore the
-normal outcome. That the restart really happens is well supported
-(`[A]`), but not provable from the bus. What remains open is only that
-inside view. It would take a confirmed alternative such as a Master Reset
-with an Erase Code for a confirmed restart (MP §3.7.1.2, Table 4, p. 81),
-whose support on mask `0701h` has not been checked.
-
-**Closed 2026-09-28 19:18 (K2, Master Reset trace).** Tried with the user's
-go: Master Reset with Erase Code `01h` (no reset) got no `A_Restart_Response`
-from `1.1.67`, only the same silence as a Basic Restart. The device came
-back unchanged (RESEARCH §19.4). There is no confirmed restart for this
-device. "Restart unconfirmed" is the final outcome, and whether it
-restarted internally cannot be settled from the bus. KNXBench offers no
-Master Reset for mask `0701h`, because MP §3.7.3 requires verified support
-first and there is no means to verify it for `0701h`.
-
-**Live, 2026-09-29 (K7/K6):** three more downloads and two address
-changes, all with the same silent restart. After the address change the
-programming LED was off, so the device did restart. That is the one visible
-sign, and the bus still shows nothing.
-
-**New, open:** two management sessions straight after each other can
-collide. In the trace a `T_Disconnect` did not show up (no `L_Data.con`),
-the device kept the old connection and NAKed the new one for ~6 s.
-`ManagementSession::disconnect` discards the send error. It should at
-least report it, and whoever opens a new session to the same device
-straight after one has closed should wait out the device's connection
-time-out (TL: 6 s).
-
-Resolution of the five items below:
-
-1. Load state machine transport: in `ManagementSession`, used by
-   `run_memory_download`; live on `1.1.67`.
-2. Table serializers: verified by byte-exact read-back after the download.
-3. Parameter image: `knx_productdb::image::build_download_image` (Dynamic
-   evaluation, union members, GrOT, masks; ADR-0044).
-4. Access key: not needed. The device accepted the download without an
-   `A_Authorize_Request` and no key was used or guessed. A device that
-   demands one is still refused.
-5. Hardware-write policy: `WriteScope::Download` is allowed on hardware only
-   through `run_memory_download`, behind the ignored, doubly confirmed live
-   test. The property-based `Downloader` still refuses hardware.
-
-The original entry follows unchanged, as the record of what was missing.
-
-**Limitation.** KNXBench can address and restart such a device (RESEARCH §8.8.6), but
-it cannot load an application program, parameters, group addresses or links
-into it. Five pieces are missing:
-
-1. ~~**A memory-mapped load state machine transport.**~~ *Lifted
-   2026-09-27, simulator only.* Mask `070nh` takes load events as an
-   11-octet `A_Memory_Write` to `0104h`, with the state read back from
-   `B6EAh`–`B6EDh` (`DMP_LoadStateMachineWrite_RCo_Mem`, MP §3.31.2).
-   `knx_core::commissioning::load_control_memory` builds the records and
-   `ManagementSession::write_memory_load_record` sends one and reads the state
-   back at most three times. A session that knows the mask is `070nh` and
-   is authorised to download or unload does not set Verify Mode, as MP
-   §3.31.2 requires. The downloader does not call
-   it yet: nothing strings the records into a whole download, and items 2–5
-   still stand.
-2. ~~**Serializers**~~ *Lifted 2026-09-27, offline only:*
-   `commissioning::group_tables` builds the Group Address Table (Resources
-   §4.16.11) and the Easy 3 association table (§4.17.9). The entries are
-   stored high octet first, as confirmed by a read-back of a real
-   mask-`0701h` device (RESEARCH §19.1).
-3. **A parameter-segment image builder.** *Half lifted 2026-09-27:*
-   `commissioning::parameter_image` places values at their `Memory`
-   offset/bit offset and refuses shapes, widths and overlaps it cannot
-   write exactly.
-   - **Still missing:** choosing which parameters are written. That is
-     `Dynamic`-tree evaluation plus the active `Union` member.
-   - **Trap:** the segment's base `<Data>` is not the parameter defaults
-     (33 of 66 differ in `A-0027-15-0BAC`, RESEARCH §19). Every active
-     parameter must be written.
-   - **Also missing:** a group object table encoder. For this application
-     the table sits at the start of the parameter segment, and its
-     configuration and type octets follow the active `ComObjectRef`s
-     (RESEARCH §19.1).
-   - **Segment `<Mask>` handling:** `AS-4000`'s mask excludes the
-     individual address. A download must keep the device's own address.
-4. **The device's access key.** The device's access key is unknown, and the
-   product data does not contain it.
-5. **A hardware-write policy decision.** `WriteScope::Download` is refused on
-   hardware by design.
-
-**Cost.** Devices in this family must still be parameterised with another
-tool. In the one live installation measured (RESEARCH §8.5), every device reported
-`0701h`.
-
-**Why it is this way.** Item 3 is ordinary work now that the encodings
-are documented. The first byte of each load state machine record is
-documented only by the conformance test suite (TSSG), and that suite
-contradicts itself on the record length (RESEARCH §19). Item 5 is deliberate.
-A wrong download can leave the device unloaded (without a working
-application) until a correct download succeeds, so the gate stays closed
-until the path has been tested end to end against the simulator and then
-reviewed.
-
-**Lifted when.** Item 3 is implemented and tested against the simulator,
-including the TSSG examples as golden vectors. Items 4 and 5 are then decided
-explicitly, and one real download of a known configuration is verified by
-observing the resulting group telegram on the bus.
+The earlier claim that mask `0701h` could not be downloaded is withdrawn.
+A memory download of `A-0027-15-0BAC` and a functional group-telegram check
+on MDT `1.1.67` succeeded with a device-specific go (RESEARCH §19.4).
+CLI/Web commands now expose this memory path, and partial scopes have their
+own bounded evidence (§7/§142). The closing Basic Restart on this device
+remains unacknowledged: `RestartOutcome::Unconfirmed` must not be presented
+as a verified restart or a failed image read-back. This single product/device
+is not evidence for other masks or revisions.
 
 ## §138 A device's access key comes from the project or a key file, and nothing checks it live
 
@@ -8967,202 +6421,42 @@ event kind, so nothing breaks.
 live, the trace shows two `A_Authorize_Request`s, and the key appears in
 no log or output.
 
-## §139 A device can be addressed by its serial number, and nothing has done it live
+<a id="139-a-device-can-be-addressed-by-its-serial-number-and-nothing-has-done-it-live"></a>
+## §139 Serial-number address write was ignored by the tested device
 
-**Update (2026-09-30, live on `1.1.67`, user go "1 alle go"; RESEARCH
-§19.15).** Bit 2 set via `service-control --enable` (`0000h` → `0004h`,
-read back twice), then `address-by-serial 1.1.68`: still answered from
-`1.1.67`, `1.1.68` still vacant, bit 2 cleared again (`0000h`, read back),
-dump byte-identical. Bit 2 alone does not explain the refusal. Found
-since: KNXBench sent all four `A_IndividualAddress*` broadcasts at low
-priority where AL §3.2.2–§3.2.5 require system priority; fixed in
-`cemi.rs` the same day. **It was not the cause:** a second run with the fix
-(bit 2 set, `c451fa95`) was ignored the same way, bit 2 cleared again, dump
-byte-identical. The serial write stays unverified on hardware; on `1.1.67`
-use the programming button (MP §2.3). Lifting this needs a device that
-takes the write, or an MDT statement on support.
+MP §2.4 serial-number read was verified on MDT `1.1.67`. The MP §2.5
+address write was sent and ignored: `1.1.68` remained free. The user also
+authorized a guarded `PID_SERVICE_CONTROL` bit-2 set/read-back/clear; the
+write remained ignored. Correcting the four address broadcasts to SYSTEM
+priority did not change that outcome (RESEARCH §19.15). The CLI reports
+"sent, not confirmed"; do not represent the simulator implementation as
+a successful live write. For this device the programming-button procedure
+(MP §2.3) is the historically verified route. Public confirmed serial
+writes now fail closed before a tunnel (ADR-0057): an action-specific
+durable pre-write backup of all affected storage is unavailable. That
+gate is separate from device support and from the property-only backup
+below. A different identified device or manufacturer statement would
+address support, but not waive recovery or fresh authorisation.
 
-**Update (2026-09-29, live on `1.1.67`, user go "Freigabe für alle Tasks
-auf der Testhardware").** Both reads work on hardware, the write does not
-take on this device, and the device says why:
+The Debug bit-2 server route remains default-off. ADR-0051 now requires a
+durable, versioned pre-write record of the original two property octets,
+device address and mask. CLI and HTTP persist, read back and sync the record
+and directory before any bit-2 change; backup failure refuses the write and
+a no-op writes neither file nor property. HTTP reports `backupPath`; CLI
+uses `./device-backups/` or `--backup-dir`. Simulator/route/CLI coverage
+exists, but this *new recovery gate* has not run on hardware. It is a
+property-specific manual recovery aid, not a full device image or automatic
+restoration of manufacturer side effects. After an ambiguous write, inspect
+the device and backup rather than retrying blind. The Settings Debug toggle
+and explicit service-control tab now expose this narrow action; the toggle
+reads the server setting back, and the panel requires an explicit read and
+typed phrase before sending a write. A returned property result is not a
+whole-device receipt; bounded `serviceControlWrite` activity is not a
+durable audit trail (ADR-0055/0056). The new UI/backup gate is covered only
+by local mock/simulator tests, **not a new live hardware run**.
 
-- `find-serial --address 1.1.67` → `0083:7A8213CF` (`PID_SERIAL_NUMBER`).
-- `find-serial 0083:7A8213CF` → `1.1.67` (MP §2.4 broadcast): the
-  `A_IndividualAddressSerialNumber_Read`/`_Response` pair is verified.
-- `address-by-serial 1.1.68`: the write went out (12:33:12); the read-back
-  still answered from `1.1.67`, so KNXBench reported *"sent, but NOT
-  confirmed"* and exit 1. Scan afterwards: `1.1.67` occupied, `1.1.68`
-  vacant. Nothing changed on the device.
-- Cause, read read-only afterwards: `PID_SERVICE_CONTROL` (object 0,
-  PID 8) = `00 00h`. Bit 2 is *"Individual Address Write Enable"*,
-  default `0 = disable` (RES §4.2.8 Table 10), and *"If this bit is
-  cleared, it shall not be possible to change the Individual Address of
-  the device"* via programming mode **or** KNX Serial Number services.
-  Yet `1.1.67` has been re-addressed by programming button twice (K6).
-  So the MDT device lets the button path through with the bit clear and
-  refuses only the serial path. `[V]` for this device, not a general rule.
-- KNXBench does not write `PID_SERVICE_CONTROL` to enable it: no procedure
-  in MP asks a client to, and a permanent control field is not something
-  to toggle for a test. The error message now names the bit.
-- The write was one attempt under one go; it was not repeated.
-
-**Update (2026-09-30, user decision, ADR-0051).** KNXBench still never sets
-the bit on its own. It can now be set explicitly as an opt-in debug action:
-`GET`/`POST /api/device/service-control` (403 unless the settings file holds
-`debugIndividualAddressWriteEnable: true`), own scope and phrase
-`I confirm individual-address write enable to <address>`, bit 2 only,
-read-back checked, mask `0021h` and a missing property refused by name.
-CLI: `knx device service-control <a.l.d> --gateway <host:port>` reads the
-bit; `--enable`/`--disable` with the scope's `--confirm` phrase changes it,
-and without the phrase prints a plan and opens no socket.
-Simulator-, route- and CLI-tested; earlier K12 bit-2 writes on hardware are
-recorded above, but the **new durable recovery gate** has not been exercised
-on hardware. The Settings Debug toggle and device action were deferred when
-the route only held the original octets in memory. ADR-0051 now specifies a
-property-specific pre-write record: CLI and HTTP persist the two original
-octets, mask and target, read the file back and fsync it and its directory
-before sending a change. Failure refuses before the property write; a no-op
-saves nothing. HTTP returns `backupPath`, and the CLI names its backup
-(default `./device-backups/`, configurable with `--backup-dir`). This is **not**
-a full device image and does not restore possible manufacturer side effects.
-A failed readback after a write leaves an ambiguous device state; compare the
-current property and backup manually, do not blindly retry. The Settings
-**Debug · device control** toggle and separate **Debug · service control** tab
-now expose only this narrow property action. The toggle reads the persisted
-server setting and accepts a change only after a successful PUT and GET
-readback; it is not a browser-cache shortcut. The tab opens no tunnel on
-mount or review, requires a prior explicit read and the scope's exact typed
-phrase, and withholds success if the returned address, mask, original bytes,
-bit-only result or recovery path is inconsistent. A write remains possible
-only while the server gate is on, with its own pre-write property record.
-The immediate result displays only the route's property readback, not a
-whole-device receipt or a retained `serviceControlWrite` activity record;
-ADR-0056 still marks write activity untracked and `coverage: partial`.
-Browser tests use local mocked API responses and the server tests use a
-simulator; **no live hardware operation validated the new UI or recovery
-gate**. Manufacturer side effects and whole-device recovery remain unknown.
-
-**Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
-and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the
-three AL PDUs, the procedures, a simulator device that answers them, the
-CLI (`knx device address-by-serial`, `knx device find-serial`) and the HTTP
-routes (`POST /api/device-address/by-serial`, `GET
-/api/device-address/find-serial`). **Not run on hardware.**
-
-**Where the serial number comes from.** The operator (`MMMM:NNNNNNNN`, the
-device label), the project (`DeviceInstance/@SerialNumber`, base64, Project
-Schema 23), or the device itself over a connection (`PID_SERIAL_NUMBER`,
-RES §4.2.11; `find-serial --address`). A project that records none is an
-error that asks for it; nothing is guessed, padded or truncated.
-
-**What the procedure does, and does not.**
-
-- Finds the device by broadcast; no answer stops it (MP §2.4). An answer
-  carrying another serial number is not taken.
-- Refuses a device found at an excluded address.
-- Checks the new address is free with MP §2.3 step 1's probe. MP §2.5
-  requires uniqueness and names no method; the borrowed probe is ours.
-- Writes, then reads back by serial number. *"Different or no answer ⇒
-  Error"*. A silent first read is repeated once after `restart_basic_t1`.
-- Sends **no restart** (MP §2.5 NOTE). The operator confirms with the
-  individual-address-programming phrase only.
-
-**Borrowed figures.** MP §2.4/§2.5 give no response time-out; the read waits
-`SessionTiming::response_timeout` (3 s).
-
-**Why no live test.** `1.1.67` (MDT, `0701h`) must support it (Profiles
-Table 4.4), but its serial number is unknown here: the corpus project does
-not record it. A read-only `knx device find-serial --address 1.1.67` would
-learn it. The live write needs its own go (goal-commission §1.2).
-
-**Web UI.** No panel yet; the routes exist.
-
-**Lifted when.** `find-serial --address 1.1.67` reads the serial number,
-`address-by-serial 1.1.68` moves the device and back, and the bus monitor
-shows the three PDUs with no `A_Restart`.
-
-## §148 The contributor license agreement is not reviewed by a lawyer, and nothing enforces it — withdrawn 2026-09-30
-
-**Withdrawn 2026-09-30.** The CLA was removed before any outside
-contribution was made under it (ADR-0054). KNXBench is `AGPL-3.0-or-later`
-only, as before. The entry is kept for the record.
-
-**Limitation.** `CLA.md` (ADR-0053) was written without legal
-review. Whether its license grant, the fallback clause in section 4, the
-liability limit in section 6 and acceptance by a pull-request sentence plus
-checkbox hold up under German law is **not verified**. There is no template
-for an organization-level agreement yet, and no commercial license text
-exists to offer vendors.
-
-Nothing checks the CLA automatically: no bot, no CI job. The pull request
-template asks for the sentence, and the maintainer checks it in review
-before merging.
-
-**Impact.** As of 2026-09-30 all 1,706 commits on `main` come from the
-maintainer, so no outside rights exist yet and dual licensing is
-unaffected. The first outside contribution merged **without** the CLA
-sentence would make commercial licensing of the code it touches depend on
-that contributor's separate consent.
-
-**Lifted when.** A lawyer has reviewed `CLA.md` (and it is re-issued as a
-new version if needed), an organization agreement exists, and the pull
-request check is either automated or explicitly accepted as manual.
-
-## §147 A received telegram's priority, repeat flag and hop count are not kept — lifted 2026-09-30
-
-**Lifted 2026-09-30.** `LDataFrame::control: Option<FrameControl>`
-carries Ctrl1's priority, repeat flag and ack request and Ctrl2's hop
-count. `decode_l_data` fills it; `LDataFrame::effective_control` reads it;
-`encode_l_data` writes it and refuses a hop count above 7
-(`CemiError::InvalidHopCount`) instead of masking it. `None` means exactly
-the encoder's previous defaults, so every existing sender, including §105's
-control-frame priorities, sends the same octets as before. The private
-capture now re-encodes 71 of 71 telegrams whole, Ctrl1 and Ctrl2 included
-(RESEARCH §19.14). Tests in `cemi.rs` plus `TransmissionPriority::from_bits`;
-11 mutants caught. Consumers (2026-09-30): `knx bus monitor --control`
-appends `[priority …, hop count …, repeated]`; the server's monitor rows
-and the debug bundle carry `control` (`priority`, `repeated`, `hopCount`;
-`repeated` only on `L_Data.ind`, `null` on the closed-session marker).
-**UI consumer (2026-09-30):** the monitor table and selected-row details
-show the priority and hop count. "Repeated" and "Not repeated" appear
-only when the indication provides a boolean; other message kinds do not
-assert either. A closed-session marker or an older server without `control`
-shows no invented field. The Web display gap is lifted; no new live bus test
-is claimed.
-
-The original entry, kept for the record:
-
-
-**Limitation.** `decode_l_data` (`crates/knx-net/src/cemi.rs`) reads Ctrl1
-and Ctrl2 for what it needs (address type, system broadcast, the
-confirmation's error bit) and keeps nothing else: `LDataFrame` has no field
-for the priority, the repeat flag, the ack request or the hop count. A
-decoded frame therefore cannot say at which priority it travelled, and
-re-encoding it writes the crate's own defaults (Ctrl1 `BCh`, low priority;
-Ctrl2 hop count 6). Consumers of decoded frames (bus monitor, capture
-exports, commissioning replies) cannot show or check these fields.
-
-**Evidence.** K19, 2026-09-30: all 71 telegrams of the maintainer's private
-ETS `CommunicationLog` decode and re-encode octet for octet past Ctrl1 and
-Ctrl2, but 16 of them were sent at normal priority (Ctrl1 `B4h`, priority
-`01b`) and come back at low (`11b`). The other 55 carry `BCh`, which is what
-the encoder writes anyway. Aggregate counts only; the capture stays
-private. Field layout `[D]` EMI_IMI v01.04.02 AS §4.1.5.3.2, priority codes
-`[D]` Data Link Layer General v01.03.02 AS §2.2.3.
-
-**Impact.** Display and diagnostics only; no outgoing frame is affected,
-since every sender builds its own `LDataFrame` and §105's control-frame
-priorities are set from the transport, not from a decoded frame. A monitor
-cannot show that a device sent a telegram at urgent or normal priority,
-nor distinguish a repeated frame, nor show how many hops it has left.
-
-**Lifted when.** `LDataFrame` carries the received Ctrl1/Ctrl2 fields (at
-least priority, repeat and hop count), `decode_l_data` fills them, the
-encoder writes them when the caller set them, and
-`crates/knx-net/tests/private_telegram_log.rs`'s pinned
-`control_not_carried: {"priority": 16}` becomes empty.
-
-## §146 A channel without `@Text` has no name of its own, and some activations are `Undetermined`
+<a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
+## §146 Channel labels are shown; undetermined activation and missing DPT remain
 
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
 
@@ -9212,39 +6506,20 @@ encoder writes them when the caller set them, and
 EN/DE browser fixture); the data half is ADR-0052. The remaining
 `Undetermined`/missing-DPT conditions above stay explicit, not guessed.
 
-## §145 Instance-level flag overrides are not written into the group object table
+<a id="145-instance-level-flag-overrides-are-not-written-into-the-group-object-table"></a>
+## §145 Instance flags are written; unlinked active objects can still differ
 
-**Lifted (2026-09-29).** `image_request_for_device` now carries every flag an
-object instance states itself (`Layer::Instance` from the file, or
-`Layer::UserEdit`) as `ImageRequest::flag_overrides`, keyed by the
-instance's `ComObjectRef` id, and `build_download_image` writes it over the
-product's flag of the activated object. Flags enrichment filled in from the
-program (`Program`/`ProgramRef`) are not overrides. An `Empty` or
-`Malformed` flag attribute refuses the request (`UnreadableFlag`) instead
-of falling back to the product. An override on an object the parameters
-leave inactive changes nothing: that entry keeps communication cleared.
-`crates/knx-app/tests/house_instance_flags.rs` (corpus, `--ignored`)
-checks the config octet of all 12 linked, overridden objects of the
-plannable house devices (1.1.5 object 0; 1.1.20 and 1.1.21 objects 0, 5,
-10, 15; 1.1.32 objects 0, 5, 10) against the octet read from the device:
-all match, and without the fix the first one fails (`4Fh` against `5Fh`).
-Still not written: the second difference below, and nothing is Verified by
-this, as no KNXBench download to these devices has run.
+Instance-level flag overrides (`Layer::Instance`/`Layer::UserEdit`) are
+written into active group-object table entries; malformed or empty flags
+are refused, not replaced with product defaults. The corpus regression
+checks 12 overridden, linked objects against read-only device octets
+(RESEARCH §19.13). No KNXBench download to those house devices has run, so
+this is image/read-back comparison rather than hardware download evidence.
 
-**Found live (2026-09-29, read-only, RESEARCH §19.13).** The download image
-takes each active object's flags from the application program
-(`ComObject`/`ComObjectRef`) and ignores `ComObjectInstanceRef`'s own
-`ReadFlag`/`WriteFlag`/`TransmitFlag`/`UpdateFlag`/`CommunicationFlag`. The
-importer keeps them (`ResolvedFlags`), the image builder does not read them.
-In the maintainer's house 12 linked objects on 1.1.5, 1.1.20, 1.1.21 and
-1.1.32 carry such an override and the devices hold it; a KNXBench download would drop it
-(1.1.20 object 0 would stop accepting group writes). Until the image applies
-instance overrides — or refuses a device that has one — a download to such a
-device changes its behaviour without saying so.
-
-Related, not a defect: for an active object without any link ETS clears the
-communication-enable bit; KNXBench sets it. With no association the object
-neither sends nor receives either way.
+**Remaining difference.** ETS clears the communication-enable bit for an
+active object without a group-address link; KNXBench leaves it set. With no
+association that object cannot send or receive either way. Neither program
+behaviour nor download parity for unlinked objects is asserted.
 
 ## §144 RF device configuration exists in the simulator only
 
@@ -9319,45 +6594,29 @@ read procedures have no CLI or HTTP route.
 **Lifted when** an RF device and an RF-capable interface are available and
 the user approves a run.
 
-## §142 The mask-`070nh` partial download is tested in the simulator only
+<a id="142-the-mask-070nh-partial-download-is-tested-in-the-simulator-only"></a>
+## §142 Partial download: one verified device, product and UI boundaries remain
 
-**Update (2026-09-30, `--partial group-addresses` on `1.1.67`; RESEARCH
-§19.15).** Not verified: the run was stopped in step 17 of 21 by an
-external shell timeout the agent had set too tight (writes took ~6 s each
-that day), leaving the association table `Loading` with the right bytes in
-memory. KNXBench's load-state check and `device compare` showed exactly
-that; the complete option-C download restored `Loaded`/`Loaded`/`Loaded`
-and a byte-identical dump. **Re-run the same day without a shell timeout:
-`--partial group-addresses` completed**, 1022 octets read back, both tables
-`Loaded`, dump byte-identical (RESEARCH §19.15). `parameters` and
-`group-addresses` are verified on `1.1.67`. **`both` followed at 16:00
-(RESEARCH §19.17): 24 steps, 1416 octets read back, all three `Loaded`,
-dump byte-identical. All three partial scopes are verified on `1.1.67`;**
-other `070nh` programs stay untested, and the same-image caveat of §19.15
-applies.
+**Verified scope (2026-09-29/30; RESEARCH §19.15/§19.17).** On the MDT
+`1.1.67`, the `parameters`, `group-addresses` and `both` partial scopes
+completed with the same option-C image: respectively 394, 1022 and 1416
+octets read back, with the relevant load states `Loaded` and byte-identical
+post-run dumps. One earlier group-address run was interrupted by an external
+shell timeout; the complete download restored it before a successful retry.
+The history and recovery evidence are retained in RESEARCH, not an open
+"simulator-only" limitation. Its closing restart remains unconfirmed (§136).
 
-**Lifted (2026-09-29, live on `1.1.67`, user go for all test-hardware
-tasks).** `knx device download 1.1.67 --partial parameters` with the
-option-C project: steps 1–6 checked mask `0701h`, manufacturer `0083h`,
-property 0/78, `PID_PROGRAM_VERSION` `00 83 00 27 15` and all three parts
-`Loaded`; then 394 octets at `4400h`–`4589h` in 33 writes, each read back,
-application program `Loaded`. The closing `A_Restart` went unacknowledged,
-as on every restart of this device (`RestartOutcome::Unconfirmed`). A
-read-only dump 40 s later is byte-identical to the one before (180 lines;
-the same option-C image was written), load states `01 01 01`. The bullets
-below stay true for everything but "not run on hardware".
-
-**Status (2026-09-29, K15).** `knx device download --partial
+`knx device download --partial
 parameters|group-addresses|both` and the `partial` field of
 `POST /api/device-download/plan` derive CP §3.9.2.4's partial download
 from the complete plan (`knx_core::commissioning::partial_memory_download`).
 The partial plan is a subset of the complete one: no application unload, no
 application allocation, tables only when group addresses are selected.
 
-- **Not run on hardware.** It runs through `WriteScope::Download`, which is
-  permitted on hardware with the device-specific phrase, like a complete
-  download. It has not been tried on `1.1.67`; the first live run needs
-  the user's request, a pre-run dump and the option-C re-download ready.
+- **Hardware evidence is narrow.** All three partial scopes ran only on
+  `1.1.67` with the same option-C image; other programs and changed target
+  configurations remain unverified. `WriteScope::Download` still requires
+  the device-specific phrase, a pre-run baseline and a restoration plan.
 - **Two checks are KNXBench's, not the Standard's.** Before the first
   write, the device must report the plan's application in
   `PID_PROGRAM_VERSION` (object 3), and every part the complete plan loads
@@ -9421,18 +6680,15 @@ procedure's own rule); broadcast read until nobody answers. The CLI is
 confirm individual-address reset to 15.15.255"`. There is no HTTP route or
 UI yet.
 
-**Current public CLI policy (ADR-0058).** The earlier user-authorized live
-run is historical, not standing write permission. Confirmed CLI resets now
-fail closed **before tunnel opening** until every affected device has a
-complete, durable, verified pre-write recovery record. The plan and low-level
-simulator remain; no HTTP/UI route exists. `WriteScope::IndividualAddressReset`
-still joins `hardware_write_is_authorised` at the protocol layer, but that
-phrase gate alone does not provide a backup. The operator-named-device guard
-still requires the first broadcast read to find exactly that set and no
-excluded address; it does not establish storage coverage. Anything else — a
-stranger pressed on the same line, a named device not pressed — writes nothing
-in the protocol procedure; it is not currently reachable through a public
-confirmed CLI reset. MP §2.18 itself resets whoever is pressed.
+**Current public CLI policy (ADR-0058).** Confirmed CLI resets fail closed
+*before opening a tunnel* until every affected device has a complete,
+durable, verified pre-write recovery record. The old go is not standing
+permission. The offline plan and protocol simulator remain; no HTTP/UI
+route exists. `WriteScope::IndividualAddressReset` remains in the protocol
+allowlist, but its phrase is not a backup. The caller-named-device guard
+requires exactly that set on the first broadcast read, with no excluded
+address; it cannot establish storage coverage. MP §2.18 itself resets
+whoever is pressed.
 
 **The restart is not evaluated.** On `1.1.67` the device ignored it: the
 LED stayed on at `15.15.255` although nobody answered the closing read. The
@@ -9445,15 +6701,12 @@ anything is written; a cap of 3 rounds that names the devices still
 answering; MP §2.3's 1 s read window.
 
 **Not covered.** Several devices at once on hardware (simulator only); a bus
-monitor trace of the sequence. **No HTTP/UI reset:** the K13 live run used a
-separately created persistent backup of the target before writing, but the
-public CLI itself did not durably capture and verify all affected storage
-before its broadcast. That historical backup and unchanged application dump
-cannot establish complete manufacturer-specific reset coverage for arbitrary
-devices. An HTTP route that calls the reset library without a verified
-complete per-device backup would bypass the same safety condition. Do not
-expose a write-capable reset endpoint or reopen the CLI until a pre-write
-backup and recovery contract is implemented and tested (ADR-0058); see
+monitor trace of the sequence. **No HTTP/UI reset:** the earlier live run
+used a separately created persistent backup, but the public CLI did not
+durably verify all manufacturer-specific affected storage before sending
+its broadcast. That historical dump cannot establish general reset recovery.
+Do not reopen CLI or expose HTTP reset until an action-specific complete
+pre-write backup and abort/recovery contract is verified (ADR-0058); see
 `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`.
 
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified

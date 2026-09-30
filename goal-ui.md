@@ -16,56 +16,38 @@ There are now three goal files, and they do not overlap:
 §5 below is the exact boundary. §6 describes how work crosses between
 sessions.
 
-## Where things stand (verified 2026-09-28)
+## Where things stand (2026-10-01)
 
-- **Source of truth for every task:**
-  `docs/superpowers/plans/2026-09-21-user-reported-issues.md` (the "issue
-  plan"). Each ISSUE there has files, interfaces and checkboxes.
-  - Tick a checkbox only when you close it, and name the test that covers
-    it.
-  - Its *Global Constraints* and *Review Focus* bind every package here.
-- **Ready-made briefs:** `docs/CLOUD_SESSIONS.md` §4, CT-7 to CT-10. They
-  are more detailed than the plan for ISSUE-13, -10, -01 and -11. Ignore
-  their cloud-only mechanics (draft PR, cloud log name, "leave after the
-  PR").
-- **Done, do not redo:**
-  - ISSUE-04 (dirty state, Save-and-quit, autosave): `d135c5e`, `1742423`.
-  - The §4 web residues: CT-1 `313489e`, CT-2 `d9ff0db`, CT-6 `826466a`.
-- **ADR-0038** (ISSUE-06, a site is a `Ground` root) is merged but still
-  `Status: Proposed`. It has never had an independent review.
-- **ADR-0039** (project mutation goes through commands): phases 1 and 2 are
-  merged (`43f68a0`, `09beee1`). ISSUE-05 is no longer blocked by it.
-- **The web lock is currently held by the commissioning session** for
-  goal-commission K5, which it announced at 20:44 on 2026-09-28. See §3.
+U0–U12's UI slices are delivered: host/port discovery fields, catalog and
+device/structure editors, channel labels, monitor control, read-only device
+checks, Site/Property creation and the ADR-0051 Debug property action.
+The Debug route remains default-off and its durable backup is *property-only*;
+no new live device check or whole-image recovery follows. K6 confirmed public
+address writes now refuse before a tunnel without device-specific durable
+recovery (ADR-0059); the Web tab shows this availability rather than asking
+for consent prematurely. CLI/HTTP discovery succeeded after the user's
+firewall rule; native WebKitGTK Search remains unverified. ISSUE-04's five
+acceptance rows have since been verified and ticked. Only ISSUE-12's two
+discovery-evidence boxes and U13's **independent read-only review** remain
+open on this UI track. The chosen Claude review was attempted but refused by
+its service quota on 2026-10-01; that is **not a review verdict**. See
+`.ai/logs/2026-10-01_codex_ui-u13-review-blocked.md`. `docs/IMPLEMENTATION_STATUS.md` and the current top of
+`.ai/CURRENT_STATE.md` take precedence over this dated snapshot.
 
 ---
 
 ## 0. Scope: what this goal owns
 
-1. **ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12 and 13** of the issue plan,
-   including their server and domain halves (batch create, the "send and
-   receive" command, 422 details, export routes, the session-log export).
-2. **The UI half of ISSUE-08:**
-   - render channel groups collapsed by default, and keep a group the user
-     expanded while the device stays selected;
-   - distinguish inactive from unsupported data visibly;
-   - show the resolved names and DPTs the projection delivers.
-
-   The data half belongs to `goal.md` (§5).
-3. **ISSUE-06's remaining step:** an independent review of ADR-0038, then
-   the user's acceptance, then `Status: Accepted`.
-4. **The File-menu rename** handed over by the commissioning session (rule
-   R2, `docs/GLOSSARY.md`):
-   - `toolbar.downloadProject` ("Download project" / "Projekt
-     herunterladen") saves or exports a file. It must say so ("Save
-     project…" / "Export project…").
-   - "Download" is reserved for writing to a device.
-5. **Docs for these features:** IMPLEMENTATION_STATUS entries,
-   KNOWN_LIMITATIONS entries the features lift or add, and the user-manual
-   chapter describing the feature you changed. The manual's T23 acceptance
-   stays with `goal.md`.
-
----
+Remaining work: reconcile ISSUE-12's two acceptance boxes against the actual
+host-firewall/discovery evidence without inventing a wire capture or a full
+loopback roundtrip, then obtain the chosen independent U13 review and fix
+its findings. Native WebKitGTK and real screen-reader checks are verification
+gaps, not permission for a KNX device write. Completed ISSUE-01–11/13 slices
+and the accepted ADR-0038 are evidenced in
+[the issue plan](docs/superpowers/plans/2026-09-21-user-reported-issues.md)
+and [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md); they are not
+implementation tasks here. Product/import data belongs to `goal.md`, live
+programming and its safety gate to `goal-commission.md`.
 
 ## 1. Hard rules
 
@@ -170,9 +152,9 @@ sessions.
    - Messages are concise and describe the change; a little humour is
      welcome.
    - Push normally. Never wait on GitHub Actions.
-9. **Quota.** At each package boundary, ask the user how much GPT/Codex
-   quota is left. Pause before it would run out. A pause holds until the
-   user's explicit "go".
+9. **Quota.** The user monitors quota directly; do not stop at a package
+   boundary to ask for a quota reading. A user-requested pause still holds
+   until their explicit "go".
 10. **Scratch** goes under
     `~/.hermes/profiles/knxbench/cache/scratch/ui/` (or your own
     tool's scratch). Never touch `scratch/iaw/` (commissioning) or other
@@ -199,8 +181,9 @@ collide on every task. Only one session edits it at a time.
   announces your merge.
 - **Hold it for one package at a time.** Release it between packages, so
   that the commissioning session (K5/K6) can get in.
-- **Right now** the commissioning session holds it for K5. Start with the
-  packages that do not edit `apps/knx-web`: U0 to U2 below.
+- **Current holder:** read the newest entry of `.ai/CURRENT_STATE.md` before
+  touching `apps/knx-web`. A holder written in this plan is stale as soon as
+  another package merges. U13's read-only review needs no Web lock.
 
 ---
 
@@ -209,158 +192,47 @@ collide on every task. Only one session edits it at a time.
 Every package ends with: tests and mutation check, gates, docs, merge, push,
 handover, cleanup. **[web]** means the package needs the web lock.
 
-### U0 — Set up (offline, no lock)
+### Completed packages (U0–U12)
 
-1. Confirm `main` is clean and every gate is green on a fresh worktree.
-2. Record the baseline counts in your first handover entry: the number of
-   workspace tests and the number of vitest tests.
+U0–U9, U10's host/port UI, U11's catalog/device editor and the bounded U12
+surfaces are delivered;
+the acceptance tests are in the
+[issue plan](docs/superpowers/plans/2026-09-21-user-reported-issues.md) and
+[implementation log](docs/IMPLEMENTATION_STATUS.md). The gateway's reply
+was initially blocked by the host firewall; after the user's rule change,
+CLI and HTTP discovery succeeded (RESEARCH §20.1). Native WebKitGTK Search
+remains unverified. Do not redispatch the completed packages.
 
-### U1 — ADR-0038 review (ISSUE-06), no lock
+### U12 — Delivered within verified boundaries [web]
 
-1. Review `docs/adr/0038-site-is-a-ground-root-space.md`, its
-   characterisation tests and KNOWN_LIMITATIONS §127 independently. The
-   scope is in `goal.md` §12.2 item 5: Project Schema23 §1.1.2.3/§1.2.6.3,
-   3/10/3 §1.2.3.5, 3/10/4 Table 10, 3/10/2 Table 1.
-2. Report the findings to the user and ask for acceptance. Only after the
-   user accepts, change the status to `Accepted`.
-
-### U2 — ISSUE-12 diagnosis, and the ISSUE-09 address-editor research, no lock
-
-1. ISSUE-12: find out why the AppImage discovery finds no gateway while a
-   manual connection works. Build the AppImage, capture the multicast
-   traffic read-only, and compare it with the dev build.
-   - Write the result into IMPLEMENTATION_STATUS/KNOWN_LIMITATIONS.
-   - Diagnose first, change second (issue plan). The fix comes in U10.
-2. ISSUE-09: check in the KNX documentation whether line membership fixes
-   the area and line octets of an individual address.
-   - Document it with `[D]`/`[V]`/`[A]` labels.
-   - Without evidence, the address editor stays as it is.
-
-### U3 — File-menu rename (R2) [web]
-
-"Download project" becomes Save/Export, in `en.ts`, `de.ts` and
-`App.test.tsx`. Change `docs/GLOSSARY.md`'s *Open* note to done. This is
-small, which makes it a good first web package.
-
-### U4 — ISSUE-13, session log: search and export [web]
-
-Brief CT-7.
-
-### U5 — ISSUE-10, actionable 422 errors and topic help [web]
-
-Brief CT-8. Keep the bus monitor's existing freetext and service filters.
-
-### U6 — ISSUE-01, zoom and remembered pane widths [web]
-
-Brief CT-9.
-
-### U7 — ISSUE-11, bus monitor: pause, export, decoding, statistics [web]
-
-Brief CT-10. Pausing must not discard buffered telegrams or move the server
-cursor wrongly.
-
-### U8 — ISSUE-03, resizable dialogs, readable forms, gear icon [web]
-
-### U9 — ISSUE-02, welcome surface and new-project clarity [web]
-
-### U10 — ISSUE-12 fix: separate host and port fields, and the discovery fix from U2 [web]
-
-### U11 — ISSUE-07 (catalog in the main window, quantity, atomic batch) and ISSUE-09 (readable flags, "send and receive", address editor only if U2 proved it) [web]
-
-These are two packages: ISSUE-07 first, then ISSUE-09.
-
-### U12 — ISSUE-05 structure editing, then the ISSUE-08 UI half [web]
-
-- **ISSUE-05** needs U1 accepted. All gestures call the same validated
-  commands as buttons and forms.
-- **ISSUE-08 UI half** starts only after the goal.md session has announced
-  the ISSUE-08 data half as merged (§6). It uses the projection fields that
-  session delivers, and invents no name heuristics.
-- **Handed over 2026-09-30 (goal.md session), each needs the web lock:**
-  1. **§146 channel labels:** show `channel.name` and `channel.number`
-     (ADR-0052, schema v18) verbatim, never composed into `text`, never
-     translated. Lifts KNOWN_LIMITATIONS §146 fully.
-  2. **ADR-0051 Debug toggle:** a clearly marked "Debug" section in
-     Settings with the key `debugIndividualAddressWriteEnable` (default
-     off, warning text), and a device action calling
-     `GET`/`POST /api/device/service-control` with the scope's own phrase
-     `I confirm individual-address write enable to <address>`. The server
-     already refuses with 403 while the key is not `true`; the UI must not
-     be the only gate.
-     **Safety pause (2026-09-30):** a read-only audit of the existing POST
-     route and its executor found read/bit-only write/readback but no
-     persisted pre-write recovery record. The commissioning handover requests
-     a backup guarantee for other UI writes before exposing them. Do not
-     expose the setting or action until the commissioning/data owner resolves
-     and tests that policy; the route already exists and remains default-off.
-     This pause does not block the independent monitor/read-only UI items.
-     **Scoped resolution (2026-09-30):** commissioning's `44b42cee`
-     introduced a same-session durable pre-write record for both original
-     property octets, mask and target, read back and synced before the
-     `PID_SERVICE_CONTROL` write; `http_service_control.rs` tests fail-closed
-     backup behavior on a simulator. Only this property action may now be
-     considered for UI exposure. It is **not** a full device backup, recovery
-     for other write routes, or permission for a hardware test. The UI
-     candidate keeps the server gate default-off, verifies the persisted
-     Settings toggle by PUT+GET, demands an explicit device read and the
-     separately typed scope phrase, and withholds inconsistent success.
-     Local mock-browser tests never contact a gateway.
-  3. **Monitor control fields (§147 consumers):** `/api/bus/monitor/telegrams`
-     rows carry `control: {priority, repeated, hopCount}` (`null` on the
-     closed-session marker). Show them as a column or tooltip; `repeated`
-     is `null` on anything but `L_Data.ind` and must stay unshown then.
-     **UI closeout (2026-09-30):** a Control column and selected-row details
-     display priority and hop count. True/false repeat evidence is distinct;
-     null/absent metadata stays unasserted. `BusMonitorPanel.test.tsx`
-     covers both states, the marker and older responses; the local mocked
-     `monitor-control.e2e.ts` covers EN/DE at 360/1440 px. No live bus action.
-  4. **Readiness and device-compare views:** the actual mounted routes are
-     `GET /api/device-readiness` (`b72a6b6`; the earlier `/api/readiness`
-     shorthand was not a route) and `POST /api/device-compare` (`76bcce74`).
-     Their UI lives under **Device checks** in Bus diagnostics: offline
-     per-device grades with original evidence and counts, then an explicit
-     two-step, read-only tunnel comparison of one uniquely addressed,
-     plannable device. `DeviceInspectionPanel.test.tsx` and the local mocked
-     `device-checks.e2e.ts` cover the path; no live bus request is part of
-     this UI package.
-  5. **ISSUE-06 Site/Property UI (ADR-0038):** the Buildings overview
-     has a dedicated **Add site / property** action using the existing
-     `Ground` root kind and `createBuildingPart`. Selecting each building
-     and choosing the site in the existing Inspector parent select calls
-     `moveBuildingPart`; the accepted model decision is unchanged.
-     `StructureWorkspace.test.tsx` and mocked EN/DE `site.e2e.ts` cover
-     two buildings in one installation with unchanged device projections;
-     `site_hierarchy.rs` already checks that the project owns each device
-     once. Published as `7fd96bf1` and `3822a20c` with remote SHA readback
-     on 2026-10-01. No ETS Ground export or live hardware was tested.
-  6. **ISSUE-04 completion evidence (U13 preflight):** the shipped saved
-     baseline, Save-and-continue and autosave had five unchecked plan boxes.
-     `http_project_routes.rs` now pins the prompt boundary and saved-baseline
-     undo→branch behavior. `App.test.tsx` exposed and fixes the status bar's
-     browser-locale formatting when the selected UI language differs. The
-     existing autosave fake-timer and settings regressions are named in the
-     issue plan. Published as `912eb768` with remote SHA readback on
-     2026-10-01. This does not decide the U13 closing review for the user.
+ISSUE-05 structure editing, ISSUE-08 grouping, §146 labels, §147 monitor
+control, read-only **Device checks**, ADR-0051 Debug property UI and
+ADR-0038 Site/Property actions are published. `GET /api/device-readiness`
+is offline; `POST /api/device-compare` uses a confirmed read-only tunnel
+and does not prove a later write. The Debug server gate defaults off and
+records only the original property octets; it cannot restore an entire
+device. The K6 address tab now checks the independent server recovery
+precondition and fails closed before consent when unavailable (ADR-0059).
+No new hardware run or full ETS site/project evidence was asserted by U12.
+The global activity/status bar, partial-scope selector and K13 reset UI
+remain commissioning follow-ups with their own safe contracts and Web lock,
+not unfinished U12 checkboxes. See the implementation log and commissioning
+handover.
 
 ### U13 — Close the UI track
 
-1. The user decides the **closing review of the whole track**. The
-   suggestion is a read-only cross-review by the goal.md (Claude) session
-   over the track's full diff. Fix its findings.
-2. Write a closing handover that lists every ISSUE with its evidence, and
-   everything left for `goal.md` (§6).
+The user chose a read-only independent review by the goal.md/Claude session.
+An attempt on 2026-10-01 was refused by that service's weekly limit before
+any review; no verdict exists. Do not replace this with a self-review or
+mark the track complete. The brief is in
+`.ai/logs/2026-10-01_codex_ui-u13-review-brief.md`. Once review access
+returns (or the user explicitly chooses another independent reviewer):
 
-**Decision, 2026-10-01:** the user chose the independent read-only review
-through the goal.md/Claude session. It has **not run yet**, and this is not
-an acceptance or a change to the U13 completion gate. First review the two
-unticked ISSUE-12 boxes against the later evidence in RESEARCH §20.1 and
-KNOWN_LIMITATIONS §79: the gateway response was found in host UFW drop logs
-and CLI/HTTP discovery subsequently worked after the user changed that
-firewall rule. No packet capture, new live test or protocol fix is needed
-to repeat that already verified host result. The issue plan's older U10
-paragraph still reflects the pre-diagnosis state; reconcile it based on
-existing test/evidence boundaries before ticking anything. The Web lock is
-released; a review must not acquire it or touch the bus.
+1. Reconcile ISSUE-12's two open discovery boxes against RESEARCH §20.1,
+   host-firewall fix and the actual offline test scope. No wire capture or
+   full loopback multicast test was performed; do not tick on inference.
+2. Obtain the independent verdict, fix findings and rerun the integration
+   gates. Close with per-ISSUE evidence and a handover to `goal.md` (§6).
 
 ---
 
@@ -400,13 +272,12 @@ Hand it over (§6).
 
 - **To the goal.md session:** in your handover entry, under the heading
   **"For the goal.md session:"**. That session adopts items into `goal.md`
-  §12.4 and confirms in its next entry. Typical items:
+  §12.3 and confirms in its next entry. Typical items:
   - new or renumbered KNOWN_LIMITATIONS entries (for the triage recount);
   - a `stats.md` refresh after each of your merges;
   - findings in product data or import (as findings, not fixes).
 - **To the commissioning session:** under **"For the commissioning
   session:"**, for example UI findings in their programming views.
-- **From the goal.md session to you:**
-  - The ISSUE-08 data half arrives as an entry naming the new projection
-    fields and the merge commit.
-  - Until then, U12's ISSUE-08 part waits.
+- **From the goal.md session to you:** the chosen U13 independent review
+  returns concrete findings and an actual verdict. A refused review request
+  is not a verdict; do not close U13 until findings and gates are settled.

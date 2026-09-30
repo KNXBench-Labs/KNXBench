@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Commissioning UI/status inventory and handover (no feature shipped)
+
+- Read-only inventory: device download and button-address programming have
+  panel-local progress/status only. The global workbench footer shows project,
+  save time and version, not bus operations. Partial-download scopes have a
+  server contract but no Web selector; K13 address reset has CLI only, **no
+  HTTP route**. Serial-address, Debug Bit 2, readiness and device compare
+  have HTTP routes but no corresponding Web controls.
+- Detailed task and acceptance-test handover:
+  `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`.
+  **Safety blocker:** K13 must not be exposed as a write-capable HTTP route
+  before a complete verified persistent backup of every affected device is
+  guaranteed before the first broadcast write. A prototype lacking that
+  gate was discarded; no server/UI implementation is claimed here.
+
 ## 2026-09-30 — U12 / §146 channel labels (UI follow-up)
 
 - Channel groups keep the evaluated, opaque ownership key. Their heading

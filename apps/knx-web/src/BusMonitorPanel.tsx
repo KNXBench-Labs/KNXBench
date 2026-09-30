@@ -14,7 +14,7 @@ import {
   subscribeContextChanges,
 } from "./busContext";
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
-import { useTranslate } from "./i18n";
+import { useTranslate, type Translate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { loadPreferredGateway } from "./gatewayPreference";
@@ -71,6 +71,28 @@ function defaultServiceFilters(): ServiceFilters {
 function decodedSummary(row: BusTelegramRow): string {
   if (!row.decoded) return "—";
   return row.decoded.dpt ? `${row.decoded.dpt}: ${row.decoded.text}` : row.decoded.text;
+}
+
+function controlPriorityLabel(t: Translate, priority: string): string {
+  switch (priority) {
+    case "system": return t("busMonitor.control.priority.system");
+    case "urgent": return t("busMonitor.control.priority.urgent");
+    case "normal": return t("busMonitor.control.priority.normal");
+    case "low": return t("busMonitor.control.priority.low");
+    default: return t("busMonitor.control.priority.unknown", { value: priority });
+  }
+}
+
+function ControlFacts({ control }: { control: BusTelegramRow["control"] }) {
+  const t = useTranslate();
+  if (!control) return <>—</>;
+  return <span className="bus-monitor-control-facts">
+    <span>{controlPriorityLabel(t, control.priority)}</span>
+    <span>{t("busMonitor.control.hopCount", { count: control.hopCount })}</span>
+    {control.repeated != null && <span className="bus-monitor-control-repeat">
+      {t(control.repeated ? "busMonitor.control.repeated" : "busMonitor.control.notRepeated")}
+    </span>}
+  </span>;
 }
 
 function decodeStateKey(decoded: BusTelegramRow["decoded"]) {
@@ -941,6 +963,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                 <th>{t("busMonitor.column.source")}</th>
                 <th>{t("busMonitor.column.destination")}</th>
                 <th>{t("busMonitor.column.service")}</th>
+                <th>{t("busMonitor.column.control")}</th>
                 <th>{t("busMonitor.column.payload")}</th>
                 <th>{t("busMonitor.column.decoded")}</th>
               </tr>
@@ -985,6 +1008,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                       )}
                     </td>
                     <td>{row.service}</td>
+                    <td className="bus-monitor-control"><ControlFacts control={row.control} /></td>
                     <td>{row.rawPayload ?? "—"}</td>
                     <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
                       {decodeKey && <span className="bus-monitor-decode-state">{t(decodeKey)}</span>}
@@ -1003,6 +1027,9 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               <dt>{t("busMonitor.column.source")}</dt><dd className="mono">{selectedTelegram.source}</dd>
               <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono ga-address">{formatGa(selectedTelegram.destination)}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
               <dt>{t("busMonitor.column.service")}</dt><dd>{selectedTelegram.service}</dd>
+              {selectedTelegram.control && <>
+                <dt>{t("busMonitor.column.control")}</dt><dd className="bus-monitor-control"><ControlFacts control={selectedTelegram.control} /></dd>
+              </>}
               <dt>{t("busMonitor.column.decoded")}</dt><dd>
                 {decodeStateKey(selectedTelegram.decoded) && (
                   <span className="bus-monitor-decode-state">{t(decodeStateKey(selectedTelegram.decoded)!)}</span>

@@ -1194,6 +1194,9 @@ export interface BusTelegramRow {
   service: string;
   rawPayload: string | null;
   decoded: BusDecodedValue | null;
+  // Additive `TelegramRowDto::control`: older servers may omit the field.
+  // `repeated` is null outside L_Data.ind; a session marker has null control.
+  control?: { priority: string; repeated: boolean | null; hopCount: number } | null;
 }
 
 // `StartResponse` (bus_routes.rs).

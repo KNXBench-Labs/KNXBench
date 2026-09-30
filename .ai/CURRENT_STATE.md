@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U11 / ISSUE-09 delivered)
+- **Timestamp:** 2026-09-30 06:52 CEST
+- **Web lock:** The ISSUE-09 lock is released in this handover. U12 must reserve its own lock in a new isolated worktree before editing `apps/knx-web`.
+- **Completed:** The device editor, readable flags, line-relative address guard and atomic directional links (including exact-order rollback/undo) were reviewed and delivered as `f8ca04398bd2743fe40c086e30771da31b8bb349`; `git ls-remote` read that exact hash back from `main`. The rebased integration passed Web 78 files/1,213 tests, TypeScript/build, six local Chromium layouts, Rust fmt/strict Clippy/130 suites/2,636 passed/0 failed/152 ignored/0 corpus skips and all four `xtask` checks (318 headers, 161 headerless at ceiling, 397 anchors in 216 docs, corpus gates). Task-owned Cargo target and read-only corpus symlink were removed; the root corpus remains untouched. No bus connection or device write was made.
+- **Pending/Next Steps:** Publish/read back this docs-only closeout; remove only U11 scratch and its isolated worktree. Then U12 ISSUE-05: inventory existing mutations and use one validated command path for Properties, centre workspace and move gestures; U12 ISSUE-08 UI half only after the goal.md data half is declared fully merged (P1/P2 are in `main`, P3 generic names/DPTs remain open). U13 requires the user's whole-track closing-review decision and a complete evidence handover. Do not pause for quota checks.
+- **Notes for Codex or Claude:** Root `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `stats.md`, and untracked root docs have unrelated local changes: do not stage, reset, or delete them. The U11 source was published by fast-forward; this follow-up changes documentation only. The web lock is released until U12 explicitly takes it. No live KNX tunnel or device write in the UI track. Some upstream handover entries carry clock times later than this host's local time; preserve their text, but use this host's clock for new records.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 10:40 CEST
 - **Web lock:** untouched; held by the UI session as its newest entry says.

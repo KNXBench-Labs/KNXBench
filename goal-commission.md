@@ -468,12 +468,22 @@ property refused), `WriteScope::IndividualAddressWriteEnable`,
 `/api/device/service-control` behind the Settings key
 `debugIndividualAddressWriteEnable` (403 unless `true`), and
 `knx device service-control` on the CLI (`e05e9e1`, `30580fad`). Simulator,
-route and CLI tested; **not run on hardware**. The Settings toggle is with
-`goal-ui.md` U12.
+route and CLI tested. Bit 2 was set and cleared again on `1.1.67` in
+the authorized K12 live run; serial-number addressing still did not take,
+even after correcting broadcast priority (RESEARCH §19.15). The Settings
+UI toggle remains with `goal-ui.md` U12.
 
-**Still open, needs the user's device-specific go:** on `1.1.67` read
-bit 2 → set it → address by serial number to a free address and back →
-clear bit 2 again → read back. Skill `knx-live-bus-operations`.
+**Recovery-policy follow-up 2026-09-30 (offline only).** ADR-0051 now gates
+both CLI and HTTP property writes on a durable pre-write record of *the entire
+property element* (two octets), mask and target. If persistence/readback fails,
+no property write is sent. The record is not a complete device image, and no
+automatic restore or new hardware test is claimed. UI owner may revisit the
+Debug action under its own lock; K13 still needs a separate whole-device
+backup contract.
+
+**Further live serial-number tests need a fresh device-specific go and
+new evidence on a device that supports the operation.** The two MDT runs
+have already shown an ignored write; do not repeat them from this goal alone.
 
 ### K13 — `NM_IndividualAddress_Reset` (item 2)
 

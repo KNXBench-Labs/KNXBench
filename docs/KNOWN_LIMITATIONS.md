@@ -8937,14 +8937,20 @@ read-back checked, mask `0021h` and a missing property refused by name.
 CLI: `knx device service-control <a.l.d> --gateway <host:port>` reads the
 bit; `--enable`/`--disable` with the scope's `--confirm` phrase changes it,
 and without the phrase prints a plan and opens no socket.
-Simulator-, route- and CLI-tested; **not run on hardware**. The Settings
-panel's Debug toggle and device action are deferred pending a cross-route
-pre-write recovery-policy decision: the existing service-control route reads
-and verifies the bit but does not persist its pre-write value before sending
-the change. See goal-ui.md U12 and ADR-0051; the server setting stays off by
-default. This note does not revoke the accepted ADR or claim that a full
-memory-image backup is required for this two-byte property — that remains to
-be established by the commissioning owner before a UI shortcut exposes it.
+Simulator-, route- and CLI-tested; earlier K12 bit-2 writes on hardware are
+recorded above, but the **new durable recovery gate** has not been exercised
+on hardware. The Settings Debug toggle and device action were deferred when
+the route only held the original octets in memory. ADR-0051 now specifies a
+property-specific pre-write record: CLI and HTTP persist the two original
+octets, mask and target, read the file back and fsync it and its directory
+before sending a change. Failure refuses before the property write; a no-op
+saves nothing. HTTP returns `backupPath`, and the CLI names its backup
+(default `./device-backups/`, configurable with `--backup-dir`). This is **not**
+a full device image and does not restore possible manufacturer side effects.
+A failed readback after a write leaves an ambiguous device state; compare the
+current property and backup manually, do not blindly retry. The debug action
+may be revisited by the UI owner using this contract, but the server setting
+remains default-off and no UI or new hardware run is claimed here.
 
 **Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
 and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the

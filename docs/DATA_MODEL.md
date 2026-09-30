@@ -526,7 +526,12 @@ but not interpreted in v1:
   `ParameterInstance` keyed by `(device, ets_id)`, and argument
   interpretation happens entirely on the product-database side of the
   fence ([KNOWN_LIMITATIONS.md §§68-71](KNOWN_LIMITATIONS.md) name what
-  that leaves open).
+  that leaves open). **Schema v18 (2026-09-30, [ADR-0052](adr/0052-channel-name-and-number-are-stored-verbatim.md))**
+  adds `dynamic_node.name` and `dynamic_node.number`: a `Channel`'s `@Name`
+  and `@Number`, verbatim (`number` is text; not every corpus value is a
+  number). `migrate_v17_to_v18` backfills them from the stored blobs as v11
+  did, but keeps every recorded unknown row except the retired
+  `Channel/@Number` ones. Again product-database side only.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

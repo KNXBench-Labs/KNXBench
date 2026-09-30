@@ -195,10 +195,18 @@ impl ChannelTable {
                 key,
                 kind: owner.kind.clone(),
                 text: channel_text(owner, activation, channel_texts),
+                name: non_empty(owner.name.as_deref()),
+                number: non_empty(owner.number.as_deref()),
                 order,
             })
             .clone()
     }
+}
+
+/// An attribute the file states, or `None` when it is absent or empty: an
+/// empty `@Name` names nothing (4 corpus channels have one).
+fn non_empty(value: Option<&str>) -> Option<String> {
+    value.filter(|v| !v.is_empty()).map(str::to_string)
 }
 
 /// `<module node chain>/<node id>`: node ids restart per `Dynamic` tree, so
@@ -270,6 +278,8 @@ mod tests {
             is_default: false,
             text: None,
             value: None,
+            name: None,
+            number: None,
             control_kind: None,
         }
     }
@@ -364,6 +374,36 @@ mod tests {
         let nodes = run(&two_channels(), &keys, &[], &HashMap::new(), &[2, 1]);
         assert_eq!(nodes[0].channel.as_ref().unwrap().order, 1);
         assert_eq!(nodes[1].channel.as_ref().unwrap().order, 0);
+    }
+
+    #[test]
+    fn the_channel_carries_its_name_and_number_as_written() {
+        // ADR-0052: shown verbatim, never composed into `text`, and an
+        // empty attribute names nothing.
+        let mut named = channel(2, 1, "CH-1", "");
+        named.name = Some("Light A".to_string());
+        named.number = Some("1".to_string());
+        let mut unnamed = channel(4, 1, "CH-2", "Kanal B");
+        unnamed.name = Some(String::new());
+        unnamed.number = Some("B".to_string());
+        let trees = ProgramTrees::single(DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            named,
+            com_ref(3, 2, "O-1"),
+            unnamed,
+            com_ref(5, 4, "O-2"),
+        ]));
+        let keys = HashMap::from([(1, unscoped("O-1")), (2, unscoped("O-2"))]);
+        let nodes = run(&trees, &keys, &[], &HashMap::new(), &[1, 2]);
+        let a = nodes[0].channel.clone().unwrap();
+        let b = nodes[1].channel.clone().unwrap();
+        assert_eq!(
+            (a.name.as_deref(), a.number.as_deref()),
+            (Some("Light A"), Some("1"))
+        );
+        assert_eq!(a.text, None, "an empty @Text stays empty");
+        assert_eq!((b.name.as_deref(), b.number.as_deref()), (None, Some("B")));
+        assert_eq!(b.text.as_deref(), Some("Kanal B"));
     }
 
     #[test]

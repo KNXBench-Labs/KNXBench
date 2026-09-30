@@ -27,6 +27,21 @@ fn drop_v17_tables(conn: &Connection) {
          DROP INDEX IF EXISTS application_program_source;",
     )
     .unwrap();
+    // Some v2/v10 fixtures already dropped the tree table/columns before
+    // calling this shared helper; only strip v18 columns if still present.
+    for column in ["name", "number"] {
+        let present: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('dynamic_node') WHERE name = ?1)",
+                [column],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if present {
+            conn.execute_batch(&format!("ALTER TABLE dynamic_node DROP COLUMN {column};"))
+                .unwrap();
+        }
+    }
 }
 
 #[allow(dead_code)]

@@ -47,6 +47,8 @@ struct ElementSpec {
     default_attr: Option<&'static str>,
     text_attr: Option<&'static str>,
     value_attr: Option<&'static str>,
+    name_attr: Option<&'static str>,
+    number_attr: Option<&'static str>,
 }
 
 const UNMODELLED: ElementSpec = ElementSpec {
@@ -57,6 +59,8 @@ const UNMODELLED: ElementSpec = ElementSpec {
     default_attr: None,
     text_attr: None,
     value_attr: None,
+    name_attr: None,
+    number_attr: None,
 };
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
@@ -79,7 +83,21 @@ fn spec_for(kind: &str) -> ElementSpec {
             default_attr: Some("default"),
             ..UNMODELLED
         },
-        "Channel" | "ParameterBlock" => ElementSpec {
+        // ADR-0052: a channel's `@Name` and `@Number` get columns of their
+        // own, verbatim. Every corpus channel states both, and 94 of them
+        // have an empty `@Text`, so these two are all that names such a
+        // channel. `@Number` is text: 5 corpus values are not numbers.
+        "Channel" => ElementSpec {
+            known: &["Id", "RefId", "Text", "Name", "Number"],
+            id_attr: Some("Id"),
+            ref_attrs: &["RefId"],
+            text_attr: Some("Text"),
+            name_attr: Some("Name"),
+            number_attr: Some("Number"),
+            ..UNMODELLED
+        },
+        // `@Name` is recognized but read by nothing, so it stays in `extra`.
+        "ParameterBlock" => ElementSpec {
             known: &["Id", "RefId", "Text", "Name"],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
@@ -482,6 +500,8 @@ fn insert_node(
     let test = spec.test_attr.and_then(|n| a.get(n));
     let text = spec.text_attr.and_then(|n| a.get(n));
     let value = spec.value_attr.and_then(|n| a.get(n));
+    let name = spec.name_attr.and_then(|n| a.get(n));
+    let number = spec.number_attr.and_then(|n| a.get(n));
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
@@ -492,6 +512,8 @@ fn insert_node(
     }
     captured.extend(spec.text_attr);
     captured.extend(spec.value_attr);
+    captured.extend(spec.name_attr);
+    captured.extend(spec.number_attr);
     // `extra` is a human-readable audit trail, not a re-parseable encoding:
     // "name=value" pairs, sorted, newline-joined (design D2), which cannot
     // be split unambiguously back apart when a value itself contains `=` or
@@ -513,8 +535,8 @@ fn insert_node(
         conn.execute(
             "INSERT INTO dynamic_node
          (program_id, module_def_id, node_id, parent_id, position, kind,
-          element_id, ref_id, test, is_default, text, value, extra)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
+          element_id, ref_id, test, is_default, text, value, extra, name, number)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)",
             params![
                 program_id,
                 module_def_id,
@@ -529,6 +551,8 @@ fn insert_node(
                 text,
                 value,
                 extra,
+                name,
+                number,
             ],
         )?;
     }

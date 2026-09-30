@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — K12 follow-up: Individual Address Write Enable as opt-in debug action
+
+- `PID_SERVICE_CONTROL` bit 2 (RES §4.2.8) can be read and set explicitly:
+  `knx_net::commissioning::service_control`, new
+  `WriteScope::IndividualAddressWriteEnable` with its own phrase, bit 2 only
+  (read-modify-write, exact read-back). Mask `0021h` and a missing property
+  are refused by name. Nothing sets the bit automatically (ADR-0051).
+- `GET`/`POST /api/device/service-control`, `403` unless the settings file
+  holds `debugIndividualAddressWriteEnable: true`; all refusals come before
+  a tunnel opens.
+- Simulator models the property; its bit 2 now decides whether an MP §2.5
+  serial-number write takes. 9 procedure tests, 5 route tests.
+- Open: Settings panel Debug toggle (web lock); no hardware run.
+
 ## 2026-09-30 — cEMI frames keep their priority, repeat flag and hop count
 
 - `LDataFrame::control: Option<FrameControl>` (`crates/knx-net/src/cemi.rs`):

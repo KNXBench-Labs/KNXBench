@@ -40,6 +40,7 @@ mod address_programming_routes;
 mod debug_report_routes;
 mod domain;
 mod serial_address_routes;
+mod service_control_routes;
 pub use domain::*;
 
 mod errors;
@@ -155,6 +156,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(address_programming_routes::address_programming_routes())
         .merge(serial_address_routes::serial_address_routes())
+        .merge(service_control_routes::service_control_routes())
         .merge(debug_report_routes::debug_report_routes())
         .merge(settings_routes::settings_routes())
         // Deliberately not in `routes::project_routes()`: this answers for

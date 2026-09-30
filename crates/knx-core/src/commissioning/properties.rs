@@ -35,6 +35,33 @@ pub const PID_RUN_STATE_CONTROL: u8 = 6;
 /// memory and zeroes `PID_TABLE_REFERENCE`."*
 pub const PID_TABLE_REFERENCE: u8 = 7;
 
+/// `PID_SERVICE_CONTROL`: RES §4.2.8, p. 31, *"a permanent control field
+/// for the device"*, `PDT_UNSIGNED_INT` (two octets). Its bits are
+/// [`SERVICE_CONTROL_IA_WRITE_ENABLE`] and others this project never
+/// touches.
+///
+/// `[D]` `03_05_01 Resources` §4.2.8 heading *"PID_SERVICE_CONTROL
+/// (PID = 8)"*, Table 10.
+pub const PID_SERVICE_CONTROL: u8 = 8;
+
+/// Bit 2 of [`PID_SERVICE_CONTROL`], *"Individual Address Write Enable"*,
+/// `0 = disable (d)`, `1 = enable`.
+///
+/// `[D]` RES §4.2.8 Table 10 and the text beneath it: *"This bit shall
+/// control the possibility to set the Individual Address via programming
+/// mode or KNX Serial Number services. If this bit is cleared, it shall not
+/// be possible to change the Individual Address of the device."* Mask
+/// `0021h` codes it inversely (same clause); callers must refuse that mask
+/// rather than use this constant on it. Profiles A.2.3.1 makes the bit
+/// optional for mask `0701h`.
+pub const SERVICE_CONTROL_IA_WRITE_ENABLE: u16 = 0x0004;
+
+/// The one mask whose Individual Address Write Enable bit is inverted.
+///
+/// `[D]` RES §4.2.8: *"Mask 0021h implementations shall have inverse coding
+/// for this bit: 0 = enable, 1 = disable"*.
+pub const SERVICE_CONTROL_INVERTED_MASK: u16 = 0x0021;
+
 /// `PID_MANUFACTURER_ID`, the guard of design spec §7.1 step 04.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row

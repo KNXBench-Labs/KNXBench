@@ -1,4 +1,28 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 15:30 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit (the Debug toggle needs it).
+- **Completed:** K12 follow-up, user decision 2026-09-30 (ADR-0051):
+  `PID_SERVICE_CONTROL` bit 2 "Individual Address Write Enable" stays never
+  set automatically, but is now an opt-in debug action.
+  `crates/knx-net/src/commissioning/service_control.rs` (read; bit-2-only
+  read-modify-write, exact read-back; mask `0021h` / missing property
+  refused), `WriteScope::IndividualAddressWriteEnable` (own phrase, allowed
+  on hardware), `apps/knx-server/src/service_control_routes.rs`
+  (`GET`/`POST /api/device/service-control`, 403 unless settings
+  `debugIndividualAddressWriteEnable: true`). Simulator models the property.
+  9 + 5 tests. No bus traffic.
+- **Pending/Next Steps:** UI session (with web lock): Settings panel "Debug"
+  section with the `debugIndividualAddressWriteEnable` toggle (default off,
+  warning text), and a device action calling the route with the typed
+  phrase. Hardware run on `1.1.67` only with an explicit user go; clear the
+  bit back afterwards (`enable: false`).
+- **Notes for Codex oder Claude:** The server reads the key from the opaque
+  settings map under `settings_lock`; only `true` (JSON bool) opens it. The
+  HTTP routes take no access key (project key only), like downloads.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 14:30 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** KNOWN_LIMITATIONS §147 lifted. `LDataFrame::control: Option<FrameControl>` (priority, repeat, ack request, hop count) in `crates/knx-net/src/cemi.rs`; decoder fills it (`None` = encoder defaults), encoder writes it, hop count > 7 refused (`CemiError::InvalidHopCount`). `TransmissionPriority::from_bits` in knx-core. All 54 existing frame literals got `control: None` and send identical octets (§105 defaults pinned). Private capture: 71/71 re-encode whole. 11 mutants caught.

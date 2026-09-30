@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — `knx device service-control` (ADR-0051 on the CLI)
+
+- `apps/knx-cli/src/device_service_control.rs`: reads `PID_SERVICE_CONTROL`
+  bit 2 (`--gateway`), or changes only that bit with `--enable`/`--disable`
+  and the phrase `I confirm individual-address write enable to <address>`.
+  Without the phrase: a plan, no socket. `--key-file` as for downloads.
+  Address, exclusion list and phrase are checked before a tunnel opens.
+- 7 unit tests (simulator); 10 mutants, all caught after two tests were
+  added for survivors. Binary checked for plan, wrong phrase (exit 1) and
+  excluded address (exit 1). No bus traffic.
+
 ## 2026-09-30 — `POST /api/device-compare`: the read-only compare over HTTP
 
 - `knx device compare` as a route: `{ address, gateway, partial? }` →

@@ -8883,8 +8883,11 @@ the bit on its own. It can now be set explicitly as an opt-in debug action:
 `debugIndividualAddressWriteEnable: true`), own scope and phrase
 `I confirm individual-address write enable to <address>`, bit 2 only,
 read-back checked, mask `0021h` and a missing property refused by name.
-Simulator- and route-tested; **not run on hardware**. The Settings panel's
-Debug toggle waits for the web lock.
+CLI: `knx device service-control <a.l.d> --gateway <host:port>` reads the
+bit; `--enable`/`--disable` with the scope's `--confirm` phrase changes it,
+and without the phrase prints a plan and opens no socket.
+Simulator-, route- and CLI-tested; **not run on hardware**. The Settings
+panel's Debug toggle waits for the web lock.
 
 **Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
 and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the

@@ -1,3 +1,12 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 17:56 CEST
+- **Web lock:** held by Codex for U12 ADR-0051 (17:51 entry below); this handover made no Web-code edits and did not claim the lock.
+- **Completed:** Read-only inventory of programming/download actions and UI status. Detailed handover at `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`: global activity/status bar, one line per action, partial-download scope selector, K13 recovery, serial address, Debug Bit 2, readiness and read-only device compare. An uncommitted server-route prototype was discarded: it could reset addresses without first guaranteeing a complete persistent pre-write backup. No hardware access or Web-code changes.
+- **Pending/Next Steps:** Design and test a backup-gated server workflow before exposing K13 reset or other risky write actions via HTTP. Agree on one cross-route activity contract; after Codex releases the Web lock, explicitly take it before implementing the status bar, action history and scoped UI panels listed in the log. K14 remains blocked.
+- **Notes for Codex oder Claude:** The log is a requirements handover, not a claim that HTTP reset or the global activity endpoint exists. Do not call the K13 CLI's manual pre-backup procedure an HTTP safety guarantee. Never guess an access key or contact excluded `1.1.220`. No K13/K14/live-bus permission carries over to future UI tests.
+
+---
+
 - **Last Agent:** codex (UI U12 / ADR-0051 lock)
 - **Timestamp:** 2026-09-30 17:51 CEST
 - **Web lock:** taken by the UI session for U12 ADR-0051 Debug toggle and device service-control view.
@@ -22,15 +31,6 @@
 - **Completed:** Claimed the free web surface from `origin/main` in an isolated worktree; no UI code has changed yet.
 - **Pending/Next Steps:** Display the existing `channel.name` and `channel.number` verbatim without composing or translating them; test, review, gate and publish this package, then release the lock.
 - **Notes for Codex oder Claude:** The root checkout's foreign edits are protected. No live KNX operation belongs to this UI-only package. Preserve all other handover entries.
-
----
-
-- **Last Agent:** Claude
-- **Timestamp:** 2026-09-30 17:42 CEST
-- **Web lock:** not taken; no `apps/knx-web` edits. UI session's release is recorded in the 16:46 Codex entry below; next Web package must take the lock explicitly.
-- **Completed:** Read-only inventory of programming/download actions and UI status. Detailed handover at `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`: global activity/status bar, one line per action, partial-download scope selector, K13 recovery, serial address, Debug Bit 2, readiness and read-only device compare. An uncommitted server-route prototype was discarded: it could reset addresses without first guaranteeing a complete persistent pre-write backup. No hardware access or Web-code changes.
-- **Pending/Next Steps:** Design and test a backup-gated server workflow before exposing K13 reset or other risky write actions via HTTP. Agree on one cross-route activity contract, then have the UI session explicitly acquire the Web lock and implement the status bar, action history and the scoped UI panels listed in the log. K14 remains blocked.
-- **Notes for Codex oder Claude:** The log is a requirements handover, not a claim that HTTP reset or the global activity endpoint exists. Do not call the K13 CLI's manual pre-backup procedure an HTTP safety guarantee. Never guess an access key or contact excluded `1.1.220`. No K13/K14/live-bus permission carries over to future UI tests.
 
 ---
 

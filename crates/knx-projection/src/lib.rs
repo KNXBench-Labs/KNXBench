@@ -620,6 +620,24 @@ pub struct ComObjectNode {
     /// Not yet in the TypeScript bindings; see `activation`.
     #[ts(skip)]
     pub channel: Option<ComObjectChannel>,
+    /// The application program's datapoint type for an object whose own
+    /// `DatapointType` is stated empty (ADR-0027's program default). `None`
+    /// whenever `dpt` is the value to show, and when the program has none.
+    /// Never exported: an empty slot stays empty in the file (ISSUE-08).
+    #[ts(skip)]
+    pub program_dpt: Option<String>,
+    /// The display text of the datapoint type the object shows: `dpt`, or
+    /// `program_dpt` when `dpt` is `None`. In the requested language when
+    /// the master data translates it. The canonical id stays in `dpt`/
+    /// `program_dpt`. Server-only: [`build_device_detail`] leaves it `None`.
+    #[ts(skip)]
+    pub dpt_text: Option<String>,
+    /// The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
+    /// the requested language when translated, module arguments of the
+    /// object's own module instance substituted. The main-function label
+    /// ETS shows next to the name (ISSUE-08). Server-only, like `dpt_text`.
+    #[ts(skip)]
+    pub function_text: Option<String>,
 }
 
 /// [`ComObjectNode::activation`]: the evaluated state, or why there is none.
@@ -723,6 +741,15 @@ fn build_device_product_node(device: &knx_core::DeviceInstance) -> DeviceProduct
 fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -> ComObjectNode {
     let name = resolved_text(project, &com.text);
     let dpt = com.dpt.value().map(|resolved| resolved.value.to_string());
+    let program_dpt = if dpt.is_none() {
+        project
+            .devices
+            .program_defaults(com.id)
+            .and_then(|defaults| defaults.dpt.as_ref())
+            .map(|resolved| resolved.value.to_string())
+    } else {
+        None
+    };
     let dpt_layer = com.dpt.layer().map(|layer| format!("{layer:?}"));
     let description = resolved_text(project, &com.description);
     let description_layer = com.description.layer().map(|layer| format!("{layer:?}"));
@@ -749,6 +776,9 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
             .collect(),
         activation: ComObjectActivation::NotEvaluated,
         channel: None,
+        program_dpt,
+        dpt_text: None,
+        function_text: None,
     }
 }
 
@@ -1118,6 +1148,56 @@ mod tests {
         assert!(com.is_active);
         assert!(!com.read); // ResolvedFlags::none() sets nothing
         assert!(com.links.is_empty());
+    }
+
+    #[test]
+    fn an_empty_dpt_slot_shows_the_program_default_beside_it_not_in_it() {
+        let mut project = project_with_one_device();
+        let id = knx_core::ComObjectInstanceId(1);
+        project.devices.com_object_mut(id).unwrap().dpt = knx_core::Override::Empty;
+        project.devices.set_program_defaults(
+            id,
+            knx_core::ProgramDefaults {
+                dpt: Some(knx_core::Resolved {
+                    value: DptRef {
+                        main: 5,
+                        sub: Some(1),
+                    },
+                    layer: knx_core::Layer::Program,
+                }),
+                ..Default::default()
+            },
+        );
+        let com = &build_device_detail(&project, knx_core::DeviceId(1))
+            .unwrap()
+            .com_objects[0];
+        assert_eq!(com.dpt, None, "the empty slot stays empty");
+        assert_eq!(com.program_dpt.as_deref(), Some("DPST-5-1"));
+        assert_eq!((&com.dpt_text, &com.function_text), (&None, &None));
+    }
+
+    #[test]
+    fn a_stated_dpt_hides_the_program_default() {
+        let mut project = project_with_one_device();
+        let id = knx_core::ComObjectInstanceId(1);
+        project.devices.set_program_defaults(
+            id,
+            knx_core::ProgramDefaults {
+                dpt: Some(knx_core::Resolved {
+                    value: DptRef {
+                        main: 5,
+                        sub: Some(1),
+                    },
+                    layer: knx_core::Layer::Program,
+                }),
+                ..Default::default()
+            },
+        );
+        let com = &build_device_detail(&project, knx_core::DeviceId(1))
+            .unwrap()
+            .com_objects[0];
+        assert_eq!(com.dpt.as_deref(), Some("DPST-1-1"));
+        assert_eq!(com.program_dpt, None);
     }
 
     #[test]

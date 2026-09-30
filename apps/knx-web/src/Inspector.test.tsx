@@ -19,6 +19,10 @@ const apiMock = vi.hoisted(() => ({
   }),
   moveDeviceToLine: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
+  setComObjectFlag: vi.fn(),
+  linkComObject: vi.fn(),
+  unlinkComObject: vi.fn(),
+  setIndividualAddress: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -123,6 +127,12 @@ async function renderInspector(
   return onApplied;
 }
 
+function setTextInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function deviceMoveTree(): ProjectTree {
   const device = {
     id: 42,
@@ -168,6 +178,15 @@ function deviceDetail(): DeviceDetail {
     com_objects: [],
     product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" },
   };
+}
+
+function detailWithComObject(links: DeviceDetail["com_objects"][number]["links"] = []): DeviceDetail {
+  return { ...deviceDetail(), com_objects: [{
+    id: 7, number: 1, name: "Switch actuator output", dpt: "DPST-1-1", dpt_layer: null,
+    description: null, description_layer: null, is_active: true,
+    read: false, write: true, transmit: false, update: false,
+    communication: true, read_on_init: false, links,
+  }] };
 }
 
 describe("Inspector — collapsed delete-restriction message", () => {
@@ -248,5 +267,231 @@ describe("Inspector — structural move keyboard equivalent", () => {
     expect(apiMock.moveDeviceToBuildingPart).toHaveBeenCalledWith(42, 501);
     expect(onApplied).toHaveBeenCalledTimes(2);
     expect(onApplied).toHaveBeenCalledWith(nextTree);
+  });
+});
+
+describe("Inspector — readable KNX communication flags (ISSUE-09)", () => {
+  it.each([
+    ["en", ["Read", "Write", "Transmit", "Update", "Communication", "Read on init"]],
+    ["de", ["Lesen", "Schreiben", "Übertragen", "Aktualisieren", "Kommunikation", "Lesen bei Initialisierung"]],
+  ])("shows the standard letters and the %s flag names without hiding them in hover tips", async (language, names) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const nextTree = deviceMoveTree();
+    apiMock.setComObjectFlag.mockResolvedValue(nextTree);
+    await renderInspector({ kind: "device", id: 42 }, nextTree, detailWithComObject());
+    const labels = Array.from(host!.querySelectorAll<HTMLElement>(".com-object-flags label"));
+    expect(labels.map((label) => label.querySelector(".flag-code")?.textContent)).toEqual(["R", "W", "T", "U", "C", "I"]);
+    expect(labels.map((label) => label.querySelector(".flag-name")?.textContent)).toEqual(names);
+    await act(async () => labels[0].querySelector("input")!.click());
+    expect(apiMock.setComObjectFlag).toHaveBeenCalledWith(7, "Read", true);
+  });
+});
+
+describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
+  it("offers Both as one request while keeping Send and Receive choices", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    apiMock.linkComObject.mockResolvedValue(tree);
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
+    const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
+    const selects = row.querySelectorAll<HTMLSelectElement>("select");
+    expect(Array.from(selects[1].options).map((option) => option.value)).toEqual(["Send", "Receive", "Both"]);
+    await act(async () => {
+      selects[0].value = "9";
+      selects[0].dispatchEvent(new Event("change", { bubbles: true }));
+      selects[1].value = "Both";
+      selects[1].dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => row.querySelector("button")!.click());
+    expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
+    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Both");
+    expect(onApplied).toHaveBeenCalledWith(tree);
+  });
+
+  it("reports a refused paired link without refreshing or retrying a partial result", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    apiMock.linkComObject.mockRejectedValueOnce(new Error("Receive is already linked"));
+    const onApplied = await renderInspector(
+      { kind: "device", id: 42 },
+      tree,
+      detailWithComObject([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Receive" }]),
+    );
+    const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
+    const selects = row.querySelectorAll<HTMLSelectElement>("select");
+    await act(async () => {
+      selects[0].value = "9";
+      selects[0].dispatchEvent(new Event("change", { bubbles: true }));
+      selects[1].value = "Both";
+      selects[1].dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await act(async () => row.querySelector("button")!.click());
+    expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
+    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Both");
+    expect(row.querySelector(".field-error")?.textContent).toContain("Receive is already linked");
+    expect(host!.querySelectorAll(".group-link-row")).toHaveLength(1);
+    expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it("offers one atomic unlink-both action beside separate directional unlink buttons", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    apiMock.unlinkComObject.mockResolvedValue(tree);
+    const links = [
+      { ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Send" },
+      { ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Receive" },
+    ];
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject(links));
+    expect(host!.querySelectorAll(".group-link-row")).toHaveLength(2);
+    const unlinkBoth = host!.querySelector<HTMLButtonElement>(".group-link-row .unlink-both")!;
+    expect(unlinkBoth?.textContent).toBe("Unlink both");
+    await act(async () => unlinkBoth.click());
+    expect(apiMock.unlinkComObject).toHaveBeenCalledTimes(1);
+    expect(apiMock.unlinkComObject).toHaveBeenCalledWith(7, 9, "Both");
+    expect(onApplied).toHaveBeenCalledWith(tree);
+    const single = host!.querySelector<HTMLButtonElement>(".group-link-row button:not(.unlink-both)")!;
+    await act(async () => single.click());
+    expect(apiMock.unlinkComObject).toHaveBeenLastCalledWith(7, 9, "Send");
+  });
+});
+
+describe("Inspector — line-bound physical address (ISSUE-09)", () => {
+  it("keeps area and line read-only while saving only an edited device octet as a full address", async () => {
+    const tree = deviceMoveTree();
+    const detail = { ...deviceDetail(), address: "1.1.12" };
+    apiMock.setIndividualAddress.mockResolvedValue(tree);
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detail);
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    const prefix = field.querySelector<HTMLElement>(".address-prefix")!;
+    expect(prefix.textContent).toBe("1.1.");
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    expect(prefix.getAttribute("aria-hidden")).toBeNull();
+    expect(input.getAttribute("aria-describedby")).toBe(prefix.id);
+    expect(prefix.id).toBe("device-address-prefix-42");
+    expect(input.value).toBe("12");
+    await act(async () => setTextInputValue(input, "17"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledWith(42, "1.1.17");
+    expect(onApplied).toHaveBeenCalledWith(tree);
+  });
+
+  it("rejects non-device numbers and coupler-only zero before contacting the API", async () => {
+    const tree = deviceMoveTree();
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    for (const bad of ["256", "0", "1.2", "-1"]) {
+      await act(async () => setTextInputValue(input, bad));
+      await act(async () => {
+        input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(field.querySelector(".field-error")?.textContent).toBeTruthy();
+      expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
+    }
+  });
+
+  it("preserves the full-address editor for unassigned devices, including clearing", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].unassigned = tree.installations[0].topology[0].lines[0].devices.splice(0);
+    apiMock.setIndividualAddress.mockResolvedValue(tree);
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, { ...deviceDetail(), address: "2.3.7" });
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.querySelector(".address-prefix")).toBeNull();
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    expect(input.value).toBe("2.3.7");
+    await act(async () => setTextInputValue(input, ""));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledWith(42, null);
+    expect(onApplied).toHaveBeenCalledWith(tree);
+  });
+
+  it("shows an imported mismatch without silently rewriting it on blur", async () => {
+    const tree = deviceMoveTree();
+    apiMock.setIndividualAddress.mockResolvedValue(tree);
+    await renderInspector({ kind: "device", id: 42 }, tree, { ...deviceDetail(), address: "2.3.9" });
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.textContent).toContain("2.3.9");
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    await act(async () => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+    expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
+    await act(async () => setTextInputValue(input, "17"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledWith(42, "1.1.17");
+  });
+
+  it("reports a duplicate address without applying or forgetting the original", async () => {
+    const tree = deviceMoveTree();
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, { ...deviceDetail(), address: "1.1.12" });
+    apiMock.setIndividualAddress.mockRejectedValueOnce(new Error("individual address 1.1.17 already used"));
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(input, "17"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledWith(42, "1.1.17");
+    expect(field.querySelector(".field-error")?.textContent).toContain("already used");
+    expect(input.value).toBe("12");
+    expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it("uses the line in the owning installation, not the first installation", async () => {
+    const tree = twoInstallationTree();
+    const area = deviceMoveTree().installations[0].topology[0];
+    area.address = 2;
+    area.lines[0].address = 3;
+    tree.installations[1].topology = [area];
+    apiMock.setIndividualAddress.mockResolvedValue(tree);
+    await renderInspector({ kind: "device", id: 42 }, tree, { ...deviceDetail(), address: "2.3.9" });
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.querySelector(".address-prefix")?.textContent).toBe("2.3.");
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(input, "18"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledWith(42, "2.3.18");
+  });
+
+  it("disables the address editor when a device is both on a line and unassigned", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].unassigned.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.querySelector<HTMLInputElement>("input")!.disabled).toBe(true);
+    expect(field.querySelector(".field-error")?.textContent).toContain("no unambiguous owning area and line");
+    expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
+  });
+
+  it("disables the address editor for a repeated device reference in one line", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].topology[0].lines[0].devices.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.querySelector<HTMLInputElement>("input")!.disabled).toBe(true);
+    expect(field.querySelector(".field-error")?.textContent).toContain("no unambiguous owning area and line");
+    expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
+  });
+
+  it("refuses to guess when the tree lists a device on two lines", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].topology[0].lines[1].devices.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    expect(field.querySelector<HTMLInputElement>("input")!.disabled).toBe(true);
+    expect(field.querySelector(".field-error")?.textContent).toContain("no unambiguous owning area and line");
+    expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
   });
 });

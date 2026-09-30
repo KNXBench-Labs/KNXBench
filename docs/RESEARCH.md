@@ -6111,6 +6111,59 @@ device still needs full-address editing. A line move is a separate intent and
 must not silently rewrite the address; reject or explicitly resolve a
 mismatch. U11/ISSUE-09 owns the tests and implementation, not U2's research.
 
+**[D]** Rechecked 2026-09-29 against the KNX Association's public
+[Project Schema23 v01.00.00](https://support.knx.org/hc/en-us/article_attachments/17389755651474),
+§1.2.4–1.2.5 (PDF pp. 40–44): assigned devices sit under an Area/Line/Segment,
+with area and line addresses in [0…15] and the device `@Address` in [0…255].
+The Association's [offline project check](https://support.knx.org/hc/en-us/articles/360019116959-Project-check-Offline)
+distinguishes a device-octet 0 **on a coupler** from a non-coupler using
+`device.IsCoupler`; only the latter is rejected as reserved. **[V]** The
+normalized `DeviceInstance` has no verified coupler classification, so a
+generic editor cannot infer that special-case permission from the number
+alone. **[A]** Fail closed for *new* device-octet-0 assignments to a line;
+preserve an imported existing `.0` without silently changing it. A future
+coupler-specific editor needs a normalized, evidenced coupler discriminator.
+For nonzero octets, reconstruct the complete area.line.device address in the
+UI and validate it again in the core; moving a device whose existing address
+belongs to another line must refuse without rewriting it. This is an
+independent KNXBench editing policy, not a claim about an ETS control.
+
+**[V] U11 implementation (2026-09-29).**
+`knx-core/src/command.rs::SetIndividualAddress` now checks the containing
+line prefix and rejects a new unclassifiable `.0` address; duplicate address
+checks remain global. `MoveDeviceToLine` validates the existing address
+*before* changing topology and refuses a mismatched prefix rather than
+silently readdressing. A line attached to two areas or a device occupying
+multiple topology positions (two lines, repeated references in one line,
+a line and unassigned, or duplicate unassigned entries) also fails before mutation: neither core nor UI may
+pick an arbitrary first owner or let a move leave duplicate placements.
+An internal `RestoreIndividualAddress` undo command preserves imported `.0`
+or mismatched addresses verbatim, and `knx-store/src/command_sync.rs`
+persists that inverse edit to the device row. Core, storage and HTTP
+regressions exercise successful, failed and undo cases. The core scans
+**all installations** for a device's placements;
+`later_installation_line_owns_the_device_address_prefix` catches a
+first-installation-only address regression, and the mixed-placement
+regressions catch a formerly accepted partial move. The inspector obtains
+the prefix from the owning installation's topology, accepts only a 1–255 device number, and
+shows imported mismatches without hiding the original. The existing
+line-move command still edits only the first installation; this new address
+display does not change that ownership boundary. A browser layout regression
+covers both languages at 360/640/1440 px using Vite plus a mocked API, never
+live KNX.
+
+**[V] U11 ordered group-link undo (2026-09-30).** A batch that removed
+the first of several links and then failed on a missing second direction
+previously rolled back by appending the first link. The link set was intact,
+but its order changed. `UnlinkComObject` now returns an undo-only
+`RestoreGroupLink` carrying the removed link and its original index; the
+inverse validates that index before inserting and deliberately preserves
+imported duplicates or dangling links. `command.rs` regressions cover failed
+paired unlink, exact undo/redo order, imported duplicates and invalid index;
+a deliberate append-only mutation made the order regression fail. This is
+an in-memory command-order guarantee, not a new claim about ETS link ordering
+or incremental group-link storage (which remains unimplemented).
+
 ---
 
 ## 21. U7 bus-monitor decoding and bounded snapshots (2026-09-29)

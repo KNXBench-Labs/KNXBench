@@ -29,6 +29,50 @@
   (`LsmIdx 5`, the same refusal as a download). 1.1.220 is refused as
   excluded. Nothing was written.
 
+## 2026-09-30 — U11 / ISSUE-09 device editor (branch verification)
+
+- The Inspector shows KNX flag letters **and** full English/German names in a
+  compact 2×3 layout. Its group-link control adds Send + Receive as one
+  request backed by one atomic `Command::Batch`, and can remove the pair in
+  one undo step without losing the separate directions. A late duplicate
+  rolls back the entire batch; a missing direction on paired unlink now
+  restores even the original ordering of interleaved links, and undo/redo
+  retains imported duplicates. The existing Send/Receive API remains valid.
+- For a line-bound device, the read-only area.line prefix comes from the
+  owning installation and is described to assistive technology. Only the
+  device number is editable (1–255); the core rechecks full-address
+  uniqueness, area/line membership and the new `.0` refusal. Malformed
+  multiple-line, multiple-area or duplicate placements (line + unassigned,
+  repeated references within one line, or two unassigned entries) are
+  refused rather than guessed. An imported prefix mismatch or `.0` remains
+  intact until an explicit edit,
+  and `RestoreIndividualAddress` preserves it through undo and incremental
+  storage sync. Moving a device never silently readdresses it: clear its
+  address first, then move, then assign one under the target line.
+- Focused core tests: 614 passed; storage: 80 passed; the full HTTP
+  edit-route suite: 19 passed, including line-address repair/undo and paired
+  links. The 78-file web suite passed 1,213 tests (Inspector 24) with
+  TypeScript and production build green; six Chromium EN/DE layout checks
+  passed at 360/640/1440 px on a local Vite/mock fixture. Mixed
+  line/unassigned and cross-installation unassigned regressions were RED
+  before the guard and GREEN after it; disabling the repeated-line guard
+  made both core and UI regressions fail. The paired-unlink order regression
+  was RED before indexed restoration; replacing it with append-only undo
+  made it RED again, and the restored implementation passed. Earlier
+  mutations also caught removed area-owner, line-membership, prefix,
+  zero-octet, later-installation, move-preflight, UI ambiguous-owner and
+  narrow-tab guards. The final branch gate passed fmt, strict Clippy,
+  125 Rust suites / 2,588 passed / 0 failed / 148 ignored / 0 corpus-skip
+  notices, plus four `xtask` checks: layering, headers (311 well formed,
+  161 headerless at ceiling), anchors (397 links / 215 Markdown files,
+  none dead) and corpus-gate integrity. The merged-result gates remain
+  before publication.
+- Sources and scope: `docs/RESEARCH.md` §20.2; `docs/KNOWN_LIMITATIONS.md`
+  U11 device-editor section. Later installations can show an address editor,
+  but line moves still target the first installation. This is an offline
+  project edit, **not** a device write, native WebKitGTK test, screen-reader
+  run or ETS-compatibility claim.
+
 ## 2026-09-29 — ISSUE-08 data half, P2: each object's evaluated activation and channel
 
 - `ComObjectNode` gains `activation` (`Active`/`Inactive`/`Undetermined`/

@@ -266,6 +266,11 @@ export const messages: Record<MessageKey, string> = {
   "toast.lateNight.busLineClocksOut": "Die Linie macht Feierabend. Du offenbar nicht.",
 
   "inspector.address": "Adresse",
+  "inspector.address.deviceOctet": "Gerätenummer",
+  "inspector.address.invalidDevice": "Eine Gerätenummer von 1 bis 255 eingeben.",
+  "inspector.address.couplerOnly": "Gerätenummer 0 ist Kopplern vorbehalten; ohne gesicherte Kopplerkennung kann sie hier nicht vergeben werden.",
+  "inspector.address.ambiguous": "Adresse nicht bearbeitbar: Das Gerät hat keinen eindeutigen Bereich und keine eindeutige Linie.",
+  "inspector.address.mismatch": "Gespeicherte Adresse {address} passt nicht zur zugeordneten Linie {line}. Sie bleibt unverändert, bis du die Gerätenummer bearbeitest.",
   "inspector.description": "Beschreibung",
   "inspector.dpt": "DPT",
   // The German ETS's own flag names, not a fresh translation of the
@@ -279,7 +284,9 @@ export const messages: Record<MessageKey, string> = {
   "inspector.comFlag.readOnInit": "Lesen bei Initialisierung",
   "inspector.direction.send": "Senden",
   "inspector.direction.receive": "Empfangen",
+  "inspector.direction.both": "Senden + Empfangen (ein Vorgang)",
   "inspector.unlink": "Trennen",
+  "inspector.unlinkBoth": "Beide lösen",
   "inspector.chooseGroupAddress": "(Gruppenadresse wählen)",
   "inspector.link": "Verknüpfen",
   "inspector.line": "Linie",

@@ -497,6 +497,31 @@ main {
   margin-top: 0.25rem;
 }
 
+/* The line-owned address prefix is fixed topology, not a second editable
+   field. Keep its device octet and any repair warning inside the inspector. */
+.individual-address-field .address-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.individual-address-field .address-prefix {
+  flex: none;
+  font-family: var(--knx-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.individual-address-field .address-editor input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+}
+.individual-address-field small {
+  max-width: 100%;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .field-error {
   display: block;
   color: var(--knx-error-color);
@@ -565,19 +590,24 @@ main {
 }
 
 .com-object-flags {
-  display: flex;
-  gap: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
   margin: 0.35rem 0;
-  font-family: var(--knx-font-mono);
   font-size: 0.85em;
 }
 
+.com-object-flags > .help-tip { grid-column: 1 / -1; justify-self: start; }
 .com-object-flags label {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.3rem;
+  min-width: 0;
   cursor: pointer;
 }
+.com-object-flags .flag-code { font-family: var(--knx-font-mono); font-weight: 700; }
+.com-object-flags .flag-name { overflow-wrap: anywhere; }
 
 .provenance-badge {
   display: inline-block;
@@ -2364,8 +2394,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .identity-more > summary { transition: color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing); }
 }
 .identity-group { margin-top: 14px; }
-.device-tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
-.device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; }
+.device-tabs { display: flex; flex-wrap: wrap; gap: 4px 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
+.device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; }
 .device-tabs button[aria-selected="true"] { color: var(--knx-accent) !important; border-bottom: 2px solid var(--knx-accent); }
 .device-workspace .com-object-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--knx-border); border-radius: 6px; overflow: hidden; }
 .device-workspace .com-object-list > li { padding: 0; margin: 0; border-bottom: 1px solid var(--knx-border); }
@@ -2374,7 +2404,18 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-summary:hover { background: color-mix(in srgb, var(--knx-accent) 8%, transparent); }
 .com-object-detail[open] > summary { background: color-mix(in srgb, var(--knx-accent) 12%, transparent); }
 .com-object-edit-fields { padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
-.com-object-edit-fields .group-link-list { flex-basis: 100%; }
+.com-object-edit-fields .group-link-list {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Nested links are flex children of a narrow editor: their intrinsic text
+   width must not force the entire list (or a translated button) off-screen. */
+.com-object-edit-fields .group-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.com-object-edit-fields .group-link-row > span { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.com-object-edit-fields .group-link-row > button { max-width: 100%; white-space: normal; }
 @media (max-width: 650px) { .com-object-summary { grid-template-columns: 24px 1fr; } }
 .workbench .tree-label, .workbench .tree-toggle { background: transparent; color: var(--knx-foreground) !important; border: 0; box-shadow: none; font-weight: 400; text-align: left; white-space: normal; }
 .workbench .tree-toggle { padding: 0; min-width: 18px; flex: 0 0 18px; }

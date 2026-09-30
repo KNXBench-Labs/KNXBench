@@ -85,42 +85,102 @@ function restrictedToFirstInstallationMessage(
   });
 }
 
-function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
-  const { detail, onApplied } = props;
+// ProjectTree nests lines under their owning areas. A device listed in
+// multiple topology positions (including unassigned + line) or under a
+// malformed area has no trustworthy address prefix.
+function addressLineContext(tree: ProjectTree, deviceId: number):
+  | { kind: "assigned"; area: number; line: number }
+  | { kind: "unassigned" | "ambiguous" } {
+  let found: { kind: "assigned"; area: number; line: number } | null = null;
+  let placements = 0;
+  for (const installation of tree.installations) {
+    placements += installation.unassigned.filter((device) => device.id === deviceId).length;
+    for (const area of installation.topology) {
+      for (const line of area.lines) {
+        const occurrences = line.devices.filter((device) => device.id === deviceId).length;
+        if (occurrences === 0) continue;
+        if (occurrences > 1 || found || !Number.isInteger(area.address) || area.address < 0 || area.address > 15
+          || !Number.isInteger(line.address) || line.address < 0 || line.address > 15) {
+          return { kind: "ambiguous" };
+        }
+        found = { kind: "assigned", area: area.address, line: line.address };
+        placements += 1;
+      }
+    }
+  }
+  return placements > 1 ? { kind: "ambiguous" } : found ?? { kind: "unassigned" };
+}
+
+function AddressField(props: { detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void }) {
+  const { detail, tree, onApplied } = props;
   const t = useTranslate();
-  const [value, setValue] = useState(detail.address ?? "");
+  const context = addressLineContext(tree, detail.id);
+  const prefix = context.kind === "assigned" ? `${context.area}.${context.line}.` : null;
+  const current = detail.address ?? "";
+  const initial = prefix && detail.address ? detail.address.split(".").at(-1) ?? "" : current;
+  const [value, setValue] = useState(initial);
+  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setValue(detail.address ?? "");
+    setValue(initial);
+    setDirty(false);
     setError(null);
-  }, [detail.address]);
+  }, [detail.id, initial, prefix]);
 
   async function apply() {
-    const current = detail.address ?? "";
-    if (value === current) return;
+    if (!dirty || context.kind === "ambiguous") return;
+    let address: string | null = value === "" ? null : value;
+    if (prefix && address !== null) {
+      if (!/^\d{1,3}$/.test(address) || Number(address) > 255) {
+        setError(t("inspector.address.invalidDevice"));
+        return;
+      }
+      address = `${prefix}${Number(address)}`;
+      if (address !== current && Number(value) === 0) {
+        setError(t("inspector.address.couplerOnly"));
+        return;
+      }
+    }
+    if ((address ?? "") === current) {
+      setDirty(false);
+      setError(null);
+      return;
+    }
     setError(null);
     try {
-      const tree = await api.setIndividualAddress(detail.id, value === "" ? null : value);
-      onApplied(tree);
+      const result = await api.setIndividualAddress(detail.id, address);
+      setDirty(false);
+      onApplied(result);
     } catch (e) {
       setError(api.errorMessage(e));
-      setValue(current);
+      setValue(initial);
+      setDirty(false);
     }
   }
 
+  const mismatch = prefix !== null && current !== "" && !current.startsWith(prefix);
   return (
-    <label className="inspector-field">
-      {t("inspector.address")}
-      <input
-        value={value}
-        placeholder="1.1.1"
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={apply}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-        }}
-      />
+    <label className="inspector-field individual-address-field">
+      {prefix ? t("inspector.address.deviceOctet") : t("inspector.address")}
+      <span className="address-editor">
+        {prefix && <span className="address-prefix" id={`device-address-prefix-${detail.id}`}>{prefix}</span>}
+        <input
+          value={value}
+          placeholder={prefix ? "1–255" : "1.1.1"}
+          aria-label={prefix ? t("inspector.address.deviceOctet") : t("inspector.address")}
+          aria-describedby={prefix ? `device-address-prefix-${detail.id}` : undefined}
+          inputMode={prefix ? "numeric" : "text"}
+          disabled={context.kind === "ambiguous"}
+          onChange={(e) => { setValue(e.target.value); setDirty(true); setError(null); }}
+          onBlur={apply}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
+      </span>
+      {context.kind === "ambiguous" && <small className="field-error">{t("inspector.address.ambiguous")}</small>}
+      {mismatch && <small className="inspector-description">{t("inspector.address.mismatch", { address: current, line: prefix.slice(0, -1) })}</small>}
       {error && <span className="field-error">{error}</span>}
     </label>
   );
@@ -273,11 +333,8 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
     }
   }
 
-  // `label` (the R/W/T/U/C/I letter) and `name` (`api.ComFlagName`, sent
-  // verbatim to `setComObjectFlag`) are not translatable — the letters are
-  // KNX's own flag abbreviations and `name` is a wire value, not display
-  // text. Only `titleKey` — the tooltip a mouse hover shows — is language
-  // text, so only it gets a catalogue key.
+  // The code letter and API flag name are stable KNX/wire values; the
+  // visible long name and tooltip both use the existing localized key.
   const flags: { label: string; name: api.ComFlagName; titleKey: MessageKey; value: boolean }[] = [
     { label: "R", name: "Read", titleKey: "inspector.comFlag.read", value: com.read },
     { label: "W", name: "Write", titleKey: "inspector.comFlag.write", value: com.write },
@@ -310,7 +367,8 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
             checked={f.value}
             onChange={(e) => toggle(f.name, e.target.checked)}
           />
-          {f.label}
+          <span className="flag-code" aria-hidden="true">{f.label}</span>
+          <span className="flag-name">{t(f.titleKey)}</span>
         </label>
       ))}
       {error && <span className="field-error">{error}</span>}
@@ -334,10 +392,10 @@ function GroupLinkRow(props: {
   const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
-  async function remove() {
+  async function remove(direction: string) {
     setError(null);
     try {
-      const tree = await api.unlinkComObject(com.id, link.ga_id, link.direction);
+      const tree = await api.unlinkComObject(com.id, link.ga_id, direction);
       onApplied(tree);
     } catch (e) {
       setError(api.errorMessage(e));
@@ -351,7 +409,10 @@ function GroupLinkRow(props: {
         <span className="ga-address">{link.address === null ? `#${link.ga_id}` : formatGa(link.address)}</span>
         {link.name ? ` ${link.name}` : ""}
       </span>
-      <button onClick={remove}>{t("inspector.unlink")}</button>
+      <button onClick={() => remove(link.direction)}>{t("inspector.unlink")}</button>
+      {link.direction === "Send" && com.links.some((other) => other.ga_id === link.ga_id && other.direction === "Receive") && (
+        <button className="unlink-both" onClick={() => remove("Both")}>{t("inspector.unlinkBoth")}</button>
+      )}
       {error && <span className="field-error">{error}</span>}
     </li>
   );
@@ -371,7 +432,7 @@ function NewGroupLinkRow(props: {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const [gaId, setGaId] = useState("");
-  const [direction, setDirection] = useState<"Send" | "Receive">("Send");
+  const [direction, setDirection] = useState<"Send" | "Receive" | "Both">("Send");
   const [error, setError] = useState<string | null>(null);
   const canLink = gaId !== "";
 
@@ -399,10 +460,11 @@ function NewGroupLinkRow(props: {
       </select>
       <select
         value={direction}
-        onChange={(e) => setDirection(e.target.value as "Send" | "Receive")}
+        onChange={(e) => setDirection(e.target.value as "Send" | "Receive" | "Both")}
       >
         <option value="Send">{t("inspector.direction.send")}</option>
         <option value="Receive">{t("inspector.direction.receive")}</option>
+        <option value="Both">{t("inspector.direction.both")}</option>
       </select>
       <button onClick={link} disabled={!canLink}>
         {t("inspector.link")}
@@ -812,7 +874,7 @@ function DeviceInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
-      <AddressField detail={detail} onApplied={onApplied} />
+      <AddressField detail={detail} tree={tree} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />

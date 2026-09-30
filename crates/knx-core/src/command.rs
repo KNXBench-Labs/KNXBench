@@ -20,13 +20,13 @@ use crate::parameter::ParameterInstance;
 use crate::project::{IdAllocators, Project};
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
-use crate::topology::{Area, Line};
+use crate::topology::{Area, Line, Topology};
 use crate::validation::{
     check_group_address_in_range, check_group_link_target_exists,
     check_group_range_is_well_ordered, check_group_range_nests_in_parent,
-    check_no_duplicate_area_address, check_no_duplicate_group_address,
-    check_no_duplicate_individual_address, check_no_duplicate_line_address,
-    check_no_overlapping_group_range, ValidationError,
+    check_individual_address_on_line, check_no_duplicate_area_address,
+    check_no_duplicate_group_address, check_no_duplicate_individual_address,
+    check_no_duplicate_line_address, check_no_overlapping_group_range, ValidationError,
 };
 use crate::{GroupAddress, IndividualAddress};
 
@@ -36,6 +36,14 @@ use crate::{GroupAddress, IndividualAddress};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     SetIndividualAddress {
+        device: DeviceId,
+        address: Option<IndividualAddress>,
+    },
+    /// Undo-only restore of a pre-existing imported address, including a
+    /// mismatched line prefix or a coupler address ending in zero. Never
+    /// constructed by an HTTP route: repairs must remain reversible without
+    /// accepting a *new* invalid assignment from the editor.
+    RestoreIndividualAddress {
         device: DeviceId,
         address: Option<IndividualAddress>,
     },
@@ -314,6 +322,15 @@ pub enum Command {
         ga: GroupAddressId,
         direction: Direction,
     },
+    /// Undo-only inverse of an unlink. Preserve the original list position:
+    /// appending during rollback could silently change primary link order.
+    /// Like other restore commands, it also preserves imported duplicate or
+    /// dangling links rather than inventing data during a repair.
+    RestoreGroupLink {
+        com_object: ComObjectInstanceId,
+        link: GroupLink,
+        position: usize,
+    },
     /// Changes the project-wide `GroupAddressStyle` — refused
     /// (`CommandError::GroupAddressDoesNotFitStyle`) if any existing group
     /// address, in any installation, would not fit `style`
@@ -387,6 +404,10 @@ pub enum CommandError {
         com_object: ComObjectInstanceId,
         ga: GroupAddressId,
         direction: Direction,
+    },
+    InvalidGroupLinkPosition {
+        com_object: ComObjectInstanceId,
+        position: usize,
     },
     /// A `SetGroupAddressStyle` was refused because `id`'s raw value does
     /// not survive a round trip through `style`'s own `format`/`parse` pair
@@ -521,6 +542,13 @@ impl fmt::Display for CommandError {
                 f,
                 "communication object {com_object} has no {direction:?} link to group address {ga}"
             ),
+            CommandError::InvalidGroupLinkPosition {
+                com_object,
+                position,
+            } => write!(
+                f,
+                "group link position {position} is invalid while restoring communication object {com_object}"
+            ),
             CommandError::GroupAddressDoesNotFitStyle { id, raw, style } => write!(
                 f,
                 "group address {id} (raw value {raw}) does not fit style {style:?}, refusing the whole restyle"
@@ -586,6 +614,63 @@ fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), Command
     } else {
         Ok(())
     }
+}
+
+/// A malformed topology may attach the same line to two areas. Never let
+/// `Topology::area_of` silently choose the first for an address write.
+fn unique_line_owner(topology: &Topology, line: LineId) -> Result<&Area, CommandError> {
+    let mut owners = topology
+        .areas
+        .iter()
+        .filter(|area| area.lines.contains(&line));
+    let first = owners
+        .next()
+        .ok_or(ValidationError::LineWithoutArea { line })?;
+    if owners.next().is_some() {
+        return Err(ValidationError::LineWithMultipleAreas { line }.into());
+    }
+    Ok(first)
+}
+
+/// Look across all installations before editing an individual address or
+/// moving a device. A malformed import may place it both on a line and in
+/// the unassigned list; choosing just the first placement would turn a move
+/// into a duplicate reference and silently guess an address prefix.
+fn assigned_line_prefix(
+    project: &Project,
+    device: DeviceId,
+) -> Result<Option<(u8, u8)>, CommandError> {
+    let mut assigned = None;
+    let mut placements = 0usize;
+    for installation in &project.installations {
+        placements += installation
+            .topology
+            .unassigned
+            .iter()
+            .filter(|&&candidate| candidate == device)
+            .count();
+        for line in &installation.topology.lines {
+            let occurrences = line
+                .devices
+                .iter()
+                .filter(|&&candidate| candidate == device)
+                .count();
+            if occurrences > 1 {
+                return Err(ValidationError::MultipleTopologyPlacements { device }.into());
+            }
+            if occurrences == 1 {
+                let area = unique_line_owner(&installation.topology, line.id)?;
+                if assigned.replace((area.address, line.address)).is_some() {
+                    return Err(ValidationError::MultipleLineMembership { device }.into());
+                }
+                placements += 1;
+            }
+        }
+    }
+    if placements > 1 {
+        return Err(ValidationError::MultipleTopologyPlacements { device }.into());
+    }
+    Ok(assigned)
 }
 
 /// Removes `device` from wherever it currently sits in `installation`'s
@@ -696,11 +781,31 @@ impl Command {
                     .ok_or(CommandError::DeviceNotFound(device))?
                     .address;
                 if let Some(addr) = address {
+                    if let Some((area, line)) = assigned_line_prefix(project, device)? {
+                        check_individual_address_on_line(
+                            device,
+                            addr,
+                            area,
+                            line,
+                            previous == Some(addr),
+                        )?;
+                    }
                     check_no_duplicate_individual_address(&project.devices, device, addr)?;
                 }
                 project.devices.get_mut(device).unwrap().address = address;
-                Ok(Command::SetIndividualAddress {
+                Ok(Command::RestoreIndividualAddress {
                     device,
+                    address: previous,
+                })
+            }
+            Command::RestoreIndividualAddress { device, address } => {
+                let target = project
+                    .devices
+                    .get_mut(*device)
+                    .ok_or(CommandError::DeviceNotFound(*device))?;
+                let previous = std::mem::replace(&mut target.address, *address);
+                Ok(Command::SetIndividualAddress {
+                    device: *device,
                     address: previous,
                 })
             }
@@ -1093,6 +1198,19 @@ impl Command {
             Command::MoveDeviceToLine { device, line } => {
                 let device = *device;
                 let line = *line;
+                let existing_address = project
+                    .devices
+                    .get(device)
+                    .ok_or(CommandError::DeviceNotFound(device))?
+                    .address;
+                if let (Some(address), Some((area, current_line))) =
+                    (existing_address, assigned_line_prefix(project, device)?)
+                {
+                    // A move must also be undoable. An imported mismatch
+                    // cannot be restored by the inverse Move command; clear
+                    // its address explicitly before changing its placement.
+                    check_individual_address_on_line(device, address, area, current_line, true)?;
+                }
                 let installation = project
                     .installations
                     .first_mut()
@@ -1100,6 +1218,23 @@ impl Command {
                 if let Some(line_id) = line {
                     if !installation.topology.lines.iter().any(|l| l.id == line_id) {
                         return Err(CommandError::LineNotFound(line_id));
+                    }
+                    let area = unique_line_owner(&installation.topology, line_id)?;
+                    if let Some(address) = existing_address {
+                        let target = installation
+                            .topology
+                            .lines
+                            .iter()
+                            .find(|l| l.id == line_id)
+                            .expect("target line was checked above");
+                        let same_line = target.devices.contains(&device);
+                        check_individual_address_on_line(
+                            device,
+                            address,
+                            area.address,
+                            target.address,
+                            same_line,
+                        )?;
                     }
                 }
                 let (previous, _) = remove_device_from_topology(installation, device)?;
@@ -1614,11 +1749,35 @@ impl Command {
                         ga,
                         direction,
                     })?;
-                com.links.remove(pos);
-                Ok(Command::LinkComObject {
+                let link = com.links.remove(pos);
+                Ok(Command::RestoreGroupLink {
                     com_object,
-                    ga,
-                    direction,
+                    link,
+                    position: pos,
+                })
+            }
+            Command::RestoreGroupLink {
+                com_object,
+                link,
+                position,
+            } => {
+                let com = project
+                    .devices
+                    .com_object_mut(*com_object)
+                    .ok_or(CommandError::ComObjectNotFound(*com_object))?;
+                if *position > com.links.len() {
+                    return Err(CommandError::InvalidGroupLinkPosition {
+                        com_object: *com_object,
+                        position: *position,
+                    });
+                }
+                // An inverse restores the exact imported link, even if it
+                // was duplicated or its group address has since gone away.
+                com.links.insert(*position, *link);
+                Ok(Command::UnlinkComObject {
+                    com_object: *com_object,
+                    ga: link.ga,
+                    direction: link.direction,
                 })
             }
             Command::SetGroupAddressStyle { style } => {
@@ -1849,6 +2008,441 @@ mod tests {
             ))
         ));
         assert!(!stack.can_undo());
+    }
+
+    fn line_bound_device(address: Option<IndividualAddress>) -> Project {
+        let mut project = project_with_line_and_unassigned_device();
+        project.installations[0].topology.unassigned.clear();
+        project.installations[0].topology.lines[0]
+            .devices
+            .push(DeviceId(1));
+        project.devices.get_mut(DeviceId(1)).unwrap().address = address;
+        project
+    }
+
+    #[test]
+    fn line_bound_address_rejects_a_different_area_or_line_without_mutation() {
+        let mut project = line_bound_device(Some(IndividualAddress::new(1, 1, 9).unwrap()));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        for address in [
+            IndividualAddress::new(2, 1, 17).unwrap(),
+            IndividualAddress::new(1, 2, 17).unwrap(),
+        ] {
+            let error = stack
+                .do_command(
+                    &mut project,
+                    Command::SetIndividualAddress {
+                        device: DeviceId(1),
+                        address: Some(address),
+                    },
+                )
+                .unwrap_err();
+            assert!(error.to_string().contains("line 1.1"), "{error}");
+            assert_eq!(project, before);
+            assert!(!stack.can_undo());
+        }
+    }
+
+    #[test]
+    fn line_with_two_owning_areas_cannot_pick_an_arbitrary_address_prefix() {
+        let mut project = line_bound_device(Some(IndividualAddress::new(1, 1, 9).unwrap()));
+        let mut duplicate_owner = project.installations[0].topology.areas[0].clone();
+        duplicate_owner.id = AreaId(2);
+        duplicate_owner.address = 2;
+        project.installations[0]
+            .topology
+            .areas
+            .push(duplicate_owner);
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(IndividualAddress::new(1, 1, 17).unwrap()),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("multiple areas"), "{error}");
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn later_installation_line_owns_the_device_address_prefix() {
+        let original = IndividualAddress::new(2, 3, 9).unwrap();
+        let mut project = line_bound_device(Some(original));
+        let mut later = project.installations[0].clone();
+        later.id = InstallationId(99);
+        later.topology.areas[0].id = AreaId(99);
+        later.topology.areas[0].address = 2;
+        later.topology.areas[0].lines = vec![LineId(99)];
+        later.topology.lines[0].id = LineId(99);
+        later.topology.lines[0].address = 3;
+        project.installations[0].topology.lines[0].devices.clear();
+        project.installations.push(later);
+        let mut stack = CommandStack::new();
+        let changed = IndividualAddress::new(2, 3, 18).unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(changed),
+                },
+            )
+            .unwrap();
+        let before_invalid = project.clone();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(IndividualAddress::new(1, 1, 18).unwrap()),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("line 2.3"), "{error}");
+        assert_eq!(project, before_invalid);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(original)
+        );
+    }
+
+    #[test]
+    fn moving_into_a_line_owned_by_two_areas_is_refused_before_mutation() {
+        let mut project = project_with_line_and_unassigned_device();
+        let mut duplicate_owner = project.installations[0].topology.areas[0].clone();
+        duplicate_owner.id = AreaId(2);
+        duplicate_owner.address = 2;
+        project.installations[0]
+            .topology
+            .areas
+            .push(duplicate_owner);
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(1)),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("multiple areas"), "{error}");
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn device_in_two_lines_is_never_assigned_a_guessed_prefix() {
+        let mut project = line_bound_device(Some(IndividualAddress::new(1, 1, 9).unwrap()));
+        project.installations[0].topology.areas[0]
+            .lines
+            .push(LineId(2));
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(2), 2, vec![DeviceId(1)]));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(IndividualAddress::new(1, 1, 17).unwrap()),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("multiple lines"), "{error}");
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn a_device_listed_as_both_line_bound_and_unassigned_cannot_be_readdressed_or_moved() {
+        let original = IndividualAddress::new(1, 1, 9).unwrap();
+        let mut project = line_bound_device(Some(original));
+        project.installations[0]
+            .topology
+            .unassigned
+            .push(DeviceId(1));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        for command in [
+            Command::SetIndividualAddress {
+                device: DeviceId(1),
+                address: Some(IndividualAddress::new(1, 1, 18).unwrap()),
+            },
+            Command::MoveDeviceToLine {
+                device: DeviceId(1),
+                line: None,
+            },
+        ] {
+            let error = stack.do_command(&mut project, command).unwrap_err();
+            assert!(
+                error.to_string().contains("multiple topology placements"),
+                "{error}"
+            );
+            assert_eq!(project, before);
+            assert!(!stack.can_undo());
+        }
+        // Clearing remains a deliberate, undoable repair action.
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: None,
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+    }
+
+    #[test]
+    fn moving_a_device_unassigned_in_two_installations_cannot_leave_a_duplicate_placement() {
+        let mut project = project_with_line_and_unassigned_device();
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(99);
+        second.topology.areas[0].id = AreaId(99);
+        second.topology.areas[0].lines[0] = LineId(99);
+        second.topology.lines[0].id = LineId(99);
+        project.installations.push(second);
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(1)),
+                },
+            )
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("multiple topology placements"),
+            "{error}"
+        );
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn repeated_device_in_one_line_is_not_a_single_valid_placement() {
+        let mut project = line_bound_device(None);
+        project.installations[0].topology.lines[0]
+            .devices
+            .push(DeviceId(1));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        for command in [
+            Command::SetIndividualAddress {
+                device: DeviceId(1),
+                address: Some(IndividualAddress::new(1, 1, 18).unwrap()),
+            },
+            Command::MoveDeviceToLine {
+                device: DeviceId(1),
+                line: None,
+            },
+        ] {
+            let error = stack.do_command(&mut project, command).unwrap_err();
+            assert!(
+                error.to_string().contains("multiple topology placements"),
+                "{error}"
+            );
+            assert_eq!(project, before);
+            assert!(!stack.can_undo());
+        }
+    }
+
+    #[test]
+    fn assigning_coupler_only_zero_to_a_line_bound_device_is_explicitly_unsupported() {
+        let mut project = line_bound_device(None);
+        let mut stack = CommandStack::new();
+        let coupler_address = IndividualAddress::new(1, 1, 0).unwrap();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(coupler_address),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("coupler"), "{error}");
+        assert_eq!(project.devices.get(DeviceId(1)).unwrap().address, None);
+        assert!(!stack.can_undo());
+        // Existing imported couplers retain their address; clearing it remains possible.
+        project.devices.get_mut(DeviceId(1)).unwrap().address = Some(coupler_address);
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(coupler_address),
+                },
+            )
+            .unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: None,
+                },
+            )
+            .unwrap();
+        assert_eq!(project.devices.get(DeviceId(1)).unwrap().address, None);
+    }
+
+    #[test]
+    fn line_bound_device_address_can_change_its_device_octet_and_undo() {
+        let mut project = line_bound_device(Some(IndividualAddress::new(1, 1, 9).unwrap()));
+        let mut stack = CommandStack::new();
+        let changed = IndividualAddress::new(1, 1, 18).unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: Some(changed),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(changed)
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(IndividualAddress::new(1, 1, 9).unwrap())
+        );
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(changed)
+        );
+    }
+
+    #[test]
+    fn undo_restores_imported_line_mismatch_and_existing_coupler_zero_losslessly() {
+        for original in [
+            IndividualAddress::new(2, 3, 9).unwrap(),
+            IndividualAddress::new(1, 1, 0).unwrap(),
+        ] {
+            let mut project = line_bound_device(Some(original));
+            let mut stack = CommandStack::new();
+            stack
+                .do_command(
+                    &mut project,
+                    Command::SetIndividualAddress {
+                        device: DeviceId(1),
+                        address: Some(IndividualAddress::new(1, 1, 18).unwrap()),
+                    },
+                )
+                .unwrap();
+            stack.undo(&mut project).unwrap();
+            assert_eq!(
+                project.devices.get(DeviceId(1)).unwrap().address,
+                Some(original)
+            );
+            stack.redo(&mut project).unwrap();
+            assert_eq!(
+                project.devices.get(DeviceId(1)).unwrap().address,
+                Some(IndividualAddress::new(1, 1, 18).unwrap())
+            );
+        }
+    }
+
+    #[test]
+    fn move_rejects_a_nonmatching_existing_address_before_changing_line_membership() {
+        let original = IndividualAddress::new(1, 1, 9).unwrap();
+        let mut project = line_bound_device(Some(original));
+        project.installations[0].topology.areas[0]
+            .lines
+            .push(LineId(2));
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(2), 2, vec![]));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(2)),
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("line 1.2"), "{error}");
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+        // Intentional repair: clear the physical address, move, then re-address.
+        stack
+            .do_command(
+                &mut project,
+                Command::SetIndividualAddress {
+                    device: DeviceId(1),
+                    address: None,
+                },
+            )
+            .unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(2)),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.installations[0].topology.lines[1].devices,
+            vec![DeviceId(1)]
+        );
+        assert_eq!(project.devices.get(DeviceId(1)).unwrap().address, None);
+        stack.undo(&mut project).unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+    }
+
+    #[test]
+    fn moving_an_imported_mismatch_cannot_create_an_unundoable_repair() {
+        let mut project = line_bound_device(Some(IndividualAddress::new(1, 2, 9).unwrap()));
+        project.installations[0].topology.areas[0]
+            .lines
+            .push(LineId(2));
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(2), 2, vec![]));
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        for target in [Some(LineId(2)), None] {
+            let error = stack
+                .do_command(
+                    &mut project,
+                    Command::MoveDeviceToLine {
+                        device: DeviceId(1),
+                        line: target,
+                    },
+                )
+                .unwrap_err();
+            assert!(error.to_string().contains("line 1.1"), "{error}");
+            assert_eq!(project, before);
+            assert!(!stack.can_undo());
+        }
     }
 
     #[test]
@@ -3529,6 +4123,242 @@ mod tests {
             range: None,
         });
         p
+    }
+
+    #[test]
+    fn both_direction_links_are_one_undoable_batch_and_roll_back_a_late_duplicate() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        let link = |direction| Command::LinkComObject {
+            com_object: ComObjectInstanceId(1),
+            ga: GroupAddressId(1),
+            direction,
+        };
+        let unlink = |direction| Command::UnlinkComObject {
+            com_object: ComObjectInstanceId(1),
+            ga: GroupAddressId(1),
+            direction,
+        };
+        let links = |project: &Project| {
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links
+                .clone()
+        };
+        stack
+            .do_command(
+                &mut project,
+                Command::Batch(vec![link(Direction::Send), link(Direction::Receive)]),
+            )
+            .unwrap();
+        assert_eq!(links(&project).len(), 2);
+        stack.undo(&mut project).unwrap();
+        assert!(links(&project).is_empty());
+        stack.redo(&mut project).unwrap();
+        assert_eq!(links(&project).len(), 2);
+        stack
+            .do_command(
+                &mut project,
+                Command::Batch(vec![unlink(Direction::Send), unlink(Direction::Receive)]),
+            )
+            .unwrap();
+        assert!(links(&project).is_empty());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(links(&project).len(), 2);
+        stack
+            .do_command(&mut project, unlink(Direction::Send))
+            .unwrap();
+        assert_eq!(
+            links(&project),
+            vec![GroupLink {
+                ga: GroupAddressId(1),
+                direction: Direction::Receive
+            }]
+        );
+        let before = project.clone();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::Batch(vec![link(Direction::Send), link(Direction::Receive)]),
+            )
+            .unwrap_err();
+        assert!(matches!(error, CommandError::BatchItem { index: 1, .. }));
+        assert_eq!(project, before);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(links(&project).len(), 2); // Failed batch added no undo step.
+    }
+
+    #[test]
+    fn failed_unlink_both_and_undo_preserve_original_group_link_order() {
+        let mut project = test_project_with_one_com_object();
+        let mut other = project.installations[0].group_addresses[0].clone();
+        other.id = GroupAddressId(2);
+        other.address = GroupAddress::from_raw(2);
+        project.installations[0].group_addresses.push(other);
+        let first = GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Send,
+        };
+        let second = GroupLink {
+            ga: GroupAddressId(2),
+            direction: Direction::Receive,
+        };
+        project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .links = vec![first, second];
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let unlink = |direction| Command::UnlinkComObject {
+            com_object: ComObjectInstanceId(1),
+            ga: GroupAddressId(1),
+            direction,
+        };
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::Batch(vec![unlink(Direction::Send), unlink(Direction::Receive)]),
+            )
+            .unwrap_err();
+        assert!(matches!(error, CommandError::BatchItem { index: 1, .. }));
+        assert_eq!(project, before, "a failed batch must not reorder links");
+        assert!(!stack.can_undo());
+
+        stack
+            .do_command(&mut project, unlink(Direction::Send))
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project, before,
+            "undo must restore the original link position"
+        );
+    }
+
+    #[test]
+    fn restore_group_link_rejects_an_out_of_bounds_position_without_mutation() {
+        let mut project = test_project_with_one_com_object();
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::RestoreGroupLink {
+                    com_object: ComObjectInstanceId(1),
+                    link: GroupLink {
+                        ga: GroupAddressId(1),
+                        direction: Direction::Send,
+                    },
+                    position: 1,
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            error,
+            CommandError::InvalidGroupLinkPosition {
+                com_object: ComObjectInstanceId(1),
+                position: 1,
+            }
+        );
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn undo_preserves_imported_duplicate_group_links_and_redo() {
+        let mut project = test_project_with_one_com_object();
+        let link = GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Send,
+        };
+        project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .links = vec![link, link];
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::UnlinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                },
+            )
+            .unwrap();
+        let after_unlink = project.clone();
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links,
+            vec![link]
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project, after_unlink);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+    }
+
+    #[test]
+    fn unlink_both_undo_and_redo_keep_interleaved_links_in_order() {
+        let mut project = test_project_with_one_com_object();
+        let mut other = project.installations[0].group_addresses[0].clone();
+        other.id = GroupAddressId(2);
+        other.address = GroupAddress::from_raw(2);
+        project.installations[0].group_addresses.push(other);
+        let send = GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Send,
+        };
+        let unrelated = GroupLink {
+            ga: GroupAddressId(2),
+            direction: Direction::Receive,
+        };
+        let receive = GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Receive,
+        };
+        project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .links = vec![send, unrelated, receive];
+        let before = project.clone();
+        let mut stack = CommandStack::new();
+        let unlink = |direction| Command::UnlinkComObject {
+            com_object: ComObjectInstanceId(1),
+            ga: GroupAddressId(1),
+            direction,
+        };
+        stack
+            .do_command(
+                &mut project,
+                Command::Batch(vec![unlink(Direction::Send), unlink(Direction::Receive)]),
+            )
+            .unwrap();
+        let after_unlink = project.clone();
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links,
+            vec![unrelated]
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project, after_unlink);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
     }
 
     #[test]

@@ -1881,6 +1881,100 @@ pub(crate) fn upgrade_report_for_baggage(
     Ok(Ok(()))
 }
 
+/// v17 -> v18 (ADR-0052): rewrites one package's measured report without
+/// the unknown attribute `name` at `xpaths`, which the parser now models.
+/// The rows are removed and the header and `unknown_construct` counts are
+/// recomputed from what remains, exactly as install computes them; the
+/// result then goes through `persist_facts`' own validation. An
+/// `unavailable` report has no rows to change and stays as it is.
+pub(crate) fn retire_report_unknowns(
+    conn: &Connection,
+    sha256: &str,
+    xpaths: &[&str],
+    name: &str,
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let Some(mut facts) = load_facts_unvalidated(conn, sha256)? else {
+        return Ok(Ok(()));
+    };
+    facts.unknown_constructs.retain(|unknown| {
+        !(unknown.kind == crate::report::UnknownKind::Attribute
+            && unknown.name == name
+            && xpaths.contains(&unknown.xpath.as_str()))
+    });
+    facts
+        .counts
+        .retain(|row| row.category != InstallCategory::UnknownConstruct);
+    // `sort` re-derives `unknown_occurrences` from the remaining rows.
+    facts.sort()?;
+    let occurrences = facts.unknown_occurrences;
+    let distinct = usize_to_u64(facts.unknown_constructs.len(), "unknown distinct")?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        distinct,
+    )?;
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+        "package_install_report",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+            [sha256],
+        )?;
+    }
+    match persist_facts(conn, sha256, facts) {
+        Ok(()) => Ok(Ok(())),
+        Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
+        Err(error) => Ok(Err(ReportNotUpgradable(error.to_string()))),
+    }
+}
+
+/// Downgrades one package's measured report to `unavailable`, with no
+/// detail rows: what a migration does when it cannot carry a report
+/// forward truthfully. A package with no report row, or an already
+/// `unavailable` one, is left as it is.
+pub(crate) fn mark_report_unavailable(
+    conn: &Connection,
+    sha256: &str,
+) -> Result<(), ProductDbError> {
+    let measured: Option<bool> = conn
+        .query_row(
+            "SELECT status = 'measured' FROM package_install_report WHERE package_sha256 = ?1",
+            [sha256],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if measured != Some(true) {
+        return Ok(());
+    }
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+            [sha256],
+        )?;
+    }
+    conn.execute(
+        "UPDATE package_install_report
+         SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0
+         WHERE package_sha256 = ?1",
+        [sha256],
+    )?;
+    Ok(())
+}
+
 fn persist_facts(
     conn: &Connection,
     sha256: &str,

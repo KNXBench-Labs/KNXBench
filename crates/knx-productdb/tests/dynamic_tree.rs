@@ -658,6 +658,8 @@ fn nd(node_id: i64, parent_id: Option<i64>, kind: &str) -> DynamicNode {
         is_default: false,
         text: None,
         value: None,
+        name: None,
+        number: None,
         control_kind: None,
     }
 }
@@ -4213,6 +4215,8 @@ fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
          DROP TABLE package_install_report;
          DROP TABLE module_def_argument;
          ALTER TABLE dynamic_node DROP COLUMN value;
+         ALTER TABLE dynamic_node DROP COLUMN name;
+         ALTER TABLE dynamic_node DROP COLUMN number;
          PRAGMA user_version = 10;",
     )
     .unwrap();

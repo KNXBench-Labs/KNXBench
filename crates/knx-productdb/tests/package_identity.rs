@@ -543,7 +543,7 @@ fn v16_to_v17_backfills_exactly_what_a_fresh_install_records() {
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 17);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
     assert_eq!(identity_tables(&conn), fresh);
 }
 

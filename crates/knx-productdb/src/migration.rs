@@ -9,14 +9,14 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection};
 
 use crate::ingest::{classify, FileKind};
 use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 17;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 18;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -290,7 +290,271 @@ fn migrations() -> Vec<Migration> {
         migrate_v14_to_v15,
         migrate_v15_to_v16,
         migrate_v16_to_v17,
+        migrate_v17_to_v18,
     ]
+}
+
+/// The two `ingest_unknown` xpaths the dynamic pass (`dynamic::parse::
+/// insert_node`) reports a `Channel` attribute under. Only that pass writes
+/// an unqualified `Number` row there: the `Static` pass skips `Dynamic`
+/// whole, and scheme evidence reconciliation only adds targeted names (none
+/// on `Channel`) and namespaced ones (`x:Number`, never `Number`).
+const RETIRED_CHANNEL_NUMBER_XPATHS: [&str; 2] = [
+    "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic/Channel",
+    "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic/Channel",
+];
+
+/// v17 -> v18 (ADR-0052). `dynamic_node` gains `name` and `number`, filled
+/// for `Channel` from each stored `ApplicationProgram` blob, and
+/// `Channel/@Number` stops being an unknown attribute.
+///
+/// Per `ApplicationProgram` blob whose bytes still match their key, inside
+/// its own savepoint:
+/// * the `dynamic_node`/`module_def_argument` rows of the programs it owns
+///   are cleared and re-parsed, as `reparse_dynamic_trees` does for v11
+///   (`reparse_owned_trees`);
+/// * the re-parse's unknown rows are **discarded**. Unlike v11, the stored
+///   `…/Dynamic/…` rows are not rewritten from the parse, because since v13
+///   scheme evidence reconciliation adds and subtracts rows there that the
+///   dynamic pass alone cannot reproduce. Only the retired
+///   `Channel/@Number` rows are deleted, for every such blob: the dynamic
+///   pass reports an attribute even for a program it does not store;
+/// * a blob that no longer re-parses is rolled back to its v17 rows and
+///   recorded as `ChannelNameBackfillError`, as is one whose bytes no
+///   longer match their key.
+///
+/// Every measured package report then drops the same retired rows, and
+/// `package.unknown_count` the distinct rows its members lost. A report
+/// with a member that was not carried forward, or that does not validate,
+/// is downgraded to `unavailable` with a recorded
+/// `InstallReportBackfillError`, as in v14 and v16.
+fn migrate_v17_to_v18(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE dynamic_node ADD COLUMN name TEXT;
+         ALTER TABLE dynamic_node ADD COLUMN number TEXT;",
+    )?;
+    let blobs = conn
+        .prepare("SELECT sha256, source_path FROM source_file ORDER BY sha256")?
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    // Blob -> how many distinct retired rows it had: what one install of it
+    // added to `package.unknown_count` for them. A blob that is missing
+    // from this map was not carried forward, and neither is any report
+    // that counts it.
+    let mut retired = std::collections::HashMap::new();
+    for (sha256, source_path) in blobs {
+        let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
+            continue;
+        };
+        let kind = classify(&bytes);
+        if kind != FileKind::ApplicationProgram {
+            // A damaged blob can stop classifying as a program altogether.
+            // Its old package/member or owner row is still evidence that this
+            // migration owes it a tree; never silently skip that failure.
+            let was_program: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM application_program WHERE source_sha256 = ?1)
+                     OR EXISTS(SELECT 1 FROM package_member WHERE source_sha256 = ?1
+                               AND role = 'ApplicationProgram')",
+                [&sha256],
+                |r| r.get(0),
+            )?;
+            if was_program {
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "ChannelNameBackfillError",
+                    "parse_dynamic_trees",
+                    &ProductDbError::Xml {
+                        source_path: source_path.clone(),
+                        cause: "v18 backfill: stored program no longer classifies as an ApplicationProgram".into(),
+                    },
+                )?;
+            }
+            continue;
+        }
+        if crate::sha256_hex(&bytes) != sha256 {
+            record_backfill_failure(
+                conn,
+                &sha256,
+                &source_path,
+                "ChannelNameBackfillError",
+                "parse_dynamic_trees",
+                &ProductDbError::Xml {
+                    source_path: source_path.clone(),
+                    cause: "v18 backfill: stored bytes do not match their SHA-256 key".into(),
+                },
+            )?;
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT v18_channel_blob;")?;
+        match reparse_owned_trees(conn, &sha256, &source_path, &bytes) {
+            Ok(()) => {
+                let distinct = retire_channel_number_unknowns(conn, &sha256)?;
+                conn.execute_batch("RELEASE SAVEPOINT v18_channel_blob;")?;
+                retired.insert(sha256, distinct);
+            }
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT v18_channel_blob;
+                     RELEASE SAVEPOINT v18_channel_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "ChannelNameBackfillError",
+                    "parse_dynamic_trees",
+                    &error,
+                )?;
+            }
+        }
+    }
+    retire_channel_number_from_reports(conn, &retired)
+}
+
+/// Re-parses the trees of the programs one blob owns. A program another
+/// blob owns is skipped by the parser itself (`program_should_be_skipped`),
+/// so a blob that lost every id conflict gains no trees. The parse's
+/// unknown rows are discarded (`migrate_v17_to_v18`).
+fn reparse_owned_trees(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    clear_program_trees(conn, sha256)?;
+    crate::dynamic::parse::parse_dynamic_trees(conn, sha256, source_path, bytes)?;
+    Ok(())
+}
+
+/// Deletes the `dynamic_node` and `module_def_argument` rows of the
+/// programs one blob owns, so `parse_dynamic_trees` writes them again
+/// instead of skipping a program that already has rows. The blob's
+/// `ingest_unknown` rows are left alone (`migrate_v17_to_v18`).
+fn clear_program_trees(conn: &Connection, sha256: &str) -> Result<(), ProductDbError> {
+    const OWNED_PROGRAMS: &str = "SELECT id FROM application_program WHERE source_sha256 = ?1";
+    conn.execute(
+        &format!("DELETE FROM dynamic_node WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    conn.execute(
+        &format!("DELETE FROM module_def_argument WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    Ok(())
+}
+
+/// Deletes one blob's retired `Channel/@Number` rows and returns how many
+/// of the retired xpaths had any. `ingest_unknown` has no unique key and a
+/// package install re-records a blob it re-parses, so the rows themselves
+/// may be duplicated; the distinct xpaths are what one parse reported.
+fn retire_channel_number_unknowns(conn: &Connection, sha256: &str) -> Result<u64, ProductDbError> {
+    let mut distinct = 0;
+    for xpath in RETIRED_CHANNEL_NUMBER_XPATHS {
+        let deleted = conn.execute(
+            "DELETE FROM ingest_unknown
+             WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = 'Attribute' AND name = 'Number'",
+            params![sha256, xpath],
+        )?;
+        if deleted > 0 {
+            distinct += 1;
+        }
+    }
+    Ok(distinct)
+}
+
+/// The package half of `migrate_v17_to_v18`. `package.unknown_count`
+/// loses, per `ApplicationProgram` member, the distinct rows that member
+/// had retired, exactly what one install of it added. The measured report
+/// is then rewritten without the retired rows, in its own savepoint. If a
+/// member was not carried forward (missing, damaged or unparseable), or the
+/// rewritten report does not validate, the report is downgraded to
+/// `unavailable` instead.
+fn retire_channel_number_from_reports(
+    conn: &Connection,
+    retired: &std::collections::HashMap<String, u64>,
+) -> Result<(), ProductDbError> {
+    let packages = conn
+        .prepare("SELECT sha256 FROM package ORDER BY sha256")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for package in packages {
+        let members = conn
+            .prepare(
+                "SELECT source_sha256 FROM package_member
+                 WHERE package_sha256 = ?1 AND role = 'ApplicationProgram'
+                 ORDER BY ordinal",
+            )?
+            .query_map([&package], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        let lost = members.iter().try_fold(0u64, |total, m| {
+            total
+                .checked_add(retired.get(m).copied().unwrap_or(0))
+                .ok_or_else(|| ProductDbError::Xml {
+                    source_path: package.clone(),
+                    cause: "v18 backfill: unknown counter overflow".into(),
+                })
+        })?;
+        let lost = i64::try_from(lost).map_err(|_| ProductDbError::Xml {
+            source_path: package.clone(),
+            cause: "v18 backfill: unknown counter overflow".into(),
+        })?;
+        let updated = conn.execute(
+            "UPDATE package SET unknown_count = unknown_count - ?2
+             WHERE sha256 = ?1 AND unknown_count >= ?2",
+            params![package, lost],
+        )?;
+        if updated != 1 {
+            return Err(ProductDbError::Xml {
+                source_path: package.clone(),
+                cause: "v18 backfill: package unknown counter would underflow".into(),
+            });
+        }
+
+        let stale_member = members.iter().find(|m| !retired.contains_key(*m));
+        conn.execute_batch("SAVEPOINT v18_channel_report;")?;
+        let outcome = match stale_member {
+            Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
+                "member {member} was not carried forward"
+            )))),
+            None => crate::package::retire_report_unknowns(
+                conn,
+                &package,
+                &RETIRED_CHANNEL_NUMBER_XPATHS,
+                "Number",
+            ),
+        };
+        let why = match outcome {
+            Ok(Ok(())) => None,
+            Ok(Err(why)) => Some(why.0),
+            Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+            Err(error) => Some(error.to_string()),
+        };
+        match why {
+            None => conn.execute_batch("RELEASE SAVEPOINT v18_channel_report;")?,
+            Some(why) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT v18_channel_report;
+                     RELEASE SAVEPOINT v18_channel_report;",
+                )?;
+                crate::package::mark_report_unavailable(conn, &package)?;
+                record_backfill_failure(
+                    conn,
+                    &package,
+                    &package,
+                    "InstallReportBackfillError",
+                    "channel_number_report_backfill",
+                    &ProductDbError::Xml {
+                        source_path: package.clone(),
+                        cause: format!("v18 backfill: {why}"),
+                    },
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v16 -> v17 (PDB-11, ADR-0043). Adds the package identity tables.
@@ -544,31 +808,7 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
                 crate::baggage::persist_unavailable(conn, &package)?;
                 // A package with no report row (only a damaged v15 database)
                 // has nothing to downgrade; that must not stop it opening.
-                let measured: Option<bool> = conn
-                    .query_row(
-                        "SELECT status = 'measured' FROM package_install_report WHERE package_sha256 = ?1",
-                        [&package],
-                        |r| r.get(0),
-                    )
-                    .optional()?;
-                if measured == Some(true) {
-                    for table in [
-                        "package_install_count",
-                        "package_install_unknown",
-                        "package_install_diagnostic",
-                    ] {
-                        conn.execute(
-                            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
-                            [&package],
-                        )?;
-                    }
-                    conn.execute(
-                        "UPDATE package_install_report
-                         SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0
-                         WHERE package_sha256 = ?1",
-                        [&package],
-                    )?;
-                }
+                crate::package::mark_report_unavailable(conn, &package)?;
                 record_backfill_failure(
                     conn,
                     &source_sha,

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / ISSUE-08 UI half)
+- **Timestamp:** 2026-09-30 13:26 CEST
+- **Web lock:** taken by this UI session for the ISSUE-08 UI half, continuing the UI-owned lock from the published ISSUE-05 package. No other session should edit `apps/knx-web` until this package releases or hands off the lock.
+- **Completed:** ISSUE-05 feature `997af0b5` and handover `95a6b494` were published and read back on `origin/main`; only their task-owned worktree, target, corpus link and scratch were cleaned. Created clean isolated `KNXBench.worktrees/ui-dpt-editor` at `95a6b494`. Verified goal.md's ISSUE-08 data half P1–P3 is merged and explicitly handed over (`.ai/CURRENT_STATE.md` 07:06 entry; ADR-0050/0052). No UI implementation in this package yet.
+- **Pending/Next Steps:** Follow `goal-ui.md` U12 and the ISSUE-08 plan: remove the projection `#[ts(skip)]` only for the delivered fields; regenerate and test the Web bindings; render DPT text/program default, function text and evidence-backed activation/channel grouping collapsed by default, preserving a user-expanded group while the device remains selected; distinguish inactive from unsupported. Use TDD and corpus-backed contract tests, then documentation, review, full gates and non-force publication. §146 channel `name`/`number` labels are the next separate UI item, not a guessed ISSUE-08 fallback. No live KNX bus operation or device write in this UI package.
+- **Notes for Codex oder Claude:** Root checkout has five foreign dirty entries and lags published `origin/main`; do not reset, stash or commit them. `k15-live` belongs to commissioning and is actively using a separate Cargo target; do not touch its worktree, process or corpus. Product corpus stays read-only; no credentials in logs. This entry is the UI lock, not authorization for ADR-0051 device writes.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 12:43 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.

@@ -9027,7 +9027,12 @@ capture now re-encodes 71 of 71 telegrams whole, Ctrl1 and Ctrl2 included
 appends `[priority …, hop count …, repeated]`; the server's monitor rows
 and the debug bundle carry `control` (`priority`, `repeated`, `hopCount`;
 `repeated` only on `L_Data.ind`, `null` on the closed-session marker).
-Still open: the web monitor table does not show them (UI track).
+**UI consumer (2026-09-30):** the monitor table and selected-row details
+show the priority and hop count. "Repeated" and "Not repeated" appear
+only when the indication provides a boolean; other message kinds do not
+assert either. A closed-session marker or an older server without `control`
+shows no invented field. The Web display gap is lifted; no new live bus test
+is claimed.
 
 The original entry, kept for the record:
 

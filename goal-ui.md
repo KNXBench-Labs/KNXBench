@@ -298,6 +298,11 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      rows carry `control: {priority, repeated, hopCount}` (`null` on the
      closed-session marker). Show them as a column or tooltip; `repeated`
      is `null` on anything but `L_Data.ind` and must stay unshown then.
+     **UI closeout (2026-09-30):** a Control column and selected-row details
+     display priority and hop count. True/false repeat evidence is distinct;
+     null/absent metadata stays unasserted. `BusMonitorPanel.test.tsx`
+     covers both states, the marker and older responses; the local mocked
+     `monitor-control.e2e.ts` covers EN/DE at 360/1440 px. No live bus action.
   4. **Readiness and device-compare views:** the APIs exist
      (`/api/readiness` `b72a6b6`, `POST /api/device-compare` `76bcce74`);
      no view shows them yet.

@@ -1909,9 +1909,24 @@ main {
 
 .bus-monitor-table {
   width: 100%;
-  min-width: 58rem; /* keep decoded states readable; the parent scrolls on narrow panes */
+  min-width: 64rem; /* keep the control facts and decoded states readable; the parent scrolls */
   border-collapse: collapse;
   font-size: 0.9em;
+}
+
+.bus-monitor-control {
+  font-variant-numeric: tabular-nums;
+}
+
+.bus-monitor-control-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  min-width: 0;
+}
+
+.bus-monitor-control-repeat {
+  font-weight: 600;
 }
 
 /* No `padding` here on purpose: this selector's specificity (0,1,1) beat

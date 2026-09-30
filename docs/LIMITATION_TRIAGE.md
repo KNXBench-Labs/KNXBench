@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der 146 nummerierten Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+Sortierung der 147 nummerierten Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
 (`grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md`), Stand 2026-09-30. Diese
 Datei ordnet nur — sie ersetzt keinen Eintrag und enthält keine neuen Fakten.
 Maßgeblich bleibt der Volltext dort. §105 ist absichtlich nicht eingestuft
-(siehe unten); die restlichen 145 sind es.
+(siehe unten); die restlichen 146 sind es.
 
 Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht; §130
 ist zweimal vergeben (Gate-Binary und Anwendungszoom) und steht deshalb
@@ -13,7 +13,7 @@ Quelldatei (Korpus-, Katalog-, Geräteeditor- und Inbetriebnahmegrenzen) sind
 nicht eingestuft.
 
 **Stand 2026-09-30 (Neuzählung).** Die Fassung vom 2026-09-20 zählte 119
-Einträge. Seitdem sind §121–§146 hinzugekommen, und etliche Einträge sind
+Einträge. Seitdem sind §121–§147 hinzugekommen, und etliche Einträge sind
 laut ihrem eigenen Status geschlossen oder verengt; nur der Statustext der
 Quelle hat entschieden, nicht der Titel. Titel, die noch das alte Problem
 nannten, tragen seit 2026-09-30 einen „resolved"-/„closed"-Zusatz; ihre alten
@@ -164,7 +164,7 @@ Anker bleiben per `<a id>` gültig.
 | 130 | Anwendungszoom browser-, nicht WebKitGTK-verifiziert | Nur in Chromium geprüft. (Zweiter Eintrag mit Nummer 130.) |
 | 137 | Bus-Monitor-JSON ist ein behaltenes Fenster, keine vollständige Aufzeichnung | Verluste werden gezählt und exportiert, nicht wiederhergestellt. |
 
-## Erledigt, steht als Historie drin (44)
+## Erledigt, steht als Historie drin (45)
 
 §10 Lizenz (AGPL) · §17 verwaiste `GroupLink`s · §20 Command-Palette-Overlay (teilweise) ·
 §21 Export ohne Gruppenbereich · §25 Docker-Node-22 · §27 Heartbeat-Race ·
@@ -199,7 +199,8 @@ Anker bleiben per `<a id>` gültig.
 §131 ehrliche Korpus-Gates ·
 §132 Schließen-Knopf mit Ungespeichert-Abfrage ·
 §142 Teil-Download `070nh` live ·
-§145 Flag-Overrides in der Gruppenobjekttabelle
+§145 Flag-Overrides in der Gruppenobjekttabelle ·
+§147 cEMI-Priorität, Wiederholungsflag und Hop-Count bleiben erhalten
 
 ---
 

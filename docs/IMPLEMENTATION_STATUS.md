@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — `knx device readiness`: the project's devices, graded offline
+
+- `knx device readiness --project … [--product-db …]` lists every project
+  device with the download `knx device download` would prepare for it,
+  graded as that command grades it: `verified`, `untested` (plans, never
+  downloaded on hardware), `unsupported` (with the download's own refusal
+  and category), `excluded` (the exclusion list, never prepared) or
+  `no-address`. Offline; the parser refuses `--gateway`.
+- `knx_app::project_readiness` (per project device, with the project's
+  values and links) beside `download_support::coverage` (per program, with
+  product defaults). New category `configuration` for a refusal from the
+  project's configuration (no program, conflicting values or links), which
+  only a project device can have.
+- Tests: 4 unit (exclusion before preparation, no address, configuration
+  refusals, order and counts), 2 CLI, and a corpus test that pins RESEARCH
+  §19.12's house table device by device: 17 untested, 17 unsupported (9
+  `LsmIdx 5`, 3 union overlap, 2 not memory-mapped, 3 `LdCtrlTaskCtrl1`),
+  1 excluded. Four mutations caught. Correction to §19.12 by the same run:
+  1.1.11–13's union overlap is category `parameter-value`, not an image
+  structure refusal.
+
 ## 2026-09-30 — ISSUE-08 data half, P3: program DPT, DPT text and function text
 
 - `ComObjectNode` gains three server-only fields (`#[ts(skip)]` until U12):

@@ -5817,7 +5817,10 @@ the house's own parameter values leave that parameter inactive, so the
 device plan does not reach it.
 
 17 of the 32 bus devices plan (17 of 35 overall); every plan is **Untested** — only 1.1.67 (the test device,
-not in this project) is Verified. Two findings came out of the run:
+not in this project) is Verified. `knx device readiness` (2026-09-30) reproduces this table from
+the project in one command, and `crates/knx-app/tests/house_readiness.rs`
+pins it device by device; the union overlap on 1.1.11–13 is reported as
+category `parameter-value`. Two findings came out of the run:
 
 1. **1.1.22 and 1.1.24 used to be refused for the wrong reason**, "object
    sends on 2 group addresses". That was an importer bug: every schema ≥21

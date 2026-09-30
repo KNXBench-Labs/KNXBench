@@ -15,6 +15,7 @@ pub mod documentation;
 pub mod download_support;
 pub mod import;
 pub mod progress;
+pub mod project_readiness;
 pub mod serial_number;
 
 pub use import::{

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ADR-0051 Debug action lock)
+- **Timestamp:** 2026-09-30 21:06 CEST
+- **Web lock:** taken by the UI session for the scoped ADR-0051 Debug setting and service-control action.
+- **Completed:** Rechecked server opt-in, device-specific phrase, single-tunnel exclusion, bit-only read/modify/write, exact readback, and the K12 same-session durable pre-write property backup in `service_control_routes.rs`, `service_control.rs`, `service_control_backup.rs` and simulator HTTP tests. This unlocks a *scoped UI review*, not a hardware operation or a general write permission. No web source edited yet.
+- **Pending/Next Steps:** Implement only the default-off Settings Debug toggle and a separately confirmed device-specific service-control UI if tests and cross-layer review stay green; keep K13 reset and all other write paths out of scope. Mock/simulator-only tests, docs and full gates before publishing. Release Web lock after this single package.
+- **Notes for Codex oder Claude:** Do not display settings-cache `true` as proof of server opt-in; the settings store has optimistic writes and can retain an unsaved value. A property backup is not a device image or automatic restore. No live tunnel or device write is authorized.
+
+---
+
 - **Last Agent:** codex (UI U12 / Device checks closeout)
 - **Timestamp:** 2026-09-30 21:01 CEST
 - **Web lock:** released by the UI session after publishing read-only Device checks.

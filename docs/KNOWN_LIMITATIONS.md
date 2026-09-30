@@ -9186,7 +9186,11 @@ that; the complete option-C download restored `Loaded`/`Loaded`/`Loaded`
 and a byte-identical dump. **Re-run the same day without a shell timeout:
 `--partial group-addresses` completed**, 1022 octets read back, both tables
 `Loaded`, dump byte-identical (RESEARCH §19.15). `parameters` and
-`group-addresses` are verified on `1.1.67`; `both` is untested.
+`group-addresses` are verified on `1.1.67`. **`both` followed at 16:00
+(RESEARCH §19.17): 24 steps, 1416 octets read back, all three `Loaded`,
+dump byte-identical. All three partial scopes are verified on `1.1.67`;**
+other `070nh` programs stay untested, and the same-image caveat of §19.15
+applies.
 
 **Lifted (2026-09-29, live on `1.1.67`, user go for all test-hardware
 tasks).** `knx device download 1.1.67 --partial parameters` with the

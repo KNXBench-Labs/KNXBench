@@ -3,10 +3,10 @@
   "verified": [
     {
       "program_id": "M-0083_A-0027-15-0BAC",
-      "scopes": ["complete", "partial-parameters", "partial-group-addresses"],
+      "scopes": ["complete", "partial-parameters", "partial-group-addresses", "partial-both"],
       "device": "MDT push button 1.1.67, mask 0701h",
       "date": "2026-09-30",
-      "reference": "docs/RESEARCH.md §19.4 (complete, 1416 octets read back), §19.8 (parameters, 394 octets) and §19.15 (group addresses, 1022 octets, 2026-09-30)"
+      "reference": "docs/RESEARCH.md §19.4 (complete, 1416 octets read back), §19.8 (parameters, 394 octets) and §19.15 (group addresses, 1022 octets, 2026-09-30) and §19.17 (both, 1416 octets, 2026-09-30)"
     }
   ]
 }

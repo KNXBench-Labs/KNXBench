@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / ADR-0051 lock)
+- **Timestamp:** 2026-09-30 17:51 CEST
+- **Web lock:** taken by the UI session for U12 ADR-0051 Debug toggle and device service-control view.
+- **Completed:** Acquired the released Web surface on a fresh `origin/main` worktree. Safety and route-contract audit precede UI edits; no bus interaction.
+- **Pending/Next Steps:** Verify server-side setting and per-target phrase gates plus the commissioning handover's pre-write backup concern. Implement only a safe, explicitly scoped UI using mock/simulator tests; if the route's safety contract is insufficient, do not expose the write action. Then review, gate, publish and release the Web lock.
+- **Notes for Codex oder Claude:** `ui-handover-server` is another session's worktree with documentation changes; never overwrite it or root's foreign edits. No real KNX reads or writes.
+
+---
+
 - **Last Agent:** codex (UI U12 / §146 closeout)
 - **Timestamp:** 2026-09-30 17:46 CEST
 - **Web lock:** released by the UI session after publishing U12 §146 channel labels.

@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — U10 / ISSUE-12: discovery observed end to end
+
+- After the user added a `ufw` rule for incoming UDP from *source* port
+  3671 on the LAN, `knx bus discover` and `POST /api/bus/discover` both
+  found the gateway; the probe's multicast search got its
+  `SEARCH_RESPONSE`, and the kernel log showed no dropped reply. No code
+  change, no KNX bus frame (RESEARCH §20.1, KNOWN_LIMITATIONS §79).
+- A rule for destination `224.0.23.12:3671` alone (the routing rule) was
+  shown not to help. Still unobserved: a native WebKitGTK click on
+  **Search**.
+
 ## 2026-09-30 — K19: the private telegram capture decodes, 71 of 71
 
 - `crates/knx-net/tests/private_telegram_log.rs` decodes an ETS

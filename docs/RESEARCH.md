@@ -6107,6 +6107,28 @@ correct, so no protocol change was made; the CLI and web hints name the
 firewall and the rule (incoming UDP from source port 3671 on the LAN).
 Changing the user's firewall is the user's decision and was not done.
 
+**[V] End to end through a permitting firewall (2026-09-30).** The user
+added the rule themselves (`ufw allow in on <LAN interface> proto udp from
+<LAN CIDR> port 3671`, i.e. `--sport 3671`). A first attempt that allowed
+only `-d 224.0.23.12 --dport 3671` (the optional routing rule) did **not**
+help: the reply was still dropped (`[UFW BLOCK] … SPT=3671`, UDP length 84),
+confirming that the discovery reply is unicast from source port 3671. With
+the source-port rule in place, all on the unchanged debug build and without
+any KNX bus frame:
+
+- `knx bus discover` listed the gateway (individual address, friendly name,
+  control endpoint, `[tunnelling]`), exit 0.
+- The throwaway probe's multicast search got one `SEARCH_RESPONSE`
+  (`0202h`, 76 octets) from the gateway's port 3671.
+- `POST /api/bus/discover` on a local `knx-server` returned the same one
+  interface with `supportsTunnelling: true`; the web **Search** uses this
+  route.
+- `journalctl -k` showed no `[UFW BLOCK]` with `SPT=3671` during the run.
+
+So KNXBench's discovery works end to end on this host once the reply is
+admitted. Not observed: a native WebKitGTK click on **Search** (the route
+was called directly).
+
 **[V] U10 contract review (2026-09-29).** The bus-monitor start route parses
 `SocketAddrV4` (`apps/knx-server/src/bus_routes.rs::start_monitor`) and the
 KNXnet/IP tunnel also takes `SocketAddrV4` (`crates/knx-net/src/client.rs`).

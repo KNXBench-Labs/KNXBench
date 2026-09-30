@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ADR-0051 Debug action closeout)
+- **Timestamp:** 2026-09-30 22:38 CEST
+- **Web lock:** released after publishing the scoped Debug setting and service-control UI; the next UI package must take a fresh lock.
+- **Completed:** Published `ab31ca292f536602e6338692e04a39759566cd1c` (feature) and `e63adad0a15985bdf50bb1522921c20635ce7322` (integrated evidence) to `origin/main`; exact remote readback matched the latter. Settings now requires server-persisted opt-in and GET confirmation. Bus diagnostics has a separate explicit read → review → typed address-bound phrase → property-write action, no gateway contact on mount, strict raw/target/mask/bit/readback/backup checks and no stale overlapping tunnel operation. ADR-0056 write activity remains untracked; immediate property readback is not a generic device receipt. Integrated gates: Rust 137 suites / 2,776 passed / 0 failed / 161 ignored / 0 `SKIP:`, Web 82 files / 1,295 passed, TypeScript/build, strict Clippy, fmt, four xtask checks and diff check; local mocked Chromium 4/4 new, 4/4 Device checks, 4/4 monitor, 10/10 existing. No real KNX gateway, tunnel or device write was contacted. Evidence: `.ai/logs/2026-09-30_codex_ui-service-control-debug.md`.
+- **Pending/Next Steps:** Continue the remaining UI goal in sequence with a new isolated worktree and explicitly acquired Web lock, after checking the current `origin/main` handover and other sessions. Service-control still needs an independent hardware-safety decision before any live trial; K13 reset, serial-address recovery and generic write telemetry are out of this UI package. Remove only this task's ignored corpus link, worktree and scratch after remote handover readback; preserve root foreign changes.
+- **Notes for Codex oder Claude:** The server controls both routes with saved `true`, a per-address phrase, a single-tunnel lock and a same-session persisted property-specific pre-write record. It is not a whole-device image or rollback. A dropped write can leave an unknown state; never retry blindly or show an all-device receipt. `serviceControlWrite` stays in `untracked` with `coverage: partial` per ADR-0056. No credentials or private corpus bytes were copied into this handover.
+
+---
+
 - **Last Agent:** codex (commissioning / write-activity evidence boundary)
 - **Timestamp:** 2026-09-30 22:12 CEST
 - **Web lock:** held by the separate UI session for its scoped Debug/service-control package; no Web source edited.

@@ -112,10 +112,10 @@ const USAGE: &str =
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
      \x20     knx device service-control <area.line.device> --gateway <host:port> [--key-file <path>]\n\
-     \x20                  [--enable|--disable [--confirm \"I confirm individual-address write enable to <address>\"]]\n\
+     \x20                  [--enable|--disable [--confirm \"I confirm individual-address write enable to <address>\"]] [--backup-dir <path>]\n\
      \x20         (reads PID_SERVICE_CONTROL bit 2, Individual Address Write Enable, RES §4.2.8;\n\
-     \x20         --enable/--disable changes only that bit, ADR-0051. KNXBench never sets it on its\n\
-     \x20         own. Without --confirm it prints the steps and opens no connection)\n\
+     \x20         --enable/--disable changes only that bit after a durable property backup in\n\
+     \x20         ./device-backups/ by default. Without --confirm no connection opens)\n\
      \x20     knx --version\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
@@ -2697,6 +2697,8 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         }
     };
     let address = target.address();
+    let backup_dir =
+        std::path::PathBuf::from(parsed.backup_dir.as_deref().unwrap_or("device-backups"));
     let key = match parsed.key_file.as_deref() {
         None => None,
         Some(path) => match std::fs::read_to_string(path)
@@ -2756,6 +2758,7 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
                     timing,
                     authorisation,
                     enable,
+                    &backup_dir,
                     &mut out,
                 )
                 .await

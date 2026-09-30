@@ -283,11 +283,42 @@ async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
     assert_eq!(body["written"], true);
     assert_eq!(body["before"]["raw"], "0000");
     assert_eq!(body["after"], "0004");
+    let path = body["backupPath"].as_str().expect("durable backup path");
+    let record: knx_app::service_control_backup::ServiceControlBackup =
+        serde_json::from_slice(&std::fs::read(path).expect("backed-up property")).unwrap();
+    assert_eq!(record.device, address.to_string());
+    assert_eq!(record.mask, body["before"]["mask"]);
+    assert_eq!(record.octets, "0000");
     assert_eq!(body["individualAddressWriteEnabled"], true);
 
     let (status, body) = send(&h.app, post("/api/device-address/by-serial", by_serial)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(h.device.address().to_string(), NEW);
+}
+
+#[tokio::test]
+async fn a_failed_property_backup_refuses_before_the_write() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    // No permissions tricks: a regular file in place of the backup directory
+    // reliably fails even when tests happen to run as root.
+    std::fs::write(h._dir.path().join("device-backups"), b"occupied").unwrap();
+    let address = h.device.address();
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INSUFFICIENT_STORAGE, "{body}");
+    assert!(body.to_string().contains("backup"), "{body}");
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+    )));
+    assert_eq!(h.device.serial_number_writes(), 0);
 }
 
 #[tokio::test]

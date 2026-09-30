@@ -17,6 +17,7 @@ pub mod import;
 pub mod progress;
 pub mod project_readiness;
 pub mod serial_number;
+pub mod service_control_backup;
 
 pub use import::{
     import_ets_project, import_ets_project_observed, import_ets_project_with, AppError,

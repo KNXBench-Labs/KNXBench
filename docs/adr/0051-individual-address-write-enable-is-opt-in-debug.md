@@ -68,6 +68,34 @@ explicitly.
 - The simulator models the property: its bit 2 decides whether a
   serial-number write takes effect, and a device can be configured without
   the property.
-- **Not run on hardware.** Setting the bit on `1.1.67` needs the user's
-  explicit go. Clearing it back afterwards is the same route with `enable:
-  false`.
+- **Not run on hardware in this implementation package.** Setting the bit on
+  `1.1.67` needs the user's explicit go. Clearing it back afterwards is the
+  same route with `enable: false`.
+
+## Amendment (2026-09-30): pre-write recovery for the property
+
+The service-control route and CLI formerly offered the write with only an
+in-memory pre-read. That was insufficient recovery evidence if the client
+crashed or the write/readback became ambiguous. Before exposing the HTTP
+setting in the UI, both production entry points now use a *property-specific*
+backup gate: the connected session reads the mask and **both octets** of
+Device Object `PID_SERVICE_CONTROL`; if the requested bit differs, a callback
+must persist exactly those octets, mask and target in a versioned JSON record,
+read it back and fsync the file and directory **before** `A_PropertyValue_Write`.
+An I/O/readback failure refuses before the write. The file is new-only and
+owner-only on Unix. CLI defaults to `./device-backups/` (or `--backup-dir`);
+HTTP uses `<data_dir>/device-backups/` and returns `backupPath` on success.
+A no-op performs neither backup nor property write. After a protocol failure,
+the path is reported for manual diagnosis; no automatic rollback is inferred.
+
+This record covers **the complete property value this procedure overwrites**,
+not an application-memory image. The protocol write names only object 0, PID
+8, one two-octet element; no known `A_Memory_Write` is in this procedure.
+Neither this fact nor a property readback proves that a manufacturer has no
+side effects elsewhere. Recovery requires an operator to verify the device's
+identity and mask, inspect the recorded original octets, and deliberately
+request the reverse operation with its own new backup and confirmation. The
+current API only changes bit 2; if any other original bit has since changed,
+do **not** use this API as a whole-property restore. K13/reset and downloads
+remain separate workflows; this property record does not satisfy their backup
+requirements. No hardware operation was run to validate this amendment.

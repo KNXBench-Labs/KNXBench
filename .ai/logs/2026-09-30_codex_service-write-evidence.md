@@ -12,7 +12,8 @@ Agent: codex. Scope: server-only, offline/simulated; no Web source, real gateway
 ## Verification
 
 - Rust workspace: 137 suites, 2,782 passed, 0 failed, 161 ignored, no `SKIP:` marker. Fresh target directory used. Strict workspace Clippy and fmt passed.
-- Web dependencies/build and 80 Vitest files / 1,270 tests passed; no Web source edited. Repository check-layering, check-headers, check-anchors, check-corpus-gates and diff check passed.
+- Initial Web dependencies/build and 80 Vitest files / 1,270 tests passed before the concurrent UI package landed. After rebasing on its published UI changes, Web build and 82 files / 1,295 tests passed; the full Rust suite, strict Clippy, fmt and all four repository gates passed again. No Web source was edited in this package.
+- Repository check-layering, check-headers, check-anchors, check-corpus-gates and diff check passed. Feature commit `65c4f43476a06c136d2427262c99c163a1687c19` was fast-forward-pushed to `main` and the remote SHA was read back exactly.
 - The first fresh-target workspace run failed only because this worktree had no `knx-web/dist` required by Tauri; `npm ci && npm run build` produced it, then full workspace passed. This is a build prerequisite, not a product failure.
 
 ## Boundaries

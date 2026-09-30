@@ -98,6 +98,7 @@ const fixture: ParameterPanelDto = {
     {
       scope: null,
       kind: "noBranchMatched",
+      severity: "info",
       message: "A choice did not match any of its options.",
       detail: "NoBranchMatched { choose_node: 4821 }",
     },
@@ -137,10 +138,37 @@ describe("ParameterPanel", () => {
     expect(host!.textContent).toContain("Module #7");
     expect(host!.textContent).toContain("P3");
     expect(host!.textContent).toContain("99");
-    expect(host!.textContent).toContain(
-      "1 issue found while evaluating this device's parameters",
-    );
+    expect(host!.textContent).toContain("1 note");
 
+    root.unmount();
+  });
+
+  it("labels a no-branch diagnostic as information rather than a warning", async () => {
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    const root = await renderPanel();
+    const banner = host!.querySelector<HTMLDetailsElement>(".parameter-diagnostics-banner")!;
+    expect(banner.querySelector("summary")?.textContent).toContain("1 note");
+    expect(banner.querySelector("summary")?.textContent).not.toContain("warning");
+    await act(async () => { banner.querySelector("summary")!.click(); });
+    const item = banner.querySelector<HTMLLIElement>('li[data-severity="info"]');
+    expect(item?.textContent).toContain("Info");
+    expect(item?.textContent).not.toContain("Warning");
+    root.unmount();
+  });
+
+  it.each([
+    ["unknown", "future"],
+    ["missing", undefined],
+  ])("fails closed to a warning for a %s diagnostic severity", async (_case, wireSeverity) => {
+    const response: ParameterPanelDto = {
+      ...fixture,
+      diagnostics: [{ ...fixture.diagnostics[0], severity: wireSeverity as "warning" }],
+    };
+    apiMock.deviceParameters.mockResolvedValue(response);
+    const root = await renderPanel();
+    const banner = host!.querySelector(".parameter-diagnostics-banner")!;
+    expect(banner.querySelector("summary")?.textContent).toContain("1 warning");
+    expect(banner.querySelector('li[data-severity="warning"]')?.textContent).toContain("Warning");
     root.unmount();
   });
 
@@ -258,6 +286,7 @@ describe("ParameterPanel", () => {
         {
           scope: null,
           kind: "unresolvedParamRef",
+          severity: "warning",
           message: "A choice's controlling parameter could not be found.",
           detail: "UnresolvedParamRef { field: \"P2\" }",
         },
@@ -266,12 +295,14 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(twoDiagnostics);
     const root = await renderPanel();
 
-    expect(host!.textContent).toContain(
-      "2 issues found while evaluating this device's parameters",
-    );
-    expect(host!.textContent).not.toContain(
-      "1 issue found while evaluating this device's parameters",
-    );
+    const banner = host!.querySelector(".parameter-diagnostics-banner")!;
+    expect(banner.querySelector("summary")?.textContent).toContain("1 warning");
+    expect(banner.querySelector("summary")?.textContent).toContain("1 note");
+    expect(banner.querySelector("summary")?.textContent).not.toContain("2 issues");
+    const items = banner.querySelectorAll("li[data-severity]");
+    expect([...items].map((item) => item.getAttribute("data-severity"))).toEqual(["info", "warning"]);
+    expect(items[0].textContent).toContain("Info");
+    expect(items[1].textContent).toContain("Warning");
 
     root.unmount();
   });
@@ -426,6 +457,7 @@ describe("ParameterPanel", () => {
         {
           scope: { moduleNode: 7, moduleId: null, moduleDefId: "MD-1" },
           kind: "noModuleInstanceMatch",
+          severity: "warning",
           message: reason,
           detail: "No imported ModuleInstance's RefId matches module 'M-7' (D39 rule 2, zero matches).",
         },

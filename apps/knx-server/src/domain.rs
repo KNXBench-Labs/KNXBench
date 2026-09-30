@@ -1331,11 +1331,12 @@ fn device_parameter_inputs(
     (stored, module_instances)
 }
 
-/// ISSUE-08: evaluates the device's `Dynamic` tree with the same
-/// [`evaluate_device`] the parameter panel uses and sets each
-/// communication object's `activation`/`channel`. Leaves every object
-/// `NotEvaluated` when the program is not installed or has no `Dynamic`
-/// tree: nothing was evaluated, so nothing may be claimed.
+/// ISSUE-08: sets each communication object's product `function_text`, then
+/// evaluates the device's `Dynamic` tree with the same [`evaluate_device`]
+/// the parameter panel uses and sets `activation`/`channel` (which also
+/// substitutes an active module object's `function_text` arguments).
+/// Leaves every object `NotEvaluated` when the program is not installed or
+/// has no `Dynamic` tree: nothing was evaluated, so nothing may be claimed.
 fn apply_com_object_activation(
     products: &knx_productdb::Connection,
     detail: &mut knx_projection::DeviceDetail,
@@ -1347,6 +1348,7 @@ fn apply_com_object_activation(
     else {
         return Ok(());
     };
+    apply_function_texts(products, detail, &input, &program_id, language)?;
     let trees = knx_productdb::dynamic::load_program_trees(products, &program_id)
         .map_err(|e| e.to_string())?;
     if !trees.has_program_tree() {
@@ -1386,6 +1388,64 @@ fn apply_com_object_activation(
         &channel_texts,
         evaluation.stale.is_empty(),
     );
+    Ok(())
+}
+
+/// ISSUE-08: the product's `FunctionText` for every object, as the program
+/// states it (`ComObjectRef` over `ComObject`), in `language` when
+/// translated. Module placeholders stay until
+/// `com_object_activation::apply` knows the object's own module scope.
+fn apply_function_texts(
+    products: &knx_productdb::Connection,
+    detail: &mut knx_projection::DeviceDetail,
+    input: &ActivationInput,
+    program_id: &str,
+    language: Option<&str>,
+) -> Result<(), String> {
+    let lookup_ids: HashMap<u32, String> = input
+        .com_objects
+        .iter()
+        .map(|(id, (ets_id, instance))| {
+            (
+                *id,
+                knx_productdb::com_object_lookup_id(program_id, ets_id, instance.is_some()),
+            )
+        })
+        .collect();
+    let refs: Vec<&str> = lookup_ids.values().map(String::as_str).collect();
+    let views = knx_productdb::query::com_object_views(products, program_id, &refs, language)
+        .map_err(|e| e.to_string())?;
+    for com in &mut detail.com_objects {
+        com.function_text = lookup_ids
+            .get(&com.id)
+            .and_then(|lookup| views.get(lookup))
+            .and_then(|view| view.function_text.clone());
+    }
+    Ok(())
+}
+
+/// ISSUE-08: the master data's display text for the datapoint type each
+/// object shows (`dpt`, else `program_dpt`), in `language` when the master
+/// data translates it. An id the master data does not know keeps `None`:
+/// the canonical id is still shown, and no text is invented.
+fn apply_dpt_texts(
+    products: &knx_productdb::Connection,
+    detail: &mut knx_projection::DeviceDetail,
+    language: Option<&str>,
+) -> Result<(), String> {
+    let mut texts: HashMap<String, Option<String>> = HashMap::new();
+    for com in &mut detail.com_objects {
+        let Some(id) = com.dpt.clone().or_else(|| com.program_dpt.clone()) else {
+            continue;
+        };
+        if !texts.contains_key(&id) {
+            let text = knx_productdb::query::datapoint_type(products, &id, language)
+                .map_err(|e| e.to_string())?
+                .and_then(|row| row.text);
+            texts.insert(id.clone(), text);
+        }
+        com.dpt_text = texts[&id].clone();
+    }
     Ok(())
 }
 
@@ -1504,6 +1564,7 @@ pub fn device_detail(
         }
     }
 
+    apply_dpt_texts(&products, &mut detail, language)?;
     if let Some(input) = activation_input {
         apply_com_object_activation(&products, &mut detail, input, language)?;
     }

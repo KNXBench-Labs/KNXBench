@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / serial-lookup one-shot evidence)
+- **Timestamp:** 2026-09-30 21:44 CEST
+- **Web lock:** held by the separate UI session for its scoped ADR-0051 Debug/service-control package; no Web source edited here.
+- **Completed:** Published server-only `serialLookup` activity to `origin/main` as `2c5894e8646bb82403c77b0aa4a1e26a2225f405`; remote readback matched. The lookup now records running, witnessed finished/failed and dropped-request unknown; its target `address` is nullable and stays `null` rather than leaking a serial number or guessing a physical address. A busy/running line scan now refuses the lookup before any second tunnel. Simulated HTTP tests cover positive/negative reads, invalid input, connector failure, cancellation and held scan; no live bus use or Web change. Rust workspace 137 suites / 2,774 passed / 0 failed / 161 ignored / 0 `SKIP:`; Web build / 80 files / 1,270 tests; strict workspace Clippy, fmt, anchors, headers, layering, corpus gates and diff check green. ADR-0055, status, limitations and goal updated; evidence `.ai/logs/2026-09-30_codex_serial-lookup-activity.md`.
+- **Pending/Next Steps:** Instrument remaining one-shot write/read routes only with their existing authorization/backup gates preserved; `serialAddress`, `serviceControl` and `groupWrite` remain untracked. The aggregate snapshot is volatile/partial, not proof of idle gateway. K13 HTTP reset and K14 remain blocked; no live hardware permission follows. Respect the UI Web lock; clean only this package's worktree and scratch after publishing the handover.
+- **Notes for Codex oder Claude:** No access key may be guessed. Serial lookup has no known target address; `null` is intentional and a witnessed no-device answer still finishes. A dropped request is not proof of success. No corpus or credentials were committed; root dirty changes and other sessions' worktrees were not touched.
+
+---
+
 - **Last Agent:** codex (commissioning / one-shot read-only device-compare activity)
 - **Timestamp:** 2026-09-30 21:22 CEST
 - **Web lock:** held by the parallel UI session for the scoped ADR-0051 Debug setting and service-control action. No Web source edited by this package.

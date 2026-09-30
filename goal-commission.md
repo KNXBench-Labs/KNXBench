@@ -496,11 +496,20 @@ have already shown an ignored write; do not repeat them from this goal alone.
 
 ### K13 — `NM_IndividualAddress_Reset` (item 2)
 
-**Live 2026-09-30 on `1.1.67` (user request).** `knx device reset-address
+**Live 2026-09-30 on `1.1.67` (historical user request).** `knx device reset-address
 1.1.67`: exactly `1.1.67` in programming mode (new guard), one round, then
 `1.1.67` vacant and `15.15.255` occupied. The unevaluated restart did not
 end programming mode (LED on). Recovered with `program-address 1.1.67`;
 compare and dump identical before and after (KL §140, RESEARCH §19.16).
+
+**Recovery safety follow-up 2026-09-30 (ADR-0058, offline only).** The
+public confirmed reset CLI now fails closed before tunnel opening. Its phrase
+and exact programming-mode device guard do not themselves persist a verified,
+complete backup of all storage affected on every pressed device; the one live
+run's separate application dump cannot establish that contract for arbitrary
+hardware. Plan-only mode and protocol simulator remain. No further reset is
+authorized without an implemented per-device durable pre-write backup/readback,
+recovery plan and a fresh device-specific go. An HTTP/UI reset remains blocked.
 
 **Done 2026-09-29, simulator only.**
 

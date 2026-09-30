@@ -518,6 +518,17 @@ async fn a_gateway_close_transitions_status_to_closed_but_stays_readable() {
     // until `/stop` is actually called.
     let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
     assert_eq!(response.status(), StatusCode::OK);
+
+    // KNOWN_LIMITATIONS §147: a real telegram's row carries the control
+    // fields it arrived with (this fake frame has none, so the decoder's
+    // defaults); the closed-session marker was never a frame and has none.
+    let rows = body_json(response).await["telegrams"].clone();
+    assert_eq!(
+        rows[0]["control"],
+        json!({ "priority": "low", "repeated": false, "hopCount": 6 })
+    );
+    assert_eq!(rows[1]["service"], "SessionClosed");
+    assert_eq!(rows[1]["control"], Value::Null);
 }
 
 // ---------------------------------------------------------------------------

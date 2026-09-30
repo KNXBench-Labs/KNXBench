@@ -39,6 +39,7 @@ use std::net::SocketAddrV4;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, RwLock};
 
+use knx_core::commissioning::group_object_table::TransmissionPriority;
 use knx_core::{
     DptCodecError, DptRef, GroupAddress, GroupAddressDpt, GroupAddressStyle, GroupValue,
     IndividualAddress,
@@ -708,6 +709,48 @@ pub struct TelegramRow {
     /// `GroupValueRead`, `Other`, and the closed-session marker, since none
     /// of those carry a `GroupValue` to decode against anything.
     pub decoded: Option<DecodedValue>,
+    /// Ctrl1/Ctrl2 as received (KNOWN_LIMITATIONS §147), `None` only on the
+    /// closed-session marker, which was never a frame.
+    pub control: Option<ReceivedControl>,
+}
+
+/// The per-frame control fields a received telegram travelled with, read
+/// through `LDataFrame::effective_control` (EMI_IMI v01.04.02 AS
+/// §4.1.5.3.2; priority codes Data Link Layer General v01.03.02 AS §2.2.3).
+/// The ack request is left out: on a TP1 `L_Data.ind` it is don't care
+/// (§4.1.5.3.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReceivedControl {
+    pub priority: TransmissionPriority,
+    /// `Some(true)` when an `L_Data.ind`'s R bit says the frame is a
+    /// repetition on the medium (§4.1.5.3.5). `None` for any other message
+    /// kind: there the same bit means "repeat on error" (`.req`) or is
+    /// don't care (`.con`), and is not a fact about this frame.
+    pub repeated: Option<bool>,
+    /// Ctrl2 bits 6–4, 0 to 7.
+    pub hop_count: u8,
+}
+
+impl ReceivedControl {
+    pub fn of(frame: &knx_net::LDataFrame) -> ReceivedControl {
+        let control = frame.effective_control();
+        ReceivedControl {
+            priority: control.priority,
+            repeated: matches!(frame.kind, knx_net::LDataMessageKind::Indication)
+                .then_some(control.repeat),
+            hop_count: control.hop_count,
+        }
+    }
+}
+
+/// The lower-case name a priority is shown and serialised with.
+pub fn priority_name(priority: TransmissionPriority) -> &'static str {
+    match priority {
+        TransmissionPriority::System => "system",
+        TransmissionPriority::Urgent => "urgent",
+        TransmissionPriority::Normal => "normal",
+        TransmissionPriority::Low => "low",
+    }
 }
 
 /// D4's four-way decode outcome, kept as a tagged enum rather than one
@@ -928,6 +971,7 @@ struct NewRow {
     service: String,
     raw_payload: Option<String>,
     decoded: Option<DecodedValue>,
+    control: Option<ReceivedControl>,
 }
 
 /// The capped, gap-accounted telegram store (design spec §3 D3). Mirrors
@@ -991,6 +1035,7 @@ impl TelegramBuffer {
             service: row.service,
             raw_payload: row.raw_payload,
             decoded: row.decoded,
+            control: row.control,
         });
         if self.entries.len() > MAX_TELEGRAMS {
             self.entries.pop_front();
@@ -1007,6 +1052,7 @@ impl TelegramBuffer {
     /// assume a group address; an individually-addressed frame is a
     /// different diagnostic this slice does not attempt).
     fn push_telegram(&mut self, frame: knx_net::LDataFrame, ctx: &GroupAddressContext) {
+        let control = ReceivedControl::of(&frame);
         let knx_net::LDataFrame {
             source,
             destination,
@@ -1093,6 +1139,7 @@ impl TelegramBuffer {
             service: service_name,
             raw_payload,
             decoded,
+            control: Some(control),
         });
     }
 
@@ -1111,6 +1158,7 @@ impl TelegramBuffer {
             service: "SessionClosed".to_string(),
             raw_payload: Some("session closed by gateway".to_string()),
             decoded: None,
+            control: None,
         });
     }
 
@@ -1622,6 +1670,76 @@ mod tests {
         assert_eq!(buffer.len(), 0);
         assert_eq!(buffer.next_seq(), 0);
         assert_eq!(buffer.dropped_before(), 0);
+    }
+
+    /// KNOWN_LIMITATIONS §147: a row keeps the priority, repeat flag and
+    /// hop count its frame arrived with, and a frame without `control`
+    /// shows the defaults the decoder would have normalised it to.
+    #[test]
+    fn a_row_keeps_the_control_fields_its_frame_arrived_with() {
+        let ctx = GroupAddressContext::from_project(None);
+        let frame = |kind, control| knx_net::LDataFrame {
+            kind,
+            source: addr(9),
+            destination: Destination::Group(GroupAddress::from_raw(1)),
+            transport: knx_net::Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            control,
+        };
+        let sent = knx_net::FrameControl {
+            priority: TransmissionPriority::Normal,
+            repeat: true,
+            ack_request: false,
+            hop_count: 5,
+        };
+        let mut buffer = TelegramBuffer::new();
+        buffer.push_telegram(
+            frame(knx_net::LDataMessageKind::Indication, Some(sent)),
+            &ctx,
+        );
+        buffer.push_telegram(frame(knx_net::LDataMessageKind::Indication, None), &ctx);
+        buffer.push_telegram(
+            frame(
+                knx_net::LDataMessageKind::Confirmation { error: false },
+                Some(sent),
+            ),
+            &ctx,
+        );
+        buffer.push_closed_marker();
+        let rows = buffer.telegrams_since(0);
+        assert_eq!(
+            rows[0].control,
+            Some(ReceivedControl {
+                priority: TransmissionPriority::Normal,
+                repeated: Some(true),
+                hop_count: 5,
+            })
+        );
+        assert_eq!(
+            rows[1].control,
+            Some(ReceivedControl {
+                priority: TransmissionPriority::Low,
+                repeated: Some(false),
+                hop_count: 6,
+            })
+        );
+        // On a confirmation the R bit is not a fact about the frame.
+        assert_eq!(rows[2].control.map(|c| c.repeated), Some(None));
+        assert_eq!(rows[3].control, None);
+    }
+
+    #[test]
+    fn every_priority_has_its_own_name() {
+        let names: Vec<_> = [
+            TransmissionPriority::System,
+            TransmissionPriority::Urgent,
+            TransmissionPriority::Normal,
+            TransmissionPriority::Low,
+        ]
+        .into_iter()
+        .map(priority_name)
+        .collect();
+        assert_eq!(names, ["system", "urgent", "normal", "low"]);
     }
 
     // -- panicked drain task (carried Task 2 finding, bus.rs:941) ----------

@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — received control fields reach the monitor (§147 consumers)
+
+- `knx bus monitor --control`: each line gains `[priority <p>, hop count
+  <n>]`, plus `, repeated` for an `L_Data.ind` the medium repeated. Off by
+  default; the plain line is unchanged (spec E4-D8).
+- Server: `TelegramRow::control` (`ReceivedControl`, read through
+  `LDataFrame::effective_control`); `/api/bus/monitor/telegrams` and the
+  debug bundle carry `control: {priority, repeated, hopCount}`, `null` on
+  the closed-session marker. `repeated` is `null` unless the frame is an
+  indication, since R means something else on `.req`/`.con`.
+- Tests: bus buffer, JSON shapes (HTTP + bundle), CLI suffix and flag;
+  11 mutants caught. Web table column: UI track.
+
 ## 2026-09-30 — `knx device service-control` (ADR-0051 on the CLI)
 
 - `apps/knx-cli/src/device_service_control.rs`: reads `PID_SERVICE_CONTROL`

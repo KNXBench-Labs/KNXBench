@@ -1,4 +1,20 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 11:40 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** §147 consumers: `knx bus monitor --control` appends
+  priority/hop count/repeated; server monitor rows and debug bundle carry
+  `control {priority, repeated, hopCount}` (`TelegramRow::control`,
+  `ReceivedControl` in `apps/knx-server/src/bus.rs`). Manual 10-command-line
+  updated. 11 mutants caught.
+- **Pending/Next Steps:** UI track (web lock): show `control` in the monitor
+  table (column or tooltip), plus ADR-0051's Settings Debug toggle.
+- **Notes for Codex oder Claude:** `repeated` is deliberately `null` on
+  anything but `L_Data.ind` (EMI_IMI §4.1.5.3.2/.4/.5); keep it that way in
+  the UI.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 11:15 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** `knx device service-control` (ADR-0051 on the CLI,

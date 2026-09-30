@@ -19,6 +19,10 @@
   136 suites, 2,761 passed, 0 failed, 160 ignored, 0 `SKIP:`; strict
   Clippy, rustfmt, diff check and all four `xtask` gates passed. These
   checks do not assert a real bus connection or hardware compatibility.
+- The reviewed feature is published on `main` as `e8a3c56f`; the remote
+  ref matched when read back. The publishing-equivalent tree repeated the
+  complete Web, corpus-backed Rust, Clippy and repository gates. The web
+  lock was released in the UI closeout handover.
 
 ## 2026-09-30 — Contributor License Agreement removed again (ADR-0054)
 

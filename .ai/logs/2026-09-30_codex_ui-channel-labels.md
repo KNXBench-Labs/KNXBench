@@ -23,4 +23,4 @@
 
 - Fixed the manual's dangling article, covered empty-string channel fields and removed the redundant assertion. Focused Web test 21/21, TypeScript/build green, full Web 78 files / 1,256 tests, local mock Chromium 10/10, rustfmt and diff check green.
 - After review fixes, corpus-backed Rust workspace: 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 `SKIP:`. Strict Clippy and `xtask` check-layering, check-headers, check-anchors, check-corpus-gates exit 0; dedicated target compiled the candidate's crates. No live tunnel or device write.
-- Merged-result gates, publishing, handover and cleanup: PENDING.
+- Published the reviewed feature `e8a3c56f2a4c35e40c4148c5479c8b94f17282a4` to `origin/main`; readback matched. The publication-equivalent tree passed a second Web build, 78 files / 1,256 tests, 10/10 local mock browser cases, Rust 136 suites / 2,761 passed / 0 failed / 160 ignored / 0 `SKIP:`, Clippy, fmt, diff and all four xtask gates. No live KNX connection or device write. The web lock is released in the closeout handover.

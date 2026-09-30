@@ -206,6 +206,38 @@ A session can also end without you: the interface can close it — the panel add
 bus session was ended elsewhere."* There is one session at a time; starting a new one
 replaces the old one and clears its rows.
 
+## Device checks: offline readiness, then an optional read-only comparison
+
+Open a project, choose **Bus monitor** in the navigation sidebar, then **Device
+checks** (German: **Geräteprüfung**). The readiness table checks every project
+device **offline** against the installed product database. It includes devices
+without an individual address and excluded devices, with their original
+readiness code, refusal category/detail or evidence, step/octets counts where
+available, and the server's counts by grade. **Verified on one device** is
+scoped to a documented application and download operation; it is not a
+promise for every device or configuration. **Plannable, not live-verified**
+means the plan built but has no matching hardware evidence. If the project or
+product database is missing, the panel reports the server's refusal instead
+of inventing grades. **Refresh readiness** recomputes the current project.
+
+**Compare with a device** is a separate operation. Only plannable devices
+with a unique individual address can be selected; a duplicate address is
+shown in the table but never guessed as a target. Choose a gateway and click
+**Review read-only comparison**. This does not connect. Read the target and
+gateway shown in the second step, then click **Read device now** if you intend
+to open a KNXnet/IP management tunnel. The operation reads the actual device's
+memory regions and load states for the *complete* download plan, and shows
+every differing byte range as current device bytes versus planned project
+bytes. It sends no device write and has no access-key field. A device that
+requires protected reads may refuse it. The gateway's one tunnel must be
+free; stop the monitor, scan or download first. Leaving this view does not
+cancel a read already in progress. The memory bytes can be private
+configuration data: do not share screenshots or logs of them casually.
+
+The UI does not yet offer the API's optional partial-download selection.
+The comparison is not a backup and does not prove that a later download will
+succeed. The UI tests use only a mocked local server, never a live device.
+
 ## Downloading to a device
 
 *Download* here means KNXBench → device over the bus: the device's configuration
@@ -271,7 +303,10 @@ This section is deliberately plain.
 
 **What KNXBench reads from a bus.** Telegrams that the interface forwards to it. The
 individual address an interface assigns to a tunneling session. During a line scan, the
-device descriptor that a device returns when asked. That is the complete list.
+device descriptor that a device returns when asked. During a deliberately confirmed
+**Device checks** comparison, the memory regions a complete plan would overwrite,
+plus affected load states and device identity. This is read-only management traffic,
+but it still occupies the gateway's tunnel; offline readiness contacts no device.
 
 **What KNXBench writes to a bus.** Group-value writes, and only group-value writes,
 from exactly three places: the `Send a value` form in the bus monitor, the `knx bus

@@ -1420,6 +1420,7 @@ main {
 
 .bus-diagnostics-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--knx-border);
@@ -1574,6 +1575,115 @@ main {
   width: 100%;
   accent-color: var(--knx-accent);
 }
+
+/* Offline device readiness and explicitly confirmed read-only comparison. */
+.device-checks-panel {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.device-checks-panel header h2,
+.device-checks-panel header p { margin: 4px 0; }
+
+.device-checks-readiness-section,
+.device-checks-compare {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  background: var(--knx-surface);
+}
+
+.device-checks-readiness-section h3,
+.device-checks-compare h3 { margin: 0; }
+
+.device-checks-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.device-checks-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.device-checks-counts li {
+  padding: 4px 8px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+
+.device-checks-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.device-checks-readiness,
+.device-checks-changes { width: 100%; }
+.device-checks-readiness { min-width: 54rem; }
+.device-checks-changes { min-width: 38rem; }
+
+.device-checks-readiness td small {
+  display: block;
+  color: var(--knx-muted);
+}
+
+.device-checks-readiness td code,
+.device-checks-changes td code { overflow-wrap: anywhere; }
+
+.device-checks-config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.device-checks-config label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--knx-muted);
+  font-size: 12px;
+}
+
+.device-checks-config button { justify-self: start; }
+
+.device-checks-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-left: 3px solid var(--knx-accent);
+  background: color-mix(in srgb, var(--knx-accent) 7%, var(--knx-surface));
+}
+
+.device-checks-confirm p { flex: 1 1 100%; margin: 0; }
+
+.device-checks-result {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.device-checks-result dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.device-checks-result dt { color: var(--knx-muted); }
+.device-checks-result dd { margin: 0; overflow-wrap: anywhere; }
 
 /* Download to a device (DeviceDownloadPanel): plan, then live progress. */
 .device-download-panel {

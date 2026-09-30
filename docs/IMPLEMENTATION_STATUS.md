@@ -15,6 +15,40 @@
   HTTP tests cover empty/held-lock snapshots, GET-only semantics, simulated
   programming before/after and corpus-backed simulated download progress.
 
+## 2026-09-30 — U12 device checks: offline readiness and explicit read-only comparison
+
+- Added a **Device checks** tab to Bus diagnostics. Its offline `GET
+  /api/device-readiness` view retains every device/grade, server counts,
+  refusal category/detail, hardware evidence and nullable plan sizes.
+  Unknown grades remain visibly unknown; ambiguous duplicate addresses
+  stay in the table but cannot become a compare target. This corrects the
+  `/api/readiness` shorthand in `goal-ui.md`: the actual mounted path is
+  `/api/device-readiness`.
+- A separate two-step action calls read-only `POST /api/device-compare` only
+  after the operator chooses one uniquely addressed, plannable device,
+  supplies a valid gateway and explicitly confirms the bus read. The UI
+  requests the complete plan only; it shows the server's byte ranges and
+  load states verbatim, withholds results on unexpected write/scope or
+  contradictory difference counts, and invalidates stale project results.
+  No setting, access key, write action or live gateway was used in this UI
+  package. The optional partial API selection remains CLI/API-only.
+- Regression: `BusDiagnosticsPanel.test.tsx` was RED before the tab was
+  added; `DeviceInspectionPanel.test.tsx` covers readiness, unsupported and
+  unknown data, duplicate targets, two-step consent, invalid gateways,
+  server-contract mismatches, keyboard-scrollable tables and stale project
+  requests. Two deliberate safety-guard mutations failed their tests before
+  restoration. Web gate: 80 files / 1,270 tests; TypeScript/build green;
+  local mocked Chromium EN/DE at 360/1440 px (4/4 new, 4/4 monitor and
+  10/10 existing). Corpus-backed simulator route checks: offline readiness
+  3/3, ignored-by-default device-compare 6/6 with no writes. No live bus
+  connection was opened. On the rebased merged-equivalent tree including
+  ADR-0055, Rust passed 137 suites / 2,769 tests / 0 failures / 160 ignored
+  with no `SKIP:`; strict Clippy, fmt and all four xtask checks passed.
+  Web passed 80 files / 1,270 tests, TypeScript and build, plus local mocked
+  Chromium 4/4 Device checks, 4/4 monitor and 10/10 existing checks.
+  See the bus user guide and KNOWN_LIMITATIONS' ADR-0049 section for the
+  scoped hardware claims.
+
 ## 2026-09-30 — K12 property-specific recovery gate before service-control writes
 
 - `knx-net` invokes a required pre-write callback after reading the exact

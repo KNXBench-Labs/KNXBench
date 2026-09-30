@@ -1,4 +1,23 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 13:45 CEST
+- **Web lock:** untouched; held by the UI session as its newest entry says.
+- **Completed:** U10 / ISSUE-12 discovery verified end to end after the
+  user's firewall rule (incoming UDP from source port 3671 on the LAN).
+  `knx bus discover` and `POST /api/bus/discover` both return the gateway;
+  no `[UFW BLOCK] SPT=3671` during the run. The optional routing rule alone
+  (destination `224.0.23.12:3671`) was proven insufficient first. Docs only:
+  RESEARCH §20.1, KNOWN_LIMITATIONS §79, IMPLEMENTATION_STATUS. No bus
+  frame, no code change.
+- **Pending/Next Steps:** For the UI session: U10's discovery part can be
+  ticked with this evidence; a native WebKitGTK click on **Search** is the
+  only unobserved step.
+- **Notes for Codex or Claude:** Both 3671 rules are now in the user's
+  `ufw`; do not change the firewall. Gateway/host addresses stay out of
+  tracked docs.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 13:30 CEST
 - **Web lock:** untouched; held by the UI session as its newest entry says.
 - **Completed:** K19 done. 71/71 private telegrams decode and re-encode past Ctrl1/Ctrl2; `crates/knx-net/tests/private_telegram_log.rs` (`KNXBENCH_TELEGRAM_LOG`, aggregates only). Found KNOWN_LIMITATIONS §147: the decoder drops priority/repeat/hop count (16 normal-priority telegrams). RESEARCH §19.14.

@@ -5395,6 +5395,14 @@ on this host stays empty until the user adds such a rule, and the manual
 endpoint remains the fallback. Discovery through a permitting firewall has
 not been observed end to end in KNXBench yet.
 
+**Observed end to end (2026-09-30, [V], RESEARCH §20.1).** After the user
+added an incoming rule for UDP *source* port 3671 from the LAN, `knx bus
+discover` and `POST /api/bus/discover` both found the gateway, and no reply
+was dropped. A rule for destination `224.0.23.12:3671` alone does not help.
+What remains of this entry: Docker's default bridge network, and any host
+whose firewall has no such rule (the hints say so). A native WebKitGTK click
+on **Search** has not been observed.
+
 **Historical impact before the HTTP route shipped.** `apps/knx-server`'s HTTP
 API had no discovery route —
 `grep -rn discover apps/knx-server/src/` finds none — so the shipped

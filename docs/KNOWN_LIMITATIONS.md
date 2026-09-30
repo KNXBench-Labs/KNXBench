@@ -8938,7 +8938,13 @@ CLI: `knx device service-control <a.l.d> --gateway <host:port>` reads the
 bit; `--enable`/`--disable` with the scope's `--confirm` phrase changes it,
 and without the phrase prints a plan and opens no socket.
 Simulator-, route- and CLI-tested; **not run on hardware**. The Settings
-panel's Debug toggle waits for the web lock.
+panel's Debug toggle and device action are deferred pending a cross-route
+pre-write recovery-policy decision: the existing service-control route reads
+and verifies the bit but does not persist its pre-write value before sending
+the change. See goal-ui.md U12 and ADR-0051; the server setting stays off by
+default. This note does not revoke the accepted ADR or claim that a full
+memory-image backup is required for this two-byte property — that remains to
+be established by the commissioning owner before a UI shortcut exposes it.
 
 **Status (2026-09-29, K12).** MP §2.4 `NM_IndividualAddress_SerialNumber_Read`
 and §2.5 `NM_IndividualAddress_SerialNumber_Write` are implemented: the

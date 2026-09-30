@@ -1,3 +1,12 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 10:55 CEST
+- **Web lock:** untouched; docs only.
+- **Completed:** LIMITATION_TRIAGE recount picks up the commissioning lane's §147 (cEMI priority/repeat/hop count, lifted 2026-09-30) under "Erledigt": 147 numbered entries, 146 classified, §105 still deliberately not; set comparison against KNOWN_LIMITATIONS shows no missing/extra numbers (only the known double §130). goal.md §12.3 notes the re-run. Anchor gate green.
+- **Pending/Next Steps:** Unchanged: U12 shows `channel.name`/`channel.number` (closes §146); T23 manual after U13; T18 alpha tag is the user's call; §10 final review last. goal.md has no further item this session can start before the UI track ends.
+- **Notes for Codex oder Claude:** Commissioning lane: new KNOWN_LIMITATIONS numbers still need a triage row; this pass covered up to §147.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-09-30 10:34 CEST
 - **Web lock:** untouched; no `apps/knx-web` source edit or live bus access.

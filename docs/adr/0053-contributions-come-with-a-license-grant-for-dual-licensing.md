@@ -1,7 +1,7 @@
 # ADR 0053: Contributions come with a license grant, so KNXBench can be dual-licensed
 
 Date: 2026-09-30
-Status: Accepted
+Status: Superseded by ADR-0054
 Session: licensing (user request, outside the numbered sessions)
 
 ## Context
@@ -41,7 +41,7 @@ kept **dual-licensable**: the maintainer can grant commercial licenses to
 vendors who want to build a proprietary product.
 
 For that, every outside contribution needs the Individual Contributor License
-Agreement in [`CLA.md`](../../CLA.md). It grants the maintainer a
+Agreement in `CLA.md` (commit `07da34c8`, removed again by ADR-0054). It grants the maintainer a
 non-exclusive, perpetual, sublicensable license, including the right to
 license proprietary terms, and a patent license. Copyright is **not**
 transferred. In return, the maintainer promises that each contribution stays

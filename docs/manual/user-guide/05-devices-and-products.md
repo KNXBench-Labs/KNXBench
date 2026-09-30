@@ -125,6 +125,30 @@ Select a device and the center of the workbench shows its panel: the name, the
 individual address, and three tabs. `←` and `→` move between them, `Home` and `End`
 jump to the first and last.
 
+### Address and line
+
+For a device already in a topology line, the **area.line** prefix is fixed by
+that line; edit only the **device number** (1–255) and press Enter or leave the
+field to apply the reconstructed address. A device not assigned to a line
+instead offers the complete individual address. A duplicate address, a number
+outside the range, or a line/prefix mismatch is rejected with a reason. An
+imported mismatch is shown so you can repair it rather than being rewritten
+without permission. If the imported topology lists one device in several
+positions (including a repeated reference on one line, both a line and
+the unassigned list, or two unassigned entries), or one line in multiple areas, this address control is disabled;
+it does not guess which prefix wins. Repair the topology outside this editor
+before moving such a device. Newly assigning device number `0` is not
+supported until couplers can be identified reliably; existing imported `.0`
+values are kept.
+
+Line moves and address edits are separate actions: changing the line does
+**not** renumber the device. To move an addressed device to a different line,
+first clear its address, choose the target line, then assign a number under
+that line's new prefix. An imported prefix mismatch can likewise be cleared
+before moving. A refused move leaves the project unchanged. The line picker
+currently supports devices in the first installation only. These controls
+edit the project; they do not connect to, program or download a KNX device.
+
 ### Communication objects
 
 ![The device panel for 1.0.1 with the Communication objects tab selected, below the
@@ -140,13 +164,20 @@ the group addresses it is linked to. Expanding a row gives you:
 | --- | --- |
 | DPT | Sets the object's datapoint type |
 | Description | Sets the object's description |
-| Flags | Read, Write, Transmit, Update, Communication, Read on init |
-| Group links | One row per link, each with Unlink |
-| New link | Pick an address, pick Send or Receive, click Link |
+| Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
+| Group links | One row per directional link, with Unlink; paired links can be unlinked together |
+| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link |
 
-The six toggles are the KNX communication flags, shown by their own letters —
-`R`, `W`, `T`, `U`, `C` and `I`. KNXBench stores what you set; it does not second-guess
-whether a combination is sensible for the product.
+The six toggles retain their KNX letters — `R`, `W`, `T`, `U`, `C` and `I` —
+and now show their full names alongside them. KNXBench stores what you set; it
+does not second-guess whether a combination is sensible for the product.
+Send + Receive creates **two separate links as one undoable edit**. If either
+already exists, neither is added; you may unlink or edit the individual
+Send/Receive links afterward. “Unlink both” likewise removes the pair in one
+undo step; a refused paired unlink leaves the other links in their original
+order, and Undo restores a removed link to its previous position. The
+screenshot above predates the expanded flag labels and the paired-link
+control; the current controls include both.
 
 Five of them are written back on export. **Read on init (`I`) is not.** No ETS project
 file this project has measured states that flag per communication object, so the

@@ -2283,7 +2283,7 @@ fn parse_direction(direction: &str) -> Result<knx_core::Direction, String> {
         "Send" => Ok(knx_core::Direction::Send),
         "Receive" => Ok(knx_core::Direction::Receive),
         other => Err(format!(
-            "unknown direction '{other}', expected 'Send' or 'Receive'"
+            "unknown direction '{other}', expected 'Send', 'Receive' or 'Both'"
         )),
     }
 }
@@ -2294,15 +2294,20 @@ pub fn link_com_object_impl(
     ga_id: u32,
     direction: String,
 ) -> Result<knx_projection::ProjectTree, String> {
-    let direction = parse_direction(&direction)?;
-    apply(
-        state,
-        knx_core::Command::LinkComObject {
-            com_object: knx_core::ComObjectInstanceId(com_object_id),
-            ga: knx_core::GroupAddressId(ga_id),
-            direction,
-        },
-    )
+    let command_for = |direction| knx_core::Command::LinkComObject {
+        com_object: knx_core::ComObjectInstanceId(com_object_id),
+        ga: knx_core::GroupAddressId(ga_id),
+        direction,
+    };
+    let command = if direction == "Both" {
+        knx_core::Command::Batch(vec![
+            command_for(knx_core::Direction::Send),
+            command_for(knx_core::Direction::Receive),
+        ])
+    } else {
+        command_for(parse_direction(&direction)?)
+    };
+    apply(state, command)
 }
 
 pub fn unlink_com_object_impl(
@@ -2311,15 +2316,20 @@ pub fn unlink_com_object_impl(
     ga_id: u32,
     direction: String,
 ) -> Result<knx_projection::ProjectTree, String> {
-    let direction = parse_direction(&direction)?;
-    apply(
-        state,
-        knx_core::Command::UnlinkComObject {
-            com_object: knx_core::ComObjectInstanceId(com_object_id),
-            ga: knx_core::GroupAddressId(ga_id),
-            direction,
-        },
-    )
+    let command_for = |direction| knx_core::Command::UnlinkComObject {
+        com_object: knx_core::ComObjectInstanceId(com_object_id),
+        ga: knx_core::GroupAddressId(ga_id),
+        direction,
+    };
+    let command = if direction == "Both" {
+        knx_core::Command::Batch(vec![
+            command_for(knx_core::Direction::Send),
+            command_for(knx_core::Direction::Receive),
+        ])
+    } else {
+        command_for(parse_direction(&direction)?)
+    };
+    apply(state, command)
 }
 
 pub fn catalog_manufacturers_impl(

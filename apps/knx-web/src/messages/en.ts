@@ -278,6 +278,11 @@ export const messages = {
   // itself from — see that key's own comment for why it's built this way
   // instead of six near-duplicate sentences.
   "inspector.address": "Address",
+  "inspector.address.deviceOctet": "Device number",
+  "inspector.address.invalidDevice": "Enter a device number from 1 to 255.",
+  "inspector.address.couplerOnly": "Device number 0 is for couplers; this editor cannot assign it without verified coupler classification.",
+  "inspector.address.ambiguous": "Address cannot be edited: the device has no unambiguous owning area and line.",
+  "inspector.address.mismatch": "Stored address {address} differs from assigned line {line}. It stays unchanged until you edit the device number.",
   "inspector.description": "Description",
   "inspector.dpt": "DPT",
   "inspector.comFlag.read": "Read",
@@ -288,7 +293,9 @@ export const messages = {
   "inspector.comFlag.readOnInit": "Read on init",
   "inspector.direction.send": "Send",
   "inspector.direction.receive": "Receive",
+  "inspector.direction.both": "Send + receive (one action)",
   "inspector.unlink": "Unlink",
+  "inspector.unlinkBoth": "Unlink both",
   "inspector.chooseGroupAddress": "(choose a group address)",
   "inspector.link": "Link",
   "inspector.line": "Line",

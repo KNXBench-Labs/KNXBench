@@ -72,6 +72,8 @@ impl BusTunnel for SimTunnel {
 struct SimConnector {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
+    connect_delay: Duration,
+    connect_failure: bool,
 }
 
 impl GatewayConnector for SimConnector {
@@ -82,7 +84,15 @@ impl GatewayConnector for SimConnector {
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(Arc::clone(&self.device)));
-        Box::pin(async move { Ok(tunnel) })
+        let delay = self.connect_delay;
+        let failure = self.connect_failure;
+        Box::pin(async move {
+            tokio::time::sleep(delay).await;
+            if failure {
+                return Err(BusSessionError::Transport(BusError::Timeout));
+            }
+            Ok(tunnel)
+        })
     }
 
     fn discover(
@@ -110,11 +120,24 @@ fn fast() -> SessionTiming {
 struct Harness {
     _dir: tempfile::TempDir,
     app: axum::Router,
+    state: Arc<knx_server::AppState>,
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
 }
 
 fn harness(config: SimulatorConfig) -> Harness {
+    harness_with_delay(config, Duration::ZERO)
+}
+
+fn harness_with_delay(config: SimulatorConfig, connect_delay: Duration) -> Harness {
+    harness_with_connector(config, connect_delay, false)
+}
+
+fn harness_with_connector(
+    config: SimulatorConfig,
+    connect_delay: Duration,
+    connect_failure: bool,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let device = Arc::new(SimulatedDevice::with_config(config));
     let calls = Arc::new(AtomicUsize::new(0));
@@ -123,6 +146,8 @@ fn harness(config: SimulatorConfig) -> Harness {
         connector: Box::new(SimConnector {
             device: Arc::clone(&device),
             calls: Arc::clone(&calls),
+            connect_delay,
+            connect_failure,
         }),
         address_programming_timing: fast(),
         address_programming_pause: Duration::from_millis(10),
@@ -130,7 +155,8 @@ fn harness(config: SimulatorConfig) -> Harness {
     });
     Harness {
         _dir: dir,
-        app: knx_server::app(state, None),
+        app: knx_server::app(Arc::clone(&state), None),
+        state,
         device,
         calls,
     }
@@ -215,6 +241,103 @@ async fn find_serial_answers_and_says_nobody_when_nobody_answers() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["address"], Value::Null);
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activity["oneShot"].as_array().unwrap().len(), 2);
+    assert_eq!(activity["oneShot"][0]["kind"], "serialLookup");
+    assert_eq!(activity["oneShot"][0]["state"], "finished");
+    // The lookup has no known physical address before the read. Never log
+    // its serial or invent a target address, even when a device answers.
+    assert_eq!(activity["oneShot"][0]["address"], Value::Null);
+    assert_eq!(activity["oneShot"][1]["address"], Value::Null);
+    assert!(!activity.to_string().contains(SERIAL));
+}
+
+#[tokio::test]
+async fn cancelled_serial_lookup_remains_unknown_without_exposing_the_serial() {
+    let h = harness_with_delay(with_serial(), Duration::from_secs(30));
+    let app = h.app.clone();
+    let task = tokio::spawn(async move {
+        send(
+            &app,
+            get(&format!(
+                "/api/device-address/find-serial?gateway={GATEWAY}&serialNumber={SERIAL}"
+            )),
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while h.calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the simulated tunnel was not requested");
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activity["oneShot"][0]["state"], "running");
+    assert_eq!(activity["oneShot"][0]["address"], Value::Null);
+
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activity["oneShot"][0]["state"], "unknown");
+    assert!(activity["oneShot"][0]["finishedAt"].is_string());
+    assert!(!activity.to_string().contains(SERIAL));
+    assert_eq!(h.device.serial_number_writes(), 0);
+}
+
+#[tokio::test]
+async fn failed_lookup_and_invalid_input_never_claim_success_or_expose_a_serial() {
+    let h = harness_with_connector(with_serial(), Duration::ZERO, true);
+    let (status, _) = send(
+        &h.app,
+        get(&format!(
+            "/api/device-address/find-serial?gateway={GATEWAY}&serialNumber=0083:12"
+        )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"], json!([]));
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+
+    let (status, _) = send(
+        &h.app,
+        get(&format!(
+            "/api/device-address/find-serial?gateway={GATEWAY}&serialNumber={SERIAL}"
+        )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "failed");
+    assert_eq!(activity["oneShot"][0]["address"], Value::Null);
+    assert!(!activity.to_string().contains(SERIAL));
+    assert_eq!(h.device.serial_number_writes(), 0);
+}
+
+#[tokio::test]
+async fn serial_lookup_refuses_an_occupied_scan_holder_before_opening_a_tunnel() {
+    let h = harness(with_serial());
+    let _scan = h.state.line_scan_session.lock().await;
+    let (status, _) = tokio::time::timeout(
+        Duration::from_secs(1),
+        send(
+            &h.app,
+            get(&format!(
+                "/api/device-address/find-serial?gateway={GATEWAY}&serialNumber={SERIAL}"
+            )),
+        ),
+    )
+    .await
+    .expect("a held scan lock must be refused promptly");
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"], json!([]));
+    assert_eq!(h.device.serial_number_writes(), 0);
 }
 
 #[tokio::test]

@@ -5,14 +5,16 @@
 The server's read-only `GET /api/bus/activity` reports retained download,
 button-programming, monitor and line-scan sessions, but **not** a complete
 global action history. It identifies held locks without guessing which
-operation or target owns them. One-shot group writes, serial-address actions and lookups, and service-control
-reads/writes still have no retained activity evidence; short actions may be
-missed entirely by polling. Live device comparisons are now recorded in a
-server-lifetime ring (up to 64 records under ordinary single-tunnel use),
-with `oneShotDropped` reporting evictions. A cancelled read-only compare has
-an unknown completion outcome; it never performs a device write. The activity
-record contains neither memory bytes nor keys or full results. A server
-restart loses this history.
+operation or target owns them. One-shot group writes, serial-address **writes**,
+and service-control reads/writes still have no retained activity evidence;
+short actions may be missed entirely by polling. Read-only device comparisons
+and serial-number lookups are recorded in a server-lifetime ring (up to 64
+records under ordinary single-tunnel use), with `oneShotDropped` reporting
+evictions. Lookup activity has `address: null`: it does not publish the device
+serial or invent an address. A cancelled read-only action has an unknown
+completion outcome; it never performs a device write. The activity record
+contains neither memory bytes nor keys or full results. A server restart
+loses this history.
 An empty `sessions` list does not prove no bus traffic, and a terminal session
 does not prove the gateway is free. The response declares `coverage: "partial"`.
 The global Web status bar and per-action UI rows are still pending; this

@@ -57,3 +57,16 @@ records in `oneShotDropped`. A server restart loses this view; it must not be
 treated as persistent audit or recovery evidence. The other one-shot routes
 remain explicitly `untracked`, and `coverage` remains `partial`. The detailed
 device-compare response remains the authoritative result.
+
+## Follow-up: an operation without a known address (2026-09-30)
+
+Read-only serial-number lookup also records a one-shot action. Its physical
+address is not known before the bus read and may never be found, so the
+`address` field of *all* one-shot records is nullable. Device comparison still
+emits its validated target string; serial lookup emits JSON `null` rather
+than a guessed address, device serial, gateway or other identifier. Success
+includes a witnessed negative answer; cancellation remains `unknown`, not
+proof of a result. The lookup also refuses a busy/running scan holder before
+opening another tunnel; the previous route omitted that exclusion. The
+serial-address **write** is not covered by this follow-up; `coverage` stays
+`partial` and the untracked list still names it.

@@ -41,10 +41,15 @@ claiming a full-device backup without evidence of other affected regions.
   affected crates/all targets passed. `cargo fmt --all --check` passed.
 - Corpus-enabled `cargo test --workspace`: 136 suites, 2,766 passed,
   0 failed, 160 ignored, no `SKIP:` output. Explicit house-readiness
-  corpus test: 1 passed. The larger download-coverage corpus test is run
-  separately; its result must be recorded before delivery.
+  and download-coverage corpus tests both passed (1 + 1). The larger
+  coverage test took about 14 minutes on this host; the first run was
+  stopped by a too-short 360-second tool timeout and the subsequent
+  unbounded background run passed. No product counts were re-pinned.
 - Fresh-worktree `xtask`: anchors, headers, layering and corpus gates passed.
-  Web production build passed to provide desktop assets for the Rust gate.
+  After rebasing onto the concurrently published U12 monitor work, the
+  integrated workspace again passed 136 suites / 2,766 tests / 0 failures /
+  160 ignored / 0 `SKIP:`; full Web 78 files / 1,258 tests and build passed;
+  workspace strict Clippy, fmt, all four xtask checks and diff check passed.
 - **No new live hardware evidence.** Restore of potential manufacturer-side
   effects remains unknown; the recorded two bytes alone do not prove them
   absent. Only the operator may approve another device-specific live write.

@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — K12 property-specific recovery gate before service-control writes
+
+- `knx-net` invokes a required pre-write callback after reading the exact
+  `PID_SERVICE_CONTROL` value in its management session and before the first
+  property write. A failed callback refuses without writing. CLI and HTTP
+  persist the original two octets, mask and address in a versioned owner-only
+  JSON record, read it back and sync file plus directory. The HTTP response
+  reports `backupPath`; CLI defaults to `./device-backups/` and accepts
+  `--backup-dir`. A no-op writes neither property nor backup.
+- Simulator tests cover the pre-write refusal and HTTP/CLI failure paths;
+  the HTTP test reads the saved record and checks it against the pre-write
+  response. Focused suite and Clippy/check pass (details in the commissioning
+  log). No live device was contacted; no UI file or K13 route was changed.
+- ADR-0051 and KNOWN_LIMITATIONS §139 define the narrow property-only recovery
+  scope and the ambiguous-write/manual-recovery boundary. A full device dump
+  is **not** claimed. The UI owner may re-evaluate the Debug action after
+  reviewing this contract; the default server gate remains off.
+
 ## 2026-09-30 — U12 / §147 received control fields in the web monitor
 
 - The existing additive monitor API field `control` is now typed by the

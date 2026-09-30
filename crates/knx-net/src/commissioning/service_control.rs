@@ -80,6 +80,8 @@ pub enum ServiceControlError {
     NotPresent,
     /// The property was not two octets long.
     Malformed { octets: usize },
+    /// Durable recovery evidence was not saved; no property write was sent.
+    PreWriteBackup(String),
     /// A session step failed.
     Session {
         step: &'static str,
@@ -103,6 +105,10 @@ impl std::fmt::Display for ServiceControlError {
             Self::Malformed { octets } => write!(
                 f,
                 "PID_SERVICE_CONTROL answered with {octets} octet(s), expected 2"
+            ),
+            Self::PreWriteBackup(reason) => write!(
+                f,
+                "pre-write property backup failed; nothing written: {reason}"
             ),
             Self::Session { step, error } => write!(f, "{step}: {error}"),
         }
@@ -163,19 +169,22 @@ pub async fn read_service_control<T: ManagementTransport>(
 /// Sets bit 2 to `enable`, leaving the other fifteen bits as read.
 ///
 /// `authorisation` must name the device and
-/// [`WriteScope::IndividualAddressWriteEnable`]. When the bit already has
-/// the requested value nothing is written, and the report says so.
+/// [`WriteScope::IndividualAddressWriteEnable`]. `persist_before_write`
+/// must durably save the exact two-octet property value and mask observed
+/// in this session; an error stops before the first property write. When the
+/// bit already has the requested value nothing is written or backed up.
 pub async fn set_individual_address_write_enable<T: ManagementTransport>(
     transport: &T,
     plan: AuthorisationPlan,
     timing: SessionTiming,
     authorisation: WriteAuthorisation,
     enable: bool,
+    persist_before_write: impl FnOnce(ServiceControl) -> Result<(), String>,
 ) -> Result<ServiceControlChange, ServiceControlError> {
     let mut session = ManagementSession::authorised(transport, plan, timing, authorisation)
         .map_err(at("authorisation"))?;
     session.connect().await.map_err(at("T_Connect"))?;
-    let result = change_in(&mut session, enable).await;
+    let result = change_in(&mut session, enable, persist_before_write).await;
     session.disconnect().await;
     result
 }
@@ -183,6 +192,7 @@ pub async fn set_individual_address_write_enable<T: ManagementTransport>(
 async fn change_in<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     enable: bool,
+    persist_before_write: impl FnOnce(ServiceControl) -> Result<(), String>,
 ) -> Result<ServiceControlChange, ServiceControlError> {
     let before = read_in(session).await?;
     if before.individual_address_write_enabled() == enable {
@@ -192,6 +202,7 @@ async fn change_in<T: ManagementTransport>(
             written: false,
         });
     }
+    persist_before_write(before).map_err(ServiceControlError::PreWriteBackup)?;
     let wanted = if enable {
         before.raw | SERVICE_CONTROL_IA_WRITE_ENABLE
     } else {
@@ -289,6 +300,7 @@ mod tests {
             fast(),
             authorisation,
             enable,
+            |_| Ok(()), // simulator-only unit helper; production callers persist a backup
         )
         .await
     }
@@ -300,6 +312,31 @@ mod tests {
             ..Default::default()
         });
         assert!(!read(&device).await.individual_address_write_enabled());
+        assert!(service_control_writes(&device).is_empty());
+    }
+
+    #[tokio::test]
+    async fn failed_prewrite_backup_refuses_the_property_write() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            serial_number_write_enabled: false,
+            ..Default::default()
+        });
+        let result = set_individual_address_write_enable(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            auth(&device),
+            true,
+            |before| {
+                assert_eq!(before.raw, 0);
+                Err("backup storage failed".to_owned())
+            },
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(ServiceControlError::PreWriteBackup(_))
+        ));
         assert!(service_control_writes(&device).is_empty());
     }
 

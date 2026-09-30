@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use knx_app::access_key::project_access_key;
+use knx_app::service_control_backup::write_backup;
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
 use knx_core::{ContactableAddress, IndividualAddress};
@@ -114,6 +115,7 @@ fn status_of(error: &ServiceControlError) -> StatusCode {
         ServiceControlError::Malformed { .. } | ServiceControlError::Session { .. } => {
             StatusCode::BAD_GATEWAY
         }
+        ServiceControlError::PreWriteBackup(_) => StatusCode::INSUFFICIENT_STORAGE,
     }
 }
 
@@ -222,6 +224,8 @@ struct WriteResponse {
     individual_address_write_enabled: bool,
     /// `false`: bit 2 already had the requested value; nothing was sent.
     written: bool,
+    /// Durable property recovery evidence, absent for a no-op.
+    backup_path: Option<String>,
 }
 
 async fn write(
@@ -238,6 +242,7 @@ async fn write(
     )
     .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
     let plan = plan(&state)?;
+    let mut backup_path = None;
     let outcome = with_tunnel!(state, gateway, |tunnel| {
         set_individual_address_write_enable(
             &tunnel,
@@ -245,6 +250,17 @@ async fn write(
             state.address_programming_timing,
             authorisation,
             body.enable,
+            |before| {
+                let path = write_backup(
+                    &state.data_dir.join("device-backups"),
+                    address,
+                    before.mask.0,
+                    before.raw,
+                )
+                .map_err(|e| e.to_string())?;
+                backup_path = Some(path);
+                Ok(())
+            },
         )
         .await
     });
@@ -256,7 +272,14 @@ async fn write(
                 & knx_core::commissioning::properties::SERVICE_CONTROL_IA_WRITE_ENABLE
                 != 0,
             written: change.written,
+            backup_path: backup_path.map(|p: std::path::PathBuf| p.display().to_string()),
         })),
-        Err(e) => Err(ApiError::with_status(status_of(&e), e.to_string())),
+        Err(e) => {
+            let detail = match backup_path {
+                Some(path) => format!("{e}; pre-write property backup: {}", path.display()),
+                None => e.to_string(),
+            };
+            Err(ApiError::with_status(status_of(&e), detail))
+        }
     }
 }

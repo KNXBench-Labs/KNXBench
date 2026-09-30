@@ -34,6 +34,7 @@ pub struct ServiceControlArgs {
     pub enable: Option<bool>,
     pub confirm: Option<String>,
     pub key_file: Option<String>,
+    pub backup_dir: Option<String>,
 }
 
 pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
@@ -42,6 +43,7 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
     let mut enable = None;
     let mut confirm = None;
     let mut key_file = None;
+    let mut backup_dir = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -51,12 +53,13 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
                 }
                 i += 1;
             }
-            "--gateway" | "--confirm" | "--key-file" => {
+            "--gateway" | "--confirm" | "--key-file" | "--backup-dir" => {
                 let value = crate::take_value(args, i + 1, &args[i])?;
                 let slot = match args[i].as_str() {
                     "--gateway" => &mut gateway,
                     "--confirm" => &mut confirm,
-                    _ => &mut key_file,
+                    "--key-file" => &mut key_file,
+                    _ => &mut backup_dir,
                 };
                 *slot = Some(value);
                 i += 2;
@@ -86,6 +89,7 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
         enable,
         confirm,
         key_file,
+        backup_dir,
     })
 }
 
@@ -159,8 +163,9 @@ pub fn format_plan(address: IndividualAddress, enable: bool) -> String {
         "== {address}: {} Individual Address Write Enable: plan (nothing sent yet) ==\n\
          RES §4.2.8 PID_SERVICE_CONTROL (object 0, PID 8), bit 2 only:\n  \
          1: read the mask (mask 0021h codes the bit inversely: refused) and the property\n  \
-         2: {} bit 2, write the two octets back with the other bits unchanged\n  \
-         3: compare the device's answer with what was written\n\
+         2: persist a durable backup of the two-octet property (mask and target included)\n  \
+         3: {} bit 2, write the two octets back with the other bits unchanged\n  \
+         4: compare the device's answer with what was written\n\
          written: no (plan only; add --gateway and --confirm {:?} to write)\n",
         if enable { "set" } else { "clear" },
         if enable { "set" } else { "clear" },
@@ -205,13 +210,40 @@ pub async fn execute<T: ManagementTransport>(
     timing: SessionTiming,
     authorisation: WriteAuthorisation,
     enable: bool,
+    backup_dir: &std::path::Path,
     out: &mut impl Write,
 ) -> bool {
     let address = authorisation.target().address();
-    match set_individual_address_write_enable(transport, plan, timing, authorisation, enable).await
-    {
+    let mut backup_path = None;
+    let result = set_individual_address_write_enable(
+        transport,
+        plan,
+        timing,
+        authorisation,
+        enable,
+        |before| {
+            let path = knx_app::service_control_backup::write_backup(
+                backup_dir,
+                address,
+                before.mask.0,
+                before.raw,
+            )
+            .map_err(|e| e.to_string())?;
+            backup_path = Some(path);
+            Ok(())
+        },
+    )
+    .await;
+    match result {
         Ok(change) => {
             let _ = writeln!(out, "{address}: before: {}", describe(change.before));
+            if let Some(path) = &backup_path {
+                let _ = writeln!(
+                    out,
+                    "{address}: pre-write property backup: {}",
+                    path.display()
+                );
+            }
             if change.written {
                 let _ = writeln!(
                     out,
@@ -232,6 +264,13 @@ pub async fn execute<T: ManagementTransport>(
         }
         Err(e) => {
             let _ = writeln!(out, "{address}: FAILED: {e}");
+            if let Some(path) = &backup_path {
+                let _ = writeln!(
+                    out,
+                    "{address}: pre-write property backup: {}",
+                    path.display()
+                );
+            }
             let _ = writeln!(
                 out,
                 "{address}: written: no, or not confirmed; read it again"
@@ -322,6 +361,18 @@ mod tests {
             check(&parsed).unwrap().1,
             Mode::Write { enable: false, .. }
         ));
+        let with_backup = parse_args(&args(&[
+            "1.1.67",
+            "--enable",
+            "--gateway",
+            GW,
+            "--confirm",
+            PHRASE,
+            "--backup-dir",
+            "safe-place",
+        ]))
+        .unwrap();
+        assert_eq!(with_backup.backup_dir.as_deref(), Some("safe-place"));
     }
 
     #[test]
@@ -342,6 +393,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_then_enable_prints_what_the_device_holds() {
+        let dir = tempfile::tempdir().unwrap();
         let device = SimulatedDevice::with_config(SimulatorConfig {
             serial_number_write_enabled: false,
             ..Default::default()
@@ -364,6 +416,7 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
+                dir.path(),
                 &mut out
             )
             .await
@@ -371,10 +424,49 @@ mod tests {
         let text = String::from_utf8(out).unwrap();
         assert!(text.contains("0000h -> 0004h"), "{text}");
         assert!(text.contains("written: yes"), "{text}");
+        assert!(text.contains("pre-write property backup"), "{text}");
+    }
+
+    #[tokio::test]
+    async fn a_blocked_backup_refuses_before_a_property_write() {
+        let dir = tempfile::tempdir().unwrap();
+        let blocker = dir.path().join("occupied");
+        std::fs::write(&blocker, b"not a directory").unwrap();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            serial_number_write_enabled: false,
+            ..Default::default()
+        });
+        let authorisation = WriteAuthorisation::for_simulator(
+            device.address(),
+            WriteScope::IndividualAddressWriteEnable,
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        assert!(
+            !execute(
+                &device,
+                AuthorisationPlan::Skip,
+                fast(),
+                authorisation,
+                true,
+                &blocker,
+                &mut out,
+            )
+            .await
+        );
+        assert!(String::from_utf8(out).unwrap().contains("backup failed"));
+        assert!(!device.seen().iter().any(|seen| matches!(
+            seen,
+            knx_net::commissioning::simulator::Seen::PropertyWrite {
+                property_id: PID_SERVICE_CONTROL,
+                ..
+            }
+        )));
     }
 
     #[tokio::test]
     async fn an_already_set_bit_is_reported_and_not_written() {
+        let dir = tempfile::tempdir().unwrap();
         let device = SimulatedDevice::with_config(SimulatorConfig::default());
         let authorisation = WriteAuthorisation::for_simulator(
             device.address(),
@@ -389,6 +481,7 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
+                dir.path(),
                 &mut out
             )
             .await
@@ -396,10 +489,12 @@ mod tests {
         let text = String::from_utf8(out).unwrap();
         assert!(text.contains("written: no need"), "{text}");
         assert!(!text.contains("written: yes"), "{text}");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
     }
 
     #[tokio::test]
     async fn a_refusal_says_written_no() {
+        let dir = tempfile::tempdir().unwrap();
         let device = SimulatedDevice::with_config(SimulatorConfig {
             mask_version: SERVICE_CONTROL_INVERTED_MASK,
             ..Default::default()
@@ -417,6 +512,7 @@ mod tests {
                 fast(),
                 authorisation,
                 true,
+                dir.path(),
                 &mut out
             )
             .await

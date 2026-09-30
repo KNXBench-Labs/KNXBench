@@ -290,6 +290,17 @@ With `--project`, each destination is annotated with its name from the project a
 value is decoded against that address's resolved datapoint type. Without it, you get
 raw payloads. Dropped telegrams are reported rather than hidden.
 
+`--control` appends the priority and hop count each telegram travelled with, and marks
+a telegram the medium repeated:
+
+```text
+1.1.4 -> 1/2/3 (Kitchen ceiling light): GroupValueWrite 1 [priority normal, hop count 6]
+```
+
+Without `--control` the line is exactly as above. The web monitor's JSON carries the
+same fields as `control` (`priority`, `repeated`, `hopCount`); the table does not show
+them yet.
+
 Monitoring reads only.
 
 ### `knx bus write` — send a group value over tunneling

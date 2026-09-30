@@ -263,6 +263,11 @@ fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
                 json!({ "kind": "error", "dpt": dpt, "reason": reason, "text": text, "error": error })
             }
         }),
+        "control": row.control.map(|c| json!({
+            "priority": crate::bus::priority_name(c.priority),
+            "repeated": c.repeated,
+            "hopCount": c.hop_count,
+        })),
     })
 }
 
@@ -281,6 +286,11 @@ mod tests {
             service: "GroupValueWrite".into(),
             raw_payload: Some("01".into()),
             decoded,
+            control: Some(crate::bus::ReceivedControl {
+                priority: knx_core::commissioning::group_object_table::TransmissionPriority::Normal,
+                repeated: Some(false),
+                hop_count: 6,
+            }),
         }
     }
 
@@ -330,5 +340,9 @@ mod tests {
         assert_eq!(value["destinationName"], json!("Kitchen ceiling light"));
         assert_eq!(value["service"], json!("GroupValueWrite"));
         assert_eq!(value["rawPayload"], json!("01"));
+        assert_eq!(
+            value["control"],
+            json!({ "priority": "normal", "repeated": false, "hopCount": 6 })
+        );
     }
 }

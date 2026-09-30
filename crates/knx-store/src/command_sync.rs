@@ -45,7 +45,8 @@ pub fn sync_after_command(
 ) -> Result<(), StoreError> {
     let tx = conn.unchecked_transaction()?;
     match command {
-        Command::SetIndividualAddress { device, .. } => {
+        Command::SetIndividualAddress { device, .. }
+        | Command::RestoreIndividualAddress { device, .. } => {
             let d = project
                 .devices
                 .get(*device)
@@ -171,10 +172,9 @@ pub fn sync_after_command(
         Command::RenameGroupRange { .. } => {
             // Group-range persistence layer not yet implemented (Task 5 scope).
         }
-        Command::LinkComObject { .. } => {
-            // Group-link persistence layer not yet implemented (Task 6 scope).
-        }
-        Command::UnlinkComObject { .. } => {
+        Command::LinkComObject { .. }
+        | Command::UnlinkComObject { .. }
+        | Command::RestoreGroupLink { .. } => {
             // Group-link persistence layer not yet implemented (Task 6 scope).
         }
         Command::SetComObjectFlag { .. } | Command::RestoreComObjectFlag { .. } => {
@@ -279,6 +279,32 @@ mod tests {
         project.installations.push(installation);
         project.devices.insert(device_one());
         project
+    }
+
+    #[test]
+    fn undo_restores_an_imported_coupler_address_in_the_device_row() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_unassigned_device();
+        let original = IndividualAddress::new(1, 1, 0).unwrap();
+        project.devices.get_mut(DeviceId(1)).unwrap().address = Some(original);
+        crate::save_project(&conn, &project).unwrap();
+        let edit = Command::SetIndividualAddress {
+            device: DeviceId(1),
+            address: Some(IndividualAddress::new(1, 1, 18).unwrap()),
+        };
+        let restore = edit.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &edit).unwrap();
+        restore.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &restore).unwrap();
+        assert_eq!(
+            crate::load_project(&conn)
+                .unwrap()
+                .devices
+                .get(DeviceId(1))
+                .unwrap()
+                .address,
+            Some(original)
+        );
     }
 
     #[test]

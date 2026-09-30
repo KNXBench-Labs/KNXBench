@@ -3,8 +3,9 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::{
-    CommissioningState, CompletionStatus, DeviceId, DeviceInstance, Installation, InstallationId,
-    Language, Project, SourceRef, Topology,
+    Area, AreaId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
+    IndividualAddress, Installation, InstallationId, Language, Line, LineId, Project, SourceRef,
+    Topology,
 };
 use serde_json::{json, Value};
 use tower::ServiceExt;
@@ -928,6 +929,155 @@ async fn creating_a_group_address_with_a_range_id_validates_it_falls_inside() {
 }
 
 #[tokio::test]
+async fn a_line_bound_address_route_refuses_invalid_values_and_undo_restores_imported_data() {
+    let state = Arc::new(state_with_one_installation_and_device());
+    let original = IndividualAddress::new(2, 1, 9).unwrap();
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let installation = &mut project.installations[0];
+        installation.topology = Topology {
+            areas: vec![Area {
+                id: AreaId(10),
+                source: SourceRef {
+                    path: "fixture".into(),
+                    ets_id: "area".into(),
+                },
+                name: "A".into(),
+                address: 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![LineId(11)],
+            }],
+            lines: vec![Line {
+                id: LineId(11),
+                source: SourceRef {
+                    path: "fixture".into(),
+                    ets_id: "line".into(),
+                },
+                name: "L".into(),
+                address: 1,
+                medium_ref: String::new(),
+                domain_address: None,
+                domain_address_is_checked: None,
+                ip_routing_multicast_address: None,
+                multicast_ttl: None,
+                completion: CompletionStatus::FinishedDesign,
+                devices: vec![DeviceId(1), DeviceId(2)],
+            }],
+            unassigned: vec![],
+        };
+        project.devices.get_mut(DeviceId(1)).unwrap().address = Some(original);
+        let mut other = project.devices.get(DeviceId(1)).unwrap().clone();
+        other.id = DeviceId(2);
+        other.address = Some(IndividualAddress::new(1, 1, 17).unwrap());
+        project.devices.insert(other);
+    }
+    let app = knx_server::app(Arc::clone(&state), None);
+    for (address, reason) in [
+        ("1.2.18", "assigned line 1.1"),
+        ("1.1.0", "reserved for couplers"),
+        ("1.1.17", "already used"),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/individual-address")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({ "deviceId": 1, "address": address }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{address}");
+        let error = body_json(response).await;
+        assert!(
+            error["error"].as_str().unwrap().contains(reason),
+            "{address}: {error}"
+        );
+        assert_eq!(
+            state
+                .project
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .devices
+                .get(DeviceId(1))
+                .unwrap()
+                .address,
+            Some(original)
+        );
+    }
+
+    let accepted = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/individual-address")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "deviceId": 1, "address": "1.1.18" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(accepted.status(), StatusCode::OK);
+    let accepted_tree = body_json(accepted).await;
+    assert_eq!(
+        accepted_tree["installations"][0]["topology"][0]["lines"][0]["devices"][0]["address"],
+        "1.1.18"
+    );
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .address,
+        Some(IndividualAddress::new(1, 1, 18).unwrap())
+    );
+    let undo = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    let undone_tree = body_json(undo).await;
+    assert_eq!(
+        undone_tree["installations"][0]["topology"][0]["lines"][0]["devices"][0]["address"],
+        "2.1.9"
+    );
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .address,
+        Some(original)
+    );
+}
+
+#[tokio::test]
 async fn linking_then_unlinking_a_com_object_to_a_group_address() {
     // No device-creation route exists yet (Sub-Project 2), so this test
     // seeds a com object directly the same way command.rs's own fixtures
@@ -1016,6 +1166,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
     assert_eq!(link.status(), StatusCode::OK);
 
     let unlink = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method("DELETE")
@@ -1029,6 +1180,133 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
         .await
         .unwrap();
     assert_eq!(unlink.status(), StatusCode::OK);
+
+    // If Receive already exists, the second item of Both fails. The Send
+    // item must be rolled back, not left as a half-applied UI action.
+    let receive = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/group-links")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "comObjectId": 1, "gaId": 1, "direction": "Receive" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(receive.status(), StatusCode::OK);
+    let conflict = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/group-links")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "comObjectId": 1, "gaId": 1, "direction": "Both" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(conflict.status(), StatusCode::BAD_REQUEST);
+    let detail = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let links = body_json(detail).await["com_objects"][0]["links"]
+        .as_array()
+        .unwrap()
+        .clone();
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0]["direction"], "Receive");
+    let unlink_receive = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/group-links")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "comObjectId": 1, "gaId": 1, "direction": "Receive" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unlink_receive.status(), StatusCode::OK);
+
+    // The additive "Both" action creates two directional links in one
+    // command, without changing the original Send/Receive request shapes.
+    let both = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/group-links")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "comObjectId": 1, "gaId": 1, "direction": "Both" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(both.status(), StatusCode::OK);
+    let detail = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        body_json(detail).await["com_objects"][0]["links"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    let remove_both = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/group-links")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "comObjectId": 1, "gaId": 1, "direction": "Both" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(remove_both.status(), StatusCode::OK);
+    let detail = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(body_json(detail).await["com_objects"][0]["links"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }
 
 /// `Project::new` defaults to `ThreeLevel` (`ProjectInfo::default`), so

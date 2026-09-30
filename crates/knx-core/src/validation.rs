@@ -19,6 +19,28 @@ pub enum ValidationError {
         existing: DeviceId,
         new: DeviceId,
     },
+    AddressOutsideAssignedLine {
+        device: DeviceId,
+        address: IndividualAddress,
+        area: u8,
+        line: u8,
+    },
+    CouplerAddressRequiresClassification {
+        device: DeviceId,
+        address: IndividualAddress,
+    },
+    LineWithoutArea {
+        line: LineId,
+    },
+    LineWithMultipleAreas {
+        line: LineId,
+    },
+    MultipleLineMembership {
+        device: DeviceId,
+    },
+    MultipleTopologyPlacements {
+        device: DeviceId,
+    },
     GroupAddressOutsideRange {
         address: GroupAddress,
         range: GroupRangeId,
@@ -69,6 +91,27 @@ impl fmt::Display for ValidationError {
             } => write!(
                 f,
                 "individual address {address} already used by device {existing}, cannot assign to device {new}"
+            ),
+            ValidationError::AddressOutsideAssignedLine { device, address, area, line } => write!(
+                f,
+                "device {device} address {address} does not match assigned line {area}.{line}; clear the address before moving lines"
+            ),
+            ValidationError::CouplerAddressRequiresClassification { device, address } => write!(
+                f,
+                "address {address} ends in 0, reserved for couplers; device {device} cannot be assigned a new coupler address without device classification"
+            ),
+            ValidationError::LineWithoutArea { line } => write!(
+                f, "line {line} has no owning area; cannot safely assign an address"
+            ),
+            ValidationError::LineWithMultipleAreas { line } => write!(
+                f, "line {line} belongs to multiple areas; cannot safely assign an address"
+            ),
+            ValidationError::MultipleLineMembership { device } => write!(
+                f, "device {device} appears on multiple lines; cannot safely assign an address"
+            ),
+            ValidationError::MultipleTopologyPlacements { device } => write!(
+                f,
+                "device {device} appears in multiple topology placements; repair the topology before editing its address or line"
             ),
             ValidationError::GroupAddressOutsideRange { address, range } => write!(
                 f,
@@ -137,6 +180,31 @@ pub fn check_no_duplicate_individual_address(
                 new: candidate,
             });
         }
+    }
+    Ok(())
+}
+
+/// Validate a complete physical address against its assigned topology line.
+/// `preserve_existing_zero` permits only an unchanged, already imported
+/// coupler address: without a device-kind model, a new zero cannot be
+/// distinguished from an invalid ordinary-device assignment.
+pub fn check_individual_address_on_line(
+    device: DeviceId,
+    address: IndividualAddress,
+    area: u8,
+    line: u8,
+    preserve_existing_zero: bool,
+) -> Result<(), ValidationError> {
+    if address.area() != area || address.line() != line {
+        return Err(ValidationError::AddressOutsideAssignedLine {
+            device,
+            address,
+            area,
+            line,
+        });
+    }
+    if address.device() == 0 && !preserve_existing_zero {
+        return Err(ValidationError::CouplerAddressRequiresClassification { device, address });
     }
     Ok(())
 }

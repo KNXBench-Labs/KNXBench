@@ -7,6 +7,15 @@
 
 ---
 
+- **Last Agent:** codex (UI U11 / ISSUE-09 branch green, integration pending)
+- **Timestamp:** 2026-09-30 06:32 CEST
+- **Web lock: still held by the UI ISSUE-09 session.** Do not edit `apps/knx-web` concurrently until the branch is published and the lock is released.
+- **Completed:** Device editor with line-bound address validation, accessible prefix, readable flags and atomic Send + Receive link/unlink. Review found and closed ambiguous topology placements and a loss of group-link order on unlink rollback/undo. `RestoreGroupLink` preserves original position, imported duplicate links and exact undo/redo order; missing/invalid positions refuse before mutation. Named regressions were RED before correction, GREEN after it; an append-only mutation was caught and restored. Final branch gates passed: Core 614, Store 80, HTTP edit routes 19, Web 78 files/1,213 plus TypeScript/build, browser six; corpus-backed workspace 125 suites/2,588 passed/0 failed/148 ignored/0 skips, fmt/strict Clippy and all four xtask gates green. `git diff --check` and added-line security scan clean. No bus or device operation.
+- **Pending/Next Steps:** The reviewed feature was committed as `c96505d`; `origin/main=c90bd0d` has advanced. The only rebase conflicts were the handover and implementation-status entries: both remote updates and this feature's notes are retained in newest-first order. Stage these two resolutions, continue the rebase, repeat complete Rust/Web/browser/xtask gates on that integration tree, push/read back the exact remote ref, release the web lock and clean only task-owned artifacts. Then U12 ISSUE-05 and ISSUE-08 UI half after prerequisites, then U13 whole-track closing review/handover. No quota pause.
+- **Notes for Codex or Claude:** Root dirty changes and `docs/paperclip-shutdown/` belong to others; never touch them. The isolated `ui-device-editor` branch is still unpublished. Browser fixture/config/test files and both U11 logs were already included in the reviewed commit; no untracked source files remain. Remove the read-only corpus symlink and dedicated Cargo target only after delivery. No live KNX tunnel/device write; Both is one atomic project edit, not two bus tickets.
+
+---
+
 - **Last Agent:** Claude (goal.md session, ISSUE-08 data half)
 - **Timestamp:** 2026-09-30 06:17 CEST
 - **Web lock:** untouched — no `apps/knx-web` change in this package. The new fields are `#[ts(skip)]` in the bindings for exactly that reason.

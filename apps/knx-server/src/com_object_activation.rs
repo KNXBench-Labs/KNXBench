@@ -71,9 +71,20 @@ pub(crate) fn apply(
         let Some(key) = keys.get(&com.id) else {
             continue;
         };
-        let (state, owner) = decide(key, device_instances, activation, uncertain);
+        let (state, hit) = decide(key, device_instances, activation, uncertain);
         com.activation = state;
-        com.channel = owner.map(|owner| channels.node(owner, activation, channel_texts));
+        com.channel = hit
+            .and_then(|hit| hit.channel.as_ref())
+            .map(|owner| channels.node(owner, activation, channel_texts));
+        // A module-based object's `FunctionText` names the module's own
+        // arguments (`{{argChannel}}`); only the activating expansion knows
+        // their values. Without one the placeholder stays visible.
+        if let Some(scope) = hit.and_then(|hit| hit.scope.as_deref()) {
+            com.function_text = com
+                .function_text
+                .as_deref()
+                .map(|text| knx_productdb::dynamic::substitute_text(text, Some(scope)));
+        }
     }
 }
 
@@ -82,7 +93,7 @@ fn decide<'a>(
     device_instances: &[knx_core::ModuleInstance],
     activation: &'a Activation,
     uncertain: bool,
-) -> (ComObjectActivation, Option<&'a ChannelOwner>) {
+) -> (ComObjectActivation, Option<&'a ActiveRef>) {
     let same_ref = activation
         .com_object_refs
         .iter()
@@ -90,7 +101,7 @@ fn decide<'a>(
 
     match key.module_instance {
         None => match same_ref.clone().find(|r| r.scope.is_none()) {
-            Some(hit) => (ComObjectActivation::Active, hit.channel.as_ref()),
+            Some(hit) => (ComObjectActivation::Active, Some(hit)),
             None if uncertain => (ComObjectActivation::Undetermined, None),
             None => (ComObjectActivation::Inactive, None),
         },
@@ -102,7 +113,7 @@ fn decide<'a>(
             for hit in same_ref.filter(|r| r.scope.is_some()) {
                 match owning_instance(hit, device_instances) {
                     Some(instance) if instance.id == own.id => {
-                        return (ComObjectActivation::Active, hit.channel.as_ref());
+                        return (ComObjectActivation::Active, Some(hit));
                     }
                     Some(_) => {}
                     None => orphaned = true,
@@ -295,6 +306,9 @@ mod tests {
             links: vec![],
             activation: ComObjectActivation::NotEvaluated,
             channel: None,
+            program_dpt: None,
+            dpt_text: None,
+            function_text: None,
         }
     }
 
@@ -481,6 +495,85 @@ mod tests {
         // channels, not one.
         assert_ne!(a.key, b.key);
         assert_eq!(a.text.as_deref(), Some("Kanal"));
+    }
+
+    #[test]
+    fn a_module_objects_function_text_gets_its_own_instances_arguments() {
+        let mut m1 = nd(3, Some(2), "Module");
+        m1.element_id = Some("A_MD-1_M-1".to_string());
+        m1.ref_id = Some("A_MD-1".to_string());
+        let mut arg1 = nd(4, Some(3), "TextArg");
+        arg1.ref_id = Some("A_MD-1_A-1".to_string());
+        arg1.value = Some("7".to_string());
+        let mut m2 = nd(6, Some(5), "Module");
+        m2.element_id = Some("A_MD-1_M-2".to_string());
+        m2.ref_id = Some("A_MD-1".to_string());
+        let mut arg2 = nd(7, Some(6), "TextArg");
+        arg2.ref_id = Some("A_MD-1_A-1".to_string());
+        arg2.value = Some("8".to_string());
+        let program = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            nd(2, Some(1), "ChannelIndependentBlock"),
+            m1,
+            arg1,
+            nd(5, Some(1), "ChannelIndependentBlock"),
+            m2,
+            arg2,
+        ]);
+        let module = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            channel(2, 1, "A_MD-1_CH-1", "Kanal {{No}}"),
+            com_ref(3, 2, "A_MD-1_O-1"),
+        ]);
+        let trees =
+            ProgramTrees::from_parts(program, HashMap::from([("A_MD-1".to_string(), module)]))
+                .with_arguments([knx_productdb::dynamic::ModuleDefArgument {
+                    id: "A_MD-1_A-1".to_string(),
+                    module_def_id: "A_MD-1".to_string(),
+                    name: Some("No".to_string()),
+                    arg_type: Some("Text".to_string()),
+                    allocates: None,
+                }]);
+        let instances = vec![instance(10, "MD-1_M-1"), instance(11, "MD-1_M-2")];
+        let keys = HashMap::from([
+            (
+                1,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    module_instance: Some(&instances[0]),
+                },
+            ),
+            (
+                2,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    module_instance: Some(&instances[1]),
+                },
+            ),
+            (3, unscoped("A_O-9")),
+        ]);
+        let activation = evaluate(&trees, &ValueMap::default());
+        let mut nodes: Vec<ComObjectNode> = [1, 2, 3].iter().map(|&id| com_node(id)).collect();
+        for node in &mut nodes {
+            node.function_text = Some("Schalten {{No}}".to_string());
+        }
+        apply(
+            &mut nodes,
+            &keys,
+            &instances,
+            &activation,
+            &HashMap::new(),
+            true,
+        );
+        assert_eq!(nodes[0].function_text.as_deref(), Some("Schalten 7"));
+        assert_eq!(nodes[1].function_text.as_deref(), Some("Schalten 8"));
+        assert_eq!(
+            nodes[0].channel.as_ref().unwrap().text.as_deref(),
+            Some("Kanal 7")
+        );
+        // No activating expansion, no scope: the placeholder stays visible
+        // rather than being filled from some other instance.
+        assert_eq!(nodes[2].function_text.as_deref(), Some("Schalten {{No}}"));
     }
 
     #[test]

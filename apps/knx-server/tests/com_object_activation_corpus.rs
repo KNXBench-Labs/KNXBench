@@ -13,6 +13,12 @@
 //! - No channel text is invented: an element with an empty `@Text` stays
 //!   `None`, which is every channel of the two house exports.
 //! - A module-based object is attributed to its own module instance.
+//! - Every object has the product's `FunctionText`, with a module object's
+//!   arguments substituted from its own instance (no `{{…}}` left).
+//! - Every DPT an object shows has a display text; an empty `DatapointType`
+//!   shows the program's default beside it (`program_dpt`), never in it.
+//!   The objects with no DPT at all are ones whose product states none, or
+//!   states a list of several with no choice (ISSUE-08 P3, §146).
 
 use std::collections::{BTreeMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -84,6 +90,21 @@ async fn counts(path: std::path::PathBuf) -> BTreeMap<&'static str, usize> {
         let mut channel_keys: HashSet<String> = HashSet::new();
         for com in detail["com_objects"].as_array().unwrap() {
             inc("objects");
+            match (com["dpt"].is_null(), com["program_dpt"].is_null()) {
+                (false, true) => inc("dpt_stated"),
+                (true, false) => inc("dpt_from_program"),
+                (true, true) => inc("dpt_none"),
+                (false, false) => panic!("a program DPT beside a stated one"),
+            }
+            if !(com["dpt"].is_null() && com["program_dpt"].is_null()) && com["dpt_text"].is_null()
+            {
+                inc("dpt_without_text");
+            }
+            match com["function_text"].as_str() {
+                None => inc("function_text_none"),
+                Some(text) if text.contains("{{") => inc("function_text_with_placeholder"),
+                Some(_) => {}
+            }
             match com["activation"].as_str().unwrap() {
                 "Active" => inc("active"),
                 "Inactive" => inc("inactive"),
@@ -142,6 +163,9 @@ async fn corpus_com_object_activation_and_channels() {
             ("active", 907),
             ("channel_without_text", 907),
             ("channels", 34),
+            ("dpt_from_program", 122),
+            ("dpt_none", 495),
+            ("dpt_stated", 290),
             ("in_channel", 907),
             ("objects", 907),
             ("with_channel", 907),
@@ -153,6 +177,9 @@ async fn corpus_com_object_activation_and_channels() {
             ("active", 867),
             ("channel_without_text", 867),
             ("channels", 33),
+            ("dpt_from_program", 122),
+            ("dpt_none", 456),
+            ("dpt_stated", 289),
             ("in_channel", 867),
             ("objects", 867),
             ("with_channel", 867),
@@ -165,6 +192,7 @@ async fn corpus_com_object_activation_and_channels() {
         map(&[
             ("active", 75),
             ("channels", 32),
+            ("dpt_stated", 75),
             ("in_channel", 75),
             ("objects", 75),
             ("with_channel", 75),

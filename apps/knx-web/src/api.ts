@@ -1488,6 +1488,37 @@ export function compareDevice(address: string, gateway: string): Promise<DeviceC
   return request("/api/device-compare", { method: "POST", body: JSON.stringify({ address, gateway }) });
 }
 
+// Device Object PID_SERVICE_CONTROL bit 2 (ADR-0051): separate debug-only
+// procedure, never called by download or address-programming paths.
+export interface ServiceControlReading {
+  address: string;
+  raw: string;
+  mask: string;
+  individualAddressWriteEnabled: boolean;
+}
+
+export interface ServiceControlWriteResponse {
+  before: ServiceControlReading;
+  after: string;
+  individualAddressWriteEnabled: boolean;
+  written: boolean;
+  backupPath: string | null;
+}
+
+export function readServiceControl(address: string, gateway: string): Promise<ServiceControlReading> {
+  const query = new URLSearchParams({ address, gateway });
+  return request(`/api/device/service-control?${query}`);
+}
+
+export function writeServiceControl(
+  address: string, gateway: string, enable: boolean, confirmation: string,
+): Promise<ServiceControlWriteResponse> {
+  return request("/api/device/service-control", {
+    method: "POST",
+    body: JSON.stringify({ address, gateway, enable, confirmation }),
+  });
+}
+
 export function planDeviceDownload(address: string): Promise<DeviceDownloadPlan> {
   return request("/api/device-download/plan", {
     method: "POST",

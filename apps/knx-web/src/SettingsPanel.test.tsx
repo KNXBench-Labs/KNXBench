@@ -20,6 +20,13 @@ import { getSetting, initSettings } from "./settingsStore";
 import { resetSettingsForTests } from "./settingsStore";
 import { rememberProgrammingConsent } from "./programmingConsent";
 
+// The Debug control is exercised against its own server-contract tests;
+// SettingsPanel's existing preferences tests must not issue an unrelated GET.
+vi.mock("./settingsStore", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./settingsStore")>(),
+  readPersistedBooleanSetting: vi.fn().mockResolvedValue(false),
+}));
+
 let host: HTMLDivElement | undefined;
 
 afterEach(() => {
@@ -138,7 +145,8 @@ describe("SettingsPanel", () => {
     const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics"]);
+    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Debug · device control"]);
+    expect(host!.querySelector(".settings-section-debug input[type='checkbox']")).not.toBeNull();
     const gateway = host!.querySelector<HTMLInputElement>(
       '.settings-section-bus input[placeholder="192.0.2.10:3671"]',
     )!;

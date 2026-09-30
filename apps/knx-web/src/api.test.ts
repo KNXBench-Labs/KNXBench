@@ -47,6 +47,31 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3 });
   });
 
+  it("encodes the service-control target for GET and names only the debug scope on POST", async () => {
+    const reading = { address: "1.1.67", raw: "0000", mask: "0701", individualAddressWriteEnabled: false };
+    mockFetchOnce(reading);
+    expect(await api.readServiceControl("1.1.67", "192.0.2.10:3671")).toEqual(reading);
+    let [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/device/service-control?address=1.1.67&gateway=192.0.2.10%3A3671");
+    expect(init?.method).toBeUndefined();
+
+    mockFetchOnce({ before: reading, after: "0004", written: true, backupPath: "[PRIVATE BACKUP PATH]" });
+    await api.writeServiceControl("1.1.67", "192.0.2.10:3671", true,
+      "I confirm individual-address write enable to 1.1.67");
+    [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/device/service-control");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      address: "1.1.67", gateway: "192.0.2.10:3671", enable: true,
+      confirmation: "I confirm individual-address write enable to 1.1.67",
+    });
+  });
+
+  it("keeps the server's default-off 403 visible to the service-control action", async () => {
+    mockFetchOnce({ error: "debug action is off" }, false, 403);
+    await expect(api.readServiceControl("1.1.67", "192.0.2.10:3671")).rejects.toMatchObject({ status: 403 });
+  });
+
   it("preserves structured 422 diagnostics and includes syntax in the toast text without rewriting raw detail", async () => {
     const refusal = { error: "malformed individual address", detail: "malformed individual address", kind: "individual_address", syntax: "area.line.device", example: "1.1.10" };
     mockFetchOnce(refusal, false, 422);

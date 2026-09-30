@@ -99,3 +99,17 @@ current API only changes bit 2; if any other original bit has since changed,
 do **not** use this API as a whole-property restore. K13/reset and downloads
 remain separate workflows; this property record does not satisfy their backup
 requirements. No hardware operation was run to validate this amendment.
+
+## UI realization (2026-09-30, simulated and mocked only)
+
+The Settings Debug switch now uses a *server-confirmed* read and an awaited
+one-key PUT followed by a GET, not the frontend's optimistic preferences
+cache. Until the saved value is verified, the switch cannot claim an opt-in.
+The separate Bus diagnostics action opens no tunnel on mount: an explicit
+read, a separate review and the exact phrase typed by the operator precede
+any POST. A response with an unexpected target, changed pre-read, non-bit-2
+change or missing recovery path cannot be shown as successful. These checks
+are additional UI evidence, **not** replacements for the route's settings
+gate, write authorisation and same-session pre-write record. Other write
+routes and full-device recovery remain outside this decision. No real bus or
+device was contacted during UI validation.

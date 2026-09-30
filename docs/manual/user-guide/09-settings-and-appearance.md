@@ -2,8 +2,10 @@
 
 # Settings, themes and languages
 
-KNXBench's settings are grouped into **Appearance**, **Language & data**, and
-**Bus & diagnostics**. Changes apply without a Save button or restart.
+KNXBench's settings are grouped into **Appearance**, **Language & data**,
+**Bus & diagnostics**, and a separate **Debug · device control** section.
+Ordinary changes apply without a Save button or restart. The Debug switch is
+shown as enabled only after the server persists and reads it back.
 
 ## Opening Settings
 
@@ -149,6 +151,23 @@ built-in wins — and the import report tells you so rather than leaving you won
 why nothing changed. Rejected packs get a specific reason, not a generic failure.
 
 For the pack format itself, see [Language packs](../../LANGUAGE_PACKS.md).
+
+## Debug · device control
+
+**Allow manual Individual Address Write Enable** is **off by default**. Its
+checkbox reflects the *server's saved setting*, not an optimistic browser
+cache: while the server is unreachable or a change cannot be read back, the
+control is unavailable and asks you to re-check. Turning it on does not
+connect to a device or change any bit; it only permits the separate, explicit
+[service-control action](07-bus-and-interfaces.md#debug-individual-address-write-enable).
+The HTTP server refuses both the read and write route with `403` while the
+setting is not exactly `true`.
+
+Use this only if you understand the device's control property. The action
+changes a persistent bit and makes a *two-octet property* recovery record
+before a write, not a whole-device backup. It does not automatically restore
+the property, reverse a vendor side effect, or change any download behaviour.
+No live device was accessed while building this UI.
 
 ## What is not in Settings
 

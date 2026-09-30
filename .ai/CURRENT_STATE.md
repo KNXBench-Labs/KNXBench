@@ -1,3 +1,12 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-09-30 10:34 CEST
+- **Web lock:** untouched; no `apps/knx-web` source edit or live bus access.
+- **Completed:** Goal §12.3 / KNOWN_LIMITATIONS §146 data half: `Channel/@Name` and `@Number` imported verbatim into product-DB schema v18, migrated from v17 and projected separately (ADR-0052; code commit `16655375`). A real v17 database and a fresh v18 ingest agree on streaming normalized row fingerprints across the dynamic tree, unknown evidence, four report tables and package unknown counters (106 files, no failures). The opt-in 115-instance product matrix passes its revised aggregate commitment; independent XML recount explains every unknown-row delta. Post-rebase: 136 workspace suites / 2,689 passed, 0 failed; Clippy, rustfmt, header, anchor, layering, matrix and diff checks green. The concurrent commissioning ADR-0051 and its status were preserved on rebase; ours was renumbered ADR-0052. No `apps/knx-web` source change or KNX/LAN/hardware traffic.
+- **Pending/Next Steps:** UI session U12 shows `channel.name`/`channel.number`; §146 closes only then. User manual T23 waits through U13; alpha tag T18 needs the user's decision; final whole-goal review comes last. Commissioning stays in `goal-commission.md`.
+- **Notes for Codex oder Claude:** `name`/`number` are nullable verbatim strings in product storage and separate `ComObjectChannel` fields; `text` keeps its translated `@Text` semantics. `ComObjectNode::channel` stays `#[ts(skip)]` until the UI session adopts it. Damaged v17 blobs retain unknown evidence and get a backfill error; unprovable reports become unavailable. ADR-0051 belongs to commissioning; cite ADR-0052 for channels. Raw private corpus values were not committed.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 15:30 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.

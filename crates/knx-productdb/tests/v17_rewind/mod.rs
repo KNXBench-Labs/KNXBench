@@ -20,7 +20,9 @@ pub fn drop_identity_tables(conn: &Connection) {
          DROP INDEX hardware_source;
          DROP INDEX product_source;
          DROP INDEX hardware2program_source;
-         DROP INDEX application_program_source;",
+         DROP INDEX application_program_source;
+         ALTER TABLE dynamic_node DROP COLUMN name;
+         ALTER TABLE dynamic_node DROP COLUMN number;",
     )
     .unwrap();
 }

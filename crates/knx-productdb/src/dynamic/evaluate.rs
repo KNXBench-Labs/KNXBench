@@ -316,6 +316,12 @@ pub struct DynamicNode {
     pub text: Option<String>,
     /// `NumericArg`/`TextArg`'s `@Value`, verbatim.
     pub value: Option<String>,
+    /// `Channel`'s `@Name`, verbatim (ADR-0052). `None` for every other
+    /// kind and for a channel without the attribute.
+    pub name: Option<String>,
+    /// `Channel`'s `@Number`, verbatim: text, since not every corpus value
+    /// is a number (ADR-0052).
+    pub number: Option<String>,
     /// Only meaningful when `kind == "choose"`. `load_tree` resolves this
     /// from `parameter_ref`/`parameter`/`parameter_type`; hand-built trees
     /// (unit tests) set it directly.
@@ -373,61 +379,41 @@ pub fn load_tree(
 ) -> Result<DynamicTree, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
-                text, value
+                text, value, name, number
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
     )?;
-    type Row = (
-        i64,
-        Option<i64>,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<i64>,
-        Option<String>,
-        Option<String>,
-    );
-    let rows: Vec<Row> = stmt
+    // `control_kind` is resolved below, per `choose` row, once the
+    // statement is done.
+    let rows: Vec<DynamicNode> = stmt
         .query_map(params![program_id, module_def_id], |r| {
-            Ok((
-                r.get(0)?,
-                r.get(1)?,
-                r.get(2)?,
-                r.get(3)?,
-                r.get(4)?,
-                r.get(5)?,
-                r.get(6)?,
-                r.get(7)?,
-                r.get(8)?,
-            ))
+            Ok(DynamicNode {
+                node_id: r.get(0)?,
+                parent_id: r.get(1)?,
+                kind: r.get(2)?,
+                element_id: r.get(3)?,
+                ref_id: r.get(4)?,
+                test: r.get(5)?,
+                is_default: r.get::<_, Option<i64>>(6)? == Some(1),
+                text: r.get(7)?,
+                value: r.get(8)?,
+                name: r.get(9)?,
+                number: r.get(10)?,
+                control_kind: None,
+            })
         })?
         .collect::<Result<_, _>>()?;
     drop(stmt);
 
     let mut nodes = Vec::with_capacity(rows.len());
-    for (node_id, parent_id, kind, element_id, ref_id, test, is_default, text, value) in rows {
-        let control_kind = if kind == "choose" {
-            match ref_id.as_deref() {
-                Some(rid) => resolve_control_kind(conn, program_id, rid)?,
-                None => None,
+    for mut node in rows {
+        if node.kind == "choose" {
+            if let Some(rid) = node.ref_id.as_deref() {
+                node.control_kind = resolve_control_kind(conn, program_id, rid)?;
             }
-        } else {
-            None
-        };
-        nodes.push(DynamicNode {
-            node_id,
-            parent_id,
-            kind,
-            element_id,
-            ref_id,
-            test,
-            is_default: is_default == Some(1),
-            text,
-            value,
-            control_kind,
-        });
+        }
+        nodes.push(node);
     }
     Ok(DynamicTree::from_nodes(nodes))
 }
@@ -1129,6 +1115,11 @@ pub struct ChannelOwner {
     pub kind: String,
     /// The element's `@Id`, as stored.
     pub element_id: Option<String>,
+    /// `Channel/@Name`, verbatim (ADR-0052). `None` for a
+    /// `ChannelIndependentBlock` and for a channel without the attribute.
+    pub name: Option<String>,
+    /// `Channel/@Number`, verbatim (ADR-0052).
+    pub number: Option<String>,
 }
 
 /// One activated label: the `@Text` of an activated `Channel`,
@@ -1470,6 +1461,8 @@ fn walk(
             node_id,
             kind: node.kind.clone(),
             element_id: node.element_id.clone(),
+            name: node.name.clone(),
+            number: node.number.clone(),
         });
         let channel = opened.as_ref().or(channel);
         for &child in tree.children_of(Some(node_id)) {

@@ -141,7 +141,7 @@ Anker bleiben per `<a id>` gültig.
 | 141 | Master Reset löscht nur im Simulator | Auf Hardware bleibt die Konfiguration; die Unterstützungsprüfung ist eine eigene Regel. |
 | 143 | RF-Domänenadressen nur im Simulator, kein RF-Gerät vorhanden | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
 | 144 | RF-Gerätekonfiguration nur im Simulator | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
-| 146 | Kanal ohne `@Text` hat keinen eigenen Namen; manche Aktivierungen bleiben `Undetermined` | `@Name`/`@Number` werden nicht gespeichert; Unsicheres wird nicht geraten (ADR-0050). |
+| 146 | Kanal ohne `@Text` hat keinen eigenen Namen; manche Aktivierungen bleiben `Undetermined` | Datenhälfte gelöst (v18, ADR-0052): `@Name`/`@Number` gespeichert und projiziert; offen bis die UI beide zeigt (U12). Unsicheres wird nicht geraten (ADR-0050). |
 
 ## K4 — niedrig (16)
 

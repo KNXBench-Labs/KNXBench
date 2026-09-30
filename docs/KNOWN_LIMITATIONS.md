@@ -8979,10 +8979,15 @@ encoder writes them when the caller set them, and
 - **Channel names.** `ComObjectChannel::text` is the element's `@Text`, and
   `None` when that is empty. In the corpus, 24 of 29 `Channel` elements
   have an empty `@Text`, including every one in the two house exports.
-  They do state `@Name` and a numeric `@Number`, but `dynamic_node` does
-  not store either attribute. Storing them needs a parser change, a schema
-  migration and a re-ingest. Until then the UI shows a generic label
-  instead of an invented one.
+  **Data half lifted (2026-09-30, schema v18, ADR-0052):** they do state
+  `@Name` and `@Number`, and `dynamic_node` now stores both verbatim.
+  `ComObjectChannel` carries them as `name` and `number` (`None` when
+  absent or empty), never composed into `text` and never translated, since
+  no product translates `@Name`. `@Number` is text: 5 of 1,268 corpus
+  channels hold a value that is not a number. What the standard means by
+  either attribute is not documented in the schema text available here;
+  KNXBench shows them as written. Until the UI adopts the two fields, it
+  shows a generic label instead of an invented one.
 - **`Undetermined`.** The evaluation cannot decide in these cases:
   - two module instances with one `RefId` (D40);
   - a scoped activation that no imported instance owns;
@@ -8996,15 +9001,16 @@ encoder writes them when the caller set them, and
   in the corpus.
 - **Not in the TypeScript bindings yet.** `activation` and `channel` are
   serialised but `#[ts(skip)]` until the UI session's U12 adopts them. The
-  same holds for P3's `program_dpt`, `dpt_text` and `function_text`.
+  same holds for P3's `program_dpt`, `dpt_text` and `function_text`, and
+  for `channel`'s `name` and `number`.
 - **No DPT to show (P3).** 495 ETS4 and 456 ETS 6.3.0 objects have neither
   a stated DPT nor a program default. For 473 and 434 of them the product
   states none. For 22 each it states a list of several (`DatapointType`
   with more than one id) and neither the project nor the product picks
   one. KNXBench shows no DPT for them rather than choosing from the list.
 
-**Lifted when.** Channel `@Name`/`@Number` are stored and projected, and
-the UI shows both fields.
+**Lifted when.** The UI shows a channel's `name` and `number` (goal-ui.md
+U12). The data half is done (ADR-0052).
 
 ## §145 Instance-level flag overrides are not written into the group object table
 

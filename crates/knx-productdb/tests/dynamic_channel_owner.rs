@@ -24,6 +24,8 @@ fn nd(node_id: i64, parent_id: Option<i64>, kind: &str) -> DynamicNode {
         is_default: false,
         text: None,
         value: None,
+        name: None,
+        number: None,
         control_kind: None,
     }
 }
@@ -44,6 +46,8 @@ fn owner(scope: Option<Rc<ModuleScope>>, node_id: i64, kind: &str, id: &str) -> 
         node_id,
         kind: kind.to_string(),
         element_id: Some(id.to_string()),
+        name: None,
+        number: None,
     }
 }
 

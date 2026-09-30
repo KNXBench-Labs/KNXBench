@@ -59,11 +59,21 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// tables hold 115 / 1,972 / 528 / 629 rows (pinned below), and per kind the
 /// ids recorded in several blobs equal an independent Python recount of the
 /// same packages exactly.
+/// Re-pinned for ADR-0052 (schema v18): `Channel/@Number` is now a typed
+/// attribute. A main-vs-branch matrix comparison found identical public
+/// outcomes and every other table/report total unchanged; isolated unknown
+/// count 22,769 -> 22,488, shared installed 22,653 -> 22,373,
+/// `ingest_unknown` 23,051 -> 22,771, `package_install_unknown` 9,251 ->
+/// 9,156. An independent 115-instance / 113-unique-package XML recount
+/// predicts the 281 / 280 / 280 / 95 deltas: 274 distinct (blob, xpath)
+/// keys plus six duplicate rows from shared blobs. The v16-shaped projection
+/// pin below is the *current v18* pin, not the historical PDB-10 pin.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "424042dafdc03737fbfb0483acd3d181d14c9384084e82615d9ad6ece0ab0420";
-/// The PDB-10 baseline, over only what schema v16 had.
+    "8bcacd20400d7b874206cafac848f0d16640880682f27694a473f3781a4c46b1";
+/// Current v18 outcomes/counts projected without the four v17 tables and
+/// PDB-11 identity; historical v16 pin: c204acc8… (see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "c204acc82024f4e231e8a0eb2e6ec44b92d52950309e4351696882dbe9280892";
+    "a5e4e14711098e04ff9712576f7f6b68a9244d2121a3dca0ac47137e9a196b3a";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -989,7 +999,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22769,
+            "unknown_count": 22488,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -1000,7 +1010,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22653,
+            "unknown_count": 22373,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -1011,7 +1021,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22769,
+            "unknown_count": 22488,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1040,6 +1050,16 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     assert_eq!(
         matrix["shared_final_database_counts"]["package_install_diagnostic"], 859,
         "shared install-diagnostic rows changed"
+    );
+    // ADR-0052: two newly modelled Channel paths retire exactly these
+    // unqualified `@Number` rows, not any other unknown evidence.
+    assert_eq!(
+        matrix["shared_final_database_counts"]["ingest_unknown"], 22771,
+        "shared per-blob unknown evidence changed"
+    );
+    assert_eq!(
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9156,
+        "shared per-package unknown evidence changed"
     );
     for (table, rows) in [
         ("package_baggage_inventory", 113),

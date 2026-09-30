@@ -608,7 +608,18 @@ PDB-11 (schema v17) re-pinned it a fourth time. The four new tables hold
 aggregates (candidate rows, distinct ids, ids in several blobs, ids with
 differing digests) plus scan status counts. The test recomputes the v16
 projection without the new tables and asserts it still equals the PDB-10
-commitment, so no existing outcome, report total or table count moved.
+commitment, so no existing outcome, report total or table count moved *in that
+v17 release*. Schema v18 (ADR-0052) intentionally changes that v16-shaped
+projection: unqualified `Channel/@Number` is now modelled, not unknown.
+A read-only main-vs-branch run on the exact 115-instance / 113-unique-package
+scope found identical public outcomes and all other tables and report totals
+unchanged; isolated unknown count 22,769 → 22,488 (−281), shared installed
+22,653 → 22,373 (−280), `ingest_unknown` 23,051 → 22,771 (−280) and
+`package_install_unknown` 9,251 → 9,156 (−95). An independent read-only XML
+probe of the same instance scope predicts 281 / 280 / 280 / 95: the 280
+per-blob rows comprise 274 distinct blob/path keys and six recorded duplicates
+from reused blobs. Both row counts are explicitly pinned alongside the current
+v18 aggregate commitment; no raw product values or paths are published.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

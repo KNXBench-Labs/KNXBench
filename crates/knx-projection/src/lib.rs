@@ -670,6 +670,16 @@ pub struct ComObjectChannel {
     /// substituted. `None` when the element has no text (every
     /// `ChannelIndependentBlock` in the corpus has none).
     pub text: Option<String>,
+    /// `Channel/@Name` as the product states it (ADR-0052): not
+    /// translated (no product translates it) and not substituted (no
+    /// corpus value holds a placeholder). `None` for a
+    /// `ChannelIndependentBlock` and when absent or empty. Shown as a fact,
+    /// never composed into a label here; that is the UI's decision.
+    pub name: Option<String>,
+    /// `Channel/@Number`, verbatim and as text: 5 corpus values are not
+    /// numbers. `None` for a `ChannelIndependentBlock` and when absent or
+    /// empty.
+    pub number: Option<String>,
     /// Sort key: the channel's position in the evaluated tree's document
     /// order (module expansions in place). Not contiguous: it counts every
     /// channel with an activated communication object reference, including

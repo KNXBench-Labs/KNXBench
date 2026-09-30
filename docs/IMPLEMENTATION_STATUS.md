@@ -34,7 +34,36 @@
   serial-number write takes. 9 procedure tests, 5 route tests.
 - Open: Settings panel Debug toggle (web lock); no hardware run.
 
+## 2026-09-30 — Product channels keep their Name and Number (schema v18)
+
+Goal §12.3 / KNOWN_LIMITATIONS §146 data half, ADR-0052. The `Channel`
+parser stores `@Name` and `@Number` as distinct nullable, verbatim text
+columns in `dynamic_node`; the evaluator and `ComObjectChannel` project both
+alongside `@Text`, not into it. An empty attribute remains empty in storage,
+but is omitted from the display projection. The TypeScript channel field
+stays skipped for the UI track (U12); no web source changes.
+
+Migration v17→v18 replays retained application-program bytes in per-blob
+savepoints, leaves existing scheme-evidence unknowns in place, and retires
+only unqualified `Channel/@Number` rows at the two dynamic-pass paths.
+Package counts and measured install reports are reconciled; an unprovable
+report is marked unavailable rather than silently changed. Synthetic tests
+cover empty/missing/non-numeric attributes, prefixed lookalikes, tree owner,
+projection, true-v17 rewind equivalence, damaged blob and report, duplicate
+program id, classification-damaged blob, counter underflow, and preservation
+of other evidence. An independent real v17 corpus database and a fresh v18
+ingest each held 106 files (0 failed): after migration they agree on streaming
+normalized row fingerprints of `dynamic_node` (3,067,570 rows),
+`module_def_argument` (756), `ingest_unknown` (21,165), all four install-report
+tables and `package.unknown_count` (102 packages). Auto-increment evidence ids
+are excluded; every other value is included in stable row order. The opt-in
+115-instance package matrix also passes its revised pin: only channel-number
+unknown totals and the two unknown-row tables moved relative to `origin/main`
+(detail in IMPORT_EXPORT). These are aggregate checks, not an ETS compatibility
+assertion. The UI half of §146 remains open until U12 shows both values.
+
 ## 2026-09-30 — cEMI frames keep their priority, repeat flag and hop count
+
 
 - `LDataFrame::control: Option<FrameControl>` (`crates/knx-net/src/cemi.rs`):
   Ctrl1 priority, repeat and ack request, Ctrl2 hop count (EMI_IMI v01.04.02

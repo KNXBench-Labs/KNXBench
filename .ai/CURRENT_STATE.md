@@ -1,4 +1,25 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 07:27 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** goal.md §10 doc reconciliation, first pass (docs only).
+  §12.2: all eight Paperclip branches verified as ancestors of `main`;
+  DIN-26's twelve accepted boundaries added to §6. GAP_ANALYSIS B10/D6/D8
+  updated from T11, T08/T09, T10, DIN-12 evidence. ROADMAP Sessions 5/6 got
+  status lines, the dangling "Cycle 14+" line a pointer. KNOWN_LIMITATIONS:
+  eleven headings (§4, §5, §19, §22, §30, §81, §89, §91, §103, §118, §120)
+  now say resolved/closed; each old slug kept via `<a id>` (gate proved to
+  fail when one is removed). Correction: `ideas.md` is **gitignored**, not
+  deleted (goal.md §8.3 fixed; the root-checkout file was edited locally).
+- **Pending/Next Steps:** §12.3 order: manual (T23) waits for the UI track's
+  U13; alpha tag is a user decision; §10 final review last. In this lane
+  meanwhile: KNOWN_LIMITATIONS §146 (channel `@Name`/`@Number`), if taken,
+  needs an ADR first (productdb schema + re-ingest).
+- **Notes for Codex or Claude:** When a heading changes, add
+  `<a id="old-slug"></a>` before it; `check-anchors` is the judge.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 07:18 CEST
 - **Completed:** goal.md §8 documentation hygiene (docs only, no code).
   `docs/LIMITATION_TRIAGE.md` recounted from the source: 146 numbered

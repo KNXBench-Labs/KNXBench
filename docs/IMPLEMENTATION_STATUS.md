@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Partial read-only bus-activity snapshot (ADR-0055)
+
+- `GET /api/bus/activity` is a guarded, tunnel-free server view of the
+  retained device-download, button-programming and line-scan sessions plus
+  the monitor session while it has not been stopped.
+  Download counts are derived from the same events as its detailed status
+  route; no raw blocks, keys, telegrams or host paths appear in the snapshot.
+  A held holder lock is reported in `busyLocks`, not mistaken for idle.
+- The contract says `coverage: "partial"` and lists one-shot routes without
+  retained activity evidence. It is **not** a global action history or proof
+  that the gateway is free. UI status bar and one-shot instrumentation remain
+  open under the other session's Web lock; no UI file or hardware was touched.
+  HTTP tests cover empty/held-lock snapshots, GET-only semantics, simulated
+  programming before/after and corpus-backed simulated download progress.
+
 ## 2026-09-30 — K12 property-specific recovery gate before service-control writes
 
 - `knx-net` invokes a required pre-write callback after reading the exact

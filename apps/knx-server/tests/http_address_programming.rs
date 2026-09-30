@@ -219,6 +219,15 @@ async fn a_button_pressed_while_waiting_gets_the_address() {
     let original = h.device.address();
     let (status, body) = start(&h, request(PHRASE, 30)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    let id = body["programmingId"].as_u64().unwrap();
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["coverage"], "partial");
+    assert_eq!(activity["sessions"][0]["kind"], "addressProgramming");
+    assert_eq!(activity["sessions"][0]["id"], id);
+    assert_eq!(activity["sessions"][0]["address"], NEW);
+    assert_eq!(activity["sessions"][0]["state"], "waiting");
+    assert!(activity["sessions"][0]["rounds"].is_u64());
 
     // The operator presses the button once the UI has shown two empty
     // rounds.
@@ -235,6 +244,11 @@ async fn a_button_pressed_while_waiting_gets_the_address() {
     assert_eq!(end["wasFree"], true);
     assert_eq!(end["restartConfirmed"], true, "{end}");
     assert_eq!(h.device.address().to_string(), NEW);
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["sessions"][0]["id"], id);
+    assert_eq!(activity["sessions"][0]["state"], "finished");
+    assert!(activity["sessions"][0].get("rounds").is_none());
 
     // Only changes are logged: "nobody" once, then the device, then the find.
     let kinds: Vec<&str> = events.iter().map(|e| e["kind"].as_str().unwrap()).collect();

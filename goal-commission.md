@@ -600,6 +600,17 @@ user assigned it to the commissioning/readiness session.
   --control`, server monitor rows and debug bundle carry `control`. The
   web table column is with `goal-ui.md` U12.
 
+### Commissioning activity status follow-up (2026-09-30)
+
+An additive, read-only `GET /api/bus/activity` now summarizes retained
+download/programming sessions and the existing monitor/scan sessions without
+opening a tunnel. It explicitly reports **partial coverage** (ADR-0055):
+one-shot writes/reads have no retained history, and a locked holder is only
+reported as busy, not attributed to an invented target. This is a backend
+step toward the requested global status bar, **not** that status bar or full
+action coverage. Web UI remains with the separate lock owner; no additional
+live write was authorized or performed.
+
 ## 3c. Later goals (not this stage)
 
 Each gets its own goal file when the user asks for it: Powerline (PL110,

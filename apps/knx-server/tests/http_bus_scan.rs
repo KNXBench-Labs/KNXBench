@@ -261,6 +261,11 @@ async fn cancellation_stops_the_probe_and_disconnects_the_tunnel() {
     assert!(!handle.sent_frames().is_empty(), "probe never started");
 
     let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    let activity = body_json(call(&app, "GET", "/api/bus/activity", None).await).await;
+    assert_eq!(activity["sessions"][0]["kind"], "lineScan");
+    assert_eq!(activity["sessions"][0]["id"], session_id);
+    assert_eq!(activity["sessions"][0]["state"], "running");
+    assert_eq!(activity["sessions"][0]["total"], 2);
     let cancel = call(
         &app,
         "POST",
@@ -270,6 +275,9 @@ async fn cancellation_stops_the_probe_and_disconnects_the_tunnel() {
     .await;
     assert_eq!(cancel.status(), StatusCode::OK);
     assert_eq!(body_json(cancel).await["status"], "cancelled");
+    let activity = body_json(call(&app, "GET", "/api/bus/activity", None).await).await;
+    assert_eq!(activity["sessions"][0]["state"], "cancelled");
+    assert_eq!(activity["sessions"][0]["id"], session_id);
     let sent_after_cancel = handle.sent_frames().len();
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     assert_eq!(handle.sent_frames().len(), sent_after_cancel);

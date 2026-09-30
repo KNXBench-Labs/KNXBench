@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Serial-address writes fail closed pending durable recovery (ADR-0057)
+
+- `POST /api/device-address/by-serial` and the confirmed CLI
+  `knx device address-by-serial` now refuse even a possible no-op **before
+  opening any tunnel**: HTTP `412 Precondition Failed` / CLI failure. A typed
+  confirmation, previous-address read and post-write response are not a
+  durable, complete pre-write backup of affected storage. There is no bypass
+  flag. Malformed addresses, serials and phrases still fail validation first.
+- Read-only `find-serial` and CLI plan remain available; the plan no longer
+  suggests that adding `--confirm` is sufficient to write. The MP §2.5
+  procedure remains simulator-tested in `knx-net`, but public CLI/HTTP
+  write success is deliberately unavailable until an action-specific,
+  persisted and verified recovery contract is implemented. `serialAddress`
+  stays `untracked` and overall activity coverage `partial`; no success is
+  inferred from earlier simulation tests or prior live attempts.
+- Simulated HTTP/CLI regressions verify pre-tunnel refusal for valid inputs,
+  a possible no-op, and after a separately backed-up service-control bit-2
+  change. No Web code, gateway or real device was touched. ADR-0057 and
+  RESEARCH §22 distinguish protocol fields from unspecified device storage.
+
 ## 2026-09-30 — Phase-aware service-control write activity (ADR-0056)
 
 - `POST /api/device/service-control` now records a bounded

@@ -103,6 +103,15 @@ cancellation, and verified readback. Both transport failures produce
 `coverage` remains `partial`: serial-address and group writes are still
 untracked, and Web UI coverage is not part of this change.
 
+## Follow-up: serial-address write fails closed (ADR-0057, 2026-09-30)
+
+The public CLI and HTTP serial-address write paths now return failure before
+opening a tunnel: no complete, durable pre-write recovery for affected device
+storage has been established. Earlier simulated HTTP 200/no-op examples above
+are historical design evidence, not a currently reachable HTTP write outcome.
+`serialAddress` remains `untracked` conservatively; no write activity is
+fabricated by the refusal, and the read-only serial lookup is unaffected.
+
 ## Consequences and next implementation slice
 
 Do not expose a generic green "completed write" status from the other

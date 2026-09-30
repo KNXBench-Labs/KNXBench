@@ -481,6 +481,15 @@ automatic restore or new hardware test is claimed. UI owner may revisit the
 Debug action under its own lock; K13 still needs a separate whole-device
 backup contract.
 
+**Recovery availability follow-up 2026-09-30 (ADR-0057, offline only).**
+The public confirmed CLI and HTTP serial-address write paths now fail closed
+*before tunnel opening* with an explicit missing-backup error, including
+possible no-ops and after the separate service-control bit-2 toggle. Neither
+previous-address readback nor the simulated K12 result was a durable backup
+of all affected storage. Read-only `find-serial`, the CLI plan and MP §2.5's
+simulated core tests remain. A future device-specific recovery contract must
+precede any reopening; this does not authorize another hardware attempt.
+
 **Further live serial-number tests need a fresh device-specific go and
 new evidence on a device that supports the operation.** The two MDT runs
 have already shown an ignored write; do not repeat them from this goal alone.

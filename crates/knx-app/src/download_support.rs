@@ -143,6 +143,11 @@ pub enum UnsupportedCategory {
     ImageStructure,
     /// The product database itself failed or lacks the program's code.
     ProductData,
+    /// The project's configuration of the device does not yield a request:
+    /// no program named or installed, conflicting values or links. Only a
+    /// project device has one; the product-default coverage never reports
+    /// it.
+    Configuration,
 }
 
 impl UnsupportedCategory {
@@ -159,6 +164,7 @@ impl UnsupportedCategory {
             Self::ParameterValue => "parameter-value",
             Self::ImageStructure => "image-structure",
             Self::ProductData => "product-data",
+            Self::Configuration => "configuration",
         }
     }
 }

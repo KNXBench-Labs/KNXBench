@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 11:50 CEST
+- **Web lock:** untouched; held by the UI session as its newest entry says.
+- **Completed:** `knx device readiness` (offline, per project device): `knx_app::project_readiness`, new `UnsupportedCategory::Configuration`, CLI module `device_readiness.rs`. House corpus test `crates/knx-app/tests/house_readiness.rs` pins RESEARCH §19.12 (17 untested / 17 unsupported / 1 excluded). 4 mutations caught. No bus traffic.
+- **Pending/Next Steps:** HTTP/UI for readiness and compare belong to the UI session (web lock). Open research items unchanged (§19.12 LsmIdx 5, union rule; §19.13 parameters).
+- **Notes for Codex oder Claude:** readiness and compare share `prepare_device_download`; a device's grade is exactly the refusal/plan its download would give. `house_readiness` is `#[ignore]`d and takes ~70 s.
+
+---
+
 - **Timestamp:** 2026-09-30 07:06 CEST
 - **Web lock:** held by the UI session (U12 / ISSUE-05) per the entry below; this package made no `apps/knx-web` change — the new fields are `#[ts(skip)]` for that reason.
 - **Completed:** ISSUE-08 data half, P3 (goal.md session). `ComObjectNode`

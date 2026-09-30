@@ -10,6 +10,7 @@ use std::process::ExitCode;
 mod device_address;
 mod device_compare;
 mod device_download;
+mod device_readiness;
 mod device_serial;
 mod scan;
 
@@ -72,6 +73,10 @@ const USAGE: &str =
      \x20         file (--backup-dir, default <project>.backups/); no backup, no write.\n\
      \x20         An application nobody has downloaded this way on hardware is UNTESTED\n\
      \x20         and needs --accept-untested \"I accept an untested download to <address>\".\n\
+     \x20     knx device readiness --project <path.knxdb> [--product-db <path>]\n\
+     \x20         (offline, per project device: verified, untested (plans, never downloaded\n\
+     \x20         on hardware), unsupported (with the download's own refusal), excluded or\n\
+     \x20         no-address. It prepares what `knx device download` would; nothing is sent)\n\
      \x20     knx device compare <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
      \x20                  [--partial parameters|group-addresses|both] --gateway <host:port>\n\
      \x20         (READ ONLY: reads exactly what `knx device download` would write and lists\n\
@@ -1800,6 +1805,7 @@ fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
         Some("compare") => run_device_compare(&args[1..]),
+        Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),
         Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
         Some("find-serial") => run_device_find_serial(&args[1..]),
@@ -2008,6 +2014,49 @@ fn run_device_download(args: &[String]) -> ExitCode {
             device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
         }
     })
+}
+
+/// `knx device readiness`: every project device, graded as its download
+/// would be. Offline.
+fn run_device_readiness(args: &[String]) -> ExitCode {
+    let parsed = match device_readiness::parse_readiness_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if !Path::new(&parsed.project).exists() {
+        eprintln!("project not found: {}", parsed.project);
+        return ExitCode::FAILURE;
+    }
+    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+        .map_err(|e| e.to_string())
+        .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
+    {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("could not read project {}: {e}", parsed.project);
+            return ExitCode::FAILURE;
+        }
+    };
+    let products = match open_products_db(parsed.product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let evidence = match knx_app::download_support::shipped_evidence() {
+        Ok(evidence) => evidence,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let rows = knx_app::project_readiness::project_readiness(&products, &project, &evidence);
+    print!("{}", device_readiness::format_readiness(&rows));
+    ExitCode::SUCCESS
 }
 
 /// `knx device compare`: what `knx device download` would change, read

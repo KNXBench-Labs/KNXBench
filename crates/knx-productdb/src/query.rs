@@ -718,6 +718,57 @@ fn translation_overlay(
     Ok(resolved)
 }
 
+/// `Channel`/`ChannelIndependentBlock` `@Id` -> translated `@Text` for one
+/// program and language (ISSUE-08). Placeholders are left as stored; the
+/// caller substitutes them per module expansion. An element without a
+/// translation into `language` is simply absent, and the caller keeps its
+/// stored text. One range scan over the program's `Text` translations,
+/// filtered to channel elements here, never one query per channel.
+pub fn channel_texts(
+    conn: &Connection,
+    program_id: &str,
+    language: &str,
+) -> Result<HashMap<String, String>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT element_id FROM dynamic_node
+         WHERE program_id = ?1 AND kind IN ('Channel','ChannelIndependentBlock')
+           AND element_id IS NOT NULL",
+    )?;
+    let channel_ids: HashSet<String> = stmt
+        .query_map([program_id], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    if channel_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let mut stmt = conn.prepare(
+        "SELECT ref_id, language, text FROM translation
+         WHERE scope = 'Program' AND scope_id = ?1 AND attribute_name = 'Text'
+           AND text IS NOT NULL",
+    )?;
+    let mut grouped: HashMap<String, Vec<(String, String)>> = HashMap::new();
+    let mut rows = stmt.query([program_id])?;
+    while let Some(row) = rows.next()? {
+        let ref_id: String = row.get(0)?;
+        if !channel_ids.contains(&ref_id) {
+            continue;
+        }
+        grouped
+            .entry(ref_id)
+            .or_default()
+            .push((row.get(1)?, row.get(2)?));
+    }
+    let mut resolved = HashMap::with_capacity(grouped.len());
+    for (ref_id, candidates) in grouped {
+        let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
+        if let Some(matched) = best_matching_language(language, &languages) {
+            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(ref_id, text.clone());
+            }
+        }
+    }
+    Ok(resolved)
+}
+
 /// One language identifier's row count, as returned by
 /// `translation_languages`/`program_translation_languages`.
 #[derive(Debug, Clone, PartialEq, Eq)]

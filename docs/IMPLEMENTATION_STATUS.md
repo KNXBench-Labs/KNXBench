@@ -58,8 +58,11 @@
   refreshes for the selected device but resets on device switch. Channel-
   independent blocks, inactive objects, undetermined objects and objects
   without evaluated ownership remain inspectable rather than being filtered
-  by a stored `IsActive` claim. Channel `name`/`number` display remains a
-  separate §146 step; neither field is turned into a guessed name here.
+  by a stored `IsActive` claim. An older/malformed `Active` response missing
+  `channel` is displayed in the no-owner group instead of crashing (review
+  regression, RED→GREEN with a guard mutation). Channel `name`/`number`
+  display remains a separate §146 step; neither field is turned into a
+  guessed name here.
 - Object rows show evaluated state and, when contradictory, the project's
   stored state; canonical DPT ID, translated DPT label and product function
   text are shown independently. Program-default DPT is display-only: the

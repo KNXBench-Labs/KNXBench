@@ -287,6 +287,13 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      `I confirm individual-address write enable to <address>`. The server
      already refuses with 403 while the key is not `true`; the UI must not
      be the only gate.
+     **Safety pause (2026-09-30):** a read-only audit of the existing POST
+     route and its executor found read/bit-only write/readback but no
+     persisted pre-write recovery record. The commissioning handover requests
+     a backup guarantee for other UI writes before exposing them. Do not
+     expose the setting or action until the commissioning/data owner resolves
+     and tests that policy; the route already exists and remains default-off.
+     This pause does not block the independent monitor/read-only UI items.
   3. **Monitor control fields (§147 consumers):** `/api/bus/monitor/telegrams`
      rows carry `control: {priority, repeated, hopCount}` (`null` on the
      closed-session marker). Show them as a column or tooltip; `repeated`

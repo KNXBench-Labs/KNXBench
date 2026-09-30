@@ -9385,7 +9385,7 @@ the request, the answer and the device back where the table says.
 
 ## §140 The individual-address reset needs the pressed devices named, and its restart is unconfirmed
 
-**Status (2026-09-30, K13, live on `1.1.67`).** MP §2.18
+**Historical live run (2026-09-30, K13 on `1.1.67`).** MP §2.18
 `NM_IndividualAddress_Reset` is implemented in
 `knx_net::commissioning::individual_address_reset`: broadcast
 `A_IndividualAddress_Write` `FFFFh`; `T_Connect`, Basic Restart and
@@ -9395,13 +9395,18 @@ procedure's own rule); broadcast read until nobody answers. The CLI is
 confirm individual-address reset to 15.15.255"`. There is no HTTP route or
 UI yet.
 
-**Allowed on hardware since the user's request** (RESEARCH §19.16).
-`WriteScope::IndividualAddressReset` joined `hardware_write_is_authorised`
-with one guard of ours: the caller names the devices it expects in
-programming mode, and the first broadcast read must find exactly that set
-and no excluded address. Anything else — a stranger pressed on the same
-line, a named device not pressed — writes nothing. MP §2.18 itself resets
-whoever is pressed.
+**Current public CLI policy (ADR-0058).** The earlier user-authorized live
+run is historical, not standing write permission. Confirmed CLI resets now
+fail closed **before tunnel opening** until every affected device has a
+complete, durable, verified pre-write recovery record. The plan and low-level
+simulator remain; no HTTP/UI route exists. `WriteScope::IndividualAddressReset`
+still joins `hardware_write_is_authorised` at the protocol layer, but that
+phrase gate alone does not provide a backup. The operator-named-device guard
+still requires the first broadcast read to find exactly that set and no
+excluded address; it does not establish storage coverage. Anything else — a
+stranger pressed on the same line, a named device not pressed — writes nothing
+in the protocol procedure; it is not currently reachable through a public
+confirmed CLI reset. MP §2.18 itself resets whoever is pressed.
 
 **The restart is not evaluated.** On `1.1.67` the device ignored it: the
 LED stayed on at `15.15.255` although nobody answered the closing read. The
@@ -9415,11 +9420,14 @@ answering; MP §2.3's 1 s read window.
 
 **Not covered.** Several devices at once on hardware (simulator only); a bus
 monitor trace of the sequence. **No HTTP/UI reset:** the K13 live run used a
-separately created complete persistent backup of the target before writing.
-An HTTP route that calls the reset library without first guaranteeing and
-verifying such a backup would bypass that safety condition. Do not expose a
-write-capable reset endpoint until a server-owned pre-write backup and
-recovery contract is implemented and tested; see
+separately created persistent backup of the target before writing, but the
+public CLI itself did not durably capture and verify all affected storage
+before its broadcast. That historical backup and unchanged application dump
+cannot establish complete manufacturer-specific reset coverage for arbitrary
+devices. An HTTP route that calls the reset library without a verified
+complete per-device backup would bypass the same safety condition. Do not
+expose a write-capable reset endpoint or reopen the CLI until a pre-write
+backup and recovery contract is implemented and tested (ADR-0058); see
 `.ai/logs/2026-09-30_claude_commissioning-ui-status-handover.md`.
 
 ## 130. Application zoom is browser-verified, not native WebKitGTK-verified

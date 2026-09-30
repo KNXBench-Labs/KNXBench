@@ -316,6 +316,18 @@ Published `ab31ca292f536602e6338692e04a39759566cd1c` (UI) and
   now requires all four scopes (RED before the data change). Every download
   scope of `M-0083_A-0027-15-0BAC` is verified on hardware.
 
+## 2026-09-30 — K13 public reset now fail-closed without durable recovery
+
+- `knx device reset-address` still prints an offline MP §2.18 plan, but a
+  confirmed call now refuses before runtime/tunnel opening: no automatic,
+  durable and verified pre-write backup exists for every affected device's
+  storage. The previous live run's separate backup and unchanged application
+  dump do not establish a reusable recovery contract (ADR-0058).
+- New CLI integration regressions cover a valid confirmed phrase with a local
+  UDP listener that receives no datagram, safe plan output and pre-gate
+  rejection of invalid address/phrase. Direct low-level simulator tests remain;
+  no HTTP/UI reset or new live hardware permission was added.
+
 ## 2026-09-30 — K13 individual-address reset on hardware, guarded
 
 - `WriteScope::IndividualAddressReset` joins `hardware_write_is_authorised`

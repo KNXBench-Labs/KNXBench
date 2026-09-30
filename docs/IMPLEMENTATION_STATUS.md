@@ -1,5 +1,36 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — ISSUE-08 data half, P3: program DPT, DPT text and function text
+
+- `ComObjectNode` gains three server-only fields (`#[ts(skip)]` until U12):
+  - `program_dpt`: the program's datapoint type (ADR-0027's program
+    default) for an object whose `DatapointType` is stated empty. It sits
+    beside `dpt`, never in it. The slot stays empty in the model and in
+    every export.
+  - `dpt_text`: the master data's display text of the DPT shown (`dpt`,
+    else `program_dpt`), in the requested language when translated. An id
+    the master data does not know keeps `None`.
+  - `function_text`: the product's `FunctionText` in the requested
+    language. A module object gets its own instance's arguments
+    substituted; an object without an activating expansion keeps the
+    placeholder visible.
+- Corpus pin (`com_object_activation_corpus.rs`), aggregates only:
+
+  | Project | DPT stated | from program | none | DPT without text | function text missing / with `{{…}}` |
+  |---|---|---|---|---|---|
+  | ETS4 | 290 | 122 | 495 | 0 | 0 / 0 |
+  | ETS 6.3.0 | 289 | 122 | 456 | 0 | 0 / 0 |
+  | KV | 75 | 0 | 0 | 0 | 0 / 0 (75 substituted) |
+
+- The objects with no DPT are genuine: the product states none for 473
+  (ETS4) and 434 (ETS 6.3.0), and a list of several with no choice for 22
+  each. Nothing is picked from such a list (KNOWN_LIMITATIONS §146).
+- Names were already language-aware through the device-detail overlay;
+  every corpus object has one, so no generic object name is needed.
+- Tests: two projection tests (program default beside an empty slot,
+  hidden by a stated one), one unit test for per-instance function-text
+  substitution, the corpus pin above.
+
 ## 2026-09-30 — `knx device compare`: what a download would change, read only
 
 - `knx device compare <a.l.d> --project … --gateway …` builds the same plan

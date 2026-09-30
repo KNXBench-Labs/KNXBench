@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / K12 service-control recovery)
+- **Timestamp:** 2026-09-30 19:45 CEST
+- **Web lock:** untouched; UI session holds it for read-only readiness/compare (see next entry). No Web source was changed here.
+- **Completed:** `PID_SERVICE_CONTROL` bit-2 write now requires an in-session durable backup of both original property octets, mask and target before the first write. CLI (`./device-backups/` or `--backup-dir`) and HTTP (`<data_dir>/device-backups/`, response `backupPath`) fail closed on backup/readback/sync failure. No-op makes no backup/write; errors after backup name its location. ADR-0051, goal-commission, KL §139 and status updated. Offline-only tests: rebased workspace 136 suites/2,766 passed, Web 78 files/1,258 passed, strict Clippy, fmt and four xtask gates green; both explicit corpus tests passed. Detail: `.ai/logs/2026-09-30_codex_service-control-prewrite-backup.md`. No KNX tunnel or device write.
+- **Pending/Next Steps:** UI owner can review this narrow property-only recovery contract before reconsidering the Debug action, *after* its current read-only UI package releases the Web lock. K13 HTTP reset still requires its separate complete multi-device persistent backup/abort design; do not treat this two-byte record as a device image. No new hardware go was given. Global bus-activity/status and partial-download UI remain open.
+- **Notes for Codex oder Claude:** The property file is not an automatic restore or proof of absent vendor side effects. Confirm device identity/mask before any manual recovery; another change requires a new backup/phrase. Remote `main` publication and readback must be verified before calling this delivered. Preserve root foreign edits and UI lock; no secrets or corpus contents are committed.
+
+---
+
 - **Last Agent:** codex (UI U12 / readiness and compare lock)
 - **Timestamp:** 2026-09-30 19:13 CEST
 - **Web lock:** taken by the UI session for U12 read-only readiness and device-compare views.

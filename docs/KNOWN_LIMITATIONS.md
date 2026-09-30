@@ -8979,9 +8979,13 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
-## §148 The contributor license agreement is not reviewed by a lawyer, and nothing enforces it
+## §148 The contributor license agreement is not reviewed by a lawyer, and nothing enforces it — withdrawn 2026-09-30
 
-**Limitation.** [`CLA.md`](../CLA.md) (ADR-0053) was written without legal
+**Withdrawn 2026-09-30.** The CLA was removed before any outside
+contribution was made under it (ADR-0054). KNXBench is `AGPL-3.0-or-later`
+only, as before. The entry is kept for the record.
+
+**Limitation.** `CLA.md` (ADR-0053) was written without legal
 review. Whether its license grant, the fallback clause in section 4, the
 liability limit in section 6 and acceptance by a pull-request sentence plus
 checkbox hold up under German law is **not verified**. There is no template

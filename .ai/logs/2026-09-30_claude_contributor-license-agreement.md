@@ -30,3 +30,12 @@ guide, KNOWN_LIMITATIONS §148, IMPLEMENTATION_STATUS. Gate: `xtask check-anchor
 ## Open
 
 Lawyer review, organization agreement, commercial license text (§148).
+
+## Reverted the same day
+
+After comparing source-available licenses, the user kept the AGPL and asked to
+remove the CLA (ADR-0054). Reading UrhG § 40 (written form for rights in
+unspecified future works, non-waivable termination after five years) and
+§ 32 (remuneration claim; exemption only for a simple right for everyone)
+showed the CLA's checkbox acceptance was weaker than assumed. Not reviewed by
+a lawyer. No contribution was ever made under the CLA.

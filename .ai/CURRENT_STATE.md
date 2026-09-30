@@ -1,3 +1,18 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 17:20 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** User decision: keep `AGPL-3.0-or-later`, no CLA. Removed
+  `CLA.md` and `.github/pull_request_template.md`; README, FAQ and
+  contributing guide restored to their pre-`07da34c8` text. ADR-0053 is
+  superseded by ADR-0054 (records the unreviewed § 40 / § 32 UrhG findings).
+  KNOWN_LIMITATIONS §148 withdrawn; status entry added.
+- **Pending/Next Steps:** None for licensing.
+- **Notes for Codex oder Claude:** Do not reintroduce a CLA or a
+  source-available license without the user's explicit request. Once outside
+  contributions are merged, relicensing needs every contributor's consent.
+
+---
+
 - **Last Agent:** codex (UI U12 / ISSUE-08 closeout)
 - **Timestamp:** 2026-09-30 16:46 CEST
 - **Web lock:** released by the UI session after publishing U12/ISSUE-08. Another session must explicitly take it for its next Web package.

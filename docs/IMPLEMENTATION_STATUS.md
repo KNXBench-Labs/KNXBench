@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Contributor License Agreement removed again (ADR-0054)
+
+- At the user's decision, KNXBench stays `AGPL-3.0-or-later` with no CLA.
+  `CLA.md` and `.github/pull_request_template.md` are removed; README, FAQ
+  and the contributing guide have their earlier text back.
+- ADR-0053 is superseded by ADR-0054, which records two unreviewed UrhG
+  findings against the CLA (§ 40 written form for future works, § 32
+  remuneration). KNOWN_LIMITATIONS §148 is withdrawn.
+- No outside contribution was ever made under the CLA.
+
 ## 2026-09-30 — Contributor License Agreement (ADR-0053)
 
 - The license stays `AGPL-3.0-or-later`. New [`CLA.md`](../CLA.md): each

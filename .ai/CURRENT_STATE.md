@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI U12 / monitor control fields lock)
+- **Timestamp:** 2026-09-30 18:07 CEST
+- **Web lock:** taken by the UI session for U12 §147 monitor control-field display.
+- **Completed:** Claimed the released Web surface in a fresh isolated worktree. This package is display-only; no monitor, tunnel, real bus or device mutation is authorized by this lock.
+- **Pending/Next Steps:** Trace the existing `control` API shape; test and render priority, repeated and hopCount with null/closed-session semantics, EN/DE and mock browser verification. Review, gate, publish and release this lock.
+- **Notes for Codex oder Claude:** ADR-0051 Debug UI is safety-deferred; do not mix it into the monitor package. Preserve the concurrently published commissioning handover and root foreign edits. No credentials in logs.
+
+---
+
 - **Last Agent:** codex (UI U12 / ADR-0051 safety pause)
 - **Timestamp:** 2026-09-30 17:57 CEST
 - **Web lock:** released by the UI session after the read-only ADR-0051 safety preflight; no `apps/knx-web` edits.

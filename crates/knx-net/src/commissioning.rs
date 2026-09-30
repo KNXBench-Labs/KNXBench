@@ -3328,6 +3328,7 @@ mod tests {
                 destination: Destination::Individual(target),
                 transport: Tpci::Connect,
                 service: ApplicationService::NoApplicationPdu,
+                control: None,
             }));
         }
 

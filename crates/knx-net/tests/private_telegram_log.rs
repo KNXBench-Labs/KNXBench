@@ -61,6 +61,9 @@ struct Census {
     /// Per result of re-encoding a decoded frame: `identical` past
     /// Ctrl1/Ctrl2, `differs`, or the encoder's refusal.
     reencode: BTreeMap<String, usize>,
+    /// Decoded frames whose re-encoding repeats every captured octet,
+    /// Ctrl1 and Ctrl2 included.
+    whole_frame_identical: usize,
     /// Per Ctrl1/Ctrl2 field: frames whose captured value the decode →
     /// encode path did not bring back. `LDataFrame` has no field for these,
     /// so the encoder writes its own; a count here is information the
@@ -151,6 +154,9 @@ fn count_frame(census: &mut Census, bytes: &[u8]) {
             for field in control_fields_not_carried(bytes, &again) {
                 *census.control_not_carried.entry(field).or_default() += 1;
             }
+            if again == bytes {
+                census.whole_frame_identical += 1;
+            }
             if same_past_control_field(bytes, &again) {
                 "identical".to_string()
             } else {
@@ -238,9 +244,9 @@ fn every_captured_telegram_decodes_and_survives_the_round_trip() {
     );
     // The capture's measured baseline (2026-09-30), aggregate only. Drift
     // means the capture or the decoder changed: explain which before
-    // updating. `priority`: 16 telegrams were sent at normal priority, and
-    // `LDataFrame` has no priority field, so they re-encode at low
-    // (KNOWN_LIMITATIONS §147).
+    // updating. `control_not_carried` held `{"priority": 16}` (16
+    // normal-priority telegrams re-encoded at low) until `LDataFrame`
+    // carried Ctrl1/Ctrl2's fields (KNOWN_LIMITATIONS §147).
     assert_eq!(census.telegrams, 71);
     assert_eq!(
         census.service,
@@ -250,9 +256,11 @@ fn every_captured_telegram_decodes_and_survives_the_round_trip() {
             ("GroupValueWrite".to_string(), 55),
         ])
     );
-    assert_eq!(
-        census.control_not_carried,
-        BTreeMap::from([("priority", 16)])
+    assert_eq!(census.whole_frame_identical, census.telegrams);
+    assert!(
+        census.control_not_carried.is_empty(),
+        "{:?}",
+        census.control_not_carried
     );
 }
 
@@ -284,10 +292,11 @@ fn the_census_counts_outcomes_without_carrying_values() {
     assert_eq!(census.service["GroupValueWrite"], 2);
     assert_eq!(census.reencode["identical"], 2);
     assert_eq!(census.unknown, 0);
-    assert_eq!(
-        census.control_not_carried,
-        BTreeMap::from([("priority", 1), ("hop count", 1)])
-    );
+    // Normal priority and hop count 5 on the second frame both survive
+    // the round trip since §147 was lifted: nothing counted, and both
+    // frames come back whole.
+    assert!(census.control_not_carried.is_empty(), "{census:?}");
+    assert_eq!(census.whole_frame_identical, 2);
     // No count label carries an address or a value.
     let labels = format!("{census:?}");
     assert!(
@@ -330,6 +339,7 @@ fn a_dropped_control_field_is_named() {
         ["frame too short"]
     );
 
+    // Through the census, a normal-priority frame now round-trips whole.
     let xml = format!(
         r#"<CommunicationLog xmlns="{TELEGRAMS_NAMESPACE}">
             <Telegram RawData="2900B4E011010801010081" />
@@ -337,10 +347,8 @@ fn a_dropped_control_field_is_named() {
         </CommunicationLog>"#
     );
     let census = census(&xml);
-    assert_eq!(
-        census.control_not_carried,
-        BTreeMap::from([("priority", 1)])
-    );
+    assert!(census.control_not_carried.is_empty(), "{census:?}");
+    assert_eq!(census.whole_frame_identical, 2);
     assert_eq!(census.reencode["identical"], 2);
 }
 

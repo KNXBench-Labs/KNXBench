@@ -550,6 +550,9 @@ user assigned it to the commissioning/readiness session.
   the priority (16 normal-priority telegrams), KNOWN_LIMITATIONS §147.
   RESEARCH §19.14; test `crates/knx-net/tests/private_telegram_log.rs`
   (`KNXBENCH_TELEGRAM_LOG`). No fixture was needed: no decoder gap.
+- **Follow-up done 2026-09-30.** §147 lifted: `LDataFrame::control`
+  carries priority, repeat, ack request and hop count; 71 of 71 now
+  re-encode whole. The fields are not shown by the monitor yet.
 
 ## 3c. Later goals (not this stage)
 

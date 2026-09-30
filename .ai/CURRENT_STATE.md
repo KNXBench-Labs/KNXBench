@@ -1,4 +1,13 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 14:30 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** KNOWN_LIMITATIONS §147 lifted. `LDataFrame::control: Option<FrameControl>` (priority, repeat, ack request, hop count) in `crates/knx-net/src/cemi.rs`; decoder fills it (`None` = encoder defaults), encoder writes it, hop count > 7 refused (`CemiError::InvalidHopCount`). `TransmissionPriority::from_bits` in knx-core. All 54 existing frame literals got `control: None` and send identical octets (§105 defaults pinned). Private capture: 71/71 re-encode whole. 11 mutants caught.
+- **Pending/Next Steps:** For the goal.md/UI sessions: the bus monitor event and server JSON do not show priority/hop count yet (display feature). Commissioning lane: live steps stay gated on an explicit user go.
+- **Notes for Codex oder Claude:** Construct new frames with `control: None` unless a non-default priority/hop count is really wanted; read fields via `effective_control()`, never by matching on `control`.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 13:45 CEST
 - **Web lock:** untouched; held by the UI session as its newest entry says.
 - **Completed:** U10 / ISSUE-12 discovery verified end to end after the

@@ -8916,7 +8916,23 @@ learn it. The live write needs its own go (goal-commission §1.2).
 `address-by-serial 1.1.68` moves the device and back, and the bus monitor
 shows the three PDUs with no `A_Restart`.
 
-## §147 A received telegram's priority, repeat flag and hop count are not kept
+## §147 A received telegram's priority, repeat flag and hop count are not kept — lifted 2026-09-30
+
+**Lifted 2026-09-30.** `LDataFrame::control: Option<FrameControl>`
+carries Ctrl1's priority, repeat flag and ack request and Ctrl2's hop
+count. `decode_l_data` fills it; `LDataFrame::effective_control` reads it;
+`encode_l_data` writes it and refuses a hop count above 7
+(`CemiError::InvalidHopCount`) instead of masking it. `None` means exactly
+the encoder's previous defaults, so every existing sender, including §105's
+control-frame priorities, sends the same octets as before. The private
+capture now re-encodes 71 of 71 telegrams whole, Ctrl1 and Ctrl2 included
+(RESEARCH §19.14). Tests in `cemi.rs` plus `TransmissionPriority::from_bits`;
+11 mutants caught. What stays open: no consumer shows the fields yet (the
+bus monitor's event and the server's JSON carry no priority); that is a
+display feature, not a decoder gap.
+
+The original entry, kept for the record:
+
 
 **Limitation.** `decode_l_data` (`crates/knx-net/src/cemi.rs`) reads Ctrl1
 and Ctrl2 for what it needs (address type, system broadcast, the

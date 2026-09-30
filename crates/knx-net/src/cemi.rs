@@ -8,6 +8,7 @@
 //! never silently dropped.
 
 use knx_core::commissioning::domain_address::DomainAddress;
+use knx_core::commissioning::group_object_table::TransmissionPriority;
 use knx_core::{GroupAddress, IndividualAddress};
 // Re-exported (not just imported) so `crate::cemi::GroupValue` keeps
 // resolving for call sites that named this module directly — `GroupValue`
@@ -169,6 +170,18 @@ pub const SYSTEM_BROADCAST_DESTINATION: Destination = Destination::SystemBroadca
 /// set means *broadcast*, clear means *system broadcast*. Every frame this
 /// crate sent before K16 had it set (Ctrl1 `0xBC`, `0xB2`, `0xB0`).
 const CTRL1_SB_BROADCAST: u8 = 0x10;
+/// cEMI Ctrl1 bit 7, Frame Type: set means standard frame (same clause).
+const CTRL1_STANDARD_FRAME: u8 = 0x80;
+
+/// cEMI Ctrl1 bit 5, Repeat (EMI_IMI v01.04.02 AS §4.1.5.3.2): set means
+/// *not* repeated / do not repeat.
+const CTRL1_NOT_REPEATED: u8 = 0x20;
+/// cEMI Ctrl1 bits 3–2, the priority (same clause).
+const CTRL1_PRIORITY: u8 = 0x0C;
+/// cEMI Ctrl1 bit 1, acknowledge request (same clause).
+const CTRL1_ACK_REQUEST: u8 = 0x02;
+/// cEMI Ctrl2 bits 6–4, the hop count (same clause).
+const CTRL2_HOP_COUNT: u8 = 0x70;
 
 /// Octet 6 of the `L_Data` frame (the TPDU's Transport Control Field).
 /// Bit layout `[D]`: `03_03_04 Transport Layer v01.02.03 AS`, clause 2
@@ -461,6 +474,84 @@ pub struct LDataFrame {
     pub destination: Destination,
     pub transport: Tpci,
     pub service: ApplicationService,
+    /// Ctrl1/Ctrl2 fields the other members do not carry. `None` means
+    /// exactly the fields `encode_l_data` writes by default for this
+    /// `kind` and `transport` ([`LDataFrame::effective_control`] names
+    /// them); `Some` means other values, which `encode_l_data` writes as
+    /// given. `decode_l_data` normalises the same way, so a decoded frame
+    /// re-encodes to its own control fields and a built frame decodes back
+    /// to itself. Read the values through `effective_control`, never by
+    /// matching on this field. Before this existed a decoded frame dropped
+    /// them (KNOWN_LIMITATIONS §147).
+    pub control: Option<FrameControl>,
+}
+
+/// The per-frame control fields of Ctrl1 and Ctrl2 (EMI_IMI v01.04.02 AS
+/// §4.1.5.3.2, `FT r R SB P P A C` and `AT HC HC HC EFF`) that do not
+/// already follow from `LDataFrame`'s other members. Not carried: FT and
+/// EFF (this crate reads and writes standard frames only), SB (it is the
+/// `Destination`), C (it is `LDataMessageKind::Confirmation`'s `error`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FrameControl {
+    /// Ctrl1 bits 3–2. Codes as Data Link Layer General v01.03.02 AS
+    /// §2.2.3: `00` system, `10` urgent, `01` normal, `11` low.
+    pub priority: TransmissionPriority,
+    /// Ctrl1 bit 5 (R) is `0`. What that means depends on the message:
+    /// on `L_Data.ind` the frame is a repetition on the medium
+    /// (§4.1.5.3.5: *"0: repeated L_Data frame on media"*); on
+    /// `L_Data.req` it asks for a repeat on error (§4.1.5.3.2: *"0: repeat
+    /// frame on medium if error"*); on `L_Data.con` it is don't care
+    /// (§4.1.5.3.4).
+    pub repeat: bool,
+    /// Ctrl1 bit 1 (A): a Layer-2 acknowledge is requested (§4.1.5.3.2;
+    /// don't care on a TP1 `L_Data.ind`, §4.1.5.3.5).
+    pub ack_request: bool,
+    /// Ctrl2 bits 6–4, 0 to 7. `encode_l_data` refuses a larger value
+    /// rather than masking it.
+    pub hop_count: u8,
+}
+
+/// The hop count this crate sends with (Ctrl2 bits 6–4).
+const DEFAULT_HOP_COUNT: u8 = 6;
+/// The largest value Ctrl2's three hop-count bits hold.
+const MAX_HOP_COUNT: u8 = 7;
+
+impl FrameControl {
+    /// What `encode_l_data` writes for a frame without `control`: low
+    /// priority, no repeat request, no ack request, hop count 6 (Ctrl1
+    /// `BCh`), except a Transport Layer control request. TL v01.02.03 AS
+    /// §3.7/§3.8 for `T_CONNECT`/`T_DISCONNECT`: *"the priority shall be
+    /// set to 'system'; the ack_request shall be set to true"* (Ctrl1
+    /// `B2h`). TL §5.3 A2–A4 name only *"priority = SYSTEM"* for
+    /// `T_ACK`/`T_NAK`, so their ack_request stays clear (Ctrl1 `B0h`).
+    /// KNOWN_LIMITATIONS §105.
+    fn default_for(kind: LDataMessageKind, transport: Tpci) -> FrameControl {
+        let (priority, ack_request) = match (kind, transport) {
+            (LDataMessageKind::Request, Tpci::Connect | Tpci::Disconnect) => {
+                (TransmissionPriority::System, true)
+            }
+            (LDataMessageKind::Request, Tpci::Ack { .. } | Tpci::Nak { .. }) => {
+                (TransmissionPriority::System, false)
+            }
+            _ => (TransmissionPriority::Low, false),
+        };
+        FrameControl {
+            priority,
+            repeat: false,
+            ack_request,
+            hop_count: DEFAULT_HOP_COUNT,
+        }
+    }
+}
+
+impl LDataFrame {
+    /// The Ctrl1/Ctrl2 fields this frame is sent with, or was received
+    /// with: `control` if set, otherwise the defaults for its `kind` and
+    /// `transport`.
+    pub fn effective_control(&self) -> FrameControl {
+        self.control
+            .unwrap_or_else(|| FrameControl::default_for(self.kind, self.transport))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -488,6 +579,10 @@ pub enum CemiError {
     /// is a 10-bit field (Application Layer v02.01.01 AS §2.2 Table 1's
     /// APCI column). Rejected on encode rather than masked.
     InvalidApci(u16),
+    /// A `FrameControl::hop_count` above 7: Ctrl2's hop count is three bits
+    /// (EMI_IMI v01.04.02 AS §4.1.5.3.2). Rejected on encode rather than
+    /// masked, which would send a different, valid hop count.
+    InvalidHopCount(u8),
     /// An `A_FunctionPropertyState_Response` with data but no return code:
     /// AL §3.4.7.3 drops both together, so no such PDU exists.
     FunctionResponseDataWithoutReturnCode,
@@ -585,6 +680,9 @@ impl std::fmt::Display for CemiError {
             }
             CemiError::InvalidApci(apci) => {
                 write!(f, "APCI {apci:#06x} does not fit 10 bits (0-0x3FF)")
+            }
+            CemiError::InvalidHopCount(hops) => {
+                write!(f, "hop count {hops} does not fit Ctrl2's three bits (0-7)")
             }
             CemiError::NpduTooLong { got } => {
                 write!(
@@ -883,12 +981,22 @@ pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
             }
         }
     };
+    let received = FrameControl {
+        priority: TransmissionPriority::from_bits(ctrl1 >> 2),
+        repeat: ctrl1 & CTRL1_NOT_REPEATED == 0,
+        ack_request: ctrl1 & CTRL1_ACK_REQUEST != 0,
+        hop_count: (ctrl2 & CTRL2_HOP_COUNT) >> 4,
+    };
+    // `None` for exactly the encoder's defaults, so a frame survives a
+    // round trip either way (`LDataFrame::control`).
+    let control = (received != FrameControl::default_for(kind, transport)).then_some(received);
     Ok(LDataFrame {
         kind,
         source,
         destination,
         transport,
         service,
+        control,
     })
 }
 
@@ -973,7 +1081,8 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
 /// every hand-built fixture `decode_l_data` is tested against above. The
 /// exception is a Transport Layer control request (`T_CONNECT`,
 /// `T_DISCONNECT`, `T_ACK`, `T_NAK`), sent at system priority per TL §3.7,
-/// §3.8 and §5.3 (see [`CTRL1_SYSTEM_ACK_REQUESTED`], [`CTRL1_SYSTEM`]).
+/// §3.8 and §5.3 (see [`FrameControl`]'s `default_for`: Ctrl1 `B2h`
+/// for `T_CONNECT`/`T_DISCONNECT`, `B0h` for `T_ACK`/`T_NAK`).
 /// Names a management service (spec §6.6) from its APCI and data octets,
 /// or returns `None` if the octets do not fit that service's PDU.
 ///
@@ -1170,29 +1279,36 @@ fn decode_memory_or_restart(apci: u16, extra: &[u8]) -> Option<ApplicationServic
     None
 }
 
-/// Ctrl1 of an outbound `T_CONNECT`/`T_DISCONNECT` request: standard frame,
-/// R and SB as in 0xBC, priority `00b` (system), ack requested (1011_0010).
-/// TL v01.02.03 AS §3.7/§3.8: "the priority shall be set to 'system'; the
-/// ack_request shall be set to true". Ctrl1 layout EMI_IMI v01.04.02 AS
-/// §4.1.5.3.2; priority codes Data Link Layer General v01.03.02 AS §2.2.3.
-const CTRL1_SYSTEM_ACK_REQUESTED: u8 = 0xB2;
-/// Ctrl1 of an outbound `T_ACK`/`T_NAK`: as above, but TL §5.3 A2-A4 name
-/// only "priority = SYSTEM", so ack_request keeps the crate default (clear):
-/// 1011_0000.
-const CTRL1_SYSTEM: u8 = 0xB0;
-
 pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     let message_code = match frame.kind {
         LDataMessageKind::Request => L_DATA_REQ,
         LDataMessageKind::Indication => L_DATA_IND,
         LDataMessageKind::Confirmation { .. } => L_DATA_CON,
     };
-    let ctrl1 = match (frame.kind, frame.transport) {
-        (LDataMessageKind::Confirmation { error: true }, _) => 0xBD,
-        (LDataMessageKind::Request, Tpci::Connect | Tpci::Disconnect) => CTRL1_SYSTEM_ACK_REQUESTED,
-        (LDataMessageKind::Request, Tpci::Ack { .. } | Tpci::Nak { .. }) => CTRL1_SYSTEM,
-        _ => 0xBC,
-    };
+    let control = frame.effective_control();
+    if control.hop_count > MAX_HOP_COUNT {
+        return Err(CemiError::InvalidHopCount(control.hop_count));
+    }
+    // Standard frame (FT = 1) and SB = 1 always, then the fields of
+    // `control`; C is the negative confirmation's error bit. Without
+    // `control` this is `0xBC` for data, `0xB2`/`0xB0` for the Transport
+    // Layer control requests (`FrameControl::default_for`) and `0xBD` for
+    // a negative confirmation.
+    let confirm_error = matches!(frame.kind, LDataMessageKind::Confirmation { error: true });
+    let ctrl1 = CTRL1_STANDARD_FRAME
+        | CTRL1_SB_BROADCAST
+        | if control.repeat {
+            0
+        } else {
+            CTRL1_NOT_REPEATED
+        }
+        | (control.priority.bits() << 2) & CTRL1_PRIORITY
+        | if control.ack_request {
+            CTRL1_ACK_REQUEST
+        } else {
+            0
+        }
+        | u8::from(confirm_error);
     let (address_type_bit, dest_raw) = match frame.destination {
         Destination::Group(addr) => (0x80, addr.raw()),
         Destination::Individual(addr) => (0x00, addr.raw()),
@@ -1203,7 +1319,8 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     } else {
         ctrl1
     };
-    let ctrl2 = address_type_bit | 0x60; // hop count 6, standard EFF (0000)
+    // Address type, hop count, and extended frame format 0000 (standard).
+    let ctrl2 = address_type_bit | (control.hop_count << 4) & CTRL2_HOP_COUNT;
     let source_raw = frame.source.raw();
 
     // The TPCI octet's own bits (Transport Layer v01.02.03 AS §2, Figure
@@ -2057,6 +2174,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
+            control: None,
         };
         assert_eq!(encode_l_data(&frame).unwrap(), write_on_request());
     }
@@ -2069,6 +2187,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0x2A, 0x99])),
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
@@ -2089,6 +2208,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0xAA; 254])),
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(encoded[8], 255); // L octet: 256 - 1
@@ -2105,6 +2225,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0xAA; 255])),
+            control: None,
         };
         assert_eq!(
             encode_l_data(&frame),
@@ -2120,6 +2241,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueRead,
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
@@ -2133,6 +2255,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x00)),
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
@@ -2149,6 +2272,7 @@ mod tests {
                 apci: 0x03C0,
                 data: vec![0xAB, 0xCD],
             },
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
@@ -2184,6 +2308,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x40)),
+            control: None,
         };
         let encoded = encode_l_data(&frame).unwrap();
         let decoded = decode_l_data(&encoded).unwrap();
@@ -2207,6 +2332,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport,
             service,
+            control: None,
         };
         let encoded = encode_l_data(&frame).expect("a valid transport/service pairing encodes");
         let decoded = decode_l_data(&encoded).expect("a frame this function built itself decodes");
@@ -2261,6 +2387,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport: Tpci::Connect,
             service: ApplicationService::NoApplicationPdu,
+            control: None,
         };
         assert_eq!(encode_l_data(&frame).unwrap(), connect_frame());
     }
@@ -2330,6 +2457,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport: Tpci::Unknown(0x06),
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
+            control: None,
         };
         let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
         assert_eq!(decoded.transport, Tpci::Unknown(0x04));
@@ -2455,6 +2583,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
             transport: Tpci::Connect,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            control: None,
         };
         assert_eq!(
             encode_l_data(&frame).unwrap_err(),
@@ -2477,6 +2606,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::NoApplicationPdu,
+            control: None,
         };
         assert_eq!(
             encode_l_data(&frame).unwrap_err(),
@@ -2499,6 +2629,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
             transport: Tpci::NumberedData { seq: 16 },
             service: ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+            control: None,
         };
         assert_eq!(
             encode_l_data(&frame).unwrap_err(),
@@ -2650,6 +2781,7 @@ mod tests {
             service: ApplicationService::DeviceDescriptorRead {
                 descriptor_type: 0x40,
             },
+            control: None,
         };
         assert_eq!(
             encode_l_data(&read_frame).unwrap_err(),
@@ -2665,6 +2797,7 @@ mod tests {
                 descriptor_type: 0xFF,
                 data: vec![1, 2],
             },
+            control: None,
         };
         assert_eq!(
             encode_l_data(&response_frame).unwrap_err(),
@@ -2687,6 +2820,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1118)),
             transport: Tpci::NumberedData { seq: 0 },
             service,
+            control: None,
         }
     }
 
@@ -3106,6 +3240,7 @@ mod tests {
             destination: Destination::Group(GroupAddress::from_raw(0x0000)),
             transport: Tpci::UnnumberedData,
             service: ApplicationService::IndividualAddressResponse,
+            control: None,
         };
         let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
         assert_eq!(
@@ -3127,6 +3262,7 @@ mod tests {
             service: ApplicationService::IndividualAddressWrite {
                 address: IndividualAddress::from_raw(0x1118),
             },
+            control: None,
         };
         let bytes = encode_l_data(&frame).unwrap();
         assert_eq!(&bytes[9..], &[0x00, 0xC0, 0x11, 0x18]);
@@ -3152,6 +3288,7 @@ mod tests {
             destination: BROADCAST_DESTINATION,
             transport: Tpci::UnnumberedData,
             service,
+            control: None,
         };
         let npdu_of = |service| encode_l_data(&frame(service)).unwrap()[9..].to_vec();
         let round_trip = |service| {
@@ -3355,6 +3492,7 @@ mod tests {
                 apci: 0x07C0,
                 data: vec![],
             },
+            control: None,
         };
         assert_eq!(
             encode_l_data(&frame).unwrap_err(),
@@ -3379,6 +3517,7 @@ mod tests {
             destination: Destination::Individual(IndividualAddress::from_raw(0x1143)),
             transport,
             service,
+            control: None,
         };
         let ctrl1 = |frame: LDataFrame| encode_l_data(&frame).unwrap()[2];
         let none = || ApplicationService::NoApplicationPdu;
@@ -3419,6 +3558,7 @@ mod domain_address_tests {
             destination,
             transport: Tpci::UnnumberedData,
             service,
+            control: None,
         }
     }
 
@@ -3654,6 +3794,7 @@ mod function_property_tests {
             destination,
             transport: Tpci::UnnumberedData,
             service,
+            control: None,
         }
     }
 
@@ -3745,5 +3886,158 @@ mod function_property_tests {
         assert_eq!(bytes[2] & 0x10, 0, "system broadcast");
         assert_eq!(&bytes[9..11], &[0x03, 0x42]);
         assert_eq!(decode_l_data(&bytes).unwrap(), sent);
+    }
+
+    // KNOWN_LIMITATIONS §147: Ctrl1/Ctrl2's own fields survive a decode and
+    // an encode. Ctrl1 `FT r R SB P P A C`, Ctrl2 `AT HC HC HC EFF`
+    // (EMI_IMI v01.04.02 AS §4.1.5.3.2).
+
+    fn group_write_indication(ctrl1: u8, ctrl2: u8) -> Vec<u8> {
+        // GroupValueWrite 1 from 1.1.1 to 1/0/1.
+        vec![
+            0x29, 0x00, ctrl1, ctrl2, 0x11, 0x01, 0x08, 0x01, 0x01, 0x00, 0x81,
+        ]
+    }
+
+    #[test]
+    fn a_decoded_frame_keeps_priority_repeat_ack_and_hop_count() {
+        // 1001_0110: repeated (R = 0), SB, normal (01), ack requested.
+        // 1101_0000: group, hop count 5.
+        let frame = decode_l_data(&group_write_indication(0x96, 0xD0)).unwrap();
+        assert_eq!(
+            frame.effective_control(),
+            FrameControl {
+                priority: TransmissionPriority::Normal,
+                repeat: true,
+                ack_request: true,
+                hop_count: 5,
+            }
+        );
+        let normal = decode_l_data(&group_write_indication(0xB4, 0xE0)).unwrap();
+        assert_eq!(
+            normal.effective_control().priority,
+            TransmissionPriority::Normal
+        );
+        for (ctrl1, priority) in [
+            (0xB0, TransmissionPriority::System),
+            (0xB8, TransmissionPriority::Urgent),
+            (0xB4, TransmissionPriority::Normal),
+            (0xBC, TransmissionPriority::Low),
+        ] {
+            let frame = decode_l_data(&group_write_indication(ctrl1, 0xE0)).unwrap();
+            assert_eq!(frame.effective_control().priority, priority, "{ctrl1:#04x}");
+        }
+        for hops in 0..=7u8 {
+            let frame = decode_l_data(&group_write_indication(0xBC, 0x80 | hops << 4)).unwrap();
+            assert_eq!(frame.effective_control().hop_count, hops);
+        }
+    }
+
+    #[test]
+    fn a_decoded_frame_re_encodes_to_its_own_control_fields() {
+        for (ctrl1, ctrl2) in [
+            (0xB4, 0xE0),
+            (0x96, 0xD0),
+            (0xBC, 0xE0),
+            (0x9E, 0x80),
+            (0xB8, 0xF0),
+        ] {
+            let bytes = group_write_indication(ctrl1, ctrl2);
+            let frame = decode_l_data(&bytes).unwrap();
+            assert_eq!(
+                encode_l_data(&frame).unwrap(),
+                bytes,
+                "{ctrl1:#04x} {ctrl2:#04x}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_frame_with_the_default_fields_decodes_without_control() {
+        // What the encoder writes by default decodes back to `None`, so a
+        // frame built without control fields survives its own round trip.
+        let frame = decode_l_data(&group_write_indication(0xBC, 0xE0)).unwrap();
+        assert_eq!(frame.control, None);
+        let differing = decode_l_data(&group_write_indication(0xB4, 0xE0)).unwrap();
+        assert!(differing.control.is_some());
+    }
+
+    #[test]
+    fn a_built_frame_sends_the_control_it_is_given() {
+        let mut frame = decode_l_data(&group_write_indication(0xBC, 0xE0)).unwrap();
+        frame.kind = LDataMessageKind::Request;
+        frame.control = Some(FrameControl {
+            priority: TransmissionPriority::Urgent,
+            repeat: true,
+            ack_request: true,
+            hop_count: 3,
+        });
+        let bytes = encode_l_data(&frame).unwrap();
+        // 1001_1010: R = 0 (repeat), SB, urgent (10), ack requested.
+        assert_eq!(bytes[2], 0x9A);
+        // 1011_0000: group, hop count 3.
+        assert_eq!(bytes[3], 0xB0);
+        assert_eq!(decode_l_data(&bytes).unwrap(), frame);
+    }
+
+    #[test]
+    fn a_hop_count_above_seven_is_refused_not_masked() {
+        let mut frame = decode_l_data(&group_write_indication(0xBC, 0xE0)).unwrap();
+        frame.control = Some(FrameControl {
+            hop_count: 8,
+            ..frame.effective_control()
+        });
+        assert_eq!(encode_l_data(&frame), Err(CemiError::InvalidHopCount(8)));
+    }
+
+    #[test]
+    fn without_control_the_encoder_keeps_its_defaults() {
+        // The §105 control-frame priorities and the 0xBC data default
+        // stay exactly as they were for every frame built with `None`.
+        let individual = Destination::Individual(IndividualAddress::from_raw(0x1105));
+        let request = |transport, service| LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: individual,
+            transport,
+            service,
+            control: None,
+        };
+        let ctrl = |frame: &LDataFrame| {
+            let bytes = encode_l_data(frame).unwrap();
+            (bytes[2], bytes[3])
+        };
+        assert_eq!(
+            ctrl(&request(
+                Tpci::Connect,
+                ApplicationService::NoApplicationPdu
+            )),
+            (0xB2, 0x60)
+        );
+        assert_eq!(
+            ctrl(&request(
+                Tpci::Ack { seq: 1 },
+                ApplicationService::NoApplicationPdu
+            )),
+            (0xB0, 0x60)
+        );
+        assert_eq!(
+            ctrl(&request(
+                Tpci::UnnumberedData,
+                ApplicationService::DeviceDescriptorRead { descriptor_type: 0 }
+            )),
+            (0xBC, 0x60)
+        );
+        // And each of them decodes back to itself, `control: None`.
+        for frame in [
+            request(Tpci::Connect, ApplicationService::NoApplicationPdu),
+            request(Tpci::Disconnect, ApplicationService::NoApplicationPdu),
+            request(Tpci::Nak { seq: 2 }, ApplicationService::NoApplicationPdu),
+        ] {
+            assert_eq!(
+                decode_l_data(&encode_l_data(&frame).unwrap()).unwrap(),
+                frame
+            );
+        }
     }
 }

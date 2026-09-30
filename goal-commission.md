@@ -439,6 +439,11 @@ would be a write this goal does not need.
 
 ### K12 — Individual address by serial number, TP (item 1)
 
+**Live 2026-09-30:** bit 2 set and cleared on `1.1.67` (read back); with
+it set the serial write was still ignored. KNXBench had sent the address
+broadcasts at low instead of system priority (AL §3.2.2–§3.2.5); fixed
+offline, second live run pending (RESEARCH §19.15, KL §139).
+
 **Live 2026-09-29:** reads verified on `1.1.67`; the write is ignored by
 the device (`PID_SERVICE_CONTROL` bit 2 clear, KL §139, RESEARCH §19.8).
 
@@ -487,6 +492,10 @@ Simulator first. **[W]** only on the user's request, followed by the
 option C re-download.
 
 ### K15 — Partial download for `070nh` (item 3)
+
+**Live 2026-09-30:** `--partial group-addresses` interrupted by an
+external timeout in step 17/21; repaired with the complete option-C
+download, dump identical. Group-address partial stays unverified (KL §142).
 
 **Live 2026-09-29:** parameters-only partial download on `1.1.67`, 394
 octets read back, dump unchanged (KL §142 lifted, RESEARCH §19.8).

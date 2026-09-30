@@ -8853,6 +8853,16 @@ no log or output.
 
 ## §139 A device can be addressed by its serial number, and nothing has done it live
 
+**Update (2026-09-30, live on `1.1.67`, user go "1 alle go"; RESEARCH
+§19.15).** Bit 2 set via `service-control --enable` (`0000h` → `0004h`,
+read back twice), then `address-by-serial 1.1.68`: still answered from
+`1.1.67`, `1.1.68` still vacant, bit 2 cleared again (`0000h`, read back),
+dump byte-identical. Bit 2 alone does not explain the refusal. Found
+since: KNXBench sent all four `A_IndividualAddress*` broadcasts at low
+priority where AL §3.2.2–§3.2.5 require system priority; fixed in
+`cemi.rs` the same day. Whether that is the cause needs a second live run
+with the fix.
+
 **Update (2026-09-29, live on `1.1.67`, user go "Freigabe für alle Tasks
 auf der Testhardware").** Both reads work on hardware, the write does not
 take on this device, and the device says why:
@@ -9125,6 +9135,15 @@ read procedures have no CLI or HTTP route.
 the user approves a run.
 
 ## §142 The mask-`070nh` partial download is tested in the simulator only
+
+**Update (2026-09-30, `--partial group-addresses` on `1.1.67`; RESEARCH
+§19.15).** Not verified: the run was stopped in step 17 of 21 by an
+external shell timeout the agent had set too tight (writes took ~6 s each
+that day), leaving the association table `Loading` with the right bytes in
+memory. KNXBench's load-state check and `device compare` showed exactly
+that; the complete option-C download restored `Loaded`/`Loaded`/`Loaded`
+and a byte-identical dump. `group-addresses` and `both` stay unverified on
+hardware; `parameters` stays verified.
 
 **Lifted (2026-09-29, live on `1.1.67`, user go for all test-hardware
 tasks).** `knx device download 1.1.67 --partial parameters` with the

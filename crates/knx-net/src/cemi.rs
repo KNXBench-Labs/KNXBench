@@ -524,13 +524,22 @@ impl FrameControl {
     /// set to 'system'; the ack_request shall be set to true"* (Ctrl1
     /// `B2h`). TL §5.3 A2–A4 name only *"priority = SYSTEM"* for
     /// `T_ACK`/`T_NAK`, so their ack_request stays clear (Ctrl1 `B0h`).
-    /// KNOWN_LIMITATIONS §105.
-    fn default_for(kind: LDataMessageKind, transport: Tpci) -> FrameControl {
+    /// KNOWN_LIMITATIONS §105. And the address broadcasts whose AL clause
+    /// fixes *"The parameter priority, implicitly with value 'system'"*
+    /// ([`sent_at_system_priority`]), also Ctrl1 `B0h`.
+    fn default_for(
+        kind: LDataMessageKind,
+        transport: Tpci,
+        service: &ApplicationService,
+    ) -> FrameControl {
         let (priority, ack_request) = match (kind, transport) {
             (LDataMessageKind::Request, Tpci::Connect | Tpci::Disconnect) => {
                 (TransmissionPriority::System, true)
             }
             (LDataMessageKind::Request, Tpci::Ack { .. } | Tpci::Nak { .. }) => {
+                (TransmissionPriority::System, false)
+            }
+            (LDataMessageKind::Request, _) if sent_at_system_priority(service) => {
                 (TransmissionPriority::System, false)
             }
             _ => (TransmissionPriority::Low, false),
@@ -544,13 +553,34 @@ impl FrameControl {
     }
 }
 
+/// The services this side sends whose Application Layer clause says
+/// *"The parameter priority, implicitly with value 'system', shall be
+/// mapped to the corresponding parameter of the T_Data_Broadcast.req"*
+/// (or `T_Data_SystemBroadcast.req`): AL v02.01.01 AS §3.2.2
+/// `A_IndividualAddress_Write` (p. 18), §3.2.3 `A_IndividualAddress_Read`
+/// (p. 19), §3.2.4 `A_IndividualAddressSerialNumber_Read` (p. 21), §3.2.5
+/// `A_IndividualAddressSerialNumber_Write` (p. 23), §3.3.6
+/// `A_DomainAddressSerialNumber_Read` and §3.3.7 `_Write`. The AL fixes
+/// no ack_request for them, so it stays clear, as on `T_ACK`/`T_NAK`.
+fn sent_at_system_priority(service: &ApplicationService) -> bool {
+    matches!(
+        service,
+        ApplicationService::IndividualAddressWrite { .. }
+            | ApplicationService::IndividualAddressRead
+            | ApplicationService::IndividualAddressSerialNumberRead { .. }
+            | ApplicationService::IndividualAddressSerialNumberWrite { .. }
+            | ApplicationService::DomainAddressSerialNumberRead { .. }
+            | ApplicationService::DomainAddressSerialNumberWrite { .. }
+    )
+}
+
 impl LDataFrame {
     /// The Ctrl1/Ctrl2 fields this frame is sent with, or was received
     /// with: `control` if set, otherwise the defaults for its `kind` and
     /// `transport`.
     pub fn effective_control(&self) -> FrameControl {
         self.control
-            .unwrap_or_else(|| FrameControl::default_for(self.kind, self.transport))
+            .unwrap_or_else(|| FrameControl::default_for(self.kind, self.transport, &self.service))
     }
 }
 
@@ -989,7 +1019,8 @@ pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
     };
     // `None` for exactly the encoder's defaults, so a frame survives a
     // round trip either way (`LDataFrame::control`).
-    let control = (received != FrameControl::default_for(kind, transport)).then_some(received);
+    let control =
+        (received != FrameControl::default_for(kind, transport, &service)).then_some(received);
     Ok(LDataFrame {
         kind,
         source,
@@ -3539,6 +3570,62 @@ mod tests {
         ind.kind = LDataMessageKind::Indication;
         assert_eq!(ctrl1(ind), 0xBC);
     }
+
+    /// The broadcast services whose Application Layer clause fixes the
+    /// priority: *"The parameter priority, implicitly with value 'system',
+    /// shall be mapped to the corresponding parameter of the
+    /// T_Data_Broadcast.req primitive"* (AL v02.01.01 AS §3.2.2
+    /// `A_IndividualAddress_Write`, p. 18; §3.2.3 `_Read`, p. 19; §3.2.4
+    /// `A_IndividualAddressSerialNumber_Read`, p. 21; §3.2.5 `_Write`,
+    /// p. 23; §3.3.6/§3.3.7 `A_DomainAddressSerialNumber_Read`/`_Write`
+    /// on the system broadcast). Before this they went out at low
+    /// priority (Ctrl1 `BCh`); a device that took the MP §2.5 write
+    /// with bit 2 set still ignored it (RESEARCH §19.8).
+    #[test]
+    fn address_broadcasts_go_out_at_system_priority() {
+        let broadcast = |service| LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x0000),
+            destination: Destination::Group(GroupAddress::from_raw(0x0000)),
+            transport: Tpci::UnnumberedData,
+            service,
+            control: None,
+        };
+        let ctrl1 = |frame: LDataFrame| encode_l_data(&frame).unwrap()[2];
+        let serial_number = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
+        let address = IndividualAddress::from_raw(0x1144);
+        let system = [
+            ApplicationService::IndividualAddressWrite { address },
+            ApplicationService::IndividualAddressRead,
+            ApplicationService::IndividualAddressSerialNumberRead { serial_number },
+            ApplicationService::IndividualAddressSerialNumberWrite {
+                serial_number,
+                address,
+            },
+            ApplicationService::DomainAddressSerialNumberRead { serial_number },
+            ApplicationService::DomainAddressSerialNumberWrite {
+                serial_number,
+                domain_address: knx_core::commissioning::domain_address::DomainAddress::Rf([
+                    0x00, 0xFA, 0x12, 0x34, 0x56, 0x78,
+                ]),
+            },
+        ];
+        for service in system {
+            let frame = broadcast(service.clone());
+            // FT=1 R=1 SB=1, P=00 (system), A=0: 1011_0000.
+            assert_eq!(ctrl1(frame.clone()), 0xB0, "{service:?}");
+            // A received request with these fields is the default again.
+            let bytes = encode_l_data(&frame).unwrap();
+            assert_eq!(decode_l_data(&bytes).unwrap(), frame, "{service:?}");
+        }
+        // A group telegram on the same destination keeps low priority.
+        assert_eq!(ctrl1(broadcast(ApplicationService::GroupValueRead)), 0xBC);
+        // The priority belongs to the request this side sends; an
+        // indication is left as it was.
+        let mut ind = broadcast(ApplicationService::IndividualAddressRead);
+        ind.kind = LDataMessageKind::Indication;
+        assert_eq!(ctrl1(ind), 0xBC);
+    }
 }
 
 /// K16: the domain-address services, the system broadcast and the RF medium
@@ -3597,7 +3684,9 @@ mod domain_address_tests {
             ApplicationService::IndividualAddressRead,
         ))
         .unwrap();
-        assert_eq!(plain[2], 0xBC);
+        // SB kept; system priority (AL §3.2.3), so Ctrl1 0xB0.
+        assert_eq!(plain[2], 0xB0);
+        assert_ne!(plain[2] & CTRL1_SB_BROADCAST, 0);
     }
 
     #[test]

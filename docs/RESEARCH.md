@@ -6043,6 +6043,59 @@ and defect 1 must be fixed first.
   decoder's own tests in `cemi.rs` cover the control fields (11 mutants
   caught).
 
+### 19.15 K12 with bit 2 set, an interrupted partial download, and system priority (2026-09-30)
+
+User go "1 alle go" for the open live steps on `1.1.67` (MDT, `0701h`),
+gateway `172.18.250.1:3671`. Evidence in
+`OriginalData/DeviceBackups/1.1.67_MDT-0701_2026-09-30_k12b-*` and
+`…_k15b-*` (private; serial number `[REDACTED]` here).
+
+- **[V] Bit 2 can be set and cleared on this device.**
+  `knx device service-control 1.1.67 --enable` read `0000h`, wrote
+  `0004h`, read it back; a separate session read `0004h` again.
+  `--disable` later wrote `0000h` and read it back. ADR-0051's path works
+  on hardware.
+- **[V] With bit 2 set, the serial-number write still did not take.**
+  `address-by-serial 1.1.68`: the device was found by serial number, `1.1.68`
+  probed vacant, the write went out, and the read-back by serial number
+  answered from `1.1.67`. Scan afterwards: `1.1.67` occupied, `1.1.68`
+  vacant. Dumps before and after: 180 lines, byte-identical. So bit 2 was
+  not the only reason for 2026-09-29's refusal.
+- **[V] KNXBench sent the address broadcasts at the wrong priority.** AL
+  v02.01.01 AS §3.2.2–§3.2.5 and §3.3.6/§3.3.7 each say *"The parameter
+  priority, implicitly with value 'system', shall be mapped to the
+  corresponding parameter of the T_Data_Broadcast.req"* (or
+  `T_Data_SystemBroadcast.req`). `FrameControl::default_for` gave every
+  request except `T_Connect`/`T_Disconnect`/`T_ACK`/`T_NAK` low priority,
+  so `A_IndividualAddressSerialNumber_Write` left as Ctrl1 `BCh` instead of
+  `B0h`. Fixed 2026-09-30 (`sent_at_system_priority` in `cemi.rs`), with the
+  test first RED on exactly that octet.
+- **[I] Whether the priority is why the write was ignored is not known.**
+  The Read with the same wrong priority *was* answered (K12 find-serial,
+  2026-09-29 and today), so the device does not filter low-priority
+  broadcasts in general. A second live K12 run with the fix answers it;
+  until then it is a hypothesis.
+- **[V] A partial download interrupted between two table loads leaves the
+  association table `Loading`.** `--partial group-addresses` (21 steps,
+  1022 octets, backup of 3 regions kept first) was stopped in step 17 of
+  21 by the 400 s shell `timeout` the agent had wrapped it in, not by
+  KNXBench: memory
+  writes took about 6 s each instead of about 1.5 s the day before (cause
+  not measured). Everything written was the option-C image the device
+  already held. A read-only `device compare` afterwards: all 1416 octets as
+  planned, address table and application `Loaded`, association table
+  `Loading`. The complete option-C download (25 steps, 1416 octets, each
+  read back, backup kept first) repaired it: all three `Loaded`,
+  `device compare` identical, and a dump 180 lines byte-identical to the
+  morning's. Its `A_Restart` went unacknowledged, as always on this device.
+- **[I] Lesson for live runs:** never wrap a download in a wall-clock
+  timeout tighter than its worst case; a stopped download is exactly the
+  half-loaded state the load-state machine exists to show. The partial
+  group-address download stays unverified on hardware (KNOWN_LIMITATIONS
+  §142).
+
+## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)
+
 ### 20.1 Discovery comparison on one Linux host
 
 **[V] Same source, same host and interface.** At `48cc48e`, built the configured

@@ -182,6 +182,12 @@ resolving. Met.
 
 ## Session 5 — UI and UX
 
+**Status (2026-09-30).** The session's own deliverable list (Project
+Explorer, properties inspector, search, command palette, dark and light mode)
+was complete with cycle 7, and later cycles added more (below). UX work that
+continues past it runs in the separate UI track,
+[`goal-ui.md`](../goal-ui.md), not as further cycles of this session.
+
 **Goal.** The desktop application.
 
 **Deliverables.** `apps/knx-desktop` — the Tauri shell and the React
@@ -380,7 +386,11 @@ source design system — orbital hero, pricing tiers, blockchain timeline —
 have no target in this data-dense project editor and are deliberately
 left unbuilt.
 
-Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
+Cycle 14+ candidates (from `ideas.md`, not yet scheduled). *Superseded
+2026-09-30:* later UI work was numbered as tasks (T37, T38 below, and the
+T-tasks of [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) and then moved to the
+UI track, [`goal-ui.md`](../goal-ui.md). `ideas.md` is a gitignored local
+wish list, so it is not a source of record for this document.
 
 ### T37 — Visible, honest progress while loading a project — shipped 2026-09-19
 
@@ -699,6 +709,13 @@ workspace crate first — if a shared trait falls out of that without
 contorting the first implementation, ADR-0025 should be revised.
 
 ## Session 6 — KNXnet/IP
+
+**Status (2026-09-30).** The deliverables below are delivered: discovery,
+tunnelling, routing, cEMI and telegram encoding (cycles 1–5), the bus monitor
+resolved against the open project (CLI here, GUI in T15, 2026-09-11) and
+connection management. Line diagnostics came later as T17/T08/T09. KNX IP
+Secure is the one excluded part, deferred by ruling (T19, below). Bus writes
+to devices (commissioning) belong to Session 7 and `goal-commission.md`.
 
 **Goal.** Talk to the bus.
 

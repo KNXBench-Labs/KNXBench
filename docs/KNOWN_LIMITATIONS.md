@@ -8998,6 +8998,9 @@ mount or review, requires a prior explicit read and the scope's exact typed
 phrase, and withholds success if the returned address, mask, original bytes,
 bit-only result or recovery path is inconsistent. A write remains possible
 only while the server gate is on, with its own pre-write property record.
+The immediate result displays only the route's property readback, not a
+whole-device receipt or a retained `serviceControlWrite` activity record;
+ADR-0056 still marks write activity untracked and `coverage: partial`.
 Browser tests use local mocked API responses and the server tests use a
 simulator; **no live hardware operation validated the new UI or recovery
 gate**. Manufacturer side effects and whole-device recovery remain unknown.

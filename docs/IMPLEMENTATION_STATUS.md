@@ -63,6 +63,10 @@
 
 ## 2026-09-30 — ADR-0051 Debug service-control UI (scoped property action)
 
+Published `ab31ca292f536602e6338692e04a39759566cd1c` (UI) and
+`e63adad0a15985bdf50bb1522921c20635ce7322` (integrated evidence) to
+`origin/main`; the remote SHA matched the latter before lock release.
+
 - **Settings → Debug · device control** exposes the default-off
   `debugIndividualAddressWriteEnable` flag. Unlike ordinary optimistic
   preferences, this safety setting reads the server record, sends a serialized

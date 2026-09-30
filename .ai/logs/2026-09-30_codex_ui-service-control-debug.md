@@ -17,6 +17,11 @@ Timestamp: 2026-09-30 21:55 CEST
 - Workspace Rust after Web build: 137 suites / 2,769 passed / 0 failed / 160 ignored / 0 `SKIP:`; strict Clippy 151 checked crates / 0 errors; fmt, layering, headers (352 valid / 161 baseline without), anchors (405 links / 221 Markdown files), corpus-gate and diff check green. An initial Rust attempt stopped before tests because the fresh worktree lacked `apps/knx-web/dist`; after building the Web app the complete Rust suite passed. All tests were offline, mocked or simulator-based.
 - After rebasing over eight independent commissioning commits, integrated Rust ran 137 suites / 2,776 passed / 0 failed / 161 ignored / 0 `SKIP:` with the corpus present; strict workspace Clippy, fmt, headers, anchors, layering, corpus gates and diff check passed. Integrated Web: 82 files / 1,295 tests, TypeScript/build green, mocked Chromium 4/4 new + 4/4 Device checks + 4/4 monitor + 10/10 existing. ADR-0056 keeps `serviceControlWrite` untracked: the UI's immediate, exact property readback is **not** a generic retained write receipt or proof of whole-device state. Root foreign files and the other session's commits were preserved.
 
-## Pending delivery
+## Delivery
 
-Publish the rebased, integrated candidate with exact remote SHA readback, then release the Web lock in a separate handover commit and remove only this package's ignored corpus link, worktree and scratch. Do not try the new action against real hardware as part of the UI track.
+Feature `ab31ca292f536602e6338692e04a39759566cd1c` and integrated
+documentation `e63adad0a15985bdf50bb1522921c20635ce7322` were published
+to `origin/main`; the exact remote SHA readback matched the latter. The Web
+lock is released in the follow-up handover entry. No hardware trial is
+implied; remove only this package's corpus link, worktree and scratch after
+handover readback.

@@ -1,0 +1,311 @@
+//! K12 follow-up: `PID_SERVICE_CONTROL` bit 2 through the web API (ADR-0051).
+//!
+//! The gateway is a [`SimTunnel`] over one simulated device; no socket. The
+//! routes are off unless the settings file says
+//! `debugIndividualAddressWriteEnable: true`, and every refusal is checked
+//! to happen before a tunnel is asked for: the connector counts its calls.
+
+use std::future::Future;
+use std::net::SocketAddrV4;
+use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use knx_core::IndividualAddress;
+use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
+use knx_net::{
+    ApplicationService, BusError, Destination, DiscoveredGateway, ManagementTransport,
+    SessionTiming, Tpci, TunnelEvent,
+};
+use knx_server::{BusSessionError, BusTunnel, GatewayConnector};
+use serde_json::{json, Value};
+use tokio::sync::broadcast;
+use tower::ServiceExt;
+
+const GATEWAY: &str = "192.0.2.10:3671";
+const NEW: &str = "1.1.30";
+const SERIAL: &str = "0083:12345678";
+const SERIAL_OCTETS: [u8; 6] = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
+
+struct SimTunnel(Arc<SimulatedDevice>);
+
+impl BusTunnel for SimTunnel {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.0.as_ref())
+    }
+
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        ManagementTransport::subscribe(self.0.as_ref())
+    }
+
+    fn send(
+        &self,
+        _destination: Destination,
+        _service: ApplicationService,
+    ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send + '_>> {
+        panic!("service control sends no group telegram")
+    }
+
+    fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
+        Box::pin(async move {
+            ManagementTransport::send_frame(self.0.as_ref(), destination, transport, service).await
+        })
+    }
+
+    fn disconnect(
+        self: Box<Self>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send>> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
+struct SimConnector {
+    device: Arc<SimulatedDevice>,
+    calls: Arc<AtomicUsize>,
+}
+
+impl GatewayConnector for SimConnector {
+    fn connect_tunnel(
+        &self,
+        _gateway: SocketAddrV4,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(Arc::clone(&self.device)));
+        Box::pin(async move { Ok(tunnel) })
+    }
+
+    fn discover(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<DiscoveredGateway>, BusSessionError>> + Send + '_>>
+    {
+        Box::pin(async { Ok(Vec::new()) })
+    }
+}
+
+fn fast() -> SessionTiming {
+    SessionTiming {
+        connection_timeout: Duration::from_millis(50),
+        response_timeout: Duration::from_millis(50),
+        poll_interval: Duration::from_millis(1),
+        max_transition: Duration::from_millis(40),
+        programming_delay: Duration::from_millis(0),
+        restart_basic_t1: Duration::from_millis(1),
+        restart_responsive_again: Duration::from_millis(5),
+        post_restart_disconnect_wait: Duration::from_millis(60),
+        programming_mode_broadcast_timeout: Duration::from_millis(20),
+    }
+}
+
+struct Harness {
+    _dir: tempfile::TempDir,
+    app: axum::Router,
+    device: Arc<SimulatedDevice>,
+    calls: Arc<AtomicUsize>,
+}
+
+fn harness(config: SimulatorConfig) -> Harness {
+    let dir = tempfile::tempdir().unwrap();
+    let device = Arc::new(SimulatedDevice::with_config(config));
+    let calls = Arc::new(AtomicUsize::new(0));
+    let state = Arc::new(knx_server::AppState {
+        data_dir: dir.path().to_path_buf(),
+        connector: Box::new(SimConnector {
+            device: Arc::clone(&device),
+            calls: Arc::clone(&calls),
+        }),
+        address_programming_timing: fast(),
+        address_programming_pause: Duration::from_millis(10),
+        ..Default::default()
+    });
+    Harness {
+        _dir: dir,
+        app: knx_server::app(state, None),
+        device,
+        calls,
+    }
+}
+
+fn post(uri: &str, body: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header("content-type", "application/json")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+fn get(uri: &str) -> Request<Body> {
+    Request::builder().uri(uri).body(Body::empty()).unwrap()
+}
+
+async fn send(app: &axum::Router, request: Request<Body>) -> (StatusCode, Value) {
+    let response = app.clone().oneshot(request).await.unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let body = serde_json::from_slice(&bytes)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+    (status, body)
+}
+
+fn locked_device() -> SimulatorConfig {
+    SimulatorConfig {
+        serial_number: Some(SERIAL_OCTETS),
+        serial_number_write_enabled: false,
+        programming_mode: false,
+        ..Default::default()
+    }
+}
+
+fn phrase(address: IndividualAddress) -> String {
+    format!("I confirm individual-address write enable to {address}")
+}
+
+async fn enable_debug(h: &Harness, value: Value) {
+    let request = Request::builder()
+        .method("PUT")
+        .uri("/api/settings")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({ "settings": { "debugIndividualAddressWriteEnable": value } }).to_string(),
+        ))
+        .unwrap();
+    let (status, body) = send(&h.app, request).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+fn write_request(address: IndividualAddress, confirmation: &str, enable: bool) -> Value {
+    json!({
+        "address": address.to_string(),
+        "gateway": GATEWAY,
+        "confirmation": confirmation,
+        "enable": enable,
+    })
+}
+
+fn read_uri(address: IndividualAddress) -> String {
+    format!("/api/device/service-control?address={address}&gateway={GATEWAY}")
+}
+
+#[tokio::test]
+async fn off_by_default_both_routes_refuse_before_a_tunnel() {
+    let h = harness(locked_device());
+    let address = h.device.address();
+    let (status, body) = send(&h.app, get(&read_uri(address))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.to_string().contains("Settings"), "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn a_value_other_than_true_keeps_it_off() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!("true")).await;
+    let address = h.device.address();
+    let (status, _) = send(&h.app, get(&read_uri(address))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn a_wrong_phrase_is_refused_before_a_tunnel() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let download_phrase = format!("I confirm download to {address}");
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &download_phrase, true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn enabled_it_reads_sets_bit_2_and_the_serial_write_then_takes() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+
+    let (status, body) = send(&h.app, get(&read_uri(address))).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["individualAddressWriteEnabled"], false);
+    assert_eq!(body["raw"], "0000");
+
+    // Without the bit, the device ignores a serial-number write.
+    let serial_phrase = format!("I confirm individual-address programming to {NEW}");
+    let by_serial = json!({
+        "address": NEW,
+        "gateway": GATEWAY,
+        "confirmation": serial_phrase,
+        "serialNumber": SERIAL,
+    });
+    let (status, _) = send(
+        &h.app,
+        post("/api/device-address/by-serial", by_serial.clone()),
+    )
+    .await;
+    assert_ne!(status, StatusCode::OK);
+    assert_eq!(h.device.serial_number_writes(), 0);
+
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["written"], true);
+    assert_eq!(body["before"]["raw"], "0000");
+    assert_eq!(body["after"], "0004");
+    assert_eq!(body["individualAddressWriteEnabled"], true);
+
+    let (status, body) = send(&h.app, post("/api/device-address/by-serial", by_serial)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(h.device.address().to_string(), NEW);
+}
+
+#[tokio::test]
+async fn a_device_without_the_property_is_named_not_guessed() {
+    let h = harness(SimulatorConfig {
+        service_control_present: false,
+        ..locked_device()
+    });
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, body) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(body.to_string().contains("PID_SERVICE_CONTROL"), "{body}");
+}

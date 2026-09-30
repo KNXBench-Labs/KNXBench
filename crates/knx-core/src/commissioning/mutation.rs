@@ -46,6 +46,12 @@ pub enum WriteScope {
     /// through `PID_PARAMETER`/`PID_OBJECTLINK`. No RF device has been on
     /// this project's bus, so hardware refuses it (KNOWN_LIMITATIONS §144).
     RfConfiguration,
+    /// `PID_SERVICE_CONTROL` bit 2, *"Individual Address Write Enable"*
+    /// (RES §4.2.8), set or cleared by read-modify-write, and nothing else
+    /// of that property. No MP procedure asks a client to write it; the
+    /// operator does, explicitly, so that a device keeping the bit clear can
+    /// be addressed by serial number (KNOWN_LIMITATIONS §139, ADR-0051).
+    IndividualAddressWriteEnable,
 }
 
 impl fmt::Display for WriteScope {
@@ -60,6 +66,7 @@ impl fmt::Display for WriteScope {
             WriteScope::MasterReset => "master reset",
             WriteScope::DomainAddressProgramming => "domain-address programming",
             WriteScope::RfConfiguration => "RF device configuration",
+            WriteScope::IndividualAddressWriteEnable => "individual-address write enable",
         })
     }
 }
@@ -243,11 +250,20 @@ impl WriteAuthorisation {
 ///
 /// And [`WriteScope::RfConfiguration`] (K17), for the same reason
 /// (KNOWN_LIMITATIONS §144).
+///
+/// **Added 2026-09-30:** [`WriteScope::IndividualAddressWriteEnable`]. The
+/// user decided that KNXBench keeps never setting `PID_SERVICE_CONTROL`
+/// bit 2 on its own, but may on an explicit operator request (ADR-0051).
+/// The scope is its own, so a download or address confirmation never
+/// covers it; its phrase names the device; only bit 2 is changed and the
+/// other fifteen bits are written back as read. The web route is further
+/// gated by an opt-in setting that defaults to off.
 pub fn hardware_write_is_authorised(scope: WriteScope) -> bool {
     match scope {
-        WriteScope::IndividualAddressProgramming | WriteScope::Restart | WriteScope::Download => {
-            true
-        }
+        WriteScope::IndividualAddressProgramming
+        | WriteScope::Restart
+        | WriteScope::Download
+        | WriteScope::IndividualAddressWriteEnable => true,
         WriteScope::Unload
         | WriteScope::ProgrammingModeToggle
         | WriteScope::IndividualAddressReset

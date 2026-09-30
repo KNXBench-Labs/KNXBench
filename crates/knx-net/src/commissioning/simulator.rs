@@ -37,7 +37,8 @@ use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
     verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER, PID_ERROR_CODE,
     PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
-    PID_PROGRAM_VERSION, PID_SERIAL_NUMBER, PID_TABLE_REFERENCE,
+    PID_PROGRAM_VERSION, PID_SERIAL_NUMBER, PID_SERVICE_CONTROL, PID_TABLE_REFERENCE,
+    SERVICE_CONTROL_IA_WRITE_ENABLE,
 };
 use knx_core::{GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
@@ -461,6 +462,12 @@ pub struct SimulatorConfig {
     /// ignores the write in silence, and MP §2.5 step 2's verify is what
     /// notices.
     pub serial_number_write_enabled: bool,
+    /// Whether the Device Object has `PID_SERVICE_CONTROL` at all (RES
+    /// §4.2.8; optional for mask `0701h`, Profiles A.2.3.1). When present,
+    /// its bit 2 starts as `serial_number_write_enabled` and, once written,
+    /// is what decides whether a serial-number write takes. `false`: a
+    /// read or write of the property is answered with `nr_of_elem = 0`.
+    pub service_control_present: bool,
     /// A second device on the bus, standing at its own address, holding
     /// `serial_number` instead of the simulated device. Its answers carry
     /// its address as their source; it takes serial-number writes like the
@@ -646,6 +653,7 @@ impl Default for SimulatorConfig {
             answer_repeat_after: Duration::ZERO,
             serial_number: None,
             serial_number_write_enabled: true,
+            service_control_present: true,
             serial_number_holder: None,
             foreign_serial_number_answer: None,
             domain_address: None,
@@ -891,6 +899,17 @@ impl SimulatedDevice {
         }
         if let Some(counter) = config.download_counter {
             properties.insert((0, PID_DOWNLOAD_COUNTER), counter.to_be_bytes().to_vec());
+        }
+        // RES §4.2.8: bit 2 of `PID_SERVICE_CONTROL` is what
+        // `serial_number_write_enabled` models, so the two start equal and
+        // a client that sets the bit really enables the serial write.
+        if config.service_control_present {
+            let bits = if config.serial_number_write_enabled {
+                SERVICE_CONTROL_IA_WRITE_ENABLE
+            } else {
+                0
+            };
+            properties.insert((0, PID_SERVICE_CONTROL), bits.to_be_bytes().to_vec());
         }
 
         let mut memory = HashMap::new();
@@ -1311,6 +1330,18 @@ impl SimulatedDevice {
         state.level <= self.config.write_requires_level
     }
 
+    /// RES §4.2.8 bit 2 as the device holds it now: the property when the
+    /// device has one, the configuration otherwise.
+    fn ia_write_enabled(&self) -> bool {
+        match self.lock().properties.get(&(0, PID_SERVICE_CONTROL)) {
+            Some(octets) => match <[u8; 2]>::try_from(octets.as_slice()) {
+                Ok(bits) => u16::from_be_bytes(bits) & SERVICE_CONTROL_IA_WRITE_ENABLE != 0,
+                Err(_) => false,
+            },
+            None => self.config.serial_number_write_enabled,
+        }
+    }
+
     fn property_read(&self, object_index: u8, property_id: u8) -> Option<Vec<u8>> {
         let mut state = self.lock();
         match property_id {
@@ -1575,9 +1606,7 @@ impl SimulatedDevice {
             ApplicationService::IndividualAddressSerialNumberWrite {
                 serial_number,
                 address,
-            } if self.config.serial_number == Some(serial_number)
-                && self.config.serial_number_write_enabled =>
-            {
+            } if self.config.serial_number == Some(serial_number) && self.ia_write_enabled() => {
                 let mut state = self.lock();
                 state.serial_number_writes += 1;
                 match self.config.serial_number_holder {
@@ -2312,6 +2341,8 @@ impl SimulatedDevice {
                 // reproduces.
                 None
             }
+            // A device without the property refuses the write the same way.
+            PID_SERVICE_CONTROL if !self.config.service_control_present => None,
             _ => {
                 self.lock()
                     .properties

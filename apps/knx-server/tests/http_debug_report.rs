@@ -355,6 +355,7 @@ fn group_write(raw: u16, value: knx_core::GroupValue) -> knx_net::TunnelEvent {
         destination: knx_net::Destination::Group(GroupAddress::from_raw(raw)),
         transport: knx_net::Tpci::UnnumberedData,
         service: knx_net::ApplicationService::GroupValueWrite(value),
+        control: None,
     })
 }
 

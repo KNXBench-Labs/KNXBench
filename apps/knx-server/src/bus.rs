@@ -1547,6 +1547,7 @@ mod tests {
             destination,
             transport: knx_net::Tpci::UnnumberedData,
             service,
+            control: None,
         })
     }
 
@@ -1615,6 +1616,7 @@ mod tests {
             destination: Destination::Individual(addr(1)),
             transport: knx_net::Tpci::UnnumberedData,
             service: ApplicationService::GroupValueRead,
+            control: None,
         };
         buffer.push_telegram(frame, &ctx);
         assert_eq!(buffer.len(), 0);
@@ -1685,6 +1687,7 @@ mod tests {
                     destination: Destination::Group(GroupAddress::from_raw(raw)),
                     transport: knx_net::Tpci::UnnumberedData,
                     service: ApplicationService::GroupValueWrite(GroupValue::Short(0)),
+                    control: None,
                 },
                 &ctx,
             );

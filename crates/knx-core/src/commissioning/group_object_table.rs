@@ -83,6 +83,19 @@ impl TransmissionPriority {
             TransmissionPriority::Low => 0b11,
         }
     }
+
+    /// The priority two bits name; only the low two bits of `bits` are
+    /// read. The same codes as a frame's Ctrl1 priority field (Data Link
+    /// Layer General v01.03.02 AS §2.2.3), which is why `knx-net` decodes
+    /// received frames with it.
+    pub fn from_bits(bits: u8) -> TransmissionPriority {
+        match bits & 0b11 {
+            0b00 => TransmissionPriority::System,
+            0b10 => TransmissionPriority::Urgent,
+            0b01 => TransmissionPriority::Normal,
+            _ => TransmissionPriority::Low,
+        }
+    }
 }
 
 /// §4.18.3.1.2.1's value type, the type octet: 0–14.
@@ -475,6 +488,18 @@ mod tests {
         assert_eq!(TransmissionPriority::Urgent.bits(), 0b10);
         assert_eq!(TransmissionPriority::Normal.bits(), 0b01);
         assert_eq!(TransmissionPriority::Low.bits(), 0b11);
+        for priority in [
+            TransmissionPriority::System,
+            TransmissionPriority::Urgent,
+            TransmissionPriority::Normal,
+            TransmissionPriority::Low,
+        ] {
+            assert_eq!(TransmissionPriority::from_bits(priority.bits()), priority);
+            assert_eq!(
+                TransmissionPriority::from_bits(priority.bits() | 0b1111_1100),
+                priority
+            );
+        }
         let base = hex(PRODUCT_BASE);
         let flags = ObjectFlags {
             priority: TransmissionPriority::Urgent,

@@ -1129,6 +1129,7 @@ impl SimulatedDevice {
                 descriptor_type: 2,
                 data: dd2.to_vec(),
             },
+            control: None,
         }));
     }
 
@@ -1216,6 +1217,7 @@ impl SimulatedDevice {
             destination: Destination::Individual(self.client),
             transport,
             service,
+            control: None,
         }));
     }
 
@@ -1227,6 +1229,7 @@ impl SimulatedDevice {
             destination: Destination::Individual(address),
             transport: Tpci::Connect,
             service: ApplicationService::NoApplicationPdu,
+            control: None,
         }));
     }
 
@@ -1270,6 +1273,7 @@ impl SimulatedDevice {
             destination: Destination::Individual(self.client),
             transport: Tpci::NumberedData { seq },
             service,
+            control: None,
         };
         let events = self.events.clone();
         let after = self.config.answer_repeat_after;
@@ -1507,6 +1511,7 @@ impl SimulatedDevice {
                         destination: BROADCAST_DESTINATION,
                         transport: Tpci::UnnumberedData,
                         service: ApplicationService::IndividualAddressResponse,
+                        control: None,
                     }));
                 }
             }

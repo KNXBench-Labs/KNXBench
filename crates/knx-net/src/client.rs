@@ -391,6 +391,7 @@ impl TunnelClient {
             destination,
             transport,
             service,
+            control: None,
         };
         let cemi_bytes =
             cemi::encode_l_data(&frame).map_err(|e| BusError::Protocol(e.to_string()))?;
@@ -719,6 +720,7 @@ impl RoutingClient {
             destination,
             transport: cemi::Tpci::UnnumberedData,
             service,
+            control: None,
         };
         let cemi_bytes =
             cemi::encode_l_data(&frame).map_err(|e| BusError::Protocol(e.to_string()))?;

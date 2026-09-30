@@ -350,6 +350,7 @@ async fn completed_scan_comparison_keeps_all_three_evidence_groups_separate() {
                             descriptor_type: 0,
                             data: vec![0x07, 0x01],
                         },
+                        control: None,
                     }));
                 return;
             }
@@ -419,6 +420,7 @@ async fn selected_scan_findings_apply_as_one_batch_and_undo_restores_content_exa
                             descriptor_type: 0,
                             data: vec![0x07, 0x01],
                         },
+                        control: None,
                     }));
                 return;
             }

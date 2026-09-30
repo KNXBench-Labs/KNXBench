@@ -6030,12 +6030,18 @@ and defect 1 must be fixed first.
   `LDataFrame` has no priority field (KNOWN_LIMITATIONS §147). Hop count,
   repeat and every other control bit match the encoder's defaults in this
   capture, which says nothing about other captures.
+- **[V]** After `LDataFrame` gained `control` (2026-09-30, KNOWN_LIMITATIONS
+  §147 lifted), all 71 re-encode whole, Ctrl1 and Ctrl2 included, and the
+  test pins `whole_frame_identical: 71` and an empty
+  `control_not_carried`.
 - **[I]** 71 telegrams of one installation's everyday traffic exercise only
   group communication; management, point-to-point and extended frames are
   not in it, so this is no evidence for those decoders.
 - Test: `crates/knx-net/tests/private_telegram_log.rs`, `#[ignore]`d,
   reads `KNXBENCH_TELEGRAM_LOG` and prints and pins aggregates only;
-  4 synthetic tests cover the census itself (5 mutants caught).
+  4 synthetic tests cover the census itself (5 mutants caught), and the
+  decoder's own tests in `cemi.rs` cover the control fields (11 mutants
+  caught).
 
 ### 20.1 Discovery comparison on one Linux host
 

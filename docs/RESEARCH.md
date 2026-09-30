@@ -6099,9 +6099,23 @@ gateway `172.18.250.1:3671`. Evidence in
   morning's. Its `A_Restart` went unacknowledged, as always on this device.
 - **[I] Lesson for live runs:** never wrap a download in a wall-clock
   timeout tighter than its worst case; a stopped download is exactly the
-  half-loaded state the load-state machine exists to show. The partial
-  group-address download stays unverified on hardware (KNOWN_LIMITATIONS
-  §142).
+  half-loaded state the load-state machine exists to show.
+- **[V] The group-address partial download, re-run (user "k15 go").**
+  12:46–12:59 with a binary built from `5783b238`, no shell timeout:
+  read-only dump before (180 lines, identical to the morning's) and
+  `device compare` (all three `Loaded`, 1416 octets as planned); then
+  `--partial group-addresses`, 21 steps. Steps 1–6 checked mask, property
+  0/78, `PID_PROGRAM_VERSION` and the three load states; the backup (3
+  regions, 1022 octets: `4000h`, `4003h`–`4200h`, `4201h`–`43FFh`) was kept
+  before step 7 and matches the independent pre-dump in all 1022 octets.
+  87 writes, each read back; address and association table `Loaded`; the
+  application program was not touched. `A_Restart` unacknowledged, as
+  always. 40 s later: `device compare` all three `Loaded`, identical; dump
+  180 lines byte-identical to the pre-dump. The same image was written, so
+  this proves the procedure and the load-state sequence, not a change of
+  configuration. `partial-group-addresses` is now in
+  `crates/knx-app/data/verified_downloads.json`; `partial-both` stays
+  untested (never run).
 
 ## 20. UI issue U2: AppImage interface discovery and line-relative addresses (2026-09-28)
 

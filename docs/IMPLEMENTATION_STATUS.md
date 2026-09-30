@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Group-address partial download verified on `1.1.67`
+
+- Live (user "k15 go"): `knx device download 1.1.67 --partial
+  group-addresses`, 21 steps, 1022 octets each read back, both tables
+  `Loaded`, dump byte-identical; backup matches the pre-dump in every
+  octet (RESEARCH §19.15, KL §142).
+- `crates/knx-app/data/verified_downloads.json`: `M-0083_A-0027-15-0BAC`
+  gains the scope `partial-group-addresses`, so that download now plans as
+  `verified`. `partial-both` stays `untested`; the shipped-evidence test
+  pins both (RED before the data change).
+
 ## 2026-09-30 — U12 / ISSUE-05 structure editor (published on main)
 
 - `RenameArea`/`RenameLine`, `RenameBuildingPart`/`MoveBuildingPart`,

@@ -8,6 +8,22 @@
 ---
 
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-30 13:25 CEST
+- **Web lock:** untouched; no `apps/knx-web` edit.
+- **Completed:** K15 live on `1.1.67` (user "k15 go"): `--partial
+  group-addresses` completed (1022 octets read back, both tables `Loaded`,
+  compare identical, dump byte-identical; backup = pre-dump). Evidence file
+  gains `partial-group-addresses`; test RED→GREEN.
+- **Pending/Next Steps:** `partial-both` never ran live (untested). K13/K14
+  stay unrun (destructive; only on explicit request). K12 serial write is
+  unsupported on this device.
+- **Notes for Codex oder Claude:** Evidence under `OriginalData/DeviceBackups/
+  1.1.67_MDT-0701_2026-09-30_k15c-*` and `1.1.67-prewrite-k15c/` (private).
+  Writes took ~6 s each; the run needed 12 min.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-30 12:43 CEST
 - **Web lock:** untouched; no `apps/knx-web` edit.
 - **Completed:** Second K12 live run on `1.1.67` with the system-priority

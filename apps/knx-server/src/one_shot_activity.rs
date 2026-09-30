@@ -16,7 +16,8 @@ const MAX_COMPLETED: usize = 64;
 pub struct OneShotActivity {
     pub id: u64,
     pub kind: &'static str,
-    pub address: String,
+    /// None when an operation cannot know a physical address in advance.
+    pub address: Option<String>,
     pub state: &'static str,
     pub started_at: String,
     pub finished_at: Option<String>,
@@ -39,7 +40,11 @@ fn now() -> String {
 }
 
 impl OneShotLog {
-    pub(crate) fn start(self: &Arc<Self>, kind: &'static str, address: String) -> ActionGuard {
+    pub(crate) fn start(
+        self: &Arc<Self>,
+        kind: &'static str,
+        address: Option<String>,
+    ) -> ActionGuard {
         let mut inner = self.inner.lock().expect("activity log poisoned");
         let id = inner.next_id.checked_add(1).expect("activity id exhausted");
         inner.next_id = id;
@@ -119,12 +124,12 @@ mod tests {
     #[test]
     fn a_dropped_action_is_unknown_and_a_witnessed_result_is_not() {
         let log = Arc::new(OneShotLog::default());
-        let abandoned = log.start("deviceCompare", "1.1.67".to_string());
+        let abandoned = log.start("deviceCompare", Some("1.1.67".to_string()));
         assert_eq!(log.snapshot_with_dropped().0[0].state, "running");
         drop(abandoned);
         assert_eq!(log.snapshot_with_dropped().0[0].state, "unknown");
         assert!(log.snapshot_with_dropped().0[0].finished_at.is_some());
-        let completed = log.start("deviceCompare", "1.1.67".to_string());
+        let completed = log.start("deviceCompare", Some("1.1.67".to_string()));
         completed.finish("finished");
         assert_eq!(log.snapshot_with_dropped().0[1].state, "finished");
         assert_eq!(log.snapshot_with_dropped().0[1].id, 2);
@@ -133,9 +138,9 @@ mod tests {
     #[test]
     fn retention_never_evicts_an_in_flight_action() {
         let log = Arc::new(OneShotLog::default());
-        let live = log.start("deviceCompare", "1.1.67".to_string());
+        let live = log.start("deviceCompare", Some("1.1.67".to_string()));
         for _ in 0..65 {
-            log.start("deviceCompare", "1.1.67".to_string())
+            log.start("deviceCompare", Some("1.1.67".to_string()))
                 .finish("failed");
         }
         let before = log.snapshot_with_dropped().0;

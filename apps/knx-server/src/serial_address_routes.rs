@@ -235,11 +235,32 @@ async fn find(
             "stop the bus monitor first: the gateway serves one tunnel",
         ));
     }
-    let tunnel = state
-        .connector
-        .connect_tunnel(gateway)
-        .await
-        .map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;
+    // A scan may hold the only usable tunnel. Do not wait behind a held
+    // holder lock or open a second tunnel while a scan is running.
+    let Ok(scan) = state.line_scan_session.try_lock() else {
+        return Err(conflict("a line scan is using the gateway"));
+    };
+    if matches!(
+        scan.as_ref().map(|scan| scan.status()),
+        Some(LineScanStatus::Running)
+    ) {
+        return Err(conflict(
+            "a line scan is running: the gateway serves one tunnel",
+        ));
+    }
+    // No physical address is known yet: never substitute a serial number or
+    // guessed address in the activity record. A dropped future is unknown.
+    let activity = state.one_shot_activity.start("serialLookup", None);
+    let tunnel = match state.connector.connect_tunnel(gateway).await {
+        Ok(tunnel) => tunnel,
+        Err(e) => {
+            activity.finish("failed");
+            return Err(ApiError::with_status(
+                StatusCode::BAD_GATEWAY,
+                e.to_string(),
+            ));
+        }
+    };
     let found = serial_number_read(
         &TunnelTransport(tunnel.as_ref()),
         serial,
@@ -247,6 +268,8 @@ async fn find(
     )
     .await;
     let _ = tunnel.disconnect().await;
+    activity.finish(if found.is_ok() { "finished" } else { "failed" });
+    drop(scan);
     drop(monitor);
     drop(programming);
     let found = found.map_err(|e| ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string()))?;

@@ -33,7 +33,7 @@ struct ActivitySnapshot {
     /// stopping. No target or operation type can safely be inferred from it.
     busy_locks: Vec<&'static str>,
     /// One-shot operations not instrumented yet; their activity is absent.
-    untracked: [&'static str; 4],
+    untracked: [&'static str; 3],
 }
 
 #[derive(Serialize)]
@@ -178,11 +178,6 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
         one_shot,
         one_shot_dropped,
         busy_locks,
-        untracked: [
-            "groupWrite",
-            "serialAddress",
-            "serialLookup",
-            "serviceControl",
-        ],
+        untracked: ["groupWrite", "serialAddress", "serviceControl"],
     })
 }

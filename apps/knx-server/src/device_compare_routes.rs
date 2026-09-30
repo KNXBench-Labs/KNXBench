@@ -145,7 +145,7 @@ async fn compare(
     // request leaves `unknown`, never a fabricated successful comparison.
     let activity = state
         .one_shot_activity
-        .start("deviceCompare", target.to_string());
+        .start("deviceCompare", Some(target.to_string()));
     let tunnel = match state.connector.connect_tunnel(gateway).await {
         Ok(tunnel) => tunnel,
         Err(e) => {

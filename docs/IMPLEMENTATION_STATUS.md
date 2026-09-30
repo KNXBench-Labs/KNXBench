@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — Serial lookup joins the observed one-shot actions
+
+- Read-only `GET /api/device-address/find-serial` now records a per-server
+  `serialLookup` action after its validation and conflict checks, before
+  connecting. A successful read, including no answering device, is finished;
+  a transport failure is failed; dropping the request before a witnessed
+  result leaves unknown. The activity target is **null**, not a serial number
+  or invented physical address. It also refuses a busy/running scan before
+  opening a second tunnel. Simulated HTTP checks cover two finished reads,
+  connection failure, in-flight cancellation, malformed input, busy scan,
+  missing target data and no device write.
+- `untracked` still names serial-address **writes**, service-control and group
+  writes. `coverage: partial` and volatile bounded history remain unchanged;
+  no UI, hardware or authorization was changed. See ADR-0055.
+
 ## 2026-09-30 — First observed one-shot action: read-only device compare
 
 - `POST /api/device-compare` now records its target and server-lifetime action

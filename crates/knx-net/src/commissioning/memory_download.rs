@@ -521,6 +521,131 @@ pub async fn run_memory_download_with_backup<T: ManagementTransport>(
     run(session, plan, observe, Some(keep)).await
 }
 
+/// Why [`read_what_the_plan_overwrites`] could not read.
+#[derive(Debug)]
+pub enum ReadBackError {
+    /// The device reports another mask than the plan's.
+    MaskMismatch {
+        /// The plan's.
+        expected: MaskVersion,
+        /// The device's.
+        found: MaskVersion,
+    },
+    /// The device reports another manufacturer than the plan's.
+    ManufacturerMismatch {
+        /// The plan's.
+        expected: u16,
+        /// The device's.
+        found: u16,
+    },
+    /// The session failed.
+    Session(SessionError),
+    /// A read answered fewer octets than it asked for.
+    ShortRead {
+        /// Where.
+        address: u32,
+        /// Asked for.
+        asked: u8,
+        /// Got.
+        got: usize,
+    },
+}
+
+impl std::error::Error for ReadBackError {}
+
+impl fmt::Display for ReadBackError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MaskMismatch { expected, found } => write!(
+                f,
+                "the device has mask {:04X}h, the plan is for {:04X}h; nothing was written",
+                found.0, expected.0
+            ),
+            Self::ManufacturerMismatch { expected, found } => write!(
+                f,
+                "the device is from manufacturer {found:04X}h, the plan is for \
+                 {expected:04X}h; nothing was written"
+            ),
+            Self::Session(error) => write!(f, "{error}; nothing was written"),
+            Self::ShortRead {
+                address,
+                asked,
+                got,
+            } => write!(
+                f,
+                "the read at {address:04X}h asked for {asked} octets and got {got}; \
+                 nothing was written"
+            ),
+        }
+    }
+}
+
+/// Reads what a download of `plan` would overwrite, and nothing else: the
+/// same [`DeviceBackup`] a download takes before its first write, without
+/// the download.
+///
+/// The session should be [`ManagementSession::read_only`]: then no write
+/// path exists at all, and a read-only session sends no Verify Mode write
+/// on connect either. Connect, check mask and manufacturer against the plan
+/// (as step 1 of a download does, `[D]` CP §3.9.2.2.2), negotiate the read
+/// size, read the load states and every written region, disconnect. A
+/// mismatch stops before the first memory read.
+pub async fn read_what_the_plan_overwrites<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+) -> Result<DeviceBackup, ReadBackError> {
+    session.adopt_mask(plan.mask);
+    session.connect().await.map_err(ReadBackError::Session)?;
+    let result = read_after_connect(session, plan).await;
+    session.disconnect().await;
+    result
+}
+
+async fn read_after_connect<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+) -> Result<DeviceBackup, ReadBackError> {
+    let found = session
+        .read_mask_version()
+        .await
+        .map_err(ReadBackError::Session)?;
+    if found != plan.mask {
+        return Err(ReadBackError::MaskMismatch {
+            expected: plan.mask,
+            found,
+        });
+    }
+    let manufacturer = session
+        .read_manufacturer_id()
+        .await
+        .map_err(ReadBackError::Session)?;
+    if manufacturer != plan.manufacturer {
+        return Err(ReadBackError::ManufacturerMismatch {
+            expected: plan.manufacturer,
+            found: manufacturer,
+        });
+    }
+    let limit = session
+        .write_limit(None)
+        .await
+        .map_err(ReadBackError::Session)?;
+    take_backup(session, plan, limit, 0)
+        .await
+        .map_err(|error| match error {
+            MemoryDownloadError::BackupRead { error, .. } => ReadBackError::Session(error),
+            MemoryDownloadError::BackupShortRead {
+                address,
+                asked,
+                got,
+            } => ReadBackError::ShortRead {
+                address,
+                asked,
+                got,
+            },
+            other => unreachable!("take_backup returns only backup errors, not {other}"),
+        })
+}
+
 /// Reads what `plan` is about to overwrite, `limit` octets at a time.
 async fn take_backup<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
@@ -2038,5 +2163,111 @@ mod tests {
             memory_reads(&backed_up).len(),
             memory_reads(&plain).len() + 5
         );
+    }
+
+    // ------------------------------------------------ read without writing
+
+    fn read_only(device: &SimulatedDevice) -> ManagementSession<'_, SimulatedDevice> {
+        ManagementSession::read_only(device, device.address(), AuthorisationPlan::Skip, fast())
+            .expect("a read-only session")
+    }
+
+    fn writes_of_any_kind(device: &SimulatedDevice) -> Vec<Seen> {
+        device
+            .seen()
+            .into_iter()
+            .filter(|seen| {
+                matches!(
+                    seen,
+                    Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. } | Seen::Restart { .. }
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn reading_what_a_plan_overwrites_returns_the_backup_and_writes_nothing() {
+        let device = old_device();
+        let before = device.memory(0x4000, 30);
+        let held = read_what_the_plan_overwrites(&mut read_only(&device), &plan())
+            .await
+            .expect("read");
+        assert_eq!(held.target, device.address());
+        assert_eq!(
+            held.load_states,
+            vec![(MemoryLoadStateMachine::AddressTable, LoadState::Loaded)]
+        );
+        assert_eq!(
+            held.regions,
+            vec![
+                BackupRegion {
+                    address: 0x4000,
+                    octets: vec![0x07],
+                },
+                BackupRegion {
+                    address: 0x4003,
+                    octets: (100..127).collect(),
+                },
+            ]
+        );
+        assert_eq!(writes_of_any_kind(&device), vec![], "read only");
+        assert_eq!(device.memory(0x4000, 30), before);
+        assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
+    }
+
+    #[tokio::test]
+    async fn another_mask_or_manufacturer_is_refused_before_any_memory_read() {
+        let other_mask = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: 0x0705,
+            ..SimulatorConfig::default()
+        });
+        other_mask.preset_property(0, PID_MANUFACTURER_ID, &MANUFACTURER.to_be_bytes());
+        let error = read_what_the_plan_overwrites(&mut read_only(&other_mask), &plan())
+            .await
+            .expect_err("refused");
+        assert!(
+            matches!(error, ReadBackError::MaskMismatch { .. }),
+            "{error}"
+        );
+        assert!(memory_reads(&other_mask).is_empty());
+        assert_eq!(other_mask.seen().last(), Some(&Seen::Disconnect));
+
+        let other_maker = device(SimulatorConfig::default());
+        other_maker.preset_property(0, PID_MANUFACTURER_ID, &0x0002u16.to_be_bytes());
+        let error = read_what_the_plan_overwrites(&mut read_only(&other_maker), &plan())
+            .await
+            .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                ReadBackError::ManufacturerMismatch {
+                    expected: MANUFACTURER,
+                    found: 0x0002
+                }
+            ),
+            "{error}"
+        );
+        assert!(memory_reads(&other_maker).is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_refused_read_is_an_error_not_a_shorter_backup() {
+        let device = device(SimulatorConfig {
+            protected_memory: Some((0x4003, 0x4004)),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::new(1), LoadState::Loaded);
+        let error = read_what_the_plan_overwrites(&mut read_only(&device), &plan())
+            .await
+            .expect_err("refused");
+        assert!(
+            matches!(
+                error,
+                ReadBackError::Session(SessionError::MemoryRefused { address: 0x4003 })
+            ),
+            "{error}"
+        );
+        assert!(error.to_string().contains("nothing was written"), "{error}");
+        assert_eq!(writes_of_any_kind(&device), vec![]);
     }
 }

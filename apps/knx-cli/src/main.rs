@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod device_address;
+mod device_compare;
 mod device_download;
 mod device_serial;
 mod scan;
@@ -71,6 +72,12 @@ const USAGE: &str =
      \x20         file (--backup-dir, default <project>.backups/); no backup, no write.\n\
      \x20         An application nobody has downloaded this way on hardware is UNTESTED\n\
      \x20         and needs --accept-untested \"I accept an untested download to <address>\".\n\
+     \x20     knx device compare <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
+     \x20                  [--partial parameters|group-addresses|both] --gateway <host:port>\n\
+     \x20         (READ ONLY: reads exactly what `knx device download` would write and lists\n\
+     \x20         every octet run where the device and the project differ. It sends no\n\
+     \x20         access key and has no write path; a read-protected device says so.\n\
+     \x20         Exit 0: the device holds the plan; 2: it differs; 1: not compared.)\n\
      \x20     knx device restore <backup.json> [--product-db <path>] [--key-file <path>]\n\
      \x20                  [--backup-dir <dir>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (writes a backup back through the same load procedure; without --confirm\n\
@@ -1792,6 +1799,7 @@ fn run_products_order_number(args: &[String]) -> ExitCode {
 fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
+        Some("compare") => run_device_compare(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),
         Some("address-by-serial") => run_device_address_by_serial(&args[1..]),
         Some("find-serial") => run_device_find_serial(&args[1..]),
@@ -1998,6 +2006,106 @@ fn run_device_download(args: &[String]) -> ExitCode {
         match written {
             device_download::Written::Yes => ExitCode::SUCCESS,
             device_download::Written::No | device_download::Written::Partially => ExitCode::FAILURE,
+        }
+    })
+}
+
+/// `knx device compare`: what `knx device download` would change, read
+/// only. The same plan as a download (project, product file, `--partial`),
+/// then a read-only session: no phrase, because nothing can be written.
+fn run_device_compare(args: &[String]) -> ExitCode {
+    let parsed = match device_compare::parse_compare_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let target = match parsed
+        .target
+        .parse::<knx_core::IndividualAddress>()
+        .map_err(|e| format!("invalid device address {}: {e}", parsed.target))
+        .and_then(|address| knx_core::ContactableAddress::new(address).map_err(|e| e.to_string()))
+    {
+        Ok(target) => target,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if !Path::new(&parsed.project).exists() {
+        eprintln!("project not found: {}", parsed.project);
+        return ExitCode::FAILURE;
+    }
+    let project = match knx_store::open_and_migrate(Path::new(&parsed.project))
+        .map_err(|e| e.to_string())
+        .and_then(|conn| knx_store::load_project(&conn).map_err(|e| e.to_string()))
+    {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("could not read project {}: {e}", parsed.project);
+            return ExitCode::FAILURE;
+        }
+    };
+    let products = match open_products_db(parsed.product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let prepared = match knx_app::device_download::prepare_device_download(
+        &products,
+        &project,
+        target.address(),
+    )
+    .map_err(|e| e.to_string())
+    .and_then(|prepared| match parsed.partial {
+        None => Ok(prepared),
+        Some(parts) => prepared.into_partial(parts).map_err(|e| e.to_string()),
+    }) {
+        Ok(prepared) => prepared,
+        Err(e) => {
+            eprintln!("nothing to compare for device {}: {e}", target.address());
+            return ExitCode::FAILURE;
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway = parsed.gateway;
+    runtime.block_on(async {
+        use knx_net::BusConnection;
+        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+            Ok(tunnel) => tunnel,
+            Err(e) => {
+                eprintln!("could not connect to {gateway}: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let compared = device_compare::compare(
+            &tunnel,
+            target,
+            knx_net::SessionTiming::default(),
+            &prepared.plan,
+            &prepared.image.segments,
+            &mut std::io::stdout(),
+        )
+        .await;
+        if let Err(e) = tunnel.disconnect().await {
+            eprintln!("tunnel disconnect: {e}");
+        }
+        match compared {
+            device_compare::Compared::Same => ExitCode::SUCCESS,
+            device_compare::Compared::Different => ExitCode::from(2),
+            device_compare::Compared::Failed => ExitCode::FAILURE,
         }
     })
 }

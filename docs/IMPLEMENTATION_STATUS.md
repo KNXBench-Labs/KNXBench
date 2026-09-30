@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — First observed one-shot action: read-only device compare
+
+- `POST /api/device-compare` now records its target and server-lifetime action
+  ID before connecting; `GET /api/bus/activity` shows running, witnessed
+  finished/failed, or unknown after request cancellation. The bounded
+  in-memory list declares how many older entries were evicted. No comparison
+  bytes, secrets, gateway or host path enter that activity record.
+- This is not durable audit and not full one-shot coverage; serial-number,
+  service-control and group-write routes remain untracked. ADR-0055 continues
+  to require `coverage: partial`. The compare route itself is still read-only;
+  no Web source or live KNX device was touched. Simulated HTTP tests cover
+  completed, failed, cancelled and pre-tunnel refused comparisons.
+
 ## 2026-09-30 — Partial read-only bus-activity snapshot (ADR-0055)
 
 - `GET /api/bus/activity` is a guarded, tunnel-free server view of the

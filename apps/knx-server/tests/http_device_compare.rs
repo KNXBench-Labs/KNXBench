@@ -262,6 +262,9 @@ async fn refusals_before_any_tunnel_need_no_corpus() {
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert!(body.to_string().contains("no product database"), "{body}");
     assert_eq!(calls.load(Ordering::SeqCst), 0, "no tunnel was asked for");
+    let (status, activity) = send(&app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["oneShot"], json!([]));
 
     // No phrase, no key: a compare has no field that could write.
     let response = app
@@ -280,6 +283,16 @@ async fn a_fresh_device_differs_and_nothing_is_written() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["address"], "1.1.67");
     assert_eq!(body["written"], false);
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["coverage"], "partial");
+    assert_eq!(activity["oneShot"][0]["kind"], "deviceCompare");
+    assert_eq!(activity["oneShot"][0]["address"], "1.1.67");
+    assert_eq!(activity["oneShot"][0]["state"], "finished");
+    assert_eq!(activity["oneShot"][0]["id"], 1);
+    assert!(activity["oneShot"][0]["startedAt"].is_string());
+    assert!(activity["oneShot"][0]["finishedAt"].is_string());
+    assert!(activity["oneShot"][0].get("changes").is_none());
     assert_eq!(body["same"], false);
     assert_eq!(body["mask"], 0x0701);
     assert_eq!(body["manufacturer"], 0x0083);
@@ -415,7 +428,53 @@ async fn another_device_type_is_not_compared_and_says_nothing_was_written() {
     let (status, body) = compare(&h.app, json!({ "address": "1.1.67", "gateway": GATEWAY })).await;
     assert_eq!(status, StatusCode::BAD_GATEWAY, "{body}");
     assert!(body.to_string().contains("nothing was written"), "{body}");
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["oneShot"][0]["kind"], "deviceCompare");
+    assert_eq!(activity["oneShot"][0]["address"], "1.1.67");
+    assert_eq!(activity["oneShot"][0]["state"], "failed");
     assert!(no_writes(&other));
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn an_abandoned_live_compare_is_unknown_not_a_success() {
+    let silent = Arc::new(SimulatedDevice::with_config_at(
+        "1.1.67".parse().unwrap(),
+        SimulatorConfig {
+            silent: true,
+            ..SimulatorConfig::default()
+        },
+    ));
+    let h = harness_timed(
+        Arc::clone(&silent),
+        SessionTiming {
+            connection_timeout: Duration::from_secs(2),
+            ..fast()
+        },
+    )
+    .await;
+    let app = h.app.clone();
+    let task = tokio::spawn(async move {
+        compare(&app, json!({ "address": "1.1.67", "gateway": GATEWAY })).await
+    });
+    for _ in 0..200 {
+        if h.calls.load(Ordering::SeqCst) > 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    }
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1, "comparison never began");
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["oneShot"][0]["state"], "running");
+    assert_eq!(activity["oneShot"][0]["address"], "1.1.67");
+    task.abort();
+    assert!(task.await.is_err());
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(status, StatusCode::OK, "{activity}");
+    assert_eq!(activity["oneShot"][0]["state"], "unknown");
+    assert!(no_writes(&silent));
 }
 
 #[tokio::test]

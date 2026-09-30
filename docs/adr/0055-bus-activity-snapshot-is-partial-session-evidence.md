@@ -39,3 +39,21 @@ complete global activity ledger or infer all actions are absent when its
 begin/end instrumentation at *every* bus route, defined lifetime/retention and
 an atomic read model before claiming global coverage. No UI code or live bus
 operation is part of this decision.
+
+## Follow-up: first one-shot observer (2026-09-30)
+
+The read-only device-compare route is now the first instrumented one-shot
+operation. Once target and gateway conflicts are checked, it starts a
+server-lifetime activity record before connecting. A witnessed result records
+`finished` or `failed`; dropping the request before a result records `unknown`
+rather than inventing success. A guard does not own, reopen or write through
+the KNX tunnel. Records have monotonically increasing per-incarnation IDs,
+target address and UTC start/end times, not a gateway, credentials, memory
+blocks or comparison differences.
+
+The in-memory view keeps at most 64 records under normal single-tunnel use,
+never evicts a running action, and reports the number of evicted terminal
+records in `oneShotDropped`. A server restart loses this view; it must not be
+treated as persistent audit or recovery evidence. The other one-shot routes
+remain explicitly `untracked`, and `coverage` remains `partial`. The detailed
+device-compare response remains the authoritative result.

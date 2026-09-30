@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-09-30 — U12 / §146 channel labels (UI follow-up)
+
+- Channel groups keep the evaluated, opaque ownership key. Their heading
+  prefers translated `text`, then verbatim `name`, then an explicit generic
+  fallback. Where both text and name exist, the raw name is shown separately;
+  a present `number` is always shown as text, including non-decimal values
+  and `"0"`. Nothing is parsed, combined into `text`, or translated.
+  Channel-independent and non-evaluated groups remain distinct.
+- `DeviceWorkspace.test.tsx` reproduces the missing labels before the change
+  and covers the two field combinations, untranslated textual numbers,
+  blank values and groups without owners. The local Chromium fixture checks
+  keyboard access and EN/DE rendering at 360 and 1440 px without a KNX
+  server or bus. See ADR-0052 and KNOWN_LIMITATIONS §146.
+- After the separate diff review and its three fixes: focused Web tests
+  21/21; full Web suite 78/78 files, 1,256/1,256 tests; TypeScript/Web
+  build and local mock Chromium 10/10 green. Corpus-backed Rust workspace
+  136 suites, 2,761 passed, 0 failed, 160 ignored, 0 `SKIP:`; strict
+  Clippy, rustfmt, diff check and all four `xtask` gates passed. These
+  checks do not assert a real bus connection or hardware compatibility.
+
 ## 2026-09-30 — Contributor License Agreement removed again (ADR-0054)
 
 - At the user's decision, KNXBench stays `AGPL-3.0-or-later` with no CLA.

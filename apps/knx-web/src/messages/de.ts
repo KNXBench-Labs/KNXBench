@@ -319,6 +319,8 @@ export const messages: Record<MessageKey, string> = {
   "inspector.communicationObjects": "Kommunikationsobjekte",
   "inspector.channelIndependent": "Kanalunabhängige Objekte",
   "inspector.untitledChannel": "Kanal ohne Bezeichnung",
+  "inspector.channelName": "Name: {value}",
+  "inspector.channelNumber": "Nummer: {value}",
   "inspector.noEvaluatedChannel": "Ohne ausgewerteten Kanal",
   "inspector.objectCount.one": "{count} Objekt",
   "inspector.objectCount.other": "{count} Objekte",

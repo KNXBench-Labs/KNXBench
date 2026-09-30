@@ -73,11 +73,11 @@ for (const language of ["en", "de"] as const) {
       await page.goto(`/e2e/device-editor-fixture.html?lang=${language}&channels=1`);
       const groups = page.locator(".com-object-channel");
       await expect(groups).toHaveCount(3, { timeout: 2_000 });
-      await expect(groups.nth(0).locator(":scope > summary")).toContainText(
-        language === "de" ? "Kanal ohne Bezeichnung" : "Untitled channel",
-      );
-      await expect(groups.nth(0).locator(":scope > summary")).not.toContainText("Raw manufacturer name");
-      await expect(groups.nth(1).locator(":scope > summary")).toContainText("Hall outputs");
+      await expect(groups.nth(0).locator(":scope > summary > strong")).toHaveText("Raw manufacturer name");
+      await expect(groups.nth(0).locator(".com-object-channel-number")).toHaveText(language === "de" ? "Nummer: A-5" : "Number: A-5");
+      await expect(groups.nth(1).locator(":scope > summary > strong")).toHaveText("Hall outputs");
+      await expect(groups.nth(1).locator(".com-object-channel-name")).toHaveText("Name: Manufacturer output");
+      await expect(groups.nth(1).locator(".com-object-channel-number")).toHaveText(language === "de" ? "Nummer: 19" : "Number: 19");
       await expect(groups.nth(2).locator(":scope > summary")).toContainText(
         language === "de" ? "Ohne ausgewerteten Kanal" : "Without evaluated channel",
       );

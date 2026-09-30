@@ -104,7 +104,7 @@ const channelDetail: DeviceDetail = {
   com_objects: [
     {
       ...detail.com_objects[0],
-      channel: { key: "opaque:hall", kind: "Channel", text: "Hall outputs", name: null, number: "19", order: 42 },
+      channel: { key: "opaque:hall", kind: "Channel", text: "Hall outputs", name: "Manufacturer output", number: "19", order: 42 },
       activation: "Active",
       function_text: "Switching lights",
       dpt_text: "Switch",

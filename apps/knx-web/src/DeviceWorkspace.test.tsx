@@ -100,14 +100,50 @@ it("groups by opaque channel key in program order, collapsed by default and stab
   ]);
   expect(groups.map((g) => g.querySelectorAll(".com-object-detail").length)).toEqual([1, 1, 2, 1]);
   expect(groups.every((g) => !g.open)).toBe(true);
-  expect(groups[0].querySelector("summary")!.textContent).not.toContain("Raw A");
-  expect(groups[0].querySelector("summary")!.textContent).not.toContain("07");
+  expect(groups[0].querySelector(".com-object-channel-name")?.textContent).toContain("Raw A");
+  expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("07");
   await act(async () => { groups[0].querySelector("summary")!.click(); });
   expect(groups[0].open).toBe(true);
   await rerender(detail(NO_REFERENCE, [...objects], 9));
   expect(host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")[0].open).toBe(true);
   await rerender(detail(NO_REFERENCE, objects, 10));
   expect([...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")].every((g) => !g.open)).toBe(true);
+  await cleanup();
+});
+
+it("shows source channel name and opaque textual number beside translated text", async () => {
+  const channel = { key: "opaque-owned", kind: "Channel" as const, text: "Lighting", name: "Raw manufacturer name", number: "A/05", order: 0 };
+  const { host, cleanup } = await render(NO_REFERENCE, false, [object(1, { activation: "Active", channel })]);
+  const summary = host.querySelector(".com-object-channel > summary")!;
+  expect(summary.querySelector("strong")?.textContent).toBe("Lighting");
+  expect(summary.querySelector(".com-object-channel-name")?.textContent).toContain("Raw manufacturer name");
+  expect(summary.querySelector(".com-object-channel-number")?.textContent).toContain("A/05");
+  expect(summary.textContent).not.toContain("opaque-owned");
+  await cleanup();
+});
+
+it("uses the verbatim channel name without Text, and keeps numbers visible even without a name", async () => {
+  const named = { key: "opaque-name", kind: "Channel" as const, text: null, name: "  Unchanged name  ", number: "07", order: 0 };
+  const numbered = { key: "opaque-number", kind: "Channel" as const, text: null, name: null, number: "0", order: 1 };
+  const empty = { key: "opaque-empty", kind: "Channel" as const, text: "", name: "", number: "", order: 2 };
+  const independent = { key: "opaque-independent", kind: "ChannelIndependentBlock" as const, text: null, name: null, number: null, order: 3 };
+  const { host, cleanup } = await render(NO_REFERENCE, false, [
+    object(1, { activation: "Active", channel: named }),
+    object(2, { activation: "Active", channel: numbered }),
+    object(3, { activation: "Active", channel: empty }),
+    object(4, { activation: "Active", channel: independent }),
+    object(5, { activation: "NotEvaluated" }),
+  ]);
+  const groups = [...host.querySelectorAll(".com-object-channel > summary")];
+  expect(groups[0].querySelector("strong")?.textContent).toBe("  Unchanged name  ");
+  expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("07");
+  expect(groups[1].querySelector("strong")?.textContent).toBe("Untitled channel");
+  expect(groups[1].querySelector(".com-object-channel-number")?.textContent).toContain("0");
+  expect(groups[2].querySelector("strong")?.textContent).toBe("Untitled channel");
+  expect(groups[2].querySelector(".com-object-channel-number, .com-object-channel-name")).toBeNull();
+  expect(groups[3].textContent).toContain("Channel-independent objects");
+  expect(groups[4].textContent).toContain("Without evaluated channel");
+  expect(groups.slice(3).every((group) => !group.querySelector(".com-object-channel-number, .com-object-channel-name"))).toBe(true);
   await cleanup();
 });
 
@@ -145,9 +181,8 @@ it("keeps inactive, undetermined and unevaluated objects inspectable but visibly
   ];
   const { host, cleanup } = await render(NO_REFERENCE, false, objects);
   const groups = [...host.querySelectorAll<HTMLDetailsElement>("details.com-object-channel")];
-  expect(groups[0].querySelector("summary")!.textContent).toContain("Untitled channel");
-  expect(groups[0].querySelector("summary")!.textContent).not.toContain("Raw name");
-  expect(groups[0].querySelector("summary")!.textContent).not.toContain("4");
+  expect(groups[0].querySelector("summary > strong")?.textContent).toBe("Raw name");
+  expect(groups[0].querySelector(".com-object-channel-number")?.textContent).toContain("4");
   await act(async () => { for (const group of groups) group.querySelector("summary")!.click(); });
   expect(host.querySelector('[data-activation="Inactive"]')?.textContent).toContain("Inactive");
   expect(host.querySelector('[data-activation="Undetermined"]')?.textContent).toContain("Undetermined");

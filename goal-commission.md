@@ -382,6 +382,16 @@ target and gateway, the one-tunnel exclusion and an operator/project key
 source if required; treat refusal as unknown, never guess or contact
 `1.1.220`. K6 confirmed writes remain blocked.
 
+**Later target correction, 2026-10-01 (operator report, not a scan).** The
+operator says the previously discussed button is no longer on the bus and
+requests another. `1.1.32` is an *offline candidate* from the read-approved
+`1.1.24`–`1.1.32` range, not a verified present device or a substitute live
+K6 go. Confirm its presence and actual identity read-only, coordinate the
+single tunnel, and ask whether this bedroom-entry button may be pressed and
+temporarily readdressed before any device-specific write request. The `.G2`
+twofold manual must not be attributed to this project-labelled eightfold
+candidate. No K6 write is reopened by changing the proposed target.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

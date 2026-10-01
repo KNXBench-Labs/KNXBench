@@ -16,4 +16,11 @@ Worktree `ui-k6-unavailable`, Web lock held. Scoped handover from commissioning:
 - Web panel: 16/16; full Web: 82 files / 1,303 passed. TypeScript and Vite build green. Local mocked Chromium: K6 4/4, Site 4/4, Service Control 4/4, Device checks 4/4, monitor 4/4, ISSUE-09 10/10. No unmocked K6 fixture API call, consent, phrase or start request.
 - Strict workspace Clippy, Rust fmt, headers, anchors, layering, corpus gates and diff check green. The unrelated historical K6 simulator remains future-ready; production POST still returns 412.
 
-Pending: review scoped diff; rebase any concurrent commissioning docs; publish with exact remote SHA readback; release Web lock and clean task-owned worktree/scratch/corpus link. No credentials, key, production KNX connection or write entered this package.
+## Delivery
+
+The scoped diff and safety boundary were reviewed; no concurrent upstream
+commit remained at publication. Published
+`76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` to `origin/main` with exact
+remote SHA readback. The follow-up handover releases the Web lock. Clean only
+this task's corpus link, worktree and scratch after readback. No credentials,
+key, production KNX connection or write entered this package.

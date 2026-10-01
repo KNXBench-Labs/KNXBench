@@ -14,4 +14,8 @@ Scope: the UI-track completion condition requires named evidence for every owned
 - Web: 82 files / 1,297 passed, TypeScript no diagnostics, Vite build green. Local mocked Chromium suites: Site 4/4, Service Control 4/4, Device checks 4/4, monitor 4/4, ISSUE-09 10/10.
 - Strict workspace Clippy, `cargo fmt --check`, `check-headers`, `check-anchors`, `check-layering`, `check-corpus-gates` and `git diff --check` all passed. An initial typo `check-corpus` returned “unknown task”; rerunning the actual `check-corpus-gates` succeeded; this was not a source or corpus failure.
 
-No hardware action, KNX tunnel, device write, live gateway or credentials were involved. This work is ISSUE-04 evidence and a locale bug fix, not the U13 closing review. ISSUE-12's two discovery checkboxes remain open pending wire/gateway evidence; U13 requires the user's review decision. Publish only after scoped diff review and rebase/remote SHA readback.
+No hardware action, KNX tunnel, device write, live gateway or credentials were involved. This work is ISSUE-04 evidence and a locale bug fix, not the U13 closing review. ISSUE-12's two discovery checkboxes remain open pending wire/gateway evidence; U13 requires the user's review decision.
+
+## Delivery
+
+Rebased over commissioning documentation without source overlap, reran repository gates and published `912eb7685012bda0e355759d37d489bcfdefa8e1` to `origin/main`; exact remote SHA readback matched. The follow-up handover releases the Web lock. Remove only this package's corpus link, worktree and scratch after readback.

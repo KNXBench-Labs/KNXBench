@@ -339,7 +339,8 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      undo→branch behavior. `App.test.tsx` exposed and fixes the status bar's
      browser-locale formatting when the selected UI language differs. The
      existing autosave fake-timer and settings regressions are named in the
-     issue plan. This does not decide the U13 closing review for the user.
+     issue plan. Published as `912eb768` with remote SHA readback on
+     2026-10-01. This does not decide the U13 closing review for the user.
 
 ### U13 — Close the UI track
 

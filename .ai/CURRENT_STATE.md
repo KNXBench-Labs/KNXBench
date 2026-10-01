@@ -1,3 +1,11 @@
+- **Last Agent:** codex (UI / U13 independent review blocked)
+- **Timestamp:** 2026-10-01 16:12 CEST
+- **Completed:** Followed the user's chosen read-only U13 review boundary. Inspected the two open ISSUE-12 checkboxes, later host-firewall discovery evidence and existing offline tests. Attempted an isolated Claude Code 2.1.283 read-only review (Read/Grep/Glob only, no shell/MCP/subagents); the service refused before any review with a weekly limit, resetting 2026-10-03 09:00 Europe/Berlin. No review verdict, product edits, test run, multicast, bus contact, firewall change or hardware operation. Details: `.ai/logs/2026-10-01_codex_ui-u13-review-blocked.md`. Web lock remains free; shared root edits untouched.
+- **Pending/Next Steps:** After Claude service access resumes, have the chosen goal.md/Claude session review the full UI track using `.ai/logs/2026-10-01_codex_ui-u13-review-brief.md`. If the user selects another independent reviewer instead, document the replacement first. Resolve findings, explicitly reconcile ISSUE-12's open boxes against RESEARCH §20.1 and real offline test boundaries, rerun merged-main gates and only then close U13. No quota check is needed; the service returned an actual refusal.
+- **Notes for Codex oder Claude:** The attempted CLI run is **not** the requested independent review. Existing fake-connector tests and HPAI test do not demonstrate a full loopback multicast discovery roundtrip. Keep default-off/fail-closed K6 and preserve other sessions' work. Do not claim U13 complete.
+
+---
+
 - **Last Agent:** codex (commissioning / experimental K6 decision and K7 simulator recovery)
 - **Timestamp:** 2026-10-01 16:11 CEST
 - **Web lock:** not reserved; no Web source changed. Preserve the independent U13 review handover below.

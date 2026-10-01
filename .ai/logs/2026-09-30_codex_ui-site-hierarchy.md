@@ -14,6 +14,12 @@ Timestamp: 2026-09-30 23:11 CEST
 - Local Playwright/Vite fixture intercepts **every** `/api/**` request. `site.e2e.ts` passed 4/4 EN/DE at 360/1440 px; it captures exact create/move payloads, requires two device tiles and no horizontal overflow, and never connects to a KNX gateway. Existing local browser suites passed 4/4 Debug, 4/4 Device checks, 4/4 monitor and 10/10 ISSUE-09.
 - Full Web: 82 files / 1,296 tests; TypeScript no diagnostics and Vite build green. Corpus-backed Rust before the parallel commissioning changes: 137 suites / 2,776 passed / 0 failed / 161 ignored / 0 `SKIP:`. On the October 1 rebased tree: 139 Rust suites / 2,791 passed / 0 failed / 161 ignored / 0 `SKIP:`, Web 82 / 1,296, TypeScript/build, mocked Chromium 4/4 new + 4/4 Debug + 4/4 Device checks + 4/4 monitor + 10/10 ISSUE-09, strict workspace Clippy, fmt, headers, anchors, layering, corpus gates and diff check passed. The upstream K6/K13/serial-address safety refusals and ADR-0056 telemetry were preserved; this UI package changes none of them. All bus-related tests were mocked or simulator-based; no live tunnel, device write or production discovery.
 
-## Pending delivery
+## Delivery
 
-The scoped diff and six initial plus two later commissioning commits were reviewed and rebased without dropping their `.ai` and status entries. Publish the integrated candidate with exact remote SHA readback, release the Web lock in a separate handover commit and clean only this package's ignored corpus link, worktree and scratch. U13 closing review remains a user decision; ISSUE-12 discovery requires wire/gateway evidence before any protocol change.
+Feature `7fd96bf1aef86b07a2d01bec86a52621978003ed` and integrated
+documentation `3822a20c1bf9333eb66ded5303158a9a31470b74` were published
+to `origin/main`; the exact remote SHA readback matched the latter. The Web
+lock is released in the follow-up handover entry. No hardware trial is
+implied; remove only this package's corpus link, worktree and scratch after
+handover readback. U13 closing review remains a user decision; ISSUE-12
+discovery requires wire/gateway evidence before any protocol change.

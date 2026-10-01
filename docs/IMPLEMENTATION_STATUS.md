@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — K6 alternate candidate: bounded read-only presence
+
+- A dry run scoped `knx bus scan` to exactly `1.1.32`. One live read-only
+  DD0 probe on the approved range returned `occupied`, mask `0701h`, exit 0;
+  no locally observed competing KNX process/socket, other target, property
+  read, access key or hardware write. RESEARCH §24 holds the scope and evidence.
+- The actual manufacturer/order/product and whether the candidate button may
+  be physically pressed remain unverified. The K6 CLI/HTTP write gate stays
+  pre-tunnel fail-closed; the previous `1.1.67` go is not transferable.
+
 ## 2026-10-01 — U13 independent review chosen, ISSUE-12 evidence reconciled for review
 
 - The user chose the independent read-only whole-UI-track review by the

@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — AR00 alpha queue and decision provenance (offline)
+
+- User started `alpha-release-goal.md`; its AR queue is the sole executor of
+  overlapping non-UI/non-commissioning work. Historical `goal.md` dispatch
+  text no longer redispatches resolved streaming, file gestures or U13 review.
+- `ALPHA_READINESS.md` accounts for all 180 original IDs/priorities/routes,
+  owner receipts, accepted decisions, exact missing inputs and safe fallbacks.
+  The dated `OFFENE_PUNKTE.md` remains byte-identical. U13's original independent
+  changes-required verdict and later fix-review provenance remain intact.
+- Triage mechanically distinguishes 110 numbered headings from 105 residual
+  boundaries; five solved/clarification rows are excluded, 104 are classified
+  (5/30/55/14), §105 remains wire-evidence-only. Both §130 meanings and nine
+  unnumbered section aliases are stable; no historic anchor is renumbered.
+- Existing implementation/tests support KL-18/23/24 and ISSUE-04 closure;
+  this package inspected them, not reran the whole product suite. Three
+  technical rules (KL-70/88/134) lack evidenced user release-scope acceptance
+  and remain waiting for decision; unscheduled FUTURE-05 is later work.
+- Fresh worktree-built anchors: 375 links / 228 Markdown files, none dead;
+  the 180-ID/owner/priority/triage validator and patch checks passed. No source,
+  Web lock, private corpus, hardware action or release permission changed.
+  Canonical-root statistics refresh remains blocked on foreign local report
+  work and safe synchronization by its owner; no fabricated refresh is claimed.
+
 ## 2026-10-01 — Pre-write backup directory chains (offline)
 
 - Both application backup writers now request directory-entry synchronization

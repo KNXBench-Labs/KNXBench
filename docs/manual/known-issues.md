@@ -9,7 +9,8 @@ means in practice, and whether a workaround exists.
 
 It is a selection, not the catalogue. The full engineering record lives in
 [`docs/KNOWN_LIMITATIONS.md`](../KNOWN_LIMITATIONS.md), which currently holds
-119 numbered entries — including ones that are already resolved, ones that
+110 numbered headings as of 2026-10-01: 105 remaining boundaries and five
+resolved or clarification-only entries, including ones that
 only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.

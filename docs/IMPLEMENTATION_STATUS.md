@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — AR03 enforcement audit; AR02 publication receipt (UTC)
+
+- Published AR02 `e691bc1318d0785289f8132378a0f26c9a829b27`: exact remote ref
+  and artifact/tree matched the staged/gated candidate. Required author and
+  committer verified, no co-author trailer. Owned checkout/branch, build
+  targets and scratch removed; foreign root/reports left untouched.
+- Docs-only audit [ADR0039_ENFORCEMENT_AUDIT](ADR0039_ENFORCEMENT_AUDIT.md)
+  distinguishes completed phases 1–2 from the six remaining direct live
+  allocator calls, single catalog-create assignment and post-command enrichment.
+  The old nine-bypass narrative is historical, not current source evidence.
+- Proposed three separate phases, IDs-only sealing and a disclosed heuristic
+  gate. Activation unanswered: `KL-129`/AR03 remain `WAITING_DECISION`; not a
+  user-approved deferral, new runtime test or implementation. Continue AR04
+  storage guarantees independently. Canonical-root statistics stays blocked.
+  Receipt `.ai/logs/2026-10-01_codex_alpha-command-audit.md`.
+
 ## 2026-10-01 — AR02 general ID exhaustion (offline; UTC receipt)
 
 - All nine core allocators use checked addition and return `IdAllocationError`;

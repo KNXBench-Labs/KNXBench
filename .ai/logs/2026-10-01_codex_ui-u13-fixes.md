@@ -149,8 +149,9 @@ nonzero header/anchor work counts, not merely an exit-only wrapper.
 U0–U13 are complete with the operator-approved independent review, resolved
 findings and integrated GREEN gates. Both ISSUE-12 boxes have exact named-test
 and environmental evidence; no owned issue-plan checkbox is unchecked. The
-closing handover releases this package's Web lock. Publication must use a
-non-forced main push with exact remote SHA readback before cleanup. Only this
+closing handover releases this package's Web lock. Source `36e6b6af` and closing
+documentation `dfa0cc79ca50bc7da747058e97978c7e3a2de25c` were published by a
+non-forced main push; exact local/remote SHA readback matched. Only this
 worktree/branch, its corpus symlink, its target child and `ui-u13-*` scratch
 artifacts are task-owned; foreign root changes and other worktrees stay intact.
 

@@ -340,6 +340,16 @@ device/product/application identity and authoritative per-mask affected-
 storage/access information; no access key may be guessed. No live go was
 requested or implied by the source check.
 
+**UI safety affordance candidate, 2026-10-01 (separate Web lock).** The
+read-only `/api/device-address/availability` response derives from the
+same recovery guard as the confirmed POST. The tab checks it on mount,
+disables Program before phrase/consent when blocked, fails closed on an
+unavailable/malformed response, and rechecks on request. A subsequent POST
+412 re-locks the UI; the server remains the authority. Local simulated
+HTTP and mocked EN/DE browser tests exercise the boundary without a bus.
+This is an honest UI status, **not** a durable backup, restored public write
+availability, or new device-specific live permission.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

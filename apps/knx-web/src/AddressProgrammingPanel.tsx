@@ -1,9 +1,9 @@
 /** Programming an individual address: wait for exactly one pressed button, then MP §2.3. */
 // Not a download (docs/GLOSSARY.md): this writes only the device's
 // individual address, to whichever single device is in programming mode.
-// The panel decides nothing: the server derives the phrase for the new
-// address, `useProgrammingConsent` asks, and the server refuses a phrase
-// for any other address (ADR-0046). While waiting the panel says what the
+// The panel decides nothing: the server reports its recovery gate before
+// consent, then derives the phrase for the new address and independently
+// refuses an unsafe start (ADR-0046/0059). While waiting it says what the
 // person at the device must do, and only then; once the device is found
 // MP §2.3 runs to its end and there is no stop button.
 
@@ -47,12 +47,40 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
   const [status, setStatus] = useState<api.AddressProgrammingStatusResponse | null>(null);
   const [events, setEvents] = useState<api.AddressProgrammingEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<api.AddressProgrammingAvailability | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const availabilityRequestRef = useRef(0);
   const sinceRef = useRef(0);
   const pollInFlightRef = useRef(false);
   const idRef = useRef<number | null>(null);
 
   const running = active(status?.status);
   const locked = starting || running;
+
+  async function refreshAvailability() {
+    const requestId = ++availabilityRequestRef.current;
+    setAvailability(null);
+    setAvailabilityError(null);
+    try {
+      const next = await api.addressProgrammingAvailability();
+      if (requestId !== availabilityRequestRef.current) return;
+      const valid = typeof next?.startAvailable === "boolean"
+        && (next.reason === null || typeof next.reason === "string")
+        && (!next.startAvailable || next.reason === null);
+      if (!valid) {
+        setAvailabilityError(t("addressProgramming.availabilityInvalid"));
+        return;
+      }
+      setAvailability(next);
+    } catch (reason) {
+      if (requestId === availabilityRequestRef.current) setAvailabilityError(api.errorMessage(reason));
+    }
+  }
+
+  useEffect(() => {
+    void refreshAvailability();
+    return () => { availabilityRequestRef.current += 1; };
+  }, []);
 
   function apply(next: api.AddressProgrammingStatusResponse) {
     if (idRef.current !== null && next.programmingId !== idRef.current) return;
@@ -88,6 +116,7 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
   }, [running, status?.programmingId]);
 
   async function start() {
+    if (availability?.startAvailable !== true) return;
     const target = address.trim();
     setError(null);
     let phrase: api.AddressProgrammingPhrase;
@@ -119,7 +148,13 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
       setStatus(null);
       await poll();
     } catch (reason) {
-      setError(api.errorMessage(reason));
+      if (api.errorStatus(reason) === 412) {
+        // The recovery gate can change after an earlier read. The server's
+        // refusal is authoritative; do not invite a second consent attempt.
+        setAvailability({ startAvailable: false, reason: api.errorMessage(reason) });
+      } else {
+        setError(api.errorMessage(reason));
+      }
     } finally {
       setStarting(false);
     }
@@ -151,6 +186,23 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
         <h2>{t("addressProgramming.title")}</h2>
         <p>{t("addressProgramming.explainer")}</p>
       </header>
+
+      {availability?.startAvailable !== true && (
+        <div className="form-warning" role={availabilityError ? "alert" : "status"}>
+          <p>{availabilityError
+            ? t("addressProgramming.availabilityFailed")
+            : availability
+              ? t("addressProgramming.recoveryBlocked")
+              : t("addressProgramming.availabilityChecking")}</p>
+          {availability?.reason && <p>{availability.reason}</p>}
+          {availabilityError && <p>{availabilityError}</p>}
+          {(availability || availabilityError) && (
+            <button type="button" onClick={() => void refreshAvailability()}>
+              {t("addressProgramming.retryAvailability")}
+            </button>
+          )}
+        </div>
+      )}
 
       <form className="address-programming-config" onSubmit={(event) => event.preventDefault()}>
         <label>
@@ -193,7 +245,7 @@ export default function AddressProgrammingPanel({ project }: AddressProgrammingP
           </ol>
           <button
             className="primary-action"
-            disabled={locked || address.trim() === "" || gateway.trim() === ""}
+            disabled={locked || availability?.startAvailable !== true || address.trim() === "" || gateway.trim() === ""}
             onClick={() => void start()}
           >
             {t("addressProgramming.start", { address: address.trim() || "…" })}

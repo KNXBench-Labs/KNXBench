@@ -274,14 +274,27 @@ that the request names the device it was shown.
 This gives *one* device its individual address: whichever device has its programming
 button pressed. Only the address is written; this is not a download of parameters.
 
+**Current safety gate (2026-10-01): programming cannot be started.** The
+server has no verified durable pre-write recovery for the button-selected
+device. The tab reads that recovery precondition and displays its refusal
+before asking for consent; its Program button remains disabled. If the
+status cannot be read, it remains disabled and offers a retry. Even if the
+status later changes, the server checks again on every start. A confirmed
+start currently returns HTTP 412 before a tunnel opens. Read-only status
+and stopping an already-held session remain available. Do not press a
+device's programming button expecting this build to program it.
+
+The steps below describe the retained procedure for a future recovery-ready
+server and simulator tests, **not an available write path today**:
+
 1. **Bus monitor** → **Program address** tab (German: **Adresse programmieren**). Type
    the new address (the project's device addresses are offered as suggestions), the
    gateway, and how long to wait for the button (1–600 s, default 120).
 2. The tab lists what happens: wait for exactly one device in programming mode, then
    the four steps of the standard procedure (check the address is free, count again,
    write, connect to the new address, read back and restart, which ends programming
-   mode). **Program 1.1.30** asks for confirmation in the programming dialog; only then
-   does the server open a tunnel.
+   mode). Once the safety gate is lifted, **Program 1.1.30** would ask for
+   confirmation; a valid phrase alone never authorizes a tunnel.
 3. While waiting, the tab says what the person at the device must do: **press the
    programming button**, or, if several devices are in programming mode, **release all
    but one**. **Stop waiting** ends the wait; nothing has been written at that point.
@@ -292,10 +305,11 @@ button pressed. Only the address is written; this is not a download of parameter
    else. A device that answered at its new address but did not acknowledge the closing
    restart still counts as **yes**; some devices never acknowledge a restart.
 
-The same procedure is available as
+The CLI retains read-only planning for the same procedure as
 [`knx device program-address`](10-command-line.md#knx-device-program-address--give-a-device-its-individual-address).
-The tab refuses while the monitor, a line scan or a download holds the gateway's tunnel,
-and those refuse while it runs.
+Confirmed CLI starts are also blocked before a tunnel. Once recovery is
+implemented, the tab would also refuse while the monitor, a line scan or a
+download holds the gateway's tunnel.
 
 ## Debug: Individual Address Write Enable
 
@@ -351,10 +365,11 @@ confirmation for that one device. It has been verified on one product family on 
 device so far. See
 [`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 
-**What KNXBench writes to a device, continued.** An individual address, to the one
-device in programming mode, from `knx device program-address` and the **Program
-address** tab ([below](#programming-an-individual-address)). Verified in the simulator
-only so far.
+**Individual-address programming is currently blocked.** The retained CLI and
+**Program address** tab ([above](#programming-an-individual-address)) can
+describe the procedure, but confirmed starts fail before opening a tunnel
+until durable device-specific recovery exists. A prior live round trip on one
+device is historical evidence, not current write permission.
 
 **What KNXBench writes to a device, continued.** A manual Debug action can
 change only the Individual Address Write Enable bit of Device Object

@@ -30,7 +30,12 @@ credential or access key was used.
 
 Added the bounded source-based findings to RESEARCH §24 and K6 status in
 `goal-commission.md`. No manufacturer-specific effect or complete K6
-storage scope was inferred. The next actual K6 work needs per-device/mask
+storage scope was inferred. Rebased over the UI Site/Property closeout,
+retained both handover entries, reran anchors (405 links/225 files) and diff
+check, then pushed audit commit `f92114c248c65613f400f2a9cba9d322a2abb2f6`.
+Local and `origin/main` SHA matched on readback. The UI lock was released by
+its owner during this audit; a future Web change requires taking a new lock.
+The next actual K6 work needs per-device/mask
 identification and verified pre-send persistence/readback and recovery,
 followed by a fresh device-specific go before any live write. No access key
 may be guessed; never query `1.1.220`.

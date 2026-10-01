@@ -7,3 +7,5 @@
 - No property read, bus/gateway access, device write, key, private corpus, UI file edit or guess was performed. The PDF/text scratch is task-owned and must be removed during cleanup.
 
 Next: If adding a public read-only probe, require explicit target/gateway and one-tunnel exclusion, use a verified property definition, preserve unknown bytes as raw data, report refusal instead of an inferred model, and never guess an access key. Keep the K6 confirmed CLI/HTTP write guard before tunnel opening; experimental operator consent does not replace durable device-specific pre-write recovery.
+
+Publication overlap: a separate user report says `1.1.67` is no longer on the bus and requests another pushbutton. `1.1.32` is only an offline, read-approved *candidate* (`devices.md`, project-labelled eightfold button), not a known present device or a transferred write go. The order-information audit above concerns the historical `1.1.67` uncertainty, not a request to contact it. The newer selection boundary is preserved in `.ai/CURRENT_STATE.md` and `goal-commission.md`; no hardware probe followed.

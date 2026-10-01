@@ -93,9 +93,15 @@ handover bytes and numbered limitation identity. Closing-doc anchor gate:
 375 checked links across 229 Markdown files, zero dead.
 
 AR02/DATA-01 status and model/limitation contracts synchronized. Reserved AR03
-activation was offered explicitly; the prompt timed out with no response.
+activation was offered explicitly; no user response was recorded.
 Empty input is not an activation or acceptance of continued deferral.
-PENDING delivery: final staged/doc gates, exact remote publication readback
-and owned artifact cleanup. Canonical-root statistics refresh stays blocked
-by foreign report work. No release tag, hosted artifact, live bus, native GUI,
-full compatibility or owner waiver claimed.
+Delivery completed: `e691bc1318d0785289f8132378a0f26c9a829b27` published to
+`origin/main`; outgoing range was exactly one reviewed commit. Author and
+committer `KNXBench <github@knxbench.com>`, no co-author trailer. Committed
+tree `56931604b5fc9662cabc487767ba6560f0383a26` matched the staged/gated tree;
+fetch, `ls-remote` and exact artifact/ref readback agreed. Closing ledger and
+anchor/staged patch checks passed. Owned checkout, branch, both build targets
+and AR02 scratch removed after verification. This receipt is recorded in the
+subsequent docs-only AR03 audit package. Canonical-root statistics stays
+blocked by foreign report work. No release tag, hosted artifact, live bus,
+native GUI, full compatibility or owner waiver claimed.

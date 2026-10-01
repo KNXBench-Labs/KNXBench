@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / K6 fail-closed availability affordance)
+- **Timestamp:** 2026-10-01 14:54 CEST
+- **Web lock:** held by `ui-k6-unavailable` for the narrow commissioning-requested K6 unavailable-state UI and additive read-only availability contract. No unrelated Web edits or live hardware operations.
+- **Completed:** Scoped the gap: `POST /api/device-address/start` returns 412 before tunnel via `knx_app::individual_address_programming_recovery::require_persistent_pre_write_recovery`, but `AddressProgrammingPanel` still asks the operator to confirm a phrase and then reports a generic error. Existing phrase/status/stop routes remain read-only/observational. Plan: expose the same backend recovery guard as a read-only availability response, fail closed on unknown status, disable consent until available, retain historical status/stop and test 412 races. No production bus or device write.
+- **Pending/Next Steps:** TDD the backend availability contract and UI refusal/failure/race behavior, run local mocked browser plus full Web/Rust/repository gates, update commissioning and UI handover docs, publish with SHA readback, then release Web lock and clean only task-owned artifacts. ISSUE-12 wire evidence and U13 user-decision gates remain unchanged.
+- **Notes for Codex oder Claude:** Backend `require_persistent_pre_write_recovery()` is the single safety source. Availability is not write permission; the POST still validates and refuses independently. Do not bypass ADR-0059, guess access keys, send KNX packets, or interpret prior historical K6 hardware success as current authorization.
+
+---
+
 - **Last Agent:** codex (UI / ISSUE-04 completion-evidence closeout)
 - **Timestamp:** 2026-10-01 14:48 CEST
 - **Web lock:** released after publishing `912eb7685012bda0e355759d37d489bcfdefa8e1`; a separate K6 UI safety package needs a fresh lock. No commissioning Web change was made here.

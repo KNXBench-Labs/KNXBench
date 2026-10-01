@@ -6481,6 +6481,29 @@ Architecture/Device Reader sources (§22) warn that network identifiers and
 arbitrary read ranges are insufficient as full manufacturer-specific memory
 evidence. No access key may be guessed; no new hardware permission is implied.
 
+**[V] Public-entry audit, 2026-10-01 (offline).** The CLI and server's
+confirmed K6 and serial-address routes, plus the K13 CLI, invoke their
+respective pre-tunnel recovery gates. CLI device download and restore both
+call `device_download::execute`, whose `run_memory_download_with_backup`
+reads the plan's overwritten regions and touched load states before the
+first mutation; `write_backup` fsyncs the file and directory and compares a
+readback before allowing that write. This is *plan-scoped*, not a complete
+device image, and does not establish a manufacturer-independent rollback.
+The Debug-gated service-control CLI/HTTP action saves and rereads the exact
+property element before writing bit 2; that receipt does not cover any
+other storage. K14's erasing operation remains hardware-blocked. Group-value
+sends (`knx bus write`, `POST /api/bus/write`) belong to `goal.md` (§5),
+not a commissioning write gate; their receiver effects remain unverified.
+No write route was reopened or hardware contacted in this audit.
+
+**[V] Web projection boundary.** The still-locked Program address panel
+fetches a valid phrase, opens its consent dialog, then on a confirmed start
+displays the server's `412` message as an alert. It does not claim a
+successful write, but still offers a now-unavailable action and has no
+focused UI regression for the durable-recovery refusal. The Web lock owner
+must decide the affordance and add its test; the server gate is the safety
+boundary in the meantime. No Web source was changed here.
+
 ---
 
 ## Sources

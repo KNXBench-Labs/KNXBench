@@ -371,6 +371,17 @@ experiment's target, scope, prerequisites, abort/recovery and outcome before
 claiming a live K6 result; do not silently substitute another device or guess
 an access key. The historical round trip is evidence of that run only.
 
+**Offline identity preflight, 2026-10-01.** KNX device diagnostics can report
+an order number only when the manufacturer exposes it readably/decodably;
+otherwise the value may be hexadecimal (RESEARCH §24). A read-only
+`PID_ORDER_INFO` read for `1.1.67` has **not** been implemented as a public
+CLI command or run on the bus. Even its raw response would need an independently
+verified MDT mapping before assigning `.G1`/`.G2`; it would still not define
+the memory affected by an address write. Plan any future read with the exact
+target and gateway, the one-tunnel exclusion and an operator/project key
+source if required; treat refusal as unknown, never guess or contact
+`1.1.220`. K6 confirmed writes remain blocked.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

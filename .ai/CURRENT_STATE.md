@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ISSUE-04 completion-evidence package)
+- **Timestamp:** 2026-10-01 14:28 CEST
+- **Web lock:** held by `ui-goal-close-audit` for ISSUE-04 regression evidence, pending test results; no commissioning Web changes during this package.
+- **Completed:** Preflight review found ISSUE-04's six plan items contain five unchecked boxes although the feature, autosave settings/engine and server dirty baseline exist. `useAutosave.test.tsx` covers the five-second warning and edge cases; `http_project_routes.rs` covers successful/failed save and undo. The missing evidence is an explicit server save→edit→undo→branch assertion and focused last-save locale/status regression. This reservation claims only the narrow ISSUE-04 tests, documentation and any verified bug they reveal. No live bus work.
+- **Pending/Next Steps:** Add RED focused regressions, fix only exposed defects, run full Web/Rust/quality gates, tick the plan with precise test names where proved, document limitations honestly, publish with SHA readback and release lock. U13 whole-track closing review still requires the user's decision; do not silently mark it complete.
+- **Notes for Codex oder Claude:** Do not adjust K6 fail-closed policy or offer the Program address button as operational under this lock. Preserve simultaneous commissioning handovers; no hardware actions or credentials.
+
+---
+
 - **Last Agent:** codex (commissioning / public-write route audit)
 - **Timestamp:** 2026-10-01 14:23 CEST
 - **Web lock:** released by the UI session after this audit started; a new Web package requires a fresh lock. This audit changed no Web source.

@@ -107,15 +107,19 @@ AR01 is `DONE`: runtime target/coverage guards, 87 xtask tests, five rejected
 behavioral mutants and emitted candidate scope; see [verification](docs/VERIFICATION.md)
 and `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`. AR00 was published as
 `6f4cef24` with remote/artifact readback and its owned checkout removed.
-AR02 is `DONE` on `alpha-id-exhaustion`: all nine checked allocators,
+AR02 is `DONE`, published as `e691bc1318d0785289f8132378a0f26c9a829b27`:
+all nine checked allocators,
 cross-layer refusal/atomicity/native boundary regressions and three caught
 behavioral mutants. Final stable-source gates: 141 Rust result blocks,
 2,855 passed / zero failed / 161 ignored; 77 explicitly executed private
 offline corpus/roundtrip tests; Web 1,312, strict Clippy, dependency policy,
 typecheck, build and repository gates green. Receipt:
 `.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md` (2026-10-01 UTC receipt).
-Next: AR03 decision audit, then AR04 while reserved activation remains
-unanswered. The activation prompt timed out; empty input is not consent.
+Its remote ref/artifact matched the gated tree; owned checkout, branch and
+AR02 targets/scratch are removed. AR03's bounded source audit and proposed
+scope are documented in [the enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md).
+AR03 remains `WAITING_DECISION`; next ready work is AR04. The activation
+prompt has no recorded answer; empty input is not consent or an accepted deferral.
 The canonical-root statistics refresh is blocked by foreign local report work;
 this does not block unrelated offline packages and is not a fabricated refresh.
 
@@ -162,12 +166,20 @@ closure does not automatically mean every source limitation was removed.
 
 **Sources:** `KL-129`. **Dependencies:** AR02. **Initial status:** `WAITING_DECISION` for the previously parked public-surface work.
 
-- [ ] Audit the current implementation against ADR-0039 phases 3–5. Do not repeat phases 1–2 or claim duplicate-ID data loss is still open.
-- [ ] Record the smallest proposed activation scope and the reason to unpark it. The accepted design is evidence, but this plan does not erase the old parked status by inference.
+- [x] Audit the current implementation against ADR-0039 phases 3–5. Do not repeat phases 1–2 or claim duplicate-ID data loss is still open.
+- [x] Record the smallest proposed activation scope and the reason to unpark it. The accepted design is evidence, but this plan does not erase the old parked status by inference.
 - [ ] Once activation is explicitly recorded, implement phase 3, phase 4 and phase 5 as separate reviewed packages: eliminate live bypasses, seal only the agreed allocator surface, then add the source-mutation gate with exact exemptions.
 - [ ] Preserve detached import construction and source data; verify seed enrichment equality, lock/plan/apply races, monotonic reservation, undo/redo, native roundtrip and positive/negative gate fixtures.
 
 **Exit evidence:** recorded activation or accepted continued deferral; if activated, per-phase tests/gates and the documented heuristic-versus-type-system boundary. No full-project sealing refactor or persisted undo history is smuggled in.
+
+**Audit receipt:** [ADR-0039 enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md)
+at published AR02 `e691bc13`: six direct live allocator calls, detached catalog
+allocation with a remaining single-create assignment, and post-command seed
+enrichment. Historical bypass counts are not current proof. Private `Project.ids`
+and the mutation gate remain unimplemented. Activation question unanswered;
+`KL-129`/AR03 stay `WAITING_DECISION`, with no runtime test or acceptance claim
+from this docs-only audit. Continue independent AR04.
 
 ### AR04 — Make storage guarantees match actual command coverage
 

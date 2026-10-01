@@ -85,6 +85,17 @@ acceptance are not inferred from those tests. The catalog scope and numbered
 limitation counts below remain unchanged; ADR-0039 phases 3–5 still require
 explicit activation (prompt unanswered, not approved).
 
+## AR03 enforcement audit and reserved decision
+
+[Pinned source audit](ADR0039_ENFORCEMENT_AUDIT.md) at published AR02
+`e691bc1318d0785289f8132378a0f26c9a829b27`: phases 1–2 are already implemented;
+the live surface has changed since the ADR's historical count. A bounded
+three-package proposal is documented, not activated. `KL-129`/AR03 remain
+`WAITING_DECISION`; no user answer is not approval or accepted continued
+deferral. This package runs doc/ledger gates only, not new product tests.
+AR02 remote/ref/artifact readback succeeded and its owned checkout, branch,
+targets and scratch were removed. The independent next ready package is AR04.
+
 ## Stable limitation identity
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of

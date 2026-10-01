@@ -2071,7 +2071,10 @@ pub fn create_group_address_impl(
         let project = project.as_mut().ok_or("no project open")?;
         let style = project.info.group_address_style;
         let address = knx_core::GroupAddress::parse(&address, style).map_err(|e| e.to_string())?;
-        let id = project.ids.next_group_address_id();
+        let id = project
+            .ids
+            .next_group_address_id()
+            .map_err(|error| error.to_string())?;
         knx_core::Command::CreateGroupAddress {
             entry: knx_core::GroupAddressEntry {
                 id,
@@ -2110,7 +2113,10 @@ pub fn create_area_impl(
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
-        let id = project.ids.next_area_id();
+        let id = project
+            .ids
+            .next_area_id()
+            .map_err(|error| error.to_string())?;
         knx_core::Command::CreateArea {
             area: knx_core::Area {
                 id,
@@ -2161,7 +2167,10 @@ pub fn create_line_impl(
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
-        let id = project.ids.next_line_id();
+        let id = project
+            .ids
+            .next_line_id()
+            .map_err(|error| error.to_string())?;
         knx_core::Command::CreateLine {
             area: knx_core::AreaId(area_id),
             line: knx_core::Line {
@@ -2249,7 +2258,10 @@ pub fn create_group_range_impl(
         let style = project.info.group_address_style;
         let start = knx_core::GroupAddress::parse(&start, style).map_err(|e| e.to_string())?;
         let end = knx_core::GroupAddress::parse(&end, style).map_err(|e| e.to_string())?;
-        let id = project.ids.next_group_range_id();
+        let id = project
+            .ids
+            .next_group_range_id()
+            .map_err(|error| error.to_string())?;
         knx_core::Command::CreateGroupRange {
             range: knx_core::GroupRange {
                 id,
@@ -2337,7 +2349,10 @@ pub fn create_building_part_impl(
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
-        let id = project.ids.next_building_part_id();
+        let id = project
+            .ids
+            .next_building_part_id()
+            .map_err(|error| error.to_string())?;
         knx_core::Command::CreateBuildingPart {
             part: knx_core::BuildingPart {
                 id,
@@ -2809,7 +2824,7 @@ pub fn create_devices_impl(
     let mut commands = Vec::with_capacity(quantity as usize);
     let mut created = Vec::with_capacity(quantity as usize);
     for index in 1..=quantity {
-        let device_id = ids.next_device_id();
+        let device_id = ids.next_device_id().map_err(|error| error.to_string())?;
         let device_name = if quantity == 1 {
             // The original single-create API stores the caller's exact name.
             // The web UI trims its own input, but direct clients may have
@@ -2821,7 +2836,9 @@ pub fn create_devices_impl(
         let mut com_objects = Vec::with_capacity(seeds.len());
         let mut enrich_inputs = Vec::with_capacity(seeds.len());
         for (ref_id, view) in &seeds {
-            let com_id = ids.next_com_object_instance_id();
+            let com_id = ids
+                .next_com_object_instance_id()
+                .map_err(|error| error.to_string())?;
             com_objects.push(knx_core::ComObjectInstance {
                 id: com_id,
                 source: knx_core::SourceRef {
@@ -3053,7 +3070,7 @@ pub fn reconcile_scan_impl(
         let mut ids = project.ids.clone();
         let mut create_commands = Vec::new();
         for address in selected_unexpected {
-            let device_id = ids.next_device_id();
+            let device_id = ids.next_device_id().map_err(|error| error.to_string())?;
             let source_id = format!("KB-SCAN-{:04X}", address.raw());
             create_commands.push(knx_core::Command::CreateDevice {
                 device: knx_core::DeviceInstance {
@@ -4453,7 +4470,13 @@ pub(crate) fn set_parameter_value_impl(
             .iter()
             .find(|p| p.device == device && p.source.ets_id == ets_id)
             .map(|p| p.id);
-        let id = existing_id.unwrap_or_else(|| project.ids.next_parameter_instance_id());
+        let id = match existing_id {
+            Some(id) => id,
+            None => project
+                .ids
+                .next_parameter_instance_id()
+                .map_err(|error| error.to_string())?,
+        };
         knx_core::Command::SetParameterValue {
             id,
             device,
@@ -4476,6 +4499,69 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn offline_reconciliation_exhaustion_preserves_deletions_and_allocators() {
+        let address = |device| knx_core::IndividualAddress::new(1, 1, device).unwrap();
+        let range = knx_net::ScannedRange {
+            area: 1,
+            line: 1,
+            first_device: 2,
+            last_device: 4,
+        };
+        let occupied = knx_net::ProbeOutcome::Occupied { mask_version: None };
+        for counter in [u32::MAX - 1, u32::MAX] {
+            let state = AppState::default();
+            new_project_impl(&state, None, None, None, None, true).unwrap();
+            reconcile_scan_impl(
+                &state,
+                range,
+                &[(address(2), occupied)],
+                &HashSet::new(),
+                vec![address(2)],
+                vec![],
+            )
+            .unwrap();
+            *state.command_stack.lock().unwrap() = knx_core::CommandStack::new();
+            {
+                let mut project = state.project.lock().unwrap();
+                let project = project.as_mut().unwrap();
+                let ids = &project.ids;
+                project.ids = knx_core::IdAllocators::from_counts(
+                    counter,
+                    ids.peek_area(),
+                    ids.peek_line(),
+                    ids.peek_com_object_instance(),
+                    ids.peek_group_range(),
+                    ids.peek_group_address(),
+                    ids.peek_building_part(),
+                    ids.peek_parameter_instance(),
+                    ids.peek_module_instance(),
+                );
+            }
+            let before = state.project.lock().unwrap().clone();
+            let results = [
+                (address(2), knx_net::ProbeOutcome::Vacant),
+                (address(3), occupied),
+                (address(4), occupied),
+            ];
+            let error = reconcile_scan_impl(
+                &state,
+                range,
+                &results,
+                &HashSet::new(),
+                vec![address(3), address(4)],
+                vec![address(2)],
+            )
+            .unwrap_err();
+            assert!(
+                error.contains("project device ID range exhausted"),
+                "{error}"
+            );
+            assert_eq!(*state.project.lock().unwrap(), before);
+            assert!(!state.command_stack.lock().unwrap().can_undo());
+        }
+    }
 
     /// ISSUE-08: an unmatched `choose` is an expected product-data state and
     /// reports as `Info`; everything else the evaluator says stays `Warning`.

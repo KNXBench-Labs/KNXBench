@@ -7984,7 +7984,7 @@ mod id_integrity_tests {
         let mut p = project();
         let mut stack = CommandStack::new();
         let mut clone = p.ids.clone();
-        let id = clone.next_group_address_id();
+        let id = clone.next_group_address_id().unwrap();
         stack
             .do_command(
                 &mut p,
@@ -8002,7 +8002,7 @@ mod id_integrity_tests {
             1,
             "undo must not rewind: the next create has to get a fresh id"
         );
-        let next = p.ids.clone().next_group_address_id();
+        let next = p.ids.clone().next_group_address_id().unwrap();
         assert_eq!(next, GroupAddressId(2));
     }
 
@@ -8014,9 +8014,9 @@ mod id_integrity_tests {
         let mut p = project();
         let mut stack = CommandStack::new();
         let mut stale = p.ids.clone();
-        let planned = stale.next_group_address_id();
+        let planned = stale.next_group_address_id().unwrap();
 
-        let live = p.ids.next_group_address_id();
+        let live = p.ids.next_group_address_id().unwrap();
         stack
             .do_command(
                 &mut p,
@@ -8129,8 +8129,8 @@ mod id_integrity_tests {
             .unwrap();
         let before = format!("{p:#?}");
         let mut through = p.ids.clone();
-        through.next_area_id();
-        through.next_area_id();
+        through.next_area_id().unwrap();
+        through.next_area_id().unwrap();
         let result = Command::Batch(vec![
             Command::ReserveIds { through },
             Command::CreateArea { area: area(1, 2) },

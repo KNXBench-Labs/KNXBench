@@ -64,6 +64,27 @@ found and fixed a transitive-only policy-root gap and the missing touched-file
 header; the mutation tests cover that gap after fixing the fixture exclusions.
 Details: `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`.
 
+## AR02 general ID exhaustion
+
+All nine project-local allocators now refuse exhaustion with a typed error.
+The final representable ID and its entities roundtrip at native schema v9;
+failed CSV/reconciliation batches apply nothing, and existing parameter edits
+remain possible. Tests assert unchanged project/counters, maximum-ID
+undo/redo/save/reopen, CLI exit 2 and HTTP refusal, not just a failure label.
+Mapper seeded-boundary tests abort detached construction and preserve input.
+See [model contract](DATA_MODEL.md) and
+`.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md`.
+
+Final offline gates, 2026-10-01 UTC receipt: 141 Rust result blocks, 2,855 passed,
+zero failed, 161 ignored; 77 private corpus/roundtrip tests explicitly run,
+zero failure/ignored/skip markers; Web 1,312; strict Clippy, dependency policy,
+typecheck, build, headers/anchors/layering/corpus policy and patch checks pass.
+Three compiled behavioral mutants fail and original source is restored.
+Native/ETS interoperability, actual hardware and whole-product release
+acceptance are not inferred from those tests. The catalog scope and numbered
+limitation counts below remain unchanged; ADR-0039 phases 3–5 still require
+explicit activation (prompt unanswered, not approved).
+
 ## Stable limitation identity
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
@@ -143,7 +164,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `DEBUG-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | goal-commission.md status / ADR-0051; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Commissioning readiness / ADR-0049; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §7 / goal-commission.md §3; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DATA-01` | P1 | AR02 | TODO | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope / crates/knx-core/src/project.rs; Retained boundary; AR02 verifies subcases before changing status |
+| `DATA-01` | P1 | AR02 | DONE | Nine checked allocators; synthetic maximum-ID/native/CSV/CLI/HTTP/mapper and rollback regressions; three behavioral mutants; final offline gate receipt .ai/logs/2026-10-01_codex_alpha-id-exhaustion.md. Parked mutation enforcement and catalog UI scope remain separate. |
 | `KL-129` | P1 | AR03 | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §129; Reserved user decision; see decision contract above |
 | `KL-106` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §106; Retained boundary; AR13 verifies subcases before changing status |
 | `DOC-01` | P1 | AR00 | DONE | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |

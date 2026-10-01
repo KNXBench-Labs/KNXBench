@@ -385,7 +385,7 @@ mod tests {
         project.installations.push(installation());
         crate::save_project(&conn, &project).unwrap();
 
-        let ga_id = project.ids.next_group_address_id();
+        let ga_id = project.ids.next_group_address_id().unwrap();
         let entry = GroupAddressEntry {
             id: ga_id,
             source: source(),

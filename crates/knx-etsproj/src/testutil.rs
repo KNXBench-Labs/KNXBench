@@ -101,7 +101,9 @@ pub(crate) fn reference_source_document() -> SourceDocument {
 }
 
 pub(crate) fn reference_project() -> knx_core::Project {
-    crate::map::map(&reference_source_document(), "P-0512/0.xml").project
+    crate::map::map(&reference_source_document(), "P-0512/0.xml")
+        .unwrap()
+        .project
 }
 
 /// Schema-≥21 counterpart of [`reference_source_document`]: the KV demo

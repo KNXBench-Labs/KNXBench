@@ -80,6 +80,7 @@ pub enum ImportFailure {
     Container(ContainerError),
     Detect(DetectError),
     Parse(ParseError),
+    Allocation(knx_core::IdAllocationError),
     NoKnownSchemaTable { version: u32 },
 }
 
@@ -90,6 +91,7 @@ impl std::fmt::Display for ImportFailure {
             ImportFailure::Container(e) => write!(f, "{e}"),
             ImportFailure::Detect(e) => write!(f, "{e}"),
             ImportFailure::Parse(e) => write!(f, "{e}"),
+            ImportFailure::Allocation(e) => write!(f, "{e}"),
             ImportFailure::NoKnownSchemaTable { version } => {
                 write!(f, "no known-element table for schema version {version}")
             }
@@ -199,7 +201,7 @@ pub fn import_knxproj_bytes_observed(
     observer.stage(ImportStage::Validate);
     let validation = validate::validate(&parsed.document);
     observer.stage(ImportStage::Map);
-    let mapped = map::map(&parsed.document, &topology_path);
+    let mapped = map::map(&parsed.document, &topology_path).map_err(ImportFailure::Allocation)?;
     observer.stage(ImportStage::InferDatapointTypes);
     let inference = infer::infer_group_address_dpts(&mapped.project);
 

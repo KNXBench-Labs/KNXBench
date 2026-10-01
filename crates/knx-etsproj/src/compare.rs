@@ -607,9 +607,9 @@ mod tests {
     /// device/com-object/module-instance combination.
     fn project_with_module_instance(repeat_index: &str) -> Project {
         let mut p = Project::new(Language("de-DE".into()));
-        let device_id = p.ids.next_device_id();
-        let com_id = p.ids.next_com_object_instance_id();
-        let module_id = p.ids.next_module_instance_id();
+        let device_id = p.ids.next_device_id().unwrap();
+        let com_id = p.ids.next_com_object_instance_id().unwrap();
+        let module_id = p.ids.next_module_instance_id().unwrap();
 
         p.devices.insert_module_instance(knx_core::ModuleInstance {
             id: module_id,

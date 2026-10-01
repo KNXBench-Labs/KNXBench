@@ -24,6 +24,8 @@ pub const CURRENT_SCHEMA_VERSION: u32 = 9;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
+/// The counter is the last issued ID, not the next one. `u32::MAX` is a
+/// valid final ID; subsequent allocation refuses without changing any counter.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct IdAllocators {
     device: u32,
@@ -37,47 +39,68 @@ pub struct IdAllocators {
     module_instance: u32,
 }
 
+/// A project-local ID space has no representable ID left. This is not a
+/// malformed imported counter: an exhausted high-water mark is valid storage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IdAllocationError {
+    /// Static allocator field name, never an external source identifier.
+    pub kind: &'static str,
+}
+
+impl std::fmt::Display for IdAllocationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "project {} ID range exhausted", self.kind)
+    }
+}
+
+impl std::error::Error for IdAllocationError {}
+
 macro_rules! next_id {
     ($self:ident, $field:ident, $id_type:ident) => {{
-        $self.$field += 1;
-        $id_type($self.$field)
+        let next = $self.$field.checked_add(1).ok_or(IdAllocationError {
+            kind: stringify!($field),
+        })?;
+        $self.$field = next;
+        Ok($id_type(next))
     }};
 }
 
 impl IdAllocators {
-    pub fn next_device_id(&mut self) -> DeviceId {
+    pub fn next_device_id(&mut self) -> Result<DeviceId, IdAllocationError> {
         next_id!(self, device, DeviceId)
     }
 
-    pub fn next_area_id(&mut self) -> AreaId {
+    pub fn next_area_id(&mut self) -> Result<AreaId, IdAllocationError> {
         next_id!(self, area, AreaId)
     }
 
-    pub fn next_line_id(&mut self) -> LineId {
+    pub fn next_line_id(&mut self) -> Result<LineId, IdAllocationError> {
         next_id!(self, line, LineId)
     }
 
-    pub fn next_com_object_instance_id(&mut self) -> ComObjectInstanceId {
+    pub fn next_com_object_instance_id(
+        &mut self,
+    ) -> Result<ComObjectInstanceId, IdAllocationError> {
         next_id!(self, com_object_instance, ComObjectInstanceId)
     }
 
-    pub fn next_group_range_id(&mut self) -> GroupRangeId {
+    pub fn next_group_range_id(&mut self) -> Result<GroupRangeId, IdAllocationError> {
         next_id!(self, group_range, GroupRangeId)
     }
 
-    pub fn next_group_address_id(&mut self) -> GroupAddressId {
+    pub fn next_group_address_id(&mut self) -> Result<GroupAddressId, IdAllocationError> {
         next_id!(self, group_address, GroupAddressId)
     }
 
-    pub fn next_building_part_id(&mut self) -> BuildingPartId {
+    pub fn next_building_part_id(&mut self) -> Result<BuildingPartId, IdAllocationError> {
         next_id!(self, building_part, BuildingPartId)
     }
 
-    pub fn next_parameter_instance_id(&mut self) -> ParameterInstanceId {
+    pub fn next_parameter_instance_id(&mut self) -> Result<ParameterInstanceId, IdAllocationError> {
         next_id!(self, parameter_instance, ParameterInstanceId)
     }
 
-    pub fn next_module_instance_id(&mut self) -> ModuleInstanceId {
+    pub fn next_module_instance_id(&mut self) -> Result<ModuleInstanceId, IdAllocationError> {
         next_id!(self, module_instance, ModuleInstanceId)
     }
 
@@ -236,12 +259,71 @@ impl Project {
 mod tests {
     use super::*;
 
+    macro_rules! exhaustion_test {
+        ($name:ident, $field:ident, $next:ident) => {
+            #[test]
+            fn $name() {
+                let mut ids = IdAllocators::default();
+                ids.$field = u32::MAX;
+                let before = ids.clone();
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ids.$next()));
+                assert!(
+                    result.is_ok(),
+                    "ID exhaustion must be a refusal, not a panic"
+                );
+                let error = result.unwrap().unwrap_err();
+                assert_eq!(error.kind, stringify!($field));
+                assert!(error.to_string().contains("ID range exhausted"));
+                assert_eq!(ids, before, "a refused allocation must not consume IDs");
+                assert_eq!(ids.$next(), Err(error), "repeated refusal must be stable");
+
+                ids.$field = u32::MAX - 1;
+                assert_eq!(ids.$next().unwrap().0, u32::MAX);
+                assert_eq!(ids.$next(), Err(error));
+            }
+        };
+    }
+
+    exhaustion_test!(exhausted_device_is_unchanged, device, next_device_id);
+    exhaustion_test!(exhausted_area_is_unchanged, area, next_area_id);
+    exhaustion_test!(exhausted_line_is_unchanged, line, next_line_id);
+    exhaustion_test!(
+        exhausted_com_object_is_unchanged,
+        com_object_instance,
+        next_com_object_instance_id
+    );
+    exhaustion_test!(
+        exhausted_group_range_is_unchanged,
+        group_range,
+        next_group_range_id
+    );
+    exhaustion_test!(
+        exhausted_group_address_is_unchanged,
+        group_address,
+        next_group_address_id
+    );
+    exhaustion_test!(
+        exhausted_building_part_is_unchanged,
+        building_part,
+        next_building_part_id
+    );
+    exhaustion_test!(
+        exhausted_parameter_is_unchanged,
+        parameter_instance,
+        next_parameter_instance_id
+    );
+    exhaustion_test!(
+        exhausted_module_is_unchanged,
+        module_instance,
+        next_module_instance_id
+    );
+
     #[test]
     fn id_allocator_starts_at_one_and_increments() {
         let mut ids = IdAllocators::default();
-        assert_eq!(ids.next_device_id(), DeviceId(1));
-        assert_eq!(ids.next_device_id(), DeviceId(2));
-        assert_eq!(ids.next_group_address_id(), GroupAddressId(1));
+        assert_eq!(ids.next_device_id().unwrap(), DeviceId(1));
+        assert_eq!(ids.next_device_id().unwrap(), DeviceId(2));
+        assert_eq!(ids.next_group_address_id().unwrap(), GroupAddressId(1));
     }
 
     #[test]
@@ -263,7 +345,7 @@ mod tests {
     fn same_user_content_ignores_allocator_high_water_marks_but_not_project_fields() {
         let baseline = Project::new(Language("en".into()));
         let mut allocator_advanced = baseline.clone();
-        allocator_advanced.ids.next_device_id();
+        allocator_advanced.ids.next_device_id().unwrap();
 
         assert!(baseline.same_user_content_as(&allocator_advanced));
 

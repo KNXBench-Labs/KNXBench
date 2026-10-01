@@ -107,7 +107,15 @@ AR01 is `DONE`: runtime target/coverage guards, 87 xtask tests, five rejected
 behavioral mutants and emitted candidate scope; see [verification](docs/VERIFICATION.md)
 and `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`. AR00 was published as
 `6f4cef24` with remote/artifact readback and its owned checkout removed.
-Next ready package: AR02 (general allocator exhaustion).
+AR02 is `DONE` on `alpha-id-exhaustion`: all nine checked allocators,
+cross-layer refusal/atomicity/native boundary regressions and three caught
+behavioral mutants. Final stable-source gates: 141 Rust result blocks,
+2,855 passed / zero failed / 161 ignored; 77 explicitly executed private
+offline corpus/roundtrip tests; Web 1,312, strict Clippy, dependency policy,
+typecheck, build and repository gates green. Receipt:
+`.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md` (2026-10-01 UTC receipt).
+Next: AR03 decision audit, then AR04 while reserved activation remains
+unanswered. The activation prompt timed out; empty input is not consent.
 The canonical-root statistics refresh is blocked by foreign local report work;
 this does not block unrelated offline packages and is not a fabricated refresh.
 
@@ -144,9 +152,9 @@ closure does not automatically mean every source limitation was removed.
 
 **Sources:** `DATA-01`. **Dependencies:** AR01.
 
-- [ ] Enumerate the current allocator methods and all non-catalog callers; preserve the scoped catalog safeguard and U13-owned fixes.
-- [ ] Add explicit checked exhaustion behavior with typed errors and no wrap, panic, overwritten entity or partially consumed batch. Respect ADR-0039's monotonic high-water marks.
-- [ ] Verify each affected entity kind at the maximum representable ID, batch rollback, undo/redo, save/reopen and caller error propagation. Keep malformed imported counters separate from new allocation.
+- [x] Enumerate the current allocator methods and all non-catalog callers; preserve the scoped catalog safeguard and U13-owned fixes.
+- [x] Add explicit checked exhaustion behavior with typed errors and no wrap, panic, overwritten entity or partially consumed batch. Respect ADR-0039's monotonic high-water marks.
+- [x] Verify each affected entity kind at the maximum representable ID, batch rollback, undo/redo, save/reopen and caller error propagation. Keep malformed imported counters separate from new allocation.
 
 **Exit evidence:** per-kind boundary regressions and cross-layer refusals; domain/application fixes rather than a UI-only guard.
 
@@ -428,7 +436,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `DEBUG-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `DATA-01` | P1 | AR02 | TODO |
+| `DATA-01` | P1 | AR02 | DONE |
 | `KL-129` | P1 | AR03 | WAITING_DECISION |
 | `KL-106` | P1 | AR13 | TODO |
 | `DOC-01` | P1 | AR00 | DONE |

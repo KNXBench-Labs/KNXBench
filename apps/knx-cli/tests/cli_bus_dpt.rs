@@ -45,12 +45,12 @@ fn stated_dpt(main: u16, sub: u16) -> Override<DptRef> {
 /// `resolve_group_address_dpt` reports as `GroupAddressDpt::None`.
 fn project_with_group_address(ga_addr: &str, dpts: &[(u16, u16)]) -> Project {
     let mut project = Project::new(Language("en".into()));
-    let ga_id = project.ids.next_group_address_id();
+    let ga_id = project.ids.next_group_address_id().unwrap();
     let mut unassigned = Vec::new();
 
     for &(main, sub) in dpts {
-        let device_id = project.ids.next_device_id();
-        let com_id = project.ids.next_com_object_instance_id();
+        let device_id = project.ids.next_device_id().unwrap();
+        let com_id = project.ids.next_com_object_instance_id().unwrap();
         project.devices.insert_com_object(ComObjectInstance {
             id: com_id,
             source: source("t"),

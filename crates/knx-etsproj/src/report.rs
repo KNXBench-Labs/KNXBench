@@ -327,7 +327,7 @@ mod tests {
         let parsed = parse_installation(&topology_bytes, &format!("{part}/0.xml"), schema).unwrap();
 
         let validation = validate(&parsed.document);
-        let mapped = map(&parsed.document, &format!("{part}/0.xml"));
+        let mapped = map(&parsed.document, &format!("{part}/0.xml")).unwrap();
         let inference = crate::infer::infer_group_address_dpts(&mapped.project);
         let collected = collect_container_entries(
             &mut c,

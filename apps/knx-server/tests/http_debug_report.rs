@@ -78,7 +78,7 @@ fn project() -> Project {
         group_addresses: vec![],
         parameters: vec![],
     });
-    let id = project.ids.next_group_address_id();
+    let id = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {

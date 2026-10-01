@@ -68,7 +68,7 @@ fn a_stale_csv_plan_can_no_longer_make_save_drop_a_group_address() {
         .expect("an unseen address plans a create");
 
     // 2. Meanwhile, the user creates a group address; it takes id 1.
-    let user_id = project.ids.next_group_address_id();
+    let user_id = project.ids.next_group_address_id().unwrap();
     Command::CreateGroupAddress {
         entry: group_address(user_id, 200, "User"),
     }
@@ -113,7 +113,7 @@ fn a_stale_csv_plan_can_no_longer_make_save_drop_a_group_address() {
 fn reserve_ids_from_a_stale_snapshot_never_lowers_what_an_earlier_edit_consumed() {
     let mut project = empty_project();
     let stale_snapshot = project.ids.clone();
-    let taken = project.ids.next_group_address_id();
+    let taken = project.ids.next_group_address_id().unwrap();
     Command::CreateGroupAddress {
         entry: group_address(taken, 1, "Taken"),
     }
@@ -127,7 +127,7 @@ fn reserve_ids_from_a_stale_snapshot_never_lowers_what_an_earlier_edit_consumed(
     .unwrap();
 
     assert!(
-        project.ids.next_group_address_id().0 > taken.0,
+        project.ids.next_group_address_id().unwrap().0 > taken.0,
         "the next id must be above the one already in use"
     );
 }

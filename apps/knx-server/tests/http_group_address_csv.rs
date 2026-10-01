@@ -52,7 +52,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
         parameters: vec![],
     });
 
-    let id1 = project.ids.next_group_address_id();
+    let id1 = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {
@@ -65,7 +65,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
             range: None,
         });
 
-    let id2 = project.ids.next_group_address_id();
+    let id2 = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {
@@ -139,6 +139,123 @@ async fn import_csv_with_confirmation(
         })),
     )
     .await
+}
+
+#[tokio::test]
+async fn structural_creation_issues_the_final_id_then_refuses_without_history_changes() {
+    let cases = [
+        ("area", "/api/areas", json!({"address":2,"name":"Last"})),
+        (
+            "line",
+            "/api/lines",
+            json!({"areaId":1,"address":1,"mediumRef":"MT-0","name":"Last"}),
+        ),
+        (
+            "group_address",
+            "/api/group-addresses",
+            json!({"address":"1/1/3","name":"Last"}),
+        ),
+        (
+            "group_range",
+            "/api/group-ranges",
+            json!({"start":"1/0/0","end":"1/7/255","name":"Last"}),
+        ),
+        (
+            "building_part",
+            "/api/building-parts",
+            json!({"kind":"Building","name":"Last"}),
+        ),
+    ];
+    for (kind, uri, body) in cases {
+        let state = Arc::new(state_with_two_group_addresses());
+        let app = knx_server::app(state.clone(), None);
+        if kind == "line" {
+            let response = call(
+                &app,
+                "POST",
+                "/api/areas",
+                Some(json!({"address":1,"name":"Parent"})),
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::OK);
+            *state.command_stack.lock().unwrap() = knx_core::CommandStack::new();
+        }
+        let n = u32::MAX - 1;
+        state.project.lock().unwrap().as_mut().unwrap().ids =
+            knx_core::IdAllocators::from_counts(n, n, n, n, n, n, n, n, n);
+        let mut baseline = state.project.lock().unwrap().clone().unwrap();
+        let response = call(&app, "POST", uri, Some(body.clone())).await;
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "{uri}: {}",
+            body_json(response).await
+        );
+        let created = state.project.lock().unwrap().clone().unwrap();
+        let installation = &created.installations[0];
+        let id = match kind {
+            "area" => installation.topology.areas.last().unwrap().id.0,
+            "line" => installation.topology.lines.last().unwrap().id.0,
+            "group_address" => installation.group_addresses.last().unwrap().id.0,
+            "group_range" => installation.group_ranges.last().unwrap().id.0,
+            "building_part" => installation.buildings.last().unwrap().id.0,
+            _ => unreachable!(),
+        };
+        assert_eq!(id, u32::MAX, "{kind}");
+        let refused = call(&app, "POST", uri, Some(body)).await;
+        assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+        assert!(body_json(refused).await["error"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("project {kind} ID range exhausted")));
+        assert_eq!(state.project.lock().unwrap().as_ref(), Some(&created));
+        assert_eq!(
+            call(&app, "POST", "/api/undo", None).await.status(),
+            StatusCode::OK
+        );
+        baseline.ids = created.ids.clone();
+        assert_eq!(state.project.lock().unwrap().as_ref(), Some(&baseline));
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+        assert_eq!(
+            call(&app, "POST", "/api/redo", None).await.status(),
+            StatusCode::OK
+        );
+        assert_eq!(state.project.lock().unwrap().as_ref(), Some(&created));
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_store::open_and_migrate(&dir.path().join("last.knxdb")).unwrap();
+        knx_store::save_project(&conn, &created).unwrap();
+        assert_eq!(knx_store::load_project(&conn).unwrap(), created);
+    }
+}
+
+#[tokio::test]
+async fn csv_exhaustion_refuses_the_whole_request_without_consuming_ids() {
+    for counter in [u32::MAX - 1, u32::MAX] {
+        let state = Arc::new(state_with_two_group_addresses());
+        state.project.lock().unwrap().as_mut().unwrap().ids =
+            knx_core::IdAllocators::from_counts(0, 0, 0, 0, 0, counter, 0, 0, 0);
+        let before = state.project.lock().unwrap().clone();
+        let app = knx_server::app(state.clone(), None);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("edits.csv");
+        std::fs::write(
+            &path,
+            "Address,Name\n1/1/1,Changed\n1/1/3,First\n1/1/4,Second\n",
+        )
+        .unwrap();
+        let response = import_csv(&app, &path).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let report = body_json(response).await;
+        assert!(
+            report
+                .to_string()
+                .contains("project group_address ID range exhausted"),
+            "{report}"
+        );
+        assert_eq!(*state.project.lock().unwrap(), before);
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+        assert!(!state.command_stack.lock().unwrap().can_redo());
+    }
 }
 
 #[tokio::test]

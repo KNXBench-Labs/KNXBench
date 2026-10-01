@@ -6533,6 +6533,26 @@ explicitly said non-public manufacturer documents are **not a blocker to
 continuing the project**. This is not an authorization for a live write or
 a substitute for durable, read-back pre-write recovery evidence.
 
+**[V] Read-only order-identity feasibility, 2026-10-01 (offline).** KNX
+Association's [Device Info description](https://support.knx.org/hc/en-us/articles/360018777979-Device-Info)
+qualifies its order number: only when the manufacturer supplies it in a
+readable/decodable form; otherwise the result is hexadecimal. Weinzierl's
+[BAOS user guide, §5.2.5](https://weinzierl.de/images/download/documents/baos/weinzierl_knx_baos_users_guide.pdf)
+lists `PID_ORDER_INFO` as property 15 of its own Device Object with a
+generic-ten type; that is an example of property access, **not** proof that
+MDT `1.1.67` exposes the same bytes, how to decode them, or that `.G1` and
+`.G2` can be distinguished by them. The existing KNXBench
+`ManagementSession::read_property` would surface a refused property as an
+error; there is currently no public read-only `PID_ORDER_INFO` CLI route.
+Even a successful raw read could narrow identity only after an independently
+verified MDT mapping; the project product reference describes intent, not
+the hardware. No property read, gateway contact, key use or live operation
+occurred in this source/code check. A future explicitly scoped read-only
+preflight must use the named device and gateway, the one-tunnel exclusion,
+an operator/project-supplied key if actually needed (never guessed), and
+report raw bytes or refusal without presenting an inferred model as fact.
+This does not supply affected-storage coverage or lift the K6 write gate.
+
 **[I] K6 recovery input still missing.** Before implementing a backup-based
 reopening, obtain the actual target's product/application identification and
 authoritative affected-storage mapping, including non-memory state and

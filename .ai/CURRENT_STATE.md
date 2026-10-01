@@ -14,6 +14,14 @@
 
 ---
 
+- **Last Agent:** codex (UI session / independent review intake)
+- **Timestamp:** 2026-10-01 19:52 CEST
+- **Completed:** Located the completed read-only U13 review in separate Hermes session `20261001_185328_b549c4`, final message `87018`, against revision `53aefe4ba0f71df9f30e853604f2b71b270d6a82`. Archived the actual report as `.ai/logs/2026-10-01_codex_ui-u13-gpt-review-received.md` with explicit provenance. Verdict: changes required. Three reported P1 findings: old device details can permit edits to device A after selecting B; parameter values do not refresh after Undo/Redo; an in-flight autosave can reschedule after disable. Reviewer assesses ISSUE-12 environmental firewall fix as satisfied on the documented host, but requests an offline UDP/transport discovery roundtrip for the second box. Reported tests and reproductions have not been rerun by this intake. No source, checkbox, Web lock, firewall or KNX operation changed.
+- **Pending/Next Steps:** Obtain explicit user acceptance of this independent GPT-6.1-Sol review as replacement for the originally selected Claude reviewer, or obtain that Claude review. Independently reproduce and fix the reported P1s with RED/GREEN/mutation coverage, reconcile ISSUE-12 evidence, and run final integrated gates before U13 closure. No claim that the UI track is complete or freigabefaehig.
+- **Notes for Codex oder Claude:** The reviewer explicitly identifies itself as GPT, not Claude; do not misattribute the report or silently change the user-selected review gate. The independent report remains useful evidence regardless of reviewer acceptance. Preserve foreign root edits and other worktrees. Intake is documentation-only, not implementation or a new gate run.
+
+---
+
 - **Last Agent:** codex (iaw commissioning / returned download-error cleanup)
 - **Timestamp:** 2026-10-01 18:20 CEST
 - **Completed:** The shared memory-download executor now closes a still-open management connection best-effort on returned execution errors, preserving the original error and backup, without retry/restore or duplicate disconnect. Invalid-plan checks still send nothing. Two RED tests reproduced pre-write/partial-mutation connection leaks; GREEN across all 3 wrappers, 45 executor tests, mutation killed 2/2. Full workspace 139 suites / 2,801 passed / 0 failed / 0 `SKIP:`, strict Clippy/fmt/layering/headers/anchors (375 links/225 files)/corpus-gates/diff passed; explicit private-fixture simulator backup/restore 1/1. No bus/key/Web-source/write. Commit `156d5404d58fba86aea6001ea2eb80e496849b5f` published and exact remote SHA readback matched. Evidence `.ai/logs/2026-10-01_codex_iaw-download-error-cleanup.md`.

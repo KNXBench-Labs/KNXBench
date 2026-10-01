@@ -7793,6 +7793,15 @@ occupancy-reading half of this entry is unchanged. The occupancy reading is revi
 `docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
 that rules on a Transport Layer release at step 1.
 
+**Current availability, 2026-10-01 (ADR-0059).** The previous live K6
+round trip does not prove complete, durable pre-write recovery for the
+button-selected device on a later call. Public confirmed CLI and HTTP starts
+now fail before opening a tunnel. Offline plan/phrase calls, protocol code
+and directly injected simulated session tests remain; this is a new safety
+boundary, not a retroactive claim that the prior test failed. A new hardware
+run needs a verified per-device pre-send backup/readback and new permission
+(RESEARCH §24).
+
 **Not a limitation any more.** An earlier draft of this section claimed MP
 §2.3 *"does not consider a `T_Connect` refusal, or a connection that opens
 and then answers nothing at all"*. The clause considers both, on p. 14,

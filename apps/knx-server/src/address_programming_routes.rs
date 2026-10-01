@@ -1,13 +1,18 @@
 //! `/api/device-address/*`: program a device's individual address on the button loop, and poll it.
 //!
 //! Programming the individual address is not a download (docs/GLOSSARY.md).
-//! ADR-0046 fixes the rules; in this order:
+//! ADR-0046 defines the protocol/session contract for future safe starts.
+//! ADR-0059 currently rejects confirmed public starts before tunnel opening
+//! because no complete durable pre-write recovery for the pressed device is
+//! implemented. The phrase route is still read-only and is not permission to
+//! write; status/stop can observe an already-held session.
 //!
-//! 1. `start` refuses before any socket opens unless the confirmation phrase
-//!    is the one `AddressProgrammingAuthorisation::for_hardware` demands for
-//!    the new address (it covers MP §2.3 step 4's restart), the wait is
-//!    within bounds, and no monitor, scan, download or other programming
-//!    runs.
+//! The retained session contract (not presently reachable through `start`):
+//! 1. A future enabled `start` must refuse before any socket opens unless
+//!    the confirmation phrase is the one
+//!    `AddressProgrammingAuthorisation::for_hardware` demands for the new
+//!    address (it covers MP §2.3 step 4's restart), the wait is within bounds,
+//!    and no monitor, scan, download or other programming runs.
 //! 2. `status` returns the rounds whose answer changed since `since`.
 //! 3. `stop` ends the wait. Once exactly one device was found, MP §2.3
 //!    runs to its end and `stop` answers `409`.
@@ -131,6 +136,8 @@ async fn start(
     let authorisation =
         AddressProgrammingAuthorisation::for_hardware(new_address, &body.confirmation)
             .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
+    knx_app::individual_address_programming_recovery::require_persistent_pre_write_recovery()
+        .map_err(|e| ApiError::with_status(StatusCode::PRECONDITION_FAILED, e))?;
 
     // Lock order download → programming → monitor → scan: a lock is only
     // ever awaited downward and `try_lock`ed upward, so no wait can form a

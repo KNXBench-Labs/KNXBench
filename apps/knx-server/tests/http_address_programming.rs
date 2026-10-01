@@ -16,6 +16,9 @@ use std::time::Duration;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::IndividualAddress;
+use knx_net::commissioning::programming_button_wait::{
+    AddressProgrammingAuthorisation, ButtonWait,
+};
 use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 use knx_net::{
     ApplicationService, BusError, Destination, DiscoveredGateway, ManagementTransport,
@@ -108,6 +111,7 @@ fn fast() -> SessionTiming {
 struct Harness {
     _dir: tempfile::TempDir,
     app: axum::Router,
+    state: Arc<knx_server::AppState>,
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
 }
@@ -128,7 +132,8 @@ fn harness(config: SimulatorConfig) -> Harness {
     });
     Harness {
         _dir: dir,
-        app: knx_server::app(state, None),
+        app: knx_server::app(Arc::clone(&state), None),
+        state,
         device,
         calls,
     }
@@ -160,6 +165,36 @@ async fn send(app: &axum::Router, request: Request<Body>) -> (StatusCode, Value)
 
 async fn start(h: &Harness, body: Value) -> (StatusCode, Value) {
     send(&h.app, post("/api/device-address/start", body)).await
+}
+
+/// Exercise the background session and HTTP status/stop endpoints in the
+/// simulator without bypassing the production start route's recovery gate.
+async fn start_simulated(h: &Harness, wait_seconds: u64) -> Value {
+    let address: IndividualAddress = NEW.parse().unwrap();
+    let authorisation = AddressProgrammingAuthorisation::for_hardware(address, PHRASE).unwrap();
+    let id = h
+        .state
+        .next_address_programming_id
+        .fetch_add(1, Ordering::SeqCst);
+    let session = knx_server::AddressProgrammingSession::start(
+        id,
+        Box::new(SimTunnel(Arc::clone(&h.device))),
+        address,
+        authorisation,
+        fast(),
+        ButtonWait {
+            give_up_after: Duration::from_secs(wait_seconds),
+            pause_between_rounds: Duration::from_millis(10),
+        },
+    );
+    assert!(h
+        .state
+        .address_programming
+        .lock()
+        .await
+        .replace(session)
+        .is_none());
+    json!({ "programmingId": id })
 }
 
 fn request(confirmation: &str, wait_seconds: u64) -> Value {
@@ -214,11 +249,26 @@ async fn the_phrase_route_names_the_address_and_sends_nothing() {
 }
 
 #[tokio::test]
+async fn confirmed_start_needs_durable_recovery_before_any_tunnel() {
+    let h = harness(SimulatorConfig {
+        programming_mode: true,
+        ..SimulatorConfig::default()
+    });
+    let previous = h.device.address();
+    let (status, body) = start(&h, request(PHRASE, 30)).await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert!(body
+        .to_string()
+        .contains("no verified durable pre-write backup"));
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(h.device.address(), previous);
+}
+
+#[tokio::test]
 async fn a_button_pressed_while_waiting_gets_the_address() {
     let h = harness(SimulatorConfig::default());
     let original = h.device.address();
-    let (status, body) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
+    let body = start_simulated(&h, 30).await;
     let id = body["programmingId"].as_u64().unwrap();
     let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
     assert_eq!(status, StatusCode::OK, "{activity}");
@@ -259,15 +309,14 @@ async fn a_button_pressed_while_waiting_gets_the_address() {
         json!([original.to_string()])
     );
     assert_eq!(events[2]["currentAddress"], original.to_string());
-    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0, "no public start tunnel");
 }
 
 #[tokio::test]
 async fn nobody_pressing_gives_up_and_writes_nothing() {
     let h = harness(SimulatorConfig::default());
     let original = h.device.address();
-    let (status, _) = start(&h, request(PHRASE, 1)).await;
-    assert_eq!(status, StatusCode::OK);
+    start_simulated(&h, 1).await;
     let (end, _) = finish(&h, |_| {}).await;
     assert_eq!(end["state"], "failed", "{end}");
     assert_eq!(end["written"], "no");
@@ -283,7 +332,7 @@ async fn nobody_pressing_gives_up_and_writes_nothing() {
 async fn stop_ends_the_wait_and_is_refused_once_the_procedure_runs() {
     let h = harness(SimulatorConfig::default());
     let original = h.device.address();
-    let (_, body) = start(&h, request(PHRASE, 30)).await;
+    let body = start_simulated(&h, 30).await;
     let id = body["programmingId"].clone();
     // Let it wait a little, then stop.
     tokio::time::sleep(Duration::from_millis(80)).await;
@@ -322,8 +371,7 @@ async fn several_buttons_are_asked_to_release_all_but_one() {
         ..SimulatorConfig::default()
     });
     let original = h.device.address();
-    let (status, _) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::OK);
+    start_simulated(&h, 30).await;
     let device = Arc::clone(&h.device);
     let (end, events) = finish(&h, |status| {
         if status["state"] == "waiting"
@@ -352,8 +400,7 @@ async fn an_unacknowledged_restart_finishes_with_the_restart_unconfirmed() {
         restart_unanswered: true,
         ..SimulatorConfig::default()
     });
-    let (status, _) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::OK);
+    start_simulated(&h, 30).await;
     let (end, _) = finish(&h, |_| {}).await;
     assert_eq!(end["state"], "finished", "{end}");
     assert_eq!(end["written"], "yes");
@@ -369,8 +416,7 @@ async fn written_but_silent_at_the_new_address_is_unconfirmed() {
         unanswered_connects: Some(1..3),
         ..SimulatorConfig::default()
     });
-    let (status, _) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::OK);
+    start_simulated(&h, 30).await;
     let (end, _) = finish(&h, |_| {}).await;
     assert_eq!(end["state"], "failed", "{end}");
     assert_eq!(end["written"], "unconfirmed");
@@ -428,8 +474,9 @@ async fn refusals_happen_before_any_tunnel_opens() {
 }
 
 #[tokio::test]
-async fn the_gateway_serves_one_tunnel_in_both_directions() {
-    // A monitor runs: no programming starts.
+async fn a_simulated_session_excludes_other_tunnels_while_public_start_refuses() {
+    // A monitor runs: the public programming start still refuses before a
+    // second tunnel (the missing recovery proof takes precedence).
     let h = harness(SimulatorConfig::default());
     let (status, body) = send(
         &h.app,
@@ -438,14 +485,16 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let (status, body) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::CONFLICT, "{body}");
-    assert!(body.to_string().contains("monitor"), "{body}");
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert!(
+        body.to_string().contains("durable pre-write backup"),
+        "{body}"
+    );
     assert_eq!(h.calls.load(Ordering::SeqCst), 1, "only the monitor's");
 
-    // A programming waits: no monitor, scan or second programming starts.
+    // A simulated programming waits: no monitor or scan starts.
     let h = harness(SimulatorConfig::default());
-    let (status, body) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
+    let body = start_simulated(&h, 30).await;
     let id = body["programmingId"].clone();
     let (status, body) = send(
         &h.app,
@@ -471,9 +520,9 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
-    let (status, _) = start(&h, request(PHRASE, 30)).await;
-    assert_eq!(status, StatusCode::CONFLICT);
-    assert_eq!(h.calls.load(Ordering::SeqCst), 1, "only the programming's");
+    let (status, body) = start(&h, request(PHRASE, 30)).await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0, "simulated session only");
 
     let (status, _) = send(
         &h.app,

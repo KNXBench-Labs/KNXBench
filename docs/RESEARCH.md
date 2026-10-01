@@ -6456,6 +6456,31 @@ safe reopening needs an identified device/mask, proven storage scope,
 pre-send durable per-device backup/readback and a separate recovery plan. No
 access key may be guessed; no new hardware go is implied.
 
+## 24. K6 button-address programming recovery scope (2026-10-01)
+
+**[V]** The public CLI and HTTP button-based address programming paths
+previously passed a valid new-address phrase and could open a tunnel. Neither
+created a durable pre-send backup/readback for the actual device selected by
+pressing its programming button. The generic download backup is plan-scoped
+and cannot automatically prove the storage effects of MP §2.3. ADR-0059
+now rejects confirmed public calls before tunnel or lock acquisition; an
+offline CLI UDP listener and HTTP simulator witness no datagram/connector call.
+Plan/phrase reads and direct simulated protocol sessions are unaffected.
+
+**[V]** RESEARCH §19 and KNOWN_LIMITATIONS §116 describe a user-authorized
+`1.1.67 → 1.1.68 → 1.1.67` run with readback and unchanged application
+dump. That verifies the observed run, not an automatic full-storage backup
+for arbitrary future button-selected devices, nor a successful restart
+acknowledgment.
+
+**[I]** MP §2.3's one-device button count establishes a protocol recipient,
+not the recipient's product identity, affected-storage scope or durable
+recovery record. A safe reopening requires those facts and a persisted,
+read-back, device-bound pre-send backup plus an abort/restore plan. ADR-0057's
+Architecture/Device Reader sources (§22) warn that network identifiers and
+arbitrary read ranges are insufficient as full manufacturer-specific memory
+evidence. No access key may be guessed; no new hardware permission is implied.
+
 ---
 
 ## Sources

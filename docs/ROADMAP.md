@@ -899,6 +899,13 @@ and an address change there and back (RESEARCH §19). The commissioning
 deliverable of Session 7 is delivered for mask `070nh` on one verified
 device (ADR-0048). Other masks and device families stay refused by name.
 
+**Safety update, 2026-10-01.** The historical K6 live result remains valid,
+but public CLI and HTTP button-address programming is now blocked before any
+tunnel: no complete durable pre-write recovery proof exists for the device
+selected by the programming button (ADR-0059). Plan/read-only and simulated
+protocol paths remain. The application-download feature remains separately
+scoped; the earlier product-availability claim for K6 is no longer current.
+
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 
 Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP

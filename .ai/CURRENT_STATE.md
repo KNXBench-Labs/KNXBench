@@ -1,3 +1,11 @@
+- **Last Agent:** codex (Hermes / alpha-release AR00)
+- **Timestamp:** 2026-10-01 21:53 CEST
+- **Completed:** User explicitly started alpha-release-goal.md. Reconciled all 180 inventory IDs/priorities/primary routes and owner receipts in docs/ALPHA_READINESS.md; input inventory unchanged. Corrected historical goal dispatch for resolved KL-18/23/24, ISSUE-04 and completed U13 without reimplementing owner work or relabelling the independent review. Mechanical recount: 110 headings, 105 residual boundaries, 104 triaged (5/30/55/14), §105 unclassified; both §130 identities and nine unnumbered aliases preserved. KL-70/88/134 lack evidenced user release-scope waiver and remain WAITING_DECISION; FUTURE-05 is LATER. Source/test inspection and narrower doc gates only: fresh-worktree xtask compiled, first anchors 375 links / 228 Markdown files, none dead; ledger/count/priority/ancestry/inventory and whitespace checks pass. Separate in-session diff review, no product source or live bus. Log .ai/logs/2026-10-01_codex_alpha-queue.md.
+- **Pending/Next Steps:** Repeat final doc/staged gates, publish only owned documentation, verify remote ref/artifact and clean owned queue checkout/target/scratch. Then immediately start AR01 runtime target/coverage regression; ordinary green boundaries are not a stop. Canonical-root statistics refresh is blocked by foreign modified stats.md and safe history synchronization by its owner; no fabricated refresh or report overwrite.
+- **Notes for Codex oder Claude:** For the alpha-release session: this AR queue supersedes overlapping goal.md execution, not UI/commissioning ownership. For the UI session: U0–U13/ISSUE-12 dated closure adopted; native WebKitGTK/real-screen-reader/multicast and optional boundaries remain. For commissioning: cleanup/worker/directory receipts adopted at offline scope; exact identity/complete recovery/new go still required, no hardware permission. Preserve foreign root handover/research/stats and unpublished telemetry/shutdown docs, commissioning/review worktrees and active locks; no subagents or quota checks. No release tag/upload authorized.
+
+---
+
 - **Last Agent:** codex (UI session / U13 publication receipt)
 - **Timestamp:** 2026-10-01 21:01 CEST
 - **Web lock:** released by ui-u13-fixes; no active UI package remains.

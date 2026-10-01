@@ -15,8 +15,10 @@ publish a release AppImage exists but has never been run.
 
 **KNXBench is Alpha software.** Concretely:
 
-- `docs/KNOWN_LIMITATIONS.md` in the repository lists 119 known limitations
-  today. Seven of them are classified critical.
+- As of 2026-10-01, `docs/KNOWN_LIMITATIONS.md` has 110 numbered headings,
+  including five resolved/clarification-only entries. Of the 105 residual
+  boundaries, five are K1 (critical); the detailed triage is the authority,
+  not a count of headings interpreted as defects.
 - The web/Docker server's protection is one shared password and one session
   cookie. No user accounts, no roles, no audit trail, and no TLS of its own.
   Without a password it refuses to leave loopback at all.

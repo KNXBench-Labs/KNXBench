@@ -94,18 +94,35 @@ The existing statistics refresh requirement remains bookkeeping, not permission 
 
 ## 3. Ordered work packages
 
-All checkboxes start open: this plan claims no completed implementation. A package can close as verified correction, delivered scoped code, explicit accepted boundary or recorded external prerequisite **only under the status rules above**. Package closure does not automatically mean every source limitation was removed.
+**Execution started:** 2026-10-01, user request `arbeite alpha-release-goal.md ab`.
+AR00 is `DONE` on the isolated `alpha-queue` checkout at baseline
+`307a5970`; per-ID evidence, decision provenance, stable unnumbered aliases
+and safe fallbacks are in [ALPHA_READINESS](docs/ALPHA_READINESS.md).
+No other `goal.md` executor was found in the startup process/worktree check;
+that file now explicitly points here rather than dispatching overlapping work.
+Evidence: `.ai/logs/2026-10-01_codex_alpha-queue.md`, verified 180-ID
+priority/route/owner ledger, 110-heading/105-residue recount, and fresh-target
+anchor gate. This is documentation/source inspection, not a new product test run.
+Next ready package: AR01 (runtime gate target/coverage).
+The canonical-root statistics refresh is blocked by foreign local report work;
+this does not block unrelated offline packages and is not a fabricated refresh.
+
+The original plan started with all checkboxes open. Checked steps below now
+refer to actual execution evidence, not planning success. A package can close
+as verified correction, delivered scoped code, explicit accepted boundary or
+recorded external prerequisite **only under the status rules above**. Package
+closure does not automatically mean every source limitation was removed.
 
 ### AR00 — Establish the live queue and remove stale dispatch instructions
 
 **Sources:** `DOC-01`, `DOC-02`, `TOOLS-06`, plus every appendix route.
 **Mode:** offline documentation/evidence. **Dependencies:** none.
 
-- [ ] Reconcile each source ID against current code, status, ADRs and both owners' latest receipts; preserve the dated input inventory rather than pretending it was a new audit.
-- [ ] Verify the already-fixed `KL-18`, `KL-23`, `KL-24` and ISSUE-04 assertions from their implementations/tests, then correct stale non-owner goal/manual dispatch text with retained historical provenance. Do not reimplement streaming, file gestures or completed PDB/UI packages.
-- [ ] Record stable IDs for both §130 entries and unnumbered limits. Recount triage mechanically without destructive renumbering or broken fragment links.
-- [ ] Classify `ACCEPTED` and `LATER` appendix entries using their actual decision/evidence. If a purported acceptance lacks provenance, leave `WAITING_DECISION`; do not manufacture consent.
-- [ ] Record current UI/commissioning dependencies as owner receipts, not local tasks. Establish that no old `goal.md` executor is simultaneously editing the same alpha-owned scope.
+- [x] Reconcile each source ID against current code, status, ADRs and both owners' latest receipts; preserve the dated input inventory rather than pretending it was a new audit.
+- [x] Verify the already-fixed `KL-18`, `KL-23`, `KL-24` and ISSUE-04 assertions from their implementations/tests, then correct stale non-owner goal/manual dispatch text with retained historical provenance. Do not reimplement streaming, file gestures or completed PDB/UI packages.
+- [x] Record stable IDs for both §130 entries and unnumbered limits. Recount triage mechanically without destructive renumbering or broken fragment links.
+- [x] Classify `ACCEPTED` and `LATER` appendix entries using their actual decision/evidence. If a purported acceptance lacks provenance, leave `WAITING_DECISION`; do not manufacture consent.
+- [x] Record current UI/commissioning dependencies as owner receipts, not local tasks. Establish that no old `goal.md` executor is simultaneously editing the same alpha-owned scope.
 
 **Exit evidence:** complete 180-ID routing/decision ledger, mechanically verified counts, corrected actionable queue and doc gates. No release-ready claim.
 
@@ -380,9 +397,15 @@ Do not use a completion percentage for unequal tasks. Report completed packages,
 
 The following table is the authoritative one-primary-route map for the 180 main-table entries in `OFFENE_PUNKTE.md`. Priority is copied from that inventory, not recomputed. The inventory contains the corresponding descriptions and exact source paths. Preserve IDs when updating status; new post-snapshot findings receive their own documented identity and do not silently change the input count.
 
-**Initial execution state:** planning only; no AR implementation has started. Owner references and accepted/later entries are not unchecked implementation jobs here. `WAITING_OWNER` on an owner-routed inventory row means consume/reconcile that owner's current evidence or scope disposition, not that a completed U-package must be implemented again. The UI closure receipt above is available; AR00 must distinguish its completed scope from optional owner-only follow-ups and remaining disclosed evidence boundaries.
+**Current execution state:** AR00 reconciliation on baseline `307a5970`;
+[ALPHA_READINESS](docs/ALPHA_READINESS.md) records each row's evidence and
+unblock contract. Owner references and accepted/later entries are not unchecked
+implementation jobs here. U13/ISSUE-12's dated tasks are done, while their
+native/accessibility/multicast and optional boundaries remain disclosed.
+Technical rulings for KL-70/88/134 are not silently upgraded to user release
+waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 
-| Source ID | Priority | Primary route | Initial status |
+| Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |
 | `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-139` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -404,7 +427,7 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `DATA-01` | P1 | AR02 | TODO |
 | `KL-129` | P1 | AR03 | WAITING_DECISION |
 | `KL-106` | P1 | AR13 | TODO |
-| `DOC-01` | P1 | AR00 | TODO |
+| `DOC-01` | P1 | AR00 | DONE |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL |
 | `KL-13` | P1 | AR08 | TODO |
 | `PDB-09` | P1 | AR05 | TODO |
@@ -415,8 +438,8 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `KL-22` | P1 | AR13 | TODO |
 | `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `UI-01` | P1 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UI-02` | P1 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `UI-01` | P1 | `goal-ui.md` — owner only | DONE |
+| `UI-02` | P1 | `goal-ui.md` — owner only | DONE |
 | `KL-126` | P2 | AR14 | TODO |
 | `KL-29` | P2 | AR14 | TODO |
 | `KL-31` | P2 | AR14 | TODO |
@@ -512,7 +535,7 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `HISTORY-01` | P3 | Later / separate scope — not an alpha task | LATER |
 | `HISTORY-02` | P3 | Later / separate scope — not an alpha task | LATER |
-| `DOC-02` | P3 | AR00 | TODO |
+| `DOC-02` | P3 | AR00 | DONE |
 | `MODEL-04` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `MODEL-05` | P3 | Later / separate scope — not an alpha task | LATER |
 | `MODEL-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
@@ -523,9 +546,9 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `IMPORT-04` | P3 | Later / separate scope — not an alpha task | LATER |
 | `KL-100` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-48` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-134` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-70` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
+| `KL-134` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
+| `KL-70` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
+| `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
 | `PDB-03` | P3 | AR07 | TODO |
 | `PDB-04` | P3 | Later / separate scope — not an alpha task | LATER |
 | `PDB-07` | P3 | AR05 | TODO |
@@ -534,7 +557,7 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `FUTURE-02` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-03` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-05` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
+| `FUTURE-05` | P3 | Recorded boundary — AR00 provenance / AR15 claims | LATER |
 | `FUTURE-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `FUTURE-07` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
@@ -550,7 +573,7 @@ The following table is the authoritative one-primary-route map for the 180 main-
 | `KL-55` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-56` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-9` | P3 | AR15 | TODO |
-| `TOOLS-06` | P3 | AR00 | TODO |
+| `TOOLS-06` | P3 | AR00 | DONE |
 | `TOOLS-01` | P3 | Later / separate scope — not an alpha task | LATER |
 | `TOOLS-02` | P3 | Later / separate scope — not an alpha task | LATER |
 | `TOOLS-03` | P3 | Later / separate scope — not an alpha task | LATER |

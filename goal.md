@@ -1,5 +1,12 @@
 # KNXBench goal — everything still open, minus commissioning
 
+**Execution routing (2026-10-01, AR00):** the user has started
+[`alpha-release-goal.md`](alpha-release-goal.md). Its AR queue is the sole
+executor for overlapping non-UI/non-commissioning work; this file is retained
+as historical scope and decision evidence, not a parallel dispatch queue.
+Current per-ID evidence and unresolved decisions are in
+[`docs/ALPHA_READINESS.md`](docs/ALPHA_READINESS.md).
+
 Current open work outside commissioning and the UI-owned track. The old
 Paperclip takeover, T01–T17 and PDB-1–PDB-11 have been completed or retired;
 §12 names the remaining acceptance and decision points. Consult current
@@ -112,13 +119,11 @@ claim needs independent evidence and a separate scoped decision.
 The diagnostics UI, scan reconciliation, settings, drag/drop, discovery,
 project creation and the closed search/accessibility bugs have shipped. The
 remaining user-facing backlog is in [`goal-ui.md`](goal-ui.md), not in old
-T08–T13 checklists. Two narrower items still lack an accepted disposition:
-
-- **§23:** `/api/project/download` buffers the entire `.knxdb` in memory.
-  Measure a large project and decide whether streaming is needed before
-  describing this as solved.
-- **§24:** the file picker still has no multi-select or drag-and-drop.
-  Do not conflate structural drag/drop (already shipped) with file input.
+T08–T13 checklists. AR00 verified the formerly listed §23/§24 assertions
+against the existing implementation and regression tests: downloads stream
+bounded chunks while retaining temporary SQLite serialization, and the
+browser picker uploads multiple selected/dropped files sequentially. Opening
+a project is still an individual choice. Neither is a new implementation task.
 
 ---
 
@@ -268,8 +273,8 @@ path and unresolved safety boundaries belong to `goal-commission.md`.
 The thirteen original reports have an evidence checklist in
 [`docs/superpowers/plans/2026-09-21-user-reported-issues.md`](docs/superpowers/plans/2026-09-21-user-reported-issues.md).
 Delivered slices are not pending tasks. `goal-ui.md` owns the remaining UI
-checks; ISSUE-04's unticked acceptance rows require verification before being
-closed (§12.2). New domain or compatibility questions remain investigation-first.
+checks; ISSUE-04's saved-baseline and locale-aware timestamp rows are already
+tested and ticked (§12.2). New domain or compatibility questions remain investigation-first.
 
 ---
 
@@ -281,14 +286,16 @@ Sources for this section:
 - The eight agent handoffs in `docs/paperclip-shutdown/` (uncommitted) and their summary, `docs/paperclip-shutdown/STATUS.md`.
 - A git check of every Paperclip worktree on 2026-09-27.
 
-`main` is still at `7b64496`. Paperclip merged nothing and pushed nothing.
+**Historical observation, 2026-09-27:** `main` was at `7b64496` for the
+Paperclip shutdown check; Paperclip merged nothing and pushed nothing in
+that check. This is not the current repository revision or a dispatch order.
 
 "Board" in the Paperclip sources means the user. A Board approval listed below is therefore a user decision. Do not ask for it again.
 
 ### 12.1 Completed foundations
 
 T01–T17 and PDB-1–PDB-11, the Paperclip DIN-9/10/11/4/16/12/26
-takeovers and the dated UI delivery through U11 are already integrated.
+takeovers and the dated UI delivery through U13 are already integrated.
 DIN-3 was rejected, not an item to merge. Evidence is in
 `docs/IMPLEMENTATION_STATUS.md`, ADR-0038/0039 and Git history. Do not
 repeat the former takeover and verification instructions. DIN-26's twelve
@@ -296,20 +303,22 @@ accepted limits are recorded in §6.
 
 ### 12.2 Work still requiring a decision or delivery
 
-1. §3's file-download memory cost and file-picker gestures (§23/§24);
-   §4's CSV-derived columns and large-diff paging (§40/§60) need a scoped
+1. §3's former streaming/file-picker tasks (§23/§24) are resolved; §4's
+   CSV-derived columns and large-diff paging (§40/§60) still require a scoped
    decision, not an invented acceptance.
-2. `goal-ui.md` U0–U12's bounded UI slices are delivered. U13 still needs
-   the user's chosen independent read-only review and findings fixes. The
-   2026-10-01 Claude service refusal occurred before a review verdict.
-   ISSUE-12 retains two discovery evidence boxes: the host-firewall fix
-   enabled CLI/HTTP discovery but no wire capture or full loopback multicast
-   test was run. Native WebKitGTK Search remains unverified.
+2. `goal-ui.md` U0–U13's bounded slices are delivered at `dfa0cc79` with
+   publication receipt `8a51b74d`. The user accepted the independent
+   GPT-6.1-Sol review in place of unavailable Claude; its original changes-
+   required verdict and the later in-session fix review keep their provenance.
+   Both ISSUE-12 boxes are ticked with host-firewall and offline UDP unicast
+   loopback evidence, not a wire capture/full multicast roundtrip. Native
+   WebKitGTK Search and real-screen-reader verification remain disclosed.
 3. ISSUE-04's saved-baseline and locale-aware last-save acceptance rows are
    now tested and ticked; do not dispatch them again.
-4. The manual's location/screenshots/claim-by-claim acceptance (T23), then
-   the user's alpha tag choice (T18), then the final whole-goal review (§10).
-   No release tag has been authorized.
+4. The manual's location/screenshots/claim-by-claim acceptance (AR16), local
+   candidate (AR17), final integrated gates and independent whole-product
+   review (AR18), then the user's release decision (AR19). No release tag
+   has been authorized; the release decision is not a review prerequisite.
 5. Commissioning K6/serial/K13 confirmed address writes currently refuse
    before any tunnel, pending verified device-specific durable recovery;
    `1.1.32` has bounded read-only presence/partial identity evidence only;

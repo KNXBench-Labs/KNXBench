@@ -56,7 +56,7 @@ fn project_with_ga_name(ga_name: &str) -> Project {
         parameters: vec![],
     });
 
-    let id = project.ids.next_group_address_id();
+    let id = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {

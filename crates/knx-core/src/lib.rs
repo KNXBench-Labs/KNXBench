@@ -48,7 +48,7 @@ pub use ids::*;
 pub use installation::Installation;
 pub use module::ModuleInstance;
 pub use parameter::ParameterInstance;
-pub use project::{IdAllocators, Project, ProjectInfo, CURRENT_SCHEMA_VERSION};
+pub use project::{IdAllocationError, IdAllocators, Project, ProjectInfo, CURRENT_SCHEMA_VERSION};
 pub use provenance::{Layer, Override, Resolved};
 pub use scan::{ScanPlan, ScanPlanBuilder, ScanPlanError};
 pub use string_table::{Language, LocalizedString, StringTable, Text, TranslationKey};

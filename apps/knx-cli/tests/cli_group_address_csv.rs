@@ -42,7 +42,7 @@ fn tiny_project() -> Project {
         parameters: vec![],
     });
 
-    let id = project.ids.next_group_address_id();
+    let id = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {
@@ -98,6 +98,45 @@ fn split_trailing_status_line(stdout: &str) -> (&str, &str) {
     let trimmed = stdout.strip_suffix('\n').unwrap_or(stdout);
     let idx = trimmed.rfind('\n').map(|i| i + 1).unwrap_or(0);
     (&trimmed[..idx], &trimmed[idx..])
+}
+
+#[test]
+fn ga_import_exhaustion_exits_2_without_saving_existing_edits() {
+    for counter in [u32::MAX - 1, u32::MAX] {
+        let dir = tempfile::tempdir().unwrap();
+        let store = dir.path().join("project.knxdb");
+        let csv_path = dir.path().join("edits.csv");
+        let mut before = tiny_project();
+        before.ids = knx_core::IdAllocators::from_counts(0, 0, 0, 0, 0, counter, 0, 0, 0);
+        let conn = knx_store::open_and_migrate(&store).unwrap();
+        knx_store::save_project(&conn, &before).unwrap();
+        drop(conn);
+        std::fs::write(
+            &csv_path,
+            "Address,Name\n1/1/1,Changed\n1/1/2,First\n1/1/3,Second\n",
+        )
+        .unwrap();
+        for dry_run in [false, true] {
+            let mut args = vec![
+                "ga-import",
+                store.to_str().unwrap(),
+                csv_path.to_str().unwrap(),
+            ];
+            if dry_run {
+                args.push("--dry-run");
+            }
+            let out = run_cli(&args);
+            let stdout = String::from_utf8(out.stdout).unwrap();
+            assert_eq!(out.status.code(), Some(2), "{stdout}");
+            assert!(
+                stdout.contains("project group_address ID range exhausted"),
+                "{stdout}"
+            );
+            assert!(stdout.contains("store written: no (rejected)"), "{stdout}");
+            let conn = knx_store::open_and_migrate(&store).unwrap();
+            assert_eq!(knx_store::load_project(&conn).unwrap(), before);
+        }
+    }
 }
 
 #[test]

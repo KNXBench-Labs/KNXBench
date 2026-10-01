@@ -58,7 +58,7 @@ fn state_with_one_group_address() -> knx_server::AppState {
         parameters: vec![],
     });
 
-    let id1 = project.ids.next_group_address_id();
+    let id1 = project.ids.next_group_address_id().unwrap();
     project.installations[0]
         .group_addresses
         .push(GroupAddressEntry {

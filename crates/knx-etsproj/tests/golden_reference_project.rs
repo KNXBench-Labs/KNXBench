@@ -33,7 +33,7 @@ fn space_type_schema_23_preserves_documented_tokens_and_reports_unknown() {
         let parsed =
             parse_installation_v21(xml.as_bytes(), "P-0001/0.xml", known_schema(23).unwrap())
                 .unwrap();
-        let mapped = map(&parsed.document, "P-0001/0.xml");
+        let mapped = map(&parsed.document, "P-0001/0.xml").unwrap();
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         for (path, bytes) in [
             ("P-0001.signature", b"x".as_slice()),

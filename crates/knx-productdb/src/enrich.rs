@@ -465,8 +465,8 @@ mod tests {
     /// `flags` are all `Absent` at instance level.
     fn project_with(com_ref_id: &str, dpt: Override<knx_core::DptRef>) -> Project {
         let mut p = Project::new(Language("de-DE".into()));
-        let device_id = p.ids.next_device_id();
-        let com_id = p.ids.next_com_object_instance_id();
+        let device_id = p.ids.next_device_id().unwrap();
+        let com_id = p.ids.next_com_object_instance_id().unwrap();
         p.devices.insert(DeviceInstance {
             id: device_id,
             source: source("P-0001-0_DI-1"),
@@ -848,9 +848,9 @@ mod tests {
     /// device-level `RefId` `enrich()` must transform before lookup.
     fn project_with_module_com_object(ets_id: &str) -> Project {
         let mut p = Project::new(Language("de-DE".into()));
-        let device_id = p.ids.next_device_id();
-        let com_id = p.ids.next_com_object_instance_id();
-        let module_id = p.ids.next_module_instance_id();
+        let device_id = p.ids.next_device_id().unwrap();
+        let com_id = p.ids.next_com_object_instance_id().unwrap();
+        let module_id = p.ids.next_module_instance_id().unwrap();
         p.devices.insert_module_instance(knx_core::ModuleInstance {
             id: module_id,
             device: device_id,

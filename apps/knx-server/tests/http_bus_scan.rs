@@ -54,10 +54,10 @@ fn project_device(id: DeviceId, address: knx_core::IndividualAddress) -> DeviceI
 
 fn state_with_project(tunnel: FakeTunnel) -> knx_server::AppState {
     let mut project = Project::new(Language("en".into()));
-    let area_id = project.ids.next_area_id();
-    let line_id = project.ids.next_line_id();
-    let missing_id = project.ids.next_device_id();
-    let excluded_id = project.ids.next_device_id();
+    let area_id = project.ids.next_area_id().unwrap();
+    let line_id = project.ids.next_line_id().unwrap();
+    let missing_id = project.ids.next_device_id().unwrap();
+    let excluded_id = project.ids.next_device_id().unwrap();
     project.devices.insert(project_device(missing_id, addr(2)));
     project.devices.insert(project_device(excluded_id, addr(3)));
     project.installations.push(Installation {

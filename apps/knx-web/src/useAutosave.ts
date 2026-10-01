@@ -139,7 +139,9 @@ export function useAutosave(options: UseAutosaveOptions): UseAutosaveResult {
   }
 
   useEffect(() => {
+    let active = true;
     if (!enabled) {
+      scheduleNextCycleRef.current = null;
       clearAllTimers();
       setRemaining(null);
       return;
@@ -154,6 +156,9 @@ export function useAutosave(options: UseAutosaveOptions): UseAutosaveResult {
     // (see there): a cut-short countdown never got the chance to run
     // down, so nothing has been "spent" against the next one yet.
     function scheduleNextCycle(fullInterval = false) {
+      // A save can finish after disable/unmount or a cadence change. Its
+      // obsolete closure must not add a timer or overwrite the new cycle's.
+      if (!active) return;
       const waitMs = fullInterval
         ? intervalMinutes * MINUTE_MS
         : Math.max(0, intervalMinutes * MINUTE_MS - countdownSeconds * SECOND_MS);
@@ -205,8 +210,10 @@ export function useAutosave(options: UseAutosaveOptions): UseAutosaveResult {
     scheduleNextCycle();
     scheduleNextCycleRef.current = scheduleNextCycle;
     return () => {
+      active = false;
       scheduleNextCycleRef.current = null;
       clearAllTimers();
+      setRemaining(null);
     };
     // Deliberately re-armed only by the inputs that change the *cadence*
     // of the cycle. `hasStorePath`/`isModified`/`onSave`/`onSaveFailed`

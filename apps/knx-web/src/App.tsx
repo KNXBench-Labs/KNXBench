@@ -488,6 +488,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   async function selectEntity(sel: Selection) {
     selectionRef.current = sel;
     setSelection(sel);
+    // Never leave the previous device's editable fields under a new selection
+    // while its asynchronous detail request is pending or fails.
+    setDeviceDetail(null);
     if (sel.kind === "building_part") {
       setBuildingScope(sel.id);
       setView("buildings");
@@ -1004,7 +1007,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
         onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }} />}
-      {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
+      {tree && selection?.kind === "device" && deviceDetail?.id === selection.id && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
     </div>
   );
 

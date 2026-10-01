@@ -324,8 +324,8 @@ and [KNOWN_LIMITATIONS.md](../../KNOWN_LIMITATIONS.md#u12-structure-editor-scope
 - [x] Add parsing/validation tests for IPv4, IPv6, hostname, blank/default port, invalid port, and discovered endpoints. (`gatewayEndpoint.test.ts` covers parsing, defaults and rejected unsupported hosts/ports; `BusMonitorPanel.test.tsx` covers the separate fields, preference hydration, discovery selection and the unchanged start payload. IPv6 and hostnames are preserved but explicitly rejected: the server's `SocketAddrV4` tunnel cannot connect to them.)
 - [x] Reproduce discovery from the unpackaged dev build and the exact AppImage on the same host/interface, recording bind address, HPAI, multicast interface, timeout, and firewall/sandbox evidence. (2026-09-28 U2 live syscall comparison, RESEARCH §20.1: both send from the host interface and get no response; firewall-rule inspection is denied, explicitly recorded as unknown.)
 - [x] Rank causes from evidence before editing; do not add retries, sleeps, or a packaging workaround without a demonstrated mechanism. (U2 AppImage-vs-dev comparison, RESEARCH §20.1 and KNOWN_LIMITATIONS §79: a packaging-only fault is unsupported; network/gateway behavior remains unproven.)
-- [ ] Implement the narrow fix at the owning network/packaging layer and retain manual connection as a first-class fallback.
-- [ ] Add loopback tests where possible and document the boundary that still requires a real multicast network.
+- [x] Implement the narrow fix at the owning network/packaging layer and retain manual connection as a first-class fallback. (User-approved independent GPT-6.1-Sol review accepts the operator's 2026-09-30 host-firewall correction, RESEARCH §20.1 / KNOWN_LIMITATIONS §79: unchanged CLI/HTTP discovery works after allowing the actual unicast reply. No protocol/AppImage patch is justified; manual numeric-IPv4 host/port connection remains first-class, covered by `gatewayEndpoint.test.ts` and `BusMonitorPanel.test.tsx`.)
+- [x] Add loopback tests where possible and document the boundary that still requires a real multicast network. (`client::tests::discovery_loopback_roundtrip_uses_advertised_hpai_and_filters_datagrams` and `::discovery_loopback_no_reply_returns_empty_at_the_deadline`: actual UDP exchange over 127.0.0.1 through the shared production helper, no skip path; HPAI, response filtering/projection, duplicate endpoints, multiple reply sources and timeout. RESEARCH §20.1 / KNOWN_LIMITATIONS §79 explicitly exclude multicast/firewall/real-gateway/native-WebKitGTK proof.)
 
 **U10 scope boundary (2026-09-29):** Separate fields and the manually entered
 IPv4 endpoint can ship without changing the KNXnet/IP protocol. U2 did not
@@ -347,6 +347,14 @@ firewall fix and existing offline tests (`http_bus_discover.rs`, the local
 discovery-HPAI test) against their exact wording. Do not add a speculative
 protocol retry, change the firewall here, or claim a loopback multicast
 roundtrip that those tests do not provide.
+
+**U13 reconciliation (2026-10-01):** the operator explicitly accepted the
+independent GPT-6.1-Sol report in place of unavailable Claude. The report
+accepts the environmental firewall correction but required actual offline
+transport coverage, now supplied by the two named loopback tests above.
+This supersedes the historical open-box notices without converting unicast
+loopback into multicast proof, inventing a packet capture, or changing host
+firewall/protocol behavior.
 
 ### ISSUE-13: Session-log freetext search and export
 

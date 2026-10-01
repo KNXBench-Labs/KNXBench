@@ -147,61 +147,78 @@ const ROUTING_MULTICAST: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(224, 0, 
 /// Cycle 3 Q3 — full spec value, not a shortened one).
 const SEARCH_TIMEOUT_SECS: u64 = 10;
 
+/// Shared discovery exchange. Production supplies its existing multicast
+/// destination, route-resolved HPAI and timeout; offline tests supply only
+/// loopback sockets. No public endpoint override or protocol change.
+async fn discover_on_socket(
+    socket: &UdpSocket,
+    discovery_endpoint: Hpai,
+    destination: SocketAddrV4,
+    timeout: Duration,
+) -> Result<Vec<DiscoveredGateway>, BusError> {
+    let request_body = discovery::encode_search_request(discovery_endpoint);
+    let datagram = frame::encode_frame(services::SEARCH_REQUEST, &request_body);
+    socket
+        .send_to(&datagram, destination)
+        .await
+        .map_err(BusError::Io)?;
+
+    let mut gateways: Vec<DiscoveredGateway> = Vec::new();
+    let deadline = tokio::time::Instant::now() + timeout;
+    let mut buf = [0u8; 1024];
+    loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        let Ok(Ok((n, _src))) = tokio::time::timeout(remaining, socket.recv_from(&mut buf)).await
+        else {
+            break; // window elapsed, or the socket errored: stop collecting
+        };
+        let Ok((header, resp_body)) = frame::decode_frame(&buf[..n]) else {
+            continue;
+        };
+        if header.service_type != services::SEARCH_RESPONSE {
+            continue;
+        }
+        let Ok(response) = discovery::decode_search_response(resp_body) else {
+            continue;
+        };
+        let control_endpoint = SocketAddrV4::new(
+            response.control_endpoint.addr,
+            response.control_endpoint.port,
+        );
+        if gateways
+            .iter()
+            .any(|g| g.control_endpoint == control_endpoint)
+        {
+            continue;
+        }
+        let supports_tunnelling = response
+            .service_families
+            .as_ref()
+            .is_some_and(|f| f.supports(dib::SERVICE_FAMILY_TUNNELLING));
+        gateways.push(DiscoveredGateway {
+            control_endpoint,
+            individual_address: response.device_info.individual_address,
+            friendly_name: response.device_info.friendly_name,
+            supports_tunnelling,
+        });
+    }
+    Ok(gateways)
+}
+
 impl BusConnection for KnxNetIpClient {
     async fn discover(&self) -> Result<Vec<DiscoveredGateway>, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
         let discovery_endpoint = local_discovery_hpai(&socket).await?;
-        let request_body = discovery::encode_search_request(discovery_endpoint);
-        let datagram = frame::encode_frame(services::SEARCH_REQUEST, &request_body);
-        socket
-            .send_to(&datagram, DISCOVERY_MULTICAST)
-            .await
-            .map_err(BusError::Io)?;
-
-        let mut gateways: Vec<DiscoveredGateway> = Vec::new();
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(SEARCH_TIMEOUT_SECS);
-        let mut buf = [0u8; 1024];
-        loop {
-            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-            if remaining.is_zero() {
-                break;
-            }
-            let Ok(Ok((n, _src))) =
-                tokio::time::timeout(remaining, socket.recv_from(&mut buf)).await
-            else {
-                break; // window elapsed, or the socket errored: stop collecting
-            };
-            let Ok((header, resp_body)) = frame::decode_frame(&buf[..n]) else {
-                continue;
-            };
-            if header.service_type != services::SEARCH_RESPONSE {
-                continue;
-            }
-            let Ok(response) = discovery::decode_search_response(resp_body) else {
-                continue;
-            };
-            let control_endpoint = SocketAddrV4::new(
-                response.control_endpoint.addr,
-                response.control_endpoint.port,
-            );
-            if gateways
-                .iter()
-                .any(|g| g.control_endpoint == control_endpoint)
-            {
-                continue;
-            }
-            let supports_tunnelling = response
-                .service_families
-                .as_ref()
-                .is_some_and(|f| f.supports(dib::SERVICE_FAMILY_TUNNELLING));
-            gateways.push(DiscoveredGateway {
-                control_endpoint,
-                individual_address: response.device_info.individual_address,
-                friendly_name: response.device_info.friendly_name,
-                supports_tunnelling,
-            });
-        }
-        Ok(gateways)
+        discover_on_socket(
+            &socket,
+            discovery_endpoint,
+            DISCOVERY_MULTICAST,
+            Duration::from_secs(SEARCH_TIMEOUT_SECS),
+        )
+        .await
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
@@ -1063,6 +1080,138 @@ async fn wait_for_reply<T: Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The same synthetic DIB layout as discovery.rs's codec fixture; not a
+    // private gateway capture. All transport endpoints stay on 127.0.0.1.
+    fn loopback_search_response(endpoint: SocketAddrV4, tunnelling: bool) -> Vec<u8> {
+        let mut body = Hpai {
+            addr: *endpoint.ip(),
+            port: endpoint.port(),
+        }
+        .encode()
+        .to_vec();
+        body.extend_from_slice(&[0x36, dib::DEVICE_INFO, 0x02, 0x00, 0x11, 0x01]);
+        body.extend_from_slice(&[0; 2]); // project-installation id
+        body.extend_from_slice(&[0; 6]); // serial
+        body.extend_from_slice(&[224, 0, 23, 12]);
+        body.extend_from_slice(&[0; 6]); // MAC
+        let mut name = b"Offline gateway".to_vec();
+        name.resize(30, 0);
+        body.extend_from_slice(&name);
+        if tunnelling {
+            body.extend_from_slice(&[0x04, dib::SUPP_SVC_FAMILIES, 0x04, 0x01]);
+        }
+        frame::encode_frame(services::SEARCH_RESPONSE, &body)
+    }
+
+    #[tokio::test]
+    async fn discovery_loopback_roundtrip_uses_advertised_hpai_and_filters_datagrams() {
+        let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let peer = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let other_peer = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = local_hpai(&client).unwrap();
+        let peer_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, peer.local_addr().unwrap().port());
+        let other_addr =
+            SocketAddrV4::new(Ipv4Addr::LOCALHOST, other_peer.local_addr().unwrap().port());
+        let valid = loopback_search_response(peer_addr, true);
+        let other = loopback_search_response(other_addr, false);
+
+        let roundtrip = async {
+            tokio::join!(
+                discover_on_socket(&client, endpoint, peer_addr, Duration::from_millis(200),),
+                async {
+                    let mut buf = [0; 1024];
+                    let (n, source) = peer.recv_from(&mut buf).await.unwrap();
+                    assert_eq!(source, client.local_addr().unwrap());
+                    let (header, body) = frame::decode_frame(&buf[..n]).unwrap();
+                    assert_eq!(header.service_type, services::SEARCH_REQUEST);
+                    let [hi, lo] = endpoint.port.to_be_bytes();
+                    assert_eq!(body, &[8, 1, 127, 0, 0, 1, hi, lo]);
+                    let reply_to = SocketAddrV4::new(endpoint.addr, endpoint.port);
+                    // Wrong header, wrong service and invalid SEARCH_RESPONSE body
+                    // must not prevent a later valid response being received.
+                    peer.send_to(&[0], reply_to).await.unwrap();
+                    peer.send_to(
+                        &frame::encode_frame(
+                            services::CONNECT_RESPONSE,
+                            &loopback_search_response(reply_to, true)[6..],
+                        ),
+                        reply_to,
+                    )
+                    .await
+                    .unwrap();
+                    peer.send_to(
+                        &frame::encode_frame(services::SEARCH_RESPONSE, &[]),
+                        reply_to,
+                    )
+                    .await
+                    .unwrap();
+                    peer.send_to(&valid, reply_to).await.unwrap();
+                    // A different UDP source can advertise the same endpoint;
+                    // discovery must stay unconnected and de-duplicate by HPAI.
+                    other_peer.send_to(&valid, reply_to).await.unwrap();
+                    other_peer.send_to(&other, reply_to).await.unwrap();
+                }
+            )
+        };
+        let (gateways, ()) = tokio::time::timeout(Duration::from_secs(2), roundtrip)
+            .await
+            .expect("bounded offline discovery roundtrip");
+        let mut gateways = gateways.unwrap();
+        gateways.sort_by_key(|gateway| gateway.control_endpoint.port());
+        let mut expected = vec![
+            DiscoveredGateway {
+                control_endpoint: peer_addr,
+                individual_address: IndividualAddress::new(1, 1, 1).unwrap(),
+                friendly_name: "Offline gateway".into(),
+                supports_tunnelling: true,
+            },
+            DiscoveredGateway {
+                control_endpoint: other_addr,
+                individual_address: IndividualAddress::new(1, 1, 1).unwrap(),
+                friendly_name: "Offline gateway".into(),
+                supports_tunnelling: false,
+            },
+        ];
+        expected.sort_by_key(|gateway| gateway.control_endpoint.port());
+        assert_eq!(gateways, expected);
+        let mut buf = [0; 1024];
+        assert_eq!(
+            peer.try_recv_from(&mut buf).unwrap_err().kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+        assert_eq!(
+            other_peer.try_recv_from(&mut buf).unwrap_err().kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+    }
+
+    #[tokio::test]
+    async fn discovery_loopback_no_reply_returns_empty_at_the_deadline() {
+        let client = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let peer = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let gateways = tokio::time::timeout(
+            Duration::from_secs(2),
+            discover_on_socket(
+                &client,
+                local_hpai(&client).unwrap(),
+                SocketAddrV4::new(Ipv4Addr::LOCALHOST, peer.local_addr().unwrap().port()),
+                Duration::from_millis(20),
+            ),
+        )
+        .await
+        .expect("no-reply discovery must be bounded")
+        .unwrap();
+        assert!(gateways.is_empty());
+        let mut buf = [0; 1024];
+        let (n, _) = peer
+            .try_recv_from(&mut buf)
+            .expect("a real search was sent");
+        assert_eq!(
+            frame::decode_frame(&buf[..n]).unwrap().0.service_type,
+            services::SEARCH_REQUEST
+        );
+    }
 
     use std::collections::HashMap;
 

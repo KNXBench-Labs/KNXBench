@@ -44,6 +44,7 @@ const apiMock = vi.hoisted(() => ({
   // fire from a real command, and `undo` is the cheapest one on the
   // toolbar.
   undo: vi.fn(),
+  redo: vi.fn(),
   // The File menu's Compare entry (stage 4, item 4's keyboard walk).
   diffProject: vi.fn(),
   // The File menu's documentation entry opens a dialog that previews on
@@ -82,6 +83,7 @@ const apiMock = vi.hoisted(() => ({
   discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
   moveDeviceToLine: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
+  setDeviceDescription: vi.fn(),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -764,6 +766,99 @@ describe("App — search reveal request", () => {
 // covers the "language changes while a device stays selected" case
 // (`CatalogBrowser.test.tsx`'s "refetches ... when open" test drives that
 // same scenario for its own fetch the same way).
+describe("App — U13 device selection identity", () => {
+  it("never exposes editors for a detail response whose ID differs from the selection", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(treeWithDevice());
+    apiMock.deviceDetail.mockReset();
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), id: 99 });
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Open project…").click());
+      await act(async () => treeLabel("Device D").click());
+      expect(host!.querySelector(".workbench-pane-right .inspector input")).toBeNull();
+      expect(host!.querySelector(".device-workspace")).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it.each(["pending", "failed"])("removes the previous device's editors while the next detail is %s", async (outcome) => {
+    const tree = treeWithDevice();
+    tree.installations[0].unassigned.push({ ...deviceNode(), id: 43, name: "Device B" });
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(tree);
+    let resolve!: (detail: DeviceDetail) => void;
+    let reject!: (error: Error) => void;
+    apiMock.deviceDetail.mockReset();
+    apiMock.deviceDetail.mockResolvedValueOnce(deviceDetailFixture())
+      .mockImplementationOnce(() => new Promise<DeviceDetail>((yes, no) => { resolve = yes; reject = no; }));
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Open project…").click());
+      await act(async () => treeLabel("Device D").click());
+      expect(host!.querySelector(".workbench-pane-right .inspector input")).not.toBeNull();
+      expect(host!.querySelector(".device-workspace")).not.toBeNull();
+
+      await act(async () => treeLabel("Device B").click());
+      expect(apiMock.deviceDetail).toHaveBeenLastCalledWith(43, null);
+      expect(host!.querySelector(".workbench-pane-right .inspector input")).toBeNull();
+      expect(host!.querySelector(".device-workspace")).toBeNull();
+      expect(apiMock.setDeviceDescription).not.toHaveBeenCalled();
+
+      await act(async () => {
+        if (outcome === "failed") reject(new Error("detail unavailable"));
+        else resolve({ ...deviceDetailFixture(), id: 43, name: "Device B" });
+      });
+      const title = host!.querySelector(".workbench-pane-right .inspector h2");
+      if (outcome === "failed") {
+        expect(title).toBeNull();
+        expect(host!.textContent).toContain("detail unavailable");
+      } else {
+        expect(title?.textContent).toBe("Device B");
+      }
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+});
+
+describe("App — U13 parameter snapshot invalidation", () => {
+  it("refreshes parameters after Undo and Redo without changing the selected device", async () => {
+    const snapshot = (revision: number, canRedo: boolean) => treeAt({ ...treeWithDevice(), can_undo: true, can_redo: canRedo }, revision);
+    const parameters = (value: string) => ({
+      programId: "PROG-1", tree: null, stale: [], diagnostics: [],
+      sections: [{ scope: null, fields: [{ etsId: "P1", name: "Field A", text: null, kind: "Number",
+        value, valueSource: "Stored", editable: true, min: "0", max: "10", enumOptions: [],
+        displayOrder: null, access: null, writeEtsId: "P1" }] }],
+    });
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValue(snapshot(1, false));
+    apiMock.deviceDetail.mockReset();
+    apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    apiMock.deviceParameters.mockReset();
+    apiMock.deviceParameters.mockResolvedValueOnce(parameters("6"))
+      .mockResolvedValueOnce(parameters("5")).mockResolvedValueOnce(parameters("6"));
+    apiMock.undo.mockResolvedValue(snapshot(2, true));
+    apiMock.redo.mockResolvedValue(snapshot(3, false));
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Open project…").click());
+      await act(async () => treeLabel("Device D").click());
+      const value = () => host!.querySelector<HTMLInputElement>(".parameter-field input")?.value;
+      expect(value()).toBe("6");
+      await act(async () => findButton("Undo").click());
+      expect(value()).toBe("5");
+      await act(async () => findButton("Redo").click());
+      expect(value()).toBe("6");
+      expect(apiMock.deviceParameters).toHaveBeenCalledTimes(3);
+      expect(apiMock.deviceParameters.mock.calls.every(([id]) => id === 42)).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+});
+
 describe("App — device-detail fetch carries the product language (T33)", () => {
   async function openProjectWithDevice() {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");

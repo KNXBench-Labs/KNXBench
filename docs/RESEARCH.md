@@ -6326,6 +6326,35 @@ discovery round trip. U2's multicast send/no-response observation remains
 unchanged. No evidence justifies a packaging-specific patch, protocol retry,
 or a claimed discovery fix. The manual IPv4 endpoint remains first-class.
 
+**[V] U13 offline transport coverage (2026-10-01).** The discovery exchange
+in `client.rs` is now a private `discover_on_socket` helper used by production
+and the loopback tests, not a second discovery implementation or a public
+destination override. Production still binds its unconnected wildcard socket,
+resolves the existing multicast-route HPAI and uses the same multicast group
+and ten-second timeout. The synthetic fixture uses the established
+`discovery.rs` codec-test DIB layout (Core v01.06.02 AS §7.4.1/§7.5.4.2), not
+a private gateway capture or new protocol assumption.
+
+`client::tests::discovery_loopback_roundtrip_uses_advertised_hpai_and_filters_datagrams`
+exchanges actual UDP datagrams solely on `127.0.0.1`: the peer verifies the
+SEARCH_REQUEST service, loopback IP and bound client port in the HPAI, replies
+to that advertised endpoint, and sends malformed/wrong-service datagrams,
+duplicates and a second gateway from another source socket. Assertions cover
+the returned endpoint/address/name/tunnelling capability, endpoint-based
+de-duplication, and no follow-up connect/send datagram.
+`discovery_loopback_no_reply_returns_empty_at_the_deadline` covers the real
+send with an empty bounded response window. Both tests have a two-second
+outer deadline and neither has a skip path.
+
+**Boundary:** this is a unicast loopback test of the shared discovery
+transport/codec path, **not** a multicast-loopback, real gateway, firewall,
+multi-interface or packaged WebKitGTK test. Actual multicast routing and
+reply admission still need a real permitted network; the previous
+2026-09-30 CLI/HTTP evidence is separate. No new live discovery, tunnel,
+firewall edit or KNX bus operation was performed by U13. The user accepted
+the independent GPT-6.1-Sol review in place of unavailable Claude; that review
+accepted the documented host-firewall correction as ISSUE-12's narrow fix.
+
 ### 20.2 Line membership and the individual-address editor
 
 **[D]** *Architecture v03.00.02 AS* §3.1, PDF p. 10 (page footer 10/26):

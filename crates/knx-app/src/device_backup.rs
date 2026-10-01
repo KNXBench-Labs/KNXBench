@@ -345,6 +345,16 @@ pub fn file_name(target: IndividualAddress, stamp: &str) -> String {
 /// Writes `stored` to a new file in `dir` (created if missing), syncs it,
 /// reads it back and compares. Never overwrites an existing file.
 pub fn write_backup(dir: &Path, stored: &StoredBackup) -> Result<PathBuf, BackupFileError> {
+    write_backup_with_sync(dir, stored, |directory| {
+        fs::File::open(directory)?.sync_all()
+    })
+}
+
+fn write_backup_with_sync(
+    dir: &Path,
+    stored: &StoredBackup,
+    sync_directory: impl FnMut(&Path) -> std::io::Result<()>,
+) -> Result<PathBuf, BackupFileError> {
     fs::create_dir_all(dir)?;
     let path = dir.join(file_name(stored.backup.target, &stored.taken));
     let text = to_json(stored);
@@ -365,7 +375,7 @@ pub fn write_backup(dir: &Path, stored: &StoredBackup) -> Result<PathBuf, Backup
         return Err(BackupFileError::ReadBackDiffers(path));
     }
     // An fsynced file is not yet durable without its directory entry.
-    fs::File::open(dir)?.sync_all()?;
+    crate::backup_directory::sync_chain(dir, sync_directory)?;
     Ok(path)
 }
 
@@ -407,6 +417,38 @@ mod tests {
             taken: "2026-09-29T14:10:00+02:00".into(),
             plan_steps: vec!["connect; check mask and manufacturer".into()],
         }
+    }
+
+    #[test]
+    fn nested_backup_directory_entries_are_all_synced() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().join("new/parent/backups");
+        let mut synced = Vec::new();
+        let path = write_backup_with_sync(&dir, &stored(), |directory| {
+            synced.push(directory.to_path_buf());
+            fs::File::open(directory)?.sync_all()
+        })
+        .unwrap();
+        let expected: Vec<_> = dir.ancestors().map(Path::to_path_buf).collect();
+        assert_eq!(synced, expected, "new parent entries need their own sync");
+        assert_eq!(read_backup(&path).unwrap(), stored());
+    }
+
+    #[test]
+    fn parent_sync_failure_refuses_a_backup_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().join("new/parent/backups");
+        let parent = dir.parent().unwrap();
+        let result = write_backup_with_sync(&dir, &stored(), |directory| {
+            if directory == parent {
+                return Err(std::io::Error::other("injected ancestor sync failure"));
+            }
+            fs::File::open(directory)?.sync_all()
+        });
+        assert!(
+            result.is_err(),
+            "an unconfirmed ancestor is not a durable receipt"
+        );
     }
 
     #[test]

@@ -79,3 +79,16 @@ web UI (`/api/device-download/*`). Verified state on 2026-09-28:
   shown plan when the project revision changes.
 - The route cannot tell a scripted client from a person. That is the same
   limit the CLI has, and it is stated in the manual.
+
+## Implementation clarification — 2026-10-01
+
+The one-tunnel reservation includes worker cleanup, not just the time before
+its terminal device result. A cancelled `join` wait retains the tracked worker.
+Polling observes an unexpectedly finished worker as `failed` without inventing
+a successful write or disconnect. Before the first changing plan step starts,
+`written:no` remains justified; after that boundary `partially` means a
+conservative unknown attempted-write outcome, not send or device-effect proof.
+Existing progress, backup path and witnessed terminal result are preserved;
+in particular a later cleanup panic cannot erase a restart's unconfirmed state.
+This does not add a cancel route, automatic retry/restore or durable crash
+recovery, and does not relax any write-authorisation or pre-write-backup gate.

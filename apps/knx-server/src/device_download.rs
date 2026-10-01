@@ -130,6 +130,8 @@ pub enum DownloadStatus {
 struct Shared {
     status: Mutex<DownloadStatus>,
     events: Mutex<Vec<ProgressEvent>>,
+    /// First step from which a mutation may be attempted, not send proof.
+    first_mutation_step: Option<usize>,
     /// The last step that started, 0-based.
     last_started: Mutex<Option<usize>>,
     /// What authorisation obtained, once connected.
@@ -165,6 +167,11 @@ impl DeviceDownloadSession {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
             events: Mutex::new(Vec::new()),
+            first_mutation_step: prepared
+                .plan
+                .steps
+                .iter()
+                .position(MemoryDownloadStep::changes_device),
             last_started: Mutex::new(None),
             granted: Mutex::new(None),
             backup_file: Mutex::new(None),
@@ -223,15 +230,42 @@ impl DeviceDownloadSession {
     }
 
     pub fn is_running(&self) -> bool {
+        // A terminal device result is recorded before IP tunnel cleanup.
+        // Keep the reservation while that cleanup future is still alive.
+        if self.task.as_ref().is_some_and(|task| !task.is_finished()) {
+            return true;
+        }
         matches!(self.status(), DownloadStatus::Running)
     }
 
     pub fn status(&self) -> DownloadStatus {
+        if self.task.as_ref().is_some_and(JoinHandle::is_finished) {
+            self.record_unexpected_end();
+        }
         self.shared
             .status
             .lock()
             .expect("download status poisoned")
             .clone()
+    }
+
+    fn record_unexpected_end(&self) {
+        let mut status = self.shared.status.lock().expect("download status poisoned");
+        // Do not erase an already witnessed result if cleanup later panics.
+        if matches!(*status, DownloadStatus::Running) {
+            let written = written_so_far(&self.shared);
+            let stopped = *self
+                .shared
+                .last_started
+                .lock()
+                .expect("download progress poisoned");
+            *status = DownloadStatus::Failed {
+                written,
+                stopped_in_step: stopped.map(|index| index + 1),
+                error: "the download task ended without a terminal result; any attempted write has an unknown outcome; connection cleanup is unconfirmed".into(),
+                hint: None,
+            };
+        }
     }
 
     /// Status first, then events: a terminal status is only ever paired
@@ -245,17 +279,10 @@ impl DeviceDownloadSession {
 
     /// Waits for the run to end. For tests and shutdown; the routes poll.
     pub async fn join(&mut self) {
-        if let Some(task) = self.task.take() {
-            if task.await.is_err() {
-                let written = written_so_far(&self.shared, None);
-                *self.shared.status.lock().expect("download status poisoned") =
-                    DownloadStatus::Failed {
-                        written,
-                        stopped_in_step: None,
-                        error: "the download task stopped unexpectedly".to_string(),
-                        hint: None,
-                    };
-            }
+        if let Some(task) = self.task.as_mut() {
+            let _ = task.await;
+            self.task = None;
+            self.record_unexpected_end();
         }
     }
 }
@@ -282,20 +309,13 @@ impl ScanTransport for TunnelTransport<'_> {
     }
 }
 
-fn written_so_far(shared: &Shared, plan: Option<&[MemoryDownloadStep]>) -> Written {
+fn written_so_far(shared: &Shared) -> Written {
     let last = *shared
         .last_started
         .lock()
         .expect("download progress poisoned");
-    match (last, plan) {
-        (Some(last), Some(steps))
-            if steps[..=last]
-                .iter()
-                .any(MemoryDownloadStep::changes_device) =>
-        {
-            Written::Partially
-        }
-        (Some(_), None) => Written::Partially,
+    match (last, shared.first_mutation_step) {
+        (Some(last), Some(first)) if last >= first => Written::Partially,
         _ => Written::No,
     }
 }
@@ -373,7 +393,7 @@ async fn run(
                             .expect("download progress poisoned");
                         let granted = *shared.granted.lock().expect("download progress poisoned");
                         DownloadStatus::Failed {
-                            written: written_so_far(&shared, Some(&prepared.plan.steps)),
+                            written: written_so_far(&shared),
                             stopped_in_step: stopped.map(|index| index + 1),
                             error: e.to_string(),
                             hint: locked_device_hint(
@@ -442,3 +462,7 @@ fn record(shared: &Shared, progress: Progress) {
         .expect("download events poisoned")
         .push(event);
 }
+
+#[cfg(test)]
+#[path = "device_download_task_tests.rs"]
+mod task_tests;

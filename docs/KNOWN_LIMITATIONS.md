@@ -1342,6 +1342,14 @@ backend and becomes the default on Linux.
 
 ## 18. `open_project` does not clear the previous `.knxdb` `store_path`
 
+**Resolved; source reconciliation 2026-10-01 (AR00).** The text below is
+historical, not the current behavior. `apps/knx-server/src/domain.rs::open_project`
+passes `None` to `replace_project_state`; its shared replacement transaction
+sets `store_path` together with the project, clean baseline, opaque data and
+manufacturer references under the project lock. The desktop delegates to that
+domain. `http_project_routes::importing_replaces_a_dirty_project_with_a_clean_baseline`
+asserts the imported snapshot has no store path. Do not redispatch the old fix.
+
 **Limitation.** `AppState.store_path` (the `.knxdb` file a subsequent plain
 `save_project` writes to) is only ever set by `save_project_as` and
 `open_native_project`. The Tauri `open_project` command — ETS `.knxproj`
@@ -1534,6 +1542,10 @@ over a transport you have secured yourself.
 
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
+**Status, reconciled 2026-10-01 (AR00): resolved for whole-file buffering.**
+The historical heading is retained for fragment links. Temporary SQLite
+serialization remains; it is not a whole-file response buffer.
+
 **Resolution.** The route freshly serializes the current in-memory project,
 including unsaved edits, opaque entries, and manufacturer references, into
 one temporary SQLite file. `tower_http::services::ServeFile` streams that
@@ -1554,6 +1566,10 @@ entries, and manufacturer references. Serialization still creates one
 temporary SQLite file before streaming begins.
 
 ## 24. `FsPicker` has no drag-and-drop or multi-select
+
+**Status, reconciled 2026-10-01 (AR00): resolved for multi-file upload/drop.**
+The historical heading remains for fragment links. Single-project selection
+is intentional and does not make the implemented upload gestures absent.
 
 **Final-review hardening, 2026-09-22.** Duplicate basenames are explicit 409
 conflicts, including pre-existing upload files; no destination is overwritten.

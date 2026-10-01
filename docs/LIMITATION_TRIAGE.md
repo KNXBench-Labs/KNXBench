@@ -1,17 +1,20 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der **110 aktiven nummerierten Einträge** aus
+Sortierung der **105 verbleibenden nummerierten Grenzen** aus
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
 `grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-01).
-109 sind eingestuft; §105 bleibt wegen fehlender Hardwareevidenz ohne
-Einstufung. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
+Die Datei enthält 110 nummerierte Überschriften: 105 Grenzen und fünf
+gelöste/historische Wegweiser (§18/23/24/90/95). 104 Grenzen sind eingestuft;
+§105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
+zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
 Der datierte [Implementierungsverlauf](IMPLEMENTATION_STATUS.md) und Git
 bewahren die Nachweise.
 
 §94 existiert nicht; §130 ist zweimal vergeben (Gate-Binary und
 Anwendungszoom) und steht zweimal in der Tabelle. Die unnummerierten
-Produktdaten-, Geräteeditor- und Inbetriebnahmegrenzen sind nicht eingestuft.
+Produktdaten-, Geräteeditor- und Inbetriebnahmegrenzen sind nicht eingestuft;
+ihre stabilen IDs stehen in [ALPHA_READINESS](ALPHA_READINESS.md).
 Nur die tatsächlich verbliebene Grenze eines teilweise gelösten Eintrags
 wird hier gewichtet, nicht seine historische Überschrift.
 
@@ -83,28 +86,27 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 129 | Veralteter Id-Allokator-Snapshot konnte Ids duplizieren | Datenverlustpfad geschlossen (ADR-0039 Phasen 1–2, 2026-09-27); dass alles über `Command::apply` läuft, sichert weiter nur das Review — Phasen 3–5 offen. |
 
-## K3 — mittel (58)
+## K3 — mittel (55)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |
 | 9 | Projektdateien nicht diffbar (SQLite) |
 | 14 | Default-Sprache des Projekts ist ein Platzhalter |
 | 15 | Unparsbare Werte überleben nur auf `Override`-Feldern |
-| 18 | `open_project` räumt den alten `store_path` nicht weg |
+
 | 20 | Overlay gemeinsam, native Screenreader-/WebKitGTK-Abnahme bleibt offen | Fokus und Tastatur getestet; keine vollständige native Barrierefreiheitsprüfung. |
-| 23 | `/api/project/download` puffert die ganze Datei im Speicher |
-| 24 | `FsPicker` ohne Drag-and-Drop-Mehrfachauswahl |
+
 | 29 | `knx bus monitor` formatiert Gruppenadressen immer dreistufig |
 | 31 | Routing-Multicast-Override | Bibliothek und CLI können ihn setzen; andere Oberflächen übernehmen ihn nicht automatisch. |
 | 36 | Session-Log-Export ist nur ein behaltenes Fenster | Höchstens 1000 Einträge; ein Neustart oder Verdrängung verhindert einen vollständigen Audit-Trail. |
 | 37 | Importierte Übersetzungen erreichen nur einen Teil der Oberflächen | Parameter und einige Produktdaten sind übersetzt; andere Quellen/Prosa bleiben originalsprachlich. |
-| 39 | CSV-Import adressiert nicht um, löscht nicht, verwaltet keine Bereiche |
+| 39 | CSV kann explizit umadressieren/löschen, verwaltet aber keine Bereiche |
 | 40 | CSV-Nur-Export-Spalten werden beim Import nie angewandt |
 | 41 | CSV aus Excel unter deutschem Gebietsschema kann überraschen |
 | 45 | Doku-Export ohne natives PDF |
-| 46 | Doku-Export löst Hersteller-, Produkt-, Programmnamen nicht auf |
-| 47 | Doku-Export listet Parameterwerte und Modul-Argumente nicht |
-| 48 | Doku-Export nur einsprachig |
+| 46 | Doku-Export löst Namen nur mit passenden installierten Produktdaten auf |
+| 47 | Parameterwerte/Modul-Argumente erscheinen; unbewiesene Semantik bleibt roh |
+| 48 | Doku-Export hat deutsche/englische Grundelemente, keinen vollständigen Prosakatalog |
 | 52 | Diff korreliert Geräte ohne Adresse und ohne `ets_id` nicht |
 | 53 | Diff kollidiert bei zwei gleichnamigen Geschwister-Gebäudeteilen |
 | 54 | Diff erkennt regenerierte `RefId`s eines Re-Imports nicht |
@@ -146,15 +148,14 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 144 | RF-Gerätekonfiguration nur im Simulator | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
 | 146 | Kanallabel sichtbar; Aktivierung kann `Undetermined` und DPT mehrdeutig bleiben | `@Name`/`@Number` sind gespeichert und in der UI gezeigt; fehlende/mehrdeutige Produktdaten werden nicht geraten (ADR-0050/0052). |
 
-## K4 — niedrig (16)
+## K4 — niedrig (14)
 
 | § | Thema | Warum K4 |
 | --- | --- | --- |
 | 42 | `command_sync.rs`' Moduldoku überzeichnet die eigene Rolle |
-| 43 | Animationen ohne In-App-Schalter, nur OS-Präferenz |
+| 43 | Animationsschalter und OS-Präferenz existieren; nicht jede Fläche ist abgedeckt |
 | 65 | `--version` nennt einen Commit, nie einen Arbeitsstand |
-| 90 | DPT-Haupttyp 46 gibt es nicht — 46 war eine Anzahl |
-| 95 | Sieben Stellen, an denen der Standardtext nicht wörtlich gilt (Wegweiser, keine Kosten) |
+
 | 98 | Die zweite Flavour-Zeile sieht fast niemand |
 | 100 | Hilfetexte liegen im Message-Katalog, ein Absatz pro Schlüssel |
 | 109 | Zwei Downloadteile derselben `PartKind` ohne definierte Reihenfolge werden beide abgelehnt | Kein einziger Fall bislang beobachtet, Ablehnung statt Rateversuch. |
@@ -168,6 +169,15 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 137 | Bus-Monitor-JSON ist ein behaltenes Fenster, keine vollständige Aufzeichnung | Verluste werden gezählt und exportiert, nicht wiederhergestellt. |
 
 ## Nicht in dieser Zählung
+
+- **§18/23/24** sind gegen aktuelle Implementierung und vorhandene
+  Regressionen abgeglichen (AR00): ETS-Import veröffentlicht `store_path=None`,
+  Download streamt begrenzte Blöcke und der Dateipicker unterstützt
+  sequenzielle Mehrfach-Uploads und Datei-Drop. Temporäre SQLite-Serialisierung
+  und die einzelne Projektwahl sind keine wiedereröffneten Defekte.
+- **§90/95** sind historische Klarstellungen, keine Kosten: 46 war eine
+  Anzahl, kein DPT-Haupttyp; §95 verweist auf sechs dokumentierte Text-Rulings.
+  Alle fünf Überschriften/Fragment-Links bleiben erhalten.
 
 - **§105** (Ctrl1-Priorität `SYSTEM` bei den vier verbindungsorientierten
   TL-Frames) ist gemerged und existiert, ist aber absichtlich nicht

@@ -221,6 +221,14 @@ handover.
 
 ### U13 — Close the UI track
 
+**User decision, 2026-10-01:** the operator explicitly accepts the completed
+independent GPT-6.1-Sol review in place of Claude, which is unavailable.
+Report: `.ai/logs/2026-10-01_codex_ui-u13-gpt-review-received.md`.
+Verdict **changes required**: selection/detail identity, Undo/Redo parameter
+refresh, autosave cleanup and offline discovery roundtrip coverage remain
+for this UI session, followed by integration gates. This is not U13 closure.
+The following describes the superseded reviewer choice and original procedure.
+
 The user chose a read-only independent review by the goal.md/Claude session.
 An attempt on 2026-10-01 was refused by that service's weekly limit before
 any review; no verdict exists. Do not replace this with a self-review or

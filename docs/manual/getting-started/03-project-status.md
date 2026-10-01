@@ -16,7 +16,7 @@ publish a release AppImage exists but has never been run.
 **KNXBench is Alpha software.** Concretely:
 
 - As of 2026-10-01, `docs/KNOWN_LIMITATIONS.md` has 110 numbered headings,
-  including five resolved/clarification-only entries. Of the 105 residual
+  including six resolved/clarification-only entries. Of the 104 residual
   boundaries, five are K1 (critical); the detailed triage is the authority,
   not a count of headings interpreted as defects.
 - The web/Docker server's protection is one shared password and one session

@@ -1,5 +1,31 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — AR01 runtime gate target and coverage (offline)
+
+- Repository gates use the exact runtime root (CWD or leading `--root PATH`),
+  validate the Cargo workspace/members, print their canonical target and pin
+  dependency metadata to it. They no longer use the build checkout as a root.
+- Headers, anchors and corpus-gates fail on missing/empty required scan roots;
+  generated-only headers do not qualify. Layering refuses absent or merely
+  transitive policy roots and reports actual graph coverage. Existing scan
+  heuristics/exclusions and AppImage artifact checks remain intact. See
+  [verification invocation/coverage contract](VERIFICATION.md).
+- Actual old binary after removal of its owned build checkout: exit 0 over
+  zero sources; rebuilt code refuses the deleted target. RED/GREEN tests and
+  five behavioral guard mutations verify runtime targeting and empty-scan /
+  membership refusal. Sources restored byte-for-byte; compilation failures
+  are not counted as killed mutants. In-session review findings fixed.
+- Relevant gates: 75 unit + 12 CLI integration tests, zero failures/ignored;
+  strict xtask Clippy, workspace fmt, layering (448 packages), headers
+  (370 valid / 160 absent / 17 generated), corpus-gates (323 Rust files),
+  anchors and patch checks. Lowered the header ratchet to measured 160 after
+  adding a header to the touched layering module. No new dependency or product API.
+- KL-130-GATE resolved with its original heading retained; KL-130-ZOOM remains
+  open. Current triage: 110 headings, 104 residual / 103 classified (5/30/54/14),
+  §105 unclassified. The 180-ID inventory is untouched. No full workspace/
+  product, private-corpus, native-screen-reader or hardware acceptance claim.
+  Canonical-root statistics refresh remains blocked by foreign report work.
+
 ## 2026-10-01 — AR00 alpha queue and decision provenance (offline)
 
 - User started `alpha-release-goal.md`; its AR queue is the sole executor of

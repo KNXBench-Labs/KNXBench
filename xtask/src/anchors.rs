@@ -113,8 +113,12 @@ fn discover(root: &Path) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::new();
 
     let docs = root.join("docs");
-    if docs.is_dir() {
-        walk_markdown(root, &docs, &mut files)?;
+    walk_markdown(root, &docs, &mut files)?;
+    if files.is_empty() {
+        return Err(format!(
+            "empty anchor scan: no Markdown files under {}",
+            docs.display()
+        ));
     }
 
     let mut root_entries: Vec<PathBuf> = fs::read_dir(root)
@@ -695,5 +699,13 @@ mod tests {
 
         assert_eq!(report.links_checked, 0);
         assert!(report.dead.is_empty());
+    }
+
+    #[test]
+    fn scan_rejects_empty_documentation_even_with_a_root_readme() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("docs")).unwrap();
+        write(root.path(), "README.md", "# Root\n");
+        assert!(scan(root.path()).is_err(), "empty docs coverage must fail");
     }
 }

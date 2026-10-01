@@ -87,20 +87,31 @@ fn returns_soon(lines: &[&str], index: usize) -> bool {
         .any(|l| l.starts_with("return"))
 }
 
-/// Every violation under `root`, as `(path relative to root, line)`, in
-/// sorted path order.
-pub fn scan(root: &Path) -> Result<Vec<(PathBuf, usize)>, String> {
-    let mut found = Vec::new();
-    for top in SCAN_ROOTS {
-        let dir = root.join(top);
-        if dir.is_dir() {
-            walk(root, &dir, &mut found)?;
-        }
-    }
-    Ok(found)
+/// Actual source coverage and violations, in deterministic path order.
+#[derive(Debug, Default)]
+pub struct Report {
+    pub files_scanned: usize,
+    pub violations: Vec<(PathBuf, usize)>,
 }
 
-fn walk(root: &Path, dir: &Path, found: &mut Vec<(PathBuf, usize)>) -> Result<(), String> {
+/// Scan each required source directory; an absent or empty one is not green.
+pub fn scan(root: &Path) -> Result<Report, String> {
+    let mut report = Report::default();
+    for top in SCAN_ROOTS {
+        let dir = root.join(top);
+        let before = report.files_scanned;
+        walk(root, &dir, &mut report)?;
+        if report.files_scanned == before {
+            return Err(format!(
+                "empty corpus gate scan: no Rust sources under {}",
+                dir.display()
+            ));
+        }
+    }
+    Ok(report)
+}
+
+fn walk(root: &Path, dir: &Path, report: &mut Report) -> Result<(), String> {
     let mut entries: Vec<PathBuf> = fs::read_dir(dir)
         .map_err(|e| format!("cannot read {}: {e}", dir.display()))?
         .map(|entry| entry.map(|e| e.path()))
@@ -111,7 +122,7 @@ fn walk(root: &Path, dir: &Path, found: &mut Vec<(PathBuf, usize)>) -> Result<()
         if path.is_dir() {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if !SKIP_DIRS.contains(&name) {
-                walk(root, &path, found)?;
+                walk(root, &path, report)?;
             }
             continue;
         }
@@ -120,9 +131,10 @@ fn walk(root: &Path, dir: &Path, found: &mut Vec<(PathBuf, usize)>) -> Result<()
         }
         let source = fs::read_to_string(&path)
             .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        report.files_scanned += 1;
         let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
         for line in violations(&source) {
-            found.push((relative.clone(), line));
+            report.violations.push((relative.clone(), line));
         }
     }
     Ok(())
@@ -131,6 +143,18 @@ fn walk(root: &Path, dir: &Path, found: &mut Vec<(PathBuf, usize)>) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scan_rejects_empty_source_directories() {
+        let root = tempfile::tempdir().unwrap();
+        for top in SCAN_ROOTS {
+            fs::create_dir(root.path().join(top)).unwrap();
+        }
+        assert!(
+            scan(root.path()).is_err(),
+            "empty source coverage must fail"
+        );
+    }
 
     #[test]
     fn flags_the_silent_return_idiom() {

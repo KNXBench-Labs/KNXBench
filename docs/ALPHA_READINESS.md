@@ -47,12 +47,29 @@ These are source/test inspections plus adopted historical owner runs, **not new
 product-test executions**. AR00's own doc/ledger checks are recorded in
 `.ai/logs/2026-10-01_codex_alpha-queue.md`. Old headings and links are retained.
 
+## AR01 verification delivery
+
+The executable uses the selected runtime workspace, validates its identity,
+pins metadata to that manifest and refuses missing/empty scan scopes. All
+checked layering roots must be actual workspace members. The target and
+coverage are emitted; see [verification targets](VERIFICATION.md).
+
+Executed: old removed-worktree zero-file success; new deleted-target refusal;
+75 unit and 12 CLI integration tests, strict xtask Clippy, fmt and all four
+repository scan gates. Five guard mutations fail behaviorally and sources are
+restored. Scope: 448 graph packages, 370 valid / 160 absent headers (ceiling
+160), 17 generated files excluded, 323 corpus-lint Rust sources. This is not
+a full product/workspace test or a real-corpus execution. In-session review
+found and fixed a transitive-only policy-root gap and the missing touched-file
+header; the mutation tests cover that gap after fixing the fixture exclusions.
+Details: `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`.
+
 ## Stable limitation identity
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
-130, and no 94. Five are resolved/clarification-only: 18, 23, 24, 90, 95.
-Therefore **105 numbered residual boundaries** remain: K1=5, K2=30, K3=55,
-K4=14 (104 triaged); 105 is wire-evidence-only and unclassified.
+130, and no 94. Six are resolved/clarification-only: 18, 23, 24, 90, 95,
+130-GATE (AR01). Therefore **104 numbered residual boundaries** remain:
+K1=5, K2=30, K3=54, K4=14 (103 triaged); 105 is wire-evidence-only and unclassified.
 No heading or legacy fragment is destructively renumbered.
 `KL-8` also routes 26 (Secure); `KL-130-GATE` and `KL-130-ZOOM` identify the
 separate headings exactly. All other numbered IDs use `KL-<number>`.
@@ -134,7 +151,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-13` | P1 | AR08 | TODO | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
 | `PDB-09` | P1 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-3 report history and coverage boundary; Retained boundary; AR05 verifies subcases before changing status |
 | `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §19.11 / goal-commission.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-130-GATE` | P1 | AR01 | TODO | docs/KNOWN_LIMITATIONS.md §130 (Gate); Retained boundary; AR01 verifies subcases before changing status |
+| `KL-130-GATE` | P1 | AR01 | DONE | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER | goal.md §9–10; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `RELEASE-02` | P1 | AR18 | WAITING_OWNER | goal.md §1 / §10; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `KL-22` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §22; Retained boundary; AR13 verifies subcases before changing status |
@@ -290,4 +307,4 @@ above and are not new tasks assigned to an already closed owner queue.
 | `UX-02` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | apps/knx-web/src/CatalogBrowser.tsx / docs/manual/known-issues.md; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | apps/knx-web/src/NewProjectDialog.tsx / apps/knx-web/src/messages/en.ts; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 
-**Mechanically counted execution statuses:** ACCEPTED_BOUNDARY=24, BLOCKED_EXTERNAL=3, DONE=5, LATER=20, TODO=55, WAITING_DECISION=6, WAITING_OWNER=67; total=180.
+**Mechanically counted execution statuses:** ACCEPTED_BOUNDARY=24, BLOCKED_EXTERNAL=3, DONE=6, LATER=20, TODO=54, WAITING_DECISION=6, WAITING_OWNER=67; total=180.

@@ -786,6 +786,11 @@ states. A complete and parameters-only backup/restore roundtrip ran on
 simulator-only. This is not a full image and cannot recover property values,
 keys outside those regions, or arbitrary non-Loaded states. See the
 commissioning-readiness section above and [ADR-0049](adr/0049-download-readiness-is-per-plan-and-backups-are-pre-write.md).
+Since 2026-10-01, a restore also refuses missing, duplicate or extraneous
+load-state machine records relative to its download plan, even when the
+saved memory-region lengths still match. This is offline-tested validation
+of the existing bounded backup, not evidence of complete address-write
+recovery or support for previously untested devices.
 
 **Live safety and compatibility remain narrow.** `1.1.220` is an excluded
 alarm panel. No prior approval carries over to a new target, write scope or

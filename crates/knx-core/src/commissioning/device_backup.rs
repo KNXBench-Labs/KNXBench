@@ -26,7 +26,7 @@ use std::fmt;
 
 use super::load_control_memory::MemoryLoadStateMachine;
 use super::load_state::{LoadState, MaskVersion};
-use super::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
+use super::memory_download::{machines, MemoryDownloadPlan, MemoryDownloadStep};
 use crate::IndividualAddress;
 
 /// One region a plan writes, as the device held it before.
@@ -101,6 +101,13 @@ pub enum RestoreError {
         /// The backup's.
         backup: Vec<(u16, usize)>,
     },
+    /// A state is missing, duplicated or for a machine outside this plan.
+    OtherLoadStates {
+        /// The machines addressed by the plan.
+        plan: Vec<MemoryLoadStateMachine>,
+        /// The machines recorded in the backup (duplicates preserved).
+        backup: Vec<MemoryLoadStateMachine>,
+    },
 }
 
 impl std::error::Error for RestoreError {}
@@ -123,6 +130,10 @@ impl fmt::Display for RestoreError {
                  plan of the same application and the same partial selection",
                 regions(backup),
                 regions(plan)
+            ),
+            Self::OtherLoadStates { plan, backup } => write!(
+                f,
+                "the backup records load states for {backup:?} but the plan addresses {plan:?}"
             ),
         }
     }
@@ -220,6 +231,19 @@ pub fn restore_plan(
     backup: &DeviceBackup,
 ) -> Result<MemoryDownloadPlan, RestoreError> {
     check_same_shape(plan, target, backup)?;
+    let plan_machines = machines(plan);
+    let mut backup_machines: Vec<_> = backup
+        .load_states
+        .iter()
+        .map(|(machine, _)| *machine)
+        .collect();
+    backup_machines.sort();
+    if plan_machines != backup_machines {
+        return Err(RestoreError::OtherLoadStates {
+            plan: plan_machines,
+            backup: backup_machines,
+        });
+    }
     let mut regions = backup.regions.iter();
     let steps = plan
         .steps
@@ -246,6 +270,8 @@ pub fn restore_plan(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commissioning::load_control_memory::event_record;
+    use crate::commissioning::load_state::LoadEvent;
 
     fn address(text: &str) -> IndividualAddress {
         text.parse().unwrap()
@@ -257,6 +283,13 @@ mod tests {
             manufacturer: 0x0083,
             steps: vec![
                 MemoryDownloadStep::Connect,
+                MemoryDownloadStep::LoadRecord(
+                    event_record(
+                        MemoryLoadStateMachine::AddressTable,
+                        LoadEvent::StartLoading,
+                    )
+                    .unwrap(),
+                ),
                 MemoryDownloadStep::WriteMemory {
                     address: 0x4000,
                     octets: vec![1, 2],
@@ -353,6 +386,48 @@ mod tests {
         assert!(matches!(
             restore_plan(&plan(), address("1.1.67"), &moved),
             Err(RestoreError::OtherShape { .. })
+        ));
+    }
+
+    #[test]
+    fn restore_refuses_missing_load_state_even_when_memory_regions_match() {
+        let mut second_machine = plan();
+        second_machine.steps.insert(
+            2,
+            MemoryDownloadStep::LoadRecord(
+                event_record(
+                    MemoryLoadStateMachine::AssociationTable,
+                    LoadEvent::StartLoading,
+                )
+                .unwrap(),
+            ),
+        );
+        assert!(matches!(
+            restore_plan(&second_machine, address("1.1.67"), &backup()),
+            Err(RestoreError::OtherLoadStates { .. })
+        ));
+    }
+
+    #[test]
+    fn restore_refuses_duplicate_load_state() {
+        let mut duplicate = backup();
+        duplicate.load_states.push(duplicate.load_states[0]);
+        assert!(matches!(
+            restore_plan(&plan(), address("1.1.67"), &duplicate),
+            Err(RestoreError::OtherLoadStates { .. })
+        ));
+    }
+
+    #[test]
+    fn restore_refuses_extra_load_state() {
+        let mut extra = backup();
+        extra.load_states.push((
+            MemoryLoadStateMachine::ApplicationProgram,
+            LoadState::Loaded,
+        ));
+        assert!(matches!(
+            restore_plan(&plan(), address("1.1.67"), &extra),
+            Err(RestoreError::OtherLoadStates { .. })
         ));
     }
 

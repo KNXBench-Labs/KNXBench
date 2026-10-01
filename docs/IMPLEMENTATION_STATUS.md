@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — Failed memory download closes its management connection
+
+- The shared memory executor now attempts one best-effort `T_Disconnect`
+  whenever execution returns an error with a still-open management connection.
+  CLI/server use this common executor; closing their outer IP tunnel alone
+  previously left some pre-write property-read or partial-write errors without
+  this cleanup. Already-disconnected failures do not send a second disconnect.
+- Two RED tests reproduced the open-connection leak before and after the
+  mutation boundary. They now pass across plain/observed/backed-up entries;
+  a temporary bypass mutation fails both again. The 45-test executor suite
+  also checks invalid-plan refusal sends nothing, failed backup persistence
+  sends only one disconnect, and partial failure neither retries nor restores.
+- The original error and caller-owned backup remain intact. This is connection
+  cleanup, not rollback, proof of device recovery or cancellation safety:
+  dropping an executing future or terminating the process cannot run this
+  awaited cleanup. No hardware, key, gateway or public write availability changed.
+- Gates: full workspace 139 suites / 2,801 passed / zero failures / zero
+  `SKIP:`; private-fixture simulator backup/restore 1/1; strict workspace
+  Clippy, fmt, layering/headers/anchors/corpus-gates and diff check passed.
+
 ## 2026-10-01 — Restore refuses incomplete load-state coverage (offline)
 
 - `knx_core::commissioning::device_backup::restore_plan` now compares the

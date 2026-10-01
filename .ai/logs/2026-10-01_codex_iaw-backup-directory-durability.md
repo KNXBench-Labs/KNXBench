@@ -59,9 +59,16 @@ from a notification. No source changed during the gate.
   `8e3f3ecec6f025da6a400c47b357024c339f8610`, whose 13/13 fixture rerun is
   documented separately. The delayed notice is not a new gate regression.
 
-## Remaining publication work
+## Verified integration and publication
 
-Rebase normally over the documentation-only upstream changes, review the scope,
-publish only this package with the required author and read back the exact ref.
-The hardware address-write gates stay closed. Keep active-run evidence until
-accepted; then remove only this package's owned artifacts.
+- Normal rebase over upstream documentation only. Both handovers and the
+  `ui-u13-fixes` Web lock were preserved in chronological order. The integrated
+  diff against gated candidate `16949387` contains no source changes.
+- Rebased anchors checked 375 links/226 Markdown files; headers/fmt/diff passed.
+  No unnecessary workspace replay was claimed for this docs-only integration.
+- Reviewed source commit `41d72237c24a014a75cceb877d4e88b4f722a68a` published
+  as `github@knxbench.com` without co-author or force push. Fresh fetch before
+  push: one reviewed local commit, zero behind. Push/fetch succeeded and exact
+  local/remote SHA matched.
+- Final handover publication and task-owned cleanup follow. No hardware
+  address-write gate opened; the overall commissioning goal is not complete.

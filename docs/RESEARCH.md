@@ -6553,6 +6553,24 @@ an operator/project-supplied key if actually needed (never guessed), and
 report raw bytes or refusal without presenting an inferred model as fact.
 This does not supply affected-storage coverage or lift the K6 write gate.
 
+**[V] Alternate K6 candidate presence, 2026-10-01 16:55 CEST (read-only
+hardware).** After the operator reported `1.1.67` unavailable and requested
+another pushbutton, the project-labelled `1.1.32` was selected as a *candidate*
+within the pre-approved `1.1.24`–`1.1.32` read range. A production CLI
+`knx bus scan` dry run named exactly one candidate (`1.1.32`). Immediately
+before the live command, no *local* KNX process or UDP socket for the gateway
+was observed. One tunnel to the previously confirmed gateway probed only
+`1.1.32`; the reviewed CLI path sends `T_Connect`, DD0 read and
+`T_Disconnect` (no independent wire capture). The CLI reported
+`occupied (mask 0x0701)` in 199 ms, summary `1 probed / 1 occupied`, exit 0.
+No access key, property read, programming button, write or other address was
+used. This is **current address occupancy and mask only**: it does not prove
+the ETS project label `BE-TA55P8.01`, manufacturer, order number, serial,
+physical accessibility or a durable recovery image. The older twofold
+`.G2` manual cannot be transferred to this eightfold candidate. A write to
+`1.1.32` needs its own device-specific recovery proof and fresh go; the prior
+`1.1.67` authorization does not follow the candidate.
+
 **[I] K6 recovery input still missing.** Before implementing a backup-based
 reopening, obtain the actual target's product/application identification and
 authoritative affected-storage mapping, including non-memory state and

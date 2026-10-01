@@ -491,6 +491,9 @@ pub async fn run_memory_download<T: ManagementTransport>(
 /// [`run_memory_download`], telling `observe` each [`Progress`] as it
 /// happens. The observer only watches: it cannot change, skip or stop a
 /// step, so what is sent is the same with or without one.
+/// A returned execution error closes any still-open management connection
+/// best-effort; the original error is retained. This is not rollback or
+/// cleanup when the future is dropped or the process is terminated.
 pub async fn run_memory_download_observed<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &MemoryDownloadPlan,
@@ -770,10 +773,27 @@ async fn take_backup<T: ManagementTransport>(
 async fn run<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(), String>>(
     session: &mut ManagementSession<'_, T>,
     plan: &MemoryDownloadPlan,
+    observe: impl FnMut(Progress),
+    keep: Option<K>,
+) -> Result<MemoryDownloadReport, MemoryDownloadError> {
+    // An invalid offline plan must not produce a cleanup telegram either.
+    check_shape(plan)?;
+    let result = run_steps(session, plan, observe, keep).await;
+    if result.is_err() && session.connection().is_some() {
+        // Closing KNXnet/IP alone does not close the device's management
+        // connection. Best effort only: preserve the original failure and
+        // never retry a mutation or treat disconnect as recovery.
+        session.disconnect().await;
+    }
+    result
+}
+
+async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(), String>>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
     mut observe: impl FnMut(Progress),
     mut keep: Option<K>,
 ) -> Result<MemoryDownloadReport, MemoryDownloadError> {
-    check_shape(plan)?;
     let of = plan.steps.len();
     let total_octets = plan.data_octets();
     let mut written_octets = 0usize;
@@ -1263,6 +1283,103 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_failed_pre_write_property_read_closes_each_download_entry_point() {
+        for entry in 0..3 {
+            let device = device(SimulatorConfig::default());
+            let mut session = session(&device, WriteScope::Download);
+            let mut missing_property = plan();
+            missing_property.steps[1] = MemoryDownloadStep::CompareProperty {
+                object_index: 0,
+                property_id: 0xFF,
+                inline_data: vec![1],
+            };
+            let mut backup_called = false;
+            let result = match entry {
+                0 => run_memory_download(&mut session, &missing_property).await,
+                1 => run_memory_download_observed(&mut session, &missing_property, |_| {}).await,
+                _ => {
+                    run_memory_download_with_backup(
+                        &mut session,
+                        &missing_property,
+                        |_| {},
+                        |_| {
+                            backup_called = true;
+                            Ok(())
+                        },
+                    )
+                    .await
+                }
+            };
+            assert!(matches!(
+                result,
+                Err(MemoryDownloadError::Session { index: Some(1), .. })
+            ));
+            assert!(!backup_called);
+            assert!(memory_writes(&device).is_empty());
+            assert!(
+                session.connection().is_none(),
+                "entry {entry} left a connection"
+            );
+            assert_eq!(
+                device
+                    .seen()
+                    .iter()
+                    .filter(|s| matches!(s, Seen::Disconnect))
+                    .count(),
+                1,
+                "entry {entry} must attempt one transport-layer disconnect"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_failed_backed_up_mutation_disconnects_without_retrying_or_restoring() {
+        let device = device(SimulatorConfig {
+            corrupt_memory_writes: true,
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::new(1), LoadState::Loaded);
+        let mut session = session(&device, WriteScope::Download);
+        let mut kept = None;
+        let result = run_memory_download_with_backup(
+            &mut session,
+            &plan(),
+            |_| {},
+            |backup| {
+                kept = Some(backup.clone());
+                Ok(())
+            },
+        )
+        .await;
+        assert!(matches!(result, Err(MemoryDownloadError::Session { .. })));
+        assert!(kept.is_some(), "pre-write backup remains with the caller");
+        assert!(
+            !memory_writes(&device).is_empty(),
+            "a mutation was attempted"
+        );
+        assert!(session.connection().is_none());
+        let seen = device.seen();
+        assert_eq!(
+            seen.iter().filter(|s| matches!(s, Seen::Connect)).count(),
+            1
+        );
+        assert_eq!(
+            seen.iter()
+                .filter(|s| matches!(s, Seen::Disconnect))
+                .count(),
+            1
+        );
+        let disconnect = seen
+            .iter()
+            .position(|s| matches!(s, Seen::Disconnect))
+            .unwrap();
+        assert!(!seen[disconnect + 1..].iter().any(|s| matches!(
+            s,
+            Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. } | Seen::Connect
+        )));
+    }
+
+    #[tokio::test]
     async fn a_protected_octet_in_a_write_stops_the_run() {
         let device = device(SimulatorConfig {
             protected_memory: Some((0x4003, 0x4004)),
@@ -1367,6 +1484,24 @@ mod tests {
 
         assert!(matches!(error, MemoryDownloadError::DoesNotConnectFirst));
         assert!(device.seen().is_empty());
+    }
+
+    #[tokio::test]
+    async fn an_invalid_plan_does_not_disconnect_a_callers_existing_connection() {
+        let device = device(SimulatorConfig::default());
+        let mut session = session(&device, WriteScope::Download);
+        session.connect().await.unwrap();
+        let before = device.seen();
+        let mut invalid = plan();
+        invalid.steps.remove(0);
+        let result = run_memory_download(&mut session, &invalid).await;
+        assert!(matches!(
+            result,
+            Err(MemoryDownloadError::DoesNotConnectFirst)
+        ));
+        assert!(session.connection().is_some());
+        assert_eq!(device.seen(), before, "offline validation sends nothing");
+        session.disconnect().await;
     }
 
     /// Recovery after an interrupted download is running the whole download
@@ -2211,8 +2346,9 @@ mod tests {
     #[tokio::test]
     async fn a_backup_that_cannot_be_kept_stops_the_run_with_nothing_written() {
         let device = old_device();
+        let mut session = session(&device, WriteScope::Download);
         let error = run_memory_download_with_backup(
-            &mut session(&device, WriteScope::Download),
+            &mut session,
             &plan(),
             |_| {},
             &mut |_: &DeviceBackup| Err("disk full".into()),
@@ -2226,6 +2362,16 @@ mod tests {
         assert!(error.to_string().contains("nothing was written"), "{error}");
         assert!(memory_writes(&device).is_empty(), "no write at all");
         assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+        assert!(session.connection().is_none());
+        assert_eq!(
+            device
+                .seen()
+                .iter()
+                .filter(|s| matches!(s, Seen::Disconnect))
+                .count(),
+            1,
+            "existing backup refusal must not receive a second cleanup disconnect"
+        );
     }
 
     #[tokio::test]

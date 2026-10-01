@@ -791,6 +791,11 @@ load-state machine records relative to its download plan, even when the
 saved memory-region lengths still match. This is offline-tested validation
 of the existing bounded backup, not evidence of complete address-write
 recovery or support for previously untested devices.
+Returned executor errors now close a still-open device management connection
+best-effort (2026-10-01, simulator-tested), preserving the original failure
+and existing backup rather than automatically restoring or retrying. This
+does not prove remote receipt of disconnect and does not cover a dropped
+future, process termination or a power loss during the run.
 
 **Live safety and compatibility remain narrow.** `1.1.220` is an excluded
 alarm panel. No prior approval carries over to a new target, write scope or

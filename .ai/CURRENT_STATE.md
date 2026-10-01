@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / public-write route audit)
+- **Timestamp:** 2026-10-01 14:18 CEST
+- **Web lock:** released by the UI session after this audit started; a new Web package requires a fresh lock. This audit changed no Web source.
+- **Completed:** Read-only source audit of commissioning CLI/HTTP write entry points after the K6 gate. K6, K12 serial write and K13 reset remain fail-closed before tunnel; CLI download/restore share plan-scoped pre-write backup and verified persistence/readback, not a universal device image; Debug-gated service-control write saves the exact property first, not whole-device state; K14 erase remains blocked. Group-value sends belong to `goal.md`, not this audit. The still-locked Web Program address tab fetches a phrase, asks consent, then shows HTTP 412 via an alert; no focused 412 UI regression exists. Added findings to RESEARCH §24, K6 goal status and `.ai/logs/2026-10-01_codex_commission-write-route-audit.md`. No code, gateway, KNX device, socket, credential or live action changed.
+- **Pending/Next Steps:** Re-run anchors/diff after this rebase, publish the docs-only audit and verify remote readback. The Web lock owner should improve the unavailable affordance and add a 412 test, without weakening the backend. K6/serial/K13 recovery requires device/mask-specific affected-storage knowledge, durable per-device pre-send backup/readback, abort/restore and a fresh device-specific go; K14 stays blocked. Do not treat the plan-scoped download backup as proof of all manufacturer-specific side effects.
+- **Notes for Codex oder Claude:** No access key may be guessed; never query `1.1.220`. No subagents or quota checks (latest user preference). Root checkout has unrelated dirty work; use isolated worktree and preserve its state. The prior K6 hardware round trip is historical evidence, not current write permission. Handoff for goal.md/UI session: the Web tab offers a now-unavailable action; error visibility is not a safety bypass, but its consent step is misleading.
+
+---
+
 - **Last Agent:** codex (UI / ISSUE-06 Ground-root Site/Property closeout)
 - **Timestamp:** 2026-10-01 14:17 CEST
 - **Web lock:** released after publishing the scoped ISSUE-06 Site/Property affordance; the next Web package needs a fresh lock.

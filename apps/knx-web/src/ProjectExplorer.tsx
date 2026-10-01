@@ -675,9 +675,10 @@ const BUILDING_PART_KINDS = [
 // observed two-level depth.
 export function NewBuildingPartRow(props: {
   parentId?: number;
+  fixedKind?: "Ground";
   onCreated: (tree: ProjectTree) => void;
 }) {
-  const { parentId, onCreated } = props;
+  const { parentId, fixedKind, onCreated } = props;
   const t = useTranslate();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<(typeof BUILDING_PART_KINDS)[number]>("Room");
@@ -688,7 +689,7 @@ export function NewBuildingPartRow(props: {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createBuildingPart(name, kind, parentId);
+      const tree = await api.createBuildingPart(name, fixedKind ?? kind, parentId);
       onCreated(tree);
       setName("");
     } catch (e) {
@@ -698,13 +699,14 @@ export function NewBuildingPartRow(props: {
 
   return (
     <li className="tree-new-row">
-      <select aria-label={t("structure.buildingKind")} value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
-        {BUILDING_PART_KINDS.map((k) => (
-          <option key={k} value={k}>
-            {buildingPartKindLabel(t, k)}
-          </option>
-        ))}
-      </select>
+      {fixedKind ? <span className="tree-fixed-kind">{buildingPartKindLabel(t, fixedKind)}</span> :
+        <select aria-label={t("structure.buildingKind")} value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+          {BUILDING_PART_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {buildingPartKindLabel(t, k)}
+            </option>
+          ))}
+        </select>}
       <input
         value={name}
         aria-label={t("inspector.name")}

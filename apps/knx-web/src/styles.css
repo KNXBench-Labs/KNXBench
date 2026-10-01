@@ -2433,8 +2433,10 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .structure-create summary { padding: 0.7rem 0.9rem; font-weight: 600; cursor: pointer; }
 .structure-create summary:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 .structure-create[open] summary { border-bottom: 1px solid var(--knx-border); }
+.structure-create-hint { margin: 0.6rem 0.9rem 0; color: var(--knx-muted); font-size: 0.85rem; line-height: 1.45; }
 .structure-create ul { list-style: none; margin: 0; padding: 0.5rem 0.9rem; }
 .structure-create .tree-new-row { flex-wrap: wrap; }
+.structure-create .tree-fixed-kind { padding: 0.35rem 0.55rem; border: 1px solid var(--knx-border); border-radius: 5px; color: var(--knx-muted); }
 .structure-create .tree-new-row input { flex: 1 1 7rem; max-width: 100%; }
 .structure-create .tree-new-row .field-error { flex-basis: 100%; }
 .eyebrow { color: var(--knx-muted); font-size: 12px; margin: 0; }

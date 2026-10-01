@@ -8366,6 +8366,13 @@ An undocumented `Space/@Type` such as `Site` is **not** read as `Ground`. It
 stays an `UnknownEnumValue` map problem with the existing reported
 `BuildingPart` fallback (§89), and a test pins that.
 
+The Buildings workspace now offers **Add site / property**, a fixed-`Ground`
+root in the first installation, and uses the existing parent select to move
+buildings beneath it. The UI test exercises two buildings on one installation
+and the existing create/move routes without duplicating device projections;
+this does **not** supply real ETS `Ground` export evidence or make later
+installations editable.
+
 Found on the way and not addressed: no command renames an `Installation`
 after creation. `Installation.name` comes only from `NewProjectDialog` or
 import. That matters once a user splits separate infrastructures into

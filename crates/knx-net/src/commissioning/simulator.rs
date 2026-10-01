@@ -524,6 +524,9 @@ pub enum Interruption {
     ReferenceRead,
     /// Step 4: a memory write carrying the data.
     DataWrite,
+    /// A specific memory-mapped region write, for a one-shot interruption
+    /// after an earlier region was already written (K7 simulator recovery).
+    MemoryWriteAt(u32),
     /// Step 5: the `PID_PROGRAM_VERSION` write.
     VersionWrite,
     /// Step 6: the `Load Completed` event write.
@@ -598,6 +601,14 @@ impl Interruption {
                 Interruption::DataWrite,
                 ApplicationService::MemoryWrite { .. } | ApplicationService::UserMemoryWrite { .. },
             ) => true,
+            (
+                Interruption::MemoryWriteAt(wanted),
+                ApplicationService::MemoryWrite { address, .. },
+            ) => wanted == u32::from(*address),
+            (
+                Interruption::MemoryWriteAt(wanted),
+                ApplicationService::UserMemoryWrite { address, .. },
+            ) => wanted == *address,
             _ => false,
         }
     }

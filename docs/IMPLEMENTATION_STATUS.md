@@ -17,6 +17,19 @@
   offline tests satisfy the open checkbox wording; until then they remain
   open and the completion condition remains unmet.
 
+## 2026-10-01 — Experimental K6 decision; K7 offline interruption regression
+
+- The operator approves continued K6 investigation **experimentally**, with
+  no further manufacturer documents available. This does not prove the exact
+  `1.1.67` model or affected storage, nor lift ADR-0059's pre-tunnel
+  durable-recovery gate. Confirmed CLI/HTTP K6 writes remain unavailable.
+  The active work target is `goal-commission.md`, not the UI goal.
+- K7's optional interrupted-download scenario now has a simulator regression:
+  the first `0701h` run writes one data region, disconnects before the second,
+  and leaves the table `Loading`; a new session on that same simulated device
+  repeats the full plan and reaches `Loaded` with both regions read back.
+  This is **not** a live interruption, rollback, or verified K6 recovery.
+
 ## 2026-10-01 — K6 recovery-gate availability in the Web tab (published)
 
 Published `76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` to

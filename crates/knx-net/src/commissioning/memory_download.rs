@@ -1003,7 +1003,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
+    use crate::commissioning::simulator::{Interruption, Seen, SimulatedDevice, SimulatorConfig};
     use crate::commissioning::SessionTiming;
     use knx_core::commissioning::device_backup::BackupRegion;
 
@@ -1403,6 +1403,45 @@ mod tests {
                 "left in {left_in:?}: the table is written again in full"
             );
         }
+    }
+
+    /// K7's optional interrupted-download recovery, exercised only in the
+    /// simulator: the first run writes the first data byte, then loses the
+    /// connection before the second region. No rollback happens; a retry
+    /// must run the complete plan.
+    #[tokio::test]
+    async fn an_interrupted_run_can_be_repeated_on_the_same_simulated_device() {
+        let device = device(SimulatorConfig {
+            interrupt_at: Some(Interruption::MemoryWriteAt(0x4003)),
+            ..SimulatorConfig::default()
+        });
+        let mut first = session(&device, WriteScope::Download);
+        run_memory_download(&mut first, &plan())
+            .await
+            .expect_err("the first run loses its connection before the second region");
+        assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loading);
+        assert_eq!(device.memory(0x4000, 1), vec![Some(0x01)]);
+        assert_eq!(device.memory(0x4003, 27), vec![None; 27]);
+        let first_writes = memory_writes(&device).len();
+        assert!(first_writes > 0, "the failed run did alter the device");
+
+        let mut retry = session(&device, WriteScope::Download);
+        let report = run_memory_download(&mut retry, &plan())
+            .await
+            .expect("the complete plan can recover after a one-shot interruption");
+        assert_eq!(
+            report.final_states,
+            vec![(MemoryLoadStateMachine::AddressTable, LoadState::Loaded)]
+        );
+        assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+        assert!(
+            memory_writes(&device).len() > first_writes,
+            "the retry wrote data again"
+        );
+        assert_eq!(
+            device.memory(0x4003, 27),
+            (0..27).map(Some).collect::<Vec<_>>()
+        );
     }
 
     #[tokio::test]

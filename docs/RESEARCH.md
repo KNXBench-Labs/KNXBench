@@ -6571,14 +6571,36 @@ physical accessibility or a durable recovery image. The older twofold
 `1.1.32` needs its own device-specific recovery proof and fresh go; the prior
 `1.1.67` authorization does not follow the candidate.
 
+**[V] Separate bounded identity probe and offline cross-check, 2026-10-01.**
+With exactly `KNX_IDENTIFY_ADDRESS=1.1.32` and the IP-only discovered tunnelling
+gateway, the explicitly ignored `knx-net` `live_identify` test used
+`ManagementSession::read_only` and `AuthorisationPlan::Skip`; it passed **1/1**
+in 0.61s, disconnected cleanly, and again read mask `0701h`. Device Object
+`PID_MANUFACTURER_ID` and `PID_HARDWARE_TYPE` each returned octets;
+`PID_PROGRAM_VERSION` answered **no elements** (a refusal, not an empty
+version). No key, write, other address or programming-mode broadcast was
+involved. The two-octet manufacturer value agrees with MDT's `M-0083`
+master-data entry documented in §8.8.5. A bounded in-memory inspection of
+the local `MDT_KP_BE_01_Push_Button_V15a.knxprod` found that the six-octet
+hardware type differs from the historical twofold target but occurs as a
+**prefix** in two of eight Device Object (`ObjIdx=0`, `PropId=78`)
+`LdCtrlCompareProp` records: `A-0020-15-7F81` and `A-0024-15-6E79`. Each
+record has **ten** octets; a six-octet prefix match is neither a successful
+full comparison nor proof of the installed product/order/application or
+affected storage. The project names the latter program, which is evidence of
+intent, not the installed image. Raw endpoint and property bytes were not
+copied into Git. The operator replied “go” to the candidate-suitability
+question; an exact write plan, complete durable recovery and operation-specific
+write confirmation remain absent. See the scoped `.ai` read-only log.
+
 **[I] K6 recovery input still missing.** Before implementing a backup-based
 reopening, obtain the actual target's product/application identification and
 authoritative affected-storage mapping, including non-memory state and
 readability/access restrictions. Prove exact per-device coverage and persist
 and read back all pre-write bytes/properties before any send; a Device Reader
-file with blank/unread fields or a generic memory range cannot qualify. This
-source check did not contact a gateway or device and grants no write
-authorization. No access key may be guessed.
+file with blank/unread fields or a generic memory range cannot qualify. The
+older *source-only* check did not contact a gateway; the later read-only probes
+above did, but grant no write authorization. No access key may be guessed.
 
 ---
 

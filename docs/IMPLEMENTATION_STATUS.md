@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — Restore refuses incomplete load-state coverage (offline)
+
+- `knx_core::commissioning::device_backup::restore_plan` now compares the
+  backup's load-state machine list to the machines in the original download
+  plan. Missing, duplicate and extraneous records are refused even if every
+  memory region still has the right shape. State order is not a coverage claim.
+- RED: two focused core tests failed against the previous permissive behavior;
+  GREEN: three focused refusal tests and the wider core/app backup tests passed.
+  A temporary bypass mutation made all three refusal tests fail, then was
+  removed. The explicitly ignored simulator restore test using the locally
+  available private product/project fixtures ran 1/1; dropping one load state
+  now returns `OtherLoadStates`, while the complete backup still restores.
+- Integrated gates on the isolated worktree: `cargo fmt --all -- --check`,
+  strict workspace Clippy, `cargo test --workspace --no-fail-fast` (139 suites,
+  2,798 passed, zero failed, zero `SKIP:`), layering, headers, anchors
+  (375 links / 225 files), corpus-gates and `git diff --check` all passed.
+- This strengthens existing *plan-scoped* K7 recovery files. It does not add
+  hardware evidence, a full-device image, an address-write backup or a public
+  K6/serial/K13 write path. Their pre-tunnel gates remain closed.
+
 ## 2026-10-01 — Active limitations and task backlog reconciled (docs only)
 
 - Removed 38 wholly resolved or withdrawn numbered KNOWN_LIMITATIONS

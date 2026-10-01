@@ -7,6 +7,10 @@ Device Reader documentation was compared with the already gated K6 CLI/HTTP
 entry points and ADR-0059. Findings and primary links are in RESEARCH §24;
 KNOWN_LIMITATIONS §116 and `goal-commission.md` now make the gap explicit.
 No gateway, target device, bus write, key, or Web source was accessed.
+Rebased over the ISSUE-04 UI lock handover and published as
+`3993d6236a479d1c778fdf576b885ce95b8eabb8`; local and remote SHA
+matched on readback. Anchors (405 links/225 files) and diff check passed
+after the rebase.
 
 - A programming-mode response count establishes a protocol recipient, not a
   complete device/product/application/storage identification. Line scans

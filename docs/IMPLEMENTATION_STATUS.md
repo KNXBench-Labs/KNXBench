@@ -27,7 +27,7 @@
   anchors (375 links / 226 Markdown files), corpus-gates and diff passed.
   Temporary corpus links were removed. No live bus or write authorization.
 
-## 2026-10-01 — U13 independent-review fixes (offline)
+## 2026-10-01 — U13 closed: independent-review fixes (offline)
 
 - The operator explicitly accepts the recovered independent GPT-6.1-Sol
   review instead of unavailable Claude; its original verdict was changes
@@ -48,9 +48,19 @@
   changing public API, protocol, destination, HPAI selection or timeout.
   This is not multicast/native Search proof. RESEARCH §20.1 and limitation
   §79 retain the real-network boundary; no live bus/firewall operation.
-- Regression evidence and final gate outcomes are recorded in
-  `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`. U13 closure waits for the
-  integrated gates and release of this package's Web lock.
+- Integrated gates after concurrent backup-safety changes: 139 Rust suites /
+  2,820 passed / zero failed / 161 ignored / zero `SKIP:` or skipping markers;
+  Web 82 files / 1,312 tests; all six local Chromium mock suites (30 tests);
+  TypeScript/build, strict workspace/all-targets Clippy, fmt, layering, headers,
+  anchors, corpus-gates and diff checks green. Fresh task-owned target and
+  read-only corpus link/environment prevented stale-root or silent-skip gates.
+- Both ISSUE-12 boxes are ticked with exact test/boundary evidence; U0–U13
+  are complete and this package's final handover releases the Web lock.
+  Regression/mutation evidence, original nonmatching mutation-filter mistake
+  and final outcomes are in `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
+  Native WebKitGTK/real screen-reader and global alpha/whole-goal acceptance
+  remain outside this completion claim; hardware recovery/write gates stay
+  fail-closed and no productive device operation occurred.
 
 
 ## 2026-10-01 — Download worker outcome and tunnel reservation (offline)

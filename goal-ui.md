@@ -26,23 +26,27 @@ no new live device check or whole-image recovery follows. K6 confirmed public
 address writes now refuse before a tunnel without device-specific durable
 recovery (ADR-0059); the Web tab shows this availability rather than asking
 for consent prematurely. CLI/HTTP discovery succeeded after the user's
-firewall rule; native WebKitGTK Search remains unverified. ISSUE-04's five
-acceptance rows have since been verified and ticked. Only ISSUE-12's two
-discovery-evidence boxes and U13's **independent read-only review** remain
-open on this UI track. The chosen Claude review was attempted but refused by
-its service quota on 2026-10-01; that is **not a review verdict**. See
-`.ai/logs/2026-10-01_codex_ui-u13-review-blocked.md`. `docs/IMPLEMENTATION_STATUS.md` and the current top of
-`.ai/CURRENT_STATE.md` take precedence over this dated snapshot.
+firewall rule; native WebKitGTK Search remains unverified. ISSUE-04 and both
+ISSUE-12 acceptance rows are verified and ticked. **U0–U13 are complete**:
+the operator accepted the independent GPT-6.1-Sol review because Claude was
+unavailable; its three P1 findings are fixed with behavioral RED/GREEN and
+restored guard mutations. Actual offline UDP discovery roundtrip/no-response
+tests close the remaining transport-evidence gap, not the real-network or
+native Search boundaries. Integrated gates: 139 Rust suites / 2,820 passed /
+zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
+30 mock-only Chromium tests, strict Clippy/fmt/type/build/repository gates
+green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
+The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
 ---
 
 ## 0. Scope: what this goal owns
 
-Remaining work: reconcile ISSUE-12's two acceptance boxes against the actual
-host-firewall/discovery evidence without inventing a wire capture or a full
-loopback roundtrip, then obtain the chosen independent U13 review and fix
-its findings. Native WebKitGTK and real screen-reader checks are verification
-gaps, not permission for a KNX device write. Completed ISSUE-01–11/13 slices
+No UI implementation work remains in this goal. ISSUE-12 reconciles the
+documented host-firewall correction and actual unicast-loopback discovery
+tests; no wire capture or multicast-loopback proof is claimed. Native
+WebKitGTK and real screen-reader checks remain verification gaps, not
+permission for a KNX device write. Completed ISSUE-01–13 slices
 and the accepted ADR-0038 are evidenced in
 [the issue plan](docs/superpowers/plans/2026-09-21-user-reported-issues.md)
 and [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md); they are not
@@ -221,26 +225,32 @@ handover.
 
 ### U13 — Close the UI track
 
-**User decision, 2026-10-01:** the operator explicitly accepts the completed
-independent GPT-6.1-Sol review in place of Claude, which is unavailable.
-Report: `.ai/logs/2026-10-01_codex_ui-u13-gpt-review-received.md`.
-Verdict **changes required**: selection/detail identity, Undo/Redo parameter
-refresh, autosave cleanup and offline discovery roundtrip coverage remain
-for this UI session, followed by integration gates. This is not U13 closure.
-The following describes the superseded reviewer choice and original procedure.
+**Done, 2026-10-01.** The operator explicitly accepted the independent
+GPT-6.1-Sol report instead of unavailable Claude. The original report remains
+`.ai/logs/2026-10-01_codex_ui-u13-gpt-review-received.md`, with its true
+**changes required** verdict and independent provenance; it is not relabelled
+as Claude approval. The historical refused Claude attempt is preserved in
+`.ai/logs/2026-10-01_codex_ui-u13-review-blocked.md`.
 
-The user chose a read-only independent review by the goal.md/Claude session.
-An attempt on 2026-10-01 was refused by that service's weekly limit before
-any review; no verdict exists. Do not replace this with a self-review or
-mark the track complete. The brief is in
-`.ai/logs/2026-10-01_codex_ui-u13-review-brief.md`. Once review access
-returns (or the user explicitly chooses another independent reviewer):
+- Device changes clear old detail; both editor surfaces reject mismatched IDs.
+- Undo/Redo invalidates parameter GETs through the accepted project snapshot;
+  older overlapping responses remain rejected.
+- Completed saves cannot re-arm an obsolete autosave cycle after disabling,
+  unmounting or cadence changes. Failures remain visible.
+- ISSUE-12's host-firewall correction was accepted by the independent review.
+  Real offline UDP loopback tests now exercise the shared transport and cover
+  HPAI, filtering, duplicates, multiple reply sources, mapping and no-reply
+  deadline. RESEARCH §20.1 and limitation §79 retain multicast/native boundaries.
+- All §2.5 gates were rerun after integration of concurrent commissioning
+  backup-safety changes. Web 1,312 tests, Rust 2,820 passed / zero failures /
+  161 ignored / zero `SKIP:`; all six Chromium mock suites pass (30 tests).
+- The implementation session's separate full-diff pass is self-review, not a
+  newly claimed independent verdict. Each new identity/lifetime guard failed
+  its mutation check and was restored before final GREEN.
 
-1. Reconcile ISSUE-12's two open discovery boxes against RESEARCH §20.1,
-   host-firewall fix and the actual offline test scope. No wire capture or
-   full loopback multicast test was performed; do not tick on inference.
-2. Obtain the independent verdict, fix findings and rerun the integration
-   gates. Close with per-ISSUE evidence and a handover to `goal.md` (§6).
+Final evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`. The final
+handover releases this package's Web lock and transfers only the existing
+native verification/global acceptance boundaries to their owners (§6).
 
 ---
 

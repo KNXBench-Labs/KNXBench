@@ -118,13 +118,49 @@ whole-device recovery or productive commissioning-write approval is implied.
   shell injection, eval or unsafe deserialization. Separate full-diff self-review
   found no remaining blocker; discovery-exchange body equivalence verified.
 - Concurrent upstream commissioning commits changed backup-directory durability
-  while the branch gates ran. Their handover was read; integrate them and rerun
-  all required gates before publishing or releasing the Web lock.
+  while the branch gates ran. Their handover was read; rebased onto `172350db`,
+  resolving the implementation-status conflict by retaining both full sections.
+  UI/network sources were byte-identical to the gated source before rebase.
+- Integrated source commit `36e6b6af44d017f6fe3ca0b417c519afe7a4f8d3`:
+  139 Rust suites / 2,820 passed / zero failed / 161 ignored / zero `SKIP:`
+  or skipping markers. All required Rust/repository step exits are zero;
+  headers 367 valid / unchanged missing-header ceiling 161 / 34 generated
+  skips; anchors 375 links / 226 Markdown files, none dead. Full integrated
+  Web 82 files / 1,312 tests, zero TypeScript diagnostics, Vite build and all
+  six mocked Chromium suites (30 tests) passed again.
+
+Environment cross-check found that exports in the first background launch did
+not carry into the next independent job: the first integrated run used the
+worktree-local default target and the available corpus symlink, and still had
+zero skip markers. It is not evidence of an explicitly configured target/
+corpus environment. Required exports were therefore moved into the gate
+script itself and the complete integrated Rust/repository gates rerun with
+separate `ui-u13-integrated-own-env-*` logs and non-secret metadata. The original
+and corrected evidence are retained separately until final task-owned cleanup.
+The corrected job exited 0: all eight required step markers are zero, the
+logged target is the fresh task-owned directory, corpus configuration is
+explicit, the changed upstream application crate compiled, and aggregate
+results remain 139 suites / 2,820 passed / 0 failed / 161 ignored / 0 skip
+markers. Final repository logs verify the actual own-target executable and
+nonzero header/anchor work counts, not merely an exit-only wrapper.
 
 ## Final handover
 
-Pending integrated gate verification, ISSUE-12 checkbox reconciliation,
-publication/readback, Web-lock release and task-owned cleanup. Foreign root
-changes and other worktrees remain untouched. The goal.md session owns global
-statistics/triage/alpha/whole-goal review; commissioning retains its separate
-hardware safety gates.
+U0–U13 are complete with the operator-approved independent review, resolved
+findings and integrated GREEN gates. Both ISSUE-12 boxes have exact named-test
+and environmental evidence; no owned issue-plan checkbox is unchecked. The
+closing handover releases this package's Web lock. Publication must use a
+non-forced main push with exact remote SHA readback before cleanup. Only this
+worktree/branch, its corpus symlink, its target child and `ui-u13-*` scratch
+artifacts are task-owned; foreign root changes and other worktrees stay intact.
+
+**For the goal.md session:** adopt the UI closure, refresh global statistics
+and any existing §79 triage description if needed. No new limitation number
+was introduced; native WebKitGTK Search, real screen-reader coverage, manual/
+alpha and the final whole-goal review remain the respective existing owners'
+work. Do not reopen the superseded Claude service-refusal blocker.
+
+**For the commissioning session:** Web lock released after UI closure. No
+target identity/recovery/write-go requirement is relaxed; K6/serial/K13 remain
+fail-closed according to their documented gates. These UI tests never touch
+the physical KNX bus.

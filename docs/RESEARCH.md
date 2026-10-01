@@ -6504,6 +6504,30 @@ focused UI regression for the durable-recovery refusal. The Web lock owner
 must decide the affordance and add its test; the server gate is the safety
 boundary in the meantime. No Web source was changed here.
 
+**[V] Official diagnostic-source cross-check, 2026-10-01 (offline).** KNX's
+[Individual address](https://support.knx.org/hc/en-us/articles/360018775719-Individual-address)
+documentation describes programming-mode response counts and a line scan of
+addresses and mask versions; neither is a complete product/application or
+storage-scope proof. [Device Info](https://support.knx.org/hc/en-us/articles/360018777979-Device-Info)
+can report manufacturer, order number, serial, firmware and application, but
+its available fields depend on mask and some group-communication information
+cannot be read from some devices. The Association's
+[Device Reader](https://support.knx.org/hc/en-us/articles/115001822070-Device-Reader)
+documents a caller-selected memory range and address space. Its property
+export leaves array properties larger than 64 bytes blank if they were not
+loaded on demand. These are diagnostic facilities, not a documented complete
+pre-write image of the button-selected device. The cited pages do not specify
+which persistent areas MP §2.3 changes for our MDT 0701h target.
+
+**[I] K6 recovery input still missing.** Before implementing a backup-based
+reopening, obtain the actual target's product/application identification and
+authoritative affected-storage mapping, including non-memory state and
+readability/access restrictions. Prove exact per-device coverage and persist
+and read back all pre-write bytes/properties before any send; a Device Reader
+file with blank/unread fields or a generic memory range cannot qualify. This
+source check did not contact a gateway or device and grants no write
+authorization. No access key may be guessed.
+
 ---
 
 ## Sources

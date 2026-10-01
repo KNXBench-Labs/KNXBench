@@ -7800,7 +7800,11 @@ now fail before opening a tunnel. Offline plan/phrase calls, protocol code
 and directly injected simulated session tests remain; this is a new safety
 boundary, not a retroactive claim that the prior test failed. A new hardware
 run needs a verified per-device pre-send backup/readback and new permission
-(RESEARCH §24).
+(RESEARCH §24). KNX's documented Device Reader takes selected memory ranges;
+its property export may leave arrays over 64 bytes blank unless loaded on
+demand. Even a saved diagnostic file is not proof that every address-programming
+side effect was captured. Manufacturer-/application-specific affected storage
+for the button-selected target is not yet established (RESEARCH §24).
 
 **Not a limitation any more.** An earlier draft of this section claimed MP
 §2.3 *"does not consider a `T_Connect` refusal, or a connection that opens

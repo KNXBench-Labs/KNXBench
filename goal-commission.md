@@ -330,6 +330,16 @@ panel still requests consent for the now-blocked action and displays HTTP
 `412` as an alert. Its unavailable-state affordance/test belongs to the
 separate Web lock owner (§5); no UI code or bus was changed by this audit.
 
+**Offline recovery-source check, 2026-10-01.** KNX diagnostic documentation
+describes programming-mode counts and address/mask scans, mask-dependent
+device information, and selected Device Reader ranges; its property export
+can even leave unloaded arrays over 64 bytes blank (RESEARCH §24). None of
+these alone proves the affected storage or a complete recovery record for
+the button-selected device. K6 remains fail-closed. Next input is the actual
+device/product/application identity and authoritative per-mask affected-
+storage/access information; no access key may be guessed. No live go was
+requested or implied by the source check.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

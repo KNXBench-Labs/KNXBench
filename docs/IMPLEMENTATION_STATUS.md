@@ -1,5 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — Pre-write backup directory chains (offline)
+
+- Both application backup writers now request directory-entry synchronization
+  for the absolute supplied path and the resolved target's ancestor chains,
+  after syncing file bytes and verifying readback. Shared spellings are visited
+  once, in deterministic child-to-parent traversal order. Symlink and `..`
+  components remain covered; relative paths are anchored without an empty
+  ancestor. A directory or path-resolution error refuses the backup receipt.
+- Public signatures, JSON versions, owner-only/create-new file protection,
+  backup coverage and hardware write gates are unchanged. A failed sync can
+  leave a file on disk, but that file is not returned as a durable receipt.
+- Four initial RED failures reproduced leaf-only sync and missing-parent-error
+  acceptance in both writers. A separate alias RED exposed the resolved-target
+  branch. Sixteen backup-focused tests pass, including nine new regressions;
+  leaf-only and canonical-only mutations fail their tests and are restored.
+- In-session review caught an empty path becoming an implicit CWD receipt.
+  Its additional RED refusal test now passes with explicit empty-path rejection,
+  retaining the previous fail-closed behavior instead of silently normalizing it.
+- This is an OS synchronization request, not a power-loss experiment,
+  descriptor-pinned path confinement or whole-device recovery evidence.
+- Delivery gates passed: 139 workspace suites / 2,818 passed / zero failures /
+  161 ignored / zero `SKIP:`; explicit simulator CLI backup/restore 1/1 and
+  private HTTP download fixtures 13/13. Strict workspace Clippy checked the
+  changed application crate; fmt, Web-resource build, layering, headers,
+  anchors (375 links / 226 Markdown files), corpus-gates and diff passed.
+  Temporary corpus links were removed. No live bus or write authorization.
+
 ## 2026-10-01 — Download worker outcome and tunnel reservation (offline)
 
 - Polling a finished server worker without a terminal device result now reports

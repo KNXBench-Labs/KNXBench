@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U13 publication receipt)
+- **Timestamp:** 2026-10-01 21:01 CEST
+- **Web lock:** released by ui-u13-fixes; no active UI package remains.
+- **Completed:** U13 source `36e6b6af44d017f6fe3ca0b417c519afe7a4f8d3` and closing documentation `dfa0cc79ca50bc7da747058e97978c7e3a2de25c` published to origin/main; exact local/remote SHA readback matched the closing commit. Operator-approved independent review, three resolved P1s, ISSUE-12 reconciliation, full integrated gates and closure are documented below. Final explicit-environment verification repeated all Rust/repository gates in the task-owned target: 139 suites / 2,820 passed / 0 failed / 161 ignored / zero skip markers; Web 1,312 and mock Chromium 30 passed. No source changed after those gates. No physical bus, firewall, recovery gate or foreign root edit changed.
+- **Pending/Next Steps:** No further goal-ui.md implementation task. The goal.md owner adopts closure, global stats/triage/manual/alpha and final whole-goal acceptance; native WebKitGTK/real-screen-reader verification remains disclosed. Commissioning continues only within its separate existing hardware gates, never on an inferred write go.
+- **Notes for Codex oder Claude:** Publication receipt is documentation-only. Own worktree/branch/corpus link/target child and ui-u13 task scratch are removed only after this receipt's remote readback; preserve all foreign root edits and other worktrees. Keep the original independent report's changes-required verdict/provenance; the implementation session's later diff review is not a new independent review. Details `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
+
+---
+
 - **Last Agent:** codex (UI session / U13 completed)
 - **Timestamp:** 2026-10-01 20:58 CEST
 - **Web lock:** released by ui-u13-fixes after integrated U13 completion.

@@ -136,9 +136,15 @@ the catalog maps to the one-based device number (the reservation is child 0).
 
 Catalog creation checks the available `u32` device and communication-object
 ID ranges for the full requested quantity before calling the core allocator.
-The shared core allocator (`crates/knx-core/src/project.rs`) still uses unchecked
-`u32` increments for other mutation paths; this scoped catalog safeguard does
-not claim to harden every project operation at the maximum representable ID.
+AR02 also makes all nine shared core allocators fallible: `u32::MAX` is the
+last valid ID, and later allocation returns `IdAllocationError` without
+changing a counter. General creation, CSV planning, offline reconciliation
+and ETS mapping propagate refusal rather than wrapping or panicking. CSV and
+reconciliation discard a refused detached batch; editing an existing parameter
+does not allocate a replacement ID. Maximum-ID native roundtrip and monotonic
+undo/redo regressions are in `knx-app/tests/id_exhaustion.rs`. This does not
+activate parked ADR-0039 phases 3–5 or claim every failed single edit leaves
+its successfully reserved high-water mark unchanged.
 
 Headless Chromium checked the catalog at 1440×900 and 400×700 against a
 local Vite page with mock catalog data, not a real manufacturer package. A

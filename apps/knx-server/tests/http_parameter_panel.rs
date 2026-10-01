@@ -772,6 +772,48 @@ async fn kv_shape_stored_values_decompose_into_five_sections_each_showing_its_ow
 // AC5: POST a valid top-level etsId/raw returns 200 and the same response
 // shows the new value as "Stored" — no second request needed.
 #[tokio::test]
+async fn exhausted_parameter_ids_refuse_new_values_but_allow_existing_edits() {
+    for counter in [u32::MAX - 1, u32::MAX] {
+        let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+        let state = Arc::new(state_with_device(products, vec![("P-1_R-1", "7")]));
+        state.project.lock().unwrap().as_mut().unwrap().ids =
+            knx_core::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, counter, 0);
+        let app = knx_server::app(state.clone(), None);
+        if counter < u32::MAX {
+            assert_eq!(
+                post_panel(app.clone(), 1, "P-2_R-1", "1").await.0,
+                StatusCode::OK
+            );
+            let project = state.project.lock().unwrap();
+            let parameters = &project.as_ref().unwrap().installations[0].parameters;
+            assert_eq!(parameters.last().unwrap().id, ParameterInstanceId(u32::MAX));
+        }
+        let before = state.project.lock().unwrap().clone();
+        let (status, dto) = post_panel(app.clone(), 1, "P-3_R-1", "8").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(dto["error"]
+            .as_str()
+            .unwrap()
+            .contains("project parameter_instance ID range exhausted"));
+        assert_eq!(*state.project.lock().unwrap(), before);
+        let (status, dto) = post_panel(app, 1, "P-1_R-1", "9").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(field(&dto, "P-1_R-1").unwrap()["value"], "9");
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().unwrap();
+        assert_eq!(project.ids.peek_parameter_instance(), u32::MAX);
+        assert_eq!(
+            project.installations[0].parameters[0].id,
+            ParameterInstanceId(1)
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_store::open_and_migrate(&dir.path().join("parameter.knxdb")).unwrap();
+        knx_store::save_project(&conn, project).unwrap();
+        assert_eq!(knx_store::load_project(&conn).unwrap(), *project);
+    }
+}
+
+#[tokio::test]
 async fn post_a_valid_top_level_value_is_reflected_in_the_same_response() {
     let (_dir, products) = temp_product_db(WRITE_PROGRAM);
     let state = Arc::new(state_with_device(products, vec![]));

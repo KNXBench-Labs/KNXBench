@@ -870,7 +870,7 @@ async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
         .find(|device| device.address == Some("1.1.67".parse().unwrap()))
         .unwrap()
         .clone();
-    device.id = project.ids.next_device_id();
+    device.id = project.ids.next_device_id().unwrap();
     device.com_objects.clear();
     {
         let products = h.state.product_db.as_ref().unwrap().lock().unwrap();

@@ -1461,11 +1461,11 @@ mod tests {
     fn allocator_state_survives_a_round_trip_and_next_id_does_not_collide() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = Project::new(Language("en".into()));
-        let _ = project.ids.next_device_id(); // DeviceId(1)
-        let second = project.ids.next_device_id(); // DeviceId(2)
+        let _ = project.ids.next_device_id().unwrap(); // DeviceId(1)
+        let second = project.ids.next_device_id().unwrap(); // DeviceId(2)
         save_project(&conn, &project).unwrap();
         let mut loaded = load_project(&conn).unwrap();
-        let next = loaded.ids.next_device_id();
+        let next = loaded.ids.next_device_id().unwrap();
         assert_eq!(next, DeviceId(3));
         assert_ne!(next, second);
     }

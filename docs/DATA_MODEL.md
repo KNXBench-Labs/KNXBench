@@ -634,3 +634,21 @@ regenerated, which must keep loading. A migration that cannot open its
 predecessor's fixture is a failing test, not a release note.
 
 See [ADR-0003](adr/0003-sqlite-project-format.md).
+
+**Amendment (AR02, 2026-10-01): checked project-local ID allocation.** All
+nine `IdAllocators::next_*_id` methods return `Result<Id, IdAllocationError>`.
+Counters store the last issued ID: zero is never allocated, `u32::MAX` is a
+valid final ID, and subsequent allocation refuses without changing counters.
+This changes the internal Rust API, not the native schema (currently v9),
+HTTP DTOs or project format. `map::map` also becomes fallible; project import
+propagates `ImportFailure::Allocation` and never returns its detached partial
+project. Source bytes are not rewritten.
+
+An exhausted counter is valid persisted state, not a malformed counter.
+Existing load-time repair of a counter below an in-use ID remains separate.
+CSV/reconciliation plan against cloned allocators and refuse an entire plan
+on exhaustion; failed command batches restore reservations. Undo/redo keeps
+the monotonic high-water mark, including the maximum. All nine final entities
+and counters have a synthetic save/reopen equality regression; editing an
+existing entity does not require a new ID. This is not activation or sealing
+of the parked ADR-0039 phases 3–5.

@@ -1,5 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — AR02 general ID exhaustion (offline; UTC receipt)
+
+- All nine core allocators use checked addition and return `IdAllocationError`;
+  `u32::MAX` is valid, repeat refusal is stable and never changes counters.
+  All production callers propagate errors: ETS mapper/import, CSV planning,
+  structural creation, parameter insertion and offline scan reconciliation.
+  Existing parameter edits need no allocation. No native schema or DTO change.
+- Nine behavioral REDs; final entities/counters save/reopen equality; CSV and
+  reconciliation failure atomicity, maximum reservation rollback and monotonic
+  undo/redo; actual CLI dry-run/write exit 2 and HTTP unchanged-project refusals.
+  Mapper tests seed counters rather than constructing billions of entities.
+  Three realistic compiled mutants caught; originals hash-checked/restored.
+- Separate in-session review closed a direct mapper fixture compilation gap
+  and an ADR-0018 header gap. The final stable-source gate passes: 141 Rust
+  result blocks / 2,855 passed / zero failed / 161 ignored; 77 explicitly run
+  private offline corpus/roundtrip tests / zero failed/ignored/skip markers;
+  Web 1,312; strict workspace Clippy, dependency policy, typecheck/build,
+  repository headers/anchors/layering/corpus and patch checks. Headers:
+  371 valid / 160 absent / 34 generated; corpus policy 324 Rust sources.
+- `DATA-01` and AR02 closed at this bounded contract; catalog preflight, U13
+  fixes and all numbered limitation identities/counts preserved. This does
+  not activate parked ADR-0039 phases 3–5, prove native GUI/live bus/ETS parity
+  or replace independent whole-product review. AR03 activation was asked but
+  no answer arrived; continue its bounded audit and then independent AR04.
+  Canonical-root statistics refresh remains foreign-owner blocked.
+  Receipt `.ai/logs/2026-10-01_codex_alpha-id-exhaustion.md`.
+
 ## 2026-10-01 — AR01 runtime gate target and coverage (offline)
 
 - Repository gates use the exact runtime root (CWD or leading `--root PATH`),

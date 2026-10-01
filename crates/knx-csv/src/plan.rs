@@ -341,9 +341,8 @@ fn validate_read_only_cell(
 }
 
 /// Plans a `Command::CreateGroupAddress` for `row`, whose address matched no
-/// existing entry. Always succeeds — there is no row-level condition left
-/// that can fail here, since the reader already rejected anything that
-/// would have.
+/// existing entry. An exhausted ID space is a row-level error, so the
+/// all-or-nothing planner returns no command for the entire file.
 fn plan_create(
     row: &CsvRow,
     ranges: &[GroupRange],
@@ -361,7 +360,17 @@ fn plan_create(
         });
     }
 
-    let id = ids.next_group_address_id();
+    let id = match ids.next_group_address_id() {
+        Ok(id) => id,
+        Err(error) => {
+            problems.push(CsvProblem {
+                row: Some(row.line),
+                severity: Severity::Error,
+                detail: error.to_string(),
+            });
+            return;
+        }
+    };
     let entry = GroupAddressEntry {
         id,
         // Matches `domain.rs`'s `create_group_address_impl`: a UI/CSV

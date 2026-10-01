@@ -48,9 +48,10 @@ use knx_core::{
     Area, AreaId, BinaryDataRef, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance,
     ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance, Devices,
     Direction, DptRef, GroupAddress, GroupAddressEntry, GroupAddressId, GroupAddressStyle,
-    GroupLink, GroupRange, GroupRangeId, IdAllocators, IndividualAddress, Installation,
-    InstallationId, Language, Layer, Line, LineId, ModuleInstance, ModuleInstanceId, Override,
-    ParameterInstance, Project, ProjectInfo, Resolved, ResolvedFlags, SourceRef, Text, Topology,
+    GroupLink, GroupRange, GroupRangeId, IdAllocationError, IdAllocators, IndividualAddress,
+    Installation, InstallationId, Language, Layer, Line, LineId, ModuleInstance, ModuleInstanceId,
+    Override, ParameterInstance, Project, ProjectInfo, Resolved, ResolvedFlags, SourceRef, Text,
+    Topology,
 };
 
 use crate::source::{
@@ -134,13 +135,21 @@ struct IdTables {
     building_parts: BTreeMap<String, BuildingPartId>,
 }
 
-pub fn map(document: &SourceDocument, source_path: &str) -> MapOutput {
+/// Exhaustion aborts detached construction; no partial project is returned.
+pub fn map(document: &SourceDocument, source_path: &str) -> Result<MapOutput, IdAllocationError> {
+    map_with_ids(document, source_path, IdAllocators::default())
+}
+
+fn map_with_ids(
+    document: &SourceDocument,
+    source_path: &str,
+    mut ids: IdAllocators,
+) -> Result<MapOutput, IdAllocationError> {
     if document.schema_version >= 21 {
-        return map_v21(document, source_path);
+        return map_v21(document, source_path, ids);
     }
 
-    let mut ids = IdAllocators::default();
-    let tables = allocate_ids(document, &mut ids);
+    let tables = allocate_ids(document, &mut ids)?;
 
     // Session 3 imports no application program, so no `TranslationUnit`
     // ever populates the string table and every `Text` produced here is
@@ -165,19 +174,19 @@ pub fn map(document: &SourceDocument, source_path: &str) -> MapOutput {
             &mut project.devices,
             &mut problems,
             &mut counts,
-        );
+        )?;
         retained.extend(installation_retained);
         project.installations.push(mapped);
     }
 
     project.ids = ids;
 
-    MapOutput {
+    Ok(MapOutput {
         project,
         retained,
         problems,
         counts,
-    }
+    })
 }
 
 /// Schema-≥21 counterpart of [`map`], sharing its top-level shape exactly:
@@ -185,9 +194,12 @@ pub fn map(document: &SourceDocument, source_path: &str) -> MapOutput {
 /// `Project::new`/`MapOutput` assembly — only `map_project_info_v21` (for
 /// `ProjectInfo::ets_schema_version`) and `map_installation_v21` (for
 /// module-instance/`GroupObjectTree`-driven device mapping) differ.
-fn map_v21(document: &SourceDocument, source_path: &str) -> MapOutput {
-    let mut ids = IdAllocators::default();
-    let tables = allocate_ids(document, &mut ids);
+fn map_v21(
+    document: &SourceDocument,
+    source_path: &str,
+    mut ids: IdAllocators,
+) -> Result<MapOutput, IdAllocationError> {
+    let tables = allocate_ids(document, &mut ids)?;
     // Schema ≥21's `ComObjectInstanceRef/@Links` names a group address by
     // its short id (`"GA-3"`), not the fully-qualified `@Id`
     // (`"P-03DE-0_GA-3"`) `tables.group_addresses` is keyed by — measured
@@ -215,19 +227,19 @@ fn map_v21(document: &SourceDocument, source_path: &str) -> MapOutput {
             &mut project.devices,
             &mut problems,
             &mut counts,
-        );
+        )?;
         retained.extend(installation_retained);
         project.installations.push(mapped);
     }
 
     project.ids = ids;
 
-    MapOutput {
+    Ok(MapOutput {
         project,
         retained,
         problems,
         counts,
-    }
+    })
 }
 
 /// The short form of every already-allocated group address id, e.g.
@@ -249,64 +261,69 @@ fn short_group_address_ids(tables: &IdTables) -> BTreeMap<String, GroupAddressId
         .collect()
 }
 
-fn allocate_ids(document: &SourceDocument, ids: &mut IdAllocators) -> IdTables {
+fn allocate_ids(
+    document: &SourceDocument,
+    ids: &mut IdAllocators,
+) -> Result<IdTables, IdAllocationError> {
     let mut tables = IdTables::default();
     for installation in &document.installations {
         for area in &installation.areas {
-            tables.areas.insert(area.id.clone(), ids.next_area_id());
+            tables.areas.insert(area.id.clone(), ids.next_area_id()?);
             for line in &area.lines {
-                tables.lines.insert(line.id.clone(), ids.next_line_id());
+                tables.lines.insert(line.id.clone(), ids.next_line_id()?);
                 for device in &line.devices {
                     tables
                         .devices
-                        .insert(device.id.clone(), ids.next_device_id());
+                        .insert(device.id.clone(), ids.next_device_id()?);
                 }
             }
         }
         for device in &installation.unassigned_devices {
             tables
                 .devices
-                .insert(device.id.clone(), ids.next_device_id());
+                .insert(device.id.clone(), ids.next_device_id()?);
         }
         for range in &installation.group_ranges {
-            allocate_group_range_ids(range, ids, &mut tables);
+            allocate_group_range_ids(range, ids, &mut tables)?;
         }
         for part in &installation.buildings {
-            allocate_building_part_ids(part, ids, &mut tables);
+            allocate_building_part_ids(part, ids, &mut tables)?;
         }
     }
-    tables
+    Ok(tables)
 }
 
 fn allocate_group_range_ids(
     range: &SourceGroupRange,
     ids: &mut IdAllocators,
     tables: &mut IdTables,
-) {
+) -> Result<(), IdAllocationError> {
     tables
         .group_ranges
-        .insert(range.id.clone(), ids.next_group_range_id());
+        .insert(range.id.clone(), ids.next_group_range_id()?);
     for address in &range.addresses {
         tables
             .group_addresses
-            .insert(address.id.clone(), ids.next_group_address_id());
+            .insert(address.id.clone(), ids.next_group_address_id()?);
     }
     for child in &range.children {
-        allocate_group_range_ids(child, ids, tables);
+        allocate_group_range_ids(child, ids, tables)?;
     }
+    Ok(())
 }
 
 fn allocate_building_part_ids(
     part: &SourceBuildingPart,
     ids: &mut IdAllocators,
     tables: &mut IdTables,
-) {
+) -> Result<(), IdAllocationError> {
     tables
         .building_parts
-        .insert(part.id.clone(), ids.next_building_part_id());
+        .insert(part.id.clone(), ids.next_building_part_id()?);
     for child in &part.children {
-        allocate_building_part_ids(child, ids, tables);
+        allocate_building_part_ids(child, ids, tables)?;
     }
+    Ok(())
 }
 
 fn map_project_info(
@@ -377,7 +394,7 @@ fn map_installation(
     devices: &mut Devices,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
-) -> (Installation, Vec<RetainedAttribute>) {
+) -> Result<(Installation, Vec<RetainedAttribute>), IdAllocationError> {
     let mut retained = installation.other.clone();
     let xpath = "/KNX/Project/Installations/Installation";
 
@@ -452,7 +469,7 @@ fn map_installation(
                     &crate::xpath::device_v11(&device.id),
                     problems,
                     counts,
-                );
+                )?;
                 retained.extend(device_retained);
                 device_ids.push(device_id);
             }
@@ -524,7 +541,7 @@ fn map_installation(
             &crate::xpath::unassigned_device(&device.id),
             problems,
             counts,
-        );
+        )?;
         retained.extend(device_retained);
         topology.unassigned.push(device_id);
     }
@@ -558,7 +575,7 @@ fn map_installation(
         );
     }
 
-    (
+    Ok((
         Installation {
             id,
             name: installation.name.clone().unwrap_or_default(),
@@ -572,7 +589,7 @@ fn map_installation(
             parameters,
         },
         retained,
-    )
+    ))
 }
 
 /// Maps one device, its owned communication objects and its parameters,
@@ -594,7 +611,7 @@ fn map_device(
     xpath: &str,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
-) -> Vec<RetainedAttribute> {
+) -> Result<Vec<RetainedAttribute>, IdAllocationError> {
     let xpath = xpath.to_string();
     let mut retained = keyed(&device.other, &xpath);
 
@@ -608,7 +625,7 @@ fn map_device(
 
     let mut com_object_ids = Vec::new();
     for com in &device.com_objects {
-        let com_id = ids.next_com_object_instance_id();
+        let com_id = ids.next_com_object_instance_id()?;
         let (mapped, com_retained) = map_com_object(
             com,
             com_id,
@@ -626,7 +643,7 @@ fn map_device(
 
     for param in &device.parameters {
         parameters.push(ParameterInstance {
-            id: ids.next_parameter_instance_id(),
+            id: ids.next_parameter_instance_id()?,
             device: device_id,
             source: SourceRef {
                 path: source_path.to_string(),
@@ -695,7 +712,7 @@ fn map_device(
     });
     counts.devices.bump();
 
-    retained
+    Ok(retained)
 }
 
 fn map_com_object(
@@ -802,7 +819,7 @@ fn map_installation_v21(
     devices: &mut Devices,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
-) -> (Installation, Vec<RetainedAttribute>) {
+) -> Result<(Installation, Vec<RetainedAttribute>), IdAllocationError> {
     let mut retained = installation.other.clone();
     let xpath = "/KNX/Project/Installations/Installation";
 
@@ -878,7 +895,7 @@ fn map_installation_v21(
                     &crate::xpath::device_v21(&device.id),
                     problems,
                     counts,
-                );
+                )?;
                 retained.extend(device_retained);
                 device_ids.push(device_id);
             }
@@ -972,7 +989,7 @@ fn map_installation_v21(
             &crate::xpath::unassigned_device(&device.id),
             problems,
             counts,
-        );
+        )?;
         retained.extend(device_retained);
         topology.unassigned.push(device_id);
     }
@@ -1006,7 +1023,7 @@ fn map_installation_v21(
         );
     }
 
-    (
+    Ok((
         Installation {
             id,
             name: installation.name.clone().unwrap_or_default(),
@@ -1020,7 +1037,7 @@ fn map_installation_v21(
             parameters,
         },
         retained,
-    )
+    ))
 }
 
 /// Schema-≥21 counterpart of [`map_device`]. Parameters, binary data,
@@ -1053,7 +1070,7 @@ fn map_device_v21(
     xpath: &str,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
-) -> Vec<RetainedAttribute> {
+) -> Result<Vec<RetainedAttribute>, IdAllocationError> {
     let xpath = xpath.to_string();
     let mut retained = keyed(&device.other, &xpath);
 
@@ -1070,7 +1087,7 @@ fn map_device_v21(
     // in order to set `ComObjectInstance::module_instance`.
     let mut module_instance_ids: BTreeMap<String, ModuleInstanceId> = BTreeMap::new();
     for mi in &device.module_instances {
-        let id = ids.next_module_instance_id();
+        let id = ids.next_module_instance_id()?;
         module_instance_ids.insert(mi.id.clone(), id);
         devices.insert_module_instance(ModuleInstance {
             id,
@@ -1109,7 +1126,7 @@ fn map_device_v21(
     // override still produces a ComObjectInstance, Override::Absent.
     let mut com_object_ids = Vec::new();
     for ref_id in &device.group_object_tree {
-        let com_id = ids.next_com_object_instance_id();
+        let com_id = ids.next_com_object_instance_id()?;
         let (mapped, com_retained) = map_com_object_v21(
             ref_id,
             overrides.get(ref_id.as_str()).copied(),
@@ -1129,7 +1146,7 @@ fn map_device_v21(
 
     for param in &device.parameters {
         parameters.push(ParameterInstance {
-            id: ids.next_parameter_instance_id(),
+            id: ids.next_parameter_instance_id()?,
             device: device_id,
             source: SourceRef {
                 path: source_path.to_string(),
@@ -1198,7 +1215,7 @@ fn map_device_v21(
     });
     counts.devices.bump();
 
-    retained
+    Ok(retained)
 }
 
 /// Schema-≥21 counterpart of [`map_com_object`]. `ref_id` is the original,
@@ -1953,6 +1970,113 @@ mod tests {
         minimal_source_document, reference_kv_source_document, reference_source_document,
     };
 
+    fn one_of_each_source_entity(version: u32) -> SourceDocument {
+        let mut document = minimal_source_document();
+        document.schema_version = version;
+        let installation = &mut document.installations[0];
+        let range = &mut installation.group_ranges[0];
+        range.addresses = range.children[0].addresses.clone();
+        range.children.clear();
+        installation.buildings.push(SourceBuildingPart {
+            id: "P-0001-0_BP-1".into(),
+            kind: Some("Building".into()),
+            ..Default::default()
+        });
+        let device = &mut installation.areas[0].lines[0].devices[0];
+        device
+            .parameters
+            .push(crate::source::SourceParameterInstance {
+                ref_id: "synthetic-parameter".into(),
+                value: Some("1".into()),
+            });
+        if version >= 21 {
+            device.group_object_tree = vec!["O-1_R-1".into()];
+            device
+                .module_instances
+                .push(crate::source::SourceModuleInstance {
+                    id: "MD-1_M-1_MI-1".into(),
+                    ref_id: "MD-1_M-1".into(),
+                    ..Default::default()
+                });
+        }
+        document
+    }
+
+    fn counters(values: [u32; 9]) -> IdAllocators {
+        IdAllocators::from_counts(
+            values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
+            values[8],
+        )
+    }
+
+    #[test]
+    fn exhausted_mapping_returns_no_partial_project_and_keeps_source_unchanged() {
+        let kinds = [
+            "device",
+            "area",
+            "line",
+            "com_object_instance",
+            "group_range",
+            "group_address",
+            "building_part",
+            "parameter_instance",
+            "module_instance",
+        ];
+        for version in [11, 21, 23] {
+            let document = one_of_each_source_entity(version);
+            let before = document.clone();
+            for (index, kind) in kinds.iter().enumerate() {
+                if version == 11 && *kind == "module_instance" {
+                    continue; // This mapper has no schema-11 module allocation.
+                }
+                let mut values = [0; 9];
+                values[index] = u32::MAX;
+                let error = map_with_ids(&document, "synthetic/0.xml", counters(values))
+                    .err()
+                    .expect("exhausted mapping must refuse the entire project");
+                assert_eq!(error, IdAllocationError { kind }, "schema {version}");
+                assert_eq!(document, before);
+            }
+        }
+    }
+
+    #[test]
+    fn each_mapper_can_issue_the_final_id_without_wrapping() {
+        for version in [11, 21, 23] {
+            let document = one_of_each_source_entity(version);
+            let output =
+                map_with_ids(&document, "synthetic/0.xml", counters([u32::MAX - 1; 9])).unwrap();
+            let mut expected = [u32::MAX; 9];
+            if version == 11 {
+                expected[8] = u32::MAX - 1;
+            }
+            assert_eq!(output.project.ids, counters(expected), "schema {version}");
+            let installation = &output.project.installations[0];
+            assert_eq!(installation.topology.areas[0].id.0, u32::MAX);
+            assert_eq!(installation.topology.lines[0].id.0, u32::MAX);
+            assert_eq!(installation.group_ranges[0].id.0, u32::MAX);
+            assert_eq!(installation.group_addresses[0].id.0, u32::MAX);
+            assert_eq!(installation.buildings[0].id.0, u32::MAX);
+            assert_eq!(installation.parameters[0].id.0, u32::MAX);
+            let device = output.project.devices.iter().next().unwrap();
+            assert_eq!(device.id.0, u32::MAX);
+            assert_eq!(device.com_objects[0].0, u32::MAX);
+            if version >= 21 {
+                assert_eq!(
+                    output
+                        .project
+                        .devices
+                        .module_instances()
+                        .next()
+                        .unwrap()
+                        .id
+                        .0,
+                    u32::MAX
+                );
+            }
+        }
+    }
+
     /// ISSUE-08: a schema-≥21 `ComObjectInstanceRef` without an `IsActive`
     /// attribute is still active. Project Schema23 does not declare
     /// `IsActive` on `ComObjectInstanceRef_t` at all; ADR-0014 makes
@@ -2024,7 +2148,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         let com = out
             .project
             .devices
@@ -2044,7 +2168,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         let mut empty = 0usize;
         let mut absent = 0usize;
         let mut valued = 0usize;
@@ -2076,7 +2200,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         let d = out
             .project
             .devices
@@ -2093,7 +2217,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         let installation = &out.project.installations[0];
         assert_eq!(installation.topology.unassigned.len(), 1);
         let id = installation.topology.unassigned[0];
@@ -2105,7 +2229,7 @@ mod tests {
     fn a_bad_attribute_value_is_reported_and_the_rest_of_the_entity_still_maps() {
         let mut doc = minimal_source_document();
         doc.installations[0].areas[0].lines[0].devices[0].last_modified = Some("not a date".into());
-        let out = map(&doc, "P-0001/0.xml");
+        let out = map(&doc, "P-0001/0.xml").unwrap();
         assert!(matches!(out.problems[0].detail, MapProblemDetail::Value(_)));
         let d = out.project.devices.iter().next().unwrap();
         assert_eq!(d.name, "D");
@@ -2119,7 +2243,7 @@ mod tests {
         com.datapoint_type = Some("DPST-nonsense".into());
         com.read_flag = Some("Perhaps".into());
 
-        let out = map(&doc, "P-0001/0.xml");
+        let out = map(&doc, "P-0001/0.xml").unwrap();
 
         let mapped = out
             .project
@@ -2148,7 +2272,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         assert!(out
             .retained
             .iter()
@@ -2163,7 +2287,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_source_document(), "P-0512/0.xml");
+        let out = map(&reference_source_document(), "P-0512/0.xml").unwrap();
         let (send, receive) = out
             .project
             .devices
@@ -2185,7 +2309,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml").unwrap();
         let device = out
             .project
             .devices
@@ -2210,7 +2334,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml").unwrap();
         let com = out
             .project
             .devices
@@ -2235,7 +2359,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml").unwrap();
         let mi = out
             .project
             .devices
@@ -2254,7 +2378,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml").unwrap();
         for com in out.project.devices.com_objects() {
             for (position, link) in com.links.iter().enumerate() {
                 let expected = if position == 0 {
@@ -2274,7 +2398,7 @@ mod tests {
             crate::testutil::corpus_available(),
             "OriginalData/ corpus not present (gitignored, local-only); this test is #[ignore]d and must be run explicitly on a machine that has it"
         );
-        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml").unwrap();
         assert_eq!(out.project.info.ets_schema_version, 21);
     }
 
@@ -2301,7 +2425,7 @@ mod tests {
             .expect("the KV sample has at least one line with a device")
             .devices[0]
             .last_modified = Some("not a date".into());
-        let out = map(&doc, "P-03DE/0.xml");
+        let out = map(&doc, "P-03DE/0.xml").unwrap();
         let problem = out
             .problems
             .iter()
@@ -2341,7 +2465,7 @@ mod tests {
         };
         doc.installations[0].unassigned_devices.push(device);
 
-        let out = map(&doc, "P-03DE/0.xml");
+        let out = map(&doc, "P-03DE/0.xml").unwrap();
         let problem = out
             .problems
             .iter()

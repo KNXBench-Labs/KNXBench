@@ -323,6 +323,15 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      plannable device. `DeviceInspectionPanel.test.tsx` and the local mocked
      `device-checks.e2e.ts` cover the path; no live bus request is part of
      this UI package.
+  5. **ISSUE-06 Site/Property UI (ADR-0038):** the Buildings overview
+     has a dedicated **Add site / property** action using the existing
+     `Ground` root kind and `createBuildingPart`. Selecting each building
+     and choosing the site in the existing Inspector parent select calls
+     `moveBuildingPart`; the accepted model decision is unchanged.
+     `StructureWorkspace.test.tsx` and mocked EN/DE `site.e2e.ts` cover
+     two buildings in one installation with unchanged device projections;
+     `site_hierarchy.rs` already checks that the project owns each device
+     once. No ETS Ground export or live hardware was tested.
 
 ### U13 — Close the UI track
 

@@ -15,9 +15,10 @@ import Inspector from "./Inspector";
 
 export type StructureView = "buildings" | "topology" | "addresses";
 
-function CreateDisclosure(props: { kind: string; parentId?: number; label: string; children: ReactNode }) {
+function CreateDisclosure(props: { kind: string; parentId?: number; label: string; hint?: string; children: ReactNode }) {
   return <details className="structure-create" data-structure-create={props.kind} data-parent-id={props.parentId}>
     <summary>{props.label}</summary>
+    {props.hint && <p className="structure-create-hint">{props.hint}</p>}
     <ul>{props.children}</ul>
   </details>;
 }
@@ -135,6 +136,10 @@ export default function StructureWorkspace(props: {
       </>}
       {view === "buildings" && <>
         {installation === first && <>
+          {!focusedBuilding && <CreateDisclosure kind="site-root" label={t("structure.addSite")}
+            hint={t("structure.siteHint")}>
+            <NewBuildingPartRow fixedKind="Ground" onCreated={onTreeUpdate} />
+          </CreateDisclosure>}
           <CreateDisclosure kind="building-root" label={t("structure.addRootBuilding")}>
             <NewBuildingPartRow onCreated={onTreeUpdate} />
           </CreateDisclosure>

@@ -44,6 +44,23 @@
   permission remain explicit. The serial-address HTTP route still needs a
   durable pre-write recovery design. No Web source or physical bus was touched.
 
+## 2026-10-01 — ISSUE-06 Ground-root site affordance (UI candidate)
+
+- Buildings overview now offers **Add site / property** for the first
+  installation. It fixes the existing `NewBuildingPartRow` to `Ground` and
+  calls the same validated `createBuildingPart` route as the generic form.
+  Existing **Parent building part** uses `moveBuildingPart` for each building;
+  no new type, command, storage migration or installation level was added.
+- RED→GREEN `StructureWorkspace.test.tsx` covers a `Ground` root with two
+  buildings in one installation, both reparenting commands, unchanged shared
+  topology and one device projection per building. A wrong-kind mutation
+  fails the test and was restored. Local mocked Chromium `site.e2e.ts`
+  passed EN/DE at 360/1440 px (4/4) with no unmocked API call or bus use;
+  Web 82 files / 1,296 tests, TypeScript and build pass. The existing
+  synthetic `site_hierarchy.rs` and native store roundtrip establish owner
+  and persistence fidelity; they are not evidence of an ETS Ground export.
+  The first-installation-only editor and installation-rename gaps remain.
+
 ## 2026-09-30 — Write activity evidence contract (ADR-0056)
 
 - Audited the existing serial-address, service-control and group-write routes

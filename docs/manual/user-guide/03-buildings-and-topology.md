@@ -55,6 +55,7 @@ the product catalog.
 | Line | Select an area, then **Add line in …**, or create under that area in the explorer | Address (a number), name, medium reference (for example `MT-0`) |
 | Device | The "+ Add device" button under a line, or `+` on a line in Topology | Opens the product catalog — see [Devices and products](05-devices-and-products.md) |
 | Building part | **Add building part at installation root** or select a part and choose **Add building part inside …**; the explorer has the same two levels of action | Kind, name |
+| Site / property | **Add site / property** in the Buildings overview (first installation only) | Name; type is fixed to `Ground` |
 
 Open the disclosure with Enter or Space, type the fields and press Enter in a
 field or click **Add**. A refused duplicate address or invalid parent appears
@@ -66,6 +67,25 @@ creating at the installation root does not silently choose the selected part.
 > Creation and structure edits are available only for the first installation.
 > Later installations remain visible and savable but cannot be mutated by these
 > commands. Imported duplicate IDs are not used to guess a parent.
+
+### A site for several buildings
+
+In the **Buildings** overview, choose **Add site / property** (German:
+**Grundstück / Liegenschaft anlegen**), name the site and press **Add**.
+This uses the existing `Ground` building-part type as a root of the **first
+installation**; it does not create a new installation or a new domain type.
+Select each existing building and use **Parent building part** in the centre
+editor or Properties to place it beneath that site. The same validated,
+undoable create and move commands serve the general building-part controls.
+A site with two buildings still has one installation, one topology and one
+group-address structure. Moving a building changes no device's line or
+individual address and does not copy its devices. The general **Add building
+part** form remains available for other types; it also offers `Ground` without
+turning undocumented external `Site` types into `Ground` on import.
+
+This layout is supported by Project Schema23 and synthetic import/native
+round-trip tests; no reference ETS export with a `Ground` root is available.
+Later installations remain visible but cannot be edited by these commands.
 
 ## Editing
 

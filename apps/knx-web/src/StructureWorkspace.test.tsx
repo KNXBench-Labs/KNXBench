@@ -10,6 +10,7 @@ const apiMock = vi.hoisted(() => ({
   createArea: vi.fn(),
   createLine: vi.fn(),
   createBuildingPart: vi.fn(),
+  moveBuildingPart: vi.fn(),
   createGroupRange: vi.fn(),
   moveLineToArea: vi.fn(),
 }));
@@ -223,4 +224,54 @@ it("edits the selected line from the centre via the inspector command route", as
   expect(apiMock.moveLineToArea).toHaveBeenCalledWith(3, 20);
   expect(onTreeUpdate).toHaveBeenCalledWith(topology);
   await act(async () => root.unmount());
+});
+
+it("creates a Ground site and groups two buildings via the existing commands without copying devices", async () => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const otherDevice = { ...device, id: 10, name: "Second actuator", address: "1.2.10" };
+  const north = { id: 4, name: "North", kind: "Building", devices: [device], children: [] };
+  const south = { id: 6, name: "South", kind: "Building", devices: [otherDevice], children: [] };
+  const site = { id: 20, name: "Campus", kind: "Ground", devices: [], children: [] as typeof north[] };
+  const first = { ...tree.installations[0], buildings: [north, south], topology: [{ ...tree.installations[0].topology[0],
+    lines: [{ ...tree.installations[0].topology[0].lines[0], devices: [device, otherDevice] }] }] };
+  const later = { ...first, id: 30, name: "Second installation", buildings: [], topology: [], unassigned: [] };
+  const initial: ProjectTree = { ...tree, installations: [first, later] };
+  const created: ProjectTree = { ...initial, installations: [{ ...first, buildings: [site, north, south] }, later] };
+  const northMoved: ProjectTree = { ...initial, installations: [{ ...first,
+    buildings: [{ ...site, children: [north] }, south] }, later] };
+  const grouped: ProjectTree = { ...initial, installations: [{ ...first,
+    buildings: [{ ...site, children: [north, south] }] }, later] };
+  const onTreeUpdate = vi.fn();
+  const render = (current: ProjectTree, id: number | null) => root.render(
+    <StructureWorkspace {...inert} tree={current} view="buildings"
+      selection={id == null ? null : { kind: "building_part", id }}
+      onTreeUpdate={onTreeUpdate} onSelect={() => {}} onCatalog={() => {}} />,
+  );
+  await act(async () => render(initial, null));
+  const installationSections = host.querySelectorAll(".installation-diagram");
+  const createSite = installationSections[0].querySelector<HTMLElement>('[data-structure-create="site-root"]')!;
+  expect(createSite).toBeTruthy();
+  expect(installationSections[1].querySelector('[data-structure-create="site-root"]')).toBeNull();
+  expect(createSite.querySelector("select")).toBeNull();
+  await fill(createSite.querySelector("input")!, "Campus");
+  apiMock.createBuildingPart.mockResolvedValueOnce(created);
+  await act(async () => createSite.querySelector("button")!.click());
+  expect(apiMock.createBuildingPart).toHaveBeenCalledWith("Campus", "Ground", undefined);
+  expect(onTreeUpdate).toHaveBeenLastCalledWith(created);
+
+  for (const [current, id, next] of [[created, 4, northMoved], [northMoved, 6, grouped]] as const) {
+    await act(async () => render(current, id));
+    const select = host.querySelector<HTMLSelectElement>(".structure-context-editor select")!;
+    expect([...select.options].some((option) => option.value === "20")).toBe(true);
+    apiMock.moveBuildingPart.mockResolvedValueOnce(next);
+    await act(async () => { select.value = "20"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(apiMock.moveBuildingPart).toHaveBeenLastCalledWith(id, 20);
+    expect(onTreeUpdate).toHaveBeenLastCalledWith(next);
+  }
+  await act(async () => render(grouped, null));
+  expect(host.querySelectorAll(".building-diagram .diagram-device")).toHaveLength(2);
+  expect(grouped.installations).toHaveLength(2);
+  expect(grouped.installations[0].buildings[0].children.map((child) => child.id)).toEqual([4, 6]);
+  expect(grouped.installations[0].topology[0].lines[0].devices.map((item) => item.id)).toEqual([9, 10]);
+  await act(async () => root.unmount()); host.remove();
 });

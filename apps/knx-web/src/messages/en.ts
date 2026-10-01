@@ -1083,6 +1083,8 @@ export const messages = {
   "structure.addArea": "Add area",
   "structure.addLineIn": "Add line in {name}",
   "structure.addRootBuilding": "Add building part at installation root",
+  "structure.addSite": "Add site / property",
+  "structure.siteHint": "Creates a Ground root in this installation. Select each existing building and set its parent to the site in Properties; devices keep their line and owner.",
   "structure.addBuildingIn": "Add building part inside {name}",
   "structure.addRootRange": "Add group range at installation root",
   "structure.addRangeIn": "Add subrange inside {name}",

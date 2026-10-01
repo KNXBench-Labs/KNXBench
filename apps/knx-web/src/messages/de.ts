@@ -957,6 +957,8 @@ export const messages: Record<MessageKey, string> = {
   "structure.addArea": "Bereich hinzufügen",
   "structure.addLineIn": "Linie in {name} hinzufügen",
   "structure.addRootBuilding": "Gebäudeteil auf Installationsebene hinzufügen",
+  "structure.addSite": "Grundstück / Liegenschaft anlegen",
+  "structure.siteHint": "Legt ein Grundstück (Ground) als Wurzel dieser Installation an. Bestehende Gebäude auswählen und unter Eigenschaften als übergeordneten Gebäudeteil das Grundstück festlegen; Geräte bleiben ihrer Linie und ihrem Gebäude zugeordnet.",
   "structure.addBuildingIn": "Gebäudeteil in {name} hinzufügen",
   "structure.addRootRange": "Gruppenbereich auf Installationsebene hinzufügen",
   "structure.addRangeIn": "Unterbereich in {name} hinzufügen",

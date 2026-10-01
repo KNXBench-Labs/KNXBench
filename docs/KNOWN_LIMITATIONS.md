@@ -7805,6 +7805,12 @@ its property export may leave arrays over 64 bytes blank unless loaded on
 demand. Even a saved diagnostic file is not proof that every address-programming
 side effect was captured. Manufacturer-/application-specific affected storage
 for the button-selected target is not yet established (RESEARCH §24).
+The Web tab now reads the same server recovery precondition through the
+read-only `GET /api/device-address/availability` route and disables Program
+before consent when blocked, unknown or malformed; a later `412` also closes
+the affordance. This improves the UI warning but does **not** provide a
+backup, open a tunnel or authorize a write. The server POST remains the
+independent fail-closed authority.
 
 **Not a limitation any more.** An earlier draft of this section claimed MP
 §2.3 *"does not consider a `T_Connect` refusal, or a connection that opens

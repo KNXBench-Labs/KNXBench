@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const apiMock = vi.hoisted(() => ({
+  addressProgrammingAvailability: vi.fn(),
   addressProgrammingPhrase: vi.fn(),
   startAddressProgramming: vi.fn(),
   pollAddressProgramming: vi.fn(),
@@ -102,6 +103,9 @@ async function confirm() {
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
+  // Historical workflow tests model a hypothetical recovery-ready server;
+  // production currently returns false from its pre-write recovery gate.
+  apiMock.addressProgrammingAvailability.mockReset().mockResolvedValue({ startAvailable: true, reason: null });
   apiMock.pollAddressProgramming.mockReset().mockRejectedValue(withStatus(404, "none yet"));
   apiMock.addressProgrammingPhrase.mockReset().mockResolvedValue(PHRASE);
   apiMock.startAddressProgramming.mockReset().mockResolvedValue({ programmingId: 4 });
@@ -122,6 +126,88 @@ it("says what it writes, and that it is not a download", async () => {
   expect(host!.textContent).toContain(en["addressProgramming.title"]);
   expect(host!.textContent).toContain("this is not a download of parameters");
   expect(host!.textContent).toContain("Nothing is written while waiting");
+});
+
+it("shows the backend recovery refusal and never requests consent or a phrase", async () => {
+  apiMock.addressProgrammingAvailability.mockResolvedValueOnce({
+    startAvailable: false,
+    reason: "no verified durable pre-write backup",
+  });
+  await render();
+  await fill();
+  const start = button("Program 1.1.30");
+  expect(start.disabled).toBe(true);
+  expect(host!.textContent).toContain("no verified durable pre-write backup");
+  start.click();
+  await flush();
+  expect(consentDialog()).toBeNull();
+  expect(apiMock.addressProgrammingPhrase).not.toHaveBeenCalled();
+  expect(apiMock.startAddressProgramming).not.toHaveBeenCalled();
+});
+
+it("can still observe and stop an already-held waiting session while new starts are blocked", async () => {
+  apiMock.addressProgrammingAvailability.mockResolvedValueOnce({
+    startAvailable: false,
+    reason: "no verified durable pre-write backup",
+  });
+  apiMock.pollAddressProgramming.mockReset()
+    .mockResolvedValueOnce(response({ state: "waiting", rounds: 1, inProgrammingMode: [] }, [], 0))
+    .mockResolvedValueOnce(response({ state: "stopped", rounds: 1 }, [], 0));
+  await render();
+  expect(host!.querySelector(".address-programming-progress")?.textContent)
+    .toContain(en["addressProgramming.pressButton"]);
+  await act(async () => button(en["addressProgramming.stop"]).click());
+  await flush();
+  expect(apiMock.stopAddressProgramming).toHaveBeenCalledWith(4);
+  expect(apiMock.addressProgrammingPhrase).not.toHaveBeenCalled();
+  expect(apiMock.startAddressProgramming).not.toHaveBeenCalled();
+});
+
+it("fails closed when the availability read fails, then rechecks on explicit retry", async () => {
+  apiMock.addressProgrammingAvailability.mockRejectedValueOnce(new Error("offline"));
+  await render();
+  await fill();
+  expect(button("Program 1.1.30").disabled).toBe(true);
+  expect(host!.querySelector('[role="alert"]')?.textContent).toContain("offline");
+  await act(async () => button(en["addressProgramming.retryAvailability"]).click());
+  await flush();
+  expect(apiMock.addressProgrammingAvailability).toHaveBeenCalledTimes(2);
+  expect(button("Program 1.1.30").disabled).toBe(false);
+  expect(consentDialog()).toBeNull();
+});
+
+it("does not infer permission from a malformed availability response", async () => {
+  apiMock.addressProgrammingAvailability.mockResolvedValueOnce({ reason: "missing gate result" });
+  await render();
+  await fill();
+  expect(button("Program 1.1.30").disabled).toBe(true);
+  expect(host!.querySelector('[role="alert"]')?.textContent)
+    .toContain(en["addressProgramming.availabilityInvalid"]);
+  expect(apiMock.addressProgrammingPhrase).not.toHaveBeenCalled();
+});
+
+it("rejects a contradictory ready flag with a recovery refusal reason", async () => {
+  apiMock.addressProgrammingAvailability.mockResolvedValueOnce({
+    startAvailable: true,
+    reason: "durable backup still missing",
+  });
+  await render();
+  await fill();
+  expect(button("Program 1.1.30").disabled).toBe(true);
+  expect(host!.querySelector('[role="alert"]')?.textContent)
+    .toContain(en["addressProgramming.availabilityInvalid"]);
+  expect(consentDialog()).toBeNull();
+});
+
+it("closes the start affordance when the server revokes recovery after an earlier available response", async () => {
+  apiMock.startAddressProgramming.mockRejectedValueOnce(withStatus(412, "no verified durable pre-write backup"));
+  await render();
+  await fill();
+  await confirm();
+  expect(apiMock.startAddressProgramming).toHaveBeenCalledTimes(1);
+  expect(button("Program 1.1.30").disabled).toBe(true);
+  expect(host!.textContent).toContain("no verified durable pre-write backup");
+  expect(consentDialog()).toBeNull();
 });
 
 it("asks for consent first, and Cancel sends nothing", async () => {

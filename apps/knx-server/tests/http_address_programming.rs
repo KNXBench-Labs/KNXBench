@@ -249,6 +249,29 @@ async fn the_phrase_route_names_the_address_and_sends_nothing() {
 }
 
 #[tokio::test]
+async fn availability_reports_the_same_recovery_block_as_confirmed_start_without_a_tunnel() {
+    let h = harness(SimulatorConfig {
+        programming_mode: true,
+        ..SimulatorConfig::default()
+    });
+    let previous = h.device.address();
+    let (status, availability) = send(&h.app, get("/api/device-address/availability")).await;
+    assert_eq!(status, StatusCode::OK, "{availability}");
+    assert_eq!(availability["startAvailable"], false);
+    assert!(availability["reason"]
+        .as_str()
+        .is_some_and(|reason| reason.contains("no verified durable pre-write backup")));
+
+    let (status, refused) = start(&h, request(PHRASE, 30)).await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{refused}");
+    assert!(refused
+        .to_string()
+        .contains(availability["reason"].as_str().unwrap()));
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(h.device.address(), previous);
+}
+
+#[tokio::test]
 async fn confirmed_start_needs_durable_recovery_before_any_tunnel() {
     let h = harness(SimulatorConfig {
         programming_mode: true,

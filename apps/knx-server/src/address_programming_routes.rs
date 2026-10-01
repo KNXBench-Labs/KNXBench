@@ -53,6 +53,7 @@ pub const MAX_WAIT_SECONDS: u64 = 600;
 
 pub fn address_programming_routes() -> Router<SharedState> {
     Router::new()
+        .route("/api/device-address/availability", get(availability))
         .route("/api/device-address/phrase", get(phrase))
         .route("/api/device-address/start", post(start))
         .route("/api/device-address/status", get(status))
@@ -69,6 +70,26 @@ fn parse_new_address(address: &str) -> Result<IndividualAddress, ApiError> {
     })?;
     ContactableAddress::new(parsed).map_err(|e| ApiError::bad_request(e.to_string()))?;
     Ok(parsed)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AvailabilityResponse {
+    /// Only the durable-recovery precondition; other start checks still apply.
+    start_available: bool,
+    reason: Option<&'static str>,
+}
+
+/// Read-only view of the same recovery gate enforced again by `start`.
+/// No address, gateway or session is inspected; this is not write permission.
+async fn availability() -> Json<AvailabilityResponse> {
+    let reason =
+        knx_app::individual_address_programming_recovery::require_persistent_pre_write_recovery()
+            .err();
+    Json(AvailabilityResponse {
+        start_available: reason.is_none(),
+        reason,
+    })
 }
 
 #[derive(Deserialize)]

@@ -480,15 +480,22 @@ anything else is refused while planning, before a connection opens.
 **This changes a device's individual address and restarts it.** It is not a download:
 it writes one thing, the address, to whichever device is in programming mode.
 
+**Current safety gate (2026-10-01):** the plan-only form below remains
+read-only. Even with the correct `--confirm`, this build refuses before
+opening a tunnel because it has no verified durable pre-write recovery for
+the button-selected device. Do not press a device's programming button
+expecting this command to write it. The confirmed example and output below
+describe retained simulator behavior, not an available live path.
+
 ```bash
 knx device program-address 1.1.30
 knx device program-address 1.1.30 --gateway 192.0.2.1:3671 \
     --confirm "I confirm individual-address programming to 1.1.30"
 ```
 
-Without `--confirm` it prints the steps and opens no connection. With it, the command
-asks the bus about every two seconds which devices are in programming mode, and tells
-you what to do whenever the answer changes:
+Without `--confirm` it prints the steps and opens no connection. Once
+device-specific recovery is implemented, a confirmed command would ask the
+bus about every two seconds which devices are in programming mode:
 
 ```text
 == program individual address 1.1.30: waiting for a programming button ==
@@ -516,9 +523,10 @@ ends programming mode. A device that already has the address is not written agai
 | --- | --- |
 | `--wait <seconds>` | How long to wait for exactly one pressed button (default 120, at most 600). Waiting only reads |
 | `--gateway <host:port>` | The KNXnet/IP interface to use |
-| `--confirm "<phrase>"` | Program. The phrase must read exactly `I confirm individual-address programming to <address>`; it also covers the closing restart |
+| `--confirm "<phrase>"` | Requests programming only after durable recovery exists; currently refused before a tunnel. The phrase must name the exact address and also covers the closing restart |
 
-It exits `0` only when the device answered at its new address. The last line always says
+When available in a future recovery-ready version, it exits `0` only when the
+device answered at its new address. The last line then says
 whether the address changed: `address written: no` when it gave up, found the address
 taken, or lost the button before writing; and `address written: yes, but NOT confirmed`
 when the write went out but the device did not answer at the new address afterwards.

@@ -96,6 +96,11 @@ product commands in K4 to K6 in particular.
 4. **Setup for a live run.**
    - The gateway accepts one tunnel only. Before any live run, check that no
      server, monitor or CLI of either session holds it.
+   - Coordinate *across worktrees* with one nonblocking `flock` on
+     `$(git rev-parse --git-common-dir)/knx-gateway-tunnel.lock`, held from
+     just before the live command until after its tunnel disconnects.
+     Process/socket checks still matter: they catch clients not using this
+     advisory lock. A task-private lock cannot exclude another session.
    - Gateway and target come from environment variables; never commit a
      literal.
    - Destructive live tests are gated twice: `#[ignore]` **plus** an env var
@@ -399,6 +404,20 @@ property or key was read, and no write was sent. This confirms current address
 occupancy, **not** the claimed eightfold model, the physical button location,
 or any backup/restore coverage. A fresh named go and a verified durable
 pre-write recovery plan are still required before K6 can write.
+
+**Separate bounded read-only identity preflight (2026-10-01).** In reply to
+the question about the candidate's physical suitability and a temporary
+address experiment, the operator said “go”; this does **not** demonstrate a
+pressed programming button or authorize an unspecified write. An independent
+one-target `live_identify` test on `1.1.32` passed: `0701h` again,
+manufacturer-ID and hardware-type properties readable, Device Object
+`PID_PROGRAM_VERSION` returned **no elements**. The manufacturer code agrees
+with MDT master data; the hardware type is a prefix of two compare records in
+the local `.01` pushbutton package, including the project-labelled `A-0024-15`.
+The full ten-octet comparison, exact installed order/application, affected
+storage and durable recovery remain unproven. No key, download, programming
+mode search, address change or second target was attempted (RESEARCH §24).
+K6 remains fail-closed until these gaps and a fresh exact-write go are resolved.
 
 ### K7 — Live acceptance of the product path
 

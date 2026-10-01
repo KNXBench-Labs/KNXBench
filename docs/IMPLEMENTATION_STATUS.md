@@ -6,8 +6,15 @@
   DD0 probe on the approved range returned `occupied`, mask `0701h`, exit 0;
   no locally observed competing KNX process/socket, other target, property
   read, access key or hardware write. RESEARCH §24 holds the scope and evidence.
-- The actual manufacturer/order/product and whether the candidate button may
-  be physically pressed remain unverified. The K6 CLI/HTTP write gate stays
+- A **separate** one-target `live_identify` read-only test passed 1/1: the
+  manufacturer-ID and hardware-type properties responded, while Device Object
+  `PID_PROGRAM_VERSION` returned no elements. The manufacturer agrees with
+  MDT local master data; a six-octet hardware-type prefix matches two possible
+  local `.01` application-program compare records, one project-labelled.
+  This does not identify the exact installed model or full application image.
+- The operator replied “go” to the suitability/temporary-address question;
+  actual button accessibility, complete recoverable storage and a concrete
+  destination/write plan remain unverified. The K6 CLI/HTTP write gate stays
   pre-tunnel fail-closed; the previous `1.1.67` go is not transferable.
 
 ## 2026-10-01 — U13 independent review chosen, ISSUE-12 evidence reconciled for review

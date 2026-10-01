@@ -303,6 +303,9 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
 
 export default function ParameterPanel(props: {
   deviceId: number;
+  /** Accepted authoritative project snapshot; commands/Undo/Redo invalidate
+   * parameters even when the selected device and product language are unchanged. */
+  refreshKey?: ProjectTree;
   // Called after every successful `api.setParameterValue`, once per field
   // committed, with the server's own freshly rebuilt `ProjectTree` (fix
   // round 1, item 6) — the same tree `apply(state, cmd)` already built
@@ -314,7 +317,7 @@ export default function ParameterPanel(props: {
   // that instead.
   onValueApplied: (tree: ProjectTree) => void;
 }) {
-  const { deviceId, onValueApplied } = props;
+  const { deviceId, onValueApplied, refreshKey } = props;
   const t = useTranslate();
   const [language] = useProductLanguage();
   const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
@@ -340,7 +343,7 @@ export default function ParameterPanel(props: {
         if (requestId !== requestIdRef.current) return;
         setLoadError(api.errorMessage(e));
       });
-  }, [deviceId, language]);
+  }, [deviceId, language, refreshKey]);
 
   if (loadError) {
     return (

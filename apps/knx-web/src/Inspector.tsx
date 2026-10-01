@@ -914,7 +914,7 @@ export function DeviceWorkspace(props: {
           can_redo: false, is_modified: true }` overlay assembled from a tree this component
           happened to be holding. `onApplied` takes exactly that shape, so
           it wires straight through, the same as every field above it. */}
-      <ParameterPanel deviceId={detail.id} onValueApplied={onApplied} />
+      <ParameterPanel deviceId={detail.id} refreshKey={tree} onValueApplied={onApplied} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab
@@ -1533,7 +1533,7 @@ export default function Inspector(props: {
   }
 
   if (selection.kind === "device") {
-    if (!deviceDetail) return null;
+    if (!deviceDetail || deviceDetail.id !== selection.id) return null;
     const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector

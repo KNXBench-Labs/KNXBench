@@ -27,6 +27,32 @@
   anchors (375 links / 226 Markdown files), corpus-gates and diff passed.
   Temporary corpus links were removed. No live bus or write authorization.
 
+## 2026-10-01 — U13 independent-review fixes (offline)
+
+- The operator explicitly accepts the recovered independent GPT-6.1-Sol
+  review instead of unavailable Claude; its original verdict was changes
+  required, not approval. The implementation session's separate diff review
+  is not presented as a new independent whole-track review.
+- Device selection clears previous detail immediately. The Properties
+  Inspector and centre workspace both reject mismatched detail IDs, so a
+  pending/failed request or contradictory response cannot expose another
+  device's editors. Existing out-of-order request checks are retained.
+- Parameter loading also keys on the accepted authoritative project snapshot.
+  Undo/Redo and other published commands refresh values without requiring a
+  device/language switch; older overlapping GET responses remain rejected.
+- Autosave scheduling invalidates the obsolete effect closure. A save that
+  completes after disable/unmount/cadence change cannot arm a timer or replace
+  the current cycle's timer; failed saves still report their failure.
+- ISSUE-12 gains actual bounded UDP loopback roundtrip/no-response coverage
+  through the production discovery exchange, extracted privately without
+  changing public API, protocol, destination, HPAI selection or timeout.
+  This is not multicast/native Search proof. RESEARCH §20.1 and limitation
+  §79 retain the real-network boundary; no live bus/firewall operation.
+- Regression evidence and final gate outcomes are recorded in
+  `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`. U13 closure waits for the
+  integrated gates and release of this package's Web lock.
+
+
 ## 2026-10-01 — Download worker outcome and tunnel reservation (offline)
 
 - Polling a finished server worker without a terminal device result now reports

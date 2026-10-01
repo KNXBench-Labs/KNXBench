@@ -4036,6 +4036,16 @@ was not observed. The successful CLI/HTTP test on this host is not proof of
 all container networks or multi-homed LANs, and a missing gateway remains
 a network diagnostic, not proof that the KNX device is absent.
 
+**Offline coverage, 2026-10-01 (U13).** Two non-skipping UDP loopback tests
+exercise the same private discovery exchange as production: advertised HPAI
+return address, service/body filtering, duplicate endpoints, multiple reply
+sources, gateway projection and no-reply deadline. See RESEARCH §20.1 and
+`client::tests::discovery_loopback_roundtrip_uses_advertised_hpai_and_filters_datagrams`.
+They bind/send only on `127.0.0.1`; they do not verify multicast routing,
+host-firewall policy, AppImage/WebKitGTK Search or physical gateway behavior.
+ISSUE-12 can close its offline-test acceptance without lifting this network
+verification boundary or claiming a new protocol fix.
+
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
 **Limitation.** The second-window diagnostics companion (T-UI-06) locks

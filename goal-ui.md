@@ -333,6 +333,13 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      `site_hierarchy.rs` already checks that the project owns each device
      once. Published as `7fd96bf1` and `3822a20c` with remote SHA readback
      on 2026-10-01. No ETS Ground export or live hardware was tested.
+  6. **ISSUE-04 completion evidence (U13 preflight):** the shipped saved
+     baseline, Save-and-continue and autosave had five unchecked plan boxes.
+     `http_project_routes.rs` now pins the prompt boundary and saved-baseline
+     undo→branch behavior. `App.test.tsx` exposed and fixes the status bar's
+     browser-locale formatting when the selected UI language differs. The
+     existing autosave fake-timer and settings regressions are named in the
+     issue plan. This does not decide the U13 closing review for the user.
 
 ### U13 — Close the UI track
 

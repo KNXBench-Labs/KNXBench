@@ -312,6 +312,15 @@ done live. Still open, outside this goal: the web panel does not show
 `restartConfirmed` yet (web lock, UI session), and the settling retry has
 not been exercised. RESEARCH §19, "K6 live".
 
+**Current safety boundary, 2026-10-01 (ADR-0059).** The historical K6
+round trip did not make a verified durable pre-send backup/readback of *all*
+storage potentially affected on every future pressed device. Confirmed
+public CLI and HTTP starts now fail before opening a tunnel; plan/phrase-only
+reads remain available. Simulator session, status/stop and one-tunnel tests
+remain, but are no longer evidence that public starts may reach hardware.
+No new live permission is implied. See RESEARCH §24; this does not retroactively
+invalidate the observed `1.1.67` result.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

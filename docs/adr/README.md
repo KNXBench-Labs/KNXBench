@@ -60,3 +60,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0051](0051-individual-address-write-enable-is-opt-in-debug.md) | Individual Address Write Enable is an opt-in debug action, never automatic | Accepted | 2026-09-30 |
 | [0053](0053-contributions-come-with-a-license-grant-for-dual-licensing.md) | Contributions come with a license grant, so KNXBench can be dual-licensed | Superseded by ADR-0054 | 2026-09-30 |
 | [0054](0054-no-contributor-license-agreement-agpl-only.md) | No contributor license agreement; contributions come in under the AGPL alone | Accepted | 2026-09-30 |
+| [0059](0059-button-address-programming-requires-durable-recovery.md) | Button-based address programming needs durable pre-write recovery | Accepted | 2026-10-01 |

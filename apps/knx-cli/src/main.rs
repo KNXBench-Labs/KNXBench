@@ -93,10 +93,9 @@ const USAGE: &str =
      \x20         untested restore also needs --accept-untested as above.)\n\
      \x20     knx device program-address <area.line.device> [--wait <seconds>]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address programming to <address>\"]\n\
-     \x20         (gives the one device in programming mode this individual address, MP §2.3;\n\
-     \x20         waits up to --wait seconds (default 120) for exactly one pressed button and\n\
-     \x20         says when to press or release; ends with a restart. Without --confirm it\n\
-     \x20         prints the steps and opens no connection)\n\
+     \x20         (MP §2.3 plan only: confirmed writes currently fail closed before a tunnel\n\
+     \x20         because a complete durable pre-write backup for the pressed device is\n\
+     \x20         not implemented; no connection opens in plan-only mode)\n\
      \x20     knx device reset-address <area.line.device>...\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm individual-address reset to 15.15.255\"]\n\
      \x20         (MP §2.18 plan only; confirmed resets currently fail closed before a tunnel:\n\
@@ -2416,11 +2415,7 @@ fn run_device_program_address(args: &[String]) -> ExitCode {
     let (gateway, authorisation) = match mode {
         device_address::Mode::Plan => {
             println!(
-                "address written: no (plan only; add --gateway and --confirm {:?} to program)",
-                knx_core::commissioning::mutation::required_confirmation_phrase(
-                    new_address,
-                    knx_core::WriteScope::IndividualAddressProgramming
-                )
+                "address written: no (plan only; confirmed writes currently fail closed before any tunnel: no verified durable pre-write backup for the pressed device)"
             );
             return ExitCode::SUCCESS;
         }
@@ -2429,6 +2424,13 @@ fn run_device_program_address(args: &[String]) -> ExitCode {
             authorisation,
         } => (gateway, authorisation),
     };
+    if let Err(error) =
+        knx_app::individual_address_programming_recovery::require_persistent_pre_write_recovery()
+    {
+        eprintln!("{error}");
+        println!("address written: no");
+        return ExitCode::FAILURE;
+    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

@@ -6,11 +6,12 @@
 //! of the library, KNOWN_LIMITATIONS §116), then the four steps. This is
 //! programming the individual address, not a download (docs/GLOSSARY.md).
 //!
-//! Without `--confirm` it prints what would happen and opens no socket. The
-//! phrase is `required_confirmation_phrase` for the new address and
-//! `WriteScope::IndividualAddressProgramming`. It covers the whole
-//! procedure, including step 4's restart
-//! ([`AddressProgrammingAuthorisation::for_hardware`]).
+//! Without `--confirm` it prints what the protocol procedure would do and
+//! opens no socket. Confirmed public CLI calls currently fail closed before
+//! opening a tunnel because complete durable pre-write recovery is missing
+//! (ADR-0059). The new-address-bound phrase and
+//! `WriteScope::IndividualAddressProgramming` remain protocol constraints,
+//! not recovery evidence; step 4's restart is part of that procedure.
 
 use std::fmt::Write as _;
 use std::io::Write;

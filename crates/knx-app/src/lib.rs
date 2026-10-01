@@ -14,6 +14,7 @@ pub mod device_download;
 pub mod documentation;
 pub mod download_support;
 pub mod import;
+pub mod individual_address_programming_recovery;
 pub mod individual_address_reset_recovery;
 pub mod progress;
 pub mod project_readiness;

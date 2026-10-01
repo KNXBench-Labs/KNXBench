@@ -103,7 +103,11 @@ that file now explicitly points here rather than dispatching overlapping work.
 Evidence: `.ai/logs/2026-10-01_codex_alpha-queue.md`, verified 180-ID
 priority/route/owner ledger, 110-heading/105-residue recount, and fresh-target
 anchor gate. This is documentation/source inspection, not a new product test run.
-Next ready package: AR01 (runtime gate target/coverage).
+AR01 is `DONE`: runtime target/coverage guards, 87 xtask tests, five rejected
+behavioral mutants and emitted candidate scope; see [verification](docs/VERIFICATION.md)
+and `.ai/logs/2026-10-01_codex_alpha-gate-scope.md`. AR00 was published as
+`6f4cef24` with remote/artifact readback and its owned checkout removed.
+Next ready package: AR02 (general allocator exhaustion).
 The canonical-root statistics refresh is blocked by foreign local report work;
 this does not block unrelated offline packages and is not a fabricated refresh.
 
@@ -130,9 +134,9 @@ closure does not automatically mean every source limitation was removed.
 
 **Sources:** `KL-130-GATE`. **Dependencies:** AR00.
 
-- [ ] Reproduce the wrong/removed-worktree false-green case in isolated gate tests.
-- [ ] Implement the smallest explicit target/coverage guard or documented invocation contract that refuses a missing target or unexpectedly empty source set; do not embed today's counts as magic constants.
-- [ ] Test valid tree, wrong tree, deleted tree, empty scan and intentional fixture scopes. Show changed gate code was compiled and that the emitted scope matches the candidate.
+- [x] Reproduce the wrong/removed-worktree false-green case in isolated gate tests.
+- [x] Implement the smallest explicit target/coverage guard or documented invocation contract that refuses a missing target or unexpectedly empty source set; do not embed today's counts as magic constants.
+- [x] Test valid tree, wrong tree, deleted tree, empty scan and intentional fixture scopes. Show changed gate code was compiled and that the emitted scope matches the candidate.
 
 **Exit evidence:** named RED/GREEN regression, rejected guard mutant, non-empty per-gate scope and up-to-date limitation wording. A zero exit inspecting zero files is not green.
 
@@ -432,7 +436,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-13` | P1 | AR08 | TODO |
 | `PDB-09` | P1 | AR05 | TODO |
 | `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-130-GATE` | P1 | AR01 | TODO |
+| `KL-130-GATE` | P1 | AR01 | DONE |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER |
 | `RELEASE-02` | P1 | AR18 | WAITING_OWNER |
 | `KL-22` | P1 | AR13 | TODO |

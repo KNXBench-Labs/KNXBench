@@ -1,3 +1,5 @@
+//! Checks the resolved workspace graph for forbidden cross-layer dependencies.
+
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A package dependency graph, keyed by package name.
@@ -81,8 +83,10 @@ pub const SECURE_FORBIDDEN: &[&str] = &["knx-core", "serde"];
 
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.
-pub fn workspace_graph() -> Result<DepGraph, String> {
+pub fn workspace_graph(root: &std::path::Path) -> Result<DepGraph, String> {
     let metadata = cargo_metadata::MetadataCommand::new()
+        .manifest_path(root.join("Cargo.toml"))
+        .current_dir(root)
         .exec()
         .map_err(|e| format!("cargo metadata failed: {e}"))?;
 
@@ -109,6 +113,27 @@ pub fn workspace_graph() -> Result<DepGraph, String> {
         edges.insert(name.clone(), deps);
     }
 
+    for root in [
+        "knx-core",
+        "knx-etsproj",
+        "knx-productdb",
+        "knx-projection",
+        "knx-csv",
+        "knx-report",
+        "knx-diff",
+        "knx-secure",
+    ] {
+        if !metadata
+            .packages
+            .iter()
+            .any(|package| package.name == root && metadata.workspace_members.contains(&package.id))
+            || !edges.contains_key(root)
+        {
+            return Err(format!(
+                "missing layering root {root} in the resolved target graph"
+            ));
+        }
+    }
     Ok(DepGraph { edges })
 }
 

@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — U13 independent review chosen, ISSUE-12 evidence reconciled for review
+
+- The user chose the independent read-only whole-UI-track review by the
+  goal.md/Claude session. This is a decision, **not** a completed review,
+  approval of ISSUE-12 as out of scope, or a UI-track closeout. The Web lock
+  is free. A review brief is in `.ai/logs/2026-10-01_codex_ui-u13-review-brief.md`.
+- ISSUE-12's issue-plan U10 note and two unchecked boxes still describe the
+  2026-09-28 no-response observation. Later RESEARCH §20.1 records the
+  2026-09-29 gateway reply in the host UFW drop log and the user's 2026-09-30
+  source-port firewall rule followed by successful unchanged CLI and HTTP
+  discovery. KNOWN_LIMITATIONS §79 records both the host fix and Docker
+  bridge limitations. No actual wire packet capture was taken and no new
+  network/hardware operation was performed in this documentation pass.
+  Independent review must assess whether the external fix and existing
+  offline tests satisfy the open checkbox wording; until then they remain
+  open and the completion condition remains unmet.
+
 ## 2026-10-01 — K6 recovery-gate availability in the Web tab (published)
 
 Published `76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` to

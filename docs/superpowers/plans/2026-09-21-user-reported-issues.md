@@ -335,6 +335,19 @@ gateway-side evidence is still required before declaring or coding a
 discovery fix; the two discovery items above remain open, not silently closed
 by the endpoint UX work.
 
+**U13 pre-review correction (2026-10-01):** the preceding paragraph predates
+RESEARCH §20.1's later findings. On 2026-09-29 the gateway's unicast response
+was seen in the host's UFW drop log; a unicast probe to the same gateway
+answered. On 2026-09-30 the user added an incoming UDP source-port-3671 rule,
+and unchanged CLI and HTTP discovery both returned the gateway, without a
+KNX bus write. No actual wire packet capture was taken, but the host cause
+and its environmental fix were verified. The two checkboxes above stay open
+until the chosen independent read-only review reconciles the external
+firewall fix and existing offline tests (`http_bus_discover.rs`, the local
+discovery-HPAI test) against their exact wording. Do not add a speculative
+protocol retry, change the firewall here, or claim a loopback multicast
+roundtrip that those tests do not provide.
+
 ### ISSUE-13: Session-log freetext search and export
 
 **User observation:** Session Log has no freetext filter and no export.

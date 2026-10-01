@@ -350,6 +350,18 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
 2. Write a closing handover that lists every ISSUE with its evidence, and
    everything left for `goal.md` (§6).
 
+**Decision, 2026-10-01:** the user chose the independent read-only review
+through the goal.md/Claude session. It has **not run yet**, and this is not
+an acceptance or a change to the U13 completion gate. First review the two
+unticked ISSUE-12 boxes against the later evidence in RESEARCH §20.1 and
+KNOWN_LIMITATIONS §79: the gateway response was found in host UFW drop logs
+and CLI/HTTP discovery subsequently worked after the user changed that
+firewall rule. No packet capture, new live test or protocol fix is needed
+to repeat that already verified host result. The issue plan's older U10
+paragraph still reflects the pre-diagnosis state; reconcile it based on
+existing test/evidence boundaries before ticking anything. The Web lock is
+released; a review must not acquire it or touch the bus.
+
 ---
 
 ## 4. Completion condition

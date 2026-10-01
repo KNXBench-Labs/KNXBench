@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ISSUE-04 completion-evidence closeout)
+- **Timestamp:** 2026-10-01 14:48 CEST
+- **Web lock:** released after publishing `912eb7685012bda0e355759d37d489bcfdefa8e1`; a separate K6 UI safety package needs a fresh lock. No commissioning Web change was made here.
+- **Completed:** ISSUE-04's five stale plan boxes are supported by named regressions. New HTTP tests prove edited-project 409 before Save, no prompt after Save, clean undo to saved baseline and dirty new branch with stable save timestamp; existing failed-save test proves no false clean/timestamp advance. New `App.test.tsx` RED found English-browser time in German UI; passing the selected UI language to `formatLastSaved` made it GREEN. Published to `origin/main` with exact remote SHA readback. Corpus-backed Rust 139 suites / 2,793 passed / 0 failed / 161 ignored / 0 `SKIP:`; Web 82 files / 1,297 passed, build/TypeScript, strict Clippy/fmt, headers/anchors/layering/corpus gates, mocked browser suites Site/Service Control/Device checks/monitor 4/4 each and ISSUE-09 10/10. Rebased over commissioning docs only, reran repository gates. No live bus, device write or secrets. Evidence `.ai/logs/2026-10-01_codex_ui-issue04-evidence.md`.
+- **Pending/Next Steps:** ISSUE-12's discovery fix and loopback checkboxes remain open for wire/gateway evidence; U13 full-track closing review is a user decision and not completed. Commissioning's K6 confirmed-start 412 pre-tunnel refusal needs a separate UI-facing unavailable state under a fresh Web lock without weakening the backend. Remove only this package's corpus link, worktree and scratch after handover readback; preserve root foreign edits and other worktrees.
+- **Notes for Codex oder Claude:** The ProjectTree wire fields are `is_modified` and optional `last_saved_at`, not `is_dirty`. `Intl.DateTimeFormat` now takes selected `useUiLanguage()`; changing the browser locale alone is not a UI-language setting. The K6 pre-send durable-recovery gap persists; no prior live trial grants a new write go.
+
+---
+
 - **Last Agent:** codex (commissioning / K6 diagnostic recovery-source check)
 - **Timestamp:** 2026-10-01 14:43 CEST
 - **Web lock:** reacquired by the separate UI owner for ISSUE-04 evidence (`0803f63f`); no Web files changed in this package.

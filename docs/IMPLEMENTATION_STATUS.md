@@ -1,6 +1,9 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-01 — ISSUE-04 completion evidence and last-save locale correction (UI candidate)
+## 2026-10-01 — ISSUE-04 completion evidence and last-save locale correction (published)
+
+Published `912eb7685012bda0e355759d37d489bcfdefa8e1` to
+`origin/main` with exact remote SHA readback before releasing the Web lock.
 
 - The ISSUE-04 plan had five unticked boxes despite the server's saved-baseline
   tracking and the shipped autosave engine/settings. `http_project_routes.rs`

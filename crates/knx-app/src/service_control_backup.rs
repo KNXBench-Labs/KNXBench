@@ -53,6 +53,14 @@ pub fn write_backup(
 }
 
 fn write_record(dir: &Path, record: ServiceControlBackup) -> io::Result<PathBuf> {
+    write_record_with_sync(dir, record, |directory| File::open(directory)?.sync_all())
+}
+
+fn write_record_with_sync(
+    dir: &Path,
+    record: ServiceControlBackup,
+    sync_directory: impl FnMut(&Path) -> io::Result<()>,
+) -> io::Result<PathBuf> {
     fs::create_dir_all(dir)?;
     let stamp: String = record
         .taken
@@ -83,13 +91,48 @@ fn write_record(dir: &Path, record: ServiceControlBackup) -> io::Result<PathBuf>
             "service-control backup differs on readback",
         ));
     }
-    File::open(dir)?.sync_all()?;
+    crate::backup_directory::sync_chain(dir, sync_directory)?;
     Ok(path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nested_backup_directory_entries_are_all_synced() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().join("new/parent/backups");
+        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104);
+        let mut synced = Vec::new();
+        let path = write_record_with_sync(&dir, record.clone(), |directory| {
+            synced.push(directory.to_path_buf());
+            File::open(directory)?.sync_all()
+        })
+        .unwrap();
+        let expected: Vec<_> = dir.ancestors().map(Path::to_path_buf).collect();
+        assert_eq!(synced, expected, "new parent entries need their own sync");
+        let saved: ServiceControlBackup = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(saved, record);
+    }
+
+    #[test]
+    fn parent_sync_failure_refuses_a_backup_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path().join("new/parent/backups");
+        let parent = dir.parent().unwrap();
+        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104);
+        let result = write_record_with_sync(&dir, record, |directory| {
+            if directory == parent {
+                return Err(io::Error::other("injected ancestor sync failure"));
+            }
+            File::open(directory)?.sync_all()
+        });
+        assert!(
+            result.is_err(),
+            "an unconfirmed ancestor is not a durable receipt"
+        );
+    }
 
     #[test]
     fn saves_the_entire_original_property_without_overwriting() {

@@ -44,7 +44,12 @@
   permission remain explicit. The serial-address HTTP route still needs a
   durable pre-write recovery design. No Web source or physical bus was touched.
 
-## 2026-10-01 — ISSUE-06 Ground-root site affordance (UI candidate)
+## 2026-10-01 — ISSUE-06 Ground-root site affordance (published)
+
+Published `7fd96bf1aef86b07a2d01bec86a52621978003ed` (feature) and
+`3822a20c1bf9333eb66ded5303158a9a31470b74` (integrated evidence) to
+`origin/main`; the remote SHA matched the latter before the Web lock was
+released.
 
 - Buildings overview now offers **Add site / property** for the first
   installation. It fixes the existing `NewBuildingPartRow` to `Ground` and

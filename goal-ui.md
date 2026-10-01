@@ -331,7 +331,8 @@ These are two packages: ISSUE-07 first, then ISSUE-09.
      `StructureWorkspace.test.tsx` and mocked EN/DE `site.e2e.ts` cover
      two buildings in one installation with unchanged device projections;
      `site_hierarchy.rs` already checks that the project owns each device
-     once. No ETS Ground export or live hardware was tested.
+     once. Published as `7fd96bf1` and `3822a20c` with remote SHA readback
+     on 2026-10-01. No ETS Ground export or live hardware was tested.
 
 ### U13 — Close the UI track
 

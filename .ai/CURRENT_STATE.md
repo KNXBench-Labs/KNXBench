@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / ISSUE-06 Ground-root Site/Property closeout)
+- **Timestamp:** 2026-10-01 14:17 CEST
+- **Web lock:** released after publishing the scoped ISSUE-06 Site/Property affordance; the next Web package needs a fresh lock.
+- **Completed:** Published `7fd96bf1aef86b07a2d01bec86a52621978003ed` (feature) and `3822a20c1bf9333eb66ded5303158a9a31470b74` (integrated evidence) to `origin/main`; exact remote readback matched the latter. Buildings overview has **Add site / property** as an existing `Ground` root in the first installation. Two buildings move beneath it through existing `createBuildingPart`/`moveBuildingPart` routes; no new domain type or duplicate owner is introduced. `StructureWorkspace.test.tsx` was RED then GREEN; a wrong-kind mutation failed and was restored. Integrated gates: Rust 139 suites / 2,791 passed / 0 failed / 161 ignored / 0 `SKIP:` with corpus, Web 82 files / 1,296 passed, TypeScript/build, strict Clippy, fmt, headers, anchors, layering, corpus gates and diff check. Mocked local Chromium EN/DE at 360/1440 px: 4/4 new, 4/4 Debug, 4/4 Device checks, 4/4 monitor and 10/10 ISSUE-09. No real KNX tunnel, gateway, device write or production discovery. Evidence `.ai/logs/2026-09-30_codex_ui-site-hierarchy.md`.
+- **Pending/Next Steps:** Review remaining UI-track completion evidence before U13; its whole-track closing review is a user decision. ISSUE-12 multicast discovery still requires wire/gateway-side evidence before a protocol fix. The newly fail-closed K6 address-programming route returns HTTP 412 on confirmed starts and needs a separate UI-facing safety status under a new Web lock if scoped for follow-up. Clean only this package's corpus symlink, worktree and scratch after remote handover readback; keep root foreign edits and other sessions' worktrees untouched.
+- **Notes for Codex oder Claude:** ADR-0038 maps a site-like root to existing `Ground`, not to an ETS `Site` type or IoT `loc:Site`. No real ETS Ground export has been verified, and only the first installation is editable. The K6/K13/serial-address recovery gates from concurrent commissioning commits were preserved; do not treat historical hardware activity as a new go. No credentials or private corpus bytes are in this handover.
+
+---
+
 - **Last Agent:** codex (commissioning / K6 button-address durable-recovery gate)
 - **Timestamp:** 2026-10-01 14:06 CEST
 - **Web lock:** held by the separate UI session; no Web source changed.

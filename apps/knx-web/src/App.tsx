@@ -50,6 +50,7 @@ import type { HelpTopicId } from "./help";
 import { useAutosaveSettings } from "./autosaveSettings";
 import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
 import { useAutosave } from "./useAutosave";
+import { useUiLanguage } from "./uiLanguage";
 
 // How often the browser asks the server what a running load is doing
 // (ADR-0023). Fast enough that a phase lasting a second is still seen,
@@ -85,13 +86,11 @@ function fileNameOf(path: string): string {
   return name && name.length > 0 ? name : path;
 }
 
-// ISSUE-04's status-bar text: the browser's own locale formatting, not a
-// hardcoded pattern — `undefined` locale means "whatever the browser is
-// set to", the same convention `Intl` callers elsewhere in this app use.
-function formatLastSaved(iso: string): string {
+// ISSUE-04: the user's selected UI language, not an unrelated browser locale.
+function formatLastSaved(iso: string, language: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(language, {
     dateStyle: "short",
     timeStyle: "medium",
   }).format(parsed);
@@ -151,6 +150,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // session, not only for whoever happens to open Settings first. See
   // `App.test.tsx`'s "lang attribute is correct on a fresh mount" test.
   const t = useTranslate();
+  const [uiLanguage] = useUiLanguage();
   useEffect(() => {
     document.title = `KNXBench ${manifestVersion}`;
   }, [manifestVersion]);
@@ -1113,7 +1113,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         {tree && (
           <span className="workbench-status-saved">
             {tree.last_saved_at
-              ? t("statusBar.lastSaved", { time: formatLastSaved(tree.last_saved_at) })
+              ? t("statusBar.lastSaved", { time: formatLastSaved(tree.last_saved_at, uiLanguage) })
               : t("statusBar.neverSaved")}
           </span>
         )}

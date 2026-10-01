@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — ISSUE-04 completion evidence and last-save locale correction (UI candidate)
+
+- The ISSUE-04 plan had five unticked boxes despite the server's saved-baseline
+  tracking and the shipped autosave engine/settings. `http_project_routes.rs`
+  now explicitly proves an edited project prompts before Save and not after,
+  and that undo to the saved baseline is clean while a replacement edit forms
+  a dirty branch (redo invalidated; timestamp unchanged). Its existing
+  failed-save case proves no dirty/timestamp reset. These tests run without
+  a gateway.
+- `App.tsx::formatLastSaved` was using the browser's locale rather than the
+  selected UI language. `App.test.tsx::uses the selected UI language and
+  advances only after a successful save` failed RED on German UI with an
+  English browser and passed after passing `useUiLanguage()` to the formatter.
+  A rejected Save leaves the status text unchanged; the next accepted clean
+  snapshot advances it. `autosaveSettings.test.ts`, `SettingsPanel.test.tsx`
+  and nine fake-timer `useAutosave.test.tsx` cases evidence the already-shipped
+  settings/countdown contract. No new persistence or protocol path was added.
+- The ISSUE-04 plan now uses the actual `is_modified` field name rather than
+  its former `is_dirty` shorthand. The older ISSUE-04 status entry remains
+  the record for Save-and-continue behavior.
+- Gates on this candidate: targeted `http_project_routes` 13 passed / 3
+  ignored; full corpus-backed Rust 139 suites / 2,793 passed / 0 failed /
+  161 ignored / 0 `SKIP:`; Web 82 files / 1,297 passed, TypeScript no
+  diagnostics and Vite build green; mocked browser suites Site 4/4,
+  Service Control 4/4, Device checks 4/4, monitor 4/4 and ISSUE-09 10/10.
+  Strict Clippy, Rust fmt, headers, anchors, layering, corpus gates and
+  diff check passed. ISSUE-12's two discovery fix/loopback boxes remain
+  open pending wire/gateway evidence; U13 closing review needs the user's
+  decision and is not asserted by this ISSUE-04 package.
+
 ## 2026-09-30 — Serial-address writes fail closed pending durable recovery (ADR-0057)
 
 - `POST /api/device-address/by-serial` and the confirmed CLI

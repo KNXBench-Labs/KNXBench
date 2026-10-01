@@ -322,6 +322,44 @@ describe("App manifest version", () => {
   });
 });
 
+describe("App — ISSUE-04 last-saved status", () => {
+  it("uses the selected UI language and advances only after a successful save", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    const first = "2026-02-03T10:20:00Z";
+    const second = "2026-02-03T11:45:00Z";
+    const dirty = treeAt({ ...baseTree(), is_modified: true, last_saved_at: first }, 1);
+    apiMock.openProject.mockResolvedValueOnce(dirty);
+    const root = await renderApp();
+    const status = () => host!.querySelector(".workbench-status-saved")?.textContent;
+    const germanTime = (iso: string) => new Intl.DateTimeFormat("de", {
+      dateStyle: "short", timeStyle: "medium",
+    }).format(new Date(iso));
+
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(status()).toContain(germanTime(first));
+
+    apiMock.saveProject.mockRejectedValueOnce(new Error("disk full"));
+    await act(async () => {
+      findButton("Speichern").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(status()).toContain(germanTime(first));
+    expect(status()).not.toContain(germanTime(second));
+
+    apiMock.currentProject.mockResolvedValueOnce(treeAt({ ...dirty, is_modified: false, last_saved_at: second }, 2));
+    await act(async () => {
+      findButton("Speichern").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(status()).toContain(germanTime(second));
+    expect(status()).not.toContain(germanTime(first));
+    expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+  });
+});
+
 function findButton(text: string): HTMLButtonElement {
   const button = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === text);
   if (!button) throw new Error(`button "${text}" not found`);

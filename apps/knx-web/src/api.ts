@@ -1548,6 +1548,16 @@ export function pollDeviceDownload(
 
 // ---- Programming an individual address (MP §2.3 on the button loop; ADR-0046) ----
 
+/** Read-only view of the server's recovery gate; a true value is not write permission. */
+export interface AddressProgrammingAvailability {
+  startAvailable: boolean;
+  reason: string | null;
+}
+
+export function addressProgrammingAvailability(): Promise<AddressProgrammingAvailability> {
+  return request("/api/device-address/availability");
+}
+
 /** What `start` will demand for a new address. Nothing is sent. */
 export interface AddressProgrammingPhrase {
   address: string;

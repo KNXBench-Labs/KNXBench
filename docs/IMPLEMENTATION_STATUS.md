@@ -1,5 +1,36 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — K6 recovery-gate availability in the Web tab (candidate)
+
+- `GET /api/device-address/availability` projects the existing application
+  recovery precondition as `{startAvailable, reason}`. It is read-only and
+  neither checks device identity nor grants write permission; confirmed
+  `POST /api/device-address/start` still applies the same guard independently
+  and returns 412 before any tunnel. The simulated HTTP regression compares
+  the GET reason to the POST refusal and checks zero connector calls and
+  unchanged device state (RED 404 → GREEN 200).
+- **Bus monitor → Program address** fetches availability before offering
+  consent or a phrase. Unknown, failed or malformed responses fail closed;
+  Retry explicitly rechecks the server, and a 412 after an earlier available
+  response closes the action again. Historical status/stop rendering remains.
+  EN/DE summaries explain durable-recovery requirements while the exact
+  server reason stays visible. Six unit regressions and local mocked
+  Chromium EN/DE at 360/1440 px (4/4) cover refusal, read failure/retry,
+  malformed/contradictory results, preserved status/stop, 412 race, zero
+  consent and no start request. Historical
+  future-ready workflow tests mock `startAvailable: true`; they do not
+  demonstrate an enabled production start.
+- The user-guide's old present-tense write instructions were corrected in
+  both the Bus tab and CLI chapter. No hardware, gateway, tunnel, key or
+  device write was used. This does not lift ADR-0059, KNOWN_LIMITATIONS §116
+  or the commissioning goal's live K6 recovery blocker.
+- Candidate gates: focused simulated HTTP availability test 1/1 and Web
+  panel 16/16; full corpus-backed Rust 139 suites / 2,794 passed / 0 failed /
+  161 ignored / 0 `SKIP:`; Web 82 files / 1,303 passed, TypeScript/build,
+  strict Clippy/fmt, headers/anchors/layering/corpus gates and diff check.
+  Local mocked Chromium K6 4/4, Site 4/4, Service Control 4/4, Device checks
+  4/4, monitor 4/4 and ISSUE-09 10/10. No live device was tested.
+
 ## 2026-10-01 — ISSUE-04 completion evidence and last-save locale correction (published)
 
 Published `912eb7685012bda0e355759d37d489bcfdefa8e1` to

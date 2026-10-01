@@ -265,4 +265,51 @@ describe("useAutosave", () => {
     });
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  it.each(["disable", "unmount", "interval change"])("does not rearm an obsolete cycle after %s during a pending save", async (change) => {
+    let finish!: () => void;
+    const onSave = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const options = baseOptions({ onSave, intervalMinutes: 1, countdownSeconds: 1 });
+    const harness = await mount(options);
+    let unmounted = false;
+    try {
+      await act(async () => { vi.advanceTimersByTime(60_000); });
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      if (change === "unmount") {
+        await act(async () => harness.root.unmount());
+        unmounted = true;
+      } else {
+        await harness.rerender({ ...options, enabled: change !== "disable", intervalMinutes: change === "interval change" ? 2 : 1 });
+      }
+      await act(async () => { finish(); });
+      expect(vi.getTimerCount()).toBe(change === "interval change" ? 1 : 0);
+      await act(async () => { vi.advanceTimersByTime(60_000); });
+      expect(onSave).toHaveBeenCalledTimes(1);
+      if (change === "interval change") {
+        await act(async () => { vi.advanceTimersByTime(60_000); });
+        expect(onSave).toHaveBeenCalledTimes(2);
+        await act(async () => { finish(); });
+      }
+    } finally {
+      if (!unmounted) await act(async () => harness.root.unmount());
+    }
+  });
+
+  it("does not rearm after a pending save fails while autosave is disabled", async () => {
+    let fail!: (error: Error) => void;
+    const onSave = vi.fn(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
+    const options = baseOptions({ onSave, intervalMinutes: 1, countdownSeconds: 1 });
+    const harness = await mount(options);
+    try {
+      await act(async () => { vi.advanceTimersByTime(60_000); });
+      await harness.rerender({ ...options, enabled: false });
+      const error = new Error("disk full");
+      await act(async () => { fail(error); });
+      expect(options.onSaveFailed).toHaveBeenCalledWith(error);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      await act(async () => harness.root.unmount());
+    }
+  });
 });

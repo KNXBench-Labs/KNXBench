@@ -129,6 +129,30 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it("reloads the same device after a project snapshot and ignores the older pending reply", async () => {
+    let resolveOld!: (panel: ParameterPanelDto) => void;
+    apiMock.deviceParameters
+      .mockImplementationOnce(() => new Promise<ParameterPanelDto>((resolve) => { resolveOld = resolve; }))
+      .mockResolvedValueOnce({
+        ...fixture, stale: [], diagnostics: [],
+        sections: [{ ...fixture.sections[0], fields: [{ ...fixture.sections[0].fields[0], text: "NEW-PARAMETER" }] }],
+      });
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => root.render(
+      <ParameterPanel deviceId={17} refreshKey={panelTree} onValueApplied={() => {}} />,
+    ));
+    await act(async () => root.render(
+      <ParameterPanel deviceId={17} refreshKey={{ ...panelTree }} onValueApplied={() => {}} />,
+    ));
+    expect(apiMock.deviceParameters).toHaveBeenCalledTimes(2);
+    expect(host.textContent).toContain("NEW-PARAMETER");
+    await act(async () => resolveOld({ ...fixture, sections: [] }));
+    expect(host.textContent).toContain("NEW-PARAMETER");
+    await act(async () => root.unmount());
+  });
+
   it("renders both sections' field rows, the stale entry, and the collapsed diagnostic count", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();

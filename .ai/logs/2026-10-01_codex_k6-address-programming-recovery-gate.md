@@ -36,6 +36,8 @@ change, **not** an implementation of recovery or a new hardware go.
   `knx-app`, `knx-server` and `knx-cli` crates compiled in the gate log.
 - No gateway, KNX hardware, credentials, live write or Web source was touched.
   Root checkout's unrelated changes and the separate UI lock were preserved.
+- Feature commit `2cca1d4ac31af2c312ec59fbe91721329cf9eede` was pushed to
+  `origin/main` without force; local and remote SHA matched on readback.
 
 ## Pending / next preflight
 

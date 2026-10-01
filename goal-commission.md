@@ -360,6 +360,17 @@ map (RESEARCH §24). Unavailable non-public manufacturer documents do not
 block other offline commissioning work; they also do not waive K6's durable
 recovery gate or supply a new hardware go.
 
+**Operator decision, 2026-10-01: K6 experimentally approved.** No further
+manufacturer documentation is available to the operator; the K6 investigation
+may proceed as an explicitly **experimental** commissioning task. The operator
+corrected the follow-on target to *this* `goal-commission.md`, not `goal-ui.md`.
+This is not a verified `1.1.67` model/memory map, an access key, a durable
+pre-write backup/readback/restore record, or permission to bypass ADR-0059.
+Confirmed CLI/HTTP starts remain pre-tunnel fail-closed. Record each proposed
+experiment's target, scope, prerequisites, abort/recovery and outcome before
+claiming a live K6 result; do not silently substitute another device or guess
+an access key. The historical round trip is evidence of that run only.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a
@@ -382,6 +393,14 @@ is active, and without a power cycle, so the unacknowledged restart does
 restart the device. Option C was restored afterwards; the read-back shows
 0 differing octets. RESEARCH §19, "K7 live acceptance". Recovery (an
 interrupted download) remains optional and not done.
+
+**Offline recovery regression, 2026-10-01.** A simulated `0701h` download
+now breaks once before its second data region, *after* the first write and
+while the table is `Loading`; a new session runs the full plan on the same
+simulated device and verifies `Loaded`, both regions and repeated writes.
+This is simulator-only evidence, not K7's optional live interruption or a
+general recovery/rollback guarantee. Do not deliberately interrupt hardware
+without a separate device-specific go, persistent backup and abort plan.
 
 ### K8 — Rule on the excluded KNOWN_LIMITATIONS entries
 

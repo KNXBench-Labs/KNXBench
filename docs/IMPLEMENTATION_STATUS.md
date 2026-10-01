@@ -316,6 +316,22 @@ Published `ab31ca292f536602e6338692e04a39759566cd1c` (UI) and
   now requires all four scopes (RED before the data change). Every download
   scope of `M-0083_A-0027-15-0BAC` is verified on hardware.
 
+## 2026-10-01 — K6 public button-programming paths require durable recovery
+
+- `knx device program-address` plan mode stays offline, but confirmed public
+  CLI programming now refuses before runtime/tunnel opening. HTTP
+  `POST /api/device-address/start` validates its address and phrase, then
+  returns `412` before taking a lock or opening a tunnel. Neither route
+  durably backs up the actually pressed device's complete affected storage
+  today, so a phrase or an old application dump cannot authorize the write
+  (ADR-0059; RESEARCH §24). The previous `1.1.67` live round trip remains
+  historical evidence, not a reusable write allowance.
+- A local UDP CLI regression and simulated HTTP regression check no tunnel or
+  datagram on a valid confirmed request; direct simulated sessions retain
+  status/stop, activity and exclusion tests without reopening public writes.
+  No Web source or hardware was changed; the Web tab can display a phrase but
+  cannot perform a confirmed write until the recovery design is implemented.
+
 ## 2026-09-30 — K13 public reset now fail-closed without durable recovery
 
 - `knx device reset-address` still prints an offline MP §2.18 plan, but a

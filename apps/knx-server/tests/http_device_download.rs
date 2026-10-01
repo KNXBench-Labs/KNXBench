@@ -30,6 +30,9 @@ use knx_core::commissioning::properties::{
     ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
 };
 use knx_core::IndividualAddress;
+use knx_net::commissioning::programming_button_wait::{
+    AddressProgrammingAuthorisation, ButtonWait,
+};
 use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 use knx_net::{
     ApplicationService, BusError, Destination, DiscoveredGateway, ManagementTransport,
@@ -671,47 +674,44 @@ async fn the_gateway_serves_one_tunnel_in_both_directions() {
 
 #[tokio::test]
 #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
-async fn a_waiting_address_programming_holds_off_the_download() {
+async fn a_waiting_simulated_address_programming_holds_off_the_download() {
     let h = harness(SimulatorConfig::default()).await;
     let shown = self::plan(&h).await;
-    let (status, body) = send(
-        &h.app,
-        post(
-            "/api/device-address/start",
-            json!({
-                "address": "1.1.30",
-                "gateway": GATEWAY,
-                "confirmation": "I confirm individual-address programming to 1.1.30",
-                "waitSeconds": 30,
-            }),
-        ),
+    // The public start route is intentionally fail-closed without a verified
+    // backup. Inject a simulator session directly to keep the cross-session
+    // exclusion test without creating a public write bypass.
+    let address: IndividualAddress = "1.1.30".parse().unwrap();
+    let authorisation = AddressProgrammingAuthorisation::for_hardware(
+        address,
+        "I confirm individual-address programming to 1.1.30",
     )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
+    .unwrap();
+    let id = h
+        .state
+        .next_address_programming_id
+        .fetch_add(1, Ordering::SeqCst);
+    *h.state.address_programming.lock().await = Some(knx_server::AddressProgrammingSession::start(
+        id,
+        Box::new(SimTunnel(Arc::clone(&h.device))),
+        address,
+        authorisation,
+        fast(),
+        ButtonWait {
+            give_up_after: Duration::from_secs(30),
+            pause_between_rounds: Duration::from_millis(10),
+        },
+    ));
     let (status, body) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert!(body.to_string().contains("programming"), "{body}");
-    assert_eq!(
-        h.calls.load(Ordering::SeqCst),
-        1,
-        "only the programming's tunnel"
-    );
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0, "no public tunnel opened");
     assert!(!h.device.memory_was_written());
     let (status, _) = send(
         &h.app,
-        post(
-            "/api/device-address/stop",
-            json!({ "programmingId": body_id(&h).await }),
-        ),
+        post("/api/device-address/stop", json!({ "programmingId": id })),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-}
-
-async fn body_id(h: &Harness) -> Value {
-    let (status, body) = send(&h.app, get("/api/device-address/status")).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    body["programmingId"].clone()
 }
 
 /// K15 over HTTP: a partial plan is shown as one, the start runs exactly

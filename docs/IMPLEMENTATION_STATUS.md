@@ -1,6 +1,10 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-01 — K6 recovery-gate availability in the Web tab (candidate)
+## 2026-10-01 — K6 recovery-gate availability in the Web tab (published)
+
+Published `76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` to
+`origin/main`; exact remote SHA readback matched before releasing the Web
+lock. No public K6 write path was reopened.
 
 - `GET /api/device-address/availability` projects the existing application
   recovery precondition as `{startAvailable, reason}`. It is read-only and
@@ -24,7 +28,7 @@
   both the Bus tab and CLI chapter. No hardware, gateway, tunnel, key or
   device write was used. This does not lift ADR-0059, KNOWN_LIMITATIONS §116
   or the commissioning goal's live K6 recovery blocker.
-- Candidate gates: focused simulated HTTP availability test 1/1 and Web
+- Gates: focused simulated HTTP availability test 1/1 and Web
   panel 16/16; full corpus-backed Rust 139 suites / 2,794 passed / 0 failed /
   161 ignored / 0 `SKIP:`; Web 82 files / 1,303 passed, TypeScript/build,
   strict Clippy/fmt, headers/anchors/layering/corpus gates and diff check.

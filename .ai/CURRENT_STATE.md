@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / public MDT manual identity check)
+- **Timestamp:** 2026-10-01 15:29 CEST
+- **Web lock:** last published UI entry released the lock; this research changed no Web source or backend.
+- **Completed:** Inspected the exact user-supplied MDT `BE-TA55xx-02` technical manual (51 pages, 07/2025 version 1.3). It belongs to Taster Plus 55 and lists `BE-TA55P2.02`/`.G2`; the historical `1.1.67` was operator-labelled `.G1` and its `PID_ORDER_INFO` has not been read. No verified exact-model/generation match or complete affected-storage backup follows from the manual's ETS commissioning instructions. RESEARCH §24, K6 status and `.ai/logs/2026-10-01_codex_k6-public-manual-identity.md` now state that boundary and the user's decision that inaccessible non-public documents do not stop other offline work. No gateway, hardware, key, private corpus or Web source accessed.
+- **Pending/Next Steps:** Continue other offline/simulator commissioning work; do not require the user to provide non-public manufacturer documentation. K6/serial/K13 confirmed public writes remain fail-closed until exact durable device-specific pre-write recovery is proved and a fresh go is given. K14 remains blocked. Exact `1.1.67` order identification remains unverified; do not equate `.G1` and `.G2` by family alone.
+- **Notes for Codex oder Claude:** No access key may be guessed; never query `1.1.220`. This user's URL is a public technical manual, not a manufacturer's low-level memory map. Root checkout has foreign dirty edits; retain isolated worktree and preserve the UI lock chronology. Clean only task-owned PDF/text scratch after publication.
+
+---
+
 - **Last Agent:** codex (UI / K6 fail-closed availability closeout)
 - **Timestamp:** 2026-10-01 15:22 CEST
 - **Web lock:** released after publishing `76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` to `origin/main`; exact remote SHA readback matched. Next Web package needs a fresh lock.

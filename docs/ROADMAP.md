@@ -56,9 +56,13 @@ U0–U12 UI work is delivered within its tested scope: read-only readiness
 and device comparison, Site/Property creation, and a default-off Debug
 property action with an offline-tested, property-only backup (ADR-0051).
 K6's Web tab shows fail-closed availability rather than a working write.
-The remaining [`goal-ui.md`](../goal-ui.md) work is U13's independent
-review and reconciliation of two ISSUE-12 evidence boxes; the chosen
-review was attempted on 2026-10-01 but the service refused before a verdict.
+[`goal-ui.md`](../goal-ui.md) is complete through U13 (2026-10-01).
+The operator accepted the independent GPT-6.1-Sol review instead of unavailable
+Claude; all three P1 findings are fixed and mutation/regression-tested.
+ISSUE-12's two evidence boxes reconcile the host-firewall correction and actual
+offline unicast-loopback transport tests, without claiming multicast proof.
+Final integrated Rust/Web/Chromium/repository gates passed; see the U13 log
+and [IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md).
 Native WebKitGTK and screen-reader coverage remain bounded (§20, §130).
 
 ## Cross-cutting — Internationalization

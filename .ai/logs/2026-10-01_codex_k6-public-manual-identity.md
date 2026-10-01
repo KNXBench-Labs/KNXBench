@@ -19,3 +19,6 @@ information is not a blocker for continuing other work; this is not a new
 hardware go and does not relax the durable pre-write recovery condition.
 No bus access, key, private corpus, or Web source was used. The PDF was held
 only in task-owned scratch and must be removed after verification.
+Published as `3eb9dd5c50efca4f148493c56c363ec936c24a3f` with exact
+remote SHA readback; anchors checked 405 links across 225 files and the
+diff check passed. The handover-only closeout follows separately.

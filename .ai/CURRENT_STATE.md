@@ -6,6 +6,15 @@
 
 ---
 
+- **Last Agent:** codex (commissioning / read-only K6 order-identity feasibility)
+- **Timestamp:** 2026-10-01 16:32 CEST
+- **Completed:** Audited existing public code and primary diagnostic/vendor sources without a bus connection. KNXBench has `ManagementSession::read_property` but no public `PID_ORDER_INFO` CLI read route; an optional/readability-dependent order number or hex bytes would not independently prove that `1.1.67` is MDT `.G1`/`.G2`, much less its affected storage. `docs/RESEARCH.md` §24 and `goal-commission.md` record the bounded result. Published `80400d18eabce3bf27befb5fda238be136d35beb` to `origin/main` with exact SHA readback; fresh anchors (405 links/225 files) and diff check passed after rebase. See `.ai/logs/2026-10-01_codex_k6-order-identity-feasibility.md`. No gateway, key, hardware write, private corpus or Web source accessed.
+- **Pending/Next Steps:** `1.1.67` is now reported off the bus; the above source audit is historical, not a request to contact it. `1.1.32` is only a candidate under the separate newer handover above. Plan any read-only raw order-information probe only after confirming its permitted exact target, a verified property definition, explicit gateway scope, one-tunnel exclusion and an operator/project key source if required. No key guessing, no `1.1.220` query, no inferred model from undecoded hex. K6 confirmed public writes remain pre-tunnel fail-closed until verified per-device durable pre-write recovery and a fresh target-specific go; K7 live interruption remains separately gated.
+- **Notes for Codex oder Claude:** User's experimental K6 consent and goal correction are already recorded below; this check neither started a live read nor changed safety availability. Independent U13 review remains blocked separately, not replaced by this work. Root foreign edits untouched. Remove only this task's PDF/text scratch and worktree after handover readback.
+
+
+---
+
 - **Last Agent:** codex (UI / U13 independent review blocked)
 - **Timestamp:** 2026-10-01 16:12 CEST
 - **Completed:** Followed the user's chosen read-only U13 review boundary. Inspected the two open ISSUE-12 checkboxes, later host-firewall discovery evidence and existing offline tests. Attempted an isolated Claude Code 2.1.283 read-only review (Read/Grep/Glob only, no shell/MCP/subagents); the service refused before any review with a weekly limit, resetting 2026-10-03 09:00 Europe/Berlin. No review verdict, product edits, test run, multicast, bus contact, firewall change or hardware operation. Details: `.ai/logs/2026-10-01_codex_ui-u13-review-blocked.md`. Web lock remains free; shared root edits untouched.

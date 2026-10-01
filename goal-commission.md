@@ -204,6 +204,11 @@ or reopen any of the address-write routes.
 Returned download errors also attempt to close a still-open management
 connection without retry/restore; dropped-future/process-crash cleanup and
 complete durable address-write recovery remain separate unproven contracts.
+Server polling now turns a dead worker without a terminal result into a
+failure with an explicitly unknown attempted-write/cleanup outcome, preserving
+backup/progress evidence. Cleanup keeps its tunnel reservation until the task
+ends, including when a `join` wait is cancelled. This is offline-tested
+server-lifetime bookkeeping, not durable recovery or a new write permission.
 
 **Still hardware-bounded, not queued as automatic retries:** K12 serial
 address writes were ignored twice by `1.1.67` (even after SYSTEM priority

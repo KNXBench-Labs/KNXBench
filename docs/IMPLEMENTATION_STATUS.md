@@ -1,5 +1,36 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — Download worker outcome and tunnel reservation (offline)
+
+- Polling a finished server worker without a terminal device result now reports
+  `failed`, rather than leaving a dead task `running`. Before the plan's first
+  mutation boundary it reports `written:no`; afterward `partially` is explicitly
+  conservative: any attempted write's outcome and connection cleanup are unknown.
+  Existing events, backup path and already witnessed terminal results survive.
+- The server keeps the download's tunnel reservation until the worker actually
+  ends, including the await after a terminal device result. Cancelling a `join`
+  wait no longer detaches the worker or releases that reservation.
+- Eight synthetic offline regressions cover panic, task abort, silent return,
+  read-only versus mutation progress, preserved backup/restart evidence and
+  delayed cleanup. Initial RED tests reproduced four bugs; the additional
+  cancelled-join regression was also RED before its fix. Four temporary guard
+  mutations failed their corresponding tests and were restored.
+- The expanded private HTTP-fixture run exposed a stale test assumption:
+  group-address partial support for its original program is already verified.
+  The acknowledgement-gate test now chooses an installed plannable program
+  without shipped evidence and uses a fresh default-only project. It still
+  rejects missing/wrong/other-target acknowledgements with zero tunnel calls;
+  the exact acknowledgement opens one simulated tunnel. No evidence was
+  downgraded and no sibling-program hardware success is claimed.
+- Gates: full workspace 139 suites / 2,809 passed / zero failures / zero
+  `SKIP:`; all 13 explicitly ignored simulator HTTP-download fixtures passed;
+  strict workspace Clippy, fmt, Web resource build, layering/headers/anchors/
+  corpus-gates and diff check passed. The first expanded fixture run was
+  12 passed / 1 stale-assumption failure, corrected before this green run.
+- This is server-lifetime outcome bookkeeping, not a cancel API, automatic
+  restore, guaranteed disconnect or durable process-crash recovery. Public
+  write gates, wire shape, domain model and Web sources are unchanged.
+
 ## 2026-10-01 — Failed memory download closes its management connection
 
 - The shared memory executor now attempts one best-effort `T_Disconnect`

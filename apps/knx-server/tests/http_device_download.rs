@@ -849,15 +849,67 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
     assert_eq!(region.octets, expected, "what the device held before");
 }
 
-/// Group addresses only has not run on hardware: the plan says untested,
-/// and `start` refuses without the exact acknowledgement, before any
-/// tunnel opens.
+/// Use another installed, plannable program without shipped evidence. The
+/// original fixture's complete and all partial scopes are now verified.
+/// `start` still refuses an untested program before any tunnel opens unless
+/// the acknowledgement names this target exactly.
 #[tokio::test]
 #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
 async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
     let h = harness(SimulatorConfig::default()).await;
-    h.device
-        .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+    let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+    let mut device = h
+        .state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .find(|device| device.address == Some("1.1.67".parse().unwrap()))
+        .unwrap()
+        .clone();
+    device.id = project.ids.next_device_id();
+    device.com_objects.clear();
+    {
+        let products = h.state.product_db.as_ref().unwrap().lock().unwrap();
+        let evidence = knx_app::download_support::shipped_evidence().unwrap();
+        let mut statement = products
+            .prepare("SELECT id, application_program_ref FROM hardware2program ORDER BY id")
+            .unwrap();
+        let candidates = statement
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        let parts = knx_core::commissioning::partial_memory_download::PartialDownloadParts {
+            parameters: false,
+            group_addresses: true,
+        };
+        let found = candidates.into_iter().any(|(program_ref, program_id)| {
+            if evidence.contains_key(&program_id) {
+                return false;
+            }
+            device.program_ref = program_ref;
+            project.devices.insert(device.clone());
+            knx_app::device_download::prepare_device_download(
+                &products,
+                &project,
+                device.address.unwrap(),
+            )
+            .ok()
+            .and_then(|prepared| prepared.into_partial(parts).ok())
+            .is_some()
+        });
+        assert!(
+            found,
+            "fixture must include an unverified plannable program"
+        );
+    }
+    *h.state.project.lock().unwrap() = Some(project);
     let (status, plan) = send(
         &h.app,
         post(
@@ -913,6 +965,12 @@ async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let (end, _) = finish(&h).await;
-    assert_eq!(end["state"], "finished", "{end}");
+    assert_eq!(
+        h.calls.load(Ordering::SeqCst),
+        1,
+        "exact acknowledgement opens one simulated tunnel"
+    );
+    // This is an acknowledgement-gate test, not hardware evidence for the
+    // selected sibling program. Identity/load checks can still refuse it.
+    let _ = finish(&h).await;
 }

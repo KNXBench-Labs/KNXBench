@@ -796,6 +796,14 @@ best-effort (2026-10-01, simulator-tested), preserving the original failure
 and existing backup rather than automatically restoring or retrying. This
 does not prove remote receipt of disconnect and does not cover a dropped
 future, process termination or a power loss during the run.
+Server polling now recognises a finished worker with no terminal result as
+failed, preserving its progress and backup path. `written:partially` after a
+mutation step starts is a conservative unknown outcome, not proof that any
+telegram was sent or that device recovery succeeded. An already witnessed
+device result survives a later cleanup panic, but does not prove disconnect.
+The tunnel reservation remains held while cleanup runs, even if a `join`
+wait is cancelled. These offline-tested checks last only for this server
+process; there is no new cancel route, automatic recovery or crash journal.
 
 **Live safety and compatibility remain narrow.** `1.1.220` is an excluded
 alarm panel. No prior approval carries over to a new target, write scope or

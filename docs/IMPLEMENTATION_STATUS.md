@@ -56,7 +56,11 @@
   topology and one device projection per building. A wrong-kind mutation
   fails the test and was restored. Local mocked Chromium `site.e2e.ts`
   passed EN/DE at 360/1440 px (4/4) with no unmocked API call or bus use;
-  Web 82 files / 1,296 tests, TypeScript and build pass. The existing
+  existing mocked browser suites passed 4/4 Debug, 4/4 Device checks,
+  4/4 monitor and 10/10 ISSUE-09. On the rebased tree Web 82 files /
+  1,296 tests, TypeScript and build pass; corpus-backed Rust 139 suites /
+  2,791 passed / 0 failed / 161 ignored / 0 `SKIP:`, strict Clippy,
+  fmt, headers, anchors, layering and corpus gates pass. The existing
   synthetic `site_hierarchy.rs` and native store roundtrip establish owner
   and persistence fidelity; they are not evidence of an ETS Ground export.
   The first-installation-only editor and installation-rename gaps remain.

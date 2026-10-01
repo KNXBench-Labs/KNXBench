@@ -392,6 +392,14 @@ temporarily readdressed before any device-specific write request. The `.G2`
 twofold manual must not be attributed to this project-labelled eightfold
 candidate. No K6 write is reopened by changing the proposed target.
 
+**Read-only presence check, 2026-10-01 16:55 CEST.** The existing CLI dry run
+contained only `1.1.32`; its single live descriptor probe returned `occupied`
+and mask `0701h` (RESEARCH §24). No other address was probed, no device
+property or key was read, and no write was sent. This confirms current address
+occupancy, **not** the claimed eightfold model, the physical button location,
+or any backup/restore coverage. A fresh named go and a verified durable
+pre-write recovery plan are still required before K6 can write.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

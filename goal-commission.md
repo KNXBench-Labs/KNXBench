@@ -321,6 +321,15 @@ remain, but are no longer evidence that public starts may reach hardware.
 No new live permission is implied. See RESEARCH §24; this does not retroactively
 invalidate the observed `1.1.67` result.
 
+**Offline entry-point audit, 2026-10-01.** RESEARCH §24 checks the public
+CLI/HTTP write paths: K6, K12 serial write and K13 reset remain pre-tunnel
+blocked; download/restore use plan-scoped pre-write backup; the opt-in
+service-control action backs up its exact property. None establishes a
+manufacturer-independent full-device recovery for K6. The Web Program address
+panel still requests consent for the now-blocked action and displays HTTP
+`412` as an alert. Its unavailable-state affordance/test belongs to the
+separate Web lock owner (§5); no UI code or bus was changed by this audit.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

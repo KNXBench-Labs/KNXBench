@@ -198,6 +198,9 @@ whole-device recovery contracts. `GET /api/bus/activity` is partial
 server-lifetime evidence, not a durable audit. The global status/history,
 partial-scope selector and any reset UI still need separate contracts and
 the Web lock; read-only Device checks already shipped without a write go.
+An offline K7 restore-file guard now rejects missing, duplicate or extraneous
+load-state records for the plan; this does not extend the saved storage scope
+or reopen any of the address-write routes.
 
 **Still hardware-bounded, not queued as automatic retries:** K12 serial
 address writes were ignored twice by `1.1.67` (even after SYSTEM priority

@@ -826,6 +826,15 @@ mod tests {
             knx_app::device_backup::prepare_restore(&products, &altered),
             Err(knx_app::device_backup::RestorePrepareError::DifferentProcedure)
         ));
+        let mut incomplete = stored.clone();
+        assert!(incomplete.backup.load_states.len() > 1);
+        incomplete.backup.load_states.pop();
+        assert!(matches!(
+            knx_app::device_backup::prepare_restore(&products, &incomplete),
+            Err(knx_app::device_backup::RestorePrepareError::Shape(
+                knx_core::commissioning::device_backup::RestoreError::OtherLoadStates { .. }
+            ))
+        ));
         let restore = knx_app::device_backup::prepare_restore(&products, &stored).unwrap();
         let authorisation =
             WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap();

@@ -347,6 +347,136 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
 }
 
 #[tokio::test]
+async fn saved_edit_can_be_replaced_without_a_discard_confirmation() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let edited = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Unsaved area", "address": 1 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(body_json(edited).await["is_modified"], true);
+    let rejected = app
+        .clone()
+        .oneshot(post("/api/project/new", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(rejected.status(), StatusCode::CONFLICT);
+
+    assert_eq!(
+        app.clone()
+            .oneshot(post(
+                "/api/project/save-as",
+                json!({ "path": dir.path().join("saved.knxdb").to_string_lossy() }),
+            ))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let saved = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    assert_eq!(saved["is_modified"], false);
+    let replaced = app
+        .oneshot(post("/api/project/new", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(replaced.status(), StatusCode::OK);
+    assert_eq!(body_json(replaced).await["is_modified"], false);
+}
+
+#[tokio::test]
+async fn undo_to_saved_baseline_then_branch_tracks_the_new_unsaved_edit() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(post(
+                "/api/project/save-as",
+                json!({ "path": dir.path().join("saved.knxdb").to_string_lossy() }),
+            ))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    let saved = body_json(app.clone().oneshot(get("/api/project")).await.unwrap()).await;
+    let saved_at = saved["last_saved_at"].as_str().unwrap();
+
+    let first_edit = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "Discarded branch", "address": 1 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(body_json(first_edit).await["is_modified"], true);
+    let undone = app
+        .clone()
+        .oneshot(post("/api/undo", json!({})))
+        .await
+        .unwrap();
+    let undone = body_json(undone).await;
+    assert_eq!(undone["is_modified"], false);
+    assert_eq!(undone["can_redo"], true);
+
+    let branch = app
+        .clone()
+        .oneshot(post(
+            "/api/areas",
+            json!({ "name": "New branch", "address": 2 }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(branch.status(), StatusCode::OK);
+    let branch = body_json(branch).await;
+    assert_eq!(branch["is_modified"], true);
+    assert_eq!(branch["can_redo"], false);
+    assert_eq!(branch["last_saved_at"], saved_at);
+    assert_eq!(
+        branch["installations"][0]["topology"][0]["name"],
+        "New branch"
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::CONFLICT
+    );
+    let back = app.oneshot(post("/api/undo", json!({}))).await.unwrap();
+    let back = body_json(back).await;
+    assert_eq!(back["is_modified"], false);
+    assert_eq!(back["last_saved_at"], saved_at);
+}
+
+#[tokio::test]
 async fn importing_replaces_a_dirty_project_with_a_clean_baseline() {
     let dir = tempfile::tempdir().unwrap();
     let path = knx_testsupport::write_minimal_knxproj(dir.path());

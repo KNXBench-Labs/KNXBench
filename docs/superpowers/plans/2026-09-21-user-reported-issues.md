@@ -124,14 +124,14 @@
 - Test: `apps/knx-web/src/NewProjectDialog.test.tsx`
 - Test: `apps/knx-web/src/SettingsPanel.test.tsx`
 
-**Interfaces:** Replace `can_undo` as a dirty proxy with authoritative saved-baseline state that survives undo/redo correctly. Successful Save/Save As returns refreshed project status including `is_dirty` and `last_saved_at`; failures leave both unchanged.
+**Interfaces:** Replace `can_undo` as a dirty proxy with authoritative saved-baseline state that survives undo/redo correctly. The refreshed `GET /api/project` snapshot carries `is_modified` and `last_saved_at` after Save/Save As; failures leave both unchanged.
 
-- [ ] Write server tests for edit→save→prompt (no prompt), edit→save failure (still dirty), save→edit→undo to saved baseline (clean), and edit→undo→branch (correct dirty result).
+- [x] Write server tests for edit→save→prompt (no prompt), edit→save failure (still dirty), save→edit→undo to saved baseline (clean), and edit→undo→branch (correct dirty result). (`http_project_routes.rs::saved_edit_can_be_replaced_without_a_discard_confirmation`, `::modified_state_clears_only_after_successful_save_or_save_as`, `::undo_to_saved_baseline_then_branch_tracks_the_new_unsaved_edit`.)
 - [x] Write UI tests for Save-and-create and Save-and-quit; failed or cancelled Save keeps the prompt and project open. (2026-09-27)
-- [ ] Write status-bar tests proving the timestamp changes only after a successful save and is formatted in the UI locale.
-- [ ] Add autosave settings: enabled by default, five-minute interval default, configurable interval, and explicit disabled state.
-- [ ] Add fake-timer tests for the five-second countdown, manual-save cancellation, edits during the countdown, missing Save-As path, concurrent save suppression, and autosave failure.
-- [ ] Implement the authoritative state first, then prompts/status, then autosave using the same save operation; never create a parallel persistence path.
+- [x] Write status-bar tests proving the timestamp changes only after a successful save and is formatted in the UI locale. (`App.test.tsx::uses the selected UI language and advances only after a successful save`; formats `de` while the test browser is `en`, and rejects an unchanged timestamp after a failed save.)
+- [x] Add autosave settings: enabled by default, five-minute interval default, configurable interval, and explicit disabled state. (`autosaveSettings.test.ts`, `SettingsPanel.test.tsx::autosave interval is disabled while autosave is off`.)
+- [x] Add fake-timer tests for the five-second countdown, manual-save cancellation, edits during the countdown, missing Save-As path, concurrent save suppression, and autosave failure. (`useAutosave.test.tsx`, nine focused cases.)
+- [x] Implement the authoritative state first, then prompts/status, then autosave using the same save operation; never create a parallel persistence path. (`domain.rs::project_is_modified`, `App.tsx::refreshSavedProject`/`saveProject`, `useAutosave.ts`; HTTP and UI regressions above.)
 
 ### ISSUE-05: Editable structure workspaces and understandable hierarchy
 

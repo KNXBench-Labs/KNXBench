@@ -201,6 +201,9 @@ the Web lock; read-only Device checks already shipped without a write go.
 An offline K7 restore-file guard now rejects missing, duplicate or extraneous
 load-state records for the plan; this does not extend the saved storage scope
 or reopen any of the address-write routes.
+Returned download errors also attempt to close a still-open management
+connection without retry/restore; dropped-future/process-crash cleanup and
+complete durable address-write recovery remain separate unproven contracts.
 
 **Still hardware-bounded, not queued as automatic retries:** K12 serial
 address writes were ignored twice by `1.1.67` (even after SYSTEM priority

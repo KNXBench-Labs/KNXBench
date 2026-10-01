@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI / U13 independent review request)
+- **Timestamp:** 2026-10-01 15:41 CEST
+- **Web lock:** released; this package is documentation-only and did not reserve Web source. Root foreign edits remain untouched.
+- **Completed:** The user selected an independent read-only whole-UI-track cross-review by the goal.md/Claude session. Published the review brief and stale ISSUE-12 evidence correction as `2203341ec2c3108a06fbd4240bfe90296d1cf026` to `origin/main`, exact remote SHA readback matched. RESEARCH §20.1 already proves the 2026-09-29 gateway unicast reply was dropped by host UFW and the user's 2026-09-30 incoming source-port-3671 rule enabled unchanged CLI and HTTP discovery; an actual wire capture was never taken. ISSUE-12's two plan boxes remain open for independent reconciliation of external fix and test wording. `goal-ui.md` U13 records the user's review choice but does **not** claim that a review ran. Documentation-only headers/anchors/layering/corpus gates and diff check passed after rebasing over commissioning handover. No new network, gateway, bus, firewall or Web operation.
+- **Pending/Next Steps:** The separate goal.md/Claude session should perform the read-only review from `.ai/logs/2026-10-01_codex_ui-u13-review-brief.md`, return concrete path:line findings, and explicitly assess ISSUE-12's two boxes using existing offline tests (`http_bus_discover.rs`, HPAI socket test) without calling them a full multicast loopback roundtrip. UI owner then fixes findings, reconciles plan evidence, reruns merged-main gates and only afterward prepares U13 closing handover. No new packet capture is required to explain the already verified failure on this host; don't request a hardware test or change firewall settings by default.
+- **Notes for Codex oder Claude:** **For the goal.md session:** user's chosen review is read-only and has not been spawned or executed; follow the brief, preserve root foreign changes and do not infer a protocol bug from the old U10 paragraph. K6 remains fail-closed. No co-author or secrets in handover.
+
+---
+
 - **Last Agent:** codex (commissioning / public MDT manual identity check)
 - **Timestamp:** 2026-10-01 15:31 CEST
 - **Web lock:** last published UI entry released the lock; this research changed no Web source or backend.

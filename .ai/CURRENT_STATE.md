@@ -1,3 +1,12 @@
+- **Last Agent:** codex (commissioning / experimental K6 decision and K7 simulator recovery)
+- **Timestamp:** 2026-10-01 16:11 CEST
+- **Web lock:** not reserved; no Web source changed. Preserve the independent U13 review handover below.
+- **Completed:** Corrected active target to `goal-commission.md`, recorded the operator's K6 experimental consent without weakening ADR-0059 or claiming complete recovery/identity, and published K7's simulator-only interrupted-run/retry regression. The first `0701h` run writes one region, disconnects before the next, leaves `Loading`; a new session completes the full plan on the same simulated device. Added address-specific one-shot simulator interruption. Code/docs published as `6d3dcb09d1a8d2a5efb5aa6ff9dfb0a18b014ad1`; remote readback matched. Post-rebase Rust workspace 139 suites / zero failed, strict Clippy, fmt, layering, headers, corpus, anchors and diff passed. `npm ci` and Web build supplied the isolated desktop resource; no Web sources changed. No gateway, device, secret, private corpus, or hardware write accessed. Detail: `.ai/logs/2026-10-01_codex_k6-experimental-k7-interruption.md`.
+- **Pending/Next Steps:** K6 remains pre-tunnel fail-closed until the selected device's exact identity, all potentially affected storage, durable backup/readback/restore and abort path are proven. No access key may be guessed and `1.1.220` must not be queried. Optional K7 hardware interruption still needs a separate specific go/backup. Continue offline K6 feasibility or other commissioning work; do not mistake simulator recovery for a live proof.
+- **Notes for Codex oder Claude:** User corrected the follow-on goal from `goal-ui.md` to `goal-commission.md`; don't edit UI under another session. The U13 review remains a separate, unresolved handover below. Root foreign edits untouched; clean only task-owned scratch/worktree when switching packages.
+
+---
+
 - **Last Agent:** codex (UI / U13 independent review request)
 - **Timestamp:** 2026-10-01 15:41 CEST
 - **Web lock:** released; this package is documentation-only and did not reserve Web source. Root foreign edits remain untouched.

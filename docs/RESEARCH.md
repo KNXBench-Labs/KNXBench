@@ -6519,6 +6519,20 @@ loaded on demand. These are diagnostic facilities, not a documented complete
 pre-write image of the button-selected device. The cited pages do not specify
 which persistent areas MP §2.3 changes for our MDT 0701h target.
 
+**[V] MDT manual supplied by the operator, 2026-10-01.** The public
+[Taster 55 / Plus 55 / Plus TS 55 technical manual, version 1.3](https://www.mdt.de/fileadmin/user_upload/BE-TA55xx-02_MDT_TM_V13_DE.pdf)
+(07/2025) covers `BE-TA55Px.x2`, explicitly including `BE-TA55P2.02` and
+`BE-TA55P2.G2`. That is the *right product family*, unlike the AMI actuator
+manual supplied earlier. It does not establish that the live `1.1.67` is
+this `.x2` generation: the operator previously named `BE-TA55P2.G1`, the
+local product-file comparison was only consistent with `.01`, and
+`PID_ORDER_INFO` was not read (RESEARCH §8.8.5). The manual covers user
+functions, commissioning and ETS parameters; no complete affected-storage
+inventory or recovery image for MP §2.3 is established from it. The user
+explicitly said non-public manufacturer documents are **not a blocker to
+continuing the project**. This is not an authorization for a live write or
+a substitute for durable, read-back pre-write recovery evidence.
+
 **[I] K6 recovery input still missing.** Before implementing a backup-based
 reopening, obtain the actual target's product/application identification and
 authoritative affected-storage mapping, including non-memory state and

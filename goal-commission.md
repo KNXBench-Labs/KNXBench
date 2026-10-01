@@ -351,6 +351,15 @@ Published as `76fa7e83f2e3a81062f5a1d68f9a8b3c61c2010b` with exact
 remote SHA readback. This is an honest UI status, **not** a durable backup,
 restored public write availability, or new device-specific live permission.
 
+**Manufacturer-manual check, 2026-10-01.** The operator supplied MDT's public
+`BE-TA55xx-02` technical manual: the correct *Taster Plus 55 family*, but its
+listed `BE-TA55P2.02`/`.G2` variants are not proof that the historical
+`1.1.67` (operator-labelled `.G1`; `PID_ORDER_INFO` not yet read) is that generation.
+Its ETS commissioning instructions are not a complete K6 pre-write backup
+map (RESEARCH §24). Unavailable non-public manufacturer documents do not
+block other offline commissioning work; they also do not waive K6's durable
+recovery gate or supply a new hardware go.
+
 ### K7 — Live acceptance of the product path
 
 - **[W]** Download `1.1.67` through **K4's command** (and K5's UI) with a

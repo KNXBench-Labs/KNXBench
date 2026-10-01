@@ -6277,9 +6277,9 @@ closed. Phases 3–5 then remove the nine live bypass points and add the
 
 ## §130 A gate binary can verify a directory that no longer exists
 
-**Status.** Open (documented 2026-09-27).
+**Status.** Resolved by AR01 (2026-10-01); historical heading/anchor retained.
 
-`xtask`'s checks derive their repository root at **compile time** from
+Before AR01, `xtask`'s checks derived their repository root at **compile time** from
 `env!("CARGO_MANIFEST_DIR")` (`xtask/src/main.rs:41`, `:234`, `:283`), not from
 the working directory at run time. A cached `xtask` binary built inside a
 different worktree therefore keeps checking *that* worktree's path. When the
@@ -6301,10 +6301,21 @@ layering ok, all exit 0 **[V]**.
 looks green. This is the skip-vs-pass failure of §129's corpus tests one layer
 up: exit code 0 is not evidence that work happened.
 
-**Lifted when.** The root is resolved at run time (e.g. walking up from
-`current_dir` to the workspace manifest, or passing `--root`) so a relocated
-or stale binary cannot silently check a foreign path, and each check fails
-loudly when it discovers zero files.
+**Resolution.** Current gate binaries select the exact runtime workspace root
+from CWD or an explicit leading `--root PATH`, validate its Cargo workspace and
+named members, and print that canonical target. They never climb to a parent
+or fall back to the build tree. Required source/documentation scan roots must
+be nonempty; layering requires every checked policy root as a workspace member
+and resolved node. Corpus-gate output now includes actual Rust-file coverage.
+See [verification targets](VERIFICATION.md) and `xtask/tests/gate_scope.rs`.
+
+AR01 reproduced the old success over zero sources after deleting its own build
+worktree, then verified new deleted-target refusal, valid/wrong targets,
+intentional fixtures and behavioral guard mutations. A pre-AR01 executable
+still has the old bug and must be rebuilt. The caller must still verify that
+the emitted target/revision is the intended candidate; nonempty coverage does
+not certify completeness or concurrent-tree stability. No native UI or bus
+claim is added; the separate zoom entry numbered 130 remains open.
 
 ## §133 A dead webview cannot be closed with the window manager's close button
 

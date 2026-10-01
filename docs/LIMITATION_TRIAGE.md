@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der **105 verbleibenden nummerierten Grenzen** aus
+Sortierung der **104 verbleibenden nummerierten Grenzen** aus
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
 `grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-01).
-Die Datei enthält 110 nummerierte Überschriften: 105 Grenzen und fünf
-gelöste/historische Wegweiser (§18/23/24/90/95). 104 Grenzen sind eingestuft;
+Die Datei enthält 110 nummerierte Überschriften: 104 Grenzen und sechs
+gelöste/historische Wegweiser (§18/23/24/90/95/130-GATE). 103 Grenzen sind eingestuft;
 §105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
 zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
@@ -12,7 +12,7 @@ Der datierte [Implementierungsverlauf](IMPLEMENTATION_STATUS.md) und Git
 bewahren die Nachweise.
 
 §94 existiert nicht; §130 ist zweimal vergeben (Gate-Binary und
-Anwendungszoom) und steht zweimal in der Tabelle. Die unnummerierten
+Anwendungszoom); nur der offene Zoom-Eintrag steht noch in der Tabelle. Die unnummerierten
 Produktdaten-, Geräteeditor- und Inbetriebnahmegrenzen sind nicht eingestuft;
 ihre stabilen IDs stehen in [ALPHA_READINESS](ALPHA_READINESS.md).
 Nur die tatsächlich verbliebene Grenze eines teilweise gelösten Eintrags
@@ -86,7 +86,7 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 129 | Veralteter Id-Allokator-Snapshot konnte Ids duplizieren | Datenverlustpfad geschlossen (ADR-0039 Phasen 1–2, 2026-09-27); dass alles über `Command::apply` läuft, sichert weiter nur das Review — Phasen 3–5 offen. |
 
-## K3 — mittel (55)
+## K3 — mittel (54)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |
@@ -135,7 +135,6 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 126 | Line-Scan-Abgleich handelt auf Belegungsevidenz, nicht Geräteidentität | Nur nach ausdrücklicher Auswahl; Schweigen gilt nicht als Abwesenheit. |
 | 127 | Site/Property-UI vorhanden, `Ground`-Semantik nur aus Schematext und Tests | Zwei Gebäude unter einer Wurzel im UI getestet; unabhängiger ETS-Export mit `Ground` fehlt weiterhin. |
 | 128 | Legacy-`.vd3`–`.vd5`/`.pr3`–`.pr5` werden abgelehnt, unter falschem Namen | Atomar abgelehnt, 0 Zeilen geschrieben; nur die Meldung stimmt nicht. |
-| 130 | Ein Gate-Binary kann ein nicht mehr existierendes Verzeichnis „prüfen" | Meldet Erfolg über null Dateien; Ergebnisgröße statt Exit-Code prüfen. (Nummer doppelt vergeben, siehe K4.) |
 | 133 | Ein toter Webview lässt sich nicht per Fensterknopf schließen | Folge des §132-Fixes; aus den Quellen gelesen, nicht reproduziert. |
 | 134 | Baggage wird inventarisiert, nicht interpretiert | Nichts wird ausgeführt oder entpackt; unbekannte Medien bleiben `unknown`. |
 | 135 | Paketidentität wird aufgezeichnet, nicht entschieden | Gespeichert bleibt die zuerst installierte Fassung; Abweichungen werden gezeigt, nicht aufgelöst. |
@@ -177,7 +176,12 @@ wird hier gewichtet, nicht seine historische Überschrift.
   und die einzelne Projektwahl sind keine wiedereröffneten Defekte.
 - **§90/95** sind historische Klarstellungen, keine Kosten: 46 war eine
   Anzahl, kein DPT-Haupttyp; §95 verweist auf sechs dokumentierte Text-Rulings.
-  Alle fünf Überschriften/Fragment-Links bleiben erhalten.
+  Diese fünf Überschriften/Fragment-Links bleiben erhalten.
+- **§130-GATE** ist durch AR01 gelöst: Laufzeit-Root statt Build-Pfad,
+  explizite Workspace- und Nichtleer-Prüfung, ausgewiesener Scanumfang,
+  negative/positive Fixtures und verhaltenswirksame Guard-Mutationen.
+  Der gleich nummerierte Zoom-Eintrag bleibt offen; siehe
+  [Prüfzielvertrag](VERIFICATION.md).
 
 - **§105** (Ctrl1-Priorität `SYSTEM` bei den vier verbindungsorientierten
   TL-Frames) ist gemerged und existiert, ist aber absichtlich nicht

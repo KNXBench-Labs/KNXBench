@@ -8,6 +8,7 @@ mod appimage;
 mod corpus_gates;
 mod headers;
 mod layering;
+mod scope;
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -17,14 +18,60 @@ const AVAILABLE_TASKS: &str =
      freeze-fixture <path>";
 
 fn main() -> ExitCode {
-    let task = std::env::args().nth(1);
-    match task.as_deref() {
-        Some("check-layering") => check_layering(),
-        Some("check-headers") => check_headers(),
-        Some("check-anchors") => check_anchors(),
-        Some("check-corpus-gates") => check_corpus_gates(),
-        Some("check-appimage") => check_appimage(),
-        Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let explicit_root = if args.first().is_some_and(|arg| arg == "--root") {
+        if args.len() < 3 {
+            eprintln!("usage: xtask [--root PATH] <task>");
+            return ExitCode::FAILURE;
+        }
+        let root = args.remove(1);
+        args.remove(0);
+        Some(root)
+    } else {
+        None
+    };
+    let task = args.first().map(String::as_str);
+    if task.is_some_and(|task| {
+        matches!(
+            task,
+            "check-layering" | "check-headers" | "check-anchors" | "check-corpus-gates"
+        )
+    }) && args.len() != 1
+    {
+        eprintln!("usage: xtask [--root PATH] <task>; this gate accepts no task options");
+        return ExitCode::FAILURE;
+    }
+    let root = if task.is_some_and(|task| {
+        matches!(
+            task,
+            "check-layering"
+                | "check-headers"
+                | "check-anchors"
+                | "check-corpus-gates"
+                | "check-appimage"
+        )
+    }) {
+        match scope::workspace_root(explicit_root.as_deref()) {
+            Ok(root) => {
+                println!("gate target: {}", root.display());
+                Some(root)
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                return ExitCode::FAILURE;
+            }
+        }
+    } else {
+        None
+    };
+    let gate_root = root.as_deref().unwrap_or_else(|| Path::new(""));
+    match task {
+        Some("check-layering") => check_layering(gate_root),
+        Some("check-headers") => check_headers(gate_root),
+        Some("check-anchors") => check_anchors(gate_root),
+        Some("check-corpus-gates") => check_corpus_gates(gate_root),
+        Some("check-appimage") => check_appimage(gate_root, &args[1..]),
+        Some("freeze-fixture") => freeze_fixture(args.get(1).cloned()),
         Some(other) => {
             eprintln!("unknown task: {other}");
             eprintln!("available tasks: {AVAILABLE_TASKS}");
@@ -38,17 +85,15 @@ fn main() -> ExitCode {
     }
 }
 
-fn check_appimage() -> ExitCode {
+fn check_appimage(root: &Path, options: &[String]) -> ExitCode {
     const USAGE: &str =
         "usage: cargo run -p xtask -- check-appimage [--artifact-dir PATH] [--tag vVERSION]";
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask lives one level below workspace root");
+
     let default_artifact_dir = root.join("target/release/bundle/appimage");
     let mut artifact_dir = default_artifact_dir.clone();
     let mut artifact_dir_set = false;
     let mut tag = None;
-    let mut args = std::env::args().skip(2);
+    let mut args = options.iter().cloned();
 
     while let Some(option) = args.next() {
         let value = match option.as_str() {
@@ -88,14 +133,16 @@ fn check_appimage() -> ExitCode {
     }
 }
 
-fn check_layering() -> ExitCode {
-    let graph = match layering::workspace_graph() {
+fn check_layering(root: &Path) -> ExitCode {
+    let graph = match layering::workspace_graph(root) {
         Ok(g) => g,
         Err(e) => {
             eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };
+
+    println!("layering scope: {} resolved packages", graph.edges.len());
 
     let mut violations =
         layering::forbidden_reachable(&graph, "knx-core", layering::CORE_FORBIDDEN);
@@ -230,22 +277,22 @@ fn check_layering() -> ExitCode {
 /// Fails on any test that answers a missing private corpus with an early
 /// `return`, which counts as a pass on every machine without the corpus
 /// (docs/KNOWN_LIMITATIONS.md §131). See `corpus_gates.rs` for the rule.
-fn check_corpus_gates() -> ExitCode {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask lives one level below the workspace root");
-    let found = match corpus_gates::scan(root) {
-        Ok(found) => found,
+fn check_corpus_gates(root: &Path) -> ExitCode {
+    let report = match corpus_gates::scan(root) {
+        Ok(report) => report,
         Err(e) => {
             eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };
-    if found.is_empty() {
-        println!("corpus gates ok: no silent early return on a missing corpus");
+    if report.violations.is_empty() {
+        println!(
+            "corpus gates ok: {} Rust files scanned, no silent early return on a missing corpus",
+            report.files_scanned
+        );
         return ExitCode::SUCCESS;
     }
-    for (path, line) in &found {
+    for (path, line) in &report.violations {
         eprintln!(
             "corpus gate violation: {}:{line}: a missing corpus returns early (a silent pass)",
             path.display()
@@ -264,10 +311,7 @@ fn check_corpus_gates() -> ExitCode {
 /// second check is the ratchet: it is what makes "a file created or
 /// edited from now on gets a header" a rule rather than a wish, without
 /// forcing a repo-wide sweep — the count may only ever go down.
-fn check_headers() -> ExitCode {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask lives one level below the workspace root");
+fn check_headers(root: &Path) -> ExitCode {
     let report = match headers::scan(root) {
         Ok(r) => r,
         Err(e) => {
@@ -313,10 +357,7 @@ fn check_headers() -> ExitCode {
 /// (see the fix-round history around ADR-0018 and `KNOWN_LIMITATIONS.md`);
 /// this is the check that makes that a compile-time, not a review-time,
 /// discovery from now on.
-fn check_anchors() -> ExitCode {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask lives one level below the workspace root");
+fn check_anchors(root: &Path) -> ExitCode {
     let report = match anchors::scan(root) {
         Ok(r) => r,
         Err(e) => {

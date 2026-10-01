@@ -210,7 +210,8 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// day, to 162: deleting the `.knxproj` writer (ADR-0028) took five
 /// headerless files with it, and a ratchet that does not follow a deletion
 /// down is the same slack by another route.
-pub const ABSENT_CEILING: usize = 161;
+/// AR01 added the missing layering-module header; its measured ceiling is 160.
+pub const ABSENT_CEILING: usize = 160;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].
@@ -246,8 +247,14 @@ pub fn scan(root: &Path) -> Result<Report, String> {
     let mut report = Report::default();
     for top in SCAN_ROOTS {
         let dir = root.join(top);
-        if dir.is_dir() {
-            walk(root, &dir, &mut report)?;
+        let before = report.ok.len() + report.absent.len() + report.invalid.len();
+        walk(root, &dir, &mut report)?;
+        let after = report.ok.len() + report.absent.len() + report.invalid.len();
+        if after == before {
+            return Err(format!(
+                "empty header scan: no non-generated sources under {}",
+                dir.display()
+            ));
         }
     }
     Ok(report)
@@ -617,12 +624,12 @@ mod tests {
     }
 
     #[test]
-    fn scan_of_a_root_without_source_dirs_is_empty() {
+    fn scan_rejects_a_root_without_source_dirs() {
         let root = std::env::temp_dir().join(format!("xtask-headers-empty-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
-        let report = scan(&root).unwrap();
+        let result = scan(&root);
         fs::remove_dir_all(&root).unwrap();
-        assert_eq!(report, Report::default());
+        assert!(result.is_err(), "empty coverage must not pass: {result:?}");
     }
 }

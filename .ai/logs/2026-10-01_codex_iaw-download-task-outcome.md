@@ -54,7 +54,14 @@ review, not an independent reviewer verdict.
   0 `SKIP:`; explicit simulator HTTP download fixture sweep: 13 passed / 0
   failed. Strict workspace Clippy checked the changed server crate; fmt,
   npm install/resource build, layering/headers/anchors/corpus gates and diff
-  check all exited zero. Remote publication and final rebase checks: PENDING.
+  check all exited zero.
+- Rebased over two upstream documentation/handover commits, preserving both
+  handovers. Diff against the originally gated candidate contains only the
+  upstream handover and open-items document, no source changes. Rebased
+  anchors: 375 links / 226 Markdown files, none dead; headers/fmt/diff green.
+- Code commit `8e3f3ecec6f025da6a400c47b357024c339f8610` published to
+  `origin/main`; push/fetch exited zero and exact local/remote SHA matched.
+  Task-owned cleanup follows the final handover publication receipt.
 
 ## Limits
 

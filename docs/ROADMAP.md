@@ -65,6 +65,16 @@ Final integrated Rust/Web/Chromium/repository gates passed; see the U13 log
 and [IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md).
 Native WebKitGTK and screen-reader coverage remain bounded (§20, §130).
 
+## Cross-cutting — Theme packs
+
+U14 resolves the declarative, versioned theme-pack contract and security/
+negative-fixture matrix in [THEME_PACKS](THEME_PACKS.md) and
+[ADR-0060](adr/0060-versioned-declarative-theme-packs.md). This is contract
+research, not shipped import/export. U15–U18 in [goal-ui](../goal-ui.md) own
+runtime validation, acknowledged settings storage, reversible management/
+preview and final regression/review acceptance. Existing built-ins/System stay
+available; no arbitrary CSS, external assets or new alpha release blocker.
+
 ## Cross-cutting — Internationalization
 
 English/German UI chrome and importable language packs shipped (T25).

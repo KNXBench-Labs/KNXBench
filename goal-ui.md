@@ -1,4 +1,4 @@
-# KNXBench goal — UI/UX track (user-reported issues), and nothing else
+# KNXBench goal — UI/UX track (user-reported issues and theme packs)
 
 Written 2026-09-28 against `main` at `99e2a6d`. Use this file as the
 instruction passed to `/goal` in the **UI session**. That session runs on
@@ -11,12 +11,12 @@ There are now three goal files, and they do not overlap:
 |---|---|---|
 | `goal.md` | goal.md session (Claude) | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
 | `goal-commission.md` | commissioning session (Claude) | T30 phase 3: device writes and their own programming UI |
-| **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, moved here on 2026-09-28 |
+| **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, the routed alpha follow-up, and user-importable theme packs (U14–U18) |
 
 §5 below is the exact boundary. §6 describes how work crosses between
 sessions.
 
-## Where things stand (2026-10-01)
+## Where things stand (updated 2026-10-02)
 
 U0–U12's UI slices are delivered: host/port discovery fields, catalog and
 device/structure editors, channel labels, monitor control, read-only device
@@ -70,10 +70,30 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ---
 
+### Theme-pack extension (user request, 2026-10-02)
+
+**U14 contract delivered; implementation pending U15–U18.** The user requested
+theme follow-up tasks after
+confirming the existing UI can switch built-in themes. U14–U18 add importable,
+exportable declarative theme packs; they do not rebuild the existing palette
+system. U0–U13 remain complete and the separately authorized alpha follow-up
+above retains its own status, dependencies and evidence. This extension is
+not an alpha release blocker unless the alpha owner explicitly adopts it.
+Updating this goal does not start or resume a run.
+
+Baseline: five built-in palettes plus System in
+`apps/knx-web/src/theme.ts`, a selector in `SettingsPanel.tsx`, a versioned
+settings record via `settingsStore.ts`, and the token/contrast boundary in
+[ADR-0022](docs/adr/0022-theme-token-boundary.md). The built-in token guard is
+not yet validation of user-supplied runtime packs. ADR-0022's original
+localStorage persistence sentence is historical: the server's settings file
+is authoritative and browser storage is only its cache.
+
 ## 0. Scope: what this goal owns
 
 No UI implementation work remains in the original U0–U13 queue. The separately
-authorized alpha follow-up is tracked above. ISSUE-12 reconciles the
+authorized alpha follow-up is tracked above. The new theme-pack queue is
+U14–U18 below. ISSUE-12 reconciles the
 documented host-firewall correction and actual unicast-loopback discovery
 tests; no wire capture or multicast-loopback proof is claimed. Native
 WebKitGTK and real screen-reader checks remain verification gaps, not
@@ -119,6 +139,9 @@ programming and its safety gate to `goal-commission.md`.
    - `git fetch`, then read the top of `.ai/CURRENT_STATE.md`. The newest
      entry is first, and the web lock lives there (§3).
    - Then read this file and the issue plan's section for the next package.
+     For U14–U18 use their checklists and the contract recorded by U14.
+     Reconcile already-authorized alpha work first; do not interrupt another
+     session's active package or infer permission to resume from this plan.
 2. **Isolation.**
    - One worktree per package: `/mnt/daten-i/Sourcecode/KNXBench.worktrees/ui-<topic>`
      on branch `ui-<topic>`, created from the current `origin/main`.
@@ -179,7 +202,9 @@ programming and its safety gate to `goal-commission.md`.
    - Before each merge, review your own full branch diff against the issue
      plan's *Review Focus* and `AGENTS.md`, in a separate pass after the
      implementation.
-   - The closing review of the whole track is described in U13.
+   - U13 records the completed original closing review; U18 closes the new
+     theme-pack extension. Preserve review provenance and do not describe
+     self-review as independent approval.
 8. **Commits.**
    - Author: `KNXBench <github@knxbench.com>`, for example with
      `git -c user.name="KNXBench" -c user.email=github@knxbench.com commit …`.
@@ -283,16 +308,167 @@ Final evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`. The final
 handover releases this package's Web lock and transfers only the existing
 native verification/global acceptance boundaries to their owners (§6).
 
+### U14 — Specify a safe, versioned theme-pack contract
+
+**Done, 2026-10-02 (contract only).** Inspected the published alpha-owner
+receipt and current theme/settings/language code, retrieved primary evidence
+and resolved the bounded v1 format, persistence/preview safety and negative
+fixture contracts. [THEME_PACKS](docs/THEME_PACKS.md),
+[ADR-0060](docs/adr/0060-versioned-declarative-theme-packs.md) and the U14 log
+record actual document/research evidence. U15–U18 remain implementation work.
+
+- [x] Inspect `theme.ts`, `themeTokens.ts`, the stylesheet/bootstrap,
+  `appearance.ts`, settings storage/routes and the language-pack lifecycle;
+  reuse applicable mechanisms without treating language and theme semantics
+  as identical. Research security-sensitive CSS/DOM behavior in primary
+  documentation and record evidence before choosing runtime application.
+- [x] Document a minimal versioned JSON pack contract in an ADR and a linked
+  theme-format document: identity, display name, format/token compatibility,
+  complete token set and optional accent variations. Keep metadata bounded;
+  built-in IDs cannot be shadowed. Specify duplicate JSON-key handling,
+  unknown fields/tokens, unsupported/newer versions and deterministic export.
+  Reject unsupported packs as a whole with named diagnostics rather than
+  silently deleting fields or downgrading them.
+- [x] Specify typed, bounded values for each token class, including palette,
+  typography, shape, shadows and backdrop. Packs are data, not arbitrary
+  CSS: no selectors, HTML, scripts, `@import`, `url()`, network assets or
+  executable content; fonts come from the installed allow-list. Any token
+  aliasing must have explicit missing-reference/cycle handling. Motion,
+  density, project styling and all other preferences remain separate.
+- [x] Specify import size/count/value-length limits, duplicate-ID replacement
+  consent, active-pack removal, missing/corrupt-pack fallback, preview rollback
+  and read-only/newer-settings behavior. Keep a known-good built-in fallback
+  and preserve recoverable stored data; rejection must leave the existing
+  pack and selection unchanged.
+- [x] Carry ADR-0022's exact supported contrast-pair validation into the
+  contract; do not promise all-component WCAG compliance from those pairs.
+  Define stricter unsupported-value rejection rather than a bypass.
+
+**Acceptance:** reviewed contract and negative-fixture matrix, linked sources
+for security-critical decisions, no product implementation or compatibility
+claim disguised as research. Record any deliberate change to ADR-0022.
+
+### U15 — Validate packs and integrate the existing theme engine [web]
+
+**Open.** Depends on U14's resolved contract. Keep parsing/validation pure and
+separate from DOM effects and persistence; do not add theme logic to KNX Core.
+
+- [ ] Write failing tests for the agreed valid and invalid pack fixtures;
+  implement one typed parser/validator and explicit structured diagnostics.
+  Cover malformed input, duplicate keys/IDs, missing/unknown tokens, unsupported
+  versions, size limits, unsafe values, alias cycles and invalid accents.
+- [ ] Validate before any DOM application, including packs reloaded from
+  settings or a stale browser cache. Extend the existing registry/resolver and
+  token application path rather than building a second theme system. Keep
+  built-ins and System unchanged; packs cannot override their IDs or selectors.
+- [ ] Reuse or narrowly extract the existing pure token/contrast evaluation;
+  enforce it for every imported base palette and accent variation at runtime.
+  Never round a failing contrast value into acceptance or skip an unsupported
+  value. Mutation-test validation and safety guards.
+- [ ] Apply only validated token names/values via the ADR-approved bounded
+  mechanism, remove obsolete overrides on switching back, and prove that
+  theme changes cannot alter motion/density or other preference-owned tokens.
+
+**Acceptance:** runtime and build-time invariants agree; all five built-ins,
+System light/dark changes, valid imported palettes and rejected packs have
+named tests. Invalid data produces neither injected rules nor asset requests.
+
+### U16 — Persist, import and export theme packs without losing settings [web]
+
+**Open.** Depends on U15. This goal owns only the necessary theme/settings
+application changes, not a new generic configuration subsystem.
+
+- [ ] Store installed packs and selected identity through the existing
+  versioned settings document and `settingsStore.ts`; use no separate
+  authoritative browser store, project file or manufacturer database.
+  Add a settings-schema migration only if the chosen representation requires
+  it. Preserve unknown/unrelated settings and newer-file refusal semantics.
+- [ ] Implement bounded file import/export with deterministic semantic
+  roundtrip. Export must not include private project, bus or unrelated settings
+  data. Clarify whether built-in palettes can be exported as independent packs;
+  importing one must never shadow its built-in source.
+- [ ] Require explicit consent to replace an installed ID; commit pack and
+  selection changes atomically where coupled. Do not report durable success
+  from an optimistic cache update. On server/write failure, surface the failure
+  and preserve or restore the last acknowledged state and original file.
+- [ ] Cover restart/hydration, cross-client settings refresh and races between
+  import, selection, replacement and removal. Removing the active pack uses
+  the documented built-in fallback; unsupported/corrupt stored packs remain
+  recoverable and visibly diagnosed rather than silently erased.
+
+**Acceptance:** import → select → persist → reload → export → reimport retains
+all supported semantics. Failure, collision, newer settings and multi-client
+regressions pass with unrelated settings unchanged; no new KNX API dependency.
+
+### U17 — Add accessible theme management and reversible preview [web]
+
+**Open.** Depends on U15 and U16. Extend Settings → Appearance; do not create a
+second settings screen or require a visual theme editor for this slice.
+
+- [ ] Show built-in and installed packs with understandable names, origin,
+  version and any incompatibility diagnostic. Add Import, Export and Remove
+  actions, replacement confirmation, and a clear reset to System/built-ins.
+  Accent controls reflect the selected pack's actual capabilities.
+- [ ] Provide a temporary preview with explicit Apply/Cancel. Preview alone
+  does not write settings; Cancel, Escape, dialog close/unmount or a failed
+  apply restores the previous acknowledged theme without retaining overrides.
+  Define/test what an authoritative cross-client change does during preview.
+- [ ] Keep reset/cancel usable for poor palettes. Use existing overlay/focus
+  patterns; localize every label and structured error, announce outcomes and
+  provide full keyboard operation without disrupting stacked modals.
+- [ ] Add behavioral component tests and fully mocked browser flows for valid
+  import, rejection, ID collision, preview rollback, active removal, reset,
+  persistence failure and System mode. Browser tests intercept all backend
+  traffic; no live server, gateway or productive bus is involved.
+
+**Acceptance:** named tests prove management/preview effects, not just mounted
+controls. Disclose native WebKitGTK and real assistive-technology evidence
+separately; mocked Chromium is not native/screen-reader acceptance.
+
+### U18 — Review and close the theme-pack extension
+
+**Open.** Depends on U14–U17. Does not reopen the completed U13 review or close
+unrelated alpha/domain/native evidence gaps.
+
+- [ ] Run semantic roundtrip and migration/settings regressions plus hostile
+  pack fixtures. Mutation-check every new rejection, rollback and persistence
+  guard; retain evidence of initially surviving controls and their corrections.
+- [ ] Exercise representative editor, table, inspector, dialog and diagnostic
+  states across built-ins, System and imported palettes; cover focus, selection,
+  disabled controls, validation/status feedback and accent switching. Keep
+  runtime contrast-pair guarantees separate from broader visual acceptance.
+- [ ] Review the full extension diff in a separate in-session pass, explicitly
+  labelled self-review. Use an independent review only if separately available
+  and authorized; never fabricate an independent verdict or start subagents.
+  Fix substantive findings, repeat §2.5 gates after integration and run the
+  production Web build plus the fully mocked browser regressions.
+- [ ] Update implementation status, roadmap, theme-format/ADR documentation
+  and known limitations to actual delivered behavior. Add user instructions
+  for import/export, preview, replacement, recovery and fallback, with no
+  unsupported full-accessibility or native-platform claim.
+- [ ] Hand completion and remaining limitations to the goal.md owner for
+  global acceptance/triage; release only this package's Web lock and clean up
+  only its own artifacts. Publishing this extension does not authorize an
+  alpha release, reopen commissioning or grant a hardware-write go.
+
+**Acceptance:** every extension checkbox has named evidence or an explicit
+user-approved disposition; integrated gates and documented review findings are
+settled. Built-in theming remains functional and original U0–U13 provenance,
+alpha-owner decisions and all hardware boundaries remain intact.
+
 ---
 
 ## 4. Completion condition
 
 Finish only when:
 
-- U0 to U12 are done with evidence, or the user has explicitly accepted an
+- U0 to U13 remain done with evidence, or the user has explicitly accepted an
   item out of scope;
 - every issue-plan checkbox for the owned issues is ticked with a named test,
   or explicitly marked out of scope with the user's acceptance;
+- every U14–U18 checklist item has named acceptance evidence or an explicit
+  user-approved scope disposition; existing alpha follow-up is reconciled
+  without treating this extension as alpha-release approval;
 - all gates from §2.5 are green on the merged `main`;
 - the closing review has run and its findings are fixed;
 - the web lock is released.
@@ -308,7 +484,8 @@ session.
 |---|---|
 | ISSUE-01, 02, 03, 05, 07, 09, 10, 11, 12, 13, with their server and domain halves; the UI half of ISSUE-08; the ADR-0038 review; the File-menu rename | **this goal** |
 | ISSUE-08 data half: trace, classification, language-aware name and DPT resolution, active/visible state and channel ownership in the projection, corpus regression counts | `goal.md` |
-| Product database, import, schema, PDB-x | `goal.md` |
+| Product database, KNX project import, domain/project schema, PDB-x | `goal.md` |
+| U14–U18 theme-pack contract, runtime validation, preference persistence and narrowly required settings API changes, theme-management UI and theme-specific docs | **this goal**, under the Web lock when editing the web tree; no KNX-domain/storage schema changes |
 | `docs/LIMITATION_TRIAGE.md` recount, `stats.md`, `goal.md`, the manual's T23 acceptance, doc hygiene `goal.md` §8, the alpha decision, the final whole-goal review | `goal.md` |
 | Device programming: download, individual address, restart. Their UI (K5 download tab, K6 address dialog), their server routes, the server-side consent decision (ADR-0045) | `goal-commission.md` |
 | The ADR-0040 consent hook and dialog | built and closed. The commissioning session calls it; this goal does not change it |
@@ -324,7 +501,9 @@ Hand it over (§6).
   §12.3 and confirms in its next entry. Typical items:
   - new or renumbered KNOWN_LIMITATIONS entries (for the triage recount);
   - a `stats.md` refresh after each of your merges;
-  - findings in product data or import (as findings, not fixes).
+  - findings in product data or import (as findings, not fixes);
+  - theme-extension completion and any new settings contract; theme tasks do
+    not change alpha scope or overwrite existing owner dispositions.
 - **To the commissioning session:** under **"For the commissioning
   session:"**, for example UI findings in their programming views.
 - **From the goal.md session to you:** the chosen U13 independent review

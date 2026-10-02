@@ -371,7 +371,9 @@ upstream commissioning c9f77d7b changes code outside this guard; actual merged
 bc5999c1/proc_d4c3a0b0b43f independently passes20/20: workspace2931/0/164,
 Web1559/Chromium61, private6/0/0 + offline SimTunnel HTTP13/0/0 without skips,
 all108 originals unchanged (including103 product archives),615 frozen inputs
-and17 equal bindings. Publication/readback remains pending. Broader AR07 stays
+and17 equal bindings. Published/read backda3bc947, local/live/fetched refs
+equal0/0 and eight exact owned artifacts; completed owned builds/shadows
+cleaned, shared root/U16 untouched. Broader AR07 stays
 open; next bounded RED investigates general diagnostic/inert traversal work
 budgeting, currently a read-only source candidate, not a reproduced defect.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual

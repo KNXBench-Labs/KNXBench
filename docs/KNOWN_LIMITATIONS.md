@@ -453,8 +453,9 @@ Chromium mock61 pass; six selected private Dynamic tests6/0/0 without genuine
 skips and all103 original identities/hashes unchanged. No private raw logs.
 Actual commissioning/Float mergebc5999c1 passes20/20, workspace2931/0/164,
 Web1559/Chromium61, private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0,
-all108 originals unchanged/615 frozen inputs/17 equal bindings. Publication
-readback remains pending; broader resource budgeting/provenance audit stays open;
+all108 originals unchanged/615 frozen inputs/17 equal bindings. Scoped guard
+publishedda3bc947, local/live/fetched refs equal0/0 and owned bytes read back;
+broader resource budgeting/provenance audit stays open;
 no Float encoding, complete type-semantics, native SQL/WAL or ETS claim.
 
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project

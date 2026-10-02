@@ -276,18 +276,16 @@ impl Test {
     }
 }
 
-/// Whether a `choose`'s controlling parameter's `ParameterType` is
-/// `TypeNone` (design D9's own code path — no comparison is ever
-/// attempted) or anything else this build treats as comparable
-/// (`TypeNumber`/`TypeRestriction` per the Standard, and — because this
-/// build does not reject a type the Standard does not expect here either —
-/// any other kind `parameter_type.kind` may hold). `None` on the owning
-/// `DynamicNode` (not this enum) means the controlling reference could not
-/// be resolved at all; see `Diagnostic::UnresolvedParamRef`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A resolved controlling declaration: Number/Restriction are comparable
+/// (`Condition_t`, ADR-0061), None retains design D9's sole-default policy,
+/// and every other stored kind is unsupported even with a numeric value.
+/// `None` on the owning `DynamicNode` means the declaration chain could not
+/// be resolved; it is distinct from a known but unsupported kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ControlKind {
     TypeNone,
     Comparable,
+    Unsupported(String),
 }
 
 /// One `dynamic_node` row, loaded for evaluation. `extra` plays no role in
@@ -630,12 +628,10 @@ fn resolve_control_kind(
             |r| r.get(0),
         )
         .optional()?;
-    Ok(kind.map(|k| {
-        if k == "None" {
-            ControlKind::TypeNone
-        } else {
-            ControlKind::Comparable
-        }
+    Ok(kind.map(|k| match k.as_str() {
+        "None" => ControlKind::TypeNone,
+        "Number" | "Restriction" => ControlKind::Comparable,
+        _ => ControlKind::Unsupported(k),
     }))
 }
 
@@ -771,6 +767,15 @@ pub enum Diagnostic {
         choose_node: i64,
         param_ref: Option<String>,
     },
+    /// ADR-0061: the declaration resolves, but its stored catalogue kind
+    /// is neither Number nor Restriction nor the existing None exception.
+    /// No branch is evaluated, including the default; refs below are named
+    /// through the bounded structural-refusal path, not activated.
+    UnsupportedControlKind {
+        choose_node: i64,
+        param_ref: Option<String>,
+        kind: String,
+    },
     /// The controlling value resolved but is not a valid `Condition_t`
     /// number.
     NonNumericValue {
@@ -794,7 +799,7 @@ pub enum Diagnostic {
     /// `ComObjectRefRef` or `Module` below a node the walk refuses for a
     /// *structural* reason. `skipped_node` is that node: an unrecognized
     /// kind, a non-`when` child of a `choose`, a `choose` with
-    /// `UnresolvedParamRef` or `UnexpectedTypeNoneShape`, a recognized
+    /// `UnresolvedParamRef`, `UnsupportedControlKind` or `UnexpectedTypeNoneShape`, a recognized
     /// layout container (`Rows`/`Columns`), or a recognized leaf
     /// (`ParameterRefRef`, `ComObjectRefRef`, `ParameterSeparator`,
     /// `Assign`) that unexpectedly has children. The reference is *not*
@@ -955,6 +960,7 @@ impl Diagnostic {
             }
             Diagnostic::UnparsableTest { .. }
             | Diagnostic::UnresolvedParamRef { .. }
+            | Diagnostic::UnsupportedControlKind { .. }
             | Diagnostic::NonNumericValue { .. }
             | Diagnostic::UnexpectedTypeNoneShape { .. }
             | Diagnostic::UnrecognizedNode { .. }
@@ -1895,7 +1901,7 @@ fn evaluate_choose(
     scope: Option<&Rc<ModuleScope>>,
     channel: Option<&ChannelOwner>,
 ) {
-    let Some(control_kind) = node.control_kind else {
+    let Some(control_kind) = node.control_kind.as_ref() else {
         activation.diagnose(
             scope,
             Diagnostic::UnresolvedParamRef {
@@ -1962,6 +1968,17 @@ fn evaluate_choose(
             scope,
             channel,
         ),
+        ControlKind::Unsupported(kind) => {
+            activation.diagnose(
+                scope,
+                Diagnostic::UnsupportedControlKind {
+                    choose_node: node.node_id,
+                    param_ref: node.ref_id.clone(),
+                    kind: kind.clone(),
+                },
+            );
+            report_refs_below(tree, node.node_id, activation, scope);
+        }
     }
 }
 

@@ -13,6 +13,41 @@ owner because its frontend foundation exists.
 
 ## Concrete follow-ups implemented
 
+### KL-82 authoritative monitor context follow-up
+
+The separate `ui-alpha-context` candidate (reservation `79dc56dd`) now compares
+the actual server session's `GroupAddressContext` with the current server
+project's interpretation snapshot: address style, group-address names and
+resolved DPTs. Browser records are only early invalidation hints, never proof.
+Monitor polling returns additive `contextStatus` (`current`, `stale`,
+`unavailable`), nullable `projectOpen` and the opaque server incarnation.
+Missing/malformed/legacy evidence, lock contention and failed polling remain
+unverified and disable compose, including explicit-DPT sends. A server restart
+cannot inherit an old browser record's project/session proof.
+
+Pause still polls context/status via HTTP `contextOnly=true`, but neither returns
+telegrams nor advances the held cursor. Resume continues from that cursor.
+Late replies cannot erase a newer invalidation or a replacement session; a
+late reattach rejection cannot overwrite a successful connection. Historical
+rows retain their original decoded values: this does not reinterpret capture
+history, provide project collaboration, authorize hardware or transactionally
+bind a later write to this point-in-time comparison.
+
+Focused backend/UI suites and the monitored Chromium fixture pass. Eleven
+compiled/runnable behavioral negative controls were rejected, with byte-exact
+restoration. The separate in-session review found busy/poisoned context coverage,
+an obsolete reattach rejection and duplicate setters; those are corrected.
+Complete candidate acceptance `proc_4258b3542021` passed all twelve steps:
+83 Web files / 1,343 tests, 35 fully intercepted Chromium cases, 146 Rust result
+blocks / 2,890 passed / zero failed / 163 ignored. Strict Clippy, type/build,
+fmt, all four repository gates and whitespace pass; 570 source/configuration
+fingerprints match. The first candidate failed its missing diagnostic hint CSS
+rule; that failure is retained, the rule corrected without weakening the test,
+and its removal also detected. Eleven controls restore exact source.
+Two non-runtime comments were then clarified in the final review; integrated
+acceptance/publication remain PENDING. These counts do not transfer the previous
+package's evidence or imply ignored private-corpus/native/live-bus execution.
+
 - **UX-02:** the catalog picker offers `.knxprod` and ZIP packages, not the
   deliberately unsupported `.vd2`. Backend rejection and compatibility scope
   remain unchanged; an accept filter is not security validation.
@@ -78,7 +113,7 @@ release consent. Final parent-ledger status follows verified delivery.
 | DATA-03 | Retained atomic catalog batch, one undo step, no blind retry after ambiguous response; `CatalogBrowser` and current batch routes. | No server replay/idempotency contract or ability to roll back a different legacy server; separate application/API design, not two frontend requests. |
 | KL-137 | Retained bounded monitor capture, explicit server/client dropped counters and 16 MiB export bound. | Native dialog and full retained-window workflow remain unverified; full-history streaming needs its own privacy/storage design. |
 | KL-36 | Retained searchable/exportable bounded session log and atomic native writer, ADR-0047. | No reconstruction of evicted entries or lifetime audit; native chooser acceptance remains open. |
-| KL-82 | Open: companion freshness still relies on the existing browser-profile record; `busContext.ts`, actual server `GroupAddressContext`. | Compare current authoritative project with the actual session context across clients/restarts; settings refresh does not fix project-context staleness. |
+| KL-82 | Implemented and candidate-gated: exact authoritative interpretation comparison, unavailable/legacy fail-closed state, pause/cursor and delayed-reply regressions; twelve candidate gates passed. | Integrated acceptance/publication PENDING; point-in-time context observation is not general collaboration, historical reinterpretation, live-bus proof or write authorization. |
 | KL-127 | Site/property Ground workflow exists under ADR-0038; synthetic hierarchy/native storage tests retain unknown types honestly. | Independent ETS Ground/multiple-installation samples remain absent; do not infer ETS semantics from synthetic fixtures. |
 | MODEL-01 | Open domain/application dependency: first-installation structural mutations and link creation remain bounded; later installations are preserved. | Installation rename/selection and correctly scoped command/API/history contracts before a general multi-installation editor. |
 | MODEL-02 | Retained safe refusal of ambiguous IDs, multiply placed devices and inconsistent topology; original imported values remain intact. | No automatic lossless repair/renumbering workflow; define reference/opaque-data preservation and undo before offering repair. |

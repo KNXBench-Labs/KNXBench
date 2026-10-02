@@ -154,6 +154,8 @@ function telegramsResponse(overrides: Partial<BusMonitorTelegramsResponse>): Bus
   return {
     sessionId: 1,
     serverIncarnation: "process-a",
+    contextStatus: "current",
+    projectOpen: true,
     status: "active",
     nextSince: 1,
     droppedBefore: 0,
@@ -912,7 +914,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
       expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
     });
 
-    it("stops polling and resumes from the held cursor with buffered rows and a visible dropped gap", async () => {
+    it("pauses row polling but keeps context-only checks and resumes the held cursor", async () => {
       apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
       apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
         nextSince: 1, telegrams: [row({ seq: 0 })],
@@ -927,7 +929,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
       expect(host!.querySelector(".bus-monitor-paused")?.textContent).toContain("server's finite buffer");
       await tick();
       await tick();
-      expect(apiMock.pollBusTelegrams).toHaveBeenCalledTimes(count);
+      expect(apiMock.pollBusTelegrams.mock.calls.slice(count)).toEqual([[1, true], [1, true], [1, true]]);
       expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
       expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
 
@@ -1021,6 +1023,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
 
     expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
 
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ contextStatus: "stale" }));
     publishProjectContext(projectTree("Kitchen ceiling, renamed mid-session"));
     await tick();
 
@@ -1033,19 +1036,118 @@ describe("BusMonitorPanel and the shared session's context", () => {
     expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
   });
 
-  it("says so, without claiming staleness, when it did not start the session it attached to", async () => {
+  it("locks from the actual server context when no browser-profile record changes", async () => {
+    publishProjectContext(projectTree("Unchanged browser record"));
+    recordSessionContext(5, "process-a");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
+      sessionId: 5, ...{ contextStatus: "stale", projectOpen: true },
+    }));
+    await renderPanel();
+    await flushReattach();
+    expect(host!.querySelector(".bus-monitor-stale-lock")).not.toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  });
+
+  it.each(["unavailable", "future-status", undefined])("does not let a local record verify an %s server comparison", async (contextStatus) => {
+    publishProjectContext(projectTree("Local record claims freshness"));
+    recordSessionContext(5, "process-a");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({
+      sessionId: 5, contextStatus: contextStatus as BusMonitorTelegramsResponse["contextStatus"],
+      projectOpen: null,
+    }));
+    await renderPanel();
+    await flushReattach();
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  });
+
+  it("uses the actual absence of a server project rather than a persisted browser tree", async () => {
+    publishProjectContext(projectTree("Persisted tree from before server restart"));
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ projectOpen: false }));
+    await renderPanel(true);
+    await flushReattach();
+    expect(host!.querySelector(".bus-compose-form")!.textContent).toContain("No project open");
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).toBeNull();
+  });
+
+  it("keeps context freshness polling while rows and cursor are paused", async () => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [row({seq: 0})], nextSince: 1 }));
+    await renderPanel();
+    await flushReattach();
+    await act(async () => clickButton("Pause"));
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ contextStatus: "stale", nextSince: 999, telegrams: [row({seq: 998})] }));
+    await tick();
+    expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(1, true);
+    expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+    expect(host!.querySelector(".bus-monitor-stale-lock")).not.toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    await act(async () => { clickButton("Resume"); await vi.advanceTimersByTimeAsync(0); });
+    expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(1);
+  });
+
+  it.each([
+    {serverIncarnation: ""}, {sessionId: 1.5}, {projectOpen: null},
+  ])("does not accept malformed current-context evidence %j", async malformed => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse(malformed));
+    await renderPanel();
+    await flushReattach();
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+  });
+
+  it("does not let a late current reply erase an observed context change", async () => {
+    publishProjectContext(projectTree("Before edit"));
+    recordSessionContext(5, "process-a");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({sessionId: 5}));
+    await renderPanel();
+    await flushReattach();
+    let finish!: (response: BusMonitorTelegramsResponse) => void;
+    apiMock.pollBusTelegrams.mockImplementationOnce(() => new Promise(resolve => {finish = resolve;}));
+    await tick();
+    await act(async () => publishProjectContext(projectTree("Changed while reply was pending")));
+    await act(async () => finish(telegramsResponse({sessionId: 5})));
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    expect(host!.querySelector(".bus-monitor-stale-lock")).not.toBeNull();
+    await tick();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(false);
+  });
+
+  it("ignores an obsolete reattach rejection after a newer connection succeeded", async () => {
+    let reject!: (reason: Error) => void;
+    apiMock.pollBusTelegrams.mockImplementationOnce(() => new Promise((_, failure) => { reject = failure; }));
+    await renderPanel();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({sessionId: 1}));
+    await connect();
+    await act(async () => reject(new Error("obsolete reattach error")));
+    expect(host!.textContent).not.toContain("obsolete reattach error");
+    expect(host!.querySelector(".bus-monitor-session")).not.toBeNull();
+  });
+
+  it("does not keep a previous current comparison after polling fails", async () => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({sessionId: 5}));
+    await renderPanel();
+    await flushReattach();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(false);
+    apiMock.pollBusTelegrams.mockRejectedValue(new Error("comparison unavailable"));
+    await tick();
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+  });
+
+  it("reports a legacy server comparison as unverified rather than fresh or stale", async () => {
     publishProjectContext(projectTree("Kitchen ceiling"));
-    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1 }));
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1, contextStatus: undefined, projectOpen: undefined }));
     await renderPanel();
     await flushReattach();
 
     const notice = host!.querySelector(".bus-monitor-unverified-lock")!;
     expect(notice.getAttribute("role")).toBe("note");
-    expect(notice.textContent).toContain("did not start this session");
-    // Unverified is not stale: sending stays possible, because nothing
-    // observed says the snapshot is wrong — only that it is unconfirmed.
+    expect(notice.textContent).toContain("cannot verify");
+    // Unknown is not proof of staleness or permission to resolve a write DPT.
     expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
-    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(false);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
   });
 
   it("stays quiet when another window recorded the very session it attached to", async () => {
@@ -1069,6 +1171,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       sessionId: 5,
       serverIncarnation: "process-b",
       nextSince: 1,
+      contextStatus: undefined,
+      projectOpen: undefined,
     }));
     await renderPanel();
     await flushReattach();
@@ -1113,6 +1217,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       serverIncarnation: "process-b",
       telegrams: [],
       nextSince: 0,
+      contextStatus: "unavailable",
+      projectOpen: null,
     }));
     await tick();
 

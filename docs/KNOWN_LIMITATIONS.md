@@ -4063,6 +4063,33 @@ verification boundary or claiming a new protocol fix.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
+**Status (2026-10-02 follow-up candidate).** The browser-only proof described
+below is superseded by an implemented, not yet delivered authoritative polling
+contract. The server compares the active session's real `GroupAddressContext`
+with the current project's interpretation (style, names and resolved DPTs).
+`contextStatus`, nullable `projectOpen` and `serverIncarnation` are returned by
+the same monitor poll. Busy/poisoned/unavailable evidence is not freshness;
+legacy/malformed responses or poll failure lock the new UI's compose form.
+Pause performs context-only reads without rows or cursor advancement. Delayed
+replies cannot erase a newer invalidation or replacement session. Browser
+records cannot establish a verified state. Backend/UI regressions and bounded
+mocked browser evidence and twelve complete candidate gates pass; integrated
+acceptance/publication remain PENDING. See
+[owner evidence](UI_ALPHA_READINESS.md).
+
+**Remaining boundary.** This is a point-in-time interpretation comparison, not
+a complete project identity/version, collaboration/push channel or atomic
+write-context token. Existing captured rows keep their old decoded values; a
+later edit can occur before another poll or send. Parameter/device changes are
+checked only insofar as they change the interpreter's actual DPT/name/style
+snapshot. Real native/live-bus verification is not inferred from fixtures.
+An older server without this evidence remains readable but cannot enable Send
+in the new monitor UI. No hardware permission or source-wide alpha waiver.
+
+**Historical explanation (before this follow-up).** The following describes
+the former local-storage-only mechanism and its known cases, not the new
+candidate's source of freshness evidence.
+
 **Limitation.** The second-window diagnostics companion (T-UI-06) locks
 itself when the project changes under a running bus session. That lock is
 decided entirely from two `localStorage` records written by the windows of

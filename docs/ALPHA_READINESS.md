@@ -205,6 +205,16 @@ closures, all inventory IDs/priorities/routes and other sessions' dispositions
 remain unchanged. Native/Orca/multicast evidence, KL-82 and domain/API-dependent
 work remain explicit; no alpha-release exception is inferred.
 
+The subsequent KL-82 owner candidate adds actual server session/project
+interpretation comparison and fail-closed unavailable/legacy handling, with
+pause/cursor/race regressions. Focused suites, eleven behavioral negative
+controls and mocked monitor Chromium tests pass. All twelve candidate gates
+pass (Web 1,343 / Chromium 35 / Rust 2,890, zero failed, 163 ignored; 570-source
+freeze). Integrated acceptance and publication remain PENDING; see the same
+owner matrix. Earlier source
+counts are not evidence for this new candidate, and no native/live-bus or
+transactional write guarantee is inferred.
+
 Each row retains its one primary route and original priority. The evidence
 column points to the **current retained source**, not a claim that its entire
 implementation was freshly tested. Open alpha code contracts are verified in
@@ -282,7 +292,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §137; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §36; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-82` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §82; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `KL-82` | P2 | `goal-ui.md` — owner only | IN_PROGRESS | Actual server interpretation comparison and unavailable/legacy fail-closed UI implemented; focused backend/UI, pause/cursor/race, mocked Chromium and eleven behavioral mutations pass. Twelve candidate gates passed; integrated acceptance/publication PENDING; docs/UI_ALPHA_READINESS.md and retained §82 boundaries. |
 | `DOC-03` | P2 | AR15 | TODO | docs/manual/known-issues.md / docs/manual/ideas-and-roadmap.md; Retained boundary; AR15 verifies subcases before changing status |
 | `RELEASE-03` | P2 | AR16 | WAITING_OWNER | goal.md §5 / docs/manual/README.md / ADR-0024; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `RELEASE-04` | P2 | AR19 | WAITING_DECISION | goal.md §5 / docs/ROADMAP.md Session 7; Reserved user decision; see decision contract above |

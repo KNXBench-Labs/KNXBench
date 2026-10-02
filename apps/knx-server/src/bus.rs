@@ -817,6 +817,7 @@ pub enum DecodeFailureReason {
 /// project-style route build a replacement. Both construct it synchronously
 /// from `AppState.project`, release that mutex, and only then enter an async
 /// bus operation; neither route inspects its fields directly.
+#[derive(PartialEq, Eq)]
 pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
@@ -1359,6 +1360,20 @@ impl BusSession {
             .style
     }
 
+    /// Exact interpretation comparison, not a browser digest or project identity.
+    /// Busy/poisoned context is unknown. Never takes the telegram-buffer lock,
+    /// changes the snapshot, or sends through the tunnel.
+    pub(crate) fn project_context_matches(
+        &self,
+        project: Option<&knx_core::Project>,
+    ) -> Option<bool> {
+        let current = GroupAddressContext::from_project(project);
+        self.ctx
+            .try_read()
+            .ok()
+            .map(|snapshot| *snapshot == current)
+    }
+
     /// Atomically replaces the context used by both incoming telegrams and
     /// outgoing writes. This updates only in-memory interpretation metadata;
     /// it does not touch, reconnect, or send through the tunnel.
@@ -1607,6 +1622,31 @@ mod tests {
     }
 
     // -- start / drain / stop -------------------------------------------
+
+    #[tokio::test]
+    async fn context_comparison_is_unknown_for_busy_and_poisoned_snapshots() {
+        let (tunnel, _handle) = fake_tunnel();
+        let connector = FakeConnector::succeeding(tunnel);
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(session.project_context_matches(None), Some(true));
+        {
+            let _held = session.ctx.write().unwrap();
+            assert_eq!(session.project_context_matches(None), None);
+        }
+        let _caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _held = session.ctx.write().unwrap();
+            panic!("test-only poisoned interpretation snapshot");
+        }));
+        assert_eq!(session.project_context_matches(None), None);
+        session.stop().await;
+    }
 
     #[tokio::test]
     async fn start_drain_stop_carries_telegrams_through_and_disconnects() {

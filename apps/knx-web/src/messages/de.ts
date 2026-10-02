@@ -587,7 +587,7 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.contextStale":
     "Das Projekt hat sich nach der letzten bestätigten Kontextveröffentlichung dieser Sitzung geändert. Die Dekodierung unten verwendet diesen früheren Kontext, Senden ist gesperrt. Für die Dekodierung gegen das aktuelle Projekt neu verbinden.",
   "busMonitor.contextUnverified":
-    "Dieses Fenster hat die Sitzung nicht gestartet und kann daher nicht bestätigen, dass die Dekodierung zum aktuell geöffneten Projekt passt.",
+    "Der Server kann nicht bestätigen, dass der Interpretationskontext dieser Sitzung zum aktuellen Projekt passt. Senden bleibt bis zu einem aktuellen Vergleich gesperrt (ältere Server liefern diesen nicht).",
   "busMonitor.sessionReplaced":
     "Die Bus-Sitzung wurde ersetzt — angezeigt wird jetzt Sitzung {id}. Zeilen der vorherigen Sitzung wurden entfernt.",
   "busMonitor.endedElsewhere": "Die Bus-Sitzung wurde an anderer Stelle beendet.",

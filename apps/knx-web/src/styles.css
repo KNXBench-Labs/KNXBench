@@ -1402,6 +1402,11 @@ main {
   font-weight: 600;
 }
 
+.bus-compose-hint.bus-compose-unverified-hint {
+  color: var(--knx-warning-color);
+  font-weight: 600;
+}
+
 .bus-monitor-filters {
   display: flex;
   flex-wrap: wrap;

@@ -94,14 +94,33 @@ three-package proposal is documented, not activated. `KL-129`/AR03 remain
 `WAITING_DECISION`; no user answer is not approval or accepted continued
 deferral. This package runs doc/ledger gates only, not new product tests.
 AR02 remote/ref/artifact readback succeeded and its owned checkout, branch,
-targets and scratch were removed. The independent next ready package is AR04.
+targets and scratch were removed. AR03's docs-only audit was published as
+`4f47059c`; its reserved activation remains unanswered.
+
+## AR04 storage command contract — verified; publication pending
+
+[Explicit full-save fallback](STORAGE_COMMAND_CONTRACT.md) replaces the exported
+helper's successful no-op arms without changing current production save paths.
+The source audit routes all 50 command variants through one complete snapshot
+write; this is not a claim of 50 individually executed variant tests.
+Behavioral parameter RED/GREEN, nine focused scalar/provenance regressions,
+three file-backed reopen/history/order/late-failure tests and three rejected
+compiled mutants are measured. Source hashes match after restoration.
+Complete coordinated gates exited 0: 142 Rust result blocks, 2,859 passed,
+zero failed, 161 ignored, zero skip markers; two explicitly executed private
+store roundtrips, zero ignored/failure; Web 1,312. Strict Clippy, typecheck,
+build, semantic bindings, dependency and repository gates pass. All 574 guarded
+source files are unchanged across gates; changed store code compilation was
+verified. Publication/final receipt remains pending; dispatch rows retain
+IN_PROGRESS until verified remote readback.
+No parked ADR phase, U12 control, schema or commissioning gate is changed.
 
 ## Stable limitation identity
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
-130, and no 94. Six are resolved/clarification-only: 18, 23, 24, 90, 95,
-130-GATE (AR01). Therefore **104 numbered residual boundaries** remain:
-K1=5, K2=30, K3=54, K4=14 (103 triaged); 105 is wire-evidence-only and unclassified.
+130, and no 94. Seven are resolved/clarification-only: 18, 23, 24, 42 (AR04),
+90, 95, 130-GATE (AR01). Therefore **103 numbered residual boundaries** remain:
+K1=5, K2=30, K3=54, K4=13 (102 triaged); 105 is wire-evidence-only and unclassified.
 No heading or legacy fragment is destructively renumbered.
 `KL-8` also routes 26 (Secure); `KL-130-GATE` and `KL-130-ZOOM` identify the
 separate headings exactly. All other numbered IDs use `KL-<number>`.
@@ -221,7 +240,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `GAP-T30-09` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.14–15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.6.7; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / commissioning-download-design.md R11; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DATA-02` | P2 | AR04 | TODO | docs/KNOWN_LIMITATIONS.md: U12 structure editor scope; Retained boundary; AR04 verifies subcases before changing status |
+| `DATA-02` | P2 | AR04 | IN_PROGRESS | STORAGE_COMMAND_CONTRACT.md; full-save fallback/native failure-history tests verified; integrated gates/publication pending; U12 editor scope is not lifted |
 | `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-87` | P2 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md §87; Retained boundary; AR05 verifies subcases before changing status |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
@@ -313,7 +332,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `FUTURE-07` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | goal.md §6; goal.md §6: logo remains user-owned |
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §107; accepted ADR-0025 and goal.md §6: data extension, no code plug-in API |
 | `KL-16` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §16; Retained boundary; AR15 verifies subcases before changing status |
-| `KL-42` | P3 | AR04 | TODO | docs/KNOWN_LIMITATIONS.md §42; Retained boundary; AR04 verifies subcases before changing status |
+| `KL-42` | P3 | AR04 | IN_PROGRESS | docs/KNOWN_LIMITATIONS.md §42; no-op/doc defect corrected with native/mutation evidence; package gates/publication pending |
 | `KL-65` | P3 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §65; Retained boundary; AR13 verifies subcases before changing status |
 | `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §41; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §45; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |

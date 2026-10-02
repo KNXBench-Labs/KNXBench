@@ -1,236 +1,33 @@
-//! Incremental persistence: after `Command::apply(&mut project)` succeeds,
-//! `sync_after_command` writes only the row(s) that command's own target
-//! id(s) name, reading the resulting state out of the already-mutated
-//! `project` rather than re-deriving `command.rs`'s own mutation logic
-//! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! every `Command` variant has a match arm here, but only nine (device
-//! address/description, com-object DPT/description and their undo/redo
-//! forms, group-address create/delete, and the project-wide group-address
-//! style) actually persist; the rest (topology/group-range/group-link
-//! variants, plus device create/delete) are no-op stubs awaiting a future
-//! incremental-sync pass (see each arm's own "persistence layer not yet
-//! implemented" comment).
+//! Command persistence through the transactional whole-project-save fallback.
+//!
+//! This compatibility entry point is not an incremental persistence engine.
+//! Server and CLI save paths use complete project saves directly; they do not
+//! call this helper. Complete snapshot persistence avoids successful no-op
+//! arms for structural commands and preserves allocator high-water marks.
 
 use rusqlite::Connection;
 
 use knx_core::command::Command;
-use knx_core::ids::InstallationId;
 use knx_core::project::Project;
 
-use crate::devices::{
-    set_device_line, upsert_com_object_description_override, upsert_com_object_dpt_override,
-    upsert_device,
-};
-use crate::group::{delete_group_address, upsert_group_address};
 use crate::StoreError;
 
 /// Call only after a successful `Command::apply(&mut project)`, passing the
-/// resulting `project`. Applies equally to undo/redo, since both replay
-/// through this same `Command` enum — a `RestoreComObjectDpt` produced by
-/// undoing a `SetComObjectDpt` is itself a `Command`, synced the same way.
+/// complete authoritative post-command snapshot. Undo/redo use the same
+/// whole-project-save fallback. The command is retained in the public
+/// signature for compatibility; it is not reapplied, inspected to choose
+/// partial writes, or replayed recursively when it is a batch.
 ///
-/// The owning installation is never a parameter: for a device it is read
-/// back off the device's own stored row, and for a group address it is
-/// `installations[0]`, the only installation `Command::apply` itself ever
-/// touches (`command.rs` uses `installations.first_mut()`). A caller
-/// passing the wrong one would silently move a device — or file a new group
-/// address — into another installation, so there is nothing to pass.
-/// `SetIndividualAddress` does not move a device between lines either, so
-/// its existing line/position is looked up and re-asserted rather than
-/// changed.
+/// A storage failure rolls back the durable write, not the already-applied
+/// in-memory command or its history: that recovery remains the caller's job.
+/// This is not optimistic conflict detection; callers comparing an expected
+/// saved state must use `save_project_if_unchanged` instead.
 pub fn sync_after_command(
     conn: &Connection,
     project: &Project,
-    command: &Command,
+    _command: &Command,
 ) -> Result<(), StoreError> {
-    let tx = conn.unchecked_transaction()?;
-    match command {
-        Command::SetIndividualAddress { device, .. }
-        | Command::RestoreIndividualAddress { device, .. } => {
-            let d = project
-                .devices
-                .get(*device)
-                .expect("Command::apply already proved this device exists");
-            let (installation_id, line_id, position): (u8, Option<i64>, i64) = tx.query_row(
-                "SELECT installation_id, line_id, topology_position FROM device WHERE id = ?1",
-                [d.id.0],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-            )?;
-            upsert_device(&tx, InstallationId(installation_id), position, d)?;
-            set_device_line(
-                &tx,
-                d.id,
-                line_id.map(|l| knx_core::ids::LineId(l as u32)),
-                position,
-            )?;
-        }
-        Command::SetDeviceDescription { device, .. } => {
-            let d = project
-                .devices
-                .get(*device)
-                .expect("Command::apply already proved this device exists");
-            let (installation_id, line_id, position): (u8, Option<i64>, i64) = tx.query_row(
-                "SELECT installation_id, line_id, topology_position FROM device WHERE id = ?1",
-                [d.id.0],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-            )?;
-            upsert_device(&tx, InstallationId(installation_id), position, d)?;
-            set_device_line(
-                &tx,
-                d.id,
-                line_id.map(|l| knx_core::ids::LineId(l as u32)),
-                position,
-            )?;
-        }
-        Command::SetComObjectDpt { com_object, .. }
-        | Command::RestoreComObjectDpt { com_object, .. } => {
-            let com = project
-                .devices
-                .com_object(*com_object)
-                .expect("Command::apply already proved this com object exists");
-            upsert_com_object_dpt_override(&tx, com.id, &com.dpt)?;
-        }
-        Command::SetComObjectDescription { com_object, .. }
-        | Command::RestoreComObjectDescription { com_object, .. } => {
-            let com = project
-                .devices
-                .com_object(*com_object)
-                .expect("Command::apply already proved this com object exists");
-            upsert_com_object_description_override(&tx, com.id, &com.description)?;
-        }
-        Command::CreateGroupAddress { entry } => {
-            // `Command::apply` pushes onto `installations.first_mut()`, so
-            // that is the installation the new row belongs to — deriving it
-            // here is what keeps the two from ever disagreeing.
-            let installation_id = project
-                .installations
-                .first()
-                .expect("Command::apply already proved this project has an installation")
-                .id;
-            let position: i64 = tx
-                .query_row(
-                    "SELECT COALESCE(MAX(position) + 1, 0) FROM group_address WHERE installation_id = ?1",
-                    [installation_id.0],
-                    |row| row.get(0),
-                )?;
-            upsert_group_address(&tx, installation_id, position, entry)?;
-        }
-        Command::RestoreGroupAddress { entry, position } => {
-            let installation_id = project
-                .installations
-                .first()
-                .expect("Command::apply already proved this project has an installation")
-                .id;
-            upsert_group_address(&tx, installation_id, *position as i64, entry)?;
-        }
-        Command::DeleteGroupAddress { id } => {
-            delete_group_address(&tx, *id)?;
-        }
-        Command::UpdateGroupAddress { .. } | Command::ReaddressGroupAddress { .. } => {
-            // Group-address update persistence layer not yet implemented
-            // (out of scope for this plan's Task 2, which only added the
-            // `Command` variant and in-memory `apply` logic).
-        }
-        Command::CreateDevice { .. } => {
-            // Device create/delete persistence layer not yet implemented
-            // (out of scope for this plan's Task 1, which only added the
-            // `Command` variants and in-memory `apply` logic).
-        }
-        Command::DeleteDevice { .. } => {
-            // Device create/delete persistence layer not yet implemented
-            // (out of scope for this plan's Task 1, which only added the
-            // `Command` variants and in-memory `apply` logic).
-        }
-        Command::RestoreDevice { .. } => {
-            // Internal undo form of device creation/deletion; persistence is
-            // covered by the same future incremental-sync work as above.
-        }
-        Command::CreateArea { .. } | Command::RestoreArea { .. } => {
-            // Area persistence layer not yet implemented (Task 2 scope).
-        }
-        Command::DeleteArea { .. } => {
-            // Area persistence layer not yet implemented (Task 2 scope).
-        }
-        Command::RenameArea { .. } => {
-            // Area name uses the existing whole-project save path, like create/delete.
-        }
-        Command::CreateLine { .. } | Command::RestoreLine { .. } => {
-            // Line persistence layer not yet implemented (Task 3 scope).
-        }
-        Command::DeleteLine { .. } => {
-            // Line persistence layer not yet implemented (Task 3 scope).
-        }
-        Command::RenameLine { .. } => {
-            // Line name uses the existing whole-project save path, like create/delete.
-        }
-        Command::MoveLineToArea { .. } | Command::RestoreLinePlacement { .. } => {
-            // Area membership currently persists through the whole-project save path.
-        }
-        Command::MoveDeviceToLine { .. } => {
-            // Line/device-membership persistence layer not yet implemented (Task 4 scope).
-        }
-        Command::SetIdAllocators { .. } | Command::ReserveIds { .. } => {
-            // Allocators are reconstructed from persisted entity ids on load.
-        }
-        Command::CreateGroupRange { .. } | Command::RestoreGroupRange { .. } => {
-            // Group-range persistence layer not yet implemented (Task 5 scope).
-        }
-        Command::DeleteGroupRange { .. } => {
-            // Group-range persistence layer not yet implemented (Task 5 scope).
-        }
-        Command::RenameGroupRange { .. } => {
-            // Group-range persistence layer not yet implemented (Task 5 scope).
-        }
-        Command::MoveGroupRange { .. } | Command::RestoreGroupRangePlacement { .. } => {
-            // Reparenting currently persists through the whole-project save path.
-        }
-        Command::LinkComObject { .. }
-        | Command::UnlinkComObject { .. }
-        | Command::RestoreGroupLink { .. } => {
-            // Group-link persistence layer not yet implemented (Task 6 scope).
-        }
-        Command::SetComObjectFlag { .. } | Command::RestoreComObjectFlag { .. } => {
-            // Com-object-flag persistence layer not yet implemented.
-        }
-        Command::SetParameterValue { .. } | Command::RestoreParameterValue { .. } => {
-            // Parameter-instance incremental persistence not yet
-            // implemented here — `upsert_parameter_instance` already exists
-            // (`crates/knx-store/src/parameter.rs`) and is used by the
-            // whole-installation save path (`project.rs`), but wiring an
-            // incremental delete for `RestoreParameterValue`'s "no row
-            // existed before" case is out of this task's scope (T18 slice
-            // 3 task 2 adds only the `Command` variants and their
-            // in-memory `apply` logic).
-        }
-        Command::CreateBuildingPart { .. } | Command::RestoreBuildingPart { .. } => {
-            // Building-part persistence layer not yet implemented (Task 4 scope).
-        }
-        Command::DeleteBuildingPart { .. } => {
-            // Building-part persistence layer not yet implemented (Task 4 scope).
-        }
-        Command::RenameBuildingPart { .. } => {
-            // Building-part persistence layer not yet implemented (Task 4 scope).
-        }
-        Command::MoveBuildingPart { .. } | Command::RestoreBuildingPartPlacement { .. } => {
-            // Reparenting currently persists through the whole-project save path.
-        }
-        Command::MoveDeviceToBuildingPart { .. } => {
-            // Building-part persistence layer not yet implemented (Task 4 scope).
-        }
-        Command::SetGroupAddressStyle { .. } => {
-            crate::project::set_group_address_style(&tx, project.info.group_address_style)?;
-        }
-        Command::Batch(_) => {
-            // No arm needed here, not just none yet: nothing currently calls
-            // `sync_after_command` from the server's command path (see
-            // docs/superpowers/specs/2026-09-10-bulk-operations-design.md,
-            // "Out of scope"), so a sub-command-by-sub-command sync of a
-            // `Batch` has no caller to serve. Only kept exhaustive so this
-            // match still compiles.
-        }
-    }
-    tx.commit()?;
-    Ok(())
+    crate::save_project(conn, project)
 }
 
 #[cfg(test)]
@@ -241,7 +38,7 @@ mod tests {
     use knx_core::commissioning::{CommissioningState, CompletionStatus};
     use knx_core::device::DeviceInstance;
     use knx_core::group::GroupAddressEntry;
-    use knx_core::ids::{DeviceId, SourceRef};
+    use knx_core::ids::{DeviceId, InstallationId, SourceRef};
     use knx_core::installation::Installation;
     use knx_core::topology::Topology;
 
@@ -293,7 +90,26 @@ mod tests {
         installation.topology.unassigned = vec![DeviceId(1)];
         project.installations.push(installation);
         project.devices.insert(device_one());
+        crate::project::cover_ids_in_use(&mut project);
         project
+    }
+
+    #[test]
+    fn command_sync_persists_a_previously_unsupported_parameter_edit() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_unassigned_device();
+        crate::save_project(&conn, &project).unwrap();
+        let command = Command::SetParameterValue {
+            id: project.ids.next_parameter_instance_id().unwrap(),
+            device: DeviceId(1),
+            ets_id: "P-1".into(),
+            raw: "7".into(),
+        };
+        command.apply(&mut project).unwrap();
+
+        sync_after_command(&conn, &project, &command).unwrap();
+
+        assert_eq!(crate::load_project(&conn).unwrap(), project);
     }
 
     #[test]
@@ -323,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn set_individual_address_syncs_only_the_device_row() {
+    fn set_individual_address_persists_the_address() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = project_with_one_unassigned_device();
         crate::save_project(&conn, &project).unwrap();
@@ -342,13 +158,8 @@ mod tests {
         );
     }
 
-    /// A device's installation is read back off its own stored row rather
-    /// than taken from the caller, so a device belonging to a second
-    /// installation stays there. With the removed `installation_id`
-    /// parameter, a caller passing the wrong value silently moved the
-    /// device: `upsert_device`'s
-    /// `ON CONFLICT ... installation_id = excluded.installation_id`
-    /// overwrote it without complaint.
+    /// The authoritative snapshot retains the second installation's membership;
+    /// persistence must not route this edit into the first installation.
     #[test]
     fn set_individual_address_keeps_a_device_in_its_own_installation() {
         let conn = open_and_migrate_in_memory().unwrap();
@@ -379,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn create_and_delete_group_address_sync_incrementally() {
+    fn create_and_delete_group_address_persist_through_whole_project_fallback() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = Project::new(knx_core::string_table::Language("en".into()));
         project.installations.push(installation());
@@ -412,12 +223,9 @@ mod tests {
         assert_eq!(loaded.installations[0].group_addresses, vec![]);
     }
 
-    /// `SetGroupAddressStyle` has no device or group-address id to key off
-    /// — it is project-wide — so its sync arm calls
-    /// `project::set_group_address_style` directly rather than reading a
-    /// stored row back the way every other arm does.
+    /// Project-wide metadata belongs to the complete saved snapshot too.
     #[test]
-    fn set_group_address_style_syncs_the_one_column() {
+    fn set_group_address_style_persists_the_project_metadata() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = Project::new(knx_core::string_table::Language("en".into()));
         project.installations.push(installation());
@@ -437,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn set_device_description_syncs_only_the_device_row() {
+    fn set_device_description_persists_the_description() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = project_with_one_unassigned_device();
         crate::save_project(&conn, &project).unwrap();
@@ -457,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn set_com_object_description_syncs_only_the_description_override_row() {
+    fn set_com_object_description_preserves_the_description_override_provenance() {
         use knx_core::device::ComObjectInstance;
         use knx_core::flags::ResolvedFlags;
         use knx_core::ids::ComObjectInstanceId;
@@ -510,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn set_com_object_dpt_syncs_only_the_dpt_override_row() {
+    fn set_com_object_dpt_preserves_the_dpt_override_provenance() {
         use knx_core::device::ComObjectInstance;
         use knx_core::dpt::DptRef;
         use knx_core::flags::ResolvedFlags;

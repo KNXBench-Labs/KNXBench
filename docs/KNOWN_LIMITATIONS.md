@@ -2142,41 +2142,26 @@ rather than a general caution.
 
 ## 42. `command_sync.rs`'s module doc overstates its own role — pre-existing, not introduced by T12
 
-**Limitation.** `crates/knx-store/src/command_sync.rs`'s module-level doc
-comment describes `sync_after_command` as *the* incremental persistence
-mechanism for command edits ("writes only the row(s) that command's own
-target id(s) name … Incremental command sync"). Grepping `crates/` and
-`apps/` for `sync_after_command` finds exactly three kinds of hits: the
-function's own definition and tests inside `command_sync.rs`, a bare
-re-export at `lib.rs:18`, and three doc-comment mentions in `devices.rs`.
-There is no actual caller anywhere in either `crates/` or `apps/`.
+**Resolved by AR04.** The exported compatibility helper explicitly uses the
+existing transactional whole-project-save fallback. Its former successful no-op
+arms and row-only persistence claims are removed; adjacent low-level helper
+comments and tests no longer imply a live incremental engine. Current production
+save paths remain complete saves and do not call this helper.
 
-**Cause.** Pre-existing — this function predates T12 and was never wired
-into the server's or CLI's actual save path, both of which persist a
-command's effect by calling `save_project` (a full project write) after
-`Command::apply`, not by calling `sync_after_command`. Not caused by this
-task. T12's own `Command::UpdateGroupAddress` gained a `command_sync.rs`
-match arm that is itself a documented no-op stub — the same pattern
-already used there for the topology/group-range/group-link and
-device-create/delete variants — which sits in the same file as the
-overstated module doc and makes the discrepancy easier to trip over for
-the next person reading that file top to bottom.
+**Evidence.** A previously unsupported parameter edit failed behaviorally before
+the fix. File-backed regressions verify nested structural batches, exact reopened
+models/high-water marks, undo/redo, middle-sibling order, unchanged opaque and
+manufacturer rows, and a late SQL failure retaining the prior durable state.
+Three compiled behavioral mutants were caught and all touched source hashes
+restored. See [the storage contract](STORAGE_COMMAND_CONTRACT.md) and the AR04
+receipt in `.ai/logs/2026-10-01_codex_alpha-storage-contract.md` for final gates
+and publication; a planned gate is not a passing result.
 
-**Impact.** None on correctness today: every command-driven edit this
-application makes is actually persisted via `save_project`, which is
-unconditional and does not depend on `sync_after_command` at all. The risk
-is purely to a future reader who trusts the module doc at face value,
-concludes `sync_after_command` is live, and either relies on it being
-called somewhere it isn't or spends time looking for a caller that does
-not exist.
-
-**Lifted when.** Open. Either the module doc is corrected to say
-`sync_after_command` is currently unused and persistence runs through
-`save_project`, or `sync_after_command` is actually wired in as the
-faster incremental path its doc already claims to be (at which point
-every no-op stub arm, including T12's new one, would need a real
-implementation too). Neither is scheduled; flagged here so the gap is
-findable without re-deriving it from a grep.
+**Retained boundary, not this former defect.** No incremental-performance claim,
+automatic in-memory/history rollback, combined opaque/model transaction or new
+multi-user conflict policy is introduced. Use `save_project_if_unchanged` for
+the existing expected-state contract. UI/editor and commissioning scopes remain
+with their original owners. This heading/fragment is a historical waypoint.
 
 <a id="43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference"></a>
 ## 43. Animation controls exist; some motion surfaces remain outside their guard

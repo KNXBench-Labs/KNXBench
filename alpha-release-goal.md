@@ -184,12 +184,23 @@ from this docs-only audit. Continue independent AR04.
 ### AR04 — Make storage guarantees match actual command coverage
 
 **Sources:** `DATA-02`, `KL-42`. **Dependencies:** AR02; coordinate any AR03 surface changes.
+**Status:** `IN_PROGRESS`; isolated `alpha-storage-contract`, published AR03
+baseline `4f47059c`. [Storage contract](docs/STORAGE_COMMAND_CONTRACT.md).
 
-- [ ] Trace every relevant structural command through `command_sync`, whole-project save, undo/redo and reopen. Identify unsupported incremental cases explicitly.
-- [ ] Choose the smallest safe behavior: verified incremental synchronization or an explicit whole-project-save fallback. Never make an unsupported command appear durably saved by an incremental success.
-- [ ] Test injected failures, reopened relationships/order, opaque metadata, rollback and undo/redo. Update overstated module documentation.
+- [x] Trace every relevant structural command through `command_sync`, whole-project save, undo/redo and reopen. Identify unsupported incremental cases explicitly.
+- [x] Choose the smallest safe behavior: verified incremental synchronization or an explicit whole-project-save fallback. Never make an unsupported command appear durably saved by an incremental success.
+- [x] Test injected failures, reopened relationships/order, opaque metadata, rollback and undo/redo. Update overstated module documentation.
 
 **Exit evidence:** an explicit coverage contract and persistence regressions. UI editor work remains owned by U12; alpha does not change its controls or multi-installation scope.
+Parameter RED/GREEN, nine focused regressions, three file-backed tests, separate
+in-session review and three compiled behavioral mutants are measured; all source
+hashes restored. Source enumeration is 50 variants, not per-variant runtime
+certification. Complete coordinated gates exited 0: 142 Rust suites, 2,859
+passed / zero failed / 161 ignored / zero skip markers; private store 2/2,
+Web 1,312; strict Clippy, type/build/bindings/dependency and repository gates
+green. Source hashes are stable; publication/final receipt remains pending.
+Receipt
+`.ai/logs/2026-10-01_codex_alpha-storage-contract.md`.
 
 ### AR05 — Close manufacturer-report omissions without rewriting history
 

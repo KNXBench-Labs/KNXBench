@@ -1,5 +1,31 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-01 — AR04 storage fallback (offline; UTC; publication pending)
+
+- Exported `sync_after_command` delegates to the existing transactional full
+  project writer for every command; no successful unsupported incremental arm.
+  Production save paths/signatures, schemas and dependencies are unchanged.
+- Behavioral parameter RED/GREEN; nine focused regressions and three new
+  file-backed tests compare reopened native models, retained allocator marks,
+  structural batch/history, sibling order, opaque/manifest preservation and
+  late SQL failure. Three compiled mutants caught; all source hashes restored.
+- Separate in-session review closed redundant fixture normalization and added
+  explicit unchanged-post-apply-memory evidence on save failure. Not an
+  independent external review or 50-variant runtime certification.
+- Complete coordinated gate exited 0: 142 Rust result blocks, 2,859 passed,
+  zero failed / 161 ignored / zero skip markers; private store 2/2; Web 1,312.
+  Strict Clippy, typecheck/build, semantic bindings, dependency policy and
+  repository gates green. 574 guarded source files unchanged; changed store
+  compilation/check verified. Headers 373 valid / 159 absent / 17 generated;
+  corpus policy 325 Rust files, target explicitly this candidate.
+- KL-42's documented defect corrected; DATA-02/AR04 package remain IN_PROGRESS
+  pending verified publication/final receipt. Contract
+  [STORAGE_COMMAND_CONTRACT](STORAGE_COMMAND_CONTRACT.md), receipt
+  `.ai/logs/2026-10-01_codex_alpha-storage-contract.md`. Triage is 110 headings,
+  seven historical/resolved, 103 residual, 102 classified (5/30/54/13).
+- No UI/editor, live KNX, parked ADR-0039 phase, import format or multi-user scope
+  change. Canonical-root statistics remains foreign-owner blocked.
+
 ## 2026-10-01 — AR03 enforcement audit; AR02 publication receipt (UTC)
 
 - Published AR02 `e691bc1318d0785289f8132378a0f26c9a829b27`: exact remote ref

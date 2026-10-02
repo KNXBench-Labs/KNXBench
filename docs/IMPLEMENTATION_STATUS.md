@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-02 — U15 theme runtime foundation (integrated, publication pending)
+## 2026-10-02 — U15 theme runtime foundation (delivered, extension still open)
 
 - Implemented bounded duplicate-aware JSON admission, exact v1/token contracts,
   safe complete value grammars and existing unrounded base/accent contrast.
@@ -22,7 +22,9 @@
   on de1bf652 and passes 22/22 steps: Web 1,559, intercepted Chromium 61, Rust
   2,916 / zero failed / 164 ignored / 146 result blocks, all twenty selected
   private offline cases and the pinned 115-instance matrix. All 614 protected
-  files unchanged; complete upstream preserved. Publication/readback is PENDING.
+  files unchanged; complete upstream preserved. Published as 9d1ae19d;
+  fetched/live ref, full tree, all 21 owned artifacts and zero outgoing commits
+  verified. Closing receipt/owned cleanup follows; U16–U18 stay open.
 - U16 durable
   transactions/file export, U17 production management/preview and U18 closing
   review remain open. [THEME_PACKS](THEME_PACKS.md) defines the exact boundary;

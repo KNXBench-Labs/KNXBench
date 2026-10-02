@@ -243,11 +243,19 @@ and order-number scripts are retained bytes plus a diagnostic, not queryable
 data. Section-level master data (`MaskVersions` with its resources and access
 rights, `InterfaceObjectTypes`, …) likewise stays reported per section, not per
 element, and untyped until a commissioning feature proves which parts it needs.
-Attributes inside the master `Languages` branch have no allowlist and are
-still retained without a report — `TranslationUnit/@Version` alone occurs
-1,928 times in the corpus. Reporting them needs corpus-observed allowlists
-for `Languages`, `Language`, `TranslationUnit`, `TranslationElement` and
-`Translation`; until then they are preserved bytes only. Persisted subtree
+AR05's v19 candidate reports unconsumed attributes inside the master `Languages`
+branch through a shared byte-only pass; consumed translation keys/text are not
+mislabelled unknown. TranslationUnit RefId/Version remain uninterpreted, not
+typed metadata. The bounded, exact-scope census observes 1,870 Version
+occurrences across 67 distinct master blobs; the historical 1,928 total used
+a different scope/unit and is not this gate's pin. Current source-derived
+evidence is separate from immutable historical install reports. The scoped
+matrix and real upgrade pass after independently reconciling the +230 isolated /
++226 shared keys; no normalized values or prior unknown evidence were lost.
+Repair-path regressions also preserve unexamined status for identity-invalid
+bytes while clearing stale exact-owner markers after authentic recovery.
+Renewed integrated acceptance of that last correction and publication remain
+pending; see [the AR05 contract](MANUFACTURER_REPORT_CONTRACT.md). Persisted subtree
 diagnostics are validated for shape, not re-derived from the blob. PDB-10 (schema v16, ADR-0042) inventories baggage: every `Baggages.xml` declaration typed as raw lexemes and resolved exactly to its member, every payload classified by content, nested ZIPs measured from their directory only. See §134 for what it deliberately does not do.
 
 Each entry states the limitation, its cause, what it costs the user, and the
@@ -4380,6 +4388,15 @@ though collisions are counted: `knx_master.xml`'s `DatapointType`/
 (`crates/knx-productdb/src/parse/master.rs`) into `datapoint_type`, whose
 primary key is `id` alone with no `source_sha256` column to compare
 against in the first place.
+
+**AR05 audit, 2026-10-02 (candidate, offline).** New package regressions verify
+same-file main/subtype collisions: four semantic declarations read, two stored,
+two dropped, first normalized values unchanged, full master bytes retained and
+historical facts stable after reopen/retry. An orphan subtype is read/dropped
+but does not increment the legacy collision counter. These distinguish semantic
+loss from retained bytes; they do not invent winner provenance or lift this
+residue. Existing normalized product identity reporting is unchanged. Contract:
+[MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
 
 **Measured against the real corpus.** Every `.knxprod` file under
 `OriginalData/ProductDatabases/` was copied to a scratch directory outside

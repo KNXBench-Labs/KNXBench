@@ -15,6 +15,7 @@ pub mod identity;
 pub mod image;
 pub mod image_request;
 pub mod ingest;
+pub mod master_evidence;
 pub mod migration;
 pub mod package;
 pub mod parse;
@@ -37,6 +38,7 @@ pub use identity::{
     IdentityReport, OrderNumberProduct, ProgramFamily, ReplacesVersions, UnmeasuredSource,
 };
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
+pub use master_evidence::{rederive_master_language_evidence, MasterLanguageEvidenceReport};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 pub use package::{
     install_package, InstallCategory, InstallCount, InstallDiagnostic, InstallDiagnosticKind,

@@ -1434,14 +1434,20 @@ fn refs_below_skipped_nodes_are_bounded_by_the_activation_budget() {
         .iter()
         .filter(|d| matches!(d.diagnostic, Diagnostic::RefBelowSkippedNode { .. }))
         .count();
-    assert!(
-        skipped <= MAX_MODULE_ACTIVATIONS,
-        "{skipped} skipped-ref diagnostics exceed the budget of {MAX_MODULE_ACTIVATIONS}"
+    // The shared leaf remains recognized; its active references and the
+    // skipped-reference diagnostics consume the same budget, not two quotas.
+    assert!(skipped > MAX_MODULE_ACTIVATIONS / 2);
+    assert!(!activation.parameter_refs.is_empty());
+    assert_eq!(
+        skipped
+            + activation.parameter_refs.len()
+            + activation.com_object_refs.len()
+            + activation.labels.len(),
+        MAX_MODULE_ACTIVATIONS,
+        "combined output is bounded exactly; omitted descendants are not exhaustively enumerated"
     );
-    assert!(
-        skipped > MAX_MODULE_ACTIVATIONS / 2,
-        "the budget, not something else, must be what stopped it: {skipped}"
-    );
+    assert!(activation.com_object_refs.is_empty());
+    assert!(activation.labels.is_empty());
     assert_eq!(
         activation
             .diagnostics

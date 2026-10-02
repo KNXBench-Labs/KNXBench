@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der **104 verbleibenden nummerierten Grenzen** aus
+Sortierung der **103 verbleibenden nummerierten Grenzen** aus
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md), gezählt mit
 `grep -cE '^## (§)?[0-9]' docs/KNOWN_LIMITATIONS.md` (Stand 2026-10-01).
-Die Datei enthält 110 nummerierte Überschriften: 104 Grenzen und sechs
-gelöste/historische Wegweiser (§18/23/24/90/95/130-GATE). 103 Grenzen sind eingestuft;
+Die Datei enthält 110 nummerierte Überschriften: 103 Grenzen und sieben
+gelöste/historische Wegweiser (§18/23/24/42/90/95/130-GATE). 102 Grenzen sind eingestuft;
 §105 bleibt wegen fehlender Hardwareevidenz ohne Einstufung. Der Befehl oben
 zählt Überschriften, nicht automatisch offene Defekte. Geschlossene oder zurückgezogene Einträge sind aus der aktiven
 Liste entfernt; frühere Nummern und Fragment-Links werden nicht wiederverwendet.
@@ -147,11 +147,11 @@ wird hier gewichtet, nicht seine historische Überschrift.
 | 144 | RF-Gerätekonfiguration nur im Simulator | Auf Hardware gesperrt, keine CLI-/HTTP-Route. |
 | 146 | Kanallabel sichtbar; Aktivierung kann `Undetermined` und DPT mehrdeutig bleiben | `@Name`/`@Number` sind gespeichert und in der UI gezeigt; fehlende/mehrdeutige Produktdaten werden nicht geraten (ADR-0050/0052). |
 
-## K4 — niedrig (14)
+## K4 — niedrig (13)
 
 | § | Thema | Warum K4 |
 | --- | --- | --- |
-| 42 | `command_sync.rs`' Moduldoku überzeichnet die eigene Rolle |
+
 | 43 | Animationsschalter und OS-Präferenz existieren; nicht jede Fläche ist abgedeckt |
 | 65 | `--version` nennt einen Commit, nie einen Arbeitsstand |
 
@@ -169,6 +169,11 @@ wird hier gewichtet, nicht seine historische Überschrift.
 
 ## Nicht in dieser Zählung
 
+- **§42** ist durch AR04 gelöst: dokumentierter vollständiger transaktionaler
+  Speicher-Fallback statt erfolgreicher No-Op-Arme; Offline-Regressionen prüfen
+  Wiederöffnen, Undo/Redo, Reihenfolge, SQL-Fehler und unveränderte opaque/Manifest-
+  Daten. Kein inkrementeller Performance- oder neuer UI-Vertrag; siehe
+  [Speichervertrag](STORAGE_COMMAND_CONTRACT.md).
 - **§18/23/24** sind gegen aktuelle Implementierung und vorhandene
   Regressionen abgeglichen (AR00): ETS-Import veröffentlicht `store_path=None`,
   Download streamt begrenzte Blöcke und der Dateipicker unterstützt

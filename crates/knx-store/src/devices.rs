@@ -114,10 +114,8 @@ pub fn upsert_device(
 /// Sets a device's line placement directly — the one column `upsert_device`
 /// deliberately leaves untouched. Called by Task 11's orchestration once
 /// the owning `Line`'s id is known (or with `line_id = None` for an
-/// unassigned device), and by Task 12's `sync_after_command` for
-/// `SetIndividualAddress` (which does not move a device between lines, but
-/// re-asserts the same placement is harmless and keeps that call site to
-/// one function).
+/// unassigned device). Command persistence uses the transactional whole-project
+/// save, not a separate incremental caller of this low-level helper.
 pub fn set_device_line(
     conn: &Connection,
     device_id: DeviceId,
@@ -473,10 +471,8 @@ fn write_override_row(
     Ok(())
 }
 
-/// Writes exactly one `com_object_override` row for `com`'s `dpt` field —
-/// the single-attribute upsert `command_sync::sync_after_command` (Task 12)
-/// calls for `SetComObjectDpt`/`RestoreComObjectDpt`, instead of rewriting
-/// the whole `com_object_instance` row.
+/// Writes exactly one `com_object_override` row for the `dpt` field. This
+/// low-level helper is not the whole-project command-persistence entry point.
 pub fn upsert_com_object_dpt_override(
     conn: &Connection,
     com_object_instance_id: ComObjectInstanceId,
@@ -485,10 +481,9 @@ pub fn upsert_com_object_dpt_override(
     write_override_row(conn, com_object_instance_id, Attr::Dpt, encode_dpt(dpt))
 }
 
-/// Writes exactly one `com_object_override` row for `com`'s `description`
-/// field — the single-attribute upsert `command_sync::sync_after_command`
-/// calls for `SetComObjectDescription`/`RestoreComObjectDescription`,
-/// instead of rewriting the whole `com_object_instance` row. Mirrors
+/// Writes exactly one `com_object_override` row for the `description`
+/// field. This low-level helper is not the whole-project command-persistence
+/// entry point. Mirrors
 /// `upsert_com_object_dpt_override`.
 pub fn upsert_com_object_description_override(
     conn: &Connection,

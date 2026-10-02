@@ -66,3 +66,13 @@ AR01 reproduced a real old binary returning success over zero sources after
 its owned build worktree was deleted; the new executable refuses that explicit
 deleted target. Focused behavioral mutations are recorded in the AR01 log.
 No KNX hardware, ETS corpus or UI/platform acceptance is implied by these gates.
+
+## Storage command verification
+
+The [storage command contract](STORAGE_COMMAND_CONTRACT.md) explicitly uses a
+transactional whole-project-save fallback, not successful incremental no-op
+arms. Its AR04 regression receipt distinguishes complete source routing from
+individually executed behaviors, native reopen equality from external ETS
+interoperability, and durable rollback from caller-owned memory/history recovery.
+Private fixture tests must be selected by their actual offline scope; ordinary
+workspace ignored counts are not proof that those fixtures executed.

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U15 publication verified)
+- **Timestamp:** 2026-10-02 19:50 CEST
+- **Web lock:** released by ui-theme-validation after exact source readback; U16 must reserve freshly.
+- **Completed:** Published U15 as 9d1ae19d5bdc1b5cc81749b907b7ee2ac745e7db; fetched origin/main and live server main equal HEAD, full tree/all 21 owned artifacts and zero outgoing commits verified, clean owned checkout. Runtime-only U15 boxes now checked with named parser/cache/DOM/hook/agreement/browser tests. Candidate and combined acceptance retain exact distinct counts: final 22/22 steps, Web 1,559, Chromium 61, Rust 2,916/zero/164 ignored/146 blocks, twenty selected private cases and 115-instance matrix, 614 unchanged protected files. 38 restored controls and type canary verified; self-review provenance remains explicit.
+- **Pending/Next Steps:** Gate/publish/read back this narrow closing receipt, then actually remove only this accepted owned checkout/branch/scratch. Immediately reserve fresh current-origin U16 and inspect existing settings/API contracts for acknowledged conditional theme updates plus strict file decoder and canonical lossless export. U16–U18 remain open, no additional go required. Root stats/synchronization stay foreign/owner-blocked, not generated from a feature branch.
+- **Notes for Codex oder Claude:** No full theme manager/import/export, independent/native/Orca/WCAG/ETS or alpha-release approval follows from U15. No productive backend/proxy/gateway/tunnel/device writes, subagents/quota probes, tags or foreign cleanup. Keep full inherited archive and separate alpha/domain/sample boundaries. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U15 integrated acceptance)
 - **Timestamp:** 2026-10-02 19:43 CEST
 - **Web lock:** taken by ui-theme-validation until exact publication readback.

@@ -1,7 +1,7 @@
 # KNXBench theme packs v1
 
-Contract resolved by U14, 2026-10-02. **U15 runtime foundation passes integrated
-acceptance; publication/readback and U16–U18 remain pending.**
+Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
+U16–U18 persistence, management and extension-wide acceptance remain pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a claim that the application already imports themes. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
@@ -32,7 +32,8 @@ configuration fingerprints match. Combined source de1bf652 passes 22/22 steps
 as proc_32a1aab25020: Web 1,559, Chromium 61, Rust 2,916 / zero failed /
 164 ignored / 146 result blocks; twenty selected private offline cases and
 the pinned 115-instance matrix pass. The same 614 protected files are stable.
-Publication/readback remains pending; this is not independent/native approval.
+Published as 9d1ae19d with fetched/live ref, full tree, all 21 owned artifacts
+and zero outgoing commits verified. This is not independent/native approval.
 
 U16 still owns acknowledged conditional persistence, strict file decoding and
 lossless export. U17 owns the production manager, diagnostic presentation and

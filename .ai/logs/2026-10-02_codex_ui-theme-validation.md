@@ -1,5 +1,18 @@
 # U15 theme runtime candidate — 2026-10-02 18:45 CEST
 
+## Source publication verified — 2026-10-02 19:50 CEST
+
+Published 9d1ae19d5bdc1b5cc81749b907b7ee2ac745e7db. Fetched/live main and HEAD,
+full tree/all 21 owned artifacts and zero outgoing commits match; checkout clean,
+required identity/no-co-author verified. U15's four runtime boxes checked only
+with named executable witnesses. Architecture/roadmap/status/limitations now
+separate delivered runtime from open U16–U18 workflow and closing acceptance.
+Web lock released only after exact source readback. Narrow receipt doc gates,
+receipt publication/readback and actual owned cleanup follow; no future cleanup
+or whole-extension/native/ETS/release acceptance is claimed.
+
+
+
 ## Combined acceptance verified — 2026-10-02 19:43 CEST
 
 Exact proc_32a1aab25020 exited 0; all 22 expected command/log receipts reconciled

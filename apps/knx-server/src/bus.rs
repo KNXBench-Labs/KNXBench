@@ -2241,6 +2241,7 @@ mod tests {
             individual_address: addr(0),
             friendly_name: "Hallway interface".into(),
             supports_tunnelling: true,
+            device_info: None,
         };
         let connector = FakeConnector::discovering(vec![found.clone()]);
         assert_eq!(connector.discovery_call_count(), 0);

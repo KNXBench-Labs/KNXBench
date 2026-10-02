@@ -5976,6 +5976,21 @@ invented to hold them are gone.
 
 ## 121. Two open windows do not see each other's preference changes until one reloads
 
+**2026-10-02 UI-owner implementation update.** The historical reload-only
+description below is superseded at frontend scope: authenticated main and
+companion windows now reread the authoritative settings record every five
+seconds while visible and on focus/visibility. Reads never write it back.
+Queued/failed local patches, unknown keys and deletion intent are preserved;
+write-generation and cancellation guards prevent stale reads from overriding
+new edits or reviving a stopped timer. Focused regressions, realistic negative
+controls and the complete offline gates pass. There is still no instantaneous
+push or general shared-project synchronization; native/AT workflows are not
+accepted by these tests. Publication remains pending. See
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title and inventory
+identity remain stable for incoming links and the separate alpha owner.
+
+**Historical description before this follow-up:**
+
 **Limitation.** Since [ADR-0029](adr/0029-application-settings-file.md),
 preferences live in one `settings.json` in the server's data directory and
 every window reads it at load. A window that changes a preference writes it
@@ -6006,6 +6021,20 @@ worth solving; both wait for a server-side change feed, which nothing else
 needs yet.
 
 ## 124. The interface search shows four facts about an interface; the protocol carries more
+
+**2026-10-02 UI-owner implementation update.** The narrowing described below
+has been removed: `DiscoveredGateway` retains optional decoded Device Info and
+the HTTP/UI layers project its medium/status octets, project-installation ID,
+serial, routing multicast and MAC without reinterpretation. Missing adapter
+metadata is explicitly unavailable, never fabricated zeros. Focused HTTP and
+actual unicast-loopback tests, raw-value UI regressions, realistic mutants and
+the complete offline gates pass; six additional intercepted-browser cases
+verify the disclosure itself. This does not accept native/live Search (§79),
+infer device identity/capabilities or grant a write. Publication is pending.
+See [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title/inventory
+identity remains stable; the following cause is historical, not current code.
+
+**Historical description before this follow-up:**
 
 **Limitation.** `POST /api/bus/discover` (`apps/knx-server/src/bus_routes.rs`)
 and the panel above it report four things per interface: control endpoint,

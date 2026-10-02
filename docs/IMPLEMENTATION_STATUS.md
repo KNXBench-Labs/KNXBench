@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — UI-owned alpha-readiness follow-ups (offline)
+
+- Audited all 24 `goal-ui.md` rows in the alpha-readiness inventory against
+  current source and retained contracts; U0–U13 were already closed and were
+  not reimplemented. Per-ID evidence: [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md).
+- Catalog picker now offers only KNX product/ZIP packages; the project inspector
+  exposes the existing undoable group-address-style command and consumes its
+  authoritative response, with unknown/refused/pending cases covered.
+- Main/companion settings periodically reread the authoritative server record
+  and recheck on focus/visibility. Write generations and cancellation protect
+  queued/failed edits, unknown keys and deletion intent; reads do not write back.
+- Discovery retains raw Device Info across network client, HTTP projection and
+  labelled, expandable UI details; absent adapter metadata is explicitly
+  unavailable. No codec, CLI default format, identity or write authority changes.
+- Eleven final coordinated gates pass: Web 83 files / 1,331 tests; Rust
+  146 result blocks / 2,885 passed / zero failed / 163 ignored; type/build,
+  strict Clippy/fmt and repository gates. Ten behavioral negative controls
+  rejected realistic regressions with exact source restoration. Six scoped
+  Chromium metadata cases pass; the first CSS-guard failure remains recorded.
+- Repaired the default browser harness to serve fixture HTML on isolated Vite
+  without a KNX backend/API proxy. All 33 cases pass, including fully intercepted
+  full-app creation for each style. Configuration regressions and a rejected
+  proxy-restoration mutant cover isolation. The first old-harness attempt was
+  not purely mocked; its possible automatic read-only discovery is explicitly
+  qualified in the owner receipt, never presented as live acceptance.
+- Native Gtk/WebKitGTK 2.52.6 static-fixture geometry passed nine X11 width/zoom
+  cases. It is not full Tauri, Orca, native-dialog or live-discovery acceptance.
+  Existing invisible-tooltip overflow at 640 px is independently recorded,
+  not introduced by metadata and not repaired by removing its AT description.
+- Upstream reconciliation/publication remains pending. KL-82/keyboard contracts
+  and missing independent native/sample evidence remain open. No alpha release,
+  full ETS compatibility, bus access or hardware write is authorized.
+
 ## 2026-10-02 — AR05 corrected-candidate acceptance (offline; 06:43 CEST)
 
 - Shared master Languages evidence, byte-only v18 -> v19 migration and explicit

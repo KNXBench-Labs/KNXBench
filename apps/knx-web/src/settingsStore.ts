@@ -124,6 +124,8 @@ let state_: SettingsState = {
  * changed in the same tick reach the server in the order they were made
  * rather than racing each other into the same read-modify-write. */
 let queue: Promise<void> = Promise.resolve();
+let writeGeneration = 0;
+const unpersisted = new Map<string, { value: unknown; generation: number }>();
 
 function readCache(): CachedDocument {
   try {
@@ -349,6 +351,8 @@ export function resetSettingsForTests(): void {
   state_ = { hydration: "cached", diagnostic: undefined, fallbackMessage: undefined };
   started = undefined;
   queue = Promise.resolve();
+  writeGeneration += 1;
+  unpersisted.clear();
   try {
     window.localStorage.removeItem(SETTINGS_CACHE_KEY);
     window.localStorage.removeItem(SETTINGS_ADOPTED_KEY);
@@ -372,12 +376,18 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 function push(patch: Record<string, unknown>): void {
   if (!synchronized) return;
+  const generation = ++writeGeneration;
+  for (const [key, value] of Object.entries(patch)) unpersisted.set(key, { value, generation });
   queue = queue
     .then(() => requestJson<SettingsResponse>("/api/settings", {
       method: "PUT",
       body: JSON.stringify({ settings: patch }),
     }))
-    .then(() => undefined)
+    .then(() => {
+      for (const key of Object.keys(patch)) {
+        if (unpersisted.get(key)?.generation === generation) unpersisted.delete(key);
+      }
+    })
     .catch((error: unknown) => {
       // A refused write (a settings file from a newer build) or an
       // unreachable server. The session keeps the change in memory; the
@@ -462,6 +472,70 @@ export function initSettings(): Promise<void> {
 }
 
 let started: Promise<void> | undefined;
+
+/**
+ * Re-read the same server record in every authenticated window, including
+ * separate browser profiles and the native companion. No peer cache is
+ * authoritative. Cleanup invalidates pending reads as well as the timer.
+ */
+export function startSettingsRefresh(): () => void {
+  const interval = 5000;
+  let active = true;
+  let inFlight = false;
+  let timer: number | undefined;
+
+  function schedule() {
+    if (!active) return;
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => { void refresh(); }, interval);
+  }
+
+  async function refresh() {
+    if (!active || inFlight) return;
+    window.clearTimeout(timer);
+    inFlight = true;
+    try {
+      if (document.visibilityState === "hidden") return;
+      if (!synchronized) {
+        await initSettings();
+        return;
+      }
+      const writes = queue;
+      await writes;
+      if (!active || queue !== writes) return;
+      const generation = writeGeneration;
+      const response = await requestJson<SettingsResponse>("/api/settings");
+      if (!active || queue !== writes || writeGeneration !== generation) return;
+      const settings = { ...response.settings };
+      // A failed PUT stays a visible local edit, not a lost edit on the
+      // next read. Successful newer patches clear only their own generation.
+      for (const [key, { value }] of unpersisted) {
+        if (value === null || value === undefined) delete settings[key];
+        else settings[key] = value;
+      }
+      apply({ ...response, settings });
+      setSettingsState({ hydration: "hydrated", diagnostic: response.diagnostic, fallbackMessage: response.message });
+    } catch (error) {
+      if (active) console.warn("KNXBench: settings refresh could not read the server record", error);
+    } finally {
+      inFlight = false;
+      schedule();
+    }
+  }
+
+  function onVisible() {
+    if (document.visibilityState !== "hidden") void refresh();
+  }
+  window.addEventListener("focus", onVisible);
+  document.addEventListener("visibilitychange", onVisible);
+  void initSettings().then(schedule);
+  return () => {
+    active = false;
+    window.clearTimeout(timer);
+    window.removeEventListener("focus", onVisible);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+}
 
 async function loadFromServer(): Promise<void> {
   let response: SettingsResponse;

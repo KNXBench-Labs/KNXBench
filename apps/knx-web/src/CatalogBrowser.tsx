@@ -320,7 +320,7 @@ export default function CatalogBrowser(props: {
         {installing ? t("catalog.installing") : t("catalog.installLabel")}
         <input
           type="file"
-          accept=".knxprod,.vd2,application/zip"
+          accept=".knxprod,application/zip"
           disabled={installing}
           onChange={(e) => {
             const file = e.target.files?.[0];

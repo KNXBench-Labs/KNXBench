@@ -99,6 +99,13 @@ function deferred<T>() {
 }
 
 describe("CatalogBrowser", () => {
+  it("offers only supported product packages in the file picker", async () => {
+    const { root } = await renderBrowser();
+    expect(host!.querySelector<HTMLInputElement>('input[type="file"]')!.accept)
+      .toBe(".knxprod,application/zip");
+    root.unmount();
+  });
+
   it("keeps a product-package installation failure visible", async () => {
     apiMock.installProductPackage.mockRejectedValueOnce(new Error("encrypted legacy database"));
     const { root } = await renderBrowser();

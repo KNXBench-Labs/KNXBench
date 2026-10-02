@@ -100,6 +100,23 @@
 
 ---
 
+- **Last Agent:** codex (UI session / U15 theme validation reservation)
+- **Timestamp:** 2026-10-02 16:54 CEST
+- **Web lock:** taken by ui-theme-validation for U15 parser, contrast and bounded runtime theme integration.
+- **Completed:** User-started U14 contract published as e98a0b58beb942760f09ecf80d8dd42fc1fc51b2 and fetched/read back: exact server ref, full tree and all eight owned documentation artifacts, zero outgoing commits, required author/committer and no co-author. Candidate/integrated documentation anchors, citation evidence, whitespace, exact 27-token boundary, original U13 and complete handover preservation passed. Contract only, not product tests. Actual owned U14 checkout/branch/scratch removed after readback. Fresh U15 checkout is based on that verified source.
+- **Pending/Next Steps:** Publish this handover-only reservation; install existing Web dependencies; U15 vertical RED-GREEN parser/runtime tests, hostile fixtures and restored guard controls; separate self-review, coordinated complete gates, integrate/publish/read back and release only this lock. U16–U18 remain next in order; no new go required between green packages.
+- **Notes for Codex oder Claude:** No root edits/synchronization, foreign worktree cleanup, real backend/proxy, gateway/discovery/tunnel/device write, quota probe, subagent or alpha tag. The ui-readiness-recheck audit remains locally uncommitted and untouched; U14–U18 do not infer a release exception or full native/Orca acceptance. Preserve all inherited handover bytes and active owner work. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
+- **Last Agent:** codex (UI session / U14 theme-pack contract)
+- **Timestamp:** 2026-10-02 16:48 CEST
+- **Completed:** User explicitly started the open UI queue. Inspected current theme/token/appearance/bootstrap/settings and language-pack code; retrieved five primary-source pages with actual HTTP bodies after the configured extract backend failed. Resolved THEME_PACKS v1/ADR-0060: complete 27-token typed grammar, bounded duplicate-aware JSON, no CSS/assets/aliases, exact role-pair contrast reuse, acknowledged conditional settings contract, retained invalid data and reversible preview. Separate in-session contract review found and fixed numeric spelling ambiguity, whitespace-only metadata and architecture heading placement. All five U14 contract boxes checked; U15–U18 remain open. First fresh-target anchors: 376 links / 236 Markdown files / none dead; citation evidence verification and whitespace pass. No new product tests or implementation claims.
+- **Pending/Next Steps:** Final docs/identity/preservation gates, focused contract publication/readback and owned cleanup, then earliest open U15 parser/runtime RED-GREEN. U14 needs no Web lock; U15 must reserve it before Web edits. Existing eight delivered UI ledger rows, sixteen retained owner conditions, native/Orca/network/sample/domain prerequisites and release dispositions are unchanged.
+- **Notes for Codex oder Claude:** Current contract is architect-reviewed, not independent product review or WCAG/native acceptance. No backend/gateway/discovery/tunnel/device write, root synchronization, quota probe or subagent. Preserve foreign root edits, ui-readiness-recheck uncommitted checklist and all other checkouts. Goal publication ad1395d4 is adopted without copying local root artifacts. Full inherited handover remains exact. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / keyboard alpha delivery receipt)
 - **Timestamp:** 2026-10-02 15:29 CEST
 - **Web lock:** released by ui-alpha-keyboard after verified source publication.

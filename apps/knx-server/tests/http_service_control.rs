@@ -330,6 +330,11 @@ async fn cancelled_debug_read_is_unknown_and_never_reports_property_bytes() {
 #[tokio::test]
 async fn enabled_it_reads_sets_bit_2_but_serial_write_still_requires_recovery() {
     let h = harness(locked_device());
+    h.device.preset_property(
+        0,
+        knx_core::commissioning::properties::PID_DEVICE_CONTROL,
+        &[0x02],
+    );
     enable_debug(&h, json!(true)).await;
     let address = h.device.address();
 
@@ -392,6 +397,9 @@ async fn enabled_it_reads_sets_bit_2_but_serial_write_still_requires_recovery() 
     assert_eq!(record.device, address.to_string());
     assert_eq!(record.mask, body["before"]["mask"]);
     assert_eq!(record.octets, "0000");
+    assert_eq!(record.format, 2);
+    assert_eq!(record.device_control_property_id, 14);
+    assert_eq!(record.device_control_octets, "02");
     assert_eq!(body["individualAddressWriteEnabled"], true);
 
     let tunnels_before = h.calls.load(Ordering::SeqCst);
@@ -444,6 +452,18 @@ async fn completed_property_change_and_noop_are_not_generic_write_receipts() {
         })
         .count();
     assert_eq!(writes, 1);
+    assert_eq!(
+        h.device
+            .seen()
+            .iter()
+            .filter(|seen| matches!(
+                seen,
+                knx_net::commissioning::simulator::Seen::PropertyWrite { .. }
+            ))
+            .count(),
+        2,
+        "the no-op must not write Verify Mode either"
+    );
 }
 
 #[tokio::test]
@@ -466,7 +486,7 @@ async fn a_failed_property_backup_refuses_before_the_write() {
     assert!(body.to_string().contains("backup"), "{body}");
     assert!(h.device.seen().iter().all(|seen| !matches!(
         seen,
-        knx_net::commissioning::simulator::Seen::PropertyWrite { property_id: 8, .. }
+        knx_net::commissioning::simulator::Seen::PropertyWrite { .. }
     )));
     assert_eq!(h.device.serial_number_writes(), 0);
     let (_, activity) = send(&h.app, get("/api/bus/activity")).await;

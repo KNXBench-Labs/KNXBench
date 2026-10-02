@@ -1415,6 +1415,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// performs authorise-then-set-Verify-Mode as one unit"*. Called again
     /// after a drop, and doing both again is the point — §14 items 5 and 15.
     pub async fn connect(&mut self) -> Result<(), SessionError> {
+        self.connect_inner(true).await
+    }
+
+    /// Defer Verify Mode until the service-control recovery snapshot exists.
+    /// Only this exact scope can use this two-phase connection setup.
+    async fn connect_for_service_control_backup(&mut self) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::IndividualAddressWriteEnable)?;
+        self.connect_inner(false).await
+    }
+
+    async fn connect_inner(&mut self, assert_verify: bool) -> Result<(), SessionError> {
         let mut events = self.transport.subscribe();
         self.send(Tpci::Connect, ApplicationService::NoApplicationPdu)
             .await?;
@@ -1492,7 +1503,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 self.session_scope(),
                 Some(WriteScope::Download | WriteScope::Unload)
             );
-        if self.authorisation.is_some() && !memory_mapped_load {
+        if assert_verify && self.authorisation.is_some() && !memory_mapped_load {
             self.assert_verify_mode().await?;
         }
         Ok(())
@@ -1861,6 +1872,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         };
         self.authorise_write(scope)?;
         let before = self.read_device_control().await?;
+        self.assert_verify_mode_from(before, scope).await
+    }
+
+    /// Use the original octet already read and, for service control, backed
+    /// up. A second read must not silently replace that recovery snapshot.
+    async fn assert_verify_mode_from(
+        &mut self,
+        before: u8,
+        scope: WriteScope,
+    ) -> Result<(), SessionError> {
+        self.authorise_write(scope)?;
         let wanted = with_verify_mode(before, true);
         // Read-modify-write: a blunt `04h` would clear three other bits of
         // RES Table 11 to change one.
@@ -1908,13 +1930,13 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         let octets = self
             .read_property(ObjectIndex::DEVICE, PID_DEVICE_CONTROL, 1, 1)
             .await?;
-        match octets.first() {
-            Some(octet) => Ok(*octet),
-            None => Err(SessionError::MalformedProperty {
+        match octets.as_slice() {
+            [octet] => Ok(*octet),
+            _ => Err(SessionError::MalformedProperty {
                 object_index: ObjectIndex::DEVICE,
                 property_id: PID_DEVICE_CONTROL,
                 expected: 1,
-                got: 0,
+                got: octets.len(),
             }),
         }
     }

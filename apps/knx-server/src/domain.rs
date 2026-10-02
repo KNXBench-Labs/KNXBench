@@ -3319,6 +3319,10 @@ fn diagnostic_kind_and_message(
             Kind::UnresolvedParamRef,
             "A choice's controlling parameter could not be found.",
         ),
+        Diagnostic::UnsupportedControlKind { .. } => (
+            Kind::UnsupportedControlKind,
+            "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.",
+        ),
         Diagnostic::NonNumericValue { .. } => (
             Kind::NonNumericValue,
             "A choice's controlling value was not a valid number.",
@@ -5948,6 +5952,41 @@ mod tests {
     // cannot fail on a divergence introduced by editing `en.ts` alone —
     // that half has no Rust test to run against it — but a `git blame`
     // on this test block is now the pointer from here to there.
+    #[test]
+    fn unsupported_controller_has_a_distinct_warning_tag_and_english_fallback() {
+        use crate::routes::{ParameterDiagnosticDto, ParameterDiagnosticKindDto as Kind};
+        use knx_productdb::dynamic::Diagnostic;
+
+        let diagnostic = Diagnostic::UnsupportedControlKind {
+            choose_node: 7,
+            param_ref: Some("P-Control".to_string()),
+            kind: "Text".to_string(),
+        };
+        let (kind, message) = diagnostic_kind_and_message(&diagnostic);
+        assert_eq!(kind, Kind::UnsupportedControlKind);
+        let severity = diagnostic_severity(&diagnostic);
+        assert_eq!(
+            severity,
+            crate::routes::ParameterDiagnosticSeverityDto::Warning
+        );
+        let dto = ParameterDiagnosticDto {
+            scope: None,
+            kind,
+            severity,
+            message: message.to_string(),
+            detail: format!("{diagnostic:?}"),
+        };
+        let json = serde_json::to_value(dto).unwrap();
+        assert_eq!(json["kind"], "unsupportedControlKind");
+        assert_eq!(json["severity"], "warning");
+        assert_eq!(
+            json["message"],
+            "A choice's controlling parameter uses an unsupported type; its branches were not evaluated."
+        );
+        assert!(json["detail"].as_str().unwrap().contains("Text"));
+        assert!(!json["message"].as_str().unwrap().contains("P-Control"));
+    }
+
     #[test]
     fn diagnostic_kind_and_message_matches_the_english_catalogue() {
         use crate::routes::ParameterDiagnosticKindDto as Kind;

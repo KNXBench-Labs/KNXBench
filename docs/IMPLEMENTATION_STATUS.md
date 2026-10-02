@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-02 — U15 theme runtime foundation (candidate, not delivered)
+## 2026-10-02 — U15 theme runtime foundation (integrated, publication pending)
 
 - Implemented bounded duplicate-aware JSON admission, exact v1/token contracts,
   safe complete value grammars and existing unrounded base/accent contrast.
@@ -18,7 +18,11 @@
   intercepted Chromium 61, Rust 146 result blocks / 2,890 passed / zero failed /
   163 ignored; no missing-corpus markers. All 614 protected source/configuration
   fingerprints unchanged; strict lint/type/build/bindings/deny and repository
-  gates pass. Integration with newer AR06 source and publication are PENDING.
+  gates pass. Combined acceptance proc_32a1aab25020 repeats all ordinary gates
+  on de1bf652 and passes 22/22 steps: Web 1,559, intercepted Chromium 61, Rust
+  2,916 / zero failed / 164 ignored / 146 result blocks, all twenty selected
+  private offline cases and the pinned 115-instance matrix. All 614 protected
+  files unchanged; complete upstream preserved. Publication/readback is PENDING.
 - U16 durable
   transactions/file export, U17 production management/preview and U18 closing
   review remain open. [THEME_PACKS](THEME_PACKS.md) defines the exact boundary;

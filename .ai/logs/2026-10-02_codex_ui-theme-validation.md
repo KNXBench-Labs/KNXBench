@@ -1,5 +1,37 @@
 # U15 theme runtime candidate — 2026-10-02 18:45 CEST
 
+## Combined acceptance verified — 2026-10-02 19:43 CEST
+
+Exact proc_32a1aab25020 exited 0; all 22 expected command/log receipts reconciled
+on de1bf652, with 614 protected source/configuration fingerprints unchanged.
+Web 1,559; 61 intercepted Chromium; Rust 146 result blocks / 2,916 passed /
+zero failed / 164 ignored, no missing-corpus markers. Compiled inventory matches
+all twenty selected private offline cases, actually executed with no ignores or
+skips, including legacy-name and pinned 115-instance product-matrix regressions.
+Strict lint/type/build, binding semantics, deny, four root gates and whitespace
+pass. Candidate count 2,890 is not the combined count. No private per-item data,
+independent/native/full-theme/ETS or alpha acceptance follows. Publication and
+exact remote artifact readback remain pending, not inferred from these gates.
+
+
+
+## Combined source prepared — 2026-10-02 19:22 CEST
+
+Source 43bf7576 contains exactly the 21 reviewed artifacts. Merge de1bf652
+integrates upstream 0c3d6a8a/AR06 in the owned checkout only. Conflict resolution
+retains the whole upstream handover and status after own-prefix insertion,
+not merely visible conflict blocks. Every upstream Rust and own Web artifact
+is byte-identical; required author/committer and no-co-author policy verified.
+
+Distinct 22-step integration runner prepared, not accepted: fresh owned target,
+both common leases, full ordinary gates and compiled inventory of 20 selected
+private offline cases, including legacy-name and compatibility-matrix targets.
+The matrix uses the documented pinned scope, external different-filesystem
+scratch output and release build; no private source labels/fingerprints published.
+No live/whole-ignored sweep, root edit, source mutation or release approval.
+
+
+
 ## Scope and constraints
 
 Isolated ui-theme-validation only. ADR-0060/THEME_PACKS v1; no domain,

@@ -90,9 +90,28 @@ all eleven required steps pass; Web 83 files / 1,331 tests, workspace
 tracked/new source/configuration fingerprints match. Earlier 82-file/568-source
 acceptance belongs to the pre-harness candidate and is not transferred.
 
-Current source acceptance is real; publication/upstream reconciliation and
-closing receipts/cleanup remain pending. The parent ledger deliberately keeps
-owner delivery states until exact publication is verified. Preserve upstream
+Integrated acceptance `proc_a6a7c68092c2` exited 0 with all eleven gates,
+identical counts and source freeze. One accidental one-second foreground start
+was interrupted (124), not accepted; the complete background renewal supplies
+the integration evidence. Only six documentation/handover paths differ from
+the gated source commit; all product source bytes match. The sole rebase
+conflict retained both visible handover blocks, newest first. A subsequent
+exact inherited-suffix audit discovered the generic replacement had dropped
+the older archive in published 6c16fe5a. The closing corrective receipt restores
+the whole byte-exact 768d53a2 handover, preserving all own new entries (3,134
+lines before the explicit correction entry). Earlier complete-preservation
+wording is disproved, not silently treated as proof. Product code is unaffected.
+Cause identified in the resolution script: the final `>>>>>>> .*` marker
+was matched with DOTALL enabled, so it consumed the whole inherited suffix.
+This was a script bug, not Git discarding history or the patch tool losing
+data. A closing-marker pattern must be line-bounded (`[^\n]*`), and whole
+inherited-suffix equality is now a required pre-commit check.
+
+Published source `6c16fe5aaf764d78f62382f867f59b6ae77f8dce` matches both
+remote ref and complete tree, with zero outgoing commits, required
+author/committer and no co-author trailer. Four scoped owner dispositions are
+DONE; remaining IDs keep their existing states. Closing receipt publication
+and owned cleanup remain pending. Preserve upstream
 AR05/AR06 handovers and non-UI dispositions, all inventory IDs/priorities/routes
 and inherited limitation identities. Root has foreign CURRENT_STATE, RESEARCH
 and stats edits plus untracked telemetry/Paperclip files; do not synchronize or

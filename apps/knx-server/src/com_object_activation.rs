@@ -368,6 +368,28 @@ mod tests {
     }
 
     #[test]
+    fn an_unsupported_controller_keeps_absent_objects_undetermined_not_inactive() {
+        let mut choose = nd(2, Some(1), "choose");
+        choose.ref_id = Some("P-Text".to_string());
+        choose.control_kind = Some(ControlKind::Unsupported("Text".to_string()));
+        let mut branch = nd(3, Some(2), "when");
+        branch.is_default = true;
+        // No descendant refs: classification must come from the controller
+        // diagnostic itself, not be masked by RefBelowSkippedNode.
+        let trees = ProgramTrees::single(DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            choose,
+            branch,
+            com_ref(4, 1, "O-2"),
+        ]));
+        let keys = HashMap::from([(1, unscoped("O-1")), (2, unscoped("O-2"))]);
+        let nodes = run(&trees, &keys, &[], &HashMap::new(), &[1, 2]);
+        assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
+        assert_eq!(nodes[1].activation, ComObjectActivation::Active);
+        assert!(nodes[0].is_active);
+    }
+
+    #[test]
     fn channel_order_follows_the_tree_not_the_object_list() {
         let keys = HashMap::from([(1, unscoped("O-1")), (2, unscoped("O-2"))]);
         // Object 2 (channel B) is listed first; B is still second in the tree.

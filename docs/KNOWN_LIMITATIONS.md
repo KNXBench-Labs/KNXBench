@@ -447,6 +447,24 @@ that the group address it names exists.
 
 ## 3. Device parameters are preserved but not interpreted
 
+**AR07 validation candidate (2026-10-02).** Nonfinite Float bounds are rejected
+before comparison rather than letting a NaN declaration bypass an inclusive
+limit. Synthetic RED101 reproduced; targeted Float6/0/0 and HTTP34/0/0 pass,
+with ten lower/upper metadata cases, nonempty project equality, retained raw
+source and independent sibling edits. Finite-value parsing policy and stored
+lexemes unchanged. Separate in-session review has no blocking bounded findings;
+public baseline8/8, workspace2926/0/164, 615 frozen inputs and 17 shadow bindings
+equal. Both compiled min/max guard mutants caught at unit/HTTP, canonical source
+restored. Frozen owned checkpoint18/18, workspace2926/0/164, Web1559 and
+Chromium mock61 pass; six selected private Dynamic tests6/0/0 without genuine
+skips and all103 original identities/hashes unchanged. No private raw logs.
+Actual commissioning/Float mergebc5999c1 passes20/20, workspace2931/0/164,
+Web1559/Chromium61, private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0,
+all108 originals unchanged/615 frozen inputs/17 equal bindings. Scoped guard
+publishedda3bc947, local/live/fetched refs equal0/0 and owned bytes read back;
+broader resource budgeting/provenance audit stays open;
+no Float encoding, complete type-semantics, native SQL/WAL or ETS claim.
+
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project
 are imported, stored and exported unchanged. As of **T18 slice 4
 (2026-09-12)** a module-scoped (per-channel) value is not just read and
@@ -6656,8 +6674,35 @@ whole-device receipt; bounded `serviceControlWrite` activity is not a
 durable audit trail (ADR-0055/0056). The new UI/backup gate is covered only
 by local mock/simulator tests, **not a new live hardware run**.
 
+**Recovery ordering correction, 2026-10-02.** The original property backup
+was taken after connection setup had already asserted Verify Mode. The
+service-control path now postpones that setup write, validates the original
+PID_DEVICE_CONTROL byte, and durably keeps both original properties in
+format 2 before any property write. Legacy format 1 is preserved, not silently
+filled with an invented byte. No-op and wrong-scope calls do not write;
+malformed widths and failed backups refuse. This does not close whole-device
+recovery, durable history or hardware-support residues (ADR-0051 amendment).
+
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
+
+**AR07 candidate (2026-10-02, ADR-0061).** A resolved controller kind outside
+Number/Restriction (with the existing None exception retained) now emits
+UnsupportedControlKind, skips/names branch refs and marks activation potentially
+hidden. Public ingest/load, nested-scope, source-reopen, HTTP hidden-field refusal
+and Undetermined projection checks pass; six behavioral mutants are detected.
+This is a 1,118/0/57 public two-crate candidate, not new whole-corpus counts or
+ETS parity. The warning token/English fallback is on the backend wire; Web's
+manual union/localized catalogue adoption remains with UI, not completed here.
+The corrected broad candidate is independently verified at 13/13: workspace
+2,924/0/164, Web 1,357 and six selected private Dynamic tests 6/0/0; all 103
+original archive hashes unchanged, no genuine skips or private raw logs. This
+selection is not blanket validation of every archive/opaque construct. Upstream
+UI ancestry integrated at 03f18c95 and independently accepted: 17/17, workspace
+2,924/0/164, Web 1,559, Chromium fixtures 61, selected private 6/0/0 and
+seventeen shadow bindings equal. Published/read back at 2d9aaeb8;
+full AR07, typed/localized token adoption and earlier corpus figures retain
+their distinct dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
 
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
 

@@ -22,6 +22,202 @@
   remain open; no independent/native/Orca/ETS/alpha-release approval implied.
 
 
+## AR07 scoped Float delivery — 2026-10-03 00:04 CEST
+
+Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.
+Local/live/fetched refs equal, divergence0/0, eight owned source/receipt/doc
+artifacts byte-exact. Actual-gated sourcebc5999c1 is unchanged by the doc-only
+receipt. Four completed owned build/shadow directories removed; accepted and
+rejected aggregate evidence plus next read-only audit retained. Shared dirty
+root/U16 untouched; integrated root statistics remain with their owner.
+Broader AR07 and Alpha remain incomplete; next bounded diagnostic/inert-work
+budget proof is not yet executed, no new resource/semantic support claimed.
+
+
+## AR07 Float actual merged checkpoint accepted — 2026-10-02 23:55 CEST
+
+Actual integration bc5999c1 (source4514076b + published commissioningc9f77d7b),
+proc_d4c3a0b0b43f exit0, independently reconciled20/20: workspace2931/0/164,
+Web1559, intercepted Chromium61, private Dynamic6/0/0 and offline injected
+SimTunnel HTTP13/0/0, zero unknown/genuine skips. All103 original product
+archive and108 total original fixture identities/hashes unchanged; no private
+raw logs. All615 source/config inputs frozen, fresh changed crates compiled,
+17 shadow bindings equal, strict Clippy/build/fmt/deny/nonempty root gates pass.
+Projection42 is a workspace subset, not additional passes. Both complete
+handover/status owners preserved. Publication/readback still pending.
+
+Broader AR07 remains open. Read-only source trace identifies a possible
+general-diagnostic fan-out and inert-node/binding traversal budgeting gap:
+activations_recorded(:1217) excludes ordinary diagnostics, diagnose(:1323)
+pushes without admission, walk(:1463/:1532) can revisit inert nodes per
+expansion, and bind_arguments(:1619) is a sibling work path. No behavioral
+RED, new safety policy or production fix has run; do not label this reproduced
+or accepted. Follow-up must cover the resource class, keep opaque sources and
+explicit truncation/uncertainty, and use bounded public TDD before changes.
+Nested ScopeKey/panel grouping and duplicate-module authority are source-traced;
+full ModuleScopeDto ancestor provenance and UI/localization remain separate.
+
+
+## AR07 Float owned final checkpoint accepted — 2026-10-02 23:09 CEST
+
+proc_536a6eb16342 exit0 independently reconciled18/18 on owned guard/test delta
+from d62baef4. Workspace2926/0/164, Web1559, intercepted Chromium61, selected
+private Dynamic6/0/0, zero genuine/unknown skips, all103 original identities/
+hashes unchanged, no private raw logs. All615 source/config inputs frozen,
+17 bindings equal; two compiled min/max mutants caught unit+HTTP and canonical
+hashes restored. Separate in-session source review no blocking bounded finding.
+
+Current upstream commissioning c9f77d7b changes code outside the guard; scoped
+commit, preservation/integration and actual merged-source gates/private offline
+owner witnesses remain pending before push/readback. Broader AR07 budget/
+module/provenance/vendor-inert audit and typed/localized UI/native/ETS parity
+remain open, not closed by this leaf. Previous pending eighteen-stage receipt
+is historical, superseded only for the owned pre-integration checkpoint.
+
+
+## AR07 Float public baseline + guard mutation checkpoint — 2026-10-02 22:34 CEST
+
+Corrected proc_e87d7afdd30d independently reconciled8/8: workspace2926/0/164,
+strict workspace Clippy/build/fmt, real npm install/build, intended-root nonempty
+anchors and whitespace. All615 source/config hashes frozen, 17 shadow bindings
+equal. First baseline remains rejected/archived for absent Tauri frontend
+resource before any tests. Both independently compiling finite min/max guard
+mutants caught at unit and HTTP (4 observations); all615 canonical hashes
+restored. Separate in-session source review no blocking bounded findings.
+
+Final eighteen-stage checkpoint proc_536a6eb16342 / PID826351 dispatched with
+classifier preflight, exact ignored inventory, six opt-in private Dynamic tests
+(raw stdout discarded), source/input hash before/after and full public/UI/
+repository/dependency gates. Actual candidate remains uncommitted on d62baef4,
+frozen by source hashes/status, no mutation until receipt. No acceptance inferred
+before reconciliation. Final integrated/private/UI checks and publication pending;
+this leaf does not close broader AR07 budgets/module/provenance/vendor-inert
+audit or typed/localized unsupported token/native/ETS parity. Earlier pending
+public-baseline/mutation entries are historical, superseded by this measured
+receipt; no private acceptance inferred from ordinary164 ignored tests.
+
+
+## AR07 remaining audit / synthetic validation RED dispatched — 2026-10-02 21:32 CEST
+
+Controller final receipt d62baef4 published/read back, old owned worktree/branch
+and 13 completed build/shadow/review entries removed. Active broader-AR07
+aggregate/public/failed evidence retained. Fresh alpha-parameter-audit starts
+from that published checkpoint; no shared-root/U16 edits.
+
+Existing Float validator allowed finite input under a NaN lower declaration.
+Actual synthetic RED Rust101/0-1-0 accepted from proc_63fdb03535b1; minimal
+min/max finite checks now in place. Targeted Float6/0/0, full HTTP34/0/0
+independently verified, with ten metadata cases, nonempty project equality,
+byte-exact retained source and independent sibling edits. Separate in-session
+bounded producer review has no blocking findings; test-only format corrected.
+First frozen baseline proc_370267152e1a rejected before tests: missing Tauri
+frontend resource ../../knx-web/dist, workspace101/wrapper1. All615 source/config
+hashes preserved; failed attempt archived. Corrected retry proc_e87d7afdd30d
+pending with real npm ci/build prerequisites before the public workspace/strict
+Clippy/build/fmt/root-explicit anchors/whitespace stages. No private inputs.
+Delayed RED notification matches existing accepted witness, not a new run.
+Mutations/restoration,
+remaining budget/module/provenance audit and full integrated gates still pending.
+Do not mutate frozen source or treat targeted GREEN as publication acceptance.
+Official Rust finite-predicate source HTTP200 confirmed; no new KNX format/
+encoding or private corpus claim. Remaining budget/module identity/validation
+audit and UI token adoption stay open.
+
+
+## Commissioning recovery: backup before Verify Mode — 2026-10-02
+
+The opt-in service-control procedure now establishes its management connection
+without a property write, reads PID_SERVICE_CONTROL and exactly one
+PID_DEVICE_CONTROL octet, and persists both originals before setting Verify
+Mode or changing bit 2. Recovery format 2 adds the original PID 14 octet;
+legacy format 1 files are not rewritten or treated as complete setup recovery.
+Wrong-scope authorisation refuses before any frame (including cleanup
+Disconnect). An already-correct value performs no backup or property write.
+Four simulator disconnect transitions clear only the Verify Mode bit, not
+unrelated Device Control bits. CLI plan output lists the setup write explicitly.
+
+Offline evidence: knx-net 425/0/0, backup 4/0/0, CLI 8/0/0, HTTP 12/0/0;
+nine compiled behavioral mutants caught and restored. Full workspace gate
+2929/0/164, Web 1559, strict Clippy/build/types/fmt/deny and nonempty repository
+gates pass; 17 shadow bindings are semantically equal. This is a bounded
+safety fix, not whole-device recovery, durable audit history, private-corpus
+coverage, a new hardware run or complete Alpha acceptance. Details and final
+publication state are in the commissioning recovery log.
+
+## AR07 bounded controller integrated checkpoint — 2026-10-02 20:56 CEST
+
+Source 00f23758 and integrated 03f18c95 (published U15/theme parent fe02deeb)
+accepted after proc_dea67da354fd exit 0, independent 17/17 reconciliation:
+workspace 2924/0/164, Web 1559, intercepted-API Chromium fixtures 61, selected
+private Dynamic 6/0/0 with zero genuine/unknown skips. All 103 originals
+unchanged, 606 source/config inputs frozen, six mutation-protected sources
+unchanged, 17 shadow bindings semantically equal under CI policy. Full frontend
+install/build, strict workspace Clippy/build, root-explicit nonempty repository
+gates and dependency/format/whitespace checks pass. Projection42 is subset.
+
+Two documentation conflicts preserved both owners and complete upstream
+handover suffix; no source conflicts or manual Web/binding edits. Remote
+publication/readback confirmed at 2d9aaeb8: live/fetched refs equal local HEAD
+and all seven owned receipt/document artifacts byte-exact. Broader AR07 audit and typed/
+localized UI token adoption remain open under U16 ownership; no blanket private
+opaque-data, native desktop or ETS compatibility claim. Earlier pre-merge
+pending notes describe their own dated receipts, now superseded in this scope.
+
+
+## AR07 controller broad candidate verified — 2026-10-02 20:14 CEST
+
+Corrected proc_ed20715c68e5 independently reconciled: 13/13, workspace
+2,924/0/164, Web 1,357, six selected private Dynamic tests 6/0/0 with no genuine
+skip signals; intentional reinstall/duplicate metadata classified separately.
+103 original archive identity/hash entries unchanged, private raw stdout
+discarded, all 596 source/config inputs frozen and controller mutation hashes
+unchanged. Seventeen shadow bindings semantically match CI policy without Web
+writes. Read-only in-session controller review: no blocking findings.
+
+First broad classifier-only failure archived, not retrospectively accepted.
+Fresh origin/main fe02deeb includes U15/theme work; integrate and re-gate that
+actual candidate before publication. Broader AR07 audit and localized/typed
+unsupportedControlKind UI adoption remain pending (U16 Web lock owned by
+ui-theme-storage). This supersedes the earlier no-private/no-workspace receipt
+status; no full ETS, native UI or all-opaque-data compatibility claim.
+
+
+## AR07 bounded controller candidate — 2026-10-02 18:43 CEST
+
+Public baseline reconciled at 417/0/6; its initial count-only failure is
+archived. Stored Text controller RED/GREEN and ADR-0061 establish a conservative
+Number/Restriction guard with the separately corpus-derived None exception
+unchanged. Known other kinds receive UnsupportedControlKind; no matching/default
+activation, bounded skipped-ref reports, preserved raw source, scoped diagnostics
+and Undetermined projection. No domain/store schema or per-kind validator change.
+
+Controller gate proc_b1e47be31700 independently reconciled at 16/16: public
+ProductDB/server 1,118/0/57, five stored-kind cases, two server unit cases, HTTP
+hidden-field refusal/independent sibling edit, six compiled behavioral mutants,
+exact source restoration, strict two-crate Clippy/frontend build/fmt/whitespace.
+593 source/config inputs frozen; Web/generated bindings untouched. The first
+controller gate rejected a compile-only mutant and restored sources; not green
+evidence. No private corpus, whole-workspace/integration or publication receipt
+yet. The unsupportedControlKind warning/English fallback is on the backend wire;
+manual Web union/catalogue adoption remains with UI, not completed localization.
+See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md). AR07 broader audit open.
+
+## 2026-10-02 17:14 CEST — AR07 offline source discovery; baseline pending
+
+- AR06 final delivery receipt `0c3d6a8a` published/read back; task-owned AR06
+  worktree/ancestor-confirmed branch and 333 scratch entries cleaned. No shared
+  root/corpus changes. New isolated AR07 checkout starts from that receipt.
+- [Parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md) records fresh local
+  Condition_t evidence (printed/PDF page 30/64), current resolver/evaluator
+  source path and already-delivered channel-label work. A stored Text/Float/
+  unknown controller is categorized Comparable today; targeted behavioral
+  regression and diagnostic/contract decision precede any production fix.
+- Seven-step public/synthetic baseline `proc_4e0a97d00922` dispatched using both
+  shared gate locks, fresh target/shadow output and a source freeze. Private
+  cases remain ignored. Dispatch is not passed evidence or AR07 completion.
+- No UI/domain-storage change, Repeat/Allocator engine, vendor execution or
+  live KNX action. External retrieval failures are logged, not proof that
+  primary manufacturer evidence does not exist.
 ## 2026-10-02 — U15 theme runtime foundation (delivered, extension still open)
 
 - Implemented bounded duplicate-aware JSON admission, exact v1/token contracts,

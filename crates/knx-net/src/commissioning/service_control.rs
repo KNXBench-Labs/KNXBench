@@ -49,6 +49,14 @@ pub struct ServiceControl {
     pub mask: MaskVersion,
 }
 
+/// Both original Device Object values that this action may write, including
+/// Verify Mode during session setup. Not a whole-device recovery image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ServiceControlPreWrite {
+    pub before: ServiceControl,
+    pub device_control: u8,
+}
+
 impl ServiceControl {
     /// Whether bit 2 allows the Individual Address to be changed. Only
     /// meaningful for a mask other than `0021h`: that mask is refused
@@ -170,8 +178,8 @@ pub async fn read_service_control<T: ManagementTransport>(
 ///
 /// `authorisation` must name the device and
 /// [`WriteScope::IndividualAddressWriteEnable`]. `persist_before_write`
-/// must durably save the exact two-octet property value and mask observed
-/// in this session; an error stops before the first property write. When the
+/// must durably save both original properties and mask observed in this
+/// session; an error stops before any property write, including Verify Mode. When the
 /// bit already has the requested value nothing is written or backed up.
 pub async fn set_individual_address_write_enable<T: ManagementTransport>(
     transport: &T,
@@ -179,12 +187,23 @@ pub async fn set_individual_address_write_enable<T: ManagementTransport>(
     timing: SessionTiming,
     authorisation: WriteAuthorisation,
     enable: bool,
-    persist_before_write: impl FnOnce(ServiceControl) -> Result<(), String>,
+    persist_before_write: impl FnOnce(ServiceControlPreWrite) -> Result<(), String>,
 ) -> Result<ServiceControlChange, ServiceControlError> {
     let mut session = ManagementSession::authorised(transport, plan, timing, authorisation)
         .map_err(at("authorisation"))?;
-    session.connect().await.map_err(at("T_Connect"))?;
-    let result = change_in(&mut session, enable, persist_before_write).await;
+    // A wrong-scope refusal must not send even a cleanup Disconnect to a
+    // device with which this operation never opened a connection.
+    session
+        .authorise_write(WriteScope::IndividualAddressWriteEnable)
+        .map_err(at("authorisation"))?;
+    let result = async {
+        session
+            .connect_for_service_control_backup()
+            .await
+            .map_err(at("T_Connect"))?;
+        change_in(&mut session, enable, persist_before_write).await
+    }
+    .await;
     session.disconnect().await;
     result
 }
@@ -192,7 +211,7 @@ pub async fn set_individual_address_write_enable<T: ManagementTransport>(
 async fn change_in<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     enable: bool,
-    persist_before_write: impl FnOnce(ServiceControl) -> Result<(), String>,
+    persist_before_write: impl FnOnce(ServiceControlPreWrite) -> Result<(), String>,
 ) -> Result<ServiceControlChange, ServiceControlError> {
     let before = read_in(session).await?;
     if before.individual_address_write_enabled() == enable {
@@ -202,7 +221,19 @@ async fn change_in<T: ManagementTransport>(
             written: false,
         });
     }
-    persist_before_write(before).map_err(ServiceControlError::PreWriteBackup)?;
+    let device_control = session
+        .read_device_control()
+        .await
+        .map_err(at("A_PropertyValue_Read PID_DEVICE_CONTROL"))?;
+    persist_before_write(ServiceControlPreWrite {
+        before,
+        device_control,
+    })
+    .map_err(ServiceControlError::PreWriteBackup)?;
+    session
+        .assert_verify_mode_from(device_control, WriteScope::IndividualAddressWriteEnable)
+        .await
+        .map_err(at("set Verify Mode after backup"))?;
     let wanted = if enable {
         before.raw | SERVICE_CONTROL_IA_WRITE_ENABLE
     } else {
@@ -283,6 +314,16 @@ mod tests {
             .collect()
     }
 
+    fn assert_no_property_writes(device: &SimulatedDevice) {
+        assert!(
+            !device
+                .seen()
+                .iter()
+                .any(|seen| matches!(seen, Seen::PropertyWrite { .. })),
+            "even connection setup must not write before the recovery receipt"
+        );
+    }
+
     async fn read(device: &SimulatedDevice) -> ServiceControl {
         read_service_control(device, device.address(), AuthorisationPlan::Skip, fast())
             .await
@@ -328,7 +369,7 @@ mod tests {
             auth(&device),
             true,
             |before| {
-                assert_eq!(before.raw, 0);
+                assert_eq!(before.before.raw, 0);
                 Err("backup storage failed".to_owned())
             },
         )
@@ -338,6 +379,190 @@ mod tests {
             Err(ServiceControlError::PreWriteBackup(_))
         ));
         assert!(service_control_writes(&device).is_empty());
+        assert_no_property_writes(&device);
+    }
+
+    #[tokio::test]
+    async fn backup_callback_precedes_every_property_write() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            serial_number_write_enabled: false,
+            ..Default::default()
+        });
+        let mut backed_up = false;
+        let change = set_individual_address_write_enable(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            auth(&device),
+            true,
+            |_| {
+                assert_no_property_writes(&device);
+                backed_up = true;
+                Ok(())
+            },
+        )
+        .await
+        .expect("change");
+        assert!(backed_up);
+        assert!(change.written);
+    }
+
+    #[tokio::test]
+    async fn malformed_device_control_refuses_before_backup_or_write() {
+        use knx_core::commissioning::properties::PID_DEVICE_CONTROL;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            serial_number_write_enabled: false,
+            ..Default::default()
+        });
+        device.preset_property(0, PID_DEVICE_CONTROL, &[0x02, 0x80]);
+        let mut backed_up = false;
+        let result = set_individual_address_write_enable(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            auth(&device),
+            true,
+            |_| {
+                backed_up = true;
+                Ok(())
+            },
+        )
+        .await;
+        assert!(
+            matches!(
+                result,
+                Err(ServiceControlError::Session {
+                    error: SessionError::MalformedProperty {
+                        expected: 1,
+                        got: 2,
+                        ..
+                    },
+                    ..
+                })
+            ),
+            "{result:?}"
+        );
+        assert!(!backed_up);
+        assert_no_property_writes(&device);
+    }
+
+    #[tokio::test]
+    async fn snapshot_preserves_both_properties_before_verify_mode() {
+        use knx_core::commissioning::properties::PID_DEVICE_CONTROL;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: 0x0701,
+            serial_number_write_enabled: false,
+            ..Default::default()
+        });
+        device.preset_property(0, PID_SERVICE_CONTROL, &[0x01, 0x00]);
+        device.preset_property(0, PID_DEVICE_CONTROL, &[0x02]);
+        set_individual_address_write_enable(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            auth(&device),
+            true,
+            |snapshot| {
+                assert_no_property_writes(&device);
+                assert_eq!(snapshot.before.raw, 0x0100);
+                assert_eq!(snapshot.before.mask.0, 0x0701);
+                assert_eq!(snapshot.device_control, 0x02);
+                Ok(())
+            },
+        )
+        .await
+        .expect("change");
+        let writes: Vec<_> = device
+            .seen()
+            .into_iter()
+            .filter_map(|seen| match seen {
+                Seen::PropertyWrite {
+                    object_index,
+                    property_id,
+                    data,
+                } => Some((object_index, property_id, data)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            writes,
+            vec![
+                (0, PID_DEVICE_CONTROL, vec![0x06]),
+                (0, PID_SERVICE_CONTROL, vec![0x01, 0x04])
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn disconnect_clears_verify_mode_without_erasing_unrelated_bits() {
+        use knx_core::commissioning::properties::PID_DEVICE_CONTROL;
+        let device = SimulatedDevice::with_config(SimulatorConfig::default());
+        device.preset_property(0, PID_DEVICE_CONTROL, &[0x06]);
+        read(&device).await;
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            fast(),
+        )
+        .expect("session");
+        session.connect().await.expect("connect");
+        let control = session
+            .read_property(ObjectIndex::DEVICE, PID_DEVICE_CONTROL, 1, 1)
+            .await
+            .expect("control");
+        session.disconnect().await;
+        assert_eq!(control, vec![0x02]);
+    }
+
+    #[tokio::test]
+    async fn simulator_disconnect_paths_preserve_other_device_control_bits() {
+        use knx_core::commissioning::properties::PID_DEVICE_CONTROL;
+        for path in 0..3 {
+            let device = SimulatedDevice::with_config(SimulatorConfig {
+                drop_connection_on_device_control_read: (path == 0).then_some(1),
+                device_descriptor_read_gets_disconnect: path == 1,
+                ..Default::default()
+            });
+            device.preset_property(0, PID_DEVICE_CONTROL, &[0x06]);
+            let mut session = ManagementSession::read_only(
+                &device,
+                device.address(),
+                AuthorisationPlan::Skip,
+                fast(),
+            )
+            .unwrap();
+            session.connect().await.unwrap();
+            match path {
+                0 => {
+                    assert!(session
+                        .read_property(ObjectIndex::DEVICE, PID_DEVICE_CONTROL, 1, 1)
+                        .await
+                        .is_err());
+                }
+                1 => {
+                    assert!(session.read_mask_version().await.is_err());
+                }
+                _ => device.break_connection(),
+            }
+            // Do not send a client Disconnect that could hide a broken
+            // server-side transition by clearing the property later.
+            let mut next = ManagementSession::read_only(
+                &device,
+                device.address(),
+                AuthorisationPlan::Skip,
+                fast(),
+            )
+            .unwrap();
+            next.connect().await.unwrap();
+            let control = next
+                .read_property(ObjectIndex::DEVICE, PID_DEVICE_CONTROL, 1, 1)
+                .await
+                .unwrap();
+            assert_eq!(control, vec![0x02], "disconnect path {path}");
+            next.disconnect().await;
+            assert_no_property_writes(&device);
+        }
     }
 
     #[tokio::test]
@@ -414,6 +639,7 @@ mod tests {
         assert!(!change.written);
         assert_eq!(change.after, change.before.raw);
         assert!(service_control_writes(&device).is_empty());
+        assert_no_property_writes(&device);
     }
 
     #[tokio::test]
@@ -427,6 +653,7 @@ mod tests {
             .expect_err("no property");
         assert!(matches!(error, ServiceControlError::NotPresent), "{error}");
         assert!(service_control_writes(&device).is_empty());
+        assert_no_property_writes(&device);
     }
 
     #[tokio::test]
@@ -443,6 +670,7 @@ mod tests {
             "{error}"
         );
         assert!(service_control_writes(&device).is_empty());
+        assert_no_property_writes(&device);
     }
 
     #[tokio::test]
@@ -459,6 +687,11 @@ mod tests {
             "{error}"
         );
         assert!(service_control_writes(&device).is_empty());
+        assert_no_property_writes(&device);
+        assert!(
+            device.seen().is_empty(),
+            "wrong scope must refuse before T_Connect"
+        );
         assert!(!read(&device).await.individual_address_write_enabled());
     }
 

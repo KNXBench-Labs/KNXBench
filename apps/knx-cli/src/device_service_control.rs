@@ -163,9 +163,10 @@ pub fn format_plan(address: IndividualAddress, enable: bool) -> String {
         "== {address}: {} Individual Address Write Enable: plan (nothing sent yet) ==\n\
          RES §4.2.8 PID_SERVICE_CONTROL (object 0, PID 8), bit 2 only:\n  \
          1: read the mask (mask 0021h codes the bit inversely: refused) and the property\n  \
-         2: persist a durable backup of the two-octet property (mask and target included)\n  \
-         3: {} bit 2, write the two octets back with the other bits unchanged\n  \
-         4: compare the device's answer with what was written\n\
+         2: read PID_DEVICE_CONTROL and persist both original properties (mask and target included)\n  \
+         3: set Verify Mode after backup, preserving other PID_DEVICE_CONTROL bits\n  \
+         4: {} bit 2, write the two octets back with the other bits unchanged\n  \
+         5: compare the device's answer with what was written\n\
          written: no (plan only; add --gateway and --confirm {:?} to write)\n",
         if enable { "set" } else { "clear" },
         if enable { "set" } else { "clear" },
@@ -225,8 +226,9 @@ pub async fn execute<T: ManagementTransport>(
             let path = knx_app::service_control_backup::write_backup(
                 backup_dir,
                 address,
-                before.mask.0,
-                before.raw,
+                before.before.mask.0,
+                before.before.raw,
+                before.device_control,
             )
             .map_err(|e| e.to_string())?;
             backup_path = Some(path);
@@ -325,6 +327,8 @@ mod tests {
         let plan = format_plan(target.address(), true);
         assert!(plan.contains(PHRASE), "{plan}");
         assert!(plan.contains("nothing sent"), "{plan}");
+        assert!(plan.contains("PID_DEVICE_CONTROL"), "{plan}");
+        assert!(plan.contains("Verify Mode after backup"), "{plan}");
     }
 
     #[test]
@@ -399,6 +403,11 @@ mod tests {
             ..Default::default()
         });
         let address = device.address();
+        device.preset_property(
+            0,
+            knx_core::commissioning::properties::PID_DEVICE_CONTROL,
+            &[0x02],
+        );
         let mut out = Vec::new();
         assert!(read(&device, address, AuthorisationPlan::Skip, fast(), &mut out).await);
         let text = String::from_utf8(out).unwrap();
@@ -425,6 +434,16 @@ mod tests {
         assert!(text.contains("0000h -> 0004h"), "{text}");
         assert!(text.contains("written: yes"), "{text}");
         assert!(text.contains("pre-write property backup"), "{text}");
+        let backups: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        assert_eq!(backups.len(), 1);
+        let record: knx_app::service_control_backup::ServiceControlBackup =
+            serde_json::from_slice(&std::fs::read(&backups[0]).unwrap()).unwrap();
+        assert_eq!(record.format, 2);
+        assert_eq!(record.octets, "0000");
+        assert_eq!(record.device_control_octets, "02");
     }
 
     #[tokio::test]
@@ -457,10 +476,7 @@ mod tests {
         assert!(String::from_utf8(out).unwrap().contains("backup failed"));
         assert!(!device.seen().iter().any(|seen| matches!(
             seen,
-            knx_net::commissioning::simulator::Seen::PropertyWrite {
-                property_id: PID_SERVICE_CONTROL,
-                ..
-            }
+            knx_net::commissioning::simulator::Seen::PropertyWrite { .. }
         )));
     }
 
@@ -490,6 +506,10 @@ mod tests {
         assert!(text.contains("written: no need"), "{text}");
         assert!(!text.contains("written: yes"), "{text}");
         assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+        assert!(!device.seen().iter().any(|seen| matches!(
+            seen,
+            knx_net::commissioning::simulator::Seen::PropertyWrite { .. }
+        )));
     }
 
     #[tokio::test]

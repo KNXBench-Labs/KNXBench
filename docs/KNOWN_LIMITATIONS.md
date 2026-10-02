@@ -6666,7 +6666,7 @@ original archive hashes unchanged, no genuine skips or private raw logs. This
 selection is not blanket validation of every archive/opaque construct. Upstream
 UI ancestry integrated at 03f18c95 and independently accepted: 17/17, workspace
 2,924/0/164, Web 1,559, Chromium fixtures 61, selected private 6/0/0 and
-seventeen shadow bindings equal. Remote publication readback remains pending;
+seventeen shadow bindings equal. Published/read back at 2d9aaeb8;
 full AR07, typed/localized token adoption and earlier corpus figures retain
 their distinct dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
 

@@ -354,7 +354,8 @@ raw logs, 596 source/config inputs frozen and 17 shadow bindings equal.
 Published U15/theme ancestry fe02deeb integrated at 03f18c95. Integrated
 proc_dea67da354fd independently reconciled at 17/17: workspace 2,924/0/164,
 Web 1,559, Chromium fixtures 61, selected private 6/0/0; 606 inputs frozen
-and 17 shadow bindings equal. Remote publication/readback remain pending.
+and 17 shadow bindings equal. Controller checkpoint published/read back at
+2d9aaeb8; local/live/fetched refs equal and all owned document bytes confirmed.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual
 Web kind/catalogue adoption stays with UI. Budget/provenance/vendor-inert audit,
 selected-private/broad candidate gates and separate in-session controller

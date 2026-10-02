@@ -1,3 +1,12 @@
+- **Last Agent:** codex (Hermes / AR07 controller publication receipt)
+- **Timestamp:** 2026-10-02 21:02 CEST
+- **Web lock:** taken by ui-theme-storage for U16; no release/edit by this session.
+- **Completed:** Bounded controller checkpoint published and independently read back at 2d9aaeb87fd0d2b94b2508e5d2ebbeeae2310710; live remote/fetched origin/main/local HEAD equal, all seven owned receipt/document artifacts byte-exact. Source 00f23758; integrated 03f18c95 with fe02deeb/U15 parent. Actual integrated proc_dea67da354fd 17/17 independently accepted: workspace2924/0/164, Web1559, Chromium mock fixture61, private Dynamic6/0/0, zero unknown/genuine skips, 103 original archive identities/hashes unchanged, 606 frozen inputs and 17 shadow bindings equal. Six compiled controller mutants observed and sources restored exactly. Both doc owners and complete upstream handover suffix preserved; shared dirty root untouched, no private raw output/bus/vendor execution.
+- **Pending/Next Steps:** Continue bounded offline remaining AR07 audit: activation-budget refusals, nested/duplicate module identity, supported parameter validation/provenance and inert opaque vendor constructs. Full AR07 checkboxes/ETS/native parity remain open. UI owner still needs manual api.ts kind and language-catalogue unsupportedControlKind adoption; no localized token rendering claim from generic Chromium fixtures.
+- **Notes for Claude:** Published receipt follows accepted integrated source; final-receipt code delta must stay zero. Projection42 subset, not extra workspace passes. Original corpus only explicit env/offline; no payloads/credentials/tokens. Keep active AR07 evidence while broader audit is open, remove only completed task-owned scaffolding at boundaries. No root synchronization, subagents, quota checks or guessed Repeat/Allocator/placement semantics. Older pending source/gate/push notes are historical, superseded by exact published checkpoint.
+
+---
+
 - **Last Agent:** codex (Hermes / AR07 controller integrated acceptance)
 - **Timestamp:** 2026-10-02 20:56 CEST
 - **Web lock:** taken by ui-theme-storage for U16; ownership unchanged.

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (Hermes / AR07 controller integrated acceptance)
+- **Timestamp:** 2026-10-02 20:56 CEST
+- **Web lock:** taken by ui-theme-storage for U16; ownership unchanged.
+- **Completed:** proc_dea67da354fd exit 0 independently reconciled at 17/17 on actual integrated 03f18c95 (source 00f23758 + published parent fe02deeb). Workspace 2924/0/164, Web 1559, all 61 intercepted-API Chromium fixtures, selected private Dynamic 6/0/0, zero genuine/unknown skips. All 103 originals unchanged, aggregate commitment equal, 606 source/config inputs frozen, six mutation-protected sources unchanged and 17 shadow bindings equal with CI end-whitespace-only policy. Frontend install/build, strict workspace Clippy/build, nonempty root-explicit repository gates and dependency/fmt/whitespace pass. Both doc owners/full upstream handover suffix preserved, no source conflicts or private raw logs.
+- **Pending/Next Steps:** Focused documentation acceptance receipt and remote publication/readback next; do not infer push from a local merge. Continue AR07 budget/refusal, nested/duplicate module identity, validation/provenance/vendor-inert audit after controller checkpoint. Typed/localized unsupportedControlKind adoption remains UI-owned, not proven by generic browser fixtures. Full AR07/ETS/native acceptance stays open.
+- **Notes for Claude:** Gated commit 03f18c95ff407c91186fd7be02afe169b40a15ee; source 00f237580bc7379b45b9004d0f18095623a4d840. Projection42 already included in workspace totals. Six selected private tests are separate from ordinary 164 ignored. Preserve shared dirty root and active U16 worktree, inherited history and scope boundaries. No secrets/tokens/private payloads, live KNX/vendor execution, subagents or quota checks. Older commit/gate pending notes superseded by this measured receipt.
+
+---
+
 - **Last Agent:** codex (Hermes / AR07 controller integration preparation)
 - **Timestamp:** 2026-10-02 20:30 CEST
 - **Web lock:** taken by ui-theme-storage for U16; inherited lock unchanged.

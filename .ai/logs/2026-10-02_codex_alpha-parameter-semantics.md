@@ -120,3 +120,17 @@ Nonempty root-explicit gate inventories checked; no stale gate success accepted.
 No private raw log retained. Separate read-only controller review found no
 blocking issues in scope. Upstream fe02deeb/theme/UI changed, integration and
 re-gate pending; broad AR07 audit and localized/typed UI adoption remain open.
+
+## Integrated controller checkpoint independently accepted — 2026-10-02 20:56 CEST
+
+Source 00f23758, integrated 03f18c95 with published fe02deeb/U15 themes.
+proc_dea67da354fd exit 0; 17/17 independently reconciled. Workspace2924/0/164,
+Web1559, Chromium fixture61, private6/0/0; projection42 workspace subset.
+All 103 original identities/hashes unchanged, 606 inputs frozen and protected
+controller sources equal; 17 generated shadow bindings match CI policy.
+Private raw stdout discarded; intentional metadata categories 1+1, no unknown
+skips. Nonempty intended-root gate inventories and full frontend build verified.
+No source merge conflict; complete upstream handover suffix/both doc owners
+retained. Focused documentation receipt and push/readback still pending.
+Broader AR07 audit, typed/localized token adoption, native/ETS acceptance remain
+open; generic browser fixtures do not establish unsupported-token localization.

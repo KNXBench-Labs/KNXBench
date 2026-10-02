@@ -81,8 +81,15 @@ fresh-target logs prove changed knx-store compilation and strict Clippy checking
 
 ## Delivery boundary
 
-Implementation/full gates are verified; final doc/staged checks, commit,
-publication, exact remote/artifact readback and owned cleanup remain pending.
+Implementation/full gates and post-handover anchors/headers/fmt/patch checks pass.
+Exactly 12 owned paths staged, inherited handover preserved in full, no foreign
+outgoing commit. Published implementation
+`216c673e7c32a4bd82a308e06544a4fd239d7b3f`; remote ref and exact command-sync,
+native-test and storage-contract artifacts match. Required author/committer and
+no-co-author policy verified. AR04/DATA-02/KL-42 are delivered. This closing
+docs-only receipt still requires its own narrow gates/publication/readback, then
+owned checkout/branch/target/scratch cleanup. No product source changed since
+the complete final gate.
 AR03 stays WAITING_DECISION. Canonical-root statistics remains foreign-owner
 blocked, not silently refreshed. Next ready package after delivery is AR05.
 No source/schema/dependency/Web change beyond this storage contract, no physical

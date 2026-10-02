@@ -1,6 +1,11 @@
 /** The registry of selectable themes, and where the choice is persisted and read back. */
-import { useEffect, useState } from "react";
-import { settingsStorage, useSettingsRevision } from "./settingsStore";
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { useEffect } from "react";
+import { getSetting, settingsStorage, useSettingsRevision } from "./settingsStore";
+import { loadAppearance } from "./appearance";
+import { readThemePackStore } from "./themePack";
+import type { ThemePack, ThemePackStore } from "./themePack";
+import { applyThemePack } from "./themePackDom";
 
 /** `hasAccentVariations` is whether styles.css declares any
  * `[data-accent="…"]` variation for this theme (ADR-0022: three of five
@@ -51,12 +56,34 @@ export const THEMES: readonly ThemeDef[] = [
 const STORAGE_KEY = "theme";
 
 /** Preserve explicit old preferences; unknown preferences follow the OS. */
-export function loadThemeId(storage: Pick<Storage, "getItem">): string {
+export function loadThemeId(storage: Pick<Storage, "getItem">, themes: readonly ThemeDef[] = THEMES): string {
   let raw: string | null = null;
   try { raw = storage.getItem(STORAGE_KEY); } catch { /* Storage can be unavailable. */ }
   if (raw === "light") return "porcelain";
   if (raw === "dark") return "graphite";
-  return THEMES.some((theme) => theme.id === raw) ? raw! : "system";
+  return themes.some((theme) => theme.id === raw) ? raw! : "system";
+}
+/** Keep the built-in registry fixed; derive installed choices from validated data. */
+export function getThemeDefinitions(store: ThemePackStore = readThemePackStore(getSetting("uiThemePacks"))): readonly ThemeDef[] {
+  return [...THEMES, ...store.packs.map((pack) => ({ id: pack.id, name: pack.name,
+    hasAccentVariations: Object.keys(pack.accents ?? {}).length > 0 }))];
+}
+export interface ThemeSelection {
+  id: string;
+  pack?: ThemePack;
+  diagnostics: ThemePackStore["diagnostics"];
+}
+/** Presentation fallback never overwrites an unknown stored identity or pack. */
+export function readThemeSelection(storage: Pick<Storage, "getItem">, rawPacks: unknown): ThemeSelection {
+  const store = readThemePackStore(rawPacks), themes = getThemeDefinitions(store);
+  let raw: string | null = null;
+  try { raw = storage.getItem(STORAGE_KEY); } catch { /* Unavailable preference follows System. */ }
+  const id = loadThemeId({ getItem: () => raw }, themes);
+  const diagnostics = [...store.diagnostics];
+  if (raw !== null && raw !== "light" && raw !== "dark" && !themes.some((theme) => theme.id === raw)) {
+    diagnostics.push({ id: null, diagnostic: { kind: "missingSelection", path: "$.theme" } });
+  }
+  return { id, pack: store.packs.find((pack) => pack.id === id), diagnostics };
 }
 export function resolveThemeId(id: string, dark: boolean): string {
   return id === "system" ? (dark ? "graphite" : "porcelain") : id;
@@ -66,19 +93,21 @@ export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void
 }
 export function useThemeId(): [string, (id: string) => void] {
   const revision = useSettingsRevision();
-  const [id, setId] = useState(() => loadThemeId(settingsStorage));
-  // The settings file arrives after the first paint, so the cached theme
-  // this mounted with may not be the recorded one. Re-reading on every
-  // revision is safe rather than circular: the save below writes nothing
-  // when the value has not changed.
-  useEffect(() => { setId(loadThemeId(settingsStorage)); }, [revision]);
+  const { id, pack } = readThemeSelection(settingsStorage, getSetting("uiThemePacks"));
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => { document.documentElement.dataset.theme = resolveThemeId(id, query.matches); };
+    const root = document.documentElement;
+    const application = pack ? applyThemePack(root, pack, loadAppearance(settingsStorage).accent) : undefined;
+    const appliedId = application && !application.ok ? "system" : id;
+    const apply = () => { root.dataset.theme = resolveThemeId(appliedId, query.matches); };
     apply();
-    saveThemeId(settingsStorage, id);
     query.addEventListener("change", apply);
-    return () => query.removeEventListener("change", apply);
-  }, [id]);
-  return [id, setId];
+    return () => {
+      query.removeEventListener("change", apply);
+      if (application?.ok) application.release();
+    };
+  }, [id, revision]);
+  return [id, (next) => {
+    if (getThemeDefinitions().some((theme) => theme.id === next)) saveThemeId(settingsStorage, next);
+  }];
 }

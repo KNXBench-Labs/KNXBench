@@ -1,4 +1,5 @@
 /** Tests for appearance preference defaults, migration, OS following, accent, and density. */
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -27,7 +28,7 @@ it("defaults to system and migrates old light/dark preferences without losing th
   expect(resolveThemeId("porcelain", true)).toBe("porcelain");
 });
 
-it("follows OS changes only in system mode and keeps the persisted preference", async () => {
+it("follows OS changes without writing an implicit default and persists only an explicit choice", async () => {
   const query = new EventTarget() as MediaQueryList;
   Object.defineProperty(query, "matches", { value: false, writable: true });
   vi.spyOn(window, "matchMedia").mockReturnValue(query);
@@ -39,9 +40,14 @@ it("follows OS changes only in system mode and keeps the persisted preference", 
   expect(document.documentElement.dataset.theme).toBe("porcelain");
   await act(async () => { Object.defineProperty(query, "matches", { value: true }); query.dispatchEvent(new Event("change")); });
   expect(document.documentElement.dataset.theme).toBe("graphite");
-  expect(getSetting("theme")).toBe("system");
+  // U14/U15: visual fallback is not a settings migration or user consent.
+  expect(getSetting("theme")).toBeUndefined();
   await act(async () => host.querySelector("button")!.click());
   expect(document.documentElement.dataset.theme).toBe("porcelain");
+  expect(getSetting("theme")).toBe("porcelain");
+  await act(async () => { query.dispatchEvent(new Event("change")); });
+  expect(document.documentElement.dataset.theme).toBe("porcelain");
+  expect(getSetting("theme")).toBe("porcelain");
 });
 
 it("validates appearance preferences and applies persisted accent and density", async () => {

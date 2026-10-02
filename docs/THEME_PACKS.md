@@ -1,9 +1,40 @@
 # KNXBench theme packs v1
 
-Contract resolved by U14, 2026-10-02. **Implementation pending U15–U18.**
+Contract resolved by U14, 2026-10-02. **U15 runtime foundation implemented in
+the candidate; integrated acceptance and U16–U18 remain pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a claim that the application already imports themes. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
+
+## Runtime implementation boundary
+
+`themePack.ts` admits original JSON text through byte, duplicate, depth and node
+limits, then validates the complete envelope, metadata, token/value grammars,
+accent maps and existing unrounded role-pair contrast. Accepted values retain
+their original spelling. `readThemePackStore()` revalidates settings/cache data,
+retains diagnostics and does not mutate rejected entries. `themePackDom.ts`
+revalidates before its reversible inline-property lease; `theme.ts` integrates
+it with the existing OS, accent and settings lifecycle without persisting a
+visual fallback over an absent/unsupported preference.
+
+Observed RED/GREEN regressions cover these boundaries. Separate in-session
+review found exact positive decimal underflow and non-data record admission;
+both were fixed and the six-file/206-test focused suite plus TypeScript passed.
+Thirty-seven runnable unit guard controls and one intercepted Chromium guard
+control were caught and restored byte-exactly; the new-file type canary failed
+with TS2322 as intended. These are self-review/local fixture evidence, not
+independent approval, native/Orca or all-component accessibility acceptance.
+
+Complete candidate acceptance proc_56f26c5c70d5 passed all 15 steps: Web 1,559,
+intercepted Chromium 61, Rust 2,890 passed / zero failed / 163 ignored across
+146 result blocks, with no missing-corpus markers. All 614 protected source/
+configuration fingerprints match. Newer upstream AR06 source still requires
+combined integration acceptance before publication.
+
+U16 still owns acknowledged conditional persistence, strict file decoding and
+lossless export. U17 owns the production manager, diagnostic presentation and
+transactional preview. U18 owns extension-wide review and closing integration
+evidence. No production import/export gesture is delivered by this foundation.
 
 ## Evidence and inspected baseline
 

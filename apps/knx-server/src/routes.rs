@@ -395,6 +395,10 @@ pub(crate) enum ParameterDiagnosticKindDto {
     NoBranchMatched,
     UnparsableTest,
     UnresolvedParamRef,
+    /// ADR-0061: declaration found, but unsupported as a choice controller.
+    /// Web's existing unknown-kind English fallback applies until the UI
+    /// owner adopts this token in its manual union and language catalogues.
+    UnsupportedControlKind,
     NonNumericValue,
     UnexpectedTypeNoneShape,
     UnrecognizedNode,

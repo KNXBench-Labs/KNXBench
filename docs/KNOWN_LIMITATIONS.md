@@ -6635,6 +6635,21 @@ by local mock/simulator tests, **not a new live hardware run**.
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
 
+**AR07 candidate (2026-10-02, ADR-0061).** A resolved controller kind outside
+Number/Restriction (with the existing None exception retained) now emits
+UnsupportedControlKind, skips/names branch refs and marks activation potentially
+hidden. Public ingest/load, nested-scope, source-reopen, HTTP hidden-field refusal
+and Undetermined projection checks pass; six behavioral mutants are detected.
+This is a 1,118/0/57 public two-crate candidate, not new whole-corpus counts or
+ETS parity. The warning token/English fallback is on the backend wire; Web's
+manual union/localized catalogue adoption remains with UI, not completed here.
+The corrected broad candidate is independently verified at 13/13: workspace
+2,924/0/164, Web 1,357 and six selected private Dynamic tests 6/0/0; all 103
+original archive hashes unchanged, no genuine skips or private raw logs. This
+selection is not blanket validation of every archive/opaque construct. Upstream
+UI integration/publication remain pending; earlier corpus figures below retain
+their dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
+
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
 
 - **Channel names.** `ComObjectChannel::text` is the element's `@Text`, and

@@ -166,8 +166,9 @@ equal before/after. Raw private stdout discarded, never persisted. This is the
 selected test scope, not validation of every opaque construct in every archive.
 
 Both documentation merge owners retained; full upstream handover suffix checked
-byte-for-byte. Controller checkpoint accepted for publication; final remote ref
-and artifact readback are still pending at this dated receipt. Broader AR07
+byte-for-byte. Controller checkpoint published as
+`2d9aaeb87fd0d2b94b2508e5d2ebbeeae2310710`; live/fetched remote refs equal
+local HEAD and all seven owned receipt/document artifacts read back byte-exact. Broader AR07
 budget/module-identity/validation/vendor-inert audit and typed/localized
 `unsupportedControlKind` adoption remain open. Browser fixture success is not
 proof of that token's localized UI adoption, native desktop behavior or ETS parity.
@@ -175,7 +176,7 @@ proof of that token's localized UI adoption, native desktop behavior or ETS pari
 ## Next evidence decisions
 
 - The bounded producer review, selected private tests and actual integrated
-  gates now pass; verify publication/readback next and retain the distinction
+  gates and publication/readback now pass; retain the distinction
   from independent ETS/manufacturer evidence.
 - Hand the diagnostic token/fallback to the UI owner with the publication commit;
   no typed/localized UI claim from backend or HTTP success alone.

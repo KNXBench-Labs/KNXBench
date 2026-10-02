@@ -1,7 +1,7 @@
 # ADR 0061: Unsupported declared choose controllers fail closed, not as missing references
 
 Date: 2026-10-02
-Status: Accepted — bounded controller public, selected private and integrated gates verified; remote publication readback pending.
+Status: Accepted — bounded controller public, selected private and integrated gates verified; published/read back at 2d9aaeb8.
 Session: 4 (manufacturer semantics), AR07
 Amends: Dynamic design D7/D9 and ADR-0041 structural-refusal coverage.
 

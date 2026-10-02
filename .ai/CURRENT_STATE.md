@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / keyboard alpha candidate acceptance)
+- **Timestamp:** 2026-10-02 15:20 CEST
+- **Web lock:** taken by ui-alpha-keyboard through reviewed integration/publication.
+- **Completed:** List nearest-edge scrolling, distinct catalog highlight, document-local stacked/dynamic background isolation, hidden-ancestor focus filtering and viewport-safe HelpTip portal/permanent local description implemented with observed RED/GREEN. Seventeen new fully intercepted Chromium cases pass; eighteen behavioral controls and a new-file TS2322 canary are caught and restored exactly. An early-release survivor required an immediate pre-observer assertion and is now caught. Separate in-session review closes R1/R2/R3. Restored focused nine-file/117-test and type checks pass. First complete proc_034266a906ce passed Web/build/52 Chromium/workspace/Clippy/layering but failed header grammar honestly; fixed first-line purpose/SPDX order, added edited-modal headers, ratcheted measured ceiling 160 to 157, bumped only frontend alpha.2 with identical dependency records. All 180 identities and 24 UI routes/full inherited handover preserved.
+- **Pending/Next Steps:** Renewed twelve-step proc_870fe2d19835 exited 0: Web 84 files/1,357 tests, 52 fully intercepted Chromium cases, Rust 146 result blocks/2,890 passed/zero failed/163 ignored, 576-source freeze. Stage/commit own scope, integrate upstream doc-only 311d396f compare.md, repeat complete integrated gates, publish/read back, close scoped owner receipt/release Web lock and actually remove only owned artifacts. Failed predecessor remains failed; no delivery claim yet.
+- **Notes for Codex oder Claude:** No independent external approval, native/Orca/full-theme, real-network, independent-sample, domain/application or alpha-release acceptance follows. No backend/proxy/gateway/discovery/tunnel/device write, subagent/quota probe, native configuration, root synchronization, reserved ADR activation or release tag. OriginalData remains read-only; ignored corpus cases are not credited. Root foreign state/statistics and other owners remain untouched. Full inherited suffix stays byte-exact.
+
+---
+
 - **Last Agent:** codex (UI session / keyboard alpha reservation)
 - **Timestamp:** 2026-10-02 13:10 CEST
 - **Web lock:** taken by ui-alpha-keyboard for KL-20 keyboard/list auto-scroll, background modal exclusion and viewport-safe HelpTip follow-up.

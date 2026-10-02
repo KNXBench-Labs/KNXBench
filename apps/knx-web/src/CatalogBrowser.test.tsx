@@ -32,6 +32,8 @@ vi.mock("./api", () => ({
 import CatalogBrowser from "./CatalogBrowser";
 import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 let host: HTMLDivElement | undefined;
 
 function installReport(overrides: Partial<CatalogInstallReport> = {}): CatalogInstallReport {
@@ -99,6 +101,32 @@ function deferred<T>() {
 }
 
 describe("CatalogBrowser", () => {
+  it("keeps keyboard highlight visible without picking or creating the catalog item", async () => {
+    apiMock.catalogItems.mockResolvedValue([item, item2]);
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      const input = host!.querySelector<HTMLInputElement>('[role="combobox"]')!;
+      scroll.mockClear();
+      await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      const row = host!.querySelector("#catalog-option-1")!;
+      expect(scroll).toHaveBeenCalledOnce();
+      expect(scroll.mock.contexts[0]).toBe(row);
+      expect(row.classList.contains("active")).toBe(true);
+      expect(row.getAttribute("aria-selected")).toBe("false");
+      expect(document.activeElement).toBe(input);
+      expect(host!.querySelector(".catalog-create-row")).toBeNull();
+      expect(apiMock.createDevice).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   it("offers only supported product packages in the file picker", async () => {
     const { root } = await renderBrowser();
     expect(host!.querySelector<HTMLInputElement>('input[type="file"]')!.accept)

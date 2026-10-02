@@ -171,15 +171,36 @@ describe("the help tip's half of the contract that lives in styles.css", () => {
     expect(rule(".help-tip-bubble.is-open")).toContain("opacity: 1");
   });
 
-  it("hides the closed bubble without taking it out of the accessibility tree", () => {
+  it("keeps the decorative closed bubble invisible and geometrically stable", () => {
     const closed = rule(".help-tip-bubble");
     expect(closed).toContain("opacity: 0");
     expect(closed).toContain("pointer-events: none");
-    // ADR-0024 decision 1: both of these would remove the element from the
-    // accessibility tree, and `aria-describedby` would resolve to nothing
-    // while the bubble is closed.
+    // Painting changes opacity, not measurement. The accessible description
+    // is a separate permanent local element protected by the next test.
     expect(closed).not.toContain("visibility: hidden");
     expect(closed).not.toContain("display: none");
+  });
+
+  it("keeps the permanent accessible description locally clipped rather than hidden", () => {
+    const description = rule(".help-tip-description");
+    expect(description).toContain("position: absolute");
+    expect(description).toContain("width: 1px");
+    expect(description).toContain("height: 1px");
+    expect(description).toContain("clip-path: inset(50%)");
+    expect(description).not.toContain("visibility: hidden");
+    expect(description).not.toContain("display: none");
+  });
+
+  it("keeps the closed painted portal out of document overflow", () => {
+    const closed = rule(".help-tip-bubble");
+    expect(closed).toContain("position: fixed");
+    expect(closed).toContain("box-sizing: border-box");
+    expect(closed).toContain("left: 0");
+    expect(closed).toContain("top: 0");
+    expect(closed).toContain("max-width: min(34ch, calc(100vw / var(--app-ui-scale, 1) - 16px))");
+    expect(closed).toContain("max-height: calc(100vh / var(--app-ui-scale, 1) - 16px)");
+    expect(closed).toContain("overflow: auto");
+    expect(closed).toContain("overflow-wrap: anywhere");
   });
 
   it("exempts a bubble marked still from the transition", () => {

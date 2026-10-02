@@ -250,6 +250,8 @@ describe("one editing workspace", () => {
     // exact API-call assertion below keeps that boundary explicit.
     // U10 adds `gatewayEndpoint.ts`: pure host/port parsing and validation,
     // with no IO or project mutation. The server API remains unchanged.
+    // Keyboard follow-up adds `modalIsolation.ts`: document-local inert/focus
+    // leases only. No API, storage, protocol or project mutation is introduced.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -274,6 +276,7 @@ describe("one editing workspace", () => {
       "localJsonDownload.ts",
       "messages/de.ts",
       "messages/en.ts",
+      "modalIsolation.ts",
       "session.ts",
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",

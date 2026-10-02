@@ -7,6 +7,7 @@ import { buildSearchIndex } from "./treeUtils";
 import type { SearchEntry } from "./treeUtils";
 import { matchEntries } from "./searchMatch";
 import Overlay from "./Overlay";
+import { useActiveOptionScroll } from "./useActiveOptionScroll";
 import { useTranslate } from "./i18n";
 import { useGroupAddressFormat } from "./gaNotation";
 import type { MessageKey } from "./messages/en";
@@ -43,6 +44,7 @@ export default function Search(props: {
   const [highlight, setHighlight] = useState(0);
   const index = useMemo(() => buildSearchIndex(tree), [tree]);
   const results = useMemo(() => matchEntries(index, query), [index, query]);
+  const activeOptionRef = useActiveOptionScroll(highlight, results);
 
   const grouped = KIND_ORDER.map((kind) => ({
     kind,
@@ -100,6 +102,7 @@ export default function Search(props: {
                   <li
                     key={`${entry.kind}-${entry.id}`}
                     id={`search-option-${position}`}
+                    ref={position === highlight ? activeOptionRef : undefined}
                     role="option"
                     aria-selected={position === highlight}
                     className={position === highlight ? "search-result selected" : "search-result"}

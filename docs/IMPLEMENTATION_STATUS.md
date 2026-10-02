@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — Keyboard/modal/help-tip alpha follow-up (offline candidate)
+
+- Search, Command Palette and Catalog Browser keep active keyboard rows visible
+  without moving combobox focus; catalog highlight is distinct from selection.
+- Shared modal background isolation is document-local, preserves prior attributes,
+  handles nested/out-of-order close and dynamic DOM, and restores final focus.
+  Initial/Tab-wrap focus filtering excludes hidden/inert/aria-hidden ancestors.
+- HelpTip separates its permanent local description from a decorative painted
+  portal; fixed viewport bounds/placement account for zoom and avoid clipping.
+  Resize/scroll listeners and portals are cleaned on close/unmount.
+- Seventeen new mock-only Chromium cases pass, including actual accessibility
+  tree descriptions/background exclusion. Eighteen behavioral controls and a
+  TypeScript new-file canary are caught with exact restoration. An initial
+  early-release survivor prompted an immediate pre-observer assertion; the
+  original whole-Web failure was the exact companion graph's missing new DOM
+  helper, corrected without changing its API/project-mutation assertions.
+- Separate in-session review fixes are complete; nine focused files / 117 tests
+  and TypeScript pass. Renewed twelve-step proc_870fe2d19835 passes: Web 84 files /
+  1,357 tests, 52 intercepted Chromium cases, Rust 146 result blocks / 2,890
+  passed / zero failed / 163 ignored; 576-source freeze. First header failure
+  stays failed; purpose/SPDX ordering corrected and measured ceiling lowered
+  to 157 without relaxing it. Frontend alpha.2 changes no dependencies.
+  Integrated gates/publication/cleanup remain pending.
+  No native/Orca/network/sample/domain, hardware or alpha-release acceptance.
+
 ## 2026-10-02 — KL-82 authoritative monitor context candidate (offline)
 
 - Added a read-only comparison of actual bus-session interpretation against

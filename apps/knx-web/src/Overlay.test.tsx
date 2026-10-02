@@ -1,3 +1,4 @@
+/** Tests shared modal focus, background isolation and viewport resizing. */
 // @vitest-environment happy-dom
 import { readFileSync } from "node:fs";
 import { act, useRef } from "react";
@@ -24,6 +25,95 @@ async function mount(children: ReactNode) {
 }
 
 describe("Overlay", () => {
+  it("skips descendants of hidden, inert and aria-hidden ancestors for initial focus and Tab wrap", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <div hidden><button>Hidden</button></div>
+      <div inert><button>Inert</button></div>
+      <div aria-hidden="true"><button>Excluded</button></div>
+      <button data-visible="true">Visible</button>
+    </Overlay>);
+    try {
+      const visible = host!.querySelector<HTMLElement>("[data-visible]")!;
+      expect(document.activeElement).toBe(visible);
+      await act(async () => visible.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true })));
+      expect(document.activeElement).toBe(visible);
+      await act(async () => visible.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+      expect(document.activeElement).toBe(visible);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("excludes asynchronously added background content and restores it after close", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}><button>Dialog</button></Overlay>);
+    const added = document.createElement("button");
+    added.textContent = "Late background";
+    try {
+      await act(async () => { document.body.appendChild(added); await Promise.resolve(); });
+      expect(added.hasAttribute("inert")).toBe(true);
+      expect(added.getAttribute("aria-hidden")).toBe("true");
+      await act(async () => root.unmount());
+      expect(added.hasAttribute("inert")).toBe(false);
+      expect(added.hasAttribute("aria-hidden")).toBe(false);
+    } finally {
+      await act(async () => root.unmount());
+      added.remove();
+    }
+  });
+
+  it("keeps background excluded when a lower dialog unmounts before the top dialog", async () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    outside.focus();
+    const lower = await mount(<Overlay label="Lower" onClose={vi.fn()}><button>Lower control</button></Overlay>);
+    const upperHost = document.createElement("div");
+    document.body.appendChild(upperHost);
+    const upper = createRoot(upperHost);
+    try {
+      await act(async () => upper.render(<Overlay label="Upper" onClose={vi.fn()}><button>Upper control</button></Overlay>));
+      expect(upperHost.querySelector('[role="dialog"]')!.closest("[inert], [aria-hidden='true']")).toBeNull();
+      await act(async () => {
+        lower.unmount();
+        // Assert before MutationObserver delivery: it must not repair an
+        // already-exposed background after an out-of-order close.
+        expect(outside.hasAttribute("inert")).toBe(true);
+        expect(outside.getAttribute("aria-hidden")).toBe("true");
+      });
+      expect(outside.hasAttribute("inert")).toBe(true);
+      expect(outside.getAttribute("aria-hidden")).toBe("true");
+      await act(async () => upper.unmount());
+      expect(outside.hasAttribute("inert")).toBe(false);
+      expect(outside.hasAttribute("aria-hidden")).toBe(false);
+      expect(document.activeElement).toBe(outside);
+    } finally {
+      await act(async () => { lower.unmount(); upper.unmount(); });
+      upperHost.remove(); outside.remove();
+    }
+  });
+
+  it("excludes background branches without hiding its ancestors and restores existing attributes on close", async () => {
+    const outside = document.createElement("div");
+    outside.setAttribute("inert", "preexisting");
+    outside.setAttribute("aria-hidden", "false");
+    document.body.appendChild(outside);
+    const root = await mount(<><main data-background="true"><button>Background</button></main><Overlay onClose={vi.fn()}><button>Dialog</button></Overlay></>);
+    try {
+      const background = host!.querySelector("main")!;
+      const panel = host!.querySelector<HTMLElement>('[role="dialog"]')!;
+      expect(background.hasAttribute("inert")).toBe(true);
+      expect(background.getAttribute("aria-hidden")).toBe("true");
+      expect(outside.getAttribute("aria-hidden")).toBe("true");
+      expect(panel.closest("[inert], [aria-hidden='true']")).toBeNull();
+      expect(document.activeElement).toBe(panel.querySelector("button"));
+      await act(async () => root.render(<main><button>Background</button></main>));
+      expect(host!.querySelector("main")!.hasAttribute("inert")).toBe(false);
+      expect(host!.querySelector("main")!.hasAttribute("aria-hidden")).toBe(false);
+      expect(outside.getAttribute("inert")).toBe("preexisting");
+      expect(outside.getAttribute("aria-hidden")).toBe("false");
+    } finally {
+      await act(async () => root.unmount());
+      outside.remove();
+    }
+  });
+
   it("renders .search-overlay > .search-panel, a dialog, with children inside", async () => {
     const root = await mount(
       <Overlay onClose={vi.fn()}>

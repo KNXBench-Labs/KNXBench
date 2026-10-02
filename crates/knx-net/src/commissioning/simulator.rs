@@ -35,10 +35,10 @@ use knx_core::commissioning::master_reset::{DownloadCounterEffect, EraseCode};
 use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
-    verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER, PID_ERROR_CODE,
-    PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
-    PID_PROGRAM_VERSION, PID_SERIAL_NUMBER, PID_SERVICE_CONTROL, PID_TABLE_REFERENCE,
-    SERVICE_CONTROL_IA_WRITE_ENABLE,
+    verify_mode_active, with_verify_mode, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER,
+    PID_ERROR_CODE, PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH,
+    PID_MCB_TABLE, PID_PROGRAM_VERSION, PID_SERIAL_NUMBER, PID_SERVICE_CONTROL,
+    PID_TABLE_REFERENCE, SERVICE_CONTROL_IA_WRITE_ENABLE,
 };
 use knx_core::{GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
@@ -1218,7 +1218,15 @@ impl SimulatedDevice {
     /// Tears the connection down from the device's side, as a real one does
     /// after 6 s of silence.
     pub fn break_connection(&self) {
-        self.lock().connected = false;
+        let mut state = self.lock();
+        state.connected = false;
+        state.verify_mode = false;
+        if let Some(control) = state.properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
+            if let Some(octet) = control.first_mut() {
+                *octet = with_verify_mode(*octet, false);
+            }
+        }
+        drop(state);
         self.emit(Tpci::Disconnect, ApplicationService::NoApplicationPdu);
     }
 
@@ -1771,7 +1779,9 @@ impl SimulatedDevice {
                 // RES §4.2.14.7.3: the bit dies with the connection,
                 // however the connection died.
                 if let Some(control) = state.properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
-                    *control = vec![0x00];
+                    if let Some(octet) = control.first_mut() {
+                        *octet = with_verify_mode(*octet, false);
+                    }
                 }
                 drop(state);
                 self.emit(Tpci::Disconnect, ApplicationService::NoApplicationPdu);
@@ -1798,7 +1808,9 @@ impl SimulatedDevice {
                 // RES §4.2.14.7.4: Verify Mode dies with the connection.
                 state.verify_mode = false;
                 if let Some(control) = state.properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
-                    *control = vec![0x00];
+                    if let Some(octet) = control.first_mut() {
+                        *octet = with_verify_mode(*octet, false);
+                    }
                 }
                 state.seen.push(Seen::Disconnect);
                 return;
@@ -2037,7 +2049,9 @@ impl SimulatedDevice {
                     state.connected = false;
                     state.verify_mode = false;
                     if let Some(control) = state.properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
-                        *control = vec![0x00];
+                        if let Some(octet) = control.first_mut() {
+                            *octet = with_verify_mode(*octet, false);
+                        }
                     }
                     drop(state);
                     self.emit(Tpci::Disconnect, ApplicationService::NoApplicationPdu);

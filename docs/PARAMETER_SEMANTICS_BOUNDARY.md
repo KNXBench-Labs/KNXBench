@@ -173,6 +173,41 @@ budget/module-identity/validation/vendor-inert audit and typed/localized
 `unsupportedControlKind` adoption remain open. Browser fixture success is not
 proof of that token's localized UI adoption, native desktop behavior or ETS parity.
 
+## Remaining validation audit started (2026-10-02)
+
+Published controller checkpoint final receipt `d62baef4` independently read back;
+remaining audit starts in fresh `alpha-parameter-audit`, not a dirty shared root.
+The existing Float write validator checks input finiteness but parses declared
+min/max directly before comparison (`apps/knx-server/src/domain.rs`). A synthetic
+nonfinite-declaration regression reproduced actual RED101 (0/1/0): a NaN
+lower bound permitted a finite write. Minimal production fix rejects nonfinite
+parsed lower/upper declarations before comparison, retaining original metadata
+and input lexemes. Targeted Float GREEN6/0/0 and public HTTP34/0/0 pass. The
+HTTP regression covers ten lower/upper NaN/infinity/exponent-overflow cases,
+nonempty in-memory project equality after refusal, byte-exact retained source
+and an independently writable Text sibling. This does not establish native
+SQL/WAL atomicity, XSD validity, wire encoding or whole-feature/private acceptance.
+Separate in-session producer review found no blocking bounded findings. The
+corrected public baseline proc_e87d7afdd30d independently passes 8/8, workspace
+2,926/0/164, strict Clippy/build/fmt/root-explicit anchors/whitespace and actual
+frontend install/build. All 615 source/config hashes remain frozen; 17 shadow
+bindings equal under CI policy. The first baseline remains rejected/archived
+for missing Tauri frontend resources before any tests ran. Both independently
+compiling min/max guard-removal mutants are caught separately by unit and HTTP
+(four observations); all 615 canonical hashes restored. Final checkpoint proc_536a6eb16342 independently passes18/18 on the owned
+guard/test delta: workspace2926/0/164, Web1559, existing Chromium fixtures61,
+selected private Dynamic6/0/0 with zero genuine/unknown skips and one each
+intentional duplicate/reinstall metadata category. All103 original archive
+identities/hashes unchanged; 615 source/config inputs frozen and 17 shadow
+bindings equal. No private raw logs. This is not all-archive opaque-semantic
+validation or UI/native parity. New upstream commissioning recovery c9f77d7b
+changes code outside this guard; actual integrated-source re-gates and
+publication/readback remain pending. Broader AR07 audit remains separate.
+
+Primary library reference: [Rust f64 is_finite](https://doc.rust-lang.org/std/primitive.f64.html#method.is_finite)
+defines finiteness to exclude NaN/infinities. This library fact does not establish
+manufacturer schema semantics; retained lexemes/native storage stay unchanged.
+
 ## Next evidence decisions
 
 - The bounded producer review, selected private tests and actual integrated

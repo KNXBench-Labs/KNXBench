@@ -6,7 +6,7 @@ use std::io::{Cursor, Write};
 
 use knx_etsproj::detect::DetectError;
 use knx_etsproj::parse::ParseError;
-use knx_etsproj::{import_knxproj_bytes, ContainerError, ImportFailure};
+use knx_etsproj::{detect, import_knxproj_bytes, Container, ContainerError, ImportFailure};
 
 const MINIMAL: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
@@ -73,6 +73,288 @@ fn knxproj_with_installation(installation_xml: &[u8]) -> Vec<u8> {
         ("P-0001/0.xml", installation_xml),
         ("P-0001/Project.xml", PROJECT_INFO),
     ])
+}
+
+fn assert_default_line_boundaries(version: u32) {
+    use knx_etsproj::map::MapProblemDetail;
+    use knx_etsproj::report::{ImportError, Severity};
+
+    let present = Some("P-0001-0_L-3");
+    let missing = Some("P-0001-0_L-99");
+    let ref_id = if version == 11 {
+        "M-0001_A-1_O-7_R-1"
+    } else {
+        "O-7_R-1"
+    };
+    for (installation_ref, space_ref) in [
+        (None, None),
+        (present, present),
+        (Some(""), Some("")),
+        (missing, missing),
+        (present, missing),
+        (missing, present),
+    ] {
+        let imported = import_knxproj_bytes(
+            knx_testsupport::mapping_boundary_knxproj_bytes(
+                version,
+                installation_ref,
+                space_ref,
+                ref_id,
+            ),
+            "synthetic-mapping.knxproj",
+        )
+        .unwrap();
+        assert_eq!(imported.report.source.schema_version, version);
+        let installation = &imported.project.installations[0];
+        assert_eq!(installation.topology.lines.len(), 2);
+        let stated_line = installation.topology.lines[1].id;
+        assert_ne!(stated_line, installation.topology.lines[0].id);
+        assert_eq!(
+            installation.default_line,
+            (installation_ref == present).then_some(stated_line),
+        );
+        assert_eq!(installation.buildings.len(), 1);
+        let space = &installation.buildings[0];
+        assert_eq!(
+            space.default_line,
+            (space_ref == present).then_some(stated_line)
+        );
+
+        let base = "/KNX/Project/Installations/Installation";
+        let space_xpath = if version == 11 {
+            format!("{base}/Buildings/BuildingPart[@Id='P-0001-0_BP-1']")
+        } else {
+            format!("{base}/Locations/Space[@Id='P-0001-0_BP-1']")
+        };
+        let mut expected = Vec::new();
+        for (value, kind, xpath) in [
+            (installation_ref, "Installation/@DefaultLine", base),
+            (space_ref, "BuildingPart/@DefaultLine", space_xpath.as_str()),
+        ] {
+            if let Some(target) = value.filter(|value| Some(*value) != present) {
+                expected.push(ImportError {
+                    stage: "map",
+                    severity: Severity::Error,
+                    xpath: xpath.to_string(),
+                    detail: format!(
+                        "{:?}",
+                        MapProblemDetail::UnresolvedReference {
+                            kind,
+                            target: target.to_string(),
+                        }
+                    ),
+                });
+            }
+        }
+        // Exact stage/path/detail/count, not a broad "some error" assertion.
+        assert_eq!(imported.report.errors, expected);
+        assert_eq!(imported.project.devices.iter().count(), 2);
+        assert_eq!(imported.project.devices.com_objects().count(), 4);
+        assert_eq!(
+            space.devices,
+            vec![installation.topology.lines[0].devices[0]]
+        );
+    }
+}
+
+#[test]
+fn schema11_default_lines_resolve_or_report_without_a_fallback() {
+    assert_default_line_boundaries(11);
+}
+
+#[test]
+fn schema21_default_lines_resolve_or_report_without_a_fallback() {
+    assert_default_line_boundaries(21);
+}
+
+#[test]
+fn schema23_default_lines_resolve_or_report_without_a_fallback() {
+    assert_default_line_boundaries(23);
+}
+
+#[test]
+fn legacy_named_inputs_are_refused_before_modern_archive_parsing() {
+    let bytes = knxproj_with_installation(MINIMAL);
+    for extension in [
+        "vd2", "vd3", "vd4", "vd5", "pr3", "pr4", "pr5", "VD3", "Pr5",
+    ] {
+        let error = import_knxproj_bytes(bytes.clone(), &format!("synthetic.{extension}"))
+            .expect_err("a readable modern archive must not enable a legacy filename extension");
+        assert_eq!(error.to_string(), format!(
+            "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
+        ));
+    }
+}
+
+#[test]
+fn legacy_filename_refusal_does_not_echo_source_bytes_or_classify_other_suffixes() {
+    let payload = b"SYNTHETIC-SENSITIVE-PAYLOAD";
+    let error = import_knxproj_bytes(payload.to_vec(), "input.PR4").unwrap_err();
+    assert!(
+        matches!(error, ImportFailure::UnsupportedLegacyFormat { ref extension } if extension == "PR4")
+    );
+    assert!(!error.to_string().contains("SYNTHETIC-SENSITIVE-PAYLOAD"));
+    for name in ["input.pr4.backup", "input.vd30", "input.knxproj"] {
+        let error = import_knxproj_bytes(payload.to_vec(), name).unwrap_err();
+        assert!(matches!(error, ImportFailure::Container(_)));
+    }
+    assert!(import_knxproj_bytes(knxproj_with_installation(MINIMAL), "input.KNXPROJ").is_ok());
+}
+
+#[test]
+fn unsupported_master_root_metadata_is_reported_without_exposing_its_values() {
+    let master =
+        br#"<KNX xmlns="urn:MASTER_METADATA_SENTINEL/11" CreatedBy="MASTER_METADATA_SENTINEL"/>"#;
+    let outcome = import_knxproj_bytes(
+        zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("P-0001/0.xml", MINIMAL),
+            ("P-0001/Project.xml", PROJECT_INFO),
+            ("knx_master.xml", master),
+        ]),
+        "unsupported-master.knxproj",
+    )
+    .expect("unsupported master metadata must not replace the supported project schema");
+    assert_eq!(outcome.report.source.schema_version, 11);
+    assert_eq!(outcome.report.source.namespace_disagreement, None);
+    assert_eq!(
+        outcome.report.unsupported,
+        vec![knx_etsproj::report::UnsupportedFeature {
+            what: "knx_master.xml root metadata".to_string(),
+            consequence: "unsupported KNX project namespace; master namespace comparison unavailable; original master bytes retained without interpreting root metadata".to_string(),
+        }]
+    );
+    let retained: Vec<_> = outcome
+        .opaque
+        .iter()
+        .filter(|entry| entry.source_path == "knx_master.xml")
+        .collect();
+    assert_eq!(retained.len(), 1);
+    assert_eq!(
+        retained[0].kind,
+        knx_etsproj::opaque::OpaqueKind::MasterData
+    );
+    assert_eq!(retained[0].bytes, master);
+    assert_eq!(retained[0].sha256, knx_etsproj::opaque::sha256_hex(master));
+    assert!(!outcome
+        .report
+        .to_json()
+        .contains("MASTER_METADATA_SENTINEL"));
+}
+
+#[test]
+fn unreadable_master_root_boundaries_retain_bytes_and_name_the_failed_comparison() {
+    let cases: &[(&[u8], &str)] = &[
+        (b"", "missing root namespace"),
+        (br#"<KNX CreatedBy="MASTER_METADATA_SENTINEL"/>"#, "missing root namespace"),
+        (br#"<MASTER_METADATA_SENTINEL xmlns="http://knx.org/xml/project/11"/>"#, "unexpected XML root"),
+        (br#"<KNX xmlns="http://knx.org/xml/project/MASTER_METADATA_SENTINEL"/>"#, "unparsable schema namespace"),
+        (br#"<KNX xmlns="http://knx.org/xml/project/11" ToolVersion="&MASTER_METADATA_SENTINEL;"/>"#, "malformed XML root attributes or encoding"),
+        (br#"<KNX xmlns="http://knx.org/xml/project/11" ToolVersion="a" ToolVersion="MASTER_METADATA_SENTINEL"/>"#, "malformed XML root attributes or encoding"),
+        (b"<KNX xmlns=\"http://knx.org/xml/project/11\" CreatedBy=\"\xff\"/>", "malformed XML root attributes or encoding"),
+        (br#"<KNX xmlns="http://knx.org/xml/project/11" xmlns:xml="MASTER_METADATA_SENTINEL"/>"#, "malformed XML root attributes or encoding"),
+    ];
+    for (master, boundary) in cases {
+        let bytes = zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("P-0001/0.xml", MINIMAL),
+            ("P-0001/Project.xml", PROJECT_INFO),
+            ("knx_master.xml", master),
+        ]);
+        let mut container = Container::open(bytes.clone()).unwrap();
+        let detected = detect(&mut container).unwrap();
+        assert_eq!(detected.namespace_disagreement, None);
+        assert!(detected.master_metadata_error.is_some());
+        let outcome = import_knxproj_bytes(bytes, "unreadable-master.knxproj").unwrap();
+        assert_eq!(outcome.report.source.schema_version, 11);
+        assert_eq!(
+            outcome.report.unsupported,
+            vec![knx_etsproj::report::UnsupportedFeature {
+                what: "knx_master.xml root metadata".to_string(),
+                consequence: format!("{boundary}; master namespace comparison unavailable; original master bytes retained without interpreting root metadata"),
+            }]
+        );
+        let retained = outcome
+            .opaque
+            .iter()
+            .find(|entry| entry.source_path == "knx_master.xml")
+            .unwrap();
+        assert_eq!(retained.bytes, *master);
+        assert_eq!(retained.sha256, knx_etsproj::opaque::sha256_hex(master));
+        assert!(!outcome
+            .report
+            .to_json()
+            .contains("MASTER_METADATA_SENTINEL"));
+    }
+}
+
+#[test]
+fn unreadable_master_container_bytes_are_fatal_not_a_retention_claim() {
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11" CreatedBy="CRC_MASTER_SENTINEL"/>"#;
+    let mut bytes = zip_with_entries(&[
+        ("P-0001.signature", b"x"),
+        ("P-0001/0.xml", MINIMAL),
+        ("P-0001/Project.xml", PROJECT_INFO),
+        ("knx_master.xml", master),
+    ]);
+    // Stored ZIP members expose the fixture bytes verbatim. Corrupt only the
+    // master payload, leaving its central/local CRC and all other entries intact.
+    let positions: Vec<_> = bytes
+        .windows(master.len())
+        .enumerate()
+        .filter_map(|(position, window)| (window == master).then_some(position))
+        .collect();
+    assert_eq!(positions.len(), 1);
+    bytes[positions[0]] = b'!';
+    let mut container = Container::open(bytes.clone()).unwrap();
+    assert!(matches!(detect(&mut container),
+        Err(DetectError::Container(ContainerError::Read { path, .. })) if path == "knx_master.xml"
+    ));
+    assert!(
+        matches!(import_knxproj_bytes(bytes, "corrupt-master.knxproj"),
+            Err(ImportFailure::Detect(DetectError::Container(ContainerError::Read { path, .. }))) if path == "knx_master.xml"
+        )
+    );
+}
+
+#[test]
+fn absent_agreeing_and_disagreeing_masters_are_not_unreadable_metadata() {
+    for (master, disagreement) in [
+        (None, None),
+        (
+            Some(br#"<KNX xmlns="http://knx.org/xml/project/11"/>"#.as_slice()),
+            None,
+        ),
+        (
+            Some(br#"<KNX xmlns="http://knx.org/xml/project/21"/>"#.as_slice()),
+            Some(21),
+        ),
+    ] {
+        let mut entries = vec![
+            ("P-0001.signature", b"x".as_slice()),
+            ("P-0001/0.xml", MINIMAL),
+            ("P-0001/Project.xml", PROJECT_INFO),
+        ];
+        if let Some(master) = master {
+            entries.push(("knx_master.xml", master));
+        }
+        let bytes = zip_with_entries(&entries);
+        let mut container = Container::open(bytes.clone()).unwrap();
+        let detected = detect(&mut container).unwrap();
+        assert_eq!(detected.master_metadata_error, None);
+        assert_eq!(
+            detected.namespace_disagreement.map(|version| version.0),
+            disagreement
+        );
+        let outcome = import_knxproj_bytes(bytes, "optional-master.knxproj").unwrap();
+        assert_eq!(outcome.report.unsupported, vec![]);
+        assert_eq!(
+            outcome.report.source.namespace_disagreement,
+            disagreement.map(|version| format!(
+                "knx_master.xml declares schema {version}, the project part declares schema 11"
+            ))
+        );
+    }
 }
 
 /// `MINIMAL` with its `<DeviceInstance>...</DeviceInstance>` subtree
@@ -187,6 +469,76 @@ fn an_unsupported_schema_version_is_named_and_not_guessed_at() {
 }
 
 #[test]
+fn a_foreign_namespace_cannot_borrow_a_supported_project_version() {
+    for namespace in [
+        "https://example.invalid/project/11",
+        "urn:foreign/21",
+        "http://knx.org/xml/project/011",
+        "http://knx.org/xml/project/+11",
+        "http://knx.org/xml/project/23/11",
+        "https://knx.org/xml/project/11",
+    ] {
+        let xml = std::str::from_utf8(MINIMAL)
+            .unwrap()
+            .replace("http://knx.org/xml/project/11", namespace);
+        let result = import_knxproj_bytes(
+            knxproj_with_installation(xml.as_bytes()),
+            "foreign-namespace.knxproj",
+        );
+        match result {
+            Err(ImportFailure::Detect(DetectError::UnsupportedNamespace {
+                entry,
+                namespace: rejected,
+            })) => {
+                assert_eq!(entry, "P-0001/0.xml");
+                assert_eq!(rejected, namespace);
+            }
+            _ => panic!(
+                "foreign namespace {namespace:?} reached KNX parsing instead of detection refusal"
+            ),
+        }
+    }
+}
+
+#[test]
+fn namespace_and_producer_fields_use_xml_values_without_version_guessing() {
+    let xml = std::str::from_utf8(MINIMAL)
+        .unwrap()
+        .replace(
+            "http://knx.org/xml/project/11",
+            "http://knx.org/xml/project/1&#49;",
+        )
+        .replace("CreatedBy=\"ETS4\"", "CreatedBy=\"Independent &amp; Tool\"")
+        .replace(
+            "<KNX ",
+            "<KNX xmlns:xml=\"http://www.w3.org/XML/1998/namesp&#97;ce\" \
+             xmlns:xmlVendor=\"urn:synthetic:vendor\" ",
+        )
+        .replace(
+            "ToolVersion=\"ETS 4.1.8\"",
+            "ToolVersion=\"opaque&#x2B;version\"",
+        );
+    let imported = import_knxproj_bytes(
+        knxproj_with_installation(xml.as_bytes()),
+        "xml-values.knxproj",
+    )
+    .expect("XML character references must be decoded before namespace comparison");
+    assert_eq!(
+        imported.report.source.namespace,
+        "http://knx.org/xml/project/11"
+    );
+    assert_eq!(
+        imported.report.source.created_by.as_deref(),
+        Some("Independent & Tool")
+    );
+    assert_eq!(
+        imported.report.source.tool_version.as_deref(),
+        Some("opaque+version")
+    );
+    assert_eq!(imported.report.source.schema_version, 11);
+}
+
+#[test]
 fn an_invalid_individual_address_is_reported_and_the_device_still_imports() {
     let xml = minimal_xml_with(r#"<DeviceInstance Id="P-0001-0_DI-1" Name="D" Address="999""#);
     let out = import_knxproj_bytes(
@@ -204,6 +556,108 @@ fn an_invalid_individual_address_is_reported_and_the_device_still_imports() {
 }
 
 #[test]
+fn unreadable_root_attributes_cannot_be_silently_erased_by_detection() {
+    let mut invalid_utf8 = br#"<KNX xmlns="http://knx.org/xml/project/11" CreatedBy=""#.to_vec();
+    invalid_utf8.push(0xff);
+    invalid_utf8.extend_from_slice(br#""/>"#);
+    for xml in [
+        br#"<KNX xmlns="http://knx.org/xml/project/11" ToolVersion="a" ToolVersion="b"/>"#.to_vec(),
+        br#"<KNX xmlns="http://knx.org/xml/project/11" Future=unquoted/>"#.to_vec(),
+        invalid_utf8,
+    ] {
+        let mut container = Container::open(knxproj_with_installation(&xml)).unwrap();
+        assert!(
+            detect(&mut container).is_err(),
+            "a malformed root is not a successful detection with absent/replacement attributes"
+        );
+    }
+}
+
+#[test]
+fn a_default_namespace_does_not_override_the_actual_root_identity() {
+    for (root, declaration) in [
+        ("NotKNX", ""),
+        ("foreign:KNX", " xmlns:foreign=\"urn:foreign\""),
+        ("unbound:KNX", ""),
+    ] {
+        let xml = std::str::from_utf8(MINIMAL)
+            .unwrap()
+            .replace("<KNX ", &format!("<{root}{declaration} "))
+            .replace("</KNX>", &format!("</{root}>"));
+        assert!(
+            matches!(
+                import_knxproj_bytes(
+                    knxproj_with_installation(xml.as_bytes()),
+                    "wrong-root.knxproj"
+                ),
+                Err(ImportFailure::Detect(_))
+            ),
+            "root {root:?} must be refused before applying a KNX known table"
+        );
+    }
+}
+
+#[test]
+fn reserved_namespace_bindings_cannot_impersonate_knx() {
+    for declaration in [
+        "xmlns:xml=\"http://knx.org/xml/project/11\"",
+        "xmlns:xmlns=\"http://knx.org/xml/project/11\"",
+        "xmlns:other=\"http://www.w3.org/XML/1998/namespace\"",
+        "xmlns:other=\"http://www.w3.org/2000/xmlns/\"",
+        "xmlns:other=\"http://www.w3.org/XML/1998/namesp&#97;ce\"",
+        "xmlns:=\"http://knx.org/xml/project/11\"",
+        "xmlns:other=\"\"",
+    ] {
+        let xml = format!("<KNX xmlns=\"http://knx.org/xml/project/11\" {declaration}/>");
+        let mut container = Container::open(knxproj_with_installation(xml.as_bytes())).unwrap();
+        assert!(
+            matches!(
+                detect(&mut container),
+                Err(DetectError::MalformedRoot { .. })
+            ),
+            "reserved namespace misuse must not be accepted as a valid KNX root"
+        );
+    }
+}
+
+#[test]
+fn a_bound_knx_prefix_is_not_mistaken_for_a_missing_namespace() {
+    // Every element is qualified; no default namespace exists.
+    let mut xml = std::str::from_utf8(MINIMAL).unwrap().to_string();
+    xml = xml.replace("xmlns=", "xmlns:knx=");
+    for element in [
+        "KNX",
+        "Project",
+        "Installations",
+        "Installation",
+        "Topology",
+        "Area",
+        "Line",
+        "DeviceInstance",
+        "ComObjectInstanceRefs",
+        "ComObjectInstanceRef",
+        "Connectors",
+        "Send",
+        "GroupAddresses",
+        "GroupRanges",
+        "GroupRange",
+        "GroupAddress",
+    ] {
+        xml = xml
+            .replace(&format!("<{element} "), &format!("<knx:{element} "))
+            .replace(&format!("<{element}>"), &format!("<knx:{element}>"))
+            .replace(&format!("</{element}>"), &format!("</knx:{element}>"));
+    }
+    let imported = import_knxproj_bytes(
+        knxproj_with_installation(xml.as_bytes()),
+        "prefixed.knxproj",
+    )
+    .expect("the root QName is bound to the supported KNX project namespace");
+    assert_eq!(imported.project.devices.iter().count(), 1);
+    assert_eq!(imported.project.installations[0].group_addresses.len(), 1);
+}
+
+#[test]
 fn a_duplicate_group_address_id_is_reported_and_both_entries_survive() {
     let out = import_knxproj_bytes(knxproj_with_duplicate_ga_id(), "dupe.knxproj").unwrap();
     // `ProblemDetail::DuplicateId`'s Debug output capitalizes "Duplicate"
@@ -216,6 +670,34 @@ fn a_duplicate_group_address_id_is_reported_and_both_entries_survive() {
         .iter()
         .any(|e| e.detail.contains("Duplicate")));
     assert_eq!(out.project.installations[0].group_addresses.len(), 2);
+}
+
+#[test]
+fn project_metadata_must_have_the_same_knx_root_namespace_as_topology() {
+    let original = std::str::from_utf8(PROJECT_INFO).unwrap();
+    for info in [
+        original.replace("http://knx.org/xml/project/11", "urn:foreign/11"),
+        original.replace(
+            "http://knx.org/xml/project/11",
+            "http://knx.org/xml/project/23",
+        ),
+        original
+            .replace("<KNX ", "<NotKNX ")
+            .replace("</KNX>", "</NotKNX>"),
+    ] {
+        let bytes = zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("P-0001/0.xml", MINIMAL),
+            ("P-0001/Project.xml", info.as_bytes()),
+        ]);
+        assert!(
+            matches!(
+                import_knxproj_bytes(bytes, "wrong-metadata-namespace.knxproj"),
+                Err(ImportFailure::Detect(_))
+            ),
+            "metadata with a different root identity must not use topology's known table"
+        );
+    }
 }
 
 #[test]

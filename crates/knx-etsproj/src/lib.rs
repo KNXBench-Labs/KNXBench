@@ -46,6 +46,10 @@ pub struct ImportOutcome {
     /// `.signature` entries) on their way to the product database
     /// (ADR-0005). `knx-app` is the only crate that ingests these.
     pub manufacturer: Vec<opaque::ManufacturerFile>,
+    /// A present master's root is unsupported or unreadable. Application
+    /// services must retain its opaque bytes but must not ingest its contents
+    /// as typed master data. This is not inferred from human-facing report text.
+    pub master_metadata_error: Option<DetectError>,
     pub report: report::ImportReport,
 }
 
@@ -81,6 +85,7 @@ pub enum ImportFailure {
     Detect(DetectError),
     Parse(ParseError),
     Allocation(knx_core::IdAllocationError),
+    UnsupportedLegacyFormat { extension: String },
     NoKnownSchemaTable { version: u32 },
 }
 
@@ -92,6 +97,10 @@ impl std::fmt::Display for ImportFailure {
             ImportFailure::Detect(e) => write!(f, "{e}"),
             ImportFailure::Parse(e) => write!(f, "{e}"),
             ImportFailure::Allocation(e) => write!(f, "{e}"),
+            ImportFailure::UnsupportedLegacyFormat { extension } => write!(
+                f,
+                "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
+            ),
             ImportFailure::NoKnownSchemaTable { version } => {
                 write!(f, "no known-element table for schema version {version}")
             }
@@ -100,6 +109,23 @@ impl std::fmt::Display for ImportFailure {
 }
 
 impl std::error::Error for ImportFailure {}
+
+/// Refuse known unsupported legacy filename extensions without reading their
+/// contents. This is a filename boundary, not legacy container detection.
+/// Callers can use it before opening or migrating destination databases.
+pub fn check_project_filename(path: &std::path::Path) -> Result<(), ImportFailure> {
+    if let Some(extension) = path.extension().and_then(|extension| extension.to_str()) {
+        if ["vd2", "vd3", "vd4", "vd5", "pr3", "pr4", "pr5"]
+            .iter()
+            .any(|legacy| extension.eq_ignore_ascii_case(legacy))
+        {
+            return Err(ImportFailure::UnsupportedLegacyFormat {
+                extension: extension.to_owned(),
+            });
+        }
+    }
+    Ok(())
+}
 
 /// Reads and imports a `.knxproj` file from disk.
 pub fn import_knxproj(path: &std::path::Path) -> Result<ImportOutcome, ImportFailure> {
@@ -113,6 +139,7 @@ pub fn import_knxproj_observed(
     path: &std::path::Path,
     observer: &dyn ImportObserver,
 ) -> Result<ImportOutcome, ImportFailure> {
+    check_project_filename(path)?;
     let bytes = std::fs::read(path).map_err(ImportFailure::Io)?;
     let file_name = path
         .file_name()
@@ -144,6 +171,7 @@ pub fn import_knxproj_bytes_observed(
     file_name: &str,
     observer: &dyn ImportObserver,
 ) -> Result<ImportOutcome, ImportFailure> {
+    check_project_filename(std::path::Path::new(file_name))?;
     let file_size = bytes.len() as u64;
     observer.stage(ImportStage::OpenContainer);
     let mut container = Container::open(bytes).map_err(ImportFailure::Container)?;
@@ -191,6 +219,8 @@ pub fn import_knxproj_bytes_observed(
     let info_bytes = container
         .read(&info_path)
         .map_err(ImportFailure::Container)?;
+    detect::require_project_namespace(&info_bytes, &info_path, &detected.namespace)
+        .map_err(ImportFailure::Detect)?;
     let (info, info_unknown) =
         parse_project_info(&info_bytes, &info_path, schema).map_err(ImportFailure::Parse)?;
     parsed.document.info = info;
@@ -330,6 +360,7 @@ pub fn import_knxproj_bytes_observed(
         project: mapped.project,
         opaque: opaque_entries,
         manufacturer,
+        master_metadata_error: detected.master_metadata_error,
         report: import_report,
     })
 }

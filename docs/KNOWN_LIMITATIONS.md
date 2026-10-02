@@ -6664,6 +6664,15 @@ whole-device receipt; bounded `serviceControlWrite` activity is not a
 durable audit trail (ADR-0055/0056). The new UI/backup gate is covered only
 by local mock/simulator tests, **not a new live hardware run**.
 
+**Recovery ordering correction, 2026-10-02.** The original property backup
+was taken after connection setup had already asserted Verify Mode. The
+service-control path now postpones that setup write, validates the original
+PID_DEVICE_CONTROL byte, and durably keeps both original properties in
+format 2 before any property write. Legacy format 1 is preserved, not silently
+filled with an invented byte. No-op and wrong-scope calls do not write;
+malformed widths and failed backups refuse. This does not close whole-device
+recovery, durable history or hardware-support residues (ADR-0051 amendment).
+
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
 

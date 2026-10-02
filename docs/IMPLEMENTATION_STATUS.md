@@ -66,6 +66,26 @@ encoding or private corpus claim. Remaining budget/module identity/validation
 audit and UI token adoption stay open.
 
 
+## Commissioning recovery: backup before Verify Mode — 2026-10-02
+
+The opt-in service-control procedure now establishes its management connection
+without a property write, reads PID_SERVICE_CONTROL and exactly one
+PID_DEVICE_CONTROL octet, and persists both originals before setting Verify
+Mode or changing bit 2. Recovery format 2 adds the original PID 14 octet;
+legacy format 1 files are not rewritten or treated as complete setup recovery.
+Wrong-scope authorisation refuses before any frame (including cleanup
+Disconnect). An already-correct value performs no backup or property write.
+Four simulator disconnect transitions clear only the Verify Mode bit, not
+unrelated Device Control bits. CLI plan output lists the setup write explicitly.
+
+Offline evidence: knx-net 425/0/0, backup 4/0/0, CLI 8/0/0, HTTP 12/0/0;
+nine compiled behavioral mutants caught and restored. Full workspace gate
+2929/0/164, Web 1559, strict Clippy/build/types/fmt/deny and nonempty repository
+gates pass; 17 shadow bindings are semantically equal. This is a bounded
+safety fix, not whole-device recovery, durable audit history, private-corpus
+coverage, a new hardware run or complete Alpha acceptance. Details and final
+publication state are in the commissioning recovery log.
+
 ## AR07 bounded controller integrated checkpoint — 2026-10-02 20:56 CEST
 
 Source 00f23758 and integrated 03f18c95 (published U15/theme parent fe02deeb)

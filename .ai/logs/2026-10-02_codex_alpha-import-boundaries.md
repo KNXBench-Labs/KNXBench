@@ -1,5 +1,52 @@
 # AR06 import boundaries — discovery
 
+## 2026-10-02 16:56 CEST — AR06 integrated receipt (publication pending)
+
+- proc_8211942fb620 exited 0; all 24 expected steps/raw logs independently
+  reconciled on merge 1404f39be3fc629788da158c4e43f459da5f2594, tree
+  5ce951c8e5ae918b1b4e5bc23eb2ddf3000a8b09; 595 tracked source/config inputs frozen.
+- Workspace: 2,916 passed, zero failed, 164 ignored, 146 result blocks. Web:
+  1,357 unit and 52 intercepted Chromium fixture tests passed. Eighteen selected
+  private offline cases and six existing raw catalogue/producer cases ran without
+  skips. Strict workspace Clippy/build, format, dependency policy, shadow binding
+  semantic comparison and all four nonempty intended-root repository gates pass.
+- Headers: 389 well-formed, 157 at the existing ceiling, 17 generated skipped;
+  anchors: 376 links / 235 Markdown files; layering: 448 resolved packages.
+- In-session whole-diff review closed both Important findings with RED/GREEN and
+  compiled behavioral mutants: destination opening before master admission and
+  an unsaved domain seed in refusal evidence. Not independent external approval.
+- New upstream e98a0b58 contains two documentation-only UI theme commits. Preserve
+  their complete handover/status archives, then rerun doc gates before publication.
+  This receipt supersedes preceding pending combined-gate wording, not the scopes
+  of historical receipts. No shared-root edits, original/corpus pin changes,
+  full ETS/XSD/descendant validation, durable-report or live KNX approval.
+- Scoped implementation/verification is complete; actual publication is pending.
+  Three genuine exports still represent two installations; independent module/
+  unimplemented-schema samples remain BLOCKED_EXTERNAL, not waived or compatible.
+
+## 2026-10-02 16:38 CEST — combined source committed; integrated gates dispatched
+
+Source f8b6f27e contains exactly twenty reviewed paths; staged tree receipt,
+author/committer github@knxbench.com and no-co-author policy verified. Upstream
+b6a43f3b merged in owned checkout as 1404f39be3fc629788da158c4e43f459da5f2594;
+all fourteen owned Rust paths remain byte-identical. Two doc conflicts were
+resolved by composing owned additions with complete authoritative upstream:
+handover suffix exact, status prefixes/base exact. Initial overly strict
+contiguous-status assertion failed after patches; composition check corrected,
+no content loss. Limitations auto-merge retained both owners. No shared-root
+edit, root ref move, source mutation, upstream reversal or publication.
+
+Format/whitespace/runner syntax/real Chromium and npx prerequisites pass;
+mock fixture port 4173 observed free before launch. Twenty-four integrated
+steps dispatched as proc_8211942fb620 / PID 4132268 with both common locks:
+pinned Web install/build/unit/mock browser, fresh shadow contract comparison,
+dependency policy plus eighteen existing offline Rust/private import steps.
+Exact integration head/tree and full tracked code/config source freeze are
+recorded by the runner. No full-gate verdict inferred from dispatch. Current
+artifacts ar06-integrated-summary.json, progress and twenty-four named logs.
+Read back every expected step/source/scope before publication; no independent
+samples, complete ETS/native/real-network/accessibility or release claim.
+
 ## 2026-10-02 16:14 CEST — final corrected candidate accepted; integration preflight
 
 Exact proc_0c225d9b5f0e EXITED 0. All eighteen expected exits/raw logs,

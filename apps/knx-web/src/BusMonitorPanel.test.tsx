@@ -1179,6 +1179,27 @@ describe("BusMonitorPanel and the shared session's context", () => {
       });
     }
 
+    it("shows retained discovery octets without inventing a programming-mode verdict", async () => {
+      apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [{
+        ...hallway,
+        deviceInfo: { medium: 129, status: 128, projectInstallationId: 4660,
+          serialNumber: [1, 2, 3, 4, 5, 6], routingMulticast: "224.0.23.12",
+          macAddress: [170, 187, 204, 221, 238, 255] },
+      }] });
+      await renderPanel();
+      await flushReattach();
+      const info = host!.querySelector(".bus-discovery-info")!;
+      expect(info).not.toBeNull();
+      expect(Object.fromEntries(Array.from(info.querySelectorAll("dt"), (term) =>
+        [term.textContent, term.nextElementSibling?.textContent]))).toEqual({
+          "KNX medium (raw)": "0x81", "Device status (raw)": "0x80",
+          "Project-installation identifier": "4660", "KNX serial number": "010203040506",
+          "Routing multicast address": "224.0.23.12", "MAC address": "aa:bb:cc:dd:ee:ff",
+        });
+      expect(info.textContent).not.toContain("Programming mode");
+      expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    });
+
     it("searches without being asked and offers what answered", async () => {
       apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [hallway, workshop] });
       await renderPanel();
@@ -1195,6 +1216,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       expect(found[0]!.textContent).toContain("Tunnelling");
       expect(found[1]!.textContent).toContain("Workshop router");
       expect(found[1]!.textContent).not.toContain("Tunnelling");
+      expect(host!.querySelectorAll(".bus-discovery-info-unavailable")).toHaveLength(2);
+      expect(host!.querySelector(".bus-discovery-info-unavailable")!.textContent).toContain("not provided");
       expect(host!.querySelector(".bus-discovery-status")!.textContent).toBe("2 interfaces answered.");
       // An offer, not a decision: nothing connected, nothing typed.
       expect(apiMock.startBusMonitor).not.toHaveBeenCalled();

@@ -5,7 +5,7 @@ import App from "./App";
 import AuthGate from "./AuthGate";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
 import { isCompanionView } from "./diagnosticsWindow";
-import { initSettings } from "./settingsStore";
+import { startSettingsRefresh } from "./settingsStore";
 import "@fontsource/space-grotesk/400.css";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
@@ -40,7 +40,7 @@ const companion = isCompanionView(window.location.search);
  */
 function SettingsBootstrap({ children }: { children: ReactNode }) {
   useEffect(() => {
-    void initSettings();
+    return startSettingsRefresh();
   }, []);
   return <>{children}</>;
 }

@@ -194,6 +194,14 @@ export function isUnsavedChangesConflict(e: unknown): boolean {
   return errorStatus(e) === 409;
 }
 
+/** Restyle through the existing undoable project command; numeric addresses stay intact. */
+export function setGroupAddressStyle(groupAddressStyle: GroupAddressStyle): Promise<ProjectTree> {
+  return request("/api/project/group-address-style", {
+    method: "POST",
+    body: JSON.stringify({ groupAddressStyle }),
+  });
+}
+
 export function saveProject(): Promise<void> {
   return request("/api/project/save", { method: "POST" });
 }
@@ -1265,6 +1273,14 @@ export interface BusDiscoveredInterface {
   individualAddress: string;
   friendlyName: string;
   supportsTunnelling: boolean;
+  deviceInfo?: {
+    medium: number;
+    status: number;
+    projectInstallationId: number;
+    serialNumber: number[];
+    routingMulticast: string;
+    macAddress: number[];
+  } | null;
 }
 
 export interface BusDiscoverResponse {

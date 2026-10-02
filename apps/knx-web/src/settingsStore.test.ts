@@ -12,6 +12,7 @@ import {
   setPersistedBooleanSetting,
   setSetting,
   settingsStorage,
+  startSettingsRefresh,
   type SettingsResponse,
 } from "./settingsStore";
 
@@ -57,6 +58,110 @@ afterEach(() => {
   window.localStorage.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe("cross-client settings refresh", () => {
+  let stop: (() => void) | undefined;
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => { stop?.(); stop = undefined; vi.useRealTimers(); });
+
+  it("adopts another client's authoritative settings without writing them back", async () => {
+    respond([
+      { settings: { theme: "graphite", vendorExtension: { preserved: true } } },
+      { settings: { theme: "neon-grid", vendorExtension: { preserved: true }, accent: "mint" } },
+    ]);
+    await initSettings();
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getSetting("theme")).toBe("neon-grid");
+    expect(getSetting("vendorExtension")).toEqual({ preserved: true });
+    expect(calls).toEqual([["/api/settings", "GET", undefined], ["/api/settings", "GET", undefined]]);
+  });
+
+  it("rechecks on focus rather than waiting for the next poll", async () => {
+    respond([{ settings: { theme: "graphite" } }, { settings: { theme: "neon-grid" } }]);
+    await initSettings();
+    stop = startSettingsRefresh();
+    window.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getSetting("theme")).toBe("neon-grid");
+    expect(calls).toHaveLength(2);
+  });
+
+  it("retains the last good document when a refresh cannot reach the server", async () => {
+    respond([{ settings: { theme: "graphite" } }, new Error("offline")]);
+    await initSettings();
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getSetting("theme")).toBe("graphite");
+    expect(getSettingsState().hydration).toBe("hydrated");
+  });
+
+  it("does not overwrite a failed local patch while still adopting unrelated remote keys", async () => {
+    respond([
+      { settings: { theme: "graphite", accent: "mint" } },
+      new Error("write refused"),
+      { settings: { theme: "graphite", accent: "amber" } },
+    ]);
+    await initSettings();
+    setSetting("theme", "neon-grid");
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getSetting("theme")).toBe("neon-grid");
+    expect(getSetting("accent")).toBe("amber");
+    expect(calls.map(([, method]) => method)).toEqual(["GET", "PUT", "GET"]);
+  });
+
+  it("keeps a newer failed patch when an older queued patch succeeds", async () => {
+    respond([
+      { settings: { theme: "graphite" } },
+      { settings: { theme: "older-success" } },
+      new Error("newer patch refused"),
+      { settings: { theme: "older-success" } },
+    ]);
+    await initSettings();
+    setSetting("theme", "older-success");
+    setSetting("theme", "newer-local-edit");
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getSetting("theme")).toBe("newer-local-edit");
+  });
+
+  it("does not apply a read started before a newer local edit", async () => {
+    respond([{ settings: { theme: "graphite" } }]);
+    await initSettings();
+    let resolve!: (response: Response) => void;
+    const pending = new Promise<Response>((done) => { resolve = done; });
+    vi.stubGlobal("fetch", vi.fn((_path: string, init?: RequestInit) => init?.method === "PUT"
+      ? Promise.resolve({ ok: true, json: async () => ({ schemaVersion: 1, status: "ok", settings: { theme: "neon-grid" } }) })
+      : pending));
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    setSetting("theme", "neon-grid");
+    await vi.advanceTimersByTimeAsync(0);
+    resolve({ ok: true, json: async () => ({ schemaVersion: 1, status: "ok", settings: { theme: "old-response" } }) } as Response);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getSetting("theme")).toBe("neon-grid");
+  });
+
+  it("cancels pending refresh effects and does not overlap or revive stopped timers", async () => {
+    respond([{ settings: { theme: "graphite" } }]);
+    await initSettings();
+    let resolve!: (response: Response) => void;
+    const pending = new Promise<Response>((done) => { resolve = done; });
+    const fetchMock = vi.fn(() => pending);
+    vi.stubGlobal("fetch", fetchMock);
+    stop = startSettingsRefresh();
+    await vi.advanceTimersByTimeAsync(5000);
+    window.dispatchEvent(new Event("focus"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    stop();
+    resolve({ ok: true, json: async () => ({ schemaVersion: 1, status: "ok", settings: { theme: "cancelled" } }) } as Response);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(getSetting("theme")).toBe("graphite");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
 
 describe("reading the record", () => {

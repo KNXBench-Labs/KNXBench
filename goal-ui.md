@@ -38,6 +38,20 @@ zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
 green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
 The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
+### UI-owned alpha follow-up (user request, 2026-10-02)
+
+The user separately requested the `goal-ui` items from
+`docs/ALPHA_READINESS.md`. This does not reopen U0–U13 or authorize commissioning.
+All 24 routed rows have a current-source audit in
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md). Four concrete gaps are
+implemented and fully offline-gated: UX-02 supported-only catalog picker,
+UX-03 command-backed project style selector, KL-121 cross-client settings
+refresh, and KL-124 lossless Device Info projection/disclosure. Publication is
+pending; native/multicast/AT and domain-dependency qualifications stay explicit.
+Continue with KL-82's authoritative project/session-context contract, then the
+keyboard/background-modal and viewport-safe help-tip contracts. Do not turn
+retained design boundaries into silently accepted alpha exceptions.
+
 ---
 
 ## 0. Scope: what this goal owns

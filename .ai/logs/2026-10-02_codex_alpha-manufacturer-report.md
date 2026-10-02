@@ -1,5 +1,22 @@
 # AR05 manufacturer-report omissions — discovery
 
+## 2026-10-02 06:53 CEST — scoped source publication read back
+
+Reviewed staged scope is exactly 25 owned UTF-8 source/documentation paths;
+inherited handover suffix is byte-unchanged, no binary payload or credential
+pattern detected in additions. Closing anchors/whitespace passed. Source commit
+`04900fbc35b2daec5e766a32f99c263a04700e0e` matches the reviewed staged tree;
+required author/committer and no-co-author policy verified. Fresh upstream was
+the exact parent; one reviewed outgoing commit was pushed from the owned tree.
+Fetch/readback gives identical local/remote SHA and all 25 exact artifacts;
+outgoing range is zero.
+
+Four AR05 checklist scopes and six inventory dispositions now reference this
+delivery. All 180 identities/priorities/routes remain unchanged. KL-86 audit
+delivery does not close its missing source-winner provenance or waive release
+scope; numbered residual totals remain unchanged. Closing doc receipt/gates,
+publication/readback and owned cleanup still pending; no alpha-release claim.
+
 ## 2026-10-02 06:43 CEST — final complete acceptance and sign-off
 
 Delayed heartbeat #2 was reconciled against the exact registry and actual log:

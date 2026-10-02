@@ -211,8 +211,10 @@ Receipt
 **Sources:** `PDB-09`, `KL-86`, `KL-87`, `PDB-06`, `PDB-07`, `PDB-11`.
 **Dependencies:** AR01; relevant current product-store schema.
 
-**Status:** `IN_PROGRESS`; isolated `alpha-manufacturer-report` at published
-AR04 receipt `f4b845a3`. Shared master Languages evidence and v18 -> v19
+**Status:** `DONE` at scoped implementation/audit delivery;
+published `04900fbc35b2daec5e766a32f99c263a04700e0e`, exact remote ref and
+all 25 owned artifacts verified. Isolated base AR04 receipt `f4b845a3`.
+Shared master Languages evidence and v18 -> v19
 byte-only re-derivation implemented; DPT provenance and Dynamic truncation
 audited with owning-crate regressions. Deferred commit rollback corrected after
 behavioral RED; two behavioral mutants caught and source hashes restored.
@@ -222,8 +224,10 @@ lost. Complete corrected-candidate acceptance proc_f9f87cee4329 exited 0:
 2,884 workspace / 585 ProductDB / 1,312 Web tests; all 20 expected steps,
 three explicitly executed private cases and 595 stable source files. Separate
 in-session review findings and compiled guard mutants are closed; source
-restoration verified. Publication/readback and cleanup remain pending.
-No AR05 delivery or release claim yet. Contract:
+restoration verified. Implementation publication/readback complete; closing
+documentation publication and owned cleanup remain pending. This scoped delivery
+does not close missing DPT source-winner provenance, remove numbered residuals,
+accept a release waiver or claim full manufacturer compatibility. Contract:
 [manufacturer report](docs/MANUFACTURER_REPORT_CONTRACT.md).
 
 - [x] Add corpus-observed handling/reporting for master `Languages` attributes, preserving bytes and reporting unknowns instead of silently declaring them known.
@@ -484,7 +488,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `DOC-01` | P1 | AR00 | DONE |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL |
 | `KL-13` | P1 | AR08 | TODO |
-| `PDB-09` | P1 | AR05 | TODO |
+| `PDB-09` | P1 | AR05 | DONE |
 | `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-130-GATE` | P1 | AR01 | DONE |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER |
@@ -526,7 +530,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `DATA-02` | P2 | AR04 | TODO |
 | `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-87` | P2 | AR05 | TODO |
+| `KL-87` | P2 | AR05 | DONE |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
@@ -558,11 +562,11 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-69` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-71` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-85` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-86` | P2 | AR05 | TODO |
+| `KL-86` | P2 | AR05 | DONE |
 | `PDB-01` | P2 | AR07 | TODO |
 | `PDB-02` | P2 | AR07 | TODO |
 | `PDB-05` | P2 | AR07 | TODO |
-| `PDB-06` | P2 | AR05 | TODO |
+| `PDB-06` | P2 | AR05 | DONE |
 | `PDB-08` | P2 | AR06 | TODO |
 | `PDB-10` | P2 | AR06 | TODO |
 | `R-DYNAMIC-01` | P2 | AR07 | TODO |
@@ -605,8 +609,8 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
 | `PDB-03` | P3 | AR07 | TODO |
 | `PDB-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `PDB-07` | P3 | AR05 | TODO |
-| `PDB-11` | P3 | AR05 | TODO |
+| `PDB-07` | P3 | AR05 | DONE |
+| `PDB-11` | P3 | AR05 | DONE |
 | `FUTURE-01` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-02` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-03` | P3 | Later / separate scope — not an alpha task | LATER |

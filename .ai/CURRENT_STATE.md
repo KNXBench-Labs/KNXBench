@@ -1,3 +1,21 @@
+- **Last Agent:** codex (UI session / U15 integrated acceptance)
+- **Timestamp:** 2026-10-02 19:43 CEST
+- **Web lock:** taken by ui-theme-validation until exact publication readback.
+- **Completed:** Exact proc_32a1aab25020 exited 0; all 22 expected command/log receipts reconciled on merge de1bf652. Web 1,559 and 61 intercepted Chromium; Rust 146 result blocks / 2,916 passed / zero failed / 164 ignored / no missing-corpus markers. All twenty registered selected private offline cases actually pass, including legacy-name and pinned 115-instance matrix; no broad ignored/live sweep. Strict lint/type/build/binding semantics/deny, four nonempty root gates and whitespace pass; all 614 protected source/configuration fingerprints match. Candidate 43bf7576 and complete upstream preservation remain verified.
+- **Pending/Next Steps:** Commit/gate only this closing documentation, publish integrated source from owned checkout and fetch/live-ref/tree/all-artifact readback before declaring U15 delivered. Then receipt/DONE checkboxes, release only own Web lock, clean only accepted owned artifacts and reserve fresh current-origin U16 for strict file roundtrip and acknowledged conditional settings. U16–U18 remain open; no new go needed.
+- **Notes for Codex oder Claude:** Current source has complete combined acceptance, not independent/native/Orca/WCAG/ETS/release approval. Keep entire upstream/inherited archives and foreign root untouched. No productive backend/proxy/discovery/tunnel/device write, subagent/quota probe or alpha tag. Private matrix/logs stay scratch-only until owned cleanup; aggregate scope alone enters docs. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
+- **Last Agent:** codex (UI session / U15 integrated source)
+- **Timestamp:** 2026-10-02 19:22 CEST
+- **Web lock:** taken by ui-theme-validation through combined acceptance/publication.
+- **Completed:** Candidate 15/15 acceptance proc_56f26c5c70d5 reconciled (Web 1,559, Chromium 61, Rust 2,890/zero/163 ignored/146 blocks, 614 protected files); exactly 21 owned artifacts committed as 43bf75763ca64fa7f3cc806fe74d10be653ff78d. Integrated current AR06 origin/main 0c3d6a8a as de1bf65282bac7d5e635a8c92f7eab83f89bd7e7. Handover/status conflicts composed as owned prefixes plus entire authoritative upstream, byte-exact proof; every upstream Rust and own Web artifact unchanged. Required author/committer and no-co-author verified. No publication yet.
+- **Pending/Next Steps:** Dispatched proc_32a1aab25020 / PID 285603: distinct 22-step combined gate with fresh owned integration target and both common leases, complete Web/Rust/lint/build/binding/policy gates plus compiled ignored-test inventory and 20 selected offline private cases. Includes the upstream legacy-name and product matrix regressions (two beyond AR06 selected eighteen); explicit pinned scopes and different-filesystem output verified. Both leases held, 614 source/configuration fingerprints recorded; fmt/Web 1559/types/build and Chromium 61 passed, workspace and later steps still pending. Not accepted/published yet. After exact receipts/counts/freeze reconciliation, publish/read back, close U15/release own lock/cleanup and proceed directly to U16. U16–U18 remain open.
+- **Notes for Codex oder Claude:** No real backend/proxy/discovery/tunnel/device write, all-ignored hardware sweep, subagent/quota probe, root synchronization, alpha tag or foreign cleanup. Matrix output stays task-owned; no raw source names/values or individual fingerprints enter Git. Self-review is not independent/native/Orca/full-theme acceptance. Preserve complete inherited archives. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U15 candidate acceptance)
 - **Timestamp:** 2026-10-02 19:01 CEST
 - **Web lock:** taken by ui-theme-validation through integration/publication.

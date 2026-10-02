@@ -29,7 +29,8 @@
   cases. It is not full Tauri, Orca, native-dialog or live-discovery acceptance.
   Existing invisible-tooltip overflow at 640 px is independently recorded,
   not introduced by metadata and not repaired by removing its AT description.
-- Upstream reconciliation/publication remains pending. KL-82/keyboard contracts
+- Integrated source publication `6c16fe5a` and exact remote/tree readback verified;
+  the eleven gates reran on that integrated source. KL-82/keyboard contracts
   and missing independent native/sample evidence remain open. No alpha release,
   full ETS compatibility, bus access or hardware write is authorized.
 

@@ -46,8 +46,9 @@ All 24 routed rows have a current-source audit in
 [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md). Four concrete gaps are
 implemented and fully offline-gated: UX-02 supported-only catalog picker,
 UX-03 command-backed project style selector, KL-121 cross-client settings
-refresh, and KL-124 lossless Device Info projection/disclosure. Publication is
-pending; native/multicast/AT and domain-dependency qualifications stay explicit.
+refresh, and KL-124 lossless Device Info projection/disclosure. Publication
+`6c16fe5a` and complete remote/tree readback are verified; native/multicast/AT
+and domain-dependency qualifications stay explicit.
 Continue with KL-82's authoritative project/session-context contract, then the
 keyboard/background-modal and viewport-safe help-tip contracts. Do not turn
 retained design boundaries into silently accepted alpha exceptions.

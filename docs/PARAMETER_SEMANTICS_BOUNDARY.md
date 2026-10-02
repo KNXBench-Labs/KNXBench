@@ -1,7 +1,7 @@
 # AR07 supported parameter semantics — research boundary
 
 Status: controller checkpoint published; bounded Float guard integrated and
-accepted20/20 on 2026-10-02, publication pending. Selected private/offline
+accepted20/20 and published as da3bc947. Selected private/offline
 witnesses pass; broader AR07 and UI/native/ETS acceptance remain separate.
 
 ## Scope and authority
@@ -243,3 +243,14 @@ or accepted. Follow-up must cover the resource class, keep opaque sources and
 explicit truncation/uncertainty, and use bounded public TDD before changes.
 Nested ScopeKey/panel grouping and duplicate-module authority are source-traced;
 full ModuleScopeDto ancestor provenance and UI/localization remain separate.
+
+## Scoped Float delivery — 2026-10-03 00:04 CEST
+
+Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.
+Local/live/fetched refs equal, divergence0/0, eight owned source/receipt/doc
+artifacts byte-exact. Actual-gated sourcebc5999c1 is unchanged by the doc-only
+receipt. Four completed owned build/shadow directories removed; accepted and
+rejected aggregate evidence plus next read-only audit retained. Shared dirty
+root/U16 untouched; integrated root statistics remain with their owner.
+Broader AR07 and Alpha remain incomplete; next bounded diagnostic/inert-work
+budget proof is not yet executed, no new resource/semantic support claimed.

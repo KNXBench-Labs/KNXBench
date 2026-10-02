@@ -135,3 +135,14 @@ Prelaunch fmt initially used scratch cwd/no Cargo.toml; correct worktree retry
 and classifier preflight passed before actual gate. Final doc prepend initially
 used repeated Last-Agent anchor and was refused without mutation; exact error
 recovered, unique timestamp-qualified prefix used, complete histories verified.
+
+## Scoped delivery read back — 2026-10-03 00:04 CEST
+
+Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.
+Local/live/fetched refs equal, divergence0/0, eight owned source/receipt/doc
+artifacts byte-exact. Actual-gated sourcebc5999c1 is unchanged by the doc-only
+receipt. Four completed owned build/shadow directories removed; accepted and
+rejected aggregate evidence plus next read-only audit retained. Shared dirty
+root/U16 untouched; integrated root statistics remain with their owner.
+Broader AR07 and Alpha remain incomplete; next bounded diagnostic/inert-work
+budget proof is not yet executed, no new resource/semantic support claimed.

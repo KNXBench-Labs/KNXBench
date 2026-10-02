@@ -1442,24 +1442,36 @@ wrappers around `role="presentation"` `<ul>`s, with the visible
 `.search-group-label` marked `aria-hidden="true"` since the group's
 `aria-label` already says the same thing.
 
-**What did not ship, on purpose (spec §5).** No scroll-into-view: a
-highlight moved past the panel's visible area by arrow keys still does
-not scroll into view in any of the three lists — the same defect §19
-records for a different widget, and `Overlay.tsx` deliberately has no
-list knowledge to fix it with. No `inert`/`aria-hidden` on background
-content: the focus trap stops `Tab` from leaving the dialog, but a
-screen reader's browse/virtual-cursor mode (as opposed to sequential
-Tab) can still reach content behind the overlay. No focus-visible
-styling pass: the trap makes every control in the dialog *reachable* by
-keyboard, not *visibly* focused in every theme. And, the one that bounds
-every claim above: **none of this has been verified against a real
-screen reader.** The test suite (`Overlay.test.tsx` plus the extended
-`CatalogBrowser.test.tsx`/`SettingsPanel.test.tsx`) runs under jsdom,
-which asserts that focus moves, the trap cycles, and ARIA attributes are
-wired to the right elements — it says nothing about what NVDA, JAWS,
-Orca or VoiceOver actually announce. No conformance to WCAG or any other
-accessibility standard is claimed; no audit of any kind has been
-performed. Design: `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
+**Keyboard alpha follow-up (2026-10-02, delivered at 2e57f8e5).** Search, Command Palette
+and Catalog Browser now scroll the active option with nearest-edge alignment
+without moving combobox focus. Catalog keyboard highlight remains distinct
+from a picked product and never creates a device by itself. The shared shell
+leases background `inert`/`aria-hidden` state per document, restores prior
+attribute values, excludes newly added background content and handles nested
+or out-of-order modal closes. Initial/Tab-wrap filtering skips controls below
+hidden/inert/aria-hidden ancestors. Final close restores the original connected,
+non-inert focus target. List logic still stays outside `Overlay.tsx`.
+
+HelpTip keeps a permanent local, visually clipped description and paints a
+separate decorative body portal. Fixed placement escapes clipped/transformed
+ancestors, bounds the popup to the viewport at application zoom, repositions
+on resize/captured scroll and cleans up listeners. Closed painted bubbles no
+longer extend the document at their old trigger coordinates.
+
+Focused tests and 17 fully intercepted Chromium cases cover list visibility,
+modal focus/background accessibility-tree exclusion, nested close, and tooltip
+geometry/description in DE/EN at 360/640/1440 px and 100/150% zoom. Eighteen
+behavioral controls are rejected with exact source restoration. All twelve
+candidate/integrated gates pass: Web 1,357, Chromium 52, Rust 2,890 / zero failed /
+163 ignored, 576-source freeze. Exact source ref/tree/all 28 artifacts were read
+back after publication; package log records failed predecessors separately.
+
+**Still open.** No whole-application focus-visible styling audit across every
+theme, full Tauri/native interaction acceptance, or actual screenreader run.
+Chromium DOM/accessibility-tree evidence does not prove what NVDA, JAWS, Orca
+or VoiceOver announces. No WCAG conformance, universal virtual-cursor guarantee
+or alpha-release exception is claimed. Design:
+`docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
 
 **U8 update (2026-09-29).** The shared shell now offers opt-in viewport-bounded
 pointer and keyboard resizing. Settings and Debug report use it; the other
@@ -4063,6 +4075,34 @@ verification boundary or claiming a new protocol fix.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
+**Status (2026-10-02 scoped delivery).** The browser-only proof described
+below is superseded by the delivered authoritative polling
+contract. The server compares the active session's real `GroupAddressContext`
+with the current project's interpretation (style, names and resolved DPTs).
+`contextStatus`, nullable `projectOpen` and `serverIncarnation` are returned by
+the same monitor poll. Busy/poisoned/unavailable evidence is not freshness;
+legacy/malformed responses or poll failure lock the new UI's compose form.
+Pause performs context-only reads without rows or cursor advancement. Delayed
+replies cannot erase a newer invalidation or replacement session. Browser
+records cannot establish a verified state. Backend/UI regressions and bounded
+mocked browser evidence and twelve complete candidate gates pass; integrated
+acceptance repeated and source `8ceacf49` published with exact remote/tree
+readback. Scoped comparison is delivered, not the remaining boundaries. See
+[owner evidence](UI_ALPHA_READINESS.md).
+
+**Remaining boundary.** This is a point-in-time interpretation comparison, not
+a complete project identity/version, collaboration/push channel or atomic
+write-context token. Existing captured rows keep their old decoded values; a
+later edit can occur before another poll or send. Parameter/device changes are
+checked only insofar as they change the interpreter's actual DPT/name/style
+snapshot. Real native/live-bus verification is not inferred from fixtures.
+An older server without this evidence remains readable but cannot enable Send
+in the new monitor UI. No hardware permission or source-wide alpha waiver.
+
+**Historical explanation (before this follow-up).** The following describes
+the former local-storage-only mechanism and its known cases, not the new
+implementation's source of freshness evidence.
+
 **Limitation.** The second-window diagnostics companion (T-UI-06) locks
 itself when the project changes under a running bus session. That lock is
 decided entirely from two `localStorage` records written by the windows of
@@ -5976,6 +6016,21 @@ invented to hold them are gone.
 
 ## 121. Two open windows do not see each other's preference changes until one reloads
 
+**2026-10-02 UI-owner implementation update.** The historical reload-only
+description below is superseded at frontend scope: authenticated main and
+companion windows now reread the authoritative settings record every five
+seconds while visible and on focus/visibility. Reads never write it back.
+Queued/failed local patches, unknown keys and deletion intent are preserved;
+write-generation and cancellation guards prevent stale reads from overriding
+new edits or reviving a stopped timer. Focused regressions, realistic negative
+controls and the complete offline gates pass. There is still no instantaneous
+push or general shared-project synchronization; native/AT workflows are not
+accepted by these tests. Publication remains pending. See
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title and inventory
+identity remain stable for incoming links and the separate alpha owner.
+
+**Historical description before this follow-up:**
+
 **Limitation.** Since [ADR-0029](adr/0029-application-settings-file.md),
 preferences live in one `settings.json` in the server's data directory and
 every window reads it at load. A window that changes a preference writes it
@@ -6006,6 +6061,20 @@ worth solving; both wait for a server-side change feed, which nothing else
 needs yet.
 
 ## 124. The interface search shows four facts about an interface; the protocol carries more
+
+**2026-10-02 UI-owner implementation update.** The narrowing described below
+has been removed: `DiscoveredGateway` retains optional decoded Device Info and
+the HTTP/UI layers project its medium/status octets, project-installation ID,
+serial, routing multicast and MAC without reinterpretation. Missing adapter
+metadata is explicitly unavailable, never fabricated zeros. Focused HTTP and
+actual unicast-loopback tests, raw-value UI regressions, realistic mutants and
+the complete offline gates pass; six additional intercepted-browser cases
+verify the disclosure itself. This does not accept native/live Search (§79),
+infer device identity/capabilities or grant a write. Publication is pending.
+See [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). The historical title/inventory
+identity remains stable; the following cause is historical, not current code.
+
+**Historical description before this follow-up:**
 
 **Limitation.** `POST /api/bus/discover` (`apps/knx-server/src/bus_routes.rs`)
 and the panel above it report four things per interface: control endpoint,

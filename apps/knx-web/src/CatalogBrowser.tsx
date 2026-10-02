@@ -17,6 +17,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { useTranslate } from "./i18n";
 import type { MessageKey, Translate } from "./i18n";
+import { useActiveOptionScroll } from "./useActiveOptionScroll";
 
 // D4 exception (task-5 brief): `CreationDiagnostic.detail` is a ready-made
 // English sentence composed server-side (`domain.rs`'s `.detail()`), but
@@ -172,6 +173,7 @@ export default function CatalogBrowser(props: {
   const filtersRef = useRef({ manufacturer: "", search: "" });
   const createInFlightRef = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const activeOptionRef = useActiveOptionScroll(highlight, items, active);
   const quantityNumber = Number(quantity);
   const validQuantity = /^\d+$/.test(quantity) && quantityNumber >= 1 && quantityNumber <= 32;
 
@@ -320,7 +322,7 @@ export default function CatalogBrowser(props: {
         {installing ? t("catalog.installing") : t("catalog.installLabel")}
         <input
           type="file"
-          accept=".knxprod,.vd2,application/zip"
+          accept=".knxprod,application/zip"
           disabled={installing}
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -435,10 +437,11 @@ export default function CatalogBrowser(props: {
           <li
             key={item.id}
             id={`catalog-option-${i}`}
+            ref={i === highlight ? activeOptionRef : undefined}
             role="option"
             aria-selected={selected?.id === item.id}
             aria-disabled={batchOutcomeUnconfirmed}
-            className={`${selected?.id === item.id ? "search-result selected" : "search-result"}${batchOutcomeUnconfirmed ? " disabled" : ""}`}
+            className={`${selected?.id === item.id ? "search-result selected" : "search-result"}${i === highlight ? " active" : ""}${batchOutcomeUnconfirmed ? " disabled" : ""}`}
             onClick={() => pick(item)}
           >
             {item.name ?? item.id}

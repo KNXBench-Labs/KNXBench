@@ -79,6 +79,8 @@ interface BusComposeFormProps {
   /// telegram sent with the wrong DPT is not an error message, it is an
   /// actuator doing the wrong thing, and Undo does not reach the bus.
   contextStale: boolean;
+  /** Unknown/legacy comparison is not permission to use an unverified DPT. */
+  contextUnverified?: boolean;
 }
 
 // Task 5 review round 2: `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
@@ -94,6 +96,7 @@ export default function BusComposeForm({
   projectOpen,
   sessionClosed,
   contextStale,
+  contextUnverified = false,
 }: BusComposeFormProps) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
@@ -142,6 +145,11 @@ export default function BusComposeForm({
       // against a project that no longer exists.
       setSendError(t("busCompose.contextStaleMessage"));
       return; // Rejected client-side — `fetch` is never called.
+    }
+
+    if (contextUnverified) {
+      setSendError(t("busMonitor.contextUnverified"));
+      return;
     }
 
     const explicitDpt = dpt.trim();
@@ -204,6 +212,7 @@ export default function BusComposeForm({
     [
       sessionClosed ? "bus-compose-closed-hint" : null,
       contextStale ? "bus-compose-stale-hint" : null,
+      contextUnverified ? "bus-compose-unverified-hint" : null,
     ]
       .filter((id): id is string => id !== null)
       .join(" ") || undefined;
@@ -213,6 +222,11 @@ export default function BusComposeForm({
       <h3>{t("busCompose.heading")}</h3>
       <p className="bus-compose-live-action">{t("busCompose.liveAction")}</p>
       {!projectOpen && <p className="bus-compose-hint">{t("busCompose.noProjectHint")}</p>}
+      {contextUnverified && (
+        <p id="bus-compose-unverified-hint" className="bus-compose-hint" role="status">
+          {t("busMonitor.contextUnverified")}
+        </p>
+      )}
       {sessionClosed && (
         <p id="bus-compose-closed-hint" className="bus-compose-hint bus-compose-closed-hint">
           {t("busCompose.sessionClosedMessage")}
@@ -236,7 +250,7 @@ export default function BusComposeForm({
             value={destination}
             placeholder={formatGa("1/1/1")}
             onChange={(e) => onDestinationChange(e.target.value)}
-            disabled={sessionClosed || contextStale}
+            disabled={sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           />
         </label>
@@ -248,7 +262,7 @@ export default function BusComposeForm({
             placeholder="DPST-1-1"
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
-            disabled={sessionClosed || contextStale}
+            disabled={sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           />
         </label>
@@ -259,7 +273,7 @@ export default function BusComposeForm({
             className="bus-compose-value"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            disabled={sessionClosed || contextStale}
+            disabled={sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           />
         </label>
@@ -271,7 +285,7 @@ export default function BusComposeForm({
             onChange={(e) =>
               setInputFormat(e.target.value === "" ? null : (e.target.value as DptInputFormat))
             }
-            disabled={sessionClosed || contextStale}
+            disabled={sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           >
             <option value="">{t("busCompose.inputFormatAuto")}</option>
@@ -284,7 +298,7 @@ export default function BusComposeForm({
         </label>
         <button
           onClick={() => void send()}
-          disabled={sending || !destination || !value || sessionClosed || contextStale}
+          disabled={sending || !destination || !value || sessionClosed || contextStale || contextUnverified}
           aria-describedby={disabledReason}
         >
           {t("busCompose.send")}

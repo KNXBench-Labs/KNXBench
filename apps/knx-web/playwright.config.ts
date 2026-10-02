@@ -1,4 +1,4 @@
-/** Configures Playwright to exercise the built web app against the local KNX server. */
+/** Runs intercepted-API browser fixtures on an isolated local Vite server. */
 
 import { defineConfig } from "@playwright/test";
 
@@ -21,15 +21,9 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "cargo run -p knx-server",
-    cwd: "../..",
-    url: "http://127.0.0.1:4173/healthz",
+    command: "npx vite --config vite.fixtures.config.ts",
+    url: "http://127.0.0.1:4173/e2e/device-editor-fixture.html",
     timeout: 120_000,
     reuseExistingServer: false,
-    env: {
-      KNX_PORT: "4173",
-      KNX_STATIC_DIR: "apps/knx-web/dist",
-      KNX_DATA_DIR: "target/playwright/knx-server-data",
-    },
   },
 });

@@ -194,6 +194,14 @@ export function isUnsavedChangesConflict(e: unknown): boolean {
   return errorStatus(e) === 409;
 }
 
+/** Restyle through the existing undoable project command; numeric addresses stay intact. */
+export function setGroupAddressStyle(groupAddressStyle: GroupAddressStyle): Promise<ProjectTree> {
+  return request("/api/project/group-address-style", {
+    method: "POST",
+    body: JSON.stringify({ groupAddressStyle }),
+  });
+}
+
 export function saveProject(): Promise<void> {
   return request("/api/project/save", { method: "POST" });
 }
@@ -1229,6 +1237,9 @@ export interface BusMonitorStopResponse {
 export interface BusMonitorTelegramsResponse {
   sessionId: number;
   serverIncarnation: string;
+  /** Authoritative interpretation comparison; absent on legacy servers. */
+  contextStatus?: "current" | "stale" | "unavailable";
+  projectOpen?: boolean | null;
   status: "active" | "closed";
   nextSince: number;
   droppedBefore: number;
@@ -1265,6 +1276,14 @@ export interface BusDiscoveredInterface {
   individualAddress: string;
   friendlyName: string;
   supportsTunnelling: boolean;
+  deviceInfo?: {
+    medium: number;
+    status: number;
+    projectInstallationId: number;
+    serialNumber: number[];
+    routingMulticast: string;
+    macAddress: number[];
+  } | null;
 }
 
 export interface BusDiscoverResponse {
@@ -1338,8 +1357,8 @@ export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
 // `since` defaults to `0` server-side too (`TelegramsQuery.since:
 // Option<u64>`) — always sent explicitly here so a caller never has to
 // remember that omitting it means "from the start."
-export function pollBusTelegrams(since: number): Promise<BusMonitorTelegramsResponse> {
-  return request(`/api/bus/monitor/telegrams?since=${since}`);
+export function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
+  return request(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
 }
 
 // `POST`, matching the route (`bus_routes.rs`'s `discover_interfaces`):

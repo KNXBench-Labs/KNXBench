@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-01 — AR04 storage fallback (offline; UTC; publication pending)
+## 2026-10-02 — AR04 storage fallback publication (offline; UTC)
 
 - Exported `sync_after_command` delegates to the existing transactional full
   project writer for every command; no successful unsupported incremental arm.
@@ -18,8 +18,10 @@
   repository gates green. 574 guarded source files unchanged; changed store
   compilation/check verified. Headers 373 valid / 159 absent / 17 generated;
   corpus policy 325 Rust files, target explicitly this candidate.
-- KL-42's documented defect corrected; DATA-02/AR04 package remain IN_PROGRESS
-  pending verified publication/final receipt. Contract
+- KL-42/DATA-02/AR04 delivered as `216c673e7c32a4bd82a308e06544a4fd239d7b3f`;
+  exact remote ref and source/contract artifact equality, author/committer and
+  no-co-author policy verified. Closing documentation/owned cleanup follows.
+  Contract
   [STORAGE_COMMAND_CONTRACT](STORAGE_COMMAND_CONTRACT.md), receipt
   `.ai/logs/2026-10-01_codex_alpha-storage-contract.md`. Triage is 110 headings,
   seven historical/resolved, 103 residual, 102 classified (5/30/54/13).

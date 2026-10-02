@@ -97,7 +97,7 @@ AR02 remote/ref/artifact readback succeeded and its owned checkout, branch,
 targets and scratch were removed. AR03's docs-only audit was published as
 `4f47059c`; its reserved activation remains unanswered.
 
-## AR04 storage command contract — verified; publication pending
+## AR04 storage command contract — DONE
 
 [Explicit full-save fallback](STORAGE_COMMAND_CONTRACT.md) replaces the exported
 helper's successful no-op arms without changing current production save paths.
@@ -111,8 +111,9 @@ zero failed, 161 ignored, zero skip markers; two explicitly executed private
 store roundtrips, zero ignored/failure; Web 1,312. Strict Clippy, typecheck,
 build, semantic bindings, dependency and repository gates pass. All 574 guarded
 source files are unchanged across gates; changed store code compilation was
-verified. Publication/final receipt remains pending; dispatch rows retain
-IN_PROGRESS until verified remote readback.
+verified. Published implementation `216c673e7c32a4bd82a308e06544a4fd239d7b3f`
+matched the remote ref and exact source/contract artifacts; author/committer and
+no-co-author policy verified. Closing doc publication/owned cleanup follows.
 No parked ADR phase, U12 control, schema or commissioning gate is changed.
 
 ## Stable limitation identity
@@ -240,7 +241,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `GAP-T30-09` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.14–15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.6.7; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / commissioning-download-design.md R11; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DATA-02` | P2 | AR04 | IN_PROGRESS | STORAGE_COMMAND_CONTRACT.md; full-save fallback/native failure-history tests verified; integrated gates/publication pending; U12 editor scope is not lifted |
+| `DATA-02` | P2 | AR04 | DONE | STORAGE_COMMAND_CONTRACT.md; published 216c673e full-save fallback/native failure-history tests, integrated gates and exact remote/artifact verified; U12 editor scope is not lifted |
 | `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-87` | P2 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md §87; Retained boundary; AR05 verifies subcases before changing status |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
@@ -332,7 +333,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `FUTURE-07` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | goal.md §6; goal.md §6: logo remains user-owned |
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §107; accepted ADR-0025 and goal.md §6: data extension, no code plug-in API |
 | `KL-16` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §16; Retained boundary; AR15 verifies subcases before changing status |
-| `KL-42` | P3 | AR04 | IN_PROGRESS | docs/KNOWN_LIMITATIONS.md §42; no-op/doc defect corrected with native/mutation evidence; package gates/publication pending |
+| `KL-42` | P3 | AR04 | DONE | docs/KNOWN_LIMITATIONS.md §42; published 216c673e no-op/doc correction, native/mutation/full-gate evidence and exact remote/artifact readback |
 | `KL-65` | P3 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §65; Retained boundary; AR13 verifies subcases before changing status |
 | `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §41; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §45; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |

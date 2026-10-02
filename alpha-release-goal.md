@@ -118,7 +118,9 @@ typecheck, build and repository gates green. Receipt:
 Its remote ref/artifact matched the gated tree; owned checkout, branch and
 AR02 targets/scratch are removed. AR03's bounded source audit and proposed
 scope are documented in [the enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md).
-AR03 remains `WAITING_DECISION`; next ready work is AR04. The activation
+AR03 remains `WAITING_DECISION`; AR04 is published as
+`216c673e7c32a4bd82a308e06544a4fd239d7b3f` with exact remote/artifact readback.
+Next ready work is AR05. The activation
 prompt has no recorded answer; empty input is not consent or an accepted deferral.
 The canonical-root statistics refresh is blocked by foreign local report work;
 this does not block unrelated offline packages and is not a fabricated refresh.
@@ -184,8 +186,9 @@ from this docs-only audit. Continue independent AR04.
 ### AR04 — Make storage guarantees match actual command coverage
 
 **Sources:** `DATA-02`, `KL-42`. **Dependencies:** AR02; coordinate any AR03 surface changes.
-**Status:** `IN_PROGRESS`; isolated `alpha-storage-contract`, published AR03
-baseline `4f47059c`. [Storage contract](docs/STORAGE_COMMAND_CONTRACT.md).
+**Status:** `DONE`; implementation published as
+`216c673e7c32a4bd82a308e06544a4fd239d7b3f`, exact remote/artifact and author
+policy verified. Baseline `4f47059c`. [Storage contract](docs/STORAGE_COMMAND_CONTRACT.md).
 
 - [x] Trace every relevant structural command through `command_sync`, whole-project save, undo/redo and reopen. Identify unsupported incremental cases explicitly.
 - [x] Choose the smallest safe behavior: verified incremental synchronization or an explicit whole-project-save fallback. Never make an unsupported command appear durably saved by an incremental success.
@@ -198,7 +201,8 @@ hashes restored. Source enumeration is 50 variants, not per-variant runtime
 certification. Complete coordinated gates exited 0: 142 Rust suites, 2,859
 passed / zero failed / 161 ignored / zero skip markers; private store 2/2,
 Web 1,312; strict Clippy, type/build/bindings/dependency and repository gates
-green. Source hashes are stable; publication/final receipt remains pending.
+green. Source hashes are stable; implementation publication verified, closing
+documentation/cleanup receipt follows.
 Receipt
 `.ai/logs/2026-10-01_codex_alpha-storage-contract.md`.
 

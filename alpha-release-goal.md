@@ -120,7 +120,7 @@ AR02 targets/scratch are removed. AR03's bounded source audit and proposed
 scope are documented in [the enforcement audit](docs/ADR0039_ENFORCEMENT_AUDIT.md).
 AR03 remains `WAITING_DECISION`; AR04 is published as
 `216c673e7c32a4bd82a308e06544a4fd239d7b3f` with exact remote/artifact readback.
-Next ready work is AR05. The activation
+Next ready work is AR06 (AR05's scoped delivery is recorded below). The activation
 prompt has no recorded answer; empty input is not consent or an accepted deferral.
 The canonical-root statistics refresh is blocked by foreign local report work;
 this does not block unrelated offline packages and is not a fabricated refresh.
@@ -244,9 +244,72 @@ accept a release waiver or claim full manufacturer compatibility. Contract:
 **Dependencies:** AR05 where reports/migrations intersect.
 
 **Status:** `IN_PROGRESS`; fresh `alpha-import-boundaries` at `65b91777`.
-Initial source/documentation audit only; no AR06 runtime acceptance or new
-compatibility claim. Discovery:
+Scoped root/metadata namespace and XML-value hardening plus explicit optional
+master diagnostics/admission implemented; final three-crate gates pass (162
+passed / zero failed / 75 ignored). Synthetic evidence includes six seeded-DB
+refusals, foreign-master typed-write prevention and native source/project reopen
+with/without shared products, plus compiled negative controls. No whole-checklist,
+private-corpus, independent-sample or new compatibility acceptance.
+Contract: `docs/IMPORT_BOUNDARY_CONTRACT.md`. Discovery/checkpoint:
 `.ai/logs/2026-10-02_codex_alpha-import-boundaries.md`.
+
+2026-10-02 13:02 CEST follow-up: filename-only legacy refusal and early CLI
+destination guards are implemented and verified, with full native/opaque reopen
+and seeded main/WAL preservation. Products-only CLI also refuses unsupported
+master roots before manufacturer writes. Five compiled killed mutants; all
+production sources restored; five-crate gates 899 passed / zero failed /
+119 ignored, strict Clippy/format/whitespace green. No private/wider/integrated
+acceptance or publication yet; the comprehensive checkboxes remain open until
+their scoped delivery/evidence is reconciled. No legacy importer is activated.
+
+2026-10-02 13:16 CEST renewed candidate receipt: `proc_11bf8a0ab11f` exited 0,
+all twelve explicit steps/logs reconciled; 2,904 workspace passes, zero failures,
+163 ignored and ten actually executed selected private offline cases. Strict
+workspace Clippy/build, format/whitespace and nonempty intended-root repository
+gates pass; thirteen Rust files remained frozen and Web/binding delta is empty.
+This is not whole-corpus/independent-sample or integrated publication acceptance.
+Raw-field/sample and DefaultLine/device-local evidence and final delivery remain
+open; missing genuine independent samples stay BLOCKED_EXTERNAL.
+
+2026-10-02 14:34 CEST mapping checkpoint: renewed proc_2296901dfdb3 exited 0;
+six compiled behavioral mutants killed with byte-exact mapper restoration,
+170 three-crate passes / zero failures / 76 ignored, strict Clippy/format green.
+Eight selected private offline cases ran without skips; synthetic native reopen
+covers 24 combinations with/without an empty product DB. Six existing raw
+catalogue/producer tests also passed. The contract now records exact raw-field
+boundaries and three existing project exports from two documented installations,
+not three independent installations. Complete feature review, renewed wider /
+integrated gates and publication are pending; checkboxes remain open until that
+delivery boundary. Genuine independent module/schema samples remain external.
+
+2026-10-02 15:17 CEST review checkpoint: the prior eighteen-step mapping gate
+exited 0 (2,910 workspace passes / zero failures / 164 ignored / 146 blocks;
+eighteen selected private cases plus six existing raw tests, no skips; fifteen
+Rust sources frozen). Separate caller review then reproduced premature product
+DB creation on unsupported-master refusal. CLI project admission now precedes
+DB opening; missing-target/non-openable-sentinel controls, a compiled killed
+mutant, eight ordinary and eight private CLI tests and strict lint pass. The
+earlier broad receipt belongs to the preceding tree; renewed broad verification,
+remaining whole-feature review and integrated publication are still pending.
+
+2026-10-02 15:52 CEST final code/fixture review checkpoint: corrected-CLI
+eighteen-step proc_129928b4f8dc exited 0 with the same verified 2,910/zero/164
+workspace scope and eighteen actual private/six raw passes. All fourteen changed
+Rust diffs reviewed (runner additionally freezes the unchanged mapper).
+An evidence gap remained: application refusal fixture had not saved its domain
+seed. `NotSaved` RED reproduced that gap; explicit nonempty save/equality checks
+and a caught compiled destructive-store mutant now pass. Restored service
+four ordinary tests/zero failures/three ignored and strict app lint pass.
+Both review findings resolved, no remaining blocking in-session code finding;
+final strengthened-fixture and integrated gates/publication remain pending.
+
+2026-10-02 16:14 CEST candidate acceptance: final strengthened-fixture
+proc_0c225d9b5f0e exited 0, all eighteen expected steps and raw logs reconciled,
+2,910 workspace passes/zero failures/164 ignored/146 blocks, eighteen selected
+private and six existing raw tests without skips, fifteen protected sources
+unchanged. Fresh origin/main b6a43f3b includes later UI/monitor source changes;
+preserving/integrating those and regating the combined tree precedes publication.
+This is current candidate acceptance, not a completed delivery or sample waiver.
 
 - [ ] Verify current schema/namespace detection, mapping and atomic refusal. Separate `.knxproj` evidence from `.knxprod` evidence and independent installations from reexports of the same installation.
 - [ ] Preserve unreadable attributes and untyped master/version lexemes where technically possible, or report their exact boundary. Do not present raw Secure capacities/MinEtsVersion/ReplacesVersions as tested abilities.

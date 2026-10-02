@@ -6045,6 +6045,20 @@ possible result. The UI says so in its own words rather than presenting an
 empty list as a verdict about the installation.
 ## 125. ETS 6's device-local communication-object ids are read from a single project's evidence
 
+**AR06 scoped checkpoint, 2026-10-02 14:34 CEST.** New synthetic regressions
+distinguish repeated RefIds by owning device, preserve instance overrides/group
+links and report malformed refs without losing later objects. Existing real
+object/enrichment tests and the exact schema-21 empty DefaultLine diagnostic
+passed explicitly; native synthetic reopen covers 24 combinations, with/without
+an empty product DB. Six compiled negative controls were caught and the mapper
+was restored byte-exactly. This adds regression evidence, not a second
+independent schema-23 sample or new mapper semantics. The raw-field/sample
+matrix in [IMPORT_BOUNDARY_CONTRACT.md](IMPORT_BOUNDARY_CONTRACT.md) distinguishes
+the two documented installations and records that invalid DefaultLine tokens
+are transient diagnostics, not newly durable native source fields. This
+limitation and its independent-sample lifting condition remain in force;
+whole-feature/integrated delivery is still pending.
+
 **What changed first.** Until T29 the ETS 6.3.0 reference project (schema 23)
 reported **867** `MapProblem::Value(MalformedRefId(..))` over **310** distinct
 ids, and mapped every one of its 867 communication objects to object number

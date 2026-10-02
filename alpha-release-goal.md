@@ -356,10 +356,25 @@ proc_dea67da354fd independently reconciled at 17/17: workspace 2,924/0/164,
 Web 1,559, Chromium fixtures 61, selected private 6/0/0; 606 inputs frozen
 and 17 shadow bindings equal. Controller checkpoint published/read back at
 2d9aaeb8; local/live/fetched refs equal and all owned document bytes confirmed.
+
+Additional bounded Float declaration guard candidate: actual RED101 before fix,
+Float6/0/0 and HTTP34/0/0 (ten lower/upper metadata cases, nonempty project
+equality, retained source, independent sibling writes). Corrected public
+proc_e87d7afdd30d8/8, workspace2926/0/164, all615 source/config hashes frozen,
+17 shadow bindings equal; failed prerequisite attempt archived/rejected. Both
+compiled min/max guard mutants caught by unit + HTTP (4 observations), all615
+hashes restored. Final owned proc_536a6eb1634218/18 independently reconciled:
+workspace2926/0/164, Web1559, existing intercepted Chromium61, private6/0/0
+with zero genuine/unknown skips and all103 original identities/hashes unchanged.
+No private raw logs, 615 frozen inputs and 17 shadow bindings equal. Later
+upstream commissioning c9f77d7b changes code outside this guard; actual merged
+source re-gates/publication/readback remain pending. This leaf does not complete
+the broader AR07 audit/checklist.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual
-Web kind/catalogue adoption stays with UI. Budget/provenance/vendor-inert audit,
-selected-private/broad candidate gates and separate in-session controller
-review now pass, and the integrated checkpoint is accepted. Channel
+Web kind/catalogue adoption stays with UI. Selected-private/broad controller
+gates and separate in-session review pass, and the controller checkpoint is
+accepted. Broader budget/module-identity/provenance/vendor-inert audit remains
+open, distinct from the scoped controller and Float fixes. Channel
 label data/UI half is already delivered; unknown manufacturer logic stays inert.
 
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.

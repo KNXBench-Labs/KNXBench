@@ -10,14 +10,159 @@
 //! those is true any more, and this file is what notices if either comes
 //! back.
 //!
-//! Gated by the standard `corpus_available()` pattern: `OriginalData/` is
-//! the maintainer's own installation, gitignored, so CI and every
-//! contributor without a copy skip rather than fail.
+//! Synthetic boundary cases run in ordinary CI. Private corpus cases are
+//! explicitly ignored by default and fail when requested without their inputs;
+//! `OriginalData/` is local-only and never committed.
 
 mod support;
 
 use knx_etsproj::import_knxproj;
 use knx_etsproj::report::Severity;
+
+/// Repeated RefIds must resolve within each owning device, never across devices.
+#[test]
+fn synthetic_device_local_refs_keep_each_devices_identity_overrides_and_links() {
+    use knx_core::{Direction, GroupAddress, Layer, Override, Resolved, Text};
+
+    for version in [21, 23] {
+        let imported = knx_etsproj::import_knxproj_bytes(
+            knx_testsupport::mapping_boundary_knxproj_bytes(version, None, None, "O-7_R-1"),
+            "synthetic-objects.knxproj",
+        )
+        .unwrap();
+        assert_eq!(imported.report.errors, vec![]);
+        let project = &imported.project;
+        let devices: Vec<_> = project.devices.iter().collect();
+        assert_eq!(devices.len(), 2);
+        assert_eq!(project.devices.com_objects().count(), 4);
+        assert_ne!(devices[0].com_objects, devices[1].com_objects);
+        for (index, device) in devices.iter().enumerate() {
+            assert_eq!(device.com_objects.len(), 2);
+            let object = project.devices.com_object(device.com_objects[0]).unwrap();
+            assert_eq!(object.device, device.id);
+            assert_eq!(object.source.ets_id, "O-7_R-1");
+            assert_eq!(object.number, 7);
+            assert_eq!(object.module_instance, None);
+            assert_eq!(
+                object.flags.read,
+                Override::Value(Resolved {
+                    value: index == 0,
+                    layer: Layer::Instance,
+                })
+            );
+            assert_eq!(
+                object.text,
+                Override::Value(Resolved {
+                    value: Text::Literal(
+                        if index == 0 {
+                            "first device"
+                        } else {
+                            "second device"
+                        }
+                        .to_string(),
+                    ),
+                    layer: Layer::Instance
+                })
+            );
+            assert_eq!(object.links.len(), 1);
+            assert_eq!(object.links[0].direction, Direction::Send);
+            let ga = project.installations[0]
+                .group_addresses
+                .iter()
+                .find(|ga| ga.id == object.links[0].ga)
+                .unwrap();
+            assert_eq!(
+                ga.address,
+                GroupAddress::from_raw(if index == 0 { 1 } else { 2 })
+            );
+            let continuation = project.devices.com_object(device.com_objects[1]).unwrap();
+            assert_eq!(continuation.device, device.id);
+            assert_eq!(continuation.source.ets_id, "O-19_R-2");
+            assert_eq!(continuation.number, 19);
+        }
+    }
+}
+
+#[test]
+fn synthetic_malformed_local_refs_are_reported_without_losing_later_objects() {
+    use knx_etsproj::map::MapProblemDetail;
+    use knx_etsproj::values::ValueError;
+
+    for version in [21, 23] {
+        for ref_id in ["O-65536_R-1", "O-7_R-x", "O-7_R-1_extra"] {
+            let imported = knx_etsproj::import_knxproj_bytes(
+                knx_testsupport::mapping_boundary_knxproj_bytes(version, None, None, ref_id),
+                "synthetic-malformed-objects.knxproj",
+            )
+            .unwrap();
+            let expected = format!(
+                "{:?}",
+                MapProblemDetail::Value(ValueError::MalformedRefId(ref_id.to_string()),)
+            );
+            assert_eq!(imported.report.errors.len(), 2);
+            for (index, device) in imported.project.devices.iter().enumerate() {
+                let error = &imported.report.errors[index];
+                assert_eq!(error.stage, "map");
+                assert_eq!(error.severity, Severity::Error);
+                assert_eq!(error.detail, expected);
+                assert!(error.xpath.contains(&device.source.ets_id));
+                assert!(error.xpath.ends_with(&format!("[@RefId='{ref_id}']")));
+                assert_eq!(device.com_objects.len(), 2);
+                let object = imported
+                    .project
+                    .devices
+                    .com_object(device.com_objects[0])
+                    .unwrap();
+                assert_eq!(object.device, device.id);
+                assert_eq!(object.source.ets_id, ref_id);
+                // Existing explicit error placeholder, not a successful object-number claim.
+                assert_eq!(object.number, 0);
+                let continuation = imported
+                    .project
+                    .devices
+                    .com_object(device.com_objects[1])
+                    .unwrap();
+                assert_eq!(continuation.device, device.id);
+                assert_eq!(continuation.number, 19);
+            }
+            assert_eq!(imported.project.devices.com_objects().count(), 4);
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+fn the_schema21_empty_default_line_is_one_exact_mapping_diagnostic() {
+    use knx_etsproj::map::MapProblemDetail;
+    use knx_etsproj::report::ImportError;
+
+    assert!(
+        knx_testsupport::corpus_available(),
+        "explicit corpus scope is unavailable"
+    );
+    let imported = import_knxproj(&knx_testsupport::reference_kv_schema21_path()).unwrap();
+    assert_eq!(imported.report.source.schema_version, 21);
+    assert_eq!(
+        imported.report.errors,
+        vec![ImportError {
+            stage: "map",
+            severity: Severity::Error,
+            xpath: "/KNX/Project/Installations/Installation".to_string(),
+            detail: format!(
+                "{:?}",
+                MapProblemDetail::UnresolvedReference {
+                    kind: "Installation/@DefaultLine",
+                    target: String::new(),
+                }
+            ),
+        }]
+    );
+    assert_eq!(imported.project.installations.len(), 1);
+    let installation = &imported.project.installations[0];
+    assert_eq!(installation.default_line, None);
+    assert!(!installation.topology.lines.is_empty());
+    // The existing real line must not be invented as the empty token's target.
+}
 
 /// Every `MalformedRefId` in one import report, as its raw id string.
 fn malformed_ref_ids(report: &knx_etsproj::ImportReport) -> Vec<String> {

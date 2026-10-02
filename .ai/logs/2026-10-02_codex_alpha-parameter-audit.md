@@ -102,3 +102,14 @@ Current remote c9f77d7b has12 commissioning recovery paths; no overlapping
 production file, shared doc/handover reconciliation required. Commit scoped
 guard, integrate owners and re-gate actual merged source before publication.
 No full AR07/private opaque/native/ETS claim.
+
+## Actual integration prepared — 2026-10-02 23:22 CEST
+
+Owned source4514076b, upstreamc9f77d7b. Source merges cleanly; shared handover
+and status resolved with full-byte expected documents and complete upstream
+owner preservation. Ten source/ADR paths exactly retain owning commit bytes.
+Actual combined-source gates/private witnesses and push/readback pending.
+Private witness is http_device_download13 via injected SimTunnel, temp-native
+copy and temp products; explicit env opt-ins only, no bus or original mutation.
+Initial lookup of http_download.rs was nonexistent; corrected by repository
+file discovery before any test invocation, not a test failure.

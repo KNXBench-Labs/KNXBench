@@ -260,6 +260,11 @@ fn run_import(args: &[String]) -> ExitCode {
         }
     };
 
+    if let Err(error) = knx_etsproj::check_project_filename(Path::new(&parsed.file)) {
+        eprintln!("import refused: {error}");
+        return ExitCode::FAILURE;
+    }
+
     // `--store` names a persistent database; without it, this run's opaque
     // entries live only in a temp file for the duration of the process —
     // `open_and_migrate` always takes a path, so a plain "just show me the
@@ -1407,13 +1412,10 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let conn = match open_products_db(product_db.as_deref()) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("{e}");
-            return ExitCode::FAILURE;
-        }
-    };
+    if let Err(error) = knx_etsproj::check_project_filename(Path::new(file)) {
+        eprintln!("product ingest refused: {error}");
+        return ExitCode::FAILURE;
+    }
 
     if matches!(
         Path::new(file)
@@ -1421,6 +1423,13 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             .and_then(|extension| extension.to_str()),
         Some("knxprod" | "vd2")
     ) {
+        let conn = match open_products_db(product_db.as_deref()) {
+            Ok(conn) => conn,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+        };
         let bytes = match std::fs::read(file) {
             Ok(bytes) => bytes,
             Err(error) => {
@@ -1467,6 +1476,21 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         Ok(outcome) => outcome,
         Err(e) => {
             eprintln!("import failed for {file}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    // This products-only command has no project opaque store in which to
+    // retain an unsupported master. Refuse before opening/migrating its DB.
+    if outcome.master_metadata_error.is_some() {
+        eprintln!("project master root metadata is unsupported; no product data ingested");
+        return ExitCode::FAILURE;
+    }
+
+    let conn = match open_products_db(product_db.as_deref()) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };

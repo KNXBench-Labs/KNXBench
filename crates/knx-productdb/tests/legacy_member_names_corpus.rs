@@ -67,7 +67,8 @@ fn verify_package(bytes: &[u8], ordinal: usize) -> Option<String> {
             knx_productdb::PackageError::UnsupportedNamespace { .. } => "unsupported namespace",
             knx_productdb::PackageError::ProjectArchive => "project archive",
             knx_productdb::PackageError::MissingManufacturerData => "missing manufacturer data",
-            knx_productdb::PackageError::LegacyVd2 { .. } => "legacy container",
+            knx_productdb::PackageError::LegacyVd2 { .. }
+            | knx_productdb::PackageError::UnsupportedLegacyFormat { .. } => "legacy container",
             knx_productdb::PackageError::Database(knx_productdb::ProductDbError::Xml {
                 ..
             }) => "XML",

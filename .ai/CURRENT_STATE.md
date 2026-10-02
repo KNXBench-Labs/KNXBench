@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / keyboard alpha reservation)
+- **Timestamp:** 2026-10-02 13:10 CEST
+- **Web lock:** taken by ui-alpha-keyboard for KL-20 keyboard/list auto-scroll, background modal exclusion and viewport-safe HelpTip follow-up.
+- **Completed:** Prior scoped KL-82 source 8ceacf49, closing receipt 44c8b27c and wording correction 79d8677d published/read back; actual owned ui-alpha-context checkout, branch and scratch removed, with no remaining cwd-owned processes. Root foreign status and shared track cache left alone. Fresh ui-alpha-keyboard starts at current origin/main 79d8677d42745d18f4a6071da6840974f53e6ba3; full inherited handover preserved.
+- **Pending/Next Steps:** Trace existing list navigation/modal/help description contracts, verify the concrete gaps, then one RED/GREEN slice at a time; add fully mocked browser regressions, guard controls, separate in-session review, complete coordinated gates, integration, publication and owned cleanup. Preserve all 24 routed rows and 180 parent identities/foreign dispositions. No UI workaround for domain/sample dependencies.
+- **Notes for Codex oder Claude:** No real backend, gateway, productive discovery/tunnel, bus send/device write, package/system/native configuration changes, quota query, subagent, root synchronization, release tag or reserved ADR activation. Native/Orca/live/sample/domain evidence remains open; implementing semantic inert/focus/geometry is not an actual screenreader or Tauri acceptance. Only this holder releases the Web lock.
+
+---
+
 - **Last Agent:** codex (UI session / KL-82 receipt verification)
 - **Timestamp:** 2026-10-02 13:06 CEST
 - **Web lock:** released by ui-alpha-context; no new UI source edits in this receipt correction.

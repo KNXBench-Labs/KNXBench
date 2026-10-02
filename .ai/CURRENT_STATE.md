@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U16 reservation)
+- **Timestamp:** 2026-10-02 20:00 CEST
+- **Web lock:** taken by ui-theme-storage for U16.
+- **Completed:** U15 source 9d1ae19d and closing receipt 5257b05f published with exact live/fetched refs, trees and owned-artifact readback; only its accepted worktree, branch and scratch actually removed. Fresh isolated ui-theme-storage starts from receipt 5257b05f. Read current goal/U16, ADR-0060, theme format and existing settings client/route: queue exists, optional expectedSettings does not. No source changes yet.
+- **Pending/Next Steps:** U16 owns a narrow optional conditional settings patch under the existing server lock, acknowledged queued client updates, strict bounded UTF-8 import, deterministic supported-pack export, content-bound replacement consent and active removal. Write RED cases before each implementation slice; preserve unmentioned settings and raw invalid entries, block unhydrated/newer/refused writes, diagnose transport/cache ambiguity and refresh races. Then self-review/restored guards and full integrated gates/publication/cleanup; U17–U18 remain open.
+- **Notes for Codex oder Claude:** This goal explicitly owns narrowly required settings API changes (goal-ui §6); no new domain/schema/parallel store. Other root/worktrees remain untouched. No productive API/proxy/KNX/discovery/tunnel/writes, subagents, quota probes, release tag or native/Orca/ETS claim. Keep the entire inherited handover suffix. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U15 publication verified)
 - **Timestamp:** 2026-10-02 19:50 CEST
 - **Web lock:** released by ui-theme-validation after exact source readback; U16 must reserve freshly.

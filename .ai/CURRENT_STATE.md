@@ -1,3 +1,11 @@
+- **Last Agent:** codex (UI session / U14 theme-pack contract)
+- **Timestamp:** 2026-10-02 16:48 CEST
+- **Completed:** User explicitly started the open UI queue. Inspected current theme/token/appearance/bootstrap/settings and language-pack code; retrieved five primary-source pages with actual HTTP bodies after the configured extract backend failed. Resolved THEME_PACKS v1/ADR-0060: complete 27-token typed grammar, bounded duplicate-aware JSON, no CSS/assets/aliases, exact role-pair contrast reuse, acknowledged conditional settings contract, retained invalid data and reversible preview. Separate in-session contract review found and fixed numeric spelling ambiguity, whitespace-only metadata and architecture heading placement. All five U14 contract boxes checked; U15–U18 remain open. First fresh-target anchors: 376 links / 236 Markdown files / none dead; citation evidence verification and whitespace pass. No new product tests or implementation claims.
+- **Pending/Next Steps:** Final docs/identity/preservation gates, focused contract publication/readback and owned cleanup, then earliest open U15 parser/runtime RED-GREEN. U14 needs no Web lock; U15 must reserve it before Web edits. Existing eight delivered UI ledger rows, sixteen retained owner conditions, native/Orca/network/sample/domain prerequisites and release dispositions are unchanged.
+- **Notes for Codex oder Claude:** Current contract is architect-reviewed, not independent product review or WCAG/native acceptance. No backend/gateway/discovery/tunnel/device write, root synchronization, quota probe or subagent. Preserve foreign root edits, ui-readiness-recheck uncommitted checklist and all other checkouts. Goal publication ad1395d4 is adopted without copying local root artifacts. Full inherited handover remains exact. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / keyboard alpha delivery receipt)
 - **Timestamp:** 2026-10-02 15:29 CEST
 - **Web lock:** released by ui-alpha-keyboard after verified source publication.

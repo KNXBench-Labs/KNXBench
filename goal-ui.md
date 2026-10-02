@@ -72,7 +72,8 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ### Theme-pack extension (user request, 2026-10-02)
 
-**Planned, not implemented.** The user requested theme follow-up tasks after
+**U14 contract delivered; implementation pending U15–U18.** The user requested
+theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette
 system. U0–U13 remain complete and the separately authorized alpha follow-up
@@ -309,34 +310,37 @@ native verification/global acceptance boundaries to their owners (§6).
 
 ### U14 — Specify a safe, versioned theme-pack contract
 
-**Open.** Dependency: reconcile the latest alpha-owner handover; no Web lock
-needed for documentation-only research. Do not mark an ADR accepted before
-resolving its contract questions.
+**Done, 2026-10-02 (contract only).** Inspected the published alpha-owner
+receipt and current theme/settings/language code, retrieved primary evidence
+and resolved the bounded v1 format, persistence/preview safety and negative
+fixture contracts. [THEME_PACKS](docs/THEME_PACKS.md),
+[ADR-0060](docs/adr/0060-versioned-declarative-theme-packs.md) and the U14 log
+record actual document/research evidence. U15–U18 remain implementation work.
 
-- [ ] Inspect `theme.ts`, `themeTokens.ts`, the stylesheet/bootstrap,
+- [x] Inspect `theme.ts`, `themeTokens.ts`, the stylesheet/bootstrap,
   `appearance.ts`, settings storage/routes and the language-pack lifecycle;
   reuse applicable mechanisms without treating language and theme semantics
   as identical. Research security-sensitive CSS/DOM behavior in primary
   documentation and record evidence before choosing runtime application.
-- [ ] Document a minimal versioned JSON pack contract in an ADR and a linked
+- [x] Document a minimal versioned JSON pack contract in an ADR and a linked
   theme-format document: identity, display name, format/token compatibility,
   complete token set and optional accent variations. Keep metadata bounded;
   built-in IDs cannot be shadowed. Specify duplicate JSON-key handling,
   unknown fields/tokens, unsupported/newer versions and deterministic export.
   Reject unsupported packs as a whole with named diagnostics rather than
   silently deleting fields or downgrading them.
-- [ ] Specify typed, bounded values for each token class, including palette,
+- [x] Specify typed, bounded values for each token class, including palette,
   typography, shape, shadows and backdrop. Packs are data, not arbitrary
   CSS: no selectors, HTML, scripts, `@import`, `url()`, network assets or
   executable content; fonts come from the installed allow-list. Any token
   aliasing must have explicit missing-reference/cycle handling. Motion,
   density, project styling and all other preferences remain separate.
-- [ ] Specify import size/count/value-length limits, duplicate-ID replacement
+- [x] Specify import size/count/value-length limits, duplicate-ID replacement
   consent, active-pack removal, missing/corrupt-pack fallback, preview rollback
   and read-only/newer-settings behavior. Keep a known-good built-in fallback
   and preserve recoverable stored data; rejection must leave the existing
   pack and selection unchanged.
-- [ ] Carry ADR-0022's exact supported contrast-pair validation into the
+- [x] Carry ADR-0022's exact supported contrast-pair validation into the
   contract; do not promise all-component WCAG compliance from those pairs.
   Define stricter unsupported-value rejection rather than a bypass.
 

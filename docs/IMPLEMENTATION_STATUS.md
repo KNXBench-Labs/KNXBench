@@ -18,8 +18,10 @@
   match. The intervening failed delivery remains a failed historical attempt.
 - Technical acceptance and scoped implementation/audit publication verified at
   `04900fbc35b2daec5e766a32f99c263a04700e0e`; exact remote and all 25 owned
-  artifacts match. Closing documentation publication/owned cleanup pending;
-  AR06 not started. KL-86's source-winner provenance
+  artifacts match. Closing receipt `65b91777` published/read back; both owned
+  checkouts/branch and task scratch cleaned with originals/foreign root preserved.
+  AR06 source discovery has started, without new implementation/runtime acceptance.
+  KL-86's source-winner provenance
   remains open, not a release waiver. No alpha-release, ETS parity or bus claim.
   Contract: [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
 

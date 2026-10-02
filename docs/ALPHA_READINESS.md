@@ -136,7 +136,9 @@ reports remain disclosed. This is neither user boundary acceptance nor full
 manufacturer compatibility. Stable identities and limitation totals below are
 unchanged. The six AR05 inventory dispositions below mean its named checklist
 scope was delivered at that revision, not every source limitation was removed.
-Closing documentation publication and owned cleanup remain pending.
+Closing documentation receipt `65b91777` is published and read back; both owned
+checkouts/branch and 266 task-owned scratch entries removed, originals and
+foreign root preserved. AR06 discovery proceeds on a fresh checkout.
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
 130, and no 94. Seven are resolved/clarification-only: 18, 23, 24, 42 (AR04),

@@ -2,7 +2,8 @@
 
 Status: implementation/audit published as
 `04900fbc35b2daec5e766a32f99c263a04700e0e`; exact remote ref and all 25
-owned artifacts verified. Closing documentation publication/cleanup pending. Base:
+owned artifacts verified. Closing receipt `65b91777` published; both owned
+checkouts, branch and task scratch removed after verification. Base:
 `f4b845a3880f4380e66c9d94a218a6dfff16e724`; product database v18 -> v19.
 
 ## Baseline facts before implementation (v18)

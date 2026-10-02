@@ -225,7 +225,8 @@ lost. Complete corrected-candidate acceptance proc_f9f87cee4329 exited 0:
 three explicitly executed private cases and 595 stable source files. Separate
 in-session review findings and compiled guard mutants are closed; source
 restoration verified. Implementation publication/readback complete; closing
-documentation publication and owned cleanup remain pending. This scoped delivery
+documentation published as `65b91777` and both owned checkouts/branch/scratch
+cleaned after exact verification. This scoped delivery
 does not close missing DPT source-winner provenance, remove numbered residuals,
 accept a release waiver or claim full manufacturer compatibility. Contract:
 [manufacturer report](docs/MANUFACTURER_REPORT_CONTRACT.md).
@@ -241,6 +242,11 @@ accept a release waiver or claim full manufacturer compatibility. Contract:
 
 **Sources:** `KL-1`, `KL-11`, `KL-125`, `KL-128`, `KL-15`, `IMPORT-06`, `PDB-08`, `PDB-10`.
 **Dependencies:** AR05 where reports/migrations intersect.
+
+**Status:** `IN_PROGRESS`; fresh `alpha-import-boundaries` at `65b91777`.
+Initial source/documentation audit only; no AR06 runtime acceptance or new
+compatibility claim. Discovery:
+`.ai/logs/2026-10-02_codex_alpha-import-boundaries.md`.
 
 - [ ] Verify current schema/namespace detection, mapping and atomic refusal. Separate `.knxproj` evidence from `.knxprod` evidence and independent installations from reexports of the same installation.
 - [ ] Preserve unreadable attributes and untyped master/version lexemes where technically possible, or report their exact boundary. Do not present raw Secure capacities/MinEtsVersion/ReplacesVersions as tested abilities.

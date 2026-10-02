@@ -1,5 +1,60 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 controller broad candidate verified — 2026-10-02 20:14 CEST
+
+Corrected proc_ed20715c68e5 independently reconciled: 13/13, workspace
+2,924/0/164, Web 1,357, six selected private Dynamic tests 6/0/0 with no genuine
+skip signals; intentional reinstall/duplicate metadata classified separately.
+103 original archive identity/hash entries unchanged, private raw stdout
+discarded, all 596 source/config inputs frozen and controller mutation hashes
+unchanged. Seventeen shadow bindings semantically match CI policy without Web
+writes. Read-only in-session controller review: no blocking findings.
+
+First broad classifier-only failure archived, not retrospectively accepted.
+Fresh origin/main fe02deeb includes U15/theme work; integrate and re-gate that
+actual candidate before publication. Broader AR07 audit and localized/typed
+unsupportedControlKind UI adoption remain pending (U16 Web lock owned by
+ui-theme-storage). This supersedes the earlier no-private/no-workspace receipt
+status; no full ETS, native UI or all-opaque-data compatibility claim.
+
+
+## AR07 bounded controller candidate — 2026-10-02 18:43 CEST
+
+Public baseline reconciled at 417/0/6; its initial count-only failure is
+archived. Stored Text controller RED/GREEN and ADR-0061 establish a conservative
+Number/Restriction guard with the separately corpus-derived None exception
+unchanged. Known other kinds receive UnsupportedControlKind; no matching/default
+activation, bounded skipped-ref reports, preserved raw source, scoped diagnostics
+and Undetermined projection. No domain/store schema or per-kind validator change.
+
+Controller gate proc_b1e47be31700 independently reconciled at 16/16: public
+ProductDB/server 1,118/0/57, five stored-kind cases, two server unit cases, HTTP
+hidden-field refusal/independent sibling edit, six compiled behavioral mutants,
+exact source restoration, strict two-crate Clippy/frontend build/fmt/whitespace.
+593 source/config inputs frozen; Web/generated bindings untouched. The first
+controller gate rejected a compile-only mutant and restored sources; not green
+evidence. No private corpus, whole-workspace/integration or publication receipt
+yet. The unsupportedControlKind warning/English fallback is on the backend wire;
+manual Web union/catalogue adoption remains with UI, not completed localization.
+See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md). AR07 broader audit open.
+
+## 2026-10-02 17:14 CEST — AR07 offline source discovery; baseline pending
+
+- AR06 final delivery receipt `0c3d6a8a` published/read back; task-owned AR06
+  worktree/ancestor-confirmed branch and 333 scratch entries cleaned. No shared
+  root/corpus changes. New isolated AR07 checkout starts from that receipt.
+- [Parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md) records fresh local
+  Condition_t evidence (printed/PDF page 30/64), current resolver/evaluator
+  source path and already-delivered channel-label work. A stored Text/Float/
+  unknown controller is categorized Comparable today; targeted behavioral
+  regression and diagnostic/contract decision precede any production fix.
+- Seven-step public/synthetic baseline `proc_4e0a97d00922` dispatched using both
+  shared gate locks, fresh target/shadow output and a source freeze. Private
+  cases remain ignored. Dispatch is not passed evidence or AR07 completion.
+- No UI/domain-storage change, Repeat/Allocator engine, vendor execution or
+  live KNX action. External retrieval failures are logged, not proof that
+  primary manufacturer evidence does not exist.
+
 ## 2026-10-02 16:59 CEST — AR06 scoped delivery verified
 
 - Source f8b6f27e and integrated gates on 1404f39b published in 95e6bcb0;

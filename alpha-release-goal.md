@@ -339,6 +339,25 @@ Both review findings closed; task-owned cleanup then AR07 offline research next.
 **Sources:** `KL-3`, `KL-146`, `PDB-01`, `PDB-02`, `PDB-03`, `PDB-05`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`.
 **Dependencies:** AR05/AR06. **Mode:** bounded offline research first.
 
+**Status:** `IN_PROGRESS`; fresh `alpha-parameter-semantics` from published
+AR06 receipt `0c3d6a8a`, 2026-10-02 17:14 CEST. Primary Condition_t constraint and actual
+controller-kind resolver traced in [parameter boundary](docs/PARAMETER_SEMANTICS_BOUNDARY.md).
+Baseline independently reconciled at 417/0/6 after correcting a source-string
+ignore-count error. Stored-controller RED/GREEN and ADR-0061 now bound comparison
+to Number/Restriction, preserve None policy and explicitly refuse other known
+kinds. Controller gate proc_b1e47be31700 is 16/16 green: public ProductDB/server
+layers 1,118/0/57, six compiled behavioral mutants, exact source restoration,
+Clippy/build/format. Corrected broad proc_ed20715c68e5 independently accepted
+13/13: workspace 2,924/0/164, Web 1,357, six selected private Dynamic tests
+6/0/0, no genuine skips, all 103 original archive hashes unchanged. No private
+raw logs, 596 source/config inputs frozen and 17 shadow bindings equal.
+Upstream UI integration/re-gates and publication remain pending.
+`unsupportedControlKind` warning/English fallback is on the backend wire; manual
+Web kind/catalogue adoption stays with UI. Budget/provenance/vendor-inert audit,
+selected-private/broad candidate gates and separate in-session controller
+review now pass; integrated receipt still open. Channel
+label data/UI half is already delivered; unknown manufacturer logic stays inert.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

@@ -1,0 +1,160 @@
+# AR07 supported parameter semantics — research boundary
+
+Status: bounded controller candidate, 2026-10-02; public regression/mutation
+gate accepted. Private corpus, whole-workspace/integration and UI adoption
+remain separate; no full manufacturer/ETS compatibility acceptance.
+
+## Scope and authority
+
+AR07 follows the delivered AR06 conservative import contract. Manufacturer
+semantics must be established independently of successful project import,
+source-byte retention or a working parameter panel. No vendor script, Button
+handler, DLL, download/placement formula or unknown RepeatIndex is executed.
+No native domain/storage schema or UI implementation changes in this checkpoint.
+
+Read current implementation, [ADR-0041](adr/0041-unmodelled-kinds-and-dynamic-nodes-are-named-never-hidden.md),
+[RESEARCH §4.3](RESEARCH.md), [KNOWN_LIMITATIONS §3](KNOWN_LIMITATIONS.md) and
+[§146](KNOWN_LIMITATIONS.md). Dated research/design descriptions are historical:
+current source and later ADRs take precedence over their original slice scope.
+
+## Primary evidence reread locally
+
+The user-provided licensed source is
+`knx-spec-kb/sources/The KNX Standard v3.0.0/Project Schema23 v01.00.00.pdf`.
+The PDF and its extraction remain outside Git. A fresh `pdftotext -layout`
+extraction was inspected at PDF page index 29 (one-based page 30); its printed
+footer is `Page 30/64`. This is a dated local source, not a latest-publication
+claim or the complete application-program XSD.
+
+- Section 1.1.3.18, `Condition_t`, describes a single integer, a space-separated
+  list of integers or an operator/integer comparison. The documented operators
+  are equality, inequality and the four ordered comparisons.
+- Its controlling-parameter constraint names `TypeNumber` and `TypeRestriction`;
+  the latter uses the enumeration value. This is distinct from the broader
+  per-kind value encoding table in section 1.1.3.19, `Value_t`.
+- These facts do not settle surrounding application-program Dynamic structure,
+  default-branch precedence, Repeat expansion, allocator memory placement or
+  execution of manufacturer calculations. Do not extrapolate a project-schema
+  simple type into an application-program interpreter contract.
+
+The Manufacturer Tool cookbook was located and extracted locally for follow-up
+inspection; no clause from it is asserted at this checkpoint. External search
+returned official KNX schema-description leads, but the configured extraction
+backend refused URL extraction and the separate browser reached a security
+interstitial on the modular-program article. No article/archive contents,
+authoritative application XSD or manufacturer semantics were recovered from
+that attempt. These failures do not prove that such evidence is unavailable.
+
+## Source-backed observations, not yet new behavioral acceptance
+
+1. `crates/knx-productdb/src/dynamic/evaluate.rs:198-260` implements the three
+   integer forms and all six operators in `Test::parse`; integer semantics,
+   not inferred float comparison, are the present supported rule.
+2. The baseline `resolve_control_kind` mapped every non-None stored kind to
+   Comparable, dispatching numeric-looking Text/Float/unknown declarations
+   through numeric comparison. Stored-declaration RED reproduced that defect,
+   followed by ADR-0061 and the bounded guard below. A known unsupported
+   declaration is distinct from an unresolved reference; values alone do not
+   authorize its interpretation.
+3. Preserve the existing, separately documented corpus-derived `TypeNone`
+   sole-default policy while auditing that constraint. The normative constraint
+   and a deliberately scoped compatibility exception are not interchangeable.
+4. Module recursion, cycle/depth checks and independent expansion/activation
+   budgets already exist (`evaluate.rs`, constants and Module arm). Do not
+   implement a second evaluator. ADR-0041 requires references below unsupported
+   structural nodes to be named without activating them; value-dependent hidden
+   branches have a different documented boundary.
+5. §146's channel-name/number data and UI gap was already lifted by ADR-0052 and
+   the UI owner. AR07 must not duplicate it or invent text for absent labels.
+   Undetermined activation and missing/multi-choice DPT remain separate residues.
+
+## Baseline dispatch and acceptance limits
+
+Seven-step baseline runs only ordinary ProductDB unit tests, `dynamic_tree`,
+`parameter_kinds`, `dynamic_channel_owner`, strict ProductDB Clippy, format and
+whitespace checks from the owned AR07 checkout. It uses a fresh task-local Cargo
+target, shadow binding output, the two shared advisory gate locks and a frozen
+tracked source/config scope. No source may change during the run.
+
+The first runner exited 1 despite successful Rust commands because an unanchored
+source-text count matched six assertion strings as well as six ignore attributes.
+The compiled `--list --ignored` inventory confirms six ignored private tests,
+not twelve. That failed attempt is preserved separately, not relabelled green.
+
+Corrected seven-step baseline exited 0 and was independently reconciled: 346
+unit, 58 dynamic-tree, eight parameter-kind and five channel-owner passes;
+417 passed total, zero failed, six explicitly ignored. Strict ProductDB Clippy,
+format/whitespace and 592-input source freeze pass. No private tests ran; no
+whole-corpus, independent ETS or integrated-feature acceptance is inferred.
+No original or private product payload is copied into this document.
+
+## Bounded controller candidate (2026-10-02)
+
+[ADR-0061](adr/0061-unsupported-choose-controller-kinds.md) confines comparison
+to stored Number/Restriction, retaining the separately documented None policy.
+Known unsupported kinds receive UnsupportedControlKind rather than masquerading
+as a missing declaration. Matching/default branches remain inert; their refs
+are named through the existing bounded refusal path. Independent siblings still
+activate, retained source bytes survive ProductDB reopen, and the diagnostic
+marks potentially hidden activation as Undetermined rather than Inactive.
+
+Initial behavioral RED exited 101 (two passes, one assertion failure), followed
+by GREEN for those three cases. The expanded five-case synthetic suite, two
+server unit cases and HTTP hidden-field refusal passed. Public ProductDB/server
+layers passed 1,118 with zero failed and 57 explicitly ignored. This is not a
+private corpus, whole-workspace or integration acceptance.
+
+Corrected controller gate `proc_b1e47be31700` passed 16/16 steps, independently
+reconciled: six compiled behavioral mutants detected, exact sources restored,
+same 1,118/0/57 final layers, strict two-crate Clippy, frontend build, format and
+whitespace green; 593 source/config inputs frozen. The first candidate gate
+detected four mutants before rejecting a compile-only non-exhaustive match as
+invalid evidence. Both failed first attempts remain archived, not relabelled
+green. No original/private payload was opened or copied by these gates.
+
+The backend adds `unsupportedControlKind`, a warning and stable English fallback.
+Web's manual kind union and localized message catalogues remain owned by the UI
+track. Its existing unknown-kind fallback is the source-level compatibility
+path; browser rendering/localized adoption are not accepted here. No Web or
+generated-binding, native schema/migration or per-kind write-validator changes
+are included. Repeat/Allocator/scripts remain inert.
+
+## Independently reconciled broad candidate gate (2026-10-02)
+
+Corrected `proc_ed20715c68e5` exited 0; all 13 steps accepted and independently
+reconciled against public logs and payload-free private receipt. Workspace
+2,924 passed, zero failed, 164 explicitly ignored; Web 1,357 passed. The 42
+projection tests are a workspace subset, not added to this total. Strict
+workspace Clippy/build, format, dependency policy and root-explicit repository
+gates pass with nonempty inventories. All 596 source/config inputs stayed
+frozen; six protected controller producer/test hashes still match their
+accepted mutation receipt. Seventeen shadow bindings match tracked bindings
+under CI's trailing-whitespace-only policy; no locked Web/binding writes.
+
+Six explicitly selected private Dynamic tests passed, zero failed/ignored or
+unexpected skip signals. One idempotent-install and one duplicate-content
+metadata message were separately classified, not mistaken for missing coverage.
+All 103 original archive identity/hash entries remained unchanged. No private
+raw stdout was retained; only aggregate counts/categories and input commitment.
+This inventory does not imply every archive's unsupported/opaque semantics
+are validated. The first broad attempt remains rejected and archived; its
+six test passes cannot retroactively make its failed classifier receipt green.
+
+The separate read-only in-session review found no blocking issues within the
+controller diff. Upstream UI changes at `fe02deeb` still require integration and
+re-gating; this candidate receipt is not publication or integrated acceptance.
+Broader AR07 budget/identity/validation audit and typed/localized UI adoption
+remain open. No complete ETS or manufacturer-tool parity follows.
+
+## Next evidence decisions
+
+- Review the producer diff, selected authorized private regressions and broad
+  workspace/integration gates before publication; retain the distinction between
+  the accepted public candidate and independent ETS/manufacturer evidence.
+- Hand the diagnostic token/fallback to the UI owner with the publication commit;
+  no typed/localized UI claim from backend or HTTP success alone.
+- Audit budget refusals, duplicate/nested module identities, validation and
+  retained unexpanded constructs against existing tests and bounded authorized
+  packages. Report remaining limitations; no Repeat/Allocator engine by guesswork.
+- Missing or unretrieved primary evidence remains explicitly pending, not a
+  global project halt and not permission to execute unknown vendor logic.

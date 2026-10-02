@@ -146,11 +146,37 @@ re-gating; this candidate receipt is not publication or integrated acceptance.
 Broader AR07 budget/identity/validation audit and typed/localized UI adoption
 remain open. No complete ETS or manufacturer-tool parity follows.
 
+## Integrated controller checkpoint accepted (2026-10-02)
+
+Source `00f23758`, integrated with published U15/theme ancestry `fe02deeb` as
+`03f18c95ff407c91186fd7be02afe169b40a15ee`. Frozen process
+`proc_dea67da354fd` exited 0; all 17 stages independently reconciled from actual
+logs/aggregate receipts. Workspace 2,924/0/164; Web 1,559 passed; all 61 existing
+intercepted-API Chromium fixtures passed. Projection 42 is a workspace subset.
+Frontend install/build, strict workspace Clippy/build, format, dependency policy,
+nonempty root-explicit repository gates and whitespace pass. Seventeen generated
+shadow bindings equal under CI's line-ending-whitespace-only policy; no binding
+or manual-catalogue edits. All 606 source/config inputs frozen and all six
+mutation-protected controller producer/test hashes unchanged.
+
+Selected private Dynamic tests 6/0/0, zero unknown/genuine skips; intentional
+idempotent reinstall/duplicate census categories each observed once. All 103
+original archive identity/hash entries unchanged and aggregate input commitment
+equal before/after. Raw private stdout discarded, never persisted. This is the
+selected test scope, not validation of every opaque construct in every archive.
+
+Both documentation merge owners retained; full upstream handover suffix checked
+byte-for-byte. Controller checkpoint accepted for publication; final remote ref
+and artifact readback are still pending at this dated receipt. Broader AR07
+budget/module-identity/validation/vendor-inert audit and typed/localized
+`unsupportedControlKind` adoption remain open. Browser fixture success is not
+proof of that token's localized UI adoption, native desktop behavior or ETS parity.
+
 ## Next evidence decisions
 
-- Review the producer diff, selected authorized private regressions and broad
-  workspace/integration gates before publication; retain the distinction between
-  the accepted public candidate and independent ETS/manufacturer evidence.
+- The bounded producer review, selected private tests and actual integrated
+  gates now pass; verify publication/readback next and retain the distinction
+  from independent ETS/manufacturer evidence.
 - Hand the diagnostic token/fallback to the UI owner with the publication commit;
   no typed/localized UI claim from backend or HTTP success alone.
 - Audit budget refusals, duplicate/nested module identities, validation and

@@ -351,11 +351,14 @@ Clippy/build/format. Corrected broad proc_ed20715c68e5 independently accepted
 13/13: workspace 2,924/0/164, Web 1,357, six selected private Dynamic tests
 6/0/0, no genuine skips, all 103 original archive hashes unchanged. No private
 raw logs, 596 source/config inputs frozen and 17 shadow bindings equal.
-Upstream UI integration/re-gates and publication remain pending.
+Published U15/theme ancestry fe02deeb integrated at 03f18c95. Integrated
+proc_dea67da354fd independently reconciled at 17/17: workspace 2,924/0/164,
+Web 1,559, Chromium fixtures 61, selected private 6/0/0; 606 inputs frozen
+and 17 shadow bindings equal. Remote publication/readback remain pending.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual
 Web kind/catalogue adoption stays with UI. Budget/provenance/vendor-inert audit,
 selected-private/broad candidate gates and separate in-session controller
-review now pass; integrated receipt still open. Channel
+review now pass, and the integrated checkpoint is accepted. Channel
 label data/UI half is already delivered; unknown manufacturer logic stays inert.
 
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.

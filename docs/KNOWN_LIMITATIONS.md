@@ -6664,8 +6664,11 @@ The corrected broad candidate is independently verified at 13/13: workspace
 2,924/0/164, Web 1,357 and six selected private Dynamic tests 6/0/0; all 103
 original archive hashes unchanged, no genuine skips or private raw logs. This
 selection is not blanket validation of every archive/opaque construct. Upstream
-UI integration/publication remain pending; earlier corpus figures below retain
-their dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
+UI ancestry integrated at 03f18c95 and independently accepted: 17/17, workspace
+2,924/0/164, Web 1,559, Chromium fixtures 61, selected private 6/0/0 and
+seventeen shadow bindings equal. Remote publication readback remains pending;
+full AR07, typed/localized token adoption and earlier corpus figures retain
+their distinct dated scope. See [parameter boundary](PARAMETER_SEMANTICS_BOUNDARY.md).
 
 **Status (2026-09-29, ISSUE-08 P2, ADR-0050).**
 

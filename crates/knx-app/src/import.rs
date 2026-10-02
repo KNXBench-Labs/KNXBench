@@ -160,11 +160,13 @@ pub fn import_ets_project_observed(
                 }
                 observer.items(index as u64 + 1, total);
             }
-            if let Some(master) = outcome
-                .opaque
-                .iter()
-                .find(|e| e.kind == knx_etsproj::opaque::OpaqueKind::MasterData)
-            {
+            if let Some(master) = outcome.opaque.iter().find(|e| {
+                // Do not give a foreign/unreadable root typed KNX master
+                // semantics. Its bytes stay in `stored`; its boundary was
+                // already reported by the authoritative detection pass.
+                e.kind == knx_etsproj::opaque::OpaqueKind::MasterData
+                    && outcome.master_metadata_error.is_none()
+            }) {
                 observer.stage(LoadStage::IngestMasterData);
                 knx_productdb::ingest_master_data(products, &master.bytes)?;
             }

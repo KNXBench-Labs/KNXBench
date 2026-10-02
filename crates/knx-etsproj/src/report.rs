@@ -200,6 +200,27 @@ pub fn build(
             ),
         })
         .collect();
+    if let Some(error) = &detected.master_metadata_error {
+        // Error strings may contain source namespace/attribute values. Project
+        // only the named boundary; the original member supplies the evidence.
+        use crate::detect::DetectError;
+        let boundary = match error {
+            DetectError::NoDefaultNamespace { .. } => "missing root namespace",
+            DetectError::UnparsableNamespace { .. } => "unparsable schema namespace",
+            DetectError::UnsupportedNamespace { .. } => "unsupported KNX project namespace",
+            DetectError::UnexpectedRoot { .. } => "unexpected XML root",
+            DetectError::NamespaceMismatch { .. } => "root namespace mismatch",
+            DetectError::MalformedRoot { .. } => "malformed XML root attributes or encoding",
+            DetectError::Container(_) => "unreadable master container entry",
+        };
+        unsupported.push(UnsupportedFeature {
+            what: "knx_master.xml root metadata".to_string(),
+            consequence: format!(
+                "{boundary}; master namespace comparison unavailable; original master bytes \
+                 retained without interpreting root metadata"
+            ),
+        });
+    }
     // Schema 23's module-based application program handling is mapped using
     // schema 21's measured shape (Task 7) — plausible, since schema 21
     // already carries the same `ModuleInstances`/`GroupObjectTree` deltas

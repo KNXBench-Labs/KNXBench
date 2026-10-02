@@ -113,7 +113,9 @@ pub fn write_minimal_knxproj(dir: &Path) -> PathBuf {
     path
 }
 
-fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
+/// Builds a synthetic ZIP from explicit entries for cross-crate import tests.
+/// No entries, signatures or XML schemas are inferred or validated here.
+pub fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
     use std::io::{Cursor, Write};
     let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options =
@@ -123,6 +125,113 @@ fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
         writer.write_all(bytes).expect("zip entry body");
     }
     writer.finish().expect("zip central directory").into_inner()
+}
+
+/// Synthetic mapping witness, not a genuine ETS sample or XSD-validity claim.
+/// Two lines, one space and two devices sharing an object RefId but carrying
+/// different overrides/links. Arguments are literal fixture tokens, not an XML
+/// escaping API. The second object is a well-formed continuation control.
+pub fn mapping_boundary_knxproj_bytes(
+    version: u32,
+    installation_default_line: Option<&str>,
+    space_default_line: Option<&str>,
+    shared_object_ref: &str,
+) -> Vec<u8> {
+    assert!([11, 21, 23].contains(&version));
+    let default_line_attribute = |value: Option<&str>| {
+        value.map_or_else(String::new, |value| format!(r#" DefaultLine="{value}""#))
+    };
+    let mut devices = String::new();
+    let other_ref = if version == 11 {
+        "M-0001_A-1_O-19_R-2"
+    } else {
+        "O-19_R-2"
+    };
+    for (index, text, read) in [
+        (1, "first device", "Enabled"),
+        (2, "second device", "Disabled"),
+    ] {
+        let links = if version == 11 {
+            format!(r#"<Connectors><Send GroupAddressRefId="P-0001-0_GA-{index}"/></Connectors>"#)
+        } else {
+            String::new()
+        };
+        let link_attribute = if version == 11 {
+            String::new()
+        } else {
+            format!(r#" Links="GA-{index}""#)
+        };
+        let tree = match version {
+            11 => String::new(),
+            21 => format!(
+                r#"<GroupObjectTree><Nodes><Node GroupObjectInstances="{shared_object_ref} {other_ref}"/></Nodes></GroupObjectTree>"#
+            ),
+            23 => format!(
+                r#"<GroupObjectTree GroupObjectInstances="{shared_object_ref} {other_ref}"/>"#
+            ),
+            _ => unreachable!("fixture version checked above"),
+        };
+        devices.push_str(&format!(
+            r#"<DeviceInstance Id="P-0001-0_DI-{index}" Name="{text}" Address="{index}"
+                ProductRefId="M-0001_H-{index}_P-1" Hardware2ProgramRefId="M-0001_H-{index}_HP-1">
+              <ComObjectInstanceRefs>
+                <ComObjectInstanceRef RefId="{shared_object_ref}" Text="{text}" ReadFlag="{read}" IsActive="1"{link_attribute}>{links}</ComObjectInstanceRef>
+                <ComObjectInstanceRef RefId="{other_ref}" IsActive="1"/>
+              </ComObjectInstanceRefs>{tree}
+            </DeviceInstance>"#
+        ));
+    }
+    let (line_contents, medium, container, element) = if version == 11 {
+        (
+            devices,
+            r#" MediumTypeRefId="MT-0""#,
+            "Buildings",
+            "BuildingPart",
+        )
+    } else {
+        (
+            format!(
+                r#"<Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">{devices}</Segment>"#
+            ),
+            "",
+            "Locations",
+            "Space",
+        )
+    };
+    let installation_default = default_line_attribute(installation_default_line);
+    let space_default = default_line_attribute(space_default_line);
+    let topology = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/{version}">
+          <Project Id="P-0001"><Installations>
+            <Installation InstallationId="0"{installation_default}>
+              <Topology><Area Id="P-0001-0_A-1" Address="1">
+                <Line Id="P-0001-0_L-2" Address="1"{medium}>{line_contents}</Line>
+                <Line Id="P-0001-0_L-3" Address="2"{medium}/>
+              </Area></Topology>
+              <{container}><{element} Id="P-0001-0_BP-1" Name="Synthetic room" Type="Room"{space_default}>
+                <DeviceInstanceRef RefId="P-0001-0_DI-1"/>
+              </{element}></{container}>
+              <GroupAddresses><GroupRanges>
+                <GroupRange Id="P-0001-0_GR-1" RangeStart="1" RangeEnd="100" Name="Synthetic range">
+                  <GroupAddress Id="P-0001-0_GA-1" Address="1" Name="First group"/>
+                  <GroupAddress Id="P-0001-0_GA-2" Address="2" Name="Second group"/>
+                </GroupRange>
+              </GroupRanges></GroupAddresses>
+            </Installation>
+          </Installations></Project>
+        </KNX>"#
+    );
+    let info = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/{version}"><Project Id="P-0001">
+          <ProjectInformation Name="Synthetic mapping witness" GroupAddressStyle="ThreeLevel"/>
+        </Project></KNX>"#
+    );
+    zip_with_entries(&[
+        ("P-0001.signature", b"synthetic signature"),
+        ("P-0001/0.xml", topology.as_bytes()),
+        ("P-0001/Project.xml", info.as_bytes()),
+        ("note.txt", b"opaque mapping witness"),
+    ])
 }
 
 const MINIMAL_TOPOLOGY: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>

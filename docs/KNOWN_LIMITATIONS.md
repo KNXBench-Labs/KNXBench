@@ -1,21 +1,28 @@
 # Known limitations
 
-## Theme packs currently provide a runtime foundation, not a management workflow
+## Theme packs have runtime and persistence foundations, not a management workflow
 
-The U15 candidate validates and resolves declarative v1 packs from JSON/settings
-and applies them through a reversible property lease. It does not yet deliver
-file import/export, acknowledged conditional installation/removal, production
-diagnostic management or the U17 preview transaction. Unsupported stored data
-is retained and exposed through structured diagnostics, not silently repaired.
-The existing built-in picker is not yet the complete custom-pack manager.
+U15 admission/runtime is delivered. U16 adds reviewed candidate file transport,
+acknowledged conditional installation/removal/selection and structured errors;
+the complete 16-check candidate gate passed; integrated gates and publication
+remain pending. U17
+production controls, visible diagnostics and reversible preview are not yet
+implemented. The existing built-in picker is not the custom-pack manager.
+
+Unknown raw entries are retained, not repaired. Recovery exports only observed
+browser JSON theme scope, not original lexical bytes, duplicate names or numeric
+precision; retain the original server file for original-file recovery. Recovery
+refuses output over 1 MiB or nonserializable data without deleting/truncating it.
+Explicit stored null cannot express an absence-based conditional precondition
+and disarms theme edits. Conditional comparison is protected by one server's
+settings lock, not a multiprocess filesystem CAS. Older servers without the
+conditional capability are not silently trusted.
 
 Admission targets serialized JSON/settings data, not isolation from already
-privileged hostile JavaScript proxies. Contrast checks cover the documented
-three role pairs and declared accents, not every component/WCAG criterion.
-Local intercepted Chromium/self-review evidence is not native WebKitGTK/Orca,
-independent approval, full-theme accessibility or release acceptance. U16–U18
-remain open; complete combined integration gates and exact publication readback
-for the U15 runtime foundation passed as 9d1ae19d. This is not the full workflow.
+privileged hostile JavaScript proxies. Contrast covers the documented three
+role pairs and accents, not every component/WCAG criterion. Local intercepted
+Chromium/self-review is not native WebKitGTK/Orca, independent approval or
+release acceptance. U16–U18 remain open; U15 publication remains 9d1ae19d.
 
 ## Backup directory synchronization is not a disk-loss or confinement proof
 

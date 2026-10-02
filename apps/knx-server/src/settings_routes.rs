@@ -68,6 +68,9 @@ enum SettingsStatus {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SettingsDto {
+    /// Wire capability, independent of the unchanged opaque file schema.
+    /// New clients must not assume old servers enforce expectedSettings.
+    conditional_patch_version: u8,
     /// The version of the document in `settings` — always this build's
     /// current version, including when the file on disk says otherwise.
     schema_version: u32,
@@ -102,6 +105,7 @@ impl SettingsDto {
     fn from_load(load: &SettingsLoad) -> Self {
         let document = load.document();
         let mut dto = Self {
+            conditional_patch_version: 1,
             schema_version: document.version,
             settings: document.preferences,
             status: SettingsStatus::Ok,
@@ -218,8 +222,12 @@ async fn read_settings(State(state): State<SharedState>) -> Result<Json<Settings
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PatchRequest {
     settings: Preferences,
+    /// Optional key-scoped compare-and-patch for acknowledged preference edits.
+    /// Null expects absence, not a stored null. Older callers omit this field.
+    expected_settings: Option<Preferences>,
 }
 
 /// Merges a patch into the file. Refuses — 409, file untouched — when the
@@ -236,7 +244,9 @@ async fn patch_settings(
     let _guard = state.settings_lock.lock().expect("state mutex poisoned");
 
     let load = read(&state)?;
-    if load.blocks_writes() {
+    if load.blocks_writes()
+        || (request.expected_settings.is_some() && matches!(load, SettingsLoad::Quarantined { .. }))
+    {
         let dto = SettingsDto::from_load(&load);
         dto.log(&state, "settings");
         return Err(ApiError::with_status(
@@ -247,6 +257,21 @@ async fn patch_settings(
     }
 
     let mut document = load.document();
+    if let Some(expected) = &request.expected_settings {
+        let changed = expected.iter().any(|(key, value)| {
+            if value.is_null() {
+                document.preferences.contains_key(key)
+            } else {
+                document.preferences.get(key) != Some(value)
+            }
+        });
+        if changed {
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                "settings changed; read the current record before retrying",
+            ));
+        }
+    }
     settings::apply_patch(&mut document.preferences, request.settings);
     write(&state, &document)?;
 
@@ -307,7 +332,7 @@ async fn adopt_settings(
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
                 "a settings file already exists; there is nothing to adopt into",
-            ))
+            ));
         }
     }
 

@@ -192,6 +192,17 @@ remain `WAITING_DECISION`. No wait blocks unrelated ready offline packages.
 
 ## Complete per-ID execution ledger
 
+### UI-owner follow-up evidence (2026-10-02)
+
+The separately authorized UI session audited all 24 UI-routed rows and gated
+four concrete implementation gaps: UX-02, UX-03, KL-121 and KL-124. Its complete
+per-ID matrix and exact native/offline qualifications are in
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). Publication is still pending, so
+this checkpoint does not yet change owner-row delivery states. Existing U13
+closures, all inventory IDs/priorities/routes and other sessions' dispositions
+remain unchanged. Native/Orca/multicast evidence, KL-82 and domain/API-dependent
+work remain explicit; no alpha-release exception is inferred.
+
 Each row retains its one primary route and original priority. The evidence
 column points to the **current retained source**, not a claim that its entire
 implementation was freshly tested. Open alpha code contracts are verified in

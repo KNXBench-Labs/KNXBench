@@ -803,6 +803,17 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                         <span className="bus-discovery-tag">{t("busDiscovery.tunnelling")}</span>
                       )}
                     </button>
+                    {iface.deviceInfo ? <details className="bus-discovery-info">
+                      <summary>{t("busDiscovery.deviceInfo")}</summary>
+                      <dl className="facts">
+                        <dt>{t("busDiscovery.mediumRaw")}</dt><dd className="mono">0x{iface.deviceInfo.medium.toString(16).padStart(2, "0")}</dd>
+                        <dt>{t("busDiscovery.statusRaw")}</dt><dd className="mono">0x{iface.deviceInfo.status.toString(16).padStart(2, "0")}</dd>
+                        <dt>{t("busDiscovery.projectInstallationId")}</dt><dd className="mono">{iface.deviceInfo.projectInstallationId}</dd>
+                        <dt>{t("busDiscovery.serialNumber")}</dt><dd className="mono">{iface.deviceInfo.serialNumber.map((octet) => octet.toString(16).padStart(2, "0")).join("")}</dd>
+                        <dt>{t("busDiscovery.routingMulticast")}</dt><dd className="mono">{iface.deviceInfo.routingMulticast}</dd>
+                        <dt>{t("busDiscovery.macAddress")}</dt><dd className="mono">{iface.deviceInfo.macAddress.map((octet) => octet.toString(16).padStart(2, "0")).join(":")}</dd>
+                      </dl>
+                    </details> : <p className="bus-discovery-info-unavailable">{t("busDiscovery.infoUnavailable")}</p>}
                   </li>
                 ))}
               </ul>

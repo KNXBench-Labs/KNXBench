@@ -28,6 +28,7 @@ const apiMock = vi.hoisted(() => ({
   setIndividualAddress: vi.fn(),
   renameArea: vi.fn(),
   renameLine: vi.fn(),
+  setGroupAddressStyle: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -514,11 +515,88 @@ describe("Inspector — collapsed delete-restriction message", () => {
   });
 });
 
-// KNOWN_LIMITATIONS.md §84 — a project's group address style, once chosen,
-// used to be invisible again. This is display only: no button, dropdown, or
-// route call lives in `ProjectInspector`, just `tree.group_address_style`
-// read back onto the screen.
+// Restyling uses the existing command-backed route, not a display preference.
 describe("Inspector — project node", () => {
+  it.each(["en", "de"])("restyles an existing project through one authoritative request (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = twoInstallationTree();
+    const changed = { ...tree, group_address_style: "TwoLevel", can_undo: true, is_modified: true };
+    apiMock.setGroupAddressStyle.mockResolvedValueOnce(changed);
+    const onApplied = await renderInspector({ kind: "project", id: 0 }, tree);
+    const select = host!.querySelector<HTMLSelectElement>("select");
+    expect(select).not.toBeNull();
+    expect(Array.from(select!.options, ({ value }) => value)).toEqual(["ThreeLevel", "TwoLevel", "Free"]);
+    expect(select!.getAttribute("aria-label")).toBe(language === "de" ? "Gruppenadress-Stil" : "Group address style");
+    await act(async () => {
+      select!.value = "TwoLevel";
+      select!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.setGroupAddressStyle).toHaveBeenCalledExactlyOnceWith("TwoLevel");
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(changed);
+    expect(tree.installations[1].group_addresses[0].address).toBe("2/1/1");
+  });
+
+  it("keeps the authoritative style and displays a refused restyle without publishing success", async () => {
+    apiMock.setGroupAddressStyle.mockRejectedValueOnce(new Error("style change refused"));
+    const onApplied = await renderInspector({ kind: "project", id: 0 }, twoInstallationTree());
+    const select = host!.querySelector<HTMLSelectElement>("select");
+    expect(select).not.toBeNull();
+    await act(async () => {
+      select!.value = "Free";
+      select!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onApplied).not.toHaveBeenCalled();
+    expect(host!.querySelector('[role="alert"]')?.textContent).toBe("style change refused");
+    expect(select!.value).toBe("ThreeLevel");
+  });
+
+  it("does not overlap restyle requests while a response is pending", async () => {
+    let resolve!: (tree: ProjectTree) => void;
+    const pending = new Promise<ProjectTree>((done) => { resolve = done; });
+    apiMock.setGroupAddressStyle.mockReturnValueOnce(pending);
+    const tree = twoInstallationTree();
+    await renderInspector({ kind: "project", id: 0 }, tree);
+    const select = host!.querySelector<HTMLSelectElement>("select");
+    expect(select).not.toBeNull();
+    await act(async () => {
+      select!.value = "Free";
+      select!.dispatchEvent(new Event("change", { bubbles: true }));
+      select!.value = "TwoLevel";
+      select!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.setGroupAddressStyle).toHaveBeenCalledExactlyOnceWith("Free");
+    expect(select!.disabled).toBe(true);
+    await act(async () => resolve({ ...tree, group_address_style: "Free" }));
+    expect(select!.disabled).toBe(false);
+  });
+
+  it("refreshes the style selector from an authoritative Undo snapshot", async () => {
+    const tree = { ...twoInstallationTree(), group_address_style: "Free" };
+    const onApplied = await renderInspector({ kind: "project", id: 0 }, tree);
+    expect(host!.querySelector<HTMLSelectElement>("select")!.value).toBe("Free");
+    await act(async () => root!.render(<Inspector selection={{ kind: "project", id: 0 }}
+      tree={{ ...tree, group_address_style: "TwoLevel", can_redo: true }} deviceDetail={null}
+      onApplied={onApplied} onDeleted={vi.fn()} />));
+    expect(host!.querySelector<HTMLSelectElement>("select")!.value).toBe("TwoLevel");
+    expect(apiMock.setGroupAddressStyle).not.toHaveBeenCalled();
+  });
+
+  it("preserves an unknown imported style without silently defaulting or posting it", async () => {
+    await renderInspector({ kind: "project", id: 0 }, { ...twoInstallationTree(), group_address_style: "FutureStyle" });
+    const select = host!.querySelector<HTMLSelectElement>("select")!;
+    expect(select.value).toBe("FutureStyle");
+    expect(select.selectedOptions[0].disabled).toBe(true);
+    expect(host!.textContent).toContain("FutureStyle");
+    expect(apiMock.setGroupAddressStyle).not.toHaveBeenCalled();
+  });
+
+  it("does not post an unchanged project style", async () => {
+    await renderInspector({ kind: "project", id: 0 }, twoInstallationTree());
+    await act(async () => host!.querySelector<HTMLSelectElement>("select")!
+      .dispatchEvent(new Event("change", { bubbles: true })));
+    expect(apiMock.setGroupAddressStyle).not.toHaveBeenCalled();
+  });
+
   it("shows the project's current group address style", async () => {
     const tree = twoInstallationTree();
     await renderInspector({ kind: "project", id: 0 }, tree);

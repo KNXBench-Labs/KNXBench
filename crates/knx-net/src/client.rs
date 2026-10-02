@@ -83,6 +83,9 @@ pub struct DiscoveredGateway {
     pub individual_address: IndividualAddress,
     pub friendly_name: String,
     pub supports_tunnelling: bool,
+    /// Complete decoded Device Info DIB. `None` is explicitly unavailable
+    /// metadata from a non-wire adapter; a decoded SEARCH_RESPONSE has Some.
+    pub device_info: Option<dib::DeviceInfo>,
 }
 
 /// A local KNXnet/IP client, not yet connected to any gateway. `discover`
@@ -201,8 +204,9 @@ async fn discover_on_socket(
         gateways.push(DiscoveredGateway {
             control_endpoint,
             individual_address: response.device_info.individual_address,
-            friendly_name: response.device_info.friendly_name,
+            friendly_name: response.device_info.friendly_name.clone(),
             supports_tunnelling,
+            device_info: Some(response.device_info),
         });
     }
     Ok(gateways)
@@ -1090,11 +1094,11 @@ mod tests {
         }
         .encode()
         .to_vec();
-        body.extend_from_slice(&[0x36, dib::DEVICE_INFO, 0x02, 0x00, 0x11, 0x01]);
-        body.extend_from_slice(&[0; 2]); // project-installation id
-        body.extend_from_slice(&[0; 6]); // serial
+        body.extend_from_slice(&[0x36, dib::DEVICE_INFO, 0x81, 0x80, 0x11, 0x01]);
+        body.extend_from_slice(&[0x12, 0x34]); // project-installation id
+        body.extend_from_slice(&[1, 2, 3, 4, 5, 6]); // serial
         body.extend_from_slice(&[224, 0, 23, 12]);
-        body.extend_from_slice(&[0; 6]); // MAC
+        body.extend_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]); // MAC
         let mut name = b"Offline gateway".to_vec();
         name.resize(30, 0);
         body.extend_from_slice(&name);
@@ -1159,18 +1163,30 @@ mod tests {
             .expect("bounded offline discovery roundtrip");
         let mut gateways = gateways.unwrap();
         gateways.sort_by_key(|gateway| gateway.control_endpoint.port());
+        let info = dib::DeviceInfo {
+            medium: 0x81,
+            status: 0x80,
+            individual_address: IndividualAddress::new(1, 1, 1).unwrap(),
+            project_installation_id: 0x1234,
+            serial_number: [1, 2, 3, 4, 5, 6],
+            routing_multicast: Ipv4Addr::new(224, 0, 23, 12),
+            mac_address: [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff],
+            friendly_name: "Offline gateway".into(),
+        };
         let mut expected = vec![
             DiscoveredGateway {
                 control_endpoint: peer_addr,
                 individual_address: IndividualAddress::new(1, 1, 1).unwrap(),
                 friendly_name: "Offline gateway".into(),
                 supports_tunnelling: true,
+                device_info: Some(info.clone()),
             },
             DiscoveredGateway {
                 control_endpoint: other_addr,
                 individual_address: IndividualAddress::new(1, 1, 1).unwrap(),
                 friendly_name: "Offline gateway".into(),
                 supports_tunnelling: false,
+                device_info: Some(info),
             },
         ];
         expected.sort_by_key(|gateway| gateway.control_endpoint.port());

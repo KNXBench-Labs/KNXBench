@@ -31,6 +31,16 @@ fn interface(last_octet: u8, device: u8, name: &str, tunnelling: bool) -> Discov
             .expect("valid test address"),
         friendly_name: name.to_string(),
         supports_tunnelling: tunnelling,
+        device_info: Some(knx_net::core::dib::DeviceInfo {
+            medium: 129,
+            status: 128,
+            individual_address: knx_core::IndividualAddress::new(1, 1, device).unwrap(),
+            project_installation_id: 4660,
+            serial_number: [1, 2, 3, 4, 5, 6],
+            routing_multicast: std::net::Ipv4Addr::new(224, 0, 23, 12),
+            mac_address: [170, 187, 204, 221, 238, 255],
+            friendly_name: name.into(),
+        }),
     }
 }
 
@@ -83,11 +93,36 @@ async fn discover_returns_every_interface_that_answered() {
     assert_eq!(interfaces[0]["individualAddress"], "1.1.0");
     assert_eq!(interfaces[0]["friendlyName"], "Hallway interface");
     assert_eq!(interfaces[0]["supportsTunnelling"], true);
+    assert_eq!(
+        interfaces[0]["deviceInfo"],
+        serde_json::json!({
+            "medium": 129, "status": 128, "projectInstallationId": 4660,
+            "serialNumber": [1, 2, 3, 4, 5, 6], "routingMulticast": "224.0.23.12",
+            "macAddress": [170, 187, 204, 221, 238, 255]
+        })
+    );
 
     assert_eq!(interfaces[1]["controlEndpoint"], "192.0.2.12:3671");
     assert_eq!(interfaces[1]["individualAddress"], "1.1.1");
     assert_eq!(interfaces[1]["friendlyName"], "Workshop router");
     assert_eq!(interfaces[1]["supportsTunnelling"], false);
+}
+
+#[tokio::test]
+async fn discover_explicitly_reports_unavailable_adapter_metadata() {
+    let mut gateway = interface(11, 0, "Legacy adapter", true);
+    gateway.device_info = None;
+    let app = knx_server::app(
+        Arc::new(state_with_connector(FakeConnector::discovering(vec![
+            gateway,
+        ]))),
+        None,
+    );
+    let body = body_json(discover(&app).await).await;
+    assert!(body["interfaces"][0]
+        .get("deviceInfo")
+        .expect("explicit availability field")
+        .is_null());
 }
 
 /// Nobody answered. That is a `200` with an empty list — the ordinary

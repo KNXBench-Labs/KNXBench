@@ -113,16 +113,19 @@ published, and the version number is not a promise that anything is finished.
 
 ### The catalog file picker offers `.vd2`, and `.vd2` is always rejected
 
+**UI offer corrected, 2026-10-02.** This historical heading is retained for
+links. The catalog picker now offers `.knxprod` and ZIP packages only; `.vd2`
+is no longer advertised. The legacy-format refusal itself remains intentional.
+
 - **Affected:** installing a product database.
-- **Limitation:** the catalog browser's file input accepts
-  `.knxprod`, `.vd2` and `application/zip`, and the command-line help lists
-  `file.vd2` as an argument. The package reader rejects every file whose name
+- **Limitation:** the package reader rejects every file whose name
   ends in `.vd2` before looking inside it — the legacy ETS3 format is out of
   scope by decision, not by accident.
-- **Consequence:** you can select a `.vd2` file and will then be told it
-  cannot be imported. The refusal is deliberate; the offer is a leftover.
+- **Consequence:** a file selected by overriding the operating system's filter
+  can still be refused. A picker filter is guidance, not format validation.
 - **Workaround:** obtain the product as a `.knxprod` package.
-- **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md)
+- **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md),
+  [UI follow-up evidence](../UI_ALPHA_READINESS.md)
 
 ### Some newer `.knxprod` master-data schemes are not installable directly
 

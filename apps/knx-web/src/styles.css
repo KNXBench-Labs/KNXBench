@@ -2013,6 +2013,43 @@ main {
   font-size: 0.78em;
 }
 
+.bus-discovery-info {
+  max-width: 28rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--knx-muted);
+  font-size: 0.82em;
+  overflow-wrap: anywhere;
+}
+
+.bus-discovery-info summary {
+  cursor: pointer;
+}
+
+.bus-discovery-info summary:focus-visible {
+  outline: 2px solid var(--knx-accent);
+  outline-offset: 2px;
+}
+
+.bus-discovery-info .facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.25rem 0.6rem;
+  margin: 0.5rem 0 0;
+}
+
+.bus-discovery-info dd {
+  margin: 0;
+  color: var(--knx-foreground);
+}
+
+.bus-discovery-info-unavailable {
+  max-width: 28rem;
+  margin: 0.25rem 0.6rem;
+  color: var(--knx-muted);
+  font-size: 0.78em;
+  overflow-wrap: anywhere;
+}
+
 .bus-discovery-tag {
   align-self: flex-start;
   padding: 0 0.35rem;

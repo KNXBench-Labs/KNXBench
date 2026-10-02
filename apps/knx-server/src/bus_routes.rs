@@ -994,19 +994,10 @@ async fn write_value(
 // ---------------------------------------------------------------------------
 
 /// One entry per KNX-compatible interface that answered the multicast
-/// `SEARCH_REQUEST` — exactly the four fields `knx_net::DiscoveredGateway`
-/// carries, rendered as strings, with nothing invented on top.
-///
-/// The `SEARCH_RESPONSE` decoder reads more than this out of the Device
-/// Info DIB (serial number, MAC address, the gateway's routing multicast
-/// group, the medium and status octets, the project-installation id —
-/// `knx_net::core::dib::DeviceInfo`), but `DiscoveredGateway` already
-/// drops those on the way out of `knx-net`, and widening that struct is a
-/// protocol-crate change this route has no business making on its own. So
-/// nothing is dropped *here*; what a user would recognise — the address to
-/// connect to, the name on the label, the interface's own individual
-/// address and whether it offers tunnelling at all — is all present. The
-/// gap is recorded in `docs/KNOWN_LIMITATIONS.md`.
+/// `SEARCH_REQUEST`. Existing endpoint/name/tunnelling fields remain intact;
+/// the additive nullable `deviceInfo` carries the decoded raw DIB metadata.
+/// Unknown medium/status bits are preserved, never interpreted as capabilities
+/// or used as proof of identity or permission to connect/write.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DiscoveredInterfaceDto {
@@ -1023,6 +1014,19 @@ struct DiscoveredInterfaceDto {
     /// DIB at all; `knx-net` collapses those two cases before this route
     /// sees them.
     supports_tunnelling: bool,
+    device_info: Option<DiscoveredDeviceInfoDto>,
+}
+
+/// Raw decoded fields, not interpreted capabilities or device identity proof.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiscoveredDeviceInfoDto {
+    medium: u8,
+    status: u8,
+    project_installation_id: u16,
+    serial_number: [u8; 6],
+    routing_multicast: String,
+    mac_address: [u8; 6],
 }
 
 #[derive(Serialize)]
@@ -1067,6 +1071,14 @@ async fn discover_interfaces(
                 individual_address: g.individual_address.to_string(),
                 friendly_name: g.friendly_name,
                 supports_tunnelling: g.supports_tunnelling,
+                device_info: g.device_info.map(|info| DiscoveredDeviceInfoDto {
+                    medium: info.medium,
+                    status: info.status,
+                    project_installation_id: info.project_installation_id,
+                    serial_number: info.serial_number,
+                    routing_multicast: info.routing_multicast.to_string(),
+                    mac_address: info.mac_address,
+                }),
             })
             .collect(),
     }))

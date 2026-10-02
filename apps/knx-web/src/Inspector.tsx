@@ -1,5 +1,5 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
@@ -1176,15 +1176,30 @@ function GroupRangeInspector(props: {
 
 // Area and line names use the same command-backed edit path as other
 // project structure Properties; address numbers remain fixed by topology.
-// The project node's own panel (KNOWN_LIMITATIONS.md §84) — display only:
-// no button, dropdown, or route call here restyles the project. Undoing
-// the closed limitation's own "afterwards never seen" complaint needs no
-// more than reading `tree.group_address_style` back onto the screen; a
-// restyle affordance is deliberately out of this cycle's scope (dispatcher
-// ruling: no UI trigger unless trivially additive, and a style change
-// this consequential is not).
-function ProjectInspector(props: { tree: ProjectTree }) {
+const PROJECT_GROUP_STYLES: readonly api.GroupAddressStyle[] = ["ThreeLevel", "TwoLevel", "Free"];
+
+function ProjectInspector(props: { tree: ProjectTree; onApplied: (tree: ProjectTree) => void }) {
   const t = useTranslate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  useEffect(() => { setError(null); }, [props.tree.group_address_style]);
+
+  async function apply(style: api.GroupAddressStyle) {
+    if (inFlight.current || style === props.tree.group_address_style) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      props.onApplied(await api.setGroupAddressStyle(style));
+    } catch (e) {
+      setError(api.errorMessage(e));
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="inspector">
       <h2>{t("inspector.project")}</h2>
@@ -1192,6 +1207,22 @@ function ProjectInspector(props: { tree: ProjectTree }) {
         <dt>{t("inspector.groupAddressStyle")}</dt>
         <dd className="mono">{props.tree.group_address_style}</dd>
       </dl>
+      <label className="inspector-field">
+        {t("inspector.groupAddressStyle")}
+        <select aria-label={t("inspector.groupAddressStyle")} value={props.tree.group_address_style}
+          disabled={busy} onChange={(event) => {
+            const style = PROJECT_GROUP_STYLES.find((candidate) => candidate === event.currentTarget.value);
+            if (style) void apply(style);
+          }}>
+          {!PROJECT_GROUP_STYLES.some((style) => style === props.tree.group_address_style) && (
+            <option value={props.tree.group_address_style} disabled>{props.tree.group_address_style}</option>
+          )}
+          {PROJECT_GROUP_STYLES.map((style) => (
+            <option key={style} value={style}>{t(`newProject.style.${style}`)}</option>
+          ))}
+        </select>
+      </label>
+      {error && <p className="field-error" role="alert">{error}</p>}
     </div>
   );
 }
@@ -1529,7 +1560,7 @@ export default function Inspector(props: {
   const t = useTranslate();
 
   if (selection.kind === "project") {
-    return <ProjectInspector tree={tree} />;
+    return <ProjectInspector tree={tree} onApplied={onApplied} />;
   }
 
   if (selection.kind === "device") {

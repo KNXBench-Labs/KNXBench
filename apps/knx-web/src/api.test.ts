@@ -33,6 +33,16 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("uses the existing project restyle route and returns its authoritative snapshot", async () => {
+    const tree = { group_address_style: "TwoLevel", can_undo: true, is_modified: true, installations: [] };
+    mockFetchOnce(tree);
+    expect(await api.setGroupAddressStyle("TwoLevel")).toEqual(tree);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/group-address-style");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ groupAddressStyle: "TwoLevel" });
+  });
+
   it("posts catalog quantities additively without changing the single-device contract", async () => {
     mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
     await api.createDevice(null, "cat-1", "Actuator");

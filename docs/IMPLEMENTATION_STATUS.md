@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — U16 acknowledged theme persistence (reviewed candidate, not delivered)
+
+- Implemented strict bounded UTF-8/BOM import, validated deterministic export,
+  detached/frozen content-bound theme plans, explicit replacement consent and
+  coupled active removal/System selection through the existing settings queue.
+- Optional key-scoped conditional PUT plus capability version 1 retains the
+  opaque settings-file schema. Unknown preferences/raw entries are preserved;
+  incompatible, pending and uncertain authority disarms mutations. Network
+  ambiguity rereads without replay; cache failure is reported independently.
+- Five-file focused suite: 144 passed; TypeScript passed. Thirty-one restored
+  behavioral controls and TS2322 canary pass; two initial survivors required
+  stronger export/status assertions. Separate self-review fixed aggregate
+  selection/runtime disagreement with an observed RED/GREEN regression.
+- Raw recovery exports browser-observed theme JSON only, not a byte-exact file.
+  Latest frozen candidate passed 16 checks: Web 1,665, intercepted Chromium 61,
+  ordinary Rust 2,925 / zero failed / 164 ignored. Eight conditional HTTP cases,
+  seven compiled server guard controls (including the initially surviving lock
+  case), five extra ordinary queue controls and all-source restoration verified.
+  Actual-merged integration and publication remain pending. U17 production manager/diagnostics/preview and U18 closing review
+  remain open; no independent/native/Orca/ETS/alpha-release approval implied.
+
+
 ## 2026-10-02 — U15 theme runtime foundation (delivered, extension still open)
 
 - Implemented bounded duplicate-aware JSON admission, exact v1/token contracts,

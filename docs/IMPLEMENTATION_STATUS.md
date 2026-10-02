@@ -24,6 +24,209 @@
   review remain open. [THEME_PACKS](THEME_PACKS.md) defines the exact boundary;
   no independent/native/Orca/full WCAG or release approval is inferred.
 
+## 2026-10-02 16:59 CEST — AR06 scoped delivery verified
+
+- Source f8b6f27e and integrated gates on 1404f39b published in 95e6bcb0;
+  fetch plus live refs/heads/main readback matched local HEAD, divergence 0/0.
+  Subsequent UI theme integration e98a0b58 and receipt changes are Markdown only
+  versus the gated source. Final doc gates: 376 links / 237 Markdown files,
+  389 well-formed headers, 157 at ceiling, 17 generated skipped; whitespace clean.
+- Actual combined acceptance: 24/24 steps, 2,916 Rust passes / zero failures /
+  164 ignored / 146 blocks; 1,357 Web unit and 52 intercepted Chromium passes;
+  eighteen selected private offline cases and six raw cases without skips;
+  595 source/config inputs frozen. Both complete upstream archives retained.
+- AR06 scoped conservative implementation and four verification items are DONE.
+  Genuine independent module/schema samples remain BLOCKED_EXTERNAL: three
+  existing exports are two installations, not a complete compatibility matrix.
+  Unknown legacy formats are refused, not implemented; raw labels are not
+  tested Secure/ETS abilities; empty ProductDB native reopen is not enrichment.
+- No full ETS/XSD/descendant-QName or durable-report claim, independent external
+  approval, live KNX access or shared-root synchronization. AR05 stays unchanged.
+  Task-owned scratch/worktree cleanup follows; aggregate evidence is durable
+  here and in the import boundary contract. AR07 offline research is next.
+
+## 2026-10-02 16:56 CEST — AR06 integrated receipt (publication pending)
+
+- proc_8211942fb620 exited 0; all 24 expected steps/raw logs independently
+  reconciled on merge 1404f39be3fc629788da158c4e43f459da5f2594, tree
+  5ce951c8e5ae918b1b4e5bc23eb2ddf3000a8b09; 595 tracked source/config inputs frozen.
+- Workspace: 2,916 passed, zero failed, 164 ignored, 146 result blocks. Web:
+  1,357 unit and 52 intercepted Chromium fixture tests passed. Eighteen selected
+  private offline cases and six existing raw catalogue/producer cases ran without
+  skips. Strict workspace Clippy/build, format, dependency policy, shadow binding
+  semantic comparison and all four nonempty intended-root repository gates pass.
+- Headers: 389 well-formed, 157 at the existing ceiling, 17 generated skipped;
+  anchors: 376 links / 235 Markdown files; layering: 448 resolved packages.
+- In-session whole-diff review closed both Important findings with RED/GREEN and
+  compiled behavioral mutants: destination opening before master admission and
+  an unsaved domain seed in refusal evidence. Not independent external approval.
+- New upstream e98a0b58 contains two documentation-only UI theme commits. Preserve
+  their complete handover/status archives, then rerun doc gates before publication.
+  This receipt supersedes preceding pending combined-gate wording, not the scopes
+  of historical receipts. No shared-root edits, original/corpus pin changes,
+  full ETS/XSD/descendant validation, durable-report or live KNX approval.
+- Scoped implementation/verification is complete; actual publication is pending.
+  Three genuine exports still represent two installations; independent module/
+  unimplemented-schema samples remain BLOCKED_EXTERNAL, not waived or compatible.
+
+## 2026-10-02 — AR06 whole-diff review checkpoint (offline; 15:52 CEST)
+
+- Corrected-CLI proc_129928b4f8dc exited 0; all eighteen steps/logs reconciled:
+  workspace 2,910 passed / zero failed / 164 ignored / 146 result blocks;
+  eighteen selected private cases and six existing raw tests ran without skips.
+  Fifteen source paths frozen (fourteen changed plus protected unchanged mapper).
+  Strict workspace Clippy/build and nonempty intended-root repository gates pass.
+- Separate in-session review of all fourteen changed Rust diffs found and closed
+  two Important findings: product DB opening before unsupported-master admission,
+  and a refusal test's unsaved domain seed. The first has missing-target/sentinel
+  regressions and a caught premature-open compiled mutant. The second reproduced
+  `NotSaved`, now saves a nonempty project and checks whole-model equality after
+  each refusal; a compiled destructive-store mutation is caught. Sources restored
+  byte-exactly. Corrected ordinary app service: four passed, zero failed, three
+  ignored; changed-app strict Clippy, format and whitespace pass. First seed
+  orchestrator's wrong expected test count is archived, not a product failure.
+- No remaining blocking in-session code finding within the conservative contract;
+  not independent external approval. Final strengthened-fixture candidate
+  proc_0c225d9b5f0e exited 0; all eighteen steps reconciled at 16:14 CEST:
+  2,910 workspace passes / zero failed / 164 ignored, eighteen selected private
+  and six raw cases without skips; fifteen protected sources frozen. Current
+  upstream has additional UI/monitor source changes; combined gates/publication
+  remain pending, not inferred from candidate acceptance.
+  AR06 remains IN_PROGRESS; genuine independent sample gaps stay BLOCKED_EXTERNAL.
+  No full ETS parity, report persistence, standalone-package-wide atomicity,
+  descendant/QName/XSD validation, UI/foreign-root or live KNX claim.
+
+## 2026-10-02 — AR06 mapping/native and raw-field checkpoint (offline; 14:34 CEST)
+
+- Renewed proc_2296901dfdb3 exited 0; six compiled behavioral mapping mutants
+  killed and source restoration equals owned HEAD. Eight step logs reconciled;
+  four fixture/test files frozen. Three-crate tests: 170 passed, zero failed,
+  76 ignored, 31 blocks; strict Clippy, format and whitespace pass. First Clippy
+  failure is archived; no production allowance or mapping change was needed.
+- Exact DefaultLine cases cover both mapper generations/project tables 11/21/23;
+  repeated device-local refs retain distinct owners, flags/text and links, and
+  malformed refs do not erase later objects. Whole-model/opaque native reopen
+  exercises 24 synthetic combinations with/without an empty product DB.
+- Eight explicitly selected private offline tests passed without skips, including
+  actual enrichment and the exact existing schema-21 empty DefaultLine finding.
+  Three existing exports still represent only two documented installations.
+- Audited raw attribute/producer/catalogue boundaries and reran six existing
+  catalogue/producer tests, all passed. [Contract](IMPORT_BOUNDARY_CONTRACT.md)
+  records the sample matrix, normalized-versus-byte retention, optional producer
+  extraction and transient-report limits. No Secure capability, new real schema,
+  complete corpus or independent module sample is inferred.
+- AR06 IN_PROGRESS: complete feature review, renewed changed-candidate workspace
+  gates, integration/publication remain pending. Missing genuine samples remain
+  BLOCKED_EXTERNAL; upstream UI changes are not yet integrated/certified here.
+
+## 2026-10-02 — AR06 changed legacy candidate wider receipt (offline; 13:16 CEST)
+
+- Exact registry handle `proc_11bf8a0ab11f` exited 0; all twelve expected steps
+  and raw log counts reconciled. Workspace: 2,904 passed, zero failed, 163
+  ignored, 146 result blocks. Strict workspace all-target Clippy, build,
+  formatting/whitespace and four intended-root repository gates pass.
+- Nonempty gate scope: 380 valid headers, 376 links / 233 Markdown files,
+  448 resolved packages and 332 Rust corpus-source files. Thirteen named Rust
+  files remained unchanged; no tracked Web/binding delta.
+- Ten explicitly selected private offline tests ran, none skipped: eight CLI
+  import cases, readable-product installation and real VD2 refusal. Not a whole
+  corpus-matrix run, new independent ETS/schema sample, password or bus claim.
+- Current artifacts are `ar06-legacy-wide-summary.json`, twelve named logs and
+  aggregate verified receipt. Older counts belong to historical candidates.
+  AR06 remains IN_PROGRESS: raw-field/sample/mapping and integrated delivery
+  remain open. [Contract](IMPORT_BOUNDARY_CONTRACT.md).
+
+## 2026-10-02 — AR06 legacy and CLI master checkpoint (offline; 13:02 CEST)
+
+- Typed filename-only refusal covers VD3–VD5/PR3–PR5 and mixed-case inputs;
+  VD2 stays unsupported. CLI preflight prevents destination creation/migration
+  before refusal. Direct ProductDB VD2 hash/length behavior remains unchanged;
+  CLI VD2 now uses the same early filename diagnostic as the other legacy names.
+- Library/application/CLI regressions verify no legacy admission through modern
+  bytes or known-hash retries, seeded database/WAL/source integrity, untouched
+  reports and full native project/opaque equality after reopen. No legacy
+  grammar, cipher, conversion or compatibility claim is introduced.
+- Caller RED reproduced silent unsupported-master acceptance in products-only
+  CLI ingest. Typed refusal now precedes every manufacturer write; two root
+  variants preserve existing database bytes and prevent new hardware/DPT rows.
+- Five compiled behavioral mutants killed and all three production sources
+  restored byte-exactly. Renewed five-crate gates: 899 passed / zero failed /
+  119 ignored / 70 blocks, strict Clippy/format/whitespace pass; tracked Web
+  delta empty. Ignored fixtures are not corpus execution. Wider/private gates,
+  sample/raw-field/mapping evidence and publication remain pending; AR06 stays
+  IN_PROGRESS. [Contract](IMPORT_BOUNDARY_CONTRACT.md).
+
+## 2026-10-02 — AR06 changed master candidate wider receipt (offline; 10:54 CEST)
+
+- Exact proc_7228729035d2 completion: exit 0; all nine expected step exits and
+  actual workspace results verified: 2,898 passed / zero failed / 163 ignored /
+  146 result blocks. Strict workspace all-target Clippy/build, format/whitespace
+  and four nonempty intended-root repository gates pass; seven Rust files frozen.
+- Production files still equal restored mutation baselines; no tracked Web or
+  binding delta. No ignored private fixture executed, no native report
+  persistence or direct ProductDB/standalone compatibility is inferred.
+- Master diagnostic/admission/native checkpoint below is backed by the current
+  wider candidate, not the historical root receipt. Remaining raw-field,
+  private-corpus/sample, legacy and DefaultLine/device-local AR06 rows stay open.
+  AR06 IN_PROGRESS; no publication, release or live-bus claim. Contract:
+  [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md).
+
+## 2026-10-02 — AR06 master metadata/admission/native checkpoint (offline; 10:42 CEST)
+
+- Replaced suppressed optional-master detection errors with a typed finding
+  forwarded through ImportOutcome. Fixed-label unsupported reporting withholds
+  source values; missing master, valid comparison and container read failures
+  remain distinct. No domain/storage/wire-shape or project-table expansion.
+- Cross-layer RED proved a foreign master could still write a typed DPT row.
+  Application now retains its opaque bytes without shared typed master ingest;
+  canonical positive control preserves the existing valid typed path.
+- Native regression verifies both product-DB modes, semantic `.knxdb` reopen,
+  all opaque entries/master bytes/hash and unchanged synthetic input. This does
+  not newly persist the transient report or certify descendant namespaces,
+  standalone packages, direct ProductDB ingest or real independent ETS samples.
+- Final three-crate gates: 162 passed / zero failed / 75 ignored / 31 blocks;
+  strict Clippy/format/whitespace pass. Three compiled behavioral mutants caught
+  and production sources restored byte-exactly. Renewed workspace/corpus/sample,
+  legacy and DefaultLine/device-local requirements remain pending. AR06 remains
+  IN_PROGRESS with its four full checklist items open; no release/bus claim.
+  Contract: [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md).
+
+## 2026-10-02 — AR06 root candidate wider-gate receipt (offline; 10:04 CEST)
+
+- Renewed proc_c5ad6d2638d7 exited 0; all nine expected steps and log counts
+  read back independently: workspace 2,892 passed / zero failed / 163 ignored /
+  146 result blocks. Workspace strict all-target Clippy/build, format/whitespace
+  and four intended-root repository gates pass; five owned source files frozen.
+- Fresh desktop initially lacked the built frontend resource. The first wider
+  run exited 101 before tests; real pinned frontend build corrected the
+  prerequisite. Its delayed notification is not a new candidate failure.
+  No tracked Web source/binding delta or UI ownership change.
+- Nonempty repository coverage verified; corpus source lint and ignored suites
+  are not private-corpus execution. Remaining master diagnostic/lexeme, legacy,
+  DefaultLine/device-local, native/sample and whole-feature requirements remain
+  open. AR06 IN_PROGRESS; no publication, ETS parity, alpha-release or bus claim.
+  Contract: [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md).
+
+## 2026-10-02 — AR06 root import-boundary checkpoint (offline; 08:51 CEST)
+
+- Read the user-provided KNX Standard v3.0.0 PDFs as local primary evidence;
+  schema-23 root/namespace/source-string findings are scoped in
+  [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md), not copied as licensed
+  text or treated as an authoritative XSD/legacy grammar.
+- Detection now verifies root QName and exact namespace identity, decodes XML
+  attribute values without lossy UTF-8 replacement, refuses malformed attributes,
+  and checks metadata/topology namespace agreement before table-based parsing.
+  Synthetic full-pipeline positive/negative cases cover each boundary.
+- Application-service regression seeds project and shared product databases;
+  all six namespace refusals preserve main/WAL bytes and typed diagnostics,
+  with/without the shared product DB. Two compiled behavioral mutants fail;
+  production bytes restored exactly before fresh green tests/lint.
+- Three focused crates: 155 passed / zero failed / 75 ignored / 31 result blocks;
+  strict all-target Clippy, formatting and whitespace pass. No private-corpus,
+  native-reopen, full-workspace, CLI/HTTP/UI or external compatibility acceptance
+  is inferred. Master metadata diagnostic suppression and remaining AR06 source
+  routes still need work. AR06 remains IN_PROGRESS; no alpha-release/bus claim.
+
 ## 2026-10-02 — U14 theme-pack contract (implementation pending)
 
 - [THEME_PACKS](THEME_PACKS.md) and

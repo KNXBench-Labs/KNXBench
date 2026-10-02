@@ -1278,6 +1278,31 @@ fn rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size() {
 }
 
 #[test]
+fn legacy_named_packages_preserve_existing_installation_and_reports() {
+    let (dir, conn) = db();
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    install_package(&conn, "seed.knxprod", &bytes).unwrap();
+    let before = counts(&conn);
+    drop(conn);
+    let database = dir.path().join("products.sqlite");
+    let database_bytes = std::fs::read(&database).unwrap();
+    let conn = open_and_migrate(&database).unwrap();
+    for extension in ["vd3", "vd4", "vd5", "pr3", "pr4", "pr5", "VD4", "Pr3"] {
+        let error = install_package(&conn, &format!("synthetic.{extension}"), &bytes)
+            .expect_err("readable modern bytes must not enable a legacy filename extension");
+        assert_eq!(error.to_string(), format!(
+            "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
+        ));
+        assert_eq!(counts(&conn), before);
+    }
+    drop(conn);
+    assert_eq!(std::fs::read(database).unwrap(), database_bytes);
+}
+
+#[test]
 fn a_small_vd2_still_reports_hash_and_length() {
     let (_dir, conn) = db();
     let bytes = vec![1u8, 2, 3];

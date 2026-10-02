@@ -31,6 +31,7 @@ const UNDECLARED_PAYLOAD_DETAIL: &str =
 #[derive(Debug)]
 pub enum PackageError {
     LegacyVd2 { sha256: String, len: usize },
+    UnsupportedLegacyFormat { extension: String },
     InvalidZip { cause: String },
     Encrypted { path: String },
     UnsafeMember { path: String },
@@ -49,6 +50,10 @@ impl fmt::Display for PackageError {
             Self::LegacyVd2 { sha256, len } => write!(
                 f,
                 "legacy .vd2 product data is unsupported (sha256 {sha256}, {len} bytes)"
+            ),
+            Self::UnsupportedLegacyFormat { extension } => write!(
+                f,
+                "legacy ETS filename extension .{extension} is unsupported; legacy import is not implemented"
             ),
             Self::InvalidZip { cause } => write!(f, "invalid product ZIP: {cause}"),
             Self::Encrypted { path } => write!(f, "encrypted product ZIP member: {path}"),
@@ -2045,6 +2050,21 @@ pub fn install_package(
             sha256: sha256_hex(bytes),
             len: bytes.len(),
         });
+    }
+    // Filename admission only: do not decrypt or guess the legacy container.
+    // Keep this before transactions and hash retries, including known bytes.
+    if let Some(extension) = std::path::Path::new(source_name)
+        .extension()
+        .and_then(|extension| extension.to_str())
+    {
+        if ["vd3", "vd4", "vd5", "pr3", "pr4", "pr5"]
+            .iter()
+            .any(|legacy| extension.eq_ignore_ascii_case(legacy))
+        {
+            return Err(PackageError::UnsupportedLegacyFormat {
+                extension: extension.to_owned(),
+            });
+        }
     }
     let sha256 = sha256_hex(bytes);
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;

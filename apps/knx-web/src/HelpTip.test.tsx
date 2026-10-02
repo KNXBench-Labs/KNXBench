@@ -2,13 +2,17 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import HelpTip from "./HelpTip";
 import { messages as enMessages } from "./messages/en";
 
 let host: HTMLDivElement | undefined;
+let currentRoot: Root | undefined;
 
-afterEach(() => {
+afterEach(async () => {
+  await act(async () => currentRoot?.unmount());
+  currentRoot = undefined;
   host?.remove();
   host = undefined;
   document.documentElement.removeAttribute("data-motion-level");
@@ -22,6 +26,7 @@ async function render(onOuterKeyDown?: () => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
+  currentRoot = root;
   await act(async () => {
     root.render(
       <div onKeyDown={onOuterKeyDown}>
@@ -33,13 +38,71 @@ async function render(onOuterKeyDown?: () => void) {
 }
 
 const trigger = () => host!.querySelector("button")!;
-const bubble = () => host!.querySelector('[role="tooltip"]') as HTMLElement;
+const bubble = () => document.body.querySelector(".help-tip-bubble") as HTMLElement;
+const description = () => host!.querySelector('[role="tooltip"]') as HTMLElement;
 
 describe("HelpTip", () => {
+  it("repositions on resize and captured scroll and releases those listeners on unmount", async () => {
+    const root = await render();
+    const anchor = vi.spyOn(trigger(), "getBoundingClientRect");
+    anchor.mockReturnValue({ left: 40, top: 40, bottom: 60 } as DOMRect);
+    vi.spyOn(bubble(), "getBoundingClientRect").mockReturnValue({ width: 200, height: 80 } as DOMRect);
+    await act(async () => trigger().dispatchEvent(new FocusEvent("focusin", { bubbles: true })));
+    expect(bubble().style.left).toBe("40px");
+    anchor.mockReturnValue({ left: 80, top: 40, bottom: 60 } as DOMRect);
+    await act(async () => window.dispatchEvent(new Event("resize")));
+    expect(bubble().style.left).toBe("80px");
+    anchor.mockReturnValue({ left: 120, top: 40, bottom: 60 } as DOMRect);
+    await act(async () => trigger().dispatchEvent(new Event("scroll", { bubbles: false })));
+    expect(bubble().style.left).toBe("120px");
+    const remove = vi.spyOn(window, "removeEventListener");
+    await act(async () => root.unmount());
+    expect(remove).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(remove).toHaveBeenCalledWith("scroll", expect.any(Function), true);
+    expect(document.body.querySelector(".help-tip-bubble")).toBeNull();
+  });
+
+  it.each([1, 1.5])("places a focused edge tooltip inside the viewport at scale %s", async (scale) => {
+    const previous = document.documentElement.style.getPropertyValue("--app-ui-scale");
+    document.documentElement.style.setProperty("--app-ui-scale", String(scale));
+    const root = await render();
+    try {
+      vi.spyOn(trigger(), "getBoundingClientRect").mockReturnValue({ left: window.innerWidth - 20, top: window.innerHeight - 30, bottom: window.innerHeight - 12 } as DOMRect);
+      vi.spyOn(bubble(), "getBoundingClientRect").mockReturnValue({ width: 200, height: 80 } as DOMRect);
+      await act(async () => trigger().dispatchEvent(new FocusEvent("focusin", { bubbles: true })));
+      expect(Number.parseFloat(bubble().style.left)).toBeCloseTo((window.innerWidth - 208) / scale);
+      expect(Number.parseFloat(bubble().style.top)).toBeCloseTo((window.innerHeight - 116) / scale);
+      const described = trigger().getAttribute("aria-describedby");
+      await act(async () => trigger().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+      expect(bubble().style.left).toBe("0px");
+      expect(bubble().style.top).toBe("0px");
+      expect(description().id).toBe(described);
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) document.documentElement.style.setProperty("--app-ui-scale", previous);
+      else document.documentElement.style.removeProperty("--app-ui-scale");
+    }
+  });
+
+  it("keeps the permanent description beside its trigger while painting the bubble outside clipped ancestors", async () => {
+    const root = await render();
+    try {
+      const described = trigger().getAttribute("aria-describedby")!;
+      const description = document.getElementById(described)!;
+      expect(host!.contains(description)).toBe(true);
+      expect(description.classList.contains("help-tip-description")).toBe(true);
+      expect(description.textContent).toBe(enMessages["help.tip.comFlags.text"]);
+      const painted = document.body.querySelector<HTMLElement>(".help-tip-bubble")!;
+      expect(painted.parentElement).toBe(document.body);
+      expect(painted.getAttribute("aria-hidden")).toBe("true");
+    } finally { await act(async () => root.unmount()); }
+  });
+
   it("registers its topic for F1 and dispatches the same topic on click", async () => {
     host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
+    currentRoot = root;
     const received = vi.fn();
     window.addEventListener("knxbench:open-help", received);
     try {
@@ -67,7 +130,7 @@ describe("HelpTip", () => {
     await render();
     const described = trigger().getAttribute("aria-describedby");
     expect(described).toBeTruthy();
-    expect(bubble().id).toBe(described);
+    expect(description().id).toBe(described);
     expect(bubble().className).not.toContain("is-open");
   });
 
@@ -78,7 +141,7 @@ describe("HelpTip", () => {
       trigger().dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
     });
     expect(trigger().getAttribute("aria-describedby")).toBe(described);
-    expect(bubble().id).toBe(described);
+    expect(description().id).toBe(described);
   });
 
   // A tooltip that appears only on hover is unreachable from a keyboard.

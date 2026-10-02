@@ -54,9 +54,16 @@ pause/cursor/race guards are implemented; twelve complete candidate gates pass
 (Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
 acceptance repeated with the same counts on published `8ceacf49`; remote
 ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
-transactional write proof follows. Continue with the keyboard/background-modal
-and viewport-safe help-tip contracts in the next independently reserved package. Do not turn
-retained design boundaries into silently accepted alpha exceptions.
+transactional write proof follows. The separately reserved `ui-alpha-keyboard`
+candidate now implements list auto-scroll, stacked/dynamic modal-background
+exclusion and viewport-safe HelpTip with a permanent local description.
+Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
+the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
+gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
+576-source freeze); first header failure remains recorded. Integrated gates,
+publication and owned cleanup are pending. Native/Orca, real-network,
+independent-sample and domain/application dependencies remain separate and open.
+Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ---
 

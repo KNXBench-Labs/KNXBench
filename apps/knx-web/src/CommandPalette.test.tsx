@@ -67,6 +67,28 @@ async function renderPalette(ctx: CommandContext, onClose = vi.fn()) {
 }
 
 describe("CommandPalette", () => {
+  it("scrolls the enabled active row after skipping disabled commands", async () => {
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    const tree = { can_undo: false, can_redo: false, is_modified: false } as unknown as ProjectTree;
+    const { root } = await renderPalette(noopCtx({ tree }));
+    try {
+      const input = host!.querySelector<HTMLInputElement>("input")!;
+      for (let i = 0; i < 4; i++) await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      scroll.mockClear();
+      await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      expect(scroll).toHaveBeenCalledOnce();
+      expect(scroll.mock.contexts[0]).toBe(host!.querySelector("#palette-option-7"));
+      expect(scroll).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+      expect(document.activeElement).toBe(input);
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {
     const { root, onClose } = await renderPalette(noopCtx());
 

@@ -751,6 +751,12 @@ main {
   margin: 0;
 }
 
+/* Keyboard highlight is distinct from the catalog item picked for creation. */
+.catalog-workspace .search-result.active {
+  outline: 2px solid var(--knx-accent);
+  outline-offset: -2px;
+}
+
 .search-group-label {
   font-size: 0.75em;
   text-transform: uppercase;
@@ -2768,24 +2774,19 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 
 /* T23 / ADR-0024 — the help tip.
-   The bubble sits in the DOM whether or not it is showing, because the
-   trigger's `aria-describedby` points at it permanently; that is the whole
-   accessibility argument for this component over a `title` attribute. So
-   "hidden" here is `opacity: 0` alone, and deliberately neither
-   `display: none` nor `visibility: hidden`: both of those remove the element
-   from the accessibility tree, which would leave `aria-describedby` pointing
-   at nothing and make the description depend on a React state update winning
-   a race against the screen reader's lookup at focus time. `opacity: 0`
-   keeps the node in the tree, leaves the fade something to move, and
-   `pointer-events: none` keeps the invisible box out of the mouse's way.
+   The permanent local description is visually clipped, never state-hidden.
+   The painted bubble is a separate aria-hidden body portal: fixed placement
+   escapes clipped ancestors, viewport caps include the application's zoom,
+   and opacity leaves it measurable without intercepting pointer input.
    `.is-still` is the JS side of the motion rule (`helpTipAnimates`, for
    `data-motion-level="off"`); `prefers-reduced-motion: reduce` is handled
    structurally by the media query, as everywhere else in this file. */
 .help-tip { position: relative; display: inline-flex; align-items: center; }
+.help-tip-description { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .help-tip-trigger { width: 18px; height: 18px; min-height: 18px; padding: 0; border: 1px solid var(--knx-border); border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
 .help-tip-trigger:hover:not(:disabled) { transform: none; box-shadow: none; color: var(--knx-accent); border-color: var(--knx-border-hover); }
 .help-tip-trigger:focus-visible { color: var(--knx-accent); border-color: var(--knx-accent); }
-.help-tip-bubble { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: max-content; max-width: min(34ch, 80vw); padding: 8px 10px; background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); box-shadow: 0 4px 24px var(--knx-overlay-shadow); font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left; text-transform: none; white-space: normal; opacity: 0; pointer-events: none; }
+.help-tip-bubble { position: fixed; top: 0; left: 0; box-sizing: border-box; z-index: 20; width: max-content; max-width: min(34ch, calc(100vw / var(--app-ui-scale, 1) - 16px)); max-height: calc(100vh / var(--app-ui-scale, 1) - 16px); overflow: auto; overflow-wrap: anywhere; padding: 8px 10px; background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); box-shadow: 0 4px 24px var(--knx-overlay-shadow); font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left; text-transform: none; white-space: normal; opacity: 0; pointer-events: none; }
 .help-tip-bubble.is-open { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
   .help-tip-bubble:not(.is-still) { transition: opacity min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing); }

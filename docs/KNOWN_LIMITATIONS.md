@@ -1442,24 +1442,35 @@ wrappers around `role="presentation"` `<ul>`s, with the visible
 `.search-group-label` marked `aria-hidden="true"` since the group's
 `aria-label` already says the same thing.
 
-**What did not ship, on purpose (spec §5).** No scroll-into-view: a
-highlight moved past the panel's visible area by arrow keys still does
-not scroll into view in any of the three lists — the same defect §19
-records for a different widget, and `Overlay.tsx` deliberately has no
-list knowledge to fix it with. No `inert`/`aria-hidden` on background
-content: the focus trap stops `Tab` from leaving the dialog, but a
-screen reader's browse/virtual-cursor mode (as opposed to sequential
-Tab) can still reach content behind the overlay. No focus-visible
-styling pass: the trap makes every control in the dialog *reachable* by
-keyboard, not *visibly* focused in every theme. And, the one that bounds
-every claim above: **none of this has been verified against a real
-screen reader.** The test suite (`Overlay.test.tsx` plus the extended
-`CatalogBrowser.test.tsx`/`SettingsPanel.test.tsx`) runs under jsdom,
-which asserts that focus moves, the trap cycles, and ARIA attributes are
-wired to the right elements — it says nothing about what NVDA, JAWS,
-Orca or VoiceOver actually announce. No conformance to WCAG or any other
-accessibility standard is claimed; no audit of any kind has been
-performed. Design: `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
+**Keyboard alpha follow-up (2026-10-02, candidate).** Search, Command Palette
+and Catalog Browser now scroll the active option with nearest-edge alignment
+without moving combobox focus. Catalog keyboard highlight remains distinct
+from a picked product and never creates a device by itself. The shared shell
+leases background `inert`/`aria-hidden` state per document, restores prior
+attribute values, excludes newly added background content and handles nested
+or out-of-order modal closes. Initial/Tab-wrap filtering skips controls below
+hidden/inert/aria-hidden ancestors. Final close restores the original connected,
+non-inert focus target. List logic still stays outside `Overlay.tsx`.
+
+HelpTip keeps a permanent local, visually clipped description and paints a
+separate decorative body portal. Fixed placement escapes clipped/transformed
+ancestors, bounds the popup to the viewport at application zoom, repositions
+on resize/captured scroll and cleans up listeners. Closed painted bubbles no
+longer extend the document at their old trigger coordinates.
+
+Focused tests and 17 fully intercepted Chromium cases cover list visibility,
+modal focus/background accessibility-tree exclusion, nested close, and tooltip
+geometry/description in DE/EN at 360/640/1440 px and 100/150% zoom. Eighteen
+behavioral controls are rejected with exact source restoration. Complete and
+integrated gate/publication evidence follows in the package log; this candidate
+entry is not a delivery claim.
+
+**Still open.** No whole-application focus-visible styling audit across every
+theme, full Tauri/native interaction acceptance, or actual screenreader run.
+Chromium DOM/accessibility-tree evidence does not prove what NVDA, JAWS, Orca
+or VoiceOver announces. No WCAG conformance, universal virtual-cursor guarantee
+or alpha-release exception is claimed. Design:
+`docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
 
 **U8 update (2026-09-29).** The shared shell now offers opt-in viewport-bounded
 pointer and keyboard resizing. Settings and Debug report use it; the other

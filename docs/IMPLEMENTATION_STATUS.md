@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — U14 theme-pack contract (implementation pending)
+
+- [THEME_PACKS](THEME_PACKS.md) and
+  [ADR-0060](adr/0060-versioned-declarative-theme-packs.md) resolve the complete
+  versioned JSON/token grammar, primary-source security evidence, limits,
+  exact contrast roles, durable conditional settings and preview contracts.
+- Existing theme/settings/language code was inspected; five primary-source
+  bodies and their literal evidence were retrieved/verified. Separate
+  in-session contract review findings were fixed before acceptance.
+- U14 closes contract/research only. U15–U18 still need actual parser/runtime,
+  persistence, UI, mutation and integrated-product gates; no built-in behavior,
+  KNX Core/API or manufacturer format was changed.
+- Fresh-target doc anchors and citation/whitespace checks pass. Original UI
+  implementation, alpha dispositions, native/Orca/hardware boundaries remain.
+
 ## 2026-10-02 — Keyboard/modal/help-tip alpha follow-up (offline candidate)
 
 - Search, Command Palette and Catalog Browser keep active keyboard rows visible

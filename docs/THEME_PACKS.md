@@ -1,7 +1,8 @@
 # KNXBench theme packs v1
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
-U16–U18 persistence, management and extension-wide acceptance remain pending.**
+U16 persistence/file operations are implemented as a reviewed candidate;
+U17 management and U18 extension-wide acceptance remain pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a claim that the application already imports themes. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
@@ -39,6 +40,65 @@ U16 still owns acknowledged conditional persistence, strict file decoding and
 lossless export. U17 owns the production manager, diagnostic presentation and
 transactional preview. U18 owns extension-wide review and closing integration
 evidence. No production import/export gesture is delivered by this foundation.
+
+## U16 persistence and file candidate
+
+`themePackFiles.ts` checks declared and actual bytes, uses fatal UTF-8 with a
+leading BOM accepted, then reuses duplicate-aware admission. Supported-pack
+export revalidates its input and preserves accepted values/metadata in sorted
+JSON. Built-ins are not converted into supposedly lossless v1 packs.
+
+`themePackStorage.ts` plans installation, explicit replacement, selection and
+active removal from a detached authoritative scope. Plans are deeply frozen;
+replacement requires explicit consent even for the same ID/version. Selection
+also reuses aggregate runtime admission, so a rejected store cannot acknowledge
+a palette that the resolver will not paint. Unknown raw entries remain intact.
+
+`settingsStore.ts` uses its existing queue, not another authoritative store.
+The route advertises `conditionalPatchVersion: 1`; schema v1 alone is not that
+capability. Preconditions compare theme/pack content under the existing write
+lock. Client mutations reject unhydrated, pending, incompatible, uncertain or
+unsupported scopes; all patched keys must have an inspected precondition.
+Stored null is not absence and disarms these operations. Conflicts do not
+replay; ambiguous responses reread authority and remain reported as ambiguous,
+even if the reread succeeds. Cache failure after acknowledgment is distinct
+from durable server failure. Older ordinary preference callers remain intact.
+
+Every ordinary-write reply is also a new server observation: missing or changed
+conditional capabilities revoke earlier claims. Only a compatible, matching
+ordinary reply clears that intent's generation; a contradictory reply cannot
+erase its local edit through a later unrelated acknowledgment. Ordinary
+preferences still synchronize against older servers without conditional support,
+while theme-pack conditional operations remain disarmed. Retired owner epochs
+neither dispatch queued ordinary writes nor adopt late completions.
+
+Recovery export is separately labelled `knxbench-theme-recovery`, version 1,
+with `selectedTheme` and `uiThemePacks` only, at most 1,048,576 UTF-8 bytes.
+It is an inert recovery document, **not an admitted/importable theme pack**.
+It preserves browser-observed JSON values, not the original server file's
+lexical bytes, duplicate names or numeric precision. Keep the original file
+for original-file recovery; no byte-exact opaque recovery is claimed here.
+Oversized/nonserializable recovery is diagnosed, never truncated or deleted.
+
+Measured candidate evidence: 144 focused tests over five files and TypeScript
+pass. The cold-restart file/settings roundtrip, same-version peer-content
+conflicts for installation/removal/selection, mixed queue intentions and stale
+refresh are named behavioral cases. Thirty-one unit guard controls are killed
+and sources restored; two initially survived and now fail with strengthened
+export/status assertions. A new-file TS2322 canary is caught and restored.
+The separate in-session review's aggregate-selection finding is fixed after
+observed RED/GREEN. The earlier frozen candidate passed 16 checks, but follow-up
+review changed source: its acceptance is not final-current-source evidence.
+Seven distinct compiled server controls are caught (the initially surviving
+writer-lock control was closed by a held-lease/real-worker case, plus 20 repeated
+named failures), with eight HTTP cases GREEN and original source restored.
+Five additional ordinary queue controls are caught; latest capability observations,
+unconfirmed intent preservation, legacy-server synchronization and owner reset
+have RED/GREEN regressions. The new frozen candidate passed all 16 checks: Web 1,665, intercepted Chromium
+61, Rust 2,925 passed / zero failed / 164 ignored, eight conditional HTTP cases,
+17 generated bindings equal and 621 inputs unchanged. Integrated acceptance and
+publication remain pending. U17 still owns visible controls/diagnostics and
+preview; U18 owns extension-wide acceptance. This is not independent approval.
 
 ## Evidence and inspected baseline
 

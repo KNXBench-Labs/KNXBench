@@ -386,7 +386,11 @@ native/Orca/all-component WCAG, full import/export or release approval follows.
 
 ### U16 — Persist, import and export theme packs without losing settings [web]
 
-**Open.** Depends on U15. This goal owns only the necessary theme/settings
+**In progress, reviewed candidate.** Depends on U15. Implemented file transport,
+acknowledged plans and queue/API contracts; 140 focused tests, TypeScript,
+31 restored unit controls and new-file canary pass. Full candidate/integrated
+gates, HTTP mutation controls and publication remain pending. U17 owns visible
+management/diagnostics/preview. This goal owns only the necessary theme/settings
 application changes, not a new generic configuration subsystem.
 
 - [ ] Store installed packs and selected identity through the existing

@@ -164,15 +164,17 @@ just the project-file reading `knx-app` already provides. See
 [ADR-0017](adr/0017-knx-server-depends-on-knx-net.md) for why this edge
 was added instead of, say, routing bus traffic back through `knx-cli`.
 
-## Theme extension boundary (U14 contract, implementation pending)
+## Theme extension boundary (U14 contract, U15 runtime delivered)
 
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md) and
 [THEME_PACKS](THEME_PACKS.md) define complete, versioned declarative theme packs.
 Their parser/contrast validation stays pure in the Web layer; bounded DOM
-application extends the existing theme resolver. The existing settings
-queue/route supplies acknowledged conditional preference updates. No theme
-logic reaches KNX Core, project storage, product data or KNXnet/IP. U15–U18
-remain implementation and verification work, not an already enforced gate.
+application extends the existing theme resolver. U15 delivers that admission,
+cache revalidation and reversible property ownership; visual fallback never
+overwrites an unsupported preference. U16 still owns acknowledged conditional
+updates through the existing settings client/route. No theme logic reaches KNX
+Core, project storage, product data or KNXnet/IP. U16–U18 persistence, management/
+preview and extension-wide acceptance remain open, not implied by runtime gates.
 
 ## 4. Enforced rules
 

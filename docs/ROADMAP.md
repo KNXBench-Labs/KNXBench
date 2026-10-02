@@ -70,9 +70,12 @@ Native WebKitGTK and screen-reader coverage remain bounded (§20, §130).
 U14 resolves the declarative, versioned theme-pack contract and security/
 negative-fixture matrix in [THEME_PACKS](THEME_PACKS.md) and
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md). This is contract
-research, not shipped import/export. U15–U18 in [goal-ui](../goal-ui.md) own
-runtime validation, acknowledged settings storage, reversible management/
-preview and final regression/review acceptance. Existing built-ins/System stay
+research, not shipped import/export. U15 runtime admission, cache revalidation
+and reversible theme application are delivered as 9d1ae19d with complete
+candidate/combined gates and exact remote readback. U16–U18 in
+[goal-ui](../goal-ui.md) still own acknowledged settings storage, file roundtrip,
+reversible management/preview and final regression/review acceptance.
+Existing built-ins/System stay
 available; no arbitrary CSS, external assets or new alpha release blocker.
 
 ## Cross-cutting — Internationalization

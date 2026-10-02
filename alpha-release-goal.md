@@ -368,8 +368,12 @@ workspace2926/0/164, Web1559, existing intercepted Chromium61, private6/0/0
 with zero genuine/unknown skips and all103 original identities/hashes unchanged.
 No private raw logs, 615 frozen inputs and 17 shadow bindings equal. Later
 upstream commissioning c9f77d7b changes code outside this guard; actual merged
-source re-gates/publication/readback remain pending. This leaf does not complete
-the broader AR07 audit/checklist.
+bc5999c1/proc_d4c3a0b0b43f independently passes20/20: workspace2931/0/164,
+Web1559/Chromium61, private6/0/0 + offline SimTunnel HTTP13/0/0 without skips,
+all108 originals unchanged (including103 product archives),615 frozen inputs
+and17 equal bindings. Publication/readback remains pending. Broader AR07 stays
+open; next bounded RED investigates general diagnostic/inert traversal work
+budgeting, currently a read-only source candidate, not a reproduced defect.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual
 Web kind/catalogue adoption stays with UI. Selected-private/broad controller
 gates and separate in-session review pass, and the controller checkpoint is

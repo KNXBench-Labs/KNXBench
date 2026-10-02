@@ -284,8 +284,9 @@ async fn write(
             let path = write_backup(
                 &state.data_dir.join("device-backups"),
                 address,
-                before.mask.0,
-                before.raw,
+                before.before.mask.0,
+                before.before.raw,
+                before.device_control,
             )
             .map_err(|e| e.to_string())?;
             backup_path = Some(path);

@@ -785,8 +785,10 @@ pub enum Diagnostic {
     /// for any other shape; nothing activates.
     UnexpectedTypeNoneShape { choose_node: i64 },
     /// An element kind this build does not recognize in this position
-    /// (design D10). Its subtree is not evaluated; every reference inside
-    /// it is named by a [`Diagnostic::RefBelowSkippedNode`] (ADR-0041).
+    /// (design D10). Its subtree is not evaluated; references inside are
+    /// named by [`Diagnostic::RefBelowSkippedNode`] only within the shared
+    /// activation budget (ADR-0041). A budget diagnostic marks truncation,
+    /// not an exhaustive inventory of every omitted descendant.
     UnrecognizedNode { node_id: i64, kind: String },
     /// ADR-0041 (PDB-9), amending D10: a `ParameterRefRef`,
     /// `ComObjectRefRef` or `Module` below a node the walk refuses for a
@@ -1380,7 +1382,7 @@ fn is_reference(kind: &str) -> bool {
     matches!(kind, "ParameterRefRef" | "ComObjectRefRef" | "Module")
 }
 
-/// Names every reference strictly below `skipped`, depth-first in document
+/// Names references strictly below `skipped`, depth-first in document
 /// order, against `skipped` itself (ADR-0041). Nothing is evaluated, so a
 /// `choose` contributes all of its branches and nested unrecognized kinds
 /// are not separately reported; a `Module`'s children are argument

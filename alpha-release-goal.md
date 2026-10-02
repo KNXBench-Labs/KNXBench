@@ -211,10 +211,25 @@ Receipt
 **Sources:** `PDB-09`, `KL-86`, `KL-87`, `PDB-06`, `PDB-07`, `PDB-11`.
 **Dependencies:** AR01; relevant current product-store schema.
 
-- [ ] Add corpus-observed handling/reporting for master `Languages` attributes, preserving bytes and reporting unknowns instead of silently declaring them known.
-- [ ] Audit duplicate normalized IDs and within-file DPT provenance; distinguish retained source, chosen normalized value and lost/uninterpreted semantics.
-- [ ] Make bounded Dynamic diagnostics disclose truncation/budget effects rather than claiming exhaustive subordinate coverage.
-- [ ] Test upgrades and explicit re-derivation from stored blobs. Preserve historical installation reports; keep metrics unavailable for pre-ledger installs instead of backfilling guessed zeros.
+**Status:** `IN_PROGRESS`; isolated `alpha-manufacturer-report` at published
+AR04 receipt `f4b845a3`. Shared master Languages evidence and v18 -> v19
+byte-only re-derivation implemented; DPT provenance and Dynamic truncation
+audited with owning-crate regressions. Deferred commit rollback corrected after
+behavioral RED; two behavioral mutants caught and source hashes restored.
+Scoped corpus matrix/migration comparison passed after independent exact-row
+reconciliation and verified re-pinning; no prior evidence or normalized data
+lost. Complete corrected-candidate acceptance proc_f9f87cee4329 exited 0:
+2,884 workspace / 585 ProductDB / 1,312 Web tests; all 20 expected steps,
+three explicitly executed private cases and 595 stable source files. Separate
+in-session review findings and compiled guard mutants are closed; source
+restoration verified. Publication/readback and cleanup remain pending.
+No AR05 delivery or release claim yet. Contract:
+[manufacturer report](docs/MANUFACTURER_REPORT_CONTRACT.md).
+
+- [x] Add corpus-observed handling/reporting for master `Languages` attributes, preserving bytes and reporting unknowns instead of silently declaring them known.
+- [x] Audit duplicate normalized IDs and within-file DPT provenance; distinguish retained source, chosen normalized value and lost/uninterpreted semantics.
+- [x] Make bounded Dynamic diagnostics disclose truncation/budget effects rather than claiming exhaustive subordinate coverage.
+- [x] Test upgrades and explicit re-derivation from stored blobs. Preserve historical installation reports; keep metrics unavailable for pre-ledger installs instead of backfilling guessed zeros.
 
 **Exit evidence:** malformed/unknown/duplicate/budget regressions, upgrade tests and explicitly executed private corpus cases with aggregate-only evidence. No regeneration is allowed to falsify the original install report.
 

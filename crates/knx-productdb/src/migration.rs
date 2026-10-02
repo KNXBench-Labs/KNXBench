@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 18;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 19;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -291,7 +291,15 @@ fn migrations() -> Vec<Migration> {
         migrate_v15_to_v16,
         migrate_v16_to_v17,
         migrate_v17_to_v18,
+        migrate_v18_to_v19,
     ]
+}
+
+/// Byte-only Languages evidence. Historical install snapshots and normalized
+/// master entities remain untouched; explicit rebuild shares the same path.
+fn migrate_v18_to_v19(conn: &Connection) -> Result<(), ProductDbError> {
+    crate::master_evidence::rederive_master_language_evidence(conn)?;
+    Ok(())
 }
 
 /// The two `ingest_unknown` xpaths the dynamic pass (`dynamic::parse::

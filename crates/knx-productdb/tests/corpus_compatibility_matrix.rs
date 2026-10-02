@@ -3,13 +3,13 @@
 mod corpus_support;
 
 use std::collections::{BTreeMap, HashSet};
-use std::ffi::OsString;
 use std::fs;
-use std::io::{Cursor, Read, Write};
-use std::os::fd::OwnedFd;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::io::{Cursor, Read};
+use std::path::PathBuf;
 
+use corpus_support::output::{
+    remove_previous_output, validate_output_path, write_atomic, OutputTarget,
+};
 use corpus_support::{
     bounded_zip_entry_count, configured_corpus, discover_packages, ConfiguredCorpus,
     CorpusPackageSource, CorpusReadBudget, DiscoveredCorpus,
@@ -17,9 +17,6 @@ use corpus_support::{
 use knx_productdb::{Connection, InstallReport, PackageError, ProductDbError};
 use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
-use rustix::fs::{
-    fstat, openat, openat2, renameat, unlinkat, AtFlags, Mode, OFlags, ResolveFlags, CWD,
-};
 use serde_json::{json, Value};
 
 const MAX_SCHEME_XML_BYTES: u64 = 64 * 1024 * 1024;
@@ -68,12 +65,19 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// predicts the 281 / 280 / 280 / 95 deltas: 274 distinct (blob, xpath)
 /// keys plus six duplicate rows from shared blobs. The v16-shaped projection
 /// pin below is the *current v18* pin, not the historical PDB-10 pin.
+/// Re-pinned for AR05 (schema v19): independent exact-path XML census over
+/// retained baseline bytes predicts RefId and Version as two newly named
+/// TranslationUnit attributes per master. Unknown-key totals increase by
+/// 230 over 115 instances / 226 over 113 unique packages; both evidence tables
+/// gain 226 rows. Full-value comparison preserves all prior unknowns and all
+/// other values except these exact fresh-install report/count increments.
+/// Migration separately preserves original historical install snapshots.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "8bcacd20400d7b874206cafac848f0d16640880682f27694a473f3781a4c46b1";
-/// Current v18 outcomes/counts projected without the four v17 tables and
+    "6406a496cc2a2c91563b5c01fd0a4915b729f34a0f72a0391816ea32284b3656";
+/// Current v19 outcomes/counts projected without the four v17 tables and
 /// PDB-11 identity; historical v16 pin: c204acc8… (see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "a5e4e14711098e04ff9712576f7f6b68a9244d2121a3dca0ac47137e9a196b3a";
+    "a2181d6526ac2c74164cfbb067a0999bc57aea45af0a304600eae18524a2f03e";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -81,7 +85,6 @@ const V17_TABLES: [&str; 4] = [
     "source_identity_scan",
     "source_producer",
 ];
-static NEXT_OUTPUT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 fn configured_output() -> PathBuf {
     std::env::var_os("KNXBENCH_PRODUCT_MATRIX_OUTPUT")
@@ -487,110 +490,6 @@ fn database_counts(conn: &Connection) -> BTreeMap<String, u64> {
         .collect()
 }
 
-struct OutputTarget {
-    directory: OwnedFd,
-    file_name: OsString,
-}
-
-struct PendingOutput<'a> {
-    directory: &'a OwnedFd,
-    name: OsString,
-    published: bool,
-}
-
-impl Drop for PendingOutput<'_> {
-    fn drop(&mut self) {
-        if !self.published {
-            let _ = unlinkat(self.directory, &self.name, AtFlags::empty());
-        }
-    }
-}
-
-fn validate_output_path(corpus_root: &Path, corpus_device: u64, path: &Path) -> OutputTarget {
-    let file_name = path
-        .file_name()
-        .filter(|name| !name.is_empty())
-        .expect("matrix output must name a file");
-    let parent = path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    let canonical_parent = parent
-        .canonicalize()
-        .expect("matrix output directory must already exist");
-    assert!(
-        !canonical_parent.starts_with(corpus_root),
-        "matrix output must be outside the configured corpus root"
-    );
-    let directory = openat2(
-        CWD,
-        &canonical_parent,
-        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
-        Mode::empty(),
-        ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_MAGICLINKS,
-    )
-    .expect("open matrix output directory without following symlinks");
-    let output_device = fstat(&directory)
-        .expect("read matrix output directory metadata")
-        .st_dev;
-    assert_ne!(
-        output_device, corpus_device,
-        "matrix output directory must be on a different filesystem from the corpus"
-    );
-    OutputTarget {
-        directory,
-        file_name: file_name.to_os_string(),
-    }
-}
-
-fn write_atomic(target: &OutputTarget, value: &Value) {
-    let (fd, temp_name) = (0..128)
-        .find_map(|_| {
-            let sequence = NEXT_OUTPUT_TEMP.fetch_add(1, Ordering::Relaxed);
-            let name = OsString::from(format!(
-                ".knxbench-matrix-{}-{sequence}.tmp",
-                std::process::id()
-            ));
-            match openat(
-                &target.directory,
-                &name,
-                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::CLOEXEC,
-                Mode::RUSR | Mode::WUSR,
-            ) {
-                Ok(fd) => Some((fd, name)),
-                Err(rustix::io::Errno::EXIST) => None,
-                Err(error) => panic!("create matrix output file: {error}"),
-            }
-        })
-        .expect("create a unique matrix output file");
-    let mut pending = PendingOutput {
-        directory: &target.directory,
-        name: temp_name,
-        published: false,
-    };
-    let mut output = fs::File::from(fd);
-    serde_json::to_writer_pretty(&mut output, value).expect("serialize compatibility matrix");
-    output
-        .write_all(b"\n")
-        .expect("finish compatibility matrix");
-    output.flush().expect("flush compatibility matrix");
-    renameat(
-        &target.directory,
-        &pending.name,
-        &target.directory,
-        &target.file_name,
-    )
-    .expect("publish compatibility matrix atomically");
-    pending.published = true;
-}
-
-fn remove_previous_output(target: &OutputTarget) {
-    match unlinkat(&target.directory, &target.file_name, AtFlags::empty()) {
-        Ok(()) | Err(rustix::io::Errno::NOENT) => {}
-        Err(error) => panic!("remove previous matrix output: {error}"),
-    }
-}
-
 fn discover_after_output_cleanup(
     corpus: ConfiguredCorpus,
     output: OutputTarget,
@@ -856,6 +755,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "pdb11_identity": pdb11_identity,
         "packages": public_records,
     });
+
     // Aggregates only; printed so a failed pin can be re-measured.
     eprintln!(
         "pdb11 aggregates: {}",
@@ -867,7 +767,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     );
     assert_eq!(
         v16_commitment, EXPECTED_V16_PROJECTION_COMMITMENT,
-        "PDB-11 changed a pre-existing outcome, report total or table count; matrix output was not published"
+        "current projected outcome, report total or table count changed; matrix output was not published"
     );
 
     let scheme_13 = private_records
@@ -999,7 +899,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22488,
+            "unknown_count": 22718,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -1010,7 +910,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22373,
+            "unknown_count": 22599,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -1021,7 +921,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22488,
+            "unknown_count": 22718,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1051,14 +951,14 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         matrix["shared_final_database_counts"]["package_install_diagnostic"], 859,
         "shared install-diagnostic rows changed"
     );
-    // ADR-0052: two newly modelled Channel paths retire exactly these
-    // unqualified `@Number` rows, not any other unknown evidence.
+    // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
+    // Channel/@Number rows remain retired; no prior unknown evidence is lost.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 22771,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 22997,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 9156,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9382,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [
@@ -1082,6 +982,51 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "shared {table} rows changed"
         );
     }
+    // AR05: unconsumed metadata is named, never falsely declared interpreted.
+    let master_path = "/KNX/MasterData/Languages/Language/TranslationUnit";
+    for name in ["RefId", "Version"] {
+        let source_totals: (i64, i64, i64) = shared
+            .query_row(
+                "SELECT count(*), count(DISTINCT source_sha256), sum(occurrences)
+                 FROM ingest_unknown WHERE program_id IS NULL AND kind='Attribute'
+                   AND xpath=?1 AND name=?2",
+                [master_path, name],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("count master-language source evidence");
+        assert_eq!(
+            source_totals,
+            (113, 67, 3125),
+            "master {name} evidence changed"
+        );
+        let package_totals: (i64, i64) = shared
+            .query_row(
+                "SELECT count(*), sum(occurrences) FROM package_install_unknown
+                 WHERE kind='Attribute' AND xpath=?1 AND name=?2",
+                [master_path, name],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("count immutable master-language install evidence");
+        assert_eq!(
+            package_totals,
+            (113, 3125),
+            "master {name} install evidence changed"
+        );
+        let unique_occurrences: i64 = shared
+            .query_row(
+                "SELECT sum(occurrences) FROM
+                 (SELECT DISTINCT source_sha256, occurrences FROM ingest_unknown
+                  WHERE program_id IS NULL AND kind='Attribute' AND xpath=?1 AND name=?2)",
+                [master_path, name],
+                |row| row.get(0),
+            )
+            .expect("count distinct master-source occurrences");
+        assert_eq!(
+            unique_occurrences, 1870,
+            "master {name} unique-source evidence changed"
+        );
+    }
+
     // Per kind: candidate rows, distinct ids, ids in several blobs, ids whose
     // recorded elements differ. Every parsed member was measurable.
     let kind = |rows: u64, ids: u64, multi: u64, differing: u64| {

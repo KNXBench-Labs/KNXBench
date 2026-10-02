@@ -10,9 +10,9 @@ use crate::report::{UnknownCollector, UnknownConstruct, UnknownKind};
 use crate::xml::local_name;
 use crate::ProductDbError;
 
-const MAX_EVIDENCE_DEPTH: usize = 1_024;
-const MAX_EVIDENCE_ITEMS: usize = 262_144;
-const MAX_EVIDENCE_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const MAX_EVIDENCE_DEPTH: usize = 1_024;
+pub(crate) const MAX_EVIDENCE_ITEMS: usize = 262_144;
+pub(crate) const MAX_EVIDENCE_BYTES: usize = 64 * 1024 * 1024;
 const SCHEME_12_NAMESPACE: &str = "http://knx.org/xml/project/12";
 const SCHEME_14_NAMESPACE: &str = "http://knx.org/xml/project/14";
 const SCHEME_21_NAMESPACE: &str = "http://knx.org/xml/project/21";

@@ -626,7 +626,7 @@ export const messages = {
   "busMonitor.contextStale":
     "The project changed after this session's last confirmed context publication. Decoded values below use that earlier context, and sending is locked. Reconnect to decode against the current project.",
   "busMonitor.contextUnverified":
-    "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
+    "The server cannot verify that this session's interpretation matches the current project. Sending is locked until a current comparison is available (legacy servers do not provide it).",
   "busMonitor.sessionReplaced":
     "The bus session was replaced — now showing session {id}. Rows from the previous session were cleared.",
   "busMonitor.endedElsewhere": "The bus session was ended elsewhere.",

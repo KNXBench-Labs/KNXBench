@@ -28,7 +28,7 @@ for (const language of ["en", "de"] as const) {
         const path = new URL(route.request().url()).pathname;
         if (path === "/api/bus/monitor/telegrams") return route.fulfill({
           contentType: "application/json",
-          body: JSON.stringify({ sessionId: 1, serverIncarnation: "fixture", status: "active", nextSince: 5, droppedBefore: 0, telegrams }),
+          body: JSON.stringify({ sessionId: 1, serverIncarnation: "fixture", contextStatus: "current", projectOpen: false, status: "active", nextSince: 5, droppedBefore: 0, telegrams }),
         });
         if (path === "/api/bus/discover") return route.fulfill({
           contentType: "application/json", body: JSON.stringify({ interfaces: [] }),
@@ -57,4 +57,44 @@ for (const language of ["en", "de"] as const) {
       expect(unmocked).toEqual([]);
     });
   }
+}
+
+for (const language of ["en", "de"] as const) {
+  test(`${language} monitor checks authoritative context while paused with no browser records`, async ({page}) => {
+    let contextStatus = "current";
+    let contextChecks = 0;
+    const unexpected: string[] = [];
+    await page.route("**/api/**", route => {
+      const url = new URL(route.request().url());
+      if (url.pathname === "/api/bus/monitor/telegrams") {
+        const contextOnly = url.searchParams.get("contextOnly") === "true";
+        if (contextOnly) contextChecks++;
+        return route.fulfill({contentType: "application/json", body: JSON.stringify({
+          sessionId: 17, serverIncarnation: "fixture-other-client", contextStatus,
+          projectOpen: false, status: "active", nextSince: contextOnly ? Number(url.searchParams.get("since")) : 5,
+          droppedBefore: 0, telegrams: contextOnly ? [] : telegrams,
+        })});
+      }
+      if (url.pathname === "/api/bus/discover") return route.fulfill({contentType: "application/json", body: JSON.stringify({interfaces: []})});
+      unexpected.push(`${route.request().method()} ${url.pathname}`);
+      return route.fulfill({status: 404, contentType: "application/json", body: JSON.stringify({error: "fixture only"})});
+    });
+    await page.goto(`/e2e/monitor-control-fixture.html?lang=${language}`);
+    await expect(page.locator(".bus-monitor-table tbody tr")).toHaveCount(4);
+    await expect(page.locator(".bus-compose-value")).toBeEnabled();
+    await expect(page.locator(".bus-monitor-unverified-lock")).toHaveCount(0);
+    await page.locator(".bus-monitor-pause").click();
+    contextStatus = "stale";
+    await expect(page.locator(".bus-monitor-stale-lock")).toBeVisible();
+    await expect(page.locator(".bus-compose-value")).toBeDisabled();
+    expect(contextChecks).toBeGreaterThan(0);
+    await expect(page.locator(".bus-monitor-table tbody tr")).toHaveCount(4);
+    contextStatus = "unavailable";
+    await expect(page.locator(".bus-monitor-unverified-lock")).toBeVisible();
+    await expect(page.locator(".bus-compose-value")).toBeDisabled();
+    contextStatus = "current";
+    await expect(page.locator(".bus-compose-value")).toBeEnabled();
+    await expect(page.locator(".bus-monitor-unverified-lock")).toHaveCount(0);
+    expect(unexpected).toEqual([]);
+  });
 }

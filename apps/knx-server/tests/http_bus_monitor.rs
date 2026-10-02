@@ -213,6 +213,195 @@ async fn start_opens_a_session_and_returns_session_id_and_assigned_address() {
 }
 
 #[tokio::test]
+async fn monitor_context_compares_the_actual_server_project_not_a_browser_record() {
+    let (tunnel, _handle) = fake_tunnel();
+    let mut state = state_with_connector(FakeConnector::succeeding(tunnel));
+    state.product_db = None;
+    *state.project.lock().unwrap() = Some(project_with_resolving_and_unresolving_group_addresses());
+    let state = Arc::new(state);
+    let app = knx_server::app(state.clone(), None);
+    let started = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({"gateway":"192.0.2.10:3671"})),
+    )
+    .await;
+    assert_eq!(started.status(), StatusCode::OK);
+    let initial = body_json(call(&app, "GET", "/api/bus/monitor/telegrams", None).await).await;
+    assert_eq!(initial["contextStatus"], "current");
+    assert_eq!(initial["projectOpen"], true);
+
+    state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .installations[0]
+        .group_addresses[0]
+        .name = "Changed by another client".into();
+    let changed = body_json(call(&app, "GET", "/api/bus/monitor/telegrams", None).await).await;
+    assert_eq!(changed["contextStatus"], "stale");
+    assert_eq!(changed["sessionId"], initial["sessionId"]);
+    assert_eq!(changed["serverIncarnation"], initial["serverIncarnation"]);
+    assert_eq!(changed["projectOpen"], true);
+}
+
+#[tokio::test]
+async fn context_comparison_covers_dpts_links_style_project_close_and_irrelevant_edits() {
+    for (change, expected) in [
+        ("same", "current"),
+        ("installationName", "current"),
+        ("dpt", "stale"),
+        ("links", "stale"),
+        ("style", "stale"),
+        ("close", "stale"),
+    ] {
+        let (tunnel, _handle) = fake_tunnel();
+        let mut state = state_with_connector(FakeConnector::succeeding(tunnel));
+        state.product_db = None;
+        *state.project.lock().unwrap() =
+            Some(project_with_resolving_and_unresolving_group_addresses());
+        let state = Arc::new(state);
+        let app = knx_server::app(state.clone(), None);
+        assert_eq!(
+            call(
+                &app,
+                "POST",
+                "/api/bus/monitor/start",
+                Some(json!({"gateway":"192.0.2.10:3671"}))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        let mut project = project_with_resolving_and_unresolving_group_addresses();
+        match change {
+            "installationName" => project.installations[0].name = "No decode effect".into(),
+            "dpt" => {
+                project
+                    .devices
+                    .com_object_mut(ComObjectInstanceId(1))
+                    .unwrap()
+                    .dpt = Override::Value(Resolved {
+                    value: knx_core::DptRef {
+                        main: 9,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Instance,
+                })
+            }
+            "links" => project
+                .devices
+                .com_object_mut(ComObjectInstanceId(1))
+                .unwrap()
+                .links
+                .clear(),
+            "style" => project.info.group_address_style = knx_core::GroupAddressStyle::Free,
+            _ => (),
+        }
+        *state.project.lock().unwrap() = (change != "close").then_some(project);
+        let response = body_json(call(&app, "GET", "/api/bus/monitor/telegrams", None).await).await;
+        assert_eq!(response["contextStatus"], expected, "{change}");
+        assert_eq!(response["projectOpen"], change != "close", "{change}");
+    }
+}
+
+#[tokio::test]
+async fn a_busy_project_is_unavailable_not_fresh_and_does_not_block_the_poll() {
+    let (tunnel, _handle) = fake_tunnel();
+    let mut state = state_with_connector(FakeConnector::succeeding(tunnel));
+    state.product_db = None;
+    let state = Arc::new(state);
+    let app = knx_server::app(state.clone(), None);
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/bus/monitor/start",
+            Some(json!({"gateway":"192.0.2.10:3671"}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let _guard = state.project.lock().unwrap();
+        ready_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+    });
+    ready_rx.recv().unwrap();
+    let response = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        call(&app, "GET", "/api/bus/monitor/telegrams", None),
+    )
+    .await;
+    release_tx.send(()).unwrap();
+    worker.join().unwrap();
+    let response = body_json(response.expect("poll must not wait for the project")).await;
+    assert_eq!(response["contextStatus"], "unavailable");
+    assert_eq!(response["projectOpen"], Value::Null);
+}
+
+#[tokio::test]
+async fn context_only_poll_does_not_return_buffered_rows_or_move_the_client_cursor() {
+    let (tunnel, handle) = fake_tunnel();
+    let mut state = state_with_connector(FakeConnector::succeeding(tunnel));
+    state.product_db = None;
+    let app = knx_server::app(Arc::new(state), None);
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/bus/monitor/start",
+            Some(json!({"gateway":"192.0.2.10:3671"}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    handle
+        .sender()
+        .send(group_value_write(1, GroupValue::Short(1)))
+        .unwrap();
+    let complete = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        loop {
+            let body =
+                body_json(call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await)
+                    .await;
+            if body["telegrams"].as_array().unwrap().len() == 1 {
+                break body;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let paused = body_json(
+        call(
+            &app,
+            "GET",
+            "/api/bus/monitor/telegrams?since=0&contextOnly=true",
+            None,
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(paused["telegrams"], json!([]));
+    assert_eq!(paused["nextSince"], 0);
+    assert_eq!(paused["contextStatus"], "current");
+    assert_eq!(paused["projectOpen"], false);
+    assert_eq!(paused["sessionId"], complete["sessionId"]);
+    let resumed =
+        body_json(call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await).await;
+    assert_eq!(resumed["telegrams"], complete["telegrams"]);
+    assert_eq!(resumed["nextSince"], 1);
+}
+
+#[tokio::test]
 async fn an_unparsable_gateway_address_is_a_bad_request() {
     let (tunnel, _handle) = fake_tunnel();
     let state = state_with_connector(FakeConnector::succeeding(tunnel));

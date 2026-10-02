@@ -1,7 +1,11 @@
-/** Cross-window records of project and bus-session context, and the stale-lock they decide. */
+/** Cross-window project/session records: local hints, never authoritative freshness evidence. */
 // apps/knx-web/src/busContext.ts
 //
 // Why this module exists at all.
+// KL-82: BusMonitorPanel now gets authoritative contextStatus/projectOpen from
+// the server. These legacy records only invalidate a positive observation
+// promptly; a matching local digest cannot establish freshness or allow Send.
+// The description below explains the original browser-profile mechanism.
 //
 // `apps/knx-server/src/bus.rs:601-618` states it plainly: a
 // `GroupAddressContext` starts from the project open in `AppState` at that

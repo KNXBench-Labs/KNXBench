@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — KL-82 authoritative monitor context candidate (offline)
+
+- Added a read-only comparison of actual bus-session interpretation against
+  current server project style/names/resolved DPTs; unavailable/busy/poisoned
+  snapshots never round up to current. Monitor HTTP fields are additive and
+  disclose neither project names nor host paths.
+- UI uses only server evidence to establish freshness/project presence and
+  blocks compose for missing/malformed/legacy evidence and poll failures.
+  Local browser records are invalidation hints, not authoritative proof.
+- Paused polls check context/status without rows or cursor advancement; Resume
+  retains its cursor. Generations/session incarnation reject late replies and
+  obsolete reattach errors. Original captured-row interpretation stays intact.
+- Focused Rust/UI and monitored mocked Chromium tests pass. Eleven behavioral
+  mutations fail as assertions and restore exact source. Separate in-session
+  review findings are fixed; no independent external review is claimed.
+- Twelve coordinated candidate gates pass: Web 83 files / 1,343 tests, 35 mocked
+  Chromium cases; Rust 146 result blocks / 2,890 passed / zero failed / 163
+  ignored; source freeze 570. Missing hint CSS failed the first gate, was fixed
+  without weakening tests and its removal detected. Final comment clarification
+  is non-runtime; integrated acceptance/publication remain PENDING.
+  Keyboard/modal/help-tip contracts follow separately. This is not a hardware
+  authorization, transaction-bound write guarantee or alpha release.
+
 ## 2026-10-02 — UI-owned alpha-readiness follow-ups (offline)
 
 - Audited all 24 `goal-ui.md` rows in the alpha-readiness inventory against

@@ -1237,6 +1237,9 @@ export interface BusMonitorStopResponse {
 export interface BusMonitorTelegramsResponse {
   sessionId: number;
   serverIncarnation: string;
+  /** Authoritative interpretation comparison; absent on legacy servers. */
+  contextStatus?: "current" | "stale" | "unavailable";
+  projectOpen?: boolean | null;
   status: "active" | "closed";
   nextSince: number;
   droppedBefore: number;
@@ -1354,8 +1357,8 @@ export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
 // `since` defaults to `0` server-side too (`TelegramsQuery.since:
 // Option<u64>`) — always sent explicitly here so a caller never has to
 // remember that omitting it means "from the start."
-export function pollBusTelegrams(since: number): Promise<BusMonitorTelegramsResponse> {
-  return request(`/api/bus/monitor/telegrams?since=${since}`);
+export function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
+  return request(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
 }
 
 // `POST`, matching the route (`bus_routes.rs`'s `discover_interfaces`):

@@ -122,12 +122,20 @@ Changing the group-address style refreshes the running session's complete addres
 and decoding context, including a style change made through Undo or Redo. It does
 not rewrite telegram rows already collected. Other group-address name or datapoint
 type edits do not independently refresh that context. When the editing window
-detects such a mismatch, sending is locked and a notice asks you to reconnect
-against the current project. This browser-profile-local check cannot detect every
-edit from another browser or client; see the [known limitations](../known-issues.md).
+or the server's periodic comparison detects such a mismatch, sending is locked
+and a notice asks you to reconnect against the current project. The server
+compares its actual session context with the current project's names, resolved
+datapoint types and address style, including edits from another client. Local
+browser records cannot prove freshness. Missing, unavailable or malformed
+evidence (including an older server) and failed polls leave sending disabled,
+even with an explicitly entered DPT. This is a point-in-time check, not project
+collaboration or a transaction-bound guarantee for a later write; see the
+[known limitations](../known-issues.md). Already captured rows keep the values
+they were decoded with.
 
-**Pause** stops this panel's polling without ending the gateway session or moving its
-server cursor. **Resume** asks for telegrams buffered in the meantime. If either
+**Pause** stops telegram collection without ending the gateway session or moving
+its cursor. Context/status-only polls continue, so Pause cannot conceal a stale
+or unavailable project context. **Resume** asks for telegrams buffered in the meantime. If either
 the server or the panel has discarded older rows, it reports the losses separately;
 Pause cannot guarantee an unlimited backlog. **Disconnect** ends the session but
 leaves its captured rows available to inspect and export until another session

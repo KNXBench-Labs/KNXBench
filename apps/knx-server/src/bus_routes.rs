@@ -633,8 +633,11 @@ async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopRespo
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct TelegramsQuery {
     since: Option<u64>,
+    #[serde(default)]
+    context_only: bool,
 }
 
 #[derive(Serialize)]
@@ -785,6 +788,8 @@ impl From<&TelegramRow> for TelegramRowDto {
 struct TelegramsResponse {
     session_id: u64,
     server_incarnation: String,
+    context_status: &'static str,
+    project_open: Option<bool>,
     status: &'static str,
     next_since: u64,
     dropped_before: u64,
@@ -809,6 +814,19 @@ async fn poll_telegrams(
     };
     let session_id = session.id();
     let buffer = session.buffer();
+    // Compare before locking the buffer: the drain reads context before buffer.
+    // No await under the project mutex; contention/poison is unavailable, not fresh.
+    let (context_status, project_open) = match state.project.try_lock() {
+        Ok(project) => (
+            match session.project_context_matches(project.as_ref()) {
+                Some(true) => "current",
+                Some(false) => "stale",
+                None => "unavailable",
+            },
+            Some(project.is_some()),
+        ),
+        Err(_) => ("unavailable", None),
+    };
     let buffer = buffer.lock().expect("bus session buffer poisoned");
     // `status`/`droppedBefore`/`telegrams` are all read from the same
     // locked `buffer` above, in one snapshot — never observed from two
@@ -821,14 +839,24 @@ async fn poll_telegrams(
     let response = TelegramsResponse {
         session_id,
         server_incarnation: state.server_incarnation.clone(),
+        context_status,
+        project_open,
         status,
-        next_since: buffer.next_seq(),
+        next_since: if q.context_only {
+            since
+        } else {
+            buffer.next_seq()
+        },
         dropped_before: buffer.dropped_before(),
-        telegrams: buffer
-            .telegrams_since(since)
-            .iter()
-            .map(TelegramRowDto::from)
-            .collect(),
+        telegrams: if q.context_only {
+            Vec::new()
+        } else {
+            buffer
+                .telegrams_since(since)
+                .iter()
+                .map(TelegramRowDto::from)
+                .collect()
+        },
     };
     Ok(Json(response))
 }

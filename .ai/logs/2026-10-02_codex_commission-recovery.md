@@ -1,5 +1,31 @@
 # Commissioning recovery gate and review — 2026-10-02 22:11
 
+## Integrated acceptance addendum
+
+Source `743c3d29` was integrated as `09cd951df77bee212c70cf0006b6e6ce220fa1f5`
+on the current upstream baseline. The retry process `proc_9fcff7e4dcdd`
+completed with exit 0: all 15 receipts accepted, including workspace
+2929 passed / 0 failed / 164 ignored, Web 1559 passed in 89 files,
+17 matching shadow bindings and all 606 frozen code/configuration inputs
+unchanged. The earlier integration attempt exited 1 and is not accepted
+evidence. Fresh-worktree audit scope was nonempty: 448 packages, 400 headered
+files, 333 Rust files for corpus policy, and 376 links across 239 documents.
+
+An additional explicit offline private-fixture target ran against this exact
+integrated revision: `cargo test -p knx-server --test http_device_download --
+--include-ignored`. All 13 registered tests passed, with no ignored tests and
+no unknown skip signals. The target injects an in-process SimTunnel; no socket
+or real device is used. All 108 original project/product/database fixture
+identities and hashes were unchanged. Raw private output was not retained;
+only aggregate counters were collected. These 13 passes are additional
+selected coverage, not a relabelling of the workspace's 164 ignored tests.
+
+The public address/reset recovery gates, whole-device recovery, durable action
+history, cancelled-future cleanup and hardware compatibility remain open.
+No frontend source/binding or another owner's lock was changed. Publication
+is a separate ref-readback step; this addendum records acceptance, not a
+release or a premature publication claim.
+
 ## Scope and review
 
 Base: d62baef4d3ec5d0311fb558d18b31ca4038c4826.

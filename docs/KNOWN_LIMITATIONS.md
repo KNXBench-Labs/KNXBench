@@ -1,5 +1,22 @@
 # Known limitations
 
+## Theme packs currently provide a runtime foundation, not a management workflow
+
+The U15 candidate validates and resolves declarative v1 packs from JSON/settings
+and applies them through a reversible property lease. It does not yet deliver
+file import/export, acknowledged conditional installation/removal, production
+diagnostic management or the U17 preview transaction. Unsupported stored data
+is retained and exposed through structured diagnostics, not silently repaired.
+The existing built-in picker is not yet the complete custom-pack manager.
+
+Admission targets serialized JSON/settings data, not isolation from already
+privileged hostile JavaScript proxies. Contrast checks cover the documented
+three role pairs and declared accents, not every component/WCAG criterion.
+Local intercepted Chromium/self-review evidence is not native WebKitGTK/Orca,
+independent approval, full-theme accessibility or release acceptance. U16–U18
+remain open; complete candidate gates passed, but combined integration and
+publication remain pending.
+
 ## Backup directory synchronization is not a disk-loss or confinement proof
 
 The device-memory and service-control backup writers sync the supplied and

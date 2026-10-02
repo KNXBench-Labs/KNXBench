@@ -134,3 +134,14 @@ No source merge conflict; complete upstream handover suffix/both doc owners
 retained. Focused documentation receipt and push/readback still pending.
 Broader AR07 audit, typed/localized token adoption, native/ETS acceptance remain
 open; generic browser fixtures do not establish unsupported-token localization.
+
+## Controller checkpoint published/read back — 2026-10-02 21:02 CEST
+
+2d9aaeb87fd0d2b94b2508e5d2ebbeeae2310710 published from owned worktree;
+three outgoing commits all owned, no co-author. Local/live/fetched refs equal
+and all seven owned receipt/document artifacts byte-exact. Source00f23758,
+actual integrated03f18c95; 17/17 independently accepted as above. Current
+receipt is docs-only after accepted source; no fresh product-semantic claim.
+Final documentation receipt needs its own anchors/whitespace and readback.
+Broader AR07 audit and UI token/cataloque adoption still open; keep active
+evidence until remaining audit closes, remove only completed scaffolding.

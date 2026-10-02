@@ -13,7 +13,8 @@ gates and dependency/format/whitespace checks pass. Projection42 is subset.
 
 Two documentation conflicts preserved both owners and complete upstream
 handover suffix; no source conflicts or manual Web/binding edits. Remote
-publication/readback pending at this receipt. Broader AR07 audit and typed/
+publication/readback confirmed at 2d9aaeb8: live/fetched refs equal local HEAD
+and all seven owned receipt/document artifacts byte-exact. Broader AR07 audit and typed/
 localized UI token adoption remain open under U16 ownership; no blanket private
 opaque-data, native desktop or ETS compatibility claim. Earlier pre-merge
 pending notes describe their own dated receipts, now superseded in this scope.

@@ -4,7 +4,8 @@
 // its delay belongs to the operating system. This is a real focusable
 // button with a real `role="tooltip"` description attached to it.
 
-import { useId, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { KeyboardEvent } from "react";
 import { helpTipAnimates, requestHelpTopic } from "./help";
 import type { HelpTopicId } from "./help";
@@ -15,7 +16,40 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
   const { labelKey, textKey, topicId } = props;
   const t = useTranslate();
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const bubbleRef = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
   const bubbleId = `help-tip-${useId()}`;
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const trigger = triggerRef.current;
+      const bubble = bubbleRef.current;
+      if (!trigger || !bubble) return;
+      const configured = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"));
+      const scale = Number.isFinite(configured) && configured > 0 ? configured : 1;
+      const anchor = trigger.getBoundingClientRect();
+      const box = bubble.getBoundingClientRect();
+      const padding = 8;
+      const gap = 6;
+      const clamp = (value: number, size: number, extent: number) => Math.max(padding, Math.min(value, extent - size - padding));
+      const below = anchor.bottom + gap;
+      setPosition({
+        left: clamp(anchor.left, box.width, window.innerWidth) / scale,
+        top: clamp(below + box.height <= window.innerHeight - padding ? below : anchor.top - box.height - gap, box.height, window.innerHeight) / scale,
+      });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
+    if (bubbleRef.current) observer?.observe(bubbleRef.current);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      observer?.disconnect();
+    };
+  }, [open, t]);
   // Read during render rather than latched in an effect: the value is a
   // pure read of two DOM attributes and re-reading it costs nothing, so a
   // motion level changed in Settings applies at this component's next
@@ -24,16 +58,10 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
   // that repaints on a settings change is not worth a listener per tip.
   const animates = helpTipAnimates(window, document.documentElement);
 
-  // The bubble is in the DOM whether or not it is visible, and
-  // `aria-describedby` points at it permanently. That is the whole
-  // accessibility argument for this component over a `title`: a screen
-  // reader gets the description when focus lands on the trigger, with no
-  // hover to simulate. It only holds because the hidden state is
-  // `opacity: 0` — `display: none` or `visibility: hidden` would drop the
-  // bubble out of the accessibility tree, and the description would then
-  // exist only if this component's state update beat the screen reader's
-  // lookup. `styles.css` says so at the rule, and `help.test.ts` fails if
-  // either declaration comes back.
+  // The permanent local description is visually clipped, not display:none
+  // or visibility:hidden. A decorative portal paints identical text outside
+  // clipped/transformed ancestors. It does not duplicate the accessible
+  // description or need to escape a surrounding modal's inert background.
   function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (e.key !== "Escape" || !open) return;
     // Only while this tip is actually showing. An unconditional stop would
@@ -53,6 +81,7 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
   return (
     <span className="help-tip">
       <button
+        ref={triggerRef}
         type="button"
         className="help-tip-trigger"
         aria-label={t(labelKey)}
@@ -69,9 +98,10 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
       >
         <span aria-hidden="true">?</span>
       </button>
-      <span id={bubbleId} role="tooltip" className={bubbleClass}>
+      <span id={bubbleId} role="tooltip" className="help-tip-description">
         {t(textKey)}
       </span>
+      {createPortal(<span ref={bubbleRef} id={`${bubbleId}-visual`} aria-hidden="true" className={bubbleClass} style={open ? position : { left: 0, top: 0 }}>{t(textKey)}</span>, document.body)}
     </span>
   );
 }

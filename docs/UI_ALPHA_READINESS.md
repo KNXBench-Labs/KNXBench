@@ -13,6 +13,37 @@ owner because its frontend foundation exists.
 
 ## Concrete follow-ups implemented
 
+### Keyboard, modal background and viewport-safe help follow-up
+
+The isolated `ui-alpha-keyboard` candidate at reservation `8656ffa1` adds
+nearest-edge active-option scrolling to the three actual lists without moving
+combobox focus. Catalog highlight is not product selection or device creation.
+Document-local modal ownership excludes background branches through `inert`
+and `aria-hidden`, preserves existing values, handles newly added DOM and
+out-of-order close, and restores focus only after the final modal closes.
+Focus filtering also excludes descendants of hidden/inert/aria-hidden branches.
+
+HelpTip's permanent local description remains the trigger's `aria-describedby`
+target; a separate decorative body portal escapes clipped/transformed ancestors.
+Its fixed viewport bounds and placement account for application zoom; resize
+and captured scroll re-place it, while cleanup removes its listeners/portal.
+DE/EN Chromium cases verify geometry and the actual accessible button description,
+including a tooltip inside a modal. This closes the earlier invisible-tooltip
+overflow mechanism in the bounded fixture, not all application layout gates.
+
+Seventeen new fully intercepted Chromium cases pass. Eighteen behavioral
+negative controls are caught and restored exactly; an initially surviving
+early-background-release mutant required a synchronous assertion before
+MutationObserver repair and is now caught. The new hook's deliberate TypeScript
+error is also detected. Restored focused verification: nine files / 117 tests
+plus TypeScript pass. Renewed twelve-step candidate acceptance proc_870fe2d19835
+passes: Web 84 files / 1,357 tests, 52 fully intercepted Chromium cases, Rust
+146 result blocks / 2,890 passed / zero failed / 163 ignored, 576-source freeze.
+The first header-grammar failure is retained; purpose/SPDX order was corrected
+and the measured ceiling lowered to 157, never relaxed. Frontend alpha.2 has
+identical dependency records. Integrated acceptance/publication remain pending;
+no independent external review, native/Orca or bus evidence is inferred.
+
 ### KL-82 authoritative monitor context follow-up
 
 The separate `ui-alpha-context` candidate (reservation `79dc56dd`) now compares
@@ -125,7 +156,7 @@ release consent. Final parent-ledger status follows verified delivery.
 | KL-133 | Existing close guard protects unsaved project state; normal quit tests are not a dead-renderer test. | Native unresponsive/crashed-WebView reproduction and a data-safe close/recovery policy; never bypass the guard by inference. |
 | UI-03 | Retained read-only device-checks UI and explicit unsupported readiness/recovery states; commissioning owns complete recovery. | No full-image backup or universal device semantics follows from the UI; preserve device-specific commissioning prerequisites. |
 | KL-130-ZOOM | New native WebKitGTK static Inspector geometry evidence at three widths/scales; Chromium interaction evidence remains distinct. | Full Tauri zoom shortcuts, pane resize/hide/restart and hover workflow are not covered by this static probe. |
-| KL-20 | Existing shared modal shell, keyboard trap and list semantics remain; native static geometry is not an accessibility audit. | List auto-scroll/background virtual-cursor exclusion and real screenreader/native modal interaction remain open. |
+| KL-20 | Candidate implements active-list scrolling, background inert/AX exclusion, stacked/dynamic modal ownership and viewport-safe HelpTip with focused and mocked Chromium evidence. | Complete integration/publication pending; actual native/Orca interaction and whole-app visual accessibility audit remain open, not a release waiver. |
 | KL-124 | Delivered raw Device Info retention, exact nullable HTTP projection, six labelled UI values and explicit unavailable state at 6c16fe5a. | Native/live Search remains KL-79, not new protocol or identity acceptance. |
 | MODEL-04 | Retained local 1–32-device batch with deterministic indexed names and no spontaneous individual-address allocation. | Unique-name/address-allocation policy and core validation before a new opt-in allocation workflow. |
 | KL-121 | Delivered authoritative cross-client settings refresh with write-generation and cleanup regressions at 6c16fe5a. | Not general project collaboration or instantaneous synchronization. |
@@ -175,8 +206,11 @@ not excuse unrelated offline implementation work and do not authorize writes.
 
 ## Continuing work
 
-After this candidate is reviewed/gated/delivered, prioritize the open KL-82
-cross-client context contract, then remaining concrete keyboard/modal gaps.
-Keep domain/sample-dependent rows and deliberate bounded features distinct from
-those ready UI changes. Do not mark all 24 rows DONE, create an alpha tag, reopen
-U13, or accept release exceptions merely because this owner receipt exists.
+KL-82 is delivered; keyboard/modal/help-tip candidate implementation and focused
+evidence and complete candidate acceptance are complete, with integrated gates
+and publication still pending.
+After delivery, keep native/Orca, real network, independent samples and unresolved
+domain/application contracts open and distinct. Group-address/structural drag,
+general multi-installation editing, allocation/repair and other retained absent
+behaviors are not silently waived by this package. Do not mark all 24 rows DONE,
+create an alpha tag, reopen U13 or infer release consent from this owner receipt.

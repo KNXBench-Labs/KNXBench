@@ -1,6 +1,8 @@
+/** Shares modal focus, background isolation, dismissal and viewport resizing. */
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { useTranslate } from "./i18n";
+import { isolateModalBackground } from "./modalIsolation";
 
 const VIEWPORT_PADDING = 16;
 const RESIZE_STEP = 24;
@@ -28,7 +30,7 @@ export const FOCUSABLE_SELECTOR =
 
 function focusableIn(panel: HTMLElement): HTMLElement[] {
   return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (el) => !el.hasAttribute("hidden") && el.getAttribute("aria-hidden") !== "true",
+    (el) => !el.closest("[hidden], [inert], [aria-hidden='true']"),
   );
 }
 
@@ -56,9 +58,9 @@ export default function Overlay(props: {
     const previous = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const target = initialFocusRef?.current ?? (panel ? (focusableIn(panel)[0] ?? panel) : null);
-    target?.focus();
+    const restoreBackground = panel ? isolateModalBackground(panel, () => target?.focus()) : () => true;
     return () => {
-      previous?.focus?.();
+      if (restoreBackground() && previous?.isConnected && !previous.closest("[inert]")) previous.focus();
     };
   }, []);
 

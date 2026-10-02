@@ -49,6 +49,27 @@ function setQuery(value: string) {
 }
 
 describe("Search", () => {
+  it("scrolls the active result into view without moving combobox focus", async () => {
+    const scroll = vi.fn();
+    const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    const { root } = await renderSearch();
+    try {
+      await act(async () => setQuery("dimmer"));
+      const input = host!.querySelector<HTMLInputElement>("input")!;
+      scroll.mockClear();
+      await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      expect(scroll).toHaveBeenCalledOnce();
+      expect(scroll.mock.contexts[0]).toBe(host!.querySelector("#search-option-1"));
+      expect(scroll).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+      expect(document.activeElement).toBe(input);
+    } finally {
+      await act(async () => root.unmount());
+      if (previous) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", previous);
+      else delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {
     const { root, onClose } = await renderSearch();
 

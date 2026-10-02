@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / alpha-readiness follow-ups)
+- **Timestamp:** 2026-10-02 07:07 CEST
+- **Web lock:** taken by ui-alpha-readiness for UI-owner alpha-readiness follow-ups.
+- **Completed:** User explicitly requested inspection and completion of goal-ui tasks in alpha_readiness.md; found current remote docs/ALPHA_READINESS.md. Read all 24 UI-routed inventory rows and their retained source boundaries; UI-01/UI-02 are already DONE, not new U13 work. Created an isolated ui-alpha-readiness checkout at 65b91777 and installed the pinned frontend dependencies. No product code, root document, hardware or release state changed.
+- **Pending/Next Steps:** Reconcile the remaining UI-owner rows from definitions/callers and accepted decisions; implement concrete offline defects with RED/GREEN and mutation coverage. Test available native prerequisites without system changes; preserve platform/hardware/spec/release boundaries and record actual blockers rather than inventing acceptance. Release this owned Web lock only after the package's review and gates.
+- **Notes for Codex oder Claude:** For the alpha-release session: this is a newly user-authorized UI follow-up, not duplication of AR packages or reopened U13 fixes. apps/knx-web and its bindings are locked by this session; coordinate any new UI consumer through a precise handoff. Only UI-owned readiness rows/receipts will change; preserve all other alpha dispositions and foreign root/review/commissioning artifacts. No subagents, quota probes, KNX sockets, system/firewall edits or inferred write permission.
+
+---
+
 - **Last Agent:** codex (Hermes / AR05 scoped implementation publication)
 - **Timestamp:** 2026-10-02 06:53 CEST
 - **Completed:** Published reviewed implementation/audit as 04900fbc35b2daec5e766a32f99c263a04700e0e. Exact origin/main SHA, every one of 25 owned artifacts, author/committer github@knxbench.com, no-co-author policy and gated staged tree verified; outgoing range zero. All 20 complete acceptance steps passed: workspace 2,884 / zero failed / 163 ignored / 146 result blocks, ProductDB 585 / zero failed / 24 ignored, Web 1,312. Each private matrix/real v18 upgrade/census case actually executes without failure/ignored/skip; full aggregate shape equality and 595-source freeze pass. Four AR05 checklists and six per-ID scoped dispositions updated to delivered revision; KL-86 provenance remains a numbered residual, not implemented or release-waived. All 180 IDs/priorities/routes and limitation totals retained.

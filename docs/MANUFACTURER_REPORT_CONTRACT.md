@@ -1,7 +1,8 @@
 # Manufacturer report omissions — AR05 design and evidence
 
-Status: implemented and complete corrected-candidate acceptance passed;
-publication/readback is pending. Base:
+Status: implementation/audit published as
+`04900fbc35b2daec5e766a32f99c263a04700e0e`; exact remote ref and all 25
+owned artifacts verified. Closing documentation publication/cleanup pending. Base:
 `f4b845a3880f4380e66c9d94a218a6dfff16e724`; product database v18 -> v19.
 
 ## Baseline facts before implementation (v18)

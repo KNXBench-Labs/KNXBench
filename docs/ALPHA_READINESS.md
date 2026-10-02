@@ -118,8 +118,9 @@ No parked ADR phase, U12 control, schema or commissioning gate is changed.
 
 ## Stable limitation identity
 
-AR05 technical acceptance is complete on the corrected candidate at base
-`f4b845a3`; publication/readback remains pending. Final process proc_f9f87cee4329
+AR05 implementation/audit is published as
+`04900fbc35b2daec5e766a32f99c263a04700e0e` at base `f4b845a3`;
+exact remote ref and all 25 owned artifacts match. Final process proc_f9f87cee4329
 exited 0 with all 20 expected gates, workspace 2,884 / ProductDB 585 / Web 1,312
 passed and no failed test. Ordinary ignored counts are 163/24, not private
 acceptance: matrix, real v18 upgrade and census separately execute one case each
@@ -133,7 +134,9 @@ not implementation of missing DPT source-winner provenance. KL-86 remains a
 numbered residual; unsupported Dynamic semantics and historical unavailable
 reports remain disclosed. This is neither user boundary acceptance nor full
 manufacturer compatibility. Stable identities and limitation totals below are
-unchanged; inventory dispositions are finalized only after revision/readback.
+unchanged. The six AR05 inventory dispositions below mean its named checklist
+scope was delivered at that revision, not every source limitation was removed.
+Closing documentation publication and owned cleanup remain pending.
 
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
 130, and no 94. Seven are resolved/clarification-only: 18, 23, 24, 42 (AR04),
@@ -218,7 +221,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `DOC-01` | P1 | AR00 | DONE | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
 | `KL-13` | P1 | AR08 | TODO | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
-| `PDB-09` | P1 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-3 report history and coverage boundary; Retained boundary; AR05 verifies subcases before changing status |
+| `PDB-09` | P1 | AR05 | DONE | Published 04900fbc; master_language_evidence/master_evidence_rederive and three actual private cases verify Languages reporting, retained bytes and report history; manufacturer-report contract scopes the remaining unknown semantics |
 | `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §19.11 / goal-commission.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-130-GATE` | P1 | AR01 | DONE | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER | goal.md §9–10; Named final acceptance prerequisites above; not ready on historical receipts alone |
@@ -260,7 +263,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / commissioning-download-design.md R11; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `DATA-02` | P2 | AR04 | DONE | STORAGE_COMMAND_CONTRACT.md; published 216c673e full-save fallback/native failure-history tests, integrated gates and exact remote/artifact verified; U12 editor scope is not lifted |
 | `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-87` | P2 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md §87; Retained boundary; AR05 verifies subcases before changing status |
+| `KL-87` | P2 | AR05 | DONE | Published 04900fbc; exact master Languages attribute reporting, namespaces and retained bytes verified by master_language_evidence; untyped Version semantics remain explicit, not a compatibility claim |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §137; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §36; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
@@ -292,11 +295,11 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-69` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §69; goal.md §6: dated 2026-09-20 module boundary decision |
 | `KL-71` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §71; goal.md §6: dated 2026-09-20 module boundary decision |
 | `KL-85` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §85; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-86` | P2 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md §86; Retained boundary; AR05 verifies subcases before changing status |
+| `KL-86` | P2 | AR05 | DONE | Published 04900fbc; scoped duplicate/DPT audit in install_reports verifies first normalized values, retained losing declarations, counts, reopen/retry; §86 missing source-winner provenance remains open, not implemented or release-waived |
 | `PDB-01` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
 | `PDB-02` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
 | `PDB-05` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
-| `PDB-06` | P2 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR05 verifies subcases before changing status |
+| `PDB-06` | P2 | AR05 | DONE | Published 04900fbc; dynamic_tree mixed active/skipped regression verifies one shared budget and truncation disclosure; value-dependent/unexpanded semantics stay unsupported, not exhaustively enumerated |
 | `PDB-08` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-3 report history and coverage boundary; Retained boundary; AR06 verifies subcases before changing status |
 | `PDB-10` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-7 catalogue metadata are source strings; Retained boundary; AR06 verifies subcases before changing status |
 | `R-DYNAMIC-01` | P2 | AR07 | TODO | docs/RESEARCH.md §4.3 / Open questions; Retained boundary; AR07 verifies subcases before changing status |
@@ -339,8 +342,8 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §88; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
 | `PDB-03` | P3 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
 | `PDB-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `PDB-07` | P3 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 / PDB-3 report history and coverage boundary; Retained boundary; AR05 verifies subcases before changing status |
-| `PDB-11` | P3 | AR05 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-3 report history and coverage boundary; Retained boundary; AR05 verifies subcases before changing status |
+| `PDB-07` | P3 | AR05 | DONE | Published 04900fbc; scoped Dynamic/report audit and budget/migration regressions; complete acceptance and private cases pass without claiming exhaustive subordinate coverage or reconstructing install history |
+| `PDB-11` | P3 | AR05 | DONE | Published 04900fbc; master_evidence_rederive, master_language_evidence and real v18 upgrade verify atomic byte-only current evidence, missing/unexamined sources and immutable measured-zero/unavailable install snapshots |
 | `FUTURE-01` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §13 / goal.md §7; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `FUTURE-02` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §14 / goal.md §7; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `FUTURE-03` | P3 | Later / separate scope — not an alpha task | LATER | ADR-0031 / goal.md §7 / docs/ROADMAP.md: In-application help; Separate future/tooling scope; not an authorized alpha implementation or release waiver |

@@ -60,8 +60,11 @@ exclusion and viewport-safe HelpTip with a permanent local description.
 Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
 the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
 gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
-576-source freeze); first header failure remains recorded. Integrated gates,
-publication and owned cleanup are pending. Native/Orca, real-network,
+576-source freeze); first header failure remains recorded. All twelve gates
+repeated on integrated source as proc_490a156044df with the same counts; published
+2e57f8e5 and exact ref/tree/all 28 artifacts/zero outgoing commits verified.
+No ready keyboard/modal/help-tip implementation remains in this package.
+Documentation receipt/owned cleanup follow. Native/Orca, real-network,
 independent-sample and domain/application dependencies remain separate and open.
 Do not turn retained design boundaries into silently accepted alpha exceptions.
 

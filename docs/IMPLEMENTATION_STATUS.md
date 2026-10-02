@@ -22,7 +22,10 @@
   passed / zero failed / 163 ignored; 576-source freeze. First header failure
   stays failed; purpose/SPDX ordering corrected and measured ceiling lowered
   to 157 without relaxing it. Frontend alpha.2 changes no dependencies.
-  Integrated gates/publication/cleanup remain pending.
+  All twelve gates repeated on integrated source as proc_490a156044df with the
+  same counts/source freeze. Published 2e57f8e5, exact remote/tree/all 28 artifacts
+  and zero outgoing commits verified. Narrow delivery receipt and owned cleanup
+  follow; actual native and external prerequisites remain open.
   No native/Orca/network/sample/domain, hardware or alpha-release acceptance.
 
 ## 2026-10-02 — KL-82 authoritative monitor context candidate (offline)

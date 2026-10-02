@@ -344,7 +344,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Device-checks UI boundary; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `UI-04` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §130 (Zoom); U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-20` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §20; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `KL-20` | P2 | `goal-ui.md` — owner only | DONE | UI owner keyboard/modal/help-tip implementation delivered at 2e57f8e5; twelve integrated gates/eighteen controls verified; docs/UI_ALPHA_READINESS.md retains actual native/Orca/full-theme residue, not entire-source acceptance or a release waiver |
 | `KL-124` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
 | `KL-76` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §76; Retained boundary; AR14 verifies subcases before changing status |
 | `KL-102` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §102; Retained boundary; AR14 verifies subcases before changing status |

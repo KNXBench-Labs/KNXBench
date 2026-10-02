@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / keyboard alpha delivery receipt)
+- **Timestamp:** 2026-10-02 15:29 CEST
+- **Web lock:** released by ui-alpha-keyboard after verified source publication.
+- **Completed:** Source 2e57f8e556932a80afb9c496f33ee247f01113a9 published and fetched back with exact ref/tree/all 28 artifacts, zero outgoing commits, required author/committer email and no co-author. Integrated proc_490a156044df repeated all twelve gates successfully: Web 84 files/1,357 tests, 52 fully intercepted Chromium cases, Rust 146 result blocks/2,890 passed/zero failed/163 ignored, 576-source freeze. Eighteen restored controls and new-file type canary remain scoped evidence. KL-20 owner implementation delivered; native/Orca/full-theme and other retained boundaries remain open. All 180 identities/24 UI routes/foreign dispositions and complete inherited handover preserved; upstream compare.md retained.
+- **Pending/Next Steps:** Gate/publish/read back this narrow documentation receipt, then remove only this completed owned checkout/branch/scratch. No ready keyboard/modal/help-tip implementation remains in this package. Actual native/Orca/full-app accessibility, real network, independent samples and domain/application prerequisites remain separate and open, not accepted alpha exceptions. Root statistics refresh still belongs to the foreign root owner.
+- **Notes for Codex oder Claude:** Do not reopen U0–U13 or delivered KL-82; do not translate scoped owner DONE into entire-source/native acceptance or release consent. No KNX backend/proxy/discovery/tunnel/device write, native configuration, quota/subagent probe, tag, reserved ADR activation or root synchronization. Ignore delayed historical process notices unless exact handles/logs disagree. Cleanup proof belongs to actual final readback, not an ahead-of-run claim; preserve foreign/root/shared cache state and all inherited bytes.
+
+---
+
 - **Last Agent:** codex (UI session / keyboard alpha candidate acceptance)
 - **Timestamp:** 2026-10-02 15:20 CEST
 - **Web lock:** taken by ui-alpha-keyboard through reviewed integration/publication.

@@ -67,9 +67,18 @@ reviewer approval is claimed. R6 only clarifies the prop fallback and removes
 three duplicate comment lines after candidate acceptance; the integrated gate
 must cover that precise source before publication.
 
-## PENDING
+## Integrated delivery
 
-Complete coordinated candidate gates, final full-diff sign-off, fresh-upstream
-integration and repeated gates; publication/ref/artifact readback, owner receipt
-and task-owned cleanup. Keyboard/modal/help-tip contracts follow separately.
-Native/AT/domain/sample boundaries remain open; no alpha-ready claim.
+`proc_f5cf67729adf` exited 0 on source
+`8ceacf49b515aa2ee174ae2f9b77ec0d52e0d654`; all twelve exact steps verified with
+identical counts and 570-source freeze. Required author/committer and no-co-author
+policy verified. Normal push from the owned checkout succeeded; fetch/readback
+proved HEAD/origin/main and complete-tree equality, all twenty owned artifacts
+and zero outgoing commits. Parent KL-82 row is DONE at this interpretation scope,
+not source-wide native/live/transactional acceptance. Root foreign work and
+full inherited handover preserved. Statistics remain blocked on the root owner's
+foreign dirty/stale state; no fabricated refresh or root synchronization.
+
+Closing owner receipt/doc gates and task-owned cleanup are pending. Keyboard,
+background modal and viewport-safe help-tip work continues in a fresh reservation;
+native/AT/domain/sample boundaries remain open. No alpha-ready claim.

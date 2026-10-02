@@ -4074,7 +4074,8 @@ Pause performs context-only reads without rows or cursor advancement. Delayed
 replies cannot erase a newer invalidation or replacement session. Browser
 records cannot establish a verified state. Backend/UI regressions and bounded
 mocked browser evidence and twelve complete candidate gates pass; integrated
-acceptance/publication remain PENDING. See
+acceptance repeated and source `8ceacf49` published with exact remote/tree
+readback. Scoped comparison is delivered, not the remaining boundaries. See
 [owner evidence](UI_ALPHA_READINESS.md).
 
 **Remaining boundary.** This is a point-in-time interpretation comparison, not

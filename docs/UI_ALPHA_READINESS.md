@@ -44,9 +44,13 @@ fmt, all four repository gates and whitespace pass; 570 source/configuration
 fingerprints match. The first candidate failed its missing diagnostic hint CSS
 rule; that failure is retained, the rule corrected without weakening the test,
 and its removal also detected. Eleven controls restore exact source.
-Two non-runtime comments were then clarified in the final review; integrated
-acceptance/publication remain PENDING. These counts do not transfer the previous
-package's evidence or imply ignored private-corpus/native/live-bus execution.
+The final in-session review's non-runtime comment clarifications are included
+in published source `8ceacf49b515aa2ee174ae2f9b77ec0d52e0d654`. All twelve gates
+were repeated on that integrated source as `proc_f5cf67729adf`, with the same
+counts and unchanged 570-source fingerprints. Exact HEAD/origin/main and
+complete-tree equality plus all twenty owned artifacts were read back; outgoing
+range is zero. These results do not transfer the previous package's evidence
+or imply ignored private-corpus/native/live-bus execution.
 
 - **UX-02:** the catalog picker offers `.knxprod` and ZIP packages, not the
   deliberately unsupported `.vd2`. Backend rejection and compatibility scope
@@ -113,7 +117,7 @@ release consent. Final parent-ledger status follows verified delivery.
 | DATA-03 | Retained atomic catalog batch, one undo step, no blind retry after ambiguous response; `CatalogBrowser` and current batch routes. | No server replay/idempotency contract or ability to roll back a different legacy server; separate application/API design, not two frontend requests. |
 | KL-137 | Retained bounded monitor capture, explicit server/client dropped counters and 16 MiB export bound. | Native dialog and full retained-window workflow remain unverified; full-history streaming needs its own privacy/storage design. |
 | KL-36 | Retained searchable/exportable bounded session log and atomic native writer, ADR-0047. | No reconstruction of evicted entries or lifetime audit; native chooser acceptance remains open. |
-| KL-82 | Implemented and candidate-gated: exact authoritative interpretation comparison, unavailable/legacy fail-closed state, pause/cursor and delayed-reply regressions; twelve candidate gates passed. | Integrated acceptance/publication PENDING; point-in-time context observation is not general collaboration, historical reinterpretation, live-bus proof or write authorization. |
+| KL-82 | Delivered authoritative interpretation comparison, unavailable/legacy fail-closed state, pause/cursor and delayed-reply regressions at 8ceacf49; twelve integrated gates and eleven behavioral controls verified. | Point-in-time interpretation is not collaboration, historical reinterpretation, native/live-bus evidence or transaction-bound write authorization; retained §82 boundaries remain explicit. |
 | KL-127 | Site/property Ground workflow exists under ADR-0038; synthetic hierarchy/native storage tests retain unknown types honestly. | Independent ETS Ground/multiple-installation samples remain absent; do not infer ETS semantics from synthetic fixtures. |
 | MODEL-01 | Open domain/application dependency: first-installation structural mutations and link creation remain bounded; later installations are preserved. | Installation rename/selection and correctly scoped command/API/history contracts before a general multi-installation editor. |
 | MODEL-02 | Retained safe refusal of ambiguous IDs, multiply placed devices and inconsistent topology; original imported values remain intact. | No automatic lossless repair/renumbering workflow; define reference/opaque-data preservation and undo before offering repair. |

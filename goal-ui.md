@@ -52,9 +52,10 @@ and domain-dependency qualifications stay explicit.
 KL-82's authoritative interpretation comparison, fail-closed uncertainty and
 pause/cursor/race guards are implemented; twelve complete candidate gates pass
 (Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
-acceptance/publication remain pending; no hardware or transactional write
-proof follows. Continue with the keyboard/background-modal and viewport-safe
-help-tip contracts after that delivery. Do not turn
+acceptance repeated with the same counts on published `8ceacf49`; remote
+ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
+transactional write proof follows. Continue with the keyboard/background-modal
+and viewport-safe help-tip contracts in the next independently reserved package. Do not turn
 retained design boundaries into silently accepted alpha exceptions.
 
 ---

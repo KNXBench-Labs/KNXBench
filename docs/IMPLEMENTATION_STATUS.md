@@ -158,6 +158,93 @@
   is inferred. Master metadata diagnostic suppression and remaining AR06 source
   routes still need work. AR06 remains IN_PROGRESS; no alpha-release/bus claim.
 
+## 2026-10-02 — Keyboard/modal/help-tip alpha follow-up (offline candidate)
+
+- Search, Command Palette and Catalog Browser keep active keyboard rows visible
+  without moving combobox focus; catalog highlight is distinct from selection.
+- Shared modal background isolation is document-local, preserves prior attributes,
+  handles nested/out-of-order close and dynamic DOM, and restores final focus.
+  Initial/Tab-wrap focus filtering excludes hidden/inert/aria-hidden ancestors.
+- HelpTip separates its permanent local description from a decorative painted
+  portal; fixed viewport bounds/placement account for zoom and avoid clipping.
+  Resize/scroll listeners and portals are cleaned on close/unmount.
+- Seventeen new mock-only Chromium cases pass, including actual accessibility
+  tree descriptions/background exclusion. Eighteen behavioral controls and a
+  TypeScript new-file canary are caught with exact restoration. An initial
+  early-release survivor prompted an immediate pre-observer assertion; the
+  original whole-Web failure was the exact companion graph's missing new DOM
+  helper, corrected without changing its API/project-mutation assertions.
+- Separate in-session review fixes are complete; nine focused files / 117 tests
+  and TypeScript pass. Renewed twelve-step proc_870fe2d19835 passes: Web 84 files /
+  1,357 tests, 52 intercepted Chromium cases, Rust 146 result blocks / 2,890
+  passed / zero failed / 163 ignored; 576-source freeze. First header failure
+  stays failed; purpose/SPDX ordering corrected and measured ceiling lowered
+  to 157 without relaxing it. Frontend alpha.2 changes no dependencies.
+  All twelve gates repeated on integrated source as proc_490a156044df with the
+  same counts/source freeze. Published 2e57f8e5, exact remote/tree/all 28 artifacts
+  and zero outgoing commits verified. Narrow delivery receipt and owned cleanup
+  follow; actual native and external prerequisites remain open.
+  No native/Orca/network/sample/domain, hardware or alpha-release acceptance.
+
+## 2026-10-02 — KL-82 authoritative monitor context candidate (offline)
+
+- Added a read-only comparison of actual bus-session interpretation against
+  current server project style/names/resolved DPTs; unavailable/busy/poisoned
+  snapshots never round up to current. Monitor HTTP fields are additive and
+  disclose neither project names nor host paths.
+- UI uses only server evidence to establish freshness/project presence and
+  blocks compose for missing/malformed/legacy evidence and poll failures.
+  Local browser records are invalidation hints, not authoritative proof.
+- Paused polls check context/status without rows or cursor advancement; Resume
+  retains its cursor. Generations/session incarnation reject late replies and
+  obsolete reattach errors. Original captured-row interpretation stays intact.
+- Focused Rust/UI and monitored mocked Chromium tests pass. Eleven behavioral
+  mutations fail as assertions and restore exact source. Separate in-session
+  review findings are fixed; no independent external review is claimed.
+- Twelve coordinated candidate gates pass: Web 83 files / 1,343 tests, 35 mocked
+  Chromium cases; Rust 146 result blocks / 2,890 passed / zero failed / 163
+  ignored; source freeze 570. Missing hint CSS failed the first gate, was fixed
+  without weakening tests and its removal detected. Final comment clarification
+  is non-runtime; repeated integrated twelve-step acceptance proc_f5cf67729adf
+  passes with the same counts/source freeze. Source 8ceacf49 and exact remote
+  ref/tree/twenty artifacts were verified, with zero outgoing commits.
+  Keyboard/modal/help-tip contracts follow separately. This is not a hardware
+  authorization, transaction-bound write guarantee or alpha release.
+
+## 2026-10-02 — UI-owned alpha-readiness follow-ups (offline)
+
+- Audited all 24 `goal-ui.md` rows in the alpha-readiness inventory against
+  current source and retained contracts; U0–U13 were already closed and were
+  not reimplemented. Per-ID evidence: [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md).
+- Catalog picker now offers only KNX product/ZIP packages; the project inspector
+  exposes the existing undoable group-address-style command and consumes its
+  authoritative response, with unknown/refused/pending cases covered.
+- Main/companion settings periodically reread the authoritative server record
+  and recheck on focus/visibility. Write generations and cancellation protect
+  queued/failed edits, unknown keys and deletion intent; reads do not write back.
+- Discovery retains raw Device Info across network client, HTTP projection and
+  labelled, expandable UI details; absent adapter metadata is explicitly
+  unavailable. No codec, CLI default format, identity or write authority changes.
+- Eleven final coordinated gates pass: Web 83 files / 1,331 tests; Rust
+  146 result blocks / 2,885 passed / zero failed / 163 ignored; type/build,
+  strict Clippy/fmt and repository gates. Ten behavioral negative controls
+  rejected realistic regressions with exact source restoration. Six scoped
+  Chromium metadata cases pass; the first CSS-guard failure remains recorded.
+- Repaired the default browser harness to serve fixture HTML on isolated Vite
+  without a KNX backend/API proxy. All 33 cases pass, including fully intercepted
+  full-app creation for each style. Configuration regressions and a rejected
+  proxy-restoration mutant cover isolation. The first old-harness attempt was
+  not purely mocked; its possible automatic read-only discovery is explicitly
+  qualified in the owner receipt, never presented as live acceptance.
+- Native Gtk/WebKitGTK 2.52.6 static-fixture geometry passed nine X11 width/zoom
+  cases. It is not full Tauri, Orca, native-dialog or live-discovery acceptance.
+  Existing invisible-tooltip overflow at 640 px is independently recorded,
+  not introduced by metadata and not repaired by removing its AT description.
+- Integrated source publication `6c16fe5a` and exact remote/tree readback verified;
+  the eleven gates reran on that integrated source. KL-82/keyboard contracts
+  and missing independent native/sample evidence remain open. No alpha release,
+  full ETS compatibility, bus access or hardware write is authorized.
+
 ## 2026-10-02 — AR05 corrected-candidate acceptance (offline; 06:43 CEST)
 
 - Shared master Languages evidence, byte-only v18 -> v19 migration and explicit

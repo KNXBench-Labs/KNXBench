@@ -626,7 +626,7 @@ export const messages = {
   "busMonitor.contextStale":
     "The project changed after this session's last confirmed context publication. Decoded values below use that earlier context, and sending is locked. Reconnect to decode against the current project.",
   "busMonitor.contextUnverified":
-    "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
+    "The server cannot verify that this session's interpretation matches the current project. Sending is locked until a current comparison is available (legacy servers do not provide it).",
   "busMonitor.sessionReplaced":
     "The bus session was replaced — now showing session {id}. Rows from the previous session were cleared.",
   "busMonitor.endedElsewhere": "The bus session was ended elsewhere.",
@@ -648,6 +648,14 @@ export const messages = {
   "busDiscovery.resultsCaption": "Select an interface to fill in the gateway address.",
   "busDiscovery.individualAddressLabel": "Interface address",
   "busDiscovery.tunnelling": "Tunnelling",
+  "busDiscovery.deviceInfo": "Advertised device information",
+  "busDiscovery.mediumRaw": "KNX medium (raw)",
+  "busDiscovery.statusRaw": "Device status (raw)",
+  "busDiscovery.projectInstallationId": "Project-installation identifier",
+  "busDiscovery.serialNumber": "KNX serial number",
+  "busDiscovery.routingMulticast": "Routing multicast address",
+  "busDiscovery.macAddress": "MAC address",
+  "busDiscovery.infoUnavailable": "Device information was not provided by this adapter.",
   "busDiscovery.empty": "No interfaces answered.",
   "busDiscovery.emptyHint":
     "The search reaches only as far as IP multicast does on this network segment. An empty result can mean no interface answered, or that the search request never left this machine — running inside a container without host networking is a common cause. A firewall on this computer can also drop the answers, which come back as unicast from UDP port 3671: allow incoming UDP from source port 3671 on the local network. Entering the address by hand still works.",

@@ -38,11 +38,42 @@ zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
 green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
 The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
+### UI-owned alpha follow-up (user request, 2026-10-02)
+
+The user separately requested the `goal-ui` items from
+`docs/ALPHA_READINESS.md`. This does not reopen U0–U13 or authorize commissioning.
+All 24 routed rows have a current-source audit in
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md). Four concrete gaps are
+implemented and fully offline-gated: UX-02 supported-only catalog picker,
+UX-03 command-backed project style selector, KL-121 cross-client settings
+refresh, and KL-124 lossless Device Info projection/disclosure. Publication
+`6c16fe5a` and complete remote/tree readback are verified; native/multicast/AT
+and domain-dependency qualifications stay explicit.
+KL-82's authoritative interpretation comparison, fail-closed uncertainty and
+pause/cursor/race guards are implemented; twelve complete candidate gates pass
+(Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
+acceptance repeated with the same counts on published `8ceacf49`; remote
+ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
+transactional write proof follows. The separately reserved `ui-alpha-keyboard`
+candidate now implements list auto-scroll, stacked/dynamic modal-background
+exclusion and viewport-safe HelpTip with a permanent local description.
+Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
+the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
+gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
+576-source freeze); first header failure remains recorded. All twelve gates
+repeated on integrated source as proc_490a156044df with the same counts; published
+2e57f8e5 and exact ref/tree/all 28 artifacts/zero outgoing commits verified.
+No ready keyboard/modal/help-tip implementation remains in this package.
+Documentation receipt/owned cleanup follow. Native/Orca, real-network,
+independent-sample and domain/application dependencies remain separate and open.
+Do not turn retained design boundaries into silently accepted alpha exceptions.
+
 ---
 
 ## 0. Scope: what this goal owns
 
-No UI implementation work remains in this goal. ISSUE-12 reconciles the
+No UI implementation work remains in the original U0–U13 queue. The separately
+authorized alpha follow-up is tracked above. ISSUE-12 reconciles the
 documented host-firewall correction and actual unicast-loopback discovery
 tests; no wire capture or multicast-loopback proof is claimed. Native
 WebKitGTK and real screen-reader checks remain verification gaps, not

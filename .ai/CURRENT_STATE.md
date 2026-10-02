@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-02 22:11
+- **Completed:** Commissioning recovery candidate: Debug service-control connects without Verify Mode, reads both original properties and persists format-2 PID 8/PID 14 recovery before every property write. Wrong-scope admission sends no frame; no-op sends no property write. Device-control width is strict and all four simulator disconnect paths clear only Verify Mode. Core, backup, CLI and HTTP regressions plus nine compiled behavioral mutants pass; exact restoration checked. In-session final safety review has no blocking finding. Branch gates: workspace 2929/0/164, Web 1559, Clippy/build/types/fmt/deny and nonempty repository gates green; 17 shadow bindings match and frozen code/config inputs unchanged. Delivery and the full 42-ID reconciliation remain pending, not a completed Alpha.
+- **Pending/Next Steps:** Publish this focused package after current-upstream/doc reconciliation; continue AUDIT-01 durable commissioning history and global runtime contract work offline. Complete the per-ID evidence/blocker ledger; do not resume K1–K19 as a queue.
+- **Notes for Claude:** No bus/device contact, private corpus run, native desktop proof or release waiver. Web lock remains held by ui-theme-storage for U16; not touched by this entry. Format-1 property backups are retained but do not contain the original PID_DEVICE_CONTROL and cannot be upgraded by inference. Address/serial/reset public recovery gates remain fail-closed. Shared dirty root and its telemetry edits are untouched. For the goal.md session: refresh integrated statistics in your own track and retain hardware/recovery/release residues. Receipt: .ai/logs/2026-10-02_codex_commission-recovery.md.
+
+---
+
 - **Last Agent:** codex (Hermes / AR07 controller publication receipt)
 - **Timestamp:** 2026-10-02 21:02 CEST
 - **Web lock:** taken by ui-theme-storage for U16; no release/edit by this session.

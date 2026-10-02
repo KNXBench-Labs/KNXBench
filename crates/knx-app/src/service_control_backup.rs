@@ -1,8 +1,8 @@
-//! Durable pre-write recovery record for Device Object PID_SERVICE_CONTROL.
+//! Durable pre-write record for service control and its Verify Mode setup.
 //!
 //! This is a property backup, not a whole-device image. It must be written
-//! inside the same management session immediately after reading the property
-//! and before the first write. Recovery is manual and requires rechecking
+//! inside the same management session after reading both original properties
+//! and before any property write. Recovery is manual and requires rechecking
 //! target identity and mask; this module never replays a write automatically.
 
 use std::fs::{self, File, OpenOptions};
@@ -24,12 +24,15 @@ pub struct ServiceControlBackup {
     pub property_id: u8,
     /// Both original property octets, big-endian hexadecimal.
     pub octets: String,
+    pub device_control_property_id: u8,
+    /// Original PID_DEVICE_CONTROL octet, before setting Verify Mode.
+    pub device_control_octets: String,
 }
 
 impl ServiceControlBackup {
-    fn new(device: IndividualAddress, mask: u16, raw: u16) -> Self {
+    fn new(device: IndividualAddress, mask: u16, raw: u16, device_control: u8) -> Self {
         Self {
-            format: 1,
+            format: 2,
             kind: "knxbench-service-control-backup".into(),
             taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Nanos, false),
             device: device.to_string(),
@@ -37,6 +40,8 @@ impl ServiceControlBackup {
             object_index: 0,
             property_id: 8,
             octets: format!("{raw:04X}"),
+            device_control_property_id: 14,
+            device_control_octets: format!("{device_control:02X}"),
         }
     }
 }
@@ -48,8 +53,12 @@ pub fn write_backup(
     device: IndividualAddress,
     mask: u16,
     raw: u16,
+    device_control: u8,
 ) -> io::Result<PathBuf> {
-    write_record(dir, ServiceControlBackup::new(device, mask, raw))
+    write_record(
+        dir,
+        ServiceControlBackup::new(device, mask, raw, device_control),
+    )
 }
 
 fn write_record(dir: &Path, record: ServiceControlBackup) -> io::Result<PathBuf> {
@@ -103,7 +112,7 @@ mod tests {
     fn nested_backup_directory_entries_are_all_synced() {
         let temp = tempfile::tempdir().unwrap();
         let dir = temp.path().join("new/parent/backups");
-        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104);
+        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0);
         let mut synced = Vec::new();
         let path = write_record_with_sync(&dir, record.clone(), |directory| {
             synced.push(directory.to_path_buf());
@@ -121,7 +130,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let dir = temp.path().join("new/parent/backups");
         let parent = dir.parent().unwrap();
-        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104);
+        let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0);
         let result = write_record_with_sync(&dir, record, |directory| {
             if directory == parent {
                 return Err(io::Error::other("injected ancestor sync failure"));
@@ -138,9 +147,13 @@ mod tests {
     fn saves_the_entire_original_property_without_overwriting() {
         let dir = tempfile::tempdir().unwrap();
         let device = IndividualAddress::new(1, 1, 67).unwrap();
-        let path = write_backup(dir.path(), device, 0x0701, 0x0104).unwrap();
+        let path = write_backup(dir.path(), device, 0x0701, 0x0104, 0x02).unwrap();
         let text = fs::read_to_string(&path).unwrap();
         let record: ServiceControlBackup = serde_json::from_str(&text).unwrap();
+        let wire: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(wire["format"], 2, "v1 does not back up Verify Mode setup");
+        assert_eq!(wire["device_control_property_id"], 14);
+        assert_eq!(wire["device_control_octets"], "02");
         assert_eq!(record.device, "1.1.67");
         assert_eq!(record.mask, "0701");
         assert_eq!(record.octets, "0104");
@@ -165,6 +178,6 @@ mod tests {
         let blocker = dir.path().join("occupied");
         fs::write(&blocker, b"not a directory").unwrap();
         let address = IndividualAddress::new(1, 1, 67).unwrap();
-        assert!(write_backup(&blocker, address, 0x0701, 0).is_err());
+        assert!(write_backup(&blocker, address, 0x0701, 0, 0).is_err());
     }
 }

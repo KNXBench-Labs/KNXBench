@@ -16,8 +16,10 @@
   repository gates pass. Each private matrix/real upgrade/census case executed
   with zero failure/ignored/skip markers; aggregate shapes and 595 guarded sources
   match. The intervening failed delivery remains a failed historical attempt.
-- Technical acceptance complete; publication/readback and owned cleanup pending.
-  AR05 is not yet delivered; AR06 not started. KL-86's source-winner provenance
+- Technical acceptance and scoped implementation/audit publication verified at
+  `04900fbc35b2daec5e766a32f99c263a04700e0e`; exact remote and all 25 owned
+  artifacts match. Closing documentation publication/owned cleanup pending;
+  AR06 not started. KL-86's source-winner provenance
   remains open, not a release waiver. No alpha-release, ETS parity or bus claim.
   Contract: [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
 

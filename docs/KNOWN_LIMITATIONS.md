@@ -1442,7 +1442,7 @@ wrappers around `role="presentation"` `<ul>`s, with the visible
 `.search-group-label` marked `aria-hidden="true"` since the group's
 `aria-label` already says the same thing.
 
-**Keyboard alpha follow-up (2026-10-02, candidate).** Search, Command Palette
+**Keyboard alpha follow-up (2026-10-02, delivered at 2e57f8e5).** Search, Command Palette
 and Catalog Browser now scroll the active option with nearest-edge alignment
 without moving combobox focus. Catalog keyboard highlight remains distinct
 from a picked product and never creates a device by itself. The shared shell
@@ -1461,9 +1461,10 @@ longer extend the document at their old trigger coordinates.
 Focused tests and 17 fully intercepted Chromium cases cover list visibility,
 modal focus/background accessibility-tree exclusion, nested close, and tooltip
 geometry/description in DE/EN at 360/640/1440 px and 100/150% zoom. Eighteen
-behavioral controls are rejected with exact source restoration. Complete and
-integrated gate/publication evidence follows in the package log; this candidate
-entry is not a delivery claim.
+behavioral controls are rejected with exact source restoration. All twelve
+candidate/integrated gates pass: Web 1,357, Chromium 52, Rust 2,890 / zero failed /
+163 ignored, 576-source freeze. Exact source ref/tree/all 28 artifacts were read
+back after publication; package log records failed predecessors separately.
 
 **Still open.** No whole-application focus-visible styling audit across every
 theme, full Tauri/native interaction acceptance, or actual screenreader run.

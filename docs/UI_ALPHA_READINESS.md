@@ -41,8 +41,10 @@ passes: Web 84 files / 1,357 tests, 52 fully intercepted Chromium cases, Rust
 146 result blocks / 2,890 passed / zero failed / 163 ignored, 576-source freeze.
 The first header-grammar failure is retained; purpose/SPDX order was corrected
 and the measured ceiling lowered to 157, never relaxed. Frontend alpha.2 has
-identical dependency records. Integrated acceptance/publication remain pending;
-no independent external review, native/Orca or bus evidence is inferred.
+identical dependency records. All twelve gates repeated on integrated source as
+proc_490a156044df with identical counts/fingerprints. Published source 2e57f8e5
+and exact remote/tree/all 28 artifacts plus zero outgoing commits verified.
+No independent external review, native/Orca or bus evidence is inferred.
 
 ### KL-82 authoritative monitor context follow-up
 
@@ -156,7 +158,7 @@ release consent. Final parent-ledger status follows verified delivery.
 | KL-133 | Existing close guard protects unsaved project state; normal quit tests are not a dead-renderer test. | Native unresponsive/crashed-WebView reproduction and a data-safe close/recovery policy; never bypass the guard by inference. |
 | UI-03 | Retained read-only device-checks UI and explicit unsupported readiness/recovery states; commissioning owns complete recovery. | No full-image backup or universal device semantics follows from the UI; preserve device-specific commissioning prerequisites. |
 | KL-130-ZOOM | New native WebKitGTK static Inspector geometry evidence at three widths/scales; Chromium interaction evidence remains distinct. | Full Tauri zoom shortcuts, pane resize/hide/restart and hover workflow are not covered by this static probe. |
-| KL-20 | Candidate implements active-list scrolling, background inert/AX exclusion, stacked/dynamic modal ownership and viewport-safe HelpTip with focused and mocked Chromium evidence. | Complete integration/publication pending; actual native/Orca interaction and whole-app visual accessibility audit remain open, not a release waiver. |
+| KL-20 | Delivered at 2e57f8e5: active-list scrolling, background inert/AX exclusion, stacked/dynamic modal ownership and viewport-safe HelpTip; twelve integrated gates and eighteen behavioral controls verified. | Actual native/Orca interaction and whole-app visual accessibility audit remain open, not a release waiver or full-source acceptance. |
 | KL-124 | Delivered raw Device Info retention, exact nullable HTTP projection, six labelled UI values and explicit unavailable state at 6c16fe5a. | Native/live Search remains KL-79, not new protocol or identity acceptance. |
 | MODEL-04 | Retained local 1–32-device batch with deterministic indexed names and no spontaneous individual-address allocation. | Unique-name/address-allocation policy and core validation before a new opt-in allocation workflow. |
 | KL-121 | Delivered authoritative cross-client settings refresh with write-generation and cleanup regressions at 6c16fe5a. | Not general project collaboration or instantaneous synchronization. |
@@ -206,9 +208,8 @@ not excuse unrelated offline implementation work and do not authorize writes.
 
 ## Continuing work
 
-KL-82 is delivered; keyboard/modal/help-tip candidate implementation and focused
-evidence and complete candidate acceptance are complete, with integrated gates
-and publication still pending.
+KL-82 and keyboard/modal/help-tip implementation are delivered with complete
+candidate/integrated acceptance and exact publication readback.
 After delivery, keep native/Orca, real network, independent samples and unresolved
 domain/application contracts open and distinct. Group-address/structural drag,
 general multi-installation editing, allocation/repair and other retained absent

@@ -113,3 +113,25 @@ Private witness is http_device_download13 via injected SimTunnel, temp-native
 copy and temp products; explicit env opt-ins only, no bus or original mutation.
 Initial lookup of http_download.rs was nonexistent; corrected by repository
 file discovery before any test invocation, not a test failure.
+
+## Actual merged checkpoint accepted — 2026-10-02 23:56 CEST
+
+Actual integration bc5999c1/source4514076b + published commissioningc9f77d7b,
+proc_d4c3a0b0b43f exit0/20-20 independently reconciled: workspace2931/0/164,
+Web1559/Chromium mock61, selected private Dynamic6/0/0 + offline injected
+SimTunnel HTTP13/0/0, zero unknown/genuine skips,103 product/108 total originals
+unchanged, no private raw logs. All615 source/config inputs frozen, fresh
+changed crates rebuilt,17 shadow bindings equal; strict Clippy/build/fmt/deny
+and intended-root nonempty gates pass. Projection42 is a workspace subset.
+Both complete handover/status owners preserved; publication/readback pending.
+
+Next read-only candidate: ordinary diagnostic fan-out and repeated inert-node/
+binding traversal bypass activation counting. No behavioral RED or fix yet;
+prove bounded synthetic witness and document safety contract before changes,
+cover sibling resource paths, keep retained sources and explicit uncertainty.
+No full AR07/Alpha/native/ETS or typed/localized UI acceptance.
+
+Prelaunch fmt initially used scratch cwd/no Cargo.toml; correct worktree retry
+and classifier preflight passed before actual gate. Final doc prepend initially
+used repeated Last-Agent anchor and was refused without mutation; exact error
+recovered, unique timestamp-qualified prefix used, complete histories verified.

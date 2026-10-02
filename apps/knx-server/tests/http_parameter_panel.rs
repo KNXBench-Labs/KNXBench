@@ -1013,6 +1013,119 @@ async fn write_undo_redo_round_trips_both_insert_and_overwrite() {
     assert_eq!(field(&dto, "P-1_R-1").unwrap()["value"], "9");
 }
 
+// AR07: malformed Float bounds cannot turn an unordered comparison into permission.
+#[tokio::test]
+async fn non_finite_float_bounds_refuse_http_writes_without_changing_project_or_source() {
+    for declared in ["NaN", "inf", "-inf", "1e999", "-1e999"] {
+        for bound in ["minInclusive", "maxInclusive"] {
+            let original = if bound == "minInclusive" {
+                "minInclusive=\"-100\""
+            } else {
+                "maxInclusive=\"200\""
+            };
+            assert_eq!(BOUNDS_PROGRAM.matches(original).count(), 1);
+            let source = BOUNDS_PROGRAM.replace(original, &format!("{bound}=\"{declared}\""));
+            let (_dir, products) = temp_product_db(&source);
+            let state = Arc::new(state_with_device(
+                products,
+                vec![("P-Float_R-1", "0"), ("P-Text_R-1", "ok")],
+            ));
+            let before = state.project.lock().unwrap().clone();
+            assert_eq!(
+                before.as_ref().unwrap().installations[0].parameters.len(),
+                2
+            );
+            let app = knx_server::app(Arc::clone(&state), None);
+            let (status, panel) = get_panel(app.clone(), 1).await;
+            assert_eq!(status, StatusCode::OK);
+            assert_eq!(field(&panel, "P-Float_R-1").unwrap()["value"], "0");
+
+            let (status, error) = post_panel(app.clone(), 1, "P-Float_R-1", "1.5").await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{bound}={declared}");
+            let role = if bound == "minInclusive" {
+                "min_inclusive"
+            } else {
+                "max_inclusive"
+            };
+            assert!(error["error"]
+                .as_str()
+                .unwrap()
+                .contains(&format!("non-finite {role}")));
+            assert_eq!(*state.project.lock().unwrap(), before);
+            {
+                let products = state.product_db.as_ref().unwrap().lock().unwrap();
+                let retained = knx_productdb::load_source_file(
+                    &products,
+                    &knx_productdb::sha256_hex(source.as_bytes()),
+                )
+                .unwrap()
+                .unwrap();
+                assert_eq!(retained, source.as_bytes());
+            }
+
+            let (status, panel) = post_panel(app, 1, "P-Text_R-1", "up").await;
+            assert_eq!(status, StatusCode::OK);
+            assert_eq!(field(&panel, "P-Text_R-1").unwrap()["value"], "up");
+        }
+    }
+}
+
+// AR07: a known unsupported controller is not a missing declaration or a
+// valid choice; hidden fields cannot be edited, but independent fields can.
+#[tokio::test]
+async fn unsupported_controller_warning_survives_http_and_refuses_hidden_field_writes() {
+    let old_type = "<ParameterType Id=\"PT-Num\" Name=\"num\"><TypeNumber maxInclusive=\"255\" minInclusive=\"0\" SizeInBit=\"8\" Type=\"unsignedInt\" /></ParameterType>";
+    assert_eq!(WRITE_PROGRAM.matches(old_type).count(), 1);
+    let source = WRITE_PROGRAM.replace(
+        old_type,
+        "<ParameterType Id=\"PT-Num\" Name=\"num\"><TypeText SizeInBit=\"16\" /></ParameterType>",
+    );
+    let reference = "<ParameterRefRef RefId=\"P-2_R-1\" />";
+    assert_eq!(source.matches(reference).count(), 1);
+    let source = source.replace(
+        reference,
+        r#"<choose ParamRefId="P-1_R-1">
+<when test="5"><ParameterRefRef RefId="P-2_R-1" /></when>
+<when default="true"><ParameterRefRef RefId="P-2_R-1" /></when>
+</choose>"#,
+    );
+    let (_dir, products) = temp_product_db(&source);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![("P-1_R-1", "5"), ("P-2_R-1", "0"), ("P-3_R-1", "3")],
+    ));
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(field(&dto, "P-2_R-1").is_none());
+    assert!(field(&dto, "P-3_R-1").is_some());
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    let warnings: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d["kind"] == "unsupportedControlKind")
+        .collect();
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0]["severity"], "warning");
+    assert_eq!(warnings[0]["message"], "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.");
+    assert!(warnings[0]["detail"].as_str().unwrap().contains("Text"));
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|d| d["kind"] == "refBelowSkippedNode")
+            .count(),
+        2
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+
+    let (status, _) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let (status, dto) = post_panel(app, 1, "P-3_R-1", "4").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(field(&dto, "P-3_R-1").unwrap()["value"], "4");
+}
+
 // AC10: `diagnostics.len()` equals `Activation::diagnostics.len()` for a
 // fixture producing at least one diagnostic (an unparsable `when/@test`).
 #[tokio::test]

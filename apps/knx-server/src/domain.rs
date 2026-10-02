@@ -3319,6 +3319,10 @@ fn diagnostic_kind_and_message(
             Kind::UnresolvedParamRef,
             "A choice's controlling parameter could not be found.",
         ),
+        Diagnostic::UnsupportedControlKind { .. } => (
+            Kind::UnsupportedControlKind,
+            "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.",
+        ),
         Diagnostic::NonNumericValue { .. } => (
             Kind::NonNumericValue,
             "A choice's controlling value was not a valid number.",
@@ -4235,6 +4239,12 @@ fn validate_kind_and_bounds(
                         view.id
                     )
                 })?;
+                if !min.is_finite() {
+                    return Err(format!(
+                        "program declares a non-finite min_inclusive '{min}' for '{}'",
+                        view.id
+                    ));
+                }
                 if parsed < min {
                     return Err(format!("'{}' must be >= {min} (got {parsed})", view.id));
                 }
@@ -4246,6 +4256,12 @@ fn validate_kind_and_bounds(
                         view.id
                     )
                 })?;
+                if !max.is_finite() {
+                    return Err(format!(
+                        "program declares a non-finite max_inclusive '{max}' for '{}'",
+                        view.id
+                    ));
+                }
                 if parsed > max {
                     return Err(format!("'{}' must be <= {max} (got {parsed})", view.id));
                 }
@@ -5076,6 +5092,24 @@ mod tests {
     // own doc comment for why nothing deeper is defensible), so their cases
     // live here too, to keep that absence visibly tested rather than
     // silently unexercised.
+
+    #[test]
+    fn float_rejects_non_finite_declared_bounds() {
+        for declared in ["NaN", "inf", "-inf", "1e999", "-1e999"] {
+            for minimum in [true, false] {
+                let mut view = view_of_kind("Float");
+                if minimum {
+                    view.min_inclusive = Some(declared.to_string());
+                } else {
+                    view.max_inclusive = Some(declared.to_string());
+                }
+                assert!(
+                    validate_kind_and_bounds(&view, "1.5").is_err(),
+                    "non-finite declared bound {declared}, minimum={minimum}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn float_accepts_a_plain_decimal_within_declared_bounds() {
@@ -5948,6 +5982,41 @@ mod tests {
     // cannot fail on a divergence introduced by editing `en.ts` alone —
     // that half has no Rust test to run against it — but a `git blame`
     // on this test block is now the pointer from here to there.
+    #[test]
+    fn unsupported_controller_has_a_distinct_warning_tag_and_english_fallback() {
+        use crate::routes::{ParameterDiagnosticDto, ParameterDiagnosticKindDto as Kind};
+        use knx_productdb::dynamic::Diagnostic;
+
+        let diagnostic = Diagnostic::UnsupportedControlKind {
+            choose_node: 7,
+            param_ref: Some("P-Control".to_string()),
+            kind: "Text".to_string(),
+        };
+        let (kind, message) = diagnostic_kind_and_message(&diagnostic);
+        assert_eq!(kind, Kind::UnsupportedControlKind);
+        let severity = diagnostic_severity(&diagnostic);
+        assert_eq!(
+            severity,
+            crate::routes::ParameterDiagnosticSeverityDto::Warning
+        );
+        let dto = ParameterDiagnosticDto {
+            scope: None,
+            kind,
+            severity,
+            message: message.to_string(),
+            detail: format!("{diagnostic:?}"),
+        };
+        let json = serde_json::to_value(dto).unwrap();
+        assert_eq!(json["kind"], "unsupportedControlKind");
+        assert_eq!(json["severity"], "warning");
+        assert_eq!(
+            json["message"],
+            "A choice's controlling parameter uses an unsupported type; its branches were not evaluated."
+        );
+        assert!(json["detail"].as_str().unwrap().contains("Text"));
+        assert!(!json["message"].as_str().unwrap().contains("P-Control"));
+    }
+
     #[test]
     fn diagnostic_kind_and_message_matches_the_english_catalogue() {
         use crate::routes::ParameterDiagnosticKindDto as Kind;

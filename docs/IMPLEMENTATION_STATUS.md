@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — U15 theme runtime foundation (candidate, not delivered)
+
+- Implemented bounded duplicate-aware JSON admission, exact v1/token contracts,
+  safe complete value grammars and existing unrounded base/accent contrast.
+  Settings/cache revalidation retains diagnostics without rewriting raw data.
+- Added reversible DOM property ownership and existing theme/OS/accent/cache
+  integration; implicit fallback no longer overwrites stored selection.
+- Observed RED/GREEN covers parser, limits, cache, real hook and DOM lifecycle.
+  Review fixes pass six files/206 tests and TypeScript; 37 unit controls plus
+  one intercepted Chromium control caught, every temporary source restored.
+  Deliberate new-file TS2322 detected. Earlier complete Web/9 Chromium passes
+  precede the last review fixes and are not final candidate acceptance.
+- Frontend alpha.3 changes version metadata only; no added/upgraded dependency,
+  KNX Core, protocol, manufacturer model or backend format change.
+- Candidate acceptance proc_56f26c5c70d5 passed all 15 steps: Web 1,559,
+  intercepted Chromium 61, Rust 146 result blocks / 2,890 passed / zero failed /
+  163 ignored; no missing-corpus markers. All 614 protected source/configuration
+  fingerprints unchanged; strict lint/type/build/bindings/deny and repository
+  gates pass. Integration with newer AR06 source and publication are PENDING.
+- U16 durable
+  transactions/file export, U17 production management/preview and U18 closing
+  review remain open. [THEME_PACKS](THEME_PACKS.md) defines the exact boundary;
+  no independent/native/Orca/full WCAG or release approval is inferred.
+
 ## 2026-10-02 — U14 theme-pack contract (implementation pending)
 
 - [THEME_PACKS](THEME_PACKS.md) and

@@ -1,3 +1,21 @@
+- **Last Agent:** codex (UI session / U15 candidate acceptance)
+- **Timestamp:** 2026-10-02 19:01 CEST
+- **Web lock:** taken by ui-theme-validation through integration/publication.
+- **Completed:** Exact proc_56f26c5c70d5 exited 0 and all 15 expected command/log receipts reconciled. Web 1,559; intercepted Chromium 61; Rust 146 result blocks / 2,890 passed / zero failed / 163 ignored / zero missing-corpus markers. Strict Clippy, type/build, binding semantics, deny, fmt, four nonempty intended-root gates and both whitespace checks pass. All 614 source/configuration fingerprints unchanged. 37 unit plus one browser controls, type canary and R1/R2 fixes retain their separate measured scope. No independent/native/Orca/release approval.
+- **Pending/Next Steps:** Commit only the 21 reviewed owned artifacts, integrate current upstream AR06 source and complete handover/status additions, then repeat complete combined gates plus relevant upstream private regressions before publication/readback. U15 is candidate-accepted but not delivered. U16 durable file/settings transactions, U17 management/preview and U18 closing review remain open. Earlier local orchestrator wrongly required nonempty silent fmt/type logs; corrected receipt assertion, no gate/code regression.
+- **Notes for Codex oder Claude:** Source stays offline; no real backend/proxy/discovery/tunnel/device write, subagent/quota probe, root synchronization, foreign cleanup or alpha tag. Keep complete inherited bytes. Source freeze excludes Markdown, so closing documentation needs its own anchor/whitespace check. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
+- **Last Agent:** codex (UI session / U15 reviewed runtime candidate)
+- **Timestamp:** 2026-10-02 18:45 CEST
+- **Web lock:** taken by ui-theme-validation through acceptance/integration/publication.
+- **Completed:** Implemented strict complete-v1 parser, byte/duplicate/depth/node limits, exact metadata/value/accent grammars, existing unrounded contrast and non-mutating stored-pack diagnostics; reversible DOM ownership and real theme/OS/accent/settings hook integration. Separate in-session review R1 decimal underflow and R2 non-data records fixed with observed RED/GREEN. Restored focused six files/206 tests and TypeScript pass. Expanded 37 unit guard controls plus one intercepted Chromium control caught; all temporary sources restored byte-exactly, new-file TS2322 canary caught. Frontend alpha.3 metadata-only delta and unchanged dependency records verified. Candidate runtime/limitations documentation updated.
+- **Pending/Next Steps:** Candidate gate proc_56f26c5c70d5 / PID 199074 dispatched under both common leases with 614 source/configuration fingerprints. Fmt, complete Web (1559 tests), TypeScript and production build passed; remaining gates and final freeze reconciliation PENDING. Then commit only the staged reviewed scope, integrate current origin/main preserving its complete AR06/handover/status additions, repeat complete gates including relevant upstream private regression scope, publish/read back and release only own Web lock. U15 not delivered yet; U16 acknowledged persistence/file export, U17 manager/preview and U18 closing review remain open. No new go needed between accepted packages.
+- **Notes for Codex oder Claude:** Source/fixtures stay offline; no real backend/proxy/discovery/tunnel/device write, subagent/quota probe, root synchronization or alpha tag. Prior whole Web/9-browser receipt predates review fixes and is not final acceptance. Self-review is not independent/native/Orca/full-WCAG approval. Preserve full inherited archive and foreign root/worktrees. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U15 theme validation reservation)
 - **Timestamp:** 2026-10-02 16:54 CEST
 - **Web lock:** taken by ui-theme-validation for U15 parser, contrast and bounded runtime theme integration.

@@ -72,7 +72,8 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ### Theme-pack extension (user request, 2026-10-02)
 
-**U14 contract delivered; implementation pending U15–U18.** The user requested
+**U14 contract delivered; U15 candidate passes gates, integration pending.**
+**U16–U18 remain open.** The user requested
 theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette

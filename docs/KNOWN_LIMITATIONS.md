@@ -451,8 +451,10 @@ equal. Both compiled min/max guard mutants caught at unit/HTTP, canonical source
 restored. Frozen owned checkpoint18/18, workspace2926/0/164, Web1559 and
 Chromium mock61 pass; six selected private Dynamic tests6/0/0 without genuine
 skips and all103 original identities/hashes unchanged. No private raw logs.
-Later commissioning recovery code c9f77d7b requires integrated-source re-gates
-before publication/readback;
+Actual commissioning/Float mergebc5999c1 passes20/20, workspace2931/0/164,
+Web1559/Chromium61, private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0,
+all108 originals unchanged/615 frozen inputs/17 equal bindings. Publication
+readback remains pending; broader resource budgeting/provenance audit stays open;
 no Float encoding, complete type-semantics, native SQL/WAL or ETS claim.
 
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project

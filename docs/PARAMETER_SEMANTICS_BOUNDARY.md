@@ -1,8 +1,8 @@
 # AR07 supported parameter semantics — research boundary
 
-Status: bounded controller candidate, 2026-10-02; public regression/mutation
-gate accepted. Private corpus, whole-workspace/integration and UI adoption
-remain separate; no full manufacturer/ETS compatibility acceptance.
+Status: controller checkpoint published; bounded Float guard integrated and
+accepted20/20 on 2026-10-02, publication pending. Selected private/offline
+witnesses pass; broader AR07 and UI/native/ETS acceptance remain separate.
 
 ## Scope and authority
 
@@ -220,3 +220,26 @@ manufacturer schema semantics; retained lexemes/native storage stay unchanged.
   packages. Report remaining limitations; no Repeat/Allocator engine by guesswork.
 - Missing or unretrieved primary evidence remains explicitly pending, not a
   global project halt and not permission to execute unknown vendor logic.
+
+## Actual merged Float guard accepted — 2026-10-02 23:55 CEST
+
+Actual integration bc5999c1 (source4514076b + published commissioningc9f77d7b),
+proc_d4c3a0b0b43f exit0, independently reconciled20/20: workspace2931/0/164,
+Web1559, intercepted Chromium61, private Dynamic6/0/0 and offline injected
+SimTunnel HTTP13/0/0, zero unknown/genuine skips. All103 original product
+archive and108 total original fixture identities/hashes unchanged; no private
+raw logs. All615 source/config inputs frozen, fresh changed crates compiled,
+17 shadow bindings equal, strict Clippy/build/fmt/deny/nonempty root gates pass.
+Projection42 is a workspace subset, not additional passes. Both complete
+handover/status owners preserved. Publication/readback still pending.
+
+Broader AR07 remains open. Read-only source trace identifies a possible
+general-diagnostic fan-out and inert-node/binding traversal budgeting gap:
+activations_recorded(:1217) excludes ordinary diagnostics, diagnose(:1323)
+pushes without admission, walk(:1463/:1532) can revisit inert nodes per
+expansion, and bind_arguments(:1619) is a sibling work path. No behavioral
+RED, new safety policy or production fix has run; do not label this reproduced
+or accepted. Follow-up must cover the resource class, keep opaque sources and
+explicit truncation/uncertainty, and use bounded public TDD before changes.
+Nested ScopeKey/panel grouping and duplicate-module authority are source-traced;
+full ModuleScopeDto ancestor provenance and UI/localization remain separate.

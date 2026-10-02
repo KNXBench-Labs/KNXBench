@@ -113,3 +113,31 @@ are additional UI evidence, **not** replacements for the route's settings
 gate, write authorisation and same-session pre-write record. Other write
 routes and full-device recovery remain outside this decision. No real bus or
 device was contacted during UI validation.
+
+## Amendment (2026-10-02): backup also precedes Verify Mode
+
+The September 30 backup statement excluded connection setup: an authorised
+connect could already write PID_DEVICE_CONTROL before the PID 8 backup.
+The service-control procedure now uses a private, scope-checked connection
+variant that postpones Verify Mode. It reads and validates PID 8 and the
+single PID 14 octet, then the callback durably persists **both originals**.
+Only a successful callback permits Verify Mode and then the bit-2 write.
+Ordinary authorised connections retain their existing Verify Mode behavior;
+read-only connections never gain a write path. No generic bypass is exposed
+and no hardware scope is widened.
+
+ServiceControlBackup format 2 stores device_control_property_id = 14 and
+its original byte in device_control_octets. Format 1 records remain on disk
+unchanged; their absent setup byte cannot be reconstructed. Neither format
+is an automatic full-property restore command, a whole-device image, a durable
+activity trail, or evidence about manufacturer side effects. Verify Mode is
+cleared when the transport connection ends (RES section 4.2.14.7.4); a historical
+PID 14 byte is diagnostic evidence, not permission to replay its transient bit.
+A no-op creates neither backup nor setup write. Wrong-scope refusal sends
+no frame; an exact-width failure or backup error sends no property write.
+
+The CLI plan names the setup write; CLI and HTTP tests read the actual saved
+format-2 record with a distinct nonzero original PID 14 value. Regression and
+mutation evidence covers callback ordering, failure admission, no-op, width,
+scope, both projections, stored originals and simulator bit preservation.
+All evidence is offline; no new device operation was authorised or attempted.

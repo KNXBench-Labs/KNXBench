@@ -14,8 +14,8 @@ privileged hostile JavaScript proxies. Contrast checks cover the documented
 three role pairs and declared accents, not every component/WCAG criterion.
 Local intercepted Chromium/self-review evidence is not native WebKitGTK/Orca,
 independent approval, full-theme accessibility or release acceptance. U16–U18
-remain open; complete combined integration gates passed, but publication
-readback remains pending.
+remain open; complete combined integration gates and exact publication readback
+for the U15 runtime foundation passed as 9d1ae19d. This is not the full workflow.
 
 ## Backup directory synchronization is not a disk-loss or confinement proof
 

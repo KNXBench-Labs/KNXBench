@@ -72,7 +72,7 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ### Theme-pack extension (user request, 2026-10-02)
 
-**U14 contract delivered; U15 passes integrated gates, publication pending.**
+**U14 contract and U15 runtime foundation delivered.**
 **U16–U18 remain open.** The user requested
 theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
@@ -351,28 +351,38 @@ claim disguised as research. Record any deliberate change to ADR-0022.
 
 ### U15 — Validate packs and integrate the existing theme engine [web]
 
-**Open.** Depends on U14's resolved contract. Keep parsing/validation pure and
+**Delivered as 9d1ae19d; runtime foundation only, U16–U18 remain open.**
+Depends on U14's resolved contract. Keep parsing/validation pure and
 separate from DOM effects and persistence; do not add theme logic to KNX Core.
 
-- [ ] Write failing tests for the agreed valid and invalid pack fixtures;
+- [x] Write failing tests for the agreed valid and invalid pack fixtures;
   implement one typed parser/validator and explicit structured diagnostics.
   Cover malformed input, duplicate keys/IDs, missing/unknown tokens, unsupported
   versions, size limits, unsafe values, alias cycles and invalid accents.
-- [ ] Validate before any DOM application, including packs reloaded from
+- [x] Validate before any DOM application, including packs reloaded from
   settings or a stale browser cache. Extend the existing registry/resolver and
   token application path rather than building a second theme system. Keep
   built-ins and System unchanged; packs cannot override their IDs or selectors.
-- [ ] Reuse or narrowly extract the existing pure token/contrast evaluation;
+- [x] Reuse or narrowly extract the existing pure token/contrast evaluation;
   enforce it for every imported base palette and accent variation at runtime.
   Never round a failing contrast value into acceptance or skip an unsupported
   value. Mutation-test validation and safety guards.
-- [ ] Apply only validated token names/values via the ADR-approved bounded
+- [x] Apply only validated token names/values via the ADR-approved bounded
   mechanism, remove obsolete overrides on switching back, and prove that
   theme changes cannot alter motion/density or other preference-owned tokens.
 
 **Acceptance:** runtime and build-time invariants agree; all five built-ins,
 System light/dark changes, valid imported palettes and rejected packs have
 named tests. Invalid data produces neither injected rules nor asset requests.
+
+**Evidence:** `themePack.test.ts`, `themePackStore.test.ts`,
+`themePackDom.test.ts`, `themePackRuntime.test.tsx`, `themePackAgreement.test.ts`
+and intercepted `theme-pack.e2e.ts`. Thirty-eight restored guard controls and
+new-file TS2322 canary; combined proc_32a1aab25020 passes 22/22 steps, Web 1,559,
+Chromium 61, Rust 2,916 / zero failed / 164 ignored, twenty selected offline
+private cases and pinned 115-instance matrix. All 614 protected files unchanged;
+exact remote ref/tree/21 artifacts/zero outgoing commits verified. No independent,
+native/Orca/all-component WCAG, full import/export or release approval follows.
 
 ### U16 — Persist, import and export theme packs without losing settings [web]
 

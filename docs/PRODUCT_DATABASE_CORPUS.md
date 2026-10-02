@@ -73,6 +73,26 @@ are understood.
 
 ## Inventory
 
+### AR05 master-language evidence checkpoint (2026-10-02)
+
+The explicitly scoped 115-instance / 113-package matrix was compared with an
+actual v18 baseline and independently reconciled against retained XML bytes.
+V19 names `TranslationUnit/@RefId` and `@Version` as uninterpreted: +230 distinct
+unknown keys across isolated attempts, +226 across unique shared installs, and
++226 rows in each of the source and package unknown ledgers. No prior unknown
+finding was removed or altered. Other table values, identities, normalized
+data and source bytes are unchanged, apart from exactly matching fresh-report
+counter increments. The v18 upgrade separately preserves all original reports.
+
+After verified re-pinning and removal of temporary capture hooks, the matrix
+passes with unknown-key totals 22,718 isolated, 22,599 shared installed and
+22,718 successful shared attempts. Each attribute has 113 shared rows / 3,125
+occurrences versus 67 distinct master blobs / 1,870 unique-source occurrences.
+These are different deduplication units, not competing measurements.
+Final repair-path changes require renewed integrated acceptance before delivery;
+see [the focused contract](MANUFACTURER_REPORT_CONTRACT.md). This does not type
+Version metadata, implement vendor behavior or establish full ETS compatibility.
+
 | Corpus | Top-level files | Modern packages | Other legacy files | Schemes |
 | --- | ---: | ---: | ---: | --- |
 | Gira | 10 | 15 | 0 | 12: 1, 20: 13, 21: 1 |

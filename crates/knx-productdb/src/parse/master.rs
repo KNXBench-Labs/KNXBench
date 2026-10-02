@@ -17,6 +17,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
+use super::master_language::master_language_unknowns;
 use super::report_unknown_attrs;
 use super::translation::{ingest_translations, TranslationScope};
 use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
@@ -212,6 +213,7 @@ pub(crate) fn ingest_master_data_detailed(
     bytes: &[u8],
 ) -> Result<DetailedMasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
+    let language_unknowns = master_language_unknowns(bytes)?;
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
@@ -437,10 +439,12 @@ pub(crate) fn ingest_master_data_detailed(
     // so `TranslationScope::Master` uses the empty-string sentinel instead.
     let translations = ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
     let uninterpreted_subtrees = uninterpreted_master_subtrees(bytes)?;
+    let mut unknown = unknown.into_vec();
+    unknown.extend(language_unknowns);
     Ok(DetailedMasterIngest {
         uninterpreted_subtrees,
         outcome: MasterIngest {
-            unknown: unknown.into_vec(),
+            unknown,
             translations,
             dropped_datapoint_types,
         },

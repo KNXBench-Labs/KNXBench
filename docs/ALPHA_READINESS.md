@@ -118,6 +118,23 @@ No parked ADR phase, U12 control, schema or commissioning gate is changed.
 
 ## Stable limitation identity
 
+AR05 technical acceptance is complete on the corrected candidate at base
+`f4b845a3`; publication/readback remains pending. Final process proc_f9f87cee4329
+exited 0 with all 20 expected gates, workspace 2,884 / ProductDB 585 / Web 1,312
+passed and no failed test. Ordinary ignored counts are 163/24, not private
+acceptance: matrix, real v18 upgrade and census separately execute one case each
+with no ignored/failure/skip markers. Complete aggregate shapes and 595 frozen
+sources match. Named regression/mutation evidence and in-session review are in
+[MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md) and
+`.ai/logs/2026-10-02_codex_alpha-manufacturer-report.md`.
+
+AR05's duplicate/provenance scope is an audit with verified reporting boundaries,
+not implementation of missing DPT source-winner provenance. KL-86 remains a
+numbered residual; unsupported Dynamic semantics and historical unavailable
+reports remain disclosed. This is neither user boundary acceptance nor full
+manufacturer compatibility. Stable identities and limitation totals below are
+unchanged; inventory dispositions are finalized only after revision/readback.
+
 There are **110 numbered headings**, **109 distinct numbers**, two meanings of
 130, and no 94. Seven are resolved/clarification-only: 18, 23, 24, 42 (AR04),
 90, 95, 130-GATE (AR01). Therefore **103 numbered residual boundaries** remain:

@@ -93,6 +93,125 @@ fn install_report_is_sorted_and_retry_returns_the_persisted_facts() {
 }
 
 #[test]
+fn same_file_dpt_collisions_keep_the_first_normalized_values_and_all_source_bytes() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("products.sqlite");
+    let conn = open_and_migrate(&path).unwrap();
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><DatapointTypes>
+      <DatapointType Id="DPT-1" Number="1" Name="first main"><DatapointSubtypes><DatapointSubtype Id="DPST-1-1" Number="1" Name="first subtype"/></DatapointSubtypes></DatapointType>
+      <DatapointType Id="DPT-1" Number="2" Name="losing main"><DatapointSubtypes><DatapointSubtype Id="DPST-1-1" Number="7" Name="losing subtype"/></DatapointSubtypes></DatapointType>
+    </DatapointTypes></MasterData></KNX>"#;
+    let bytes = archive(&[
+        ("knx_master.xml", master),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    let first = install_package(&conn, "dpt-duplicates.knxprod", &bytes).unwrap();
+    let facts = first.facts.clone().unwrap();
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Read
+        ),
+        4
+    );
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Stored
+        ),
+        2
+    );
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Dropped
+        ),
+        2
+    );
+    assert_eq!(first.dropped_datapoint_types, 2);
+    let actual: Vec<(String, i64, Option<i64>, String)> = conn
+        .prepare("SELECT id,main,sub,name FROM datapoint_type ORDER BY id")
+        .unwrap()
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        actual,
+        vec![
+            ("DPST-1-1".into(), 1, Some(1), "first subtype".into()),
+            ("DPT-1".into(), 1, None, "first main".into())
+        ]
+    );
+    assert_eq!(
+        knx_productdb::load_source_file(&conn, &sha256_hex(master))
+            .unwrap()
+            .unwrap(),
+        master
+    );
+    drop(conn);
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(
+        install_package(&conn, "retry.knxprod", &bytes)
+            .unwrap()
+            .facts,
+        Some(facts)
+    );
+}
+
+#[test]
+fn an_orphan_dpt_is_a_dropped_semantic_declaration_not_a_collision() {
+    let directory = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&directory.path().join("products.sqlite")).unwrap();
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><DatapointTypes><DatapointSubtype Id="DPST-ORPHAN" Number="1"/></DatapointTypes></MasterData></KNX>"#;
+    let bytes = archive(&[
+        ("knx_master.xml", master),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    let report = install_package(&conn, "orphan.knxprod", &bytes).unwrap();
+    let facts = report.facts.unwrap();
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Read
+        ),
+        1
+    );
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Stored
+        ),
+        0
+    );
+    assert_eq!(
+        fact_count(
+            &facts,
+            InstallCategory::DatapointType,
+            InstallDisposition::Dropped
+        ),
+        1
+    );
+    assert_eq!(
+        report.dropped_datapoint_types, 0,
+        "the legacy counter counts collisions, not every semantic drop"
+    );
+    assert_eq!(
+        knx_productdb::load_source_file(&conn, &sha256_hex(master))
+            .unwrap()
+            .unwrap(),
+        master
+    );
+}
+
+#[test]
 fn baggage_xml_and_baggage_members_are_not_misclassified() {
     let dir = tempfile::tempdir().unwrap();
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();

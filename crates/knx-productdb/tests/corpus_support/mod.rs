@@ -1,5 +1,8 @@
 //! Bounded, deterministic discovery of explicitly configured private product corpora.
 
+#[allow(dead_code)] // Only report-producing test targets need publication helpers.
+pub(crate) mod output;
+
 use std::ffi::OsString;
 use std::fs;
 use std::io::{Cursor, Read};

@@ -8,6 +8,7 @@ pub mod catalog;
 pub mod comobject;
 pub mod hardware;
 pub mod master;
+pub(crate) mod master_language;
 pub mod program;
 pub(crate) mod scheme_evidence;
 pub mod translation;

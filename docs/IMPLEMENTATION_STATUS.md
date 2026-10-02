@@ -1,5 +1,61 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 — AR05 corrected-candidate acceptance (offline; 06:43 CEST)
+
+- Shared master Languages evidence, byte-only v18 -> v19 migration and explicit
+  rebuilding are fully gated without normalized-master replay or changes to
+  historical installation snapshots. DPT collision/provenance audit and bounded
+  Dynamic reporting retain their documented semantic limitations.
+- Separate in-session review findings are closed, including repaired issue
+  markers, protected census output, exact wrapper comparison and declared ZIP
+  entry limits before construction. Compiled guard mutants fail behaviorally;
+  sources are restored byte-exactly. No independent external approval is claimed.
+- Final proc_f9f87cee4329 exited 0: all 20 expected steps, workspace 2,884 passed /
+  zero failed / 163 ignored / 146 result blocks, ProductDB 585 / zero failed /
+  24 ignored, Web 1,312. Strict Clippy, build/bindings/dependencies and intended-root
+  repository gates pass. Each private matrix/real upgrade/census case executed
+  with zero failure/ignored/skip markers; aggregate shapes and 595 guarded sources
+  match. The intervening failed delivery remains a failed historical attempt.
+- Technical acceptance complete; publication/readback and owned cleanup pending.
+  AR05 is not yet delivered; AR06 not started. KL-86's source-winner provenance
+  remains open, not a release waiver. No alpha-release, ETS parity or bus claim.
+  Contract: [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
+
+## 2026-10-02 — AR05 master evidence and report-boundary checkpoint (offline)
+
+- Shared pure master Languages evidence reports unconsumed attributes rather
+  than declaring metadata interpreted. Current ingest, explicit rebuild and
+  product-database v18 -> v19 call the same logic; no normalized master replay,
+  retained-byte mutation or rewriting of historical installation snapshots.
+- Missing/malformed/identity-invalid sources remain named, oversized unclassified
+  sources explicitly unexamined. SQL failures are atomic, including deferred
+  commit failure at final savepoint release; caller-owned transactions survive
+  failed nested rebuilds. New deferred-commit test reproduced two retained rows
+  before the correction, then passed with zero and released ownership.
+- DPT package regressions distinguish first normalized values, retained losing
+  declarations, collision counts and orphan semantic drops. Winner provenance
+  remains limited (KL-86 not closed). Dynamic diagnostics use the existing mixed
+  active/skipped budget and one truncation marker, not exhaustive enumeration.
+- Post-mutation ProductDB gate: 25 result blocks / 578 passed / zero failed /
+  23 ignored / zero skip markers. Warning-denied all-target ProductDB Clippy
+  passed, changed crate compiled/checked. Two compiled behavioral mutants caught;
+  production source hashes restored exactly. The ignored private tests are not
+  counted as acceptance.
+- Exact-scope shape census: 115 instances / 113 packages / 67 master blobs,
+  canonical TranslationUnit RefId/Version each 1,870 occurrences on distinct
+  masters. Scoped matrix, real retained-byte upgrade and renewed census passed
+  after independent full-value/evidence reconciliation; all new rows are exactly
+  TranslationUnit RefId/Version. Permanent corpus assertions and reviewed pins
+  distinguish instance/package/source units; pre-assertion capture hooks removed.
+- Final review reproduced stale issue markers after byte repair. Two new
+  behavioral regressions now pass, including identity-invalid opaque data and a
+  false-master intermediate. All nine rebuild tests and strict all-target
+  ProductDB Clippy pass; cleanup-disabled mutant caught. Full integrated gates
+  with renewed corpus acceptance, final sign-off and publication remain pending.
+  AR05 IN_PROGRESS,
+  AR06 not started; no release/ETS parity, UI or live-bus claim. Contract:
+  [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md).
+
 ## 2026-10-02 — AR04 storage fallback publication (offline; UTC)
 
 - Exported `sync_after_command` delegates to the existing transactional full

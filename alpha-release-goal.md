@@ -243,7 +243,7 @@ accept a release waiver or claim full manufacturer compatibility. Contract:
 **Sources:** `KL-1`, `KL-11`, `KL-125`, `KL-128`, `KL-15`, `IMPORT-06`, `PDB-08`, `PDB-10`.
 **Dependencies:** AR05 where reports/migrations intersect.
 
-**Status:** `VERIFIED_PENDING_PUBLICATION`; scoped conservative contract, not full ETS/sample acceptance.
+**Status:** `DONE_SCOPED`; verified delivery 95e6bcb0, independent samples `BLOCKED_EXTERNAL`, not full ETS/sample acceptance.
 Scoped root/metadata namespace and XML-value hardening plus explicit optional
 master diagnostics/admission implemented; final three-crate gates pass (162
 passed / zero failed / 75 ignored). Synthetic evidence includes six seeded-DB
@@ -320,10 +320,17 @@ pass. Documentation-only e98a0b58 integration and publication remain pending;
 prior pending combined-gate wording is historical. Contract/sample matrix keeps
 independent missing samples BLOCKED_EXTERNAL; no full compatibility claim.
 
-- [ ] Verify current schema/namespace detection, mapping and atomic refusal. Separate `.knxproj` evidence from `.knxprod` evidence and independent installations from reexports of the same installation.
-- [ ] Preserve unreadable attributes and untyped master/version lexemes where technically possible, or report their exact boundary. Do not present raw Secure capacities/MinEtsVersion/ReplacesVersions as tested abilities.
-- [ ] Improve misleading VD3–VD5/PR3–PR5 rejection text without implementing their deferred importer or enabling VD2. Maintain explicit unsupported diagnostics and native-data integrity.
-- [ ] Verify DefaultLine diagnostics and device-local communication-object mapping with synthetic regression cases and existing authorized corpus. New genuine project-schema/model evidence remains externally blocked until available.
+2026-10-02 16:59 CEST scoped delivery: source f8b6f27e published through 95e6bcb0;
+local/fetched/live main matched, divergence 0/0. Two later UI theme documentation
+commits preserved without code changes; doc gates/whitespace pass. Four scoped
+verification items below are complete under the contract and explicit sample
+matrix, not a full legacy importer/ETS approval or waiver of external samples.
+Both review findings closed; task-owned cleanup then AR07 offline research next.
+
+- [x] Verify current schema/namespace detection, mapping and atomic refusal. Separate `.knxproj` evidence from `.knxprod` evidence and independent installations from reexports of the same installation.
+- [x] Preserve unreadable attributes and untyped master/version lexemes where technically possible, or report their exact boundary. Do not present raw Secure capacities/MinEtsVersion/ReplacesVersions as tested abilities.
+- [x] Improve misleading VD3–VD5/PR3–PR5 rejection text without implementing their deferred importer or enabling VD2. Maintain explicit unsupported diagnostics and native-data integrity.
+- [x] Verify DefaultLine diagnostics and device-local communication-object mapping with synthetic regression cases and existing authorized corpus. New genuine project-schema/model evidence remains externally blocked until available.
 
 **Exit evidence:** bounded compatibility/import report, malformed-input and atomicity tests, native save/load evidence and an explicit sample matrix. Missing independent samples remain `BLOCKED_EXTERNAL`, not “compatible”.
 

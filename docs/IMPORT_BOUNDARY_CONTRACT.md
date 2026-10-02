@@ -1,7 +1,7 @@
 # AR06 import boundary contract
 
-Status: research and behavioral verification in progress; no new compatibility
-acceptance. This document distinguishes a project XML namespace from a trailing
+Status: AR06 scoped conservative boundary implemented, verified and published;
+independent missing samples remain BLOCKED_EXTERNAL. No new full compatibility acceptance. This document distinguishes a project XML namespace from a trailing
 number, and project evidence from standalone product-package evidence.
 
 ## 2026-10-02 16:56 CEST — AR06 integrated receipt (publication pending)
@@ -27,6 +27,27 @@ number, and project evidence from standalone product-package evidence.
 - Scoped implementation/verification is complete; actual publication is pending.
   Three genuine exports still represent two installations; independent module/
   unimplemented-schema samples remain BLOCKED_EXTERNAL, not waived or compatible.
+
+## 2026-10-02 16:59 CEST — AR06 scoped delivery verified
+
+- Source f8b6f27e and integrated gates on 1404f39b published in 95e6bcb0;
+  fetch plus live refs/heads/main readback matched local HEAD, divergence 0/0.
+  Subsequent UI theme integration e98a0b58 and receipt changes are Markdown only
+  versus the gated source. Final doc gates: 376 links / 237 Markdown files,
+  389 well-formed headers, 157 at ceiling, 17 generated skipped; whitespace clean.
+- Actual combined acceptance: 24/24 steps, 2,916 Rust passes / zero failures /
+  164 ignored / 146 blocks; 1,357 Web unit and 52 intercepted Chromium passes;
+  eighteen selected private offline cases and six raw cases without skips;
+  595 source/config inputs frozen. Both complete upstream archives retained.
+- AR06 scoped conservative implementation and four verification items are DONE.
+  Genuine independent module/schema samples remain BLOCKED_EXTERNAL: three
+  existing exports are two installations, not a complete compatibility matrix.
+  Unknown legacy formats are refused, not implemented; raw labels are not
+  tested Secure/ETS abilities; empty ProductDB native reopen is not enrichment.
+- No full ETS/XSD/descendant-QName or durable-report claim, independent external
+  approval, live KNX access or shared-root synchronization. AR05 stays unchanged.
+  Task-owned scratch/worktree cleanup follows; aggregate evidence is durable
+  here and in the import boundary contract. AR07 offline research is next.
 
 ## Primary evidence read before changes
 

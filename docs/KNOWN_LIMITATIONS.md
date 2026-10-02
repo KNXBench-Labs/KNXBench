@@ -6114,6 +6114,12 @@ possible result. The UI says so in its own words rather than presenting an
 empty list as a verdict about the installation.
 ## 125. ETS 6's device-local communication-object ids are read from a single project's evidence
 
+**AR06 scoped delivery, 2026-10-02 16:59 CEST.** Published 95e6bcb0 after integrated
+24-step receipt and documentation-only upstream reconciliation; 2,916 Rust,
+1,357 Web and 52 intercepted-browser passes, eighteen selected private/six raw
+cases without skips. This supersedes historical pending-delivery wording below,
+not the independent-sample lifting condition or any compatibility boundary.
+
 **AR06 scoped checkpoint, 2026-10-02 14:34 CEST.** New synthetic regressions
 distinguish repeated RefIds by owning device, preserve instance overrides/group
 links and report malformed refs without losing later objects. Existing real

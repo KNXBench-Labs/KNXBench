@@ -4063,8 +4063,8 @@ verification boundary or claiming a new protocol fix.
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
-**Status (2026-10-02 follow-up candidate).** The browser-only proof described
-below is superseded by an implemented, not yet delivered authoritative polling
+**Status (2026-10-02 scoped delivery).** The browser-only proof described
+below is superseded by the delivered authoritative polling
 contract. The server compares the active session's real `GroupAddressContext`
 with the current project's interpretation (style, names and resolved DPTs).
 `contextStatus`, nullable `projectOpen` and `serverIncarnation` are returned by
@@ -4089,7 +4089,7 @@ in the new monitor UI. No hardware permission or source-wide alpha waiver.
 
 **Historical explanation (before this follow-up).** The following describes
 the former local-storage-only mechanism and its known cases, not the new
-candidate's source of freshness evidence.
+implementation's source of freshness evidence.
 
 **Limitation.** The second-window diagnostics companion (T-UI-06) locks
 itself when the project changes under a running bus session. That lock is

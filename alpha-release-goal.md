@@ -243,7 +243,7 @@ accept a release waiver or claim full manufacturer compatibility. Contract:
 **Sources:** `KL-1`, `KL-11`, `KL-125`, `KL-128`, `KL-15`, `IMPORT-06`, `PDB-08`, `PDB-10`.
 **Dependencies:** AR05 where reports/migrations intersect.
 
-**Status:** `IN_PROGRESS`; fresh `alpha-import-boundaries` at `65b91777`.
+**Status:** `VERIFIED_PENDING_PUBLICATION`; scoped conservative contract, not full ETS/sample acceptance.
 Scoped root/metadata namespace and XML-value hardening plus explicit optional
 master diagnostics/admission implemented; final three-crate gates pass (162
 passed / zero failed / 75 ignored). Synthetic evidence includes six seeded-DB
@@ -310,6 +310,15 @@ private and six existing raw tests without skips, fifteen protected sources
 unchanged. Fresh origin/main b6a43f3b includes later UI/monitor source changes;
 preserving/integrating those and regating the combined tree precedes publication.
 This is current candidate acceptance, not a completed delivery or sample waiver.
+
+2026-10-02 16:56 CEST integrated acceptance: proc_8211942fb620 exited 0; all 24
+steps/logs independently reconciled on 1404f39b. 595 source/config inputs frozen;
+workspace 2,916 passed/zero failed/164 ignored/146 blocks, Web 1,357 unit and
+52 intercepted Chromium fixture tests, eighteen selected private and six raw
+cases without skips. Bindings/dependency policy/Clippy/build/nonempty root gates
+pass. Documentation-only e98a0b58 integration and publication remain pending;
+prior pending combined-gate wording is historical. Contract/sample matrix keeps
+independent missing samples BLOCKED_EXTERNAL; no full compatibility claim.
 
 - [ ] Verify current schema/namespace detection, mapping and atomic refusal. Separate `.knxproj` evidence from `.knxprod` evidence and independent installations from reexports of the same installation.
 - [ ] Preserve unreadable attributes and untyped master/version lexemes where technically possible, or report their exact boundary. Do not present raw Secure capacities/MinEtsVersion/ReplacesVersions as tested abilities.

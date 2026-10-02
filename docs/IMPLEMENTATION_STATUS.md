@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-02 16:56 CEST — AR06 integrated receipt (publication pending)
+
+- proc_8211942fb620 exited 0; all 24 expected steps/raw logs independently
+  reconciled on merge 1404f39be3fc629788da158c4e43f459da5f2594, tree
+  5ce951c8e5ae918b1b4e5bc23eb2ddf3000a8b09; 595 tracked source/config inputs frozen.
+- Workspace: 2,916 passed, zero failed, 164 ignored, 146 result blocks. Web:
+  1,357 unit and 52 intercepted Chromium fixture tests passed. Eighteen selected
+  private offline cases and six existing raw catalogue/producer cases ran without
+  skips. Strict workspace Clippy/build, format, dependency policy, shadow binding
+  semantic comparison and all four nonempty intended-root repository gates pass.
+- Headers: 389 well-formed, 157 at the existing ceiling, 17 generated skipped;
+  anchors: 376 links / 235 Markdown files; layering: 448 resolved packages.
+- In-session whole-diff review closed both Important findings with RED/GREEN and
+  compiled behavioral mutants: destination opening before master admission and
+  an unsaved domain seed in refusal evidence. Not independent external approval.
+- New upstream e98a0b58 contains two documentation-only UI theme commits. Preserve
+  their complete handover/status archives, then rerun doc gates before publication.
+  This receipt supersedes preceding pending combined-gate wording, not the scopes
+  of historical receipts. No shared-root edits, original/corpus pin changes,
+  full ETS/XSD/descendant validation, durable-report or live KNX approval.
+- Scoped implementation/verification is complete; actual publication is pending.
+  Three genuine exports still represent two installations; independent module/
+  unimplemented-schema samples remain BLOCKED_EXTERNAL, not waived or compatible.
+
 ## 2026-10-02 — AR06 whole-diff review checkpoint (offline; 15:52 CEST)
 
 - Corrected-CLI proc_129928b4f8dc exited 0; all eighteen steps/logs reconciled:

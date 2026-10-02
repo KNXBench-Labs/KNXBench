@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / KL-82 discovery)
+- **Timestamp:** 2026-10-02 11:24 CEST
+- **Web lock:** taken by ui-alpha-context for the authoritative project/session-context follow-up.
+- **Completed:** Prior source 6c16fe5a and corrective closing receipt 474c55e4 are published with exact refs/artifacts and full inherited suffix verified. Four implementation slices DONE; complete integrated gates and 33 mocked browser cases retain their documented scope. Removed the completed checkout/branch and task scratch. Initial cleanup met two recreated Vite cache files: verified the owned node-MainThread process cwd, stopped it, removed only residual files, then created this fresh origin checkout. Root/foreign work, corpus originals and shared locks untouched. Traced actual GroupAddressContext maps and monitor DTO/caller; old unverified UI permits sending, so uncertainty must be addressed explicitly, not hidden in a polling patch.
+- **Pending/Next Steps:** Document bounded read-only authoritative comparison, write behavioral backend/UI REDs, implement smallest exact context-status projection with paused monitoring and cleanup/race cases; separate review, mutations, full gates and publication. Keyboard/modal/help-tip work follows separately. Domain/sample/native prerequisites remain open.
+- **Notes for Codex oder Claude:** Own new UI surface lock only. No real backend, gateway, tunnel, device writes, release tag, reserved ADR activation, quota probes or subagents. Server status is a point-in-time interpretation check, not hardware authorization or transactional write safety. Preserve the entire inherited suffix byte-exactly during any rebase; line-bound conflict markers under DOTALL.
+
+---
+
 - **Last Agent:** codex (UI session / exact handover preservation correction)
 - **Timestamp:** 2026-10-02 11:11 CEST
 - **Web lock:** released by ui-alpha-readiness; next package must reserve independently.

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / KL-82 receipt verification)
+- **Timestamp:** 2026-10-02 13:06 CEST
+- **Web lock:** released by ui-alpha-context; no new UI source edits in this receipt correction.
+- **Completed:** Source 8ceacf49 and closing receipt 44c8b27c65d55207086db0e26618e2c3355e5cac both published and fetched back with exact ref/tree equality and zero outgoing commits; correct author/committer. Context integrated twelve-step gates and eleven mutations remain the measured evidence below. All 180 inventory identities and foreign dispositions preserved; complete published handover retained byte-exact. Corrected the stale not-yet-delivered wording in §82 and clarified that only the original U0–U13 queue is complete, not the newly authorized alpha follow-up.
+- **Pending/Next Steps:** Doc-only gate/publication readback for this wording correction, then actual owned checkout/branch/scratch cleanup. Immediately reserve a fresh current-origin package for keyboard/list auto-scroll, background-modal exclusion and viewport-safe HelpTip. Native/Orca/network/sample/domain prerequisites remain open and separate.
+- **Notes for Codex oder Claude:** No root synchronization/statistics overwrite, real backend/gateway/bus action, release tag, ADR activation, quota check or subagent. This correction does not modify or re-certify runtime source. Preserve the full inherited archive; root foreign changes belong to their owner.
+
+---
+
 - **Last Agent:** codex (UI session / KL-82 scoped delivery)
 - **Timestamp:** 2026-10-02 12:58 CEST
 - **Web lock:** released by ui-alpha-context after verified source publication; next package must reserve independently.

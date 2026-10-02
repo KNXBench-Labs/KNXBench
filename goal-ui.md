@@ -62,7 +62,8 @@ retained design boundaries into silently accepted alpha exceptions.
 
 ## 0. Scope: what this goal owns
 
-No UI implementation work remains in this goal. ISSUE-12 reconciles the
+No UI implementation work remains in the original U0–U13 queue. The separately
+authorized alpha follow-up is tracked above. ISSUE-12 reconciles the
 documented host-firewall correction and actual unicast-loopback discovery
 tests; no wire capture or multicast-loopback proof is claimed. Native
 WebKitGTK and real screen-reader checks remain verification gaps, not

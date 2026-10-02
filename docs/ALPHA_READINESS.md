@@ -192,6 +192,31 @@ remain `WAITING_DECISION`. No wait blocks unrelated ready offline packages.
 
 ## Complete per-ID execution ledger
 
+### UI-owner follow-up evidence (2026-10-02)
+
+The separately authorized UI session audited all 24 UI-routed rows and gated
+four concrete implementation gaps: UX-02, UX-03, KL-121 and KL-124. Its complete
+per-ID matrix and exact native/offline qualifications are in
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). Implementation publication
+`6c16fe5aaf764d78f62382f867f59b6ae77f8dce` and exact remote/tree equality
+are verified. Four owner rows are DONE at that implementation scope only.
+Existing U13
+closures, all inventory IDs/priorities/routes and other sessions' dispositions
+remain unchanged. Native/Orca/multicast evidence, KL-82 and domain/API-dependent
+work remain explicit; no alpha-release exception is inferred.
+
+The subsequent KL-82 owner candidate adds actual server session/project
+interpretation comparison and fail-closed unavailable/legacy handling, with
+pause/cursor/race regressions. Focused suites, eleven behavioral negative
+controls and mocked monitor Chromium tests pass. All twelve candidate gates
+pass (Web 1,343 / Chromium 35 / Rust 2,890, zero failed, 163 ignored; 570-source
+freeze). All twelve steps repeated on integrated source `8ceacf49`, now
+published with exact remote/tree/artifact readback; see the same owner matrix.
+The scoped KL-82 implementation row is DONE, not a source-wide/native/alpha
+waiver. Earlier source
+counts are not evidence for this new candidate, and no native/live-bus or
+transactional write guarantee is inferred.
+
 Each row retains its one primary route and original priority. The evidence
 column points to the **current retained source**, not a claim that its entire
 implementation was freshly tested. Open alpha code contracts are verified in
@@ -269,7 +294,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §137; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §36; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-82` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §82; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `KL-82` | P2 | `goal-ui.md` — owner only | DONE | Scoped authoritative interpretation comparison and unavailable/legacy fail-closed UI delivered at 8ceacf49; pause/cursor/race and eleven behavioral controls, all twelve integrated gates and exact remote/tree/artifact readback verified. Point-in-time/native/live/transactional limitations remain in §82 and docs/UI_ALPHA_READINESS.md; not an alpha waiver. |
 | `DOC-03` | P2 | AR15 | TODO | docs/manual/known-issues.md / docs/manual/ideas-and-roadmap.md; Retained boundary; AR15 verifies subcases before changing status |
 | `RELEASE-03` | P2 | AR16 | WAITING_OWNER | goal.md §5 / docs/manual/README.md / ADR-0024; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `RELEASE-04` | P2 | AR19 | WAITING_DECISION | goal.md §5 / docs/ROADMAP.md Session 7; Reserved user decision; see decision contract above |
@@ -319,8 +344,8 @@ above and are not new tasks assigned to an already closed owner queue.
 | `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Device-checks UI boundary; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `UI-04` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §130 (Zoom); U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-20` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §20; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-124` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §124; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `KL-20` | P2 | `goal-ui.md` — owner only | DONE | UI owner keyboard/modal/help-tip implementation delivered at 2e57f8e5; twelve integrated gates/eighteen controls verified; docs/UI_ALPHA_READINESS.md retains actual native/Orca/full-theme residue, not entire-source acceptance or a release waiver |
+| `KL-124` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
 | `KL-76` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §76; Retained boundary; AR14 verifies subcases before changing status |
 | `KL-102` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §102; Retained boundary; AR14 verifies subcases before changing status |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §110; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
@@ -373,12 +398,12 @@ above and are not new tasks assigned to an already closed owner queue.
 | `TOOLS-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md / .ai/CURRENT_STATE.md (local); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `TOOLS-05` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `FUTURE-08` | P3 | Later / separate scope — not an alpha task | LATER | docs/manual/ideas-and-roadmap.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `KL-121` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §121; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `KL-121` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
 | `KL-43` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §43; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-97` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §97; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-98` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §98; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `UX-01` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/GAP_ANALYSIS_ETS.md B10 / docs/IMPLEMENTATION_STATUS.md T11; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `UX-02` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | apps/knx-web/src/CatalogBrowser.tsx / docs/manual/known-issues.md; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | apps/knx-web/src/NewProjectDialog.tsx / apps/knx-web/src/messages/en.ts; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
+| `UX-02` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
+| `UX-03` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
 
 **Mechanically counted execution statuses:** ACCEPTED_BOUNDARY=24, BLOCKED_EXTERNAL=3, DONE=6, LATER=20, TODO=54, WAITING_DECISION=6, WAITING_OWNER=67; total=180.

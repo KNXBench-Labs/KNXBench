@@ -141,6 +141,14 @@ function resolutionFromRow(row: BusTelegramRow): ComposeResolution {
 
 let nextComposeSeedKey = 1;
 
+function responseContextLock(response: api.BusMonitorTelegramsResponse): ContextLock {
+  if (!Number.isSafeInteger(response.sessionId) || response.sessionId < 1 ||
+      typeof response.serverIncarnation !== "string" || response.serverIncarnation.length === 0) return "unverified";
+  if (response.contextStatus === "current" && typeof response.projectOpen === "boolean") return "synced";
+  if (response.contextStatus === "stale") return "stale";
+  return "unverified";
+}
+
 /// Live view of `/api/bus/monitor/*` (design spec `docs/superpowers/specs/
 /// 2026-09-11-group-monitor-design.md` §4). Needs no open project — same
 /// reasoning as `LogPanel` (`KNOWN_LIMITATIONS.md` #36, part A):
@@ -152,10 +160,9 @@ let nextComposeSeedKey = 1;
 /// This is not a claim of ETS Group Monitor parity, nor of anything
 /// verified against real hardware — see the design spec's §5/§7.
 ///
-/// `projectOpen` is threaded from `App.tsx` (same `tree !== null` fact
-/// `LogPanel` already receives as `tree`) purely so the compose form can
-/// state up front that no project means no automatic DPT resolution,
-/// rather than the user discovering that from a failed send.
+/// `projectOpen` from `App.tsx` is only a hint until the server reports its
+/// actual project presence. Unknown server context still disables compose;
+/// this prop never establishes freshness or allows sending on its own.
 export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
@@ -196,12 +203,20 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const [status, setStatus] = useState<"active" | "closed" | null>(null);
   const [droppedBefore, setDroppedBefore] = useState(0);
 
-  // Whether the project state behind the attached session still matches the
-  // project as it is now — see `busContext.ts` for why this cannot be
-  // answered by asking the server. Re-read on every poll tick, on every
-  // cross-window signal and whenever this window regains focus, so a stale
-  // verdict never waits for a remount.
+  // Only an authoritative response can verify the actual interpretation.
+  // Local records are immediate negative hints, never freshness evidence.
   const [contextLock, setContextLock] = useState<ContextLock>("synced");
+  const [serverProjectOpen, setServerProjectOpen] = useState<boolean | null>(null);
+  const contextGenerationRef = useRef(0);
+
+  function applyResponseContext(response: api.BusMonitorTelegramsResponse, generation: number) {
+    if (generation !== contextGenerationRef.current) {
+      setContextLock(previous => previous === "stale" ? "stale" : "unverified");
+      return;
+    }
+    setContextLock(responseContextLock(response));
+    setServerProjectOpen(typeof response.projectOpen === "boolean" ? response.projectOpen : null);
+  }
   // The id of a session that replaced the one this panel was attached to
   // (someone disconnected and reconnected, in this window or another).
   // Connection state moving under the panel is one of the four things the
@@ -276,9 +291,6 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
 
   // Mirrors `session` for the listeners registered once on mount below,
   // which fire long after the render that created their closure and must
-  // see the current value rather than the one captured at mount.
-  // Mirrors `session` for the listeners registered once on mount below,
-  // which fire long after the render that created their closure and must
   // see the current value rather than the one captured at mount. Updated
   // synchronously by `attachTo` rather than by an effect: `connect()`
   // publishes a session record in the same tick it adopts the session, and
@@ -296,6 +308,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   }, [settingsState.hydration]);
 
   function attachTo(next: AttachedSession | null) {
+    contextGenerationRef.current += 1;
     sessionRef.current = next;
     setSession(next);
     // Retain provenance for a capture exported after Disconnect or a 404.
@@ -306,9 +319,10 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   /// the mount effect and the signal effect below; `isCancelled` lets the
   /// mount effect discard a reply that lands after unmount.
   async function reattach(isCancelled: () => boolean): Promise<void> {
+    const generation = contextGenerationRef.current;
     try {
       const response = await api.pollBusTelegrams(0);
-      if (isCancelled()) return;
+      if (isCancelled() || generation !== contextGenerationRef.current || sessionRef.current !== null) return;
       sinceRef.current = response.nextSince;
       const adopted = appendCapturedRows([], response.telegrams);
       setCapture({ rows: adopted.rows, pruned: adopted.pruned });
@@ -316,7 +330,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       setStatus(response.status);
       setEndedElsewhere(false);
       setReplacedBy(null);
-      setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
+      applyResponseContext(response, generation);
       skipNextImmediatePollRef.current = true;
       gatewaySeedResolvedRef.current = true;
       attachTo({
@@ -325,7 +339,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         assignedAddress: null,
       });
     } catch (e) {
-      if (isCancelled()) return;
+      if (isCancelled() || generation !== contextGenerationRef.current || sessionRef.current !== null) return;
       if (api.errorStatus(e) === 404) return; // no session — Connect form, as before.
       // Anything else (network error, 500, …) is not silently
       // swallowed either, even though it leaves the same Connect-form
@@ -381,27 +395,29 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // clicks into the companion has already given it the one signal no
   // platform withholds.
   useEffect(() => {
+    let cancelled = false;
     function onSignal() {
+      contextGenerationRef.current += 1;
       const current = sessionRef.current;
       if (current === null) {
-        void reattach(() => false);
+        void reattach(() => cancelled);
         return;
       }
-      setContextLock(readContextLock(current.sessionId, current.serverIncarnation));
+      setContextLock(readContextLock(current.sessionId, current.serverIncarnation) === "stale" ? "stale" : "unverified");
     }
     const unsubscribe = subscribeContextChanges(onSignal);
     window.addEventListener("focus", onSignal);
     return () => {
+      cancelled = true;
       unsubscribe();
       window.removeEventListener("focus", onSignal);
     };
   }, []);
 
   useEffect(() => {
-    // Pausing is strictly a client-side polling decision. The server keeps
-    // its session and ring buffer; an in-flight reply is discarded by the
-    // effect cleanup without advancing sinceRef or the rendered rows.
-    if (!session || paused) return;
+    // Pause freezes rows/cursor, never freshness. A context-only query does
+    // not transfer the buffer and cannot silently consume paused telegrams.
+    if (!session) return;
     let cancelled = false;
     let inFlight = false;
 
@@ -410,8 +426,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     async function poll() {
       if (inFlight) return;
       inFlight = true;
+      const generation = contextGenerationRef.current;
       try {
-        const response = await api.pollBusTelegrams(sinceRef.current);
+        const response = paused
+          ? await api.pollBusTelegrams(sinceRef.current, true)
+          : await api.pollBusTelegrams(sinceRef.current);
         if (cancelled) return;
         // Connection state moved under this panel: `/telegrams` is
         // answering for a *different* session than the one these rows and
@@ -436,7 +455,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           setDroppedBefore(0);
           setPollError(null);
           setReplacedBy(response.sessionId);
-          setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
+          applyResponseContext(response, generation);
           setStatus(response.status);
           attachTo({
             sessionId: response.sessionId,
@@ -445,6 +464,10 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           });
           return;
         }
+        applyResponseContext(response, generation);
+        setStatus(response.status);
+        setPollError(null);
+        if (paused) return;
         sinceRef.current = response.nextSince;
         if (response.telegrams.length > 0) {
           setCapture((previous) => {
@@ -460,12 +483,6 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
             : null,
         );
         setDroppedBefore(response.droppedBefore);
-        setStatus(response.status);
-        setPollError(null);
-        // Cheap (one synchronous `localStorage` read) and unconditional, so
-        // the verdict never depends on a cross-window event this platform
-        // may or may not deliver.
-        setContextLock(readContextLock(response.sessionId, response.serverIncarnation));
       } catch (e) {
         if (cancelled) return;
         if (api.errorStatus(e) === 404) {
@@ -482,6 +499,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           return;
         }
         setPollError(api.errorMessage(e));
+        setContextLock("unverified");
       } finally {
         inFlight = false;
       }
@@ -532,7 +550,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       // and fire a reattach request against the session just started.
       sessionRef.current = attached;
       recordSessionContext(started.sessionId, started.serverIncarnation);
-      setContextLock(readContextLock(started.sessionId, started.serverIncarnation));
+      setContextLock("unverified");
+      setServerProjectOpen(null);
       attachTo(attached);
     } catch (e) {
       setConnectError(api.errorMessage(e));
@@ -803,6 +822,17 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                         <span className="bus-discovery-tag">{t("busDiscovery.tunnelling")}</span>
                       )}
                     </button>
+                    {iface.deviceInfo ? <details className="bus-discovery-info">
+                      <summary>{t("busDiscovery.deviceInfo")}</summary>
+                      <dl className="facts">
+                        <dt>{t("busDiscovery.mediumRaw")}</dt><dd className="mono">0x{iface.deviceInfo.medium.toString(16).padStart(2, "0")}</dd>
+                        <dt>{t("busDiscovery.statusRaw")}</dt><dd className="mono">0x{iface.deviceInfo.status.toString(16).padStart(2, "0")}</dd>
+                        <dt>{t("busDiscovery.projectInstallationId")}</dt><dd className="mono">{iface.deviceInfo.projectInstallationId}</dd>
+                        <dt>{t("busDiscovery.serialNumber")}</dt><dd className="mono">{iface.deviceInfo.serialNumber.map((octet) => octet.toString(16).padStart(2, "0")).join("")}</dd>
+                        <dt>{t("busDiscovery.routingMulticast")}</dt><dd className="mono">{iface.deviceInfo.routingMulticast}</dd>
+                        <dt>{t("busDiscovery.macAddress")}</dt><dd className="mono">{iface.deviceInfo.macAddress.map((octet) => octet.toString(16).padStart(2, "0")).join(":")}</dd>
+                      </dl>
+                    </details> : <p className="bus-discovery-info-unavailable">{t("busDiscovery.infoUnavailable")}</p>}
                   </li>
                 ))}
               </ul>
@@ -876,7 +906,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           key={composeSeed.key}
           destination={composeSeed.destination}
           resolution={composeSeed.resolution}
-          projectOpen={projectOpen}
+          projectOpen={serverProjectOpen ?? projectOpen}
           // Task 5 review, fix 2: `status` already covers both ways a
           // session can be closed while this panel shows it — the gateway
           // dropping it mid-poll, and the mount-time reattach effect above
@@ -889,6 +919,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           // server would pick is the old project's answer — so the send
           // path locks on exactly the same condition the table does.
           contextStale={contextLock === "stale"}
+          contextUnverified={contextLock === "unverified"}
         />
       )}
       {(session || rows.length > 0) && (

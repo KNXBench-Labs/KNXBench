@@ -211,7 +211,8 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// headerless files with it, and a ratchet that does not follow a deletion
 /// down is the same slack by another route.
 /// AR01 added the missing layering-module header; its measured ceiling is 160.
-pub const ABSENT_CEILING: usize = 160;
+/// The keyboard package adds edited modal headers and follows the measured 157.
+pub const ABSENT_CEILING: usize = 157;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

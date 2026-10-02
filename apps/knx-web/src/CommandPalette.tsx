@@ -7,6 +7,7 @@ import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
+import { useActiveOptionScroll } from "./useActiveOptionScroll";
 
 function firstEnabledIndex(commands: ResolvedPaletteCommand[], ctx: CommandContext): number {
   return commands.findIndex((cmd) => cmd.isEnabled(ctx));
@@ -46,6 +47,7 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
     [t],
   );
   const results = useMemo(() => filterCommands(resolvedCommands, query), [resolvedCommands, query]);
+  const activeOptionRef = useActiveOptionScroll(highlight, results);
 
   useEffect(() => {
     setHighlight(firstEnabledIndex(results, ctx));
@@ -109,6 +111,7 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
             <li
               key={cmd.id}
               id={`palette-option-${i}`}
+              ref={i === highlight ? activeOptionRef : undefined}
               role="option"
               aria-selected={i === highlight}
               className={classes.join(" ")}

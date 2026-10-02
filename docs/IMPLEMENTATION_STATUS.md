@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 bounded controller integrated checkpoint — 2026-10-02 20:56 CEST
+
+Source 00f23758 and integrated 03f18c95 (published U15/theme parent fe02deeb)
+accepted after proc_dea67da354fd exit 0, independent 17/17 reconciliation:
+workspace 2924/0/164, Web 1559, intercepted-API Chromium fixtures 61, selected
+private Dynamic 6/0/0 with zero genuine/unknown skips. All 103 originals
+unchanged, 606 source/config inputs frozen, six mutation-protected sources
+unchanged, 17 shadow bindings semantically equal under CI policy. Full frontend
+install/build, strict workspace Clippy/build, root-explicit nonempty repository
+gates and dependency/format/whitespace checks pass. Projection42 is subset.
+
+Two documentation conflicts preserved both owners and complete upstream
+handover suffix; no source conflicts or manual Web/binding edits. Remote
+publication/readback pending at this receipt. Broader AR07 audit and typed/
+localized UI token adoption remain open under U16 ownership; no blanket private
+opaque-data, native desktop or ETS compatibility claim. Earlier pre-merge
+pending notes describe their own dated receipts, now superseded in this scope.
+
+
 ## AR07 controller broad candidate verified — 2026-10-02 20:14 CEST
 
 Corrected proc_ed20715c68e5 independently reconciled: 13/13, workspace

@@ -19,7 +19,9 @@
   Chromium cases; Rust 146 result blocks / 2,890 passed / zero failed / 163
   ignored; source freeze 570. Missing hint CSS failed the first gate, was fixed
   without weakening tests and its removal detected. Final comment clarification
-  is non-runtime; integrated acceptance/publication remain PENDING.
+  is non-runtime; repeated integrated twelve-step acceptance proc_f5cf67729adf
+  passes with the same counts/source freeze. Source 8ceacf49 and exact remote
+  ref/tree/twenty artifacts were verified, with zero outgoing commits.
   Keyboard/modal/help-tip contracts follow separately. This is not a hardware
   authorization, transaction-bound write guarantee or alpha release.
 

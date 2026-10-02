@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / KL-82 scoped delivery)
+- **Timestamp:** 2026-10-02 12:58 CEST
+- **Web lock:** released by ui-alpha-context after verified source publication; next package must reserve independently.
+- **Completed:** Published 8ceacf49b515aa2ee174ae2f9b77ec0d52e0d654 from owned checkout; exact HEAD/origin/main, tree and all twenty artifacts read back, zero outgoing commits, required author/committer and no co-author. All twelve gates repeated on integrated source as proc_f5cf67729adf (exit 0): Web 83 files / 1,343 tests; 35 fully mocked Chromium cases; Rust 146 result blocks / 2,890 passed / zero failed / 163 ignored; 570-source freeze. Eleven behavioral controls and separate in-session review verified. First CSS failure remains failed, its corrected source independently re-gated. Scoped KL-82 owner row DONE; native/live/transactional boundaries remain explicit.
+- **Pending/Next Steps:** Gate/publish/read back this narrow closing receipt, preserve every inherited byte and inventory identity/foreign disposition, then clean only owned completed artifacts. Continue keyboard/list auto-scroll, background-modal exclusion and viewport-safe HelpTip in a fresh current-origin reservation. Native/Orca/sample/domain prerequisites remain open, not an alpha waiver.
+- **Notes for Codex oder Claude:** No real backend, gateway, productive discovery/tunnel, device write, release tag, reserved ADR activation, quota probe, subagent or root synchronization. Root CURRENT_STATE/RESEARCH/stats and telemetry/shutdown artifacts are foreign; statistics refresh remains owner-blocked. Complete interpretation is point-in-time, not general collaboration, historic-row reinterpretation or transactional authorization. Web lock released only by its actual holder.
+
+---
+
 - **Last Agent:** codex (UI session / KL-82 candidate acceptance)
 - **Timestamp:** 2026-10-02 12:44 CEST
 - **Web lock:** taken by ui-alpha-context for the authoritative project/session-context follow-up.

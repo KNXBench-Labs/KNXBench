@@ -7117,6 +7117,38 @@ other 3 hit §151/§152).
 
 ## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
 
+**Full offline/public candidate evidence accepted 2026-10-03 22:35 CEST;
+integrated acceptance/publication/cleanup pending, not yet lifted.** Commit
+a2aa4b7 has fresh complete public16: Rust153 blocks/3009-0-166, ignored
+inventory166, Web1702, Chromium82 and shadow bindings17 token-exact. The first
+binding helper API rejection is retained separately, not a product/test failure.
+Fresh same-profile Release pair12 confirms old-parser named storage RED,
+candidate7 GREEN and CLI5 controls GREEN on both sides. Full853 original-name
+CLI pair independently reconciled: baseline687 installed/candidate688, exactly
+one database-constraint refusal becomes installed;147 namespace,15 ZIP-limit,
+two evidence-item-limit and one invalid-ZIP refusals unchanged. No installed-
+to-refused regression. Original manifest/all853 files independently rehashed,
+successful package bytes/source-blob hashes verified, four catalog/package
+tables empty after refusal, temporary inputs/databases gone; aggregate-only
+receipts, no private item/raw output. No new limits or runtime semantics.
+
+**Storage candidate verified 2026-10-03 20:56 CEST; not yet delivered/lifted.**
+Synthetic named UNIQUE-constraint RED confirms that a single mutable definition
+identity loses its enclosing scope at an inner End; Empty also clears it.
+The candidate stores lexical definition identity and argument position on a
+stack, preserving existing keys, source ownership and atomic transactions.
+Nine public focused tests and ProductDB625/0/25 pass with strict Clippy;
+three compiled mutants have five named failures, plus an exact committed
+pre-fix baseline RED. One authorized private nested-package pair is baseline
+RED/candidate GREEN, with independent lexical/stored scope-count agreement,
+original-ZIP/retained-member equality, successful retry and unchanged originals.
+No private raw/item records survive. Full853 CLI measurement, broad/current-
+upstream gates, publication/readback and cleanup remain pending. This does not
+claim R-MODULE-04 runtime/allocation semantics, new nested diagnostic XPath
+fidelity or automatic repair of previously admitted mis-scoped catalog rows.
+The existing idempotence policy still skips stored trees; eligible retained-
+source replay is synthetically verified, not a new database migration.
+
 **Observed 2026-10-03.** MDT `RF-TAL55Bx0x-01S_MDT_KP_V12.knxprod`
 (scheme 20, program `M-0083_A-00F2-12-05C4`) fails in a shared and in a
 fresh database with `UNIQUE constraint failed: dynamic_node.program_id,

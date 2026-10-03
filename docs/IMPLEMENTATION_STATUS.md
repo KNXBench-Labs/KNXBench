@@ -1,5 +1,49 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06P KL-150 full candidate verification — 2026-10-03 22:35 CEST
+
+Owned candidate a2aa4b7 is committed, source706 exact; not published yet.
+Fresh complete public16 retry: Rust153 blocks/3009-0-166, compiled ignored166,
+Web1702, Chromium inventory/pass82, shadow bindings17 significant-token exact
+with eight controls; strict workspace Clippy/build/deny/format and all audits.
+First broad eight commands exited0; the added binding helper's pre-v7 absolute
+directory API assumption rejected verification, not product tests or semantics.
+Original evidence retained and whole16 rerun, never fixture-origin weakening.
+Release pair12 separately reconciled: exact committed old-parser named RED,
+candidate storage7 GREEN, CLI5 GREEN each; both profiles Release, binaries/logs
+hash-exact. Full853 original-filename CLI pair accepted and independently
+rehashed/reconciled: installed687→688, one database-constraint refusal→installed;
+all other categories unchanged, no installed→refused regression. Every side has
+a fresh private DB; successful archive bytes/source blob digests verified and
+four catalog/package tables empty on refusal. Original manifest/all inputs
+unchanged, temporary copies/DBs removed, only aggregate receipts survive.
+Fresh current-upstream integrated acceptance, final metadata/publication/readback
+and owned cleanup remain pending; KL150 remains unchecked. R-MODULE-04 runtime,
+new limit/grammar claims and automatic repair of old stored rows are not included.
+
+## AR06P KL-150 lexical storage candidate — 2026-10-03 20:56 CEST
+
+The nested-definition UNIQUE-constraint bug has an exact synthetic package RED.
+The smallest private parser scope stack preserves enclosing definition identity
+and argument position, including Empty and deeper/sibling scopes. No public
+API, schema/version, evaluator, UI, protocol or limit change. Nine focused
+ordinary tests and ProductDB625/0/25 pass; compiled ignored inventory25 and
+strict Clippy/format/whitespace verified. Three separately compiled mutants
+have five named failures; a fourth exact committed pre-fix parser has its own
+public RED. Canonical706 source/config inputs remain unchanged during gates.
+One authorized offline private nested package passes only with the candidate:
+same-profile baseline RED/candidate GREEN, independent lexical/stored scope
+counts agree, all original ZIP member bytes match retained blobs, retry passes,
+original package/manifest unchanged, zero private temporary directories and
+no private raw/item records. This is not a new full853 or115/113 matrix run.
+Separate in-session review has no blocking finding, not independent-model
+approval. Fresh broad/current-upstream acceptance, full853 CLI measurement,
+publication/readback and owned cleanup remain open; KL150 is not lifted.
+R-MODULE-04 runtime/allocation semantics and automatic repair of old admitted
+mis-scoped rows remain outside this storage correction. KL149 closing metadata
+cb5781c7 is published/live/fetched byte-verified and its own final target,
+seventeen runner/config scaffolds, checkout and branch have been removed.
+
 ## AR06P KL-149 scoped delivery checked — 2026-10-03 18:45 CEST
 
 Only CLI exact-extension dispatch now uses ASCII case-independent comparison.

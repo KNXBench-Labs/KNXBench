@@ -7211,6 +7211,24 @@ rolled back, so no partial rows are written, but nothing of it can be used.
 
 ## §151 Real manufacturer packages exceed the product-ZIP size limits
 
+**Bounded resource research verified 2026-10-03 22:02 UTC, base5540dcac.**
+All853 original hashes/manifest rechecked; declared-size selection15 is seven
+member-only, five total-only and three both (eight total/ten member violations).
+The extra two member-only cases follow KL149 dispatch admission. A scratch-only
+fixed member256MiB/expanded4GiB variant, compressed256MiB and other706 inputs
+unchanged, installs14 and explicitly refuses one unsupported namespace;
+production baseline refuses15 atomically. Same Release profile, fresh per-side
+DBs,16 registered public hostile controls/six helper controls verified. Raised
+cohort maxima:789976KiB RSS,221.55s ingest,7556988928-byte DB; total638.04s and
+21970833408 DB bytes. Original/retained archive hashes and refusal empty tables
+verified, private copies/DBs gone, no private raw/per-item vectors persisted.
+This is measured admission, not runtime/ETS compatibility. Production bounds
+remain unchanged: a blanket raise is not accepted by these corpus figures alone.
+The HTTP catalog route still performs synchronous install while holding the
+product DB mutex; CLI timings do not prove HTTP latency/progress/cancellation
+acceptance. Reconcile caller ownership/resource guards and add cap-boundary
+hostile regressions before choosing a smaller documented bound or streaming.
+
 **Observed 2026-10-03.** `MAX_EXPANDED_SIZE` (256 MiB) and
 `MAX_MEMBER_SIZE` (64 MiB) in `knx-productdb/src/package.rs` refuse 13 of
 853 crawled files, plus 2 more Hager packages once §149 is worked around.

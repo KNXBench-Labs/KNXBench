@@ -74,3 +74,32 @@ exact remote readback/owned cleanup follow only on accepted receipts. Broader
 AR07/Alpha, genuine nested products, external substitution/variable output,
 scoped-value ancestor ambiguity and native/ETS acceptance remain open. No
 private payload, secret, live KNX, vendor execution, subagent or quota action.
+
+## Actual integration accepted — 2026-10-03 05:38 CEST
+
+Source d51dd6c7df5106d702c41b556686ab6e66ba727c and conventional actual merge
+3711c4f73d0fda6f6c3503b034ca1c4b5655fa60 have exact parents e9707794/d51dd6c7,
+the reviewed candidate tree and complete inherited handover. Required commit
+identity and no co-author verified. Full job proc_f27315f3cd8c exits0, independently
+accepted20/20: ordinary Rust2957/0/164 over148 result blocks; Web1665,
+existing intercepted Chromium61; selected private Dynamic6/0/0 and in-memory
+SimTunnel HTTP13/0/0. No genuine/unknown skip; raw private stdout not stored.
+All624 code/config inputs equal exact committed blobs,17 shadow bindings equal,
+420 original files including103 loose product archives unchanged. This hashes
+the broader inventory, not parser coverage of all420 files. Reference fixture
+preserved and owned corpus/reference links actually removed. Strict workspace
+Clippy/build/fmt, dependency policy and four nonempty intended-root audits pass.
+
+First independent verifier failed an over-specific display-verb assertion:
+fresh Clippy prints `Compiling knx-server`, not `Checking knx-server`. Retained
+`verifier-first-attempt.json` is not a behavioral test failure. Corrected
+`integrated-independently-verified.json` checks actual command/exits, either
+fresh compile verb and every source/result/binding/original proof, without a
+source change or rerunning the gate. No independent-model approval claimed.
+
+The earlier Pending section is historical for the public precursor. Current
+remaining boundary is acceptance-document gates, exact publication/readback
+and completed-owned cleanup. ADR-0063 backend-only accepted; UI adoption,
+genuine nested manufacturer, external substitution/variable output and full
+AR07/Alpha remain open. Canonical-root statistics stay with their owner;
+no misleading generator run from this isolated history or dirty older root.

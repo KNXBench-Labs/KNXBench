@@ -610,8 +610,8 @@ that server-named id instead of the declared one (D43).
     scoped values. This is unattested — the corpus has zero nesting to
     check it against — and is called out here rather than silently
     assumed safe.
-  - **`apps/knx-server`'s `ModuleScopeDto` carries only the innermost
-    scope — backend correction under verification (2026-10-03).** The
+  - **Parameter HTTP scope identity — bounded backend correction accepted
+    (2026-10-03).** The
     original 2026-09-14 finding was that correctly separated nameless nested
     sections could have identical `moduleNode`/`moduleId`/`moduleDefId`
     HTTP scopes, causing client-side diagnostic misattribution. AR07's
@@ -621,7 +621,10 @@ that server-named id instead of the declared one (D43).
     now adds response-local, outermost-first `nodeChain` through the existing
     Core accessor. Public HTTP 38/0/0, server library 205/0/2 and three
     compiled behavioral mutations/restoration verify the candidate backend
-    contract; integrated gates and publication remain pending. This is not
+    contract. Actual3711c4f7 passes20/20 independently: ordinary Rust2957/0/164,
+    Web1665/Chromium61, selected private Dynamic6/0/0 and in-memory SimTunnel13/0/0;
+    all624 committed inputs,17 bindings and420 originals unchanged. Publication
+    remains pending. The420-file hash inventory is not420 parsed test cases. This is not
     a durable ETS identity, a write target or a change to scoped-value rules.
     **UI residue remains:** the UI owner's manual `ModuleScope` interface and
     `ParameterPanel.tsx`'s legacy `sameScope()` still require adoption and

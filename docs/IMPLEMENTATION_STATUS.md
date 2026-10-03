@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06Q KL-151 resource research accepted — 2026-10-03 22:02 UTC
+
+Base5540dcac/source706 unchanged. Secure853 declared-size census selects15:
+7 member-only/5 total-only/3 both. Scratch-only fixed member256MiB/expanded4GiB
+variant (compressed256MiB, same grammar/evidence) admits14 and refuses1 namespace;
+baseline15 size refusals remain atomic. Fresh Release profiles,22 build/test
+commands/16 hostile ZIP controls/six helper controls verified. Peak789976KiB
+RSS, max221.55s/7556988928-byte DB;638.04s/21970833408 DB bytes total. All originals
+independently rehashed, retained archives checked, private temporary data gone,
+closed aggregate-only output. First zero-pair namespace-guard PermissionError
+retained as infrastructure rejection; corrected isolated retry is the accepted
+measurement. No production limit/code change or general compatibility claim.
+KL151 remains open pending bounded cap/streaming/caller safety decision; direct
+HTTP catalog install/product mutex needs owner-aware latency acceptance before
+a global raise. KL152/153 and wider Alpha remain open. KL1505540dcac fully
+delivered and owned checkout/branches/targets/scaffolds cleaned.
+
 ## AR06P KL-150 scoped code delivered — 2026-10-03 23:05 CEST
 
 Actual integrated cbe9952f passed fresh complete public16 and the authorized

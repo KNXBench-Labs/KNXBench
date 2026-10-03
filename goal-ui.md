@@ -427,8 +427,12 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 final full Web1,702/95 files and intercepted Chromium69 (zero skipped/flaky/failed),
 TypeScript and production build pass over262 unchanged frontend inputs. Eight
 caught/restored behavioral controls and the new-module type canary pass.
-Eight manager browser cases cover Strict Mode, download/cold reload, nested
-keyboard/focus, active removal, conflicts and narrow layout. Full branch13/13 repository commands passed, Rust2940/0/164,17 bindings and693
+Eleven manager browser cases cover Strict Mode, download/cold reload, nested
+keyboard/focus, active removal, conflicts, narrow layout, hostile-file rejection,
+explicit System reset/OS changes and HTTP500 rollback/no replay. Three additional
+compiled browser controls are caught/restored. Earlier full frontend69 predates
+these coverage additions; renewed actual gates remain pending.
+Full branch13/13 repository commands passed, Rust2940/0/164,17 bindings and693
 inputs unchanged; actual-merged acceptance/publication pending, native/Orca separate.
 Depends on U15 and U16. Extend Settings → Appearance; do not create a
 second settings screen or require a visual theme editor for this slice.

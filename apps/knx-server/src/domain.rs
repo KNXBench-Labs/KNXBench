@@ -3316,6 +3316,10 @@ fn diagnostic_kind_and_message(
     use crate::routes::ParameterDiagnosticKindDto as Kind;
     use knx_productdb::dynamic::Diagnostic;
     match diagnostic {
+        Diagnostic::EvaluationWorkBudgetExhausted { .. } => (
+            Kind::EvaluationWorkBudgetExhausted,
+            "This program exceeded the evaluation work limit; its incomplete parameter panel is read-only.",
+        ),
         Diagnostic::NoBranchMatched { .. } => (
             Kind::NoBranchMatched,
             "A choice did not match any of its options.",
@@ -3400,18 +3404,13 @@ fn diagnostic_kind_and_message(
     }
 }
 
-/// Carries only the innermost `Module` — `scope.parent` is never walked.
-/// Known limitation (`docs/KNOWN_LIMITATIONS.md`, "`ModuleScopeDto`
-/// carries only the innermost scope"): since fix round 1, the server
-/// correctly splits two nesting chains that share an innermost
-/// `module_node` under different ancestors into two distinct sections,
-/// but if both chains' innermost `Module`s are also nameless under the
-/// same `ModuleDef`, this DTO is identical for both, so the client's
-/// `sameScope()` (`ParameterPanel.tsx`) cannot tell the two sections
-/// apart and misattributes each one's diagnostics to both — not merely
-/// lost ancestor context, an actual cross-section misattribution.
+/// ADR-0063: preserve the same full identity that Core dedup and section
+/// grouping use. Legacy innermost fields remain display context only; they
+/// cannot distinguish nameless nested instances. Web's manual `sameScope`
+/// adoption remains UI-owned, not solved merely by this additive wire field.
 fn module_scope_dto(scope: &knx_productdb::dynamic::ModuleScope) -> crate::routes::ModuleScopeDto {
     crate::routes::ModuleScopeDto {
+        node_chain: scope.node_chain(),
         module_node: scope.module_node,
         module_id: scope.module_id.clone(),
         module_def_id: scope.module_def_id.clone(),
@@ -3815,6 +3814,15 @@ fn assemble_parameter_panel(
         values,
         activation,
     } = evaluate_device(&products, &program_id, stored, &module_instances)?;
+    // ADR-0062: a truncated traversal cannot rule out unseen duplicate
+    // module authority. Preserve its prefix for inspection, never for writes.
+    let resource_limited = activation.diagnostics.iter().any(|scoped| {
+        matches!(
+            scoped.diagnostic,
+            knx_productdb::dynamic::Diagnostic::EvaluationWorkBudgetExhausted { .. }
+                | knx_productdb::dynamic::Diagnostic::ModuleExpansionBudgetExhausted { .. }
+        )
+    });
     // `language` is the request-supplied display language (T26 Task 2);
     // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
     let views = knx_productdb::query::parameter_views(&products, &program_id, language)
@@ -4021,13 +4029,17 @@ fn assemble_parameter_panel(
             // now has no string standing in for it anywhere, not even an
             // unreachable one; the `(Some(_), None)` arm returns `None`
             // directly.
-            let write_ets_id = match (&section.scope, mi_digits.as_deref()) {
-                (None, _) => Some(view.id.clone()),
-                (Some(_), None) => None,
-                (Some(scope), Some(digits)) => scope
-                    .module_id
-                    .as_ref()
-                    .and_then(|module_id| module_scoped_write_id(module_id, digits, &view.id)),
+            let write_ets_id = if resource_limited {
+                None
+            } else {
+                match (&section.scope, mi_digits.as_deref()) {
+                    (None, _) => Some(view.id.clone()),
+                    (Some(_), None) => None,
+                    (Some(scope), Some(digits)) => scope
+                        .module_id
+                        .as_ref()
+                        .and_then(|module_id| module_scoped_write_id(module_id, digits, &view.id)),
+                }
             };
             let editable = write_ets_id.is_some();
             fields.push(crate::routes::ParameterFieldDto {
@@ -4452,7 +4464,7 @@ pub(crate) fn set_parameter_value_impl(
                     Some(correct) => format!(
                         "is shown, but must be written using its module-qualified id '{correct}', not this one"
                     ),
-                    None => "is currently shown but not writable (its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
+                    None => "is currently shown but not writable (evaluation was incomplete, its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
                 }
             } else if before.ref_ids.contains(&ets_id) {
                 "is declared by this program but not currently active".to_string()
@@ -4524,6 +4536,45 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn module_scope_projection_keeps_every_ancestor_without_argument_values() {
+        use knx_productdb::dynamic::{BoundArgument, ModuleScope, MAX_MODULE_NESTING_DEPTH};
+        use std::rc::Rc;
+
+        for depth in [1, 3, MAX_MODULE_NESTING_DEPTH] {
+            let mut parent = None;
+            let mut expected_chain = Vec::new();
+            for index in 0..depth {
+                // Reused local nodes and IDs cannot stand in for the full path.
+                let module_node = if index % 2 == 0 { 11 } else { 7 };
+                expected_chain.push(module_node);
+                parent = Some(Rc::new(ModuleScope {
+                    module_node,
+                    module_id: Some("DUPLICATE".into()),
+                    module_def_id: format!("MD-{index}"),
+                    arguments: vec![BoundArgument {
+                        name: "Caption".into(),
+                        value: "synthetic-core-only-value".into(),
+                    }],
+                    parent,
+                }));
+            }
+            let scope = parent.unwrap();
+            let dto = module_scope_dto(&scope);
+            assert_eq!(
+                serde_json::to_value(dto).unwrap(),
+                serde_json::json!({
+                    "nodeChain": expected_chain,
+                    "moduleNode": scope.module_node,
+                    "moduleId": "DUPLICATE",
+                    "moduleDefId": format!("MD-{}", depth - 1)
+                })
+            );
+            assert_eq!(scope.arguments[0].value, "synthetic-core-only-value");
+            assert_eq!(scope.node_chain(), expected_chain);
+        }
+    }
 
     #[test]
     fn offline_reconciliation_exhaustion_preserves_deletions_and_allocators() {

@@ -310,6 +310,10 @@ pub(crate) struct ParameterSectionDto {
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ModuleScopeDto {
+    /// ADR-0063: outermost-first evaluation identity, ending in `module_node`.
+    /// Response-local, not a persistent ETS ID or a parameter write target.
+    /// This manual DTO is not ts-rs exported; Web adoption stays UI-owned.
+    pub(crate) node_chain: Vec<i64>,
     pub(crate) module_node: i64,
     pub(crate) module_id: Option<String>,
     pub(crate) module_def_id: String,
@@ -390,7 +394,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// An imported `ModuleInstance`'s id does not decompose as expected
     /// (D39 rule 3).
     MalformedModuleInstanceId,
-    /// The remaining sixteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
+    /// The remaining tags mirror `knx_productdb::dynamic::Diagnostic`'s
     /// own variants 1:1 (see `diagnostic_kind_and_message` in `domain.rs`).
     NoBranchMatched,
     UnparsableTest,
@@ -407,6 +411,8 @@ pub(crate) enum ParameterDiagnosticKindDto {
     ModuleCycleDetected,
     ModuleNestingTooDeep,
     ModuleExpansionBudgetExhausted,
+    /// ADR-0062: shared work refusal; the admitted panel prefix is read-only.
+    EvaluationWorkBudgetExhausted,
     MissingValue,
     ModuleWithoutId,
     /// Added by T12's module-argument work (main), merged into this

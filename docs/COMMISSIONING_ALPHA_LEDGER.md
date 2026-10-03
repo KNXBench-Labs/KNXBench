@@ -29,7 +29,14 @@ Web 1559 tests in 89 files; explicitly selected private download 14/0/0 and
 Dynamic 6/0/0, zero unknown skips and all 108 original inputs unchanged. All
 608 frozen code/config inputs and 17 shadow bindings match. Ignored ordinary
 tests are not counted as passed; private results are separate scopes. This
-receipt does not cover the upcoming merge with the published Float guard.
+receipt does not cover the later integration with the published Float guard,
+U16 settings contract, evaluation work admission and module-scope provenance.
+
+Integration resume, 2026-10-03: published parent `14e2eb9a` is being reconciled
+in the owned commissioning worktree. Both complete owner handovers and status
+sections are retained. The unpublished history ADR is renumbered to **0064**,
+leaving the published work-admission ADR-0062 and scope ADR-0063 unchanged.
+Actual integrated gates/publication are **PENDING**, not candidate evidence.
 
 ## Meaning of dispositions
 
@@ -68,7 +75,7 @@ records of the residual scope.
   explicit unavailable-history admission test; corrected candidate coverage is
   14/14 with originals unchanged. Integrated coverage is still pending.
   Backup scope is only plan-affected memory/load states.
-- **E4 — lifecycle and history candidate:** ADR-0055/0056/0062; `knx-store`
+- **E4 — lifecycle and history candidate:** ADR-0055/0056/0064; `knx-store`
   `activity_history.rs`; server `one_shot_activity.rs`, `bus_activity_routes.rs`,
   `http_activity_history.rs` and `http_service_control.rs`. Focused tests prove
   reopen, ring eviction, prior-incarnation unknown, bounded pages, foreign/future

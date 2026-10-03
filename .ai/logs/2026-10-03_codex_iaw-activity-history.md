@@ -178,6 +178,24 @@ the other owner's PID1408878 holding both common gate locks.
 
 ## Residue
 
+### Authorized integration resume — 2026-10-03 06:29 CEST
+
+Fresh origin/main14e2eb9a adds published U16 conditional settings, dynamic work
+admission and complete module-scope wire provenance. Source changes auto-merge;
+only CURRENT_STATE/IMPLEMENTATION_STATUS conflict. Exact own handover prefix and
+entire latest upstream suffix preserved; seven upstream status headings retained.
+First marker resolution had two newline differences, independently rejected and
+corrected before staging; not product/test evidence. Unpublished history0062
+collided with published work admission0062, so history moved to0064 with index
+and live references, leaving foreign0062/0063 intact. No runtime refactor.
+Separate source review confirms owned files byte-equal0fc483c2, settings/evaluator
+and scope DTOs exact upstream, merged domain has both persistent factory and
+upstream guards. All42 readiness IDs and nonempty fallback/unblock columns exact.
+Actual integrated acceptance/final docs/publication PENDING. Next gate uses a
+new owned target/output and both shared locks; no old receipt reuse, private raw
+output or live device contact. Canonical root/statistics and U17 are untouched.
+
+
 Durable long-session journals, Web/global status/scope adoption, complete
 physical-device recovery and independent vendor/device evidence remain open.
 The controller still owns final whole-product review, statistics and release.

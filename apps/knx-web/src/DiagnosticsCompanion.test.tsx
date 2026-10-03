@@ -252,6 +252,8 @@ describe("one editing workspace", () => {
     // with no IO or project mutation. The server API remains unchanged.
     // Keyboard follow-up adds `modalIsolation.ts`: document-local inert/focus
     // leases only. No API, storage, protocol or project mutation is introduced.
+    // U16 adds `canonicalJson.ts` through the existing settings client: pure
+    // JSON ordering only, with no imports, IO or new project capability.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -265,6 +267,7 @@ describe("one editing workspace", () => {
       "busDiscovery.ts",
       "busMonitorCapture.ts",
       "busMonitorStatistics.ts",
+      "canonicalJson.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
       "gaNotation.ts",

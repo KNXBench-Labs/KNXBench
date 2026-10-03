@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-03 — CRT 1.1 branch publication
+
+- User-authorized source commit879c69b2f11c825c1d4f10b5409e5a5148f06e67 is
+  published on design-retro-green-crt-20261003; exact local/fetched/live refs
+  matched at20:19 CEST. No main merge or dirty-root product synchronization.
+- Fresh Web1712/96 files and TypeScript/Vite build pass; separate in-session
+  review/static scan found no blocking issue. Existing16-group browser receipt
+  covers unchanged source. Author/committer github@knxbench.com; no co-author.
+- The following local design notes are historical; palette/study and proposed
+  production limitations are unchanged. This acknowledgment changes Markdown only.
+
 ## 2026-10-03 — CRT 1.1 reference-image development (local)
 
 - Evolved the existing design from the user reference: softer phosphor ink,

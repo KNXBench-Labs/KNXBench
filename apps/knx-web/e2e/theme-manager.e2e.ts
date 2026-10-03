@@ -5,6 +5,7 @@ import { themePackFixture } from "../src/themePackFixtures";
 import { canonicalJson } from "../src/canonicalJson";
 import { parseThemePackText } from "../src/themePack";
 import { readFile } from "node:fs/promises";
+import { Buffer } from "node:buffer";
 
 async function fixture(page: Page, installed = false) {
   const pack = themePackFixture();
@@ -16,6 +17,8 @@ async function fixture(page: Page, installed = false) {
   const writes: { settings: Record<string, unknown>; expectedSettings: Record<string, unknown> }[] = [];
   const unexpected: string[] = [], errors: string[] = [];
   let conflicts = 0;
+  let failNextWrite = false;
+  const requests: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error" || message.type() === "warning") errors.push(message.text()); });
   await page.route("**/*", async (route) => {
@@ -24,10 +27,15 @@ async function fixture(page: Page, installed = false) {
       unexpected.push(url.origin); await route.abort(); return;
     }
     if (url.pathname === "/api/settings") {
+      requests.push(request.method());
       if (request.method() === "PUT") {
         const patch = request.postDataJSON() as (typeof writes)[number];
         if (!patch.expectedSettings) { unexpected.push("unconditional write"); await route.abort(); return; }
         writes.push(patch);
+        if (failNextWrite) {
+          failNextWrite = false;
+          await route.fulfill({ status: 500, json: { message: "synthetic write failure" } }); return;
+        }
         if (Object.entries(patch.expectedSettings).some(([key, value]) => canonicalJson(settings[key] ?? null) !== canonicalJson(value))) {
           conflicts += 1;
           await route.fulfill({ status: 409, json: { message: "synthetic conflict" } }); return;
@@ -45,15 +53,20 @@ async function fixture(page: Page, installed = false) {
   await page.getByRole("button", { name: "Open settings", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Theme packs", exact: true })).toBeVisible();
   await expect(page.locator("#theme-pack-import")).toBeEnabled();
-  return { pack, writes, settings: () => settings,
+  return { pack, writes, requests, settings: () => settings,
+    failWrite: () => { failNextWrite = true; },
     peer: (patch: Record<string, unknown>) => { settings = { ...settings, ...patch }; },
-    check: (expectedConflicts = 0) => {
+    check: (expectedConflicts = 0, expectedFailures = 0) => {
       expect(unexpected).toEqual([]);
       expect(conflicts).toBe(expectedConflicts);
       // Chromium reports its deliberately intercepted HTTP error on console.
       // Account for that exact event/count; never hide other console errors.
-      expect(errors).toEqual(Array.from({ length: expectedConflicts }, () =>
-        "Failed to load resource: the server responded with a status of 409 (Conflict)"));
+      expect(errors).toEqual([
+        ...Array.from({ length: expectedConflicts }, () =>
+          "Failed to load resource: the server responded with a status of 409 (Conflict)"),
+        ...Array.from({ length: expectedFailures }, () =>
+          "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"),
+      ]);
     } };
 }
 
@@ -73,6 +86,61 @@ test("actual Appearance imports and cancels a draft under Strict Mode without wr
   expect(await page.locator("html").evaluate((element) => (element as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
   expect(writes).toEqual([]);
   check();
+});
+
+test("actual Appearance rejects hostile file values without DOM effects or requests to the asset", async ({ page }) => {
+  const { pack, writes, settings, check } = await fixture(page);
+  const original = structuredClone(settings());
+  pack.tokens["--knx-bg"] = 'url("https://invalid.example/synthetic-asset")';
+  await page.locator("#theme-pack-import").setInputFiles({ name: "hostile.knx-theme.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(pack)) });
+  await expect(page.getByText("The theme file was rejected. The saved theme and installed packs have not changed.", { exact: true })).toBeVisible();
+  await expect(page.getByText("The token value is outside the permitted syntax or bounds.", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-theme-diagnostic=invalidValue]")).toContainText("tokens.--knx-bg");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
+  expect(await page.locator("html").evaluate((root) => (root as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
+  await expect(page.getByRole("button", { name: "Apply theme", exact: true })).toHaveCount(0);
+  expect(writes).toEqual([]);
+  expect(settings()).toEqual(original);
+  check();
+});
+
+test("explicit System reset keeps installed contents and responds to OS changes", async ({ page }) => {
+  const { pack, writes, settings, check } = await fixture(page, true);
+  await page.locator(`[data-theme-id="${pack.id}"]`).getByRole("button", { name: `Preview ${pack.name}`, exact: true }).click();
+  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
+  await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
+  const beforeReset = structuredClone(settings());
+  await page.getByRole("button", { name: "Use system theme", exact: true }).click();
+  await expect(page.getByTestId("saved-selection")).toHaveText("system");
+  await expect(page.getByText("Theme saved.", { exact: true })).toBeVisible();
+  expect(settings()).toEqual({ ...beforeReset, theme: "system" });
+  expect(writes[1]).toEqual({ settings: { theme: "system" }, expectedSettings: { theme: pack.id, uiThemePacks: { [pack.id]: pack } } });
+  expect(writes).toHaveLength(2);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "porcelain");
+  expect(settings()).toEqual({ ...beforeReset, theme: "system" });
+  expect(writes).toHaveLength(2);
+  check();
+});
+
+test("an uncertain HTTP500 Apply restores the last confirmed palette and never replays the write", async ({ page }) => {
+  const { pack, writes, requests, settings, failWrite, check } = await fixture(page);
+  const original = structuredClone(settings());
+  await importPack(page, pack);
+  const baselineRequests = requests.length;
+  failWrite();
+  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
+  await expect(page.getByText("The theme could not be saved. Preview was cancelled; review the acknowledged settings before trying again.", { exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
+  expect(await page.locator("html").evaluate((root) => (root as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
+  await expect(page.getByRole("button", { name: "Apply theme", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Theme saved.", { exact: true })).toHaveCount(0);
+  expect(settings()).toEqual(original);
+  expect(writes).toHaveLength(1);
+  expect(requests.slice(baselineRequests)).toEqual(["PUT", "GET"]);
+  check(0, 1);
 });
 
 test("replacement Escape cancels its draft and returns focus to the persistent import control", async ({ page }) => {

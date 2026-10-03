@@ -296,6 +296,92 @@ constructs nested below subtrees a specialized parser does not model. Values and
 original XML bytes are retained, but KNXBench does not claim to execute load
 procedures or reproduce manufacturer separator layout.
 
+## Public crawler corpus run (2026-10-03)
+
+A one-off test of the **production install path** against a second, much
+wider corpus: 853 files that the separate
+[`knxprod-crawler`](https://github.com/KNXBench-Labs/knxprod-crawler) tool
+(private repository) downloaded on 2026-10-03 from the public download
+pages of Siemens, ABB/Busch-Jaeger, Hager/Berker and MDT (1.25 GiB). This was
+testing only: no KNXBench code was changed, and the downloaded files stay
+outside the repository. These are publicly offered manufacturer files, not
+part of `OriginalData/`. Only 29 of the 102 loose `OriginalData` `.knxprod`
+files are byte-identical to a crawled file, and another 27 crawled files
+share a file name with an `OriginalData` file but differ in content (newer
+releases).
+
+**Method.** A release `knx` CLI was built from `origin/main` `c6b5a240`. Every
+file went through `knx products ingest <file> --product-db <db>` into **one
+fresh shared database**, ordered by content SHA-256. Exit code, the install
+summary line and stderr were recorded for each file. Failures were then
+re-run against a fresh isolated database to separate file-specific errors
+from shared-state effects. Afterwards the run executed `knx products
+verify`, `knx products coverage` and an aggregate `sqlite3` census.
+Schema versions come from the `knx_master.xml` namespace (read from the ZIP
+directory without extraction), not from file names.
+
+**Inventory by master-data scheme (all 853 files).**
+
+| Scheme | Files | Installed | Rejected |
+|---|---|---|---|
+| 10 | 146 | 0 | 145 unsupported namespace (§153), 1 size limit (§151) |
+| 11 | 395 | 347 | 44 CLI extension case (§149), 4 size limit (§151) |
+| 13 | 4 | 4 | – |
+| 14 | 4 | 2 | 1 CLI extension case (§149), 1 evidence item limit (§152) |
+| 20 | 298 | 288 | 8 size limit (§151), 1 CLI extension case (§149), 1 constraint crash (§150) |
+| 21 | 3 | 3 | – |
+| **23** | 2 | 0 | 2 unsupported namespace (§153) |
+| no ZIP | 1 | 0 | invalid ZIP: ABB serves a PDF named `.knxprod`. Correctly refused |
+
+**Outcome totals (shared run).** 644 installs (608 new packages and 36
+byte-identical re-deliveries reported as "already known"), 147
+unsupported-namespace refusals, 46 CLI extension-case refusals (all Hager),
+13 size-limit refusals, 1 evidence-item-limit refusal, 1 database
+constraint crash and 1 invalid ZIP: 853 in total. By source: Siemens 0/1
+(its only file is a 1 GiB-expanded bundle), ABB 547/707, Hager 2/48, MDT
+95/97.
+
+**Counterfactual for §149.** The same 46 Hager files given a lowercase
+`.knxprod` name (symlinks, fresh database) install 43 of 46. The remaining 3
+hit the size limit (2) or the evidence item limit (1). Fixing §149 alone
+would raise the overall result from 644 to 687 of 853 (80.5 %).
+
+**Loss accounting held.** Every one of the 644 installs reported unknown
+constructs (84,549 in total, at most 1,634 for one package). The final
+database holds 47,286 `package_install_unknown` rows covering 533 distinct
+(kind, name, XPath) constructs with 241 distinct names. The most common are
+master-data attributes (`Manufacturer/@KnxManufacturerId`,
+`@ImportRestriction`, `@DefaultLanguage`, `@CompatibilityGroup`,
+`DatapointType/@SizeInBit`, `@Default`) and `Static` children
+(`Options`, `Code`, `AddressTable`, `AssociationTable`, `LoadProcedures`,
+`LdCtrlWriteProp`), each present in 342–608 packages. Nothing was silently
+dropped. Cross-package ID collisions are recorded, not resolved:
+`package_conflict` holds 2,169 rows (catalog_section 1,818, hardware 118,
+product 116, hardware2program 46, application_program 40, catalog_item 31).
+The per-install reports sum to 2,373, because "already known" re-installs
+repeat their stored conflicts. In isolation, the sampled packages have
+zero conflicts.
+
+**Final shared database.** 608 packages, 1,167 application programs, 984
+products, 803 hardware, 1,088 catalog items, 584 catalog sections, 389
+datapoint types, 836 master-data manufacturers, 1,607,607 parameters and
+17,268,578 translations. The file is **13.2 GiB** for 1.25 GiB of input
+(about 10.6×). `products verify`: 0 mismatches in 4 s. Ingest wall time was
+438 s in total, at most 17.3 s for one file.
+
+**Download coverage** (`products coverage`, offline, 28 s): of 1,167
+programs, 0 are verified, 51 untested-plannable and 1,116 unsupported
+(not-memory-mapped 788, image-structure 204, parameter-evaluation 48,
+unmodelled-step 42, parameter-value 23, procedure-contents 9,
+procedure-shape 2). By mask, only `MV-0701` (16/238) and `MV-0705` (35/139)
+have any plannable programs. `MV-07B0` (664 programs) has none.
+
+**What this run does not show.** It is parser/persistence evidence for
+publicly downloadable files at one point in time, not ETS parity, not
+semantic completeness and not commissioning evidence. It is not a pinned
+regression gate: the crawled files can change upstream, and they are not
+redistributed. Findings: KNOWN_LIMITATIONS §149–§153.
+
 ## Feature-shape observations relevant to implementation
 
 ### Parameters

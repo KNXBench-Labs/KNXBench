@@ -1,5 +1,26 @@
 # Known limitations
 
+## CRT motion is browser-verified application behavior, not theme-pack v2
+
+The local CRT interaction follow-up implements real App/ProjectExplorer/
+GroupAddressTable feedback through a separately selected motion style. Palette
+v1 remains declarative and unchanged; importing it cannot enable motion. Exact
+selection `#003300`, Save-only purple, additional input focus glow and all other
+component redesign remain outside this animation change. Native table markup,
+bulk-selection rail and existing delegated keyboard handlers are retained.
+
+Standard admits bounded light/flash; Subtle admits fill only. Off and OS reduced
+motion cancel active CRT effects. Scroll, resize, zoom/preference change, anchor
+retirement, drag start, window blur and disposal retire transient feedback.
+Save glow is a request-activation cue, never a success indicator; a failed Save
+still reports its error and keeps the project dirty. Autosave remains silent.
+
+Evidence uses only intercepted synthetic Chromium requests; there is no native
+WebKitGTK, Orca, full ARIA tree/grid, every-state contrast or WCAG acceptance claim.
+The native-frame screenshot uses paused test time; normal expiry/cancellation is
+checked separately. Source is local in feat/crt-interactions-20261003, not merged
+into main or published. See [CRT guide](DESIGN_RETRO_GREEN_CRT.md).
+
 <a id="theme-pack-management-is-a-local-candidate-not-release-acceptance"></a>
 ## Verified theme pack management is not whole-extension release acceptance
 

@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U16 source delivered, receipt-only close)
+- **Timestamp:** 2026-10-03 03:01 CEST
+- **Web lock:** released by ui-theme-storage after U16 source publication/readback; U17 has not taken it.
+- **Completed:** U16 source/actual merge/acceptance published as1f94808d5d9985b38fcf85021403bb4b05fea3e7; live/fetched main and own HEAD equal. All20 owned artifact blobs and622 committed inputs read back equal to actual-gated36e922bc. Actual22 commands: Web1665, Chromium61, Rust2940/0/164 over148 blocks, eight conditional HTTP, six explicit private suites/11 cases, matrix115/113, all17 bindings. All420 private inputs unchanged. Separate acceptance-doc delta four intended-root audits/whitespace pass; parser-only spacing mistake reconciled without replay. U16 foundation DONE, not a visible production manager or extension-wide approval. Complete inherited histories retained below.
+- **Pending/Next Steps:** Publish/read back this receipt-only metadata after fresh document gates, then actually remove own U16 checkout/branch/task scratch; cleanup is not yet performed. Continue immediately with U17 in fresh own worktree after fetching and rereading current reservation; take its web lock via handover-only publication. U17/U18 remain pending; no quota/delegation inquiry.
+- **Notes for Codex oder Claude:** Source/readback verified, historical unpublished/queued statements below are overtaken. Root/foreign checkout/refs untouched. U17 planning only so far: actual App passes static THEMES; keep one root theme writer for reversible preview, use authoritative conditional plans for pack operations, do not stack unconditional DOM leases. No productive backend/KNX/discovery/tunnel/device operation, native/Orca/global-alpha/ETS or independent-model acceptance. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U16 actual-merged acceptance passed)
 - **Timestamp:** 2026-10-03 02:47 CEST
 - **Web lock:** taken by ui-theme-storage for U16; not released.

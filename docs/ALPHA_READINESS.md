@@ -407,3 +407,37 @@ above and are not new tasks assigned to an already closed owner queue.
 | `UX-03` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
 
 **Mechanically counted execution statuses:** ACCEPTED_BOUNDARY=24, BLOCKED_EXTERNAL=3, DONE=6, LATER=20, TODO=54, WAITING_DECISION=6, WAITING_OWNER=67; total=180.
+
+## Post-snapshot findings (outside the 180-ID ledger)
+
+Added 2026-10-03 from the test-only product-install run over 853 public
+manufacturer downloads ([corpus run](PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03),
+commit `2cceea4e`). They have their own identities. The 180-ID ledger, its
+mechanically counted statuses and the 110-heading recount above are a dated
+snapshot and stay unchanged. AR15 recounts them.
+
+| Source ID | Priority | Primary route | Status | Evidence / remaining disposition |
+| --- | --- | --- | --- | --- |
+| `KL-150` | P1 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §150; a real MDT product with nested `ModuleDef`s fails atomically on a `dynamic_node` UNIQUE constraint; synthetic RED fixture first, local package as private evidence only |
+| `KL-149` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §149; CLI extension check is case-sensitive; 43/46 refused Hager files install under a lowercase name |
+| `KL-151` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §151; 13 real packages exceed the ZIP size limits, including Siemens' only current download; measure before changing the bound |
+| `KL-152` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §152; 2 real packages exceed the XML evidence item limit; measure before resizing |
+| `KL-153` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §153; schemes 10 (146 files) and 23 (2 files) are refused; grammar evidence for scheme 23 first; unsupported schemes stay explicit refusals |
+
+**Post-snapshot counts:** P1=1, P2=4; TODO=5; total=5.
+
+**Unblock input for AR07 (status unchanged here):** the same corpus contains
+sample evidence that the ledger above reports as missing. Its status change is
+up to the AR07 executor:
+
+- `R-MODULE-03` (AllocatorRef sample missing): 10 crawled packages use
+  `NumericArg … AllocatorRefId=` with 1,070 uses in total (ABB 4 packages,
+  MDT 5, Siemens' HVAC bundle 1). Three further MDT packages declare an
+  `Allocator` without referencing it.
+- `R-MODULE-04` (no real nested-module example): exactly one of 852 crawled
+  ZIP packages nests `ModuleDef`s (MDT `RF-TAL55Bx0x-01S`, 11 nested, depth
+  2). This is the package that `KL-150` cannot install yet.
+
+These files are public downloads that may not be redistributed. They can serve
+as local, private evidence. A committed regression fixture still has to be
+synthetic or authorized.

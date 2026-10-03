@@ -66,6 +66,13 @@
 
 ---
 
+- **Last Agent:** Claude (planned crawler-corpus findings into the alpha queue; docs only)
+- **Timestamp:** 2026-10-03 13:55 CEST
+- **Completed:** KL-149..KL-153 planned as the new alpha package **AR06P** (`alpha-release-goal.md`, placed before AR07; checklist ordered by value/effort; AR15 now also depends on AR06P), with a separate post-snapshot ledger in `alpha-release-goal.md` §8 and ALPHA_READINESS (KL-150 P1, the others P2, all TODO). The 180-ID ledger stays unchanged (validated: 180 rows / 180 IDs). A read-only module scan of the crawl found the only real nested-`ModuleDef` package (= the KL-150 package) and 10 packages with 1,070 `AllocatorRefId` uses. Recorded as unblock input for R-MODULE-03/04; the status stays with AR07. Pointer added to OFFENE_PUNKTE. Previous crawler-corpus test: `2cceea4e`.
+- **Pending/Next Steps:** AR06P is ready: first KL-149 (CLI extension case, trivial), then KL-150 (synthetic nested fixture RED → fix `dynamic_node` scoping, coordinate with the AR07 executor). KL-151/152 measure first. KL-153 scheme 23 grammar evidence first.
+- **Notes for Codex oder Claude:** Pre-existing drift: the "Mechanically counted execution statuses" line in ALPHA_READINESS (DONE=6/TODO=54/WAITING_OWNER=67) does not match the table (DONE=21/TODO=45/WAITING_OWNER=61). Left for AR15, not corrected here. The crawled files (`/mnt/daten-i/Sourcecode/knxprod-crawler/downloads`) are private evidence and never a fixture/gate. Web lock and UI session untouched.
+---
+
 - **Last Agent:** codex (UI session / U17 delivered, U18 closing work next)
 - **Timestamp:** 2026-10-03 12:28 CEST
 - **Web lock:** retained by UI session through U18; not released.

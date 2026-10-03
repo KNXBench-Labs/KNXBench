@@ -2,8 +2,8 @@
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
 U16 persistence/file foundations are delivered/read back as 1f94808d;
-U17 management passes actual-merged acceptance; publication is tracked in the
-current handover. U18 extension-wide acceptance remains pending.**
+U17 management is delivered/read back as4d9073ca. U18 extension-wide actual
+acceptance is delivered/read back as1964fd6b; final metadata is in the handover.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
@@ -172,7 +172,7 @@ The deliberately cancelled attempt1 and lifecycle-interrupted attempt2 remain
 non-acceptance records. Subsequent integration with upstream5ca570a0 changes
 Markdown only; all697 gated inputs remain equal, with document gates required
 before publication. U18-R1 cross-palette representative-component state coverage
-is still open; this manager acceptance is not a substitute for it.
+was open at U17; U18 closes it in the actual extension receipt below.
 
 ## Evidence and inspected baseline
 
@@ -351,3 +351,20 @@ Sources are registered from retrieved primary pages; access date 2026-10-02.
 [4] https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
 [5] https://react.dev/reference/react-dom/components/common
 [6] https://www.rfc-editor.org/rfc/rfc8259.html
+
+## U18 representative-state closing verification
+
+The [original candidate-status anchor](IMPLEMENTATION_STATUS.md#u18-representative-theme-states--candidate-acceptance-running)
+is retained for backward-compatible links; its current section records actual acceptance.
+
+The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Inspector`, contextual inline-address validation, `Overlay` and structured theme diagnostics to the offline real Appearance/root fixture. Five built-ins, both System resolutions and admitted imported light/dark palettes are exercised. The frozen final-source matrix passed 10/10; three rendered-style sabotage controls were detected by named state assertions and a new-module TS2322 type-inclusion canary was detected/restored. Dedicated `npm run check:theme-fixtures` includes the new modules and test in the TypeScript project.
+
+**Actual-integrated extension acceptance verified (2026-10-03 15:23 CEST):** Persistent `proc_e95dfc308724` completed normally; the coupled receipts on `1660911bdd5bf350c6042bbeb9a2b694ad66fa41` were checked against committed blobs and the final working tree. **24/24 commands** passed (18 repository, six explicit offline inventory/execution commands): Web **1,702**, intercepted Chromium **82** with zero failures/skips/flaky, representative matrix **10/10**, ordinary Rust **2,995 passed / 0 failed / 165 ignored across 150 blocks**, and 17 generated bindings identical. Three rendered-style controls failed the named selection/focus/validation assertions; the TS2322 fixture-inclusion canary remains separately recorded. All **703** protected source/config inputs match exactly.
+
+Offline inventories reconcile **11 product + 16 injected-server + 1 matrix cases = 28 executed cases**. The matrix measured **115 instances / 113 unique packages**; its case is already included in28. All **421** private source files (420 OriginalData files plus project_dump) remained unchanged. Private stdout was classified in memory; only aggregate receipts were persisted. Own fixture links and transient matrix output were removed. Simulator download tests use injected transport, not a real KNX tunnel.
+
+The separately labelled in-session full-extension self-review traces admission/file decoding → immutable plans → conditional queue/API acknowledgment → single root DOM lease → manager/selector/diagnostics → semantic export/reimport and representative states. U18-R1 is closed by real components, not generic markup. No new blocking production finding; this is **self-review, not independent approval**. Historical running/candidate-only observations are superseded for their stated scopes. Later integration `ef4cfb92` brings eight upstream Markdown paths, zero protected-source changes; all703 actual-gated inputs remain exact. Closure Markdown/integrity gates passed; source delivery1964fd6b was pushed and read back with live/fetched refs, full tree, all703 inputs and15 owned artifacts exact, zero outgoing commits.52 completed own scratch entries and own node_modules were removed after worker/cwd checks; only final metadata housekeeping remains. The UI reservation is released in the current handover.
+
+No native WebKitGTK/Orca, all-component WCAG, Alpha/ETS compatibility or real discovery/tunnel/commissioning/hardware acceptance follows. User instructions for import/export, reversible preview, explicit replacement, recovery and fallback are in the U17 user instructions above.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

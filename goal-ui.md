@@ -351,7 +351,7 @@ claim disguised as research. Record any deliberate change to ADR-0022.
 
 ### U15 — Validate packs and integrate the existing theme engine [web]
 
-**Delivered as 9d1ae19d; runtime foundation only. U16 subsequently delivered; U17–U18 remain open.**
+**Delivered as9d1ae19d; runtime foundation only. U16/U17/U18 subsequently delivered and read back; native/global-alpha acceptance remains separate.**
 Depends on U14's resolved contract. Keep parsing/validation pure and
 separate from DOM effects and persistence; do not add theme logic to KNX Core.
 
@@ -464,40 +464,52 @@ records findings, negative controls, integration provenance and actual counts.
 
 ### U18 — Review and close the theme-pack extension
 
-**Open.** Depends on U14–U17. Does not reopen the completed U13 review or close
-unrelated alpha/domain/native evidence gaps.
+**DONE — source delivery1964fd6b published/read back; final metadata housekeeping in the handover.** U18 depends on the delivered U14–U17 extension, does not reopen U13 and does not close unrelated alpha/domain/native gates.
 
-Read-only acceptance audit recorded IMPORTANT U18-R1: existing theme-runtime
-browser assertions exercise root switches and a generic table/input, not the
-representative editor/inspector/dialog/diagnostic states required below across
-all palettes. Add and verify that bounded mocked coverage before closing U18;
-do not reinterpret U17 management evidence as whole-extension visual acceptance.
+U18-R1 is closed by an opt-in, explicitly typed harness using actual
+GroupAddressTable, Inspector, inline address validation, Overlay and structured
+diagnostics. Nine palette paths cover five built-ins, System light/dark and two
+admitted user palettes; the harness-presence case makes10/10. Three rendered-style
+controls fail named assertions, not invented production-source mutation results.
+The fixture-module TS2322 inclusion canary was detected and restored. Initial
+shared-lease refusals remain infrastructure-only, not successful mutant evidence.
 
-- [ ] Run semantic roundtrip and migration/settings regressions plus hostile
-  pack fixtures. Mutation-check every new rejection, rollback and persistence
-  guard; retain evidence of initially surviving controls and their corrections.
-- [ ] Exercise representative editor, table, inspector, dialog and diagnostic
-  states across built-ins, System and imported palettes; cover focus, selection,
-  disabled controls, validation/status feedback and accent switching. Keep
-  runtime contrast-pair guarantees separate from broader visual acceptance.
-- [ ] Review the full extension diff in a separate in-session pass, explicitly
-  labelled self-review. Use an independent review only if separately available
-  and authorized; never fabricate an independent verdict or start subagents.
-  Fix substantive findings, repeat §2.5 gates after integration and run the
-  production Web build plus the fully mocked browser regressions.
-- [ ] Update implementation status, roadmap, theme-format/ADR documentation
-  and known limitations to actual delivered behavior. Add user instructions
-  for import/export, preview, replacement, recovery and fallback, with no
-  unsupported full-accessibility or native-platform claim.
-- [ ] Hand completion and remaining limitations to the goal.md owner for
-  global acceptance/triage; release only this package's Web lock and clean up
-  only its own artifacts. Publishing this extension does not authorize an
-  alpha release, reopen commissioning or grant a hardware-write go.
+- [x] Semantic roundtrip, migration/settings and hostile-pack regressions:
+  `themePackRoundtrip.test.ts`, `themePackFiles.test.ts`, `themePackStorage.test.ts`,
+  settings client/HTTP regressions and U15/U16/U17 restored guard evidence.
+  The actual Web1702/Rust2995 suites execute these contracts; U18 adds no new
+  production rejection/persistence guard needing a separate source mutant.
+- [x] Representative editor/table/inspector/dialog/diagnostic states:
+  `e2e/theme-state.e2e.ts` passes10/10, full mocked Chromium82. Focus, selection,
+  filtering, invalid editable drafts, disabled controls, dialog trap/Escape/restore,
+  diagnostic kinds/paths and supported/disabled accent choices are asserted.
+  Selection/focus/validation rendered-style controls fail their named assertions.
+  Three contrast-pair guarantees remain separate from all-component acceptance.
+- [x] Full extension reviewed in a separate in-session **self-review** pass,
+  admission → plans → queue/API → root runtime → manager/selector/diagnostics →
+  semantic roundtrip/real states. No new blocking production finding; no claimed
+  independent approval or subagents. Source-freeze703 binds actual1660911b;
+  18 repository plus six explicit offline commands pass24/24. Web1702,
+  Chromium82, Rust2995/0/165 over150 blocks,17 equal bindings. Offline inventories
+  reconcile11 product+16 injected-server+1 matrix=28; matrix115/113 unique;
+  421 private files unchanged and own temporary inputs/matrix removed.
+- [x] Status, roadmap, theme format/ADR and owned known-limitations section
+  reconciled. `docs/THEME_PACKS.md` documents import/export, preview/Cancel,
+  explicit replacement, recovery, System reset and unavailable-data fallback.
+  Closing self-review also corrects live candidate/open U18-R1 documentation drift.
+- [x] Source delivery1964fd6b published/read back: live/fetched refs, full tree,
+  all703 gated inputs and15 owned artifacts exact; zero outgoing commits.
+  Completion/remaining limitations handed to the goal.md owner; UI reservation
+  released in the current handover.52 completed own scratch entries and own
+  node_modules cleaned; final clean worktree/branch housekeeping follows the
+  metadata readback. Root/foreign worktrees and all other reservations untouched.
 
-**Acceptance:** every extension checkbox has named evidence or an explicit
-user-approved disposition; integrated gates and documented review findings are
-settled. Built-in theming remains functional and original U0–U13 provenance,
-alpha-owner decisions and all hardware boundaries remain intact.
+**Evidence:** `.ai/logs/2026-10-03_codex_ui-theme-closing.md` and its aggregate
+receipt; actual gate1660911b, normal Markdown-only upstream integrationef4cfb92,
+all703 protected inputs exact. No private raw output is retained. Candidate18/18
+and U17 historical23/23 are not substituted for actual24/24 acceptance.
+Native WebKitGTK/Orca, general WCAG, Alpha/ETS and real KNX commissioning remain
+separate; this theme extension never grants a hardware-write go.
 
 ---
 
@@ -552,3 +564,5 @@ Hand it over (§6).
 - **From the goal.md session to you:** the chosen U13 independent review
   returns concrete findings and an actual verdict. A refused review request
   is not a verdict; do not close U13 until findings and gates are settled.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

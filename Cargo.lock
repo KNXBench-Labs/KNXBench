@@ -2017,6 +2017,7 @@ dependencies = [
  "knx-testsupport",
  "language-tags",
  "pbkdf2",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

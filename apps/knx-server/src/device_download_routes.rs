@@ -396,6 +396,15 @@ async fn start(
         }
     }
 
+    state
+        .one_shot_activity
+        .ensure_write_available()
+        .map_err(|_| {
+            ApiError::with_status(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "activity history unavailable; not sent",
+            )
+        })?;
     let tunnel = state
         .connector
         .connect_tunnel(gateway)

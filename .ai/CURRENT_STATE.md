@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U17 delivered, U18 closing work next)
+- **Timestamp:** 2026-10-03 12:28 CEST
+- **Web lock:** retained by UI session through U18; not released.
+- **Completed:** U17 published/read back4d9073ca092198b23fbb52411cd68edc7fab8c4a. Owned HEAD/fetched/live main and full trees equal; all697 actual-gated code/config inputs plus25 owned artifacts exact remotely; zero outgoing commits. Full actual chain23/23, Web1702/95, Chromium72/0 failed/skipped/flaky, ordinary Rust2984/0/165/149 blocks,17 equal bindings,27 selected private cases plus115-instance/113-unique matrix,420 private files unchanged. Doc-only upstream integration and four nonempty intended-root doc audits/whitespace pass. U17 acceptance boxes have named tests. No root/foreign writes or live bus.
+- **Pending/Next Steps:** Publish this receipt-only metadata after doc gates/readback. Remove completed U17 task-owned build/probe scaffolding and clean checkout/ancestor-proven branch after moving all shell/kernel working directories out. Preserve compact actual/publication/negative-control evidence for U18; create fresh isolated ui-theme-closing from published main. U18-R1 IMPORTANT: add representative editor/inspector/table/dialog/diagnostic/focus/selection/disabled/accent state browser coverage across builtins/System/imported palettes. Then complete explicitly labelled in-session full-extension self-review, regression/mutation/roundtrip/integration gates and closing docs; release only this UI reservation on final acceptance.
+- **Notes for Codex oder Claude:** U18 is not done and U17 does not grant native WebKitGTK/Orca/WCAG/ETS/general-alpha approval. Original cancelled/interrupted/instrumentation controls retain their truthful classes; full chain3 and exact remote receipt provide actual acceptance. No quota checks, subagents, production network/hardware, unrelated refactors or root synchronization. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U17 accepted, publication pending)
 - **Timestamp:** 2026-10-03 12:24 CEST
 - **Web lock:** retained by UI session through U18; not released.

@@ -568,6 +568,15 @@ are implemented. No evaluator/API/UI/binding change. Full853 CLI measurement,
 broad/current-upstream delivery/readback and owned cleanup remain pending;
 keep AR07/runtime acceptance and KL150 delivery open.
 
+At 2026-10-03 22:35 CEST KL150 candidate a2aa4b7 has complete offline
+original-filename853 CLI evidence: baseline687/candidate688 installed, exactly
+one constraint refusal admitted; all other outcomes unchanged, originals
+independently rehashed, no raw/private item records and all copies/DBs removed.
+Fresh public16 and same-profile Release12 also pass; integrated acceptance and
+publication remain pending. This closes the candidate's storage-admission
+evidence gap only. Keep R-MODULE-04 runtime/allocation/parameter-write behavior
+and the separate115/113 selected semantics acceptance outside this claim.
+
 
 ## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
 

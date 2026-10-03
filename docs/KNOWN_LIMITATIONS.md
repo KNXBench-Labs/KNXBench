@@ -7117,6 +7117,21 @@ other 3 hit §151/§152).
 
 ## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
 
+**Full offline/public candidate evidence accepted 2026-10-03 22:35 CEST;
+integrated acceptance/publication/cleanup pending, not yet lifted.** Commit
+a2aa4b7 has fresh complete public16: Rust153 blocks/3009-0-166, ignored
+inventory166, Web1702, Chromium82 and shadow bindings17 token-exact. The first
+binding helper API rejection is retained separately, not a product/test failure.
+Fresh same-profile Release pair12 confirms old-parser named storage RED,
+candidate7 GREEN and CLI5 controls GREEN on both sides. Full853 original-name
+CLI pair independently reconciled: baseline687 installed/candidate688, exactly
+one database-constraint refusal becomes installed;147 namespace,15 ZIP-limit,
+two evidence-item-limit and one invalid-ZIP refusals unchanged. No installed-
+to-refused regression. Original manifest/all853 files independently rehashed,
+successful package bytes/source-blob hashes verified, four catalog/package
+tables empty after refusal, temporary inputs/databases gone; aggregate-only
+receipts, no private item/raw output. No new limits or runtime semantics.
+
 **Storage candidate verified 2026-10-03 20:56 CEST; not yet delivered/lifted.**
 Synthetic named UNIQUE-constraint RED confirms that a single mutable definition
 identity loses its enclosing scope at an inner End; Empty also clears it.

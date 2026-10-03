@@ -503,3 +503,29 @@ substitute_text and its two ISSUE-08 projection callers have no Activation/refus
 reporting and remain an explicit coordinated consumer boundary, not fixed by this
 core candidate. Other metadata/source/diagnostic copies, allocator capacity/RSS,
 general latency and whole AR07/Alpha remain outside the limited proposal.
+
+
+## Outside-walk text refusal proposal — 2026-10-03
+
+Bounded scalar policy/final receipt5ca570a0 is published/read back, own old
+checkout/branch and seven targets actually removed;74 compact receipts retained,
+canonical root/originals unchanged. New alpha-external-text begins from fresh
+remote5ca570a0, preserving the existing complete history. Source confirms two
+String-only ISSUE-08 callers and repeated cached-channel text copies with no
+request-level refusal. Existing domain Result/HTTP400 can report a whole-detail
+rendering refusal without a new DTO or Web/binding change. ADR-0066 is Proposed,
+not accepted semantics. Independent projection content budget must not mutate
+completed activation or parameter write authority, reset per object, silently
+clip output or replace an unresolved placeholder. Application policy, not KNX
+length rule. All metadata/query/raw-source/RSS/native/ETS boundaries stay open.
+
+First public synthetic HTTP tracer uses Small for the evaluated channel, then
+2,000,001 ASCII translation bytes (proposed input+output4,000,002 >4,000,000).
+Positive untranslated active/channel control and nonempty project/product-file
+equality run before expected HTTP400; no partial detail. Compilation/runtime
+RED are still pending, no production implementation or GREEN. AppState.new
+opens its default product path even when later overwritten; RED environment
+therefore redirects XDG_DATA_HOME into owned scratch as well as explicitly
+setting synthetic ProductDB and data_dir. No host database/private corpus, bus
+or vendor path is authorized. U17 Web lock remains held by ui-theme-management
+(10:00 owner note), not released or touched; commissioning lifecycle is separate.

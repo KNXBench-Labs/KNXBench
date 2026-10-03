@@ -33,7 +33,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use knx_productdb::dynamic::{Activation, ActiveRef, ChannelOwner, ModuleScope};
+use knx_productdb::dynamic::{
+    substitute_text_checked, Activation, ActiveRef, ChannelOwner, ModuleScope,
+    TextProjectionBudget, TextProjectionError,
+};
 use knx_projection::{ComObjectActivation, ComObjectChannel, ComObjectNode};
 
 /// What `apply` needs to know about one communication object.
@@ -59,7 +62,9 @@ pub(crate) fn apply(
     activation: &Activation,
     channel_texts: &HashMap<String, String>,
     values_complete: bool,
-) {
+) -> Result<(), TextProjectionError> {
+    // One context for the complete overlay, including repeated channel copies.
+    let mut budget = TextProjectionBudget::default();
     let uncertain = !values_complete
         || activation
             .diagnostics
@@ -75,7 +80,8 @@ pub(crate) fn apply(
         com.activation = state;
         com.channel = hit
             .and_then(|hit| hit.channel.as_ref())
-            .map(|owner| channels.node(owner, activation, channel_texts));
+            .map(|owner| channels.node(owner, activation, channel_texts, &mut budget))
+            .transpose()?;
         // A module-based object's `FunctionText` names the module's own
         // arguments (`{{argChannel}}`); only the activating expansion knows
         // their values. Without one the placeholder stays visible.
@@ -83,9 +89,11 @@ pub(crate) fn apply(
             com.function_text = com
                 .function_text
                 .as_deref()
-                .map(|text| knx_productdb::dynamic::substitute_text(text, Some(scope)));
+                .map(|text| substitute_text_checked(text, Some(scope), &mut budget))
+                .transpose()?;
         }
     }
+    Ok(())
 }
 
 fn decide<'a>(
@@ -186,20 +194,26 @@ impl ChannelTable {
         owner: &ChannelOwner,
         activation: &Activation,
         channel_texts: &HashMap<String, String>,
-    ) -> ComObjectChannel {
+        budget: &mut TextProjectionBudget,
+    ) -> Result<ComObjectChannel, TextProjectionError> {
         let key = channel_key(owner);
         let order = self.order.get(&key).copied().unwrap_or(u32::MAX);
-        self.known
-            .entry(key.clone())
-            .or_insert_with(|| ComObjectChannel {
+        let node = match self.known.entry(key.clone()) {
+            std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
+            std::collections::hash_map::Entry::Vacant(entry) => entry.insert(ComObjectChannel {
                 key,
                 kind: owner.kind.clone(),
-                text: channel_text(owner, activation, channel_texts),
+                text: channel_text(owner, activation, channel_texts, budget)?,
                 name: non_empty(owner.name.as_deref()),
                 number: non_empty(owner.number.as_deref()),
                 order,
-            })
-            .clone()
+            }),
+        };
+        // Cache hits still copy text into each object's serialized projection.
+        if let Some(text) = node.text.as_deref() {
+            budget.admit_copy(text)?;
+        }
+        Ok(node.clone())
     }
 }
 
@@ -231,7 +245,8 @@ fn channel_text(
     owner: &ChannelOwner,
     activation: &Activation,
     channel_texts: &HashMap<String, String>,
-) -> Option<String> {
+    budget: &mut TextProjectionBudget,
+) -> Result<Option<String>, TextProjectionError> {
     let scope: Option<&ModuleScope> = owner.scope.as_deref();
     if let Some(translated) = owner
         .element_id
@@ -239,7 +254,7 @@ fn channel_text(
         .and_then(|id| channel_texts.get(id))
         .filter(|t| !t.is_empty())
     {
-        return Some(knx_productdb::dynamic::substitute_text(translated, scope));
+        return substitute_text_checked(translated, scope, budget).map(Some);
     }
     activation
         .labels
@@ -249,7 +264,8 @@ fn channel_text(
                 && l.kind == owner.kind
                 && same_scope(l.scope.as_ref(), owner.scope.as_ref())
         })
-        .map(|l| l.text.clone())
+        .map(|l| budget.copy_text(&l.text))
+        .transpose()
 }
 
 fn same_scope(a: Option<&Rc<ModuleScope>>, b: Option<&Rc<ModuleScope>>) -> bool {
@@ -349,7 +365,7 @@ mod tests {
     ) -> Vec<ComObjectNode> {
         let activation = evaluate(trees, &ValueMap::default());
         let mut nodes: Vec<ComObjectNode> = ids.iter().map(|&id| com_node(id)).collect();
-        apply(&mut nodes, keys, instances, &activation, texts, true);
+        apply(&mut nodes, keys, instances, &activation, texts, true).unwrap();
         nodes
     }
 
@@ -452,7 +468,7 @@ mod tests {
         let keys = HashMap::from([(9, unscoped("O-9"))]);
         let activation = evaluate(&two_channels(), &ValueMap::default());
         let mut nodes = vec![com_node(9)];
-        apply(&mut nodes, &keys, &[], &activation, &HashMap::new(), false);
+        apply(&mut nodes, &keys, &[], &activation, &HashMap::new(), false).unwrap();
         assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
     }
 
@@ -626,7 +642,8 @@ mod tests {
             &activation,
             &HashMap::new(),
             true,
-        );
+        )
+        .unwrap();
         assert_eq!(nodes[0].function_text.as_deref(), Some("Schalten 7"));
         assert_eq!(nodes[1].function_text.as_deref(), Some("Schalten 8"));
         assert_eq!(
@@ -636,6 +653,58 @@ mod tests {
         // No activating expansion, no scope: the placeholder stays visible
         // rather than being filled from some other instance.
         assert_eq!(nodes[2].function_text.as_deref(), Some("Schalten {{No}}"));
+    }
+
+    #[test]
+    fn scoped_function_text_amplification_refuses_without_changing_activation() {
+        let mut module = nd(2, Some(1), "Module");
+        module.element_id = Some("A_MD-1_M-1".into());
+        module.ref_id = Some("A_MD-1".into());
+        let mut argument = nd(3, Some(2), "TextArg");
+        argument.ref_id = Some("A_MD-1_A-1".into());
+        argument.value = Some("X".repeat(1024));
+        let trees = ProgramTrees::from_parts(
+            DynamicTree::from_nodes(vec![nd(1, None, "Dynamic"), module, argument]),
+            HashMap::from([(
+                "A_MD-1".into(),
+                DynamicTree::from_nodes(vec![nd(1, None, "Dynamic"), com_ref(2, 1, "A_MD-1_O-1")]),
+            )]),
+        )
+        .with_arguments([knx_productdb::dynamic::ModuleDefArgument {
+            id: "A_MD-1_A-1".into(),
+            module_def_id: "A_MD-1".into(),
+            name: Some("No".into()),
+            arg_type: Some("Text".into()),
+            allocates: None,
+        }]);
+        let activation = evaluate(&trees, &ValueMap::default());
+        assert!(activation.diagnostics.is_empty());
+        assert_eq!(activation.com_object_refs.len(), 1);
+        let activation_before = activation.clone();
+        let instances = vec![instance(10, "MD-1_M-1")];
+        let keys = HashMap::from([(
+            1,
+            ComObjectKey {
+                lookup_id: "A_MD-1_O-1".into(),
+                module_instance: Some(&instances[0]),
+            },
+        )]);
+        let mut nodes = vec![com_node(1)];
+        let raw = "{{No}}".repeat(4096);
+        nodes[0].function_text = Some(raw.clone());
+        assert_eq!(
+            apply(
+                &mut nodes,
+                &keys,
+                &instances,
+                &activation,
+                &HashMap::new(),
+                true
+            ),
+            Err(TextProjectionError),
+        );
+        assert_eq!(nodes[0].function_text.as_deref(), Some(raw.as_str()));
+        assert_eq!(activation, activation_before);
     }
 
     #[test]

@@ -171,9 +171,13 @@ was added instead of, say, routing bus traffic back through `knx-cli`.
 Their parser/contrast validation stays pure in the Web layer; bounded DOM
 application extends the existing theme resolver. U15 delivers that admission,
 cache revalidation and reversible property ownership; visual fallback never
-overwrites an unsupported preference. U16 still owns acknowledged conditional
-updates through the existing settings client/route. No theme logic reaches KNX
-Core, project storage, product data or KNXnet/IP. U16–U18 persistence, management/
+overwrites an unsupported preference. U16 delivers acknowledged
+conditional updates through that same settings client/route: its last server
+observation is not a second store, and the optional compare-and-patch capability
+is independent of the unchanged opaque settings-file schema. File transport and
+inert recovery remain Web utilities; candidate and actual-merged acceptance
+passed, source 1f94808d is published with exact remote readback. No theme logic reaches KNX
+Core, project storage, product data or KNXnet/IP. U17–U18 management/
 preview and extension-wide acceptance remain open, not implied by runtime gates.
 
 ## 4. Enforced rules

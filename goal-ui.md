@@ -72,8 +72,8 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 
 ### Theme-pack extension (user request, 2026-10-02)
 
-**U14 contract and U15 runtime foundation delivered.**
-**U16–U18 remain open.** The user requested
+**U14 contract, U15 runtime and U16 persistence/file foundations delivered.**
+**U17–U18 remain open.** The user requested
 theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette
@@ -351,7 +351,7 @@ claim disguised as research. Record any deliberate change to ADR-0022.
 
 ### U15 — Validate packs and integrate the existing theme engine [web]
 
-**Delivered as 9d1ae19d; runtime foundation only, U16–U18 remain open.**
+**Delivered as 9d1ae19d; runtime foundation only. U16 subsequently delivered; U17–U18 remain open.**
 Depends on U14's resolved contract. Keep parsing/validation pure and
 separate from DOM effects and persistence; do not add theme logic to KNX Core.
 
@@ -386,23 +386,33 @@ native/Orca/all-component WCAG, full import/export or release approval follows.
 
 ### U16 — Persist, import and export theme packs without losing settings [web]
 
-**Open.** Depends on U15. This goal owns only the necessary theme/settings
+**DONE — foundation delivered/read back as 1f94808d.** Depends on U15. Implemented file transport,
+acknowledged plans and queue/API contracts; 144 focused tests, TypeScript,
+restored unit/HTTP controls and new-file canary pass. Candidate4 passed all
+16 checks. Actual-merged 22-step acceptance passed on 36e922bc, with six
+explicitly selected offline suites/11 private cases, narrower than historical
+U15's twenty-case scope. Web 1,665, intercepted Chromium 61, ordinary Rust
+2,940/0/164 over 148 blocks, all 17 bindings equal, 622 protected inputs and
+420 private files unchanged. Exact remote ref, 20 owned artifacts and all 622
+gated inputs read back equal. These checkboxes attest U16 application/storage
+and structured error contracts, not an implemented management panel. U17 owns visible
+management/diagnostics/preview. This goal owns only the necessary theme/settings
 application changes, not a new generic configuration subsystem.
 
-- [ ] Store installed packs and selected identity through the existing
+- [x] Store installed packs and selected identity through the existing
   versioned settings document and `settingsStore.ts`; use no separate
   authoritative browser store, project file or manufacturer database.
   Add a settings-schema migration only if the chosen representation requires
   it. Preserve unknown/unrelated settings and newer-file refusal semantics.
-- [ ] Implement bounded file import/export with deterministic semantic
+- [x] Implement bounded file import/export with deterministic semantic
   roundtrip. Export must not include private project, bus or unrelated settings
   data. Clarify whether built-in palettes can be exported as independent packs;
   importing one must never shadow its built-in source.
-- [ ] Require explicit consent to replace an installed ID; commit pack and
+- [x] Require explicit consent to replace an installed ID; commit pack and
   selection changes atomically where coupled. Do not report durable success
   from an optimistic cache update. On server/write failure, surface the failure
   and preserve or restore the last acknowledged state and original file.
-- [ ] Cover restart/hydration, cross-client settings refresh and races between
+- [x] Cover restart/hydration, cross-client settings refresh and races between
   import, selection, replacement and removal. Removing the active pack uses
   the documented built-in fallback; unsupported/corrupt stored packs remain
   recoverable and visibly diagnosed rather than silently erased.

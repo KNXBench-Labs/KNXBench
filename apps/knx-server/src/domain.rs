@@ -1400,7 +1400,8 @@ fn apply_com_object_activation(
         &evaluation.activation,
         &channel_texts,
         evaluation.stale.is_empty(),
-    );
+    )
+    .map_err(|error| error.to_string())?;
     Ok(())
 }
 

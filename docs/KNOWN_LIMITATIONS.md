@@ -463,6 +463,24 @@ that the group address it names exists.
 
 ## 3. Device parameters are preserved but not interpreted
 
+**AR07 validation candidate (2026-10-02).** Nonfinite Float bounds are rejected
+before comparison rather than letting a NaN declaration bypass an inclusive
+limit. Synthetic RED101 reproduced; targeted Float6/0/0 and HTTP34/0/0 pass,
+with ten lower/upper metadata cases, nonempty project equality, retained raw
+source and independent sibling edits. Finite-value parsing policy and stored
+lexemes unchanged. Separate in-session review has no blocking bounded findings;
+public baseline8/8, workspace2926/0/164, 615 frozen inputs and 17 shadow bindings
+equal. Both compiled min/max guard mutants caught at unit/HTTP, canonical source
+restored. Frozen owned checkpoint18/18, workspace2926/0/164, Web1559 and
+Chromium mock61 pass; six selected private Dynamic tests6/0/0 without genuine
+skips and all103 original identities/hashes unchanged. No private raw logs.
+Actual commissioning/Float mergebc5999c1 passes20/20, workspace2931/0/164,
+Web1559/Chromium61, private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0,
+all108 originals unchanged/615 frozen inputs/17 equal bindings. Scoped guard
+publishedda3bc947, local/live/fetched refs equal0/0 and owned bytes read back;
+broader resource budgeting/provenance audit stays open;
+no Float encoding, complete type-semantics, native SQL/WAL or ETS claim.
+
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project
 are imported, stored and exported unchanged. As of **T18 slice 4
 (2026-09-12)** a module-scoped (per-channel) value is not just read and

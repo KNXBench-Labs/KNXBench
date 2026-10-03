@@ -73,3 +73,15 @@ Next: doc gates/in-session review, focused research-only publication/readback
 and owned build/snapshot/probe cleanup. KL151 stays open; KL152 item-max census
 and KL153 bounded grammar research remain independently ready. No producer/
 namespace/evidence/UI/HTTP/limit change and no full Alpha completion claim.
+
+## Research delivery checkpoint — 2026-10-03 22:20 UTC
+
+Separate in-session six-path doc review has no blocker; metrics recomputed from
+the accepted aggregate, private path/basename/individual-digest and added-line
+secret scans pass. Fresh current-root doc5/log hashes/source706 and entire
+authoritative handover suffix checked. fc5f2db1 normally published/live/fetched
+six Markdown blobs exact. Three owned experiment build/snapshot directories
+removed, no private temp directories. Final closing metadata/doc target/runners/
+worktree/branch hygiene pending; keep public logs/aggregate commitments/plans.
+Canonical code/limits unchanged; no owner endpoint, source matrix or production
+compatibility claim implicitly accepted by research-only delivery.

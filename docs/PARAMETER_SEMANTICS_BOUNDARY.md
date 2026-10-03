@@ -556,6 +556,18 @@ parser fixture/private one-off sample must be handled before claiming new real
 R-MODULE-04 semantics;853 crawler files are not this selected9-case gate or a
 committed fixture. Current broader supported-semantics matrix/AR07/Alpha open.
 
+AR06P KL-150 storage candidate checkpoint (2026-10-03 20:56 CEST): lexical
+definition/argument-position restoration has public RED/GREEN, whole-package
+rollback, eligible-source replay and three compiled scope mutants. The one
+authorized nested-package private pair is baseline RED/candidate GREEN;
+independent lexical/stored scope counts and original/retained ZIP bytes agree,
+retry succeeds, originals unchanged and raw/private-item outputs discarded.
+This supplies an offline stored-scope witness for the later R-MODULE-04 work,
+not evidence that nested allocation, substitution or parameter-write semantics
+are implemented. No evaluator/API/UI/binding change. Full853 CLI measurement,
+broad/current-upstream delivery/readback and owned cleanup remain pending;
+keep AR07/runtime acceptance and KL150 delivery open.
+
 
 ## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
 

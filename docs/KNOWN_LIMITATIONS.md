@@ -7117,6 +7117,23 @@ other 3 hit §151/§152).
 
 ## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
 
+**Storage candidate verified 2026-10-03 20:56 CEST; not yet delivered/lifted.**
+Synthetic named UNIQUE-constraint RED confirms that a single mutable definition
+identity loses its enclosing scope at an inner End; Empty also clears it.
+The candidate stores lexical definition identity and argument position on a
+stack, preserving existing keys, source ownership and atomic transactions.
+Nine public focused tests and ProductDB625/0/25 pass with strict Clippy;
+three compiled mutants have five named failures, plus an exact committed
+pre-fix baseline RED. One authorized private nested-package pair is baseline
+RED/candidate GREEN, with independent lexical/stored scope-count agreement,
+original-ZIP/retained-member equality, successful retry and unchanged originals.
+No private raw/item records survive. Full853 CLI measurement, broad/current-
+upstream gates, publication/readback and cleanup remain pending. This does not
+claim R-MODULE-04 runtime/allocation semantics, new nested diagnostic XPath
+fidelity or automatic repair of previously admitted mis-scoped catalog rows.
+The existing idempotence policy still skips stored trees; eligible retained-
+source replay is synthetically verified, not a new database migration.
+
 **Observed 2026-10-03.** MDT `RF-TAL55Bx0x-01S_MDT_KP_V12.knxprod`
 (scheme 20, program `M-0083_A-00F2-12-05C4`) fails in a shared and in a
 fresh database with `UNIQUE constraint failed: dynamic_node.program_id,

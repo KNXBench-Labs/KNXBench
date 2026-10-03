@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-03 — U17 Appearance manager (reviewed local candidate, not delivered)
+## 2026-10-03 — U17 Appearance manager (actual implementation acceptance passed)
 
 Settings → Appearance now manages immutable builtins and admitted installed
 packs with origin/version/saved status, import/export/recovery, explicit Apply/
@@ -26,6 +26,20 @@ and three further compiled controls pass/restored, no production change. Earlier
 full69-browser source predates this test-only delta; renewed actual gates pending.
 Full legacy Web suite emits fixture stderr; no warning-free whole-suite claim.
 Native WebKitGTK/Orca/global-alpha/ETS and U18 acceptance remain separate/open.
+
+The candidate-only statements above are superseded by actual chain
+proc_cdcd42b97d47 on f16f1e40:23/23 commands passed,17 repository and six offline
+inventory/execution commands; Web1702, Chromium72 (zero failed/skipped/flaky),
+Rust2984/0/165 across149 blocks, compiled ignored inventory165,17 equal bindings,
+697 unchanged source/config inputs. Six selected offline suites execute27 private
+cases plus one115-instance/113-unique matrix case;420 private files unchanged,
+temporary corpus link removed. Earlier cancelled/interrupted runs are not
+acceptance. Integration with upstream5ca570a0 changes only Markdown and preserves
+complete owner histories/gated source; document gates/publication/readback are
+tracked in the current handover. U18-R1 remains IMPORTANT: representative
+editor/inspector/table/dialog/diagnostic state coverage across palettes is not
+established by the current generic root-switch fixture. U17 management acceptance
+does not close U18, native/Orca, general WCAG, ETS or global-alpha release.
 
 ## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
 

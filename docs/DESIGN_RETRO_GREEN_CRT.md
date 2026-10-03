@@ -69,6 +69,17 @@ unsupported value is hidden in an ignored JSON field or a token with another rol
 
 ## Use in the application
 
+### Publication checkpoint
+
+After explicit user authorization, source commit
+`879c69b2f11c825c1d4f10b5409e5a5148f06e67` was pushed to
+`design-retro-green-crt-20261003`; local, fetched and live remote source refs were
+equal on2026-10-03 at20:19 CEST. Fresh Web1712/96 files and TypeScript/Vite build
+passed. Review was in-session, not independent-agent approval. The branch is
+published, **not merged into main**; no dirty-root product synchronization.
+
+### Import
+
 Requires the U14–U18 theme integration (verified baseline `e7f9db8e`, fetched
 `origin/main`), not the older dirty local root checkout inspected at task start.
 Open **Settings → Appearance**, import the `.knx-theme.json` file, inspect the

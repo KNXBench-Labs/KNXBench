@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:19
+- **Completed:** Committed CRT1.1 as879c69b2f11c825c1d4f10b5409e5a5148f06e67 and published design-retro-green-crt-20261003 after explicit user authorization. Exact local/fetched/live remote source refs matched. Fresh pre-publication Web1712/96 files and TypeScript/Vite build pass; in-session review/static scan has no blocking findings. Author/committer github@knxbench.com, no co-author. Palette/study/test/browser receipt and owned logs are tracked; this acknowledgment is source-identical Markdown bookkeeping.
+- **Pending/Next Steps:** Production component/token/motion integration and any main merge remain separately scoped/unauthorized. Retain design branch/worktree for review; Git HEAD/upstream identify the metadata tip. This record acknowledges already measured source publication, not a speculative main integration.
+- **Notes for Codex oder Claude:** See .ai/logs/2026-10-03_codex_crt-publication.md and docs/DESIGN_RETRO_GREEN_CRT.md. No independent-review/native/Orca/full-WCAG claim. No root product synchronization or live settings/project/KNX writes. Earlier uncommitted/no-push entries below are historical.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-03 20:16
 - **Completed:** CRT1.1 packaging reviewed in-session for explicitly authorized commit/push on design-retro-green-crt-20261003. Fresh Web1712/96 files and TypeScript/Vite build pass; retained16-group Chromium receipt covers unchanged source. Static scan, local design links, syntax and whitespace checks pass. See .ai/logs/2026-10-03_codex_crt-publication.md; no independent-review claim.
 - **Pending/Next Steps:** Commit owned artifacts only, publish this design branch and verify exact remote equality before acknowledging delivery. No main merge/root product synchronization; production token/component/motion integration remains separate.

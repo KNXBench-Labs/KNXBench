@@ -39,3 +39,15 @@ tracked additive documentation/handover diff.
 At this checkpoint no remote design branch existed and no CRT source commit had
 been made. Publication is pending until exact remote-ref readback; the subsequent
 acknowledgment records the measured source commit and delivery boundary.
+
+## Source publication acknowledgment — 2026-10-03 20:19 CEST
+
+- Source commit: `879c69b2f11c825c1d4f10b5409e5a5148f06e67`.
+- Remote branch: `design-retro-green-crt-20261003`.
+- Exact local HEAD, fetched tracking ref and live `ls-remote` tip matched.
+- Both author and committer are `github@knxbench.com`; no co-author trailer.
+- Explicit staged scope contained only thirteen owned files; source parent is
+  the inspected e7f9db8e baseline, not foreign/unreviewed commits.
+- No main merge or root product synchronization. Subsequent source-identical
+  Markdown acknowledgment is verified against the published source before push;
+  the final Git refs, not a self-referential hash here, identify that metadata tip.

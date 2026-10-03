@@ -1,8 +1,8 @@
 # AR07 supported parameter semantics — research boundary
 
-Status: bounded controller candidate, 2026-10-02; public regression/mutation
-gate accepted. Private corpus, whole-workspace/integration and UI adoption
-remain separate; no full manufacturer/ETS compatibility acceptance.
+Status: controller checkpoint published; bounded Float guard integrated and
+accepted20/20 and published as da3bc947. Selected private/offline
+witnesses pass; broader AR07 and UI/native/ETS acceptance remain separate.
 
 ## Scope and authority
 
@@ -173,6 +173,41 @@ budget/module-identity/validation/vendor-inert audit and typed/localized
 `unsupportedControlKind` adoption remain open. Browser fixture success is not
 proof of that token's localized UI adoption, native desktop behavior or ETS parity.
 
+## Remaining validation audit started (2026-10-02)
+
+Published controller checkpoint final receipt `d62baef4` independently read back;
+remaining audit starts in fresh `alpha-parameter-audit`, not a dirty shared root.
+The existing Float write validator checks input finiteness but parses declared
+min/max directly before comparison (`apps/knx-server/src/domain.rs`). A synthetic
+nonfinite-declaration regression reproduced actual RED101 (0/1/0): a NaN
+lower bound permitted a finite write. Minimal production fix rejects nonfinite
+parsed lower/upper declarations before comparison, retaining original metadata
+and input lexemes. Targeted Float GREEN6/0/0 and public HTTP34/0/0 pass. The
+HTTP regression covers ten lower/upper NaN/infinity/exponent-overflow cases,
+nonempty in-memory project equality after refusal, byte-exact retained source
+and an independently writable Text sibling. This does not establish native
+SQL/WAL atomicity, XSD validity, wire encoding or whole-feature/private acceptance.
+Separate in-session producer review found no blocking bounded findings. The
+corrected public baseline proc_e87d7afdd30d independently passes 8/8, workspace
+2,926/0/164, strict Clippy/build/fmt/root-explicit anchors/whitespace and actual
+frontend install/build. All 615 source/config hashes remain frozen; 17 shadow
+bindings equal under CI policy. The first baseline remains rejected/archived
+for missing Tauri frontend resources before any tests ran. Both independently
+compiling min/max guard-removal mutants are caught separately by unit and HTTP
+(four observations); all 615 canonical hashes restored. Final checkpoint proc_536a6eb16342 independently passes18/18 on the owned
+guard/test delta: workspace2926/0/164, Web1559, existing Chromium fixtures61,
+selected private Dynamic6/0/0 with zero genuine/unknown skips and one each
+intentional duplicate/reinstall metadata category. All103 original archive
+identities/hashes unchanged; 615 source/config inputs frozen and 17 shadow
+bindings equal. No private raw logs. This is not all-archive opaque-semantic
+validation or UI/native parity. New upstream commissioning recovery c9f77d7b
+changes code outside this guard; actual integrated-source re-gates and
+publication/readback remain pending. Broader AR07 audit remains separate.
+
+Primary library reference: [Rust f64 is_finite](https://doc.rust-lang.org/std/primitive.f64.html#method.is_finite)
+defines finiteness to exclude NaN/infinities. This library fact does not establish
+manufacturer schema semantics; retained lexemes/native storage stay unchanged.
+
 ## Next evidence decisions
 
 - The bounded producer review, selected private tests and actual integrated
@@ -185,3 +220,37 @@ proof of that token's localized UI adoption, native desktop behavior or ETS pari
   packages. Report remaining limitations; no Repeat/Allocator engine by guesswork.
 - Missing or unretrieved primary evidence remains explicitly pending, not a
   global project halt and not permission to execute unknown vendor logic.
+
+## Actual merged Float guard accepted — 2026-10-02 23:55 CEST
+
+Actual integration bc5999c1 (source4514076b + published commissioningc9f77d7b),
+proc_d4c3a0b0b43f exit0, independently reconciled20/20: workspace2931/0/164,
+Web1559, intercepted Chromium61, private Dynamic6/0/0 and offline injected
+SimTunnel HTTP13/0/0, zero unknown/genuine skips. All103 original product
+archive and108 total original fixture identities/hashes unchanged; no private
+raw logs. All615 source/config inputs frozen, fresh changed crates compiled,
+17 shadow bindings equal, strict Clippy/build/fmt/deny/nonempty root gates pass.
+Projection42 is a workspace subset, not additional passes. Both complete
+handover/status owners preserved. Publication/readback still pending.
+
+Broader AR07 remains open. Read-only source trace identifies a possible
+general-diagnostic fan-out and inert-node/binding traversal budgeting gap:
+activations_recorded(:1217) excludes ordinary diagnostics, diagnose(:1323)
+pushes without admission, walk(:1463/:1532) can revisit inert nodes per
+expansion, and bind_arguments(:1619) is a sibling work path. No behavioral
+RED, new safety policy or production fix has run; do not label this reproduced
+or accepted. Follow-up must cover the resource class, keep opaque sources and
+explicit truncation/uncertainty, and use bounded public TDD before changes.
+Nested ScopeKey/panel grouping and duplicate-module authority are source-traced;
+full ModuleScopeDto ancestor provenance and UI/localization remain separate.
+
+## Scoped Float delivery — 2026-10-03 00:04 CEST
+
+Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.
+Local/live/fetched refs equal, divergence0/0, eight owned source/receipt/doc
+artifacts byte-exact. Actual-gated sourcebc5999c1 is unchanged by the doc-only
+receipt. Four completed owned build/shadow directories removed; accepted and
+rejected aggregate evidence plus next read-only audit retained. Shared dirty
+root/U16 untouched; integrated root statistics remain with their owner.
+Broader AR07 and Alpha remain incomplete; next bounded diagnostic/inert-work
+budget proof is not yet executed, no new resource/semantic support claimed.

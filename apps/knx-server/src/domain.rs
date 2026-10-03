@@ -4248,6 +4248,12 @@ fn validate_kind_and_bounds(
                         view.id
                     )
                 })?;
+                if !min.is_finite() {
+                    return Err(format!(
+                        "program declares a non-finite min_inclusive '{min}' for '{}'",
+                        view.id
+                    ));
+                }
                 if parsed < min {
                     return Err(format!("'{}' must be >= {min} (got {parsed})", view.id));
                 }
@@ -4259,6 +4265,12 @@ fn validate_kind_and_bounds(
                         view.id
                     )
                 })?;
+                if !max.is_finite() {
+                    return Err(format!(
+                        "program declares a non-finite max_inclusive '{max}' for '{}'",
+                        view.id
+                    ));
+                }
                 if parsed > max {
                     return Err(format!("'{}' must be <= {max} (got {parsed})", view.id));
                 }
@@ -5089,6 +5101,24 @@ mod tests {
     // own doc comment for why nothing deeper is defensible), so their cases
     // live here too, to keep that absence visibly tested rather than
     // silently unexercised.
+
+    #[test]
+    fn float_rejects_non_finite_declared_bounds() {
+        for declared in ["NaN", "inf", "-inf", "1e999", "-1e999"] {
+            for minimum in [true, false] {
+                let mut view = view_of_kind("Float");
+                if minimum {
+                    view.min_inclusive = Some(declared.to_string());
+                } else {
+                    view.max_inclusive = Some(declared.to_string());
+                }
+                assert!(
+                    validate_kind_and_bounds(&view, "1.5").is_err(),
+                    "non-finite declared bound {declared}, minimum={minimum}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn float_accepts_a_plain_decimal_within_declared_bounds() {

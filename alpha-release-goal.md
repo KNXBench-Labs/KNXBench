@@ -374,14 +374,145 @@ all108 originals unchanged (including103 product archives),615 frozen inputs
 and17 equal bindings. Published/read backda3bc947, local/live/fetched refs
 equal0/0 and eight exact owned artifacts; completed owned builds/shadows
 cleaned, shared root/U16 untouched. Broader AR07 stays
-open; next bounded RED investigates general diagnostic/inert traversal work
-budgeting, currently a read-only source candidate, not a reproduced defect.
+open. Fresh alpha-parameter-budget from published be88e7b9 now reproduces the
+general-diagnostic gap: compiled public RED101/0-1-0, 2,000,896 warnings above
+the proposed 2,000,000 ceiling in1.89s, without refs/labels or exhausted expansion
+quota. Production source unchanged; no timeout/OOM/private/live/vendor run.
+ADR-0062 records proposed shared work admission and incomplete-evaluation write
+refusal. Sibling REDs subsequently compiled and reproduced the defect; public
+Core GREEN proc_ce7c8cb5fef3 passed nine stages (Library354/0/0,
+DynamicTree62/0/6, eight small admission-boundary units, strict Clippy/fmt/
+whitespace/source freeze). Four targeted repeats are subsets. A second compiled
+HTTP RED proved prefix write authority incorrectly returned200 instead of400.
+The server now clears all write targets after resource truncation; public
+backend GREEN proc_61273ee26c21 passed six stages: HTTP35/0/0 and server204/0/2,
+strict ProductDB/server Clippy, atomic nonempty-project refusal, retained source
+bytes and source freeze. Separate in-session bounded source/security review has
+no blocking finding, not an independent-model approval. First mutation attempt
+proc_f134efced013 failed shared-lock acquisition before any compiler/source
+mutation; its timeout remains rejected, not behavioral evidence. Retry
+proc_43b041004d63 independently accepted five compiled behavioral mutants:
+walk/skipped-descendant/binding/diagnostic admission and prefix write authority.
+Each compiled0 and produced intended Rust101/0-1-0 assertion failure; canonical
+evaluator/server bytes and full source hashes restored. Actual candidate
+proc_cd67fb854490 exited0, independently20/20: workspace2944/0/164,
+Web1559/Chromium61, selected private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0,
+103/108 originals unchanged,616 frozen inputs/17 equal bindings and strict
+build/lints/nonempty intended-root audits. Restored candidate GREEN is not
+latest-upstream acceptance: integrate fresh0889c102 U16/U17 with all owner
+artifacts intact, gate the combined tree, then publish/read back.
+Actual integration subsequently committed7ae116a1, both complete owner histories
+and all producer source artifacts retained. proc_096e63a3429e exited0 and
+independently20/20: workspace2953/0/164 over148 blocks, Web1665/Chromium61,
+explicit private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0 without genuine
+skips or private raw logs,103/108 originals unchanged,624 frozen inputs equal
+exact committed blobs,17 bindings equal and strict build/lints/nonempty root
+audits. Five compiled mutants remain restored. This accepts ADR-0062's bounded
+work policy, not broader AR07. Acceptance metadata/publication/readback pending;
+preceding integration-pending words describe the earlier candidate checkpoint.
+Bounded policy source8f47c13b/actual-gated7ae116a1 subsequently published/read back
+through2704f8e29b6ca2d53c022c468f116b526109c678: local/live/fetched refs equal0/0,
+all14 owned artifacts and624 actual-gated inputs exact remotely; doc-only
+acceptance gates pass, code delta zero. Own build/script/raw-log scaffolding
+removed, minimal aggregate receipts and source-only remaining audit retained.
+Final receipt metadata publication/readback and clean checkout/branch removal
+remain closing steps, not new semantics or full-package AR07/Alpha acceptance.
+Broader AR07 and
+work/byte/semantics acceptance remain open; no completed UI/native/ETS claim.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual
 Web kind/catalogue adoption stays with UI. Selected-private/broad controller
 gates and separate in-session review pass, and the controller checkpoint is
 accepted. Broader budget/module-identity/provenance/vendor-inert audit remains
 open, distinct from the scoped controller and Float fixes. Channel
 label data/UI half is already delivered; unknown manufacturer logic stays inert.
+
+2026-10-03 module-provenance subpackage: fresh `alpha-module-provenance` from
+published `e9707794`. Public compiled nameless-nesting RED101/0-1-0 shows distinct
+Core/server paths collapsing to identical HTTP scope identities. ADR-0063 adds
+response-local `nodeChain` through the existing accessor only; legacy fields,
+write authority, source data and storage schemas unchanged. Public HTTP38/0/0,
+server205/0/2 and selected Core identity72/0/6 pass, strict Clippy/fmt/whitespace
+and624 frozen inputs; three compiled omission/inner-only/reversal mutants caught
+and restored, separate in-session review without blocking finding. Integration
+and delivery pending. UI manual scope matching remains owner work, not completed
+by an additive wire field; genuine nested manufacturer and broader AR07 remain
+open. The prior budget final receipt/cleanup is verified, not a pending rerun.
+
+2026-10-03 05:38 actual module-provenance acceptance: reviewed source d51dd6c7,
+conventional integration3711c4f7 on published e9707794. proc_f27315f3cd8c's20/20
+independently accepted: ordinary Rust2957/0/164 over148 blocks, Web1665,
+intercepted Chromium61, selected private Dynamic6/0/0 and in-memory SimTunnel
+HTTP13/0/0; no genuine/unknown skips or private raw logs. All624 committed inputs,
+17 bindings and420 original files (including103 product archives) unchanged.
+Hashing420 files is not parsing420 files. Strict Clippy/build/fmt/dependency and
+four nonempty intended-root audits pass. First `Checking`-only receipt assertion
+rejected; actual fresh Clippy says `Compiling`, corrected without source change
+or gate replay. ADR-0063 bounded backend accepted; publication/readback/cleanup
+pending, UI scope adoption and whole AR07/Alpha remain open.
+
+2026-10-03 05:48 module-provenance backend leaf delivered: source/acceptance
+3a8b66f422bda73c9999fb214f2459c79ecea76b published and read back with0/0
+local/live/fetched refs at that checkpoint, all11 own artifacts and624 actual
+inputs exact remotely. Actual3711c4f7's20/20 and three compiled mutants/restoration
+retain their scope; post-gate Markdown delta has four nonempty intended-root
+audits/whitespace green. Completed owned targets/raw scaffolding removed after
+process checks; minimal aggregates retained. Final receipt-only publication and
+checkout/two ancestor-confirmed branch cleanup follow separately. Continue
+earliest-ready AR07 external substitution/variable-output audit on fresh upstream;
+UI chain adoption, genuine nested products and whole AR07/Alpha remain open.
+
+2026-10-03 06:56 AR07 continuation: final module-provenance receipt14e2eb9a
+published/read back; actual clean checkout/two ancestor-confirmed branches and
+owned scaffolding removed, dirty root unchanged. Fresh alpha-text-output on14e2eb9a
+audits binding/label scalar copies. Initial ancestor-cost hypothesis rejected:
+ModuleScope::argument is deliberately local, already charged correctly; no
+inheritance/ancestor fee is authorized. ADR-0065 is proposed scalar admission,
+not new KNX semantics or old byte guarantee. proc_49808cde0743 compile0, three
+copy assertions101/0-1-0 independently verified; fourth inheritance expectation
+rejected and converted to positive non-inheritance regression (old-production1/0/0).
+Exact UTF-8-cost unit101/0-1-0 verified before core fix. Candidate core copy admission
+implemented, Core proc_c73947a5b170 independently5/5:355/0/0 library and66/0/6
+DynamicTree plus strict Clippy/fmt/whitespace/freeze, no private ignored cases
+executed. New HTTP cause test shares existing whole-prefix atomic assertions;
+proc_8ee608d8a643 independently5/5, named1/0/0/full39/0/0, strict lint/fmt/
+whitespace/freeze and complete-prefix atomic authority/source invariants.
+Omission/restoration proc_98b4f3f512f1 independently verifies3 compiled mutants,
+4 caught assertions, evaluator/all9 scoped hashes exact. Candidate-only broad
+public proc_2b136248f7f9 rejected at header158>157 after workspace2963/0/164.
+Required blank Rust doc separator fixed, unchanged ceiling; fix gate410/157/17
+passes, first rejected logs/receipt retained. Retry proc_230c3f7e4db9 independently
+passed13/13, workspace2963/0/164 across148 blocks, Web1665,615 frozen inputs and
+17 unchanged shadow bindings; copy policy renumbered0065 to preserve upstream0064;
+no integrated
+delivery yet. No consumer/UI/binding source edit
+or acceptance claimed. Outside-walk String-only projection and general allocation/
+RSS/latency remain explicit boundaries; whole AR07 and Alpha still open.
+
+## AR07 scalar-copy actual integration accepted — 2026-10-03 09:52 CEST
+
+Reviewed source2e7a41c3 conventionally merged with published c07e6403 at
+9f512ab3e302014d1b4c3d2af33cd33712a052ad; upstream ADR0064/owner histories
+preserved, own scalar policy ADR0065. Actual proc_3ea5d4e7afa4 exit1 is retained:
+private Dynamic Rust6/0/0 exit0 but closed skip classifier rejected two output
+signals. Private raw lines were not persisted; do not claim recovered text.
+Source-backed public regression proves bool-valued PackageInstallReport.skipped
+and registered libtest-prefix cases; corrected classifier5 positives/7 negatives
+pass, unknown or missing-data signals still rejected. No production change.
+Continuation proc_8dd254bb5c75 exit0 independently accepted20 stages: five public
+commands reused from the exact same committed617-input tree (not a wholly fresh
+20-command run),13 commands and2 final checks newly executed. Workspace2984/0/165
+over149 blocks, Web1665, intercepted Chromium61; newly selected private Dynamic
+6/0/0 and in-memory offline SimTunnel Download14/0/0, zero unknown skip signals.
+All617 current/committed source/config hashes and17 shadow bindings equal;
+420 originals including103 product archives unchanged across the complete new
+private window. Hashing420 files does not mean parsing420 files. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+Earlier candidate/header failure and three compiled omission mutants/restoration
+remain scoped to their actual runs, not relabelled. Separate in-session review,
+not an independent-model verdict. Acceptance-doc gates/publication/readback
+pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
+UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
+remain open. No live bus/vendor code or private raw logs; UI owner untouched.
 
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.

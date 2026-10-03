@@ -68,6 +68,29 @@ No property octets, keys or host backup paths are disclosed. The global Web
 status bar and per-action history remain open (ADR-0055/0056); simulator
 evidence is not a live bus check.
 
+**Durable backend candidate, 2026-10-03 (ADR-0064).** A separate versioned
+SQLite history now retains four one-shot operation kinds across ring eviction
+and restart; seven kinds remain explicitly untracked. Previous-incarnation
+running rows become interrupted/unknown, never success. Storage/metadata
+refusal is visible and latches unavailable history; download and Debug-write
+starts refuse before tunnelling when history cannot be admitted. Property
+intent persistence still follows the PID 8/PID 14 recovery and precedes the
+first property write. This is metadata only, not a recovery image, complete
+download journal or a shipped global UI. Whole-candidate acceptance and
+publication remain pending. The exact consumer contract and residue are in
+[COMMISSIONING_ACTIVITY_HISTORY](COMMISSIONING_ACTIVITY_HISTORY.md) and
+[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md).
+
+**Admission correction, 2026-10-03.** Late synthetic review reproduced SQLite
+hot-journal rollback before a foreign-format refusal. Corrected openers first
+admit existing identity/schema read-only; WAL is explicitly unsupported and
+header-refused before SQLite can create shared-memory sidecars. Hot-journal and
+WAL RED/GREEN cases preserve main/journal/WAL bytes; 21 current-source compiled
+behavioral mutants fail as expected and restoration is exact. Preserve failed
+storage and its sidecars for explicit repair, not automatic rollback/conversion.
+Hostile concurrent path replacement is not covered. Earlier full gate receipts
+belong to their older source; corrected integrated acceptance is still pending.
+
 ## U12 structure editor scope (ISSUE-05)
 
 Area/line renames and line, building-part and group-range reparenting are
@@ -621,26 +644,28 @@ that server-named id instead of the declared one (D43).
     scoped values. This is unattested — the corpus has zero nesting to
     check it against — and is called out here rather than silently
     assumed safe.
-  - **`apps/knx-server`'s `ModuleScopeDto` carries only the innermost
-    scope.** `module_scope_dto()` (`apps/knx-server/src/domain.rs`) reads
-    `scope.module_node`/`module_id`/`module_def_id` only; it does not walk
-    `ModuleScope::parent`. A nested-module diagnostic or activation
-    surfaced through the parameter-editor HTTP API therefore *displays*
-    only the innermost enclosing `Module`, not the full ancestor chain.
-    **Consequence sharpened, fix round 2 (2026-09-14):** the server now
-    correctly splits two nesting chains that share an innermost
-    `module_node` under different ancestors into two distinct sections
-    (previous bullet), but if both chains' innermost `Module`s are also
-    both nameless (no `@Id`) under the *same* `ModuleDef`, their DTOs are
-    identical — `moduleNode`/`moduleId`/`moduleDefId` all equal — so the
-    client cannot tell the two correctly-split sections apart. `ParameterPanel.tsx`'s
-    `sameScope()` then matches a diagnostic meant for one section against
-    both, misattributing it. This is no longer only lost ancestor
-    *context*; it is diagnostic *misattribution* between two sections the
-    server itself got right. Unattested against real data — no corpus
-    sample reaches this path — but this is a display omission, not the
-    section-collision defect the next bullet used to describe; that one
-    is fixed, this one is not.
+  - **Parameter HTTP scope identity — bounded backend correction accepted
+    (2026-10-03).** The
+    original 2026-09-14 finding was that correctly separated nameless nested
+    sections could have identical `moduleNode`/`moduleId`/`moduleDefId`
+    HTTP scopes, causing client-side diagnostic misattribution. AR07's
+    public synthetic RED reproduced exactly that wire collision on
+    `e9707794`, without changing Core or the section grouping.
+    [ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md)
+    now adds response-local, outermost-first `nodeChain` through the existing
+    Core accessor. Public HTTP 38/0/0, server library 205/0/2 and three
+    compiled behavioral mutations/restoration verify the candidate backend
+    contract. Actual3711c4f7 passes20/20 independently: ordinary Rust2957/0/164,
+    Web1665/Chromium61, selected private Dynamic6/0/0 and in-memory SimTunnel13/0/0;
+    all624 committed inputs,17 bindings and420 originals unchanged. Publication
+    of source/acceptance3a8b66f4 is read back with all11 owned artifacts and624
+    inputs exact. The420-file hash inventory is not420 parsed test cases. This is not
+    a durable ETS identity, a write target or a change to scoped-value rules.
+    **UI residue remains:** the UI owner's manual `ModuleScope` interface and
+    `ParameterPanel.tsx`'s legacy `sameScope()` still require adoption and
+    regression evidence; the backend field alone does not fix their matching.
+    Real nested manufacturer evidence remains absent from the historical
+    corpus measurement, not established by these synthetic cases.
   - **Fixed in fix round 1 (2026-09-14): two nesting chains sharing a
     `module_node` no longer collide into one section.** Before this fix,
     `apps/knx-server`'s parameter-panel grouping keyed sections on the
@@ -5879,6 +5904,18 @@ The conservative Download Counter refusal stays; a device-profile model that
 can tell Coupler Model 2.0 from System B reopens it.
 
 ## 115. `MasterResetResponse::recovery_wait` and `SessionTiming::restart_basic_t1` compute durations nobody waits on yet
+
+**Current status, 2026-10-03.** The blanket title and original account below
+are historical, not a description of current callers. The typed
+`master_reset()` procedure in `commissioning/master_reset.rs` waits on
+`probe.recovery_wait(&timing)` and the erasing answer's recovery wait, then
+performs a bounded mask-read retry at the expected address. The
+individual-address procedure also uses `restart_basic_t1` for its documented
+reconnect wait. These are caller-specific implementations; they do not add a
+generic failed-service restart/retry contract or authorize erasing hardware.
+The public reset recovery gate remains in force. Retain this heading/anchor
+for historical inbound links; the original "no reader" sentences are
+superseded by this status.
 
 **Limitation.** `[C15]` `ManagementSession::restart_master_reset`
 (`crates/knx-net/src/commissioning.rs`) sends the confirmed Master Reset

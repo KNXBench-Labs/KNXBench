@@ -25,6 +25,6 @@ pub use evaluate::{
     evaluate, load_module_def_arguments, load_program_trees, load_tree, resolve_values,
     substitute_text, Activation, ActiveLabel, ActiveRef, ArgumentKind, BoundArgument, ChannelOwner,
     ControlKind, Diagnostic, DynamicNode, DynamicTree, ModuleDefArgument, ModuleScope, Op,
-    ProgramTrees, ScopedDiagnostic, Test, UnparsableTest, ValueMap, MAX_MODULE_ACTIVATIONS,
-    MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
+    ProgramTrees, ScopedDiagnostic, Test, UnparsableTest, ValueMap, MAX_EVALUATION_WORK,
+    MAX_MODULE_ACTIVATIONS, MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
 };

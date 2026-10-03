@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 module-scope provenance — public GREEN, not delivered (2026-10-03)
+
+At `e9707794`, public nameless nested paths retained distinct Core chains and
+server sections but serialized identical HTTP scopes: compilation 0, behavioral
+Rust 101 / 0 passed / 1 failed / 0 ignored. Production hashes unchanged during
+RED. The additive ADR-0063 backend candidate now supplies `nodeChain` from the
+existing Core accessor on section and diagnostic scopes, without changing
+write authority, scoped values, domain/storage schemas or legacy fields.
+
+Public gate independently reconciled: parameter HTTP 38/0/0, server library
+205/0/2, selected public ProductDB identity suites 72/0/6; strict two-crate
+Clippy, fmt/whitespace pass and 624 code/config inputs unchanged. Three compiled
+wire-omission, innermost-only and order-reversal mutants each fail behaviorally
+with 101 / 0-1-0, restored sources and final HTTP/mapper GREEN verified. Repeated
+tests are subsets, not additional coverage. Separate in-session contract/security
+review found no blocking issue, not independent-model approval.
+
+Actual integrated gates/publication remain pending. UI manual `ModuleScope` and
+`sameScope()` adoption remains with the U17 Web-lock owner; no Web or binding
+change. Genuine nested products, broader AR07/Alpha and ETS parity stay open.
+
 ## AR07 bounded work admission delivered — 2026-10-03 04:10 CEST
 
 Published/read back2704f8e29b6ca2d53c022c468f116b526109c678; local/live/fetched

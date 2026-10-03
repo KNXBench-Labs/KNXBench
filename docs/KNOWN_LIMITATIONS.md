@@ -611,25 +611,23 @@ that server-named id instead of the declared one (D43).
     check it against — and is called out here rather than silently
     assumed safe.
   - **`apps/knx-server`'s `ModuleScopeDto` carries only the innermost
-    scope.** `module_scope_dto()` (`apps/knx-server/src/domain.rs`) reads
-    `scope.module_node`/`module_id`/`module_def_id` only; it does not walk
-    `ModuleScope::parent`. A nested-module diagnostic or activation
-    surfaced through the parameter-editor HTTP API therefore *displays*
-    only the innermost enclosing `Module`, not the full ancestor chain.
-    **Consequence sharpened, fix round 2 (2026-09-14):** the server now
-    correctly splits two nesting chains that share an innermost
-    `module_node` under different ancestors into two distinct sections
-    (previous bullet), but if both chains' innermost `Module`s are also
-    both nameless (no `@Id`) under the *same* `ModuleDef`, their DTOs are
-    identical — `moduleNode`/`moduleId`/`moduleDefId` all equal — so the
-    client cannot tell the two correctly-split sections apart. `ParameterPanel.tsx`'s
-    `sameScope()` then matches a diagnostic meant for one section against
-    both, misattributing it. This is no longer only lost ancestor
-    *context*; it is diagnostic *misattribution* between two sections the
-    server itself got right. Unattested against real data — no corpus
-    sample reaches this path — but this is a display omission, not the
-    section-collision defect the next bullet used to describe; that one
-    is fixed, this one is not.
+    scope — backend correction under verification (2026-10-03).** The
+    original 2026-09-14 finding was that correctly separated nameless nested
+    sections could have identical `moduleNode`/`moduleId`/`moduleDefId`
+    HTTP scopes, causing client-side diagnostic misattribution. AR07's
+    public synthetic RED reproduced exactly that wire collision on
+    `e9707794`, without changing Core or the section grouping.
+    [ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md)
+    now adds response-local, outermost-first `nodeChain` through the existing
+    Core accessor. Public HTTP 38/0/0, server library 205/0/2 and three
+    compiled behavioral mutations/restoration verify the candidate backend
+    contract; integrated gates and publication remain pending. This is not
+    a durable ETS identity, a write target or a change to scoped-value rules.
+    **UI residue remains:** the UI owner's manual `ModuleScope` interface and
+    `ParameterPanel.tsx`'s legacy `sameScope()` still require adoption and
+    regression evidence; the backend field alone does not fix their matching.
+    Real nested manufacturer evidence remains absent from the historical
+    corpus measurement, not established by these synthetic cases.
   - **Fixed in fix round 1 (2026-09-14): two nesting chains sharing a
     `module_node` no longer collide into one section.** Before this fix,
     `apps/knx-server`'s parameter-panel grouping keyed sections on the

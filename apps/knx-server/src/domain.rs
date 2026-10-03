@@ -3395,18 +3395,13 @@ fn diagnostic_kind_and_message(
     }
 }
 
-/// Carries only the innermost `Module` — `scope.parent` is never walked.
-/// Known limitation (`docs/KNOWN_LIMITATIONS.md`, "`ModuleScopeDto`
-/// carries only the innermost scope"): since fix round 1, the server
-/// correctly splits two nesting chains that share an innermost
-/// `module_node` under different ancestors into two distinct sections,
-/// but if both chains' innermost `Module`s are also nameless under the
-/// same `ModuleDef`, this DTO is identical for both, so the client's
-/// `sameScope()` (`ParameterPanel.tsx`) cannot tell the two sections
-/// apart and misattributes each one's diagnostics to both — not merely
-/// lost ancestor context, an actual cross-section misattribution.
+/// ADR-0063: preserve the same full identity that Core dedup and section
+/// grouping use. Legacy innermost fields remain display context only; they
+/// cannot distinguish nameless nested instances. Web's manual `sameScope`
+/// adoption remains UI-owned, not solved merely by this additive wire field.
 fn module_scope_dto(scope: &knx_productdb::dynamic::ModuleScope) -> crate::routes::ModuleScopeDto {
     crate::routes::ModuleScopeDto {
+        node_chain: scope.node_chain(),
         module_node: scope.module_node,
         module_id: scope.module_id.clone(),
         module_def_id: scope.module_def_id.clone(),
@@ -4532,6 +4527,45 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn module_scope_projection_keeps_every_ancestor_without_argument_values() {
+        use knx_productdb::dynamic::{BoundArgument, ModuleScope, MAX_MODULE_NESTING_DEPTH};
+        use std::rc::Rc;
+
+        for depth in [1, 3, MAX_MODULE_NESTING_DEPTH] {
+            let mut parent = None;
+            let mut expected_chain = Vec::new();
+            for index in 0..depth {
+                // Reused local nodes and IDs cannot stand in for the full path.
+                let module_node = if index % 2 == 0 { 11 } else { 7 };
+                expected_chain.push(module_node);
+                parent = Some(Rc::new(ModuleScope {
+                    module_node,
+                    module_id: Some("DUPLICATE".into()),
+                    module_def_id: format!("MD-{index}"),
+                    arguments: vec![BoundArgument {
+                        name: "Caption".into(),
+                        value: "synthetic-core-only-value".into(),
+                    }],
+                    parent,
+                }));
+            }
+            let scope = parent.unwrap();
+            let dto = module_scope_dto(&scope);
+            assert_eq!(
+                serde_json::to_value(dto).unwrap(),
+                serde_json::json!({
+                    "nodeChain": expected_chain,
+                    "moduleNode": scope.module_node,
+                    "moduleId": "DUPLICATE",
+                    "moduleDefId": format!("MD-{}", depth - 1)
+                })
+            );
+            assert_eq!(scope.arguments[0].value, "synthetic-core-only-value");
+            assert_eq!(scope.node_chain(), expected_chain);
+        }
+    }
 
     #[test]
     fn offline_reconciliation_exhaustion_preserves_deletions_and_allocators() {

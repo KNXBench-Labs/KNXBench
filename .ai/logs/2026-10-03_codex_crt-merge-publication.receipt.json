@@ -71,5 +71,7 @@
   "gateExit": 0,
   "scope": "ordinary workspace tests; ignored/private/hardware tests and native/Orca acceptance unclaimed",
   "handoverPreservation": "full upstream handover suffix and both status prefixes verified",
-  "pushReadback": "pending; authoritative current refs and closure handover record publication"
+  "pushReadback": "verified local/fetched/live main d5c1080efb0cf66b5ea51d912e233130414125cd and feature16c9d774; current refs record the later source-identical acknowledgment tip",
+  "laterUpstream": "80a5500d84e6a21bcc31c2dc77b959ed0098fbc9; documentation-only delta; complete archives preserved and4 metadata gates repeated",
+  "cleanup": "owned fixture stopped; port4173 clear; own deps/dist/gate targets/named scratch removed; permanent evidence retained; dirty shared root unchanged except additive handover"
 }

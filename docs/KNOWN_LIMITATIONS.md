@@ -6739,6 +6739,19 @@ recovery, durable history or hardware-support residues (ADR-0051 amendment).
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
 
+**Bounded text-refusal policy accepted (2026-10-03 13:32 CEST, ADR-0066).**
+Scoped FunctionText substitution and channel-text rendering/cached copies share
+one4,000,000-unit content/work context. Overflow refuses the whole DeviceDetail
+through existing HTTP400, no clipped output or changed activation/write authority.
+Actual0369a56a/22 commands passes: Rust2995/0/165, Web1702/Chromium72,
+selected private9,699 exact inputs/17 equal bindings/420 unchanged originals.
+No new generated/UI contract; dedicated language/refresh error/snapshot behavior
+is UI-owner verification. Legacy String SDK helper, unscoped/raw metadata/query/
+serializer allocations and total RSS remain outside this bound. Full AR07/ETS
+and the newly found AR06P nested-definition sample are not accepted by this gate.
+Final acceptance documents/publication are pending. See
+[decision](adr/0066-outside-walk-text-refusal.md).
+
 **AR07 candidate (2026-10-02, ADR-0061).** A resolved controller kind outside
 Number/Restriction (with the existing None exception retained) now emits
 UnsupportedControlKind, skips/names branch refs and marks activation potentially

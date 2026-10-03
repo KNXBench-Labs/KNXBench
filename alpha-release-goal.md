@@ -561,6 +561,21 @@ gates/publication and clean owned checkout/branch/scaffolding removal follow.
 Whole AR07/Alpha, ISSUE-08 checked-result consumer contract, UI diagnostics/
 identity adoption, native/hardware/vendor/general allocation/RSS remain open.
 
+### AR07 checked outside-walk subpackage accepted — 2026-10-03 13:32 CEST
+
+Scoped source a065ad94 / actual0369a56a, proc_39eb1bd6a2f3 exits0/22 commands:
+16 fresh public,3 compiled selected inventories,3 private executions (6+2+1).
+Workspace2995/0/165/150 blocks, Web1702/Chromium72,17 equal bindings,
+699 exact committed inputs,420 unchanged originals, no private raw logs/link.
+Five real compiled behavior mutants and separate in-session review accepted.
+ADR0066 is bounded backend text-overlay policy, not complete response memory,
+legacy SDK/UI-specific/native/ETS semantics. Acceptance documents, publication,
+readback and own cleanup pending. e2a40268's Markdown-only AR06P plan/findings
+integrated7bb0ee72 with complete owner histories and zero gated-code delta.
+Fresh queue now prioritizes AR06P KL-149 then coordinated KL-150; actual nested
+manufacturer evidence is a newly available prerequisite, not already validated.
+Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

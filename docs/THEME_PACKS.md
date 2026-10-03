@@ -174,6 +174,20 @@ Markdown only; all697 gated inputs remain equal, with document gates required
 before publication. U18-R1 cross-palette representative-component state coverage
 was open at U17; U18 closes it in the actual extension receipt below.
 
+## Local design example: Modern Retro Green CRT
+
+An importable complete v1 phosphor-green palette and a separately labelled
+interactive target-design study are documented in
+[Modern Retro Green CRT](DESIGN_RETRO_GREEN_CRT.md). The study's animation,
+dedicated selection fill and Save-only purple are not injected by its v1 pack.
+The guide proposes explicit component/token-version changes for those effects;
+this example does not expand the accepted format or claim new runtime features.
+The reference-image revision is palette version1.1.0 with the same ID; replacing
+an installed1.0 pack requires the existing explicit confirmation. Its softer
+ink, quiet green rules and mint primary gradient are token-only changes. The
+updated standalone native-table study and reproducible browser receipt remain
+separate from production component behavior.
+
 ## Evidence and inspected baseline
 
 The five built-in palettes/System resolver live in `apps/knx-web/src/theme.ts`;

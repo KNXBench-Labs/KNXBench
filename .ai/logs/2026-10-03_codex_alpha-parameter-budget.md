@@ -1,5 +1,30 @@
 # AR07 bounded evaluation work admission
 
+## Actual merged acceptance — 2026-10-03 03:57 CEST
+
+Budget8f47c13b and published0889c102 U16/U17 integrated as7ae116a1. Source
+artifacts byte-equal to their producers; both complete added owner records and
+inherited bodies retained. One implementation-status conflict combined both
+sections; a missing blank separator was caught by byte preservation and restored
+before merge acceptance. Required author/committer, no co-author.
+
+proc_096e63a3429e exited0, all20 stages independently accepted against raw public
+logs and aggregate private receipts. Workspace2953/0/164 over148 blocks,
+Web1665, existing intercepted Chromium61, private Dynamic6/0/0 and offline
+SimTunnel HTTP13/0/0, no genuine/unknown skip or private raw persistence.
+All103 product archives/108 originals unchanged,624 frozen inputs equal exact
+committed blobs and17 shadow bindings equal. Strict build/lints/dependency/fmt
+and four nonempty intended-root audits pass; changed server actually compiled.
+Projection42 is a subset. Canonical five-mutation-protected sources remain exact.
+
+Delayed candidate/Core/backend/mutation notices only reconciled existing receipts;
+both original pre-start shared-lock failures remain rejected separately. No gate
+was replayed to obtain readable output. Actual receipt:
+ar07-budget/merged-integrated/integrated-independently-verified.json.
+Observed live main0889c102; publication/readback and owned cleanup still pending.
+No new UI/native/ETS/full AR07 or Alpha acceptance; U17 lock remains held by its
+owner. No bus/vendor/private payload/credential/foreign-root/subagent/quota action.
+
 ## Candidate20/20 accepted; current upstream integration pending — 03:23 CEST
 
 `proc_cd67fb854490` exited0; all20 named stages independently reconciled.

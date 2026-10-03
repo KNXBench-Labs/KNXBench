@@ -1,7 +1,7 @@
 # ADR 0062: Dynamic evaluation admits repeated work before performing it
 
 Date: 2026-10-03
-Status: Proposed — public Core/HTTP RED-to-GREEN and five compiled mutations/restoration verified; integrated acceptance and delivery pending.
+Status: Accepted for the bounded work-admission contract — actual7ae116a1 merged gates verified; publication/readback pending, broader AR07 open.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0041's bounded diagnostic/refusal coverage and Dynamic evaluation budgets.
 
@@ -107,6 +107,17 @@ and nonempty intended-root audits pass. Projection42 is a workspace subset.
 This is restored candidate GREEN, not latest-upstream integration. Preserve
 fresh0889c102 U16/U17 and gate the actual merged tree before acceptance/delivery;
 do not reuse the prior Float gate. Publication readback remains pending.
+
+Actual merged7ae116a1 (budget8f47c13b plus published0889c102 U16/U17) then passed
+proc_096e63a3429e, independently20/20: workspace2953/0/164 over148 blocks,
+Web1665, intercepted Chromium61, selected Dynamic6/0/0 and offline SimTunnel
+HTTP13/0/0 without genuine skips or private raw logs. All103 archives/108 original
+fixtures unchanged;624 frozen code/config hashes equal exact committed blobs,
+17 shadow bindings equal; strict build/lints and nonempty root audits pass.
+Both complete owner records and source artifacts retained. Five compiled mutants
+remain restored. This accepts only the bounded policy above, not full AR07,
+new-token UI, byte/RSS/latency/general-depth/native/ETS semantics or delivery.
+
 Private corpus runs remain opt-in, offline, aggregate-only and separate from
 public synthetic coverage. No live bus or vendor code is authorized.
 

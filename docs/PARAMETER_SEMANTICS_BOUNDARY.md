@@ -325,3 +325,19 @@ Manual Web
 token/localization adoption belongs to the UI owner. General non-module depth,
 variable-sized data and external substitution consumers remain outside this
 work-unit bound. This candidate is not full AR07 or ETS compatibility closure.
+
+## Actual work-admission merge accepted — 2026-10-03 03:57 CEST
+
+proc_096e63a3429e exited0 and independently passed20/20 on actual7ae116a1:
+budget8f47c13b plus published0889c102 U16/U17, all source artifacts and complete
+owner histories preserved. Workspace2953/0/164 over148 blocks, Web1665,
+intercepted Chromium61, explicitly selected Dynamic6/0/0 and offline SimTunnel
+HTTP13/0/0 without genuine/unknown skips or private raw logs. All103 product
+archives/108 originals unchanged,624 frozen inputs equal exact committed blobs,
+17 bindings equal; strict build/lints/dependency and nonempty root audits pass.
+Projection42 is a workspace subset. Five compiled behavioral mutants restored.
+
+ADR-0062 accepts this bounded application policy. Publication/readback remain
+pending; previous pending gate wording is historical checkpoint evidence.
+Manual UI token/localization, external substitution/variable output, innermost
+DTO provenance, general depth, native/ETS parity and broader AR07 stay separate.

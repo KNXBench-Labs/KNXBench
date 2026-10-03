@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 work admission — actual merge accepted, delivery pending (2026-10-03)
+
+Actual7ae116a1 integrates reviewed budget8f47c13b with published0889c102 U16/U17,
+without source conflict or lost owner history/artifacts. proc_096e63a3429e exited0
+and all20 stages independently pass: workspace2953/0/164 over148 result blocks,
+Web1665, intercepted Chromium61, explicit private Dynamic6/0/0 and offline
+SimTunnel HTTP13/0/0 with no genuine skips or private raw logs. All103 product
+archives/108 original fixtures unchanged,624 frozen code/config hashes equal
+exact committed blobs,17 shadow bindings equal; strict build/lints/dependency
+and four nonempty intended-root audits pass. Projection42 is a workspace subset.
+
+Five compiled behavioral mutations/restoration and public RED/GREEN precede
+this merged acceptance. Both initial lock timeouts remain rejected infrastructure
+attempts before compiler/source start, not behavioral evidence. Delivery/readback
+remain pending. Manual new-token/localization adoption stays UI-owned; broader
+AR07/Alpha, byte/RSS/latency/general-depth and native/ETS guarantees stay open.
+
 ## AR07 work-admission candidate — public GREEN, not delivered (2026-10-03)
 
 The owned `alpha-parameter-budget` candidate adds shared evaluator work

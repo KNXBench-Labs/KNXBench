@@ -350,3 +350,36 @@ and624 exact actual-gated code/config inputs read back remotely. Acceptance
 metadata changes no code; four nonempty intended-root audits/whitespace pass.
 Completed build/script/raw-log scaffolding removed, minimal aggregate evidence
 and read-only next-audit retained. Entire AR07/Alpha and stated limits stay open.
+
+## Module identity projection candidate — 2026-10-03
+
+Fresh `alpha-module-provenance` starts at published `e9707794`; prior budget
+worktree/branch/build cleanup is independently verified. Core `ScopeKey` and
+server section grouping already use `ModuleScope::node_chain()`; the HTTP mapper
+discarded ancestors. A public synthetic nameless nested case compiled and failed
+exactly at unequal-wire-scope expectation (Rust 101 / 0-1-0), with all production
+hashes unchanged. The first test attempt was a rejected compilation-only
+instrumentation error (`ProgramTrees` has no `PartialEq`), not behavioral RED;
+the corrected test compares activation and retained source bytes instead.
+
+[ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md) adds only
+`nodeChain` to non-null manual parameter scopes, outermost first and ending in
+`moduleNode`. Top-level scope remains null; legacy innermost fields remain.
+This response-local identity is not stable across product reinstall, not an ETS
+or project module-instance ID and not write authorization. No argument values
+are serialized and no domain/storage schema or value-resolution rule changes.
+
+Public acceptance: HTTP 38/0/0, server library 205/0/2, selected ProductDB
+identity suites 72/0/6, strict Clippy/fmt/whitespace, 624 frozen inputs. Nameless
+and duplicate named paths keep distinct chains and one diagnostic per scope;
+ambiguous writes refuse with nonempty project equality and retained source
+bytes. Top-level successful writes retain scope shape. Exact projection checks
+cover depths 1/3/16 without argument leakage. Three compiled omission/clipping/
+reversal mutants fail 101 / 0-1-0; sources restored and final HTTP/mapper GREEN.
+Separate in-session review has no blocking finding, not independent-model approval.
+
+Integration/delivery pending; no private corpus executed in this public gate.
+UI must adopt the field and compare full chains in its manual interface and
+`sameScope()`; the active U17 lock is untouched. Backend wire uniqueness does
+not prove UI adoption or real nested manufacturer semantics. Other AR07
+substitution/work/byte/provenance residues remain separate.

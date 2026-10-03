@@ -109,3 +109,22 @@ in THEME_PACKS makes the same deletion fail by the named old anchor; restoration
 returns green. Source703 remains canonical. Final publication, remote readback,
 UI reservation release and owned cleanup remain pending at this entry. No secrets, individual private identifiers/contents,
 native/Orca/general WCAG/ETS/Alpha approval or real bus authorization follows.
+
+
+## Source delivery and cleanup checkpoint (2026-10-03 15:47 CEST)
+
+Published/read-back source1964fd6b: live/fetched refs and full trees match;
+all703 protected inputs and15 owned artifacts exact, zero outgoing commits.
+Normal documentation-only integration never reuses candidate-only backend evidence.
+The final aggregate receipt is tracked beside this log. Four closure docs gates,
+whitespace and linked old-anchor negative/restore pass. All five U18 checkboxes
+now have named evidence; no UI goal checkbox remains open. UI reservation released,
+not another owner's Alpha/gateway/tunnel permission.
+
+Both actual worker PIDs are gone and no process cwd uses either owned directory.
+52 own scratch entries and own node_modules removed; no corpus/raw/root/foreign
+cleanup. Only the final standalone doc-check executable is retained until last
+metadata/readback, then clean owned worktree/ancestor-confirmed branch cleanup.
+For goal.md: adopt unnumbered U18-R1 closure, refresh canonical-main statistics,
+retain native/Orca/general WCAG/Alpha/ETS/real commissioning as separate gates.
+No new numbered limitation and no commissioning/source/domain change.

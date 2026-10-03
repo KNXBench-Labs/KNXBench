@@ -177,6 +177,7 @@ export default function GroupAddressTable(props: {
               return (
                 <tr
                   key={ga.id}
+                  data-crt-surface="row"
                   aria-selected={selection?.kind === "group_address" && selection.id === ga.id}
                   className={checked(ga) ? "row-multi-selected" : undefined}
                 >
@@ -199,6 +200,7 @@ export default function GroupAddressTable(props: {
                   <td className="mono ga-address">
                     <button
                       className="table-select"
+                      data-crt-activate=""
                       onClick={(e) =>
                         onItemClick(
                           e,

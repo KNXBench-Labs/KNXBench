@@ -188,6 +188,14 @@ ink, quiet green rules and mint primary gradient are token-only changes. The
 updated standalone native-table study and reproducible browser receipt remain
 separate from production component behavior.
 
+The 2026-10-03 production animation follow-up is independently selected as
+**Motion style → CRT**, not injected by the pack. The real workbench/tree/address
+table now have application-owned fill and bounded light/activation, with Off/OS
+reduced-motion cancellation. Save-only purple and exact selection colors remain
+unimplemented semantic-role proposals. The v1 token/schema boundary is unchanged;
+see the guide's production section and ADR-0022 follow-up. That source is local
+to feat/crt-interactions-20261003 and not implicitly published or merged.
+
 ## Evidence and inspected baseline
 
 The five built-in palettes/System resolver live in `apps/knx-web/src/theme.ts`;

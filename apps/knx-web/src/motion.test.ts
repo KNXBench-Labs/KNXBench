@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 import {
   MOTION_LEVELS,
   MOTION_STYLES,
@@ -18,6 +22,18 @@ function fakeStorage(initial: Record<string, string> = {}) {
   };
 }
 
+it("executes the real pre-mount script with a persisted CRT style", () => {
+  const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../index.html"), "utf8");
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)![1];
+  const attributes: Record<string, string> = {};
+  runInNewContext(script, {
+    localStorage: { getItem: () => JSON.stringify({ settings: { motionStyle: "crt", motionLevel: "standard" } }) },
+    matchMedia: () => ({ matches: false }),
+    document: { documentElement: { dataset: {}, setAttribute: (key: string, value: string) => { attributes[key] = value; } } },
+  });
+  expect(attributes["data-motion-style"]).toBe("crt");
+});
+
 describe("MOTION_LEVELS", () => {
   it("contains exactly the documented ids, in order", () => {
     expect(MOTION_LEVELS.map((l) => l.id)).toEqual(["off", "subtle", "standard"]);
@@ -30,11 +46,11 @@ describe("MOTION_LEVELS", () => {
 
 describe("MOTION_STYLES", () => {
   it("contains exactly the documented ids, in order", () => {
-    expect(MOTION_STYLES.map((s) => s.id)).toEqual(["apple", "glitch"]);
+    expect(MOTION_STYLES.map((s) => s.id)).toEqual(["apple", "glitch", "crt"]);
   });
 
   it("carries the documented names", () => {
-    expect(MOTION_STYLES.map((s) => s.name)).toEqual(["Smooth", "Glitch"]);
+    expect(MOTION_STYLES.map((s) => s.name)).toEqual(["Smooth", "Glitch", "CRT"]);
   });
 });
 

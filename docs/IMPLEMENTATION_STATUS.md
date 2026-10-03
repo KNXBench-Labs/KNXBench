@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-03 — Productive CRT interactions (local feature worktree)
+
+- Implemented the user-requested animations in real App/ProjectExplorer/
+  GroupAddressTable, not only the offline study. Independent motion style `crt`
+  is admitted by both the actual pre-mount bootstrap and runtime registry.
+- Standard: 250ms ease-out fill, inert clipped light, bounded activation glow.
+  Subtle: existing 120ms fill only. Off/OS reduced motion cancel running feedback.
+  A disposable per-workbench controller handles timers/observers and retirement;
+  existing delegated keyboard, native selection and bulk-selection rail remain.
+- Manual Save/Save As glows only on its existing request path, after cancellation/
+  stale-snapshot checks; autosave is silent. The glow does not certify success.
+  Browser refusal assertions verify error reporting; source review confirms the
+  existing dirty-state/error path is unchanged, not a real persistence test.
+- Reviewed final Web **1739 tests / 98 files**, TypeScript/Vite build and **12**
+  actual-app Chromium groups pass. Receipt records zero page errors, unexpected
+  requests and real backend requests; two Save requests are intercepted synthetic
+  refusals. The native-frame screenshot has been visually inspected.
+- Added controller/CSS/bootstrap regressions and a reproducible real-App browser
+  verifier with a synthetic project and intercepted file-picker/open/settings/
+  discovery/Save flow. No actual project/settings/backend/KNX write or new
+  dependency. No WebKitGTK/Orca/full-WCAG or independent-review claim.
+- In-session review removed redundant keyboard handlers in favor of the already
+  delegated production implementations; transient feedback is presentation-only.
+  Updated ADR-0022, CRT/theme guide, roadmap, limitations and handover/log.
+- Worktree: /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-interactions-20261003,
+  branch feat/crt-interactions-20261003, base 3337e4ef. Changes remain local and
+  uncommitted; no feature push/main merge/root product synchronization. Native
+  acceptance, exact selection/Save-only roles and broader component styling
+  remain separate. Own test-runtime cleanup is recorded in the task handover.
+
 ## 2026-10-03 — CRT 1.1 branch publication
 
 - User-authorized source commit879c69b2f11c825c1d4f10b5409e5a5148f06e67 is

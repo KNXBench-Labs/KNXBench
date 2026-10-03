@@ -7,21 +7,24 @@ import { getThemeDefinitions, useThemeId, type ThemePreview } from "../src/theme
 import { useAppearance } from "../src/appearance";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "../src/motion";
 import { initSettings, startSettingsRefresh } from "../src/settingsStore";
+import RepresentativeThemeStates from "./theme-state-fixture";
 import "@fontsource/inter/400.css";
 import "@fontsource/space-grotesk/400.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "../src/styles.css";
 
 function Fixture() {
+  const representative = new URLSearchParams(location.search).get("representative") === "1";
   const [preview, setPreview] = useState<ThemePreview>();
   const [themeId, selectTheme] = useThemeId(preview);
   const appearance = useAppearance();
   useMotion();
   const [open, setOpen] = useState(false);
   return <>
-    <main><h1>Offline Appearance fixture</h1>
+    <main><h1>{representative ? "Representative theme state fixture" : "Offline Appearance fixture"}</h1>
       <button onClick={() => setOpen(true)}>Open settings</button>
       <output data-testid="saved-selection">{themeId}</output>
+      {representative && <RepresentativeThemeStates />}
     </main>
     {open && <SettingsPanel themes={getThemeDefinitions()} activeThemeId={themeId} onSelectTheme={selectTheme}
       onPreviewTheme={setPreview} previewTheme={preview} appearance={appearance}

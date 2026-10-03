@@ -464,6 +464,9 @@ records findings, negative controls, integration provenance and actual counts.
 
 ### U18 — Review and close the theme-pack extension
 
+**U18 candidate progress (2026-10-03 13:35 CEST):** U18-R1 now has an opt-in, typed actual-component harness in `e2e/theme-state-fixture.tsx`, with real table filtering/selection, contextual device-address validation, inspector roles, Overlay focus/disabled state and structured diagnostics. The frozen final-source palette matrix passed **10/10**, and three explicitly rendered-style negative controls failed the named expected assertions; the new fixture-module TS2322 inclusion canary was detected and restored. The Web suite/build/fixture types passed independently (1,702 Web tests); complete candidate checks are running under the legitimate shared leases in isolated `ui-theme-closing`, process `proc_9cc7de516414`, with **701** frozen source/config inputs. The former shared-lease rejection was infrastructure contention, not a product failure or executed mutant. **Do not mark U18 done:** candidate review, actual-integrated/full offline acceptance, closing documentation/publication/readback and UI reservation release remain pending. Native/Orca/general WCAG/Alpha/ETS/live commissioning remain separate. See `.ai/logs/2026-10-03_codex_ui-theme-closing.md`.
+
+
 **Open.** Depends on U14–U17. Does not reopen the completed U13 review or close
 unrelated alpha/domain/native evidence gaps.
 
@@ -552,3 +555,5 @@ Hand it over (§6).
 - **From the goal.md session to you:** the chosen U13 independent review
   returns concrete findings and an actual verdict. A refused review request
   is not a verdict; do not close U13 until findings and gates are settled.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

@@ -187,6 +187,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(data_dir: PathBuf) -> Self {
+        let server_incarnation = new_server_incarnation();
         let product_db = knx_productdb::default_path()
             .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
             .map(Mutex::new);
@@ -199,7 +200,7 @@ impl AppState {
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             import_counts: Mutex::new((0, 0)),
-            server_incarnation: new_server_incarnation(),
+            server_incarnation: server_incarnation.clone(),
             project_revision: AtomicU64::new(0),
             product_db,
             session_log: Mutex::new(SessionLog::default()),
@@ -215,7 +216,12 @@ impl AppState {
             device_download_timing: knx_net::SessionTiming::default(),
             address_programming: tokio::sync::Mutex::new(None),
             next_address_programming_id: std::sync::atomic::AtomicU64::new(1),
-            one_shot_activity: std::sync::Arc::new(crate::one_shot_activity::OneShotLog::default()),
+            one_shot_activity: std::sync::Arc::new(
+                crate::one_shot_activity::OneShotLog::persistent(
+                    data_dir.join("activity-history.sqlite"),
+                    server_incarnation,
+                ),
+            ),
             address_programming_timing: knx_net::SessionTiming::default(),
             address_programming_pause:
                 knx_net::commissioning::programming_button_wait::ButtonWait::DEFAULT_PAUSE,
@@ -237,7 +243,10 @@ impl Default for AppState {
     /// with `KNX_DATA_DIR`. Falls back to the OS temp dir so tests that
     /// never touch `/api/fs/*` don't need to care.
     fn default() -> Self {
-        Self::new(std::env::temp_dir())
+        let mut state = Self::new(std::env::temp_dir());
+        // Test conveniences never share a durable activity database.
+        state.one_shot_activity = std::sync::Arc::default();
+        state
     }
 }
 

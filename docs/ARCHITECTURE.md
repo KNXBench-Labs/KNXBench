@@ -79,7 +79,9 @@ crates/
                    No IO, no XML, no SQL, no UI.
   knx-app/         Application services: open/save, commands, undo/redo,
                    search, selection, reports
-  knx-store/       SQLite project storage, schema migrations, opaque store
+  knx-store/       SQLite project storage, schema migrations, opaque store;
+                   separate versioned activity metadata store (ADR-0064),
+                   never a project/vendor/recovery database
   knx-etsproj/     .knxproj read/write: ZIP, schema detection, tolerant XML
                    parser, mapping to/from knx-core, import report
   knx-productdb/   Product database (own SQLite, own migration chain),

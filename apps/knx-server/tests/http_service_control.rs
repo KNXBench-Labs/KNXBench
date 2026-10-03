@@ -101,6 +101,7 @@ struct SimConnector {
     calls: Arc<AtomicUsize>,
     connect_delay: Duration,
     write_trap: Option<Arc<WriteTrap>>,
+    break_history: Option<std::path::PathBuf>,
 }
 
 impl GatewayConnector for SimConnector {
@@ -110,6 +111,10 @@ impl GatewayConnector for SimConnector {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
+        if let Some(path) = &self.break_history {
+            std::fs::rename(path, path.with_extension("interrupted.sqlite")).unwrap();
+            std::fs::create_dir(path).unwrap();
+        }
         let tunnel: Box<dyn BusTunnel> =
             Box::new(SimTunnel(Arc::clone(&self.device), self.write_trap.clone()));
         let delay = self.connect_delay;
@@ -161,6 +166,15 @@ fn harness_with_trap(
     connect_delay: Duration,
     write_trap: Option<Arc<WriteTrap>>,
 ) -> Harness {
+    harness_with_history_failure(config, connect_delay, write_trap, false)
+}
+
+fn harness_with_history_failure(
+    config: SimulatorConfig,
+    connect_delay: Duration,
+    write_trap: Option<Arc<WriteTrap>>,
+    break_history: bool,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let device = Arc::new(SimulatedDevice::with_config(config));
     let calls = Arc::new(AtomicUsize::new(0));
@@ -171,10 +185,12 @@ fn harness_with_trap(
             calls: Arc::clone(&calls),
             connect_delay,
             write_trap,
+            break_history: break_history.then(|| dir.path().join("activity-history.sqlite")),
         }),
         address_programming_timing: fast(),
         address_programming_pause: Duration::from_millis(10),
-        ..Default::default()
+        product_db: None,
+        ..knx_server::AppState::new(dir.path().to_path_buf())
     });
     Harness {
         _dir: dir,
@@ -245,6 +261,145 @@ fn write_request(address: IndividualAddress, confirmation: &str, enable: bool) -
 
 fn read_uri(address: IndividualAddress) -> String {
     format!("/api/device/service-control?address={address}&gateway={GATEWAY}")
+}
+
+#[tokio::test]
+async fn unavailable_activity_history_refuses_write_before_connect() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    std::fs::create_dir(h._dir.path().join("activity-history.sqlite")).unwrap();
+    let address = h.device.address();
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert!(h.device.seen().is_empty());
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["historyState"], "unavailable");
+    assert_eq!(activity["oneShot"][0]["state"], "notSent");
+}
+
+#[tokio::test]
+async fn history_failure_after_connect_blocks_every_property_write() {
+    let h = harness_with_history_failure(locked_device(), Duration::ZERO, None, true);
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INSUFFICIENT_STORAGE);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert!(h.device.seen().iter().all(|seen| !matches!(
+        seen,
+        knx_net::commissioning::simulator::Seen::PropertyWrite { .. }
+    )));
+    assert_eq!(
+        std::fs::read_dir(h._dir.path().join("device-backups"))
+            .unwrap()
+            .count(),
+        1
+    );
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["historyState"], "unavailable");
+    assert_eq!(activity["oneShot"][0]["state"], "notSent");
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["backupRecorded"],
+        true
+    );
+    assert_eq!(
+        activity["oneShot"][0]["writeEvidence"]["sendPossible"],
+        false
+    );
+}
+
+#[tokio::test]
+async fn malformed_history_refuses_the_next_write_before_connect() {
+    let h = harness(locked_device());
+    knx_store::activity_history::ActivityHistory::open(
+        &h._dir.path().join("activity-history.sqlite"),
+    )
+    .unwrap()
+    .record("first", 1, "invalid metadata")
+    .unwrap();
+    assert_eq!(
+        send(&h.app, get("/api/bus/history")).await.0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert!(h.device.seen().is_empty());
+}
+
+#[tokio::test]
+async fn verified_write_history_reopens_without_bus_contact_or_payloads() {
+    let h = harness(locked_device());
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device/service-control",
+            write_request(address, &phrase(address), true),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, live) = send(&h.app, get("/api/bus/activity")).await;
+    let (status, page) = send(&h.app, get("/api/bus/history?limit=1")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    let entry = &page["entries"][0];
+    assert_eq!(entry["kind"], "serviceControlWrite");
+    assert_eq!(entry["state"], "verified");
+    assert_eq!(entry["address"], address.to_string());
+    assert_eq!(entry["serverIncarnation"], live["serverIncarnation"]);
+    assert_eq!(entry["interrupted"], false);
+    assert_eq!(
+        entry["writeEvidence"],
+        json!({"backupRecorded": true, "sendPossible": true})
+    );
+    for field in [
+        "backupPath",
+        "gateway",
+        "before",
+        "after",
+        "payload",
+        "serialNumber",
+        "key",
+    ] {
+        assert!(entry.get(field).is_none());
+    }
+    let restarted = knx_server::app(
+        Arc::new(knx_server::AppState {
+            product_db: None,
+            ..knx_server::AppState::new(h._dir.path().to_path_buf())
+        }),
+        None,
+    );
+    let (status, reopened) = send(&restarted, get("/api/bus/history?limit=1")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(reopened, page);
 }
 
 #[tokio::test]

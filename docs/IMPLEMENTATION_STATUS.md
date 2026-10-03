@@ -37,6 +37,72 @@ no actual-source delivery or full
 AR07 acceptance yet. Outside-walk String-only ISSUE-08 projection remains
 coordinated owner work; no Web lock, caller or generated binding changed.
 
+## Commissioning bounded history source delivered — 2026-10-03 07:10 CEST
+
+Source and gated acceptance published/read back at
+`cde52ebc1e9f9125f5b94096a6b6c001a3269bd4`: local/fetched/live main equal,
+all23 contributed artifacts and617 actual-gated inputs exact remotely. Actual
+66dca279 acceptance below remains18/18, workspace2978/0/165, Web1665 in93 files,
+offline Download14/0/0 and Dynamic6/0/0,17 bindings and108 scoped originals
+unchanged. Four fresh-target acceptance-document audits/whitespace passed.
+
+Four completed owned build targets actually removed after live-process/lease
+checks;105 compact JSON receipts, including rejected/survivor evidence, retained
+outside the repository. Closing receipt-only doc gate/publication and clean own
+checkout/scaffolding removal follow separately; canonical root/statistics belong
+to their owner. SAFE-03/AUDIT-01 long-session work remains next, not complete.
+Web/native/hardware/vendor/ETS/release boundaries are unchanged.
+
+## Commissioning actual integrated backend accepted — 2026-10-03 06:59 CEST
+
+Actual merge `66dca2793fcaf50c2149d73c90364a4ae727cd06` integrates reviewed runtime
+source `0fc483c2` and published parent `14e2eb9a`. Exact18-step receipts and
+committed-source hashes independently reconciled after process exit0: workspace
+2978/0/165 over149 result blocks, Web1665 in93 files, selected offline in-process
+Download14/0/0 and Dynamic6/0/0 with no unknown skips and108 scoped originals
+unchanged. All617 frozen code/config inputs and17 shadow bindings equal.
+Strict Clippy/build/fmt/dependency policy and four nonempty intended-root audits
+pass. Final metadata gates and publication/readback are pending, not source tests.
+
+Complete owner handover/status histories remain preserved; ADR0064 does not
+overwrite published0062/0063. Two rejected receipt-verifier assumptions (Web
+file count and optimized xtask root suffix) were corrected from raw evidence
+without replaying the gate. Historical candidate entries below are superseded
+for the current integration, not silently relabelled. SAFE-03/AUDIT-01 remain
+partial: long-session durable intent/terminal/version evolution is next offline
+work. Web/global consumer, independent hardware/vendor evidence and controller
+release stay open; no Chromium/native/ETS/device-success proof follows.
+
+## Commissioning durable metadata / admission candidate — 2026-10-03
+
+Separate version-1 activity storage and bounded authenticated history API cover
+four one-shot kinds; seven untracked kinds and volatile long-session data remain
+explicit. Identity/state validation, interruption projection, sticky failure,
+serialized first admission and pre-tunnel write refusal are offline-tested.
+Metadata is not a recovery image or device-success proof.
+
+Late review reproduced foreign hot-journal recovery before format refusal.
+Corrected admission is read-only before the writable opener; a raw SQLite
+header guard also refuses WAL before sidecar creation. Two synthetic RED/GREEN
+regressions protect both openers and original main/journal/WAL bytes. Current
+21 compiled behavioral mutants fail as expected, with exact source restoration.
+An earlier 18-step run (workspace 2948/0/165, Web 1559, private download 14/0/0,
+Dynamic 6/0/0) describes the pre-admission-fix source only. Corrected integrated
+gates and publication are PENDING, not implied by focused tests.
+
+Corrected candidate is now independently accepted at 18/18: workspace
+2950/0/165, Web 1559 in 89 files, explicitly selected private download 14/0/0
+and Dynamic 6/0/0, zero unknown skips and 108 originals unchanged. All 608
+frozen code/config inputs and 17 shadow bindings match; reviewed runtime diff
+is unchanged. Integrated Float-guard coexistence and publication remain
+PENDING. This does not close long-session, Web, hardware or release scope.
+
+The [42-ID ledger](COMMISSIONING_ALPHA_LEDGER.md) matches the readiness inventory
+without omissions, duplicates or extras; every row retains its fallback and
+unblock condition. [API contract](COMMISSIONING_ACTIVITY_HISTORY.md), ADR-0064
+and the direct Profile audit document the bounded support. Long-session intent,
+Web adoption, independent hardware/vendor evidence and release remain open.
+
 ## AR07 module-scope backend leaf delivered — 2026-10-03 05:48 CEST
 
 Published/read back source/acceptance3a8b66f422bda73c9999fb214f2459c79ecea76b;
@@ -177,6 +243,7 @@ AR07 and Alpha remain incomplete. See [the bounded evidence](PARAMETER_SEMANTICS
   read back equal. Receipt-only metadata/owned cleanup are tracked separately.
   U17 production manager/diagnostics/preview and U18 closing review
   remain open; no independent/native/Orca/ETS/alpha-release approval implied.
+
 
 
 ## AR07 scoped Float delivery — 2026-10-03 00:04 CEST

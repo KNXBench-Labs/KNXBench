@@ -1,5 +1,51 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-03 — CRT 1.1 reference-image development (local)
+
+- Evolved the existing design from the user reference: softer phosphor ink,
+  green-black surfaces, fine green rules, mint action gradients and compact
+  chrome. Same theme ID, palette version1.1.0, unchanged safe v1 token contract.
+- Replaced the study's layout-button rows with twelve native table rows and
+  independent checkbox/address-button controls. Added a bounded leading light,
+  violet Save flare and shared activation guard; cancellation handles user Off,
+  OS reduced motion, scroll and resize. All data and actions remain synthetic.
+- Ten theme/study tests pass (new revision observed RED before implementation);
+  focused329, complete Web1712/96 files and TypeScript/Vite build pass.
+- Retained reproducible `design/verify-crt-reference.mjs` and JSON receipt:16
+  Chromium groups, including actual manager refused/confirmed same-ID replacement,
+  exact reload/export and mid-effect cancellation. One guarded mock settings write,
+  zero page errors/unexpected requests. Screenshot samples a paused native frame.
+- Updated [design guide](DESIGN_RETRO_GREEN_CRT.md) with actual palette behavior,
+  reproduction and specific token/component/motion proposals. No production
+  component, protocol, core, dependency or storage change; no native/Orca/WCAG claim,
+  commit, push or root product synchronization. Earlier 1.0 results below are
+  historical; retained current design artifacts are now1.1.
+
+## 2026-10-03 — Modern Retro Green CRT design artifacts (local)
+
+- Added an importable complete theme-pack v1 palette: black `#050505`, neon
+  green `#39ff14`, installed JetBrains Mono throughout, small radii, green
+  elevation/hover-shadow tokens and distinct error/warning colors.
+- Added a self-contained interactive HTML design study with embedded licensed
+  JetBrains Mono, purple Save, left-to-right fill, activation glow, filtering,
+  keyboard navigation and user/OS motion guards. This is a standalone reference,
+  not React/Tailwind/Tauri component integration or actual project operations.
+- The production v1 pack cannot separate Save from the shared accent, set exact
+  `#003300` row fill, inject animation rules or add input focus-shadow consumers.
+  These remain explicitly proposed component/versioned-token changes in
+  [the design guide](DESIGN_RETRO_GREEN_CRT.md); no theme-contract weakening,
+  dependency, domain, protocol, persistence or production-component change.
+- Seven palette tests observed RED, then GREEN. Intermediate test-harness
+  environment/URL issues were corrected without changing runtime code. Focused
+  suite: 326/326; full Web: 1,709/1,709 in 96 files; TypeScript/Vite build passes.
+- Ten actual Chromium verification groups pass: real manager import preview,
+  conditional acknowledged apply, reload/all-token paint and UI export, plus
+  six standalone-design checks including keyboard activation, actual 250ms fill,
+  Off/reduced-motion and 390px layout. Settings were intercepted/synthetic;
+  one mock conditional write, zero unexpected requests or page errors.
+- Local isolated branch `design-retro-green-crt-20261003` at baseline `e7f9db8e`;
+  no root synchronization, commit/push, native/Orca/full-WCAG or hardware claim.
+
 ## AR07 checked outside-walk scoped delivery — 2026-10-03 13:54 CEST
 
 Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded

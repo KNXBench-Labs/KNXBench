@@ -461,6 +461,33 @@ checkout/two ancestor-confirmed branch cleanup follow separately. Continue
 earliest-ready AR07 external substitution/variable-output audit on fresh upstream;
 UI chain adoption, genuine nested products and whole AR07/Alpha remain open.
 
+2026-10-03 06:56 AR07 continuation: final module-provenance receipt14e2eb9a
+published/read back; actual clean checkout/two ancestor-confirmed branches and
+owned scaffolding removed, dirty root unchanged. Fresh alpha-text-output on14e2eb9a
+audits binding/label scalar copies. Initial ancestor-cost hypothesis rejected:
+ModuleScope::argument is deliberately local, already charged correctly; no
+inheritance/ancestor fee is authorized. ADR-0065 is proposed scalar admission,
+not new KNX semantics or old byte guarantee. proc_49808cde0743 compile0, three
+copy assertions101/0-1-0 independently verified; fourth inheritance expectation
+rejected and converted to positive non-inheritance regression (old-production1/0/0).
+Exact UTF-8-cost unit101/0-1-0 verified before core fix. Candidate core copy admission
+implemented, Core proc_c73947a5b170 independently5/5:355/0/0 library and66/0/6
+DynamicTree plus strict Clippy/fmt/whitespace/freeze, no private ignored cases
+executed. New HTTP cause test shares existing whole-prefix atomic assertions;
+proc_8ee608d8a643 independently5/5, named1/0/0/full39/0/0, strict lint/fmt/
+whitespace/freeze and complete-prefix atomic authority/source invariants.
+Omission/restoration proc_98b4f3f512f1 independently verifies3 compiled mutants,
+4 caught assertions, evaluator/all9 scoped hashes exact. Candidate-only broad
+public proc_2b136248f7f9 rejected at header158>157 after workspace2963/0/164.
+Required blank Rust doc separator fixed, unchanged ceiling; fix gate410/157/17
+passes, first rejected logs/receipt retained. Retry proc_230c3f7e4db9 independently
+passed13/13, workspace2963/0/164 across148 blocks, Web1665,615 frozen inputs and
+17 unchanged shadow bindings; copy policy renumbered0065 to preserve upstream0064;
+no integrated
+delivery yet. No consumer/UI/binding source edit
+or acceptance claimed. Outside-walk String-only projection and general allocation/
+RSS/latency remain explicit boundaries; whole AR07 and Alpha still open.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

@@ -6,6 +6,7 @@
 //! migration-backfill/corpus-evaluation tests live further down this same
 //! file, after the storage tests above.
 
+mod dynamic_scalar_copy;
 mod v16_rewind;
 
 use std::collections::HashMap;

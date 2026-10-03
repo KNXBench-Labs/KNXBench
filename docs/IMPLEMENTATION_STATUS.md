@@ -1,5 +1,35 @@
 # IMPLEMENTATION_STATUS.md
 
+## Commissioning durable metadata / admission candidate — 2026-10-03
+
+Separate version-1 activity storage and bounded authenticated history API cover
+four one-shot kinds; seven untracked kinds and volatile long-session data remain
+explicit. Identity/state validation, interruption projection, sticky failure,
+serialized first admission and pre-tunnel write refusal are offline-tested.
+Metadata is not a recovery image or device-success proof.
+
+Late review reproduced foreign hot-journal recovery before format refusal.
+Corrected admission is read-only before the writable opener; a raw SQLite
+header guard also refuses WAL before sidecar creation. Two synthetic RED/GREEN
+regressions protect both openers and original main/journal/WAL bytes. Current
+21 compiled behavioral mutants fail as expected, with exact source restoration.
+An earlier 18-step run (workspace 2948/0/165, Web 1559, private download 14/0/0,
+Dynamic 6/0/0) describes the pre-admission-fix source only. Corrected integrated
+gates and publication are PENDING, not implied by focused tests.
+
+Corrected candidate is now independently accepted at 18/18: workspace
+2950/0/165, Web 1559 in 89 files, explicitly selected private download 14/0/0
+and Dynamic 6/0/0, zero unknown skips and 108 originals unchanged. All 608
+frozen code/config inputs and 17 shadow bindings match; reviewed runtime diff
+is unchanged. Integrated Float-guard coexistence and publication remain
+PENDING. This does not close long-session, Web, hardware or release scope.
+
+The [42-ID ledger](COMMISSIONING_ALPHA_LEDGER.md) matches the readiness inventory
+without omissions, duplicates or extras; every row retains its fallback and
+unblock condition. [API contract](COMMISSIONING_ACTIVITY_HISTORY.md), ADR-0062
+and the direct Profile audit document the bounded support. Long-session intent,
+Web adoption, independent hardware/vendor evidence and release remain open.
+
 ## Commissioning recovery: backup before Verify Mode — 2026-10-02
 
 The opt-in service-control procedure now establishes its management connection

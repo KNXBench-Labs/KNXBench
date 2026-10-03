@@ -96,8 +96,15 @@ Five additional ordinary queue controls are caught; latest capability observatio
 unconfirmed intent preservation, legacy-server synchronization and owner reset
 have RED/GREEN regressions. The new frozen candidate passed all 16 checks: Web 1,665, intercepted Chromium
 61, Rust 2,925 passed / zero failed / 164 ignored, eight conditional HTTP cases,
-17 generated bindings equal and 621 inputs unchanged. Integrated acceptance and
-publication remain pending. U17 still owns visible controls/diagnostics and
+17 generated bindings equal and 621 inputs unchanged. Actual-merged 36e922bc
+passed all 22 checks as proc_613ec7154cf3: Web 1,665, intercepted Chromium 61,
+ordinary Rust 2,940 / zero failed / 164 ignored across 148 result blocks,
+eight conditional HTTP cases and 17 bindings equal. All 622 protected source/
+configuration inputs and all 420 private files remain unchanged. Six explicitly
+selected offline suites/11 private cases passed; this is narrower than U15's
+historical twenty-case scope. The product matrix measured 115 instances and
+113 unique packages, with status-only per-item outcomes and no private names.
+Publication/readback remain pending. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
 
 ## Evidence and inspected baseline

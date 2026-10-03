@@ -1,3 +1,21 @@
+- **Last Agent:** codex (UI session / U16 actual-merged acceptance passed)
+- **Timestamp:** 2026-10-03 02:47 CEST
+- **Web lock:** taken by ui-theme-storage for U16; not released.
+- **Completed:** Exact proc_613ec7154cf3 exited0; actual36e922bc all22 command/receipt identities reconciled. Web1665, intercepted Chromium61, ordinary Rust2940/0/164 over148 blocks, eight conditional HTTP cases, strict Clippy/build/fmt/type/deny and four nonempty intended-root gates pass. All17 bindings equal. Six explicitly selected offline suites/11 private cases actually passed; narrower than historical U15 twenty-case scope. Matrix115/113 and public status-only shape verified. All622 protected inputs and420 private files unchanged. Fresh origin/main remainsbe88e7b9. Scoped separate in-session review/guard regressions closed; no independent model approval.
+- **Pending/Next Steps:** Gate the acceptance-doc delta, commit only owned metadata and publish reviewed/actual-gated source with exact remote artifact readback. Then receipt-only U16 DONE/lock release, doc gates/publication/readback and actual owned cleanup; begin U17 in fresh own worktree. U16 remains unpublished, U17/U18 open. Do not infer cleanup or release readiness.
+- **Notes for Codex oder Claude:** Complete inherited histories preserved below, root/foreign refs untouched. No productive server/KNX/discovery/tunnel/hardware/native/Orca/ETS/global-alpha operation or acceptance. U17 read-only discovery: App still passes static THEMES; root runtime must remain sole preview DOM writer because existing pack leases restore unconditionally. Use existing conditional plans, not normal optimistic setters, for pack management. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
+- **Last Agent:** codex (UI session / U16 actual merge prepared)
+- **Timestamp:** 2026-10-03 01:45 CEST
+- **Web lock:** taken by ui-theme-storage for U16; not released.
+- **Completed:** Reviewed exact20-path U16 candidate committed with required identity/no coauthor. Normal merge36e922bc integrates current upstreambe88e7b9; both parents verified, complete authoritative upstream/local handover and status retained against independent complete-blob oracle, negative suffix control passes. Three overlaps are docs only; no source conflict. Own checkout clean before this notice. Candidate4 16/16 acceptance applies to precursor only.
+- **Pending/Next Steps:** Run distinct22-step actual-merged integration with fresh target, both common leases and source/input freeze. Six explicitly selected readonly suites declare11 private cases; compile inventory must match, no broad ignored sweep and no claim of historical U15 twenty-case scope. Full115-instance matrix included with scoped config and external different-filesystem output. Then exact receipts/review, delivery docs/push/readback/owned cleanup and U17; U16 not yet published, U17/U18 remain open.
+- **Notes for Codex oder Claude:** Root/foreign refs untouched. Complete immutable incoming histories preserved below. Own OriginalData/project_dump links verified exact; all private files hashed before run, inputs read-only. No productive backend/network/KNX/device operation, native/Orca/general-alpha/ETS compatibility or independent model approval. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U16 candidate4 accepted, integration next)
 - **Timestamp:** 2026-10-03 01:22 CEST
 - **Web lock:** taken by ui-theme-storage for U16; not released.

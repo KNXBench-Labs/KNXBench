@@ -1,5 +1,21 @@
 # U16 — acknowledged settings and lossless theme files
 
+## Actual-merged acceptance — 2026-10-03 02:47 CEST
+
+Exact proc_613ec7154cf3 exited 0 on actual merge 36e922bc. Independently parsed
+all 22 required command/receipt identities and counts: Web 1,665, intercepted
+Chromium 61, ordinary Rust 2,940 passed / zero failed / 164 ignored over 148
+blocks; eight conditional HTTP cases, strict Clippy/build/fmt/type/deny and four
+nonempty intended-root gates pass. All 17 shadow bindings equal. Six explicitly
+selected offline suites declare/execute 11 private cases with no ignored cases,
+missing-data signals or raw private logs. This is narrower than U15's historical
+twenty-case scope. Matrix 115 instances / 113 unique, isolation 115 installed,
+shared 113 installed / two deduplicated; status-only per-item shape and no input
+names verified. All 622 protected inputs and 420 private files unchanged.
+Upstream remains be88e7b9; no new source to integrate. Publication/readback,
+delivery receipt and owned cleanup remain PENDING, not inferred from acceptance.
+U17 production management/preview and U18 extension-wide acceptance remain open.
+
 ## Scope and inspected state
 
 Owned checkout/branch: `ui-theme-storage`, based on verified U15 receipt

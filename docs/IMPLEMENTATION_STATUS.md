@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-02 — U16 acknowledged theme persistence (reviewed candidate, not delivered)
+## 2026-10-03 — U16 acknowledged theme persistence (integrated acceptance, publication pending)
 
 - Implemented strict bounded UTF-8/BOM import, validated deterministic export,
   detached/frozen content-bound theme plans, explicit replacement consent and
@@ -18,7 +18,13 @@
   ordinary Rust 2,925 / zero failed / 164 ignored. Eight conditional HTTP cases,
   seven compiled server guard controls (including the initially surviving lock
   case), five extra ordinary queue controls and all-source restoration verified.
-  Actual-merged integration and publication remain pending. U17 production manager/diagnostics/preview and U18 closing review
+  Actual merge 36e922bc passed 22/22 commands: Web 1,665, intercepted Chromium
+  61, ordinary Rust 2,940 / zero failed / 164 ignored across 148 result blocks.
+  Six explicitly selected offline suites/11 private cases passed, including the
+  115-instance/113-unique product matrix. This is narrower than U15's historical
+  twenty-case scope. All 622 protected inputs and 420 private files unchanged;
+  all 17 bindings equal. Publication/readback remain pending.
+  U17 production manager/diagnostics/preview and U18 closing review
   remain open; no independent/native/Orca/ETS/alpha-release approval implied.
 
 

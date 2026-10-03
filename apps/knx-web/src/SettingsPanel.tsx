@@ -1,7 +1,10 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
 import { useState } from "react";
-import type { ThemeDef } from "./theme";
+import type { ThemeDef, ThemePreview } from "./theme";
+import { getThemeAccentOptions, THEMES } from "./theme";
+import ThemePackManager from "./ThemePackManager";
+import { commitThemeMutation, planThemeSelection } from "./themePackStorage";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";
 import type { ProductLanguage } from "./api";
 import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
@@ -104,7 +107,12 @@ function describeRejectionReason(t: Translate, reason: ImportRejection, fallback
  * data-shaping half (what `handleExportTemplate`/`handleExportPack` build)
  * stays trivial to unit-test without needing a real download to happen. */
 function downloadJson(filename: string, data: unknown): void {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  downloadText(filename, JSON.stringify(data, null, 2));
+}
+
+/** Keeps validated/canonical theme-export text byte-for-byte intact. */
+function downloadText(filename: string, text: string): void {
+  const blob = new Blob([text], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -207,6 +215,8 @@ export default function SettingsPanel(props: {
   themes: readonly ThemeDef[];
   activeThemeId: string;
   onSelectTheme: (id: string) => void;
+  onPreviewTheme?: (preview: ThemePreview | undefined) => void;
+  previewTheme?: ThemePreview;
   motionStyles: readonly MotionStyleDef[];
   activeMotionStyle: string;
   onSelectMotionStyle: (id: string) => void;
@@ -253,12 +263,39 @@ export default function SettingsPanel(props: {
 
   const packs = useLanguagePacks();
   const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null);
+  const [themeSelectionOutcome, setThemeSelectionOutcome] = useState<"saved" | "failed">();
+  const [themeSelectionBusy, setThemeSelectionBusy] = useState(false);
+  const [themeSelectionCacheError, setThemeSelectionCacheError] = useState(false);
+
+  async function selectTheme(id: string) {
+    // Standalone/legacy panels retain their existing builtin callback. The
+    // managed Appearance surface uses acknowledgment for every theme choice.
+    if (!props.onPreviewTheme && THEMES.some((theme) => theme.id === id)) {
+      onSelectTheme(id);
+      return;
+    }
+    if (themeSelectionBusy) return;
+    const prepared = planThemeSelection(id);
+    if (!prepared.ok) { setThemeSelectionOutcome("failed"); return; }
+    setThemeSelectionBusy(true);
+    setThemeSelectionOutcome(undefined);
+    setThemeSelectionCacheError(false);
+    try {
+      const result = await commitThemeMutation(prepared.plan);
+      setThemeSelectionOutcome("saved");
+      setThemeSelectionCacheError(result.cacheError);
+    } catch { setThemeSelectionOutcome("failed"); }
+    finally { setThemeSelectionBusy(false); }
+  }
 
   // Cupertino, Neon Grid and Bitcoin DeFi treat the accent as identity and
   // declare no `[data-accent="…"]` variations (ADR-0022) — the control
   // below would silently do nothing for them, so it is disabled instead.
   const activeTheme = themes.find((theme) => theme.id === activeThemeId);
-  const accentUnavailable = activeTheme !== undefined && !activeTheme.hasAccentVariations;
+  const accentOptions = getThemeAccentOptions(activeThemeId, props.previewTheme);
+  const accentUnavailable = props.onPreviewTheme ? accentOptions.length === 0
+    : activeTheme !== undefined && !activeTheme.hasAccentVariations;
+  const partialAccentSupport = !!props.onPreviewTheme && accentOptions.length > 0 && accentOptions.length < ACCENTS.length;
 
   async function handleImportFile(file: File) {
     let raw: unknown;
@@ -332,7 +369,8 @@ export default function SettingsPanel(props: {
         <span className="settings-field-label">{t("settings.theme")}</span>
         <select
           value={activeThemeId}
-          onChange={(e) => onSelectTheme(e.target.value)}
+          disabled={themeSelectionBusy}
+          onChange={(event) => { void selectTheme(event.target.value); }}
           aria-label={t("settings.theme")}
         >
           {themes.map((theme) => (
@@ -342,6 +380,9 @@ export default function SettingsPanel(props: {
           ))}
         </select>
       </label>
+      {themeSelectionOutcome && <div role="status">{t(themeSelectionOutcome === "saved" ? "themePack.manager.saved" : "themePack.manager.applyFailed")}</div>}
+      {themeSelectionCacheError && <p role="status" className="settings-diagnostic">{t("themePack.manager.cacheWarning")}</p>}
+      {props.onPreviewTheme && <ThemePackManager onPreview={props.onPreviewTheme} onDownload={downloadText} />}
       {props.appearance && <>
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.accent")}</span>
@@ -353,15 +394,19 @@ export default function SettingsPanel(props: {
               otherwise become part of the accessible *name*. */}
           <select aria-label={t("appearance.accent")} value={props.appearance.accent}
             disabled={accentUnavailable}
-            aria-describedby={accentUnavailable ? ACCENT_HINT_ID : undefined}
+            aria-describedby={accentUnavailable || partialAccentSupport ? ACCENT_HINT_ID : undefined}
             onChange={(e) => props.appearance!.setAccent(e.target.value as typeof ACCENTS[number])}>
-            {ACCENTS.map((accent) => <option key={accent} value={accent}>{t(`appearance.${accent}`)}</option>)}
+            {ACCENTS.map((accent) => <option key={accent} value={accent}
+              disabled={!!props.onPreviewTheme && !accentOptions.includes(accent)}>{t(`appearance.${accent}`)}</option>)}
           </select>
           {accentUnavailable && (
             <span className="settings-field-hint" id={ACCENT_HINT_ID}>
               {t("appearance.accentUnavailable")}
             </span>
           )}
+          {partialAccentSupport && <span className="settings-field-hint" id={ACCENT_HINT_ID}>
+            {t("themePack.manager.partialAccents")}
+          </span>}
         </label>
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.density")}</span>

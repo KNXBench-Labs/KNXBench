@@ -27,7 +27,7 @@ import { publishProjectContext, rebasePublishedSessionContext } from "./busConte
 import { ensureBusDiscovery } from "./busDiscovery";
 import { openCompanionWindow } from "./diagnosticsWindow";
 import { useAppearance } from "./appearance";
-import { THEMES, useThemeId } from "./theme";
+import { getThemeDefinitions, useThemeId, type ThemePreview } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
@@ -291,7 +291,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     tree,
     (sel) => void selectEntity(sel),
   );
-  const [themeId, setThemeId] = useThemeId();
+  const [themePreview, setThemePreview] = useState<ThemePreview>();
+  const [themeId, setThemeId] = useThemeId(themePreview);
   const appearance = useAppearance();  const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
   const [productLanguage, setProductLanguage] = useProductLanguage();
   useSettingsRevision();
@@ -1166,9 +1167,11 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       {settingsOpen && (
         <SettingsPanel
           appearance={appearance}
-          themes={THEMES}
+          themes={getThemeDefinitions()}
           activeThemeId={themeId}
           onSelectTheme={setThemeId}
+          onPreviewTheme={setThemePreview}
+          previewTheme={themePreview}
           motionStyles={MOTION_STYLES}
           activeMotionStyle={motionStyle}
           onSelectMotionStyle={setMotionStyle}

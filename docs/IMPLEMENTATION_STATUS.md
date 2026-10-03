@@ -90,6 +90,53 @@ ui-theme-management, not touched. No bus/vendor/private inputs or new model
 review. Full review, broad/actual integration, doc gates, publication/readback,
 cleanup and complete AR07/Alpha remain pending.
 
+## 2026-10-03 — U17 Appearance manager (delivered/read back as 4d9073ca)
+
+Settings → Appearance now manages immutable builtins and admitted installed
+packs with origin/version/saved status, import/export/recovery, explicit Apply/
+Cancel, content-bound replacement/removal questions and System reset. The root
+runtime is the sole visual owner; the Debug report reads without acquiring a
+second DOM lease. Live EN/DE outcomes and all actual admission kinds are typed;
+accent controls expose only variations the displayed palette can apply.
+
+31 actual parent cases and five root cases cover stale/late/out-of-order intake,
+cross-client contents/selection, repeated Apply, definitive 409 and uncertain
+500 reconciliation without write replay, close during acknowledgment, exact Blob
+roundtrip/recovery and independent preference preservation. Both manager and
+original selector report server success separately from local cache failure.
+Latest scoped 74 and TypeScript pass without stderr. Six behavioral guard
+controls were caught/restored; the new diagnostic module's TS2322 inclusion
+canary was caught and restored. Final frontend candidate: Web1,702/95 files,
+Chromium69 without skip/flaky/failure, build/types and262 frozen inputs unchanged.
+Eight behavioral controls were caught and restored. Full branch13/13 repository commands pass: Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending.
+U17-R1 acceptance audit found missing explicit manager-browser rejection/reset/
+HTTP500 gestures. Added three fully intercepted cases:11 manager browser cases
+and three further compiled controls pass/restored, no production change. Earlier
+full69-browser source predates this test-only delta; renewed actual gates pending.
+Full legacy Web suite emits fixture stderr; no warning-free whole-suite claim.
+Native WebKitGTK/Orca/global-alpha/ETS and U18 acceptance remain separate/open.
+
+The candidate-only statements above are superseded by actual chain
+proc_cdcd42b97d47 on f16f1e40:23/23 commands passed,17 repository and six offline
+inventory/execution commands; Web1702, Chromium72 (zero failed/skipped/flaky),
+Rust2984/0/165 across149 blocks, compiled ignored inventory165,17 equal bindings,
+697 unchanged source/config inputs. Six selected offline suites execute27 private
+cases plus one115-instance/113-unique matrix case;420 private files unchanged,
+temporary corpus link removed. Earlier cancelled/interrupted runs are not
+acceptance. Integration with upstream5ca570a0 changes only Markdown and preserves
+complete owner histories/gated source; document gates/publication/readback are
+tracked in the current handover. U18-R1 remains IMPORTANT: representative
+editor/inspector/table/dialog/diagnostic state coverage across palettes is not
+established by the current generic root-switch fixture. U17 management acceptance
+does not close U18, native/Orca, general WCAG, ETS or global-alpha release.
+
+Publication4d9073ca092198b23fbb52411cd68edc7fab8c4a verified: owned HEAD,
+fetched main and live main equal; full Git trees equal, all697 gated source/config
+inputs and25 owned artifacts exact remotely, zero outgoing commits. Subsequent
+changes from gated f16f1e40 are Markdown only; four nonempty intended-root
+documentation audits and whitespace passed. U18 stays open with U18-R1.
+
 ## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
 
 Source/actual acceptance published and fetched/live read back at

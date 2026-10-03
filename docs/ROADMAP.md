@@ -73,8 +73,9 @@ negative-fixture matrix in [THEME_PACKS](THEME_PACKS.md) and
 research, not shipped import/export. U15 runtime admission, cache revalidation
 and reversible theme application are delivered as 9d1ae19d with complete
 candidate/combined gates and exact remote readback. U16 implements reviewed
-candidate acknowledged storage/file roundtrip (144 focused passes, restored unit
-controls and a complete 16-check candidate gate), with integrated gates/publication pending. U17–U18 in
+candidate acknowledged storage/file roundtrip (144 focused passes, restored
+controls, complete 16-check candidate and 22-check actual-merged gates), with
+publication/readback pending. U17–U18 in
 [goal-ui](../goal-ui.md) still own reversible management/preview and final
 regression/review acceptance.
 Existing built-ins/System stay

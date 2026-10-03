@@ -1,13 +1,14 @@
 # Roadmap
 
-## Local CRT animation follow-up (2026-10-03)
+## Integrated CRT animation follow-up (2026-10-03)
 
 Application-owned CRT feedback is implemented separately from the completed
 declarative theme-pack delivery: real tree/address-table fills, bounded light
 and manual Save activation. Existing keyboard/selection paths and the v1 palette
 contract are retained. See [CRT guide](DESIGN_RETRO_GREEN_CRT.md) and ADR-0022.
-Publication/main integration, native WebKitGTK/Orca evidence, Save-only semantic
-color roles and broader component redesign remain separate work; this is not a
+Authorized main integration is3d03aea5 (feature16c9d774) with repeated merged-result
+gates; current refs/handover establish publication. Native WebKitGTK/Orca evidence,
+Save-only semantic color roles and broader component redesign remain separate; this is not a
 reopening of the completed theme-pack format milestone or Alpha/ETS acceptance.
 
 The original Session 0–7 delivery sequence is complete at its evidenced

@@ -193,8 +193,10 @@ The 2026-10-03 production animation follow-up is independently selected as
 table now have application-owned fill and bounded light/activation, with Off/OS
 reduced-motion cancellation. Save-only purple and exact selection colors remain
 unimplemented semantic-role proposals. The v1 token/schema boundary is unchanged;
-see the guide's production section and ADR-0022 follow-up. That source is local
-to feat/crt-interactions-20261003 and not implicitly published or merged.
+see the guide's production section and ADR-0022 follow-up. The authorized delivery
+committed it as16c9d774 and integrated it as3d03aea5 onto current main, with merged
+frontend/browser/workspace gates. Current refs/handover establish publication;
+importing a pack still cannot implicitly enable CRT or override Motion Off.
 
 ## Evidence and inspected baseline
 

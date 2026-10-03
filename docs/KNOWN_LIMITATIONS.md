@@ -7078,7 +7078,7 @@ acceptance remains separate from the mock/simulator evidence here.
 
 ## §149 `knx products ingest` matches the `.knxprod` extension case-sensitively
 
-**Candidate checkpoint (not lifted/published):** The scoped AR06P CLI correction
+**Actual acceptance checkpoint (publication pending):** The scoped AR06P CLI correction
 uses exact ASCII case-independent extension comparison, with five synthetic CLI
 regressions, four named compiled mutation failures, public workspace/build
 gates and same-release-profile baseline RED/candidate GREEN verification.
@@ -7087,10 +7087,13 @@ refusal remains unchanged. Full unpinned853 original-filename measurement
 is independently accepted on the same release profile:644→687 installs,
 Hager/Berker2→45;43 upper-case packages admitted, two ZIP-limit and one
 evidence-item refusal remain explicit/atomic. Originals and retained successful
-blobs verified unchanged; no private raw/item logs. Current-upstream actual
-gates/publication remain pending; no full compatibility or delivered lift yet.
+blobs verified unchanged; no private raw/item logs. Normal U18 merge dd5a350c
+is independently actual16 accepted: Rust3000/0/165, Web1702, Chromium82,
+17 bindings/704 committed-exact inputs. All285 CLI build/test inputs equal
+the measured producer. Publication/readback/cleanup still pending; no full
+compatibility or delivered lift yet.
 
-**Observed 2026-10-03** (PRODUCT_DATABASE_CORPUS §Public crawler corpus run).
+**Historical baseline observed 2026-10-03** (PRODUCT_DATABASE_CORPUS §Public crawler corpus run).
 `run_products_ingest` (`apps/knx-cli/src/main.rs`) routes a file to
 `knx_productdb::install_package` only when its extension is exactly
 `knxprod` or `vd2`. Hager and Berker publish their product databases as

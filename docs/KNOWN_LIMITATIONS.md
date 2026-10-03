@@ -7056,3 +7056,101 @@ resource-bounded streaming/storage workflow and its own privacy policy; it
 is not an extension of this local snapshot. A GUI-capable Linux desktop
 check can independently verify the dialog and responsive layout. Live-bus
 acceptance remains separate from the mock/simulator evidence here.
+
+## §149 `knx products ingest` matches the `.knxprod` extension case-sensitively
+
+**Observed 2026-10-03** (PRODUCT_DATABASE_CORPUS §Public crawler corpus run).
+`run_products_ingest` (`apps/knx-cli/src/main.rs`) routes a file to
+`knx_productdb::install_package` only when its extension is exactly
+`knxprod` or `vd2`. Hager and Berker publish their product databases as
+`*.KNXPROD`. Those 46 files fall through to the `.knxproj` project importer
+and fail with the misleading `no P-*.signature entry; cannot determine the
+project part`. The same bytes under a lowercase name install 43 of 46 (the
+other 3 hit §151/§152).
+
+- Only the CLI is affected. The server install route calls
+  `install_package` directly with no extension switch, and the web file
+  picker's `accept=".knxprod"` matches case-insensitively per HTML.
+- `install_package` itself already compares legacy extensions
+  case-insensitively (`.vd3`–`.vd5`, `.pr3`–`.pr5`), so the two entry
+  points disagree.
+- **Workaround:** rename or symlink to lowercase `.knxprod`.
+- **Lifted when** the CLI compares the extension case-insensitively, with a
+  regression test using an upper-case name.
+
+## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
+
+**Observed 2026-10-03.** MDT `RF-TAL55Bx0x-01S_MDT_KP_V12.knxprod`
+(scheme 20, program `M-0083_A-00F2-12-05C4`) fails in a shared and in a
+fresh database with `UNIQUE constraint failed: dynamic_node.program_id,
+dynamic_node.module_def_id, dynamic_node.node_id`. The whole package is
+rolled back, so no partial rows are written, but nothing of it can be used.
+
+- The program declares 19 `ModuleDef`s, 11 of them nested inside another
+  `ModuleDef` (depth 2). It is the only one of 97 crawled MDT packages with
+  nested `ModuleDef`s, and every other MDT package installs.
+- **Hypothesis (unverified, no code changed):** `dynamic/parse.rs` clears
+  `module_def_id` at the end of a `ModuleDef` (around line 317). After an
+  inner definition ends, the outer one's remaining `Dynamic` content lands
+  under the wrong `(program_id, module_def_id)` key, where the per-key
+  monotonic `node_id` then collides.
+- This contradicts the earlier note that "the installed corpus measures
+  zero products that actually nest" (GAP_ANALYSIS_ETS A3). That note
+  remains true for `OriginalData`, but real downloadable products do nest. A full scan of the 852 crawled ZIP
+ packages found this one package as the *only* nested example, which makes
+ it the sole real R-MODULE-04 sample so far.
+ - Planned as alpha package AR06P (`alpha-release-goal.md`), P1.
+- **Lifted when** nested `ModuleDef`s parse into correctly scoped
+  `dynamic_node` rows, proven by a synthetic nested fixture plus this
+  package.
+
+## §151 Real manufacturer packages exceed the product-ZIP size limits
+
+**Observed 2026-10-03.** `MAX_EXPANDED_SIZE` (256 MiB) and
+`MAX_MEMBER_SIZE` (64 MiB) in `knx-productdb/src/package.rs` refuse 13 of
+853 crawled files, plus 2 more Hager packages once §149 is worked around.
+
+- **Expanded total > 256 MiB (8):** complete manufacturer bundles, 295 MiB
+  to 2,740 MiB expanded. These include Siemens' complete
+  `Siemens_HVAC_All_PDB_Oct_2023_ETS5_ETS6.knxprod` (1,006 MiB, which is
+  Siemens' *only* current download) and ABB's
+  `IBUS_ETS5_{ABB,BJE}_XX_V24-12-20_…` all-products bundles (2,740 and
+  1,700 MiB).
+- **Single member > 64 MiB (5):** individual ABB device packages whose
+  application XML is 65–139 MiB (e.g. `DGS_264511_…`, `6197_46_…`).
+- The refusal is clean and correct for the current limits. The limits
+  remain a deliberate denial-of-service bound and are not a defect in
+  themselves. But Siemens' entire public offering is currently unusable,
+  and so are several real single-device packages.
+- **Lifted when** the limits are revisited with measured memory/time costs,
+  for example a streaming ingest or a per-package opt-in raise, while
+  keeping a bound.
+
+## §152 The XML evidence item limit refuses two real packages
+
+**Observed 2026-10-03.** `MAX_EVIDENCE_ITEMS` (262,144,
+`knx-productdb/src/parse/scheme_evidence.rs`) refuses ABB
+`PS5604-KNX AC500.knxprod` and Hager `PS_TXA664D_V105_T5` (both scheme 14;
+the Hager one measured after the §149 workaround) with `XML evidence exceeds
+item limit 262144`. Reproduced in a fresh database. The refusal is atomic
+and explicit, so no data is lost silently. **Lifted when** the evidence
+budget is sized against measured real maxima, or evidence collection
+degrades to a counted summary instead of refusing the package.
+
+## §153 Master-data schemes 10 and 23 are refused for standalone `.knxprod`
+
+**Observed 2026-10-03.** Of 853 crawled files, 146 use namespace
+`http://knx.org/xml/project/10` (145 ABB plus 1 ABB bundle that also hits
+§151) and 2 use `…/project/23`: ABB `LKS_43_VD-TP_XX_V1-0_…_Rev_A` and MDT
+`SCN-LK001-03S_MDT_KP_V10_ETS6`. Both schemes are refused with
+`unsupported product master namespace`, consistent with the documented
+accepted set (11, 12, 13, 14, 20, exact 21).
+
+- Scheme 10 is the largest single refusal class. ABB still offers that
+  many ETS4-era packages.
+- Scheme 23 has so far been named only for `.knxproj` projects
+  (COMPATIBILITY.md). It now also appears in current ETS6 product
+  downloads, and the corpus documents' "schemes 15–19 and 22 remain
+  unmeasured" list did not mention it.
+- **Lifted when** each scheme is admitted with grammar evidence like
+  schemes 12–14/21 were. Until then, the refusal is the intended behaviour.

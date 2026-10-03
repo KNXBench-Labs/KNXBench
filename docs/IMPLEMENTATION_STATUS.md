@@ -90,6 +90,22 @@ ui-theme-management, not touched. No bus/vendor/private inputs or new model
 review. Full review, broad/actual integration, doc gates, publication/readback,
 cleanup and complete AR07/Alpha remain pending.
 
+## 2026-10-03 — Product install tested against 853 public manufacturer downloads (test only)
+
+No code changed. The release `knx products ingest` from `c6b5a240` ran over
+853 files that the separate `knxprod-crawler` tool downloaded from Siemens,
+ABB/Busch-Jaeger, Hager/Berker and MDT, into one fresh shared database
+(content order). 644 installed (608 new, 36 byte-identical). 147 were refused
+by namespace (scheme 10: 145, scheme 23: 2), 46 hit a case-sensitive CLI
+extension check, 13 hit the size limits, and 1 each hit the evidence item
+limit, a database constraint crash (nested `ModuleDef`s) and an invalid ZIP
+(a PDF named `.knxprod`, correctly refused). `products verify` reported 0
+mismatches. Coverage: 51 of 1,167 programs are plannable for download.
+Database size 13.2 GiB for 1.25 GiB of input. Details and method:
+PRODUCT_DATABASE_CORPUS §Public crawler corpus run. New limitations:
+KNOWN_LIMITATIONS §149–§153. The run is evidence, not a pinned gate; the
+downloaded files are not part of the repository.
+
 ## 2026-10-03 — U17 Appearance manager (delivered/read back as 4d9073ca)
 
 Settings → Appearance now manages immutable builtins and admitted installed

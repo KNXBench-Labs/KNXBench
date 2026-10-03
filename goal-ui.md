@@ -351,7 +351,7 @@ claim disguised as research. Record any deliberate change to ADR-0022.
 
 ### U15 — Validate packs and integrate the existing theme engine [web]
 
-**Delivered as9d1ae19d; runtime foundation only. U16/U17 subsequently delivered; U18 actual acceptance verified, final delivery closure pending.**
+**Delivered as9d1ae19d; runtime foundation only. U16/U17/U18 subsequently delivered and read back; native/global-alpha acceptance remains separate.**
 Depends on U14's resolved contract. Keep parsing/validation pure and
 separate from DOM effects and persistence; do not add theme logic to KNX Core.
 
@@ -464,7 +464,7 @@ records findings, negative controls, integration provenance and actual counts.
 
 ### U18 — Review and close the theme-pack extension
 
-**Actual acceptance verified; final publication/readback and owned cleanup pending.** U18 depends on the delivered U14–U17 extension, does not reopen U13 and does not close unrelated alpha/domain/native gates.
+**DONE — source delivery1964fd6b published/read back; final metadata housekeeping in the handover.** U18 depends on the delivered U14–U17 extension, does not reopen U13 and does not close unrelated alpha/domain/native gates.
 
 U18-R1 is closed by an opt-in, explicitly typed harness using actual
 GroupAddressTable, Inspector, inline address validation, Overlay and structured
@@ -497,9 +497,12 @@ shared-lease refusals remain infrastructure-only, not successful mutant evidence
   reconciled. `docs/THEME_PACKS.md` documents import/export, preview/Cancel,
   explicit replacement, recovery, System reset and unavailable-data fallback.
   Closing self-review also corrects live candidate/open U18-R1 documentation drift.
-- [ ] Publish/read back the source-identical final integration and closing metadata,
-  hand completion/remaining limitations to the goal.md owner, release only the UI
-  reservation and remove only owned worktree/build/scratch artifacts.
+- [x] Source delivery1964fd6b published/read back: live/fetched refs, full tree,
+  all703 gated inputs and15 owned artifacts exact; zero outgoing commits.
+  Completion/remaining limitations handed to the goal.md owner; UI reservation
+  released in the current handover.52 completed own scratch entries and own
+  node_modules cleaned; final clean worktree/branch housekeeping follows the
+  metadata readback. Root/foreign worktrees and all other reservations untouched.
 
 **Evidence:** `.ai/logs/2026-10-03_codex_ui-theme-closing.md` and its aggregate
 receipt; actual gate1660911b, normal Markdown-only upstream integrationef4cfb92,

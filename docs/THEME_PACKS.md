@@ -3,7 +3,7 @@
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
 U16 persistence/file foundations are delivered/read back as 1f94808d;
 U17 management is delivered/read back as4d9073ca. U18 extension-wide actual
-acceptance is verified; final publication/readback is tracked in the handover.**
+acceptance is delivered/read back as1964fd6b; final metadata is in the handover.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
@@ -363,7 +363,7 @@ The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Ins
 
 Offline inventories reconcile **11 product + 16 injected-server + 1 matrix cases = 28 executed cases**. The matrix measured **115 instances / 113 unique packages**; its case is already included in28. All **421** private source files (420 OriginalData files plus project_dump) remained unchanged. Private stdout was classified in memory; only aggregate receipts were persisted. Own fixture links and transient matrix output were removed. Simulator download tests use injected transport, not a real KNX tunnel.
 
-The separately labelled in-session full-extension self-review traces admission/file decoding → immutable plans → conditional queue/API acknowledgment → single root DOM lease → manager/selector/diagnostics → semantic export/reimport and representative states. U18-R1 is closed by real components, not generic markup. No new blocking production finding; this is **self-review, not independent approval**. Historical running/candidate-only observations are superseded for their stated scopes. Later integration `ef4cfb92` brings eight upstream Markdown paths, zero protected-source changes; all703 actual-gated inputs remain exact. Closure Markdown gates, publication/readback and owned cleanup are still pending here.
+The separately labelled in-session full-extension self-review traces admission/file decoding → immutable plans → conditional queue/API acknowledgment → single root DOM lease → manager/selector/diagnostics → semantic export/reimport and representative states. U18-R1 is closed by real components, not generic markup. No new blocking production finding; this is **self-review, not independent approval**. Historical running/candidate-only observations are superseded for their stated scopes. Later integration `ef4cfb92` brings eight upstream Markdown paths, zero protected-source changes; all703 actual-gated inputs remain exact. Closure Markdown/integrity gates passed; source delivery1964fd6b was pushed and read back with live/fetched refs, full tree, all703 inputs and15 owned artifacts exact, zero outgoing commits.52 completed own scratch entries and own node_modules were removed after worker/cwd checks; only final metadata housekeeping remains. The UI reservation is released in the current handover.
 
 No native WebKitGTK/Orca, all-component WCAG, Alpha/ETS compatibility or real discovery/tunnel/commissioning/hardware acceptance follows. User instructions for import/export, reversible preview, explicit replacement, recovery and fallback are in the U17 user instructions above.
 

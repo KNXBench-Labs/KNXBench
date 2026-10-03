@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 
-Status: Accepted — U15/U16/U17 delivered/read back; U18 actual24-command extension acceptance and closing self-review verified, final publication/readback in handover.
+Status: Accepted — U14–U18 delivered/read back; U18 actual24-command extension acceptance and closing self-review verified, source delivery1964fd6b, final metadata in handover.
 
 ## Context
 

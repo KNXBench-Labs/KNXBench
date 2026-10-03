@@ -6749,7 +6749,9 @@ No new generated/UI contract; dedicated language/refresh error/snapshot behavior
 is UI-owner verification. Legacy String SDK helper, unscoped/raw metadata/query/
 serializer allocations and total RSS remain outside this bound. Full AR07/ETS
 and the newly found AR06P nested-definition sample are not accepted by this gate.
-Final acceptance documents/publication are pending. See
+Final five document checks passed; scoped delivery 0b8ec935
+was published/fetched/live-read back,699 inputs/7 docs exact at that checkpoint.
+Whole AR07/Alpha and dedicated UI consumer acceptance remain open. See
 [decision](adr/0066-outside-walk-text-refusal.md).
 
 **AR07 candidate (2026-10-02, ADR-0061).** A resolved controller kind outside

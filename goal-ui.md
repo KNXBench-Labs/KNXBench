@@ -423,7 +423,7 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 
 ### U17 — Add accessible theme management and reversible preview [web]
 
-**Implementation accepted on f16f1e40; publication/readback belongs to the current handover.**
+**DONE — management delivered/read back as 4d9073ca; U18 remains open.**
 Actual merged chain proc_cdcd42b97d47 passed all23 commands:17 repository and
 six offline inventory/execution commands. Web1,702/95 files, Chromium72 (zero
 failed/skipped/flaky), Rust2,984/0/165 across149 blocks,17 equal bindings and697

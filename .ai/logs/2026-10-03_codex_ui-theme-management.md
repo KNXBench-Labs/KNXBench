@@ -53,6 +53,13 @@ entries remain visible as diagnostics/recovery candidates, never silently erased
 
 ### Actual merged acceptance and documentation-only integration
 
+Published/read back4d9073ca092198b23fbb52411cd68edc7fab8c4a: exact owned/fetched/
+live main equality, equal full tree, all697 gated source/configuration inputs and
+25 owned artifacts equal remotely, zero outgoing commits. All post-gate changes
+are Markdown; four nonempty intended-root doc audits and whitespace passed.
+This closes U17 delivery, not U18/global release. Closing receipt-only metadata
+and owned artifact cleanup follow; retain the UI reservation through U18.
+
 Actual chain proc_cdcd42b97d47/PID2816334 completed exit0 on f16f1e40.
 All23 commands accepted:17 repository and six selected offline inventory/
 execution commands. Web1702/95 files, Chromium72 without failed/skipped/flaky,

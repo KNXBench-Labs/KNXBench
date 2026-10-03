@@ -555,3 +555,16 @@ Fresh AR06P now precedes AR07 in the queue. Its synthetic nested-definition
 parser fixture/private one-off sample must be handled before claiming new real
 R-MODULE-04 semantics;853 crawler files are not this selected9-case gate or a
 committed fixture. Current broader supported-semantics matrix/AR07/Alpha open.
+
+
+## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
+
+Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded
+checkpoint: refs/trees equal0/0,699 actual-gated inputs and7 acceptance documents
+exact. Actual0369a56a's22 accepted commands and final five nonempty/root-explicit
+doc/whitespace gates retain their run scope; later delta is Markdown only.
+Twelve completed own build/snapshot/shadow/XDG directories removed after process
+checks; originals/foreign/root unchanged. Closing metadata gates/readback and
+clean checkout/branch/scaffolding removal remain, not new policy acceptance.
+AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
+open. Published statistics-owner artifact preserved, not a local statistics refresh.

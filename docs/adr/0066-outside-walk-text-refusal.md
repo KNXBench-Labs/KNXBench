@@ -1,7 +1,7 @@
 # ADR 0066: Outside-walk text substitution has explicit request-level refusal
 
 Date: 2026-10-03
-Status: Accepted — bounded backend checked-text policy; actual integrated gates verified, publication pending.
+Status: Accepted — bounded backend checked-text policy; integrated gates and scoped publication/readback verified.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0065's explicit outside-walk consumer boundary, not its accepted walk policy.
 
@@ -140,3 +140,15 @@ request client forwards400; source selection handling clears failed detail.
 Language/refresh paths retain prior detail on error; their snapshot/localized
 presentation policy needs UI-owner verification, not a new task assigned here.
 No dedicated new-consumer browser, native, complete ETS or full AR07 acceptance.
+
+## Scoped publication receipt — 2026-10-03 13:54 CEST
+
+Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded
+checkpoint: refs/trees equal0/0,699 actual-gated inputs and7 acceptance documents
+exact. Actual0369a56a's22 accepted commands and final five nonempty/root-explicit
+doc/whitespace gates retain their run scope; later delta is Markdown only.
+Twelve completed own build/snapshot/shadow/XDG directories removed after process
+checks; originals/foreign/root unchanged. Closing metadata gates/readback and
+clean checkout/branch/scaffolding removal remain, not new policy acceptance.
+AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
+open. Published statistics-owner artifact preserved, not a local statistics refresh.

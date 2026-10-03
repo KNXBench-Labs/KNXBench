@@ -189,8 +189,22 @@
     ],
     "verdict": "no new blocking production issue; U18-R1 fixed; MINOR stale current documentation fixed; self-review only"
   },
-  "publication": "PENDING",
-  "timestamp": "2026-10-03 15:23 CEST",
+  "publication": {
+    "status": "PUBLISHED_READ_BACK",
+    "sourceDelivery": {
+      "head": "1964fd6bb0787cf3ffa95e3b153fb3961bcb7ddd",
+      "liveRemoteRefExact": true,
+      "fetchedRefExact": true,
+      "fullTreeExact": true,
+      "protectedInputsExact": 703,
+      "ownedArtifactsExact": 15,
+      "outgoingCommits": 0,
+      "sourceGatedHead": "1660911bdd5bf350c6042bbeb9a2b694ad66fa41",
+      "sourceDeltaSinceGate": false
+    },
+    "finalMetadata": "source-identical doc-only closure; its live readback follows commit"
+  },
+  "timestamp": "2026-10-03 15:47 CEST",
   "fixtureTypeCanary": {
     "expectedTS2322": true,
     "module": "theme-state-fixture.tsx",
@@ -228,5 +242,13 @@
       "finalLinksChecked": 382,
       "markdownFilesChecked": 248
     }
+  },
+  "cleanup": {
+    "workersGone": true,
+    "noProcessesUsingOwnedCwd": true,
+    "ownScratchEntriesRemoved": 52,
+    "ownNodeModulesRemoved": true,
+    "rootAndForeignUntouched": true,
+    "finalDocExecutableAndCleanWorktreeCleanup": "after final metadata readback"
   }
 }

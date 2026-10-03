@@ -1,7 +1,7 @@
 # ADR 0066: Outside-walk text substitution has explicit request-level refusal
 
 Date: 2026-10-03
-Status: Proposed — current public GREEN/mutations verified, in-session candidate review complete; public candidate Broad accepted; actual integrated acceptance pending.
+Status: Accepted — bounded backend checked-text policy; actual integrated gates verified, publication pending.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0065's explicit outside-walk consumer boundary, not its accepted walk policy.
 
@@ -113,3 +113,30 @@ Fresh upstream c6b5a240 carries UI-owner U17 changes. These candidate results
 are not its merged Web acceptance or final scoped policy delivery. Actual
 integration, selected offline compatibility, acceptance documents and publication
 remain pending; Proposed status and owner UI presentation boundary remain.
+
+## Actual integration accepted — 2026-10-03 13:32 CEST
+
+Reviewed source a065ad94 conventionally integrated current U17 as0369a56a.
+Exact proc_39eb1bd6a2f3 exits0;22 commands independently reconciled:16 fresh
+public commands,3 compiled selected inventories and3 private execution commands.
+Ordinary workspace2995/0/165 across150 blocks, compiled ignored165, Web1702,
+intercepted Chromium72 (zero failed/skipped/flaky),17 equal shadow bindings.
+Selected private Dynamic6/server-library2/com-object activation1 all pass;
+420 originals unchanged via before/after aggregate commitment. No private raw
+logs or payloads saved; corpus link removed. All699 actual-gated code/config
+inputs equal current files and committed blobs. Five earlier compiled behavioral
+mutants match unchanged producer/test source; review remains in-session.
+
+Later upstream e2a40268 adds only Markdown and AR06P's crawler/nested-module
+findings; conventionally merged7bb0ee72 with complete owner histories and zero
+699-input code delta. No wider crawler/nested sample acceptance is inferred.
+Final acceptance-document gates/publication/readback remain pending.
+
+Accepted scope is one shared budget across scoped FunctionText substitution and
+channel-text rendering/copies, with whole HTTP400 refusal and no clipped detail.
+It is not a total response-byte/metadata/query/serializer/RSS limit, an unscoped
+FunctionText allocation cap or a changed legacy SDK helper contract. Existing
+request client forwards400; source selection handling clears failed detail.
+Language/refresh paths retain prior detail on error; their snapshot/localized
+presentation policy needs UI-owner verification, not a new task assigned here.
+No dedicated new-consumer browser, native, complete ETS or full AR07 acceptance.

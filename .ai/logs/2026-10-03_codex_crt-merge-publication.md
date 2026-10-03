@@ -35,7 +35,7 @@ Every admitted stage exit0. No real backend/project/settings/KNX operation.
 Final native-frame screenshot visually inspected: selected first row, light at
 1/0/9, readable inspector and unobstructed footer. Timing tested separately.
 
-## Integrated result — publication readback still pending
+## Integrated and published result
 
 Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1 was integrated onto freshly fetched
 upstream5540dcac5ce380630771de36ed6aa28366d7de6c as merge3d03aea5ee2905a98450ee193bdc1246d0f93c99.
@@ -47,7 +47,21 @@ All admitted commands exit0. Ordinary workspace scope excludes the ignored
 private/hardware tests; no full corpus/native/Orca/WCAG acceptance is claimed.
 Merged native-frame screenshot inspected: selected first row, light on1/0/9,
 readable inspector and unobstructed footer. No code/config delta after this gate;
-closure metadata/evidence is separately checked. Live push readback remains pending.
+closure metadata/evidence is separately checked. Publication readback completed:
+feature16c9d774 matches its live branch; published main d5c1080efb0cf66b5ea51d912e233130414125cd
+matches local HEAD/fetched/live main and contains the design and feature ancestors.
+Concurrent upstream80a5500d ZIP-measurement changes were documentation-only.
+Reconciled full upstream handover/status archives, proved no code/config delta
+against gated3d03aea5, and repeated4 repository metadata gates before push.
+
+Cleanup confirmed: port4173 has no listener; own node_modules/dist in both feature
+and integration checkouts, both fresh gate targets/log directories and named
+publication scratch removed, retaining permanent source/PNG/receipts/log. Root
+HEAD/index remained unchanged. A concurrent storytelling track updated its brief
+and handover; those live changes were preserved rather than overwritten/staged.
+The final source-identical Markdown acknowledgment is separately committed/pushed;
+current refs/latest handover identify that bookkeeping tip, not a self-referential
+hash invented inside its own commit. Closure timestamp is2026-10-03 22:39 UTC.
 
 Main source advanced in CLI/productdb since the design baseline; no
 frontend source overlap. Only handover/status documents overlap. Preserve the

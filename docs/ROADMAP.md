@@ -151,6 +151,10 @@ Public confirmed address writes are now pre-tunnel refused pending verified
 durable recovery (ADRs 0057–0059); no prior go transfers to another device.
 Other masks, device families and RF hardware remain refused or simulator-only.
 The application-download backup is not a universal rollback (ADR-0049).
+ADR-0064 adds a separate durable one-shot activity-metadata backend and bounded
+history API; complete long-session journalling and the global Web consumer
+remain open. See [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md)
+for all 42 commissioning-routed source IDs, safe fallbacks and exact unblocks.
 The remaining v1 closeout is manual acceptance, the user's alpha-tag decision
 and the final review (`goal.md` §5/§10). No public release or blanket ETS
 compatibility follows from this milestone.

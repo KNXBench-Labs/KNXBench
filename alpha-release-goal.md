@@ -360,9 +360,20 @@ retains its original run identity. Scoped KL-149 delivery362fec24 is
 published/live/fetched read back at equal0/0: source704 and ten exact owned
 artifacts, full owner history preserved. Final five acceptance Markdown gates
 passed;16 completed own build/snapshot/shadow/XDG directories removed with
-all aggregate/public evidence retained. Closing metadata and final
-target/checkout/branch cleanup remain, not new policy acceptance.
-`KL-150` remains next after delivery; `KL-151`/`KL-152` need measurement before
+all aggregate/public evidence retained. Closing metadata cb5781c7 is also
+published/live/fetched byte-verified; final target, seventeen runner/config
+scaffolds, owned clean checkout and ancestor-confirmed branch removed.
+`KL-150` storage candidate is verified at 2026-10-03 20:56 CEST: exact synthetic
+UNIQUE-constraint RED, nine public focused tests/ProductDB625/0/25, three compiled
+scope mutants/five named failures and an exact committed pre-fix baseline RED.
+One authorized offline private nested package is baseline RED/candidate GREEN;
+independent lexical/stored scope counts, original/retained member bytes and
+retry agree, originals unchanged, no raw/private item logs. All706 candidate
+source/config inputs exact. Separate in-session review is not independent-model
+approval. Full853 CLI measurement, fresh broad/current-upstream acceptance,
+publication/readback and own cleanup remain; KL150 stays unchecked. No new
+R-MODULE-04 runtime semantics, migration/schema, limits, UI or bus behavior.
+`KL-151`/`KL-152` need measurement before
 any limit changes. `KL-153` is bounded research.
 
 Ordered by value per effort:
@@ -377,6 +388,18 @@ Ordered by value per effort:
 for anything still unsupported, a re-run of the 853-file measurement with a
 before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are
 private, unpinned evidence and never a committed fixture or CI gate.
+
+At 2026-10-03 22:35 CEST KL150 candidate a2aa4b7 has full offline853
+original-filename CLI evidence, independently reconciled: baseline687 installed,
+candidate688; exactly one database constraint refusal→installed, all other
+categories unchanged, no installed→refused regression. Original manifest/all
+inputs rehashed unchanged, successful retained package bytes/source blob hashes
+verified, refusal tables empty, private temp copies/DBs removed; aggregate-only
+receipts. Fresh complete public16 (Rust3009/0/166, Web1702, Chromium82,
+bindings17) and same-profile Release12 (baseline named RED/candidate storage7
+GREEN/CLI5 controls each) pass. Fresh upstream is still cb5781c7, source706
+exact. Integrated acceptance, final metadata/publication/readback and own cleanup
+remain; KL150 is still unchecked and R-MODULE-04 runtime remains separate.
 
 ### AR07 — Research and validate supported parameter semantics, never execute unknown vendor logic
 

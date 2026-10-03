@@ -32,6 +32,9 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+#[cfg(test)]
+mod work_budget_tests;
+
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ProductDbError;
@@ -194,6 +197,13 @@ pub const MAX_MODULE_EXPANSIONS: usize = 100_000;
 /// wall time. Nowhere near the multi-GB regime `MAX_MODULE_EXPANSIONS`
 /// alone left open. Revisit if a genuine corpus sample ever needs more.
 pub const MAX_MODULE_ACTIVATIONS: usize = 1_000_000;
+
+/// ADR-0062: shared admission for visits, diagnostics, binding/choice scans
+/// and placeholder lookup work, including visits producing no activations.
+/// This is application policy, not a KNX limit or a complete byte/RSS bound.
+/// Four activation caps leave headroom for the existing reference boundary;
+/// diagnostics consume both a triggering visit/token and a diagnostic unit.
+pub const MAX_EVALUATION_WORK: usize = MAX_MODULE_ACTIVATIONS * 4;
 
 /// [D] `Condition_t`'s three alternatives (`Project Schema23 v01.00.00.md`
 /// §1.1.3.18): a single number, a space-separated list of numbers, or a
@@ -743,6 +753,10 @@ pub fn resolve_values(
 /// `(program_id, module_def_id)`, which this type does not itself carry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Diagnostic {
+    /// ADR-0062: the shared work quota refused admission at this source node.
+    /// Recorded once per evaluation; its admitted prefix is incomplete, not
+    /// an exhaustive inventory of omitted descendants or safe write authority.
+    EvaluationWorkBudgetExhausted { node_id: i64, budget: usize },
     /// [A] Inferred from RESEARCH.md §4.3: 5570 of 8732 default-less
     /// `choose` elements in the corpus have a legal value no `when` covers.
     /// The conservative reading — activate nothing rather than guess a
@@ -939,6 +953,29 @@ pub enum Diagnostic {
 }
 
 impl Diagnostic {
+    fn node_id(&self) -> i64 {
+        match self {
+            Self::NoBranchMatched { choose_node, .. }
+            | Self::UnresolvedParamRef { choose_node, .. }
+            | Self::UnsupportedControlKind { choose_node, .. }
+            | Self::NonNumericValue { choose_node, .. }
+            | Self::UnexpectedTypeNoneShape { choose_node }
+            | Self::MissingValue { choose_node, .. } => *choose_node,
+            Self::UnparsableTest { when_node, .. } => *when_node,
+            Self::RefBelowSkippedNode { ref_node, .. } => *ref_node,
+            Self::EvaluationWorkBudgetExhausted { node_id, .. }
+            | Self::UnrecognizedNode { node_id, .. }
+            | Self::ModuleDefNotFound { node_id, .. }
+            | Self::ModuleCycleDetected { node_id, .. }
+            | Self::ModuleNestingTooDeep { node_id, .. }
+            | Self::ModuleExpansionBudgetExhausted { node_id, .. }
+            | Self::ModuleWithoutId { node_id }
+            | Self::ModuleArgumentNotBound { node_id, .. }
+            | Self::UnsupportedModuleArgumentKind { node_id, .. }
+            | Self::UnresolvedTextPlaceholder { node_id, .. } => *node_id,
+        }
+    }
+
     /// Whether this diagnostic can stand between a ref and its activation
     /// (ISSUE-08): after it, "not activated" may be wrong, not just
     /// conditional. `false` only for the two that cannot:
@@ -969,6 +1006,7 @@ impl Diagnostic {
             | Diagnostic::ModuleCycleDetected { .. }
             | Diagnostic::ModuleNestingTooDeep { .. }
             | Diagnostic::ModuleExpansionBudgetExhausted { .. }
+            | Diagnostic::EvaluationWorkBudgetExhausted { .. }
             | Diagnostic::MissingValue { .. }
             | Diagnostic::ModuleWithoutId { .. }
             | Diagnostic::ModuleArgumentNotBound { .. }
@@ -1190,6 +1228,10 @@ pub struct Activation {
     /// a `ModuleDef` wrapping its refs in an unrecognized node multiplies
     /// them with fan-out exactly as unwrapped refs would.
     skipped_refs_reported: usize,
+    /// Internal admission state; input trees and catalogue data stay intact.
+    work_units_used: usize,
+    work_budget_exhausted: bool,
+    activation_budget_diagnosed: bool,
 }
 
 /// The dedup key design D18 specifies, qualified for nested expansion
@@ -1205,6 +1247,27 @@ fn scope_key_chain(scope: Option<&Rc<ModuleScope>>) -> Vec<i64> {
 }
 
 impl Activation {
+    /// Admit before repeated work. The one refusal marker uses a reserved
+    /// diagnostic slot, bypassing `diagnose` to avoid recursive admission.
+    fn admit_work(&mut self, scope: Option<&Rc<ModuleScope>>, node_id: i64, units: usize) -> bool {
+        if self.work_budget_exhausted {
+            return false;
+        }
+        if units <= MAX_EVALUATION_WORK.saturating_sub(self.work_units_used) {
+            self.work_units_used += units;
+            return true;
+        }
+        self.work_budget_exhausted = true;
+        self.diagnostics.push(ScopedDiagnostic {
+            scope: scope.cloned(),
+            diagnostic: Diagnostic::EvaluationWorkBudgetExhausted {
+                node_id,
+                budget: MAX_EVALUATION_WORK,
+            },
+        });
+        false
+    }
+
     /// Combined `parameter_refs.len() + com_object_refs.len()`, checked
     /// against [`MAX_MODULE_ACTIVATIONS`] by `activate_parameter_ref`/
     /// `activate_com_object_ref` before pushing (fix round 2, blocking
@@ -1221,22 +1284,10 @@ impl Activation {
             + self.skipped_refs_reported
     }
 
-    /// Whether the activation budget has already produced its one
-    /// diagnostic. Needed because `activations_recorded()` freezes at
-    /// `MAX_MODULE_ACTIVATIONS` once the budget is hit (nothing pushes
-    /// past it), so a bare `total == MAX_MODULE_ACTIVATIONS` check would
-    /// be true on *every* subsequent refused ref, not just the first —
-    /// this scan (cheap: at most one matching entry ever exists, so it's
-    /// O(1) in practice once the budget has tripped) is what keeps it to
-    /// exactly one.
+    /// Constant-time marker state: scanning a large warning prefix on every
+    /// refused ref would create another repeated-work amplification path.
     fn activation_budget_already_diagnosed(&self) -> bool {
-        self.diagnostics.iter().any(|d| {
-            matches!(
-                d.diagnostic,
-                Diagnostic::ModuleExpansionBudgetExhausted { budget, .. }
-                    if budget == MAX_MODULE_ACTIVATIONS
-            )
-        })
+        self.activation_budget_diagnosed
     }
 
     /// Whether the activation budget is spent, and — on the first call
@@ -1264,6 +1315,7 @@ impl Activation {
             return false;
         }
         if !self.activation_budget_already_diagnosed() {
+            self.activation_budget_diagnosed = true;
             self.diagnose(
                 scope,
                 Diagnostic::ModuleExpansionBudgetExhausted {
@@ -1321,6 +1373,9 @@ impl Activation {
     }
 
     fn diagnose(&mut self, scope: Option<&Rc<ModuleScope>>, diagnostic: Diagnostic) {
+        if !self.admit_work(scope, diagnostic.node_id(), 1) {
+            return;
+        }
         self.diagnostics.push(ScopedDiagnostic {
             scope: scope.cloned(),
             diagnostic,
@@ -1337,12 +1392,17 @@ impl Activation {
 /// `Module` (design D19). Also bounded by [`MAX_MODULE_ACTIVATIONS`]
 /// (fix round 2), the budget on total recorded refs complementing
 /// [`MAX_MODULE_EXPANSIONS`]'s budget on total `Module` expansions.
+/// ADR-0062's [`MAX_EVALUATION_WORK`] also admits repeated work producing
+/// no activations. Refusal preserves an explicitly incomplete result prefix.
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let mut activation = Activation::default();
     let mut seen_params = HashSet::new();
     let mut seen_coms = HashSet::new();
     let mut expansions_used = 0usize;
     for &root in trees.program.roots() {
+        if activation.work_budget_exhausted {
+            break;
+        }
         walk(
             trees,
             &trees.program,
@@ -1356,6 +1416,11 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             None,
         );
     }
+    // Admission state is local to this call, not part of result equality.
+    // Completeness remains explicit in the retained budget diagnostics.
+    activation.work_units_used = 0;
+    activation.work_budget_exhausted = false;
+    activation.activation_budget_diagnosed = false;
     activation
 }
 
@@ -1402,6 +1467,9 @@ fn report_refs_below(
     activation: &mut Activation,
     scope: Option<&Rc<ModuleScope>>,
 ) {
+    if activation.work_budget_exhausted {
+        return;
+    }
     let mut pending: Vec<i64> = tree
         .children_of(Some(skipped))
         .iter()
@@ -1409,6 +1477,9 @@ fn report_refs_below(
         .copied()
         .collect();
     while let Some(id) = pending.pop() {
+        if !activation.admit_work(scope, id, 1) {
+            return;
+        }
         let Some(node) = tree.node(id) else {
             continue;
         };
@@ -1457,11 +1528,17 @@ fn walk(
     scope: Option<&Rc<ModuleScope>>,
     channel: Option<&ChannelOwner>,
 ) {
+    if !activation.admit_work(scope, node_id, 1) {
+        return;
+    }
     let Some(node) = tree.node(node_id) else {
         return;
     };
     if is_transparent_container(&node.kind) {
         record_label(activation, scope, node);
+        if activation.work_budget_exhausted {
+            return;
+        }
         // ISSUE-08: a channel element becomes the owner of everything
         // activated below it; any other container passes the current one on.
         let opened = is_channel(&node.kind).then(|| ChannelOwner {
@@ -1474,6 +1551,9 @@ fn walk(
         });
         let channel = opened.as_ref().or(channel);
         for &child in tree.children_of(Some(node_id)) {
+            if activation.work_budget_exhausted {
+                break;
+            }
             walk(
                 trees,
                 tree,
@@ -1616,8 +1696,11 @@ fn walk(
                     if node.element_id.is_none() {
                         activation.diagnose(scope, Diagnostic::ModuleWithoutId { node_id });
                     }
-                    let arguments =
-                        bind_arguments(trees, tree, node_id, &module_def_id, activation, scope);
+                    let Some(arguments) =
+                        bind_arguments(trees, tree, node_id, &module_def_id, activation, scope)
+                    else {
+                        return;
+                    };
                     let new_scope = Rc::new(ModuleScope {
                         module_node: node_id,
                         module_id: node.element_id.clone(),
@@ -1626,6 +1709,9 @@ fn walk(
                         parent: scope.cloned(),
                     });
                     for &root in module_tree.roots() {
+                        if activation.work_budget_exhausted {
+                            break;
+                        }
                         walk(
                             trees,
                             module_tree,
@@ -1683,9 +1769,15 @@ fn bind_arguments(
     module_def_id: &str,
     activation: &mut Activation,
     scope: Option<&Rc<ModuleScope>>,
-) -> Vec<BoundArgument> {
+) -> Option<Vec<BoundArgument>> {
+    if activation.work_budget_exhausted {
+        return None;
+    }
     let mut bound = Vec::new();
     for &child_id in tree.children_of(Some(module_node_id)) {
+        if !activation.admit_work(scope, child_id, 1) {
+            return None;
+        }
         let Some(child) = tree.node(child_id) else {
             continue;
         };
@@ -1703,6 +1795,9 @@ fn bind_arguments(
                         kind: other.to_string(),
                     },
                 );
+                if activation.work_budget_exhausted {
+                    return None;
+                }
                 continue;
             }
         }
@@ -1754,11 +1849,14 @@ fn bind_arguments(
                 None
             }
         };
+        if activation.work_budget_exhausted {
+            return None;
+        }
         if let Some(binding) = resolved {
             bound.push(binding);
         }
     }
-    bound
+    Some(bound)
 }
 
 /// Records one activated element's `@Text` as a label, substituted against
@@ -1766,13 +1864,18 @@ fn bind_arguments(
 /// `@Text`, or an empty one, produces nothing — an empty label says less
 /// than no label and would cost a budget slot to say it.
 fn record_label(activation: &mut Activation, scope: Option<&Rc<ModuleScope>>, node: &DynamicNode) {
+    if activation.work_budget_exhausted {
+        return;
+    }
     let Some(raw) = node.text.as_deref().filter(|t| !t.is_empty()) else {
         return;
     };
     if activation.activation_budget_spent(scope, node.node_id, None) {
         return;
     }
-    let text = substitute_arguments(raw, scope, node.node_id, activation);
+    let Some(text) = substitute_arguments(raw, scope, node.node_id, activation) else {
+        return;
+    };
     activation.labels.push(ActiveLabel {
         scope: scope.cloned(),
         node_id: node.node_id,
@@ -1812,16 +1915,8 @@ fn substitute_arguments(
     scope: Option<&Rc<ModuleScope>>,
     node_id: i64,
     activation: &mut Activation,
-) -> String {
-    substitute_with(raw, scope.map(Rc::as_ref), |name| {
-        activation.diagnose(
-            scope,
-            Diagnostic::UnresolvedTextPlaceholder {
-                node_id,
-                name: name.to_string(),
-            },
-        );
-    })
+) -> Option<String> {
+    substitute_with(raw, scope.map(Rc::as_ref), scope, node_id, Some(activation))
 }
 
 /// [`substitute_arguments`]' rule for text that is read *outside* the
@@ -1833,16 +1928,18 @@ fn substitute_arguments(
 /// visible, not diagnosed. `scope: None` returns `raw` unchanged apart
 /// from that: the program's own tree binds no arguments.
 pub fn substitute_text(raw: &str, scope: Option<&ModuleScope>) -> String {
-    substitute_with(raw, scope, |_| {})
+    substitute_with(raw, scope, None, 0, None).unwrap_or_else(|| raw.to_string())
 }
 
 fn substitute_with(
     raw: &str,
     scope: Option<&ModuleScope>,
-    mut unresolved: impl FnMut(&str),
-) -> String {
+    source_scope: Option<&Rc<ModuleScope>>,
+    node_id: i64,
+    mut activation: Option<&mut Activation>,
+) -> Option<String> {
     if !raw.contains(PLACEHOLDER_OPEN) {
-        return raw.to_string();
+        return Some(raw.to_string());
     }
     let mut out = String::with_capacity(raw.len());
     let mut rest = raw;
@@ -1852,6 +1949,13 @@ fn substitute_with(
             break;
         };
         let name = &after_open[..close];
+        if let Some(activation) = activation.as_deref_mut() {
+            // Pay for the binding search before invoking its linear lookup.
+            let units = scope.map_or(1, |s| s.arguments.len().saturating_add(1));
+            if !activation.admit_work(source_scope, node_id, units) {
+                return None;
+            }
+        }
         out.push_str(&rest[..open]);
         match (is_argument_name(name), scope.and_then(|s| s.argument(name))) {
             (true, Some(value)) => out.push_str(value),
@@ -1859,7 +1963,18 @@ fn substitute_with(
                 out.push_str(PLACEHOLDER_OPEN);
                 out.push_str(name);
                 out.push_str(PLACEHOLDER_CLOSE);
-                unresolved(name);
+                if let Some(activation) = activation.as_deref_mut() {
+                    activation.diagnose(
+                        source_scope,
+                        Diagnostic::UnresolvedTextPlaceholder {
+                            node_id,
+                            name: name.to_string(),
+                        },
+                    );
+                    if activation.work_budget_exhausted {
+                        return None;
+                    }
+                }
             }
             (false, _) => {
                 out.push_str(PLACEHOLDER_OPEN);
@@ -1870,7 +1985,7 @@ fn substitute_with(
         rest = &after_open[close + PLACEHOLDER_CLOSE.len()..];
     }
     out.push_str(rest);
-    out
+    Some(out)
 }
 
 /// Whether `name` is shaped like an argument name — `Identifier50_t`'s
@@ -2030,6 +2145,9 @@ fn evaluate_comparable_choose(
     let mut selected: Option<i64> = None;
     let mut default_child: Option<i64> = None;
     for &child_id in tree.children_of(Some(node.node_id)) {
+        if !activation.admit_work(scope, child_id, 1) {
+            return;
+        }
         let Some(child) = tree.node(child_id) else {
             continue;
         };
@@ -2063,6 +2181,9 @@ fn evaluate_comparable_choose(
             // diagnostic invented for it.
             continue;
         };
+        if !activation.admit_work(scope, child_id, raw_test.len()) {
+            return;
+        }
         match Test::parse(raw_test) {
             Ok(test) if test.matches(observed) => {
                 selected = Some(child_id);
@@ -2079,6 +2200,9 @@ fn evaluate_comparable_choose(
         }
     }
 
+    if activation.work_budget_exhausted {
+        return;
+    }
     match selected.or(default_child) {
         Some(child) => walk(
             trees,

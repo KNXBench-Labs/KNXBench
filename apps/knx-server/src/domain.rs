@@ -3307,6 +3307,10 @@ fn diagnostic_kind_and_message(
     use crate::routes::ParameterDiagnosticKindDto as Kind;
     use knx_productdb::dynamic::Diagnostic;
     match diagnostic {
+        Diagnostic::EvaluationWorkBudgetExhausted { .. } => (
+            Kind::EvaluationWorkBudgetExhausted,
+            "This program exceeded the evaluation work limit; its incomplete parameter panel is read-only.",
+        ),
         Diagnostic::NoBranchMatched { .. } => (
             Kind::NoBranchMatched,
             "A choice did not match any of its options.",
@@ -3806,6 +3810,15 @@ fn assemble_parameter_panel(
         values,
         activation,
     } = evaluate_device(&products, &program_id, stored, &module_instances)?;
+    // ADR-0062: a truncated traversal cannot rule out unseen duplicate
+    // module authority. Preserve its prefix for inspection, never for writes.
+    let resource_limited = activation.diagnostics.iter().any(|scoped| {
+        matches!(
+            scoped.diagnostic,
+            knx_productdb::dynamic::Diagnostic::EvaluationWorkBudgetExhausted { .. }
+                | knx_productdb::dynamic::Diagnostic::ModuleExpansionBudgetExhausted { .. }
+        )
+    });
     // `language` is the request-supplied display language (T26 Task 2);
     // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
     let views = knx_productdb::query::parameter_views(&products, &program_id, language)
@@ -4012,13 +4025,17 @@ fn assemble_parameter_panel(
             // now has no string standing in for it anywhere, not even an
             // unreachable one; the `(Some(_), None)` arm returns `None`
             // directly.
-            let write_ets_id = match (&section.scope, mi_digits.as_deref()) {
-                (None, _) => Some(view.id.clone()),
-                (Some(_), None) => None,
-                (Some(scope), Some(digits)) => scope
-                    .module_id
-                    .as_ref()
-                    .and_then(|module_id| module_scoped_write_id(module_id, digits, &view.id)),
+            let write_ets_id = if resource_limited {
+                None
+            } else {
+                match (&section.scope, mi_digits.as_deref()) {
+                    (None, _) => Some(view.id.clone()),
+                    (Some(_), None) => None,
+                    (Some(scope), Some(digits)) => scope
+                        .module_id
+                        .as_ref()
+                        .and_then(|module_id| module_scoped_write_id(module_id, digits, &view.id)),
+                }
             };
             let editable = write_ets_id.is_some();
             fields.push(crate::routes::ParameterFieldDto {
@@ -4443,7 +4460,7 @@ pub(crate) fn set_parameter_value_impl(
                     Some(correct) => format!(
                         "is shown, but must be written using its module-qualified id '{correct}', not this one"
                     ),
-                    None => "is currently shown but not writable (its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
+                    None => "is currently shown but not writable (evaluation was incomplete, its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
                 }
             } else if before.ref_ids.contains(&ets_id) {
                 "is declared by this program but not currently active".to_string()

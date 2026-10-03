@@ -352,8 +352,12 @@ A separate same-release-profile baseline/candidate pair proves two named
 baseline REDs and candidate5/0/0. The full same853 original-filename measurement
 is independently accepted: installed644→687, Hager/Berker2→45,43 newly
 admitted; two ZIP-limit and one evidence-item refusal remain explicit and
-atomic. All originals unchanged, no private raw/item logs. Current-upstream
-integration/actual gates/publication remain pending, so KL-149 is not yet checked.
+atomic. All originals unchanged, no private raw/item logs. Normal fresh U18
+merge dd5a350c independently passes NEW actual16: Rust3000/0/165/151 blocks,
+Web1702, Chromium82 inventory/pass,17 bindings,704 committed-exact inputs.
+All285 CLI Rust/build/test inputs equal the measured producer; private evidence
+retains its original run identity. Publication/readback/cleanup still pending,
+so KL-149 is not yet checked.
 `KL-150` remains next after delivery; `KL-151`/`KL-152` need measurement before
 any limit changes. `KL-153` is bounded research.
 

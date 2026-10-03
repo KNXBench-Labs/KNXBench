@@ -601,5 +601,9 @@ partial run was deliberately interrupted after56 pairs and is not acceptance.
 The downloads remain unpinned private evidence, not committed fixtures or CI
 gates. This proves the measured filename-routing/importer behavior only, not
 semantic completeness, ETS/native/hardware compatibility or broader AR06P
-acceptance. Current-upstream integration, actual gates and publication remain
-pending; the existing115/113 pinned matrix is a different scope.
+acceptance. Current-upstream U18 integration dd5a350c independently passes
+NEW actual16: Rust3000/0/165/151 blocks, Web1702, Chromium82 inventory/pass,
+17 equal bindings/704 committed-exact inputs. All285 CLI Rust/build/test
+inputs match the privately measured producer; that receipt keeps its original
+run identity, not a newly claimed private run. Publication/readback/cleanup
+remain pending; the existing115/113 pinned matrix is a different scope.

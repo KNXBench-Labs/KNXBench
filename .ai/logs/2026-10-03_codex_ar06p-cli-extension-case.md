@@ -79,6 +79,23 @@ operation was added. `.KNXPROJ` remains on the project-import branch.
 
 ## Remaining acceptance
 
+Reviewed candidate1cebc275 committed the nine owned source/test/document/receipt
+paths with author and committer github@knxbench.com and no co-author trailer.
+Normal upstream merge dd5a350c incorporates U18 e7f9db8e. Only handover
+conflicted; resolution retains the entire own prefix and byte-exact entire
+upstream suffix. Expected-content and truncated-suffix negative controls pass.
+All704 current code/config inputs equal committed blobs;285 CLI Rust/build/test
+inputs equal the measured candidate. The private853 receipt remains evidence
+about its own producer/run, with that source-identity reconciliation explicit.
+Fresh actual16 proc_7c8c83880554 is running with a new target and isolated
+original-origin browser namespace. NEW actual16 independently accepted at
+2026-10-03 18:32 CEST: Rust3000/0/165/151 blocks, Web1702, Chromium82 inventory/pass,
+17 bindings/704 committed-exact inputs, all log hashes and actual-root nonempty
+audits checked. All285 CLI Rust/build/test inputs match measured producer;
+private853 receipt retains its own run identity. Candidate72 was not reused
+as integrated82 acceptance. Root/foreign/retro listener and
+private originals remain untouched.
+
 updated limitation/status/goal documentation; current-upstream integration and
 actual gates; publication/readback and owned cleanup. No inferred corpus
 improvement, broad or release acceptance is recorded ahead of execution.

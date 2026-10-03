@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06P KL-149 scoped candidate, measurement pending — 2026-10-03 17:30 CEST
+## AR06P KL-149 actual acceptance, publication pending — 2026-10-03 18:32 CEST
 
 Only CLI exact-extension dispatch now uses ASCII case-independent comparison.
 Five synthetic CLI regressions cover fresh uppercase/mixed install, retained
@@ -20,8 +20,12 @@ installed, Hager/Berker2→45;43 new installs and three still explicit refusals.
 All originals, retained successful blobs, source700 and binary hashes verified;
 refused package/source_file/product tables empty, no private raw/item records
 or temporary private directories. This is unpinned measurement, not a CI or
-semantic compatibility claim. Latest-upstream acceptance is still pending. Scope still starts
-at f15f7cd2; integration/docs/publication/cleanup and broader Alpha remain open.
+semantic compatibility claim. Normal current-U18 e7f9db8e integration dd5a350c
+passes NEW actual16 independently: Rust3000/0/165/151 blocks, Web1702,
+Chromium82 inventory/pass,17 equal bindings/704 committed-exact inputs.
+All285 CLI Rust/build/test inputs equal the privately measured producer; that
+receipt retains its original run identity. Publication/readback/cleanup and
+broader AR06P/AR07/Alpha remain open; other package limits unchanged.
 
 ## AR07 checked outside-walk scoped delivery — 2026-10-03 13:54 CEST
 

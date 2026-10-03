@@ -192,7 +192,7 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
             calls: Arc::clone(&calls),
         }),
         device_download_timing: timing,
-        ..Default::default()
+        ..knx_server::AppState::new(dir.path().to_path_buf())
     });
     let app = knx_server::app(Arc::clone(&state), None);
     let (status, body) = send(
@@ -363,6 +363,18 @@ async fn the_ui_route_writes_the_saved_project_and_shows_every_block() {
     let (status, _) = start(&h, &plan["planId"], "I confirm download to 1.1.67").await;
     assert_eq!(status, StatusCode::CONFLICT);
     assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn unavailable_history_refuses_download_before_connect() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    std::fs::create_dir(h._dir.path().join("activity-history.sqlite")).unwrap();
+    let (status, _) = start(&h, &shown["planId"], "I confirm download to 1.1.67").await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert!(h.device.seen().is_empty());
 }
 
 #[tokio::test]

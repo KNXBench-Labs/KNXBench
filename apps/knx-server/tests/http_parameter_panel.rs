@@ -728,6 +728,187 @@ async fn two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section(
     }
 }
 
+// AR07 / ADR-0063: synthetic identity evidence, not a real nested product.
+#[tokio::test]
+async fn nameless_nested_module_scopes_keep_distinct_wire_identities() {
+    let program = NESTED_MODULE_NODE_COLLISION_PROGRAM
+        .replace(" Id=\"MOD-A_INNER\"", "")
+        .replace(" Id=\"MOD-B_INNER\"", "")
+        .replace(
+            "<ParameterRefRef RefId=\"MD-Inner_P-1_R-1\" />",
+            "<ParameterRefRef RefId=\"MD-Inner_P-1_R-1\" /><OpaqueExtension />",
+        );
+    let (_dir, products) = temp_product_db(&program);
+    let trees = knx_productdb::dynamic::load_program_trees(&products, "A-1").unwrap();
+    let activation = knx_productdb::dynamic::evaluate(&trees, &Default::default());
+    let chains: Vec<_> = activation
+        .parameter_refs
+        .iter()
+        .map(|r| r.scope.as_ref().unwrap().node_chain())
+        .collect();
+    assert_eq!(chains.len(), 2);
+    assert_ne!(chains[0], chains[1]);
+    assert!(chains.iter().all(|chain| chain.len() == 2));
+
+    let state = Arc::new(state_with_device(products, vec![]));
+    let before = state.project.lock().unwrap().as_ref().unwrap().clone();
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let sections = dto["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), 2);
+    let scopes: Vec<_> = sections.iter().map(|s| &s["scope"]).collect();
+    for key in ["moduleNode", "moduleId", "moduleDefId"] {
+        assert_eq!(scopes[0][key], scopes[1][key]);
+    }
+    assert!(scopes[0]["moduleId"].is_null());
+    assert_ne!(
+        scopes[0], scopes[1],
+        "distinct core paths must not collapse to identical wire scopes"
+    );
+    for (section, chain) in sections.iter().zip(&chains) {
+        assert_eq!(section["scope"]["nodeChain"], json!(chain));
+        assert_eq!(section["scope"]["moduleNode"], json!(chain.last().unwrap()));
+        assert_eq!(section["fields"].as_array().unwrap().len(), 1);
+        assert_eq!(section["fields"][0]["etsId"], "MD-Inner_P-1_R-1");
+        assert_eq!(section["fields"][0]["editable"], false);
+        assert!(section["fields"][0]["writeEtsId"].is_null());
+    }
+    let diagnostics: Vec<_> = dto["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["kind"] == "unrecognizedNode")
+        .collect();
+    assert_eq!(diagnostics.len(), 2);
+    for scope in &scopes {
+        assert_eq!(
+            diagnostics.iter().filter(|d| &d["scope"] == *scope).count(),
+            1
+        );
+    }
+    let (_, repeated) = get_panel(app.clone(), 1).await;
+    assert_eq!(repeated, dto);
+    let (status, _) = post_panel(app.clone(), 1, "MD-Inner_P-1_R-1", "7").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &before);
+    let (_, after) = get_panel(app, 1).await;
+    assert_eq!(after, dto);
+    let products = state.product_db.as_ref().unwrap().lock().unwrap();
+    let source: Vec<u8> = products
+        .query_row(
+            "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(source, program.as_bytes());
+    assert_eq!(
+        knx_productdb::dynamic::evaluate(
+            &knx_productdb::dynamic::load_program_trees(&products, "A-1").unwrap(),
+            &Default::default()
+        ),
+        activation
+    );
+}
+
+#[tokio::test]
+async fn duplicate_nested_module_ids_keep_distinct_scopes_and_refuse_writes() {
+    let program = NESTED_MODULE_NODE_COLLISION_PROGRAM
+        .replace("MOD-A_INNER", "MD-Inner_M-1")
+        .replace("MOD-B_INNER", "MD-Inner_M-1");
+    let (_dir, products) = temp_product_db(&program);
+    let trees = knx_productdb::dynamic::load_program_trees(&products, "A-1").unwrap();
+    let activation = knx_productdb::dynamic::evaluate(&trees, &Default::default());
+    let chains: Vec<_> = activation
+        .parameter_refs
+        .iter()
+        .map(|r| r.scope.as_ref().unwrap().node_chain())
+        .collect();
+    assert_eq!(chains.len(), 2);
+    assert_ne!(chains[0], chains[1]);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("MD-Inner_M-1_MI-1_P-1_R-1", "4")],
+        vec![("MD-Inner_M-1", "MD-Inner_M-1_MI-1")],
+    ));
+    let before = state.project.lock().unwrap().as_ref().unwrap().clone();
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let sections = dto["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), 2);
+    let diagnostics: Vec<_> = dto["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["kind"] == "duplicateModuleId")
+        .collect();
+    assert_eq!(diagnostics.len(), 2);
+    for (section, chain) in sections.iter().zip(&chains) {
+        assert_eq!(section["scope"]["nodeChain"], json!(chain));
+        assert_eq!(section["scope"]["moduleId"], "MD-Inner_M-1");
+        assert_eq!(section["fields"].as_array().unwrap().len(), 1);
+        assert_eq!(section["fields"][0]["editable"], false);
+        assert!(section["fields"][0]["writeEtsId"].is_null());
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d["scope"] == section["scope"])
+                .count(),
+            1
+        );
+    }
+    let (status, _) = post_panel(app.clone(), 1, "MD-Inner_M-1_MI-1_P-1_R-1", "7").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &before);
+    let (_, after) = get_panel(app, 1).await;
+    assert_eq!(after, dto);
+    let products = state.product_db.as_ref().unwrap().lock().unwrap();
+    let source: Vec<u8> = products
+        .query_row(
+            "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(source, program.as_bytes());
+}
+
+#[tokio::test]
+async fn scope_identity_is_additive_for_top_level_and_successful_write_responses() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let trees = knx_productdb::dynamic::load_program_trees(&products, "A-1").unwrap();
+    let activation = knx_productdb::dynamic::evaluate(&trees, &Default::default());
+    let scope = activation
+        .parameter_refs
+        .iter()
+        .find_map(|r| r.scope.as_ref())
+        .unwrap();
+    assert_eq!(scope.node_chain().len(), 1);
+    let expected = json!({
+        "nodeChain": scope.node_chain(),
+        "moduleNode": scope.module_node,
+        "moduleId": "MOD-1_M-1",
+        "moduleDefId": "MD-1"
+    });
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(dto["sections"].as_array().unwrap().len(), 2);
+    assert!(dto["sections"][0]["scope"].is_null());
+    assert_eq!(dto["sections"][1]["scope"], expected);
+    let (status, written) = post_panel(app.clone(), 1, "P-1_R-1", "9").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(written["sections"][0]["fields"][0]["value"], "9");
+    assert!(written["sections"][0]["scope"].is_null());
+    assert_eq!(written["sections"][1]["scope"], expected);
+    assert_eq!(written["diagnostics"], dto["diagnostics"]);
+    let (_, after) = get_panel(app, 1).await;
+    assert_eq!(after["sections"], written["sections"]);
+}
+
 // AC4: the KV v2.5 demo shape verbatim — five sections, each showing its
 // own stored value, `stale` empty.
 #[tokio::test]
@@ -1068,6 +1249,126 @@ async fn non_finite_float_bounds_refuse_http_writes_without_changing_project_or_
             assert_eq!(field(&panel, "P-Text_R-1").unwrap()["value"], "up");
         }
     }
+}
+
+// AR07 resource admission, not a manufacturer grammar claim. Inert shared
+// leaves exhaust work without a huge DTO. An unseen later duplicate module
+// makes the previously admitted prefix insufficient as write authority.
+#[tokio::test]
+async fn work_limited_parameter_prefix_refuses_writes_without_changing_project_or_source() {
+    let original_module = r#"<Module Id="MOD-1_M-1" RefId="MD-1" />"#;
+    assert_eq!(WRITE_PROGRAM.matches(original_module).count(), 1);
+    let mut definitions = String::new();
+    for level in 1..=5 {
+        definitions.push_str(&format!(
+            r#"<ModuleDef Id="PUBLIC-WORK-F-{level}" Name="public work"><Dynamic>"#
+        ));
+        for branch in 0..4 {
+            definitions.push_str(&format!(
+                r#"<Module Id="PUBLIC-WORK-{level}-{branch}" RefId="PUBLIC-WORK-F-{}" />"#,
+                level + 1
+            ));
+        }
+        definitions.push_str("</Dynamic></ModuleDef>");
+    }
+    definitions.push_str(r#"<ModuleDef Id="PUBLIC-WORK-F-6" Name="public inert leaf"><Dynamic>"#);
+    let leaf_count = knx_productdb::dynamic::MAX_EVALUATION_WORK / 4usize.pow(5) + 1;
+    definitions.push_str(&"<Assign />".repeat(leaf_count));
+    definitions.push_str("</Dynamic></ModuleDef>");
+    let source = WRITE_PROGRAM.replace(
+        original_module,
+        &format!(
+            r#"{original_module}<Module Id="PUBLIC-WORK-ROOT" RefId="PUBLIC-WORK-F-1" />{original_module}"#
+        ),
+    );
+    assert_eq!(source.matches("</ModuleDefs>").count(), 1);
+    let source = source.replace("</ModuleDefs>", &format!("{definitions}</ModuleDefs>"));
+    assert_resource_limited_prefix_is_read_only(source).await;
+}
+
+// ADR-0065: a single literal label needs both retained and rendered content.
+// This is application cost admission, not a normative manufacturer text limit.
+#[tokio::test]
+async fn scalar_limited_parameter_prefix_refuses_writes_without_changing_project_or_source() {
+    let original_module = r#"<Module Id="MOD-1_M-1" RefId="MD-1" />"#;
+    assert_eq!(WRITE_PROGRAM.matches(original_module).count(), 1);
+    let label = "L".repeat(knx_productdb::dynamic::MAX_EVALUATION_WORK / 2 + 1);
+    let source = WRITE_PROGRAM.replace(
+        original_module,
+        &format!(r#"{original_module}<ParameterBlock Text="{label}" />{original_module}"#),
+    );
+    assert_resource_limited_prefix_is_read_only(source).await;
+}
+
+/// Same complete-panel authority/source invariants for both refusal causes.
+async fn assert_resource_limited_prefix_is_read_only(source: String) {
+    let (_dir, products) = temp_product_db(&source);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("P-1_R-1", "5"), ("MOD-1_M-1_MI-1_P-1_R-1", "1")],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let before = state.project.lock().unwrap().clone();
+    assert_eq!(
+        before.as_ref().unwrap().installations[0].parameters.len(),
+        2
+    );
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(field(&dto, "P-1_R-1").unwrap()["value"], "5");
+    assert!(field(&dto, "MOD-1_P-1_R-1").is_some());
+    let markers: Vec<_> = dto["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["kind"] == "evaluationWorkBudgetExhausted")
+        .collect();
+    assert_eq!(markers.len(), 1);
+    assert_eq!(markers[0]["severity"], "warning");
+    assert!(markers[0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("read-only"));
+    assert!(markers[0]["detail"]
+        .as_str()
+        .unwrap()
+        .contains("EvaluationWorkBudgetExhausted"));
+
+    for ets_id in ["P-1_R-1", "MOD-1_M-1_MI-1_P-1_R-1"] {
+        let (status, error) = post_panel(app.clone(), 1, ets_id, "7").await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "incomplete prefix must not authorize {ets_id}"
+        );
+        assert!(
+            error["error"].as_str().unwrap().contains("not writable")
+                || error["error"]
+                    .as_str()
+                    .unwrap()
+                    .contains("no editable field")
+        );
+        assert_eq!(*state.project.lock().unwrap(), before);
+    }
+    let fields: Vec<_> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|s| s["fields"].as_array().unwrap())
+        .collect();
+    assert_eq!(fields.len(), 4);
+    for field in fields {
+        assert_eq!(field["editable"], false);
+        assert!(field.get("writeEtsId").is_some());
+        assert!(field["writeEtsId"].is_null());
+    }
+    let products = state.product_db.as_ref().unwrap().lock().unwrap();
+    let retained =
+        knx_productdb::load_source_file(&products, &knx_productdb::sha256_hex(source.as_bytes()))
+            .unwrap()
+            .unwrap();
+    assert_eq!(retained, source.as_bytes());
 }
 
 // AR07: a known unsupported controller is not a missing declaration or a

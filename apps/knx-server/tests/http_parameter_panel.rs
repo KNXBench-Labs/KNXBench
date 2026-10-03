@@ -1013,6 +1013,63 @@ async fn write_undo_redo_round_trips_both_insert_and_overwrite() {
     assert_eq!(field(&dto, "P-1_R-1").unwrap()["value"], "9");
 }
 
+// AR07: malformed Float bounds cannot turn an unordered comparison into permission.
+#[tokio::test]
+async fn non_finite_float_bounds_refuse_http_writes_without_changing_project_or_source() {
+    for declared in ["NaN", "inf", "-inf", "1e999", "-1e999"] {
+        for bound in ["minInclusive", "maxInclusive"] {
+            let original = if bound == "minInclusive" {
+                "minInclusive=\"-100\""
+            } else {
+                "maxInclusive=\"200\""
+            };
+            assert_eq!(BOUNDS_PROGRAM.matches(original).count(), 1);
+            let source = BOUNDS_PROGRAM.replace(original, &format!("{bound}=\"{declared}\""));
+            let (_dir, products) = temp_product_db(&source);
+            let state = Arc::new(state_with_device(
+                products,
+                vec![("P-Float_R-1", "0"), ("P-Text_R-1", "ok")],
+            ));
+            let before = state.project.lock().unwrap().clone();
+            assert_eq!(
+                before.as_ref().unwrap().installations[0].parameters.len(),
+                2
+            );
+            let app = knx_server::app(Arc::clone(&state), None);
+            let (status, panel) = get_panel(app.clone(), 1).await;
+            assert_eq!(status, StatusCode::OK);
+            assert_eq!(field(&panel, "P-Float_R-1").unwrap()["value"], "0");
+
+            let (status, error) = post_panel(app.clone(), 1, "P-Float_R-1", "1.5").await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{bound}={declared}");
+            let role = if bound == "minInclusive" {
+                "min_inclusive"
+            } else {
+                "max_inclusive"
+            };
+            assert!(error["error"]
+                .as_str()
+                .unwrap()
+                .contains(&format!("non-finite {role}")));
+            assert_eq!(*state.project.lock().unwrap(), before);
+            {
+                let products = state.product_db.as_ref().unwrap().lock().unwrap();
+                let retained = knx_productdb::load_source_file(
+                    &products,
+                    &knx_productdb::sha256_hex(source.as_bytes()),
+                )
+                .unwrap()
+                .unwrap();
+                assert_eq!(retained, source.as_bytes());
+            }
+
+            let (status, panel) = post_panel(app, 1, "P-Text_R-1", "up").await;
+            assert_eq!(status, StatusCode::OK);
+            assert_eq!(field(&panel, "P-Text_R-1").unwrap()["value"], "up");
+        }
+    }
+}
+
 // AR07: a known unsupported controller is not a missing declaration or a
 // valid choice; hidden fields cannot be edited, but independent fields can.
 #[tokio::test]

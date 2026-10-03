@@ -88,6 +88,18 @@ local source checkpoint is not final doc/integrated acceptance or publication.
 Added runtime-line security scan and whole-owned-scope private-identity scan
 are clear. Final acceptance waits for the cooperating gate lease.
 
+## Local source and integration preparation — 2026-10-03 02:15 CEST
+
+Reviewed source `0fc483c26cb73525fc4041bc74b5f953c350bc43` committed with exact22 owned files, required
+author/committer and no co-author; tree/readback verified. Not published.
+Actual candidate merge with `be88e7b90cd622e921e675d4d58d01029ed22258` had two doc conflicts, no source
+conflicts. Both own entries and complete authoritative upstream handover/status
+bodies preserved; handover truncation negative control rejects archive loss.
+Five history/guard sources equal their owner byte-for-byte; parameter tests,
+parameter boundary/goal and upstream log equal their published owner.
+Integrated domain overlap reviewed separately; actual merged gate is PENDING,
+as are final doc acceptance and publication under the common gate lease.
+
 ## Residue
 
 Durable long-session journals, Web/global status/scope adoption, complete

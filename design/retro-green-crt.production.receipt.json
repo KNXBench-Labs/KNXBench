@@ -6,7 +6,7 @@
   ],
   "paletteVersion": "1.1.0",
   "motionStyle": "crt",
-  "verifiedAt": "2026-10-03T22:11:00.564Z",
+  "verifiedAt": "2026-10-03T22:20:35.150Z",
   "checks": 12,
   "passed": [
     "real workbench loads the cached v1 CRT palette and persisted CRT style; 250ms fill",

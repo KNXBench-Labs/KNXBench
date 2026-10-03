@@ -1,11 +1,20 @@
 # Modern Retro Green CRT
 
-## Production animation integration (2026-10-03, local)
+## Production animation integration (2026-10-03; integrated follow-up)
 
 The previously proposed interaction effects now run in the real React `App`,
 `ProjectExplorer` and `GroupAddressTable`, on the isolated branch
-`feat/crt-interactions-20261003`. No main merge, commit or push is implied.
+`feat/crt-interactions-20261003`. The authorized follow-up committed the feature
+as `16c9d774` and integrated it onto current upstream main as `3d03aea5` in a
+separate clean checkout. Publication is verified through the current Git refs
+and the closure handover; the original local-only boundary below is historical.
 The existing tree/workspace keyboard controllers are reused unchanged.
+
+The integrated merge passed Web1739/98, build,12 production and16 reference
+Chromium groups, workspace Clippy, Rust3009 passed/166 ignored (153 result blocks),
+fmt and4 repository gates. The ignored tests/private corpus/live hardware were
+not executed by this ordinary workspace gate; native/Orca acceptance is unclaimed.
+See `.ai/logs/2026-10-03_codex_crt-merge-publication.md` and its retained receipt.
 
 Select **Settings → Appearance → Motion style → CRT** separately from the theme:
 

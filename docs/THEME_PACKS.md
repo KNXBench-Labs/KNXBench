@@ -2,9 +2,10 @@
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
 U16 persistence/file foundations are delivered/read back as 1f94808d;
-U17 management and U18 extension-wide acceptance remain pending.**
+U17 management passes actual-merged acceptance; publication is tracked in the
+current handover. U18 extension-wide acceptance remains pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
-standard or a claim that the application already imports themes. Decision:
+standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
 
 ## Runtime implementation boundary
@@ -107,6 +108,71 @@ historical twenty-case scope. The product matrix measured 115 instances and
 Source 1f94808d5d9985b38fcf85021403bb4b05fea3e7 is published; exact remote ref,
 20 owned artifacts and all 622 gated inputs read back equal. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
+
+<a id="u17-local-management-candidate-and-operator-workflow"></a>
+## U17 verified management and operator workflow
+
+Implementation passes the actual merged acceptance below; publication/readback
+is recorded in the current handover, not inferred from a candidate run. Open
+Settings → Appearance. Builtins are immutable and show application origin;
+admitted imported entries show ID/name/version and saved selection. Preview is
+temporary. Use Apply to confirm a guarded selection/install; Cancel/Escape or
+closing the manager releases the candidate and restores the current confirmed
+rendering. The root theme runtime owns the only DOM lease; report consumers are
+read-only. Cross-client theme/map/accent changes revoke stale drafts/consent.
+
+Import a `.knx-theme.json` file. File admission shows the actual structured kind
+and path with live localized explanation. An ID collision opens a question
+showing the old/new identity/version, initially focused on Cancel. Same ID/version
+never implies consent or equivalent contents. Export on a validated installed
+row downloads canonical JSON text; it preserves admitted values and metadata.
+Builtins are not exported as misleading lossless v1 packs. Export recovery data
+preserves the observed raw theme area and is deliberately non-importable; keep
+the original settings file when original lexical bytes are required.
+
+Remove requires a content-bound confirmation. Removing the active pack couples
+map removal with System selection, retaining foreign entries and other settings.
+Use system theme resets selection without deleting the map or rewriting accent,
+density, motion or language. Available accent options follow the admitted visual
+candidate; an unsupported stored accent remains retained and explained.
+
+Apply uses U16's existing conditional queue. A dispatched write is not undone by
+closing Settings; this is stated while pending, with false-undo Cancel disabled.
+Repeated Apply dispatches once. A 409 restores the last known acknowledgment;
+the normal focus refresh adopts a later peer snapshot. An uncertain response can
+read once for reconciliation without replaying the write. Server acknowledgment
+and local cache failure are reported separately in manager and original selector.
+
+Historical candidate evidence:31 actual parent and five root cases, latest scoped74/TypeScript
+without stderr, six caught/restored behavioral controls and a caught/restored
+new-module TS2322 inclusion canary. The final frontend candidate passed
+Web1,702/95 files, Chromium69/no skip/no flaky, production build and types over262
+unchanged inputs. Eight behavioral controls were caught/restored. Full branch13/13 repository commands pass, Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending. Legacy full Web
+suite emits fixture stderr; no warning-free whole-suite claim. Actual intercepted
+Chromium is not native WebKitGTK/Orca or general WCAG/ETS/global-alpha approval.
+
+U17-R1 acceptance audit added explicit actual-manager hostile-file rejection,
+System reset/OS transitions and HTTP500 rollback/no replay. Eleven manager
+browser cases and three further compiled browser guard controls pass, canonical
+runtime restored unchanged. The previous full69-browser receipt predates this
+test-only delta; renewed full actual-merged gates are recorded below. The cancelled first
+actual attempt and initial unused-import mutant compilation are retained as
+non-acceptance/instrumentation records, not successful behavioral evidence.
+
+Actual chain proc_cdcd42b97d47 on f16f1e40 passed23 commands:17 repository
+and six explicitly selected offline inventory/execution commands. Web1702 in95
+files, Chromium72 with zero failure/skip/flaky, ordinary Rust2984/0/165 across149
+result blocks, compiled ignored inventory165 and17 generated bindings equal.
+Six selected offline suites execute27 private cases; the release matrix is one
+additional case measuring115 instances/113 unique packages with status-only
+per-item output. All697 source/configuration inputs and420 private files remain
+unchanged; temporary corpus link removed. This is not a broad ignored/live sweep.
+The deliberately cancelled attempt1 and lifecycle-interrupted attempt2 remain
+non-acceptance records. Subsequent integration with upstream5ca570a0 changes
+Markdown only; all697 gated inputs remain equal, with document gates required
+before publication. U18-R1 cross-palette representative-component state coverage
+is still open; this manager acceptance is not a substitute for it.
 
 ## Evidence and inspected baseline
 

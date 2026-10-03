@@ -1,13 +1,16 @@
 # Known limitations
 
-## Theme packs have runtime and persistence foundations, not a management workflow
+<a id="theme-pack-management-is-a-local-candidate-not-release-acceptance"></a>
+## Verified theme pack management is not whole-extension release acceptance
 
 U15 admission/runtime is delivered. U16 delivers file transport as 1f94808d,
 acknowledged conditional installation/removal/selection and structured errors;
 the 16-check candidate and actual-merged 22-check gates passed. Source publication
-and exact remote artifact readback are verified. U17
-production controls, visible diagnostics and reversible preview are not yet
-implemented. The existing built-in picker is not the custom-pack manager.
+and exact remote artifact readback are verified. U17 Appearance management/
+diagnostics/preview passes actual merged23-command acceptance on f16f1e40:
+Web1702, Chromium72, Rust2984/0/165,27 explicitly selected private offline cases
+plus the115-instance matrix,697 unchanged source/config inputs and420 unchanged
+private files. Publication/readback is tracked in the current handover.
 
 Unknown raw entries are retained, not repaired. Recovery exports only observed
 browser JSON theme scope, not original lexical bytes, duplicate names or numeric
@@ -22,7 +25,20 @@ Admission targets serialized JSON/settings data, not isolation from already
 privileged hostile JavaScript proxies. Contrast covers the documented three
 role pairs and accents, not every component/WCAG criterion. Local intercepted
 Chromium/self-review is not native WebKitGTK/Orca, independent approval or
-release acceptance. U17–U18 remain open; U15 publication remains 9d1ae19d.
+release acceptance. U18 remains open; U15 publication remains 9d1ae19d.
+IMPORTANT U18-R1: root-switch/generic table/input tests do not establish the
+required representative editor/inspector/dialog/diagnostic state coverage across
+all palettes. This must be verified separately, not silently treated as done.
+
+Preview cancellation changes presentation only. Once a guarded write is
+dispatched, closing Settings cannot cancel its server operation; the UI states
+this and disables false-undo Cancel while awaiting acknowledgment. A definitive
+409 retains the last confirmed settings until the existing refresh sees a peer;
+an ambiguous 500 may require a read, never a silent write retry. Recovery exports
+currently observed data (possibly cache), not a fresh server-file backup. A local
+cache-write failure after server acknowledgment is separately reported.
+Older standalone builtin callers retain their ordinary callback; the actual
+managed Appearance selector uses guarded acknowledgment for all theme choices.
 
 ## Backup directory synchronization is not a disk-loss or confinement proof
 

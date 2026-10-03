@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 
-Status: Accepted — U14 researched/reviewed contract; implementation pending U15–U18.
+Status: Accepted — U15/U16 foundations delivered; U17 actual-merged implementation accepted, publication in handover; U18 closing acceptance pending.
 
 ## Context
 
@@ -46,6 +46,21 @@ Cancel/Escape/close/unmount/failure restore the latest acknowledged state.
 Authoritative theme changes cancel stale preview. Removing the active pack
 atomically selects System. Exports contain only validated installed packs;
 complex built-in backdrops are not misrepresented as lossless v1 exports.
+
+## U17 ownership follow-through
+
+One App-owned transient candidate feeds the existing root theme hook. A manager
+must not mount a second DOM lease; the Debug report consumes a read-only hook.
+Generation retirement guards late file results; acknowledged theme/map/accent
+fingerprints revoke stale preview and replacement/removal questions. The actual
+managed selector waits for conditional acknowledgment even for builtin choices.
+Existing standalone builtin callers retain their old callback. Dispatched writes
+are not reversible visual previews: closing Settings cannot retract them, and
+the pending UI does not advertise a false undo. Shared Overlay can restore an
+explicit persistent focus target when cancellation removes the opening trigger.
+Actual parent/browser regressions and the full23-command merged acceptance
+on f16f1e40 verify these decisions. Publication/readback is tracked in the
+handover; U18 representative-component/whole-extension acceptance remains open.
 
 ## Alternatives
 

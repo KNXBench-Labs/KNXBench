@@ -52,3 +52,60 @@ At the last observation, the 18-command candidate pipeline is `RUNNING`, active 
 Reviewed candidate `ce87478f` binds the 701 candidate inputs exactly. Normal merge `cedce46b` integrates `0b8ec935`; the upstream advanced after the first fetch and includes six AR07 backend/source/test changes, not only documentation. Candidate-only backend acceptance was explicitly invalidated for those four changed inputs/two new modules. The checked text-projection admission/refusal is separate from completed activation/write authority; no new UI coupling or hardware operation is introduced by this integration. Complete upstream handover suffix plus owned prefix were compared byte-exactly. One incoming `docs/ProjectStats.md` extra EOF newline caused a genuine whitespace gate diagnostic and was removed without changing content.
 
 The actual chain is prepared for 18 fresh repository commands plus six explicit offline inventory/execution steps. Selected server download tests use injected SimConnector/SimTunnel and no real tunnel implementation. OriginalData and project_dump inputs are available, saved K3 fixture has exactly one match, scope directories are explicitly Gira/MDT, matrix output is on a different filesystem. Private stdout remains in RAM and only aggregate receipts are written; transient links/matrix are removed. Acceptance and publication remain pending until real actual receipts are verified.
+
+
+## Actual24 acceptance and separate closing self-review
+
+Persistent proc_e95dfc308724 exited0 normally. Receipts are bound to actual
+1660911bdd5bf350c6042bbeb9a2b694ad66fa41, not the older candidate.18 repository
+and6 offline inventory/execution commands pass24/24. Web1702, Chromium82
+(no unexpected/skip/flaky), final matrix10/10, ordinary Rust2995/0/165 over150
+blocks,17 generated bindings identical and all703 protected inputs exact in
+working files and committed Git blobs. The three rendered-style controls fail
+named selection/focus/validation assertions. The new-module TS2322 inclusion
+canary is historical separate positive proof of fixture type inclusion.
+
+The offline registry executes11 product+16 injected-server+1 matrix=28 cases.
+Matrix115 instances/113 unique packages; the matrix case is included, not added
+again.421 private inputs (420 OriginalData files plus project_dump) are unchanged;
+raw stdout is RAM-only, transient own links/report removed. This is a bounded
+explicit offline selection, not a broad ignored/live sweep. Native project
+roundtrip and injected download simulator evidence are not real-device writes.
+
+The separate closing pass reviews the theme extension against ADR0060 from
+ad1395d4 through1660911b, using24 captured production/test diff paths (theme-related
+parts of shared UI files, not another owner's commissioning changes). It traces:
+
+| Boundary | Source evidence | Executed regression evidence |
+|---|---|---|
+| Whole-file admission, duplicate/unsafe/version/value/contrast refusal | themePack.ts:127,187,225; themePackFiles.ts:31 | themePack.test.ts, themePackFiles.test.ts, themePackAgreement.test.ts; hostile manager browser case |
+| Retained settings, immutable plans, conditional acknowledgment | themePackStorage.ts:21,32,49,60,78; settingsStore.ts:211,253; settings_routes.rs:237 | storage/queue/HTTP tests, themePackRoundtrip.test.ts; actual Web/Rust suites |
+| Reversible single root lease, builtin/System fallback and independent preferences | themePackDom.ts:6; theme.ts:113; App.tsx:294 | DOM/runtime tests and theme-pack/manager intercepted browser tests |
+| Late file/peer/replacement consent, definitive409, ambiguous500, cache warning | ThemePackManager.tsx:47,81,105,118,143; SettingsPanel.tsx:284 | parent/root tests, manager browser cases; prior restored U17 guards |
+| Structured producer vocabulary, real focus/selection/validation/disabled roles | ThemePackDiagnostic.tsx:6; e2e/theme-state.e2e.ts:73,79 | full82 Chromium;10 representative cases; three rendered-style failures |
+| Semantic export/reimport/cold restart and unrelated data unchanged | themePackFiles.ts:13,23; themePackRoundtrip.test.ts:21 | ordinary Web suite, strict settings HTTP tests; native offline integration selection |
+
+Verdict: **in-session self-review, no new CRITICAL/IMPORTANT production finding**;
+not independent approval. IMPORTANT U18-R1 is fixed by the actual-component
+harness and named positive/negative outcomes. MINOR stale running/candidate and
+open U18-R1 current-status statements are reconciled in owned goal/status/roadmap/
+format/ADR/limitations docs; dated historical receipts remain provenance.
+The nine palette variants plus harness-presence case are ten, not an invented
+additional reimport browser test. Existing semantic reimport is separately named.
+
+Later fetcheda23cf987 changes eight Markdown paths from common base0b8ec935,
+zero protected source inputs. Normal mergeef4cfb92 preserves the full authoritative
+upstream handover suffix and all703 actual-gated bytes. The actual24 gate is not
+claimed as a fresh execution on the later documentation-only commit: final
+Markdown/integrity gates cover that delta before publication.
+
+The old [candidate-status heading](../../docs/IMPLEMENTATION_STATUS.md#u18-representative-theme-states--candidate-acceptance-running)
+retains its exact backward-compatible anchor. No numbered limitation is added or
+renumbered; the goal.md owner retains global triage/statistics/alpha responsibility.
+Closure four documentation gates pass. The first backward-anchor deletion control
+survived because its only fragment reference was not gate-visible; this is retained
+as instrumentation evidence, not a detected guard. Adding the real fragment link
+in THEME_PACKS makes the same deletion fail by the named old anchor; restoration
+returns green. Source703 remains canonical. Final publication, remote readback,
+UI reservation release and owned cleanup remain pending at this entry. No secrets, individual private identifiers/contents,
+native/Orca/general WCAG/ETS/Alpha approval or real bus authorization follows.

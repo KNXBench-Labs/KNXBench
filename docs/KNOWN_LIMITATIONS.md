@@ -25,10 +25,14 @@ Admission targets serialized JSON/settings data, not isolation from already
 privileged hostile JavaScript proxies. Contrast covers the documented three
 role pairs and accents, not every component/WCAG criterion. Local intercepted
 Chromium/self-review is not native WebKitGTK/Orca, independent approval or
-release acceptance. U18 remains open; U15 publication remains 9d1ae19d.
-IMPORTANT U18-R1: root-switch/generic table/input tests do not establish the
-required representative editor/inspector/dialog/diagnostic state coverage across
-all palettes. This must be verified separately, not silently treated as done.
+release acceptance. U15 publication remains9d1ae19d. U18-R1 is closed by
+actual GroupAddressTable/Inspector/Overlay/diagnostic states over five built-ins,
+System light/dark and two admitted user palettes:10/10 representative cases,
+three named rendered-style failures, full Chromium82 and Web1702 on the
+actual-integrated703-input stand1660911b. The coupled24-command acceptance
+includes28 selected offline cases (matrix included);421 private files unchanged.
+This closes the fixture-coverage finding, not native/Orca/general WCAG or
+whole-application Alpha/ETS acceptance. Publication/readback is in the handover.
 
 Preview cancellation changes presentation only. Once a guarded write is
 dispatched, closing Settings cannot cancel its server operation; the UI states

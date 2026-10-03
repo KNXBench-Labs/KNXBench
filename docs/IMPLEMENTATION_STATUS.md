@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## CRT authorized integration/publication follow-up
+
+- User authorized commit/main integration/push. Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1
+  integrated onto upstream5540dcac as3d03aea5ee2905a98450ee193bdc1246d0f93c99.
+  Complete upstream handover archive and both status prefixes preserved exactly.
+- Actual merged-result gates: Web1739/98, build,12 production/16 reference browser
+  groups, Clippy workspace/all-targets with warnings denied, Rust3009 passed,
+  166 ignored across153 result blocks, fmt and4 repository gates. All executed
+  stages exit0; ignored/private/hardware/native/Orca scopes remain unclaimed.
+- Retained merged receipt/closure log and fresh native-frame screenshot. Source
+  unchanged after the accepted merge; closure changes are documentation/evidence.
+  Current refs and latest handover establish the final publication state.
+- Shared dirty/stale root main remains deliberately unsynchronized; no foreign
+  product/stats/research/UI-plan edits were staged or overwritten. Earlier local-
+  only/no-commit/no-merge entries below describe the original delivery, not this
+  authorized follow-up. Separate semantic-role/acceptance limitations remain.
+
 ## 2026-10-03 — Productive CRT interactions (local feature worktree)
 
 - Implemented the user-requested animations in real App/ProjectExplorer/

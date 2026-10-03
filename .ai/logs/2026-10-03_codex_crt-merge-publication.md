@@ -35,11 +35,21 @@ Every admitted stage exit0. No real backend/project/settings/KNX operation.
 Final native-frame screenshot visually inspected: selected first row, light at
 1/0/9, readable inspector and unobstructed footer. Timing tested separately.
 
-## Pending publication
+## Integrated result — publication readback still pending
 
-Feature commit, conflict-preserving integration onto the freshly fetched remote
-main, merged-result gates and live push readback are still pending at this log
-creation. Main source advanced in CLI/productdb since the design baseline; no
+Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1 was integrated onto freshly fetched
+upstream5540dcac5ce380630771de36ed6aa28366d7de6c as merge3d03aea5ee2905a98450ee193bdc1246d0f93c99.
+Complete upstream handover suffix and both status prefixes were verified exactly.
+Actual merged-result gates pass: Web1739/98, build,12 production/16 reference
+Chromium groups, Clippy workspace/all-targets/-D warnings, Rust3009 passed/166
+ignored across153 result blocks, fmt and4 fresh worktree-root-bound xtask gates.
+All admitted commands exit0. Ordinary workspace scope excludes the ignored
+private/hardware tests; no full corpus/native/Orca/WCAG acceptance is claimed.
+Merged native-frame screenshot inspected: selected first row, light on1/0/9,
+readable inspector and unobstructed footer. No code/config delta after this gate;
+closure metadata/evidence is separately checked. Live push readback remains pending.
+
+Main source advanced in CLI/productdb since the design baseline; no
 frontend source overlap. Only handover/status documents overlap. Preserve the
 complete authoritative upstream handover archive during conflict reconciliation.
 Do not update the checked-out dirty root main ref or stage its foreign changes.

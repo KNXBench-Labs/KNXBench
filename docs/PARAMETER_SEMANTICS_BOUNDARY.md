@@ -383,3 +383,23 @@ UI must adopt the field and compare full chains in its manual interface and
 `sameScope()`; the active U17 lock is untouched. Backend wire uniqueness does
 not prove UI adoption or real nested manufacturer semantics. Other AR07
 substitution/work/byte/provenance residues remain separate.
+
+### Actual module-provenance integration accepted — 2026-10-03 05:38 CEST
+
+Source d51dd6c7 and actual3711c4f7 integrate published e9707794 conventionally;
+the exact candidate tree, complete owner histories and untouched Web lock are
+verified. proc_f27315f3cd8c passes20/20 with independent acceptance: ordinary
+workspace2957/0/164 over148 blocks; Web1665, existing intercepted Chromium61,
+selected private Dynamic6/0/0 and in-memory SimTunnel HTTP13/0/0. No genuine or
+unknown skips or saved private raw output. All624 inputs match committed blobs,
+17 shadow bindings equal,420 originals (including103 product archives) unchanged;
+hash inventory does not imply parser coverage of all420. Strict build/lints/
+dependency policy and four intended-root audits have nonzero measured scopes.
+
+The first independent verifier rejected an assumed Clippy display verb:
+`Compiling knx-server` is the actual fresh-target line, not `Checking`.
+Retained failure is orchestration-only; corrected receipt verification ran
+against the same real command, exits and frozen source, without gate replay.
+ADR-0063 now accepts only the bounded backend identity projection. Exact remote
+readback/owned cleanup are pending. UI adoption, real nested manufacturer,
+external substitution/variable output and broader AR07/Alpha remain open.

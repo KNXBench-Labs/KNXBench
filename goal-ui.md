@@ -423,7 +423,14 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 
 ### U17 — Add accessible theme management and reversible preview [web]
 
-**Open.** Depends on U15 and U16. Extend Settings → Appearance; do not create a
+**Reviewed local candidate; not delivered.**31 actual parent/five root cases,
+final full Web1,702/95 files and intercepted Chromium69 (zero skipped/flaky/failed),
+TypeScript and production build pass over262 unchanged frontend inputs. Eight
+caught/restored behavioral controls and the new-module type canary pass.
+Eight manager browser cases cover Strict Mode, download/cold reload, nested
+keyboard/focus, active removal, conflicts and narrow layout. Full branch13/13 repository commands passed, Rust2940/0/164,17 bindings and693
+inputs unchanged; actual-merged acceptance/publication pending, native/Orca separate.
+Depends on U15 and U16. Extend Settings → Appearance; do not create a
 second settings screen or require a visual theme editor for this slice.
 
 - [ ] Show built-in and installed packs with understandable names, origin,

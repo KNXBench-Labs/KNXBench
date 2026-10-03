@@ -75,9 +75,11 @@ and reversible theme application are delivered as 9d1ae19d with complete
 candidate/combined gates and exact remote readback. U16 delivers acknowledged
 storage/file roundtrip as 1f94808d (144 focused passes, restored
 controls, complete 16-check candidate and 22-check actual-merged gates), with
-exact source publication/artifact readback verified. U17–U18 in
-[goal-ui](../goal-ui.md) still own reversible management/preview and final
-regression/review acceptance.
+exact source publication/artifact readback verified. U17's local management/
+preview candidate now has31 actual parent/five root cases and eight intercepted
+manager browser flows; final-current candidate/actual-merged gates and publication
+are pending. U18 in [goal-ui](../goal-ui.md) still owns extension-wide closing
+review/mutation/roundtrip and representative-component visual acceptance.
 Existing built-ins/System stay
 available; no arbitrary CSS, external assets or new alpha release blocker.
 

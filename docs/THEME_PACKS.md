@@ -351,3 +351,11 @@ Sources are registered from retrieved primary pages; access date 2026-10-02.
 [4] https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
 [5] https://react.dev/reference/react-dom/components/common
 [6] https://www.rfc-editor.org/rfc/rfc8259.html
+
+## U18 representative-state closing verification
+
+The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Inspector`, contextual inline-address validation, `Overlay` and structured theme diagnostics to the offline real Appearance/root fixture. Five built-ins, both System resolutions and admitted imported light/dark palettes are exercised. The frozen final-source matrix passed 10/10; three rendered-style sabotage controls were detected by named state assertions and a new-module TS2322 type-inclusion canary was detected/restored. Dedicated `npm run check:theme-fixtures` includes the new modules and test in the TypeScript project.
+
+The independent frontend verification passed 1,702 Web tests, build and fixture types. The full frozen candidate gate is running under shared leases (process `proc_9cc7de516414`, 701 source/config inputs). This is **candidate progress, not actual-integrated acceptance or delivery**: upstream reconciliation, full offline/corpus integrity acceptance, closure review and publication/readback are pending. No native/Orca, general WCAG, Alpha/ETS compatibility, real KNX or hardware acceptance is implied. The in-session review is not an independent third-party review. Details/provenance are in `.ai/logs/2026-10-03_codex_ui-theme-closing.md`.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

@@ -426,6 +426,18 @@ accepted. Broader budget/module-identity/provenance/vendor-inert audit remains
 open, distinct from the scoped controller and Float fixes. Channel
 label data/UI half is already delivered; unknown manufacturer logic stays inert.
 
+2026-10-03 module-provenance subpackage: fresh `alpha-module-provenance` from
+published `e9707794`. Public compiled nameless-nesting RED101/0-1-0 shows distinct
+Core/server paths collapsing to identical HTTP scope identities. ADR-0063 adds
+response-local `nodeChain` through the existing accessor only; legacy fields,
+write authority, source data and storage schemas unchanged. Public HTTP38/0/0,
+server205/0/2 and selected Core identity72/0/6 pass, strict Clippy/fmt/whitespace
+and624 frozen inputs; three compiled omission/inner-only/reversal mutants caught
+and restored, separate in-session review without blocking finding. Integration
+and delivery pending. UI manual scope matching remains owner work, not completed
+by an additive wire field; genuine nested manufacturer and broader AR07 remain
+open. The prior budget final receipt/cleanup is verified, not a pending rerun.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

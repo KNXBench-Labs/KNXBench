@@ -503,3 +503,55 @@ substitute_text and its two ISSUE-08 projection callers have no Activation/refus
 reporting and remain an explicit coordinated consumer boundary, not fixed by this
 core candidate. Other metadata/source/diagnostic copies, allocator capacity/RSS,
 general latency and whole AR07/Alpha remain outside the limited proposal.
+
+
+## Outside-walk text refusal proposal — 2026-10-03
+
+Bounded scalar policy/final receipt5ca570a0 is published/read back, own old
+checkout/branch and seven targets actually removed;74 compact receipts retained,
+canonical root/originals unchanged. New alpha-external-text begins from fresh
+remote5ca570a0, preserving the existing complete history. Source confirms two
+String-only ISSUE-08 callers and repeated cached-channel text copies with no
+request-level refusal. Existing domain Result/HTTP400 can report a whole-detail
+rendering refusal without a new DTO or Web/binding change. ADR-0066 is Proposed,
+not accepted semantics. Independent projection content budget must not mutate
+completed activation or parameter write authority, reset per object, silently
+clip output or replace an unresolved placeholder. Application policy, not KNX
+length rule. All metadata/query/raw-source/RSS/native/ETS boundaries stay open.
+
+First public synthetic HTTP tracer uses Small for the evaluated channel, then
+2,000,001 ASCII translation bytes (proposed input+output4,000,002 >4,000,000).
+Positive untranslated active/channel control and nonempty project/product-file
+equality run before expected HTTP400; no partial detail. Compilation/runtime
+RED are still pending, no production implementation or GREEN. AppState.new
+opens its default product path even when later overwritten; RED environment
+therefore redirects XDG_DATA_HOME into owned scratch as well as explicitly
+setting synthetic ProductDB and data_dir. No host database/private corpus, bus
+or vendor path is authorized. U17 Web lock remains held by ui-theme-management
+(10:00 owner note), not released or touched; commissioning lifecycle is separate.
+
+
+## Checked outside-walk backend policy accepted — 2026-10-03 13:32 CEST
+
+ADR0066 producer/source a065ad94 and actual0369a56a integrate U17 without Web
+or binding changes. proc_39eb1bd6a2f3 exits0/22 actual commands: fresh public16,
+selected inventory3 and execution3. Workspace2995/0/165/150 blocks, Web1702,
+intercepted Chromium72,17 equal bindings and699 exact committed source inputs.
+Private Dynamic6/server-library2/com-object1 execute9 cases without missing/skip
+signals;420 originals unchanged, raw private output not persisted, link removed.
+Five compiled behavior mutants and separate in-session review retain their scope.
+Post-gate e2a40268 Markdown-only history/AR06P findings integrated7bb0ee72;
+source delta zero. Final docs/publication/readback pending, not delivered yet.
+
+Whole-device400 reports rendering refusal, not Inactive activation or source
+loss. Project/product-file equality is loaded-model/source evidence, not native
+project save/reopen. Supported local tokens/UTF8/raw/output/lookup admission and
+repeated cache copies share one context; legacy public String helper and general
+metadata/query/source/serializer/RSS remain unmetered boundaries. UI request
+source forwards existing errors; dedicated language/refresh presentation and
+snapshot consumer acceptance stays with UI, no new U-package assigned here.
+
+Fresh AR06P now precedes AR07 in the queue. Its synthetic nested-definition
+parser fixture/private one-off sample must be handled before claiming new real
+R-MODULE-04 semantics;853 crawler files are not this selected9-case gate or a
+committed fixture. Current broader supported-semantics matrix/AR07/Alpha open.

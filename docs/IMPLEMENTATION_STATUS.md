@@ -24,6 +24,36 @@ gated before publication. UI token/localization adoption belongs to its owner.
 The work cap is not a complete byte/RSS/latency/general-depth guarantee; broader
 AR07 and Alpha remain incomplete. See [the bounded evidence](PARAMETER_SEMANTICS_BOUNDARY.md).
 
+## 2026-10-03 — U16 acknowledged theme persistence (foundation delivered as 1f94808d)
+
+- Implemented strict bounded UTF-8/BOM import, validated deterministic export,
+  detached/frozen content-bound theme plans, explicit replacement consent and
+  coupled active removal/System selection through the existing settings queue.
+- Optional key-scoped conditional PUT plus capability version 1 retains the
+  opaque settings-file schema. Unknown preferences/raw entries are preserved;
+  incompatible, pending and uncertain authority disarms mutations. Network
+  ambiguity rereads without replay; cache failure is reported independently.
+- Five-file focused suite: 144 passed; TypeScript passed. Thirty-one restored
+  behavioral controls and TS2322 canary pass; two initial survivors required
+  stronger export/status assertions. Separate self-review fixed aggregate
+  selection/runtime disagreement with an observed RED/GREEN regression.
+- Raw recovery exports browser-observed theme JSON only, not a byte-exact file.
+  Latest frozen candidate passed 16 checks: Web 1,665, intercepted Chromium 61,
+  ordinary Rust 2,925 / zero failed / 164 ignored. Eight conditional HTTP cases,
+  seven compiled server guard controls (including the initially surviving lock
+  case), five extra ordinary queue controls and all-source restoration verified.
+  Actual merge 36e922bc passed 22/22 commands: Web 1,665, intercepted Chromium
+  61, ordinary Rust 2,940 / zero failed / 164 ignored across 148 result blocks.
+  Six explicitly selected offline suites/11 private cases passed, including the
+  115-instance/113-unique product matrix. This is narrower than U15's historical
+  twenty-case scope. All 622 protected inputs and 420 private files unchanged;
+  all 17 bindings equal. Published 1f94808d5d9985b38fcf85021403bb4b05fea3e7;
+  exact live/fetched remote ref, all 20 owned artifact blobs and 622 gated inputs
+  read back equal. Receipt-only metadata/owned cleanup are tracked separately.
+  U17 production manager/diagnostics/preview and U18 closing review
+  remain open; no independent/native/Orca/ETS/alpha-release approval implied.
+
+
 ## AR07 scoped Float delivery — 2026-10-03 00:04 CEST
 
 Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.

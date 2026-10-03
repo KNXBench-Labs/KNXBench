@@ -4,18 +4,88 @@
 //! commands are not all tracked, and a server restart loses its in-memory
 //! history. `coverage: partial` and
 //! `untracked` are part of the response contract, not UI decoration.
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::routing::get;
 use axum::{Json, Router};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::bus::SessionStatus;
 use crate::bus_scan::LineScanStatus;
 use crate::device_download::{DownloadStatus, ProgressEvent};
+use crate::errors::ApiError;
 use crate::{AddressProgrammingStatus, SharedState};
 
 pub fn bus_activity_routes() -> Router<SharedState> {
-    Router::new().route("/api/bus/activity", get(snapshot))
+    Router::new()
+        .route("/api/bus/activity", get(snapshot))
+        .route("/api/bus/history", get(history))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct HistoryQuery {
+    #[serde(default)]
+    after: u64,
+    #[serde(default = "history_page_size")]
+    limit: usize,
+}
+
+fn history_page_size() -> usize {
+    50
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HistoryPage {
+    format: u32,
+    coverage: &'static str,
+    durability: &'static str,
+    entries: Vec<crate::one_shot_activity::HistoryActivity>,
+    has_more: bool,
+    next_cursor: u64,
+    untracked: [&'static str; 7],
+}
+
+async fn history(
+    State(state): State<SharedState>,
+    Query(query): Query<HistoryQuery>,
+) -> Result<Json<HistoryPage>, ApiError> {
+    if query.limit == 0
+        || query.limit > knx_store::activity_history::MAX_PAGE_SIZE
+        || query.after > i64::MAX as u64
+    {
+        return Err(ApiError::bad_request(
+            "invalid activity history page bounds",
+        ));
+    }
+    let (entries, has_more) = state
+        .one_shot_activity
+        .history_page(query.after, query.limit)
+        .map_err(|_| {
+            ApiError::with_status(
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "activity history unavailable; no bus action attempted",
+            )
+        })?;
+
+    let next_cursor = entries.last().map_or(query.after, |entry| entry.sequence);
+    Ok(Json(HistoryPage {
+        format: knx_store::activity_history::FORMAT,
+        coverage: "partial",
+        durability: "persistent",
+        entries,
+        has_more,
+        next_cursor,
+        untracked: [
+            "deviceIdentify",
+            "groupWrite",
+            "serialAddress",
+            "deviceDownload",
+            "addressProgramming",
+            "busMonitor",
+            "lineScan",
+        ],
+    }))
 }
 
 #[derive(Serialize)]
@@ -23,6 +93,8 @@ pub fn bus_activity_routes() -> Router<SharedState> {
 struct ActivitySnapshot {
     server_incarnation: String,
     coverage: &'static str,
+    /// Configured is not a claim of complete audit coverage or storage health.
+    history_state: &'static str,
     /// At most one session per kind, in kind order rather than time order.
     sessions: Vec<SessionActivity>,
     /// Short operations observed during this server lifetime, oldest first.
@@ -174,6 +246,7 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
     Json(ActivitySnapshot {
         server_incarnation: state.server_incarnation.clone(),
         coverage: "partial",
+        history_state: state.one_shot_activity.history_state(),
         sessions,
         one_shot,
         one_shot_dropped,

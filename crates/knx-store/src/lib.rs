@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+pub mod activity_history;
 pub mod building;
 pub mod command_sync;
 pub mod devices;

@@ -624,7 +624,8 @@ that server-named id instead of the declared one (D43).
     contract. Actual3711c4f7 passes20/20 independently: ordinary Rust2957/0/164,
     Web1665/Chromium61, selected private Dynamic6/0/0 and in-memory SimTunnel13/0/0;
     all624 committed inputs,17 bindings and420 originals unchanged. Publication
-    remains pending. The420-file hash inventory is not420 parsed test cases. This is not
+    of source/acceptance3a8b66f4 is read back with all11 owned artifacts and624
+    inputs exact. The420-file hash inventory is not420 parsed test cases. This is not
     a durable ETS identity, a write target or a change to scoped-value rules.
     **UI residue remains:** the UI owner's manual `ModuleScope` interface and
     `ParameterPanel.tsx`'s legacy `sameScope()` still require adoption and

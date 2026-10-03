@@ -103,3 +103,22 @@ and completed-owned cleanup. ADR-0063 backend-only accepted; UI adoption,
 genuine nested manufacturer, external substitution/variable output and full
 AR07/Alpha remain open. Canonical-root statistics stay with their owner;
 no misleading generator run from this isolated history or dirty older root.
+
+## Source/acceptance delivery — 2026-10-03 05:48 CEST
+
+3a8b66f422bda73c9999fb214f2459c79ecea76b published and read back exactly from
+local, fetched and live refs, divergence0/0 at this checkpoint. All11 own
+artifacts and624 actual-gated source/config blobs exact remotely. Reviewed
+outgoing range had only source d51dd6c7, actual3711c4f7 and acceptance metadata;
+no foreign unreviewed commit or shared-root ref moved. Four nonempty
+acceptance-doc gates/whitespace pass; source delta after actual gate is empty.
+
+Completed task-owned targets/raw scaffolding actually removed after live
+process checks; retain only minimal aggregate RED/GREEN/mutation/integration/
+publication receipts and the rejected instrumentation/verifier records. No
+private raw evidence or input deleted. Final receipt-only publication and
+clean worktree/two ancestor-confirmed branch removal remain next. Both owner
+histories and the U17 lock intact. Backend field is delivered, but UI chain
+comparison/older-server fallback, real nested products, external substitution
+and whole AR07/Alpha stay open. Continue with a fresh owned source audit after
+delivery cleanup, not a rerun of completed gates.

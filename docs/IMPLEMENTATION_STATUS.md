@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 module-scope backend leaf delivered — 2026-10-03 05:48 CEST
+
+Published/read back source/acceptance3a8b66f422bda73c9999fb214f2459c79ecea76b;
+local/fetched/live refs equal0/0 at that checkpoint, all11 owned artifacts and
+624 actual-gated inputs exact remotely. Source d51dd6c7, actual3711c4f7, the
+independently accepted20/20 and three compiled mutants/restoration below remain
+the evidence. Only owned Markdown changed after the actual gate, with four
+nonempty intended-root acceptance audits and whitespace check passing.
+
+Completed owned targets/raw scaffolding removed after live-process checks;
+minimal aggregate receipts retained. Final receipt-only publication and clean
+checkout/two ancestor-confirmed branch removal follow separately. ADR-0063's
+bounded backend identity is delivered, not UI consumer/diagnostic association,
+genuine nested manufacturer, external substitution or whole AR07/Alpha/ETS
+acceptance. Canonical root/statistics remain untouched with their owner.
+
 ## AR07 module-scope provenance — actual integration accepted (2026-10-03 05:38 CEST)
 
 Reviewed source d51dd6c7 is conventionally integrated as3711c4f7 with published

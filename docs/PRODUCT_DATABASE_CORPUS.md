@@ -1,5 +1,27 @@
 # Gira and MDT product-database corpus
 
+## Bounded ZIP resource pair — 2026-10-03 22:02 UTC
+
+Base5540dcac, original853 manifest/source hashes match independently. Current
+size-selected15 =7 member-only/5 expanded-only/3 both; one other archive remains
+metadata-unvalidated,837 are within these size caps. Directory census is not
+full ZIP validation. Same Release fresh-DB pair: unchanged baseline15 size
+refusals; scratch-only member256MiB/expanded4GiB/compressed256MiB produces14
+installs and1 unsupported namespace. Namespace/grammar/evidence budget unchanged;
+all706 source/config inputs match except two scratch constants. Structural
+hostile16/helper6 controls and22 build/test command logs/binary hashes verified.
+
+Raised cohort peak RSS789976KiB (771.46MiB), max ingest221.55s, total638.04s;
+max DB7556988928 bytes (7.038GiB), total21970833408 (20.462GiB). Baseline peak
+256492KiB, total2.43s, max0.513s, DB438272 bytes per case. All retained archive
+hashes and refusal empty tables checked; original manifest/all853 files rehashed
+again, private copies/DBs removed. Only aggregates/cohort commitments persisted,
+never item metrics/paths/raw stdout/stderr. First zero-pair PermissionError is
+preserved, not an importer refusal; corrected network-isolated retry is measured.
+This does not raise production limits, prove HTTP responsiveness/cancellation,
+semantic fidelity or ETS compatibility. KL151 cap/streaming decision remains
+open; direct synchronous HTTP/product-mutex caller needs owner-aware acceptance.
+
 Investigation date: **2026-09-23**.
 
 This note inventories the local, ignored corpora under

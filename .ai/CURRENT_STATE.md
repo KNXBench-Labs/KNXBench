@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (product-install test against public crawler corpus; docs only)
+- **Timestamp:** 2026-10-03 13:20 CEST
+- **Completed:** Tested release `knx products ingest` (origin/main `c6b5a240`) against 853 public `.knxprod` downloads from the separate `knxprod-crawler` repo (Siemens/ABB/Hager/MDT, 1.25 GiB), in one fresh shared DB, content order. 644 installed. Refusals were classified and reproduced in isolated DBs. Documented in PRODUCT_DATABASE_CORPUS §Public crawler corpus run, KNOWN_LIMITATIONS §149–§153, COMPATIBILITY, GAP_ANALYSIS A3 and IMPLEMENTATION_STATUS. **No code changed** (user instruction: testing only). check-anchors passes (377 links / 246 files); `git diff --check` is clean.
+- **Pending/Next Steps:** Triage KL-149..KL-153 into ALPHA_READINESS (not done, because priority/owner is the planner's decision). The most valuable fixes: §149 (CLI extension case; +43 installs, trivial) and §150 (nested `ModuleDef` constraint crash; real product, hypothesis `dynamic/parse.rs` ~l.317). §151/§152 limits need measured sizing. §153 schemes 10/23 need grammar evidence.
+- **Notes for Codex oder Claude:** The crawled files live outside KNXBench (`/mnt/daten-i/Sourcecode/knxprod-crawler/downloads`, git-ignored there) and change upstream. Don't pin them as a gate. The scratch DB (13 GiB) and worktree were removed after delivery. The root checkout's dirty files and the UI session's Web lock were not touched.
+
+---
+
 - **Last Agent:** codex (UI session / U17 delivered, U18 closing work next)
 - **Timestamp:** 2026-10-03 12:28 CEST
 - **Web lock:** retained by UI session through U18; not released.

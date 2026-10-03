@@ -386,10 +386,14 @@ native/Orca/all-component WCAG, full import/export or release approval follows.
 
 ### U16 — Persist, import and export theme packs without losing settings [web]
 
-**In progress, reviewed candidate.** Depends on U15. Implemented file transport,
-acknowledged plans and queue/API contracts; 140 focused tests, TypeScript,
-31 restored unit controls and new-file canary pass. Full candidate/integrated
-gates, HTTP mutation controls and publication remain pending. U17 owns visible
+**Integrated acceptance passed; publication/readback pending.** Depends on U15. Implemented file transport,
+acknowledged plans and queue/API contracts; 144 focused tests, TypeScript,
+restored unit/HTTP controls and new-file canary pass. Candidate4 passed all
+16 checks. Actual-merged 22-step acceptance passed on 36e922bc, with six
+explicitly selected offline suites/11 private cases, narrower than historical
+U15's twenty-case scope. Web 1,665, intercepted Chromium 61, ordinary Rust
+2,940/0/164 over 148 blocks, all 17 bindings equal, 622 protected inputs and
+420 private files unchanged. Publication/readback remain pending. U17 owns visible
 management/diagnostics/preview. This goal owns only the necessary theme/settings
 application changes, not a new generic configuration subsystem.
 

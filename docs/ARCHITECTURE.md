@@ -175,8 +175,8 @@ overwrites an unsupported preference. U16 implements candidate acknowledged
 conditional updates through that same settings client/route: its last server
 observation is not a second store, and the optional compare-and-patch capability
 is independent of the unchanged opaque settings-file schema. File transport and
-inert recovery remain Web utilities; candidate acceptance passed, integrated
-delivery is pending. No theme logic reaches KNX
+inert recovery remain Web utilities; candidate and actual-merged acceptance
+passed, publication is pending. No theme logic reaches KNX
 Core, project storage, product data or KNXnet/IP. U16–U18 persistence, management/
 preview and extension-wide acceptance remain open, not implied by runtime gates.
 

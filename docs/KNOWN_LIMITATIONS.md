@@ -4,8 +4,8 @@
 
 U15 admission/runtime is delivered. U16 adds reviewed candidate file transport,
 acknowledged conditional installation/removal/selection and structured errors;
-the complete 16-check candidate gate passed; integrated gates and publication
-remain pending. U17
+the 16-check candidate and actual-merged 22-check gates passed. Publication and
+remote readback remain pending. U17
 production controls, visible diagnostics and reversible preview are not yet
 implemented. The existing built-in picker is not the custom-pack manager.
 

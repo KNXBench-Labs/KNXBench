@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 
-Status: Accepted — U15/U16 foundations delivered; U17 local candidate, U18 closing acceptance pending.
+Status: Accepted — U15/U16 foundations delivered; U17 actual-merged implementation accepted, publication in handover; U18 closing acceptance pending.
 
 ## Context
 
@@ -58,8 +58,9 @@ Existing standalone builtin callers retain their old callback. Dispatched writes
 are not reversible visual previews: closing Settings cannot retract them, and
 the pending UI does not advertise a false undo. Shared Overlay can restore an
 explicit persistent focus target when cancellation removes the opening trigger.
-These are local candidate decisions with actual parent/browser regressions;
-final-current and actual-merged delivery proof remain pending.
+Actual parent/browser regressions and the full23-command merged acceptance
+on f16f1e40 verify these decisions. Publication/readback is tracked in the
+handover; U18 representative-component/whole-extension acceptance remains open.
 
 ## Alternatives
 

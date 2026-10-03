@@ -72,9 +72,12 @@ negative-fixture matrix in [THEME_PACKS](THEME_PACKS.md) and
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md). This is contract
 research, not shipped import/export. U15 runtime admission, cache revalidation
 and reversible theme application are delivered as 9d1ae19d with complete
-candidate/combined gates and exact remote readback. U16–U18 in
-[goal-ui](../goal-ui.md) still own acknowledged settings storage, file roundtrip,
-reversible management/preview and final regression/review acceptance.
+candidate/combined gates and exact remote readback. U16 delivers acknowledged
+storage/file roundtrip as 1f94808d (144 focused passes, restored
+controls, complete 16-check candidate and 22-check actual-merged gates), with
+exact source publication/artifact readback verified. U17–U18 in
+[goal-ui](../goal-ui.md) still own reversible management/preview and final
+regression/review acceptance.
 Existing built-ins/System stay
 available; no arbitrary CSS, external assets or new alpha release blocker.
 
@@ -148,7 +151,7 @@ Public confirmed address writes are now pre-tunnel refused pending verified
 durable recovery (ADRs 0057–0059); no prior go transfers to another device.
 Other masks, device families and RF hardware remain refused or simulator-only.
 The application-download backup is not a universal rollback (ADR-0049).
-ADR-0062 adds a separate durable one-shot activity-metadata backend and bounded
+ADR-0064 adds a separate durable one-shot activity-metadata backend and bounded
 history API; complete long-session journalling and the global Web consumer
 remain open. See [COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md)
 for all 42 commissioning-routed source IDs, safe fallbacks and exact unblocks.

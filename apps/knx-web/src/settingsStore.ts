@@ -25,6 +25,7 @@
 // per key and flushed once hydration completes.
 
 import { useSyncExternalStore } from "react";
+import { canonicalJson } from "./canonicalJson";
 
 /** The one `localStorage` key this module owns: a cache of the document. */
 export const SETTINGS_CACHE_KEY = "knx-desktop:settings-cache";
@@ -73,6 +74,7 @@ const BROWSER_ERA_SCHEMA_VERSION = 0;
 /** What `GET /api/settings` answers with. Mirrors `SettingsDto` in
  * `apps/knx-server/src/settings_routes.rs`. */
 export interface SettingsResponse {
+  conditionalPatchVersion?: number;
   schemaVersion: number;
   settings: Record<string, unknown>;
   status: "ok" | "absent" | "migrated" | "refusedNewer" | "quarantined";
@@ -109,6 +111,10 @@ interface CachedDocument {
 }
 
 let document_: CachedDocument | undefined;
+/** Last server observation, not another store: optimistic/cache values are not acknowledgment. */
+let acknowledged_: SettingsResponse | undefined;
+let acknowledgmentUncertain = false;
+let settingsEpoch = 0;
 let synchronized = false;
 let pendingBeforeHydration = new Map<string, unknown>();
 let revision = 0;
@@ -151,13 +157,15 @@ function cache(): CachedDocument {
   return document_;
 }
 
-function writeCache(): void {
+function writeCache(): boolean {
   try {
     window.localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(cache()));
+    return true;
   } catch {
     // Private browsing, a full quota, a browser with storage switched off.
     // The session still works; only the next first paint is slower to
     // find the right theme.
+    return false;
   }
 }
 
@@ -169,6 +177,95 @@ function notify(): void {
 /** Reads one preference as parsed JSON, or `undefined` when unset. */
 export function getSetting(key: string): unknown {
   return cache().settings[key];
+}
+
+export type SettingsAcknowledgementReason = "notHydrated" | "incompatibleSettings" | "unsupportedServer" | "pendingWrite" | "unsupportedValue" | "uncertain";
+export type SettingsAcknowledgedSnapshot = { ok: true; settings: Record<string, unknown> }
+  | { ok: false; reason: SettingsAcknowledgementReason };
+export class SettingsMutationError extends Error {
+  constructor(readonly kind: SettingsAcknowledgementReason | "conflict" | "rejected" | "ambiguous" | "stale") { super(kind); }
+}
+function usableSettingsDocument(response: unknown): response is SettingsResponse {
+  if (typeof response !== "object" || response === null || Array.isArray(response)) return false;
+  const value = response as SettingsResponse;
+  return value.schemaVersion === 1
+    && ["ok", "absent", "migrated"].includes(value.status)
+    && typeof value.settings === "object" && value.settings !== null && !Array.isArray(value.settings);
+}
+function usableAcknowledgment(response: unknown): response is SettingsResponse {
+  return usableSettingsDocument(response) && response.conditionalPatchVersion === 1;
+}
+function adoptAcknowledgment(response: SettingsResponse): { cacheError: boolean } {
+  acknowledged_ = JSON.parse(JSON.stringify(response)) as SettingsResponse;
+  acknowledgmentUncertain = false;
+  const settings = { ...response.settings };
+  for (const [key, { value }] of unpersisted) {
+    if (value === undefined || value === null) delete settings[key];
+    else settings[key] = value;
+  }
+  document_ = { schemaVersion: response.schemaVersion, settings };
+  const cacheError = !writeCache();
+  notify();
+  return { cacheError };
+}
+export async function patchAcknowledgedSettings(patchInput: Record<string, unknown>, expectedInput: Record<string, unknown>): Promise<{ cacheError: boolean }> {
+  if (Object.keys(patchInput).some((key) => !Object.hasOwn(expectedInput, key) || patchInput[key] === undefined)) {
+    throw new SettingsMutationError("unsupportedValue");
+  }
+  const patch = JSON.parse(JSON.stringify(patchInput)) as Record<string, unknown>;
+  const expected = JSON.parse(JSON.stringify(expectedInput)) as Record<string, unknown>;
+  const epoch = settingsEpoch;
+  const operation = queue.then(async () => {
+    if (settingsEpoch !== epoch) throw new SettingsMutationError("stale");
+    const snapshot = getAcknowledgedSettings(Object.keys(expected));
+    if (!snapshot.ok) throw new SettingsMutationError(snapshot.reason);
+    if (canonicalJson(snapshot.settings) !== canonicalJson(expected)) throw new SettingsMutationError("conflict");
+    let response: SettingsResponse;
+    try {
+      response = await requestJson<SettingsResponse>("/api/settings", {
+        method: "PUT", body: JSON.stringify({ settings: patch, expectedSettings: expected }),
+      });
+      if (settingsEpoch !== epoch) throw new SettingsMutationError("stale");
+      if (!usableAcknowledgment(response) || Object.keys(expected).some((key) => {
+        const wanted = Object.hasOwn(patch, key) ? patch[key] : expected[key];
+        return wanted === null ? Object.hasOwn(response.settings, key)
+          : !Object.hasOwn(response.settings, key) || canonicalJson(response.settings[key]) !== canonicalJson(wanted);
+      })) throw new SettingsMutationError("ambiguous");
+    } catch (error) {
+      if (settingsEpoch !== epoch) throw new SettingsMutationError("stale");
+      if (error instanceof SettingsHttpError && error.status === 409) throw new SettingsMutationError("conflict");
+      if (error instanceof SettingsHttpError && error.status >= 400 && error.status < 500) throw new SettingsMutationError("rejected");
+      acknowledgmentUncertain = true;
+      notify();
+      try {
+        const reread = await requestJson<SettingsResponse>("/api/settings");
+        if (settingsEpoch !== epoch) throw new SettingsMutationError("stale");
+        if (usableAcknowledgment(reread)) adoptAcknowledgment(reread);
+      } catch { /* Keep last acknowledgment and require a fresh authoritative observation. */ }
+      if (settingsEpoch !== epoch) throw new SettingsMutationError("stale");
+      throw new SettingsMutationError("ambiguous");
+    }
+    return adoptAcknowledgment(response);
+  });
+  queue = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+export function getAcknowledgedSettings(keys: readonly string[]): SettingsAcknowledgedSnapshot {
+  if (state_.hydration !== "hydrated" || !acknowledged_) return { ok: false, reason: "notHydrated" };
+  if (acknowledgmentUncertain) return { ok: false, reason: "uncertain" };
+  if (acknowledged_.schemaVersion !== 1 || !["ok", "absent", "migrated"].includes(acknowledged_.status)
+      || typeof acknowledged_.settings !== "object" || acknowledged_.settings === null || Array.isArray(acknowledged_.settings)) {
+    return { ok: false, reason: "incompatibleSettings" };
+  }
+  if (acknowledged_.conditionalPatchVersion !== 1) return { ok: false, reason: "unsupportedServer" };
+  if (keys.some((key) => unpersisted.has(key) || pendingBeforeHydration.has(key))) return { ok: false, reason: "pendingWrite" };
+  // The conditional wire contract uses null for absence. Do not conflate an
+  // explicit damaged stored null with a key that can be expected absent.
+  if (keys.some((key) => Object.hasOwn(acknowledged_!.settings, key) && acknowledged_!.settings[key] === null)) {
+    return { ok: false, reason: "unsupportedValue" };
+  }
+  return { ok: true, settings: Object.fromEntries(keys.map((key) => [key,
+    Object.hasOwn(acknowledged_!.settings, key) ? JSON.parse(JSON.stringify(acknowledged_!.settings[key])) as unknown : null])) };
 }
 
 /**
@@ -346,6 +443,9 @@ function setSettingsState(next: SettingsState): void {
  * un-seed a module that has already read it. */
 export function resetSettingsForTests(): void {
   document_ = undefined;
+  acknowledged_ = undefined;
+  acknowledgmentUncertain = false;
+  settingsEpoch += 1;
   synchronized = false;
   pendingBeforeHydration = new Map();
   state_ = { hydration: "cached", diagnostic: undefined, fallbackMessage: undefined };
@@ -362,6 +462,9 @@ export function resetSettingsForTests(): void {
   notify();
 }
 
+class SettingsHttpError extends Error {
+  constructor(readonly status: number, message: string) { super(message); }
+}
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
@@ -369,24 +472,37 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
+    throw new SettingsHttpError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
   }
   return (await response.json()) as T;
 }
 
 function push(patch: Record<string, unknown>): void {
   if (!synchronized) return;
+  const epoch = settingsEpoch;
   const generation = ++writeGeneration;
   for (const [key, value] of Object.entries(patch)) unpersisted.set(key, { value, generation });
   queue = queue
-    .then(() => requestJson<SettingsResponse>("/api/settings", {
+    .then(() => settingsEpoch === epoch ? requestJson<SettingsResponse>("/api/settings", {
       method: "PUT",
       body: JSON.stringify({ settings: patch }),
-    }))
-    .then(() => {
-      for (const key of Object.keys(patch)) {
-        if (unpersisted.get(key)?.generation === generation) unpersisted.delete(key);
+    }) : undefined)
+    .then((response) => {
+      if (settingsEpoch !== epoch) return;
+      // A new server observation also revokes stale capability claims.
+      acknowledged_ = JSON.parse(JSON.stringify(response)) as SettingsResponse;
+      // Ordinary preferences still work with older servers, but only an
+      // actual matching acknowledgment clears their outstanding intent.
+      const confirmed = usableSettingsDocument(response) && Object.entries(patch).every(([key, value]) =>
+        value === null ? !Object.hasOwn(response.settings, key)
+          : Object.hasOwn(response.settings, key) && canonicalJson(response.settings[key]) === canonicalJson(value));
+      if (confirmed) {
+        acknowledgmentUncertain = false;
       }
+      for (const key of Object.keys(patch)) {
+        if (confirmed && unpersisted.get(key)?.generation === generation) unpersisted.delete(key);
+      }
+      if (confirmed) notify();
     })
     .catch((error: unknown) => {
       // A refused write (a settings file from a newer build) or an
@@ -506,6 +622,8 @@ export function startSettingsRefresh(): () => void {
       const generation = writeGeneration;
       const response = await requestJson<SettingsResponse>("/api/settings");
       if (!active || queue !== writes || writeGeneration !== generation) return;
+      acknowledged_ = JSON.parse(JSON.stringify(response)) as SettingsResponse;
+      if (usableAcknowledgment(response)) acknowledgmentUncertain = false;
       const settings = { ...response.settings };
       // A failed PUT stays a visible local edit, not a lost edit on the
       // next read. Successful newer patches clear only their own generation.
@@ -593,6 +711,7 @@ async function loadFromServer(): Promise<void> {
     // Also in the session log, server-side, where the Log panel shows it.
     console.warn(`KNXBench: ${response.message}`);
   }
+  acknowledged_ = JSON.parse(JSON.stringify(response)) as SettingsResponse;
   apply(response);
   synchronized = true;
   setSettingsState({

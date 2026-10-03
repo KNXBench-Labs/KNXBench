@@ -1,6 +1,6 @@
 # Commissioning activity history contract
 
-[ADR-0062](adr/0062-durable-activity-history-is-not-recovery.md) separates durable
+[ADR-0064](adr/0064-durable-activity-history-is-not-recovery.md) separates durable
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
 

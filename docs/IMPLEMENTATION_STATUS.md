@@ -26,9 +26,152 @@ PENDING. This does not close long-session, Web, hardware or release scope.
 
 The [42-ID ledger](COMMISSIONING_ALPHA_LEDGER.md) matches the readiness inventory
 without omissions, duplicates or extras; every row retains its fallback and
-unblock condition. [API contract](COMMISSIONING_ACTIVITY_HISTORY.md), ADR-0062
+unblock condition. [API contract](COMMISSIONING_ACTIVITY_HISTORY.md), ADR-0064
 and the direct Profile audit document the bounded support. Long-session intent,
 Web adoption, independent hardware/vendor evidence and release remain open.
+
+## AR07 module-scope backend leaf delivered — 2026-10-03 05:48 CEST
+
+Published/read back source/acceptance3a8b66f422bda73c9999fb214f2459c79ecea76b;
+local/fetched/live refs equal0/0 at that checkpoint, all11 owned artifacts and
+624 actual-gated inputs exact remotely. Source d51dd6c7, actual3711c4f7, the
+independently accepted20/20 and three compiled mutants/restoration below remain
+the evidence. Only owned Markdown changed after the actual gate, with four
+nonempty intended-root acceptance audits and whitespace check passing.
+
+Completed owned targets/raw scaffolding removed after live-process checks;
+minimal aggregate receipts retained. Final receipt-only publication and clean
+checkout/two ancestor-confirmed branch removal follow separately. ADR-0063's
+bounded backend identity is delivered, not UI consumer/diagnostic association,
+genuine nested manufacturer, external substitution or whole AR07/Alpha/ETS
+acceptance. Canonical root/statistics remain untouched with their owner.
+
+## AR07 module-scope provenance — actual integration accepted (2026-10-03 05:38 CEST)
+
+Reviewed source d51dd6c7 is conventionally integrated as3711c4f7 with published
+e9707794, the exact candidate tree and complete inherited owner handover.
+proc_f27315f3cd8c's actual20/20 is independently accepted: ordinary Rust2957/0/164
+over148 result blocks; Web1665 and existing intercepted Chromium61; explicit
+private Dynamic6/0/0 and in-memory SimTunnel HTTP13/0/0 with no genuine/unknown
+skip and no private raw logs. All624 committed code/config inputs and17 shadow
+bindings exact;420 original files, including103 product archives, unchanged.
+The broader hash inventory is not a claim that every file was parsed. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+
+Three compiled mutants/restoration and bounded public RED/GREEN below remain
+their narrower evidence. First receipt verifier's `Checking`-only Clippy display
+assertion rejected separately: actual fresh output says `Compiling knx-server`;
+corrected evidence check, no source change or gate replay. ADR-0063's bounded
+backend projection contract accepted; publication/readback and cleanup pending.
+Manual UI scope matching stays with U17; no new UI, real nested manufacturer,
+storage/ETS parity, independent-model or full AR07/Alpha acceptance claimed.
+
+## AR07 module-scope provenance — public GREEN, not delivered (2026-10-03)
+
+At `e9707794`, public nameless nested paths retained distinct Core chains and
+server sections but serialized identical HTTP scopes: compilation 0, behavioral
+Rust 101 / 0 passed / 1 failed / 0 ignored. Production hashes unchanged during
+RED. The additive ADR-0063 backend candidate now supplies `nodeChain` from the
+existing Core accessor on section and diagnostic scopes, without changing
+write authority, scoped values, domain/storage schemas or legacy fields.
+
+Public gate independently reconciled: parameter HTTP 38/0/0, server library
+205/0/2, selected public ProductDB identity suites 72/0/6; strict two-crate
+Clippy, fmt/whitespace pass and 624 code/config inputs unchanged. Three compiled
+wire-omission, innermost-only and order-reversal mutants each fail behaviorally
+with 101 / 0-1-0, restored sources and final HTTP/mapper GREEN verified. Repeated
+tests are subsets, not additional coverage. Separate in-session contract/security
+review found no blocking issue, not independent-model approval.
+
+Actual integrated gates/publication remain pending. UI manual `ModuleScope` and
+`sameScope()` adoption remains with the U17 Web-lock owner; no Web or binding
+change. Genuine nested products, broader AR07/Alpha and ETS parity stay open.
+
+## AR07 bounded work admission delivered — 2026-10-03 04:10 CEST
+
+Published/read back2704f8e29b6ca2d53c022c468f116b526109c678; local/live/fetched
+refs equal0/0, all14 owned artifacts and624 actual-gated code/config inputs exact
+remotely. Source8f47c13b, actual merged7ae116a1 accepted20/20 as below, five compiled
+mutants/restoration; doc-only acceptance gates pass and code delta is zero.
+Own build/script/raw-log scaffolding removed after active-process checks, minimal
+aggregate receipts/source-only next-audit retained. Final receipt-only publication
+and completed clean checkout/branch removal remain the closing steps.
+
+ADR-0062's bounded work policy is delivered, not complete AR07/Alpha, localized
+new-token UI, byte/RSS/latency/general-depth, external-substitution or native/ETS
+acceptance. Other owners' complete histories and source remain intact.
+
+## AR07 work admission — actual merge accepted, delivery pending (2026-10-03)
+
+Actual7ae116a1 integrates reviewed budget8f47c13b with published0889c102 U16/U17,
+without source conflict or lost owner history/artifacts. proc_096e63a3429e exited0
+and all20 stages independently pass: workspace2953/0/164 over148 result blocks,
+Web1665, intercepted Chromium61, explicit private Dynamic6/0/0 and offline
+SimTunnel HTTP13/0/0 with no genuine skips or private raw logs. All103 product
+archives/108 original fixtures unchanged,624 frozen code/config hashes equal
+exact committed blobs,17 shadow bindings equal; strict build/lints/dependency
+and four nonempty intended-root audits pass. Projection42 is a workspace subset.
+
+Five compiled behavioral mutations/restoration and public RED/GREEN precede
+this merged acceptance. Both initial lock timeouts remain rejected infrastructure
+attempts before compiler/source start, not behavioral evidence. Delivery/readback
+remain pending. Manual new-token/localization adoption stays UI-owned; broader
+AR07/Alpha, byte/RSS/latency/general-depth and native/ETS guarantees stay open.
+
+## AR07 work-admission candidate — public GREEN, not delivered (2026-10-03)
+
+The owned `alpha-parameter-budget` candidate adds shared evaluator work
+admission and explicit truncation reporting; incomplete parameter-panel prefixes
+are read-only. Original and sibling public REDs, then a compiled HTTP 200/400
+write-authority RED, precede their respective fixes. ProductDB Library 354/0/0,
+DynamicTree 62/0/6, full parameter HTTP 35/0/0 and server Library 204/0/2 pass;
+targeted repeats are subsets. Strict ProductDB/server Clippy, formatting,
+whitespace, source freeze, nonempty-project refusal and original-source
+retention checks pass. No private or live-hardware acceptance is inferred.
+
+[ADR-0062](adr/0062-dynamic-evaluation-work-admission.md) remains Proposed:
+five compiled behavioral mutations and exact source restoration are independently
+accepted at proc_43b041004d63; first lock-only timeout rejected separately.
+Actual candidate proc_cd67fb854490 exited0 and all20 stages independently pass:
+workspace2944/0/164, Web1559, intercepted Chromium61, private Dynamic6/0/0 and
+offline SimTunnel HTTP13/0/0,103/108 originals unchanged,616 frozen inputs,
+17 equal shadow bindings and strict build/lints/nonempty intended-root gates.
+This is restored candidate GREEN, not current-upstream acceptance. Fresh
+origin/main0889c102 U16/U17 must be preserved/integrated and the combined tree
+gated before publication. UI token/localization adoption belongs to its owner.
+The work cap is not a complete byte/RSS/latency/general-depth guarantee; broader
+AR07 and Alpha remain incomplete. See [the bounded evidence](PARAMETER_SEMANTICS_BOUNDARY.md).
+
+## 2026-10-03 — U16 acknowledged theme persistence (foundation delivered as 1f94808d)
+
+- Implemented strict bounded UTF-8/BOM import, validated deterministic export,
+  detached/frozen content-bound theme plans, explicit replacement consent and
+  coupled active removal/System selection through the existing settings queue.
+- Optional key-scoped conditional PUT plus capability version 1 retains the
+  opaque settings-file schema. Unknown preferences/raw entries are preserved;
+  incompatible, pending and uncertain authority disarms mutations. Network
+  ambiguity rereads without replay; cache failure is reported independently.
+- Five-file focused suite: 144 passed; TypeScript passed. Thirty-one restored
+  behavioral controls and TS2322 canary pass; two initial survivors required
+  stronger export/status assertions. Separate self-review fixed aggregate
+  selection/runtime disagreement with an observed RED/GREEN regression.
+- Raw recovery exports browser-observed theme JSON only, not a byte-exact file.
+  Latest frozen candidate passed 16 checks: Web 1,665, intercepted Chromium 61,
+  ordinary Rust 2,925 / zero failed / 164 ignored. Eight conditional HTTP cases,
+  seven compiled server guard controls (including the initially surviving lock
+  case), five extra ordinary queue controls and all-source restoration verified.
+  Actual merge 36e922bc passed 22/22 commands: Web 1,665, intercepted Chromium
+  61, ordinary Rust 2,940 / zero failed / 164 ignored across 148 result blocks.
+  Six explicitly selected offline suites/11 private cases passed, including the
+  115-instance/113-unique product matrix. This is narrower than U15's historical
+  twenty-case scope. All 622 protected inputs and 420 private files unchanged;
+  all 17 bindings equal. Published 1f94808d5d9985b38fcf85021403bb4b05fea3e7;
+  exact live/fetched remote ref, all 20 owned artifact blobs and 622 gated inputs
+  read back equal. Receipt-only metadata/owned cleanup are tracked separately.
+  U17 production manager/diagnostics/preview and U18 closing review
+  remain open; no independent/native/Orca/ETS/alpha-release approval implied.
+
+
 
 ## AR07 scoped Float delivery — 2026-10-03 00:04 CEST
 

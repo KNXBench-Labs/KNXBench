@@ -18,7 +18,50 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 
 fn state() -> Arc<knx_server::AppState> {
-    Arc::new(knx_server::AppState::default())
+    // Progress transport does not need a product database or a real connector.
+    // Do not call AppState::new/Default and then override product_db: opening
+    // and migrating the default database has already happened by that point.
+    Arc::new(knx_server::AppState {
+        project: Default::default(),
+        clean_project: Default::default(),
+        last_saved_at: Default::default(),
+        store_path: Default::default(),
+        opaque: Default::default(),
+        manufacturer_refs: Default::default(),
+        command_stack: Default::default(),
+        import_counts: Default::default(),
+        server_incarnation: "synthetic-progress-test".into(),
+        project_revision: Default::default(),
+        product_db: None,
+        session_log: Default::default(),
+        connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),
+        bus_session: Default::default(),
+        group_address_style_publication: Default::default(),
+        next_bus_session_id: Default::default(),
+        line_scan_session: Default::default(),
+        next_line_scan_session_id: Default::default(),
+        device_download_plan: Default::default(),
+        device_download: Default::default(),
+        next_device_download_id: Default::default(),
+        device_download_timing: Default::default(),
+        address_programming: Default::default(),
+        next_address_programming_id: Default::default(),
+        one_shot_activity: Default::default(),
+        address_programming_timing: Default::default(),
+        address_programming_pause: Default::default(),
+        load_operations: Default::default(),
+        data_dir: std::env::temp_dir(),
+        settings_lock: Default::default(),
+    })
+}
+
+#[test]
+fn progress_fixture_does_not_open_an_unrelated_default_product_database() {
+    let state = state();
+    assert!(
+        state.product_db.is_none(),
+        "progress transport fixtures must not open or migrate the default product database"
+    );
 }
 
 async fn body_json(response: axum::response::Response) -> Value {
@@ -79,7 +122,13 @@ async fn a_finished_import_leaves_a_succeeded_snapshot_naming_its_source() {
         ))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
+    let status = response.status();
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "unexpected synthetic import response: {}",
+        body_json(response).await
+    );
 
     let snapshot = progress(&state).await;
     assert_eq!(snapshot["operationId"], 1);
@@ -110,7 +159,13 @@ async fn a_client_token_sent_on_import_is_echoed_in_every_snapshot() {
         ))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
+    let status = response.status();
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "unexpected synthetic import response: {}",
+        body_json(response).await
+    );
 
     let snapshot = progress(&state).await;
     assert_eq!(
@@ -206,7 +261,13 @@ async fn a_load_started_with_no_client_token_names_its_owner_as_null() {
         ))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
+    let status = response.status();
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "unexpected synthetic import response: {}",
+        body_json(response).await
+    );
 
     let snapshot = progress(&state).await;
     assert_eq!(

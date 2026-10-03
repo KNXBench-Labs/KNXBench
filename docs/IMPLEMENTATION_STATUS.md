@@ -20,6 +20,10 @@ canary was caught and restored. Final frontend candidate: Web1,702/95 files,
 Chromium69 without skip/flaky/failure, build/types and262 frozen inputs unchanged.
 Eight behavioral controls were caught and restored. Full branch13/13 repository commands pass: Rust2940/0/164,17 equal bindings
 and693 inputs unchanged; actual-merged acceptance/publication remain pending.
+U17-R1 acceptance audit found missing explicit manager-browser rejection/reset/
+HTTP500 gestures. Added three fully intercepted cases:11 manager browser cases
+and three further compiled controls pass/restored, no production change. Earlier
+full69-browser source predates this test-only delta; renewed actual gates pending.
 Full legacy Web suite emits fixture stderr; no warning-free whole-suite claim.
 Native WebKitGTK/Orca/global-alpha/ETS and U18 acceptance remain separate/open.
 

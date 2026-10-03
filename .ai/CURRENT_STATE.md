@@ -1,3 +1,21 @@
+- **Last Agent:** codex (UI session / U17 browser-acceptance gap closed, renewed actual gate pending)
+- **Timestamp:** 2026-10-03 10:09 CEST
+- **Web lock:** taken by ui-theme-management for U17; not released.
+- **Completed:** Actual merge82fc4e44 retains reviewed runtime and all complete owner histories. Separate acceptance audit found U17-R1: component rejection/reset/HTTP500 coverage lacked corresponding actual manager browser flows. Added three explicit fully intercepted browser cases, no production behavior changes: hostile file leaves DOM/settings/requests untouched; System reset preserves all independent settings/installed map and follows dark/light OS; uncertain500 rolls back and reads once with no PUT replay. Eleven manager browser cases pass with no skips/flaky/errors. Three compiled behavioral guard controls caught named assertion failures and restored canonical sources exactly; initial unused-import mutant compilation retained/rejected, never counted as behavior evidence.
+- **Pending/Next Steps:** First actual run proc_7630de2f820c deliberately cancelled before acceptance to close coverage gap; retained merged-first-cancelled-receipt.json, not a product-test failure. Commit reviewed test/metadata delta, then renew full current actual gate using repository_gate_2.py merged and offline_gate_2.py (fresh merged-target-2). Reconcile every full/offline stage/source/input/binding receipt, publish/read back and clean owned artifacts. U17 remains undelivered; U18 remains justified/open.
+- **Notes for Codex oder Claude:** All reviewed runtime blobs still equal d07555f0; only e2e/theme-manager.e2e.ts changed for coverage/helper fault injection. Existing Source/ROOT owners and lock intact. Three new controls/eleven-browser receipts in own ui-theme-management scratch. No live KNX/backend/device, native/Orca/ETS/general-alpha approval, quota probe or subagent. Only scoped Markdown dispatch checkpoint may change during renewed gate. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
+- **Last Agent:** codex (UI session / U17 actual merge prepared, acceptance pending)
+- **Timestamp:** 2026-10-03 10:00 CEST
+- **Web lock:** taken by ui-theme-management for U17; not released.
+- **Completed:** Reviewed candidate d07555f0 committed with required author/committer and no co-author. Conventional actual merge 82fc4e44 integrates current upstream cbc6b0b2; all owned Web source blobs equal reviewed candidate. Two documentation conflicts reconciled against independent complete-blob expectations. Complete authoritative upstream/own prefixes and historical insertions preserved, truncated-suffix negative controls caught. Candidate13/13 repository checks plus separately executed/hash-verified Web1702/Chromium69/types/build remain precursor evidence only.
+- **Pending/Next Steps:** Dispatch distinct actual-merged repository_gate.py merged followed by offline_gate.py as one notified background job. Fresh merged-target, both shared gate leases, source/HEAD freeze, runtime-root-explicit audits, complete17 binding comparison. Explicit offline Dynamic/program/legacy/matrix and reference open/save/SimTunnel HTTP targets use read-only corpus linkage, compiled inventories and closed skip classification; no broad ignored sweep. Reconcile every receipt/count before acceptance/publication/readback. U18 still open.
+- **Notes for Codex oder Claude:** upstream was not a simple suffix of old base because it inserted historical entries; actual three-way inspection proved insertion-only, all retained. Own scratch actual-merge-receipt.json binds parents/history/protected Web blobs. No source or HEAD edits during the gate; only this Markdown dispatch checkpoint. Preserve root/foreign checkouts and private inputs. No live server/bus/device, native/Orca/ETS/general-alpha claim, subagent/quota probe, or release tag. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U17 final frontend candidate verified, integration pending)
 - **Timestamp:** 2026-10-03 09:57 CEST
 - **Web lock:** taken by ui-theme-management for U17; not released.

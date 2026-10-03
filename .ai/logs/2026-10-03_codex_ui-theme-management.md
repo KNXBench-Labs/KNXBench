@@ -86,6 +86,31 @@ Root/foreign trees/private inputs unchanged; no native/Orca/ETS/global-alpha cla
 
 ### Historical intermediate checkpoints
 
+### Acceptance audit finding U17-R1 (closed locally, renewed full gate pending)
+
+IMPORTANT: the eight initial manager browser flows lacked explicit hostile-file
+rejection, direct System reset and uncertain HTTP500 rollback. Component cases
+and an older runtime fixture did not establish these actual manager gestures.
+First actual run proc_7630de2f820c was deliberately cancelled before acceptance,
+not relabelled as a product failure. Its five completed prerequisite stages are
+retained separately and not substituted for a full actual-merged verdict.
+
+Added three fully intercepted actual-UI browser cases; all11 manager cases pass.
+The tests assert no DOM/network/settings effect for hostile data, exact
+selection-only System reset with dark/light OS follow-through, and rollback/
+one reconciliation read/no write replay for500. All runtime source remains equal
+reviewed d07555f0. Three additional controls compile and fail their named browser
+assertions; sources restore byte-exactly. Initial file-admission mutant's unused
+import caused TS6133; it was restored and rejected as instrumentation failure,
+then retried with realistic parser-import removal. No invented production RED.
+
+Candidate d07555f0 conventionally merged with cbc6b0b2 at82fc4e44. Complete
+upstream/owned history retained, including historical upstream insertions that
+made the simple suffix-to-old-base check inapplicable. Independent expectation
+and truncated-suffix negative controls verify preservation. Corrected browser
+coverage is a follow-up acceptance delta; renewed full actual gates/publication
+are pending. U18 remains open, not folded into these U17 checks.
+
 As of 2026-10-03 05:43 CEST, three root/fourteen parent tracers pass. New:
 HTTP409 restores the last acknowledgment and never replays PUT; peer state is
 adopted by the existing focus refresh, not invented from a bare409 response.

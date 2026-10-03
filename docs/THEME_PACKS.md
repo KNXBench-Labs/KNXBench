@@ -149,6 +149,14 @@ and693 inputs unchanged; actual-merged acceptance/publication remain pending. Le
 suite emits fixture stderr; no warning-free whole-suite claim. Actual intercepted
 Chromium is not native WebKitGTK/Orca or general WCAG/ETS/global-alpha approval.
 
+U17-R1 acceptance audit added explicit actual-manager hostile-file rejection,
+System reset/OS transitions and HTTP500 rollback/no replay. Eleven manager
+browser cases and three further compiled browser guard controls pass, canonical
+runtime restored unchanged. The previous full69-browser receipt predates this
+test-only delta; renewed full actual-merged gates are pending. The cancelled first
+actual attempt and initial unused-import mutant compilation are retained as
+non-acceptance/instrumentation records, not successful behavioral evidence.
+
 ## Evidence and inspected baseline
 
 The five built-in palettes/System resolver live in `apps/knx-web/src/theme.ts`;

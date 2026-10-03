@@ -206,7 +206,10 @@ fn incomplete_placeholder_substitution_does_not_publish_a_partial_label() {
         text: Some(raw.into()),
         ..node(0, None, "ParameterBlock")
     }]));
-    let activation = with_remaining(&trees, &ValueMap::default(), 3);
+    // Walk, raw allowance, first lookup/copy/diagnostic and next lookup.
+    // Refuse the second output before publishing the first substituted prefix.
+    let through_first = 1 + raw.len() + 1 + "{{Missing}}".len() + 1 + 1;
+    let activation = with_remaining(&trees, &ValueMap::default(), through_first);
     assert!(activation.labels.is_empty());
     assert_eq!(activation.diagnostics.len(), 2);
     assert!(!activation.diagnostics[0].diagnostic.may_hide_refs());
@@ -244,4 +247,25 @@ fn internal_admission_state_does_not_change_public_result_equality() {
         evaluate(&trees, &ValueMap::default()),
         Activation::default()
     );
+}
+
+#[test]
+fn literal_label_utf8_copies_use_exact_byte_cost_without_clipping() {
+    let raw = "🧰é";
+    let trees = ProgramTrees::single(DynamicTree::from_nodes(vec![DynamicNode {
+        text: Some(raw.into()),
+        ..node(7, None, "ParameterBlock")
+    }]));
+    let exact_cost = 1 + raw.len() * 2;
+    let exact = with_remaining(&trees, &ValueMap::default(), exact_cost);
+    assert_eq!(exact.labels.len(), 1);
+    assert_eq!(exact.labels[0].raw_text, raw);
+    assert_eq!(exact.labels[0].text, raw);
+    assert!(exact.diagnostics.is_empty());
+    assert_eq!(exact.work_units_used, MAX_EVALUATION_WORK);
+
+    let short = with_remaining(&trees, &ValueMap::default(), exact_cost - 1);
+    assert!(short.labels.is_empty());
+    assert_eq!(refusal(&short).scope, None);
+    assert_eq!(trees.program.node(7).unwrap().text.as_deref(), Some(raw));
 }

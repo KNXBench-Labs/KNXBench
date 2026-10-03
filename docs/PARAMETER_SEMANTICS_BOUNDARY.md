@@ -415,3 +415,45 @@ removed after process checks, minimal aggregates retained. Final receipt-only
 publication and clean checkout/branch removal follow separately. UI manual
 nodeChain/fallback adoption, genuine nested manufacturer, external substitution
 and whole AR07/Alpha stay open. No source/schema/authority or lock change.
+
+### Scalar-copy source audit and rejected inheritance hypothesis — 2026-10-03
+
+Delivered14e2eb9a's checkout/two branches and own build scaffolding are actually
+removed after ancestry/process/cleanliness checks; dirty canonical root unchanged.
+Fresh clean alpha-text-output starts exactly from that current remote snapshot.
+The source audit traces binding name/value copies and literal/replacement label
+copies uncharged by the current counter. Initial ancestor-search hypothesis
+rejected before any production edit: ModuleScope::argument is explicitly local,
+parent means provenance/depth/cycle, not lexical inheritance. Lookup width already
+matches that actual rule; never infer name inheritance from full node_chain.
+This is stronger proposed scalar admission, not an old byte guarantee. ADR-0065
+records UTF-8/minimum-reservation facts, one quota, no partial label/scope and
+existing full-panel read-only behavior.
+
+Actual compile0; three copy families independently verified101/0-1-0 with
+8,000,002/8,408,071/8,393,618 observed content bytes versus proposed4,000,000,
+no timeout/OOM and public tree/production restoration. Fourth inheritance
+assertion rejected;4096 unresolved warnings establish the positive non-inheritance
+case instead. Additional exact UTF-8 cost unit101/0-1-0 and old-production
+non-inheritance baseline1/0/0 verified. Candidate core copy admission implemented;
+public GREEN proc_c73947a5b170 independently accepted5/5: library355/0/0,
+DynamicTree66/0/6, strict Clippy/fmt/whitespace/source freeze. Six private ignored
+cases not executed; five consumer sources unchanged. New-cause literal-label
+HTTP regression reuses full-prefix authority/atomic source/project checks;
+proc_8ee608d8a643 independently5/5, named1/0/0 and full39/0/0 plus strict server/
+PDB Clippy/fmt/whitespace/frozen inputs. All-prefix null authority, scoped/
+unscoped400 and project/source atomicity verified. Compiled omissions/restoration
+proc_98b4f3f512f1 independently verifies3 compiled omissions caught by4 assertions,
+canonical evaluator/all9 scoped hashes restored. Candidate-only broad public
+proc_2b136248f7f9 rejected at headers158>157 after workspace2963/0/164.
+Only new test doc separator fixed (ADR0018), no runtime/ceiling change;
+actual fix gate410 valid/157 absent/17 generated passes. Full retry
+proc_230c3f7e4db9 independently passed13/13 with615 frozen inputs and17 unchanged
+shadow bindings; workspace2963/0/164 and Web1665. Rejected first proof retained.
+No integrated/publication acceptance.
+No API, native schema, generated binding
+or Web source changed. Public outside-walk String-only
+substitute_text and its two ISSUE-08 projection callers have no Activation/refusal
+reporting and remain an explicit coordinated consumer boundary, not fixed by this
+core candidate. Other metadata/source/diagnostic copies, allocator capacity/RSS,
+general latency and whole AR07/Alpha remain outside the limited proposal.

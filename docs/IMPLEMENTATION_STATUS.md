@@ -1,5 +1,42 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 scalar-copy audit — three valid public REDs (2026-10-03)
+
+The preceding bounded module-provenance source and final receipt14e2eb9a are
+published/read back; clean own checkout/two ancestor-confirmed branches and
+build scaffolding actually removed, foreign dirty root untouched. New clean
+alpha-text-output starts from14e2eb9a, not the older canonical root checkout.
+Read-only audit confirms unmetered binding/label scalar copies. Initial ancestor
+lookup hypothesis rejected: ModuleScope::argument deliberately searches only its
+own vector, already charged correctly; do not invent inheritance or ancestor fees.
+ADR-0065 proposes scalar cost admission only. proc_49808cde0743 compiled0 and
+executed four assertions; independently accept three valid copy REDs101/0-1-0
+(8,000,002/8,408,071/8,393,618 bytes versus proposed4,000,000), no timeout/OOM.
+Fourth expected ancestor search incorrectly;4096 unresolved names prove the
+non-inheritance rule, now a positive regression, not a correctness RED.
+Six production/consumer files frozen unchanged during RED. Additional UTF-8
+exact-cost unit101/0-1-0 and positive non-inheritance baseline1/0/0 verified.
+Candidate core now admits binding bytes, raw length before reservation/scan and
+whole output slices before copy using existing quota/marker; no ancestor or API
+change. Public Core GREEN proc_c73947a5b170 independently accepted5/5: library
+355/0/0, DynamicTree66/0/6 (private ignores not executed), strict Clippy/fmt/
+whitespace and frozen inputs; five consumer sources unchanged. Added new-cause
+HTTP regression shares existing full-prefix authority/atomic project+source
+checks with inert-work case; proc_8ee608d8a643 independently5/5, named1/0/0 and
+complete39/0/0, strict server/PDB Clippy/fmt/whitespace/frozen inputs. Compiled
+copy-guard omission/restoration proc_98b4f3f512f1 independently accepted3 compiled
+mutants caught by4 actual assertions, canonical evaluator/all9 source hashes
+restored. Candidate-only broad proc_2b136248f7f9 rejected at actual headers
+158>157 after workspace2963/0/164 and other runtime stages passed. Fixed only
+new test doc separator per ADR0018, not ceiling; fix gate410 valid/157 absent
+passes. First rejected receipt/logs retained; retry proc_230c3f7e4db9 independently
+passed13/13, workspace2963/0/164 across148 blocks, Web1665,615 frozen inputs and
+17 unchanged shadow bindings. Separate in-session review has no blocking finding,
+not independent-model approval. Upstream owns ADR0064; copy policy renamed0065;
+no actual-source delivery or full
+AR07 acceptance yet. Outside-walk String-only ISSUE-08 projection remains
+coordinated owner work; no Web lock, caller or generated binding changed.
+
 ## AR07 module-scope backend leaf delivered — 2026-10-03 05:48 CEST
 
 Published/read back source/acceptance3a8b66f422bda73c9999fb214f2459c79ecea76b;

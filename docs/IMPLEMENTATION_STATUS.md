@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-03 — U17 Appearance manager (actual implementation acceptance passed)
+## 2026-10-03 — U17 Appearance manager (delivered/read back as 4d9073ca)
 
 Settings → Appearance now manages immutable builtins and admitted installed
 packs with origin/version/saved status, import/export/recovery, explicit Apply/
@@ -40,6 +40,12 @@ tracked in the current handover. U18-R1 remains IMPORTANT: representative
 editor/inspector/table/dialog/diagnostic state coverage across palettes is not
 established by the current generic root-switch fixture. U17 management acceptance
 does not close U18, native/Orca, general WCAG, ETS or global-alpha release.
+
+Publication4d9073ca092198b23fbb52411cd68edc7fab8c4a verified: owned HEAD,
+fetched main and live main equal; full Git trees equal, all697 gated source/config
+inputs and25 owned artifacts exact remotely, zero outgoing commits. Subsequent
+changes from gated f16f1e40 are Markdown only; four nonempty intended-root
+documentation audits and whitespace passed. U18 stays open with U18-R1.
 
 ## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
 

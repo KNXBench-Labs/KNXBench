@@ -401,6 +401,15 @@ Web1559/Chromium61, selected private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0
 build/lints/nonempty intended-root audits. Restored candidate GREEN is not
 latest-upstream acceptance: integrate fresh0889c102 U16/U17 with all owner
 artifacts intact, gate the combined tree, then publish/read back.
+Actual integration subsequently committed7ae116a1, both complete owner histories
+and all producer source artifacts retained. proc_096e63a3429e exited0 and
+independently20/20: workspace2953/0/164 over148 blocks, Web1665/Chromium61,
+explicit private Dynamic6/0/0 + offline SimTunnel HTTP13/0/0 without genuine
+skips or private raw logs,103/108 originals unchanged,624 frozen inputs equal
+exact committed blobs,17 bindings equal and strict build/lints/nonempty root
+audits. Five compiled mutants remain restored. This accepts ADR-0062's bounded
+work policy, not broader AR07. Acceptance metadata/publication/readback pending;
+preceding integration-pending words describe the earlier candidate checkpoint.
 Broader AR07 and
 work/byte/semantics acceptance remain open; no completed UI/native/ETS claim.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual

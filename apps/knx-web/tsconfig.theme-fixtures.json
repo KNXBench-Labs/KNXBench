@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "e2e/theme-manager-fixture.tsx",
+    "e2e/theme-state-fixture.tsx",
+    "e2e/theme-state-data.ts",
+    "e2e/theme-state.e2e.ts"
+  ]
+}

@@ -390,7 +390,7 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// An imported `ModuleInstance`'s id does not decompose as expected
     /// (D39 rule 3).
     MalformedModuleInstanceId,
-    /// The remaining sixteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
+    /// The remaining tags mirror `knx_productdb::dynamic::Diagnostic`'s
     /// own variants 1:1 (see `diagnostic_kind_and_message` in `domain.rs`).
     NoBranchMatched,
     UnparsableTest,
@@ -407,6 +407,8 @@ pub(crate) enum ParameterDiagnosticKindDto {
     ModuleCycleDetected,
     ModuleNestingTooDeep,
     ModuleExpansionBudgetExhausted,
+    /// ADR-0062: shared work refusal; the admitted panel prefix is read-only.
+    EvaluationWorkBudgetExhausted,
     MissingValue,
     ModuleWithoutId,
     /// Added by T12's module-argument work (main), merged into this

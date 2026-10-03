@@ -1070,6 +1070,107 @@ async fn non_finite_float_bounds_refuse_http_writes_without_changing_project_or_
     }
 }
 
+// AR07 resource admission, not a manufacturer grammar claim. Inert shared
+// leaves exhaust work without a huge DTO. An unseen later duplicate module
+// makes the previously admitted prefix insufficient as write authority.
+#[tokio::test]
+async fn work_limited_parameter_prefix_refuses_writes_without_changing_project_or_source() {
+    let original_module = r#"<Module Id="MOD-1_M-1" RefId="MD-1" />"#;
+    assert_eq!(WRITE_PROGRAM.matches(original_module).count(), 1);
+    let mut definitions = String::new();
+    for level in 1..=5 {
+        definitions.push_str(&format!(
+            r#"<ModuleDef Id="PUBLIC-WORK-F-{level}" Name="public work"><Dynamic>"#
+        ));
+        for branch in 0..4 {
+            definitions.push_str(&format!(
+                r#"<Module Id="PUBLIC-WORK-{level}-{branch}" RefId="PUBLIC-WORK-F-{}" />"#,
+                level + 1
+            ));
+        }
+        definitions.push_str("</Dynamic></ModuleDef>");
+    }
+    definitions.push_str(r#"<ModuleDef Id="PUBLIC-WORK-F-6" Name="public inert leaf"><Dynamic>"#);
+    let leaf_count = knx_productdb::dynamic::MAX_EVALUATION_WORK / 4usize.pow(5) + 1;
+    definitions.push_str(&"<Assign />".repeat(leaf_count));
+    definitions.push_str("</Dynamic></ModuleDef>");
+    let source = WRITE_PROGRAM.replace(
+        original_module,
+        &format!(
+            r#"{original_module}<Module Id="PUBLIC-WORK-ROOT" RefId="PUBLIC-WORK-F-1" />{original_module}"#
+        ),
+    );
+    assert_eq!(source.matches("</ModuleDefs>").count(), 1);
+    let source = source.replace("</ModuleDefs>", &format!("{definitions}</ModuleDefs>"));
+    let (_dir, products) = temp_product_db(&source);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("P-1_R-1", "5"), ("MOD-1_M-1_MI-1_P-1_R-1", "1")],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let before = state.project.lock().unwrap().clone();
+    assert_eq!(
+        before.as_ref().unwrap().installations[0].parameters.len(),
+        2
+    );
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, dto) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(field(&dto, "P-1_R-1").unwrap()["value"], "5");
+    assert!(field(&dto, "MOD-1_P-1_R-1").is_some());
+    let markers: Vec<_> = dto["diagnostics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["kind"] == "evaluationWorkBudgetExhausted")
+        .collect();
+    assert_eq!(markers.len(), 1);
+    assert_eq!(markers[0]["severity"], "warning");
+    assert!(markers[0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("read-only"));
+    assert!(markers[0]["detail"]
+        .as_str()
+        .unwrap()
+        .contains("EvaluationWorkBudgetExhausted"));
+
+    for ets_id in ["P-1_R-1", "MOD-1_M-1_MI-1_P-1_R-1"] {
+        let (status, error) = post_panel(app.clone(), 1, ets_id, "7").await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "incomplete prefix must not authorize {ets_id}"
+        );
+        assert!(
+            error["error"].as_str().unwrap().contains("not writable")
+                || error["error"]
+                    .as_str()
+                    .unwrap()
+                    .contains("no editable field")
+        );
+        assert_eq!(*state.project.lock().unwrap(), before);
+    }
+    let fields: Vec<_> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|s| s["fields"].as_array().unwrap())
+        .collect();
+    assert_eq!(fields.len(), 4);
+    for field in fields {
+        assert_eq!(field["editable"], false);
+        assert!(field.get("writeEtsId").is_some());
+        assert!(field["writeEtsId"].is_null());
+    }
+    let products = state.product_db.as_ref().unwrap().lock().unwrap();
+    let retained =
+        knx_productdb::load_source_file(&products, &knx_productdb::sha256_hex(source.as_bytes()))
+            .unwrap()
+            .unwrap();
+    assert_eq!(retained, source.as_bytes());
+}
+
 // AR07: a known unsupported controller is not a missing declaration or a
 // valid choice; hidden fields cannot be edited, but independent fields can.
 #[tokio::test]

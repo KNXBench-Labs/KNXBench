@@ -61,3 +61,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0053](0053-contributions-come-with-a-license-grant-for-dual-licensing.md) | Contributions come with a license grant, so KNXBench can be dual-licensed | Superseded by ADR-0054 | 2026-09-30 |
 | [0054](0054-no-contributor-license-agreement-agpl-only.md) | No contributor license agreement; contributions come in under the AGPL alone | Accepted | 2026-09-30 |
 | [0059](0059-button-address-programming-requires-durable-recovery.md) | Button-based address programming needs durable pre-write recovery | Accepted | 2026-10-01 |
+| [0062](0062-dynamic-evaluation-work-admission.md) | Dynamic evaluation admits repeated work before performing it | Proposed | 2026-10-03 |

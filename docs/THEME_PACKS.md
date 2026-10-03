@@ -1,7 +1,7 @@
 # KNXBench theme packs v1
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
-U16 persistence/file operations are implemented as a reviewed candidate;
+U16 persistence/file foundations are delivered/read back as 1f94808d;
 U17 management and U18 extension-wide acceptance remain pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
 standard or a claim that the application already imports themes. Decision:
@@ -41,7 +41,7 @@ lossless export. U17 owns the production manager, diagnostic presentation and
 transactional preview. U18 owns extension-wide review and closing integration
 evidence. No production import/export gesture is delivered by this foundation.
 
-## U16 persistence and file candidate
+## U16 delivered persistence and file foundations
 
 `themePackFiles.ts` checks declared and actual bytes, uses fatal UTF-8 with a
 leading BOM accepted, then reuses duplicate-aware admission. Supported-pack
@@ -104,7 +104,8 @@ configuration inputs and all 420 private files remain unchanged. Six explicitly
 selected offline suites/11 private cases passed; this is narrower than U15's
 historical twenty-case scope. The product matrix measured 115 instances and
 113 unique packages, with status-only per-item outcomes and no private names.
-Publication/readback remain pending. U17 still owns visible controls/diagnostics and
+Source 1f94808d5d9985b38fcf85021403bb4b05fea3e7 is published; exact remote ref,
+20 owned artifacts and all 622 gated inputs read back equal. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
 
 ## Evidence and inspected baseline

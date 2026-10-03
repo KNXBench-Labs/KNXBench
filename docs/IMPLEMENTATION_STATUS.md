@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-03 — U16 acknowledged theme persistence (integrated acceptance, publication pending)
+## 2026-10-03 — U16 acknowledged theme persistence (foundation delivered as 1f94808d)
 
 - Implemented strict bounded UTF-8/BOM import, validated deterministic export,
   detached/frozen content-bound theme plans, explicit replacement consent and
@@ -23,7 +23,9 @@
   Six explicitly selected offline suites/11 private cases passed, including the
   115-instance/113-unique product matrix. This is narrower than U15's historical
   twenty-case scope. All 622 protected inputs and 420 private files unchanged;
-  all 17 bindings equal. Publication/readback remain pending.
+  all 17 bindings equal. Published 1f94808d5d9985b38fcf85021403bb4b05fea3e7;
+  exact live/fetched remote ref, all 20 owned artifact blobs and 622 gated inputs
+  read back equal. Receipt-only metadata/owned cleanup are tracked separately.
   U17 production manager/diagnostics/preview and U18 closing review
   remain open; no independent/native/Orca/ETS/alpha-release approval implied.
 

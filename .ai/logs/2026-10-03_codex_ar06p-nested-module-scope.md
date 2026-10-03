@@ -94,3 +94,22 @@ Dynamic unknown-diagnostic paths still use their existing templates; retained
 bytes, not a new full nested-XPath guarantee, preserve the original XML.
 KL-149 cb5781c7 is fully delivered and cleaned; shared root/statistics owner,
 foreign worktrees/processes, original data and hardware remain untouched.
+
+## Actual acceptance / delivery — 2026-10-03 23:05 CEST
+
+Actual integrated cbe9952f fresh16 separately verified: Rust153 blocks/3009/0/166,
+compiled ignored166, Web1702, Chromium82, bindings17 literal/identifier-preserving
+token-equal/eight controls, all logs/source706 exact. Same authorized private
+test-profile baseline RED/candidate GREEN reexecuted on actual binary; durable
+scope census/original hashes/privacy closed keysets checked independently.
+Full853 Release receipt retains its original identity and unchanged706 inputs.
+Code publication preflight refused incoming462833b9 stats-only change before
+push; normal merge1b215d51 retains that blob byte-exact, fresh doc5 accepted.
+Normal publication/live/fetched/source readback equal;14 owned build/snapshot/
+browser directories removed. Public/aggregate receipts and logs retained.
+
+KL150 storage admission checked/lifted only, not R-MODULE-04 runtime/allocation/
+parameter-write semantics, auto repair of existing rows or general compatibility.
+Closing exact Markdown gates/publication/readback/final checkout hygiene remain.
+No root sync/stats regeneration/foreign mutation or private original/raw records.
+Next KL151/152 measured limits, KL153 research; wider Alpha remains open.

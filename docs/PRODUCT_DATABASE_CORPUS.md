@@ -612,6 +612,14 @@ scope. Final metadata/own cleanup do not change measured format policy.
 
 ## Nested-definition full CLI pair — 2026-10-03 22:35 CEST
 
+Delivery checkpoint 2026-10-03 23:05 CEST: actual integrated cbe9952f passes
+fresh public16 and the authorized one-case private baseline RED/candidate GREEN.
+Its706 producer/config inputs equal the measured full853 candidate. Code
+published as1b215d51/live/fetched equal after preserving an incoming stats-only
+commit byte-exact and rerunning doc5. Fourteen own build/snapshot/browser
+directories removed; final metadata/checkout hygiene pending. Storage admission
+is lifted only; selected115/113 and R-MODULE-04 runtime acceptance stay separate.
+
 KL-150 candidate a2aa4b7 now has a complete offline original-filename853
 before/after run, independently reconciled against the retained aggregate and
 unchanged manifest/all original input hashes. Same fresh Release profile;

@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06P KL-150 scoped code delivered — 2026-10-03 23:05 CEST
+
+Actual integrated cbe9952f passed fresh complete public16 and the authorized
+private same-profile baseline RED/candidate GREEN. Source706 is identical to
+the full853 Release CLI pair (installed687→688, one constraint refusal admitted,
+all other outcomes unchanged; originals rehashed, no raw/private item output).
+Code published as1b215d51 after adopting a foreign stats-only commit byte-exact;
+fresh doc5 gates and live/fetched equality verified. Fourteen owned build/
+snapshot/browser directories removed; final metadata/checkout hygiene remains.
+KL150 fresh-install storage/key-scoping is lifted, not nested runtime/allocation/
+parameter-write semantics or automatic old-catalog repair. AR06P/AR07/full
+Alpha remain open; KL151/152 require measurements, KL153 bounded research.
+
 ## AR06P KL-150 full candidate verification — 2026-10-03 22:35 CEST
 
 Owned candidate a2aa4b7 is committed, source706 exact; not published yet.

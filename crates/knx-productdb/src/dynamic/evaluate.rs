@@ -1819,10 +1819,18 @@ fn bind_arguments(
                         );
                         None
                     }
-                    (_, Some(name)) => Some(BoundArgument {
-                        name: name.to_string(),
-                        value: value.to_string(),
-                    }),
+                    (_, Some(name)) => {
+                        // Admit scalar content before allocating owned bindings.
+                        // A large value is not cheap merely because it is one arg.
+                        let copied_bytes = name.len().saturating_add(value.len());
+                        if !activation.admit_work(scope, child_id, copied_bytes) {
+                            return None;
+                        }
+                        Some(BoundArgument {
+                            name: name.to_string(),
+                            value: value.to_string(),
+                        })
+                    }
                     // Declared, typed, and nameless: there is no token a
                     // placeholder could spell, so the value can never be
                     // reached.
@@ -1938,10 +1946,19 @@ fn substitute_with(
     node_id: i64,
     mut activation: Option<&mut Activation>,
 ) -> Option<String> {
-    if !raw.contains(PLACEHOLDER_OPEN) {
-        return Some(raw.to_string());
+    if let Some(activation) = activation.as_deref_mut() {
+        // Input/reservation and the retained raw_text allowance are admitted
+        // before scanning or allocating. Output copies pay separately below.
+        // This bounds content cost, not exact allocator capacity or total RSS.
+        if !activation.admit_work(source_scope, node_id, raw.len()) {
+            return None;
+        }
     }
     let mut out = String::with_capacity(raw.len());
+    if !raw.contains(PLACEHOLDER_OPEN) {
+        return append_substitution(&mut out, raw, &mut activation, source_scope, node_id)
+            .then_some(out);
+    }
     let mut rest = raw;
     while let Some(open) = rest.find(PLACEHOLDER_OPEN) {
         let after_open = &rest[open + PLACEHOLDER_OPEN.len()..];
@@ -1956,13 +1973,28 @@ fn substitute_with(
                 return None;
             }
         }
-        out.push_str(&rest[..open]);
+        if !append_substitution(
+            &mut out,
+            &rest[..open],
+            &mut activation,
+            source_scope,
+            node_id,
+        ) {
+            return None;
+        }
         match (is_argument_name(name), scope.and_then(|s| s.argument(name))) {
-            (true, Some(value)) => out.push_str(value),
+            (true, Some(value)) => {
+                if !append_substitution(&mut out, value, &mut activation, source_scope, node_id) {
+                    return None;
+                }
+            }
             (true, None) => {
-                out.push_str(PLACEHOLDER_OPEN);
-                out.push_str(name);
-                out.push_str(PLACEHOLDER_CLOSE);
+                for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
+                    if !append_substitution(&mut out, part, &mut activation, source_scope, node_id)
+                    {
+                        return None;
+                    }
+                }
                 if let Some(activation) = activation.as_deref_mut() {
                     activation.diagnose(
                         source_scope,
@@ -1977,15 +2009,37 @@ fn substitute_with(
                 }
             }
             (false, _) => {
-                out.push_str(PLACEHOLDER_OPEN);
-                out.push_str(name);
-                out.push_str(PLACEHOLDER_CLOSE);
+                for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
+                    if !append_substitution(&mut out, part, &mut activation, source_scope, node_id)
+                    {
+                        return None;
+                    }
+                }
             }
         }
         rest = &after_open[close + PLACEHOLDER_CLOSE.len()..];
     }
-    out.push_str(rest);
-    Some(out)
+    append_substitution(&mut out, rest, &mut activation, source_scope, node_id).then_some(out)
+}
+
+/// Copy an entire UTF-8 slice only after admission; never clip a code point
+/// or publish the partially built label when the shared work budget refuses.
+/// Outside-walk String-only substitution deliberately has no quota/reporting
+/// context; its consumer boundary remains separate (ADR-0065).
+fn append_substitution(
+    out: &mut String,
+    part: &str,
+    activation: &mut Option<&mut Activation>,
+    source_scope: Option<&Rc<ModuleScope>>,
+    node_id: i64,
+) -> bool {
+    if let Some(activation) = activation.as_deref_mut() {
+        if !activation.admit_work(source_scope, node_id, part.len()) {
+            return false;
+        }
+    }
+    out.push_str(part);
+    true
 }
 
 /// Whether `name` is shaped like an argument name — `Identifier50_t`'s

@@ -23,6 +23,7 @@ export const MOTION_LEVELS: readonly MotionLevelDef[] = [
 export const MOTION_STYLES: readonly MotionStyleDef[] = [
   { id: "apple", name: "Smooth" },
   { id: "glitch", name: "Glitch" },
+  { id: "crt", name: "CRT" },
 ];
 
 const DEFAULT_MOTION_LEVEL_ID = "standard";

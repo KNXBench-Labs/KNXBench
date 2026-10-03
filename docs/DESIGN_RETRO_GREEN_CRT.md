@@ -1,5 +1,59 @@
 # Modern Retro Green CRT
 
+## Production animation integration (2026-10-03, local)
+
+The previously proposed interaction effects now run in the real React `App`,
+`ProjectExplorer` and `GroupAddressTable`, on the isolated branch
+`feat/crt-interactions-20261003`. No main merge, commit or push is implied.
+The existing tree/workspace keyboard controllers are reused unchanged.
+
+Select **Settings → Appearance → Motion style → CRT** separately from the theme:
+
+- **Standard:** 250ms ease-out left-to-right hover/focus/selection fill, a bounded
+  leading light and an activation glow capped at 120ms. Repeated bright feedback
+  is bounded by a 600ms per-stream gap without throttling the actual actions.
+- **Subtle:** existing 120ms fill only, no transient light or activation flash.
+- **Off / OS reduced motion:** static feedback only; running CRT effects cancel.
+- Manual **Save/Save As** glows when its existing request begins, not when it is
+  assumed to succeed. Cancellation/stale-snapshot guards and errors remain intact;
+  autosave does not glow. Save still uses the shared palette accent.
+
+The palette remains **v1 / 1.1.0** and carries no motion or executable CSS.
+Fill colors use the current shared accent/surface mixtures, preserving the
+multi-selection rail. Save-only purple, exact `#003300`, additional input-focus
+glow and broader component styling remain separate semantic-role proposals.
+Importing the palette does not silently enable animations or override Motion Off.
+
+Production evidence:
+
+- `design/verify-crt-interactions.mjs` drives the actual application entry point,
+  real browser file picker, mocked native-open projection and actual manual Save
+  path. All API requests are intercepted or blocked; startup discovery is mocked.
+  No project file, real backend/settings or KNX hardware is read/written.
+- [Production browser receipt](../design/retro-green-crt.production.receipt.json)
+  records native expiry, selection/checkbox independence, existing keyboard
+  navigation, mid-effect Off/reduced-motion cancellation, zoom clipping, Save
+  refusal/Enter behavior and separation from Smooth.
+- [Production screenshot](../design/retro-green-crt.production.png) samples a real
+  native 125ms frame at a fixed viewport with Playwright Clock paused. Informational
+  toasts are dismissed through their real buttons for the capture. Expiry tests
+  use real timers separately; the still image is not a timing test.
+- `crtInteractions.test.ts`, `crtStyles.test.ts` and the strengthened motion tests
+  cover admission, bounded effects, cancellation, disposal, clipping and bootstrap.
+  Existing motion/token/selection/application regressions remain in the full suite.
+
+Reproduce after `npm ci --ignore-scripts` in `apps/knx-web`, then start
+`npx vite --config vite.fixtures.config.ts` there. From the worktree root run
+`node --experimental-strip-types design/verify-crt-interactions.mjs`.
+Use only that no-proxy local fixture server and `/usr/bin/chromium`. The Node flag
+admits the repository's synthetic TypeScript fixture import. The script overwrites
+only its own production screenshot/receipt. Native WebKitGTK/Orca and full
+tree/grid accessibility remain unclaimed; see the ADR-0022 follow-up.
+
+The following design-study/publication entries are historical. In particular,
+their original “not integrated” statements describe that earlier delivery, not
+the production animation follow-up above.
+
 ## Reference-driven revision — 1.1.0 (2026-10-03)
 
 This revision develops the existing CRT design from the user's monitor photograph:
@@ -122,7 +176,11 @@ The standalone study is a visual/interaction reference for those changes, not
 proof that they are enabled in the production UI. It does not replace native
 WebKitGTK, real screen-reader, all-component contrast or broad WCAG acceptance.
 
-## Proposed production changes — NOT implemented in this delivery
+## Original production proposals — design-study delivery, before the follow-up
+
+The application-owned animation and existing keyboard paths are implemented/
+verified above. The semantic-token additions and broader accessibility proposals
+below are still proposals; this section preserves the original design rationale.
 
 ### 1. Separate semantic palette roles, with an explicit token-version policy
 

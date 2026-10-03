@@ -154,6 +154,13 @@ pub(crate) fn attribute_is_known(kind: &str, name: &str, value: Option<&str>) ->
 /// One open element's node id and the position its next child will get.
 type Frame = (i64, i64);
 
+/// Lexical definition scope, including the next argument's document position.
+/// A nested definition must not overwrite its enclosing definition's state.
+struct ModuleDefScope {
+    id: String,
+    next_argument_position: i64,
+}
+
 /// Reads every `Dynamic` tree out of one `ApplicationProgram` file's bytes
 /// and stores it. Designed to run standalone over a single blob — the
 /// caller supplies only the connection, the bytes and their content hash —
@@ -190,7 +197,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
     let mut entities = EntityCounts::default();
 
     let mut program_id = String::new();
-    let mut module_def_id = String::new();
+    let mut module_defs: Vec<ModuleDefScope> = Vec::new();
     let mut skip_program = false;
     let mut seen_programs = HashSet::new();
 
@@ -198,10 +205,6 @@ pub(crate) fn parse_dynamic_trees_detailed(
     // included: one frame per currently-open ancestor.
     let mut stack: Vec<Frame> = Vec::new();
     let mut next_node_id: i64 = 0;
-    // Document position of the next `ModuleDef/Arguments/Argument`, reset
-    // at every `ModuleDef` the same way `next_node_id` resets at every
-    // `Dynamic` root.
-    let mut next_argument_position: i64 = 0;
 
     loop {
         buf.clear();
@@ -223,12 +226,11 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     true,
                     source_sha256,
                     &mut program_id,
-                    &mut module_def_id,
+                    &mut module_defs,
                     &mut skip_program,
                     &mut seen_programs,
                     &mut stack,
                     &mut next_node_id,
-                    &mut next_argument_position,
                     &mut unknown,
                     &mut entities,
                 )?;
@@ -243,12 +245,11 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     false,
                     source_sha256,
                     &mut program_id,
-                    &mut module_def_id,
+                    &mut module_defs,
                     &mut skip_program,
                     &mut seen_programs,
                     &mut stack,
                     &mut next_node_id,
-                    &mut next_argument_position,
                     &mut unknown,
                     &mut entities,
                 )?;
@@ -257,7 +258,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
                 let name = e.local_name();
                 let name: &str = name.as_ref();
                 if name == "ModuleDef" {
-                    module_def_id.clear();
+                    module_defs.pop();
                 }
                 stack.pop();
             }
@@ -285,37 +286,31 @@ fn handle_start_or_empty(
     is_start: bool,
     source_sha256: &str,
     program_id: &mut String,
-    module_def_id: &mut String,
+    module_defs: &mut Vec<ModuleDefScope>,
     skip_program: &mut bool,
     seen_programs: &mut HashSet<String>,
     stack: &mut Vec<Frame>,
     next_node_id: &mut i64,
-    next_argument_position: &mut i64,
     unknown: &mut UnknownCollector,
     entities: &mut EntityCounts,
 ) -> Result<(), ProductDbError> {
     match name {
         "ApplicationProgram" => {
             *program_id = a.get("Id").unwrap_or_default().to_string();
-            module_def_id.clear();
+            module_defs.clear();
             let first_declaration = seen_programs.insert(program_id.clone());
             *skip_program =
                 !first_declaration || program_should_be_skipped(conn, program_id, source_sha256)?;
         }
         "ModuleDef" => {
-            *module_def_id = a.get("Id").unwrap_or_default().to_string();
-            *next_argument_position = 0;
-            if !is_start {
-                // `quick-xml` never emits an `Event::End` for a self-closing
-                // element, so a `<ModuleDef .../>` would otherwise leak its
-                // id forward onto every element until the next
-                // `ModuleDef`/`ApplicationProgram` (fix round 1, finding 2).
-                // It has no children to attribute anyway — self-closing
-                // means no content — so the scope reverts synchronously
-                // here instead of waiting for an `End` that will never
-                // come.
-                module_def_id.clear();
+            if is_start {
+                module_defs.push(ModuleDefScope {
+                    id: a.get("Id").unwrap_or_default().to_string(),
+                    next_argument_position: 0,
+                });
             }
+            // A self-closing definition has no children and no End event.
+            // Leave the enclosing scope intact instead of clearing it.
         }
         // Design D47: `ModuleDef/Arguments/Argument` is the declaration a
         // `Module`'s `NumericArg`/`TextArg` binding points at, and the only
@@ -327,17 +322,19 @@ fn handle_start_or_empty(
         // site: an element that happens to be called `Argument` inside a
         // `Dynamic` tree (none in the researched corpus) stays a plain
         // `dynamic_node` row.
-        "Argument" if !module_def_id.is_empty() && stack.is_empty() => {
-            if !*skip_program {
-                insert_module_def_argument(
-                    conn,
-                    program_id,
-                    module_def_id,
-                    *next_argument_position,
-                    a,
-                )?;
+        "Argument" if stack.is_empty() => {
+            if let Some(scope) = module_defs.last_mut().filter(|scope| !scope.id.is_empty()) {
+                if !*skip_program {
+                    insert_module_def_argument(
+                        conn,
+                        program_id,
+                        &scope.id,
+                        scope.next_argument_position,
+                        a,
+                    )?;
+                }
+                scope.next_argument_position += 1;
             }
-            *next_argument_position += 1;
         }
         _ => {
             handle_dynamic_element(
@@ -345,7 +342,7 @@ fn handle_start_or_empty(
                 next_node_id,
                 conn,
                 program_id,
-                module_def_id,
+                module_defs.last().map_or("", |scope| scope.id.as_str()),
                 *skip_program,
                 name,
                 a,

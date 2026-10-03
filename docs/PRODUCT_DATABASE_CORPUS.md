@@ -609,3 +609,22 @@ run identity, not a newly claimed private run. Delivery362fec24 is published/
 live/fetched read back: refs0/0, source704 and ten owned artifacts byte-exact.
 Only KL-149 dispatch is lifted; the existing115/113 pinned matrix is a different
 scope. Final metadata/own cleanup do not change measured format policy.
+
+## Nested-definition storage candidate — 2026-10-03 20:56 CEST
+
+AR06P KL-150 has a bounded one-package offline before/after witness, not a new
+853-file measurement. An exact committed pre-fix parser and the candidate were
+compiled with the same test profile and identical other705 source/config
+inputs. The explicitly authorized nested package fails the baseline's named
+private test and passes the candidate's exact ignored test (0-1-0 versus1-0-0).
+Candidate lexical scope counts independently agree with durable dynamic-node
+scope counts; every reported ZIP member matches its retained original bytes,
+retry succeeds, original package and853-entry manifest are unchanged. No raw
+private output/item records or temporary private directories remain.
+Public9 focused tests, ProductDB625/0/25, three compiled mutants/five named
+failures and a separate public exact-baseline RED support the same storage
+correction. Full original-filename853 CLI measurement, broad/current-upstream
+acceptance, publication/readback and owned cleanup are still pending. Do not
+infer a new full-corpus install total from this one-case witness or replace
+the separately pinned115/113 matrix. Nested runtime/allocation semantics remain
+AR07 work, not a side effect of successful source admission.

@@ -360,9 +360,20 @@ retains its original run identity. Scoped KL-149 delivery362fec24 is
 published/live/fetched read back at equal0/0: source704 and ten exact owned
 artifacts, full owner history preserved. Final five acceptance Markdown gates
 passed;16 completed own build/snapshot/shadow/XDG directories removed with
-all aggregate/public evidence retained. Closing metadata and final
-target/checkout/branch cleanup remain, not new policy acceptance.
-`KL-150` remains next after delivery; `KL-151`/`KL-152` need measurement before
+all aggregate/public evidence retained. Closing metadata cb5781c7 is also
+published/live/fetched byte-verified; final target, seventeen runner/config
+scaffolds, owned clean checkout and ancestor-confirmed branch removed.
+`KL-150` storage candidate is verified at 2026-10-03 20:56 CEST: exact synthetic
+UNIQUE-constraint RED, nine public focused tests/ProductDB625/0/25, three compiled
+scope mutants/five named failures and an exact committed pre-fix baseline RED.
+One authorized offline private nested package is baseline RED/candidate GREEN;
+independent lexical/stored scope counts, original/retained member bytes and
+retry agree, originals unchanged, no raw/private item logs. All706 candidate
+source/config inputs exact. Separate in-session review is not independent-model
+approval. Full853 CLI measurement, fresh broad/current-upstream acceptance,
+publication/readback and own cleanup remain; KL150 stays unchecked. No new
+R-MODULE-04 runtime semantics, migration/schema, limits, UI or bus behavior.
+`KL-151`/`KL-152` need measurement before
 any limit changes. `KL-153` is bounded research.
 
 Ordered by value per effort:

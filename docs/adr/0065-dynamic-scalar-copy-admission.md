@@ -1,7 +1,7 @@
 # ADR 0065: Dynamic evaluation admits scalar copies before allocating them
 
 Date: 2026-10-03
-Status: Proposed — public Core/HTTP, three compiled omissions/restoration and broad candidate verified; actual integration/publication pending.
+Status: Proposed — actual merged bounded policy independently accepted; publication/readback pending.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0062's bounded work-admission policy, not KNX grammar or storage.
 
@@ -96,6 +96,32 @@ history; this proposal was renumbered0065 before integration. Historical0064
 references in dispatch logs identify the provisional copy proposal, not that
 upstream decision. The retry reused its own same-root target after the header
 fix; actual integration must use a wholly fresh target and committed hashes.
+
+## AR07 scalar-copy actual integration accepted — 2026-10-03 09:52 CEST
+
+Reviewed source2e7a41c3 conventionally merged with published c07e6403 at
+9f512ab3e302014d1b4c3d2af33cd33712a052ad; upstream ADR0064/owner histories
+preserved, own scalar policy ADR0065. Actual proc_3ea5d4e7afa4 exit1 is retained:
+private Dynamic Rust6/0/0 exit0 but closed skip classifier rejected two output
+signals. Private raw lines were not persisted; do not claim recovered text.
+Source-backed public regression proves bool-valued PackageInstallReport.skipped
+and registered libtest-prefix cases; corrected classifier5 positives/7 negatives
+pass, unknown or missing-data signals still rejected. No production change.
+Continuation proc_8dd254bb5c75 exit0 independently accepted20 stages: five public
+commands reused from the exact same committed617-input tree (not a wholly fresh
+20-command run),13 commands and2 final checks newly executed. Workspace2984/0/165
+over149 blocks, Web1665, intercepted Chromium61; newly selected private Dynamic
+6/0/0 and in-memory offline SimTunnel Download14/0/0, zero unknown skip signals.
+All617 current/committed source/config hashes and17 shadow bindings equal;
+420 originals including103 product archives unchanged across the complete new
+private window. Hashing420 files does not mean parsing420 files. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+Earlier candidate/header failure and three compiled omission mutants/restoration
+remain scoped to their actual runs, not relabelled. Separate in-session review,
+not an independent-model verdict. Acceptance-doc gates/publication/readback
+pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
+UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
+remain open. No live bus/vendor code or private raw logs; UI owner untouched.
 
 ## Remaining explicit boundary
 

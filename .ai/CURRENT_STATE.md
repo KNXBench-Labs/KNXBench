@@ -1,3 +1,19 @@
+- **Last Agent:** codex (UI session / U18 closure reviewed and documented)
+- **Timestamp:** 2026-10-03 15:39 CEST
+- **Completed:** Actual24 receipts verified on1660911b; Web1702, Chromium82, representative10/10, Rust2995/0/165 over150 blocks,28 selected offline cases including matrix115/113,17 bindings and703 protected inputs exact.421 private files unchanged; links/transient matrix removed. Normal Markdown-only integrationef4cfb92 preserves latest authoritative a23cf987 suffix. Separate closing self-review has no new blocking production finding; U18-R1 real-state gap closed. Current goal/status/roadmap/format/ADR/owned limitation rows reconciled. Four closure doc gates and whitespace pass; old heading anchor computed from gate semantics, corrected linked deletion fails by name, restored382 links/248 Markdown files green. Initial unreferenced anchor control survivor retained honestly.
+- **Pending/Next Steps:** Commit only nine owned closure artifacts, publish from this isolated branch, read back live/fetched refs, full trees, all703 gated inputs and exact owned artifacts. Then mark delivery checkbox and UI reservation released, publish final truthful metadata/readback, close tracker and remove only owned worktree/branch/build/scratch artifacts. Do not claim U18 fully delivered before remote proof or root synchronization. No fresh full24 execution is claimed on later Markdown-only commits.
+- **Notes for Codex oder Claude:** Aggregate receipt .ai/logs/2026-10-03_codex_ui-theme-closing_receipt.json preserves accepted stages, controls, source-freeze commitment and self-review scope before scratch cleanup. All new source is synthetic test-only; no core/domain/protocol change. Historical public-only receipt pending-offline flags require coupled actual-chain PASSED receipt. Keep inherited histories and owner dispositions. No subagents/quota/real KNX/native/ETS/global Alpha claims; no secrets/raw private corpus.
+
+### For the goal.md session:
+
+U14–U18 actual theme-extension acceptance is complete; remote publication/readback and UI reservation release are the last pending delivery steps at this entry. U18-R1 (unnumbered theme-management fixture-coverage gap) is fixed; no numbered KNOWN_LIMITATIONS entry is added/renumbered. Refresh canonical-main statistics and adopt this boundary into global acceptance/triage, not the UI checkout's temporary history. Native WebKitGTK/Orca/general WCAG, global Alpha/ETS and live commissioning remain outside this acceptance. Existing owner dispositions, U0–U13 provenance and all hardware consent boundaries are unchanged.
+
+### For the commissioning session:
+
+No commissioning route, consent, hardware operation or activity UI changed. Appearance packs do not authorize a bus write. Continue only that session's separately scoped goal.
+
+---
+
 - **Last Agent:** codex (UI session / U18 actual24 accepted, closure pending)
 - **Timestamp:** 2026-10-03 15:16 CEST
 - **Completed:** Persistent proc_e95dfc308724 exited normally. Exact actual receipts on1660911bdd5bf350c6042bbeb9a2b694ad66fa41 verified:18 repository+6 offline commands, Web1702, Chromium82, representative10/10, ordinary Rust2995/0/165 across150 blocks, three named rendered-style failures. All703 frozen inputs match both working files and committed blobs. Offline inventory reconciles11 product+16 injected-server+1 matrix cases=28; matrix115 instances/113 unique packages. All421 private input files (420 OriginalData files plus project_dump) unchanged; own links and transient matrix removed. No live/network/hardware operation.

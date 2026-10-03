@@ -81,8 +81,12 @@ Rust2984/0/165,27 selected private offline cases plus the115-instance matrix,
 17 equal bindings and697 source/config inputs/420 private files unchanged.
 Publication/readback is recorded in the current handover. Eleven manager browser
 flows and31 actual parent/five root cases cover the management contract.
-U18 in [goal-ui](../goal-ui.md) still owns extension-wide closing
-review/mutation/roundtrip and representative-component visual acceptance.
+U18 in [goal-ui](../goal-ui.md) passes actual24-command extension acceptance
+on1660911b: Web1702, Chromium82, representative10/10, Rust2995/0/165,28
+offline cases including the115-instance matrix;703 source/config inputs and421
+private files unchanged. Closing self-review settles U18-R1 with real component
+states and detected rendered-style controls, not native/Orca/general WCAG proof.
+Publication/readback and owned cleanup are tracked in the current handover.
 Existing built-ins/System stay
 available; no arbitrary CSS, external assets or new alpha release blocker.
 

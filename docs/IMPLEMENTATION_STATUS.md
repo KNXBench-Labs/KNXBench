@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 work-admission candidate — public GREEN, not delivered (2026-10-03)
+
+The owned `alpha-parameter-budget` candidate adds shared evaluator work
+admission and explicit truncation reporting; incomplete parameter-panel prefixes
+are read-only. Original and sibling public REDs, then a compiled HTTP 200/400
+write-authority RED, precede their respective fixes. ProductDB Library 354/0/0,
+DynamicTree 62/0/6, full parameter HTTP 35/0/0 and server Library 204/0/2 pass;
+targeted repeats are subsets. Strict ProductDB/server Clippy, formatting,
+whitespace, source freeze, nonempty-project refusal and original-source
+retention checks pass. No private or live-hardware acceptance is inferred.
+
+[ADR-0062](adr/0062-dynamic-evaluation-work-admission.md) remains Proposed:
+five compiled behavioral mutations and exact source restoration are independently
+accepted at proc_43b041004d63; first lock-only timeout rejected separately.
+Actual candidate proc_cd67fb854490 exited0 and all20 stages independently pass:
+workspace2944/0/164, Web1559, intercepted Chromium61, private Dynamic6/0/0 and
+offline SimTunnel HTTP13/0/0,103/108 originals unchanged,616 frozen inputs,
+17 equal shadow bindings and strict build/lints/nonempty intended-root gates.
+This is restored candidate GREEN, not current-upstream acceptance. Fresh
+origin/main0889c102 U16/U17 must be preserved/integrated and the combined tree
+gated before publication. UI token/localization adoption belongs to its owner.
+The work cap is not a complete byte/RSS/latency/general-depth guarantee; broader
+AR07 and Alpha remain incomplete. See [the bounded evidence](PARAMETER_SEMANTICS_BOUNDARY.md).
+
 ## AR07 scoped Float delivery — 2026-10-03 00:04 CEST
 
 Scoped Float guard published/read back as da3bc9472610341a0d56bb13a6cfc016bb33eb2d.

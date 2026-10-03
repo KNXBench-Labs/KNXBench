@@ -254,3 +254,74 @@ rejected aggregate evidence plus next read-only audit retained. Shared dirty
 root/U16 untouched; integrated root statistics remain with their owner.
 Broader AR07 and Alpha remain incomplete; next bounded diagnostic/inert-work
 budget proof is not yet executed, no new resource/semantic support claimed.
+
+## Resource admission gap reproduced — 2026-10-03
+
+The preceding no-RED statements describe the earlier Float checkpoint.
+Fresh `alpha-parameter-budget` starts from published `be88e7b9`. Its public
+synthetic shallow fan-out produces 2,000,896 ordinary diagnostics without
+activating references/labels or exhausting the expansion quota. The original
+compiled regression fails its proposed 2,000,000-output ceiling: Rust exit101,
+zero passes, one assertion failure, zero ignored, elapsed1.89 seconds.
+Compilation succeeds; bounded CPU/address-space/wall limits do not trip.
+Independent log/source reconciliation confirms the expected count assertion
+and unchanged production evaluator. No private source, bus or vendor code ran.
+
+`activations_recorded` excludes ordinary diagnostics, while `diagnose` pushes
+without admission. Inert visits, skipped non-reference descendants and
+successful argument binding are sibling repeated-work paths; separate public
+regressions subsequently compiled and each reproduced the missing marker;
+the original inert RED stopped at its first Assign case. Other inert kinds
+are covered by the later GREEN run, not separately claimed as original REDs.
+[ADR-0062](adr/0062-dynamic-evaluation-work-admission.md) records the proposed
+shared work-admission contract before production changes. The reproduction
+checkpoint did not claim implementation or GREEN; the later candidate below
+does not claim a full memory/latency guarantee, UI acceptance or delivery.
+Broader AR07 remains open, including variable-sized output and outside-evaluator
+consumers, manufacturer semantics and complete compatibility acceptance.
+
+## Public work-admission and write-refusal candidate — 2026-10-03
+
+`proc_ce7c8cb5fef3` passed nine ProductDB stages, reconciled against actual
+compiler/test logs: Library 354/0/0, DynamicTree 62/0/6, eight small admission
+boundary units, strict Clippy, formatting, whitespace and frozen source scope.
+All four repeated-work families pass; the separately targeted four are subsets,
+not additional unique tests. The previous GREEN attempt timed out acquiring
+shared locks before compilation and remains rejected, not a failed Rust test.
+
+The public HTTP regression then compiled and reproduced a second defect:
+an admitted prefix authorized an ordinary write with HTTP 200 instead of 400
+(Rust 101, 0/1/0). The server now removes all write targets after work or the
+existing activation/expansion truncation marker. Partial results remain visible
+for inspection, never as complete write authority.
+
+`proc_61273ee26c21` passed six public backend stages: named refusal regression
+1/0/0, full parameter HTTP 35/0/0, server library 204/0/2, strict Clippy for
+ProductDB and server, formatting/whitespace and source freeze. Both ordinary
+and module-qualified POSTs refuse; the entire nonempty project and retained
+source bytes remain unchanged. All four retained fields expose null write
+targets and are read-only. Ordinary complete-evaluation writes still pass the
+existing suite. No private fixtures, bus or vendor code ran.
+
+Separate in-session bounded source/security review has no blocking finding,
+not an independent-model approval. `proc_43b041004d63` independently accepted
+five compiled behavioral mutations: walk/skipped-descendant/binding/diagnostic
+admission and prefix write authority, each compile0 then intended Rust101/0-1-0
+assertion failure. Canonical evaluator/server bytes and full source hashes
+restored; initial pre-start lock-only timeout remains rejected separately.
+
+Actual candidate proc_cd67fb854490 exited0 and all20 stages independently pass:
+workspace2944/0/164, Web1559, intercepted Chromium61, selected private Dynamic6
+and offline SimTunnel HTTP13 without skips. All103 product archives/108 originals
+unchanged,616 frozen code/config inputs and17 equal shadow bindings. Strict
+workspace Clippy/build/format/dependency and nonempty intended-root audits pass.
+Projection42 is a workspace subset. First verifier's invented hyphenated corpus
+marker was corrected against the original emitter/log; no gate replay.
+
+ADR-0062 remains Proposed pending fresh upstream0889c102 U16/U17 integration,
+actual merged-source acceptance and publication readback. Candidate20/20 is
+not latest-upstream evidence and does not inherit the old Float acceptance.
+Manual Web
+token/localization adoption belongs to the UI owner. General non-module depth,
+variable-sized data and external substitution consumers remain outside this
+work-unit bound. This candidate is not full AR07 or ETS compatibility closure.

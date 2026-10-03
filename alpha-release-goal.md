@@ -356,14 +356,18 @@ atomic. All originals unchanged, no private raw/item logs. Normal fresh U18
 merge dd5a350c independently passes NEW actual16: Rust3000/0/165/151 blocks,
 Web1702, Chromium82 inventory/pass,17 bindings,704 committed-exact inputs.
 All285 CLI Rust/build/test inputs equal the measured producer; private evidence
-retains its original run identity. Publication/readback/cleanup still pending,
-so KL-149 is not yet checked.
+retains its original run identity. Scoped KL-149 delivery362fec24 is
+published/live/fetched read back at equal0/0: source704 and ten exact owned
+artifacts, full owner history preserved. Final five acceptance Markdown gates
+passed;16 completed own build/snapshot/shadow/XDG directories removed with
+all aggregate/public evidence retained. Closing metadata and final
+target/checkout/branch cleanup remain, not new policy acceptance.
 `KL-150` remains next after delivery; `KL-151`/`KL-152` need measurement before
 any limit changes. `KL-153` is bounded research.
 
 Ordered by value per effort:
 
-- [ ] `KL-149` (P2): compare `.knxprod`/`.vd*` extensions case-insensitively in `knx products ingest`, matching `install_package`. Add a CLI regression test with an upper-case name and a negative control showing that `.KNXPROJ` still routes to the project importer. Expected effect from measurement: Hager/Berker installs go from 2 to 45 of 48.
+- [x] `KL-149` (P2): compare `.knxprod`/`.vd*` extensions case-insensitively in `knx products ingest`, matching `install_package`. Add a CLI regression test with an upper-case name and a negative control showing that `.KNXPROJ` still routes to the project importer. Verified effect from the same853 original-filename release measurement: Hager/Berker installs go from 2 to 45 of 48.
 - [ ] `KL-150` (P1): reproduce with a **synthetic** nested-`ModuleDef` fixture (RED), fix the `dynamic_node` key scoping so inner and outer definitions keep their own `(program_id, module_def_id, node_id)`, and keep the atomic rollback. Verify against the local MDT `RF-TAL55Bx0x-01S` package as private evidence only. Do not commit it. Then hand the nested sample to AR07 as R-MODULE-04 input; this package does not claim nested-module semantics.
 - [ ] `KL-151` (P2): measure peak RSS, ingest time and database growth for the eight over-limit bundles and five over-limit members, using a temporary raised limit in a scratch build only. Then decide on a documented bound (or streaming) with a hostile-ZIP regression test. Do not just remove the limit. Siemens' only current download (1,006 MiB expanded) is the reference case.
 - [ ] `KL-152` (P2): measure the actual evidence-item maxima of the two refused packages. Then either size the budget with a hostile-input test, or change evidence collection to a counted summary that stays explicit and loss-reporting.

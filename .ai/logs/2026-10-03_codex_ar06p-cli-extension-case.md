@@ -87,7 +87,7 @@ upstream suffix. Expected-content and truncated-suffix negative controls pass.
 All704 current code/config inputs equal committed blobs;285 CLI Rust/build/test
 inputs equal the measured candidate. The private853 receipt remains evidence
 about its own producer/run, with that source-identity reconciliation explicit.
-Fresh actual16 proc_7c8c83880554 is running with a new target and isolated
+Fresh actual16 proc_7c8c83880554 ran with a new target and isolated
 original-origin browser namespace. NEW actual16 independently accepted at
 2026-10-03 18:32 CEST: Rust3000/0/165/151 blocks, Web1702, Chromium82 inventory/pass,
 17 bindings/704 committed-exact inputs, all log hashes and actual-root nonempty
@@ -96,12 +96,18 @@ private853 receipt retains its own run identity. Candidate72 was not reused
 as integrated82 acceptance. Root/foreign/retro listener and
 private originals remain untouched.
 
-updated limitation/status/goal documentation; current-upstream integration and
-actual gates; publication/readback and owned cleanup. No inferred corpus
-improvement, broad or release acceptance is recorded ahead of execution.
+Delivery362fec24 published/live/fetched read back: refs0/0, source704/ten
+owned artifacts byte-exact, full owner suffix retained. Acceptance doc5 passed.
+16 completed own scratch build/snapshot/shadow/XDG directories removed after
+process-reference checks; all existing public logs/plans/aggregates preserved.
+The first staged-doc verifier expected an unsorted path list and was rejected;
+corrected exact sorted seven-path check passes, without changing source or gates.
+Closing metadata gates/publication/readback and final actual-target/checkout/
+branch cleanup remain. Broader AR06P/AR07/Alpha remain open; KL150 next.
 
 Fresh fetched owner e7f9db8e records U18 completion and release of its own UI
-reservation. This candidate still starts at f15f7cd2: old candidate evidence is
-not actual integrated U18 acceptance. Broader AR06P, AR07 and Alpha remain open.
+reservation. Candidate f15f7cd2 proof kept its own identity; NEW dd5a350c
+actual16 evidence above proves integrated U18 acceptance for this CLI scope.
+Broader AR06P, AR07 and Alpha remain open.
 The crawled files are local, unpinned private evidence, not committed fixtures or
 CI gates. Native, ETS, hardware and statistics-owner decisions remain separate.

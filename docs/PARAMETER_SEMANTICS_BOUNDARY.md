@@ -577,6 +577,12 @@ publication remain pending. This closes the candidate's storage-admission
 evidence gap only. Keep R-MODULE-04 runtime/allocation/parameter-write behavior
 and the separate115/113 selected semantics acceptance outside this claim.
 
+The storage fix's actual cbe9952f public16/private pair is accepted and code is
+published as1b215d51 (2026-10-03 23:05 CEST), source706 unchanged and incoming
+stats-only documentation preserved. This makes the retained-source scope
+witness available to AR07; it does not close R-MODULE-04 runtime/allocation/
+parameter-write semantics or the selected115/113 acceptance.
+
 
 ## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
 

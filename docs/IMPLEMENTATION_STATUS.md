@@ -1,5 +1,92 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-03 — Productive CRT interactions (local feature worktree)
+
+- Implemented the user-requested animations in real App/ProjectExplorer/
+  GroupAddressTable, not only the offline study. Independent motion style `crt`
+  is admitted by both the actual pre-mount bootstrap and runtime registry.
+- Standard: 250ms ease-out fill, inert clipped light, bounded activation glow.
+  Subtle: existing 120ms fill only. Off/OS reduced motion cancel running feedback.
+  A disposable per-workbench controller handles timers/observers and retirement;
+  existing delegated keyboard, native selection and bulk-selection rail remain.
+- Manual Save/Save As glows only on its existing request path, after cancellation/
+  stale-snapshot checks; autosave is silent. The glow does not certify success.
+  Browser refusal assertions verify error reporting; source review confirms the
+  existing dirty-state/error path is unchanged, not a real persistence test.
+- Reviewed final Web **1739 tests / 98 files**, TypeScript/Vite build and **12**
+  actual-app Chromium groups pass. Receipt records zero page errors, unexpected
+  requests and real backend requests; two Save requests are intercepted synthetic
+  refusals. The native-frame screenshot has been visually inspected.
+- Added controller/CSS/bootstrap regressions and a reproducible real-App browser
+  verifier with a synthetic project and intercepted file-picker/open/settings/
+  discovery/Save flow. No actual project/settings/backend/KNX write or new
+  dependency. No WebKitGTK/Orca/full-WCAG or independent-review claim.
+- In-session review removed redundant keyboard handlers in favor of the already
+  delegated production implementations; transient feedback is presentation-only.
+  Updated ADR-0022, CRT/theme guide, roadmap, limitations and handover/log.
+- Worktree: /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-interactions-20261003,
+  branch feat/crt-interactions-20261003, base 3337e4ef. Changes remain local and
+  uncommitted; no feature push/main merge/root product synchronization. Native
+  acceptance, exact selection/Save-only roles and broader component styling
+  remain separate. Own test-runtime cleanup is recorded in the task handover.
+
+## 2026-10-03 — CRT 1.1 branch publication
+
+- User-authorized source commit879c69b2f11c825c1d4f10b5409e5a5148f06e67 is
+  published on design-retro-green-crt-20261003; exact local/fetched/live refs
+  matched at20:19 CEST. No main merge or dirty-root product synchronization.
+- Fresh Web1712/96 files and TypeScript/Vite build pass; separate in-session
+  review/static scan found no blocking issue. Existing16-group browser receipt
+  covers unchanged source. Author/committer github@knxbench.com; no co-author.
+- The following local design notes are historical; palette/study and proposed
+  production limitations are unchanged. This acknowledgment changes Markdown only.
+
+## 2026-10-03 — CRT 1.1 reference-image development (local)
+
+- Evolved the existing design from the user reference: softer phosphor ink,
+  green-black surfaces, fine green rules, mint action gradients and compact
+  chrome. Same theme ID, palette version1.1.0, unchanged safe v1 token contract.
+- Replaced the study's layout-button rows with twelve native table rows and
+  independent checkbox/address-button controls. Added a bounded leading light,
+  violet Save flare and shared activation guard; cancellation handles user Off,
+  OS reduced motion, scroll and resize. All data and actions remain synthetic.
+- Ten theme/study tests pass (new revision observed RED before implementation);
+  focused329, complete Web1712/96 files and TypeScript/Vite build pass.
+- Retained reproducible `design/verify-crt-reference.mjs` and JSON receipt:16
+  Chromium groups, including actual manager refused/confirmed same-ID replacement,
+  exact reload/export and mid-effect cancellation. One guarded mock settings write,
+  zero page errors/unexpected requests. Screenshot samples a paused native frame.
+- Updated [design guide](DESIGN_RETRO_GREEN_CRT.md) with actual palette behavior,
+  reproduction and specific token/component/motion proposals. No production
+  component, protocol, core, dependency or storage change; no native/Orca/WCAG claim,
+  commit, push or root product synchronization. Earlier 1.0 results below are
+  historical; retained current design artifacts are now1.1.
+
+## 2026-10-03 — Modern Retro Green CRT design artifacts (local)
+
+- Added an importable complete theme-pack v1 palette: black `#050505`, neon
+  green `#39ff14`, installed JetBrains Mono throughout, small radii, green
+  elevation/hover-shadow tokens and distinct error/warning colors.
+- Added a self-contained interactive HTML design study with embedded licensed
+  JetBrains Mono, purple Save, left-to-right fill, activation glow, filtering,
+  keyboard navigation and user/OS motion guards. This is a standalone reference,
+  not React/Tailwind/Tauri component integration or actual project operations.
+- The production v1 pack cannot separate Save from the shared accent, set exact
+  `#003300` row fill, inject animation rules or add input focus-shadow consumers.
+  These remain explicitly proposed component/versioned-token changes in
+  [the design guide](DESIGN_RETRO_GREEN_CRT.md); no theme-contract weakening,
+  dependency, domain, protocol, persistence or production-component change.
+- Seven palette tests observed RED, then GREEN. Intermediate test-harness
+  environment/URL issues were corrected without changing runtime code. Focused
+  suite: 326/326; full Web: 1,709/1,709 in 96 files; TypeScript/Vite build passes.
+- Ten actual Chromium verification groups pass: real manager import preview,
+  conditional acknowledged apply, reload/all-token paint and UI export, plus
+  six standalone-design checks including keyboard activation, actual 250ms fill,
+  Off/reduced-motion and 390px layout. Settings were intercepted/synthetic;
+  one mock conditional write, zero unexpected requests or page errors.
+- Local isolated branch `design-retro-green-crt-20261003` at baseline `e7f9db8e`;
+  no root synchronization, commit/push, native/Orca/full-WCAG or hardware claim.
+
 ## AR06P KL-150 scoped code delivered — 2026-10-03 23:05 CEST
 
 Actual integrated cbe9952f passed fresh complete public16 and the authorized

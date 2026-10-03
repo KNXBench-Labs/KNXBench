@@ -1,3 +1,43 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 22:38
+- **Completed:** Implemented user-requested productive CRT animations in real App/ProjectExplorer/GroupAddressTable, independently selected as motion style crt. Standard250ms fill/bounded light120ms activation; Subtle120ms fill only; Off/OS reduced motion cancels. Presentation-only disposable controller clips portals/handles zoom and lifecycle. Manual Save/Save As signals existing request path, not success; autosave silent. Existing delegated keyboard/selection/bulk rail preserved; redundant new keyboard handlers removed during in-session review. Frozen-source Web1739/98 files, TypeScript/Vite build and12 actual-App Chromium groups pass; zero page errors/unexpected/real-backend requests. Final screenshot visually inspected. Updated relevant docs/ADR/log. Own fixture PID4163503 stopped by verified SIGTERM after manager kill was incomplete; PID absent and port4173 has no listener. Removed own node_modules/dist and12 named scratch files, retaining production verifier/PNG/receipt/source/log.
+- **Pending/Next Steps:** Local uncommitted work only on feat/crt-interactions-20261003, base3337e4ef; no feature commit/push/main merge/root product synchronization. Any publication/integration is separately scoped. Native WebKitGTK/Orca/full-WCAG acceptance, exact selection/Save-only semantic roles and broader styling remain separate. Reinstall dependencies before rerunning using the CRT guide; do not use the normal proxy server for offline QA.
+- **Notes for Codex oder Claude:** Worktree /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-interactions-20261003; .ai/logs/2026-10-03_codex_crt-interactions.md and docs/DESIGN_RETRO_GREEN_CRT.md are the current source/evidence pointer. Controller/CSS/bootstrap tests and production receipt retained; no independent reviewer or real backend/project/settings/KNX write. Own ignored log must be included explicitly if a later authorized commit is made; never force-add all logs. Root foreign/product changes preserved. Earlier design-only/publication/pending-animation entries below are historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:19
+- **Completed:** Committed CRT1.1 as879c69b2f11c825c1d4f10b5409e5a5148f06e67 and published design-retro-green-crt-20261003 after explicit user authorization. Exact local/fetched/live remote source refs matched. Fresh pre-publication Web1712/96 files and TypeScript/Vite build pass; in-session review/static scan has no blocking findings. Author/committer github@knxbench.com, no co-author. Palette/study/test/browser receipt and owned logs are tracked; this acknowledgment is source-identical Markdown bookkeeping.
+- **Pending/Next Steps:** Production component/token/motion integration and any main merge remain separately scoped/unauthorized. Retain design branch/worktree for review; Git HEAD/upstream identify the metadata tip. This record acknowledges already measured source publication, not a speculative main integration.
+- **Notes for Codex oder Claude:** See .ai/logs/2026-10-03_codex_crt-publication.md and docs/DESIGN_RETRO_GREEN_CRT.md. No independent-review/native/Orca/full-WCAG claim. No root product synchronization or live settings/project/KNX writes. Earlier uncommitted/no-push entries below are historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:16
+- **Completed:** CRT1.1 packaging reviewed in-session for explicitly authorized commit/push on design-retro-green-crt-20261003. Fresh Web1712/96 files and TypeScript/Vite build pass; retained16-group Chromium receipt covers unchanged source. Static scan, local design links, syntax and whitespace checks pass. See .ai/logs/2026-10-03_codex_crt-publication.md; no independent-review claim.
+- **Pending/Next Steps:** Commit owned artifacts only, publish this design branch and verify exact remote equality before acknowledging delivery. No main merge/root product synchronization; production token/component/motion integration remains separate.
+- **Notes for Codex oder Claude:** Author and committer must be github@knxbench.com without co-author trailer. Private reference photograph is not published. Preceding local delivery entries are historical; fresh publication acknowledgment will identify the verified source commit.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 18:35
+- **Completed:** Developed CRT from the user reference in the retained isolated branch: same-ID palette1.1.0, softer phosphor ink/quiet rules/mint actions, compact HTML shell, native twelve-row table, independent checkbox controls, transient leading light and violet Save flare. Added reproducible QA source/receipt and updated screenshot/docs. Focused329, complete Web1712/96 files, TypeScript/Vite build and16 distinct Chromium groups pass; actual manager refused/confirmed replacement, exact reload/export use intercepted synthetic settings only. Final screenshot samples a native125ms animation at a fixed viewport. Owned Vite stopped, port4173 free, own dependencies/build/scratch removed.
+- **Pending/Next Steps:** Requested image-driven design and code-change proposals complete locally/uncommitted. Production Save-only purple, exact selection fill/light, focus-glow consumers and complete tree-keyboard behavior still require separately scoped component/token-version/motion work. No commit/push/root product synchronization authorized.
+- **Notes for Codex oder Claude:** Read docs/DESIGN_RETRO_GREEN_CRT.md and .ai/logs/2026-10-03_codex_crt-reference.md. Receipt at design/retro-green-crt-reference.receipt.json; reproduce QA after reinstalling existing Web deps and starting the local fixture only. Pack remains a safe declarative v1 palette; study is not React/Tailwind/native integration. No real settings/backend/project/KNX write or native/Orca/full-WCAG claim. Private reference photograph was inspected, not embedded/published. Previous notes below are historical and preserved.
+
+---
+
+- **Last Agent:** codex (Hermes Agent, Modern Retro Green CRT design)
+- **Timestamp:** 2026-10-03 16:31 CEST
+- **Completed:** Created complete importable CRT v1 palette, seven RED/GREEN palette/roundtrip/DOM tests, self-contained interactive target-design HTML with embedded licensed JetBrains Mono and actual Chromium screenshot, and focused design/implementation proposal. Updated theme documentation and implementation status. Focused 326/326, full Web 1709/1709 across96 files, final TypeScript/Vite build pass. Ten Chromium verification groups pass against real manager with intercepted settings and standalone demo; one mock conditional write, zero unexpected requests/page errors. Worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/retro-green-crt-20261003`, branch `design-retro-green-crt-20261003`, baseline e7f9db8e. No production component/core/protocol/dependency changes.
+- **Pending/Next Steps:** Requested palette/design/proposals delivered locally, uncommitted; no commit/push/root synchronization authorized. Actual Save-only purple, exact003300 selection fill, added input-focus glow, animation and full arrow-tree behavior remain proposed production work, not v1-pack functionality. Retain the worktree/branch/artifacts until user decides integration/publication.
+- **Notes for Codex oder Claude:** Main palette keeps shared accent green for readable selected ink; do not replace it with purple to fake Save-only coloring. Standalone HTML demonstrates full target but is not a React/Tailwind/native implementation. See docs/DESIGN_RETRO_GREEN_CRT.md and own log. Root foreign edits preserved; no KNX/hardware/native/Orca/general WCAG/full Alpha claim, no settings-file write. Existing Web lock owner/release history below is untouched by this design-only entry.
+
+---
+
 - **Last Agent:** codex (alpha / KL-150 code delivered; closing metadata)
 - **Timestamp:** 2026-10-03 23:05 CEST
 - **Completed:** Actual integrated cbe9952f fresh public16 and private one-case baseline RED/candidate GREEN independently verified: Rust153 blocks/3009-0-166, ignored166, Web1702, Chromium82, binding17 token-equal/eight controls, source706/log hashes exact. Full853 Release candidate evidence is source-identical, installed687→688, other categories unchanged, originals independently rehashed/no private raw/item records. Publication preflight correctly stopped for foreign462833b9 stats-only advance; no push occurred then. Merged stats byte-exact as1b215d51, reran doc5, normally published/live/fetched equal. Fourteen owned build/snapshot/browser directories removed. KL150 fresh-install storage/key scope lifted, not R-MODULE-04 runtime/allocation/write semantics or old-catalog automatic repair.

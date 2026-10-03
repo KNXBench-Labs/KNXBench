@@ -177,8 +177,14 @@ observation is not a second store, and the optional compare-and-patch capability
 is independent of the unchanged opaque settings-file schema. File transport and
 inert recovery remain Web utilities; candidate and actual-merged acceptance
 passed, source 1f94808d is published with exact remote readback. No theme logic reaches KNX
-Core, project storage, product data or KNXnet/IP. U17–U18 management/
-preview and extension-wide acceptance remain open, not implied by runtime gates.
+Core, project storage, product data or KNXnet/IP. U17's local manager candidate
+keeps ephemeral visual intent in App and one root DOM writer; read-only consumers
+cannot acquire that lease. Appearance gestures reuse conditional U16 plans,
+including the original selector. Intake generations, acknowledged theme/map/
+accent fingerprints and explicit content-bound questions prevent stale preview
+or consent reuse. Shared Overlay restores a persistent focus target when the
+discarded draft's trigger disappears. U17 final delivery and U18 extension-wide
+acceptance remain open, not implied by focused runtime/browser gates.
 
 ## 4. Enforced rules
 

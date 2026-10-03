@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-03 — U17 Appearance manager (reviewed local candidate, not delivered)
+
+Settings → Appearance now manages immutable builtins and admitted installed
+packs with origin/version/saved status, import/export/recovery, explicit Apply/
+Cancel, content-bound replacement/removal questions and System reset. The root
+runtime is the sole visual owner; the Debug report reads without acquiring a
+second DOM lease. Live EN/DE outcomes and all actual admission kinds are typed;
+accent controls expose only variations the displayed palette can apply.
+
+31 actual parent cases and five root cases cover stale/late/out-of-order intake,
+cross-client contents/selection, repeated Apply, definitive 409 and uncertain
+500 reconciliation without write replay, close during acknowledgment, exact Blob
+roundtrip/recovery and independent preference preservation. Both manager and
+original selector report server success separately from local cache failure.
+Latest scoped 74 and TypeScript pass without stderr. Six behavioral guard
+controls were caught/restored; the new diagnostic module's TS2322 inclusion
+canary was caught and restored. Final frontend candidate: Web1,702/95 files,
+Chromium69 without skip/flaky/failure, build/types and262 frozen inputs unchanged.
+Eight behavioral controls were caught and restored. Full branch13/13 repository commands pass: Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending.
+Full legacy Web suite emits fixture stderr; no warning-free whole-suite claim.
+Native WebKitGTK/Orca/global-alpha/ETS and U18 acceptance remain separate/open.
+
 ## 2026-10-03 — U16 acknowledged theme persistence (foundation delivered as 1f94808d)
 
 - Implemented strict bounded UTF-8/BOM import, validated deterministic export,

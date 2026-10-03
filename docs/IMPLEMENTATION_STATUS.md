@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 checked text overlay actual acceptance — 2026-10-03 13:32 CEST
+
+Source a065ad94 / actual0369a56a, proc_39eb1bd6a2f3:22/22 accepted,
+16 fresh public+3 compiled selected inventories+3 private runs. Rust2995/0/165
+(150 blocks), Web1702, intercepted Chromium72,17 equal bindings,699 exact
+committed inputs. Selected private6+2+1 cases pass;420 originals unchanged,
+no private raw logs, transient link removed. Five real compiled behavior mutants,
+separate in-session review, not independent-model/native/ETS approval.
+ADR0066 accepts only checked scoped FunctionText/channel-copy admission and
+whole existing400 refusal; loaded project/product bytes preserved, no new DTO.
+Legacy SDK/unscoped/general metadata/query/serializer/RSS and UI-specific
+language/refresh snapshot/localization remain explicit separate boundaries.
+Post-gate e2a40268 Markdown-only AR06P/owner history merged7bb0ee72, source699
+unchanged. Acceptance docs/publication/readback/own cleanup PENDING. Next ready
+queue is new AR06P KL-149 then coordinated nested parser KL-150; broader AR07
+matrix/full Alpha remain open. U18 Web reservation untouched.
+
 ## AR07 outside-walk candidate Broad accepted — 2026-10-03 12:45 CEST
 
 Public candidate fourteen-command evidence reconciled independently in-session:

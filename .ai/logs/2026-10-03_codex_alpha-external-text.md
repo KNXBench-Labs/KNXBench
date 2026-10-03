@@ -125,3 +125,24 @@ by implication. Review is in-session, no independent-model verdict. Fresh fetch
 origin/main c6b5a240 carries U17; owner retains Web reservation through U18.
 Commit scoped candidate then integrate complete histories and run fresh actual
 public/private-safe acceptance. ADR Proposed, full AR07/Alpha still open.
+
+
+## 2026-10-03 13:32 CEST: actual22 accepted, latest documentation owner integrated
+
+proc_39eb1bd6a2f3 exits0. Fresh actual16 public: Workspace2995/0/165/150
+blocks, compiled ignored165, Web1702, Chromium72/zero failure/skip/flaky,
+17 equal bindings;3 compiled selected inventories and3 private runs execute
+Dynamic6/server-library2/com-object1.420 originals before/after commitment
+equal,699 inputs/current/committed blobs equal; private diagnostics captured
+and discarded, link removed. Code review is separate in-session,5 real compiled
+mutants retained; no independent-model or dedicated consumer browser verdict.
+
+Fresh e2a40268 adds only Markdown/crawler findings/AR06P plan. Notice committed
+then conventionally merged7bb0ee72; two shared document conflicts resolved
+against complete expected upstream blobs/own prefixes and truncation controls.
+699 code/config inputs unchanged. New853-file evidence is separate/private/
+unpinned, not included in our9-case gate or a claimed nested sample verification.
+AR06P KL-149 is next ready before AR07 matrix, KL-150 coordinated later.
+ADR0066 Accepted for checked scoped FunctionText/channel copies and whole400,
+not unscoped/general allocations/RSS/legacy SDK/UI language-refresh snapshots.
+Final5 document gates/publication/exact readback/own cleanup PENDING.

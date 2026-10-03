@@ -529,3 +529,29 @@ therefore redirects XDG_DATA_HOME into owned scratch as well as explicitly
 setting synthetic ProductDB and data_dir. No host database/private corpus, bus
 or vendor path is authorized. U17 Web lock remains held by ui-theme-management
 (10:00 owner note), not released or touched; commissioning lifecycle is separate.
+
+
+## Checked outside-walk backend policy accepted — 2026-10-03 13:32 CEST
+
+ADR0066 producer/source a065ad94 and actual0369a56a integrate U17 without Web
+or binding changes. proc_39eb1bd6a2f3 exits0/22 actual commands: fresh public16,
+selected inventory3 and execution3. Workspace2995/0/165/150 blocks, Web1702,
+intercepted Chromium72,17 equal bindings and699 exact committed source inputs.
+Private Dynamic6/server-library2/com-object1 execute9 cases without missing/skip
+signals;420 originals unchanged, raw private output not persisted, link removed.
+Five compiled behavior mutants and separate in-session review retain their scope.
+Post-gate e2a40268 Markdown-only history/AR06P findings integrated7bb0ee72;
+source delta zero. Final docs/publication/readback pending, not delivered yet.
+
+Whole-device400 reports rendering refusal, not Inactive activation or source
+loss. Project/product-file equality is loaded-model/source evidence, not native
+project save/reopen. Supported local tokens/UTF8/raw/output/lookup admission and
+repeated cache copies share one context; legacy public String helper and general
+metadata/query/source/serializer/RSS remain unmetered boundaries. UI request
+source forwards existing errors; dedicated language/refresh presentation and
+snapshot consumer acceptance stays with UI, no new U-package assigned here.
+
+Fresh AR06P now precedes AR07 in the queue. Its synthetic nested-definition
+parser fixture/private one-off sample must be handled before claiming new real
+R-MODULE-04 semantics;853 crawler files are not this selected9-case gate or a
+committed fixture. Current broader supported-semantics matrix/AR07/Alpha open.

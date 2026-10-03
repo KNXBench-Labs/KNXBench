@@ -65,3 +65,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0063](0063-parameter-scopes-preserve-evaluation-identity.md) | Parameter scopes preserve the full evaluation identity | Accepted (bounded backend contract) | 2026-10-03 |
 | [0064](0064-durable-activity-history-is-not-recovery.md) | Activity history is durable metadata, not recovery or bus proof | Accepted (bounded backend contract) | 2026-10-02 |
 | [0065](0065-dynamic-scalar-copy-admission.md) | Dynamic evaluation admits scalar copies before allocating them | Accepted (bounded Core/HTTP scalar admission; external projections open) | 2026-10-03 |
+| [0066](0066-outside-walk-text-refusal.md) | Outside-walk text substitution has explicit request-level refusal | Proposed (source audit and first public HTTP tracer; execution pending) | 2026-10-03 |

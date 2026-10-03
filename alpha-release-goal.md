@@ -334,6 +334,33 @@ Both review findings closed; task-owned cleanup then AR07 offline research next.
 
 **Exit evidence:** bounded compatibility/import report, malformed-input and atomicity tests, native save/load evidence and an explicit sample matrix. Missing independent samples remain `BLOCKED_EXTERNAL`, not “compatible”.
 
+### AR06P — Admit real-world product packages the supported grammar already covers
+
+**Sources (post-snapshot, outside the 180-ID ledger):** `KL-149`, `KL-150`, `KL-151`, `KL-152`, `KL-153`.
+**Origin:** test-only run of the release `knx products ingest` against 853 public
+manufacturer downloads on 2026-10-03 (`2cceea4e`; [corpus run](docs/PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
+644 installed. The refusals are real compatibility gaps for downloads a user
+actually gets from Siemens, ABB, Hager/Berker and MDT.
+**Dependencies:** AR06's import-boundary contract (`docs/IMPORT_BOUNDARY_CONTRACT.md`).
+`KL-150` touches the nested-module model of AR07/R-MODULE-04, so coordinate with
+the AR07 executor before changing `dynamic/parse.rs`. No dependency on UI or
+commissioning.
+**Status:** `TODO`. Ready now for `KL-149`/`KL-150`. `KL-151`/`KL-152` need
+measurement before any limit changes. `KL-153` is bounded research.
+
+Ordered by value per effort:
+
+- [ ] `KL-149` (P2): compare `.knxprod`/`.vd*` extensions case-insensitively in `knx products ingest`, matching `install_package`. Add a CLI regression test with an upper-case name and a negative control showing that `.KNXPROJ` still routes to the project importer. Expected effect from measurement: Hager/Berker installs go from 2 to 45 of 48.
+- [ ] `KL-150` (P1): reproduce with a **synthetic** nested-`ModuleDef` fixture (RED), fix the `dynamic_node` key scoping so inner and outer definitions keep their own `(program_id, module_def_id, node_id)`, and keep the atomic rollback. Verify against the local MDT `RF-TAL55Bx0x-01S` package as private evidence only. Do not commit it. Then hand the nested sample to AR07 as R-MODULE-04 input; this package does not claim nested-module semantics.
+- [ ] `KL-151` (P2): measure peak RSS, ingest time and database growth for the eight over-limit bundles and five over-limit members, using a temporary raised limit in a scratch build only. Then decide on a documented bound (or streaming) with a hostile-ZIP regression test. Do not just remove the limit. Siemens' only current download (1,006 MiB expanded) is the reference case.
+- [ ] `KL-152` (P2): measure the actual evidence-item maxima of the two refused packages. Then either size the budget with a hostile-input test, or change evidence collection to a counted summary that stays explicit and loss-reporting.
+- [ ] `KL-153` (P2): collect grammar evidence for scheme 23 first (current ETS6 product downloads, 2 files) the same way schemes 12–14/21 were admitted. Scheme 10 (146 ABB ETS4-era files) follows only if its grammar differences are bounded. Any scheme without evidence stays an explicit refusal.
+
+**Exit evidence:** RED/GREEN regression tests per item, unchanged atomic refusal
+for anything still unsupported, a re-run of the 853-file measurement with a
+before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are
+private, unpinned evidence and never a committed fixture or CI gate.
+
 ### AR07 — Research and validate supported parameter semantics, never execute unknown vendor logic
 
 **Sources:** `KL-3`, `KL-146`, `PDB-01`, `PDB-02`, `PDB-03`, `PDB-05`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`.
@@ -623,7 +650,7 @@ identity adoption, native/hardware/vendor/general allocation/RSS remain open.
 ### AR15 — Reconcile release documentation and limitations on the finished scope
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
-**Dependencies:** completed/explicitly blocked AR00–AR14; newest owner receipts.
+**Dependencies:** completed/explicitly blocked AR00–AR14 and AR06P; newest owner receipts.
 
 - [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
 - [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.
@@ -927,3 +954,17 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
 
 Entries spanning supported and blocked subcases (notably `KL-13`, `KL-11`, `KL-61` and parameter semantics) require a subcase disposition in their AR package. `TODO` authorizes verification/planning within the stated boundaries, not guessing the missing semantics or claiming implementation is absent.
+
+## 8. Post-snapshot findings (outside the 180-ID count)
+
+These entries were found after the inventory snapshot. They have their own
+identities and do not change the 180-entry count above. Priority follows the
+`OFFENE_PUNKTE.md` scale.
+
+| Source ID | Priority | Primary route | Current status |
+| --- | --- | --- | --- |
+| `KL-150` | P1 | AR06P | TODO |
+| `KL-149` | P2 | AR06P | TODO |
+| `KL-151` | P2 | AR06P | TODO |
+| `KL-152` | P2 | AR06P | TODO |
+| `KL-153` | P2 | AR06P | TODO |

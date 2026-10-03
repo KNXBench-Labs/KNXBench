@@ -7096,7 +7096,10 @@ rolled back, so no partial rows are written, but nothing of it can be used.
   monotonic `node_id` then collides.
 - This contradicts the earlier note that "the installed corpus measures
   zero products that actually nest" (GAP_ANALYSIS_ETS A3). That note
-  remains true for `OriginalData`, but real downloadable products do nest.
+  remains true for `OriginalData`, but real downloadable products do nest. A full scan of the 852 crawled ZIP
+ packages found this one package as the *only* nested example, which makes
+ it the sole real R-MODULE-04 sample so far.
+ - Planned as alpha package AR06P (`alpha-release-goal.md`), P1.
 - **Lifted when** nested `ModuleDef`s parse into correctly scoped
   `dynamic_node` rows, proven by a synthetic nested fixture plus this
   package.

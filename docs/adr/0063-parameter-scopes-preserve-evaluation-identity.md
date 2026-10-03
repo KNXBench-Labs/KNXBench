@@ -1,7 +1,7 @@
 # ADR 0063: Parameter scopes preserve the full evaluation identity
 
 Date: 2026-10-03
-Status: Proposed — bounded backend contract public-verified; integrated gates/publication pending.
+Status: Accepted for the bounded backend contract — actual integration 3711c4f7 verified; publication pending. UI adoption and broader AR07 remain open.
 Session: 4, AR07
 
 ## Context and evidence
@@ -63,6 +63,22 @@ deterministic repeated reads and read-only/atomic refusal. Reverting or clipping
 the chain must compile and fail the behavioral tests. Preserve original product
 bytes, nonempty project data, and every existing write-authority rule.
 
-Full source review, applicable integration gates, exact source restoration and
-publication readback remain required. No real nested product, new UI consumer,
-ETS parity, complete AR07 or Alpha acceptance follows from synthetic success.
+Source d51dd6c7 and conventional actual integration 3711c4f7 retain the reviewed
+candidate tree and complete inherited handover. Public HTTP38/0/0, server205/0/2,
+selected Core identity72/0/6 and three compiled omission/clipping/reversal mutants
+(compile0, behavior101/0-1-0) are independently reconciled; sources restored.
+Actual integration proc_f27315f3cd8c passes20/20: ordinary workspace2957/0/164
+over148 result blocks, Web1665, intercepted Chromium61, explicit private
+Dynamic6/0/0 and in-memory SimTunnel HTTP13/0/0. No genuine/unknown skip marker;
+private raw output discarded. All624 code/config hashes equal exact committed
+blobs,17 shadow bindings equal,420 original files including103 loose product
+archives unchanged. Hashing420 files is not parser coverage of all420 inputs.
+Strict build/lints/dependency policy and four nonempty intended-root audits pass.
+
+Separate in-session source/contract/security review has no blocking finding,
+not independent-model approval. The first independent receipt assertion expected
+the Clippy display verb `Checking`; actual fresh output says `Compiling
+knx-server`. That rejected verifier attempt is retained; both compile verbs are
+checked with the actual command/exit/fresh-target/source proof, without replay.
+Exact publication readback remains required. No real nested product, new UI
+consumer, ETS parity, complete AR07 or Alpha acceptance follows from these gates.

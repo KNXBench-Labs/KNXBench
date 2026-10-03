@@ -438,6 +438,18 @@ and delivery pending. UI manual scope matching remains owner work, not completed
 by an additive wire field; genuine nested manufacturer and broader AR07 remain
 open. The prior budget final receipt/cleanup is verified, not a pending rerun.
 
+2026-10-03 05:38 actual module-provenance acceptance: reviewed source d51dd6c7,
+conventional integration3711c4f7 on published e9707794. proc_f27315f3cd8c's20/20
+independently accepted: ordinary Rust2957/0/164 over148 blocks, Web1665,
+intercepted Chromium61, selected private Dynamic6/0/0 and in-memory SimTunnel
+HTTP13/0/0; no genuine/unknown skips or private raw logs. All624 committed inputs,
+17 bindings and420 original files (including103 product archives) unchanged.
+Hashing420 files is not parsing420 files. Strict Clippy/build/fmt/dependency and
+four nonempty intended-root audits pass. First `Checking`-only receipt assertion
+rejected; actual fresh Clippy says `Compiling`, corrected without source change
+or gate replay. ADR-0063 bounded backend accepted; publication/readback/cleanup
+pending, UI scope adoption and whole AR07/Alpha remain open.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

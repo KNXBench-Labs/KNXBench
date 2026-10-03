@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 module-scope provenance — actual integration accepted (2026-10-03 05:38 CEST)
+
+Reviewed source d51dd6c7 is conventionally integrated as3711c4f7 with published
+e9707794, the exact candidate tree and complete inherited owner handover.
+proc_f27315f3cd8c's actual20/20 is independently accepted: ordinary Rust2957/0/164
+over148 result blocks; Web1665 and existing intercepted Chromium61; explicit
+private Dynamic6/0/0 and in-memory SimTunnel HTTP13/0/0 with no genuine/unknown
+skip and no private raw logs. All624 committed code/config inputs and17 shadow
+bindings exact;420 original files, including103 product archives, unchanged.
+The broader hash inventory is not a claim that every file was parsed. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+
+Three compiled mutants/restoration and bounded public RED/GREEN below remain
+their narrower evidence. First receipt verifier's `Checking`-only Clippy display
+assertion rejected separately: actual fresh output says `Compiling knx-server`;
+corrected evidence check, no source change or gate replay. ADR-0063's bounded
+backend projection contract accepted; publication/readback and cleanup pending.
+Manual UI scope matching stays with U17; no new UI, real nested manufacturer,
+storage/ETS parity, independent-model or full AR07/Alpha acceptance claimed.
+
 ## AR07 module-scope provenance — public GREEN, not delivered (2026-10-03)
 
 At `e9707794`, public nameless nested paths retained distinct Core chains and

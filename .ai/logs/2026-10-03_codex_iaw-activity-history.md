@@ -178,6 +178,23 @@ the other owner's PID1408878 holding both common gate locks.
 
 ## Residue
 
+### Source publication and completed target cleanup — 2026-10-03 07:10 CEST
+
+Gated four-file acceptance delta committed cde52ebc1e9f9125f5b94096a6b6c001a3269bd4
+with required author/committer and no co-author. Authorized push from own tree
+carried only five owned reviewed/integration/metadata commits. Fresh fetched and
+live main equal local HEAD; all23 contributed artifacts and617 frozen inputs
+read back exactly, complete owner history preserved and no Web source delta.
+Four fresh-target metadata audits have real nonempty coverage/exit0.
+
+Archived105 compact JSON receipts plus the verifier error and next-contract
+audit under owned commission-20261003-verified-evidence. Earlier failed/survivor
+receipts retained separately. Four completed own build targets actually removed
+after process and lease checks; protected serial-recovery target untouched.
+Closing receipt gate/publication and own checkout/scaffolding cleanup remain
+next, followed immediately by SAFE-03/AUDIT-01 versioned long-session design.
+This is bounded source delivery, not complete global commissioning or a new go.
+
 ### Actual integrated acceptance — 2026-10-03 06:59 CEST
 
 proc_4ba14211415e exited0. All18 expected receipts independently reconciled on

@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## Commissioning bounded history source delivered — 2026-10-03 07:10 CEST
+
+Source and gated acceptance published/read back at
+`cde52ebc1e9f9125f5b94096a6b6c001a3269bd4`: local/fetched/live main equal,
+all23 contributed artifacts and617 actual-gated inputs exact remotely. Actual
+66dca279 acceptance below remains18/18, workspace2978/0/165, Web1665 in93 files,
+offline Download14/0/0 and Dynamic6/0/0,17 bindings and108 scoped originals
+unchanged. Four fresh-target acceptance-document audits/whitespace passed.
+
+Four completed owned build targets actually removed after live-process/lease
+checks;105 compact JSON receipts, including rejected/survivor evidence, retained
+outside the repository. Closing receipt-only doc gate/publication and clean own
+checkout/scaffolding removal follow separately; canonical root/statistics belong
+to their owner. SAFE-03/AUDIT-01 long-session work remains next, not complete.
+Web/native/hardware/vendor/ETS/release boundaries are unchanged.
+
 ## Commissioning actual integrated backend accepted — 2026-10-03 06:59 CEST
 
 Actual merge `66dca2793fcaf50c2149d73c90364a4ae727cd06` integrates reviewed runtime

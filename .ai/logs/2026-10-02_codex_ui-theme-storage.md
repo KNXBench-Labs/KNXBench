@@ -1,5 +1,19 @@
 # U16 — acknowledged settings and lossless theme files
 
+## Source publication/readback — 2026-10-03 03:01 CEST
+
+Reviewed U16 source/actual merge plus doc-only acceptance published as
+1f94808d5d9985b38fcf85021403bb4b05fea3e7. Live remote main, fetched origin/main
+and own HEAD equal; exactly three reviewed outgoing commits, correct author/
+committer emails, no coauthor trailers. All 20 owned artifact blobs and all 622
+committed protected inputs equal the actual-merged gate. Acceptance-doc delta
+passed four nonempty intended-root audits plus whitespace on a fresh target.
+Its first layering command passed; an inferred `ok` spacing check was corrected
+against its original `layering ok:` emitter/log without replaying the command.
+The source is delivered; U17/U18 remain open. This receipt-only update releases
+the held U16 web lock. Its own doc publication/readback and actual cleanup are
+PENDING here, not fabricated. Historical pending statements below are overtaken.
+
 ## Actual-merged acceptance — 2026-10-03 02:47 CEST
 
 Exact proc_613ec7154cf3 exited 0 on actual merge 36e922bc. Independently parsed

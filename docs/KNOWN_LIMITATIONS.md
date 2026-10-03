@@ -2,10 +2,10 @@
 
 ## Theme packs have runtime and persistence foundations, not a management workflow
 
-U15 admission/runtime is delivered. U16 adds reviewed candidate file transport,
+U15 admission/runtime is delivered. U16 delivers file transport as 1f94808d,
 acknowledged conditional installation/removal/selection and structured errors;
-the 16-check candidate and actual-merged 22-check gates passed. Publication and
-remote readback remain pending. U17
+the 16-check candidate and actual-merged 22-check gates passed. Source publication
+and exact remote artifact readback are verified. U17
 production controls, visible diagnostics and reversible preview are not yet
 implemented. The existing built-in picker is not the custom-pack manager.
 
@@ -22,7 +22,7 @@ Admission targets serialized JSON/settings data, not isolation from already
 privileged hostile JavaScript proxies. Contrast covers the documented three
 role pairs and accents, not every component/WCAG criterion. Local intercepted
 Chromium/self-review is not native WebKitGTK/Orca, independent approval or
-release acceptance. U16–U18 remain open; U15 publication remains 9d1ae19d.
+release acceptance. U17–U18 remain open; U15 publication remains 9d1ae19d.
 
 ## Backup directory synchronization is not a disk-loss or confinement proof
 

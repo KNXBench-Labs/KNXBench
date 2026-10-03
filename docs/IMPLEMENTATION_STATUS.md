@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## Commissioning actual integrated backend accepted — 2026-10-03 06:59 CEST
+
+Actual merge `66dca2793fcaf50c2149d73c90364a4ae727cd06` integrates reviewed runtime
+source `0fc483c2` and published parent `14e2eb9a`. Exact18-step receipts and
+committed-source hashes independently reconciled after process exit0: workspace
+2978/0/165 over149 result blocks, Web1665 in93 files, selected offline in-process
+Download14/0/0 and Dynamic6/0/0 with no unknown skips and108 scoped originals
+unchanged. All617 frozen code/config inputs and17 shadow bindings equal.
+Strict Clippy/build/fmt/dependency policy and four nonempty intended-root audits
+pass. Final metadata gates and publication/readback are pending, not source tests.
+
+Complete owner handover/status histories remain preserved; ADR0064 does not
+overwrite published0062/0063. Two rejected receipt-verifier assumptions (Web
+file count and optimized xtask root suffix) were corrected from raw evidence
+without replaying the gate. Historical candidate entries below are superseded
+for the current integration, not silently relabelled. SAFE-03/AUDIT-01 remain
+partial: long-session durable intent/terminal/version evolution is next offline
+work. Web/global consumer, independent hardware/vendor evidence and controller
+release stay open; no Chromium/native/ETS/device-success proof follows.
+
 ## Commissioning durable metadata / admission candidate — 2026-10-03
 
 Separate version-1 activity storage and bounded authenticated history API cover

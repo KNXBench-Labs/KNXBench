@@ -178,7 +178,51 @@ the other owner's PID1408878 holding both common gate locks.
 
 ## Residue
 
+### Actual integrated acceptance — 2026-10-03 06:59 CEST
+
+proc_4ba14211415e exited0. All18 expected receipts independently reconciled on
+actual66dca2793fcaf50c2149d73c90364a4ae727cd06: workspace2978/0/165 over149 blocks,
+Web1665 in93 files, selected offline Download14/0/0 and Dynamic6/0/0, no unknown
+skips,108 scoped originals unchanged;617 frozen inputs equal current/committed
+blobs and17 normalized shadow bindings equal. Fresh target builds changed store
+and server; xtask contains the actual owned root, with nonempty audits. Four
+audits, strict Clippy/build/fmt/dependency policy pass. No Chromium/native/live
+device/vendor/ETS proof or release waiver. Final docs/publication still pending.
+
+Draft handover Web file count96 was rejected and corrected to captured93.
+First acceptance verifier assumed an /xtask suffix in optimized binary strings;
+actual baked root is present without that suffix. Raw error/diagnosis retained,
+corrected independent receipt verifies root plus nonempty work. Neither is a
+failed test or replayed gate. All earlier mutation survivors remain recorded.
+
+### Keep-going receipt reconciliation — 2026-10-03 06:53 CEST
+
+Same actual integrated process proc_4ba14211415e remains running, not accepted.
+All15 completed receipts have exit0; ordinary workspace2978/0/165 across149
+result blocks, Web1665 in93 files, selected in-process Download14/0/0 with108
+scoped originals unchanged and no unknown skip. Dynamic is still active;
+final18-step/bindings/frozen-input acceptance is not inferred. Nonempty actual
+header audit411/157/17 and anchor audit376 links/245 Markdown files inspected.
+Fresh fetch06:50 still14e2eb9a, no new incoming commit; only the permitted owned
+handover/log Markdown delta exists. No source mutation, replay or competing gate.
+
+Reloaded applicable skills and revalidated all42 IDs, nonempty evidence/fallback/
+unblock columns and the three preserved tasks. SAFE-03/AUDIT-01 remain the two
+partial-backend rows; the download worker has pre-tunnel history admission but
+no durable begin/terminal record. Read-only call-path/version-evolution/fault
+matrix saved as owned scratch long-session-next-contract-audit.md. It is design
+discovery, not implementation, compatibility proof or permission for writes.
+Final acceptance/doc gates/publication/readback and owned cleanup remain pending.
+U17 surface/root/foreign worktrees/private corpus remain untouched.
+
 ### Authorized integration resume — 2026-10-03 06:29 CEST
+
+Actual conventional merge checkpoint66dca2793fcaf50c2149d73c90364a4ae727cd06
+has exact two parents and clean source. At06:33 CEST, proc_4ba14211415e is
+RUNNING: four initial stages have real exit0, Clippy is building in fresh owned
+target. Python child1991423 holds both common locks; wrapper-shell PID1991327
+caused the first receipt-verifier assumption to reject, not a gate failure.
+Actual integrated acceptance/publication remain PENDING. No gate replay.
 
 Fresh origin/main14e2eb9a adds published U16 conditional settings, dynamic work
 admission and complete module-scope wire provenance. Source changes auto-merge;

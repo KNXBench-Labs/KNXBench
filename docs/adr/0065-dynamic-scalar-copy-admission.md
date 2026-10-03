@@ -1,7 +1,7 @@
 # ADR 0065: Dynamic evaluation admits scalar copies before allocating them
 
 Date: 2026-10-03
-Status: Proposed — actual merged bounded policy independently accepted; publication/readback pending.
+Status: Accepted — bounded Core/HTTP scalar-content admission published/read back; external String-only and broader AR07 remain open.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0062's bounded work-admission policy, not KNX grammar or storage.
 
@@ -122,6 +122,26 @@ not an independent-model verdict. Acceptance-doc gates/publication/readback
 pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
 UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
 remain open. No live bus/vendor code or private raw logs; UI owner untouched.
+
+## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
+
+Source/actual acceptance published and fetched/live read back at
+cbc6b0b238fbeef2da41c4d38208850574c68760: owned HEAD/fetched/live main equal,
+divergence0/0; all617 actual-gated code/config inputs and7 acceptance documents
+exact remotely. Canonical dirty root/main/statistics unchanged. Actual9f512ab3
+continuation remains20 accepted stages with5 verified public commands reused,
+13 commands+2 checks new, workspace2984/0/165, Web1665/Chromium61, selected
+private Dynamic6/0/0 and offline SimTunnel14/0/0;17 equal bindings and420
+unchanged originals including103 archives. Four fresh-target nonempty
+intended-root acceptance-document audits and whitespace passed; zero code delta.
+ADR0065 accepted only for this bounded Core/HTTP scalar-content admission,
+not external String-only projections or full AR07/ETS/Alpha semantics. Initial
+header/classifier rejections and compiled mutant/restoration receipts retained.
+Six completed owned build targets actually removed after process checks;
+compact machine-readable evidence retained. Closing receipt-only metadata
+gates/publication and clean owned checkout/branch/scaffolding removal follow.
+Whole AR07/Alpha, ISSUE-08 checked-result consumer contract, UI diagnostics/
+identity adoption, native/hardware/vendor/general allocation/RSS remain open.
 
 ## Remaining explicit boundary
 

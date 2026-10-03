@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 bounded work admission delivered — 2026-10-03 04:10 CEST
+
+Published/read back2704f8e29b6ca2d53c022c468f116b526109c678; local/live/fetched
+refs equal0/0, all14 owned artifacts and624 actual-gated code/config inputs exact
+remotely. Source8f47c13b, actual merged7ae116a1 accepted20/20 as below, five compiled
+mutants/restoration; doc-only acceptance gates pass and code delta is zero.
+Own build/script/raw-log scaffolding removed after active-process checks, minimal
+aggregate receipts/source-only next-audit retained. Final receipt-only publication
+and completed clean checkout/branch removal remain the closing steps.
+
+ADR-0062's bounded work policy is delivered, not complete AR07/Alpha, localized
+new-token UI, byte/RSS/latency/general-depth, external-substitution or native/ETS
+acceptance. Other owners' complete histories and source remain intact.
+
 ## AR07 work admission — actual merge accepted, delivery pending (2026-10-03)
 
 Actual7ae116a1 integrates reviewed budget8f47c13b with published0889c102 U16/U17,

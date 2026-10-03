@@ -341,3 +341,12 @@ ADR-0062 accepts this bounded application policy. Publication/readback remain
 pending; previous pending gate wording is historical checkpoint evidence.
 Manual UI token/localization, external substitution/variable output, innermost
 DTO provenance, general depth, native/ETS parity and broader AR07 stay separate.
+
+## Bounded work-policy delivery — 2026-10-03 04:10 CEST
+
+Published/read back2704f8e29b6ca2d53c022c468f116b526109c678 (source8f47c13b,
+actual-gated merge7ae116a1). Local/live/fetched refs equal0/0, all14 owned artifacts
+and624 exact actual-gated code/config inputs read back remotely. Acceptance
+metadata changes no code; four nonempty intended-root audits/whitespace pass.
+Completed build/script/raw-log scaffolding removed, minimal aggregate evidence
+and read-only next-audit retained. Entire AR07/Alpha and stated limits stay open.

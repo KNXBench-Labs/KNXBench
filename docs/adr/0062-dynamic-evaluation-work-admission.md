@@ -1,7 +1,7 @@
 # ADR 0062: Dynamic evaluation admits repeated work before performing it
 
 Date: 2026-10-03
-Status: Accepted for the bounded work-admission contract — actual7ae116a1 merged gates verified; publication/readback pending, broader AR07 open.
+Status: Accepted for the bounded work-admission contract — actual7ae116a1 merged gates verified, published/read back2704f8e2; broader AR07 open.
 Session: 4 (manufacturer semantics), AR07
 Amends: ADR-0041's bounded diagnostic/refusal coverage and Dynamic evaluation budgets.
 

@@ -1,5 +1,22 @@
 # AR07 bounded evaluation work admission
 
+## Scoped publication/readback — 2026-10-03 04:10 CEST
+
+Source8f47c13b and actual-gated merge7ae116a1 published through2704f8e29b6ca2d53c022c468f116b526109c678.
+Local/live/fetched refs equal0/0; all14 owned artifacts and624 exact gated inputs
+read back remotely. Actual20/20 outcome unchanged by doc-only acceptance metadata:
+workspace2953/0/164 over148 blocks, Web1665, intercepted Chromium61, selected
+Dynamic6 and offline SimTunnel HTTP13 without genuine skips;103/108 originals
+unchanged,17 bindings equal, five compiled mutants/restoration. Both owner
+records/artifacts preserved. Required author/committer, no co-author.
+
+Own build target/scripts/raw-log scaffolding removed after active-process cwd
+check; minimal aggregate receipts, rejected lock evidence and read-only remaining
+source notes retained in ar07-budget. Originals/foreign trees/system temp intact.
+Receipt-only metadata gate/publication/readback and completed clean checkout/
+branch removal still pending. No AR07/Alpha closure, release tag, private payload,
+bus/vendor/native/new-token UI or complete ETS claim.
+
 ## Actual merged acceptance — 2026-10-03 03:57 CEST
 
 Budget8f47c13b and published0889c102 U16/U17 integrated as7ae116a1. Source

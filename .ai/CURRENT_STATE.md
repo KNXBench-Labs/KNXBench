@@ -1,3 +1,27 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:16
+- **Completed:** CRT1.1 packaging reviewed in-session for explicitly authorized commit/push on design-retro-green-crt-20261003. Fresh Web1712/96 files and TypeScript/Vite build pass; retained16-group Chromium receipt covers unchanged source. Static scan, local design links, syntax and whitespace checks pass. See .ai/logs/2026-10-03_codex_crt-publication.md; no independent-review claim.
+- **Pending/Next Steps:** Commit owned artifacts only, publish this design branch and verify exact remote equality before acknowledging delivery. No main merge/root product synchronization; production token/component/motion integration remains separate.
+- **Notes for Codex oder Claude:** Author and committer must be github@knxbench.com without co-author trailer. Private reference photograph is not published. Preceding local delivery entries are historical; fresh publication acknowledgment will identify the verified source commit.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 18:35
+- **Completed:** Developed CRT from the user reference in the retained isolated branch: same-ID palette1.1.0, softer phosphor ink/quiet rules/mint actions, compact HTML shell, native twelve-row table, independent checkbox controls, transient leading light and violet Save flare. Added reproducible QA source/receipt and updated screenshot/docs. Focused329, complete Web1712/96 files, TypeScript/Vite build and16 distinct Chromium groups pass; actual manager refused/confirmed replacement, exact reload/export use intercepted synthetic settings only. Final screenshot samples a native125ms animation at a fixed viewport. Owned Vite stopped, port4173 free, own dependencies/build/scratch removed.
+- **Pending/Next Steps:** Requested image-driven design and code-change proposals complete locally/uncommitted. Production Save-only purple, exact selection fill/light, focus-glow consumers and complete tree-keyboard behavior still require separately scoped component/token-version/motion work. No commit/push/root product synchronization authorized.
+- **Notes for Codex oder Claude:** Read docs/DESIGN_RETRO_GREEN_CRT.md and .ai/logs/2026-10-03_codex_crt-reference.md. Receipt at design/retro-green-crt-reference.receipt.json; reproduce QA after reinstalling existing Web deps and starting the local fixture only. Pack remains a safe declarative v1 palette; study is not React/Tailwind/native integration. No real settings/backend/project/KNX write or native/Orca/full-WCAG claim. Private reference photograph was inspected, not embedded/published. Previous notes below are historical and preserved.
+
+---
+
+- **Last Agent:** codex (Hermes Agent, Modern Retro Green CRT design)
+- **Timestamp:** 2026-10-03 16:31 CEST
+- **Completed:** Created complete importable CRT v1 palette, seven RED/GREEN palette/roundtrip/DOM tests, self-contained interactive target-design HTML with embedded licensed JetBrains Mono and actual Chromium screenshot, and focused design/implementation proposal. Updated theme documentation and implementation status. Focused 326/326, full Web 1709/1709 across96 files, final TypeScript/Vite build pass. Ten Chromium verification groups pass against real manager with intercepted settings and standalone demo; one mock conditional write, zero unexpected requests/page errors. Worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/retro-green-crt-20261003`, branch `design-retro-green-crt-20261003`, baseline e7f9db8e. No production component/core/protocol/dependency changes.
+- **Pending/Next Steps:** Requested palette/design/proposals delivered locally, uncommitted; no commit/push/root synchronization authorized. Actual Save-only purple, exact003300 selection fill, added input-focus glow, animation and full arrow-tree behavior remain proposed production work, not v1-pack functionality. Retain the worktree/branch/artifacts until user decides integration/publication.
+- **Notes for Codex oder Claude:** Main palette keeps shared accent green for readable selected ink; do not replace it with purple to fake Save-only coloring. Standalone HTML demonstrates full target but is not a React/Tailwind/native implementation. See docs/DESIGN_RETRO_GREEN_CRT.md and own log. Root foreign edits preserved; no KNX/hardware/native/Orca/general WCAG/full Alpha claim, no settings-file write. Existing Web lock owner/release history below is untouched by this design-only entry.
+
+---
+
 - **Last Agent:** codex (UI session / U18 DONE, source published and read back)
 - **Timestamp:** 2026-10-03 15:47 CEST
 - **Web lock:** RELEASED — this UI/theme reservation only. No release of Alpha/gateway/tunnel or another session's reservation; shared gate files were not removed.

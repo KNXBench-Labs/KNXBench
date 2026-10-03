@@ -57,6 +57,29 @@ No property octets, keys or host backup paths are disclosed. The global Web
 status bar and per-action history remain open (ADR-0055/0056); simulator
 evidence is not a live bus check.
 
+**Durable backend candidate, 2026-10-03 (ADR-0064).** A separate versioned
+SQLite history now retains four one-shot operation kinds across ring eviction
+and restart; seven kinds remain explicitly untracked. Previous-incarnation
+running rows become interrupted/unknown, never success. Storage/metadata
+refusal is visible and latches unavailable history; download and Debug-write
+starts refuse before tunnelling when history cannot be admitted. Property
+intent persistence still follows the PID 8/PID 14 recovery and precedes the
+first property write. This is metadata only, not a recovery image, complete
+download journal or a shipped global UI. Whole-candidate acceptance and
+publication remain pending. The exact consumer contract and residue are in
+[COMMISSIONING_ACTIVITY_HISTORY](COMMISSIONING_ACTIVITY_HISTORY.md) and
+[COMMISSIONING_ALPHA_LEDGER](COMMISSIONING_ALPHA_LEDGER.md).
+
+**Admission correction, 2026-10-03.** Late synthetic review reproduced SQLite
+hot-journal rollback before a foreign-format refusal. Corrected openers first
+admit existing identity/schema read-only; WAL is explicitly unsupported and
+header-refused before SQLite can create shared-memory sidecars. Hot-journal and
+WAL RED/GREEN cases preserve main/journal/WAL bytes; 21 current-source compiled
+behavioral mutants fail as expected and restoration is exact. Preserve failed
+storage and its sidecars for explicit repair, not automatic rollback/conversion.
+Hostile concurrent path replacement is not covered. Earlier full gate receipts
+belong to their older source; corrected integrated acceptance is still pending.
+
 ## U12 structure editor scope (ISSUE-05)
 
 Area/line renames and line, building-part and group-range reparenting are
@@ -5870,6 +5893,18 @@ The conservative Download Counter refusal stays; a device-profile model that
 can tell Coupler Model 2.0 from System B reopens it.
 
 ## 115. `MasterResetResponse::recovery_wait` and `SessionTiming::restart_basic_t1` compute durations nobody waits on yet
+
+**Current status, 2026-10-03.** The blanket title and original account below
+are historical, not a description of current callers. The typed
+`master_reset()` procedure in `commissioning/master_reset.rs` waits on
+`probe.recovery_wait(&timing)` and the erasing answer's recovery wait, then
+performs a bounded mask-read retry at the expected address. The
+individual-address procedure also uses `restart_basic_t1` for its documented
+reconnect wait. These are caller-specific implementations; they do not add a
+generic failed-service restart/retry contract or authorize erasing hardware.
+The public reset recovery gate remains in force. Retain this heading/anchor
+for historical inbound links; the original "no reader" sentences are
+superseded by this status.
 
 **Limitation.** `[C15]` `ManagementSession::restart_master_reset`
 (`crates/knx-net/src/commissioning.rs`) sends the confirmed Master Reset

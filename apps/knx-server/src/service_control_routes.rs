@@ -261,7 +261,20 @@ async fn write(
     let _reservation = reserve_tunnel(&state).await?;
     let activity = state
         .one_shot_activity
-        .start_write("serviceControlWrite", Some(address.to_string()));
+        .start_write("serviceControlWrite", Some(address.to_string()))
+        .map_err(|_| {
+            ApiError::with_status(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "activity history unavailable; not sent",
+            )
+        })?;
+    if state.one_shot_activity.ensure_write_available().is_err() {
+        activity.finish(WriteOutcome::NotSent);
+        return Err(ApiError::with_status(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "activity history unavailable; not sent",
+        ));
+    }
     let connected = match state.connector.connect_tunnel(gateway).await {
         Ok(connected) => connected,
         Err(e) => {
@@ -292,7 +305,9 @@ async fn write(
             backup_path = Some(path);
             // The protocol invokes this callback immediately before its
             // write. A transport failure after here cannot prove no send.
-            activity.mark_send_possible();
+            activity
+                .mark_send_possible()
+                .map_err(|_| "activity write intent unavailable; not sent".to_string())?;
             Ok(())
         },
     )

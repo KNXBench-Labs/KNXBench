@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 
-Status: Accepted — U15/U16 foundations delivered; U17 actual-merged implementation accepted, publication in handover; U18 closing acceptance pending.
+Status: Accepted — U14–U18 delivered/read back; U18 actual24-command extension acceptance and closing self-review verified, source delivery1964fd6b, final metadata in handover.
 
 ## Context
 
@@ -60,7 +60,9 @@ the pending UI does not advertise a false undo. Shared Overlay can restore an
 explicit persistent focus target when cancellation removes the opening trigger.
 Actual parent/browser regressions and the full23-command merged acceptance
 on f16f1e40 verify these decisions. Publication/readback is tracked in the
-handover; U18 representative-component/whole-extension acceptance remains open.
+handover; U18 representative-component/whole-extension actual24 acceptance
+on1660911b now verifies703 unchanged inputs,10 representative cases and three
+named rendered-style failures. No native/Orca/whole-application release claim follows.
 
 ## Alternatives
 

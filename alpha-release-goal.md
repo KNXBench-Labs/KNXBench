@@ -345,8 +345,17 @@ actually gets from Siemens, ABB, Hager/Berker and MDT.
 `KL-150` touches the nested-module model of AR07/R-MODULE-04, so coordinate with
 the AR07 executor before changing `dynamic/parse.rs`. No dependency on UI or
 commissioning.
-**Status:** `TODO`. Ready now for `KL-149`/`KL-150`. `KL-151`/`KL-152` need
-measurement before any limit changes. `KL-153` is bounded research.
+**Status:** `IN_PROGRESS`. `KL-149` has a scoped candidate with independently
+verified public16 (Rust3000/0/165, Web1702, Chromium72,17 equal bindings,
+700 exact inputs), five CLI regressions and two compiled routing mutants.
+A separate same-release-profile baseline/candidate pair proves two named
+baseline REDs and candidate5/0/0. The full same853 original-filename measurement
+is independently accepted: installed644→687, Hager/Berker2→45,43 newly
+admitted; two ZIP-limit and one evidence-item refusal remain explicit and
+atomic. All originals unchanged, no private raw/item logs. Current-upstream
+integration/actual gates/publication remain pending, so KL-149 is not yet checked.
+`KL-150` remains next after delivery; `KL-151`/`KL-152` need measurement before
+any limit changes. `KL-153` is bounded research.
 
 Ordered by value per effort:
 

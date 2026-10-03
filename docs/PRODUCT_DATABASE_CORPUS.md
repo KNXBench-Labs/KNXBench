@@ -563,3 +563,43 @@ ZIP filename decoding and schemes 12-14 are evidenced. The next priorities are
 (2) deeper typed coverage of parameter/dynamic/load-procedure semantics.
 That sequence maximizes usable products without pretending that successful
 catalogue installation is full ETS or commissioning compatibility.
+
+## CLI extension-case before/after measurement — 2026-10-03
+
+Scoped AR06P KL-149 candidate, independently reconciled before integration.
+Both binaries use the release profile: baseline `main.rs` is byte-exact
+committed f15f7cd2 pre-fix source; candidate changes only existing ASCII
+exact-extension dispatch. The same853 manifest downloads (751 unique byte
+contents) were each installed into a fresh isolated catalogue on both sides,
+using their original basenames in owned readonly copies.
+
+| Public download source | Inputs | Before installed | After installed |
+| --- | ---: | ---: | ---: |
+| ABB |707|547|547|
+| Hager/Berker |48|2|45|
+| MDT |97|95|95|
+| Siemens |1|0|0|
+| Total |853|644|687|
+
+All46 uppercase Hager/Berker inputs previously reached the wrong project
+importer.43 now install; two still meet ZIP limits and one the evidence-item
+limit, as explicit atomic refusals. All other outcome categories are unchanged.
+This neither changes limits nor admits another scheme/nested-module grammar.
+The remaining catalogue refusals include147 unsupported namespaces,15 ZIP
+limits,2 evidence-item limits,1 invalid ZIP and1 database constraint. These
+closed measured categories are not all deliberate unsupported-format outcomes.
+
+Successful retained package blobs were checked against original byte digests;
+refused isolated catalogues contain zero package/source_file/product rows.
+The manifest and every original path/size/content digest match before/after and
+an independent final readonly pass. All700 candidate code/config inputs and
+both binary identities remain exact. No private raw output, filenames, member
+paths or per-item records were persisted. All private input copies/databases
+were removed; only aggregate commitments/counts survive. An earlier debug
+partial run was deliberately interrupted after56 pairs and is not acceptance.
+
+The downloads remain unpinned private evidence, not committed fixtures or CI
+gates. This proves the measured filename-routing/importer behavior only, not
+semantic completeness, ETS/native/hardware compatibility or broader AR06P
+acceptance. Current-upstream integration, actual gates and publication remain
+pending; the existing115/113 pinned matrix is a different scope.

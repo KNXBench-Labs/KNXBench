@@ -376,6 +376,15 @@ unmodelled-step 42, parameter-value 23, procedure-contents 9,
 procedure-shape 2). By mask, only `MV-0701` (16/238) and `MV-0705` (35/139)
 have any plannable programs. `MV-07B0` (664 programs) has none.
 
+**Module feature census** (read-only stream scan of the 852 ZIP packages'
+application XML). Exactly **one** package nests `ModuleDef`s: MDT
+`RF-TAL55Bx0x-01S` with 11 nested definitions at depth 2, the §150 failure.
+**Ten** packages pass module arguments through `NumericArg … AllocatorRefId=`,
+with 1,070 uses in total (ABB 4, MDT 5, Siemens HVAC bundle 1). Three more
+MDT packages declare an `Allocator` without referencing it. This is local
+evidence for the R-MODULE-03/04 rows in [ALPHA_READINESS](ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger).
+It is not a committed fixture.
+
 **What this run does not show.** It is parser/persistence evidence for
 publicly downloadable files at one point in time, not ETS parity, not
 semantic completeness and not commissioning evidence. It is not a pinned

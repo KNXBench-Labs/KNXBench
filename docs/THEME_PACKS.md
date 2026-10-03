@@ -108,6 +108,47 @@ Source 1f94808d5d9985b38fcf85021403bb4b05fea3e7 is published; exact remote ref,
 20 owned artifacts and all 622 gated inputs read back equal. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
 
+## U17 local management candidate and operator workflow
+
+Implementation is local/reviewed, not yet published or final-gated. Open
+Settings → Appearance. Builtins are immutable and show application origin;
+admitted imported entries show ID/name/version and saved selection. Preview is
+temporary. Use Apply to confirm a guarded selection/install; Cancel/Escape or
+closing the manager releases the candidate and restores the current confirmed
+rendering. The root theme runtime owns the only DOM lease; report consumers are
+read-only. Cross-client theme/map/accent changes revoke stale drafts/consent.
+
+Import a `.knx-theme.json` file. File admission shows the actual structured kind
+and path with live localized explanation. An ID collision opens a question
+showing the old/new identity/version, initially focused on Cancel. Same ID/version
+never implies consent or equivalent contents. Export on a validated installed
+row downloads canonical JSON text; it preserves admitted values and metadata.
+Builtins are not exported as misleading lossless v1 packs. Export recovery data
+preserves the observed raw theme area and is deliberately non-importable; keep
+the original settings file when original lexical bytes are required.
+
+Remove requires a content-bound confirmation. Removing the active pack couples
+map removal with System selection, retaining foreign entries and other settings.
+Use system theme resets selection without deleting the map or rewriting accent,
+density, motion or language. Available accent options follow the admitted visual
+candidate; an unsupported stored accent remains retained and explained.
+
+Apply uses U16's existing conditional queue. A dispatched write is not undone by
+closing Settings; this is stated while pending, with false-undo Cancel disabled.
+Repeated Apply dispatches once. A 409 restores the last known acknowledgment;
+the normal focus refresh adopts a later peer snapshot. An uncertain response can
+read once for reconciliation without replaying the write. Server acknowledgment
+and local cache failure are reported separately in manager and original selector.
+
+Current evidence:31 actual parent and five root cases, latest scoped74/TypeScript
+without stderr, six caught/restored behavioral controls and a caught/restored
+new-module TS2322 inclusion canary. The final frontend candidate passed
+Web1,702/95 files, Chromium69/no skip/no flaky, production build and types over262
+unchanged inputs. Eight behavioral controls were caught/restored. Full branch13/13 repository commands pass, Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending. Legacy full Web
+suite emits fixture stderr; no warning-free whole-suite claim. Actual intercepted
+Chromium is not native WebKitGTK/Orca or general WCAG/ETS/global-alpha approval.
+
 ## Evidence and inspected baseline
 
 The five built-in palettes/System resolver live in `apps/knx-web/src/theme.ts`;

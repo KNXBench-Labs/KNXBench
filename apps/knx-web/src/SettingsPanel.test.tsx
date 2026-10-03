@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseRules } from "./themeTokens";
 import SettingsPanel from "./SettingsPanel";
 import { THEMES } from "./theme";
@@ -28,6 +28,10 @@ vi.mock("./settingsStore", async (importOriginal) => ({
 }));
 
 let host: HTMLDivElement | undefined;
+
+beforeEach(() => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+});
 
 afterEach(() => {
   host?.remove();
@@ -119,6 +123,15 @@ async function renderPanel(onClose = vi.fn(), productLanguages?: readonly Produc
 }
 
 describe("SettingsPanel", () => {
+  it("renders and cleans up in a configured React act environment without hiding warnings", async () => {
+    const errors = vi.spyOn(console, "error");
+    try {
+      const { root } = await renderPanel();
+      await act(async () => root.unmount());
+      expect(errors.mock.calls).toEqual([]);
+    } finally { errors.mockRestore(); }
+  });
+
   it("uses a roomy shared resize shell with a two-column layout that stacks on narrow windows", async () => {
     const { root } = await renderPanel();
     const panel = host!.querySelector<HTMLElement>(".settings-panel")!;
@@ -137,7 +150,7 @@ describe("SettingsPanel", () => {
     expect(checkbox).toMatch(/width:\s*1rem/);
     expect(checkbox).toMatch(/min-height:\s*1rem/);
     expect(checkbox).toMatch(/padding:\s*0/);
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("groups appearance, language/data, and consumed bus preferences", async () => {
@@ -159,7 +172,7 @@ describe("SettingsPanel", () => {
     });
     expect(getSetting("preferredGateway")).toBe("192.0.2.10:3671");
     expect(host!.querySelector(".settings-section-bus .line-scan-exclusions")).not.toBeNull();
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("says programming asks every time until a 'don't ask again' is stored", async () => {
@@ -167,7 +180,7 @@ describe("SettingsPanel", () => {
     const field = host!.querySelector(".settings-field-programming-consent")!;
     expect(field.textContent).toContain("Asked before every programming operation.");
     expect(field.querySelector("button")).toBeNull();
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("shows a remembered programming consent by stage name and resets it", async () => {
@@ -178,7 +191,7 @@ describe("SettingsPanel", () => {
     await act(async () => field.querySelector("button")!.click());
     expect(getSetting("programmingConsent")).toBeUndefined();
     expect(field.textContent).toContain("Asked before every programming operation.");
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("autosave interval is disabled while autosave is off, and both controls call back", async () => {
@@ -230,22 +243,26 @@ describe("SettingsPanel", () => {
       interval.dispatchEvent(new Event("input", { bubbles: true }));
     });
     expect(onSelectAutosaveIntervalMinutes).toHaveBeenCalledWith(10);
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("shows the server fallback when no typed settings diagnostic is present", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      status: "loaded",
-      schemaVersion: 1,
-      settings: {},
-      message: "A future settings event occurred.",
-    }), { status: 200, headers: { "Content-Type": "application/json" } })));
-    await act(async () => initSettings());
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+        status: "loaded",
+        schemaVersion: 1,
+        settings: {},
+        message: "A future settings event occurred.",
+      }), { status: 200, headers: { "Content-Type": "application/json" } })));
+      await act(async () => initSettings());
 
-    const { root } = await renderPanel();
-    expect(host!.querySelector(".settings-diagnostic")!.textContent)
-      .toBe("A future settings event occurred.");
-    root.unmount();
+      const { root } = await renderPanel();
+      expect(host!.querySelector(".settings-diagnostic")!.textContent)
+        .toBe("A future settings event occurred.");
+      act(() => root.unmount());
+      expect(warning).toHaveBeenCalledExactlyOnceWith("KNXBench: A future settings event occurred.");
+    } finally { warning.mockRestore(); }
   });
 
   it("opens from the gear button (rendered by App.tsx) and shows its five labelled selects", async () => {
@@ -259,7 +276,7 @@ describe("SettingsPanel", () => {
     expect(host!.querySelector('select[aria-label="Product data language"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="UI language"]')).not.toBeNull();
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {
@@ -271,7 +288,7 @@ describe("SettingsPanel", () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("closes on a click outside the panel", async () => {
@@ -283,7 +300,7 @@ describe("SettingsPanel", () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("does not close on a click inside the panel", async () => {
@@ -295,7 +312,7 @@ describe("SettingsPanel", () => {
     });
 
     expect(onClose).not.toHaveBeenCalled();
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("changing the motion level select sets document.documentElement's data-motion-level", async () => {
@@ -310,7 +327,7 @@ describe("SettingsPanel", () => {
     });
 
     expect(document.documentElement.getAttribute("data-motion-level")).toBe("off");
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("changing the motion style select sets document.documentElement's data-motion-style", async () => {
@@ -325,7 +342,7 @@ describe("SettingsPanel", () => {
     });
 
     expect(document.documentElement.getAttribute("data-motion-style")).toBe("glitch");
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("renders one option per product language plus the package default", async () => {
@@ -345,7 +362,7 @@ describe("SettingsPanel", () => {
     ]);
     expect(select.disabled).toBe(false);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("selecting a product language persists it", async () => {
@@ -360,7 +377,7 @@ describe("SettingsPanel", () => {
 
     expect(getSetting("productLanguage")).toBe("de-DE");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("renders a disabled select with an explanation when no product database is installed", async () => {
@@ -371,7 +388,7 @@ describe("SettingsPanel", () => {
     expect(select.disabled).toBe(true);
     expect(Array.from(select.options).map((o) => o.text)).toEqual(["No product database installed"]);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("lists exactly the catalogues messages/ actually ships, named in themselves", async () => {
@@ -385,7 +402,7 @@ describe("SettingsPanel", () => {
       { value: "de", text: "Deutsch" },
     ]);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("the UI language select shows the active language", async () => {
@@ -394,7 +411,7 @@ describe("SettingsPanel", () => {
     const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
     expect(select.value).toBe("en");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("changing the UI language re-renders an already-mounted sibling and sets document.documentElement.lang", async () => {
@@ -416,7 +433,7 @@ describe("SettingsPanel", () => {
     expect(document.documentElement.getAttribute("lang")).toBe("de");
     expect(getSetting("uiLanguage")).toBe("de");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 });
 
@@ -434,7 +451,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       { value: "nl-NL", text: "Nederlands" },
     ]);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("activating an installed pack re-renders an already-mounted sibling with its strings", async () => {
@@ -450,7 +467,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     });
 
     expect(reader.textContent).toBe("Opslaan");
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("removing the active pack falls the UI back to English", async () => {
@@ -474,7 +491,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     });
 
     expect(reader.textContent).toBe("Save");
-    root.unmount();
+    act(() => root.unmount());
   });
 
   // Fix round 1: `handleRemovePack` no longer calls `setUiLanguage("en")`
@@ -502,7 +519,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
 
     expect(getSetting("uiLanguage")).toBe("nl-NL");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("re-importing the removed pack's tag restores the language without re-selecting it", async () => {
@@ -535,7 +552,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(select.value).toBe("nl-NL");
     expect(reader.textContent).toBe("Opslaan");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("importing a partial pack shows the report: applied/missing counts, unknown keys, plural support", async () => {
@@ -561,7 +578,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(report.textContent).toContain("some.future.key");
     expect(report.textContent).toContain("Plural forms are supported for this language.");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   // The export-side hint (`exportEnglishTemplate`'s own doc comment, and
@@ -589,7 +606,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(report.textContent).toContain("matches a built-in language");
     expect(report.textContent).toContain('"en"');
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("a rejected pack shows its reason in words, and never appears in the select", async () => {
@@ -611,7 +628,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
     expect(Array.from(select.options).map((o) => o.value)).toEqual(["en", "de"]);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   // KNOWN_LIMITATIONS.md §67: the rejection reason used to be
@@ -653,7 +670,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     // The old English clause must not survive alongside the German one.
     expect(report.textContent).not.toMatch(/is not a well-formed/i);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("a hand-typed grandfathered tag gets a hint at its modern replacement", async () => {
@@ -677,7 +694,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(report.textContent).toContain('"i-klingon"');
     expect(report.textContent).toContain('"tlh"');
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("exporting the English template produces a document the loader accepts", async () => {
@@ -704,8 +721,10 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       const text = await capturedBlob!.text();
       const parsed = JSON.parse(text) as unknown;
 
-      const result = importLanguagePack(parsed);
-      expect(result.ok).toBe(true);
+      await act(async () => {
+        const result = importLanguagePack(parsed);
+        expect(result.ok).toBe(true);
+      });
       // Matches the exported template's own message content.
       const template = exportEnglishTemplate();
       expect((parsed as { messages: Record<string, string> }).messages).toEqual(template.messages);
@@ -714,7 +733,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       URL.revokeObjectURL = originalRevokeObjectURL;
     }
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("exporting an installed pack round-trips it, unknown fields and all", async () => {
@@ -744,7 +763,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       URL.revokeObjectURL = originalRevokeObjectURL;
     }
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("shows no packs installed when none are, and a hint about the template's shadowed tag", async () => {
@@ -753,7 +772,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(host!.textContent).toContain("No language packs installed.");
     expect(host!.textContent).toContain("shadowed by the built-in English catalogue");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 });
 
@@ -813,7 +832,7 @@ describe("SettingsPanel's accent control", () => {
     expect(select.getAttribute("aria-describedby")).toBeNull();
     expect(host!.textContent).not.toContain("keeps its own accent");
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("is enabled under a palette that declares accent variations", async () => {
@@ -821,7 +840,7 @@ describe("SettingsPanel's accent control", () => {
 
     expect(select.disabled).toBe(false);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   it("is disabled under a theme whose accent is its identity", async () => {
@@ -829,7 +848,7 @@ describe("SettingsPanel's accent control", () => {
 
     expect(select.disabled).toBe(true);
 
-    root.unmount();
+    act(() => root.unmount());
   });
 
   // Without this, the sentence explaining the disabled control is on
@@ -846,7 +865,7 @@ describe("SettingsPanel's accent control", () => {
       "This theme keeps its own accent; the accent setting has no effect here.",
     );
 
-    root.unmount();
+    act(() => root.unmount());
   });
 });
 

@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06P KL-149 actual acceptance, publication pending — 2026-10-03 18:32 CEST
+## AR06P KL-149 scoped delivery checked — 2026-10-03 18:45 CEST
 
 Only CLI exact-extension dispatch now uses ASCII case-independent comparison.
 Five synthetic CLI regressions cover fresh uppercase/mixed install, retained
@@ -24,8 +24,12 @@ semantic compatibility claim. Normal current-U18 e7f9db8e integration dd5a350c
 passes NEW actual16 independently: Rust3000/0/165/151 blocks, Web1702,
 Chromium82 inventory/pass,17 equal bindings/704 committed-exact inputs.
 All285 CLI Rust/build/test inputs equal the privately measured producer; that
-receipt retains its original run identity. Publication/readback/cleanup and
-broader AR06P/AR07/Alpha remain open; other package limits unchanged.
+receipt retains its original run identity. Delivery362fec24 published/live/
+fetched read back at refs0/0, source704 and ten owned artifacts exact, complete
+owner history retained. Five acceptance Markdown gates passed.16 completed
+own build/snapshot/shadow/XDG directories removed, all aggregate/public logs
+retained. Closing metadata/final target/checkout/branch cleanup remain; broader
+AR06P/AR07/Alpha open, next KL150 scoping RED; package limits unchanged.
 
 ## AR07 checked outside-walk scoped delivery — 2026-10-03 13:54 CEST
 

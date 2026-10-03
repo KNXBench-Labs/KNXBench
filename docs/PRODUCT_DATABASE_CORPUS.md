@@ -605,5 +605,7 @@ acceptance. Current-upstream U18 integration dd5a350c independently passes
 NEW actual16: Rust3000/0/165/151 blocks, Web1702, Chromium82 inventory/pass,
 17 equal bindings/704 committed-exact inputs. All285 CLI Rust/build/test
 inputs match the privately measured producer; that receipt keeps its original
-run identity, not a newly claimed private run. Publication/readback/cleanup
-remain pending; the existing115/113 pinned matrix is a different scope.
+run identity, not a newly claimed private run. Delivery362fec24 is published/
+live/fetched read back: refs0/0, source704 and ten owned artifacts byte-exact.
+Only KL-149 dispatch is lifted; the existing115/113 pinned matrix is a different
+scope. Final metadata/own cleanup do not change measured format policy.

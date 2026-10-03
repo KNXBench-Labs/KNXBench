@@ -410,6 +410,13 @@ exact committed blobs,17 bindings equal and strict build/lints/nonempty root
 audits. Five compiled mutants remain restored. This accepts ADR-0062's bounded
 work policy, not broader AR07. Acceptance metadata/publication/readback pending;
 preceding integration-pending words describe the earlier candidate checkpoint.
+Bounded policy source8f47c13b/actual-gated7ae116a1 subsequently published/read back
+through2704f8e29b6ca2d53c022c468f116b526109c678: local/live/fetched refs equal0/0,
+all14 owned artifacts and624 actual-gated inputs exact remotely; doc-only
+acceptance gates pass, code delta zero. Own build/script/raw-log scaffolding
+removed, minimal aggregate receipts and source-only remaining audit retained.
+Final receipt metadata publication/readback and clean checkout/branch removal
+remain closing steps, not new semantics or full-package AR07/Alpha acceptance.
 Broader AR07 and
 work/byte/semantics acceptance remain open; no completed UI/native/ETS claim.
 `unsupportedControlKind` warning/English fallback is on the backend wire; manual

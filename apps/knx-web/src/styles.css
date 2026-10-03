@@ -816,6 +816,27 @@ main {
   font-size: 0.9rem;
 }
 
+/* Appearance management reuses the engineering shell's palette and spacing. */
+.theme-manager { display: grid; gap: 0.75rem; min-width: 0; }
+.theme-manager h4, .theme-manager p { margin: 0; }
+.theme-manager > button { justify-self: start; }
+.theme-manager-list { display: grid; gap: 0.5rem; padding: 0; margin: 0; list-style: none; }
+.theme-manager-entry {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--knx-border);
+  border-radius: 6px;
+  background: var(--knx-surface);
+}
+.theme-manager-entry > span, .theme-manager-entry > p { color: var(--knx-muted); font-size: 0.8rem; }
+.theme-manager code, .theme-manager strong, .theme-manager p { overflow-wrap: anywhere; }
+.theme-manager-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
+.theme-manager-actions > button { max-width: 100%; white-space: normal; }
+.theme-manager-state { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+.theme-manager-state > p, .theme-manager-state > div { flex-basis: 100%; }
+
 .settings-section .line-scan-exclusions {
   margin-top: 0.25rem;
 }

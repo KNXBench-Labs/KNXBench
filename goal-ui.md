@@ -73,7 +73,7 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 ### Theme-pack extension (user request, 2026-10-02)
 
 **U14 contract, U15 runtime and U16 persistence/file foundations delivered.**
-**U17–U18 remain open.** The user requested
+**U17 implementation acceptance passed; publication is tracked in the current handover. U18 remains open.** The user requested
 theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette
@@ -423,21 +423,33 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 
 ### U17 — Add accessible theme management and reversible preview [web]
 
-**Open.** Depends on U15 and U16. Extend Settings → Appearance; do not create a
+**DONE — management delivered/read back as 4d9073ca; U18 remains open.**
+Actual merged chain proc_cdcd42b97d47 passed all23 commands:17 repository and
+six offline inventory/execution commands. Web1,702/95 files, Chromium72 (zero
+failed/skipped/flaky), Rust2,984/0/165 across149 blocks,17 equal bindings and697
+unchanged source/config inputs. Compiled ignored inventory165; separately selected
+six offline suites execute27 private cases plus the115-instance/113-unique matrix.
+All420 private input files unchanged; transient corpus link removed.
+31 actual parent/five root and eleven manager browser cases cover the management
+contract. Eight original behavioral controls plus three added compiled browser
+controls are caught/restored; diagnostic-module type canary is caught/restored.
+Earlier cancelled/lifecycle-interrupted attempts remain non-acceptance evidence.
+In-session self-review, not independent/native/Orca/global-alpha approval.
+Depends on U15 and U16. Extend Settings → Appearance; do not create a
 second settings screen or require a visual theme editor for this slice.
 
-- [ ] Show built-in and installed packs with understandable names, origin,
+- [x] Show built-in and installed packs with understandable names, origin,
   version and any incompatibility diagnostic. Add Import, Export and Remove
   actions, replacement confirmation, and a clear reset to System/built-ins.
   Accent controls reflect the selected pack's actual capabilities.
-- [ ] Provide a temporary preview with explicit Apply/Cancel. Preview alone
+- [x] Provide a temporary preview with explicit Apply/Cancel. Preview alone
   does not write settings; Cancel, Escape, dialog close/unmount or a failed
   apply restores the previous acknowledged theme without retaining overrides.
   Define/test what an authoritative cross-client change does during preview.
-- [ ] Keep reset/cancel usable for poor palettes. Use existing overlay/focus
+- [x] Keep reset/cancel usable for poor palettes. Use existing overlay/focus
   patterns; localize every label and structured error, announce outcomes and
   provide full keyboard operation without disrupting stacked modals.
-- [ ] Add behavioral component tests and fully mocked browser flows for valid
+- [x] Add behavioral component tests and fully mocked browser flows for valid
   import, rejection, ID collision, preview rollback, active removal, reset,
   persistence failure and System mode. Browser tests intercept all backend
   traffic; no live server, gateway or productive bus is involved.
@@ -446,10 +458,20 @@ second settings screen or require a visual theme editor for this slice.
 controls. Disclose native WebKitGTK and real assistive-technology evidence
 separately; mocked Chromium is not native/screen-reader acceptance.
 
+Named evidence: `ThemePackManager.integration.test.tsx`, `themePreview.test.tsx`,
+`SettingsPanel.test.tsx` and all eleven `theme-manager.e2e.ts` flows. The U17 log
+records findings, negative controls, integration provenance and actual counts.
+
 ### U18 — Review and close the theme-pack extension
 
 **Open.** Depends on U14–U17. Does not reopen the completed U13 review or close
 unrelated alpha/domain/native evidence gaps.
+
+Read-only acceptance audit recorded IMPORTANT U18-R1: existing theme-runtime
+browser assertions exercise root switches and a generic table/input, not the
+representative editor/inspector/dialog/diagnostic states required below across
+all palettes. Add and verify that bounded mocked coverage before closing U18;
+do not reinterpret U17 management evidence as whole-extension visual acceptance.
 
 - [ ] Run semantic roundtrip and migration/settings regressions plus hostile
   pack fixtures. Mutation-check every new rejection, rollback and persistence

@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06P KL-149 scoped candidate, measurement pending — 2026-10-03 17:30 CEST
+
+Only CLI exact-extension dispatch now uses ASCII case-independent comparison.
+Five synthetic CLI regressions cover fresh uppercase/mixed install, retained
+byte/idempotent retry, uppercase project routing, eight legacy refusals and
+three lookalikes. No parser/schema/legacy/UI admission added. Original RED and
+seven-command expanded GREEN are verified; two separate compiled snapshot
+mutants yield four named behavioral failures, canonical never mutated.
+Fresh candidate public16 accepted: Rust3000/0/165 (151 blocks), Web1702,
+Chromium72 in a network namespace retaining exact4173 safety guards,17 equal
+bindings and700 frozen inputs. Both port/origin rejections retained.
+Release-pair nine stages accepted: pre-fix committed producer two named REDs,
+candidate5/0/0, exact same release profile and source inputs. Incomplete debug
+measurement deliberately interrupted after56 pairs; zero private temporaries,
+no final accepted result, receipt retained. Full offline original-filename853
+release measurement proc_1fcfbf5cdfa3 is independently accepted:644→687
+installed, Hager/Berker2→45;43 new installs and three still explicit refusals.
+All originals, retained successful blobs, source700 and binary hashes verified;
+refused package/source_file/product tables empty, no private raw/item records
+or temporary private directories. This is unpinned measurement, not a CI or
+semantic compatibility claim. Latest-upstream acceptance is still pending. Scope still starts
+at f15f7cd2; integration/docs/publication/cleanup and broader Alpha remain open.
+
 ## AR07 checked outside-walk scoped delivery — 2026-10-03 13:54 CEST
 
 Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded

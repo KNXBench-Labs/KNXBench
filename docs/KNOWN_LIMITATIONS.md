@@ -7078,7 +7078,7 @@ acceptance remains separate from the mock/simulator evidence here.
 
 ## §149 `knx products ingest` matches the `.knxprod` extension case-sensitively
 
-**Actual acceptance checkpoint (publication pending):** The scoped AR06P CLI correction
+**Scoped resolution published362fec24 (2026-10-03):** The scoped AR06P CLI correction
 uses exact ASCII case-independent extension comparison, with five synthetic CLI
 regressions, four named compiled mutation failures, public workspace/build
 gates and same-release-profile baseline RED/candidate GREEN verification.
@@ -7090,8 +7090,10 @@ evidence-item refusal remain explicit/atomic. Originals and retained successful
 blobs verified unchanged; no private raw/item logs. Normal U18 merge dd5a350c
 is independently actual16 accepted: Rust3000/0/165, Web1702, Chromium82,
 17 bindings/704 committed-exact inputs. All285 CLI build/test inputs equal
-the measured producer. Publication/readback/cleanup still pending; no full
-compatibility or delivered lift yet.
+the measured producer. Delivery362fec24 live/fetched/local refs equal0/0,
+source704 and ten owned artifacts byte-exact; five acceptance Markdown gates
+pass. This lifts only the case-sensitive CLI dispatch limitation, not §150–153
+or full product/ETS/commissioning compatibility.
 
 **Historical baseline observed 2026-10-03** (PRODUCT_DATABASE_CORPUS §Public crawler corpus run).
 `run_products_ingest` (`apps/knx-cli/src/main.rs`) routes a file to
@@ -7108,9 +7110,10 @@ other 3 hit §151/§152).
 - `install_package` itself already compares legacy extensions
   case-insensitively (`.vd3`–`.vd5`, `.pr3`–`.pr5`), so the two entry
   points disagree.
-- **Workaround:** rename or symlink to lowercase `.knxprod`.
-- **Lifted when** the CLI compares the extension case-insensitively, with a
-  regression test using an upper-case name.
+- **Historical workaround (older CLI builds):** rename or symlink to lowercase `.knxprod`.
+- **Lifted in the scoped delivery above:** exact ASCII case-independent routing
+  with uppercase/mixed-case, project negative-control, legacy-refusal, retained
+  byte/idempotence regressions and independently compiled routing mutants.
 
 ## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
 

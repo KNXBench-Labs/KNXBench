@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session / U17 management reservation)
+- **Timestamp:** 2026-10-03 03:14 CEST
+- **Web lock:** taken by ui-theme-management for U17.
+- **Completed:** U16 source1f94808d and receipt3839e3a3 published/read back; actual own U16 worktree, branch and task scratch removed after live-process and exact-input-link checks. Root/foreign trees and all private input untouched. Minimal public aggregates/planning retained only for active U17 provenance. Fresh isolated ui-theme-management created on fetched3839e3a3; latest authoritative lock was released. Read CURRENT_STATE, PROJECT_CONTEXT/generated read-only index, implementation/goal/contracts and existing App/Settings/root theme/DOM leases/storage. No U17 implementation or acceptance yet.
+- **Pending/Next Steps:** Publish/read back this handover-only reservation after fresh doc gate, then U17 vertical TDD: one root visual preview owner, Appearance manager using authoritative conditional plans, atomic consent/apply/error restore, invalid-store recovery, localized metadata/diagnostics, keyboard/focus and local intercepted browser flows. U18 final extension-wide review/mutation/roundtrip/integration remains pending. Do not implement a second Settings store/screen or claim source-only U16 is the manager.
+- **Notes for Codex oder Claude:** Root App still passes static THEMES and normal optimistic setter; installed-pack operations must use U16 plans. Existing DOM pack leases restore unconditionally, so do not stack root preview/runtime writers. Cross-client source/selection/accent changes and unmount must cancel preview without persistence; Keep density/motion/language independent. Native/Orca/global-alpha/ETS and independent-model approval absent. No quota/delegation checks or productive backend/KNX/discovery/tunnel/hardware; local mocks only. Do not preserve secrets, tokens, credentials, passwords, API keys, or connection strings; use `[REDACTED]`.
+
+---
+
 - **Last Agent:** codex (UI session / U16 source delivered, receipt-only close)
 - **Timestamp:** 2026-10-03 03:01 CEST
 - **Web lock:** released by ui-theme-storage after U16 source publication/readback; U17 has not taken it.

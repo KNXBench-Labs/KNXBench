@@ -1,7 +1,7 @@
 # ADR 0063: Parameter scopes preserve the full evaluation identity
 
 Date: 2026-10-03
-Status: Accepted for the bounded backend contract — actual integration 3711c4f7 verified; publication pending. UI adoption and broader AR07 remain open.
+Status: Accepted for the bounded backend contract — actual integration 3711c4f7 verified, source/acceptance published and read back as3a8b66f4. UI adoption and broader AR07 remain open.
 Session: 4, AR07
 
 ## Context and evidence
@@ -80,5 +80,9 @@ not independent-model approval. The first independent receipt assertion expected
 the Clippy display verb `Checking`; actual fresh output says `Compiling
 knx-server`. That rejected verifier attempt is retained; both compile verbs are
 checked with the actual command/exit/fresh-target/source proof, without replay.
-Exact publication readback remains required. No real nested product, new UI
-consumer, ETS parity, complete AR07 or Alpha acceptance follows from these gates.
+Source/acceptance3a8b66f4 is published: local/fetched/live refs equal0/0 at that
+checkpoint; all11 owned artifacts and624 gated inputs exact remotely. Completed
+owned builds/raw scaffolding removed after process checks; minimal aggregates
+retained. Final receipt-only publication and checkout/branch cleanup follow
+separately. No real nested product, new UI consumer, ETS parity, complete AR07
+or Alpha acceptance follows from these gates.

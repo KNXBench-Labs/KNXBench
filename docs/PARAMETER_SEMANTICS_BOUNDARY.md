@@ -403,3 +403,15 @@ against the same real command, exits and frozen source, without gate replay.
 ADR-0063 now accepts only the bounded backend identity projection. Exact remote
 readback/owned cleanup are pending. UI adoption, real nested manufacturer,
 external substitution/variable output and broader AR07/Alpha remain open.
+
+### Module-provenance backend delivery — 2026-10-03 05:48 CEST
+
+Source/acceptance3a8b66f4 published/read back: local/fetched/live refs equal0/0
+at that checkpoint, all11 owned artifacts and624 actual-gated inputs exact
+remotely. Actual3711c4f7's20/20 and three compiled mutations/restoration above
+are the source acceptance; subsequent delta is Markdown only, four nonempty
+intended-root doc audits/whitespace passed. Completed own targets/raw scaffolding
+removed after process checks, minimal aggregates retained. Final receipt-only
+publication and clean checkout/branch removal follow separately. UI manual
+nodeChain/fallback adoption, genuine nested manufacturer, external substitution
+and whole AR07/Alpha stay open. No source/schema/authority or lock change.

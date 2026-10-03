@@ -450,6 +450,17 @@ rejected; actual fresh Clippy says `Compiling`, corrected without source change
 or gate replay. ADR-0063 bounded backend accepted; publication/readback/cleanup
 pending, UI scope adoption and whole AR07/Alpha remain open.
 
+2026-10-03 05:48 module-provenance backend leaf delivered: source/acceptance
+3a8b66f422bda73c9999fb214f2459c79ecea76b published and read back with0/0
+local/live/fetched refs at that checkpoint, all11 own artifacts and624 actual
+inputs exact remotely. Actual3711c4f7's20/20 and three compiled mutants/restoration
+retain their scope; post-gate Markdown delta has four nonempty intended-root
+audits/whitespace green. Completed owned targets/raw scaffolding removed after
+process checks; minimal aggregates retained. Final receipt-only publication and
+checkout/two ancestor-confirmed branch cleanup follow separately. Continue
+earliest-ready AR07 external substitution/variable-output audit on fresh upstream;
+UI chain adoption, genuine nested products and whole AR07/Alpha remain open.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.

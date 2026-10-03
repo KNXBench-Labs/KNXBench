@@ -2,9 +2,10 @@
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
 U16 persistence/file foundations are delivered/read back as 1f94808d;
-U17 management and U18 extension-wide acceptance remain pending.**
+U17 management passes actual-merged acceptance; publication is tracked in the
+current handover. U18 extension-wide acceptance remains pending.**
 This document defines a KNXBench-owned format, not an existing interoperability
-standard or a claim that the application already imports themes. Decision:
+standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
 
 ## Runtime implementation boundary
@@ -108,9 +109,11 @@ Source 1f94808d5d9985b38fcf85021403bb4b05fea3e7 is published; exact remote ref,
 20 owned artifacts and all 622 gated inputs read back equal. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
 
-## U17 local management candidate and operator workflow
+<a id="u17-local-management-candidate-and-operator-workflow"></a>
+## U17 verified management and operator workflow
 
-Implementation is local/reviewed, not yet published or final-gated. Open
+Implementation passes the actual merged acceptance below; publication/readback
+is recorded in the current handover, not inferred from a candidate run. Open
 Settings → Appearance. Builtins are immutable and show application origin;
 admitted imported entries show ID/name/version and saved selection. Preview is
 temporary. Use Apply to confirm a guarded selection/install; Cancel/Escape or
@@ -140,7 +143,7 @@ the normal focus refresh adopts a later peer snapshot. An uncertain response can
 read once for reconciliation without replaying the write. Server acknowledgment
 and local cache failure are reported separately in manager and original selector.
 
-Current evidence:31 actual parent and five root cases, latest scoped74/TypeScript
+Historical candidate evidence:31 actual parent and five root cases, latest scoped74/TypeScript
 without stderr, six caught/restored behavioral controls and a caught/restored
 new-module TS2322 inclusion canary. The final frontend candidate passed
 Web1,702/95 files, Chromium69/no skip/no flaky, production build and types over262
@@ -153,9 +156,23 @@ U17-R1 acceptance audit added explicit actual-manager hostile-file rejection,
 System reset/OS transitions and HTTP500 rollback/no replay. Eleven manager
 browser cases and three further compiled browser guard controls pass, canonical
 runtime restored unchanged. The previous full69-browser receipt predates this
-test-only delta; renewed full actual-merged gates are pending. The cancelled first
+test-only delta; renewed full actual-merged gates are recorded below. The cancelled first
 actual attempt and initial unused-import mutant compilation are retained as
 non-acceptance/instrumentation records, not successful behavioral evidence.
+
+Actual chain proc_cdcd42b97d47 on f16f1e40 passed23 commands:17 repository
+and six explicitly selected offline inventory/execution commands. Web1702 in95
+files, Chromium72 with zero failure/skip/flaky, ordinary Rust2984/0/165 across149
+result blocks, compiled ignored inventory165 and17 generated bindings equal.
+Six selected offline suites execute27 private cases; the release matrix is one
+additional case measuring115 instances/113 unique packages with status-only
+per-item output. All697 source/configuration inputs and420 private files remain
+unchanged; temporary corpus link removed. This is not a broad ignored/live sweep.
+The deliberately cancelled attempt1 and lifecycle-interrupted attempt2 remain
+non-acceptance records. Subsequent integration with upstream5ca570a0 changes
+Markdown only; all697 gated inputs remain equal, with document gates required
+before publication. U18-R1 cross-palette representative-component state coverage
+is still open; this manager acceptance is not a substitute for it.
 
 ## Evidence and inspected baseline
 

@@ -1,14 +1,16 @@
 # Known limitations
 
-## Theme pack management is a local candidate, not release acceptance
+<a id="theme-pack-management-is-a-local-candidate-not-release-acceptance"></a>
+## Verified theme pack management is not whole-extension release acceptance
 
 U15 admission/runtime is delivered. U16 delivers file transport as 1f94808d,
 acknowledged conditional installation/removal/selection and structured errors;
 the 16-check candidate and actual-merged 22-check gates passed. Source publication
-and exact remote artifact readback are verified. U17 now has a reviewed local
-Appearance manager/diagnostics/preview candidate, including actual mocked
-Chromium keyboard/focus/roundtrip flows. Final-current candidate and actual-merged
-gates/publication remain pending; do not describe it as delivered yet.
+and exact remote artifact readback are verified. U17 Appearance management/
+diagnostics/preview passes actual merged23-command acceptance on f16f1e40:
+Web1702, Chromium72, Rust2984/0/165,27 explicitly selected private offline cases
+plus the115-instance matrix,697 unchanged source/config inputs and420 unchanged
+private files. Publication/readback is tracked in the current handover.
 
 Unknown raw entries are retained, not repaired. Recovery exports only observed
 browser JSON theme scope, not original lexical bytes, duplicate names or numeric
@@ -23,7 +25,10 @@ Admission targets serialized JSON/settings data, not isolation from already
 privileged hostile JavaScript proxies. Contrast covers the documented three
 role pairs and accents, not every component/WCAG criterion. Local intercepted
 Chromium/self-review is not native WebKitGTK/Orca, independent approval or
-release acceptance. U17–U18 remain open; U15 publication remains 9d1ae19d.
+release acceptance. U18 remains open; U15 publication remains 9d1ae19d.
+IMPORTANT U18-R1: root-switch/generic table/input tests do not establish the
+required representative editor/inspector/dialog/diagnostic state coverage across
+all palettes. This must be verified separately, not silently treated as done.
 
 Preview cancellation changes presentation only. Once a guarded write is
 dispatched, closing Settings cannot cancel its server operation; the UI states

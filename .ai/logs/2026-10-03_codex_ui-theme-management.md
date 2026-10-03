@@ -51,6 +51,39 @@ entries remain visible as diagnostics/recovery candidates, never silently erased
 
 ## Evidence
 
+### Actual merged acceptance and documentation-only integration
+
+Actual chain proc_cdcd42b97d47/PID2816334 completed exit0 on f16f1e40.
+All23 commands accepted:17 repository and six selected offline inventory/
+execution commands. Web1702/95 files, Chromium72 without failed/skipped/flaky,
+ordinary Rust2984/0/165 across149 result blocks, compiled ignored inventory165,
+17 equal shadow bindings and697 unchanged code/configuration inputs. Six offline
+suites execute27 private cases and one release-matrix case; matrix115 instances/
+113 unique products with recursively verified status-only item shape. All420
+private originals unchanged and transient corpus link removed. No raw private
+diagnostics retained, live bus or native/Orca/general-alpha/ETS approval.
+
+Attempt1 was cancelled to close U17-R1. Attempt2 was killed by agent_close during
+workspace compilation; stale RUNNING was reconciled against process/OS evidence,
+not called a product failure or acceptance. Run3 had separate fresh directories,
+shared leases, frozen HEAD/source and explicit notified lifecycle persistence.
+Eleven actual manager browser cases and three added compiled guard controls close
+U17-R1. Independent review is not claimed; bounded in-session self-review.
+
+New upstream5ca570a0 adds only Markdown. Conventional integration40642ea2 keeps
+all complete upstream/owned histories; independent full-blob expectations and
+truncated-suffix controls prove both conflicting implementation prefixes and
+handover histories survive. All697 gated code/configuration inputs remain equal.
+Updated acceptance/operator/ADR/roadmap/limitations documents; their final gates
+and publication/readback are tracked in the handover, not assumed here.
+
+Preliminary U18 audit found IMPORTANT U18-R1: generic root-switch/table/input
+fixtures do not establish the explicitly required representative editor/inspector/
+dialog/diagnostic/focus/selection/disabled/accent states across palettes. This is
+U18 closing work, not a claim that U17 implementation is missing or native AT
+has been accepted. U18 remains open. All preceding candidate checkpoints are
+historical evidence for their own trees and do not override this actual receipt.
+
 ### Final frontend candidate (2026-10-03)
 
 Final Web1,702 in95 files, intercepted Chromium69 (zero failed/skipped/flaky),

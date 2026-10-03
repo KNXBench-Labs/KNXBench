@@ -610,6 +610,39 @@ live/fetched read back: refs0/0, source704 and ten owned artifacts byte-exact.
 Only KL-149 dispatch is lifted; the existing115/113 pinned matrix is a different
 scope. Final metadata/own cleanup do not change measured format policy.
 
+## Nested-definition full CLI pair — 2026-10-03 22:35 CEST
+
+KL-150 candidate a2aa4b7 now has a complete offline original-filename853
+before/after run, independently reconciled against the retained aggregate and
+unchanged manifest/all original input hashes. Same fresh Release profile;
+the baseline differs only by the exact committed pre-fix dynamic parser from
+the candidate's706 source/config inputs. The previous KL149 candidate histogram
+is reproduced exactly, not merely compared with an extrapolated count.
+
+| Coarse CLI outcome | Pre-KL150 baseline | Candidate |
+| --- | ---: | ---: |
+| Installed | 687 | 688 |
+| Unsupported namespace | 147 | 147 |
+| ZIP policy limit | 15 | 15 |
+| XML evidence item limit | 2 | 2 |
+| Database constraint | 1 | 0 |
+| Invalid ZIP | 1 | 1 |
+| Total measured original files | 853 | 853 |
+
+Exactly one constraint refusal becomes installed; no installed→refused change.
+Each input/side gets a fresh private database and readonly original-basename
+copy. Successful package BLOB bytes match input bytes, stored source BLOB hashes
+are internally consistent, and four catalog/package tables stay empty after
+refusal. Original manifest/all inputs independently rehashed unchanged; all
+private copies/databases removed. Only corpus-wide counts, closed categories,
+code/whole-cohort commitments survive; no per-item records/raw output.
+Public16 (Rust3009/0/166, Web1702, Chromium82, bindings17) and Release12
+(old-parser named RED/candidate storage7 GREEN/CLI5 controls each) also pass.
+Current-upstream integrated acceptance, final docs/publication/readback and own
+cleanup are pending. This is admission/storage evidence, not new nested runtime,
+allocation/parameter-write semantics, full ETS/vendor compatibility or a rerun
+of the separately pinned115/113 selected semantics matrix. No limits changed.
+
 ## Nested-definition storage candidate — 2026-10-03 20:56 CEST
 
 AR06P KL-150 has a bounded one-package offline before/after witness, not a new

@@ -389,6 +389,18 @@ for anything still unsupported, a re-run of the 853-file measurement with a
 before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are
 private, unpinned evidence and never a committed fixture or CI gate.
 
+At 2026-10-03 22:35 CEST KL150 candidate a2aa4b7 has full offline853
+original-filename CLI evidence, independently reconciled: baseline687 installed,
+candidate688; exactly one database constraint refusal→installed, all other
+categories unchanged, no installed→refused regression. Original manifest/all
+inputs rehashed unchanged, successful retained package bytes/source blob hashes
+verified, refusal tables empty, private temp copies/DBs removed; aggregate-only
+receipts. Fresh complete public16 (Rust3009/0/166, Web1702, Chromium82,
+bindings17) and same-profile Release12 (baseline named RED/candidate storage7
+GREEN/CLI5 controls each) pass. Fresh upstream is still cb5781c7, source706
+exact. Integrated acceptance, final metadata/publication/readback and own cleanup
+remain; KL150 is still unchecked and R-MODULE-04 runtime remains separate.
+
 ### AR07 — Research and validate supported parameter semantics, never execute unknown vendor logic
 
 **Sources:** `KL-3`, `KL-146`, `PDB-01`, `PDB-02`, `PDB-03`, `PDB-05`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`.

@@ -56,6 +56,32 @@ receipts remain preserved. No lint allowance or workspace trust change.
 
 ## Open boundaries
 
+## Full candidate checkpoint — 2026-10-03 22:35 CEST
+
+Owned11-file candidate a2aa4b7 committed, clean and author/committer/trailers
+checked. Whole public16 retry separately reconciled: Rust153 blocks/3009/0/166,
+compiled ignored166, Web1702, Chromium82, shadow bindings17 significant-token
+exact/eight controls. Strict Clippy/build/deny/format and all repository audits
+pass. First broad had eight command exits0 but its added binding comparer could
+not load the installed TypeScript7 package as an old absolute-directory API.
+Rejected runner/receipt/logs preserved; source/fixture guards unchanged, complete
+16 rerun with literal/identifier-preserving stdlib tokens, no source restore.
+Fresh Release pair12: exact old parser named storage RED, candidate storage7
+GREEN, CLI5 controls GREEN each. Hashes/logs/source706 separately verified;
+ten public classifier and seven descriptor controls pass.
+
+Complete offline original-filename853 CLI pair accepted and independently
+reconciled/rehashed: baseline687/candidate688 installed; one database constraint
+refusal becomes installed. Namespace147, ZIP-limit15, evidence-item-limit2,
+invalid-ZIP1 unchanged; no installed→refused regression. Fresh DB per side/input,
+successful retained archive bytes/source blob hashes verified, four catalog/
+package tables empty after refusal. Manifest/all inputs unchanged; all private
+copies/databases removed, aggregate-only receipt and whole-cohort commitments.
+Fresh origin still cb5781c7. Integrated acceptance, final metadata/publication/
+live-fetched readback and owned cleanup remain open. No new runtime/limit/
+grammar/ETS-compatibility claim. Historical open-boundary text below is the
+20:56 checkpoint, not current missing evidence.
+
 Fresh broad/current-upstream acceptance, the complete original-filename853
 CLI measurement, final documentation/publication/readback and owned cleanup
 remain pending. KL-150 is not checked or lifted yet. The single private case is

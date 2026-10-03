@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06P KL-150 full candidate verification — 2026-10-03 22:35 CEST
+
+Owned candidate a2aa4b7 is committed, source706 exact; not published yet.
+Fresh complete public16 retry: Rust153 blocks/3009-0-166, compiled ignored166,
+Web1702, Chromium inventory/pass82, shadow bindings17 significant-token exact
+with eight controls; strict workspace Clippy/build/deny/format and all audits.
+First broad eight commands exited0; the added binding helper's pre-v7 absolute
+directory API assumption rejected verification, not product tests or semantics.
+Original evidence retained and whole16 rerun, never fixture-origin weakening.
+Release pair12 separately reconciled: exact committed old-parser named RED,
+candidate storage7 GREEN, CLI5 GREEN each; both profiles Release, binaries/logs
+hash-exact. Full853 original-filename CLI pair accepted and independently
+rehashed/reconciled: installed687→688, one database-constraint refusal→installed;
+all other categories unchanged, no installed→refused regression. Every side has
+a fresh private DB; successful archive bytes/source blob digests verified and
+four catalog/package tables empty on refusal. Original manifest/all inputs
+unchanged, temporary copies/DBs removed, only aggregate receipts survive.
+Fresh current-upstream integrated acceptance, final metadata/publication/readback
+and owned cleanup remain pending; KL150 remains unchecked. R-MODULE-04 runtime,
+new limit/grammar claims and automatic repair of old stored rows are not included.
+
 ## AR06P KL-150 lexical storage candidate — 2026-10-03 20:56 CEST
 
 The nested-definition UNIQUE-constraint bug has an exact synthetic package RED.

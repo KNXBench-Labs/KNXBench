@@ -17,8 +17,8 @@ use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
     evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_ACTIVATIONS,
-    MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_EVALUATION_WORK,
+    MAX_MODULE_ACTIVATIONS, MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -4276,4 +4276,163 @@ fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
             .unwrap();
         assert_eq!(present, 1, "v10's `{table}` survives the v11 step");
     }
+}
+
+// Compact resource-only siblings of the existing fan-out fixture. These
+// deliberately produce no activations; the work itself must be admitted.
+fn public_work_only_fanout(leaf: DynamicTree) -> ProgramTrees {
+    let (program, mut modules) = build_fanout_chain(5, 4);
+    modules.insert("F-6".into(), leaf);
+    ProgramTrees::from_parts(program, modules)
+}
+
+fn assert_public_work_refusal(activation: &knx_productdb::dynamic::Activation) {
+    let markers: Vec<_> = activation
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.diagnostic,
+                Diagnostic::EvaluationWorkBudgetExhausted { .. }
+            )
+        })
+        .collect();
+    assert_eq!(markers.len(), 1);
+    assert!(markers[0].scope.is_some());
+    assert!(markers[0].diagnostic.may_hide_refs());
+    assert!(matches!(
+        markers[0].diagnostic,
+        Diagnostic::EvaluationWorkBudgetExhausted {
+            budget: MAX_EVALUATION_WORK,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn inert_fan_out_is_admitted_even_without_recorded_results() {
+    let leaf_count = MAX_MODULE_ACTIVATIONS * 4 / 4usize.pow(5) + 1;
+    for kind in [
+        "Assign",
+        "Rows",
+        "Columns",
+        "ParameterBlock",
+        "when",
+        "ParameterSeparator",
+    ] {
+        let trees = public_work_only_fanout(DynamicTree::from_nodes(
+            (0..leaf_count).map(|i| nd(i as i64, None, kind)).collect(),
+        ));
+        let original = format!("{trees:?}");
+        let activation = evaluate(&trees, &values(&[]).into());
+        assert_eq!(
+            activation.diagnostics.len(),
+            1,
+            "inert {kind} fan-out must report resource truncation, not finish without a work quota"
+        );
+        assert_public_work_refusal(&activation);
+        assert!(activation.diagnostics[0].diagnostic.may_hide_refs());
+        assert!(activation.parameter_refs.is_empty());
+        assert!(activation.com_object_refs.is_empty());
+        assert!(activation.labels.is_empty());
+        assert_eq!(format!("{trees:?}"), original);
+    }
+}
+
+#[test]
+fn skipped_non_reference_descendants_consume_evaluation_work() {
+    let leaf_count = MAX_MODULE_ACTIVATIONS * 4 / 4usize.pow(5) + 1;
+    let mut nodes = vec![nd(0, None, "Rows")];
+    nodes.extend((1..=leaf_count).map(|i| nd(i as i64, Some(0), "Assign")));
+    let trees = public_work_only_fanout(DynamicTree::from_nodes(nodes));
+    let original = format!("{trees:?}");
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert_eq!(
+        activation.diagnostics.len(),
+        1,
+        "reporting a skipped subtree must admit non-reference visits too"
+    );
+    assert_public_work_refusal(&activation);
+    assert!(activation.diagnostics[0].diagnostic.may_hide_refs());
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert_eq!(format!("{trees:?}"), original);
+}
+
+#[test]
+fn successful_module_bindings_consume_work_without_activations() {
+    let binding_count = MAX_MODULE_ACTIVATIONS * 4 / 4usize.pow(5) + 1;
+    let mut nodes = vec![DynamicNode {
+        element_id: Some("PUBLIC-BIND".into()),
+        ref_id: Some("PUBLIC-EMPTY".into()),
+        ..nd(0, None, "Module")
+    }];
+    nodes.extend((1..=binding_count).map(|i| DynamicNode {
+        ref_id: Some(format!("PUBLIC-ARG-{i}")),
+        value: Some("  public {{unrescanned}}  ".into()),
+        ..nd(i as i64, Some(0), "TextArg")
+    }));
+    let (program, mut modules) = build_fanout_chain(5, 4);
+    modules.insert("F-6".into(), DynamicTree::from_nodes(nodes));
+    modules.insert("PUBLIC-EMPTY".into(), DynamicTree::default());
+    let trees =
+        ProgramTrees::from_parts(program, modules).with_arguments((1..=binding_count).map(|i| {
+            knx_productdb::dynamic::ModuleDefArgument {
+                id: format!("PUBLIC-ARG-{i}"),
+                module_def_id: "PUBLIC-EMPTY".into(),
+                name: Some(format!("Public_{i}")),
+                arg_type: Some("Text".into()),
+                allocates: None,
+            }
+        }));
+    let original = format!("{trees:?}");
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert_eq!(
+        activation.diagnostics.len(),
+        1,
+        "successful argument bindings are not free just because their module activates nothing"
+    );
+    assert_public_work_refusal(&activation);
+    assert!(activation.diagnostics[0].diagnostic.may_hide_refs());
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert!(activation.labels.is_empty());
+    assert_eq!(format!("{trees:?}"), original);
+}
+
+// AR07 resource admission, not a manufacturer-grammar claim. Reuse the
+// existing shallow fan-out fixture, replacing only its shared leaf with
+// childless unknown nodes: no ref, label or skipped-ref activation can spend
+// the current activation budget. The compact input must not manufacture an
+// unbounded diagnostic vector merely by visiting that leaf repeatedly.
+#[test]
+fn generic_diagnostic_fan_out_cannot_bypass_evaluation_resource_admission() {
+    const FANOUT: usize = 4;
+    const MODULE_LEVELS: usize = 5;
+    let output_ceiling = MAX_MODULE_ACTIVATIONS * 2;
+    let leaf_instances = FANOUT.pow(MODULE_LEVELS as u32);
+    let warnings_per_leaf = output_ceiling / leaf_instances + 1;
+    let total_expansions: usize = (0..=MODULE_LEVELS).map(|n| FANOUT.pow(n as u32)).sum();
+    assert!(total_expansions < MAX_MODULE_EXPANSIONS);
+
+    let (program, mut modules) = build_fanout_chain(MODULE_LEVELS, FANOUT);
+    modules.insert(
+        format!("F-{}", MODULE_LEVELS + 1),
+        DynamicTree::from_nodes(
+            (0..warnings_per_leaf)
+                .map(|i| nd(i as i64, None, "PublicUnknown"))
+                .collect(),
+        ),
+    );
+    let trees = ProgramTrees::from_parts(program, modules);
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert!(activation.labels.is_empty());
+    assert!(
+        activation.diagnostics.len() <= output_ceiling,
+        "generic diagnostic fan-out produced {} warnings above the public resource ceiling {output_ceiling}",
+        activation.diagnostics.len()
+    );
+    assert_public_work_refusal(&activation);
 }

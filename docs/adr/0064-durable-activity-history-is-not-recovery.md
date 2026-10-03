@@ -1,4 +1,4 @@
-# ADR-0062: Activity history is durable metadata, not recovery or bus proof
+# ADR-0064: Activity history is durable metadata, not recovery or bus proof
 
 - Status: Accepted (2026-10-02)
 - Scope: Offline commissioning application/storage contract; no new KNX behavior

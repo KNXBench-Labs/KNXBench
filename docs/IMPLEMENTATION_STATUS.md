@@ -1,5 +1,95 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR07 outside-walk candidate Broad accepted — 2026-10-03 12:45 CEST
+
+Public candidate fourteen-command evidence reconciled independently in-session:
+13 verified reused commands plus1 new, Workspace2995/0/165 (150 result blocks),
+Web1665, Chromium61,17 semantically equal shadow bindings,619 unchanged inputs.
+Four runner-only rejections retained; final actual inventory/type/placeholder
+checks follow source/Git facts, without changing production or audit limits.
+Seven-command focused GREEN and five compiled behavioral mutants remain valid.
+Separate complete code/test review has no blocker, not an independent-model
+verdict. Current upstream c6b5a240 contains U17 Web changes; candidate evidence
+is not integrated acceptance. ADR0066 remains Proposed pending fresh merged
+public/private-safe compatibility gates, acceptance/docs/publication/readback.
+UI retains U18 ownership/lock; full AR07, semantics matrix and Alpha stay open.
+
+## AR07 remaining public audit inventory correction — 2026-10-03 12:27 CEST
+
+Continuation proc_b03d8af2339a rejected only for own erroneous >400 source-count
+assertion: both new audits exit0, anchors376 links/247 MD files, corpus340 Rust
+files. Source-backed independent census apps105/crates235 (xtask excluded by
+that scanner) matches340 exactly; predicate corrected to actual inventory, not
+another magic minimum. No production/619-input change. First and continuation
+rejections remain preserved, not GREEN. Thirteen actual commands passed; final
+whitespace/17-shadow-binding/source checks dispatched proc_173bac7ae3af, queued
+under both shared leases, final PENDING. Complete candidate acceptance must say
+13 verified reused+1 new, not fresh14 or actual merged/private/owner evidence.
+Reviewed commit/integration/applicable private-safe gates/docs/push/readback/
+cleanup and full AR07/Alpha remain open.
+
+## AR07 public broad runner rejection — 2026-10-03 12:14 CEST
+
+First proc_3d0b6f570fda retained rejected solely for header-output parser mismatch,
+not Rust/Clippy/header-audit failure. Eleven actual commands exit0 independently
+reconciled; workspace2995/0/165 over150 result blocks, Web1665/Chromium61,
+strict Clippy/build/dependency/fmt/layering and headers414/157 ceiling157/17
+nonempty intended-root audit. Header source template in xtask:330-339 verified,
+parser corrected with2 public positives/9 negatives; no production/source change.
+Canonical619 inputs/HEAD5ca570a0 exact, raw logs hash-pinned for continuation.
+Remaining3 commands/final17-shadow-binding checks dispatched proc_b03d8af2339a
+under shared leases; complete broad still PENDING, not a fresh14-stage run or
+integration acceptance. Foreground queue timeout at420s produced no stage/summary
+and no own survivor; retained separately, corrected to notified background launch.
+No foreign process/lock bypass/private output. Review/ADR0066 still candidate;
+actual integration/applicable private-safe gates/docs/push/readback/cleanup follow.
+
+## AR07 outside-walk current public acceptance — 2026-10-03 11:47 CEST
+
+Current candidate remains uncommitted/ADR0066 Proposed. Actual expanded
+proc_3ceb5030b9ba independently accepted7/7 public stages: complete HTTP2/0/0,
+ProductDB363/0/0, DynamicTree66/0/6, Server214/0/2, strict Clippy/fmt/whitespace,
+619 current source/config inputs byte-equal. Five compiled behavioral mutants
+caught; each compile/inventory0 and exact named Rust101/0-1-0: independent
+projection/raw admission, cached copy, checked scoped caller and per-object
+reset. No compiler/zero-selection/timeout/OOM substitute, no private input.
+Canonical never mutated; isolated snapshots/fresh per-snapshot Cargo targets.
+Separate in-session full source/test review: zero blocking code findings,
+loaded-project wording clarified (not native save/reopen atomicity evidence);
+no independent-model review claimed. Test harness isolates XDG default opener.
+Fourteen-step fresh-target ordinary workspace/Web/intercepted Chromium/binding/
+dependency-policy/repository-audit broad gate dispatched proc_3d0b6f570fda,
+PID2863725 under both common locks; final verdict PENDING, not accepted branch
+or merged/corpus/ETS/native/owner UI evidence. Source619 frozen and index empty;
+only explicit Markdown notice delta allowed. After broad: actual integration
+and applicable private-safe selected gates, fresh docs, publication/readback
+and cleanup; entire AR07/Alpha still open. No bus/vendor/subagents/quota checks.
+
+## AR07 outside-walk text refusal — candidate only, 2026-10-03 11:23 CEST
+
+ADR0066 stays Proposed. Public HTTP RED independently accepted compile0 and
+Rust101/0-1-0: active ordinary detail first, then unexpected HTTP200 versus400,
+nonempty project and product-file equality before failure; no timeout/OOM.
+Candidate uses one substitution scanner, independent sticky TextProjectionBudget,
+pre-admission raw/lookup/UTF8 output, per-device sharing and cached-text copy
+admission. Two production consumers now propagate checked Results through the
+existing domain/device GET400 error envelope. No DTO/UI/persistence/grammar,
+parameter authority or manufacturer semantics change; legacy String helper stays
+unmetered, other loaders/metadata/serializer/RSS are not bounded by this policy.
+First public GREEN7/7 accepted HTTP1, ProductDB355/0/0, Dynamic66/0/6,
+Server213/0/2, strict Clippy/fmt/whitespace and618 source/config inputs. Later
+public Core363/0/0 exercised eight new checked-text unit regressions; its HTTP
+selection still excluded the new cached-copy case. Current619-input candidate
+adds scoped FunctionText unchanged-activation oracle and HTTP exact2-vs3 cache
+copies/whole-error/privacy/project-product equality. Expanded GREEN then five
+isolated compiled mutants dispatched proc_3ceb5030b9ba: PENDING, not an accepted
+mutation/full/merged verdict. Snapshot preparation's symlink rejection and stale
+count/preflight assumptions retained as orchestration failures, not test REDs.
+Fresh fetched remote and own base5ca570a0 equal; U17 Web lock remains held by
+ui-theme-management, not touched. No bus/vendor/private inputs or new model
+review. Full review, broad/actual integration, doc gates, publication/readback,
+cleanup and complete AR07/Alpha remain pending.
+
 ## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
 
 Source/actual acceptance published and fetched/live read back at

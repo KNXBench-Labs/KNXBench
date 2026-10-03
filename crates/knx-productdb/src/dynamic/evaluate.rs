@@ -35,6 +35,9 @@ use std::rc::Rc;
 #[cfg(test)]
 mod work_budget_tests;
 
+#[cfg(test)]
+mod text_projection_tests;
+
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ProductDbError;
@@ -1939,25 +1942,141 @@ pub fn substitute_text(raw: &str, scope: Option<&ModuleScope>) -> String {
     substitute_with(raw, scope, None, 0, None).unwrap_or_else(|| raw.to_string())
 }
 
+/// ADR-0066: independent content/work ceiling for one outside-walk text overlay.
+/// This is application policy, not a KNX length rule or total RSS bound.
+pub const MAX_TEXT_PROJECTION_WORK: usize = MAX_EVALUATION_WORK;
+
+/// One sticky admission context shared across a device's text projection.
+/// Does not alter an already completed activation or parameter write authority.
+#[derive(Debug, Default)]
+pub struct TextProjectionBudget {
+    units_used: usize,
+    exhausted: bool,
+}
+
+/// Explicit rendering refusal. No manufacturer text or host identity is exposed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextProjectionError;
+
+impl std::fmt::Display for TextProjectionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("device text projection budget exhausted")
+    }
+}
+
+impl std::error::Error for TextProjectionError {}
+
+impl TextProjectionBudget {
+    fn admit(&mut self, units: usize) -> Result<(), TextProjectionError> {
+        if self.exhausted || units > MAX_TEXT_PROJECTION_WORK.saturating_sub(self.units_used) {
+            self.exhausted = true;
+            return Err(TextProjectionError);
+        }
+        self.units_used += units;
+        Ok(())
+    }
+
+    /// Admit a complete rendered text copy before cloning a cached channel.
+    /// Metadata fields and allocator overhead are outside this content policy.
+    pub fn admit_copy(&mut self, text: &str) -> Result<(), TextProjectionError> {
+        self.admit(text.len())
+    }
+
+    /// Copy already rendered text only after admission; no partial result.
+    pub fn copy_text(&mut self, text: &str) -> Result<String, TextProjectionError> {
+        self.admit_copy(text)?;
+        Ok(text.to_string())
+    }
+}
+
+/// Same substitution rules as the legacy helper, with explicit refusal and
+/// admission before input reservation, local binding lookup and output copies.
+/// Reuse one budget for the whole overlay, never one budget per string.
+pub fn substitute_text_checked(
+    raw: &str,
+    scope: Option<&ModuleScope>,
+    budget: &mut TextProjectionBudget,
+) -> Result<String, TextProjectionError> {
+    substitute_in_context(raw, scope, SubstitutionContext::Projection(budget))
+        .ok_or(TextProjectionError)
+}
+
+// One scanner serves the walk, checked projections and legacy callers.
+// Only the walk records evaluation diagnostics; presentation refusal must not
+// turn a completed activation into an incomplete evaluation.
+enum SubstitutionContext<'a> {
+    Walk {
+        activation: &'a mut Activation,
+        source_scope: Option<&'a Rc<ModuleScope>>,
+        node_id: i64,
+    },
+    Projection(&'a mut TextProjectionBudget),
+    Legacy,
+}
+
+impl SubstitutionContext<'_> {
+    fn admit(&mut self, units: usize) -> bool {
+        match self {
+            Self::Walk {
+                activation,
+                source_scope,
+                node_id,
+            } => activation.admit_work(*source_scope, *node_id, units),
+            Self::Projection(budget) => budget.admit(units).is_ok(),
+            Self::Legacy => true,
+        }
+    }
+
+    fn unresolved(&mut self, name: &str) -> bool {
+        if let Self::Walk {
+            activation,
+            source_scope,
+            node_id,
+        } = self
+        {
+            activation.diagnose(
+                *source_scope,
+                Diagnostic::UnresolvedTextPlaceholder {
+                    node_id: *node_id,
+                    name: name.to_string(),
+                },
+            );
+            return !activation.work_budget_exhausted;
+        }
+        true
+    }
+}
+
 fn substitute_with(
     raw: &str,
     scope: Option<&ModuleScope>,
     source_scope: Option<&Rc<ModuleScope>>,
     node_id: i64,
-    mut activation: Option<&mut Activation>,
+    activation: Option<&mut Activation>,
 ) -> Option<String> {
-    if let Some(activation) = activation.as_deref_mut() {
-        // Input/reservation and the retained raw_text allowance are admitted
-        // before scanning or allocating. Output copies pay separately below.
-        // This bounds content cost, not exact allocator capacity or total RSS.
-        if !activation.admit_work(source_scope, node_id, raw.len()) {
-            return None;
-        }
+    let context = match activation {
+        Some(activation) => SubstitutionContext::Walk {
+            activation,
+            source_scope,
+            node_id,
+        },
+        None => SubstitutionContext::Legacy,
+    };
+    substitute_in_context(raw, scope, context)
+}
+
+fn substitute_in_context(
+    raw: &str,
+    scope: Option<&ModuleScope>,
+    mut context: SubstitutionContext<'_>,
+) -> Option<String> {
+    // Input/reservation and retained raw_text allowance precede allocation.
+    if !context.admit(raw.len()) {
+        return None;
     }
     let mut out = String::with_capacity(raw.len());
     if !raw.contains(PLACEHOLDER_OPEN) {
-        return append_substitution(&mut out, raw, &mut activation, source_scope, node_id)
-            .then_some(out);
+        return append_substitution(&mut out, raw, &mut context).then_some(out);
     }
     let mut rest = raw;
     while let Some(open) = rest.find(PLACEHOLDER_OPEN) {
@@ -1966,52 +2085,33 @@ fn substitute_with(
             break;
         };
         let name = &after_open[..close];
-        if let Some(activation) = activation.as_deref_mut() {
-            // Pay for the binding search before invoking its linear lookup.
-            let units = scope.map_or(1, |s| s.arguments.len().saturating_add(1));
-            if !activation.admit_work(source_scope, node_id, units) {
-                return None;
-            }
+        // Pay for the actual scope-local linear lookup before invoking it.
+        let units = scope.map_or(1, |s| s.arguments.len().saturating_add(1));
+        if !context.admit(units) {
+            return None;
         }
-        if !append_substitution(
-            &mut out,
-            &rest[..open],
-            &mut activation,
-            source_scope,
-            node_id,
-        ) {
+        if !append_substitution(&mut out, &rest[..open], &mut context) {
             return None;
         }
         match (is_argument_name(name), scope.and_then(|s| s.argument(name))) {
             (true, Some(value)) => {
-                if !append_substitution(&mut out, value, &mut activation, source_scope, node_id) {
+                if !append_substitution(&mut out, value, &mut context) {
                     return None;
                 }
             }
             (true, None) => {
                 for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
-                    if !append_substitution(&mut out, part, &mut activation, source_scope, node_id)
-                    {
+                    if !append_substitution(&mut out, part, &mut context) {
                         return None;
                     }
                 }
-                if let Some(activation) = activation.as_deref_mut() {
-                    activation.diagnose(
-                        source_scope,
-                        Diagnostic::UnresolvedTextPlaceholder {
-                            node_id,
-                            name: name.to_string(),
-                        },
-                    );
-                    if activation.work_budget_exhausted {
-                        return None;
-                    }
+                if !context.unresolved(name) {
+                    return None;
                 }
             }
             (false, _) => {
                 for part in [PLACEHOLDER_OPEN, name, PLACEHOLDER_CLOSE] {
-                    if !append_substitution(&mut out, part, &mut activation, source_scope, node_id)
-                    {
+                    if !append_substitution(&mut out, part, &mut context) {
                         return None;
                     }
                 }
@@ -2019,24 +2119,17 @@ fn substitute_with(
         }
         rest = &after_open[close + PLACEHOLDER_CLOSE.len()..];
     }
-    append_substitution(&mut out, rest, &mut activation, source_scope, node_id).then_some(out)
+    append_substitution(&mut out, rest, &mut context).then_some(out)
 }
 
-/// Copy an entire UTF-8 slice only after admission; never clip a code point
-/// or publish the partially built label when the shared work budget refuses.
-/// Outside-walk String-only substitution deliberately has no quota/reporting
-/// context; its consumer boundary remains separate (ADR-0065).
+/// Copy an entire UTF-8 slice after admission; never publish a partial label.
 fn append_substitution(
     out: &mut String,
     part: &str,
-    activation: &mut Option<&mut Activation>,
-    source_scope: Option<&Rc<ModuleScope>>,
-    node_id: i64,
+    context: &mut SubstitutionContext<'_>,
 ) -> bool {
-    if let Some(activation) = activation.as_deref_mut() {
-        if !activation.admit_work(source_scope, node_id, part.len()) {
-            return false;
-        }
+    if !context.admit(part.len()) {
+        return false;
     }
     out.push_str(part);
     true

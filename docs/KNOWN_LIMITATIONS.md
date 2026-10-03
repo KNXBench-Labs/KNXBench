@@ -7117,6 +7117,18 @@ other 3 hit §151/§152).
 
 ## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
 
+**Scoped storage fix delivered 2026-10-03 23:05 CEST.** Actual integrated
+cbe9952f passed fresh public16 and the same authorized private baseline RED/
+candidate GREEN; code published as1b215d51, fetched/live refs equal. An incoming
+foreign stats-only commit was retained byte-exact, source706 unchanged, five
+fresh publication doc gates pass. Full853 measured installed687→688 with one
+constraint refusal→installed and unchanged other categories; all original
+hashes independently checked. Fourteen owned build/snapshot/browser directories
+removed; closing metadata and final checkout hygiene pending. Lift only this
+fresh-install storage/key-scoping bug. R-MODULE-04 runtime/allocation/parameter
+semantics, new limits/grammar, full vendor/ETS compatibility and automatic repair
+of already-admitted mis-scoped catalog rows remain outside this fix.
+
 **Full offline/public candidate evidence accepted 2026-10-03 22:35 CEST;
 integrated acceptance/publication/cleanup pending, not yet lifted.** Commit
 a2aa4b7 has fresh complete public16: Rust153 blocks/3009-0-166, ignored

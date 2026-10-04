@@ -1,0 +1,2709 @@
+{
+ "chapters": [
+  {
+   "body": [
+    "KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows.",
+    "The earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus.",
+    "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening.",
+    "Where the strategy document itself came from is not in any log we could read. It simply appears, finished, in the first commit."
+   ],
+   "events": [
+    "home-toolbox",
+    "strategy-seed"
+   ],
+   "id": "ch-seed",
+   "kicker": "The seed",
+   "lede": "The story is supposed to start with a single prompt. The record shows two, about half an hour apart.",
+   "number": 1,
+   "title": "One prompt. Well, two."
+  },
+  {
+   "body": [
+    "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products.",
+    "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed.",
+    "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files."
+   ],
+   "events": [
+    "architecture-day-one",
+    "core-model",
+    "ets-import",
+    "product-database"
+   ],
+   "id": "ch-foundations",
+   "kicker": "Foundations",
+   "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight.",
+   "number": 2,
+   "title": "A suspiciously productive Wednesday"
+  },
+  {
+   "body": [
+    "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try.",
+    "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause.",
+    "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format."
+   ],
+   "events": [
+    "schema-23-refusal",
+    "own-format",
+    "drop-ets-export"
+   ],
+   "id": "ch-real-files",
+   "kicker": "Reading ETS projects",
+   "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing.",
+   "number": 3,
+   "title": "Real files fight back"
+  },
+  {
+   "body": [
+    "The first interface was a native Linux desktop window. Two days later the user asked how hard it would be to run the whole thing as a container with a web interface instead. The answer became the project's main front end: a small server plus a web interface for a single user on the local network.",
+    "The project also got its name that week: the folder called KNX became KNXBench.",
+    "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it, ran out of quota, and another finished it. Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks."
+   ],
+   "events": [
+    "desktop-shell",
+    "rename-knxbench",
+    "web-docker",
+    "languages",
+    "ui-redesign",
+    "loading-jokes",
+    "appimage",
+    "notation-reversal",
+    "theme-packs-crt"
+   ],
+   "id": "ch-interface",
+   "kicker": "Interface",
+   "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary.",
+   "number": 4,
+   "title": "A face for it. Several, actually."
+  },
+  {
+   "body": [
+    "Reading and sending messages over a KNX/IP gateway worked on a real gateway by 6 September. From then on the bus was not a simulator: it was an occupied home.",
+    "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September.",
+    "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven."
+   ],
+   "events": [
+    "live-bus-first",
+    "home-bus-boundary",
+    "test-transmitting-building",
+    "first-device-programmed",
+    "fail-closed-writes"
+   ],
+   "id": "ch-bus",
+   "kicker": "Bus & commissioning",
+   "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own.",
+   "number": 5,
+   "title": "There is a house on the other end"
+  },
+  {
+   "body": [
+    "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable.",
+    "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it."
+   ],
+   "events": [
+    "history-scrub",
+    "licence-agpl",
+    "licence-cla-reversal"
+   ],
+   "id": "ch-trust",
+   "kicker": "Privacy, safety & licence",
+   "lede": "Some branches of this tree exist to keep things out of it.",
+   "number": 6,
+   "title": "Secrets, licences and second thoughts"
+  },
+  {
+   "body": [
+    "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing.",
+    "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code.",
+    "Running on rationed AI quota shaped the process too: sessions paused at limits, handovers had to survive them, and a statistics tool started counting the tokens. Counting is not the same as explaining, which is part of why this page exists."
+   ],
+   "events": [
+    "codex-joins-goal",
+    "spec-knowledge-base",
+    "hermes-shared-memory",
+    "paperclip-experiment",
+    "split-goals",
+    "project-stats",
+    "crawler-corpus"
+   ],
+   "id": "ch-hands",
+   "kicker": "Human–AI workflow",
+   "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem.",
+   "number": 7,
+   "title": "Many hands, one repository"
+  },
+  {
+   "body": [
+    "At the cutoff KNXBench can import supported ETS projects with a report of anything it could not model, edit them in its own format, browse manufacturer data and watch a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Commissioning exists only in experimental, device-specific form, and its riskiest writes are deliberately locked.",
+    "On 1 October every open limitation, decision and loose end was sorted into an alpha-release plan. Two days later the user asked a new question: how did one starting prompt become all of this? The answer is the tree you have been watching grow.",
+    "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do."
+   ],
+   "events": [
+    "alpha-backlog",
+    "evolution-story",
+    "story-first-preview"
+   ],
+   "id": "ch-now",
+   "kicker": "The bigger picture",
+   "lede": "One month after the first prompt, KNXBench is alpha software with a long, honest to-do list.",
+   "number": 8,
+   "title": "Where the tree stands"
+  }
+ ],
+ "edition": {
+  "baseline_note": "Published history means the commits reachable from origin/main at the cutoff. Work that existed only in a local checkout at the cutoff is labelled as local and unpublished.",
+  "cutoff": {
+   "conversations_through": "2026-10-04T00:51+02:00",
+   "git_commit": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
+   "git_commit_time": "2026-10-04T00:42:05+02:00",
+   "git_ref": "origin/main",
+   "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026"
+  },
+  "id": "2026-10-04.2",
+  "sources": [
+   {
+    "id": "src-git",
+    "label": "Published Git history",
+    "note": "The early history was rewritten twice for privacy on 20 September 2026. Commit hashes cited here are the rewritten ones.",
+    "scope": "1,909 commits on the main branch, 2 September to 4 October 2026, including 66 architecture decision records",
+    "status": "read"
+   },
+   {
+    "id": "src-docs",
+    "label": "Maintained project documentation and handover logs",
+    "note": "Handover entries are agents' self-reports. They were used for orientation and cross-checked against commits.",
+    "scope": "Roadmap, implementation status, known limitations, research notes and the agents' shared handover file",
+    "status": "read"
+   },
+   {
+    "id": "src-claude",
+    "label": "Local Claude Code sessions",
+    "note": "Later Claude work ran through Hermes and is covered there. Claude Code cloud sessions were not read.",
+    "scope": "111 local session transcripts from the project folder (under its old and new name) and its companion folders, 2 to 24 September 2026, plus the local prompt history",
+    "status": "read"
+   },
+   {
+    "id": "src-codex",
+    "label": "Local Codex sessions",
+    "note": "Later Codex work ran through Hermes and is covered there.",
+    "scope": "202 project-related session logs, 7 to 25 September 2026, plus the local prompt history",
+    "status": "read"
+   },
+   {
+    "id": "src-hermes",
+    "label": "Local Hermes sessions",
+    "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed.",
+    "scope": "81 sessions in the project's Hermes profile, 22 September to 4 October 2026, plus project-related sessions from the default profile",
+    "status": "read"
+   },
+   {
+    "id": "src-paperclip",
+    "label": "Local Paperclip orchestration data",
+    "note": "Credential and secret tables were not opened. Detailed run logs were not reviewed.",
+    "scope": "Database backups of the orchestration experiment, 25 to 27 September 2026 (issues, agents and goals only)",
+    "status": "partial"
+   },
+   {
+    "id": "src-local-story",
+    "label": "This story's local working copy",
+    "note": "Not part of the published history at the cutoff.",
+    "scope": "The unpublished worktree in which the first preview was built and tested, 4 October 2026",
+    "status": "read"
+   },
+   {
+    "id": "src-cloud",
+    "label": "Cloud-hosted agent sessions and the remote repository host",
+    "note": "Reading them would need separate authorization. Anything that happened only there is missing from this edition.",
+    "scope": "Not accessed",
+    "status": "unavailable"
+   }
+  ],
+  "status": "private-candidate",
+  "title": "From one prompt to a project"
+ },
+ "events": [
+  {
+   "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. Famous last words.",
+   "chapter": "ch-seed",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 2 Sep 2026, project folder then named KNX",
+     "source": "src-claude"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Edited for privacy"
+     ],
+     "note": "Earliest prompt found in any available source, 2 September 2026, 13:50 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "In this project folder you'll find my KNX environment: [our home's ETS project file]. Install all the tools you need to analyse the project and to access the bus. The KNX IP gateway can be reached at [address removed].",
+     "transforms": [
+      "translated",
+      "edited_for_privacy"
+     ]
+    }
+   ],
+   "id": "home-toolbox",
+   "kind": "starting-point",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 0,
+    "x": 575,
+    "y": 96
+   },
+   "short": "Home project + toolbox",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "The earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
+   "title": "A home, a bus and a toolbox",
+   "uncertainty": [
+    "Earliest available is not necessarily earliest ever. No older prompt was found locally."
+   ],
+   "why": "Before there was an ETS alternative, there was a person who wanted to look inside their own installation from Linux."
+  },
+  {
+   "aside": "A one-line prompt with a 369-line attachment. Technically still 'one prompt'.",
+   "chapter": "ch-seed",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 2 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "First commit, adding the strategy document",
+     "ref": "acf2e1bd",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "2 September 2026, 14:23 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Look at 'KNX ETS Alternative – Claude Code Development Strategy.md' and get going.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "strategy-seed",
+   "kind": "starting-point",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 1,
+    "x": 575,
+    "y": 136
+   },
+   "short": "Founding prompt",
+   "status": "recorded",
+   "strand": "trunk",
+   "summary": "A short prompt hands the agent a German strategy document for a modern, Linux-first KNX engineering application as an alternative to ETS: data integrity first, then compatibility, architecture, maintainability, UX and performance, worked through in eight sessions.",
+   "title": "The founding prompt and its strategy",
+   "uncertainty": [
+    "How and by whom the strategy document was written is not recorded in any available source."
+   ],
+   "why": "This is the moment a home-inspection task became a product. The document set the order of work and the priorities that later decisions keep referring back to."
+  },
+  {
+   "aside": "The agent asked a multiple-choice question. The human picked the answer it had not recommended. Collaboration achieved.",
+   "chapter": "ch-foundations",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 2 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "ADRs 0001–0009 added",
+     "ref": "d0a5d566",
+     "source": "src-git"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0003: SQLite as the native project format",
+     "ref": "docs/adr/0003-sqlite-project-format.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Layering gate keeping the core free of I/O",
+     "ref": "a3b0227d",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "paraphrase",
+     "labels": [
+      "Translated from German",
+      "Paraphrased"
+     ],
+     "note": "Agent question, shortened to its options.",
+     "original_language": "de",
+     "speaker": "agent",
+     "text": "How should the project format be stored? A: one SQLite file. B: a folder of JSON or TOML files. C: SQLite as the working file plus export and import in a text format. Recommendation: A.",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "User answer, 2 September 2026, 15:29 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "C, and the product database (manufacturers/application programs) is kept as its own SQLite DB outside the project file.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "architecture-day-one",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 2,
+    "x": 575,
+    "y": 176
+   },
+   "short": "Architecture, day one",
+   "status": "implemented",
+   "strand": "trunk",
+   "summary": "Technical research and an architecture were written the same afternoon, with nine decision records: Rust, an own parser for ETS files, SQLite as the project format, provenance tracking, a separate product database, verbatim preservation of unknown data, isolated key material and a strict boundary to the interface. A build check keeps the core free of input/output code.",
+   "title": "Research and architecture on day one",
+   "uncertainty": [
+    "ADR-0003 adopted SQLite and recorded the text format as optional future work. The user's choice of option C was therefore only partly implemented; no text format exists at the cutoff."
+   ],
+   "why": "These early decisions still shape the project. Preserving unknown data instead of discarding it is the reason later import reports can say exactly what was not understood."
+  },
+  {
+   "aside": "Undo and redo arrived on day one. Some projects wait years for that.",
+   "chapter": "ch-foundations",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Command layer with undo and redo",
+     "ref": "7efad59e",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Session 2 recorded as complete",
+     "ref": "640bfdef",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "core-model",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 3,
+    "x": 575,
+    "y": 216
+   },
+   "short": "Core model",
+   "status": "implemented",
+   "strand": "trunk",
+   "summary": "The core gained typed individual and group addresses, buildings and topology, devices, communication objects, parameters, validation rules, undo and redo, and the skeleton of a migration chain for future file versions.",
+   "title": "A model of a KNX project",
+   "uncertainty": [],
+   "why": "Everything else, from import to the interface, reads and writes through this model instead of through ETS's file format."
+  },
+  {
+   "aside": "Rule one of importing: if you do not understand it, keep it and say so.",
+   "chapter": "ch-foundations",
+   "date": "2026-09-02",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Session 3 import plan",
+     "ref": "128168e1",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Import results, limitations and ADR-0010 recorded",
+     "ref": "ce005277",
+     "source": "src-git"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0006: opaque passthrough store",
+     "ref": "docs/adr/0006-opaque-passthrough-store.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "ets-import",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 3,
+    "row": 4,
+    "x": 745,
+    "y": 256
+   },
+   "short": "ETS import",
+   "status": "implemented",
+   "strand": "import",
+   "summary": "An importer for ETS project archives was planned and implemented the same evening, with results, limitations and a further decision record documented. Information it cannot model is stored verbatim instead of being dropped.",
+   "title": "Reading ETS projects",
+   "uncertainty": [
+    "At this point only one schema version, from one real project, had been tested."
+   ],
+   "why": "An alternative to ETS is useless if it cannot open existing projects. Being honest about what was not understood became a project rule."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-foundations",
+   "date": "2026-09-03",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "ADR-0011 and ADR-0012",
+     "ref": "c92b3918",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Catalogue and hardware ingestion",
+     "ref": "082cc3f6",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "product-database",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 4,
+    "row": 5,
+    "x": 915,
+    "y": 296
+   },
+   "short": "Product database",
+   "status": "implemented",
+   "strand": "products",
+   "summary": "Catalogue and hardware data from manufacturers is ingested into its own database, shared across projects, and used to enrich devices only where a project leaves a value empty.",
+   "title": "A separate home for manufacturer data",
+   "uncertainty": [],
+   "why": "Manufacturer data has its own licences and lifecycle. Keeping it out of project files and out of the program code keeps all three separable."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-interface",
+   "date": "2026-09-03",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Desktop shell with an 'open project' command",
+     "ref": "65b902d1",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Toast notifications, humour and easter eggs recorded",
+     "ref": "2d8e5a9e",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "desktop-shell",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 6,
+    "x": 1085,
+    "y": 336
+   },
+   "short": "Desktop shell",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "A native Linux desktop shell followed, then search, a command palette, dark and light modes, a project dashboard and toast notifications that came with jokes and easter eggs.",
+   "title": "A desktop window with a sense of humour",
+   "uncertainty": [],
+   "why": "The strategy asked for a modern engineering application rather than a legacy one. Humour was part of the brief from early on."
+  },
+  {
+   "aside": "It said no, clearly and in full sentences. Some people call that a bug. The importer calls it integrity.",
+   "chapter": "ch-real-files",
+   "date": "2026-09-05",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 5 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "doc",
+     "label": "Schema 21/23 import support design",
+     "ref": "docs/superpowers/specs/2026-09-06-schema-21-23-import-support-design.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "ADR-0013 and ADR-0014",
+     "ref": "ae724f4f",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "5 September 2026. The error text itself was English in the original.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "When loading a non-ETS4 project there's an error: no known-element table for schema version 23",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "schema-23-refusal",
+   "kind": "setback",
+   "layout": {
+    "label_side": "end",
+    "lane": 3,
+    "row": 7,
+    "x": 745,
+    "y": 376
+   },
+   "short": "Newer ETS schemas",
+   "status": "implemented",
+   "strand": "import",
+   "summary": "On the first hands-on test the user opened a project exported from a newer ETS, and the importer refused it by schema version. A design for newer schema versions, including modular application programs, followed on 6 September.",
+   "title": "A newer ETS file is refused, then supported",
+   "uncertainty": [
+    "The design document cites the project backlog and a second sample project, not this prompt. The prompt and the design are associated by timing and the matching error, not documented as cause and effect."
+   ],
+   "why": "Real projects come from several ETS generations. Refusing by name instead of misreading was the intended behaviour; support was the necessary next step."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-interface",
+   "date": "2026-09-05",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 5 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Rebrand: KNX → KNXBench",
+     "ref": "65064f8b",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "5 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "New name: KNXBench. Product name, README and whatever else makes sense.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "rename-knxbench",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 8,
+    "x": 575,
+    "y": 416
+   },
+   "short": "Named KNXBench",
+   "status": "implemented",
+   "strand": "trunk",
+   "summary": "The project folder, repository and product name changed from KNX to KNXBench, and the agents' notes were moved to the new folder.",
+   "title": "KNX becomes KNXBench",
+   "uncertainty": [],
+   "why": "A name that is also the name of the standard was never going to work for long."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-interface",
+   "date": "2026-09-05",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 5 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Spec for the web/container deployment target",
+     "ref": "922bc258",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Frontend moved from the desktop app to the web app",
+     "ref": "245166e1",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "5 September 2026. Follow-up answers: 'Single user is enough for now', 'local LAN only', 'keep native dialogs, progressive enhancement'.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "How complicated would it be to provide the application as a Docker container with a web interface?",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "web-docker",
+   "kind": "change-of-direction",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 9,
+    "x": 1085,
+    "y": 456
+   },
+   "short": "Web + container",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "Asked how hard a container with a web interface would be, the user settled the trade-offs in a few short answers: single user, local network only, keep native dialogs where available. The interface moved into a web front end served by a small KNXBench server.",
+   "title": "From desktop window to local web app",
+   "uncertainty": [],
+   "why": "A container runs in more places than a native app. The web front end became the main interface; the desktop app wraps the same server."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-bus",
+   "date": "2026-09-06",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Read-only tunnelling shipped",
+     "ref": "51bffc11",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Live send verification against a real gateway",
+     "ref": "9d30877b",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "live-bus-first",
+   "kind": "capability",
+   "layout": {
+    "label_side": "start",
+    "lane": 6,
+    "row": 10,
+    "x": 1255,
+    "y": 496
+   },
+   "short": "KNXnet/IP",
+   "status": "verified",
+   "strand": "bus",
+   "summary": "KNXBench learned KNXnet/IP: read-only tunnelling first, then sending, confirmed by an acknowledgement from a real gateway, then gateway discovery.",
+   "title": "First words on a real bus",
+   "uncertainty": [
+    "Verification covered one gateway in one installation."
+   ],
+   "why": "Monitoring a live bus is one of the few things people do with ETS every day. It was also the first contact with real hardware."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-real-files",
+   "date": "2026-09-08",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 8 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0015 (later superseded by ADR-0028)",
+     "ref": "docs/adr/0015-native-output-drops-ets-reimport-goal.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "8 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Major plan change: I no longer want .knxproj as the output target. We can choose our own format for our output or project file. Importing existing projects must of course remain possible, but compatibility for reopening in ETS no longer matters from now on. Note that for the future.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "own-format",
+   "kind": "change-of-direction",
+   "layout": {
+    "label_side": "end",
+    "lane": 3,
+    "row": 11,
+    "x": 745,
+    "y": 536
+   },
+   "short": "Own format first",
+   "status": "superseded",
+   "strand": "import",
+   "summary": "The user dropped the goal that ETS must be able to reopen KNXBench's output. Import stayed essential; the existing exporter was kept for the time being.",
+   "title": "ETS no longer has to reopen our files",
+   "uncertainty": [],
+   "why": "Promising byte-faithful round trips into another vendor's closed format had been expensive and unproven. Letting it go freed the internal model."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-hands",
+   "date": "2026-09-09",
+   "date_precision": "approximate",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Codex sessions, 8–9 Sep 2026",
+     "source": "src-codex"
+    },
+    {
+     "kind": "commit",
+     "label": "Goal file first committed",
+     "ref": "f2f3c349",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "To Codex, 9 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "I'd like to use an instruction file that I can pass to the /goal parameter. Save it in the project root as goal.md.",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "The same evening.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Yes, actually: everything should run as autonomously as possible. Git is a safety net after all.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "codex-joins-goal",
+   "kind": "process-change",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 12,
+    "x": 235,
+    "y": 576
+   },
+   "short": "Codex + goal file",
+   "status": "recorded",
+   "strand": "collab",
+   "summary": "Codex started working in the repository on 8 September and translated Claude's instruction file into its own. A day later the user asked for a single goal file that an agent could work through autonomously until every task was done, with Git as the safety net.",
+   "title": "A second agent and a standing goal",
+   "uncertainty": [
+    "The goal file was committed on 12 September; earlier versions existed only in the working tree."
+   ],
+   "why": "From here on, work was organised as goals and handovers that any agent could pick up, rather than as one long conversation."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-hands",
+   "date": "2026-09-11",
+   "date_precision": "approximate",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Codex and Claude Code sessions in knx-spec-kb, 7–11 Sep 2026",
+     "source": "src-codex"
+    },
+    {
+     "kind": "commit",
+     "label": "Local KNX Standard corpus and spec skill noted",
+     "ref": "694d5152",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "In the knx-spec-kb project, 11 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Since I'm currently developing an ETS alternative, an app that can program a KNX environment, only the information I need for exactly this task matters to me.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "spec-knowledge-base",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "start",
+    "lane": 7,
+    "row": 13,
+    "x": 1425,
+    "y": 616
+   },
+   "short": "knx-spec-kb",
+   "status": "implemented",
+   "strand": "support",
+   "summary": "A separate project, knx-spec-kb, turned the KNX Standard documents into searchable databases. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
+   "title": "The KNX Standard as a searchable knowledge base",
+   "uncertainty": [
+    "The knowledge-base project existed before the first available session ('take over the further development of my project'). Its origins are not covered."
+   ],
+   "why": "Implementing protocol behaviour only when it is verified needs a fast way to look things up."
+  },
+  {
+   "aside": "Klingon support is technically possible. Nobody has shipped the pack yet.",
+   "chapter": "ch-interface",
+   "date": "2026-09-12",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 12 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Merge: the buttons learn German",
+     "ref": "8243c9de",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Shortened"
+     ],
+     "note": "Two consecutive prompts, 12 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Plan English and German as default languages. Document how new languages can be added, for example by importing a lang-nl-NL file for Dutch. Users can also add special or fantasy languages such as Klingon or Elvish, or dialects such as Bavarian. […] The fallback language is always English.",
+     "transforms": [
+      "translated",
+      "shortened"
+     ]
+    }
+   ],
+   "id": "languages",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 14,
+    "x": 1085,
+    "y": 656
+   },
+   "short": "Languages",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "The interface learned German alongside English, with English as the fallback, and language packs that users can import as files.",
+   "title": "English, German, and room for Klingon",
+   "uncertainty": [],
+   "why": "KNX installers and home users are not all English speakers. Packs keep translations as data rather than code."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-bus",
+   "date": "2026-09-12",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 12 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Hardware writes wait for hardware",
+     "ref": "5a835a1f",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Edited for privacy"
+     ],
+     "note": "12 September 2026. Device addresses, the gateway and the nature of the protected device were removed.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Use the KNX gateway [address removed]. IMPORTANT! [One device] must NEVER be read until I give approval. [It reacts badly when it is read or written.] You can always actively read [a few named devices].",
+     "transforms": [
+      "translated",
+      "edited_for_privacy"
+     ]
+    }
+   ],
+   "id": "home-bus-boundary",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 1,
+    "row": 15,
+    "x": 405,
+    "y": 696
+   },
+   "short": "Bus safety rules",
+   "status": "recorded",
+   "strand": "trust",
+   "summary": "The user named one device that must never be contacted, a short list of devices that may be read, and later ruled all device writes out of scope until dedicated test hardware existed.",
+   "title": "House rules for an occupied building",
+   "uncertainty": [],
+   "why": "The test bus was a family home. Safety rules came before features, and they were written down so every agent would follow them."
+  },
+  {
+   "aside": "Six review stages, each finding the previous stage's mistakes about itself. Peer review, but recursive.",
+   "chapter": "ch-interface",
+   "date": "2026-09-13",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Codex session, 13 Sep 2026",
+     "source": "src-codex"
+    },
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 13 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Merge of the workbench redesign",
+     "ref": "9064724f",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Shortened"
+     ],
+     "note": "To Codex, 13 September 2026, 02:48 CEST.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "The UI/UX of the current version is rubbish. I want a proposal for a complete redesign. What matters: modern design, themeable, Apple-style animations. Sleek, fresh, dynamic. […] It should be fun to use the app.",
+     "transforms": [
+      "translated",
+      "shortened"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "To Claude, the same morning.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "I only mean the design task from Codex. Could you implement it to the end? The limit there is used up and only available again in 5 hours.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "ui-redesign",
+   "kind": "change-of-direction",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 16,
+    "x": 1085,
+    "y": 736
+   },
+   "short": "UI redesign",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench; when its quota ran out, the user asked Claude to finish the job. The merged result went through six rounds of review.",
+   "title": "'The UI is rubbish': a redesign, passed between agents",
+   "uncertainty": [
+    "Which lines each agent wrote cannot be told from Git metadata; all commits carry the user's identity."
+   ],
+   "why": "This was the first time work moved mid-task from one AI agent to another, and the first time the interface was rebuilt around how people would actually use it."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-trust",
+   "date": "2026-09-16",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Codex session, 16 Sep 2026",
+     "source": "src-codex"
+    },
+    {
+     "kind": "commit",
+     "label": "Licence file added (AGPL-3.0)",
+     "ref": "18b78b2c",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "16 September 2026, after an earlier question about preventing commercial redistribution.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "OK, let's forget about selling. What matters to me is that everyone can use the app for free.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "licence-agpl",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 1,
+    "row": 17,
+    "x": 405,
+    "y": 776
+   },
+   "short": "AGPL licence",
+   "status": "implemented",
+   "strand": "trust",
+   "summary": "Asked for a licence recommendation, the user first wanted to prevent commercial redistribution, then settled on the simpler principle that everyone can use the app for free. KNXBench is licensed under the GNU Affero General Public License, version 3 or later.",
+   "title": "Free for everyone: AGPL",
+   "uncertainty": [],
+   "why": "A licence decides who can use, change and share the work. It also had to be settled before publishing anything."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-interface",
+   "date": "2026-09-17",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "adr",
+     "label": "ADR-0021: AppImage is the first Linux package",
+     "ref": "docs/adr/0021-appimage-is-the-first-linux-package.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Linux AppImage bundle configured",
+     "ref": "18b78b2c",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "appimage",
+   "kind": "decision",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 18,
+    "x": 1085,
+    "y": 816
+   },
+   "short": "AppImage",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "The desktop app was configured to build as a self-contained AppImage, recorded as the first Linux package format.",
+   "title": "A Linux package: AppImage first",
+   "uncertainty": [
+    "README at the cutoff states that no release has ever been published."
+   ],
+   "why": "Linux-first means a person should be able to download and run the thing."
+  },
+  {
+   "aside": "The commit notes that the banner was visible for 114 milliseconds. Each joke gets a very short career.",
+   "chapter": "ch-interface",
+   "date": "2026-09-19",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 19 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Fifty jokes for a banner that lasts 114 milliseconds",
+     "ref": "613b0a39",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Shortened"
+     ],
+     "note": "19 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "The loading banner should also show funny messages, like 'Sorting group addresses by colour', 'Asking devices how they feel' or 'Checking the constellation of the stars'. Come up with 50 different messages […]",
+     "transforms": [
+      "translated",
+      "shortened"
+     ]
+    }
+   ],
+   "id": "loading-jokes",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 19,
+    "x": 1085,
+    "y": 856
+   },
+   "short": "Loading jokes",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "The project-loading banner gained fifty rotating, translatable jokes, at the user's request.",
+   "title": "Fifty jokes for a progress banner",
+   "uncertainty": [],
+   "why": "Small, but it shows the brief: engineering software is allowed to be pleasant."
+  },
+  {
+   "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something.",
+   "chapter": "ch-real-files",
+   "date": "2026-09-20",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "adr",
+     "label": "ADR-0028: KNXBench reads .knxproj and never writes one",
+     "ref": "docs/adr/0028-no-knxproj-export.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "20 September 2026, as quoted in ADR-0028.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Drop the export to ETS. We don't need it. Once imported, it stays in the KNXBench file format.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "drop-ets-export",
+   "kind": "change-of-direction",
+   "layout": {
+    "label_side": "end",
+    "lane": 3,
+    "row": 20,
+    "x": 745,
+    "y": 896
+   },
+   "short": "No ETS export",
+   "status": "implemented",
+   "strand": "import",
+   "summary": "The remaining exporter, about 2,000 lines that every import change had to be mirrored into, was removed. KNXBench imports a project once and keeps it in its own format.",
+   "title": "Read ETS files, never write them",
+   "uncertainty": [],
+   "why": "Keeping unused writer code was not free. Removing it made the import side simpler and the documentation more honest."
+  },
+  {
+   "aside": "The fix's commit message opens with 'Here I am, brain the size of a planet'. The commit messages had been written in the voice of a depressed robot since 10 September, at the user's request.",
+   "chapter": "ch-bus",
+   "date": "2026-09-20",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "The routing tests stop transmitting into the actual building",
+     "ref": "c18d5ff5",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "test-transmitting-building",
+   "kind": "setback",
+   "layout": {
+    "label_side": "start",
+    "lane": 6,
+    "row": 21,
+    "x": 1255,
+    "y": 936
+   },
+   "short": "Leaky test fixed",
+   "status": "implemented",
+   "strand": "bus",
+   "summary": "A routing test had been sending a real 'switch on' message into the building's network on every full test run, for four development cycles, because the operating system chose the physical network for it. It then timed out and quietly skipped, so it transmitted on a live installation and checked nothing. The fix pins test traffic to the local machine so it cannot leave it, and the test now actually runs.",
+   "title": "The test that talked to the house",
+   "uncertainty": [
+    "What, if anything, the stray messages did in the building is not recorded."
+   ],
+   "why": "A reminder that 'it passes' and 'it is harmless' are different claims, especially when a test can reach a real installation."
+  },
+  {
+   "aside": "'Nothing at all' was, for once, the desired outcome.",
+   "chapter": "ch-trust",
+   "date": "2026-09-20",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Claude Code session, 13 Sep 2026",
+     "source": "src-claude"
+    },
+    {
+     "kind": "commit",
+     "label": "Second rewrite, over messages as well as files",
+     "ref": "df287d0a",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "The remote was deleted and rebuilt",
+     "ref": "5a835a1f",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "13 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "History leak and a general check for sensitive data once more, right at the end.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "history-scrub",
+   "kind": "setback",
+   "layout": {
+    "label_side": "end",
+    "lane": 1,
+    "row": 22,
+    "x": 405,
+    "y": 976
+   },
+   "short": "History rewritten",
+   "status": "implemented",
+   "strand": "trust",
+   "summary": "The first commits had included data from the user's real home installation. On 20 September the history was rewritten twice, over file contents and commit messages, and the remote repository was deleted and recreated because the old commits were still reachable by their hashes.",
+   "title": "Scrubbing the history",
+   "uncertainty": [
+    "Because of the rewrite, commit hashes from before 20 September differ from the hashes the agents saw at the time."
+   ],
+   "why": "Private data in Git history does not go away by deleting a file. Fixing it properly cost a rewrite of every commit hash."
+  },
+  {
+   "aside": "A feature was implemented, merged and retired within roughly a day. Efficient, in its way.",
+   "chapter": "ch-interface",
+   "date": "2026-09-21",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Codex session, 21 Sep 2026",
+     "source": "src-codex"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0030, amended after the selectable version",
+     "ref": "docs/adr/0030-group-address-notation-is-a-display-preference.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "Two consecutive short prompts, 21 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Group address notation: keep the format prescribed by the spec. No selection.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "notation-reversal",
+   "kind": "reversal",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 23,
+    "x": 1085,
+    "y": 1016
+   },
+   "short": "Slash notation",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "A setting to choose how group addresses are displayed was built, then removed: the user asked for the specification's slash notation everywhere and no selector.",
+   "title": "One way to write a group address",
+   "uncertainty": [],
+   "why": "A dotted group address looks confusingly like an individual address. The spec already had an answer."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-hands",
+   "date": "2026-09-22",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Catalog the agents' private notebooks",
+     "ref": "24c87e2f",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "One instruction file, two names, zero drift",
+     "ref": "5ae8a6e0",
+     "source": "src-git"
+    },
+    {
+     "kind": "conversation",
+     "label": "Local Hermes sessions from 22 Sep 2026",
+     "source": "src-hermes"
+    }
+   ],
+   "excerpts": [],
+   "id": "hermes-shared-memory",
+   "kind": "process-change",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 24,
+    "x": 235,
+    "y": 1056
+   },
+   "short": "Hermes + shared memory",
+   "status": "implemented",
+   "strand": "collab",
+   "summary": "Work began running through the Hermes agent, which can drive different AI models. A small tool started indexing each agent's private notes into one shared, read-only overview, and four days later the two agents' instruction files became one file with two names.",
+   "title": "Hermes, and one notebook for all agents",
+   "uncertainty": [],
+   "why": "Three agents kept three separate memories, and they did not always agree. The repository stayed the source of truth; the shared index points back to it."
+  },
+  {
+   "aside": "Twenty fun facts per report. The user asked for about twenty-five; the count settled at twenty.",
+   "chapter": "ch-hands",
+   "date": "2026-09-24",
+   "date_precision": "approximate",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Chart the receipts, not the packets",
+     "ref": "e9471754",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Count the tokens, spare the ants",
+     "ref": "462833b9",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "project-stats",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "start",
+    "lane": 7,
+    "row": 25,
+    "x": 1425,
+    "y": 1096
+   },
+   "short": "ProjectStats",
+   "status": "implemented",
+   "strand": "support",
+   "summary": "A statistics script, later moved into its own ProjectStats folder, reports commits, code size and AI usage across the agents, and prints 'not available' rather than a guessed zero where no measurement exists.",
+   "title": "Counting tokens, honestly",
+   "uncertainty": [
+    "The script itself lives outside this repository; only its reports are versioned here.",
+    "The date marks reports from late September; the script's own start date is not established here."
+   ],
+   "why": "Numbers about AI-assisted work are easy to inflate. The tool's rule is to separate measured from estimated."
+  },
+  {
+   "aside": "Eight job titles, one of them 'Head of All'. Fifty tickets. Mostly blocked. A very realistic company.",
+   "chapter": "ch-hands",
+   "date": "2026-09-25",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "database",
+     "label": "Local Paperclip database backups, 25–27 Sep 2026",
+     "source": "src-paperclip"
+    },
+    {
+     "kind": "commit",
+     "label": "The Paperclip inbox was empty for days; the goal file finally noticed",
+     "ref": "9d2d0174",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Verbatim"
+     ],
+     "note": "First line of a longer setup prompt, 25 September 2026.",
+     "original_language": "en",
+     "speaker": "user",
+     "text": "Set up Paperclip as the autonomous multi-project development orchestration layer for my software projects.",
+     "transforms": []
+    }
+   ],
+   "id": "paperclip-experiment",
+   "kind": "experiment",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 26,
+    "x": 235,
+    "y": 1136
+   },
+   "short": "AI company (abandoned)",
+   "status": "abandoned",
+   "strand": "collab",
+   "summary": "The orchestration tool Paperclip set up a simulated company with eight AI roles, from project lead to QA engineer and reviewer, coordinating through tickets. Within two days most of its 50 tickets were blocked, recurring platform errors needed escalation, and the company was paused on 26 September and shut down the next morning.",
+   "title": "The AI company that lasted a weekend",
+   "uncertainty": [
+    "Ticket and run counts come from the last local backup (27 September); the detailed run logs were not reviewed."
+   ],
+   "why": "More agents did not mean more progress. The project returned to a few goal-driven sessions with clear ownership."
+  },
+  {
+   "aside": "The device did ignore one polite request to restart. It is recorded as open, not explained away.",
+   "chapter": "ch-bus",
+   "date": "2026-09-26",
+   "date_precision": "approximate",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "The first device to be told where it lives",
+     "ref": "03e358fc",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "First live download, every step read back",
+     "ref": "07a03749",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Backup before writing, restored byte for byte",
+     "ref": "19e0dba7",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Address reset and restored",
+     "ref": "786ec9f2",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "19 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Can the app program devices yet?",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "19 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "I'll get a device for testing. It can then be used for the approval.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "first-device-programmed",
+   "kind": "capability",
+   "layout": {
+    "label_side": "start",
+    "lane": 6,
+    "row": 27,
+    "x": 1255,
+    "y": 1176
+   },
+   "short": "First device programmed",
+   "status": "verified",
+   "strand": "bus",
+   "summary": "With a test push button on the bus: on 26 September it received its address; on 28 September a downloaded program was read back byte for byte; on 29 September a backup taken before writing was restored exactly; on 30 September its address was reset and restored.",
+   "title": "Programming a real device, then putting it back",
+   "uncertainty": [
+    "Verified on one device with one application program. This does not establish commissioning support for devices in general.",
+    "The date marks the first of four steps between 26 and 30 September."
+   ],
+   "why": "This is what turns a project viewer into an engineering tool. Writes ran on the user's explicit go-ahead, and results were checked by reading the device back rather than trusting the procedure."
+  },
+  {
+   "aside": "",
+   "chapter": "ch-hands",
+   "date": "2026-09-28",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Commissioning gets its own goal file",
+     "ref": "c779ab99",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "The UI gets its own goal file and a web lock",
+     "ref": "4014e004",
+     "source": "src-git"
+    },
+    {
+     "kind": "conversation",
+     "label": "Local Hermes session, 28 Sep 2026",
+     "source": "src-hermes"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "28 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Important update: the remaining GPT quota is at 1%, so 99% used up.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "split-goals",
+   "kind": "process-change",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 28,
+    "x": 235,
+    "y": 1216
+   },
+   "short": "Split goal files",
+   "status": "recorded",
+   "strand": "collab",
+   "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'. The same day the user reported that one provider's quota was 99 percent used and moved the remaining work back to local sessions.",
+   "title": "Separate goals, separate fences",
+   "uncertainty": [
+    "Whether the end of the orchestration experiment led directly to the split is not documented; the connection shown is editorial."
+   ],
+   "why": "Parallel agents need boundaries as much as instructions."
+  },
+  {
+   "aside": "Nobody signed it. Nobody had the chance.",
+   "chapter": "ch-trust",
+   "date": "2026-09-30",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Hermes session, 30 Sep 2026",
+     "source": "src-hermes"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0054: no contributor licence agreement, AGPL only",
+     "ref": "docs/adr/0054-no-contributor-license-agreement-agpl-only.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "The CLA leaves before anyone signed it",
+     "ref": "8c90b59b",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "30 September 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Which open-source licence would be most sensible for KNXBench if I want to allow commercial use, but not the sale of a product based on it?",
+     "transforms": [
+      "translated"
+     ]
+    },
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German"
+     ],
+     "note": "30 September 2026, about half an hour later.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Then we'll stay with the original licence.",
+     "transforms": [
+      "translated"
+     ]
+    }
+   ],
+   "id": "licence-cla-reversal",
+   "kind": "reversal",
+   "layout": {
+    "label_side": "end",
+    "lane": 1,
+    "row": 29,
+    "x": 405,
+    "y": 1256
+   },
+   "short": "CLA withdrawn",
+   "status": "superseded",
+   "strand": "trust",
+   "summary": "A contributor licence agreement was added to keep a future dual-licensing option open, then withdrawn the same day. KNXBench stays AGPL-only without a CLA. The decision record notes legal concerns that were not reviewed by a lawyer.",
+   "title": "A licence agreement that lasted an afternoon",
+   "uncertainty": [],
+   "why": "Reversals are part of the record. Here the simpler option won before it mattered to anyone outside."
+  },
+  {
+   "aside": "Progress, measured in things the software now refuses to do.",
+   "chapter": "ch-bus",
+   "date": "2026-10-01",
+   "date_precision": "approximate",
+   "evidence": [
+    {
+     "kind": "adr",
+     "label": "ADR-0057: serial-number address writes require durable recovery",
+     "ref": "docs/adr/0057-serial-address-writes-require-durable-recovery.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "adr",
+     "label": "ADR-0059: button address programming requires durable recovery",
+     "ref": "docs/adr/0059-button-address-programming-requires-durable-recovery.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "Button writes wait for a real backup",
+     "ref": "2cca1d4a",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "fail-closed-writes",
+   "kind": "decision",
+   "layout": {
+    "label_side": "start",
+    "lane": 6,
+    "row": 30,
+    "x": 1255,
+    "y": 1296
+   },
+   "short": "Writes fail closed",
+   "status": "implemented",
+   "strand": "bus",
+   "summary": "Between 30 September and 1 October, three decision records made address-changing writes refuse to start until a durable, device-specific recovery path is proven. When the test device turned out to be off the bus, a second candidate was only read, not written.",
+   "title": "No recovery, no write",
+   "uncertainty": [],
+   "why": "A failed write can leave a device unreachable. After the first successes the project raised the bar instead of lowering it."
+  },
+  {
+   "aside": "Version 0.1.0-alpha.1, no tag, no release. The badge says 'alpha' and means it.",
+   "chapter": "ch-now",
+   "date": "2026-10-01",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "commit",
+     "label": "Alpha release plan",
+     "ref": "307a5970",
+     "source": "src-git"
+    },
+    {
+     "kind": "doc",
+     "label": "README at the cutoff",
+     "ref": "README.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Verbatim"
+     ],
+     "note": "From the project README at the cutoff, on why the project exists.",
+     "original_language": "en",
+     "speaker": "user",
+     "text": "In hindsight: I must have been drunk.",
+     "transforms": []
+    }
+   ],
+   "id": "alpha-backlog",
+   "kind": "status",
+   "layout": {
+    "label_side": "end",
+    "lane": 2,
+    "row": 31,
+    "x": 575,
+    "y": 1336
+   },
+   "short": "Alpha plan",
+   "status": "open",
+   "strand": "trunk",
+   "summary": "Every open limitation, blocker, research question and pending decision was collected, translated into English and ordered into twenty work packages towards a first alpha release. No release has been published.",
+   "title": "An honest alpha to-do list",
+   "uncertainty": [
+    "The README is committed under the user's name; whether its wording was drafted with AI help is not recorded."
+   ],
+   "why": "Listing what is not done is part of being trustworthy about what is."
+  },
+  {
+   "aside": "The commit promises 'a pulse, not a disco'. This page inherited the pulse.",
+   "chapter": "ch-interface",
+   "date": "2026-10-03",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "adr",
+     "label": "ADR-0060: versioned declarative theme packs",
+     "ref": "docs/adr/0060-versioned-declarative-theme-packs.md",
+     "source": "src-git"
+    },
+    {
+     "kind": "commit",
+     "label": "CRT animations: 'a pulse, not a disco'",
+     "ref": "16c9d774",
+     "source": "src-git"
+    },
+    {
+     "kind": "conversation",
+     "label": "Local Hermes session, 3 Oct 2026",
+     "source": "src-hermes"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Shortened"
+     ],
+     "note": "3 October 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "Based on the new theme integration, build a new design. If something can't be done (like animations), propose the corresponding code changes […]",
+     "transforms": [
+      "translated",
+      "shortened"
+     ]
+    }
+   ],
+   "id": "theme-packs-crt",
+   "kind": "capability",
+   "layout": {
+    "label_side": "end",
+    "lane": 5,
+    "row": 32,
+    "x": 1085,
+    "y": 1376
+   },
+   "short": "Theme packs + CRT",
+   "status": "implemented",
+   "strand": "interface",
+   "summary": "Themes became versioned, validated packs that users can import. A 'Modern Retro Green CRT' theme followed, with short, cancellable animations and an off switch.",
+   "title": "Theme packs and a green CRT",
+   "uncertainty": [
+    "Native desktop rendering and screen-reader behaviour of the theme are documented as not yet accepted."
+   ],
+   "why": "Themes as data, not code, keep the interface customisable without letting a theme file run anything."
+  },
+  {
+   "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that.",
+   "chapter": "ch-hands",
+   "date": "2026-10-03",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "doc",
+     "label": "Implementation status, 3 October 2026 product-install test",
+     "ref": "docs/IMPLEMENTATION_STATUS.md",
+     "source": "src-git"
+    }
+   ],
+   "excerpts": [],
+   "id": "crawler-corpus",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "start",
+    "lane": 7,
+    "row": 33,
+    "x": 1425,
+    "y": 1416
+   },
+   "short": "Public product test",
+   "status": "verified",
+   "strand": "support",
+   "summary": "A separate crawler downloaded 853 publicly available product files from four manufacturer groups. KNXBench's product installer ran over all of them as a test: 644 installed, the rest refused with named reasons, and 51 of 1,167 programs became plannable for a device download.",
+   "title": "853 public product files as a test",
+   "uncertainty": [
+    "Evidence from one run, not a repeatable gate; the downloaded files are not part of the repository."
+   ],
+   "why": "Real manufacturer files are the best test of a product database, and every refusal became a documented limitation instead of a silent gap."
+  },
+  {
+   "aside": "Yes, this node is the page you are reading. Please do not divide by it.",
+   "chapter": "ch-now",
+   "date": "2026-10-03",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "conversation",
+     "label": "Local Hermes session, 3 Oct 2026",
+     "source": "src-hermes"
+    },
+    {
+     "kind": "local",
+     "label": "Story brief and design study, local and unpublished at the cutoff",
+     "source": "src-docs"
+    }
+   ],
+   "excerpts": [
+    {
+     "kind": "quote",
+     "labels": [
+      "Translated from German",
+      "Shortened"
+     ],
+     "note": "3 October 2026.",
+     "original_language": "de",
+     "speaker": "user",
+     "text": "[…] the main question: how such a complex project could grow out of one starting prompt, presented in a visually interesting and humorous way. Ideally in English.",
+     "transforms": [
+      "translated",
+      "shortened"
+     ]
+    }
+   ],
+   "id": "evolution-story",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 34,
+    "x": 235,
+    "y": 1456
+   },
+   "short": "This story",
+   "status": "planned",
+   "strand": "collab",
+   "summary": "The user asked for a public, humorous English story of how one starting prompt became this project. A brief and the Phosphor Atlas visual study were prepared locally. At the cutoff neither was part of the published history.",
+   "title": "The project asks where it came from",
+   "uncertainty": [],
+   "why": "Telling a project's history honestly means showing the detours, the gaps and who decided what."
+  },
+  {
+   "aside": "The tree now contains a branch about drawing the tree. Recursion: achieved, again.",
+   "chapter": "ch-now",
+   "date": "2026-10-04",
+   "date_precision": "day",
+   "evidence": [
+    {
+     "kind": "local",
+     "label": "Local story worktree with candidates, tests and browser checks, 4 Oct 2026",
+     "source": "src-local-story"
+    }
+   ],
+   "excerpts": [],
+   "id": "story-first-preview",
+   "kind": "supporting-tool",
+   "layout": {
+    "label_side": "end",
+    "lane": 0,
+    "row": 35,
+    "x": 235,
+    "y": 1496
+   },
+   "short": "Private preview",
+   "status": "implemented",
+   "strand": "collab",
+   "summary": "The first locally working version of this page was built from the project's own records: a validated, translated and privacy-scanned set of steps, a growing graph, a full-complexity view and a text-only reading path. It stays private until a separate, explicit approval.",
+   "title": "A first private preview of this story",
+   "uncertainty": [
+    "This step is local and unpublished; it is not part of the published history at the cutoff.",
+    "Whether and when this story is published is still undecided."
+   ],
+   "why": "Preparing an update and publishing it are deliberately two different decisions, made separately each time."
+  }
+ ],
+ "gaps": [
+  {
+   "detail": "The strategy document appears complete in the first commit. How it was written, and with which help, is not recorded in any source available for this edition.",
+   "id": "gap-strategy-origin",
+   "title": "Where the strategy came from"
+  },
+  {
+   "detail": "No earlier project prompt was found in local Claude Code, Codex or Hermes histories. Earliest available is not proven to be earliest ever.",
+   "id": "gap-before-first-prompt",
+   "title": "Anything before 2 September, 13:50 CEST"
+  },
+  {
+   "detail": "knx-spec-kb existed before its first available session. Its beginnings are outside this edition.",
+   "id": "gap-spec-kb-origin",
+   "title": "The knowledge base's early days"
+  },
+  {
+   "detail": "Cloud-hosted agent sessions and the remote repository host were not accessed. Some cloud jobs are known to have run for this project.",
+   "id": "gap-cloud",
+   "title": "Cloud sessions"
+  },
+  {
+   "detail": "Every commit carries the user's identity. This edition does not attribute code to a particular AI agent from Git metadata; it names agents only where a conversation shows the hand-off.",
+   "id": "gap-attribution",
+   "title": "Who wrote which line"
+  },
+  {
+   "detail": "The history was rewritten for privacy. Content removed then is not recoverable here, and earlier commit hashes no longer exist.",
+   "id": "gap-rewritten-history",
+   "title": "Rewritten early history"
+  }
+ ],
+ "graph": {
+  "height": 1556,
+  "lane_width": 170,
+  "lanes": [
+   {
+    "strand": "collab",
+    "x": 235
+   },
+   {
+    "strand": "trust",
+    "x": 405
+   },
+   {
+    "strand": "trunk",
+    "x": 575
+   },
+   {
+    "strand": "import",
+    "x": 745
+   },
+   {
+    "strand": "products",
+    "x": 915
+   },
+   {
+    "strand": "interface",
+    "x": 1085
+   },
+   {
+    "strand": "bus",
+    "x": 1255
+   },
+   {
+    "strand": "support",
+    "x": 1425
+   }
+  ],
+  "left_gutter": 150,
+  "row_height": 40,
+  "rows": [
+   {
+    "date": "2026-09-02",
+    "date_precision": "day",
+    "row": 0,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-02",
+    "date_precision": "day",
+    "row": 1,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-02",
+    "date_precision": "day",
+    "row": 2,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-02",
+    "date_precision": "day",
+    "row": 3,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-02",
+    "date_precision": "day",
+    "row": 4,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-03",
+    "date_precision": "day",
+    "row": 5,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-03",
+    "date_precision": "day",
+    "row": 6,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-05",
+    "date_precision": "day",
+    "row": 7,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-05",
+    "date_precision": "day",
+    "row": 8,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-05",
+    "date_precision": "day",
+    "row": 9,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-06",
+    "date_precision": "day",
+    "row": 10,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-08",
+    "date_precision": "day",
+    "row": 11,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-09",
+    "date_precision": "approximate",
+    "row": 12,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-11",
+    "date_precision": "approximate",
+    "row": 13,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-12",
+    "date_precision": "day",
+    "row": 14,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-12",
+    "date_precision": "day",
+    "row": 15,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-13",
+    "date_precision": "day",
+    "row": 16,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-16",
+    "date_precision": "day",
+    "row": 17,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-17",
+    "date_precision": "day",
+    "row": 18,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-19",
+    "date_precision": "day",
+    "row": 19,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-20",
+    "date_precision": "day",
+    "row": 20,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-20",
+    "date_precision": "day",
+    "row": 21,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-20",
+    "date_precision": "day",
+    "row": 22,
+    "shows_date": false
+   },
+   {
+    "date": "2026-09-21",
+    "date_precision": "day",
+    "row": 23,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-22",
+    "date_precision": "day",
+    "row": 24,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-24",
+    "date_precision": "approximate",
+    "row": 25,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-25",
+    "date_precision": "day",
+    "row": 26,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-26",
+    "date_precision": "approximate",
+    "row": 27,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-28",
+    "date_precision": "day",
+    "row": 28,
+    "shows_date": true
+   },
+   {
+    "date": "2026-09-30",
+    "date_precision": "day",
+    "row": 29,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-01",
+    "date_precision": "approximate",
+    "row": 30,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-01",
+    "date_precision": "day",
+    "row": 31,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-03",
+    "date_precision": "day",
+    "row": 32,
+    "shows_date": true
+   },
+   {
+    "date": "2026-10-03",
+    "date_precision": "day",
+    "row": 33,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-03",
+    "date_precision": "day",
+    "row": 34,
+    "shows_date": false
+   },
+   {
+    "date": "2026-10-04",
+    "date_precision": "day",
+    "row": 35,
+    "shows_date": true
+   }
+  ],
+  "top_margin": 96,
+  "width": 1570
+ },
+ "relations": [
+  {
+   "from": "home-toolbox",
+   "id": "rel-home-strategy",
+   "note": "Same morning, same folder; the strategy document entered Git in the same first commit as data from the home project.",
+   "to": "strategy-seed",
+   "type": "documented_association"
+  },
+  {
+   "from": "strategy-seed",
+   "id": "rel-strategy-architecture",
+   "note": "The user started 'session 1' of the strategy's session plan.",
+   "to": "architecture-day-one",
+   "type": "documented_cause"
+  },
+  {
+   "from": "architecture-day-one",
+   "id": "rel-architecture-core",
+   "note": "Session 2 followed the Session 1 plan.",
+   "to": "core-model",
+   "type": "documented_cause"
+  },
+  {
+   "from": "core-model",
+   "id": "rel-core-import",
+   "note": "Session 3 built the importer on the core model.",
+   "to": "ets-import",
+   "type": "documented_cause"
+  },
+  {
+   "from": "architecture-day-one",
+   "id": "rel-architecture-products",
+   "note": "The separate product database was decided in Session 1 and built in Session 4.",
+   "to": "product-database",
+   "type": "documented_cause"
+  },
+  {
+   "from": "ets-import",
+   "id": "rel-import-products",
+   "note": "Session 4 followed Session 3 and enriches imported devices.",
+   "to": "product-database",
+   "type": "documented_cause"
+  },
+  {
+   "from": "strategy-seed",
+   "id": "rel-strategy-desktop",
+   "note": "Session 5 (UI/UX) of the strategy.",
+   "to": "desktop-shell",
+   "type": "documented_cause"
+  },
+  {
+   "from": "strategy-seed",
+   "id": "rel-strategy-bus",
+   "note": "Session 6 (KNXnet/IP) of the strategy.",
+   "to": "live-bus-first",
+   "type": "documented_cause"
+  },
+  {
+   "from": "strategy-seed",
+   "id": "rel-strategy-rename",
+   "note": "Same project, new name.",
+   "to": "rename-knxbench",
+   "type": "editorial"
+  },
+  {
+   "from": "desktop-shell",
+   "id": "rel-desktop-web",
+   "note": "The frontend moved from the desktop app into the web app.",
+   "to": "web-docker",
+   "type": "documented_cause"
+  },
+  {
+   "from": "desktop-shell",
+   "id": "rel-desktop-appimage",
+   "note": "The AppImage packages the desktop app.",
+   "to": "appimage",
+   "type": "documented_association"
+  },
+  {
+   "from": "web-docker",
+   "id": "rel-web-languages",
+   "note": "Translations were built into the web front end.",
+   "to": "languages",
+   "type": "documented_association"
+  },
+  {
+   "from": "web-docker",
+   "id": "rel-web-redesign",
+   "note": "The redesign rebuilt the web front end.",
+   "to": "ui-redesign",
+   "type": "documented_association"
+  },
+  {
+   "from": "codex-joins-goal",
+   "id": "rel-codex-redesign",
+   "note": "Codex proposed and started the redesign.",
+   "to": "ui-redesign",
+   "type": "documented_cause"
+  },
+  {
+   "from": "ui-redesign",
+   "id": "rel-redesign-jokes",
+   "note": "Added to the redesigned workbench.",
+   "to": "loading-jokes",
+   "type": "documented_association"
+  },
+  {
+   "from": "spec-knowledge-base",
+   "id": "rel-spec-notation",
+   "note": "ADR-0030 grounds the slash notation in KNX Standard documents.",
+   "to": "notation-reversal",
+   "type": "documented_association"
+  },
+  {
+   "from": "web-docker",
+   "id": "rel-web-notation",
+   "note": "The removed selector was a web interface setting.",
+   "to": "notation-reversal",
+   "type": "documented_association"
+  },
+  {
+   "from": "ui-redesign",
+   "id": "rel-redesign-themes",
+   "note": "The redesign asked for a themeable interface; theme packs came three weeks later.",
+   "to": "theme-packs-crt",
+   "type": "editorial"
+  },
+  {
+   "from": "ets-import",
+   "id": "rel-import-schema",
+   "note": "The importer's refusal of unknown schemas by name is its designed behaviour.",
+   "to": "schema-23-refusal",
+   "type": "documented_cause"
+  },
+  {
+   "from": "ets-import",
+   "id": "rel-import-ownformat",
+   "note": "ADR-0015 revises the Session 3 round-trip goal.",
+   "to": "own-format",
+   "type": "documented_association"
+  },
+  {
+   "from": "own-format",
+   "id": "rel-ownformat-drop",
+   "note": "ADR-0028 builds on ADR-0015 and supersedes it.",
+   "to": "drop-ets-export",
+   "type": "documented_cause"
+  },
+  {
+   "from": "schema-23-refusal",
+   "id": "rel-schema-drop",
+   "note": "ADR-0028 cites export code that had to mirror every import change, including schema support.",
+   "to": "drop-ets-export",
+   "type": "documented_association"
+  },
+  {
+   "from": "live-bus-first",
+   "id": "rel-bus-boundary",
+   "note": "The rules were set for a live-bus task.",
+   "to": "home-bus-boundary",
+   "type": "documented_association"
+  },
+  {
+   "from": "live-bus-first",
+   "id": "rel-bus-leaky",
+   "note": "The faulty test belonged to the KNXnet/IP routing code.",
+   "to": "test-transmitting-building",
+   "type": "documented_cause"
+  },
+  {
+   "from": "spec-knowledge-base",
+   "id": "rel-spec-bus",
+   "note": "Extracted KNX/IP specification text was used during that work.",
+   "to": "live-bus-first",
+   "type": "documented_association"
+  },
+  {
+   "from": "home-bus-boundary",
+   "id": "rel-boundary-device",
+   "note": "Writes waited for dedicated test hardware, which the user then obtained.",
+   "to": "first-device-programmed",
+   "type": "documented_cause"
+  },
+  {
+   "from": "spec-knowledge-base",
+   "id": "rel-spec-device",
+   "note": "Commissioning steps were researched against the specification.",
+   "to": "first-device-programmed",
+   "type": "documented_association"
+  },
+  {
+   "from": "product-database",
+   "id": "rel-products-device",
+   "note": "Download data is read from the stored product file (ADR-0044).",
+   "to": "first-device-programmed",
+   "type": "documented_association"
+  },
+  {
+   "from": "first-device-programmed",
+   "id": "rel-device-failclosed",
+   "note": "ADR-0059 starts from the earlier hardware round trip.",
+   "to": "fail-closed-writes",
+   "type": "documented_cause"
+  },
+  {
+   "from": "home-bus-boundary",
+   "id": "rel-boundary-failclosed",
+   "note": "Both protect a real installation from risky writes.",
+   "to": "fail-closed-writes",
+   "type": "documented_association"
+  },
+  {
+   "from": "home-toolbox",
+   "id": "rel-home-scrub",
+   "note": "The first commit message still lists home-project data that the rewrite removed.",
+   "to": "history-scrub",
+   "type": "documented_cause"
+  },
+  {
+   "from": "strategy-seed",
+   "id": "rel-strategy-licence",
+   "note": "An independent alternative eventually needs a licence.",
+   "to": "licence-agpl",
+   "type": "editorial"
+  },
+  {
+   "from": "licence-agpl",
+   "id": "rel-licence-cla",
+   "note": "ADR-0054 returns to the original licence.",
+   "to": "licence-cla-reversal",
+   "type": "documented_cause"
+  },
+  {
+   "from": "architecture-day-one",
+   "id": "rel-architecture-codex",
+   "note": "Codex's instruction file was derived from the project's Claude instructions.",
+   "to": "codex-joins-goal",
+   "type": "documented_association"
+  },
+  {
+   "from": "codex-joins-goal",
+   "id": "rel-codex-hermes",
+   "note": "The shared index catalogues both agents' notes.",
+   "to": "hermes-shared-memory",
+   "type": "documented_association"
+  },
+  {
+   "from": "hermes-shared-memory",
+   "id": "rel-hermes-paperclip",
+   "note": "The simulated company's agents ran on Hermes.",
+   "to": "paperclip-experiment",
+   "type": "documented_association"
+  },
+  {
+   "from": "paperclip-experiment",
+   "id": "rel-paperclip-split",
+   "note": "After the shutdown, work continued in separate goal sessions.",
+   "to": "split-goals",
+   "type": "editorial"
+  },
+  {
+   "from": "hermes-shared-memory",
+   "id": "rel-hermes-stats",
+   "note": "The statistics read the agents' local usage records.",
+   "to": "project-stats",
+   "type": "documented_association"
+  },
+  {
+   "from": "product-database",
+   "id": "rel-products-crawler",
+   "note": "The crawled files were used to test the product installer.",
+   "to": "crawler-corpus",
+   "type": "documented_cause"
+  },
+  {
+   "from": "fail-closed-writes",
+   "id": "rel-failclosed-alpha",
+   "note": "Open commissioning gates are routed in the alpha plan.",
+   "to": "alpha-backlog",
+   "type": "documented_association"
+  },
+  {
+   "from": "drop-ets-export",
+   "id": "rel-drop-alpha",
+   "note": "Import boundaries are part of what the alpha may claim.",
+   "to": "alpha-backlog",
+   "type": "editorial"
+  },
+  {
+   "from": "split-goals",
+   "id": "rel-split-alpha",
+   "note": "The alpha plan leaves interface and commissioning tasks to their own goal files.",
+   "to": "alpha-backlog",
+   "type": "documented_association"
+  },
+  {
+   "from": "theme-packs-crt",
+   "id": "rel-themes-story",
+   "note": "The story's green CRT look follows the same afternoon's theme work.",
+   "to": "evolution-story",
+   "type": "editorial"
+  },
+  {
+   "from": "project-stats",
+   "id": "rel-stats-story",
+   "note": "Counting the project came first; explaining it came next.",
+   "to": "evolution-story",
+   "type": "editorial"
+  },
+  {
+   "from": "alpha-backlog",
+   "id": "rel-alpha-story",
+   "note": "Taking stock, two days apart.",
+   "to": "evolution-story",
+   "type": "editorial"
+  },
+  {
+   "from": "evolution-story",
+   "id": "rel-story-preview",
+   "note": "The preview implements the brief and the approved visual study.",
+   "to": "story-first-preview",
+   "type": "documented_cause"
+  }
+ ],
+ "schema": "knxbench-evolution-payload/1",
+ "strands": [
+  {
+   "accent": "violet",
+   "description": "How the work was directed, split between agents and kept honest.",
+   "id": "collab",
+   "label": "Human–AI workflow"
+  },
+  {
+   "accent": "amber",
+   "description": "Decisions about what must never leak, break or be locked away.",
+   "id": "trust",
+   "label": "Privacy, safety & licence"
+  },
+  {
+   "accent": "phosphor",
+   "description": "The starting intent, the architecture and the core model.",
+   "id": "trunk",
+   "label": "Foundations"
+  },
+  {
+   "accent": "phosphor",
+   "description": "Getting existing KNX projects in without losing anything.",
+   "id": "import",
+   "label": "Reading ETS projects"
+  },
+  {
+   "accent": "phosphor",
+   "description": "Product catalogues and application programs from manufacturers.",
+   "id": "products",
+   "label": "Manufacturer data"
+  },
+  {
+   "accent": "phosphor",
+   "description": "The windows, web pages, languages and themes people actually touch.",
+   "id": "interface",
+   "label": "Interface"
+  },
+  {
+   "accent": "phosphor",
+   "description": "Talking to a real KNX installation, carefully.",
+   "id": "bus",
+   "label": "Bus & commissioning"
+  },
+  {
+   "accent": "amber",
+   "description": "Side projects that fed knowledge or numbers into the main one.",
+   "id": "support",
+   "label": "Supporting tools"
+  }
+ ],
+ "tool_version": "0.1.0"
+}

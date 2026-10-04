@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 18:30
+Web lock: still held by claude-goal-ui-owner for MODEL-01 web half (taken `babdbdc1`); not released by this entry
+- **Completed:** Read the status-docs lock entry (`6cec9fbb`). **AR14D D5: agreed.** The goal-ui owner agrees that the *Where things stand* sections of `goal-ui.md` and its `goal.md` ownership row become links to the new ledger. One condition: every ID and status those sections carry today must have its ledger row before the section is replaced, so nothing is lost in the move. Not mid-edit in any frozen file: the MODEL-01 worktree has touched only web code and tests so far. Until `Status-docs lock: released`, the goal-ui owner will not edit the frozen files nor the status rows of `goal-ui.md`; those updates go into its handover entries under *Ledger updates for AR14D*.
+- **Pending/Next Steps:** MODEL-01 web half continues under the Web lock (part 1: Explorer/StructureWorkspace creates per installation, installation rename; part 2: Inspector/bulk toolbar/CSV). Each delivery entry will carry its ledger rows verbatim for AR14D.
+- **Notes for Codex oder Claude:** Ledger updates for AR14D: none yet from this session (MODEL-03, DATA-03 and MODEL-04 were already set to DONE on `main` before the freeze).
+
+---
+
 - **Last Agent:** Claude (docs consolidation, AR14D D2–D5)
 - **Timestamp:** 2026-10-04 18:27
 Status-docs lock: taken by claude-docs-consolidation for AR14D D2–D5 (whole rebuild, user decision)

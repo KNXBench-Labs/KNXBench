@@ -1263,6 +1263,57 @@ main {
   gap: 0.35rem;
 }
 
+/* KL-60: long tables filter and scroll in a bounded viewport. Rows carry
+   their own spacing (no flex gap), so a measured row height is its full
+   share of the list and the windowing offsets add up. */
+.project-diff-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+}
+
+.project-diff-filter input[type="search"] {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+.project-diff-status-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.project-diff-status-filter button[aria-pressed="true"] {
+  border-color: var(--knx-accent);
+  font-weight: 600;
+}
+
+.project-diff-match-count,
+.project-diff-no-match {
+  margin: 0.25rem 0;
+  color: var(--knx-muted);
+}
+
+.project-diff-viewport {
+  max-height: 28rem;
+  overflow-y: auto;
+  overflow-anchor: none;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-input);
+  padding: 0 0.5rem;
+}
+
+.project-diff-viewport .project-diff-entries {
+  display: block;
+  margin: 0;
+}
+
+.project-diff-viewport .project-diff-entries > li {
+  padding: 0.175rem 0;
+}
+
 .project-diff-status {
   font-weight: 600;
 }

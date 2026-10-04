@@ -691,9 +691,20 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 **Sources:** `KL-106`, `KL-22`, `KL-65`.
 **Dependencies:** AR01; can run independently of UI/commissioning acceptance.
 
-- [ ] Audit debug/report export against bounded privacy-pattern classes and synthetic sensitive fixtures, not one remembered address. Ensure newly handled fields are redacted or explicitly warned without claiming perfect anonymization.
-- [ ] Verify existing server authentication/bind refusal and documented reverse-proxy/TLS requirements offline. Keep a shared password distinct from roles, multi-user isolation and public-Internet safety.
-- [ ] Make artifact version/provenance accurately describe its built revision; test any adopted dirty-build marker rather than claiming version output proves a clean source tree.
+- [x] Audit debug/report export against bounded privacy-pattern classes and synthetic sensitive fixtures, not one remembered address. Ensure newly handled fields are redacted or explicitly warned without claiming perfect anonymization.
+- [x] Verify existing server authentication/bind refusal and documented reverse-proxy/TLS requirements offline. Keep a shared password distinct from roles, multi-user isolation and public-Internet safety.
+- [x] Make artifact version/provenance accurately describe its built revision; test any adopted dirty-build marker rather than claiming version output proves a clean source tree.
+
+**AR13 delivered, Claude session, 2026-10-04:** dossier and deployment/privacy
+checklist in [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar13-privacy-and-deployment-security-dossier).
+Debug report now names every kept class and the telegram file's values and
+timestamps; all 97 declared route/method pairs checked for the guard;
+`KNX_REQUIRE_CLEAN_TREE=1` release builds refuse a modified tree. 12 new
+tests (1 privacy fixture, 1 exhaustive route test, 10 build-stamp tests),
+9 behavioural mutants caught plus a build-level experiment now pinned by a
+test. KL-65 `DONE`; KL-22 and KL-106 `ACCEPTED_BOUNDARY`. AR17 must build
+with `KNX_REQUIRE_CLEAN_TREE=1`; the dialog wording is handed to the
+Web-lock holder.
 
 **Exit evidence:** privacy/authentication/provenance regressions and deployment/privacy checklist. No automatic TLS service, user-role system, new license regime, credential disclosure or host configuration change.
 
@@ -702,10 +713,18 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 **Sources:** `KL-29`, `KL-31`, `KL-62`, `KL-72`, `KL-73`, `KL-74`, `KL-75`, `KL-76`, `KL-77`, `KL-78`, `KL-126`, `KL-102`.
 **Dependencies:** AR09 for DPT changes; otherwise independent.
 
-- [ ] Verify supported CLI address/name formatting and existing routing/scan/monitor contracts with fakes and local adapters. If a case is already assigned to U13/ISSUE-12 or another owner, consume its test instead of rebuilding it here.
-- [ ] Test truthful busy/vacant/unknown results, timeout boundaries, exclusion enforcement and reconciliation preserving project identity; occupancy is not product identity.
-- [ ] Maintain bounded one-tunnel/one-line scope, uncertain retries and custom multicast evidence gaps. Real gateway/custom-group evidence is external and belongs to an authorized owner, not this goal.
-- [ ] For an unreachable public error branch, document that reachability boundary and test only genuinely reachable behavior; do not fabricate a wire event to tick a coverage box.
+- [x] Verify supported CLI address/name formatting and existing routing/scan/monitor contracts with fakes and local adapters. If a case is already assigned to U13/ISSUE-12 or another owner, consume its test instead of rebuilding it here.
+- [x] Test truthful busy/vacant/unknown results, timeout boundaries, exclusion enforcement and reconciliation preserving project identity; occupancy is not product identity.
+- [x] Maintain bounded one-tunnel/one-line scope, uncertain retries and custom multicast evidence gaps. Real gateway/custom-group evidence is external and belongs to an authorized owner, not this goal.
+- [x] For an unreachable public error branch, document that reachability boundary and test only genuinely reachable behavior; do not fabricate a wire event to tick a coverage box.
+
+**AR14 delivered, Claude session, 2026-10-04:** offline dossier in
+[ALPHA_READINESS](docs/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+Three defects fixed (CLI project style, multi-installation names in CLI and
+server monitor, Linux cross-group routing delivery), 17 new tests plus a
+three-level case in an existing round trip, 16/16 behavioural mutants caught. KL-29 `DONE`, KL-31 `BLOCKED_EXTERNAL` (real
+custom-group run), the other ten `ACCEPTED_BOUNDARY` as retained documented
+boundaries. No bus run.
 
 **Exit evidence:** offline contract/regression dossier or retained documented boundaries. No real bus run, multi-tunnel redesign, automatic coupler traversal, scan speed promise or new hardware support. Monitor UI and discovery acceptance remain external owner work.
 
@@ -927,7 +946,7 @@ answers questions about them.
 | `SAFE-03` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `DATA-01` | P1 | AR02 | DONE |
 | `KL-129` | P1 | AR03 | WAITING_DECISION |
-| `KL-106` | P1 | AR13 | TODO |
+| `KL-106` | P1 | AR13 | ACCEPTED_BOUNDARY |
 | `DOC-01` | P1 | AR00 | DONE |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL |
 | `KL-13` | P1 | AR08 | TODO |
@@ -936,21 +955,21 @@ answers questions about them.
 | `KL-130-GATE` | P1 | AR01 | DONE |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER |
 | `RELEASE-02` | P1 | AR18 | WAITING_OWNER |
-| `KL-22` | P1 | AR13 | TODO |
+| `KL-22` | P1 | AR13 | ACCEPTED_BOUNDARY |
 | `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `UI-01` | P1 | `goal-ui.md` — owner only | DONE |
 | `UI-02` | P1 | `goal-ui.md` — owner only | DONE |
-| `KL-126` | P2 | AR14 | TODO |
-| `KL-29` | P2 | AR14 | TODO |
-| `KL-31` | P2 | AR14 | TODO |
-| `KL-62` | P2 | AR14 | TODO |
-| `KL-72` | P2 | AR14 | TODO |
-| `KL-73` | P2 | AR14 | TODO |
-| `KL-74` | P2 | AR14 | TODO |
-| `KL-75` | P2 | AR14 | TODO |
-| `KL-77` | P2 | AR14 | TODO |
-| `KL-78` | P2 | AR14 | TODO |
+| `KL-126` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-29` | P2 | AR14 | DONE |
+| `KL-31` | P2 | AR14 | BLOCKED_EXTERNAL |
+| `KL-62` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-72` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-73` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-74` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-75` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-77` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-78` | P2 | AR14 | ACCEPTED_BOUNDARY |
 | `KL-105` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-108` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-101` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -1029,8 +1048,8 @@ answers questions about them.
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-20` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-124` | P3 | `goal-ui.md` — owner only | DONE |
-| `KL-76` | P3 | AR14 | TODO |
-| `KL-102` | P3 | AR14 | TODO |
+| `KL-76` | P3 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-102` | P3 | AR14 | ACCEPTED_BOUNDARY |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-115` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -1064,7 +1083,7 @@ answers questions about them.
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-16` | P3 | AR15 | TODO |
 | `KL-42` | P3 | AR04 | TODO |
-| `KL-65` | P3 | AR13 | TODO |
+| `KL-65` | P3 | AR13 | DONE |
 | `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-46` | P3 | AR15 | TODO |

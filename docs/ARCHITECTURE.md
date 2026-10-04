@@ -103,6 +103,10 @@ crates/
                    format this project defines and owns (T12)
   knx-report/      Renders a project into one self-contained HTML document —
                    a KNXBench report, never an ETS-compatible one (T13)
+  knx-build-stamp/ Build-script helper for both binaries: decides the commit
+                   `--version` names and, with KNX_REQUIRE_CLEAN_TREE=1,
+                   refuses a release build from a modified tree (ADR-0018
+                   amendment). Zero dependencies; a build-dependency only.
   knx-testsupport/ Test-fixture paths and nothing else. Zero dependencies,
                    used only as a `[dev-dependencies]` entry, so it appears
                    in neither graph below: it exists so that no crate has to

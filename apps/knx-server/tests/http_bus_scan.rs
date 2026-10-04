@@ -601,3 +601,107 @@ async fn running_and_cancelled_scans_cannot_be_reconciled() {
     assert_eq!(cancelled.status(), StatusCode::CONFLICT);
     assert!(!state.command_stack.lock().unwrap().can_undo());
 }
+
+/// KNOWN_LIMITATIONS §126 / AR14: the server recomputes the comparison
+/// against the current project and refuses selections that are foreign,
+/// duplicated, ambiguous or stale — each without touching the project or
+/// the undo history.
+#[tokio::test]
+async fn reconciliation_refuses_foreign_duplicate_ambiguous_and_stale_selections() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = Arc::new(state_with_project(tunnel));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 2, &[], 1)),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    assert_eq!(poll_until_terminal(&app).await["status"], "completed");
+    let frames_after_scan = handle.sent_frames();
+
+    let reconcile = |session: u64, missing: Value| {
+        let app = app.clone();
+        async move {
+            let response = call(
+                &app,
+                "POST",
+                "/api/bus/scan/reconcile",
+                Some(json!({ "sessionId": session, "unexpected": [], "missing": missing })),
+            )
+            .await;
+            let status = response.status();
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            (status, String::from_utf8_lossy(&bytes).into_owned())
+        }
+    };
+    let snapshot = || format!("{:#?}", state.project.lock().unwrap().as_ref().unwrap());
+    let unchanged = |before: &str| {
+        assert_eq!(
+            snapshot(),
+            before,
+            "a refused reconciliation changed the project"
+        );
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+    };
+
+    let before = snapshot();
+    let (status, _) = reconcile(session_id + 1, json!(["1.1.2"])).await;
+    assert_eq!(status, StatusCode::CONFLICT, "foreign session");
+    unchanged(&before);
+
+    let (status, body) = reconcile(session_id, json!(["1.1.2", "1.1.2"])).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(body.contains("duplicate"), "{body}");
+    unchanged(&before);
+
+    // A second project device takes the same address: deleting "the"
+    // missing device would be a guess.
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let twin = project.ids.next_device_id().unwrap();
+        project.devices.insert(project_device(twin, addr(2)));
+    }
+    let before = snapshot();
+    let (status, body) = reconcile(session_id, json!(["1.1.2"])).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(body.contains("exactly one project device"), "{body}");
+    unchanged(&before);
+
+    // The project moved on: no device claims 1.1.2 any more, so the scan's
+    // old "missing" finding is no longer part of the current comparison.
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let ids: Vec<_> = project
+            .devices
+            .iter()
+            .filter(|device| device.address == Some(addr(2)))
+            .map(|device| device.id)
+            .collect();
+        for id in ids {
+            project.devices.get_mut(id).unwrap().address = Some(addr(7));
+        }
+    }
+    let before = snapshot();
+    let (status, body) = reconcile(session_id, json!(["1.1.2"])).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        body.contains("not part of the current scan comparison"),
+        "{body}"
+    );
+    unchanged(&before);
+
+    assert_eq!(
+        handle.sent_frames(),
+        frames_after_scan,
+        "reconciliation sent KNX traffic"
+    );
+}

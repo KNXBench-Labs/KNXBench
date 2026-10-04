@@ -660,6 +660,18 @@ impl RoutingClient {
         socket2_socket
             .bind(&std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, group.port())).into())
             .map_err(BusError::Io)?;
+        // A socket bound to the wildcard address on Linux otherwise receives
+        // every group *any* socket on the host has joined (ip(7),
+        // `IP_MULTICAST_ALL`, default on). Two routing clients for separate
+        // installations on one host — default group next to a custom one —
+        // would then hear each other's telegrams, defeating the separation a
+        // custom group exists for (Routing v01.05.02 AS §2.3.2). Measured by
+        // `a_custom_group_telegram_reaches_its_group_and_not_the_default_one`
+        // (AR14). Other platforms' delivery policy is unverified.
+        #[cfg(target_os = "linux")]
+        socket2_socket
+            .set_multicast_all_v4(false)
+            .map_err(BusError::Io)?;
         socket2_socket.set_nonblocking(true).map_err(BusError::Io)?;
         // Both of these are skipped for `PRODUCTION`, which asks for the
         // kernel's own defaults (`IP_MULTICAST_IF` = `INADDR_ANY`, TTL 1):
@@ -1877,6 +1889,87 @@ mod tests {
         assert_eq!(
             client.group, ROUTING_MULTICAST,
             "connect() without an override must still join the standard group"
+        );
+    }
+
+    /// KNOWN_LIMITATIONS §31 / AR14: a custom routing group exists to keep
+    /// installations apart (Routing v01.05.02 AS §2.3.2), so a telegram sent
+    /// on one must reach that group's members and not a default-group client
+    /// on the same host. Loopback only: evidence for this host's socket
+    /// delivery, not for a KNXnet/IP router on a real network.
+    #[tokio::test]
+    async fn a_custom_group_telegram_reaches_its_group_and_not_the_default_one() {
+        use crate::cemi::{ApplicationService, Destination, GroupValue};
+        use knx_core::GroupAddress;
+
+        let group = Ipv4Addr::new(239, 0, 2, 14);
+        let sender_address = IndividualAddress::new(1, 1, 14).unwrap();
+        let sender = match RoutingClient::connect_to_group_with(
+            sender_address,
+            group,
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping a_custom_group_telegram_reaches_its_group_and_not_the_default_one: \
+                     could not join {group} on loopback in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        let member = RoutingClient::connect_to_group_with(
+            IndividualAddress::new(1, 1, 15).unwrap(),
+            group,
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        .expect("a second client joins the same custom group");
+        let bystander = RoutingClient::connect_with(
+            IndividualAddress::new(1, 1, 16).unwrap(),
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        .expect("a default-group client joins next to it");
+        let mut member_telegrams = member.subscribe();
+        let mut bystander_telegrams = bystander.subscribe();
+
+        let destination = Destination::Group(GroupAddress::from_raw(0x0A0E));
+        sender
+            .send(
+                destination,
+                ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            )
+            .await
+            .expect("send over loopback multicast should succeed");
+
+        let Some(received) =
+            recv_from_source(&mut member_telegrams, sender_address, TELEGRAM_WAIT).await
+        else {
+            assert!(
+                !loopback_multicast_is_deliverable().await,
+                "the custom group's own member never heard the sender, yet plain sockets \
+                 deliver multicast on this host"
+            );
+            eprintln!(
+                "skipping a_custom_group_telegram_reaches_its_group_and_not_the_default_one: \
+                 this sandbox does not deliver multicast locally"
+            );
+            return;
+        };
+        assert_eq!(received.destination, destination);
+
+        let leaked = recv_from_source(
+            &mut bystander_telegrams,
+            sender_address,
+            Duration::from_millis(500),
+        )
+        .await;
+        assert!(
+            leaked.is_none(),
+            "a default-group client heard a telegram sent on custom group {group}: {leaked:?}"
         );
     }
 

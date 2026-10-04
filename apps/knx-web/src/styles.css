@@ -3116,3 +3116,93 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+/* CRT interaction feedback — application-owned behavior, never theme-pack CSS.
+   Native table rows paint their fill directly; a disposable inert light lives
+   outside the table. Palette roles stay semantic, including the bulk rail. */
+:root[data-motion-style="crt"] {
+  --knx-motion-easing: ease-out;
+}
+:root[data-motion-level="standard"][data-motion-style="crt"] {
+  --knx-transition-duration: 250ms;
+}
+:root[data-motion-style="crt"] .workbench [data-crt-surface] {
+  --crt-selection-rail: inset 0 0 0 transparent;
+  animation-name: none;
+  transition-property: none;
+}
+:root[data-motion-style="crt"] .workbench .tree-label[data-crt-surface],
+:root[data-motion-style="crt"] .workbench .address-table tr[data-crt-surface] {
+  background-color: transparent;
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)),
+    color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface))
+  );
+  background-size: 0% 100%;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
+:root[data-motion-style="crt"] .workbench .tree-label[data-crt-surface]:is(:hover, :focus-visible, .selected),
+:root[data-motion-style="crt"] .workbench .address-table tr[data-crt-surface]:is(:hover, :focus-within, [aria-selected="true"], .row-multi-selected) {
+  background-size: 100% 100%;
+}
+:root[data-motion-style="crt"] .workbench .address-table tr.row-multi-selected {
+  --crt-selection-rail: inset 3px 0 0 var(--knx-accent);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)),
+    color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface))
+  );
+}
+:root[data-motion-style="crt"] .workbench [data-crt-surface]:hover,
+:root[data-motion-style="crt"] .workbench .table-select:hover {
+  transform: none;
+}
+:root[data-motion-style="crt"] .workbench .table-select:hover {
+  box-shadow: none;
+}
+:root[data-motion-style="crt"] .workbench .tree-label[data-dragging="true"] {
+  background-size: 0% 100%;
+}
+.crt-interaction-light {
+  position: fixed;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+  animation-name: none;
+}
+.crt-beam-core {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--knx-foreground);
+  box-shadow: 0 0 6px 4px color-mix(in srgb, var(--knx-accent) 65%, transparent),
+    0 0 22px 8px color-mix(in srgb, var(--knx-accent) 35%, transparent);
+  opacity: 0;
+  animation-name: none;
+}
+@keyframes knx-crt-flash {
+  from { box-shadow: var(--crt-selection-rail), 0 0 12px color-mix(in srgb, var(--knx-accent) 65%, transparent); }
+  to { box-shadow: var(--crt-selection-rail), 0 0 0 transparent; }
+}
+@keyframes knx-crt-sweep {
+  0% { transform: translateX(0); opacity: 0; }
+  12% { opacity: 1; }
+  80% { opacity: 0.75; }
+  100% { transform: translateX(calc(var(--crt-sweep-width) - 2px)); opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion-style="crt"][data-motion-level="standard"] .workbench .tree-label[data-crt-surface],
+  :root[data-motion-style="crt"][data-motion-level="standard"] .workbench .address-table tr[data-crt-surface],
+  :root[data-motion-style="crt"][data-motion-level="subtle"] .workbench .tree-label[data-crt-surface],
+  :root[data-motion-style="crt"][data-motion-level="subtle"] .workbench .address-table tr[data-crt-surface] {
+    transition: background-size var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+  :root[data-motion-style="crt"][data-motion-level="standard"] .workbench [data-crt-flash="true"] {
+    animation: knx-crt-flash min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing);
+  }
+  :root[data-motion-style="crt"][data-motion-level="standard"] .crt-beam-core {
+    animation: knx-crt-sweep var(--knx-transition-duration) var(--knx-motion-easing) both;
+  }
+}

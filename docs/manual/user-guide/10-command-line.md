@@ -286,9 +286,12 @@ Then one line per telegram, source first:
 1.1.4 -> 1/2/3 (Kitchen ceiling light): GroupValueWrite 1
 ```
 
-With `--project`, each destination is annotated with its name from the project and the
-value is decoded against that address's resolved datapoint type. Without it, you get
-raw payloads. Dropped telegrams are reported rather than hidden.
+With `--project`, each destination is printed in the project's group-address style
+(three-level, two-level or free), annotated with its name from the project, and the
+value is decoded against that address's resolved datapoint type. If several
+installations name the same address differently, all names are shown, separated by
+` | `. Without `--project`, addresses are three-level and payloads raw. Dropped
+telegrams are reported rather than hidden.
 
 `--control` appends the priority and hop count each telegram travelled with, and marks
 a telegram the medium repeated:
@@ -324,8 +327,10 @@ knx bus write --gateway 192.0.2.1:3671 --dpt DPST-1-1 --dry-run 1/2/3 1
 | `--dry-run` | Encode and print; open no connection, send nothing |
 
 With neither `--project` nor `--dpt`, the value falls back to raw `0`, `1` or hex.
-Everything — address, project, datapoint type, value — is parsed and validated before a
-socket is opened, so a typo fails without touching the network.
+With `--project`, type the group address in that project's style (for example `2049`
+in a free-style project); without it, three-level. Everything — project, address,
+datapoint type, value — is parsed and validated before a socket is opened, so a typo
+fails without touching the network.
 
 Without `--dry-run` the command connects, sends a group-value write, disconnects and
 prints `wrote to 1/2/3`. Tunneling is confirmed, so a failure is reported rather than
@@ -338,7 +343,9 @@ knx bus route-monitor --source-address 1.1.250 --project house.knxdb
 ```
 
 Joins the KNX routing multicast group and prints telegrams in the same format as
-`knx bus monitor`. `--source-address` is the individual address this machine uses on
+`knx bus monitor`, including the project's address style and names. On Linux it
+receives only the group it joined, not other groups joined elsewhere on the same
+machine. `--source-address` is the individual address this machine uses on
 the bus; pick one that no device owns. `--multicast-group <addr>` joins a different
 IPv4 multicast address; omitted, it joins the standard `224.0.23.12`. The port is fixed
 at `3671` either way.

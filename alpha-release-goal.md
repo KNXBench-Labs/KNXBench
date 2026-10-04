@@ -702,10 +702,18 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 **Sources:** `KL-29`, `KL-31`, `KL-62`, `KL-72`, `KL-73`, `KL-74`, `KL-75`, `KL-76`, `KL-77`, `KL-78`, `KL-126`, `KL-102`.
 **Dependencies:** AR09 for DPT changes; otherwise independent.
 
-- [ ] Verify supported CLI address/name formatting and existing routing/scan/monitor contracts with fakes and local adapters. If a case is already assigned to U13/ISSUE-12 or another owner, consume its test instead of rebuilding it here.
-- [ ] Test truthful busy/vacant/unknown results, timeout boundaries, exclusion enforcement and reconciliation preserving project identity; occupancy is not product identity.
-- [ ] Maintain bounded one-tunnel/one-line scope, uncertain retries and custom multicast evidence gaps. Real gateway/custom-group evidence is external and belongs to an authorized owner, not this goal.
-- [ ] For an unreachable public error branch, document that reachability boundary and test only genuinely reachable behavior; do not fabricate a wire event to tick a coverage box.
+- [x] Verify supported CLI address/name formatting and existing routing/scan/monitor contracts with fakes and local adapters. If a case is already assigned to U13/ISSUE-12 or another owner, consume its test instead of rebuilding it here.
+- [x] Test truthful busy/vacant/unknown results, timeout boundaries, exclusion enforcement and reconciliation preserving project identity; occupancy is not product identity.
+- [x] Maintain bounded one-tunnel/one-line scope, uncertain retries and custom multicast evidence gaps. Real gateway/custom-group evidence is external and belongs to an authorized owner, not this goal.
+- [x] For an unreachable public error branch, document that reachability boundary and test only genuinely reachable behavior; do not fabricate a wire event to tick a coverage box.
+
+**AR14 delivered, Claude session, 2026-10-04:** offline dossier in
+[ALPHA_READINESS](docs/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+Three defects fixed (CLI project style, multi-installation names in CLI and
+server monitor, Linux cross-group routing delivery), 17 new tests plus a
+three-level case in an existing round trip, 16/16 behavioural mutants caught. KL-29 `DONE`, KL-31 `BLOCKED_EXTERNAL` (real
+custom-group run), the other ten `ACCEPTED_BOUNDARY` as retained documented
+boundaries. No bus run.
 
 **Exit evidence:** offline contract/regression dossier or retained documented boundaries. No real bus run, multi-tunnel redesign, automatic coupler traversal, scan speed promise or new hardware support. Monitor UI and discovery acceptance remain external owner work.
 
@@ -941,16 +949,16 @@ answers questions about them.
 | `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `UI-01` | P1 | `goal-ui.md` — owner only | DONE |
 | `UI-02` | P1 | `goal-ui.md` — owner only | DONE |
-| `KL-126` | P2 | AR14 | TODO |
-| `KL-29` | P2 | AR14 | TODO |
-| `KL-31` | P2 | AR14 | TODO |
-| `KL-62` | P2 | AR14 | TODO |
-| `KL-72` | P2 | AR14 | TODO |
-| `KL-73` | P2 | AR14 | TODO |
-| `KL-74` | P2 | AR14 | TODO |
-| `KL-75` | P2 | AR14 | TODO |
-| `KL-77` | P2 | AR14 | TODO |
-| `KL-78` | P2 | AR14 | TODO |
+| `KL-126` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-29` | P2 | AR14 | DONE |
+| `KL-31` | P2 | AR14 | BLOCKED_EXTERNAL |
+| `KL-62` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-72` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-73` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-74` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-75` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-77` | P2 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-78` | P2 | AR14 | ACCEPTED_BOUNDARY |
 | `KL-105` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-108` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-101` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -1029,8 +1037,8 @@ answers questions about them.
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-20` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-124` | P3 | `goal-ui.md` — owner only | DONE |
-| `KL-76` | P3 | AR14 | TODO |
-| `KL-102` | P3 | AR14 | TODO |
+| `KL-76` | P3 | AR14 | ACCEPTED_BOUNDARY |
+| `KL-102` | P3 | AR14 | ACCEPTED_BOUNDARY |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-115` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |

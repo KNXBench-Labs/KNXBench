@@ -7371,6 +7371,19 @@ degrades to a counted summary instead of refusing the package.
 
 ## §153 Master-data schemes 10 and 23 are refused for standalone `.knxprod`
 
+**2026-10-04 unpublished candidate checkpoint.** Exact scheme23 admission
+reuses the strict21 namespace/qualified-attribute boundary, package-scoped opaque
+evidence and unchanged storage/ZIP/work/depth limits. Original Release Full853:
+690 equal existing installs,161 diagnostically equal atomic refusals,2 exact23
+admissions;853 original hashes and1382 retained archives verified. Four current
+CLI/HTTP GREENs/four baseline REDs,current native6,six compiled guard controls
+and separate in-session review are recorded; original survivors/verifier failures
+are retained. Only three test files differ from those frozen corpus inputs;
+production bytes are unchanged. Current-upstream workspace/Web/build/integration
+and publication are pending: this is **not delivered**,not complete manufacturer
+semantics or bus/runtime support. Scheme10 remains refused and KL153 remains
+open. See PRODUCT_SCHEME_23_RESEARCH.md and ADR-0068.
+
 **Research 2026-10-04,not admission.** Base575a2d1d/source712:bounded offline
 census rechecks853 hashes/852 master documents/one explicit scan refusal;two
 scheme23 packages have8 complete XML (2 each Master/Catalog/Hardware/

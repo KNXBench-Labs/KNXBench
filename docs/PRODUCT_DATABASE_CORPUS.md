@@ -14,7 +14,10 @@ verified after probe,private temp0/config files0/raw or item vectors0.
 Public ProductDB631/0/25/28 blocks,strict Clippy/Release build passed. Official
 project Schema23 documentation excludes complete manufacturer grammar/runtime
 semantics; see [primary source and admission prerequisites](PRODUCT_SCHEME_23_RESEARCH.md).
-Production namespace set unchanged;KL153 remains open. Research delivery pending.
+Production namespace set unchanged;KL153 remains open. Research published
+as87df5d82a126384da904fc47277b0bd0101bf198 with exact eight blobs/live
+and fetched refs; doc5/in-session/privacy review GREEN. Own final hygiene
+is recorded separately; this does not close unsupported product namespaces.
 
 ## KL-152 coupled evidence-work budget — delivered, 2026-10-04
 

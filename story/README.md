@@ -22,7 +22,9 @@ Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-
 
 Private provenance (session identifiers, local paths, raw prompt extracts) lives
 outside the repository, by default in `../KNXBench.story-private/` next to the
-checkout, owner-readable only. It is never bundled.
+checkout, owner-readable only. It is never bundled. The relative path in the
+commands below assumes the main checkout; from a worktree, pass the ledger's
+absolute path (a missing ledger stops `prepare` before anything is written).
 
 ## Commands
 
@@ -71,6 +73,18 @@ local path. It is not a repository dependency.
 5. Write the versioned page with `build <id> --preview` and commit it with the
    candidate. After any change to `site/`, regenerate every page in `previews/`;
    the preview test names the stale ones.
+
+## Narrator voice
+
+An edition may set `edition.narrator` to tell the story in a persona (since
+`2026-10-04.3`: a gloomy AI in homage to Marvin; rules in the
+[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md#voice-and-accessibility)). It
+supplies the hero (`kicker`, one to three `title_lines`, `lede`, `aside`), the
+`aside_label` shown on every event aside, a short `label` for the edition facts
+and a **mandatory** `disclosure` shown in the label guide. The persona belongs in
+chapter text and asides only; the record fields stay plain. `CHANGES.md` reports
+a narrator change and `REVIEW.md` adds voice checks. Without the field the page
+renders exactly as before.
 
 **Publishing this version** is a different decision. It needs an approval
 record naming the exact `story_sha256` of one candidate

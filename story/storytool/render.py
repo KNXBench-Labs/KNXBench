@@ -29,6 +29,38 @@ EVIDENCE_LABELS = {
     "database": "Database", "local": "Local file",
 }
 SOURCE_STATUS_LABELS = {"read": "Read", "partial": "Partly read", "unavailable": "Not accessed"}
+DEFAULT_ASIDE_LABEL = "Editorial aside"
+
+# The original, unnarrated hero. Kept as literal markup so that editions without a
+# narrator keep rendering byte-for-byte as their committed previews.
+_DEFAULT_HERO = (
+    '<p class="kicker">The shape of an idea</p>'
+    '<h1 id="title"><span>One prompt.</span> <span>Then it</span> <span>branched.</span></h1>'
+    '<p class="lede">How a request to look inside one home\'s light switches became an independent KNX '
+    'engineering application, told from the project\'s own records: the decisions, the detours, and the '
+    'people and AI agents behind the branches.</p>'
+    '<p class="aside-joke">Scope creep, now with a family tree.</p>'
+)
+_DEFAULT_ASIDE_GUIDE = '<li><strong>Editorial aside</strong>: our commentary, not part of the record.</li>'
+
+
+def _hero(narrator: dict | None) -> str:
+    if narrator is None:
+        return _DEFAULT_HERO
+    hero = narrator["hero"]
+    title = " ".join(f"<span>{e(line)}</span>" for line in hero["title_lines"])
+    return (f'<p class="kicker">{e(hero["kicker"])}</p>'
+            f'<h1 id="title">{title}</h1>'
+            f'<p class="lede">{e(hero["lede"])}</p>'
+            f'<p class="aside-joke">{e(hero["aside"])}</p>')
+
+
+def _aside_guide(narrator: dict | None) -> str:
+    if narrator is None:
+        return _DEFAULT_ASIDE_GUIDE
+    return (f'<li><strong>{e(narrator["aside_label"])}</strong>: the narrator\'s commentary, not part of the '
+            'record.</li>'
+            f'<li><strong>Narrator</strong>: {e(narrator["disclosure"])}</li>')
 
 
 def e(text: object) -> str:
@@ -72,7 +104,7 @@ def _relation_items(event: dict, payload: dict, titles: dict[str, str]) -> str:
 
 
 def render_event_card(event: dict, payload: dict, strands: dict[str, dict], sources: dict[str, dict],
-                      titles: dict[str, str]) -> str:
+                      titles: dict[str, str], aside_label: str = DEFAULT_ASIDE_LABEL) -> str:
     parts = [
         f'<article class="event-card strand-{e(event["strand"])} status-{e(event["status"])}" '
         f'id="ev-{e(event["id"])}" data-event="{e(event["id"])}" tabindex="-1">',
@@ -87,7 +119,7 @@ def render_event_card(event: dict, payload: dict, strands: dict[str, dict], sour
         f'<p class="event-why"><span class="why-label">Why it mattered</span> {e(event["why"])}</p>',
     ]
     if event.get("aside"):
-        parts.append(f'<p class="event-aside"><span class="aside-label">Editorial aside</span> {e(event["aside"])}</p>')
+        parts.append(f'<p class="event-aside"><span class="aside-label">{e(aside_label)}</span> {e(event["aside"])}</p>')
     count = len(event["excerpts"]) + len(event["evidence"])
     parts.append(f'<details class="evidence"><summary>Prompts, evidence and uncertainty '
                  f'<span class="count">{count}</span></summary><div class="evidence-body">')
@@ -124,6 +156,8 @@ def render_body(payload: dict, story_sha: str) -> str:
     events = {event["id"]: event for event in payload["events"]}
     titles = {ident: event["title"] for ident, event in events.items()}
     edition = payload["edition"]
+    narrator = edition.get("narrator")
+    aside_label = narrator["aside_label"] if narrator else DEFAULT_ASIDE_LABEL
     first = payload["events"][0]
     out: list[str] = []
     add = out.append
@@ -142,19 +176,15 @@ def render_body(payload: dict, story_sha: str) -> str:
 
     add('<main id="main">')
     add('<section class="hero" aria-labelledby="title"><div class="intro">'
-        '<p class="kicker">The shape of an idea</p>'
-        '<h1 id="title"><span>One prompt.</span> <span>Then it</span> <span>branched.</span></h1>'
-        '<p class="lede">How a request to look inside one home\'s light switches became an independent KNX '
-        'engineering application, told from the project\'s own records: the decisions, the detours, and the '
-        'people and AI agents behind the branches.</p>'
-        '<p class="aside-joke">Scope creep, now with a family tree.</p>'
-        '<nav class="hero-links" aria-label="Ways to read">'
+        + _hero(narrator)
+        + '<nav class="hero-links" aria-label="Ways to read">'
         '<a class="explore" href="#chapter-1">Start the story</a>'
         '<a class="explore secondary" href="#atlas">Explore the whole tree</a>'
         '<a class="explore secondary" href="#all-steps">Read every step as text</a>'
         '</nav></div>')
     add('<aside class="edition-facts" aria-labelledby="facts-title"><h2 id="facts-title">This edition</h2><dl>'
-        f'<dt>Earliest prompt found</dt><dd>{e(display_date(first))}</dd>'
+        + (f'<dt>Narrator</dt><dd>{e(narrator["label"])}</dd>' if narrator else '')
+        + f'<dt>Earliest prompt found</dt><dd>{e(display_date(first))}</dd>'
         f'<dt>Evidence cutoff</dt><dd>{e(edition["cutoff"]["label"])}</dd>'
         f'<dt>Development steps</dt><dd>{len(payload["events"])} steps on {len(payload["strands"])} strands, '
         f'{len(payload["relations"])} connections</dd>'
@@ -179,7 +209,7 @@ def render_body(payload: dict, story_sha: str) -> str:
             add(f"<p>{e(paragraph)}</p>")
         add('<div class="event-cards">')
         for member in sorted(chapter["events"], key=lambda ident: events[ident]["layout"]["row"]):
-            add(render_event_card(events[member], payload, strands, sources, titles))
+            add(render_event_card(events[member], payload, strands, sources, titles, aside_label))
         add("</div></article>")
     add('</div><aside class="story-graph" aria-label="Growing ancestry graph">'
         '<div class="graph-heading"><h2>The ancestry blueprint</h2>'
@@ -255,8 +285,8 @@ def render_body(payload: dict, story_sha: str) -> str:
         '<li><strong>Edited for privacy</strong>: private details were replaced by a bracketed description.</li>'
         '<li><strong>Shortened</strong>: parts were left out, marked with […].</li>'
         '<li><strong>Paraphrased</strong>: a summary of a message, not its wording.</li>'
-        '<li><strong>Editorial aside</strong>: our commentary, not part of the record.</li>'
-        '<li><strong>Documented cause</strong>, <strong>documented association</strong> and '
+        + _aside_guide(narrator)
+        + '<li><strong>Documented cause</strong>, <strong>documented association</strong> and '
         '<strong>editorial link</strong>: how strongly the sources support a connection. Closeness in time alone '
         'is never treated as cause.</li>'
         '<li><strong>Verified (bounded)</strong>: checked in the stated, limited setting only.</li></ul></section>')

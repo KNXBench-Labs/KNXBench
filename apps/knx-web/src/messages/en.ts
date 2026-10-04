@@ -333,7 +333,7 @@ export const messages = {
   "toast.lateNight.busLineClocksOut": "The bus line clocks out. You, evidently, do not.",
 
   // `Inspector.tsx`. `inspector.entity.*` and `inspector.restrictedAction.*`
-  // are the two halves `inspector.restrictedToFirstInstallation` composes
+  // are the two halves `inspector.restrictedToOneInstallation` composes
   // itself from — see that key's own comment for why it's built this way
   // instead of six near-duplicate sentences.
   "inspector.address": "Address",
@@ -372,13 +372,13 @@ export const messages = {
   "inspector.rangePlacementAmbiguous": "Cannot move this range: duplicate or missing parent references need repair first.",
   "inspector.none": "(none)",
   "inspector.delete": "Delete",
-  // The two verb clauses `inspector.restrictedToFirstInstallation`'s
+  // The two verb clauses `inspector.restrictedToOneInstallation`'s
   // `{action}` slot takes — carrying their own verb (`is`/`are`) so the
   // base sentence never has to conjugate around how many verbs it's naming.
   "inspector.restrictedAction.delete": "Delete is",
   "inspector.restrictedAction.renameAndDelete": "Rename and Delete are",
   "inspector.restrictedAction.renameMoveAndDelete": "Rename, Move and Delete are",
-  "inspector.restrictedToFirstInstallation": "{action} only available for {entity} in the first installation.",
+  "inspector.restrictedToOneInstallation": "{action} only available for {entity} that belong to exactly one installation.",
   "inspector.entity.devices": "devices",
   "inspector.entity.groupAddresses": "group addresses",
   "inspector.entity.groupRanges": "group ranges",
@@ -1114,6 +1114,7 @@ export const messages = {
   "bulkAction.unassigned": "(unassigned)",
   "bulkAction.moveToBuildingPart": "Move to building part…",
   "bulkAction.none": "(none)",
+  "bulkAction.oneInstallation": "Moving needs devices of one installation.",
   "bulkAction.dismissSelection": "Dismiss selection",
 
   // `BusComposeForm.tsx` — `BusMonitorPanel.tsx`'s compose/send sibling.
@@ -1182,6 +1183,7 @@ export const messages = {
   // the join punctuation itself (", ") needs no localization.
   "groupAddressCsv.exportButton": "Export group addresses (CSV)…",
   "groupAddressCsv.importButton": "Import group addresses (CSV)…",
+  "groupAddressCsv.installation": "Installation for CSV",
   "groupAddressCsv.exportSummaryNone": "Group addresses exported to CSV, no warnings.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Group addresses exported to CSV, {count} warning — see Log.",

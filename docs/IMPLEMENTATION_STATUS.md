@@ -1,5 +1,33 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — MODEL-01 web half, part 2: every installation is edited in place
+
+- The Inspector no longer gates on the first installation. Edit, delete,
+  rename and move of areas, lines, building parts, group ranges, group
+  addresses and devices are offered for every entity owned by exactly one
+  installation. Every move or link list offers only that installation's
+  targets: a device's lines and building parts, a line's areas, a part's or
+  range's parents, and the group addresses a communication object can link
+  to. A device placed nowhere may link to any group address, mirroring
+  `Command::LinkComObject`. An id owned by no single installation stays
+  read-only, with the reworded message "… only available for … that belong to
+  exactly one installation."
+- `findDeviceLine` / `findDeviceBuildingPart` (previously
+  `…InFirstInstallation`) look inside the device's own installation.
+- The bulk toolbar moves a device selection only when one installation places
+  every selected device; otherwise it says so and still offers delete.
+- With several installations the group-address CSV buttons carry an
+  installation choice. Export, import preview and import confirmation name the
+  same installation (the server binds it into the confirmation token). With
+  one installation the requests are unchanged.
+- Evidence: 14 new Vitest cases written RED first, plus one guard. Five older
+  Inspector tests that asserted the first-installation-only rule now assert
+  the owning-installation rule, and one `findDeviceBuildingPart` fixture
+  gained a topology placement. Full Vitest 1,803 in 100 files. A second
+  `e2e/installations.e2e.ts` case renames a line of installation 2 through
+  the Inspector; it fails against the previous Inspector. 7 guard mutants
+  caught. MODEL-01 is `DONE` in `docs/status/LEDGER.md`.
+
 ## 2026-10-04 — MODEL-01 web half, part 1: every installation can be built and named
 
 - The Project Explorer and the structure workspace offer their create rows in

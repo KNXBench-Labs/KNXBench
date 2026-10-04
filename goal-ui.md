@@ -486,7 +486,7 @@ commissioning session holds the Web lock at the time of writing.
 | UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | backend done (RESEARCH §25); KL-127 closed as known gap; MODEL-03 web half done 2026-10-04 (`.0` submitted, server decides) |
 | UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | server half done (ADR-0069); client half done 2026-10-04 (same-id retry, same server only) |
 | UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles done 2026-10-04 |
-| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half done; UI open **[web]** |
+| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
 | UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half done (ADR-0071); UI open **[web]** |
 | UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); handed over **[web]** |
 

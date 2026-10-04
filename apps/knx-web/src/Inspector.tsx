@@ -29,8 +29,10 @@ import {
 import {
   findArea,
   findBuildingPart,
-  findDeviceBuildingPartInFirstInstallation,
-  findDeviceLineInFirstInstallation,
+  deviceInstallation,
+  findDeviceBuildingPart,
+  findDeviceLine,
+  owningInstallation,
   findGroupAddress,
   findGroupRange,
   findLine,
@@ -74,7 +76,7 @@ function buildingPartKindLabel(t: Translate, kind: string): string {
 // are") so the base sentence never needs to conjugate around how many
 // verbs it's naming — see `inspector.restrictedAction.*`'s own comment in
 // `messages/en.ts`.
-function restrictedToFirstInstallationMessage(
+function restrictedToOneInstallationMessage(
   t: Translate,
   action: "delete" | "renameAndDelete" | "renameMoveAndDelete",
   entityKey: MessageKey,
@@ -85,7 +87,7 @@ function restrictedToFirstInstallationMessage(
       : action === "renameAndDelete"
         ? "inspector.restrictedAction.renameAndDelete"
         : "inspector.restrictedAction.renameMoveAndDelete";
-  return t("inspector.restrictedToFirstInstallation", {
+  return t("inspector.restrictedToOneInstallation", {
     action: t(actionKey),
     entity: t(entityKey),
   });
@@ -498,7 +500,8 @@ function LineMoveField(props: {
 }) {
   const { detail, tree, onApplied } = props;
   const t = useTranslate();
-  const current = findDeviceLineInFirstInstallation(tree, detail.id);
+  const current = findDeviceLine(tree, detail.id);
+  const installation = deviceInstallation(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
 
   if (current === undefined) return null;
@@ -521,7 +524,7 @@ function LineMoveField(props: {
         onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
       >
         <option value="">{t("inspector.unassigned")}</option>
-        {tree.installations[0]?.topology.map((area) => (
+        {installation?.topology.map((area) => (
           <optgroup
             key={area.id}
             label={t("inspector.areaLabel", { address: area.address, name: area.name })}
@@ -556,8 +559,8 @@ function BuildingPartMoveField(props: {
 }) {
   const { detail, tree, onApplied } = props;
   const t = useTranslate();
-  const current = findDeviceLineInFirstInstallation(tree, detail.id);
-  const currentPart = findDeviceBuildingPartInFirstInstallation(tree, detail.id);
+  const current = findDeviceLine(tree, detail.id);
+  const currentPart = findDeviceBuildingPart(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
 
   if (current === undefined) return null;
@@ -572,7 +575,7 @@ function BuildingPartMoveField(props: {
     }
   }
 
-  const parts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+  const parts = flattenBuildingParts(deviceInstallation(tree, detail.id)?.buildings ?? [], []);
 
   return (
     <label className="inspector-field">
@@ -833,11 +836,23 @@ function ComObjectRow(props: {
   </li>;
 }
 
+// MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
+// in one installation links only to that installation's group addresses; a
+// device placed nowhere may link to any; one placed in two is refused.
+function linkableGroupAddresses(tree: ProjectTree, deviceId: number): GroupAddressNode[] {
+  const owner = deviceInstallation(tree, deviceId);
+  if (owner) return owner.group_addresses;
+  const placed = tree.installations.some((installation) =>
+    installation.unassigned.some((device) => device.id === deviceId)
+    || installation.topology.some((area) => area.lines.some((line) => line.devices.some((device) => device.id === deviceId))));
+  return placed ? [] : tree.installations.flatMap((installation) => installation.group_addresses);
+}
+
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, onApplied } = props;
-  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
+  const groupAddresses = linkableGroupAddresses(tree, detail.id);
   const t = useTranslate();
   const [tab, setTab] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<{ deviceId: number; keys: Set<string> }>({
@@ -962,7 +977,7 @@ function DeviceInspector(props: {
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.devices")}
+          {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.devices")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1024,7 +1039,7 @@ function GroupAddressInspector(props: {
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
+          {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1166,7 +1181,7 @@ function GroupRangeInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.groupRanges")}
+          {restrictedToOneInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.groupRanges")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1320,7 +1335,7 @@ function AreaInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameAndDelete", "inspector.entity.areas")}
+          {restrictedToOneInstallationMessage(t, "renameAndDelete", "inspector.entity.areas")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1339,7 +1354,7 @@ function LineInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
-  const areas = tree.installations[0]?.topology ?? [];
+  const areas = owningInstallation(tree, "line", line.id)?.topology ?? [];
   const owners = areas.flatMap((area) =>
     area.lines.filter((candidate) => candidate.id === line.id).map(() => area),
   );
@@ -1409,7 +1424,7 @@ function LineInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.lines")}
+          {restrictedToOneInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.lines")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1475,7 +1490,7 @@ function BuildingPartInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
-  const allParts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+  const allParts = flattenBuildingParts(owningInstallation(tree, "building_part", node.id)?.buildings ?? [], []);
   const occurrences = allParts.filter((entry) => entry.node.id === node.id).length;
   const parentMatches = allParts.filter((entry) =>
     entry.node.children.some((child) => child.id === node.id),
@@ -1551,7 +1566,7 @@ function BuildingPartInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(
+          {restrictedToOneInstallationMessage(
             t,
             "renameMoveAndDelete",
             "inspector.entity.buildingParts",
@@ -1586,7 +1601,7 @@ export default function Inspector(props: {
 
   if (selection.kind === "device") {
     if (!deviceDetail || deviceDetail.id !== selection.id) return null;
-    const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
+    const canDelete = deviceInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector
         propertiesOnly={props.propertiesOnly}
@@ -1602,7 +1617,7 @@ export default function Inspector(props: {
   if (selection.kind === "group_address") {
     const ga = findGroupAddress(tree, selection.id);
     if (!ga) return null;
-    const canDelete = tree.installations[0]?.group_addresses.some((g) => g.id === ga.id) ?? false;
+    const canDelete = owningInstallation(tree, "group_address", ga.id) !== undefined;
     return <GroupAddressInspector ga={ga} canDelete={canDelete} onDeleted={onDeleted} />;
   }
 
@@ -1629,12 +1644,12 @@ export default function Inspector(props: {
   if (selection.kind === "group_range") {
     const range = findGroupRange(tree, selection.id);
     if (!range) return null;
-    const canEdit = tree.installations[0]?.group_ranges.some((r) => r.id === range.id) ?? false;
+    const owner = owningInstallation(tree, "group_range", range.id);
     return (
       <GroupRangeInspector
         range={range}
-        ranges={tree.installations[0]?.group_ranges ?? []}
-        canEdit={canEdit}
+        ranges={owner?.group_ranges ?? []}
+        canEdit={owner !== undefined}
         onApplied={onApplied}
         onDeleted={onDeleted}
       />
@@ -1644,23 +1659,20 @@ export default function Inspector(props: {
   if (selection.kind === "area") {
     const area = findArea(tree, selection.id);
     if (!area) return null;
-    const canEdit = tree.installations[0]?.topology.some((a) => a.id === area.id) ?? false;
+    const canEdit = owningInstallation(tree, "area", area.id) !== undefined;
     return <AreaInspector area={area} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />;
   }
 
   if (selection.kind === "line") {
     const line = findLine(tree, selection.id);
     if (!line) return null;
-    const canEdit =
-      tree.installations[0]?.topology.some((a) => a.lines.some((l) => l.id === line.id)) ?? false;
+    const canEdit = owningInstallation(tree, "line", line.id) !== undefined;
     return <LineInspector line={line} tree={tree} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />;
   }
 
   const found = findBuildingPart(tree, selection.id);
   if (!found) return null;
-  const canEdit = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []).some(
-    ({ node }) => node.id === found.node.id,
-  );
+  const canEdit = owningInstallation(tree, "building_part", found.node.id) !== undefined;
   return (
     <BuildingPartInspector
       node={found.node}

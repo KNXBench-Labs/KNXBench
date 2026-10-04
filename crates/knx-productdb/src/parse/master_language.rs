@@ -8,9 +8,14 @@ use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
 use quick_xml::{NsReader, XmlVersion};
 
-use super::scheme_evidence::{MAX_EVIDENCE_BYTES, MAX_EVIDENCE_DEPTH, MAX_EVIDENCE_ITEMS};
+use super::scheme_evidence::MAX_EVIDENCE_DEPTH;
 use crate::report::{UnknownCollector, UnknownConstruct};
 use crate::ProductDbError;
+
+// Dedicated master-language scanning and retained-source classification keep
+// their original ceilings independently of package scheme-evidence policy.
+pub(crate) const MAX_MASTER_LANGUAGE_BYTES: usize = 64 * 1024 * 1024;
+const MAX_MASTER_LANGUAGE_ITEMS: usize = 262_144;
 
 const LANGUAGE_PATH: &[&str] = &[
     "KNX",
@@ -38,7 +43,7 @@ fn error(cause: impl Into<String>) -> ProductDbError {
 fn charge(total: &mut usize, bytes: usize) -> Result<(), ProductDbError> {
     *total = total
         .checked_add(bytes)
-        .filter(|size| *size <= MAX_EVIDENCE_BYTES)
+        .filter(|size| *size <= MAX_MASTER_LANGUAGE_BYTES)
         .ok_or_else(|| error("master-language evidence byte budget exceeded"))?;
     Ok(())
 }
@@ -64,7 +69,7 @@ fn supported_namespace(namespace: &str) -> bool {
 pub(crate) fn master_language_unknowns(
     bytes: &[u8],
 ) -> Result<Vec<UnknownConstruct>, ProductDbError> {
-    if bytes.len() > MAX_EVIDENCE_BYTES {
+    if bytes.len() > MAX_MASTER_LANGUAGE_BYTES {
         return Err(error("master-language input byte budget exceeded"));
     }
     let mut reader = NsReader::from_reader(bytes);
@@ -126,7 +131,7 @@ pub(crate) fn master_language_unknowns(
                         || (path.len() >= 3 && path[2].local == "Languages"));
                 if in_languages {
                     items += 1;
-                    if items > MAX_EVIDENCE_ITEMS || path.len() >= MAX_EVIDENCE_DEPTH {
+                    if items > MAX_MASTER_LANGUAGE_ITEMS || path.len() >= MAX_EVIDENCE_DEPTH {
                         return Err(error("master-language evidence depth/item budget exceeded"));
                     }
                     let canonical = in_namespace

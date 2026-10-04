@@ -5,6 +5,7 @@
 //! knows nothing about any file format or the user interface.
 
 pub mod address;
+pub mod allocation;
 pub mod building;
 pub mod command;
 pub mod commissioning;
@@ -28,6 +29,7 @@ pub use address::{
     is_project_excluded, AddressError, ContactableAddress, ExcludedAddress, GroupAddress,
     GroupAddressStyle, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES,
 };
+pub use allocation::{free_line_addresses, AddressAllocationError};
 pub use building::{BuildingPart, BuildingPartType};
 pub use command::{Command, CommandError, CommandStack, CouplerEvidence, IdKind};
 pub use commissioning::mutation::{WriteAuthorisation, WriteScope};

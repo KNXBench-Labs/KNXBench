@@ -159,8 +159,17 @@ line number or an addressed device outside the target area.line prefix.
 Duplicate line/area IDs, multiple owners and multiply placed devices are
 not guessed away. Area, line, building-part and group-range IDs repeated in
 one or more installations disable structural editing in the Inspector; direct
-commands refuse ambiguous IDs too. The UI does not repair or renumber
-imported duplicate identities automatically. Building-part moves refuse new
+commands refuse ambiguous IDs too. Since MODEL-02 (ADR-0071) a multiply
+placed device and a line listed by several areas can be repaired
+**explicitly**: the user names the placement or area to keep
+(`POST /api/repair/device-placement`, `POST /api/repair/line-owner`), every
+other occurrence is removed in one undoable step. The web UI does not offer
+that choice yet (Web lock). Nothing is repaired automatically, duplicate ids
+are not renumbered, and ambiguous building-part or group-range placement has
+no repair command. `.knxdb` save refuses an ambiguous topology
+(`StoreError::AmbiguousTopology`) instead of silently keeping the last
+placement, as it did before; a `knx-cli` import producing such a project
+therefore fails at save. Building-part moves refuse new
 cycles and ambiguous parent references. Group-range moves additionally
 require destination-span containment and no sibling overlap. The undo-only
 placement commands retain original sibling positions and may restore
@@ -197,8 +206,8 @@ just in the browser. If a device appears in multiple topology placements
 (two lines, twice on one line, both a line and the unassigned list, or
 twice unassigned), or
 its line belongs to two areas, the editor refuses to choose a prefix and
-stays disabled until the topology is repaired outside this editor; imported
-values are preserved. Clearing an address through the core remains an
+stays disabled until the topology is repaired (MODEL-02 repair commands,
+server/API only so far); imported values are preserved. Clearing an address through the core remains an
 undoable repair step even when placement is malformed.
 
 The line-move command and new group links act in the device's own

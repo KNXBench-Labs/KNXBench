@@ -51,6 +51,14 @@ pub enum StoreError {
     /// installation to be filed under and would be silently dropped —
     /// refused instead (CLAUDE.md: never silently discard information).
     UnreachableDevices(Vec<knx_core::ids::DeviceId>),
+    /// Devices placed more than once, or lines listed by several area
+    /// entries. The schema holds one placement per device and one area per
+    /// line, so saving would keep an arbitrary one — refused instead until
+    /// the topology is repaired (MODEL-02).
+    AmbiguousTopology {
+        devices: Vec<knx_core::ids::DeviceId>,
+        lines: Vec<knx_core::ids::LineId>,
+    },
     /// The same, one level down: communication object instances owned by
     /// `Project::devices` that no `DeviceInstance::com_objects` list names.
     UnreachableComObjects(Vec<knx_core::ids::ComObjectInstanceId>),
@@ -88,6 +96,14 @@ impl fmt::Display for StoreError {
                  unassigned list, so they have no installation to be saved under: {}",
                 ids.len(),
                 join_ids(ids)
+            ),
+            StoreError::AmbiguousTopology { devices, lines } => write!(
+                f,
+                "the topology is ambiguous and cannot be saved without losing a placement \
+                 (devices placed more than once: [{}]; lines listed by several areas: [{}]); \
+                 repair the placements first",
+                join_ids(devices),
+                join_ids(lines)
             ),
             StoreError::UnreachableComObjects(ids) => write!(
                 f,

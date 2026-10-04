@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA5: explicit topology repair (MODEL-02, core/store/server half)
+
+- [ADR-0071](adr/0071-ambiguous-topology-is-repaired-explicitly.md):
+  `Command::RepairDevicePlacement { device, keep: DevicePlacementSlot }` and
+  `Command::RepairLineOwner { line, keep }` keep the named existing placement
+  and remove every other occurrence, in one undo step with exact-order undo
+  (`RestoreDevicePlacements` / `RestoreLineOwners`). Refused when nothing is
+  ambiguous, when the kept slot is not current, or across installations.
+- **Data-integrity fix:** `.knxdb` save silently collapsed a multiply placed
+  device or multiply owned line to the last written placement (schema holds
+  one). Save now refuses with `StoreError::AmbiguousTopology` before writing.
+- Server: `POST /api/repair/device-placement`, `POST /api/repair/line-owner`.
+- Tests: `crates/knx-core/tests/topology_repair.rs` (RED: did not compile —
+  no repair API; GREEN 8/8), `apps/knx-server/tests/topology_repair_routes.rs`
+  (2), two store tests in `crates/knx-store/tests/command_persistence.rs`
+  (the first draft expected save/reopen to keep the ambiguity and exposed the
+  lossy save). 10/10 guard mutants caught.
+- Not covered: duplicate-id renumbering, building-part/group-range placement
+  repair, web UI choice of the kept placement (Web lock). MODEL-02 stays
+  `IN_PROGRESS` until the UI half lands.
+
 ## 2026-10-04 — UA4: every installation editable in the core (MODEL-01, core/server half)
 
 - [ADR-0070](adr/0070-commands-act-in-the-owning-installation.md): `knx-core` commands no longer assume `installations[0]`: id-addressed

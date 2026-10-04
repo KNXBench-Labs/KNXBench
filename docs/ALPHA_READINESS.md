@@ -194,11 +194,14 @@ session. Offline only; no TLS service, role system, host or firewall change.
 
 ### Handed over
 
-**For the UI session / Web-lock holder:** the dialog string
-`debugReport.privacyTelegrams` (en/de) names addresses and names only; add
-that the file also keeps every telegram value (text values included) and its
-timestamp. Backend wording to mirror: `report.md`'s second paragraph
-(`apps/knx-server/src/debug_report.rs`, `report_markdown`).
+**For the UI session / Web-lock holder (done 2026-10-04, goal-ui owner):**
+the dialog string `debugReport.privacyTelegrams` (en/de) now mirrors
+`report.md`'s second paragraph (`apps/knx-server/src/debug_report.rs`,
+`report_markdown`). `bus-telegrams.json` is not redacted and keeps addresses,
+group-address names, every telegram's value (text values included) and its
+timestamp, which together can show when the installation was in use. A
+content test in `DebugReportButton.test.tsx` pins these parts in both
+languages; it failed on the previous wording.
 
 **For the alpha-release session (AR17):** build the candidate with
 `KNX_REQUIRE_CLEAN_TREE=1`.

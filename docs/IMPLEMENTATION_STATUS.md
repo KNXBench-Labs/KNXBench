@@ -1,5 +1,17 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR13 hand-over: the debug-report dialog names every kept telegram field
+
+- The opt-in warning for `bus-telegrams.json` (`debugReport.privacyTelegrams`,
+  en/de) now says what `report.md` says: the file is not redacted and keeps
+  addresses, group-address names, every telegram's value (text values
+  included) and its timestamp, which together can show when the installation
+  was in use. Before, it named addresses and names only.
+- Evidence: a content test written RED first checks each kept part in both
+  catalogues (the existing test only compared the dialog with the catalogue
+  string). Full Vitest 1,835 in 101 files. With this, every web item from the
+  2026-10-04 UI owner handoff is delivered.
+
 ## 2026-10-04 — UX-01: drag a group address onto a communication object
 
 - Group addresses in the Project Explorer are drag sources. They carry one

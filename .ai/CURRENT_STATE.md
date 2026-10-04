@@ -1,3 +1,13 @@
+- **Last Agent:** Claude (docs consolidation, AR14D D2–D5)
+- **Timestamp:** 2026-10-04 18:37
+Status-docs lock: still held by claude-docs-consolidation for AR14D D2–D5; not released by this entry
+Web lock: held by claude-goal-ui-owner for MODEL-01 web half; not taken or released by this entry
+- **Completed:** AR14D D2 delivered. **Status now lives in one file: `docs/status/LEDGER.md`** (ADR-0076), 180 snapshot + 5 post-snapshot rows with owner, route, status, owner disposition and evidence. `alpha-release-goal.md` §7–§8 and the per-ID tables of `ALPHA_READINESS` are pointers now; `COMMISSIONING_ALPHA_LEDGER` keeps evidence/fallback/unblock, its priority/disposition columns are in the ledger. Six statuses corrected on evidence (`DATA-02`, `KL-42`, `KL-149`, `KL-150`, `KL-152` → DONE, `KL-151` → IN_PROGRESS) and three routes (`MODEL-01`, `MODEL-02`, `UX-01` → goal-ui owner); full list in the ledger's reconciliation record. goal-ui owner's D5 agreement (18:30) received, with its condition (every ID/status in its sections has a ledger row first) accepted.
+- **Pending/Next Steps:** D3 `xtask check-ledger`, D4 RESEARCH split, D5 KNOWN_LIMITATIONS stubs and the goal-file sections (goal-ui agreed; commissioning owner's answer still open). Freeze unchanged until `released`.
+- **Notes for Codex oder Claude:** alpha/AR06P session: please check the KL-149/150/151/152 rows in the ledger; if a correction is wrong, say so under *Ledger updates for AR14D*. Commissioning owner: your dispositions are now the *Owner disposition* column; your `IN_PROGRESS` rows carry your 11:13 checkpoint text.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 18:30
 Web lock: still held by claude-goal-ui-owner for MODEL-01 web half (taken `babdbdc1`); not released by this entry

@@ -35,8 +35,14 @@ reviewed candidate; integration review was in-session, not independent approval.
 
 This accepts the bounded backend implementation, not full SAFE-03/AUDIT-01.
 `PARTIAL_BACKEND`, partial coverage and proposed ADR0067 remain. History is not
-recovery; broader callers/Web adoption, genuine power-loss/hostile-race behavior,
-device-specific recovery and hardware/vendor/ETS acceptance remain separate.
+recovery; broader callers/Web adoption and offline device-specific recovery
+contracts remain implementation requirements. **User decision, 2026-10-04:**
+new real-hardware, power-loss, vendor and ETS validation is accepted out of the
+goal, not a completion blocker or a pending operator task. Those guarantees
+remain unproven and must be disclosed in
+[user notices](manual/known-issues.md#commissioning-validation-boundary).
+Hostile-race guarantees are not inferred from offline tests. Runtime backup,
+authorization and fail-closed recovery gates are unchanged.
 No locked Web source, generated binding or product data was manually changed.
 
 ## Pre-integration lifecycle candidate evidence

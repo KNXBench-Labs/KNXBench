@@ -234,6 +234,27 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 
 ## The bus
 
+### Commissioning validation boundary
+
+- **Affected:** device programming, download, restart and recovery.
+- **Notice:** offline tests and historical runs on particular devices do not
+  prove behavior on every device, manufacturer or ETS version. General
+  real-hardware, power-loss, vendor and ETS validation is not provided. The
+  project owner accepted this validation boundary on 2026-10-04; those
+  experiments are not required to complete the commissioning goal.
+- **Consequence:** there is no general guarantee of device compatibility or
+  complete recovery after a crash or power loss. A finished activity-history
+  row is not a recovery backup or a read-back proof of device state. Unsupported
+  or uncertain device-specific operations remain refused.
+- **Safety:** original values must be saved before any property mutation,
+  including the original `PID_DEVICE_CONTROL`. If saving the backup fails,
+  no property write may follow. Explicit confirmation cannot bypass this gate.
+- **Scope:** broader software lifecycle coverage, Web/client adoption and
+  offline recovery/abort/restore contracts remain implementation requirements.
+  This documentation notice is not a claim that an in-app warning is wired up.
+- **Details:** [Commissioning history contract](../COMMISSIONING_ACTIVITY_HISTORY.md),
+  [commissioning goal](../../goal-commission.md).
+
 ### Commissioning cannot program a device
 
 - **Affected:** everything a user would call "downloading to the bus".

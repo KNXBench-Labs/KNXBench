@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Commissioning validation scope and requested continuation
+
+- User removed new real-hardware, power-loss, vendor and ETS validation from
+  the commissioning completion goal. This is an accepted evidence boundary,
+  not a hardware/compatibility/recovery claim or pending operator work.
+- [User notices](manual/known-issues.md#commissioning-validation-boundary) now
+  disclose it. Existing receipts and runtime safety/refusal gates are unchanged.
+- User requested implementation of broader caller/long-session coverage,
+  Web/client adoption and offline recovery/abort/restore contracts. These are
+  pending implementation, not newly accepted tests. SAFE-03/AUDIT-01 remains
+  partial; ADR0067 remains Proposed until software contracts and owner admission
+  are verified. No new hardware operation is authorized.
+
 ## 2026-10-04 — Project-evolution story, first private version (companion, not product)
 
 - New, independent `story/` companion ([README](../story/README.md),

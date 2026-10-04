@@ -16,9 +16,14 @@ selection; initial three successful stages and corrected17-phase continuation
 are separately retained. No product/fixture change was needed. Five actual
 semantic controls were executed on the pre-integration source, not on this
 merged context. Review remains in-session. History stays partial metadata,
-not recovery or device-effect proof. Broader callers/Web adoption, full owner
-admission and crash/power-loss/hostile-race/hardware/vendor/ETS acceptance are
-not established; therefore the ADR remains Proposed. Older pending notices
+not recovery or device-effect proof. Broader callers/Web adoption, offline
+recovery contracts and full owner admission remain open; therefore the ADR
+remains Proposed. User decision, 2026-10-04: new real-hardware, power-loss,
+vendor and ETS validation is accepted out of the goal. Its absence is a
+[user-notice boundary](../manual/known-issues.md#commissioning-validation-boundary),
+not a completion blocker or a compatibility/recovery guarantee. Crash and
+hostile-race guarantees likewise are not inferred. Runtime safety/refusal
+gates stay unchanged. Older pending notices
 below describe their explicitly historical snapshots, not this current gate.
 
 ## Fault-fixture correction researched 2026-10-03

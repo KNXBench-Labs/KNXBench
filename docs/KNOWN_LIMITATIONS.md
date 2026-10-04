@@ -1,5 +1,17 @@
 # Known limitations
 
+## Accepted commissioning validation boundary — user decision 2026-10-04
+
+New real-hardware, power-loss, vendor and ETS validation is not required to
+complete the commissioning goal: the user explicitly removed these experiments
+because they cannot provide them. Their absence remains disclosed in
+[KNXBench user notices](manual/known-issues.md#commissioning-validation-boundary)
+and is not a hardware/ETS compatibility or recovery guarantee. Existing scoped
+evidence and historical limitations stay intact. Broader caller coverage,
+Web/client adoption and offline recovery/abort/restore contracts remain open;
+original-value backup, authorization and fail-closed runtime gates are unchanged.
+This decision does not mark SAFE-03/AUDIT-01 or the Alpha release complete.
+
 ## CRT motion is browser-verified application behavior, not theme-pack v2
 
 The CRT interaction follow-up implements real App/ProjectExplorer/

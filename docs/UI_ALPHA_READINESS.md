@@ -224,3 +224,10 @@ close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
 MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
 [goal-ui.md](../goal-ui.md). The parent ledger in
 [alpha-release-goal.md](../alpha-release-goal.md) carries the per-row status.
+
+**Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
+published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no
+backend change. By user decision every remaining web half is handed over to
+the Web-lock holder (commissioning session); the task table with API
+contracts and acceptance criteria is the *UI owner handoff* in the parent
+ledger. None of these rows is `DONE` before its web half is published.

@@ -529,10 +529,16 @@ commissioning session holds the Web lock at the time of writing.
 | UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles open **[web]** |
 | UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half done; UI open **[web]** |
 | UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half done (ADR-0071); UI open **[web]** |
-| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | open |
+| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); handed over **[web]** |
 
 Every package follows §2: RED first, mutation check per new guard, gates,
 docs, merge, push, handover, cleanup.
+
+**Handoff 2026-10-04 11:27:** all backend halves are published. By user decision the
+**[web]** halves of UA1–UA5 and all of UA6 are handed over to the Web-lock
+holder (the commissioning session). Tasks, API contracts and acceptance
+criteria are in `alpha-release-goal.md` → *UI owner handoff*. This owner
+session keeps the backend contracts.
 
 ---
 

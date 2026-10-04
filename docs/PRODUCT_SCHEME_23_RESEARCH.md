@@ -159,7 +159,7 @@ of the earlier controlled lexical proof. No Web sources were written. The first
 zero-stage `/proc/1/ns/net` PermissionError is retained; the separately captured
 parent-namespace retry passed. Separate integrated in-session review has no
 blocking product finding, not independent-model approval. See [ADR-0072](adr/0072-product-scheme23-namespace-gate.md).
-Final upstream/publication readback remains pending. Scheme10, KL153 and the
+Published `aadd88204de154cfcf5c1638310831a0a316dd86`: live/fetched refs and17 exact owned artifacts read back. Final actual integrated10 on aadd8820 repeats Rust3089/0/176,Web1739,Chromium82; all10 commands0. Keep its post-stage older-binary-hash assertion refusal separate: CLI build.rs stamps/watches Git HEAD, and the current release reports aadd8820 with a new independently archived hash. Scheme10, KL153 and the
 Alpha goal remain open; exact23 support is bounded import/storage/report/replay,
 not complete manufacturer grammar, commissioning or runtime compatibility.
 

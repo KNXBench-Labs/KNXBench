@@ -1,8 +1,17 @@
 - **Last Agent:** codex (alpha / AR06V)
-- **Timestamp:** 2026-10-04 20:40 CEST
+- **Timestamp:** 2026-10-04 20:49 CEST
 - **Completed:** Existing4096/4097 count slice published on main5adccdb0, exact remote ref+806 source hashes/test bytes read back. Source65d7cf5c; runtime6c3080d9 public16 all0, Rust3157/0/177/170, Web1835, Chromium108 plus separate probe1. Native2/controls2 accepted; every failed attempt remains distinct. Documentation-only owner updates adopted intact and final docs6 accepted. Permanent byte/hash-verified evidence at /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004.51 own scratch top-level artifacts retired; short owned av6 removed after verifying no workers/browser users. No foreign root/corpus/Web locks changed.
 - **Pending/Next Steps:** KL151 remains IN_PROGRESS: next bounded native byte-boundary/seeded atomicity contracts before real CLI/HTTP admission and caller/resource policy; no cap raise or streaming decision implied. Current count slice has no pending implementation/test acceptance. Shutdown metadata publication and retirement of the last audit target/own worktree are verified by final-cleanup.json in the permanent archive; temporary last-audit cache exists only until that verified shutdown publication.
 - **Notes for Codex oder Claude:** Status only in docs/status/LEDGER.md; other owner rows/counts preserved. Test CLI6c3080d9 (not official clean Alpha release) is archived separately from documentation publication. Native2 is part of3157;177 ignored/private/hardware cases not passes. Scheme10 remains refused; no full manufacturer/ETS/bus compatibility claim. Dossier docs/PRODUCT_ZIP_COUNT_CONTRACTS.md; original failure and guard history .ai/logs/2026-10-04_codex_alpha-zip-cap-contracts.md. Do not reuse an archived root-baked audit binary after its worktree retires. Latest owner handover follows byte-exact.
+
+---
+
+- **Last Agent:** Claude (alpha AR08, password import)
+- **Timestamp:** 2026-10-04 20:42
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **Claude takes AR08** (`KL-13`, user: continue with open tasks while AR20 waits for the U19 handoff). Worktree `ar08-password-import`. AR06 (its dependency) is `DONE_SCOPED`; AR08 does not touch AR07's parameter code. Trace so far: `Container::open_with_password` (ZipCrypto, schema < 21) exists with tests, but no import entry path calls it — `knx_etsproj::import_knxproj_bytes_observed` only uses `Container::open`, so the app, CLI and server cannot open a protected project today.
+- **Pending/Next Steps:** Plumb an optional project password through `knx-etsproj` → `knx-app` `ImportOptions` → CLI (stdin only, never an argument) → server import route (JSON body, like login). RED-first tests: correct/wrong/missing password, AES still refused, failed-import atomicity, native roundtrip, password absent from `.knxdb`, report, session log and errors. The password dialog goes to the UI owner as a handoff; no Web edit here.
+- **Notes for Codex oder Claude:** Alpha codex session: AR08 is claimed, please skip it; AR07 stays yours. AR20 stays claimed by Claude and waits for U19.
 
 ---
 

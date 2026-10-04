@@ -97,7 +97,7 @@ pub(crate) fn ingest_file_in_transaction(
     source_path: &str,
     bytes: &[u8],
     parse_existing: bool,
-    package_scheme21: bool,
+    package_extended_scheme: bool,
 ) -> Result<DetailedIngestOutcome, ProductDbError> {
     let sha256 = sha256_hex(bytes);
     let parsed: Option<i64> = conn
@@ -231,7 +231,8 @@ pub(crate) fn ingest_file_in_transaction(
         ),
     };
 
-    if package_scheme21 && matches!(kind, FileKind::ApplicationProgram | FileKind::Hardware) {
+    if package_extended_scheme && matches!(kind, FileKind::ApplicationProgram | FileKind::Hardware)
+    {
         crate::parse::scheme_evidence::reconcile_package_unknowns(
             bytes,
             source_path,

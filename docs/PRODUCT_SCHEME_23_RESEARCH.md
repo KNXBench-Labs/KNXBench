@@ -86,6 +86,83 @@ unchanged older namespaces and current full-corpus/caller evidence separately.
 Unsupported semantics stay explicit; no vendor script or bus operation is
 part of this task.
 
+## Unpublished exact23 candidate follow-up — 2026-10-04
+
+The research receipts above remain bound to the unchanged `575a2d1d` producer;
+its allowlist description is historical, not a new runtime result. On the
+isolated `9d719a4f` base, six synthetic native contracts first reached five
+named admission-policy REDs and one passing unresearched-namespace control.
+
+A subsequent offline full-ancestor expanded-name probe scanned both original
+scheme23 packages and all eight XML documents. Three positive and one negative
+controls distinguish full paths, prefixed namespace identity, foreign lookalikes,
+value non-disclosure and DTD refusal. Both vocabulary attempts rehashed all 853
+original files afterward. Nine aggregate path shapes fit a closed vocabulary
+derived from public repository source/fixtures. Seventy-six sightings did not
+fit that publication vocabulary and were explicitly withheld in both attempts.
+This does **not** establish 76 unsupported semantic constructs or a complete
+manufacturer grammar; no private name or value is published.
+
+The local candidate admits only the exact namespace23 master and extends the
+existing scheme21 strict member-namespace/qualified-attribute boundary and
+package-scoped opaque-field scanner to it. It does not broaden generic standalone
+XML evidence, change storage schema or budgets, infer new enum/default/reference
+meaning, execute vendor content or authorize runtime operations. Native contracts
+and ProductDB regression/Clippy stages returned zero. Separate reconciliation
+verified six native GREENs, 637 public tests (zero failed, 25 ignored; 29 blocks),
+strict Clippy and actual baseline/candidate Release binaries. The first build
+orchestrators remain refused due a post-stage executable-name verifier mistake;
+the manifest names `knx`, not the `knx-cli` package name.
+
+The real two-package CLI comparison now verifies two atomic baseline namespace
+refusals followed by two candidate installs, twelve typed-table query checks,
+two exact archives/ten exact retained members, 352 exact opaque-field occurrences
+and two fresh-process replay checks. All 853 original files were independently
+rehashed afterward; private temporary files zero. Unscoped raw name matches are
+not the dedicated scanner contract: 76 occurrences below unsupported master
+sections remain retained with explicit unsupported-section diagnostics, while
+`TypeNumber/@UIHint` is reported by the existing generic type-attribute parser.
+Failed verifier attempts remain distinct receipts, not product findings or
+accepted private runs. No private field values or per-item vectors are published.
+
+The completed actual Release CLI Full853 comparison is bound to the same
+Source713 candidate and Source712 baseline: 690 existing installs have equal
+contents across all database tables; 161 refusals preserve exit/diagnostic
+equality and empty user-data tables; two previously namespace-refused exact23
+packages become installs. The partition totals 853, with baseline 690/candidate
+692 installs and 1382 exact retained-archive checks. All 853 original files were
+rehashed after the run; private temporary files zero and no raw/item records
+persisted. The aggregate receipt's public/private prerequisite commitments,
+current frozen candidate inputs and both release-binary hashes were reconciled
+without rerunning the private corpus. This is measured import/storage comparison,
+not complete manufacturer semantics, bus/runtime compatibility or delivery.
+Caller acceptance now verifies four baseline semantic REDs and four freshly
+compiled actual CLI/HTTP GREENs. Native six remain GREEN with scanner-owned
+master `Resource/@Optional` evidence and exact full-path/count assertions. Six
+compiled behavioral controls cover namespace/qualified guards, master evidence,
+member late-depth admission, unresearched24 and generic/package scope. The first
+master-field probe and ordinary member-field probes survived because generic
+parsers already provide those fields; they remain recorded rather than counted
+as kills. The master scanner has its own opaque witness, and the member scan's
+actual valid late-depth test kills its omission. Verifier-colon/fresh-cache
+refusals remain distinct from native outcomes.
+
+Before integration, only the native fixture and two caller test files changed
+from the Full853 inputs. Current upstream adds a read-only coupler query/test;
+all other productdb source files and the complete CLI entrypoint remain
+byte-identical, and the query's only runtime caller is the owner's server domain,
+not installation. The original private Full853 is not relabelled as a new
+Source770 private execution. Actual current integrated public22 on `a346fa30`:
+Rust3089/0/176 across161 blocks,ProductDB638/0/25,Web1739,Chromium82,strict Clippy,
+build/dependency/docs gates and17 fresh shadow binding pairs matching both sides
+of the earlier controlled lexical proof. No Web sources were written. The first
+zero-stage `/proc/1/ns/net` PermissionError is retained; the separately captured
+parent-namespace retry passed. Separate integrated in-session review has no
+blocking product finding, not independent-model approval. See [ADR-0072](adr/0072-product-scheme23-namespace-gate.md).
+Final upstream/publication readback remains pending. Scheme10, KL153 and the
+Alpha goal remain open; exact23 support is bounded import/storage/report/replay,
+not complete manufacturer grammar, commissioning or runtime compatibility.
+
 ## Sources
 
 [1] https://support.knx.org/hc/en-us/article_attachments/17389755651474 — KNX Association: Project Schema23 v01.00.00 (2024-03-01)

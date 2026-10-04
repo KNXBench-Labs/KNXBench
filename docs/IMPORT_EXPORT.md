@@ -1,5 +1,23 @@
 # Import and export
 
+## Bounded exact23 standalone product-package import (2026-10-04)
+
+The package adapter admits only `http://knx.org/xml/project/23`, reusing the
+strict21 typed-member namespace/qualified-attribute boundary. Existing known
+fields are queryable; opaque attributes stay in the measured encounter ledger
+with exact paths/samples/counts. Entire original archives and member bytes are
+retained; reopen/replay facts remain deterministic. CLI and HTTP expose the
+existing measured-facts contract without host source names. Nonempty seeded
+stores remain unchanged after foreign-member or valid late-depth refusal.
+
+No schema/budget/DTO dependency change, vendor execution or new generic/project
+scan admission. Source713 Full853690/161/2 stays its historical producer-bound
+private receipt; current source770 public22 and unchanged importer-write inputs
+are separately recorded in [the research](PRODUCT_SCHEME_23_RESEARCH.md) and
+[ADR-0072](adr/0072-product-scheme23-namespace-gate.md). This is not complete
+manufacturer grammar,signature verification,ETS parity or runtime support.
+Scheme10 remains refused; existing unresearched namespace gates stay closed.
+
 ## PDB-3 product-install evidence projection (schema v12)
 
 Product-package installs expose the core encounter ledger through the server and

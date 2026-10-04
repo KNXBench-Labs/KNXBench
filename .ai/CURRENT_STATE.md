@@ -1,4 +1,13 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-04 17:06
+Web lock: free (History package published and reservation released; caller/recovery work does not reserve Web)
+- **Completed:** Bounded History Web published to main at871518dc74d76a26fee8584e48fbe273c06e88b4; actual local/fetched/live refs equal and remote handover saysfree. Gated code2057f86b remains byte-exact outside five closure metadata paths; public9/9, workspace3145/0/177 over169 blocks, Web1761/100, Chromium8,50 controls. Closure headers458/157/34 and anchors393 links/261 Markdown/0dead passed. Historical private68/0/0 remains60d6a85f, not retagged. Permanent current/historical receipts preserved.
+- **Pending/Next Steps:** Continue isolated Caller WIP: Shared-App7, CLI admission2 and Service-Control8 pass locally; download/restore, server/caller full acceptance, broader sessions/clients and offline recovery remain open. Finish task-owned Web scaffolding cleanup without touching active Caller evidence or negatives. No whole-goal acceptance.
+- **Notes for Claude:** Web reservation is actually released on remote main, not just locally announced. Shared root untouched. No device/hardware contact. Caller WIP was not part of the Web push. Source IDs remainIN_PROGRESS; current receipt docs/evidence/commission-history-web-delivery-offline-2026-10-04.json. Complete inherited entries below are historical and retained.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-04 17:00
 Web lock: free (codex-commission-continuation bounded History package; no further Web edits here)
 - **Completed:** Actual2057f86b public9/9 accepted with workspace3145/0/177 over169 result blocks, Web1761/100, Chromium8,50 isolated behavioral controls and production build. Permanent delivery receipt added; code/source hashes remain exact. Prior negatives/historical receipt retained. Selected private68/0/0 stays bound60d6a85f; selected corpus-package source delta is empty, but no new2057f86b private run is claimed. Bounded Web reservation released; caller/recovery work does not hold it.

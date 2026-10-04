@@ -889,14 +889,21 @@ and named regressions, consumed next by U20. No hardware or recipient-state proo
 
 ### AR21 — Accept the integrated telegram-flow Alpha feature
 
-**Open.** Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
+**Review 2026-10-05: returned to the UI owner with findings.** Receipt
+`9d432d17` + `deb6813a` + `fb40a99a` verified and gates rerun; two §9.3 binding
+requirements are neither met nor recorded as deviations, and the §7 starting
+load saturates the main thread with motion on
+([§13](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05)).
+`FLOW-01` stays `IN_PROGRESS`.
+
+Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
 covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
 The alpha session does not reimplement the UI or take its lock for bookkeeping.
 
-- [ ] Consume and verify both owners' exact integrated revisions/contracts/tests;
+- [x] Consume and verify both owners' exact integrated revisions/contracts/tests;
   confirm productive use of the existing monitor feed, not an isolated study or
   second connection. Check snapshot/sequence/age/flag semantics across layers.
-- [ ] Exercise the contract's synthetic end-to-end cases: immediate same-slot
+- [x] Exercise the contract's synthetic end-to-end cases: immediate same-slot
   values/7-second expiry, three badges plus Inspector, current-source leader,
   layout-only freeze, bidirectional/group-labelled pulses, persistent quiet
   edges, high-load coalescing versus actual loss, stale/restart and no-project

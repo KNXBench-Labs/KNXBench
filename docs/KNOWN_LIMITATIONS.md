@@ -141,11 +141,17 @@ belong to their older source; corrected integrated acceptance is still pending.
 Area/line renames and line, building-part and group-range reparenting are
 local, undoable project commands. The centre workspace reuses the same
 creation forms and Inspector commands as the project explorer and Properties.
-All structure mutations still target **only the first installation**; later
-installations remain visible and savable. The centre cannot select an orphaned
-line that has no projected area, although the explicit line-move command can
-attach such an imported line by ID. Installation renaming is also still
-absent (§127).
+Since MODEL-01 (2026-10-04) the core resolves every id-addressed structure
+command in the installation that owns the entity, and refuses ids found in
+several installations or moves that would connect two installations
+(`CommandError::CrossInstallation`). Root creates take an optional
+`installationId` (absent = first installation) and `PATCH
+/api/installations/{id}` renames an installation. The **web editor still
+offers creation only in the first installation** and has no installation
+rename control yet (Web lock); edits of existing entities in later
+installations work through the same Inspector commands. The centre cannot
+select an orphaned line that has no projected area, although the explicit
+line-move command can attach such an imported line by ID.
 
 A line move changes its area relationship, **not** its numeric line address
 or any device's individual address. It refuses a destination with a duplicate
@@ -195,13 +201,13 @@ stays disabled until the topology is repaired outside this editor; imported
 values are preserved. Clearing an address through the core remains an
 undoable repair step even when placement is malformed.
 
-The existing line-move command and its dropdown operate on the **first
-installation** only. A later installation may display and edit its
-line-relative address, but moving its device between lines is not yet offered.
-This is a known topology-command boundary, not evidence that its line is
-missing. Likewise, new group links currently target the first installation's
-group-address list. Do not infer full multi-installation editing from the
-address display.
+The line-move command and new group links act in the device's own
+installation (MODEL-01): a device may move between lines of its installation
+and link to that installation's group addresses. Moving a device to a line,
+building part or group address of **another** installation is refused, as is
+any edit of an id that occurs in several installations. Whether the web
+dropdowns list later-installation targets is a UI question still open under
+the Web lock.
 
 “Send + Receive” and “unlink both” are one atomic project edit and one undo
 step. If either direction is already linked when adding both, the operation
@@ -6407,16 +6413,11 @@ Mocked UI tests cover two buildings under one root without duplicated
 devices. This does not supply independent ETS `Ground` export evidence or
 make later installations editable.
 
-Found on the way and not addressed: no command renames an `Installation`
-after creation. `Installation.name` comes only from `NewProjectDialog` or
-import. That matters once a user splits separate infrastructures into
-separate installations. Larger than that: **no command edits any
-installation but the first.** Every `Command` applies to `installations[0]`
-(`knx-core` `command.rs`; `CreateBuildingPart` uses
-`installations.first_mut()`), so a second installation brought in by import
-is kept and saved but cannot be edited. ADR-0038's "separate infrastructures
-are separate installations" is therefore a representation KNXBench can hold,
-not yet a workflow it offers.
+Found on the way, and since addressed in the core and server by MODEL-01
+(2026-10-04): `Command::RenameInstallation` renames an installation, and
+commands act in the installation that owns the addressed entity instead of
+`installations[0]`; root creates accept an explicit installation. The web UI
+does not yet expose installation rename or later-installation creation.
 
 **Alpha disposition (2026-10-04).** A renewed search found no `Ground`
 sample in the corpus or in eight public xknxproject fixtures (RESEARCH §25).

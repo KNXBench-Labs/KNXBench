@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; img-src data:; style-src &#x27;sha256-8hLKVyX6YrGnOzbeRHPVNmgAQEulpxF5oWiwJlb17j0=&#x27;; script-src &#x27;sha256-dbVpS91y7K2upjmVewgYzjcDnu0cD3WH3MRNLkLtctA=&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;">
+<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; img-src data:; style-src &#x27;sha256-P6Or08Gx31ookpzVCEKtLVElZErbp83avmkc/Ecnu1A=&#x27;; script-src &#x27;sha256-LmEJA4D3/4NonrNBPx1b3S2VoP1Q3vzo6k42gSHlerY=&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;">
 <title>From one prompt to a project — KNXBench project evolution (private preview 2026-10-04.1)</title>
 <style>/* KNXBench project evolution — Phosphor Atlas styles. Tokens follow the approved study. */
 :root{--screen:#03150c;--surface:#0b2d1c;--surface-2:#0f3824;--ink:#eef5e9;--phosphor:#88ffad;--violet:#c1aff2;--amber:#e7c688;--rule:#316343;--muted:#b9c9bd;--dim:#7f9a86;--sans:"Liberation Sans",Arial,sans-serif;--mono:"Adwaita Mono","Liberation Mono","DejaVu Sans Mono",monospace;color-scheme:dark}
@@ -210,6 +210,34 @@ html:not(.js) .story{grid-template-columns:minmax(0,1fr)}
 .graph .edge.is-new.documented_cause{stroke-dasharray:1;animation:grow-thread 760ms cubic-bezier(.3,0,.2,1) backwards}
 .graph .edge.is-new:not(.documented_cause){animation:fade-in 520ms ease-out backwards}
 .graph .node.is-new{animation:arrive 380ms ease-out backwards;transform-box:fill-box;transform-origin:center}
+
+/* Scrolling back: later steps retract (growth in reverse), then the chapter that is current again
+   pulses once. Finite like the growth; .is-hidden is applied when the retreat ends. */
+@keyframes refocus{0%,100%{transform:none}40%{transform:scale(1.6)}}
+.graph .edge.is-leaving.documented_cause{stroke-dasharray:1;animation:grow-thread 460ms cubic-bezier(.4,0,.8,.4) reverse forwards}
+.graph .edge.is-leaving:not(.documented_cause){animation:fade-in 380ms ease-in reverse forwards}
+.graph .node.is-leaving{animation:arrive 320ms ease-in reverse forwards;transform-box:fill-box;transform-origin:center}
+.graph .date-label.is-leaving{animation:fade-in 300ms ease-in reverse forwards}
+.graph .node.is-refocus{animation:refocus 560ms ease-out;transform-box:fill-box;transform-origin:center}
+
+/* Ambient life (user request, 4 Oct 2026): a signal dot travels each visible connection, start to end,
+   in a loop, like a telegram on the bus. It pauses off screen and stops with Motion off and reduced motion. */
+@keyframes ambient-pulse{0%{stroke-dashoffset:1;opacity:0}6%,62%{opacity:1}70%,100%{stroke-dashoffset:0;opacity:0}}
+.graph .pulse{fill:none;stroke:var(--phosphor);stroke-width:calc(var(--px)*6);stroke-linecap:round;stroke-dasharray:.035 .965;
+ opacity:0;pointer-events:none;animation:ambient-pulse var(--pulse-dur,3s) linear var(--pulse-delay,0s) infinite}
+.graph .pulse.editorial{stroke:var(--violet);stroke-width:calc(var(--px)*4.2)}
+.story-graph .graph .edge:not(.is-past)+.pulse{filter:drop-shadow(0 0 calc(var(--px)*4) #88ffadcc)}
+.graph .edge.is-past+.pulse{stroke-width:calc(var(--px)*3.6);stroke-dasharray:0 1;filter:opacity(.45)}
+.graph .edge.is-hidden+.pulse,.graph .edge.is-new+.pulse,.graph .edge.is-leaving+.pulse{display:none}
+.graph .edge.is-dimmed+.pulse{filter:opacity(.16)}
+.graph.is-offscreen .pulse{animation-play-state:paused}
+
+/* Headline letters roll through in place, a random one or two at a time. The glyph slides out to the
+   right while its twin (::after) slides in from the left; the word itself never changes. */
+.char-word{display:inline;white-space:nowrap}
+.char{display:inline-block;position:relative}
+.char::after{content:attr(data-char);position:absolute;left:0;top:0;opacity:0;transform:translateX(-100%)}
+.char-glyph{display:inline-block}
 .event-card{transition:box-shadow 200ms ease-out}
 html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -464,7 +492,11 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
   function motionAllowed() { return !reduceQuery.matches && !motionBox.checked; }
 
   function settleEffects() {
-    document.querySelectorAll(".is-new").forEach((node) => node.classList.remove("is-new"));
+    document.querySelectorAll(".is-new, .is-refocus").forEach((node) => node.classList.remove("is-new", "is-refocus"));
+    document.querySelectorAll(".is-leaving").forEach((node) => {
+      node.classList.remove("is-leaving");
+      node.classList.add("is-hidden");
+    });
     if (document.getAnimations) {
       for (const animation of document.getAnimations()) {
         try { animation.finish(); } catch (_) { animation.cancel(); }
@@ -537,9 +569,13 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
     });
     const edges = new Map();
     data.relations.forEach((relation) => {
-      const attributes = { class: `edge ${relation.type}`, d: edgePath(relation.from, relation.to) };
+      const d = edgePath(relation.from, relation.to);
+      const attributes = { class: `edge ${relation.type}`, d };
       if (relation.type === "documented_cause") attributes.pathLength = 1;
-      edges.set(relation.id, svg("path", attributes, edgeLayer));
+      const edge = svg("path", attributes, edgeLayer);
+      edges.set(relation.id, edge);
+      const pulse = svg("path", { class: `pulse ${relation.type}`, d, pathLength: 1 }, edgeLayer);
+      pacePulse(pulse, edge);
     });
     const nodes = new Map();
     data.events.forEach((event) => {
@@ -561,7 +597,26 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
       }
       nodes.set(event.id, node);
     });
+    pauseWhenOffscreen(graph);
     return { graph, nodes, edges, dateLabels };
+  }
+
+  // Signals travel at roughly constant speed, so long connections take longer. Random negative
+  // delays start every loop somewhere along its way instead of all at once.
+  const PULSE_SPEED = 120; // graph units per second while travelling
+  function pacePulse(pulse, edge) {
+    let length = 300;
+    try { length = edge.getTotalLength() || length; } catch (_) { /* not measurable yet */ }
+    const duration = Math.min(7, Math.max(1.8, length / PULSE_SPEED / 0.7));
+    pulse.style.setProperty("--pulse-dur", `${duration.toFixed(2)}s`);
+    pulse.style.setProperty("--pulse-delay", `${(-Math.random() * duration).toFixed(2)}s`);
+  }
+
+  function pauseWhenOffscreen(graph) {
+    if (!("IntersectionObserver" in window)) return;
+    new IntersectionObserver((entries) => {
+      entries.forEach((entry) => graph.classList.toggle("is-offscreen", !entry.isIntersecting));
+    }).observe(graph);
   }
 
   // Keeps labels legible at any scale: higher-priority labels win, overlapping ones are hidden
@@ -612,6 +667,33 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
     let storyScale = 1;
     let activeIds = new Set();
     let visibleIds = new Set();
+    let retreat = 0;
+
+    // A retreating element is hidden when its animation ends (or is cancelled). A timer backs
+    // this up for cases where no animation runs at all, for example a graph that is not rendered.
+    function finishRetreat(element) {
+      if (!element.classList.contains("is-leaving")) return;
+      element.classList.remove("is-leaving");
+      element.classList.add("is-hidden");
+    }
+    function onEffectEnd(event) {
+      const element = event.target;
+      if (!element.classList) return;
+      finishRetreat(element);
+      if (event.animationName === "refocus") element.classList.remove("is-refocus");
+      // A finished growth effect leaves its final state; dropping the marker lets the
+      // connection's signal pulse start only once the line has been drawn.
+      if (event.type === "animationend" && element.classList.contains("is-new")) element.classList.remove("is-new");
+    }
+    graph.graph.addEventListener("animationend", onEffectEnd);
+    graph.graph.addEventListener("animationcancel", onEffectEnd);
+
+    function startRetreat(element, delay) {
+      element.classList.remove("is-hidden");
+      element.style.animationDelay = `${delay}ms`;
+      void element.getBoundingClientRect();
+      element.classList.add("is-leaving");
+    }
 
     function tidy() {
       declutter(graph, storyScale, activeIds, () => 0, (row) => visibleIds.has(rowEvent.get(row)));
@@ -643,14 +725,22 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
       const before = previous >= 0 ? stateFor(previous).visible : new Set();
       const { visible, active } = stateFor(index);
       const grow = animate && motionAllowed() && index > previous;
+      const shrink = animate && motionAllowed() && previous >= 0 && index < previous && stage.clientWidth > 0;
+      const token = ++retreat;
       let edgeOrder = 0;
+      let leaveOrder = 0;
       data.relations.forEach((relation) => {
         const edge = graph.edges.get(relation.id);
         const shown = visible.has(relation.from) && visible.has(relation.to);
         const wasShown = before.has(relation.from) && before.has(relation.to);
-        edge.classList.toggle("is-hidden", !shown);
+        edge.classList.remove("is-new", "is-leaving");
         edge.classList.toggle("is-past", shown && !active.has(relation.from) && !active.has(relation.to));
-        edge.classList.remove("is-new");
+        if (shrink && wasShown && !shown) {
+          startRetreat(edge, Math.min(leaveOrder, 8) * 45);
+          leaveOrder += 1;
+          return;
+        }
+        edge.classList.toggle("is-hidden", !shown);
         if (shown && grow && !wasShown) {
           edge.style.animationDelay = `${Math.min(edgeOrder, 8) * 110}ms`;
           void edge.getBoundingClientRect();
@@ -662,10 +752,20 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
       data.events.forEach((event) => {
         const node = graph.nodes.get(event.id);
         const shown = visible.has(event.id);
-        node.classList.toggle("is-hidden", !shown);
+        node.classList.remove("is-new", "is-leaving", "is-refocus");
         node.classList.toggle("is-active", active.has(event.id));
         node.classList.toggle("is-past", shown && !active.has(event.id));
-        node.classList.remove("is-new");
+        if (shrink && before.has(event.id) && !shown) {
+          startRetreat(node, 120 + Math.min(leaveOrder, 10) * 35);
+          leaveOrder += 1;
+          return;
+        }
+        node.classList.toggle("is-hidden", !shown);
+        if (shrink && active.has(event.id)) {
+          node.style.animationDelay = "380ms";
+          void node.getBoundingClientRect();
+          node.classList.add("is-refocus");
+        }
         if (shown && grow && !before.has(event.id)) {
           node.style.animationDelay = `${300 + Math.min(nodeOrder, 10) * 90}ms`;
           void node.getBoundingClientRect();
@@ -674,8 +774,16 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
         }
       });
       graph.dateLabels.forEach(({ label, row }) => {
-        label.classList.toggle("is-hidden", !visible.has(rowEvent.get(row)));
+        const id = rowEvent.get(row);
+        label.classList.remove("is-leaving");
+        if (shrink && before.has(id) && !visible.has(id)) startRetreat(label, 120);
+        else label.classList.toggle("is-hidden", !visible.has(id));
       });
+      if (shrink) {
+        window.setTimeout(() => {
+          if (token === retreat) graph.graph.querySelectorAll(".is-leaving").forEach(finishRetreat);
+        }, 1400);
+      }
       activeIds = active;
       visibleIds = visible;
       tidy();
@@ -737,6 +845,84 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
     }
     show(0, false);
     return { fit, show, get current() { return current; } };
+  })();
+
+  /* ---------- Headlines: random letters roll through in place ---------- */
+  // Each heading keeps its text as its accessible name; the per-letter boxes are hidden from
+  // assistive technology. Only ASCII whitespace separates words, so a non-breaking space keeps
+  // its words together. Swaps use the Web Animations API, so settling motion finishes them.
+  const letters = (() => {
+    const headings = Array.from(document.querySelectorAll(
+      ".hero h1, .chapter-section h2, .atlas > h2, .all-steps > h2, .sources > h2"));
+    const boxes = new Map();
+    const SWAP = { duration: 720, easing: "cubic-bezier(.65,0,.35,1)", id: "ambient-char-swap" };
+    const CLIP = "inset(-0.4em -0.06em)";
+
+    function split(heading) {
+      heading.setAttribute("aria-label", heading.textContent.replace(/\s+/g, " ").trim());
+      const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+      const texts = [];
+      while (walker.nextNode()) texts.push(walker.currentNode);
+      const found = [];
+      texts.forEach((text) => {
+        const fragment = document.createDocumentFragment();
+        text.data.split(/([ \t\n\r\f]+)/).forEach((part) => {
+          if (!part) return;
+          if (/^[ \t\n\r\f]+$/.test(part)) { fragment.appendChild(document.createTextNode(part)); return; }
+          const word = document.createElement("span");
+          word.className = "char-word";
+          word.setAttribute("aria-hidden", "true");
+          Array.from(part).forEach((character) => {
+            const box = document.createElement("span");
+            box.className = "char";
+            box.dataset.char = character;
+            const glyph = document.createElement("span");
+            glyph.className = "char-glyph";
+            glyph.textContent = character;
+            box.appendChild(glyph);
+            word.appendChild(box);
+            if (/\S/.test(character)) found.push(box);
+          });
+          fragment.appendChild(word);
+        });
+        text.parentNode.replaceChild(fragment, text);
+      });
+      return found;
+    }
+
+    function roll(box, delay) {
+      const timing = { ...SWAP, delay };
+      box.animate([{ clipPath: CLIP }, { clipPath: CLIP }], timing);
+      box.firstChild.animate([{ transform: "translateX(0)" }, { transform: "translateX(105%)" }], timing);
+      box.animate([{ transform: "translateX(-105%)", opacity: 1 }, { transform: "translateX(0)", opacity: 1 }],
+        { ...timing, pseudoElement: "::after" });
+    }
+
+    const onScreen = new Set();
+    function tick() {
+      if (motionAllowed() && !document.hidden && onScreen.size) {
+        const pool = [];
+        onScreen.forEach((heading) => boxes.get(heading).forEach((box) => {
+          if (!box.getAnimations({ subtree: true }).length) pool.push(box);
+        }));
+        for (let picked = 0; picked < 2 && pool.length; picked += 1) {
+          const [box] = pool.splice(Math.floor(Math.random() * pool.length), 1);
+          roll(box, picked ? 60 + Math.random() * 160 : 0);
+        }
+      }
+      window.setTimeout(tick, 2200 + Math.random() * 1600);
+    }
+
+    headings.forEach((heading) => boxes.set(heading, split(heading)));
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
+        if (entry.isIntersecting) onScreen.add(entry.target);
+        else onScreen.delete(entry.target);
+      }));
+      headings.forEach((heading) => observer.observe(heading));
+      window.setTimeout(tick, 1200);
+    }
+    return { count: () => Array.from(boxes.values()).reduce((sum, list) => sum + list.length, 0) };
   })();
 
   /* ---------- Full complexity view: pan, zoom, search, strand focus, inspector ---------- */
@@ -1019,6 +1205,7 @@ html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:n
     view: () => ({ ...atlas.view }),
     selected: () => atlas.selected,
     motionOff: () => root.classList.contains("motion-off"),
+    letters: () => letters.count(),
   });
 })();
 </script>

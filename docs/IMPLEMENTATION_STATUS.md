@@ -48,6 +48,34 @@ hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
   Broader callers/long sessions and offline recovery remain separate open work;
   excluded hardware/power-loss/vendor/ETS experiments remain user notices.
 
+## 2026-10-04 — AR13: privacy, authentication and provenance (Claude session)
+
+- Debug report: `report.md` (also the GitHub issue body) names every class
+  that survives redaction and says `bus-telegrams.json` keeps values (text
+  included) and timestamps. One synthetic fixture per class through every
+  input channel pins the redaction (KL-106).
+- Auth: the guard test now covers every declared route (97 method/path
+  pairs) instead of seven samples (KL-22).
+- New `crates/knx-build-stamp` replaces both identical build scripts;
+  `KNX_REQUIRE_CLEAN_TREE=1` makes a release build refuse a modified or
+  unconfirmed tree (KL-65, ADR-0018 amendment).
+
+## 2026-10-04 — AR14: offline bus/CLI contracts (Claude session)
+
+- CLI `bus monitor`/`route-monitor`/`bus write` honour the `--project`
+  group-address style (three-level only without a project, and for
+  `route-send`). New `knx_core::resolve_project_group_address_names` lists
+  every installation's distinct name for a raw address; CLI and server
+  Group Monitor share it instead of last-read-wins (KL-29, KL-62 item 13).
+- `RoutingClient` clears `IP_MULTICAST_ALL` on Linux: a default-group
+  client no longer receives a custom group's telegrams from another client
+  on the same host (KL-31; measured over loopback before and after).
+- New pinning tests for scan identity (DD0 only), negative-confirm window,
+  timeout trade-off, no `Indeterminate` retry, four reconciliation refusals,
+  and the three-level monitor→write round trip. 16/16 mutants caught.
+- Ledger: KL-29 `DONE`, KL-31 `BLOCKED_EXTERNAL` (real custom-group run),
+  ten rows `ACCEPTED_BOUNDARY`; dossier in ALPHA_READINESS.
+
 ## 2026-10-04 — UA10: CSV group-address exchange per installation (MODEL-01)
 
 - `knx-csv`: `plan_import_into(project, parsed, Option<InstallationId>)` and

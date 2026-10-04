@@ -275,3 +275,11 @@ over274 files,186 ledger rows,365 Rust corpus-policy files, layering/whitespace.
 806 runtime sources unchanged; product execution/CLI code identity6c3080d9
 retained. Final checkpoint metadata gates/publication/readback and own-only
 hygiene pending. No cap changes, new private work or whole Alpha closure.
+
+## Final owner-only bookkeeping adoption
+
+30ebbe92 actual docs6/6 accepted and806 source inputs exact, then strict
+publication ancestor check refused because3369dd1a updated only CURRENT_STATE
+and goal-ui. Original six command/log results retained; not a product failure.
+Full owner3369dd1a handover preserved byte-exact, source/CLI6c3080d9 unchanged.
+Final docs6/fast-forward/readback and own-only cleanup next, no policy closure.

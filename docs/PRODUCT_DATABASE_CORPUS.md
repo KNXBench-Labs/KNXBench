@@ -1,5 +1,55 @@
 # Gira and MDT product-database corpus
 
+## KL-152 coupled evidence-work budget — candidate, 2026-10-03
+
+At base80a5500d, a bounded descriptor-relative census reverified all853 original
+hashes and counted the four size-admitted scheme14 packages (16 XML documents).
+Charging one item per Start/Empty plus every raw attribute, including namespace
+declarations, selects exactly two packages above262144. This is scan work, not
+the number of distinct unknown rows. The maximum observed item count is802433.
+Four synthetic XML counter controls cover empty elements, raw attributes,
+namespace declarations, escaped values/comments/CDATA and DTD/malformed refusal.
+The raw counter alone was not accepted as Rust admission or byte-budget proof.
+
+A fresh offline Release/Release CLI pair over those two originals then measured
+the actual Rust scanner, with bounded scratch ceilings1048576 items/256MiB
+estimated bytes and an EOF numeric observer. Baseline has two atomic item-limit
+refusals; scratch has two installs. Maximum observed work:802433 items and
+155281510 estimated bytes. The byte estimate charges repeated paths, raw
+attribute keys/values and expanded names; it is neither XML size nor process
+RSS. Raising only the item ceiling would leave a separate64MiB byte refusal.
+Observer peak RSS134552KiB/max wall2.985s; baseline134568KiB/max wall2.467s.
+These two-case measurements do not establish general HTTP responsiveness.
+
+Six public build/test stages, source706/binary/log identity, archive hashes,
+empty refusal tables and all853 originals were independently checked. Private
+temporary inputs/DBs are gone; no private raw output/item vectors persisted.
+First verifier attempt was rejected with zero completed pairs. Its discarded
+assertion was not reconstructed: later public source inspection found that
+archives belong in `package`, not member-blob `source_file`, and three synthetic
+storage controls precede the accepted corrected pair. The rejected attempt
+remains separate evidence, not an importer failure or acceptance.
+
+The current **unpublished policy candidate** sets coupled scan ceilings to
+1048576 items/256MiB estimated bytes. Depth1024 and all ZIP/namespace/grammar
+limits remain unchanged. No summary fallback or truncation is introduced.
+Two registered public REDs prove the old item and byte ceilings; six new tests
+cover bounded admission, inclusive ceilings/next-item refusal, and late scan
+failure preserving preexisting evidence. Focused GREEN/fmt passed; broad real
+checkout gates, actual candidate private validation, review and delivery are
+still pending. The scratch pair is not evidence for an unbuilt real binary.
+This changes no runtime/module semantics, schema, DTOs, UI or ETS compatibility.
+
+Broad attempt1 exposed three registered retained-source regressions: dedicated
+master-language parsing and re-derivation had imported the scheme scanner's
+ceilings for raw-source classification too. A global change would therefore
+silently widen the unrelated64MiB input limit. The candidate now gives the
+master-language module explicit original64MiB/262144 ceilings and shares its
+64MiB constant with retained-source preflight; depth1024 remains unchanged.
+Only scheme-evidence scan work is enlarged. Old failed logs/input hashes remain
+under `policy-attempt1-summary.json`; its CLI release stage never started. Full
+current-source gates must pass after this correction before any delivery claim.
+
 ## Bounded ZIP resource pair — 2026-10-03 22:02 UTC
 
 Base5540dcac, original853 manifest/source hashes match independently. Current

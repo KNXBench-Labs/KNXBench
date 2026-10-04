@@ -10,9 +10,12 @@ use crate::report::{UnknownCollector, UnknownConstruct, UnknownKind};
 use crate::xml::local_name;
 use crate::ProductDbError;
 
-pub(crate) const MAX_EVIDENCE_DEPTH: usize = 1_024;
-pub(crate) const MAX_EVIDENCE_ITEMS: usize = 262_144;
-pub(crate) const MAX_EVIDENCE_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const MAX_EVIDENCE_DEPTH: usize = 1024;
+// Coupled scan-work ceilings, not a bound on process RSS. Raw attributes,
+// repeated paths, and expanded namespace names remain charged independently.
+// KL-152 measurement and policy rationale: docs/PRODUCT_DATABASE_CORPUS.md.
+pub(crate) const MAX_EVIDENCE_ITEMS: usize = 1_048_576;
+pub(crate) const MAX_EVIDENCE_BYTES: usize = 256 * 1024 * 1024;
 const SCHEME_12_NAMESPACE: &str = "http://knx.org/xml/project/12";
 const SCHEME_14_NAMESPACE: &str = "http://knx.org/xml/project/14";
 const SCHEME_21_NAMESPACE: &str = "http://knx.org/xml/project/21";
@@ -1056,6 +1059,119 @@ mod tests {
         }
         assert!(parser_alias_xpath(&module, "Dynamic")
             .ends_with("/ModuleDefs/ModuleDef/Dynamic/Dynamic"));
+    }
+
+    #[test]
+    fn budget_policy_admits_one_million_attribute_and_element_items() {
+        let mut element = BytesStart::new("X");
+        element.push_attribute(("f", "v"));
+        let mut count = 0;
+        let mut bytes = 0;
+        for _ in 0..524_288 {
+            charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
+                .expect("bounded item policy must admit one million charged items");
+        }
+        assert_eq!(count, 1_048_576);
+        assert!(bytes < MAX_EVIDENCE_BYTES);
+    }
+
+    #[test]
+    fn budget_policy_admits_bounded_repeated_attribute_bytes_above_64_mib() {
+        let value = "v".repeat(1024 * 1024);
+        let mut element = BytesStart::new("X");
+        element.push_attribute(("f", value.as_str()));
+        let mut count = 0;
+        let mut bytes = 0;
+        for _ in 0..128 {
+            charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
+                .expect("bounded byte policy must admit repeated evidence above 64 MiB");
+        }
+        assert_eq!(count, 256);
+        assert!(bytes > 128 * 1024 * 1024);
+        assert!(bytes < MAX_EVIDENCE_BYTES);
+    }
+
+    #[test]
+    fn budget_policy_item_boundary_includes_attributes_and_rejects_next_element() {
+        let mut element = BytesStart::new("X");
+        element.push_attribute(("f", "v"));
+        let mut count = MAX_EVIDENCE_ITEMS - 2;
+        let mut bytes = 0;
+        charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
+            .expect("the exact item ceiling is inclusive");
+        assert_eq!(count, MAX_EVIDENCE_ITEMS);
+        let error = charge_evidence_budget(
+            &mut count,
+            &mut bytes,
+            &[],
+            &BytesStart::new("X"),
+            "fixture.xml",
+        )
+        .expect_err("the next element must fail even without attributes");
+        assert!(error.to_string().contains("evidence exceeds item limit"));
+    }
+
+    #[test]
+    fn budget_policy_byte_boundary_is_inclusive_and_rejects_next_path() {
+        let element = BytesStart::new("X");
+        let mut count = 0;
+        // The empty ancestor path plus /X charges three bytes.
+        let mut bytes = MAX_EVIDENCE_BYTES - 3;
+        charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
+            .expect("the exact estimated-byte ceiling is inclusive");
+        assert_eq!(bytes, MAX_EVIDENCE_BYTES);
+        let error = charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
+            .expect_err("the next charged path must fail");
+        assert!(error.to_string().contains("evidence exceeds byte limit"));
+    }
+
+    #[test]
+    fn budget_policy_late_item_refusal_preserves_existing_evidence() {
+        let mut xml = String::from(r#"<KNX xmlns="http://knx.org/xml/project/14">"#);
+        for _ in 0..=MAX_EVIDENCE_ITEMS / 2 {
+            xml.push_str(r#"<Property Occurrence="2"/>"#);
+        }
+        xml.push_str("</KNX>");
+        let retained = UnknownConstruct {
+            xpath: "/old".into(),
+            kind: UnknownKind::Element,
+            name: "Old".into(),
+            occurrences: 1,
+            sample: None,
+        };
+        let mut unknown = vec![retained.clone()];
+        let error = reconcile_targeted_unknowns(xml.as_bytes(), "fixture.xml", &mut unknown)
+            .expect_err("late item exhaustion must reject the complete scan");
+        assert!(error.to_string().contains("evidence exceeds item limit"));
+        assert_eq!(unknown, vec![retained]);
+    }
+
+    #[test]
+    fn budget_policy_late_repeated_path_byte_refusal_preserves_existing_evidence() {
+        let name = "N".repeat(128);
+        let mut xml = String::from(r#"<KNX xmlns="http://knx.org/xml/project/14">"#);
+        for _ in 0..128 {
+            xml.push_str(&format!("<{name}>"));
+        }
+        for _ in 0..32_768 {
+            xml.push_str("<Property/>");
+        }
+        for _ in 0..128 {
+            xml.push_str(&format!("</{name}>"));
+        }
+        xml.push_str("</KNX>");
+        let retained = UnknownConstruct {
+            xpath: "/old".into(),
+            kind: UnknownKind::Element,
+            name: "Old".into(),
+            occurrences: 1,
+            sample: None,
+        };
+        let mut unknown = vec![retained.clone()];
+        let error = reconcile_targeted_unknowns(xml.as_bytes(), "fixture.xml", &mut unknown)
+            .expect_err("repeated paths must not bypass the estimated-byte ceiling");
+        assert!(error.to_string().contains("evidence exceeds byte limit"));
+        assert_eq!(unknown, vec![retained]);
     }
 
     #[test]

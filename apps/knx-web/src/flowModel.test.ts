@@ -75,6 +75,22 @@ describe("flow reducer — participants", () => {
     expect(model.nodes.has("d:4")).toBe(false);
   });
 
+  it("keeps the linked objects of both ends per group address as Inspector evidence", () => {
+    const model = ready();
+    admitRows(model, [row(1)], 1000);
+    const evidence = model.edges.get("d:1→d:2")!.groups.get(LIGHT)!;
+    expect(evidence.sourceObjects.map((o) => [o.comObjectId, o.direction])).toEqual([[100, "Send"]]);
+    expect(evidence.targetObjects).toEqual([{
+      comObjectId: 200, direction: "Receive", active: true,
+      flags: { communication: true, read: null, write: true, transmit: null, update: null, readOnInit: null },
+    }]);
+    expect(evidence.generation).toBe("1");
+    const raw = createFlowModel(IDENTITY);
+    provideContext(raw, "1", snapshot("1", [], [], { status: "historical", groupAddressStyle: null }), 0);
+    admitRows(raw, [row(1)], 1000);
+    expect(raw.edges.get("ia:4353→g:2049")!.groups.get(LIGHT)).toMatchObject({ sourceObjects: [], targetObjects: [] });
+  });
+
   it("names an address held by several devices ambiguous and excludes its candidates from the targets", () => {
     const devices = [...DEVICES, device(5, IA(1, 1, 1), "Twin")];
     const model = ready("1", devices, [group(LIGHT, [member(5), member(2)])]);
@@ -113,6 +129,16 @@ describe("flow reducer — participants", () => {
     expect(model.edges.get("d:1→d:2")!.count).toBe(1);
     expect(model.edges.get("d:1→d:4")!.count).toBe(1);
     expect(model.edges.get("d:1→d:3")!.count).toBe(1);
+  });
+
+  it("resolves a re-addressed device only with the generation that states its new address", () => {
+    const model = ready("1");
+    const moved = [device(1, IA(1, 1, 9), "Switch"), ...DEVICES.slice(1)];
+    provideContext(model, "2", snapshot("2", moved, GROUPS), 1000);
+    admitRows(model, [row(1), row(2, { flowGeneration: "2" }), row(3, { flowGeneration: "2", sourceRaw: IA(1, 1, 9), source: "1.1.9" })], 1000);
+    expect(model.edges.get("d:1→d:2")!.count).toBe(2);
+    expect(model.nodes.get("ia:4353")).toMatchObject({ kind: "unresolvedSource", label: "1.1.1" });
+    expect(model.edges.get("ia:4353→d:2")!.count).toBe(1);
   });
 
   it("draws historical and no-project rows raw, without configured targets", () => {

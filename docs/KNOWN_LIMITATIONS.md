@@ -7624,3 +7624,29 @@ accepted set (11, 12, 13, 14, 20, exact 21).
 - **Remaining boundary:** scheme10 stays refused until separately researched and
   tested. Exact23 now has bounded verified import/storage/report/replay support;
   unknown manufacturer semantics and full runtime compatibility remain unsupported.
+
+## 154. The telegram-flow view is static and checked in Chromium only
+
+**Status.** Introduced by U20 (2026-10-04). The bus monitor's **Flow** view
+(`TelegramFlowView.tsx`, reducer `flowModel.ts`, rules in
+TELEGRAM_FLOW_VISUALIZATION §11) is fed by the monitor's own poll loop and
+the AR20 snapshot route. It is read-only.
+
+**What remains.**
+
+- **Static layout.** Nodes are placed by order of appearance on hex rings and
+  never move. Activity-dependent distances, the observed-sender leader,
+  travelling pulses, quiet-edge fading and the *Freeze layout* control are U21
+  scope. A frozen-layout button without a moving layout would be a control that
+  does nothing, so it is not offered yet.
+- **Configured, not received.** Lines to devices are project configuration.
+  Values at configured members are inferred from the group address, not read
+  back. This is the intended meaning and is stated in the view and the guide.
+- **Re-rendering.** Every admitted batch and every value expiry re-renders the
+  whole monitor panel, including its table of up to 1,000 rows. U21 measures
+  dense bursts and long sessions; no load claim is made here.
+- **Evidence.** Unit tests (happy-dom) and Chromium e2e with intercepted,
+  synthetic traffic (`e2e/telegram-flow.e2e.ts`). There is no real-bus
+  evidence, no native WebKitGTK run and no screen-reader check. Values and
+  lines are hidden from assistive technology on purpose; the Inspector is the
+  accessible path, and it has not been tried with Orca.

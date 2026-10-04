@@ -262,6 +262,19 @@ describe("one editing workspace", () => {
     // the AR20 flow snapshot and row fields. It imports nothing, calls no
     // API and touches no project state; the snapshot route it validates is
     // a read.
+    //
+    // U20 part 2 adds the flow view to the monitor panel: `flowModel.ts`
+    // and `flowLayout.ts` are pure (data in, data out), `flowFeed.ts` holds
+    // one model per session and calls only the snapshot reader it is given,
+    // and `TelegramFlowView.tsx` renders. None of them calls the API itself;
+    // the panel passes `fetchFlowSnapshot`, a read, which is the one new
+    // entry in the API inventory below. No mutation is added.
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx"]) {
+      const moduleGraph = valueImportGraph(module);
+      expect(apiCallsIn(moduleGraph)).toEqual([]);
+      expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
+      expect(moduleGraph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    }
     const flowWireGraph = valueImportGraph("flowWire.ts");
     expect([...flowWireGraph.keys()]).toEqual(["flowWire.ts"]);
     expect(apiCallsIn(flowWireGraph)).toEqual([]);
@@ -278,6 +291,7 @@ describe("one editing workspace", () => {
       "HelpTip.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
+      "TelegramFlowView.tsx",
       "activityHistory.ts",
       "api.ts",
       "busContext.ts",
@@ -287,6 +301,9 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
+      "flowFeed.ts",
+      "flowLayout.ts",
+      "flowModel.ts",
       "flowWire.ts",
       "gaNotation.ts",
       "gatewayEndpoint.ts",
@@ -319,6 +336,7 @@ describe("one editing workspace", () => {
       "discoverBusInterfaces",
       "errorMessage",
       "errorStatus",
+      "fetchFlowSnapshot",
       "getSessionLog",
       "pollBusTelegrams",
       "startBusMonitor",

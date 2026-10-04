@@ -572,6 +572,58 @@ mutants, all killed (log `.ai/logs/2026-10-04_claude_ar20-flow-contract.md`).
 No Web consumer (U20, Web lock), no hardware or real traffic, no
 measurement. The flow view itself is accepted only at AR21.
 
+## 11. U20 consumer decisions (goal-ui owner, 2026-10-04)
+
+Part 1 (pure, not yet rendered): `apps/knx-web/src/flowWire.ts` validates
+the §10 wire fields and `flowModel.ts` reduces admitted rows. These are the
+rules the view in part 2 renders; they are product decisions made under §1–§4,
+not KNX protocol facts.
+
+- **Wire validation.** IDs are checked against their Rust widths (u8/u16/u32),
+  counters against `Number.MAX_SAFE_INTEGER`, a generation against the
+  canonical decimal form (`01` is refused), and each member must state all six
+  flags (`null` is a statement; a missing key is a deviation). A refused
+  snapshot is not guessed at: its rows are drawn raw (reason `failed`).
+- **One model per monitor session** (`serverIncarnation` + `sessionId`). A
+  snapshot of another session, server or generation is refused.
+- **Admission.** A batch is ordered by `seq`; anything at or below the highest
+  sequence seen (admitted or queued) is a repeated delivery and counted, not
+  drawn again. The `SessionClosed` marker ends traffic and is not traffic.
+  Rows without the AR20 fields (legacy) and rows with out-of-range fields
+  (malformed) are counted and not drawn.
+- **Own generation only.** A row waits in a sequence-ordered queue until the
+  context of *its* `flowGeneration` is known; the caller fetches each new
+  generation's snapshot once. The queue is bounded (5,000); when it is full,
+  its oldest row is drawn raw (reason `pendingOverflow`) instead of waiting.
+- **Sources.** An individual address held by exactly one device is that
+  device (`d:<deviceId>`). Several holders give one ambiguous source node
+  (`ia:<raw>`) that lists the candidates and picks none; no holder gives an
+  unresolved source node. Without participants (`historical`, `unavailable`,
+  `failed`, `pendingOverflow`) the source is a raw node with its reason.
+- **Configured targets.** If exactly one group has the raw destination, its
+  targets are every **active** member, Send or Receive (§2 item 4), except
+  the device(s) holding the source address. Several groups with one raw
+  address name no members (a group node marked ambiguous); none, or no
+  remaining member, gives the group-address node. Edges to devices are
+  marked *configured*; they are project evidence, not observed receipt.
+- **Values.** Only Write and Response with a decoded `value` set slots;
+  Read, undecodable/unresolved/conflicting payloads and rows of unknown age
+  never do. Observation time is `receive time − observedAgeMs` on the
+  client's monotonic clock; the value lives until exactly 7,000 ms after it.
+  A row already past that when it arrives (reattachment, delayed batch) sets
+  nothing. One slot per node and raw group address: the source, each
+  configured target (marked inferred) and an unresolved group node. A slot
+  is replaced only by a higher sequence, across generations; the slot keeps
+  its generation. At most three current values per node are badges, newest
+  first; the rest are counted for the Inspector.
+- **Limits.** 1,000 nodes, 5,000 edges, 10,000 value slots. Growth beyond
+  them is refused and counted; existing nodes keep receiving values.
+- **Node evidence follows its generation.** A node keeps its identity; a
+  changed kind replaces its description, so an earlier ambiguity or raw
+  reason does not outlive the generation that stated it.
+- For U21: an edge whose rows all had unknown age has no observation time
+  (`lastObservedAtMs` is `-Infinity`); fading must treat it as unknown.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

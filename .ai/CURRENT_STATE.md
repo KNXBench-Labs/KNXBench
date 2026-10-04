@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:21
+Web lock: still held by claude-goal-ui-owner (U20 part 1 delivered here; part 2 follows under the same lock, not released by this entry)
+- **Completed:** **U20 part 1: telegram-flow wire validation and reducer** (pure, not rendered yet). `flowWire.ts` validates the AR20 snapshot and row fields: widths, canonical generation, all six flags; refusal instead of coercion. `flowModel.ts` is the session-keyed reducer: seq dedupe and ordering, a bounded queue per unknown generation, each row resolved only against its own generation, exact/ambiguous/unresolved/raw sources, configured targets = active members (Send+Receive) minus the source holders, value slots 7 s from observation time (Write/Response with a decoded value only), at most 3 badges, limits with counters. `api.ts`: additive row/poll fields and `fetchFlowSnapshot`. Rules in TELEGRAM_FLOW_VISUALIZATION §11. RED first (24+26+1); 23/23 mutants caught; the review found stale node evidence across generations (fixed RED-first). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 502 ok; anchors 452 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,936/110 files, complete Chromium suite 118/118, whitespace; source frozen. Log: `.ai/logs/2026-10-04_claude_ui-u20-part1-reducer.md`.
+- **Pending/Next Steps:** U20 part 2: feed the model from the existing BusMonitorPanel poll loop (no second loop), one snapshot fetch per generation, table/flow view switch, SVG view with stable placement, Inspector with per-object evidence, keyboard/pan/zoom, en/de, e2e with intercepted traffic. Freeze comes with U21's dynamic layout.
+- **Notes for Codex oder Claude:** For the alpha owner: the `FLOW-01` ledger row can mention U20 part 1; I did not change it (row owner alpha). No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 22:02
 Web lock: taken by claude-goal-ui-owner for U20 (telegram-flow view: shared monitor feed, graph, immediate values)
 - **Completed:** Lock taken only. AR20 is integrated (`85bfab88`, TELEGRAM_FLOW_VISUALIZATION §10).

@@ -291,6 +291,10 @@ mod tests {
                 repeated: Some(false),
                 hop_count: 6,
             }),
+            source_raw: Some(0x1109),
+            destination_raw: Some(0x0901),
+            observed_at: std::time::Instant::now(),
+            flow_generation: Some(1),
         }
     }
 

@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha AR20, telegram-flow contract)
+- **Timestamp:** 2026-10-04 21:35
+Web lock: not taken or released by this entry (held by claude-goal-ui-owner for the AR08 dialog / KL-60)
+- **Completed:** **AR20 delivered.** Exact contract in `docs/TELEGRAM_FLOW_VISUALIZATION.md` §10. Rows of `GET /api/bus/monitor/telegrams`: `sourceRaw`, `destinationRaw` (integers, `null` only on the SessionClosed marker), `observedAgeMs` (server-monotonic, measured per response), `flowGeneration` (decimal string); poll response `flowGeneration`. New read-only `GET /api/bus/monitor/flow-snapshot?sessionId=&generation=` → `serverIncarnation`, `sessionId`, `generation`, `status` current/historical/unavailable, `groupAddressStyle`, `devices[]`, `groups[]` with `members[]` (`direction`, `active`, `flags` with six nullable flags), `diagnostics`, `truncated`. Context comparison now covers devices/links/flags/activation (such edits → `contextStatus: "stale"`); generation advances on a different republished context (style/undo/redo). Counters capped at 2^53−1. Tests: `apps/knx-server/tests/http_bus_flow.rs` (9), `flow::tests` (7), 2 `bus::tests`; 9 guard mutants killed; knx-server 626/0/44. Ledger `FLOW-01` → `IN_PROGRESS`. Log `.ai/logs/2026-10-04_claude_ar20-flow-contract.md`.
+- **Pending/Next Steps:** **UI owner: U20 is unblocked.** Consume §10 under your Web lock (add the types to `api.ts`; refuse unsafe numbers; fetch the snapshot only for an unknown generation; show rows of another generation raw/historical). Note for the existing monitor: `contextStatus` now turns `stale` on link/flag/activation/device edits too — intended. Then U21, then AR21 (alpha).
+- **Notes for Codex oder Claude:** No Web file touched. Deviations from the §9.2 proposal are listed in §10 and the log (per-flag nulls, boolean `active`, empty lists when historical).
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 21:33
 Web lock: still held by claude-goal-ui-owner (AR08 dialog delivered here; KL-60 follows under the same lock)

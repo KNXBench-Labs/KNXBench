@@ -2566,6 +2566,9 @@ struct CreateDeviceBody {
     name: String,
     #[serde(default = "default_catalog_quantity")]
     quantity: u32,
+    /// DATA-03: optional client token that makes a resend replay safely.
+    #[serde(default)]
+    request_id: Option<String>,
 }
 
 fn default_catalog_quantity() -> u32 {
@@ -2646,6 +2649,7 @@ struct CreateDeviceResponseDto {
     tree: knx_projection::ProjectTree,
     diagnostics: Vec<CreationDiagnosticDto>,
     items: Vec<CreatedCatalogDeviceDto>,
+    replayed: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -2674,6 +2678,7 @@ impl From<domain::CreateDeviceResponse> for CreateDeviceResponseDto {
             tree: value.tree,
             diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
             items: value.items.into_iter().map(Into::into).collect(),
+            replayed: value.replayed,
         }
     }
 }
@@ -2682,12 +2687,13 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_devices_impl(
+    domain::create_devices_with_request_impl(
         &state,
         body.line_id,
         body.catalog_item_id,
         body.name,
         body.quantity,
+        body.request_id,
     )
     .map(CreateDeviceResponseDto::from)
     .map(Json)

@@ -183,6 +183,11 @@ pub struct AppState {
     /// the same instant would otherwise both write back the document they
     /// read, and the later write would silently drop the earlier one.
     pub settings_lock: Mutex<()>,
+    /// Committed catalog requests by client `requestId` (DATA-03), so a
+    /// resent batch replays instead of applying twice. Cleared together with
+    /// the command stack whenever the open project is replaced. Lock order:
+    /// after `project`.
+    pub catalog_requests: Mutex<crate::catalog_requests::CatalogRequestLedger>,
 }
 
 impl AppState {
@@ -228,6 +233,7 @@ impl AppState {
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),
+            catalog_requests: Mutex::new(Default::default()),
         }
     }
 }
@@ -1777,11 +1783,14 @@ fn replace_project_state_transaction(
         .manufacturer_refs
         .lock()
         .expect("state mutex poisoned");
+    let mut catalog_requests = state.catalog_requests.lock().expect("state mutex poisoned");
 
     if !can_replace(project.as_ref(), clean_project.as_ref()) {
         return Err(UnsavedChanges);
     }
     after_guard();
+    // A recorded request belongs to the project it was committed into.
+    catalog_requests.clear();
 
     let clean_replacement = replacement.clone();
     *project = Some(replacement);
@@ -2623,9 +2632,13 @@ pub struct CreateDeviceResponse {
     pub tree: ProjectTree,
     pub diagnostics: Vec<CreationDiagnostic>,
     pub items: Vec<CreatedCatalogDevice>,
+    /// The request ID was already committed: `items`/`diagnostics` are the
+    /// recorded outcome, nothing was applied now, and `tree` is the current
+    /// project (which may since have been edited or undone).
+    pub replayed: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CreatedCatalogDevice {
     pub index: u32,
     pub device_id: knx_core::DeviceId,
@@ -2747,6 +2760,87 @@ pub fn create_devices_impl(
     name: String,
     quantity: u32,
 ) -> Result<CreateDeviceResponse, String> {
+    create_devices_with_request_impl(state, line_id, catalog_item_id, name, quantity, None)
+}
+
+/// [`create_devices_impl`] with an optional client `requestId` (DATA-03).
+/// A committed ID replays its recorded outcome instead of applying again;
+/// the same ID with different content is refused. See `catalog_requests`.
+pub fn create_devices_with_request_impl(
+    state: &AppState,
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    quantity: u32,
+    request_id: Option<String>,
+) -> Result<CreateDeviceResponse, String> {
+    let request = match request_id {
+        None => None,
+        Some(id) => {
+            crate::catalog_requests::validate_request_id(&id)?;
+            let fingerprint = crate::catalog_requests::CatalogRequestFingerprint {
+                line_id,
+                catalog_item_id: catalog_item_id.clone(),
+                name: name.clone(),
+                quantity,
+            };
+            Some((id, fingerprint))
+        }
+    };
+    // Answer a resend before consulting the product database: the product
+    // may have changed since, but the committed outcome has not.
+    if let Some((id, fingerprint)) = &request {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
+            return Ok(replay);
+        }
+    }
+    create_devices_recorded(state, line_id, catalog_item_id, name, quantity, request)
+}
+
+/// The recorded outcome for a committed request, with the current tree.
+/// The caller holds `project`; the ledger lock is taken after it.
+fn replay_catalog_request(
+    state: &AppState,
+    project: &knx_core::Project,
+    id: &str,
+    fingerprint: &crate::catalog_requests::CatalogRequestFingerprint,
+) -> Result<Option<CreateDeviceResponse>, String> {
+    let ledger = state.catalog_requests.lock().expect("state mutex poisoned");
+    let Some(recorded) = ledger.lookup(id, fingerprint)? else {
+        return Ok(None);
+    };
+    let recorded = recorded.clone();
+    drop(ledger);
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
+    Ok(Some(CreateDeviceResponse {
+        tree: tree_with_state(
+            project,
+            clean_project.as_ref(),
+            &stack,
+            import_counts,
+            current_project_revision(state),
+            &state.server_incarnation,
+            last_saved_at.as_deref(),
+        ),
+        diagnostics: recorded.diagnostics,
+        items: recorded.items,
+        replayed: true,
+    }))
+}
+
+fn create_devices_recorded(
+    state: &AppState,
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    quantity: u32,
+    request: Option<(String, crate::catalog_requests::CatalogRequestFingerprint)>,
+) -> Result<CreateDeviceResponse, String> {
     const MAX_CATALOG_QUANTITY: u32 = 32;
     if !(1..=MAX_CATALOG_QUANTITY).contains(&quantity) {
         return Err(format!(
@@ -2816,6 +2910,13 @@ pub fn create_devices_impl(
     // `product_db` is no longer held.
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
+    // A concurrent identical request may have committed while the product
+    // database was read; this check under `project` is the authoritative one.
+    if let Some((id, fingerprint)) = &request {
+        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
+            return Ok(replay);
+        }
+    }
 
     // Locate the owning installation first. A line in the second installation
     // must not be forced into the first one, and an unknown line must not
@@ -2991,6 +3092,20 @@ pub fn create_devices_impl(
             diagnostics: item_diagnostics,
         });
     }
+    if let Some((id, fingerprint)) = request {
+        state
+            .catalog_requests
+            .lock()
+            .expect("state mutex poisoned")
+            .record(
+                id,
+                fingerprint,
+                crate::catalog_requests::RecordedCatalogRequest {
+                    diagnostics: diagnostics.clone(),
+                    items: items.clone(),
+                },
+            );
+    }
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
@@ -3007,6 +3122,7 @@ pub fn create_devices_impl(
         ),
         diagnostics,
         items,
+        replayed: false,
     })
 }
 

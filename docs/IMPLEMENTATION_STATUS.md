@@ -1,5 +1,17 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA2: catalog batch replay token (DATA-03, server half)
+
+- `POST /api/devices` accepts an optional `requestId`; a committed ID with
+  identical content replays its recorded outcome (`replayed: true`) without
+  applying again, other content under the same ID is refused, failed requests
+  are not recorded ([ADR-0069](adr/0069-catalog-batch-request-replay-token.md)).
+- Tests: `apps/knx-server/tests/catalog_request_replay.rs` (6/6 RED before:
+  the resend created a second batch; GREEN after) and the ledger unit tests in
+  `catalog_requests.rs`. Five guard mutants caught.
+- The web client half (send a per-action ID, offer a safe retry) waits for the
+  Web lock; DATA-03 stays `IN_PROGRESS` until then.
+
 ## 2026-10-04 — UA1: coupler `.0` with manufacturer evidence; KL-127 closed as known gap
 
 - MODEL-03 backend: a device whose product's hardware has `IsCoupler` true in

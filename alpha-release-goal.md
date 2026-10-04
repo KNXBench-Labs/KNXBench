@@ -862,13 +862,31 @@ Excluded external validation is a user-visible boundary, not a renewed request
 for unavailable hardware evidence. No Alpha release, real bus contact or new
 write permission follows from this update.
 
+**UI owner checkpoint — 2026-10-04 10:00 CEST (Claude, `goal-ui.md` owner
+session):** the 24 `goal-ui.md` rows below now carry their owner status instead
+of the generic `WAITING_OWNER`. Per-row evidence stays in
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md).
+
+| UI rows | Status | Basis | Still required |
+| --- | --- | --- | --- |
+| `UI-01`, `UI-02` | DONE | U13 closure `dfa0cc79` (unchanged) | — |
+| `KL-82`, `KL-124`, `KL-121`, `UX-02`, `UX-03` | DONE | Published `8ceacf49` (KL-82) and `6c16fe5a` (the other four), integrated gates and remote readback in UI_ALPHA_READINESS | — ; their native/live qualifications fall under the boundary row below |
+| `KL-79`, `KL-137`, `KL-36`, `KL-133`, `UI-03`, `KL-130-ZOOM`, `KL-20` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** native WebKitGTK/Tauri, Orca, native file chooser, dead-WebView, real multicast and real-device web evidence leave the Alpha scope. Offline parts stay delivered (KL-20 keyboard/modal `2e57f8e5`, KL-79 offline UDP loopback at U13) | Nothing for the Alpha. Release notes must keep these as disclosed, unverified boundaries, not claims |
+| `KL-97`, `KL-98` | ACCEPTED_BOUNDARY | Owner decision (the user left this choice to the owner): truthful phase text without an invented percentage (ADR-0023) and decorative flavour text are intended behaviour | — |
+| `KL-43` | LATER | Owner decision: global motion level/style plus OS reduced motion ship; per-category motion is a separate scope | Own scope if ever wanted |
+| `DATA-03`, `MODEL-01`, `MODEL-02`, `MODEL-04`, `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. Domain/backend halves first; UI halves need the Web lock, which the commissioning session holds at this checkpoint | Implementation, RED/GREEN, gates, publication |
+| `MODEL-03`, `KL-127` | IN_PROGRESS | **User decision 2026-10-04:** research first (KNX specification/corpus); implement only on reliable evidence, otherwise record a known gap and close the row | Research outcome |
+
+This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
+release, no hardware permission and no native-acceptance claim.
+
 | Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |
 | `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-139` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-140` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `SAFE-01` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-79` | P1 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-79` | P1 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-61` | P1 | AR09 | TODO |
 | `KL-99` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-112` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -928,19 +946,19 @@ write permission follows from this update.
 | `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `DATA-02` | P2 | AR04 | TODO |
-| `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `DATA-03` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
 | `KL-87` | P2 | AR05 | DONE |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-82` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-137` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-36` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-82` | P2 | `goal-ui.md` — owner only | DONE |
 | `DOC-03` | P2 | AR15 | TODO |
 | `RELEASE-03` | P2 | AR16 | WAITING_OWNER |
 | `RELEASE-04` | P2 | AR19 | WAITING_DECISION |
-| `KL-127` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-01` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-02` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-127` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
+| `MODEL-01` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
+| `MODEL-02` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
+| `MODEL-03` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
 | `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `IMPORT-06` | P2 | AR06 | TODO |
 | `KL-11` | P2 | AR06 | TODO |
@@ -971,7 +989,7 @@ write permission follows from this update.
 | `R-DYNAMIC-01` | P2 | AR07 | TODO |
 | `R-MODULE-03` | P2 | AR07 | BLOCKED_EXTERNAL |
 | `R-MODULE-04` | P2 | AR07 | BLOCKED_EXTERNAL |
-| `KL-133` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-133` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-38` | P2 | AR11 | TODO |
 | `KL-39` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-40` | P2 | AR11 | TODO |
@@ -980,11 +998,11 @@ write permission follows from this update.
 | `KL-51` | P2 | AR11 | TODO |
 | `KL-60` | P2 | AR11 | TODO |
 | `R-SEC-01` | P2 | Later / separate scope — not an alpha task | LATER |
-| `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `UI-03` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `UI-04` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-20` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-124` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-20` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-124` | P3 | `goal-ui.md` — owner only | DONE |
 | `KL-76` | P3 | AR14 | TODO |
 | `KL-102` | P3 | AR14 | TODO |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -993,7 +1011,7 @@ write permission follows from this update.
 | `HISTORY-01` | P3 | Later / separate scope — not an alpha task | LATER |
 | `HISTORY-02` | P3 | Later / separate scope — not an alpha task | LATER |
 | `DOC-02` | P3 | AR00 | DONE |
-| `MODEL-04` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `MODEL-04` | P3 | `goal-ui.md` — owner only | IN_PROGRESS |
 | `MODEL-05` | P3 | Later / separate scope — not an alpha task | LATER |
 | `MODEL-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `MODEL-07` | P3 | Later / separate scope — not an alpha task | LATER |
@@ -1037,13 +1055,13 @@ write permission follows from this update.
 | `TOOLS-04` | P3 | Later / separate scope — not an alpha task | LATER |
 | `TOOLS-05` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-08` | P3 | Later / separate scope — not an alpha task | LATER |
-| `KL-121` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-43` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-97` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-98` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-01` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-02` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-121` | P3 | `goal-ui.md` — owner only | DONE |
+| `KL-43` | P3 | `goal-ui.md` — owner only | LATER |
+| `KL-97` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-98` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `UX-01` | P3 | `goal-ui.md` — owner only | IN_PROGRESS |
+| `UX-02` | P3 | `goal-ui.md` — owner only | DONE |
+| `UX-03` | P3 | `goal-ui.md` — owner only | DONE |
 
 Entries spanning supported and blocked subcases (notably `KL-13`, `KL-11`, `KL-61` and parameter semantics) require a subcase disposition in their AR package. `TODO` authorizes verification/planning within the stated boundaries, not guessing the missing semantics or claiming implementation is absent.
 

@@ -51,6 +51,7 @@ use knx_net::{
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
 
+use crate::flow::FlowParticipants;
 use crate::session_log;
 
 /// What a monitor session needs from something that can open a tunnel.
@@ -712,6 +713,20 @@ pub struct TelegramRow {
     /// Ctrl1/Ctrl2 as received (KNOWN_LIMITATIONS §147), `None` only on the
     /// closed-session marker, which was never a frame.
     pub control: Option<ReceivedControl>,
+    /// AR20: the sender's individual address, unformatted. `None` only on
+    /// the closed-session marker.
+    pub source_raw: Option<u16>,
+    /// AR20: the destination group address, unformatted (rows exist only
+    /// for group destinations). `None` only on the closed-session marker.
+    pub destination_raw: Option<u16>,
+    /// AR20: the server's monotonic clock when the row was admitted. Turned
+    /// into an age at response time, so a client never compares two
+    /// machines' wall clocks.
+    pub observed_at: std::time::Instant,
+    /// AR20: the generation of the interpretation context (DPTs, names,
+    /// style and flow participants) this row was decoded with, fixed at
+    /// push. `None` only on the closed-session marker.
+    pub flow_generation: Option<u64>,
 }
 
 /// The per-frame control fields a received telegram travelled with, read
@@ -817,12 +832,36 @@ pub enum DecodeFailureReason {
 /// project-style route build a replacement. Both construct it synchronously
 /// from `AppState.project`, release that mutex, and only then enter an async
 /// bus operation; neither route inspects its fields directly.
-#[derive(PartialEq, Eq)]
 pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
     names: HashMap<u16, String>,
+    /// AR20: the configured participants (devices, links, flags,
+    /// activation) of the same project. Part of the comparison, so a
+    /// link-, flag-, activation- or device-only edit is no longer
+    /// invisible to `contextStatus`. Shared, because the snapshot route
+    /// hands it out without copying.
+    flow: Arc<FlowParticipants>,
+    /// AR20: which version of this session's context this is. Not part of
+    /// the comparison; [`BusSession::update_group_address_context`] keeps
+    /// it for an equal replacement and advances it for a different one.
+    generation: u64,
 }
+
+/// The generation of a session's first interpretation context.
+pub(crate) const FIRST_FLOW_GENERATION: u64 = 1;
+
+impl PartialEq for GroupAddressContext {
+    /// The interpretation facts only; the generation is bookkeeping.
+    fn eq(&self, other: &Self) -> bool {
+        self.style == other.style
+            && self.dpts == other.dpts
+            && self.names == other.names
+            && *self.flow == *other.flow
+    }
+}
+
+impl Eq for GroupAddressContext {}
 
 impl GroupAddressContext {
     /// Builds the snapshot. Mirrors `apps/knx-cli/src/main.rs`'s
@@ -838,12 +877,20 @@ impl GroupAddressContext {
                 style: None,
                 dpts: HashMap::new(),
                 names: HashMap::new(),
+                flow: Arc::new(FlowParticipants::default()),
+                generation: FIRST_FLOW_GENERATION,
             },
-            Some(project) => Self {
-                style: Some(project.info.group_address_style),
-                dpts: knx_core::resolve_project_group_address_dpts(project),
-                names: knx_core::resolve_project_group_address_names(project),
-            },
+            Some(project) => {
+                let dpts = knx_core::resolve_project_group_address_dpts(project);
+                let flow = FlowParticipants::from_project(project, &dpts);
+                Self {
+                    style: Some(project.info.group_address_style),
+                    dpts,
+                    names: knx_core::resolve_project_group_address_names(project),
+                    flow: Arc::new(flow),
+                    generation: FIRST_FLOW_GENERATION,
+                }
+            }
         }
     }
 
@@ -966,7 +1013,18 @@ struct NewRow {
     raw_payload: Option<String>,
     decoded: Option<DecodedValue>,
     control: Option<ReceivedControl>,
+    source_raw: Option<u16>,
+    destination_raw: Option<u16>,
+    flow_generation: Option<u64>,
 }
+
+/// The largest integer a JavaScript `number` represents exactly
+/// (`Number.MAX_SAFE_INTEGER`, 2^53 − 1). `seq`, `nextSince` and
+/// `droppedBefore` are sent as JSON numbers and never exceed it: the buffer
+/// stops admitting rows (counting them as dropped) instead (AR20). At one
+/// million frames per second that point is about 285 years away; the bound
+/// exists so the contract holds without assuming that.
+pub const MAX_SAFE_COUNTER: u64 = (1 << 53) - 1;
 
 /// The capped, gap-accounted telegram store (design spec §3 D3). Mirrors
 /// `session_log.rs`'s `SessionLog` in honesty — a loss is always counted,
@@ -1018,6 +1076,10 @@ impl TelegramBuffer {
     /// so `dropped_before` never jumps by more than one here (contrast
     /// `RecvError::Lagged(n)`, which can jump it by many at once).
     fn push(&mut self, row: NewRow) {
+        if self.next_seq >= MAX_SAFE_COUNTER {
+            self.count_dropped(1);
+            return;
+        }
         let seq = self.next_seq;
         self.next_seq += 1;
         self.entries.push_back(TelegramRow {
@@ -1030,11 +1092,20 @@ impl TelegramBuffer {
             raw_payload: row.raw_payload,
             decoded: row.decoded,
             control: row.control,
+            source_raw: row.source_raw,
+            destination_raw: row.destination_raw,
+            observed_at: std::time::Instant::now(),
+            flow_generation: row.flow_generation,
         });
         if self.entries.len() > MAX_TELEGRAMS {
             self.entries.pop_front();
-            self.dropped_before += 1;
+            self.count_dropped(1);
         }
+    }
+
+    /// Adds to `dropped_before`, saturating at [`MAX_SAFE_COUNTER`].
+    fn count_dropped(&mut self, n: u64) {
+        self.dropped_before = self.dropped_before.saturating_add(n).min(MAX_SAFE_COUNTER);
     }
 
     /// Turns one received `LDataFrame` into a row and pushes it — unless
@@ -1056,6 +1127,7 @@ impl TelegramBuffer {
         let Destination::Group(ga) = destination else {
             return;
         };
+        let source_raw = source.raw();
         let source = source.to_string();
         let destination_name = ctx.name(ga);
         let destination = ctx.format_destination(ga);
@@ -1134,6 +1206,9 @@ impl TelegramBuffer {
             raw_payload,
             decoded,
             control: Some(control),
+            source_raw: Some(source_raw),
+            destination_raw: Some(ga.raw()),
+            flow_generation: Some(ctx.generation),
         });
     }
 
@@ -1153,6 +1228,9 @@ impl TelegramBuffer {
             raw_payload: Some("session closed by gateway".to_string()),
             decoded: None,
             control: None,
+            source_raw: None,
+            destination_raw: None,
+            flow_generation: None,
         });
     }
 
@@ -1162,7 +1240,7 @@ impl TelegramBuffer {
     /// is pushed for a lag — there is nothing to show, only a count of what
     /// cannot be shown.
     fn record_lagged(&mut self, n: u64) {
-        self.dropped_before += n;
+        self.count_dropped(n);
     }
 
     pub fn status(&self) -> SessionStatus {
@@ -1370,11 +1448,39 @@ impl BusSession {
     /// Atomically replaces the context used by both incoming telegrams and
     /// outgoing writes. This updates only in-memory interpretation metadata;
     /// it does not touch, reconnect, or send through the tunnel.
-    pub(crate) fn update_group_address_context(&self, ctx: GroupAddressContext) {
-        *self
+    ///
+    /// AR20: an equal replacement keeps the generation, a different one
+    /// gets the next. Rows already pushed keep the generation they were
+    /// decoded with.
+    pub(crate) fn update_group_address_context(&self, mut ctx: GroupAddressContext) {
+        let mut current = self
             .ctx
             .write()
-            .expect("bus session group-address context poisoned") = ctx;
+            .expect("bus session group-address context poisoned");
+        ctx.generation = if *current == ctx {
+            current.generation
+        } else {
+            current.generation.saturating_add(1)
+        };
+        *current = ctx;
+    }
+
+    /// AR20: the current context's generation.
+    pub(crate) fn flow_generation(&self) -> u64 {
+        self.ctx
+            .read()
+            .expect("bus session group-address context poisoned")
+            .generation
+    }
+
+    /// AR20: the current generation, the style it formats with (`None`: no
+    /// project) and its participant snapshot, read together.
+    pub(crate) fn flow_snapshot(&self) -> (u64, Option<GroupAddressStyle>, Arc<FlowParticipants>) {
+        let ctx = self
+            .ctx
+            .read()
+            .expect("bus session group-address context poisoned");
+        (ctx.generation, ctx.style, Arc::clone(&ctx.flow))
     }
 
     /// A cloned handle to the shared buffer — what a poll handler (Task 3)
@@ -1612,6 +1718,61 @@ mod tests {
             Destination::Group(GroupAddress::from_raw(raw)),
             ApplicationService::GroupValueWrite(value),
         )
+    }
+
+    // -- AR20: JavaScript-safe counters and context generations ----------
+
+    #[test]
+    fn counters_never_pass_javascripts_safe_integer_limit() {
+        let ctx = GroupAddressContext::from_project(None);
+        let mut buffer = TelegramBuffer::new();
+        buffer.next_seq = MAX_SAFE_COUNTER - 1;
+        let frame = |raw| match group_value_write(raw, GroupValue::Short(1)) {
+            TunnelEvent::Telegram(frame) => frame,
+            _ => unreachable!(),
+        };
+        buffer.push_telegram(frame(1), &ctx);
+        assert_eq!(
+            buffer.telegrams_since(0).last().unwrap().seq,
+            MAX_SAFE_COUNTER - 1
+        );
+        assert_eq!(buffer.next_seq(), MAX_SAFE_COUNTER);
+        buffer.push_telegram(frame(2), &ctx);
+        assert_eq!(buffer.next_seq(), MAX_SAFE_COUNTER, "refused, not wrapped");
+        assert_eq!(buffer.dropped_before(), 1, "a refused row is counted");
+        buffer.record_lagged(u64::MAX);
+        assert_eq!(buffer.dropped_before(), MAX_SAFE_COUNTER);
+    }
+
+    #[tokio::test]
+    async fn an_equal_context_keeps_its_generation_and_a_different_one_advances_it() {
+        let (tunnel, _handle) = fake_tunnel();
+        let connector = FakeConnector::succeeding(tunnel);
+        let project = project_with_group_addresses();
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(Some(&project)),
+        )
+        .await
+        .unwrap();
+        assert_eq!(session.flow_generation(), FIRST_FLOW_GENERATION);
+        session.update_group_address_context(GroupAddressContext::from_project(Some(&project)));
+        assert_eq!(session.flow_generation(), FIRST_FLOW_GENERATION);
+
+        let mut flagged = project.clone();
+        let com = flagged.devices.com_objects().next().unwrap().id;
+        flagged.devices.com_object_mut(com).unwrap().flags.read =
+            knx_core::Override::Value(knx_core::Resolved {
+                value: true,
+                layer: knx_core::Layer::UserEdit,
+            });
+        assert_eq!(session.project_context_matches(Some(&flagged)), Some(false));
+        session.update_group_address_context(GroupAddressContext::from_project(Some(&flagged)));
+        assert_eq!(session.flow_generation(), FIRST_FLOW_GENERATION + 1);
+        assert_eq!(session.project_context_matches(Some(&flagged)), Some(true));
+        session.stop().await;
     }
 
     // -- start / drain / stop -------------------------------------------

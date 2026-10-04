@@ -849,41 +849,43 @@ boundaries. No bus run.
 
 ### AR20 — Publish the read-only, session-bound telegram-flow contract
 
-**Open; implementation authorized by user decision 2026-10-04.** Source: new
+**Backend delivered 2026-10-04 (Claude); vertical feature open until U20/U21/AR21.** Source: new
 approved Alpha feature, [flow research](docs/TELEGRAM_FLOW_VISUALIZATION.md),
 [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
 **Dependencies:** U19's exact contract handoff and current monitor/project
 contracts. Ready independently of unrelated import/commissioning packages;
 required before U20 and final AR15–AR18 acceptance. No Web implementation here.
 
-- [ ] Trace current capture/rows/context/projection and all consumers against
+- [x] Trace current capture/rows/context/projection and all consumers against
   directly read KNX clauses; reuse application/service resolution and existing
   associations. Distinguish observed source from configured participant, flag
   handling and unresolved/ambiguous mappings; Send is not a receiver exclusion.
-- [ ] Implement the smallest pure read-only participant snapshot and service
+- [x] Implement the smallest pure read-only participant snapshot and service
   adapter: typed raw destination/source identity, per-object membership/evidence,
   existing decoded/raw states and reliable event age. Keep domain/core independent
   of UI and format; no new core graph, coordinates, project/product migration.
-- [ ] Bind evidence to server incarnation, monitor session and full flow context.
+- [x] Bind evidence to server incarnation, monitor session and full flow context.
   Extend exact comparison to relevant device/link/flag/activation facts;
   preserve atomic snapshots, cursor/drops/restarts and old-consumer compatibility.
   Do not remap retained events against an edited project or round unsafe counters.
-- [ ] Specify bounded response/model/age admission and visible unavailable,
+- [x] Specify bounded response/model/age admission and visible unavailable,
   historical, stale and overflow states. Capture repeats with distinct sequences
   are observed frames; duplicate poll delivery is not another event. No new
   tunnel, active probe, persistence, decryption, write API or UI-only inference.
-- [ ] Add RED/GREEN semantic/service regressions for Write/Read/Response,
+- [x] Add RED/GREEN semantic/service regressions for Write/Read/Response,
   no/multiple recipients, Send-associated receiving candidates, unknown flags,
   inactive/dangling objects, duplicate addresses/IDs, multiple installations,
   DPT conflict/error, individual/opaque services, link-only edits, delayed rows,
   session/server restart, invalid counters, bounded refusal and capture gaps.
-- [ ] Run actual owning-crate/integration/full gates and restored guard mutations;
+- [x] Run actual owning-crate/integration/full gates and restored guard mutations;
   document exact final wire fields/routes, revision and named tests in the U20
   handover. Coordinate bindings with the UI owner/Web lock; no alpha edits under
   the Web tree by stealth. A data-only receipt does not close the vertical feature.
 
 **Exit evidence:** integrated, version-compatible, read-only semantic contract
 and named regressions, consumed next by U20. No hardware or recipient-state proof.
+
+**State 2026-10-04:** contract, wire names and named tests in [TELEGRAM_FLOW_VISUALIZATION §10](docs/TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04); handed to U20 in the handover. Status: ledger row `FLOW-01`.
 
 ### AR21 — Accept the integrated telegram-flow Alpha feature
 

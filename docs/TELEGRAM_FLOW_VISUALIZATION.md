@@ -482,6 +482,96 @@ native WebKitGTK rendering cost, Orca and real traffic are not measured. Guard
 mutants (11, all caught) cover the study's semantics. The productive U20/U21
 code still needs its own RED/GREEN and mutation evidence.
 
+## 10. AR20 delivered contract (alpha, 2026-10-04)
+
+This is the backend contract U20 consumes. Everything is additive; existing
+fields and routes are unchanged. Implementation: `apps/knx-server/src/flow.rs`
+(participant snapshot and bounded wire form), `bus.rs` (rows, context,
+generation, counters) and `bus_routes.rs` (DTOs and route). No Web file,
+generated binding, core type, project/product schema or migration changed.
+
+### 10.1 Monitor rows and poll (`GET /api/bus/monitor/telegrams`)
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `telegrams[].sourceRaw` | integer 0–65535 or `null` | Sender's individual address, unformatted. `null` only on the `SessionClosed` marker |
+| `telegrams[].destinationRaw` | integer 0–65535 or `null` | Group address, unformatted. `null` only on the marker |
+| `telegrams[].observedAgeMs` | integer ≥ 0 or `null` | Server-monotonic milliseconds between admission and this response. Always present today; `null` stays reserved for "unknown" |
+| `telegrams[].flowGeneration` | decimal string or `null` | Generation of the context the row was decoded with, fixed at push. `null` only on the marker |
+| `flowGeneration` | decimal string | The session's current generation |
+
+Rows still exist only for group destinations; individually addressed frames
+are not admitted (no row, no `seq`), unchanged from §9.1. `seq`, `nextSince`
+and `droppedBefore` stay JSON numbers and never exceed 2^53 − 1
+(`MAX_SAFE_COUNTER`): at the limit the buffer refuses further rows and counts
+them in `droppedBefore`, which saturates there too.
+
+### 10.2 Participants (`GET /api/bus/monitor/flow-snapshot`)
+
+Query: `sessionId` and `generation`, both optional decimal strings; anything
+else is `400`. No active monitor session: `404`. Response:
+
+- `serverIncarnation`, `sessionId` (number), `generation` (decimal string:
+  the requested one, else the current one), `groupAddressStyle`
+  (`"Free"`/`"TwoLevel"`/`"ThreeLevel"` or `null`).
+- `status`: `"current"` (lists of the current generation); `"historical"`
+  (another session or generation was requested; the server keeps no older
+  snapshot, so the lists are empty and the client shows those rows raw);
+  `"unavailable"` (no project context; empty lists).
+- `devices[]`: `deviceId`, `installationId` (`null` when no or several
+  installations place it), `name`, `individualAddressRaw` (`null` when none).
+- `groups[]`: `gaRaw`, `gaId`, `installationId`, `name`, `dpt` (single
+  resolved DPT or `null`; rows carry conflicts exactly), `members[]`.
+- `members[]`: `deviceId`, `comObjectId`, `direction` (`"Send"`/`"Receive"`),
+  `active` (boolean), `flags` with `communication`, `read`, `write`,
+  `transmit`, `update`, `readOnInit`, **each** `true`/`false`/`null`
+  (`null` = no layer states it; the object is never `null`).
+- `diagnostics`: `duplicateIndividualAddresses[{individualAddressRaw,
+  deviceIds}]`, `ambiguousGroupAddresses[{gaRaw, gaIds}]`,
+  `ambiguousDevices[deviceId]`, `danglingLinks[{comObjectId, gaId}]` (not
+  members), `unknownDevices[{comObjectId, deviceId}]` (still members),
+  `objectsWithoutFlags[comObjectId]`.
+- `truncated`: omitted `devices`, `groups`, `members`, `diagnostics`.
+  Bounds: 10,000 devices, 20,000 groups, 100,000 members, 1,000 entries per
+  diagnostics list (`FLOW_LIMITS`).
+
+Members are configuration evidence. A `Send` link does not exclude
+receiving, and a listed `Receive` member is not proof of delivery.
+
+### 10.3 Generation and staleness
+
+The session context now compares style, DPTs, names **and** the participant
+snapshot (devices with installation, name and address; object ownership;
+every link with direction; all six flags; activation). Consequences:
+
+- `contextStatus` turns `stale` for a link-, flag-, activation- or
+  device-only edit, which it did not detect before. The Web monitor will show
+  its stale state more often; that is the intended correction.
+- The generation starts at `1` per session and advances by one whenever the
+  session's context is **replaced by a different one**. Today that happens on
+  the routes that republish the context to the session: group-address style,
+  undo and redo. Other edits leave the session on its generation and report
+  `stale` until the context is republished or the monitor restarted. An equal
+  replacement keeps the generation.
+- Every session starts at generation `1` (its context is built fresh at
+  start) under a new `sessionId`; a server restart changes
+  `serverIncarnation`. A snapshot request naming another session is
+  `historical` (tested); a stop/start sequence itself is not exercised by
+  these tests, because the fake connector serves one tunnel.
+
+### 10.4 Tests
+
+`apps/knx-server/tests/http_bus_flow.rs` (HTTP contract, 9: rows and age, snapshot, generation bump and keep, stale on flag/activation/device/link edits, no project, historical and bad parameters, no session, closed marker, Write/Read/Response/opaque mix with individual frames excluded),
+`flow::tests` (7: ordering, members/flags/activation, diagnostics, change
+detection, truncation, empty project, wire names) and two `bus::tests`
+(safe-counter refusal and saturation; generation keep/advance). Nine guard
+mutants, all killed (log `.ai/logs/2026-10-04_claude_ar20-flow-contract.md`).
+
+### 10.5 Not done here
+
+No Web consumer (U20, Web lock), no hardware or real traffic, no
+measurement. The flow view itself is accepted only at AR21.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

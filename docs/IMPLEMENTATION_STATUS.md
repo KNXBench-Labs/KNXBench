@@ -19,6 +19,20 @@
   the unit test looked for a toast class that does not exist, and now checks
   the visible text instead.
 
+## 2026-10-04 — AR20: the telegram-flow backend contract
+
+- Monitor rows gain `sourceRaw`, `destinationRaw`, server-monotonic
+  `observedAgeMs` and the `flowGeneration` they were decoded with; the poll
+  carries the current `flowGeneration`. Counters stay JavaScript-safe
+  (refusal and saturation at 2^53 − 1).
+- New read-only `GET /api/bus/monitor/flow-snapshot`: configured devices,
+  group members (Send/Receive, activation, six nullable flags), diagnostics
+  and truncation counts, bound to session and generation.
+- The session context comparison now covers devices, links, flags and
+  activation, so such edits show as `stale`.
+- Contract: [TELEGRAM_FLOW_VISUALIZATION §10](TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04).
+  Next: U20/U21 (UI), AR21.
+
 ## 2026-10-04 — U19: telegram-flow study measured, AR20 handoff written
 
 - A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`) covers

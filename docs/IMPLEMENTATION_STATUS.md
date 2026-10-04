@@ -1,5 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
+## Commissioning lifecycle: integrated offline implementation accepted — 2026-10-04
+
+Candidate `a8c9342c` and upstream `75ad9650` are integrated and published as
+`1c5dec07`, with exact fetched/live `main` readback. Same-merged-source scoped
+**125/0/0** (Store94/OneShot18/ten offline workers/API3) and required ordinary
+**3022 passed/0 failed/176 ignored** across153 blocks are independently
+reconciled. The ordinary ignored scope is not accepted and overlaps scoped125;
+History13 and the one25-case leaf are included, not additional tests. Web pinned
+offline build/typecheck passed; Vitest1739 tests/98 files passed. All26 command
+stages used unchanged source32/public Rust-Cargo369/tracked Web inputs and
+actual dual leases, with initially fresh build target/unchanged private original
+commitment/no skip/no private raw saved. The first worker's stale inner receipt
+namespace refused before Cargo/input discovery; corrected17-phase continuation
+and initial same-source positive3 are separately bound, not rewritten evidence.
+
+Recovery-first/start-before-contact, intent/terminal monotonicity, independent
+cleanup uncertainty, strict malformed receipt refusal and version evolution are
+implemented at the documented bounded scope. Five semantic mutations below
+remain pre-integration evidence; integrated runtime was actually renewed.
+Review is in-session; broader owner admission/full SAFE-03/AUDIT-01 remains
+`PARTIAL_BACKEND`, ADR0067 Proposed. Web/manual-client adoption, other callers,
+hardware/device recovery/crash/power-loss/ETS evidence are not claimed. The
+permanent [receipt](evidence/commission-download-lifecycle-offline-2026-10-04.json)
+and [history contract](COMMISSIONING_ACTIVITY_HISTORY.md) preserve provenance.
+Older entries below are historical snapshots, including their former pending
+integration notices; they do not override this current scoped acceptance.
+
 ## Commissioning lifecycle candidate: offline closure — 2026-10-04
 
 The local SAFE-03/AUDIT-01 candidate on `iaw-commission-download-lifecycle`

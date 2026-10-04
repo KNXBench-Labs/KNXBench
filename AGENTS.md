@@ -34,7 +34,7 @@ Important documents include:
 
 ```text
 docs/
-├── RESEARCH.md
+├── RESEARCH.md   (index; topic files in research/)
 ├── ARCHITECTURE.md
 ├── DATA_MODEL.md
 ├── IMPORT_EXPORT.md

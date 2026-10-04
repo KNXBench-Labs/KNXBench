@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR14D D4: RESEARCH split by topic
+
+- `docs/RESEARCH.md` (6,759 lines) is now an index of 181 lines: the evidence
+  tags, a table that maps every section to its file, §1 and §9–§12, and the
+  sources. The rest moved verbatim to five topic files under `docs/research/`:
+  project format (§2, §3, §5–§7), product data (§4, §18, scheme 23),
+  KNXnet/IP and bus (§8), commissioning (§19, §22–§24 and the download-coverage
+  entries) and features/UI (§13–§17, §20, §21, §25, U5/U6).
+- Section numbers stay global, so every textual `RESEARCH §N` reference still
+  holds. New findings go into the topic file; §26 is next.
+- 14 inbound anchor links rewritten; check-anchors 433 links / 270 files, none
+  dead. A script compared the old file with the union of the new ones: no
+  original line is missing; only link targets changed. Documentation only.
+
 ## 2026-10-04 — AR14D D3: `xtask check-ledger` guards the single status record
 
 - New repository gate `cargo run -p xtask -- check-ledger`
@@ -385,7 +399,7 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
   (`Command::SetCouplerIndividualAddress`, `CouplerEvidence`,
   `knx_productdb::query::product_hardware_is_coupler`). Line prefix and
   uniqueness stay enforced; undo/redo round-trips. Everything else keeps the
-  existing refusal. Evidence and tests: [RESEARCH §25](RESEARCH.md#25-ua1-coupler-0-evidence-and-siteground-samples-2026-10-04).
+  existing refusal. Evidence and tests: [RESEARCH §25](research/features-and-ui.md#25-ua1-coupler-0-evidence-and-siteground-samples-2026-10-04).
 - The web editor half (offer `.0` for an evidenced coupler) waits for the Web
   lock; MODEL-03 stays `IN_PROGRESS` until then.
 - KL-127: no independent `Ground` sample found; closed for the Alpha as a

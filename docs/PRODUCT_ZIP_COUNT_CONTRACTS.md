@@ -83,6 +83,12 @@ These are accepted negative controls, not production test failures.
   Subsequent owner2231d87c changes Markdown only: source-identical publication
   needs doc audits, not a relabeled runtime execution.
 
+- Source-identical documentation merge `948f9382` after owner2231d87c passed
+  actual final docs6: headers470/157, anchors443 across274 files, ledger186
+  rows, corpus-policy365 Rust files, layering and whitespace. All806 runtime
+  source/config hashes remain exact. Code/CLI acceptance stays6c3080d9,
+  not an invented new product-test run. Publication/readback still pending.
+
 Separate in-session whole-slice review found no blocking findings; it is not an
 independent-model approval. Subsequent published UI/ledger changes require their
 own actual integrated gates before publication; these checkpoints retain their

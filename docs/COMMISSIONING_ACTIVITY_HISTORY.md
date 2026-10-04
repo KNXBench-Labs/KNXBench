@@ -1,5 +1,31 @@
 # Commissioning activity history contract
 
+## History Web delivery checkpoint — 2026-10-04
+
+The actual merged source `2057f86b` passed all nine required public stages:
+**3145 ordinary workspace tests passed, 0 failed, 177 ignored**, across169
+result blocks; Web1761/100 files, intercepted Chromium8, production build,
+strict Clippy/fmt and all four repository policy checks passed. All50 isolated
+guard controls compiled and failed at their named behavioral assertions;
+canonical source was never mutated. See the separate
+[delivery receipt](evidence/commission-history-web-delivery-offline-2026-10-04.json).
+The earlier receipt below remains evidence for its original source snapshot.
+
+The selected private regression sweep remains bound to `60d6a85f`:
+four stages,68 registered and passed,0 failed/ignored, original input commitment
+unchanged. No selected corpus-package source changed between that snapshot and
+`2057f86b`; intervening changes concern desktop/server-domain code and desktop
+Cargo declarations. This is **not** a new private run on the delivery HEAD,
+and private counts are never added to overlapping ordinary workspace counts.
+
+The bounded History Web reservation is released by this closure; no additional
+Web edits belong to this package. Publication is proved separately by exact
+remote readback in the handover. Further callers, client surfaces, long sessions
+and offline recovery/abort/restore remain open. All four owning Alpha IDs remain
+IN_PROGRESS. External hardware/power-loss/vendor/ETS experiments remain outside
+the goal; this does not waive backup, authorization or fail-closed safety.
+
+
 [ADR-0064](adr/0064-durable-activity-history-is-not-recovery.md) separates durable
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.

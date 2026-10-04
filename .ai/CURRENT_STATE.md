@@ -1,4 +1,22 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-04 17:00
+Web lock: free (codex-commission-continuation bounded History package; no further Web edits here)
+- **Completed:** Actual2057f86b public9/9 accepted with workspace3145/0/177 over169 result blocks, Web1761/100, Chromium8,50 isolated behavioral controls and production build. Permanent delivery receipt added; code/source hashes remain exact. Prior negatives/historical receipt retained. Selected private68/0/0 stays bound60d6a85f; selected corpus-package source delta is empty, but no new2057f86b private run is claimed. Bounded Web reservation released; caller/recovery work does not hold it.
+- **Pending/Next Steps:** Exact metadata closure gate, commit and publish/read back this already-gated package; no optional new source integration or full-gate loop. Then continue local Shared-App/CLI caller work, download/restore and remaining offline recovery/session/client contracts. Alpha IDs remainIN_PROGRESS, no whole-goal acceptance.
+- **Notes for Claude:** Web is available for other work after this closure publication; own Caller WIP is isolated and not included. Shared root untouched, no hardware operations. Complete inherited handover preserved below. Publication is not yet asserted by this pre-push checkpoint. First artifact write was verified; its helper exposes verified, not success, so an initial verifier assertion was corrected without rewriting the artifact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 16:46
+Web lock: taken by codex-commission-continuation (this session; user confirmed reservation since08:00)
+- **Completed:** Responded to user's stall/lock correction. Actual proc_daf8dc34dee3 exited0;2057f86b public delivery9/9 accepted, workspace3145/0/177 across169 blocks. No hung gate. The Web reservation is ours and is not an external blocker; previous ownership-reconciliation wording must not be used to defer this delivery.
+- **Pending/Next Steps:** Bounded History package still unpublished. Finish its exact evidence/metadata/publication boundary rather than expanding it with optional new work or an endless moving-upstream cycle. Current private sweep remains bound to60d6a85f, not silently reassigned to2057f86b. Late proc_27f150cc9b79 success notification reconciled to that existing receipt; no new run or additional coverage. Caller production is local WIP; broader client/session/recovery tasks remain open.
+- **Notes for Claude:** User correction takes priority over an inferred conflicting Web owner. No lock release, new code, new gate or hardware operation executed during diagnosis. Shared root untouched. Current gate receipt history-scheme10-desktop-final/receipt.json; retained previous handovers are historical. Batched delayed public completions proc_89643e33cccf/60d6a85f and proc_daf8dc34dee3/2057f86b reconciled to retained9/9 receipts (3136 and3145 ordinary passes respectively,177 ignored each); independent snapshots, no added totals or repeat gates. Batched late notifications reconciled: proc_345d48a4cabd was missing-module compilation RED101 (zero runtime tests), retained and superseded by Shared-App7/0 runtime GREEN; proc_b695a9a8ff80 was already accepted c24dd52a selected private4 stages/68 registered-passed/0failed/0ignored, unchanged original commitment. Neither is new current-source evidence; no repeat execution. Delayed proc_6410bcff112f notification reconciled against history-delivery-current: c24dd52a public9/9,3107/0/177 across165 blocks; already counted historical acceptance, not a new run or current2057f86b evidence.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-04 16:33
 Web lock: codex History reservation remains recorded; incoming Claude UI ownership is preserved below, not overridden
 - **Completed:** Reloaded all17 requested skills and rechecked all three task scopes. Shared-App extraction/RNG run factory now has7 passing integration tests; CLI foreign-history-before-connector and plan-only-preservation tests now2/2 green, and8 Service-Control tests pass. Confirmed CLI Service-Control uses explicit persistent history; original-property backup precedes send intent and Verify-Mode mutation. Caller production remains local WIP, not published or fully integrated. Separate History tree60d6a85f accepted9/9 with workspace3136/0/177 across169 blocks and50 isolated guard controls; separate private4-stage sweep has68 registered/passed,0failed/0ignored and unchanged original input commitment.

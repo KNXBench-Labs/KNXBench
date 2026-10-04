@@ -1728,6 +1728,16 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 to the internet. It is safe to expose to a network you have thought about,
 over a transport you have secured yourself.
 
+**AR13 (2026-10-04) — verified offline, boundary retained.** The guard test
+no longer samples seven routes: `every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four`
+reads every `.route(...)` declaration from `apps/knx-server/src/` (97
+method/path pairs on 89 paths at the time) and expects `401` from each,
+except `/healthz` and the three `/api/auth/*` routes; a reverting mutant that
+adds one unguarded `/api` route fails it, while the old seven-route test
+stays green. The listening address has no override: `main.rs` binds only
+`bind_address(auth_required)`. TLS, roles, audit and CSRF remain the
+deployer's, exactly as stated above.
+
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
 **Status, reconciled 2026-10-01 (AR00): resolved for whole-file buffering.**
@@ -3652,6 +3662,18 @@ git at all, or with `.git` excluded (the Docker build), the metadata is
 simply absent — `knx 0.1.0-alpha.1` — unless `KNX_BUILD_SHA` is passed
 in. Absence is the intended failure direction; a false number is the one
 this section, and the ADR, exist to rule out.
+
+**Update, 2026-10-04 (AR13) — lifted for release builds.** Both build
+scripts now call `crates/knx-build-stamp`. Development builds stamp exactly
+as described above. With `KNX_REQUIRE_CLEAN_TREE=1` the build script re-runs
+on every build (it watches a path that never exists) and fails unless git
+confirms this workspace, resolves `HEAD`, reports no modified or untracked
+non-ignored path and any explicit `KNX_BUILD_SHA` names that commit. Measured
+on a real checkout: clean → `+g345d0bc5`; one edit afterwards → the next
+build refuses and names the path; without the always-re-run watch the same
+edit was silently stamped with the clean commit. So a release artifact built
+this way names only a commit it was built from; a development build still
+names a commit, never a tree.
 
 <a id="66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14"></a>
 <a id="66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14"></a>
@@ -5593,6 +5615,20 @@ token, no credential, no `POST` from the application, and no upload anywhere.
 worth adding — MAC addresses are the obvious candidate — it goes in as
 another shape-recognising pass next to the existing four, with the same
 requirement that it name what it removes rather than silently blanking text.
+
+**AR13 (2026-10-04) — audited with one fixture per class.**
+`every_privacy_class_is_either_redacted_or_named_in_the_report` feeds IPv4
+(private and public), IPv6 (including IPv4-mapped), the home prefix and the
+hostname (bare and FQDN) through every input channel — description, the four
+client facts, log message/location/detail — and finds none of them in
+`report.md`, `environment.json` or `log.json`. MAC addresses, serial numbers,
+e-mail addresses, paths outside the home directory, KNX addresses and names
+survive as written, and `report.md` (also the GitHub issue body) now names
+each of them. It also says `bus-telegrams.json` is not redacted and carries
+values — text values included — and timestamps, which together can show when
+the installation was in use; before, only its addresses were mentioned.
+`project-summary.json` stays counts-only (existing test). The in-app dialog
+text is Web-owned; the matching wording is handed to the Web-lock holder.
 
 ## 107. There is no plugin API — a third party cannot add a format, a protocol, a report template or a UI panel without forking
 

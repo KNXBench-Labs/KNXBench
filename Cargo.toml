@@ -13,6 +13,7 @@ members = [
     "crates/knx-net",
     "crates/knx-secure",
     "crates/knx-testsupport",
+    "crates/knx-build-stamp",
     "apps/knx-cli",
     "apps/knx-desktop/src-tauri",
     "apps/knx-server",
@@ -38,6 +39,7 @@ knx-report = { path = "crates/knx-report" }
 knx-net = { path = "crates/knx-net" }
 knx-secure = { path = "crates/knx-secure" }
 knx-testsupport = { path = "crates/knx-testsupport" }
+knx-build-stamp = { path = "crates/knx-build-stamp" }
 knx-server = { path = "apps/knx-server" }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 rusqlite = { version = "0.40", features = ["bundled"] }

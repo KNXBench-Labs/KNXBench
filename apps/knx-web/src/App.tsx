@@ -17,6 +17,8 @@ import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
 import NewProjectDialog from "./NewProjectDialog";
+import ProjectPasswordDialog from "./ProjectPasswordDialog";
+import { projectPasswordRefusal, type ProjectPasswordRefusal } from "./projectPassword";
 import Inspector, { DeviceWorkspace } from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
@@ -164,6 +166,8 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
+  // AR08: which import is waiting for its project password, and why.
+  const [passwordPrompt, setPasswordPrompt] = useState<{ path: string; reason: ProjectPasswordRefusal } | null>(null);
   // Modern responses are ordered within an opaque server lifetime. The set
   // of retired lifetimes prevents a delayed reply from switching the UI back
   // after a restarted server has been accepted. Legacy responses remain in
@@ -689,6 +693,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     path: string,
     load: (p: string, clientToken: string) => Promise<ProjectTree>,
     storePath: boolean,
+    kind: "import" | "open" = storePath ? "open" : "import",
   ) {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -722,6 +727,15 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         } catch (recoveryError) {
           failure = recoveryError;
         }
+      }
+      // AR08: a protected ETS project is not a failure to report but a
+      // question to ask; the server wrote nothing, so nothing is pinned.
+      const passwordRefusal = kind === "import" ? projectPasswordRefusal(failure) : null;
+      if (passwordRefusal) {
+        setLoadSource(null);
+        setLoadSnapshot(null);
+        setPasswordPrompt({ path, reason: passwordRefusal });
+        return;
       }
       reportError(failure);
       const message = api.errorMessage(failure);
@@ -1142,6 +1156,16 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
 
       {newProjectOpen && (
         <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} onSaveFirst={saveProject} />
+      )}
+      {passwordPrompt && (
+        <ProjectPasswordDialog fileName={fileNameOf(passwordPrompt.path)} reason={passwordPrompt.reason}
+          onCancel={() => setPasswordPrompt(null)}
+          onSubmit={(password) => {
+            const { path } = passwordPrompt;
+            setPasswordPrompt(null);
+            // The password lives only in this closure for the one retry.
+            void runLoad(path, (p, clientToken) => api.importProject(p, clientToken, password), false, "import");
+          }} />
       )}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectSearchResult} onClose={() => setSearchOpen(false)} />

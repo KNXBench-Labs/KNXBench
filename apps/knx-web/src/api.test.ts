@@ -136,6 +136,24 @@ describe("api", () => {
     ]);
   });
 
+  // AR08: the project password travels only in the import request that
+  // needs it, and only when one was entered.
+  it("sends a project password only when one is given", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-1");
+    let [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/import");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-1" });
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-2", "s3cret");
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-2", password: "s3cret" });
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-3", "");
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-3" });
+  });
+
   it("renames an installation through PATCH /api/installations/{id}", async () => {
     mockFetchOnce({ installations: [] });
     await api.renameInstallation(2, "Annex");

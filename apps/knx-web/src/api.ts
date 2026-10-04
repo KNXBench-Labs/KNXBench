@@ -85,10 +85,12 @@ function requestError(status: number, message: string, body: unknown = null): Er
  * `loadProgress.ts`'s `ownsOperation` is exact equality against it, not a
  * fact this module derives.
  */
-export function importProject(path: string, clientToken: string): Promise<ProjectTree> {
+export function importProject(path: string, clientToken: string, password?: string): Promise<ProjectTree> {
+  // AR08: a project password travels only in this request, only when one
+  // was entered. It is never logged, stored or echoed by the client.
   return request("/api/project/import", {
     method: "POST",
-    body: JSON.stringify({ path, clientToken }),
+    body: JSON.stringify({ path, clientToken, ...(password ? { password } : {}) }),
   });
 }
 

@@ -6,8 +6,8 @@
   `goal.md`, `OFFENE_PUNKTE.md`, `PROJECT_ANALYSIS_2026-09-15.md`. This log
   keeps everything since the last October entry; the 12.5k-line September tail
   moved verbatim to [docs/history](history/IMPLEMENTATION_STATUS_2026-09.md).
-  The handover `.ai/CURRENT_STATE.md` keeps its 75 newest entries, the 470
-  older ones moved verbatim to `.ai/archive/`.
+  The handover `.ai/CURRENT_STATE.md` keeps its newest entries (77 at the
+  cut); the 470 older ones moved verbatim to `.ai/archive/`.
 - Only relative links changed, two cross-file anchors were re-pointed;
   check-anchors 393 links / 262 files, none dead. A plain-file link check finds
   no new dead link (17 pre-existing ones in old plans and `../CLA.md` are

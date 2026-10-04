@@ -513,6 +513,29 @@ separate; this theme extension never grants a hardware-write go.
 
 ---
 
+## 3b. Alpha owner queue (Claude owner session, 2026-10-04)
+
+The user made this Claude session the `goal-ui.md` owner and asked it to work
+through the UI rows at the end of `alpha-release-goal.md`. Row statuses and the
+decisions behind them are in that file's *UI owner checkpoint*. Native/live
+evidence rows are `ACCEPTED_BOUNDARY` by user decision; these packages cover
+the remaining absent behaviour. Domain/backend halves come first because the
+commissioning session holds the Web lock at the time of writing.
+
+| Package | Rows | Content | Status |
+| --- | --- | --- | --- |
+| UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | open |
+| UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | open |
+| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | open |
+| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | open |
+| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | open |
+| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | open |
+
+Every package follows §2: RED first, mutation check per new guard, gates,
+docs, merge, push, handover, cleanup.
+
+---
+
 ## 4. Completion condition
 
 Finish only when:

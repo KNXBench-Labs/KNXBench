@@ -71,3 +71,5 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0069](0069-catalog-batch-request-replay-token.md) | A catalog batch request may carry a replay token | Accepted (server half; web client pending) | 2026-10-04 |
 | [0070](0070-commands-act-in-the-owning-installation.md) | Commands act in the installation that owns their target | Accepted (core/server; web UI pending) | 2026-10-04 |
 | [0071](0071-ambiguous-topology-is-repaired-explicitly.md) | Ambiguous topology is repaired explicitly, never collapsed on save | Accepted (core/store/server; web UI pending) | 2026-10-04 |
+| [0073](0073-imported-elements-keep-their-own-ids.md) | Imported elements keep their own ids; ambiguous references are not guessed | Accepted | 2026-10-04 |
+| [0074](0074-native-save-is-exact-or-refused.md) | A native save is exact or refused | Accepted | 2026-10-04 |

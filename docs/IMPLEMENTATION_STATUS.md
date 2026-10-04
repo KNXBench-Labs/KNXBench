@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA7/UA8: no silent loss between import, memory and `.knxdb`
+
+- [ADR-0073](adr/0073-imported-elements-keep-their-own-ids.md) (`knx-etsproj`):
+  elements with a repeated ETS `@Id` keep distinct internal ids
+  (`id_table::IdTable`); references to a repeated id are reported as
+  `MapProblemDetail::AmbiguousReference`; schema ≥21 short `Links` ids
+  resolve within the device's own installation. Previously both duplicates
+  shared one id (one lost on save), and a device could be linked silently to
+  another installation's group address.
+- [ADR-0074](adr/0074-native-save-is-exact-or-refused.md) (`knx-store`):
+  `representable::check_representable` runs before every save; duplicate ids,
+  orphaned lines, foreign line references, parent/child mismatches and a
+  device twice in one part are refused with `StoreError::Unrepresentable`.
+  A probe showed seven of these states saving "successfully" and reopening
+  different.
+- Tests: `crates/knx-store/tests/lossless_save.rs` (6),
+  `crates/knx-etsproj/tests/links_installation_scope.rs` (2), a new case in
+  `crates/knx-etsproj/tests/malformed_input.rs`, `id_table` unit test;
+  10/10 guard mutants caught. Corpus import output unchanged (no repeated ids,
+  one installation each).
+
 ## AR06T exact23 bounded import — delivered (2026-10-04, `aadd8820`)
 
 Local candidate on `9d719a4f`: exact product namespace23 admission with the

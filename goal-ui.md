@@ -576,7 +576,10 @@ not a shipped graph or a hypothetical benchmark. Acquire no lock merely to plan.
 
 ### U20 — Integrate the shared monitor feed, graph and immediate values [web]
 
-**Open.** Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
+**In progress (2026-10-04).** AR20 is integrated (`85bfab88`, §10). Part 1
+(wire validation and pure reducer, TELEGRAM_FLOW_VISUALIZATION §11) is
+published. Part 2 (monitor wiring, view, Inspector, keyboard, e2e) follows
+under the same Web lock. Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
 wire names and revision. Reuse one session/event controller with existing
 attachment/pause/cursor/context guards; do not implement another capture service.
 

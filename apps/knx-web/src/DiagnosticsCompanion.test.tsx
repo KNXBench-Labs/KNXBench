@@ -257,6 +257,15 @@ describe("one editing workspace", () => {
     // History admission adds `activityHistory.ts` through the shared API:
     // pure validation only. The companion does not call the new history reader.
     // Keep the exact API and mutation inventories below unchanged.
+    //
+    // U20 adds `flowWire.ts` through the shared API: the pure validator of
+    // the AR20 flow snapshot and row fields. It imports nothing, calls no
+    // API and touches no project state; the snapshot route it validates is
+    // a read.
+    const flowWireGraph = valueImportGraph("flowWire.ts");
+    expect([...flowWireGraph.keys()]).toEqual(["flowWire.ts"]);
+    expect(apiCallsIn(flowWireGraph)).toEqual([]);
+    expect(flowWireGraph.get("flowWire.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     const historyGraph = valueImportGraph("activityHistory.ts");
     expect([...historyGraph.keys()]).toEqual(["activityHistory.ts"]);
     expect(apiCallsIn(historyGraph)).toEqual([]);
@@ -278,6 +287,7 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
+      "flowWire.ts",
       "gaNotation.ts",
       "gatewayEndpoint.ts",
       "gatewayPreference.ts",

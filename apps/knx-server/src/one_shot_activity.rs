@@ -23,6 +23,27 @@ struct WriteEvidence {
     send_possible: bool,
 }
 
+/// Metadata-only correlation and witnessed outcomes, never recovery payloads.
+/// None is an unwitnessed device/restart outcome, not proof of no write.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct DownloadEvidence {
+    session_id: u64,
+    written: Option<crate::device_download::Written>,
+    restart: Option<crate::device_download::Restart>,
+    cleanup: DownloadCleanup,
+}
+
+/// Describes the adapter return only, not a KNX disconnect acknowledgment.
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum DownloadCleanup {
+    Pending,
+    ReturnedOk,
+    ReturnedError,
+    Unknown,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct OneShotActivity {
@@ -35,6 +56,8 @@ pub struct OneShotActivity {
     pub finished_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     write_evidence: Option<WriteEvidence>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    download_evidence: Option<DownloadEvidence>,
 }
 
 #[derive(Serialize)]
@@ -50,9 +73,14 @@ pub(crate) struct HistoryActivity {
 impl OneShotActivity {
     fn validate(&self, operation_id: u64) -> io::Result<()> {
         let write = self.kind == "serviceControlWrite";
+        let download = self.kind == "deviceDownload";
         let valid_kind = matches!(
             self.kind.as_str(),
-            "deviceCompare" | "serviceControlRead" | "serviceControlWrite" | "serialLookup"
+            "deviceCompare"
+                | "serviceControlRead"
+                | "serviceControlWrite"
+                | "serialLookup"
+                | "deviceDownload"
         );
         let valid_address = match &self.address {
             Some(address) => {
@@ -61,7 +89,33 @@ impl OneShotActivity {
             }
             None => self.kind == "serialLookup",
         };
-        let valid_state = if write {
+        let valid_state = if download {
+            match (&self.write_evidence, &self.download_evidence) {
+                (Some(write), Some(evidence)) => {
+                    evidence.session_id > 0
+                        && (!write.send_possible || write.backup_recorded)
+                        && (evidence.written.is_none()
+                            || evidence.written == Some(crate::device_download::Written::No)
+                            || (write.backup_recorded && write.send_possible))
+                        && match self.state.as_str() {
+                            "running" => {
+                                evidence.written.is_none()
+                                    && evidence.restart.is_none()
+                                    && evidence.cleanup == DownloadCleanup::Pending
+                            }
+                            "finished" => evidence.written.is_some() && evidence.restart.is_some(),
+                            "failed" => evidence.written.is_some() && evidence.restart.is_none(),
+                            "unknown" => {
+                                evidence.written.is_none()
+                                    && evidence.restart.is_none()
+                                    && evidence.cleanup == DownloadCleanup::Unknown
+                            }
+                            _ => false,
+                        }
+                }
+                _ => false,
+            }
+        } else if write {
             match (self.state.as_str(), &self.write_evidence) {
                 ("verified" | "effectUnverified", Some(evidence)) => {
                     evidence.backup_recorded && evidence.send_possible
@@ -91,6 +145,7 @@ impl OneShotActivity {
             || !valid_kind
             || !valid_address
             || !valid_state
+            || (!download && self.download_evidence.is_some())
             || start.is_none()
             || !valid_finish
         {
@@ -191,9 +246,21 @@ impl OneShotLog {
             {
                 return Err(io::Error::other("invalid activity identity"));
             }
-            let interrupted = row.incarnation != self.incarnation && entry.state == "running";
+            let pending_cleanup = entry
+                .download_evidence
+                .as_ref()
+                .is_some_and(|evidence| evidence.cleanup == DownloadCleanup::Pending);
+            let interrupted = row.incarnation != self.incarnation
+                && (entry.state == "running" || pending_cleanup);
             if interrupted {
-                entry.state = "unknown".into();
+                if entry.state == "running" {
+                    entry.state = "unknown".into();
+                }
+                if let Some(evidence) = entry.download_evidence.as_mut() {
+                    if evidence.cleanup == DownloadCleanup::Pending {
+                        evidence.cleanup = DownloadCleanup::Unknown;
+                    }
+                }
             }
             entries.push(HistoryActivity {
                 sequence: row.sequence,
@@ -209,6 +276,7 @@ impl OneShotLog {
         if self.history_path.is_none() {
             return Ok(());
         }
+        entry.validate(entry.id)?;
         let document = serde_json::to_string(entry).map_err(io::Error::other)?;
         self.open_history()?
             .record(&self.incarnation, entry.id, &document)
@@ -264,6 +332,61 @@ impl OneShotLog {
         }
     }
 
+    /// Admit and persist before the caller asks its connector for a tunnel.
+    /// A long download owns its row separately from the bounded one-shot ring.
+    pub(crate) fn start_download(
+        self: &Arc<Self>,
+        session_id: u64,
+        address: knx_core::IndividualAddress,
+    ) -> io::Result<DownloadGuard> {
+        self.ensure_write_available()?;
+        let id = {
+            let mut inner = self.inner.lock().expect("activity log poisoned");
+            let id = inner
+                .next_id
+                .checked_add(1)
+                .ok_or_else(|| io::Error::other("activity id exhausted"))?;
+            inner.next_id = id;
+            id
+        };
+        let entry = OneShotActivity {
+            id,
+            kind: "deviceDownload".into(),
+            address: Some(address.to_string()),
+            state: "running".into(),
+            started_at: now(),
+            finished_at: None,
+            write_evidence: Some(WriteEvidence {
+                backup_recorded: false,
+                send_possible: false,
+            }),
+            download_evidence: Some(DownloadEvidence {
+                session_id,
+                written: None,
+                restart: None,
+                cleanup: DownloadCleanup::Pending,
+            }),
+        };
+        self.persist_download(&entry)?;
+        Ok(DownloadGuard {
+            log: Arc::clone(self),
+            entry,
+            done: false,
+        })
+    }
+
+    fn persist_download(&self, entry: &OneShotActivity) -> io::Result<()> {
+        let mut inner = self.inner.lock().expect("activity log poisoned");
+        if inner.history_failed {
+            return Err(io::Error::other("activity history is unavailable"));
+        }
+        if let Err(error) = self.persist(entry) {
+            inner.history_failed = true;
+            return Err(error);
+        }
+        Ok(())
+    }
+
     pub(crate) fn start_write(
         self: &Arc<Self>,
         kind: &'static str,
@@ -312,6 +435,7 @@ impl OneShotLog {
             started_at: now(),
             finished_at: None,
             write_evidence,
+            download_evidence: None,
         });
         if inner.history_failed
             || self
@@ -400,6 +524,96 @@ fn prune(inner: &mut Inner) {
     }
 }
 
+/// Owns bounded metadata across HTTP acquisition and worker cleanup.
+/// A drop is uncertainty, never a no-write or successful-disconnect receipt.
+pub(crate) struct DownloadGuard {
+    log: Arc<OneShotLog>,
+    entry: OneShotActivity,
+    done: bool,
+}
+
+impl DownloadGuard {
+    /// Called by the keeper only after the original recovery image is retained.
+    /// A recording error is propagated through that keeper before any mutation.
+    pub(crate) fn mark_send_possible(&mut self) -> io::Result<()> {
+        if self.entry.state != "running" {
+            return Err(io::Error::other(
+                "download intent cannot follow a terminal result",
+            ));
+        }
+        let mut candidate = self.entry.clone();
+        candidate.write_evidence = Some(WriteEvidence {
+            backup_recorded: true,
+            send_possible: true,
+        });
+        self.log.persist_download(&candidate)?;
+        self.entry = candidate;
+        Ok(())
+    }
+
+    /// Record the worker's classification, never its error strings or payloads.
+    /// Keep the witnessed result in memory even if durable recording fails.
+    pub(crate) fn record_result(
+        &mut self,
+        status: &crate::device_download::DownloadStatus,
+    ) -> io::Result<()> {
+        if self.entry.state != "running" {
+            return Err(io::Error::other("download result was already recorded"));
+        }
+        use crate::device_download::DownloadStatus;
+        let (state, written, restart) = match status {
+            DownloadStatus::Finished {
+                written, restart, ..
+            } => ("finished", *written, Some(*restart)),
+            DownloadStatus::Failed { written, .. } => ("failed", *written, None),
+            DownloadStatus::Running => return Err(io::Error::other("nonterminal download result")),
+        };
+        self.entry.state = state.into();
+        self.entry.finished_at = Some(now());
+        let evidence = self
+            .entry
+            .download_evidence
+            .as_mut()
+            .expect("download evidence");
+        evidence.written = Some(written);
+        evidence.restart = restart;
+        self.log.persist_download(&self.entry)
+    }
+
+    /// This is the adapter's return, not a device-level disconnect receipt.
+    pub(crate) fn record_cleanup(mut self, returned_ok: bool) -> io::Result<()> {
+        self.entry
+            .download_evidence
+            .as_mut()
+            .expect("download evidence")
+            .cleanup = if returned_ok {
+            DownloadCleanup::ReturnedOk
+        } else {
+            DownloadCleanup::ReturnedError
+        };
+        let result = self.log.persist_download(&self.entry);
+        self.done = true;
+        result
+    }
+}
+
+impl Drop for DownloadGuard {
+    fn drop(&mut self) {
+        if !self.done {
+            if self.entry.state == "running" {
+                self.entry.state = "unknown".into();
+                self.entry.finished_at = Some(now());
+            }
+            self.entry
+                .download_evidence
+                .as_mut()
+                .expect("download evidence")
+                .cleanup = DownloadCleanup::Unknown;
+            let _ = self.log.persist_download(&self.entry);
+        }
+    }
+}
+
 pub(crate) struct ActionGuard {
     log: Arc<OneShotLog>,
     id: u64,
@@ -473,6 +687,351 @@ impl Drop for WriteGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn download_guard_cannot_replace_a_witnessed_terminal_result() {
+        use crate::device_download::{DownloadStatus, Restart, Written};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(path.clone(), "synthetic".into()));
+        let mut guard = log.start_download(9, "1.1.1".parse().unwrap()).unwrap();
+        guard.mark_send_possible().unwrap();
+        guard
+            .record_result(&DownloadStatus::Finished {
+                written: Written::Yes,
+                restart: Restart::Acknowledged,
+                restart_note: None,
+            })
+            .unwrap();
+        let history = knx_store::activity_history::ActivityHistory::open_existing(&path).unwrap();
+        let original = history.page(0, 100).unwrap().0;
+        assert_eq!(original.len(), 1);
+
+        let replacement = guard.record_result(&DownloadStatus::Failed {
+            written: Written::No,
+            stopped_in_step: None,
+            error: "synthetic replacement outcome".into(),
+            hint: None,
+        });
+
+        assert!(
+            replacement.is_err(),
+            "second terminal outcome replaced witnessed download result"
+        );
+        let retained = history.page(0, 100).unwrap().0;
+        assert_eq!(retained.len(), 1);
+        assert_eq!(retained[0].document, original[0].document);
+        assert_eq!(retained[0].sequence, original[0].sequence);
+        assert_eq!(log.history_state(), "configured");
+        assert!(log.ensure_write_available().is_ok());
+        guard.record_cleanup(true).unwrap();
+        let (entries, more) = log.history_page(0, 100).unwrap();
+        assert!(!more);
+        assert_eq!(entries.len(), 1);
+        let value = serde_json::to_value(&entries[0]).unwrap();
+        assert_eq!(value["state"], "finished");
+        assert_eq!(value["downloadEvidence"]["written"], "yes");
+        assert_eq!(value["downloadEvidence"]["restart"], "acknowledged");
+        assert_eq!(value["downloadEvidence"]["cleanup"], "returnedOk");
+    }
+
+    #[test]
+    fn download_guard_cannot_mark_send_possible_after_terminal_result() {
+        use crate::device_download::{DownloadStatus, Written};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(path.clone(), "synthetic".into()));
+        let mut guard = log.start_download(11, "1.1.1".parse().unwrap()).unwrap();
+        guard
+            .record_result(&DownloadStatus::Failed {
+                written: Written::No,
+                stopped_in_step: None,
+                error: "synthetic refusal before mutation".into(),
+                hint: None,
+            })
+            .unwrap();
+        let history = knx_store::activity_history::ActivityHistory::open_existing(&path).unwrap();
+        let original = history.page(0, 100).unwrap().0;
+        assert_eq!(original.len(), 1);
+
+        let late_intent = guard.mark_send_possible();
+
+        assert!(
+            late_intent.is_err(),
+            "late send-possible intent reopened terminal download"
+        );
+        let retained = history.page(0, 100).unwrap().0;
+        assert_eq!(retained.len(), 1);
+        assert_eq!(retained[0].document, original[0].document);
+        assert_eq!(retained[0].sequence, original[0].sequence);
+        assert_eq!(log.history_state(), "configured");
+        assert!(log.ensure_write_available().is_ok());
+        guard.record_cleanup(false).unwrap();
+        let (entries, more) = log.history_page(0, 100).unwrap();
+        assert!(!more);
+        assert_eq!(entries.len(), 1);
+        let value = serde_json::to_value(&entries[0]).unwrap();
+        assert_eq!(value["state"], "failed");
+        assert_eq!(value["writeEvidence"]["backupRecorded"], false);
+        assert_eq!(value["writeEvidence"]["sendPossible"], false);
+        assert_eq!(value["downloadEvidence"]["written"], "no");
+        assert_eq!(
+            value["downloadEvidence"]["restart"],
+            serde_json::Value::Null
+        );
+        assert_eq!(value["downloadEvidence"]["cleanup"], "returnedError");
+    }
+
+    #[test]
+    fn download_without_evidence_is_refused_before_history_creation() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(path.clone(), "synthetic".into()));
+
+        let result = log.start_write("deviceDownload", Some("1.1.1".into()));
+
+        assert!(
+            result.is_err(),
+            "download without lifecycle evidence accepted"
+        );
+        assert_eq!(log.history_state(), "unavailable");
+        assert!(log.ensure_write_available().is_err());
+        assert!(!path.exists());
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn invalid_download_receipts_are_refused_without_overwriting_or_partial_history() {
+        use serde_json::{json, Value};
+
+        let valid = json!({
+            "id": 1, "kind": "deviceDownload", "address": "1.1.1",
+            "state": "finished", "startedAt": "2026-10-01T00:00:00Z",
+            "finishedAt": "2026-10-01T00:00:01Z",
+            "writeEvidence": {"backupRecorded": true, "sendPossible": true},
+            "downloadEvidence": {"sessionId": 9, "written": "yes",
+                "restart": "acknowledged", "cleanup": "returnedOk"}
+        });
+        let mut cases: Vec<(&str, Value)> = Vec::new();
+        for (name, pointer, replacement) in [
+            ("missing-download", "/downloadEvidence", Value::Null),
+            ("missing-write", "/writeEvidence", Value::Null),
+            ("zero-session", "/downloadEvidence/sessionId", json!(0)),
+            ("negative-session", "/downloadEvidence/sessionId", json!(-1)),
+            ("string-session", "/downloadEvidence/sessionId", json!("9")),
+            (
+                "unknown-written",
+                "/downloadEvidence/written",
+                json!("unsupported"),
+            ),
+            (
+                "unknown-restart",
+                "/downloadEvidence/restart",
+                json!("unsupported"),
+            ),
+            (
+                "unknown-cleanup",
+                "/downloadEvidence/cleanup",
+                json!("unsupported"),
+            ),
+            ("null-cleanup", "/downloadEvidence/cleanup", Value::Null),
+            (
+                "missing-written-result",
+                "/downloadEvidence/written",
+                Value::Null,
+            ),
+            (
+                "missing-restart-result",
+                "/downloadEvidence/restart",
+                Value::Null,
+            ),
+            (
+                "send-without-backup",
+                "/writeEvidence/backupRecorded",
+                json!(false),
+            ),
+            (
+                "write-without-intent",
+                "/writeEvidence/sendPossible",
+                json!(false),
+            ),
+        ] {
+            let mut document = valid.clone();
+            *document.pointer_mut(pointer).unwrap() = replacement;
+            cases.push((name, document));
+        }
+        for (name, field) in [
+            ("unknown-download-field", "downloadEvidence"),
+            ("unknown-write-field", "writeEvidence"),
+        ] {
+            let mut document = valid.clone();
+            document[field]["futureField"] = json!(true);
+            cases.push((name, document));
+        }
+        for (name, field) in [
+            ("absent-session", "sessionId"),
+            ("absent-cleanup", "cleanup"),
+        ] {
+            let mut document = valid.clone();
+            document["downloadEvidence"]
+                .as_object_mut()
+                .unwrap()
+                .remove(field);
+            cases.push((name, document));
+        }
+        let mut running = valid.clone();
+        running["state"] = json!("running");
+        running["finishedAt"] = Value::Null;
+        running["downloadEvidence"]["written"] = Value::Null;
+        running["downloadEvidence"]["restart"] = Value::Null;
+        running["downloadEvidence"]["cleanup"] = json!("pending");
+        for (name, field, replacement) in [
+            ("running-written", "written", json!("no")),
+            ("running-restart", "restart", json!("notInPlan")),
+            ("running-cleanup", "cleanup", json!("unknown")),
+        ] {
+            let mut document = running.clone();
+            document["downloadEvidence"][field] = replacement;
+            cases.push((name, document));
+        }
+        let mut failed = valid.clone();
+        failed["state"] = json!("failed");
+        cases.push(("failed-with-restart", failed));
+        let mut unknown = valid.clone();
+        unknown["state"] = json!("unknown");
+        unknown["downloadEvidence"]["written"] = Value::Null;
+        unknown["downloadEvidence"]["restart"] = Value::Null;
+        unknown["downloadEvidence"]["cleanup"] = json!("unknown");
+        for (name, field, replacement) in [
+            ("unknown-written-result", "written", json!("no")),
+            ("unknown-restart-result", "restart", json!("notInPlan")),
+            ("unknown-cleanup-success", "cleanup", json!("returnedOk")),
+        ] {
+            let mut document = unknown.clone();
+            document["downloadEvidence"][field] = replacement;
+            cases.push((name, document));
+        }
+        let mut non_download = valid.clone();
+        non_download["kind"] = json!("deviceCompare");
+        non_download
+            .as_object_mut()
+            .unwrap()
+            .remove("writeEvidence");
+        cases.push(("download-evidence-on-read", non_download));
+
+        for (name, mut malformed) in cases {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("activity.sqlite");
+            let log = Arc::new(OneShotLog::persistent(path.clone(), "synthetic".into()));
+            let history = knx_store::activity_history::ActivityHistory::open(&path).unwrap();
+            history.record("synthetic", 1, &valid.to_string()).unwrap();
+            assert_eq!(log.history_page(0, 100).unwrap().0.len(), 1);
+            malformed["id"] = json!(2);
+            history
+                .record("synthetic", 2, &malformed.to_string())
+                .unwrap();
+            let before = std::fs::read(&path).unwrap();
+            let original = history.page(0, 100).unwrap().0;
+
+            assert!(
+                log.history_page(0, 100).is_err(),
+                "invalid download receipt was rendered: {name}"
+            );
+            assert_eq!(log.history_state(), "unavailable");
+            assert!(log.start_download(10, "1.1.1".parse().unwrap()).is_err());
+            assert!(std::fs::read(&path).unwrap() == before);
+            let retained = history.page(0, 100).unwrap().0;
+            assert_eq!(retained.len(), 2);
+            for (before, after) in original.iter().zip(&retained) {
+                assert_eq!(before.sequence, after.sequence);
+                assert_eq!(before.incarnation, after.incarnation);
+                assert_eq!(before.operation_id, after.operation_id);
+                assert_eq!(before.document, after.document);
+            }
+            assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+        }
+    }
+
+    #[test]
+    fn download_metadata_keeps_written_restart_and_cleanup_distinct() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = OneShotLog::persistent(path.clone(), "synthetic".into());
+        let document = serde_json::json!({
+            "id": 1, "kind": "deviceDownload", "address": "1.1.1",
+            "state": "finished", "startedAt": "2026-10-01T00:00:00Z",
+            "finishedAt": "2026-10-01T00:00:01Z",
+            "writeEvidence": {"backupRecorded": true, "sendPossible": true},
+            "downloadEvidence": {"sessionId": 9, "written": "yes",
+                "restart": "unconfirmed", "cleanup": "returnedError"}
+        });
+        knx_store::activity_history::ActivityHistory::open(&path)
+            .unwrap()
+            .record("synthetic", 1, &document.to_string())
+            .unwrap();
+        let (entries, more) = log.history_page(0, 100).unwrap();
+        assert!(!more);
+        assert_eq!(entries.len(), 1);
+        let value = serde_json::to_value(&entries[0]).unwrap();
+        assert_eq!(value["kind"], "deviceDownload");
+        assert_eq!(value["state"], "finished");
+        assert_eq!(value["interrupted"], false);
+        assert_eq!(value["writeEvidence"], document["writeEvidence"]);
+        assert_eq!(value["downloadEvidence"], document["downloadEvidence"]);
+        assert!(log.snapshot_with_dropped().0.is_empty());
+    }
+
+    #[test]
+    fn previous_incarnation_pending_cleanup_is_unknown_without_erasing_device_result() {
+        for finished in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("activity.sqlite");
+            let log = OneShotLog::persistent(path.clone(), "current".into());
+            let document = serde_json::json!({
+                "id": 1, "kind": "deviceDownload", "address": "1.1.1",
+                "state": if finished { "finished" } else { "running" },
+                "startedAt": "2026-10-01T00:00:00Z",
+                "finishedAt": if finished { Some("2026-10-01T00:00:01Z") } else { None },
+                "writeEvidence": {"backupRecorded": true, "sendPossible": true},
+                "downloadEvidence": {"sessionId": 9,
+                    "written": if finished { Some("yes") } else { None },
+                    "restart": if finished { Some("unconfirmed") } else { None },
+                    "cleanup": "pending"}
+            });
+            let original = document.to_string();
+            knx_store::activity_history::ActivityHistory::open(&path)
+                .unwrap()
+                .record("previous", 1, &original)
+                .unwrap();
+            let (entries, more) = log.history_page(0, 100).unwrap();
+            assert!(!more);
+            assert_eq!(entries.len(), 1);
+            let value = serde_json::to_value(&entries[0]).unwrap();
+            assert_eq!(value["interrupted"], true);
+            assert_eq!(
+                value["state"],
+                if finished { "finished" } else { "unknown" }
+            );
+            assert_eq!(value["finishedAt"], document["finishedAt"]);
+            assert_eq!(value["writeEvidence"], document["writeEvidence"]);
+            assert_eq!(value["downloadEvidence"]["cleanup"], "unknown");
+            assert_eq!(
+                value["downloadEvidence"]["written"],
+                document["downloadEvidence"]["written"]
+            );
+            assert_eq!(
+                value["downloadEvidence"]["restart"],
+                document["downloadEvidence"]["restart"]
+            );
+            let history =
+                knx_store::activity_history::ActivityHistory::open_existing(&path).unwrap();
+            let (retained, _) = history.page(0, 100).unwrap();
+            assert_eq!(retained.len(), 1);
+            assert_eq!(retained[0].document, original);
+        }
+    }
 
     #[test]
     fn invalid_persisted_metadata_is_refused_not_rendered() {

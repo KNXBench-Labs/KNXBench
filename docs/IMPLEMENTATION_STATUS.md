@@ -30,6 +30,233 @@ implicitly shared with the scheme scanner. Candidate separates them and keeps
 their original64MiB/262144 values, including retained-source preflight. Failed
 logs/inputs are preserved; corrected real-source and integrated gates now pass.
 
+## Commissioning lifecycle candidate: offline closure — 2026-10-04
+
+The local SAFE-03/AUDIT-01 candidate on `iaw-commission-download-lifecycle`
+passed125 distinct registered tests/0 failed/0 ignored on the current declared
+source32/HEAD: full Store94 (History13 included), OneShot18 (one25-case malformed
+download matrix included), ten actual offline worker leaves and three public
+history API leaves. All16 stages used actual outer-alpha/workspace leases;
+worker/history API rebuilds and all-target server/store Clippy passed. The
+ten workers retain the original unchanged input commitment, no skip and no raw
+private output. The source32 scope is explicit, not every repository file;
+reviewed Rust diffs and owned-path inventory are checked separately.
+
+Five actual production-source controls compiled and failed at their intended
+semantic assertions: repeated result, late intent, swallowed migration COMMIT
+error, admitted unknown download fields, admitted zero session. Originals were
+restored byte-for-byte in finally under the actual leases; the canonical public
+Store94/OneShot18 bookend112 passed and is not added to the final-chain total.
+The newly added matrix is test-only: malformed second rows refuse the whole
+page without overwriting, latch unavailable and prevent a fresh download;
+bytes/rows/identity/cursor/sidecar absence are checked after refusal.
+
+This is scoped local offline closure, not integrated delivery or complete
+SAFE-03/AUDIT-01. The established four-kind coverage declaration remains partial;
+the bounded local download candidate does not erase its broader residue.
+ADR-0067 remains Proposed. Review is in-session, not independent whole-goal
+approval. Hardware/vendor/ETS compatibility, power-loss/crash restoration,
+wider commissioning journalling, integrated acceptance and publication are not
+claimed. Earlier sections below retain their historical source-scoped counts.
+See `COMMISSIONING_ACTIVITY_HISTORY.md` and `KNOWN_LIMITATIONS.md`.
+
+## Commissioning lifecycle storage candidate — 2026-10-03 08:14 CEST
+
+SAFE-03/AUDIT-01 continues offline on `iaw-commission-download-lifecycle`.
+Known history format1 is admitted read-only first and upgraded transactionally
+to2, preserving opaque documents, identity keys, cursor gaps and AUTOINCREMENT.
+SQLite EXTRA synchronization is configured after admission, before transactions;
+this is storage policy, not universal power-loss or hardware recovery evidence.
+The exact current storage source passed **91/0/0** library tests, including
+nonempty old-schema retention, busy-write migration failure, foreign-schema
+refusal through both openers, hot-journal and WAL preservation.
+
+Proposed ADR0066 and the manual contract record this local candidate. The queued
+metadata regression subsequently compiled and failed on the expected missing
+reader support; its minimal parser passed13 focused tests. A second compiled
+RED exposed prior-incarnation pending cleanup remaining falsely pending. The
+corrected reader passed14/0/0, preserves witnessed device/restart results and
+original stored documents while projecting interrupted cleanup as unknown.
+The separate publisher RED compiled and failed on accepting missing download
+evidence. That publisher snapshot passed the complete focused metadata/OneShotLog
+group15/0/0 with an actual server rebuild before the subsequent caller changes. Existing
+history HTTP admission/version/empty/refusal regressions pass3/0/0; this does
+not test nonempty download serialization or worker receipts.
+The initial actual caller tracer bullet compiled its expected missing-start RED,
+then passed one selected offline HTTP simulator test with a server rebuild,
+both shared leases and two unchanged original inputs. Its start row is durable
+before fake tunnel acquisition, outside the volatile one-shot ring. This is
+not complete worker journalling. Unproved intent/result/cleanup hooks were
+removed before the next test-first terminal slice; the candidate currently
+retained minimum start ownership and conservative drop before the next RED.
+The nonempty joined-worker HTTP receipt regression subsequently compiled and
+failed on the expected missing terminal record (0/1/0,15 filtered). Only then
+were intent/result/cleanup hooks added in two production paths; test and
+collector were unchanged; actual terminal GREEN now passes one selected offline
+simulator HTTP test with a real server rebuild, both leases and unchanged inputs.
+This is happy-path worker/receipt evidence only. Subsequent scoped regressions
+passed OneShotLog15/0/0, worker8/0/0 and start-before-contact1/0/0 on that source.
+A terminal-replacement preservation probe subsequently compiled and failed as
+expected: a second result could overwrite the first. The minimum prior-state
+guard now refuses before mutation without marking storage unavailable; its
+complete OneShotLog GREEN passes16/0/0 and new-source terminal HTTP regression
+passes1/0/0 with actual server rebuilds, both leases and unchanged private inputs.
+The late-intent-after-terminal sibling probe compiled and failed on reopening
+possible-send evidence after a failed/no outcome. Only afterward a prior-state
+refusal was added before intent mutation/persistence; its complete OneShotLog,
+worker and selected terminal HTTP GREEN/regressions passed17/0/0,8/0/0 and1/0/0
+on that candidate, with exact source manifests and unchanged private inputs.
+A test-only actual keeper/worker admission-refusal probe follows: synthetic
+sidecar after durable start, retained backup, zero device-changing sends, cleanup,
+unchanged metadata DB/marker and refusal of further starts. Its actual run is
+not yet behaviorally measured: first attempt failed instrumentation compilation
+before running tests. A missed second simulator constructor was corrected;
+compiler-only check then separate fault/positive retries remain pending.
+Production paths unchanged; no authentic WAL/crash/power-loss claim.
+The next compiler-only stage passed; its named runtime probe failed because the
+fixture installed only a synthetic marker with a still-admitted rollback header.
+That rejected premise is retained separately; it does not establish keeper failure.
+Corrected test-owned header2/2 plus marker now defines the intended refusal, with
+post-injection bytes as preservation baseline. Actual corrected runtime pending;
+rollback-header orphan-sidecar policy remains unresolved separate coverage.
+Corrected actual runtime and positive default-disabled-control terminal test now
+each passed1/0/0 with exact retained named outcomes, compiler-only fresh target,
+both lease pairs and32 captured source/build-input paths. This proves the narrow
+simulated admission-refusal keeper/cleanup behavior, not real WAL/crash/recovery.
+Public synthetic orphan-sidecar refusal test actually compiled and failed on
+admitting the first marker. Only afterward a minimum no-follow presence refusal
+was added before sentinel/SQLite opening; whole-source delta verified. Complete
+history/OneShotLog and actual-worker GREEN/regressions passed11/0/0,17/0/0 and
+two named1/0/0 on the guard candidate, including24 regular-marker combinations
+in one storage leaf. Next test-only Unix directory/live-link/dangling-link
+coverage completed18 combinations; its actual12-leaf history run passed12/0/0
+on its own32-path snapshot. The next test-only actual keeper backup-save-failure
+scope must prove no device-changing sends, no false retained-backup/intent claim,
+cleanup and a durable failed/no row. Its compiler passed, named runtime failed
+without a retained public assertion location; failure evidence is preserved.
+Diagnostic-only23 closed keys locate wrong test enum expectation:available instead
+of actual configured. Preceding no-write/no-backup/cleanup checks passed; only test
+literal corrected, production unchanged. Corrected full case and positive-worker
+regression passed1/0/0 each after an actual rebuild on their own frozen32-path
+snapshot, dual leases/originals unchanged/raw discarded. The test-owned backup
+directory blocker proves zero mutations/no retained backup, failed/no worker,
+one cleanup and successful history query with actual durable failed/no/backup=false/
+intent=false/cleanup row. Configured alone is not health proof; not all keeper faults.
+Metadata-error/path-race/remaining lifecycle fault and full release gates remain
+open; no authentic WAL/crash/hardware or universal restoration claim.
+Next scoped evidence captures exact selected public test/outcome before discarding
+private raw output and freezes Cargo manifests/lock/config presence as well.
+Earlier private receipts retain their narrower exact-command/result-block scope;
+they are not retroactively named-execution or omitted-build-input proof.
+The Proposed lifecycle decision is now ADR-0067; upstream ADR-0066 is another
+owner's accepted decision and is not replaced by this package.
+Intent/terminal/fault acceptance,
+mutations, review and full integrated acceptance/publication remain **PENDING**.
+Next test-only actual-worker cleanup returned-error/panic cases require persisted
+result before disconnect, retained backup and stable witnessed result/timestamp/
+identity/sequence independently of cleanup metadata. Default-disabled local probes,
+exact named private scopes and closed diagnostic controls prepared; actual compiler/
+runtime/default-control results pending, production unchanged. First compiler
+passed but returned-error test failed on a fixture row/API projection mismatch:
+sequence/incarnation were omitted from the captured document. Negative evidence
+preserved; test snapshot corrected from actual row fields, comparisons retained,
+corrected error/panic/default scopes passed1/0/0 each after actual rebuild on
+their own frozen32-path snapshot/every dual lease/originals unchanged/raw discarded.
+Actual worker results/backup/timestamp/identity/sequence survive adapter returned
+error or panic; cleanup separately returnedError/unknown, reservation released,
+one adapter cleanup and no history-query bus contact. Production unchanged,
+initial fixture failure retained; storage-recording refusal/abort faults still open.
+Next test-only cleanup-recording refusal injects synthetic unsupported header after
+persisted device result, then returns adapter OK. New case requires preserved
+worker result/backup, unavailable history/refused subsequent start before contact,
+preserved injected baseline/no sidecars. Compiler/new case/error/panic/default
+regressions passed1/0/0 each (4 actual leaves) after rebuild/frozen32/every dual lease/
+originals unchanged/raw discarded on new source. Device result/backup preserved,
+history unavailable/new write503 before contact/refused bytes exact/no sidecars;
+production unchanged. Pending-cleanup interruption/terminal storage/midwrite faults
+and broader gates remain open; no protocol or real-WAL/crash/restoration claim.
+Next synchronous actual-worker pending-cleanup shutdown test is prepared with a
+default-disabled adapter hold/Notify signal and fully owned current-thread runtime,
+then separate observer. Result/backup/identity/timestamp preservation and unknown
+cleanup/released reservation now passed1/0/0, alongside storage/error/panic/default
+1/0/0 each (5 leaves) after actual rebuild on own frozen32/every dual lease/originals
+unchanged/raw discarded. Real spawned worker yielded in adapter cleanup, full
+runtime drop before observer; backup/result/timestamp/identity preserved, cleanup
+unknown/reservation released/no extra frames. No public cancel API or crash proof;
+terminal-recording refusal/midwrite interruption/mutants/full gates remain open.
+Actual terminal-recording refusal test is now prepared: consumed synthetic metadata
+fault after simulated Restart send, durable running intent before fault, actual
+worker result/backup preserved/unavailable history/new-start refusal before contact/
+refused bytes no sidecars. Compiler/new case and shutdown/cleanup-storage/error/
+panic/default each1/0/0, Store12/0/0 and OneShot17/0/0 passed after actual integration
+rebuild:35 leaves on own frozen32/every dual lease/originals unchanged/raw absent.
+Actual terminal recorder refuses after restart, durable running intent observed
+first; worker result/backup retained, history unavailable/new-start503 before contact/
+refused bytes unchanged/no sidecars. Production unchanged, no protocol change or
+claim that unavailable terminal receipt was persisted. Midwrite interruption,
+negative mutants/version-fault closure/review/full integrated delivery remain open.
+Midwrite interruption actual-worker regression is prepared with default-disabled
+send-future hold after simulated MemoryWrite/durable running intent and full owned
+runtime shutdown. It requires backup/intent retained, live failed/partially versus
+unknown nullable durable extent/restart, cleanup unknown/zero adapter-return claims,
+same identity and no added frames/retry/restore. Compiler/new case/six private
+controls each1/0/0/public Store12/0/0/OneShot17/0/0 passed after actual integration
+rebuild:36 leaves on own frozen32/every dual lease/originals unchanged/raw absent.
+Actual dropped worker retains backup/intent, live failed/partially versus durable
+unknown/null written/restart/unknown cleanup/same identity; zero adapter-return
+claim and no added frames. Production unchanged by test-only extensions, no hard
+kill/power-loss/rollback/restoration proof. All-target server/store Clippy next;
+negative source mutants/version-fault closure/full review/integrated delivery open.
+All-target server/store Clippy returned101 on two capability-heavy eight-argument
+constructor/worker signatures. Only scoped too_many_arguments annotations/reason
+comments added (all executable statement bytes exactly unchanged); no broad lint
+disable or parameter-bag abstraction. Failed lint receipt preserved; new all-target
+Clippy/compiler/seven worker/Store/OneShot regressions PENDING on frozen source.
+Next lint attempt returned101/await_holding_lock in the header-refusal fixture;
+later ten phases did not start. Existing explicit drop already preceded awaits;
+the synchronous snapshot assertion now has lexical lock scope, all checks retained
+and no lint suppression/production change. New all-target Clippy/compiler/eight
+worker controls (including owning header-refusal case)/Store/OneShot PENDING.
+That complete corrected source passed all-target server/store Clippy and actual
+integration rebuild, eight real-worker cases plus Store12/OneShot17:37/0/0 on
+frozen32/every dual lease/unchanged originals/raw absent. Both earlier lint failures
+remain separate negative evidence, no full SAFE03 close. Next public synthetic
+legacy-upgrade reader-blocked finalization test adds actual dirty-journal witness,
+main/version/row/counter preservation and explicit-reader-release retry; production
+unchanged. New compiler/focused/all-target lint/Store/OneShot results PENDING.
+New case now passed with actual dirty-journal witness; compile0/all-target Clippy0,
+Store13/OneShot17:30 distinct public tests0 failed, separately executed focused leaf
+included rather than double counted. Exact frozen32/every dual lease/current source;
+no historical private-worker borrowing. Three production-source negative guard/
+commit-error controls planned, not executed; full SAFE03 close still pending.
+All three controls now compiled and failed at the intended exact named public
+semantic assertion. Original production bytes restored in finally under actual
+dual leases; canonical Store13/OneShot17 bookend30/0/0. Fresh complete current-
+source twelve-phase lint/build/eight-worker/public-suite chain PENDING, expected
+38 distinct tests; no historical borrowing or full SAFE03/parent close.
+That restored current-source chain passed actual all-target lint/integration build,
+eight privacy-closed actual workers plus Store13/OneShot17:38 distinct/0 failed/
+0 ignored, all32/chain/every dual lease/unchanged originals/raw absent. Three
+public production controls killed/restored on same source. Complete branch review
+and actual three-case public HTTP history version projection gate still pending;
+PARTIAL_BACKEND, no integrated delivery/hardware/power-loss/full SAFE03 claim.
+Three actual public HTTP history API cases now passed3/0/0 after actual build:
+format2/partial/persistent/no path, bounds before creation, foreign/future3
+unchanged. Same exact source32 current total41 distinct/0 failed/0 ignored.
+Two additional current-source start-before-contact/backup-save-failure worker
+scopes pending; full branch review/closure/integrated delivery still pending.
+Those two actual selected workers now passed1/0/0 each with identical source32,
+every actual lease/same unchanged original commitment/no raw retained. Current
+43 distinct/0 failed/0 ignored accepted 2026-10-04, no historical borrowing.
+Wider storage-library public unit gate/full review/closure/delivery pending.
+No complete recovery, Web adoption, hardware/vendor/ETS or release claim.
+
+Fresh upstream `c07e6403` changed only owner statistics and was fast-forwarded
+into this owned checkout; no owned source overlap or ADR-number collision.
+Later fresh upstream `5ca570a0` includes productdb scalar-copy admission and
+its ADR0065; own unpublished lifecycle ADR was renumbered0066. No direct
+commissioning-source overlap, but eventual integration must retest planning.
+Root/statistics and the ui-theme-management/U17 Web surface remain untouched.
 ## CRT authorized integration/publication follow-up
 
 - User authorized commit/main integration/push. Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1

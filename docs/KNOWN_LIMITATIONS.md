@@ -3940,6 +3940,9 @@ a `module_def_id` or equivalent scope marker, so the server could resolve
 a bare id's scope without first evaluating the tree it belongs to. Not
 scheduled.
 
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
+
 ## 71. A project imported before store schema 6 has no module-instance ids to write with
 
 **Limitation.** `migrate_v5_to_v6` (design D38) cannot invent a
@@ -4923,6 +4926,9 @@ it reproduces first-install's own answer only when no master blob in the
 database was ever installed by more than one package; the third install
 above was constructed specifically to violate that, to make the residual
 measurable rather than asserted.
+
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
 
 ## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file
 
@@ -6635,6 +6641,9 @@ bypasses, seal the agreed ID surface and add `check-project-mutation`, or
 after the user explicitly accepts the disclosed continued deferral. Neither
 decision is inferred here; until then this entry stays open.
 
+**Alpha decision (user, 2026-10-04).** Phases 3–5 stay deferred past the Alpha. Phases 1–2 and the AR02 exhaustion refusal are the Alpha boundary.
+
+
 ## §130 A gate binary can verify a directory that no longer exists
 
 **Status.** Resolved by AR01 (2026-10-01); historical heading/anchor retained.
@@ -6758,6 +6767,9 @@ vendor payloads, would trade integrity and safety for convenience.
 concrete feature (icon display, manual links) needs a payload and brings its
 own sandboxed viewer with tests.
 
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
+
 ## §135 Package identity is recorded, not decided
 
 **Limitation.** Since PDB-11 (schema v17, ADR-0043) every element of the six
@@ -6809,6 +6821,10 @@ UI slice lets the user pick a winner per id.
 <a id="136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download"></a>
 
 <a id="136-mask-0701h-bim-m112-devices-can-receive-an-application-download--lifted-the-restart-stays-unconfirmed"></a>
+
+**Alpha decision (user, 2026-10-04).** No version/pinning policy for the Alpha: first-installed winner with every candidate disclosed is the accepted boundary.
+
+
 ## §136 `0701h` download verified once; restart remains unconfirmed
 
 The earlier claim that mask `0701h` could not be downloaded is withdrawn.

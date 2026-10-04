@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha, user decisions)
+- **Timestamp:** 2026-10-04 21:08
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** Five reserved decisions answered by the user and recorded (ledger, KNOWN_LIMITATIONS notes, AR03/AR12 state lines): `KL-129`/AR03 phases 3–5 deferred past the Alpha; `KL-135`/AR12 no pinning policy, first-winner stays; `KL-70`, `KL-88`, `KL-134` accepted as Alpha boundaries. All five → `ACCEPTED_BOUNDARY`. `WAITING_DECISION` is now only `RELEASE-04` (AR19).
+- **Pending/Next Steps:** AR03 and AR12 need no implementation for the Alpha. Remaining alpha work: AR07 (Codex) → AR09/AR10; AR06 row assignment; AR20 after U19; UI items (AR08 dialog, KL-60 diff virtualisation/search, U19–U21); then AR15–AR19.
+- **Notes for Codex oder Claude:** Docs/ledger only, no code.
+
+---
+
 - **Last Agent:** Claude (alpha AR11, CSV/report decisions)
 - **Timestamp:** 2026-10-04 21:02
 Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry

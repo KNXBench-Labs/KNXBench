@@ -841,6 +841,27 @@ native/accessibility/multicast and optional boundaries remain disclosed.
 Technical rulings for KL-70/88/134 are not silently upgraded to user release
 waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 
+**Commissioning session checkpoint — 2026-10-04 08:30 CEST:** the commissioning
+owner updates its rows here at meaningful intermediate checkpoints, not only
+after final delivery. `IN_PROGRESS` below means active owner implementation,
+not whole-feature acceptance. Keep published work, local changes and pending
+verification separate; do not change another session's rows.
+
+| Commissioning work in this session | Status | Verified intermediate result | Still required |
+| --- | --- | --- | --- |
+| Remove new hardware/power-loss/vendor/ETS validation from the completion goal; retain user warnings | ACCEPTED_BOUNDARY | Scope and user notices published in `5d0271c1`; actual-root documentation gate: 388 links / 254 Markdown files / no dead anchors | Keep absent guarantees visible; no pending operator experiment and no relaxation of runtime safety gates |
+| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Bounded download lifecycle already published in `1c5dec07`, with receipt closure `bb62ae57`; further callers inspected | Broader caller integration, offline interruption/abort/recovery contracts and actual-current-source acceptance; bounded prior evidence does not close these rows |
+| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Web reservation published in `7234dd00`; strict format-2 HTTP reader passed 6 focused tests after semantic RED; actual diagnostics-parent missing-tab RED observed | History tab, separate device/restart/cleanup evidence and EN/DE notices are local changes; post-change parent tests, typecheck/build, browser proof, integrated gates and publication remain pending |
+| `SAFE-03` / `DEBUG-01`: offline recovery-record validation | IN_PROGRESS | Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged | Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
+
+The other commissioning rows retain their existing owner dispositions pending
+their exact scoped acceptance. The complete per-ID fallback/evidence inventory
+is in [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md); this newer
+checkpoint supersedes its older statements that Web adoption has not started.
+Excluded external validation is a user-visible boundary, not a renewed request
+for unavailable hardware evidence. No Alpha release, real bus contact or new
+write permission follows from this update.
+
 | Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |
 | `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -857,9 +878,9 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-142` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-7` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-92` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `DEBUG-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `DEBUG-01` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `SAFE-03` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `DATA-01` | P1 | AR02 | DONE |
 | `KL-129` | P1 | AR03 | WAITING_DECISION |
 | `KL-106` | P1 | AR13 | TODO |
@@ -909,7 +930,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `DATA-02` | P2 | AR04 | TODO |
 | `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-87` | P2 | AR05 | DONE |
-| `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `AUDIT-01` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-82` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
@@ -960,7 +981,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-60` | P2 | AR11 | TODO |
 | `R-SEC-01` | P2 | Later / separate scope — not an alpha task | LATER |
 | `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UI-04` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `UI-04` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-20` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
 | `KL-124` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |

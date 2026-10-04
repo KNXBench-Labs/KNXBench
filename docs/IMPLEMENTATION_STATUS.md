@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA1: coupler `.0` with manufacturer evidence; KL-127 closed as known gap
+
+- MODEL-03 backend: a device whose product's hardware has `IsCoupler` true in
+  the product database may take device octet 0 on its line
+  (`Command::SetCouplerIndividualAddress`, `CouplerEvidence`,
+  `knx_productdb::query::product_hardware_is_coupler`). Line prefix and
+  uniqueness stay enforced; undo/redo round-trips. Everything else keeps the
+  existing refusal. Evidence and tests: [RESEARCH §25](RESEARCH.md#25-ua1-coupler-0-evidence-and-siteground-samples-2026-10-04).
+- The web editor half (offer `.0` for an evidenced coupler) waits for the Web
+  lock; MODEL-03 stays `IN_PROGRESS` until then.
+- KL-127: no independent `Ground` sample found; closed for the Alpha as a
+  known gap on the user's instruction.
+
 ## 2026-10-04 — Commissioning validation scope and requested continuation
 
 - User removed new real-hardware, power-loss, vendor and ETS validation from

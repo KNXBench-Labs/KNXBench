@@ -6691,6 +6691,58 @@ above did, but grant no write authorization. No access key may be guessed.
 
 ---
 
+## 25. UA1: coupler `.0` evidence and Site/Ground samples (2026-10-04)
+
+Research for the alpha rows MODEL-03 and KL-127 (`goal-ui.md` §3b).
+
+**Coupler discriminator — found.** **[D]** The KNX Association's offline
+project check (§U2 above) accepts a device octet 0 for a device whose
+`IsCoupler` is true and rejects it for every other device. **[V]** That flag
+is manufacturer data: `Hardware/@IsCoupler` in a product's `Hardware.xml`.
+The product database already stores it (`hardware.is_coupler`, written by
+`knx-productdb/src/parse/hardware.rs`; `true`/`1` → 1, `false`/`0` → 0,
+absent → NULL). **[V]** Private corpus census, 2026-10-04: 103 `.knxprod`
+packages carry 308 `Hardware` elements; 8 have `IsCoupler="true"` and all 8
+are line couplers, RF line couplers or IP routers by name; 2 say `"0"`; 298
+omit the attribute. **[A]** The schema default for the omitted attribute is
+taken as false, which is also the safe reading: only an explicit true is
+evidence. A project device reaches its hardware through
+`DeviceInstance/@ProductRefId` → `product.hardware_id`.
+
+**[V] Implemented (backend).** `Command::SetCouplerIndividualAddress` takes a
+`CouplerEvidence { product_ref }` and accepts device octet 0 on the device's
+own line; the line prefix and global uniqueness checks stay unchanged, and
+the command refuses evidence that names a different product than the
+device's. The server builds it only when
+`knx_productdb::query::product_hardware_is_coupler` returns `Some(true)`;
+without a database, without an installed product or for a non-coupler, the
+plain command keeps refusing a new `.0`. Undo restores the previous address;
+redo re-applies the coupler command, because the plain one would refuse the
+zero. Tests: `apps/knx-server/tests/coupler_address.rs` (runtime RED before
+the change: both coupler cases refused with the classification error), the
+two `coupler_evidence_*` core tests and `hardware_coupler_flag_is_evidence_only_when_true`.
+Six mutants (evidence product check, redo evidence, line prefix, duplicate
+check, NULL-as-coupler, server flag check) all fail a named assertion.
+
+**Not established.** Whether a coupler **must** sit at `.0` is not enforced:
+KNXBench only lifts the refusal. Area couplers (`x.0.0`) follow the same rule
+through their main line's prefix; no area-coupler sample exists. Devices
+whose product is not installed in the product database stay refused, even if
+the project archive's own `M-xxxx/Hardware.xml` says `IsCoupler` — the
+importer does not keep that flag. The web editor still accepts only 1–255;
+its UI half needs the Web lock.
+
+**Site/Ground sample — not found.** **[V]** None of the three corpus projects
+has a `Ground` or `Site` space, a second root space or a second installation
+(as ADR-0038 E3 already recorded). **[V]** Eight public xknxproject test
+fixtures (GPL-2.0, downloaded to private scratch only, not committed) were
+checked: the six readable ones use only `Building`, `Floor` and `Room`
+spaces and one installation each; two are password protected and were not
+opened. **[A]** No independent ETS `Ground` export is available, so KL-127
+stays a known evidence gap and is closed for the Alpha on the user's
+instruction. Installation renaming and editing beyond the first installation
+are MODEL-01's work, not KL-127's.
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)
@@ -6704,3 +6756,4 @@ above did, but grant no write authorization. No access key may be guessed.
 * [File formats used during registration/certification – KNX Association](https://support.knx.org/hc/en-us/articles/4659247971346-File-formats-used-during-registration-certification)
 * [ISO 22510:2019 — KNXnet/IP communication](https://www.iso.org/standard/73364.html)
 * [thelsing/CreateKnxProd](https://github.com/thelsing/CreateKnxProd)
+* [XKNX/xknxproject test resources](https://github.com/XKNX/xknxproject/tree/main/test/resources) (GPL-2.0; inspected, not copied)

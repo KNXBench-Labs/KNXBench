@@ -178,8 +178,11 @@ select controls, not a new drag gesture.
 
 A device placed in a line shows its line-derived area.line prefix and lets the
 user change only the device octet (1–255). New `.0` assignments are refused
-because the normalized device model has no verified coupler discriminator;
-imported `.0` addresses remain intact, including after undo. An imported
+unless the product database classifies the device's hardware as a coupler
+(`Hardware/@IsCoupler`, RESEARCH §25): the server then uses
+`SetCouplerIndividualAddress`. The web editor does not offer `.0` yet, and a
+device whose product is not installed stays refused. Imported `.0` addresses
+remain intact, including after undo. An imported
 address with a line prefix mismatch is shown for repair, not silently
 rewritten. Until repaired, moving that device to another line is refused; a
 move never auto-allocates an address. Unassigned devices retain the full
@@ -6401,6 +6404,12 @@ installation but the first.** Every `Command` applies to `installations[0]`
 is kept and saved but cannot be edited. ADR-0038's "separate infrastructures
 are separate installations" is therefore a representation KNXBench can hold,
 not yet a workflow it offers.
+
+**Alpha disposition (2026-10-04).** A renewed search found no `Ground`
+sample in the corpus or in eight public xknxproject fixtures (RESEARCH §25).
+On the user's instruction this stays a known gap and is closed for the Alpha
+(`KL-127` → `ACCEPTED_BOUNDARY`); it is not evidence that ETS accepts the
+ADR-0038 shape.
 
 **Lifted when.** A real ETS export containing a `Ground` root (ideally with
 several `Building` children, or several installations) is added to the

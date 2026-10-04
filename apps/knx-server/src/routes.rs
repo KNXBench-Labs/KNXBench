@@ -2569,6 +2569,11 @@ struct CreateDeviceBody {
     /// DATA-03: optional client token that makes a resend replay safely.
     #[serde(default)]
     request_id: Option<String>,
+    /// MODEL-04: opt-in, both default off.
+    #[serde(default)]
+    allocate_addresses: bool,
+    #[serde(default)]
+    unique_names: bool,
 }
 
 fn default_catalog_quantity() -> u32 {
@@ -2658,6 +2663,7 @@ struct CreatedCatalogDeviceDto {
     index: u32,
     device_id: u32,
     name: String,
+    address: Option<String>,
     diagnostics: Vec<CreationDiagnosticDto>,
 }
 
@@ -2667,6 +2673,7 @@ impl From<domain::CreatedCatalogDevice> for CreatedCatalogDeviceDto {
             index: value.index,
             device_id: value.device_id.0,
             name: value.name,
+            address: value.address.map(|a| a.to_string()),
             diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
         }
     }
@@ -2687,13 +2694,17 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_devices_with_request_impl(
+    domain::create_catalog_devices_impl(
         &state,
-        body.line_id,
-        body.catalog_item_id,
-        body.name,
-        body.quantity,
-        body.request_id,
+        domain::CatalogCreateRequest {
+            line_id: body.line_id,
+            catalog_item_id: body.catalog_item_id,
+            name: body.name,
+            quantity: body.quantity,
+            request_id: body.request_id,
+            allocate_addresses: body.allocate_addresses,
+            unique_names: body.unique_names,
+        },
     )
     .map(CreateDeviceResponseDto::from)
     .map(Json)

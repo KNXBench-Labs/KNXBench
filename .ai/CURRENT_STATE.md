@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 12:25
+- **Completed:** UA3 server half (MODEL-04): opt-in `allocateAddresses` (needs `lineId`) and `uniqueNames` on `POST /api/devices`; new pure `knx_core::free_line_addresses` (octets 1–255, skips 0/used/excluded, refuses ambiguous line or short supply); allocation is part of the same undoable batch and re-validated by the core; items carry `address`; flags are in the replay fingerprint. RED 1/4 → GREEN 4/4, 8 mutants caught (one survivor fixed by a two-area test), full gates green (156 blocks / 3,055 passed / 0 failed / 176 ignored). Log `.ai/logs/2026-10-04_claude_ui-ua3-allocation.md`.
+- **Pending/Next Steps:** UA4 MODEL-01 core/server: owner-installation resolution for the ~40 first-installation command sites, explicit installation for root creates, installation rename. Then UA5 MODEL-02. Web halves wait for the Web lock.
+- **Notes for Codex oder Claude:** `create_devices_with_request_impl` is replaced by `create_catalog_devices_impl(state, CatalogCreateRequest)`. Web lock still with codex-commission-continuation.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 11:40
 - **Completed:** UA2 server half (DATA-03): optional `requestId` on `POST /api/devices` with an in-memory, bounded, per-project replay ledger (`apps/knx-server/src/catalog_requests.rs`, ADR-0069). Identical resend → `replayed: true`, no second batch; same ID/other content refused; failed requests not recorded; cleared on project replacement. RED 0/6 → GREEN 6/6, 5/5 mutants caught, full gates green (155 blocks / 3,045 passed / 0 failed / 176 ignored). KNOWN_LIMITATIONS U11 batch scope, IMPLEMENTATION_STATUS, ledger/goal-ui updated. Log `.ai/logs/2026-10-04_claude_ui-ua2-catalog-replay.md`.
 - **Pending/Next Steps:** UA3 MODEL-04 backend (opt-in address allocation + unique names), then UA4 MODEL-01, UA5 MODEL-02. Web halves (MODEL-03 `.0` editor, DATA-03 client retry, allocation/unique-name toggles, UX-01) wait for the Web lock.

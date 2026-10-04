@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA3: opt-in address allocation and unique names (MODEL-04, server half)
+
+- `POST /api/devices` accepts `allocateAddresses` (needs `lineId`) and
+  `uniqueNames`, both default off. Allocation uses the new pure
+  `knx_core::free_line_addresses` (lowest free octet 1–255, skips 0, every
+  project address and the exclusion list; refuses ambiguous lines and short
+  supply) and adds one `SetIndividualAddress` per device to the same batch, so
+  the core validates every address and one undo removes everything. Items carry
+  their `address`. Both flags are part of the DATA-03 replay fingerprint.
+- Tests: `apps/knx-server/tests/catalog_allocation.rs` (RED 1/4 → GREEN 4/4),
+  `allocation::tests` (5), `allocated_batches_map_both_children_of_an_item_to_that_item`.
+  Eight guard mutants caught (one survivor found a missing two-area test, added).
+- The web catalog toggles wait for the Web lock; MODEL-04 stays `IN_PROGRESS`.
+
 ## 2026-10-04 — UA2: catalog batch replay token (DATA-03, server half)
 
 - `POST /api/devices` accepts an optional `requestId`; a committed ID with

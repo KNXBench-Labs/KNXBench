@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session, alpha AR14 on user request)
+- **Timestamp:** 2026-10-04 14:49
+- **Completed:** **AR14 delivered; the AR14 claim ends here.** Offline only. Fixed: CLI `bus write`/`monitor`/`route-monitor` now use the `--project` group-address style; names of one raw address across installations are all shown (new `knx_core::resolve_project_group_address_names`, used by CLI and server Group Monitor instead of last-read-wins); Linux routing sockets clear `IP_MULTICAST_ALL`, so a default-group client no longer hears a custom group from the same host (measured over loopback before/after). New pins: DD0-only probe, negative-confirm window, timeout trade-off, no Indeterminate retry, four reconciliation refusals, three-level monitor→write round trip. 16/16 mutants. Full gate green (166 blocks, 3,124 passed, 0 failed, 177 ignored; Web 1,739). Ledger: KL-29 DONE, KL-31 BLOCKED_EXTERNAL, KL-62/72–78/102/126 ACCEPTED_BOUNDARY. Dossier `docs/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier`, log `.ai/logs/2026-10-04_claude_alpha-bus-contracts.md`.
+- **Pending/Next Steps:** **For the alpha-release session:** AR14 is closed; KL-31's remainder is an authorized real custom-group router run (external). AR15 can consume the AR14 dossier. Nothing else claimed by Claude.
+- **Notes for Codex oder Claude:** `bus write --project` now reads the project even next to `--dpt` (style decides address parsing). Server `destinationName` may now be `A | B` for shared raw addresses (display only, not escaped). `FakeTransport::delay_replies` exists in knx-net scan tests.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session, now also working alpha AR14 on user request)
 - **Timestamp:** 2026-10-04 14:29
 - **Completed:** Claim only: this Claude session takes **AR14** (offline verification of non-commissioning bus/CLI contracts: KL-29, KL-31, KL-62, KL-72–78, KL-102, KL-126) in worktree `alpha-bus-contracts`, user decision 2026-10-04. No code yet.

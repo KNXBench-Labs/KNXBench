@@ -123,6 +123,20 @@ Design plan:
   keyboard-reachable controls and evidence disclosures. No continuous flicker,
   glitch loop, artificial blur, fake monitor bezel, or mandatory boot sequence.
   Reduced motion must preserve immediate understanding and access.
+- **Motion update (user decision, 2026-10-04):** the user asked for more life.
+  Three changes:
+  - Scrolling back now retracts the later steps (growth in reverse), and the
+    current chapter pulses once.
+  - Each visible connection carries a looping signal pulse, travelling from
+    start to end like a telegram on the bus.
+  - Random headline letters roll through in place, one or two every few
+    seconds (inspired by the letter swap on eszterbial.com, own
+    implementation).
+
+  These ambient loops are calm travelling light, not flicker or glitch. They
+  pause off screen, and they stop entirely with *Motion off* or the OS
+  reduced-motion preference. Headings keep their text as their accessible
+  name.
 
 Self-review: a green monochrome terminal would undermine the broad readership;
 uniform rounded cards would undermine the genealogy. Retain the dark phosphor

@@ -10,9 +10,9 @@
   hashes and current CLI verified. Same-root accepted cache/native120
   unchanged, no fresh-target claim or private/hardware test passes.
 - [PRODUCT_ZIP_COUNT_CONTRACTS](PRODUCT_ZIP_COUNT_CONTRACTS.md) retains original
-  failures, exact checkpoint identities and bounds. Incoming2231d87c changes
-  Markdown only; final doc audits/publication pending. Ledger status stays
-  unresolved for byte/caller/resource policy; no whole Alpha acceptance.
+  failures, exact checkpoint identities and bounds. Source-identical owner
+  documentation adopted; final docs6 passed and main5adccdb0/source806 readback
+  verified. Ledger resource policy remains unresolved; no whole Alpha acceptance.
 
 ## 2026-10-04 — Telegram-flow nervous-system Alpha scope approved (planning only)
 

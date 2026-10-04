@@ -283,3 +283,15 @@ publication ancestor check refused because3369dd1a updated only CURRENT_STATE
 and goal-ui. Original six command/log results retained; not a product failure.
 Full owner3369dd1a handover preserved byte-exact, source/CLI6c3080d9 unchanged.
 Final docs6/fast-forward/readback and own-only cleanup next, no policy closure.
+
+## Verified source publication and scoped hygiene
+
+main5adccdb0 exact ls-remote/fetch and806 remote source hashes/native fixture
+bytes verified. Actual source6c3080d9 all16 accepted, subsequent metadata only.
+51 declared own scratch paths removed after permanent predecessor/current-code/
+final-doc/log/publication archives verified; foreign paths untouched. Only the
+accepted root-bound final-audit cache temporarily retained for shutdown docs6.
+Short owned av6 removed after marker/no-active-user verification. No native
+byte/caller/resource/streaming or whole Alpha closure; ledger stays IN_PROGRESS.
+Last audit target/worktree retirement verified by archived final-cleanup.json
+after the actual final metadata publication/readback, not a premature claim.

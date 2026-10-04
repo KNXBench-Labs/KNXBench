@@ -13,6 +13,7 @@ pub mod module_instance;
 pub mod opaque;
 pub mod parameter;
 pub mod project;
+pub mod representable;
 pub mod strings;
 pub mod topology;
 
@@ -59,6 +60,10 @@ pub enum StoreError {
         devices: Vec<knx_core::ids::DeviceId>,
         lines: Vec<knx_core::ids::LineId>,
     },
+    /// The schema cannot hold the project exactly (duplicate ids, an
+    /// orphaned line, inconsistent parent/child lists, …). Refused before
+    /// any write instead of reopening different (ADR-0074).
+    Unrepresentable(Vec<representable::RepresentationIssue>),
     /// The same, one level down: communication object instances owned by
     /// `Project::devices` that no `DeviceInstance::com_objects` list names.
     UnreachableComObjects(Vec<knx_core::ids::ComObjectInstanceId>),
@@ -104,6 +109,15 @@ impl fmt::Display for StoreError {
                  repair the placements first",
                 join_ids(devices),
                 join_ids(lines)
+            ),
+            StoreError::Unrepresentable(issues) => write!(
+                f,
+                "the project cannot be saved without losing data: {}",
+                issues
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("; ")
             ),
             StoreError::UnreachableComObjects(ids) => write!(
                 f,

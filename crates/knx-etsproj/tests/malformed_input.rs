@@ -672,6 +672,36 @@ fn a_duplicate_group_address_id_is_reported_and_both_entries_survive() {
     assert_eq!(out.project.installations[0].group_addresses.len(), 2);
 }
 
+/// Surviving in memory is not enough: both entries shared one internal id,
+/// so the native save kept only the last one. Each element now has its own
+/// id, and the device's `Send` to the repeated ETS id is reported as
+/// ambiguous instead of being linked to one of the two by guesswork.
+#[test]
+fn a_duplicate_group_address_id_keeps_two_internal_ids_and_does_not_guess_links() {
+    use knx_etsproj::map::MapProblemDetail;
+    let out = import_knxproj_bytes(knxproj_with_duplicate_ga_id(), "dupe.knxproj").unwrap();
+    let entries = &out.project.installations[0].group_addresses;
+    assert_eq!(entries.len(), 2);
+    assert_ne!(entries[0].id, entries[1].id, "one id per element");
+    assert_eq!(entries[0].source.ets_id, entries[1].source.ets_id);
+    let links: Vec<_> = out
+        .project
+        .devices
+        .com_objects()
+        .flat_map(|com| com.links.iter())
+        .collect();
+    assert!(links.is_empty(), "the link target is ambiguous: {links:?}");
+    assert!(out.report.errors.iter().any(|e| e.stage == "map"
+        && e.detail
+            == format!(
+                "{:?}",
+                MapProblemDetail::AmbiguousReference {
+                    kind: "GroupAddressRef",
+                    target: "P-0001-0_GA-1".into(),
+                }
+            )));
+}
+
 #[test]
 fn project_metadata_must_have_the_same_knx_root_namespace_as_topology() {
     let original = std::str::from_utf8(PROJECT_INFO).unwrap();

@@ -4,7 +4,7 @@
 //! Design: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
 //! §3 (the format).
 
-use knx_core::{DptRef, GroupAddress, GroupAddressId, Installation, Project};
+use knx_core::{DptRef, GroupAddress, GroupAddressId, Installation, InstallationId, Project};
 
 use crate::read::{CsvProblem, Severity};
 
@@ -31,6 +31,39 @@ pub struct CsvExport {
 /// project with no installation writes just the header. Never mutates
 /// `project`.
 pub fn export_group_addresses(project: &Project) -> CsvExport {
+    write_installation(project, project.installations.first())
+}
+
+/// An installation id that names no installation of the project.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnknownInstallation(pub InstallationId);
+
+impl std::fmt::Display for UnknownInstallation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "installation {} does not exist", self.0)
+    }
+}
+
+impl std::error::Error for UnknownInstallation {}
+
+/// [`export_group_addresses`] for installation `target` (MODEL-01); `None`
+/// keeps the first installation. Range names come from that installation.
+pub fn export_group_addresses_from(
+    project: &Project,
+    target: Option<InstallationId>,
+) -> Result<CsvExport, UnknownInstallation> {
+    match target {
+        None => Ok(export_group_addresses(project)),
+        Some(id) => project
+            .installations
+            .iter()
+            .find(|installation| installation.id == id)
+            .map(|installation| write_installation(project, Some(installation)))
+            .ok_or(UnknownInstallation(id)),
+    }
+}
+
+fn write_installation(project: &Project, installation: Option<&Installation>) -> CsvExport {
     let style = project.info.group_address_style;
     let mut warnings = Vec::new();
 
@@ -51,7 +84,7 @@ pub fn export_group_addresses(project: &Project) -> CsvExport {
         ])
         .expect("writing to an in-memory Vec<u8> cannot fail");
 
-    if let Some(installation) = project.installations.first() {
+    if let Some(installation) = installation {
         for (index, ga) in installation.group_addresses.iter().enumerate() {
             // 1-based, counting the header: matches what a spreadsheet
             // shows, and what `read.rs`'s `CsvRow::line`/`CsvProblem::row`

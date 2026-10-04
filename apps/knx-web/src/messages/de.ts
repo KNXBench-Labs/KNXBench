@@ -401,6 +401,8 @@ export const messages: Record<MessageKey, string> = {
   "explorer.project": "Projekt",
   "inspector.project": "Projekt",
   "inspector.groupAddressStyle": "Gruppenadress-Stil",
+  "inspector.installations": "Installationen",
+  "inspector.installationName": "Name der Installation {n}",
 
   "buildingPartKind.building": "Gebäude",
   "buildingPartKind.floor": "Etage",

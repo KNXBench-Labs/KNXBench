@@ -284,14 +284,17 @@ export function setComObjectFlag(
   });
 }
 
+// MODEL-01 / ADR-0070: `installationId` names the installation of a
+// range-less address; absent keeps the server's first-installation default.
 export function createGroupAddress(
   name: string,
   address: string,
   rangeId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/group-addresses", {
     method: "POST",
-    body: JSON.stringify({ name, address, rangeId }),
+    body: JSON.stringify({ name, address, rangeId, installationId }),
   });
 }
 
@@ -304,10 +307,11 @@ export function createGroupRange(
   start: string,
   end: string,
   parentId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/group-ranges", {
     method: "POST",
-    body: JSON.stringify({ name, start, end, parentId }),
+    body: JSON.stringify({ name, start, end, parentId, installationId }),
   });
 }
 
@@ -330,10 +334,11 @@ export function createBuildingPart(
   name: string,
   kind: string,
   parentId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/building-parts", {
     method: "POST",
-    body: JSON.stringify({ name, kind, parentId }),
+    body: JSON.stringify({ name, kind, parentId, installationId }),
   });
 }
 
@@ -391,8 +396,13 @@ export function unlinkComObject(
   });
 }
 
-export function createArea(name: string, address: number): Promise<ProjectTree> {
-  return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address }) });
+export function createArea(name: string, address: number, installationId?: number): Promise<ProjectTree> {
+  return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address, installationId }) });
+}
+
+// MODEL-01: `Command::RenameInstallation`, one undo step.
+export function renameInstallation(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/installations/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
 export function deleteArea(id: number): Promise<ProjectTree> {

@@ -5,6 +5,8 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import {
+  deviceInstallation,
+  owningInstallation,
   buildSearchIndex,
   findArea,
   findBuildingPart,
@@ -289,5 +291,64 @@ describe("findDeviceBuildingPartInFirstInstallation", () => {
 
   it("returns null when there is no first installation at all", () => {
     expect(findDeviceBuildingPartInFirstInstallation(tree([]), 9)).toBeNull();
+  });
+});
+
+// MODEL-01 / ADR-0070: the UI asks the same question as the core — which one
+// installation holds this entity — and never falls back to the first.
+describe("owningInstallation", () => {
+  const ga = { id: 30, name: "Light", address: "1/1/1", range: null, dpts: [], links: [] };
+  function twoInstallations(): ProjectTree {
+    return tree([
+      installation({ topology: [{ id: 1, name: "A", address: 1, lines: [{ id: 7, name: "L", address: 1, devices: [] }] }] }),
+      installation({
+        id: 2,
+        name: "Annex",
+        topology: [{ id: 2, name: "B", address: 2, lines: [{ id: 8, name: "M", address: 1, devices: [] }] }],
+        buildings: [building(5, "Room", "Room", [building(6, "Nook", "RoomPart")])],
+        group_ranges: [{ id: 20, name: "R", start: "1/0/0", end: "1/7/255", parent: null }],
+        group_addresses: [ga],
+      }),
+    ]);
+  }
+
+  it("finds the installation holding each kind of entity, a later one included", () => {
+    const t = twoInstallations();
+    expect(owningInstallation(t, "area", 1)?.id).toBe(0);
+    expect(owningInstallation(t, "area", 2)?.id).toBe(2);
+    expect(owningInstallation(t, "line", 8)?.id).toBe(2);
+    expect(owningInstallation(t, "building_part", 6)?.id).toBe(2);
+    expect(owningInstallation(t, "group_range", 20)?.id).toBe(2);
+    expect(owningInstallation(t, "group_address", 30)?.id).toBe(2);
+    expect(owningInstallation(t, "area", 99)).toBeUndefined();
+  });
+
+  it("never picks the first of several occurrences", () => {
+    const t = twoInstallations();
+    t.installations[1].topology.push({ id: 1, name: "Copy", address: 3, lines: [] });
+    expect(owningInstallation(t, "area", 1)).toBeUndefined();
+    t.installations[1].group_ranges.push({ id: 20, name: "Twin", start: "2/0/0", end: "2/7/255", parent: null });
+    expect(owningInstallation(t, "group_range", 20)).toBeUndefined();
+  });
+});
+
+describe("deviceInstallation", () => {
+  it("is the installation whose topology places the device, on a line or unassigned", () => {
+    const t = tree([
+      installation({ unassigned: [device(4, "Spare")] }),
+      installation({ id: 2, topology: [{ id: 2, name: "B", address: 2, lines: [
+        { id: 8, name: "M", address: 1, devices: [device(9, "Switch")] }] }] }),
+    ]);
+    expect(deviceInstallation(t, 4)?.id).toBe(0);
+    expect(deviceInstallation(t, 9)?.id).toBe(2);
+  });
+
+  it("ignores a building-only placement and refuses topology placements in two installations", () => {
+    const t = tree([
+      installation({ buildings: [building(5, "Room", "Room", [], [device(3, "Only in a room")])], unassigned: [device(9, "Twice")] }),
+      installation({ id: 2, unassigned: [device(9, "Twice")] }),
+    ]);
+    expect(deviceInstallation(t, 3)).toBeUndefined();
+    expect(deviceInstallation(t, 9)).toBeUndefined();
   });
 });

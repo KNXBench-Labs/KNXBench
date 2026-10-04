@@ -1223,18 +1223,28 @@ function ProjectInspector(props: { tree: ProjectTree; onApplied: (tree: ProjectT
         </select>
       </label>
       {error && <p className="field-error" role="alert">{error}</p>}
+      {/* MODEL-01: `Command::RenameInstallation`, one undo step each. */}
+      <h3>{t("inspector.installations")}</h3>
+      {props.tree.installations.map((installation, index) => (
+        <NameField key={installation.id} id={installation.id} name={installation.name}
+          label={t("inspector.name")} inputLabel={t("inspector.installationName", { n: index + 1 })}
+          rename={(value) => api.renameInstallation(installation.id, value)} onApplied={props.onApplied} />
+      ))}
     </div>
   );
 }
 
-function TopologyNameField(props: {
-  kind: "area" | "line";
+// A name edited in place and committed on blur/Enter; a refusal restores
+// the authoritative name and shows the server's reason.
+function NameField(props: {
   id: number;
   name: string;
+  label: string;
+  inputLabel?: string;
+  rename: (name: string) => Promise<ProjectTree>;
   onApplied: (tree: ProjectTree) => void;
 }) {
-  const { kind, id, name, onApplied } = props;
-  const t = useTranslate();
+  const { id, name, rename, onApplied } = props;
   const [value, setValue] = useState(name);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -1249,8 +1259,7 @@ function TopologyNameField(props: {
     }
     setError(null);
     try {
-      const tree = kind === "area" ? await api.renameArea(id, value) : await api.renameLine(id, value);
-      onApplied(tree);
+      onApplied(await rename(value));
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(name);
@@ -1258,11 +1267,23 @@ function TopologyNameField(props: {
   }
 
   return <label className="inspector-field">
-    {t("inspector.name")}
-    <input value={value} onChange={(e) => setValue(e.target.value)} onBlur={apply}
+    {props.label}
+    <input value={value} aria-label={props.inputLabel} onChange={(e) => setValue(e.target.value)} onBlur={apply}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
     {error && <span className="field-error">{error}</span>}
   </label>;
+}
+
+function TopologyNameField(props: {
+  kind: "area" | "line";
+  id: number;
+  name: string;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { kind, id } = props;
+  const t = useTranslate();
+  return <NameField id={id} name={props.name} label={t("inspector.name")} onApplied={props.onApplied}
+    rename={(value) => kind === "area" ? api.renameArea(id, value) : api.renameLine(id, value)} />;
 }
 
 function AreaInspector(props: {

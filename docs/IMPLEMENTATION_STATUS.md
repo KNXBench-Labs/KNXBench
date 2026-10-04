@@ -1,5 +1,43 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — MODEL-01 web half, part 1: every installation can be built and named
+
+- The Project Explorer and the structure workspace offer their create rows in
+  **every** installation, not just the first. Root creates (area, main group
+  range, root building part or site, range-less group address) send the
+  `installationId` of the installation they are typed into. A child (line,
+  middle range, nested part, address in a range) goes to its parent's
+  installation and appears only where that parent lives (ADR-0070). "Add
+  device" works on the lines of every installation. The unassigned row stays
+  in the first installation only, because the catalog route carries no
+  installation and the server puts an unassigned device there.
+- Device drag and drop works inside each installation and never between two
+  of them. The drop handler re-checks that source and target share one
+  installation, because a drop event arrives even when the target refused
+  the dragover. A device placed in two installations has no owner and cannot
+  be dragged.
+- The project node in the Inspector lists every installation with its own
+  name field (`PATCH /api/installations/{id}`, one undo step each); a
+  refused rename restores the name and shows the server's reason.
+- `treeUtils` gains `owningInstallation` and `deviceInstallations` /
+  `deviceInstallation`, which mirror the core's `owning_installation` and
+  `device_installation`: absent or ambiguous never falls back to the first
+  installation. Device ownership is computed in one linear pass per render.
+- Evidence: 17 new or changed Vitest cases written RED first, plus one guard
+  that already held before the change. Adapted to the new rule: the old
+  "only first-installation drag sources" test, and the StructureWorkspace
+  expectations that the second installation has no create rows. Full Vitest
+  1,790/100 files before the review fixes. `e2e/installations.e2e.ts` uses a
+  new fixture with the real Explorer and project Inspector to create a root
+  area in installation 2 and rename it; it fails against the previous
+  Explorer. 7 guard mutants are caught. One equivalent mutant (a redundant
+  section check on the line row) led to removing that check. `site.e2e.ts`
+  now expects the explicit `installationId` on its root create. Full gate
+  (second attempt; the first failed only on that pinned body): Rust 3,145 / 0
+  / 177, Vitest 1,790 in 100 files, Chromium 103/103. Part 2
+  (Inspector edit gates and dropdowns, bulk toolbar, CSV installation choice)
+  follows under the same Web lock.
+
 ## 2026-10-04 — AR14D D5: resolved limitation bodies to history, goal-ui status to its dossier
 
 - Five `KNOWN_LIMITATIONS` entries whose own status line says resolved (§18,

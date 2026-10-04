@@ -29,6 +29,7 @@ const apiMock = vi.hoisted(() => ({
   renameArea: vi.fn(),
   renameLine: vi.fn(),
   setGroupAddressStyle: vi.fn(),
+  renameInstallation: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -595,6 +596,38 @@ describe("Inspector — project node", () => {
     await act(async () => host!.querySelector<HTMLSelectElement>("select")!
       .dispatchEvent(new Event("change", { bubbles: true })));
     expect(apiMock.setGroupAddressStyle).not.toHaveBeenCalled();
+  });
+
+  // MODEL-01: an installation is renamed from the project node, one field
+  // per installation, through `PATCH /api/installations/{id}`.
+  it.each(["en", "de"])("renames each installation through its own field (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = twoInstallationTree();
+    const renamed = { ...tree, can_undo: true };
+    apiMock.renameInstallation.mockResolvedValueOnce(renamed);
+    const onApplied = await renderInspector({ kind: "project", id: 0 }, tree);
+    const label = language === "de" ? "Name der Installation" : "Installation name";
+    const fields = Array.from(host!.querySelectorAll<HTMLInputElement>(`input[aria-label^="${label}"]`));
+    expect(fields.map((field) => field.value)).toEqual(["Installation 1", "Installation 2"]);
+    await act(async () => {
+      setTextInputValue(fields[1], "Annex");
+      fields[1].dispatchEvent(new Event("focusout", { bubbles: true }));
+    });
+    expect(apiMock.renameInstallation).toHaveBeenCalledExactlyOnceWith(1, "Annex");
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(renamed);
+  });
+
+  it("keeps an installation's name and shows the refusal when a rename fails", async () => {
+    apiMock.renameInstallation.mockRejectedValueOnce(new Error("installation name must not be empty"));
+    const onApplied = await renderInspector({ kind: "project", id: 0 }, twoInstallationTree());
+    const field = host!.querySelectorAll<HTMLInputElement>('input[aria-label^="Installation name"]')[0];
+    await act(async () => {
+      setTextInputValue(field, "Renamed");
+      field.dispatchEvent(new Event("focusout", { bubbles: true }));
+    });
+    expect(field.value).toBe("Installation 1");
+    expect(host!.querySelector(".field-error")?.textContent).toBe("installation name must not be empty");
+    expect(onApplied).not.toHaveBeenCalled();
   });
 
   it("shows the project's current group address style", async () => {

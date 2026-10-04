@@ -146,10 +146,16 @@ command in the installation that owns the entity, and refuses ids found in
 several installations or moves that would connect two installations
 (`CommandError::CrossInstallation`). Root creates take an optional
 `installationId` (absent = first installation) and `PATCH
-/api/installations/{id}` renames an installation. The **web editor still
-offers creation only in the first installation** and has no installation
-rename control yet (Web lock); edits of existing entities in later
-installations work through the same Inspector commands. The centre cannot
+/api/installations/{id}` renames an installation. Since MODEL-01 web part 1
+(2026-10-04) the Project Explorer and the centre workspace offer creation in
+every installation: root creates name their installation, children follow
+their parent, devices move by drag and drop only inside one installation,
+and the project node renames installations. An unassigned catalog device
+still lands in the first installation, because the catalog route has no
+installation field; add it on a line of the target installation instead.
+**Until part 2, the Inspector's edit, delete, move and link controls act only
+on entities of the first installation**, as do the bulk toolbar targets and
+the group-address CSV buttons. The centre cannot
 select an orphaned line that has no projected area, although the explicit
 line-move command can attach such an imported line by ID.
 

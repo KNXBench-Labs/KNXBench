@@ -77,4 +77,3 @@ export async function openFlow(page: Page, language = "en", theme = "porcelain")
   await page.goto(`/e2e/telegram-flow-fixture.html?lang=${language}&theme=${theme}`);
   await page.getByRole("tab", { name: language === "de" ? "Fluss" : "Flow" }).click();
 }
-

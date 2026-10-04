@@ -1404,9 +1404,11 @@ project now imports end to end through the library, the application
 service, `knx import --password-stdin` and `POST /api/project/import`
 (optional `password`); see IMPORT_EXPORT.md §2 for the entry paths and
 redaction tests. Verified against a synthetic fixture only, not a real
-export. The Web UI has no password dialog yet: the server's `422`
-`projectPasswordRequired`/`projectPasswordWrong` contract is handed to the
-UI owner. Still not covered: comparing against a protected file
+export. Since 2026-10-04 the Web UI asks for the password when the import
+answers `422` `projectPasswordRequired` (or asks again on
+`projectPasswordWrong`). It retries the same import with the password in
+that request only and never stores or logs it; opening a `.knxdb` never
+asks. Cancel leaves no project and no error. Still not covered: comparing against a protected file
 (`knx diff`, `POST /api/project/diff`) and ingesting products from a
 protected project (`knx products ingest`) take no password and refuse such
 a file by name.

@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR08 Web half: the project-password dialog
+
+- Importing a ZipCrypto-protected ETS4/ETS5 project in the Web UI no longer
+  ends in an error. On `422` `projectPasswordRequired` the app opens a
+  dialog naming the file. The field is masked and `autocomplete=off`, with a
+  note that the password is not stored. The app then retries **the same
+  import** with the password in that one request; on `projectPasswordWrong`
+  it asks again. Cancel ends quietly: no project, no toast, no failure
+  banner. Opening a `.knxdb` never asks. `projectPassword.ts` classifies the
+  refusal; the password lives only in the dialog field and the retry closure.
+- Evidence: 13 Vitest cases (api body, classification, dialog en/de, three
+  App flows), written RED first. `e2e/project-password.e2e.ts` runs the real
+  app with an intercepted API (required → wrong → right, and cancel) and
+  checks every browser request: the password appears only in import bodies,
+  and in neither `localStorage` nor `sessionStorage`. The e2e fails against
+  the previous app. 7 guard mutants are caught; one survived at first because
+  the unit test looked for a toast class that does not exist, and now checks
+  the visible text instead.
+
 ## 2026-10-04 — U19: telegram-flow study measured, AR20 handoff written
 
 - A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`) covers

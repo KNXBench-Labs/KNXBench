@@ -3271,3 +3271,87 @@ describe("App — the logout control (T01b)", () => {
     await act(async () => root.unmount());
   });
 });
+
+// AR08: a protected ETS project asks for its password instead of failing,
+// retries the same import with it, and never keeps the password anywhere.
+describe("App — project password", () => {
+  const passwordRefusal = (kind: string) =>
+    Object.assign(new Error("project password needed"), { status: 422, body: { error: "project password needed", kind } });
+
+  async function openProtected() {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/villa.knxproj");
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    return root;
+  }
+
+  async function enter(password: string) {
+    const input = document.querySelector<HTMLInputElement>('input[type="password"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, password);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      Array.from(document.querySelectorAll("button")).find((b) => b.textContent === "Import")!.click();
+    });
+    await act(async () => {});
+  }
+
+  it("asks, retries with the password, and loads the project without an error", async () => {
+    apiMock.importProject.mockReset();
+    apiMock.importProject
+      .mockRejectedValueOnce(passwordRefusal("projectPasswordRequired"))
+      .mockResolvedValueOnce(baseTree());
+    const root = await openProtected();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("villa.knxproj");
+    // A password refusal is a question, not an error: no toast, no failure banner.
+    expect(document.body.textContent).not.toContain("project password needed");
+    expect(document.body.textContent).not.toContain("Could not load");
+    await enter("s3cret");
+    expect(apiMock.importProject).toHaveBeenCalledTimes(2);
+    expect(apiMock.importProject.mock.calls[0]).toHaveLength(2);
+    expect(apiMock.importProject.mock.calls[1][0]).toBe("/tmp/villa.knxproj");
+    expect(apiMock.importProject.mock.calls[1][2]).toBe("s3cret");
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    expect(host!.querySelector(".project-explorer")).not.toBeNull();
+    expect(JSON.stringify(window.localStorage)).not.toContain("s3cret");
+    root.unmount();
+  });
+
+  it("never asks for a password when opening a native project", async () => {
+    apiMock.openProject.mockReset();
+    apiMock.openProject.mockRejectedValueOnce(passwordRefusal("projectPasswordRequired"));
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/villa.knxdb");
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    expect(apiMock.openProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.importProject).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("asks again after a wrong password and stops quietly on cancel", async () => {
+    apiMock.importProject.mockReset();
+    apiMock.importProject
+      .mockRejectedValueOnce(passwordRefusal("projectPasswordRequired"))
+      .mockRejectedValueOnce(passwordRefusal("projectPasswordWrong"));
+    const root = await openProtected();
+    await enter("guess");
+    expect(document.body.textContent).toContain("was not accepted");
+    await act(async () => {
+      Array.from(document.querySelectorAll("button")).find((b) => b.textContent === "Cancel")!.click();
+    });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("project password needed");
+    expect(document.body.textContent).not.toContain("Could not load");
+    expect(apiMock.importProject).toHaveBeenCalledTimes(2);
+    expect(host!.querySelector(".project-explorer")).toBeNull();
+    root.unmount();
+  });
+});

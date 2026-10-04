@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 15:41
+- **Completed:** Handover-only. User decision recorded in `alpha-release-goal.md` → *UI owner handoff* and `goal-ui.md` §3b: the six web halves (MODEL-03 `.0` editor, DATA-03 `requestId` retry, MODEL-04 toggles, MODEL-01 installation rename/target, MODEL-02 repair choice, UX-01 drag) and the AR13 `debugReport.privacyTelegrams` text move back to the goal-ui owner session. Checked before recording: none had been started in either commissioning worktree or on main.
+- **Pending/Next Steps:** **For the commissioning session:** these rows are no longer yours. Keep the Web lock for your SAFE-03/AUDIT-01 history-client package and release it in your merge entry as usual; nothing else is asked of you. **For the goal-ui owner (this session):** once the newest Web-lock line says released, take the lock by the `goal-ui.md` §3 procedure, then work the six halves one package at a time, each with RED/GREEN, mutants, gates and browser evidence. The rows stay `IN_PROGRESS` until each is published.
+- **Notes for Codex oder Claude:** Web lock: still held by codex-commission-continuation; not taken or released by this entry. Backend contracts are published (ADR-0069–0071; MODEL-03 coupler, MODEL-04 allocation).
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session — taken over 2026-10-04 15:38 on user request)
 - **Timestamp:** 2026-10-04 15:38
 - **Completed:** Handover-only. The previous Claude owner session closed at 15:28 and left the `goal-ui.md` owner role vacant. By user decision this session, the one that published the §133 desktop-shell fix `2ab5698f`, is now the owner. This supersedes the line in the entry below that said this session would stop after that delivery. Recorded in `goal-ui.md` §3b. No code, Alpha ledger or Web-lock change.

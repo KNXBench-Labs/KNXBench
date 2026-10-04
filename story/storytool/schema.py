@@ -157,6 +157,36 @@ def _check_evidence(checker: _Checker, item: object, where: str, source_ids: set
         checker.fail(f"{where}.ref", f"evidence of kind {kind!r} must not carry a reference")
 
 
+MAX_HERO_TITLE_LINES = 3
+
+
+def _check_narrator(checker: _Checker, edition: dict) -> None:
+    """An optional narrator voice; when present, every visitor-facing part of it is required.
+
+    The disclosure is mandatory so that a persona can never be shown without
+    telling the reader that the commentary, not the record, carries the voice.
+    """
+    if "narrator" not in edition:
+        return
+    narrator = edition["narrator"]
+    where = "edition.narrator"
+    if not isinstance(narrator, dict):
+        checker.fail(where, "must be an object")
+        return
+    for key in ("label", "disclosure", "aside_label"):
+        checker.require(narrator, key, str, where)
+    hero = checker.require(narrator, "hero", dict, where)
+    if hero is None:
+        return
+    for key in ("kicker", "lede", "aside"):
+        checker.require(hero, key, str, f"{where}.hero")
+    lines = hero.get("title_lines")
+    if (not isinstance(lines, list) or not 1 <= len(lines) <= MAX_HERO_TITLE_LINES
+            or not all(isinstance(line, str) and line.strip() for line in lines)):
+        checker.fail(f"{where}.hero.title_lines",
+                     f"must be a list of 1 to {MAX_HERO_TITLE_LINES} non-empty strings")
+
+
 def validate(content: Any) -> dict:
     """Validates candidate content and returns it unchanged, or raises ValidationError."""
     checker = _Checker()
@@ -178,6 +208,7 @@ def validate(content: Any) -> dict:
             if commit and not re.fullmatch(r"[0-9a-f]{40}", commit):
                 checker.fail("edition.cutoff.git_commit", "must be a full 40-character commit hash")
             checker.require(cutoff, "git_commit_time", str, "edition.cutoff")
+        _check_narrator(checker, edition)
     sources = edition.get("sources") if isinstance(edition, dict) else None
     source_ids: set[str] = set()
     if not isinstance(sources, list) or not sources:

@@ -1333,6 +1333,27 @@ pub fn resolve_catalog_item_program(
     })
 }
 
+/// Whether the product's hardware is a coupler (`Hardware/@IsCoupler`).
+/// `None` when the product or its hardware row is not installed, so the
+/// caller cannot tell; `Some(false)` when the hardware row exists without a
+/// true flag (the attribute's schema default is false). Only `Some(true)`
+/// is evidence that permits a coupler-only address (MODEL-03).
+pub fn product_hardware_is_coupler(
+    conn: &Connection,
+    product_ref_id: &str,
+) -> Result<Option<bool>, ProductDbError> {
+    let flag: Option<Option<i64>> = conn
+        .query_row(
+            "SELECT h.is_coupler FROM product p
+             JOIN hardware h ON h.id = p.hardware_id
+             WHERE p.id = ?1",
+            [product_ref_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    Ok(flag.map(|value| value == Some(1)))
+}
+
 /// The evidence `apps/knx-server` overlays onto `DeviceProductNode::catalog`
 /// (T16) — everything a device's stated `product_ref`/`hardware2program_ref`
 /// pair resolves to, in one row rather than one query per table, joined the
@@ -2374,6 +2395,40 @@ mod tests {
         assert_eq!(
             ids,
             vec!["A-1_O-1_R-1".to_string(), "A-1_O-1_R-2".to_string()]
+        );
+    }
+
+    #[test]
+    fn hardware_coupler_flag_is_evidence_only_when_true() {
+        let (_dir, conn) = db();
+        conn.execute_batch(
+            "INSERT INTO hardware (id, manufacturer_id, name, is_coupler, source_sha256)
+                  VALUES ('H-C', 'M', 'c', 1, 'x'), ('H-0', 'M', 'o', 0, 'x'),
+                         ('H-N', 'M', 'n', NULL, 'x');
+             INSERT INTO product (id, manufacturer_id, hardware_id, source_sha256)
+                  VALUES ('P-C', 'M', 'H-C', 'x'), ('P-0', 'M', 'H-0', 'x'),
+                         ('P-N', 'M', 'H-N', 'x'), ('P-ORPHAN', 'M', 'H-MISSING', 'x');",
+        )
+        .unwrap();
+        assert_eq!(
+            product_hardware_is_coupler(&conn, "P-C").unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            product_hardware_is_coupler(&conn, "P-0").unwrap(),
+            Some(false)
+        );
+        assert_eq!(
+            product_hardware_is_coupler(&conn, "P-N").unwrap(),
+            Some(false)
+        );
+        assert_eq!(
+            product_hardware_is_coupler(&conn, "P-ORPHAN").unwrap(),
+            None
+        );
+        assert_eq!(
+            product_hardware_is_coupler(&conn, "P-ABSENT").unwrap(),
+            None
         );
     }
 

@@ -1954,13 +1954,49 @@ pub fn set_individual_address_impl(
         ),
         None => None,
     };
+    let device = knx_core::DeviceId(device_id);
+    if let Some(address) = address.filter(|a| a.device() == 0) {
+        if let Some(evidence) = coupler_evidence(state, device)? {
+            return apply(
+                state,
+                knx_core::Command::SetCouplerIndividualAddress {
+                    device,
+                    address,
+                    evidence,
+                },
+            );
+        }
+    }
     apply(
         state,
-        knx_core::Command::SetIndividualAddress {
-            device: knx_core::DeviceId(device_id),
-            address,
-        },
+        knx_core::Command::SetIndividualAddress { device, address },
     )
+}
+
+/// MODEL-03: manufacturer evidence that `device`'s hardware is a coupler,
+/// read from the product database (`Hardware/@IsCoupler`). `None` when the
+/// device, the database or a true flag is missing; the plain command then
+/// keeps refusing a new device octet 0. The project and product locks are
+/// taken one after the other, never together (see `device_detail`).
+fn coupler_evidence(
+    state: &AppState,
+    device: knx_core::DeviceId,
+) -> Result<Option<knx_core::CouplerEvidence>, String> {
+    let product_ref = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        match project.devices.get(device) {
+            Some(d) => d.product_ref.clone(),
+            None => return Ok(None),
+        }
+    };
+    let Some(products) = state.product_db.as_ref() else {
+        return Ok(None);
+    };
+    let products = products.lock().expect("state mutex poisoned");
+    let is_coupler = knx_productdb::query::product_hardware_is_coupler(&products, &product_ref)
+        .map_err(|e| e.to_string())?;
+    Ok((is_coupler == Some(true)).then_some(knx_core::CouplerEvidence { product_ref }))
 }
 
 pub fn set_com_object_dpt_impl(

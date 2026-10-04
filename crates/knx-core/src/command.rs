@@ -32,6 +32,15 @@ use crate::validation::{
 };
 use crate::{GroupAddress, IndividualAddress};
 
+/// Manufacturer evidence that a device's hardware is a coupler
+/// (`Hardware/@IsCoupler` in the product database). Carries the product
+/// reference it was read for so a command cannot apply it to another device
+/// kind; the core does not read manufacturer data itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CouplerEvidence {
+    pub product_ref: String,
+}
+
 /// A single reversible mutation. Most commands target the first installation;
 /// `CreateDevice` can explicitly target the installation owning a selected
 /// line. Other commands still need per-installation routing.
@@ -41,13 +50,30 @@ pub enum Command {
         device: DeviceId,
         address: Option<IndividualAddress>,
     },
+    /// Assigns an address to a device whose manufacturer data classifies its
+    /// hardware as a coupler, which is what permits device octet 0 on its
+    /// line (RESEARCH §25, MODEL-03). The application layer supplies the
+    /// evidence from the product database; the command re-checks that it
+    /// still describes this device's product. Line prefix and uniqueness
+    /// are validated exactly as for `SetIndividualAddress`.
+    SetCouplerIndividualAddress {
+        device: DeviceId,
+        address: IndividualAddress,
+        evidence: CouplerEvidence,
+    },
     /// Undo-only restore of a pre-existing imported address, including a
     /// mismatched line prefix or a coupler address ending in zero. Never
     /// constructed by an HTTP route: repairs must remain reversible without
     /// accepting a *new* invalid assignment from the editor.
+    ///
+    /// `redo_coupler` is set when this restore undoes a
+    /// `SetCouplerIndividualAddress`, so that redo re-applies the coupler
+    /// assignment with its evidence instead of the plain command, which
+    /// would refuse the zero.
     RestoreIndividualAddress {
         device: DeviceId,
         address: Option<IndividualAddress>,
+        redo_coupler: Option<CouplerEvidence>,
     },
     /// Sets a device's description as a user edit. Unlike
     /// `ComObjectInstance::description`, `DeviceInstance::description` is a
@@ -431,6 +457,11 @@ pub enum Command {
 pub enum CommandError {
     Validation(ValidationError),
     DeviceNotFound(DeviceId),
+    /// Coupler evidence names a different product than the device now has.
+    CouplerEvidenceMismatch {
+        device: DeviceId,
+        evidence_product_ref: String,
+    },
     ComObjectNotFound(ComObjectInstanceId),
     GroupAddressNotFound(GroupAddressId),
     /// A `DeleteGroupAddress` was refused because at least one
@@ -598,6 +629,13 @@ impl fmt::Display for CommandError {
         match self {
             CommandError::Validation(e) => write!(f, "{e}"),
             CommandError::DeviceNotFound(id) => write!(f, "device {id} not found"),
+            CommandError::CouplerEvidenceMismatch {
+                device,
+                evidence_product_ref,
+            } => write!(
+                f,
+                "coupler evidence for product {evidence_product_ref} does not describe device {device}'s product"
+            ),
             CommandError::ComObjectNotFound(id) => {
                 write!(f, "communication object instance {id} not found")
             }
@@ -1390,17 +1428,60 @@ impl Command {
                 Ok(Command::RestoreIndividualAddress {
                     device,
                     address: previous,
+                    redo_coupler: None,
                 })
             }
-            Command::RestoreIndividualAddress { device, address } => {
+            Command::SetCouplerIndividualAddress {
+                device,
+                address,
+                evidence,
+            } => {
+                let device = *device;
+                let address = *address;
+                let current = project
+                    .devices
+                    .get(device)
+                    .ok_or(CommandError::DeviceNotFound(device))?;
+                if current.product_ref != evidence.product_ref {
+                    return Err(CommandError::CouplerEvidenceMismatch {
+                        device,
+                        evidence_product_ref: evidence.product_ref.clone(),
+                    });
+                }
+                let previous = current.address;
+                if let Some((area, line)) = assigned_line_prefix(project, device)? {
+                    check_individual_address_on_line(device, address, area, line, true)?;
+                }
+                check_no_duplicate_individual_address(&project.devices, device, address)?;
+                project.devices.get_mut(device).unwrap().address = Some(address);
+                Ok(Command::RestoreIndividualAddress {
+                    device,
+                    address: previous,
+                    redo_coupler: Some(evidence.clone()),
+                })
+            }
+            Command::RestoreIndividualAddress {
+                device,
+                address,
+                redo_coupler,
+            } => {
                 let target = project
                     .devices
                     .get_mut(*device)
                     .ok_or(CommandError::DeviceNotFound(*device))?;
                 let previous = std::mem::replace(&mut target.address, *address);
-                Ok(Command::SetIndividualAddress {
-                    device: *device,
-                    address: previous,
+                Ok(match (redo_coupler, previous) {
+                    (Some(evidence), Some(coupler_address)) => {
+                        Command::SetCouplerIndividualAddress {
+                            device: *device,
+                            address: coupler_address,
+                            evidence: evidence.clone(),
+                        }
+                    }
+                    _ => Command::SetIndividualAddress {
+                        device: *device,
+                        address: previous,
+                    },
                 })
             }
             Command::SetDeviceDescription {
@@ -3263,6 +3344,111 @@ mod tests {
             )
             .unwrap();
         assert_eq!(project.devices.get(DeviceId(1)).unwrap().address, None);
+    }
+
+    #[test]
+    fn coupler_evidence_permits_zero_only_for_the_evidenced_product() {
+        let mut project = line_bound_device(None);
+        let product_ref = project
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .product_ref
+            .clone();
+        let zero = IndividualAddress::new(1, 1, 0).unwrap();
+        let mut stack = CommandStack::new();
+
+        let before = project.clone();
+        let error = stack
+            .do_command(
+                &mut project,
+                Command::SetCouplerIndividualAddress {
+                    device: DeviceId(1),
+                    address: zero,
+                    evidence: CouplerEvidence {
+                        product_ref: format!("{product_ref}-other"),
+                    },
+                },
+            )
+            .unwrap_err();
+        assert!(
+            matches!(error, CommandError::CouplerEvidenceMismatch { .. }),
+            "{error}"
+        );
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+
+        let evidence = CouplerEvidence { product_ref };
+        for wrong_line in [
+            IndividualAddress::new(1, 2, 0).unwrap(),
+            IndividualAddress::new(2, 1, 0).unwrap(),
+        ] {
+            let error = stack
+                .do_command(
+                    &mut project,
+                    Command::SetCouplerIndividualAddress {
+                        device: DeviceId(1),
+                        address: wrong_line,
+                        evidence: evidence.clone(),
+                    },
+                )
+                .unwrap_err();
+            assert!(error.to_string().contains("line 1.1"), "{error}");
+            assert_eq!(project, before);
+        }
+
+        stack
+            .do_command(
+                &mut project,
+                Command::SetCouplerIndividualAddress {
+                    device: DeviceId(1),
+                    address: zero,
+                    evidence: evidence.clone(),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(zero)
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().address,
+            Some(zero)
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+    }
+
+    #[test]
+    fn coupler_evidence_does_not_bypass_duplicate_addresses() {
+        let mut project = line_bound_device(None);
+        let product_ref = project
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .product_ref
+            .clone();
+        let zero = IndividualAddress::new(1, 1, 0).unwrap();
+        let mut other = project.devices.get(DeviceId(1)).unwrap().clone();
+        other.id = DeviceId(2);
+        other.address = Some(zero);
+        project.devices.insert(other);
+        let before = project.clone();
+        let error = CommandStack::new()
+            .do_command(
+                &mut project,
+                Command::SetCouplerIndividualAddress {
+                    device: DeviceId(1),
+                    address: zero,
+                    evidence: CouplerEvidence { product_ref },
+                },
+            )
+            .unwrap_err();
+        assert!(error.to_string().contains("already used"), "{error}");
+        assert_eq!(project, before);
     }
 
     #[test]

@@ -7506,7 +7506,9 @@ test, log and binary hashes. Canonical cap4096 never mutated. This does not
 cover compressed/member/expanded byte boundaries, real manufacturer workload
 resources or CLI/HTTP ownership/latency. Branch public8 all exit0,ProductDB
 640/0/25, strict Clippy/fmt/doc-policy/whitespace verified; integrated gates
-and publication remain pending;
+accepted integrated4dbca7e5 public15 recordsRust3147/0/177,Web1761,Chromium90
+plus separate probe1; original startup/browser infrastructure failures retained.
+New Web-owner integration/regating and publication remain pending;
 no new private corpus run, production raise or KL151 closure.
 
 **Bounded resource research verified 2026-10-03 22:02 UTC, base5540dcac.**

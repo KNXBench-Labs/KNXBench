@@ -14,7 +14,13 @@
   blocks, strict package Clippy, fmt, four freshly root-bound doc/policy audits
   and whitespace all exit0;784 public source/config hashes exact. Native2 is
   included in640, not counted again;25 ignored tests are not passes.
-- Integration, full merged-result gates and publication pending. This does not establish
+- Actual integrated4dbca7e5 public15 independently accepted:Rust3147/0/177
+  across170 result blocks,Web1761,Chromium90 plus separate environment probe1
+  (not91),793 source hashes/all logs/release CLI hash+HEAD version exact.
+  Original zero-stage optional-placeholder and90 browser socket-path launch
+  failures remain separate; not product assertion failures or erased attempts.
+- Further published Web-owner changes need latest integration/regating before
+  publication; final archive/hygiene pending. This does not establish
   byte-boundary/caller/resource-owner acceptance or complete KL151/Alpha.
   No private corpus, hardware action or Web source change.
 

@@ -48,6 +48,25 @@ hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
   Broader callers/long sessions and offline recovery remain separate open work;
   excluded hardware/power-loss/vendor/ETS experiments remain user notices.
 
+## 2026-10-04 — Desktop shell recovers a terminated web process (§133)
+
+- **§133, terminated web process.** `apps/knx-desktop/src-tauri/src/web_process.rs`
+  observes WebKit's `web-process-terminated`, reloads the page (the unsaved
+  project lives in the embedded server, so nothing is lost) at most three
+  times in 60 s, then answers the user's explicit close itself: it closes when
+  nothing is unsaved and asks a native GTK question first when the server
+  still holds edits (`AppState::has_unsaved_changes`, the same predicate as the
+  published `is_modified`). Eight shell tests and one server test were written
+  RED first; nine guard mutants each fail a named test. A native run of the
+  real binary in a loopback-only namespace reproduced the original bug on the
+  baseline and showed the fix reloading, closing cleanly, and asking (once,
+  again after dismissal) before discarding unsaved edits.
+  `webkit2gtk` becomes a direct Linux-only dependency of `knx-desktop`, at the
+  version already resolved through `wry` (one new lockfile edge, no new crate).
+  A web process that hangs without terminating remains open (§133). The user
+  placed dead-WebView evidence outside the Alpha scope on 2026-10-04; this
+  narrows that accepted boundary and is not an Alpha requirement.
+
 ## 2026-10-04 — AR13: privacy, authentication and provenance (Claude session)
 
 - Debug report: `report.md` (also the GitHub issue body) names every class

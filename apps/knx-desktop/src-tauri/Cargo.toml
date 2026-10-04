@@ -22,3 +22,7 @@ tauri.workspace = true
 tauri-plugin-dialog.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# `v2_20` is the first WebKitGTK API level with `web-process-terminated`.
+webkit2gtk = { workspace = true, features = ["v2_20"] }

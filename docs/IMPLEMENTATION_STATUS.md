@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06T exact23 bounded import — verified locally, publication pending (2026-10-04)
+## AR06T exact23 bounded import — delivered (2026-10-04, `aadd8820`)
 
 Local candidate on `9d719a4f`: exact product namespace23 admission with the
 existing scheme21 strict member-namespace/qualified-attribute boundary and
@@ -37,7 +37,7 @@ closed lexical proof (not a new generic TS parser or rerun of its controls).
 The first broad attempt is a retained zero-stage namespace-proof PermissionError;
 separate correctly parent-bound isolated retry passed. Separate integrated
 in-session review has no blocking product finding, not independent-model approval.
-Publication/final upstream reconciliation remain pending. Exact23 is bounded
+Published as `aadd88204de154cfcf5c1638310831a0a316dd86`: live/fetched refs and17 owned blobs exact. Final actual integrated10 repeats Rust3089/0/176,Web1739,Chromium82 after preserving a story-only owner update; all10 commands0. Its post-stage old-binary hash assertion remains rejected: CLI build.rs correctly stamps the new Git HEAD. Current archived release version/hash independently verified. Exact23 is bounded
 import/storage/report/replay support, not full manufacturer or bus/runtime
 compatibility. Scheme10, KL153 and the Alpha goal remain open. Decision:
 `adr/0072-product-scheme23-namespace-gate.md`.

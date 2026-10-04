@@ -7416,7 +7416,7 @@ degrades to a counted summary instead of refusing the package.
 <a id="153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod"></a>
 ## §153 Product scheme10 is refused; exact23 support is bounded
 
-**2026-10-04 verified local exact23 support; publication pending.** Exact
+**2026-10-04 delivered exact23 support (`aadd8820`).** Exact
 namespace23 reuses the strict21 typed-member/qualified-attribute boundary,
 package-scoped opaque evidence and unchanged storage/ZIP/work/depth limits.
 Original producer-bound Release Full853:690 equal existing installs,161 equal
@@ -7429,7 +7429,7 @@ survivors,verifier refusals and zero-stage namespace-proof PermissionError remai
 retained. All productdb source except an owner-added read-only coupler query/test
 and native fixture is byte-identical; CLI entrypoint unchanged. Original Full853
 is not a newly run current private matrix. Separate in-session review,no
-independent-model approval. Final publication/readback pending; no full
+independent-model approval. Live/fetched refs and17 owned artifacts read back byte-exact. Actual final integrated10 repeats Rust3089/0/176,Web1739,Chromium82; all10 commands0. Its old-vs-current Git-stamped binary hash assertion refusal remains recorded; current release version/hash independently verified. No full
 manufacturer semantics,signature/runtime/commissioning or ETS parity claim.
 Scheme10 remains refused, and KL153 remains open. See PRODUCT_SCHEME_23_RESEARCH.md
 and ADR-0072. The original namespace-refusal census below is historical evidence,

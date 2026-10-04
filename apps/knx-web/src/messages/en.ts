@@ -339,7 +339,6 @@ export const messages = {
   "inspector.address": "Address",
   "inspector.address.deviceOctet": "Device number",
   "inspector.address.invalidDevice": "Enter a device number from 1 to 255.",
-  "inspector.address.couplerOnly": "Device number 0 is for couplers; this editor cannot assign it without verified coupler classification.",
   "inspector.address.ambiguous": "Address cannot be edited: the device has no unambiguous owning area and line.",
   "inspector.address.mismatch": "Stored address {address} differs from assigned line {line}. It stays unchanged until you edit the device number.",
   "inspector.description": "Description",

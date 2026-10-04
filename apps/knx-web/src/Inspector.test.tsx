@@ -757,12 +757,12 @@ describe("Inspector — line-bound physical address (ISSUE-09)", () => {
     expect(onApplied).toHaveBeenCalledWith(tree);
   });
 
-  it("rejects non-device numbers and coupler-only zero before contacting the API", async () => {
+  it("rejects non-device numbers before contacting the API", async () => {
     const tree = deviceMoveTree();
     await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
     const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
     const input = field.querySelector<HTMLInputElement>("input")!;
-    for (const bad of ["256", "0", "1.2", "-1"]) {
+    for (const bad of ["256", "1.2", "-1"]) {
       await act(async () => setTextInputValue(input, bad));
       await act(async () => {
         input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
@@ -771,6 +771,43 @@ describe("Inspector — line-bound physical address (ISSUE-09)", () => {
       expect(field.querySelector(".field-error")?.textContent).toBeTruthy();
       expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
     }
+  });
+
+  // MODEL-03: only the server knows whether the product database marks this
+  // product as a coupler (`Hardware/@IsCoupler`), so the editor must ask it.
+  it("submits device number 0 so the server can accept an evidenced coupler", async () => {
+    const tree = deviceMoveTree();
+    apiMock.setIndividualAddress.mockResolvedValue(tree);
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(input, "0"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledExactlyOnceWith(42, "1.1.0");
+    expect(onApplied).toHaveBeenCalledWith(tree);
+    expect(field.querySelector(".field-error")).toBeNull();
+  });
+
+  it("shows the server's refusal when device number 0 is not an evidenced coupler", async () => {
+    const tree = deviceMoveTree();
+    const refusal = "address 1.1.0 ends in 0, reserved for couplers; device 42 cannot be assigned "
+      + "a new coupler address without device classification";
+    apiMock.setIndividualAddress.mockRejectedValue(new Error(refusal));
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, { ...deviceDetail(), address: "1.1.12" });
+    const field = host!.querySelector<HTMLElement>(".individual-address-field")!;
+    const input = field.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setTextInputValue(input, "0"));
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setIndividualAddress).toHaveBeenCalledExactlyOnceWith(42, "1.1.0");
+    expect(field.querySelector(".field-error")?.textContent).toBe(refusal);
+    expect(input.value).toBe("12");
+    expect(onApplied).not.toHaveBeenCalled();
   });
 
   it("preserves the full-address editor for unassigned devices, including clearing", async () => {

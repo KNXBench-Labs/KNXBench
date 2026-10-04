@@ -909,7 +909,7 @@ of the generic `WAITING_OWNER`. Per-row evidence stays in
 | `MODEL-01` | IN_PROGRESS | Core/server half delivered: owner-installation resolution for all id-addressed commands, explicit target for root creates, `RenameInstallation`, cross-installation refusal; RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): installation rename and target choice |
 | `MODEL-02` | IN_PROGRESS | Core/store/server half delivered (ADR-0071): explicit `RepairDevicePlacement` / `RepairLineOwner` with exact undo; `.knxdb` save now refuses an ambiguous topology instead of silently keeping the last placement; 10/10 mutants | Handed to the Web-lock holder (see handoff below): repair choice; duplicate-id renumbering stays a documented gap |
 | `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. No backend half needed — `POST /api/group-links` with the core's checks (now installation-scoped, ADR-0070) already exists | Handed to the Web-lock holder (see handoff below): drag gesture, keyboard equivalent kept |
-| `MODEL-03` | IN_PROGRESS | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants | Handed to the Web-lock holder (see handoff below): `.0` in the address editor |
+| `MODEL-03` | DONE | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants; web half delivered 2026-10-04: the editor submits `.0`, the server decides and its refusal is shown; `Inspector.test.tsx` (2 new RED/GREEN cases), `e2e/coupler-address.e2e.ts` (4 intercepted Chromium cases, en/de), 3/3 mutants | — |
 | `KL-127` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** without reliable evidence record a known gap and close. UA1 found no `Ground` sample in the corpus or eight public fixtures (RESEARCH §25, KNOWN_LIMITATIONS §127) | — ; installation rename moves to MODEL-01 |
 
 This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
@@ -1020,7 +1020,7 @@ half had been started anywhere.
 | `KL-127` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `MODEL-01` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
 | `MODEL-02` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
-| `MODEL-03` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `MODEL-03` | P2 | `goal-ui.md` owner — backend and web half delivered | DONE |
 | `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `IMPORT-06` | P2 | AR06 | TODO |
 | `KL-11` | P2 | AR06 | TODO |

@@ -1,7 +1,7 @@
 # ADR 0069: A catalog batch request may carry a replay token
 
 Date: 2026-10-04
-Status: Accepted (server half); the web client half follows under the Web lock
+Status: Accepted; server half and web client half (2026-10-04) delivered
 Session: goal-ui owner, Alpha package UA2 (`DATA-03`)
 
 ## Context

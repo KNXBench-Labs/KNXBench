@@ -70,6 +70,38 @@ Web lock: taken by codex-commission-continuation for SAFE-03/AUDIT-01 history-cl
 
 ---
 
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:25
+- **Completed:** UA10 (MODEL-01 remainder): CSV group-address import/export per installation. `knx_csv::plan_import_into` / `export_group_addresses_from` (old functions = first installation); server `installationId` on `/api/group-addresses/csv-import` and `/csv-export` (unknown → 400, nothing written); the destructive-preview confirmation token now binds the installation. RED 0/4 (server silently ignored `installationId` and imported into the first installation) → GREEN 4/4, 5/5 mutants, full gate green (164 blocks, 3,103 passed). Handoff table (`alpha-release-goal.md`) MODEL-01 row now includes the CSV contract and the CSV buttons' installation choice as web task.
+- **Pending/Next Steps:** No goal-ui backend work is open. Web halves (incl. CSV installation choice) stay with the Web-lock holder. CLI `ga-import`/`ga-export` still use the first installation (no installation flag yet).
+- **Notes for Codex oder Claude:** `plan_csv_import` (domain.rs) takes an installation parameter now; in-crate tests pass `None`.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:15
+- **Completed:** Corpus save/reopen equality extended from ETS4 only to all three reference projects (KV schema 21, ETS 6.3.0 schema 23): `knx-store/tests/reference_project.rs::the_schema_21_and_23_reference_projects_round_trip_through_save_and_load`, 3/3 green with `--ignored`; the old header claiming schema 23 is refused was stale. COMPATIBILITY row added (native model equality only, not bytes or ETS re-import). Post-push corpus run of `7e94daae`: knx-store 2, save_load_roundtrip 1, open_reference_project 1, cli_import 8, knx-etsproj 50 green; its 5 failures are the xknxproject oracle tests without the local `project_dump.json` (green when linked).
+- **Pending/Next Steps:** No goal-ui backend work is open; web halves stay with the Web-lock holder.
+- **Notes for Codex oder Claude:** ADR numbers: 0072 is scheme23 (other session, now indexed), 0073 importer ids, 0074 lossless save.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 12:58
+- **Completed:** UA7/UA8 data-integrity follow-up (user: "keep on going"). ADR-0074: `.knxdb` save is exact or refused — `knx_store::representable::check_representable` refuses duplicate entity ids, orphaned lines, foreign line references, parent/child mismatches and a device twice in one building part (`StoreError::Unrepresentable`) before any write; a probe had shown seven such states saving "successfully" and reopening different. ADR-0073: the ETS mapper gives every element its own internal id even when its `@Id` repeats (`knx-etsproj/src/id_table.rs`), reports references to a repeated id as `MapProblemDetail::AmbiguousReference`, and resolves schema ≥21 short `Links` ids within the device's own installation (old mapper linked installation 0's device to installation 1's `GA-1`, silently). RED evidence, 10/10 mutants, workspace gate + all corpus-gated tests green (details in `.ai/logs/2026-10-04_claude_ui-ua78-lossless-import-save.md`).
+- **Pending/Next Steps:** No goal-ui backend work is open; the six web halves stay with the Web-lock holder (handoff table in `alpha-release-goal.md`). Possible later scope, deliberately not built: hierarchy repair and duplicate-id renumbering commands — no supported importer produces those states any more, so they would be speculative.
+- **Notes for Codex oder Claude:** Import reports for files with a repeated `@Id` now contain one extra error per reference to it (`AmbiguousReference`); `http_project_diff` expects 2 diagnostics for its fixture. Whether ETS repeats `GA-<n>` across installations is unverified (no multi-installation schema ≥21 sample). The xknxproject oracle tests need the local `project_dump.json` at the worktree root.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 10:48 UTC
+- **Completed:** AR06T bounded exact23 import/storage/report/replay published aadd88204de154cfcf5c1638310831a0a316dd86; live/fetched refs and17 owned blobs exact,complete owner handover/Web lock preserved. Actual current public22/source770 and final integrated10:Rust3089/0/176,Web1739,Chromium82; ProductDB638/0/25,binding17 fresh byte-bound; native6/caller4/six compiled guard controls. All final10 commands0; wrapper old-vs-new CLI binary hash assertion refused because build.rs stamps Git HEAD. Current archived release knx0.1.0-alpha.1+gaadd8820/e9985cc8 independently verified. Historical Full853 source713690/161/2 retained with importer-code continuity,not new current private execution. Original survivors/refusals remain unchanged. Public acceptance .ai/logs/2026-10-04_codex_alpha-scheme23-acceptance.json.
+- **Pending/Next Steps:** Closing metadata/docs gates and exact remote readback; then archive only public aggregates/logs and clean completed own scheme23 build/snapshot/worktree/branch artifacts. Next ready AR06P work is separately bounded scheme10 grammar research; KL151 resource/owner acceptance stays open. KL153/AR06P/AR07/Alpha not complete,no release tag/full-manufacturer/runtime claim.
+- **Notes for Codex oder Claude:** Dirty shared root untouched. Commissioning session owns the Web lock and handed-off UI web halves. No bus/private/vendor/subagent/quota actions in caller/mutant/public blocks. Final binary has a new SHA due Git stamp even when relevant Rust inputs match; never require identity to an earlier-HEAD CLI. Only story input deltas since public22,verified independently. All gate workers complete; evidence protected until archive/closing/hygiene verification.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-04 10:20 UTC
 - **Completed:** AR06T actual integrated a346fa30 public22 independently accepted (770 inputs and22 logs SHA-exact):Rust3089/0/176/161 blocks,ProductDB638/0/25,Web1739,Chromium82,strict Clippy/build/dependencies/docs;17 fresh binding pairs byte-identical to both sides of prior controlled lexical proof. Native6/caller4 and six compiled guard controls proved,original field survivors/verifier refusals/zero-stage namespace-proof PermissionError retained. ADR0072/compatibility/import/corpus/limitations/research/status/goal checkpoint synchronized. Original Full853 Source713690/161/2 remains historical private result; importer-storage-evidence/CLI source continuity separately verified,not whole-source equality or a new private matrix.

@@ -21,11 +21,13 @@ mod testutil;
 mod write;
 
 pub use plan::{
-    plan_import, CsvAffectedLink, CsvDestructiveAction, CsvDestructiveChange, CsvImportReport,
-    ImportPlan,
+    plan_import, plan_import_into, CsvAffectedLink, CsvDestructiveAction, CsvDestructiveChange,
+    CsvImportReport, ImportPlan,
 };
 pub use read::{
     parse_group_addresses, CsvAction, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason,
     ParsedCsv, Severity,
 };
-pub use write::{export_group_addresses, CsvExport};
+pub use write::{
+    export_group_addresses, export_group_addresses_from, CsvExport, UnknownInstallation,
+};

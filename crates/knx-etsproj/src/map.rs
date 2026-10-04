@@ -54,6 +54,7 @@ use knx_core::{
     Topology,
 };
 
+use crate::id_table::{IdTable, Reference};
 use crate::source::{
     RetainedAttribute, SourceBuildingPart, SourceComObjectInstance, SourceDevice, SourceDocument,
     SourceGroupRange, SourceInstallation,
@@ -90,6 +91,14 @@ pub enum MapProblemDetail {
         com_object: String,
         group_address: String,
     },
+    /// A cross-reference names an ETS id that several elements share
+    /// (validation reports the `DuplicateId`). The reference is not
+    /// resolved — picking one element would be a guess — and every element
+    /// keeps its own internal id.
+    AmbiguousReference {
+        kind: &'static str,
+        target: String,
+    },
 }
 
 /// How many source elements of one kind were read, and how many were
@@ -124,15 +133,16 @@ pub struct EntityCounts {
 }
 
 /// Pass 1's result: a stable internal id for every cross-referenceable
-/// entity, keyed by its ETS id string.
+/// entity, keyed by its ETS id string. A repeated ETS id keeps one id per
+/// element ([`IdTable`]).
 #[derive(Default)]
 struct IdTables {
-    areas: BTreeMap<String, AreaId>,
-    lines: BTreeMap<String, LineId>,
-    devices: BTreeMap<String, DeviceId>,
-    group_ranges: BTreeMap<String, GroupRangeId>,
-    group_addresses: BTreeMap<String, GroupAddressId>,
-    building_parts: BTreeMap<String, BuildingPartId>,
+    areas: IdTable<AreaId>,
+    lines: IdTable<LineId>,
+    devices: IdTable<DeviceId>,
+    group_ranges: IdTable<GroupRangeId>,
+    group_addresses: IdTable<GroupAddressId>,
+    building_parts: IdTable<BuildingPartId>,
 }
 
 /// Exhaustion aborts detached construction; no partial project is returned.
@@ -200,14 +210,6 @@ fn map_v21(
     mut ids: IdAllocators,
 ) -> Result<MapOutput, IdAllocationError> {
     let tables = allocate_ids(document, &mut ids)?;
-    // Schema ≥21's `ComObjectInstanceRef/@Links` names a group address by
-    // its short id (`"GA-3"`), not the fully-qualified `@Id`
-    // (`"P-03DE-0_GA-3"`) `tables.group_addresses` is keyed by — measured
-    // against the KV reference project (RESEARCH §3.3/§3.4's "short id"
-    // pattern, here on the group-address side rather than the com-object
-    // side). Derived once from the already-built table, without touching
-    // the schema-agnostic `allocate_ids` itself.
-    let short_group_addresses = short_group_address_ids(&tables);
 
     let mut project = Project::new(Language("en".into()));
 
@@ -218,6 +220,14 @@ fn map_v21(
     project.info = map_project_info_v21(document, &mut retained, &mut problems);
 
     for installation in &document.installations {
+        // Schema ≥21's `ComObjectInstanceRef/@Links` names a group address by
+        // its short id (`"GA-3"`), not the fully-qualified `@Id`
+        // (`"P-03DE-0_GA-3"`) `tables.group_addresses` is keyed by — measured
+        // against the KV reference project (RESEARCH §3.3/§3.4's "short id"
+        // pattern, here on the group-address side rather than the com-object
+        // side). A short id embeds no installation, so it is resolved within
+        // the device's own installation — the scope validation checks it in.
+        let short_group_addresses = short_group_address_ids(installation, &tables);
         let (mapped, installation_retained) = map_installation_v21(
             installation,
             source_path,
@@ -242,23 +252,40 @@ fn map_v21(
     })
 }
 
-/// The short form of every already-allocated group address id, e.g.
+/// The short form of every group address id of `installation`, e.g.
 /// `"P-03DE-0_GA-3"` → `"GA-3"`. See [`map_v21`]'s call site for why this
 /// exists. Silently skips any id that does not end in a `_GA-<n>` segment
 /// rather than panicking — a document whose ids do not follow this pattern
 /// just leaves schema-≥21 `Links` unresolved (reported by `push_link`'s
 /// existing `DroppedLink`, same as any other dangling reference), not a
-/// parse failure.
-fn short_group_address_ids(tables: &IdTables) -> BTreeMap<String, GroupAddressId> {
-    tables
-        .group_addresses
-        .iter()
-        .filter_map(|(full, &id)| {
-            full.rsplit_once('_')
-                .filter(|(_, short)| short.starts_with("GA-"))
-                .map(|(_, short)| (short.to_string(), id))
-        })
-        .collect()
+/// parse failure. Every allocation of a repeated id is carried over, so a
+/// short form shared by several elements is ambiguous, never "last wins".
+fn short_group_address_ids(
+    installation: &SourceInstallation,
+    tables: &IdTables,
+) -> IdTable<GroupAddressId> {
+    fn collect<'a>(range: &'a SourceGroupRange, out: &mut std::collections::BTreeSet<&'a str>) {
+        out.extend(range.addresses.iter().map(|address| address.id.as_str()));
+        for child in &range.children {
+            collect(child, out);
+        }
+    }
+    let mut full_ids = std::collections::BTreeSet::new();
+    for range in &installation.group_ranges {
+        collect(range, &mut full_ids);
+    }
+    let mut short_ids = IdTable::default();
+    for full in full_ids {
+        if let Some((_, short)) = full
+            .rsplit_once('_')
+            .filter(|(_, short)| short.starts_with("GA-"))
+        {
+            for &id in tables.group_addresses.all(full) {
+                short_ids.insert(short, id);
+            }
+        }
+    }
+    short_ids
 }
 
 fn allocate_ids(
@@ -268,20 +295,16 @@ fn allocate_ids(
     let mut tables = IdTables::default();
     for installation in &document.installations {
         for area in &installation.areas {
-            tables.areas.insert(area.id.clone(), ids.next_area_id()?);
+            tables.areas.insert(&area.id, ids.next_area_id()?);
             for line in &area.lines {
-                tables.lines.insert(line.id.clone(), ids.next_line_id()?);
+                tables.lines.insert(&line.id, ids.next_line_id()?);
                 for device in &line.devices {
-                    tables
-                        .devices
-                        .insert(device.id.clone(), ids.next_device_id()?);
+                    tables.devices.insert(&device.id, ids.next_device_id()?);
                 }
             }
         }
         for device in &installation.unassigned_devices {
-            tables
-                .devices
-                .insert(device.id.clone(), ids.next_device_id()?);
+            tables.devices.insert(&device.id, ids.next_device_id()?);
         }
         for range in &installation.group_ranges {
             allocate_group_range_ids(range, ids, &mut tables)?;
@@ -300,11 +323,11 @@ fn allocate_group_range_ids(
 ) -> Result<(), IdAllocationError> {
     tables
         .group_ranges
-        .insert(range.id.clone(), ids.next_group_range_id()?);
+        .insert(&range.id, ids.next_group_range_id()?);
     for address in &range.addresses {
         tables
             .group_addresses
-            .insert(address.id.clone(), ids.next_group_address_id()?);
+            .insert(&address.id, ids.next_group_address_id()?);
     }
     for child in &range.children {
         allocate_group_range_ids(child, ids, tables)?;
@@ -319,7 +342,7 @@ fn allocate_building_part_ids(
 ) -> Result<(), IdAllocationError> {
     tables
         .building_parts
-        .insert(part.id.clone(), ids.next_building_part_id()?);
+        .insert(&part.id, ids.next_building_part_id()?);
     for child in &part.children {
         allocate_building_part_ids(child, ids, tables)?;
     }
@@ -434,28 +457,19 @@ fn map_installation(
     let mut parameters = Vec::new();
 
     for area in &installation.areas {
-        let area_id = *tables
-            .areas
-            .get(&area.id)
-            .expect("every area is allocated in pass 1");
+        let area_id = tables.areas.own(&area.id);
         let area_xpath = format!("{xpath}/Topology/Area[@Id='{}']", area.id);
         let area_addr = required_u8(&area.address, "Area/@Address", &area_xpath, problems);
 
         let mut line_ids = Vec::new();
         for line in &area.lines {
-            let line_id = *tables
-                .lines
-                .get(&line.id)
-                .expect("every line is allocated in pass 1");
+            let line_id = tables.lines.own(&line.id);
             let line_xpath = format!("{area_xpath}/Line[@Id='{}']", line.id);
             let line_addr = required_u8(&line.address, "Line/@Address", &line_xpath, problems);
 
             let mut device_ids = Vec::new();
             for device in &line.devices {
-                let device_id = *tables
-                    .devices
-                    .get(&device.id)
-                    .expect("every device is allocated in pass 1");
+                let device_id = tables.devices.own(&device.id);
                 let device_retained = map_device(
                     device,
                     device_id,
@@ -524,10 +538,7 @@ fn map_installation(
     }
 
     for device in &installation.unassigned_devices {
-        let device_id = *tables
-            .devices
-            .get(&device.id)
-            .expect("every device is allocated in pass 1");
+        let device_id = tables.devices.own(&device.id);
         let device_retained = map_device(
             device,
             device_id,
@@ -814,7 +825,7 @@ fn map_installation_v21(
     installation: &SourceInstallation,
     source_path: &str,
     tables: &IdTables,
-    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    short_group_addresses: &IdTable<GroupAddressId>,
     ids: &mut IdAllocators,
     devices: &mut Devices,
     problems: &mut Vec<MapProblem>,
@@ -859,29 +870,20 @@ fn map_installation_v21(
     let mut parameters = Vec::new();
 
     for area in &installation.areas {
-        let area_id = *tables
-            .areas
-            .get(&area.id)
-            .expect("every area is allocated in pass 1");
+        let area_id = tables.areas.own(&area.id);
         let area_xpath = crate::xpath::area(&area.id);
         let area_addr = required_u8(&area.address, "Area/@Address", &area_xpath, problems);
 
         let mut line_ids = Vec::new();
         for line in &area.lines {
-            let line_id = *tables
-                .lines
-                .get(&line.id)
-                .expect("every line is allocated in pass 1");
+            let line_id = tables.lines.own(&line.id);
             let line_xpath = crate::xpath::line(&line.id);
             let segment_xpath = crate::xpath::segment(&line.id);
             let line_addr = required_u8(&line.address, "Line/@Address", &line_xpath, problems);
 
             let mut device_ids = Vec::new();
             for device in &line.devices {
-                let device_id = *tables
-                    .devices
-                    .get(&device.id)
-                    .expect("every device is allocated in pass 1");
+                let device_id = tables.devices.own(&device.id);
                 let device_retained = map_device_v21(
                     device,
                     device_id,
@@ -972,10 +974,7 @@ fn map_installation_v21(
     }
 
     for device in &installation.unassigned_devices {
-        let device_id = *tables
-            .devices
-            .get(&device.id)
-            .expect("every device is allocated in pass 1");
+        let device_id = tables.devices.own(&device.id);
         let device_retained = map_device_v21(
             device,
             device_id,
@@ -1063,7 +1062,7 @@ fn map_device_v21(
     source_path: &str,
     area_address: Option<u8>,
     line_address: Option<u8>,
-    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    short_group_addresses: &IdTable<GroupAddressId>,
     ids: &mut IdAllocators,
     devices: &mut Devices,
     parameters: &mut Vec<ParameterInstance>,
@@ -1259,7 +1258,7 @@ fn map_com_object_v21(
     device_id: DeviceId,
     source_path: &str,
     module_instance_ids: &BTreeMap<String, ModuleInstanceId>,
-    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    short_group_addresses: &IdTable<GroupAddressId>,
     device_xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> (ComObjectInstance, Vec<RetainedAttribute>) {
@@ -1438,21 +1437,30 @@ fn push_link(
     target: &str,
     direction: Direction,
     com_ref_id: &str,
-    table: &BTreeMap<String, GroupAddressId>,
+    table: &IdTable<GroupAddressId>,
     xpath: &str,
     links: &mut Vec<GroupLink>,
     problems: &mut Vec<MapProblem>,
 ) {
-    match table.get(target) {
-        Some(&ga) => links.push(GroupLink { ga, direction }),
-        None => problems.push(MapProblem {
-            xpath: xpath.to_string(),
-            detail: MapProblemDetail::DroppedLink {
-                com_object: com_ref_id.to_string(),
-                group_address: target.to_string(),
-            },
-        }),
-    }
+    let detail = match table.reference(target) {
+        Reference::Unique(ga) => {
+            links.push(GroupLink { ga, direction });
+            return;
+        }
+        Reference::Missing => MapProblemDetail::DroppedLink {
+            com_object: com_ref_id.to_string(),
+            group_address: target.to_string(),
+        },
+        // Linking one of several same-id group addresses would be a guess.
+        Reference::Ambiguous => MapProblemDetail::AmbiguousReference {
+            kind: "GroupAddressRef",
+            target: target.to_string(),
+        },
+    };
+    problems.push(MapProblem {
+        xpath: xpath.to_string(),
+        detail,
+    });
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1467,10 +1475,7 @@ fn map_group_range(
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> GroupRangeId {
-    let id = *tables
-        .group_ranges
-        .get(&range.id)
-        .expect("every group range is allocated in pass 1");
+    let id = tables.group_ranges.own(&range.id);
     let xpath = crate::xpath::group_range(&range.id);
 
     let start = required_ga(
@@ -1497,10 +1502,7 @@ fn map_group_range(
     }
 
     for address in &range.addresses {
-        let ga_id = *tables
-            .group_addresses
-            .get(&address.id)
-            .expect("every group address is allocated in pass 1");
+        let ga_id = tables.group_addresses.own(&address.id);
         group_addresses.push(GroupAddressEntry {
             id: ga_id,
             source: SourceRef {
@@ -1551,10 +1553,7 @@ fn map_building_part(
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> BuildingPartId {
-    let id = *tables
-        .building_parts
-        .get(&part.id)
-        .expect("every building part is allocated in pass 1");
+    let id = tables.building_parts.own(&part.id);
     let xpath = crate::xpath::building_part(container, element, &part.id);
 
     let kind = match &part.kind {
@@ -1917,50 +1916,52 @@ fn compose_individual_address(
 
 fn resolve_optional<Id: Copy>(
     value: &Option<String>,
-    table: &BTreeMap<String, Id>,
+    table: &IdTable<Id>,
     kind: &'static str,
     xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> Option<Id> {
-    let s = value.as_ref()?;
-    match table.get(s) {
-        Some(&id) => Some(id),
-        None => {
-            problems.push(MapProblem {
-                xpath: xpath.to_string(),
-                detail: MapProblemDetail::UnresolvedReference {
-                    kind,
-                    target: s.clone(),
-                },
-            });
-            None
-        }
-    }
+    resolve_one(value.as_ref()?, table, kind, xpath, problems)
 }
 
 fn resolve_many<Id: Copy>(
     values: &[String],
-    table: &BTreeMap<String, Id>,
+    table: &IdTable<Id>,
     kind: &'static str,
     xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> Vec<Id> {
     values
         .iter()
-        .filter_map(|s| match table.get(s) {
-            Some(&id) => Some(id),
-            None => {
-                problems.push(MapProblem {
-                    xpath: xpath.to_string(),
-                    detail: MapProblemDetail::UnresolvedReference {
-                        kind,
-                        target: s.clone(),
-                    },
-                });
-                None
-            }
-        })
+        .filter_map(|target| resolve_one(target, table, kind, xpath, problems))
         .collect()
+}
+
+/// A missing target is `UnresolvedReference`, a repeated one
+/// `AmbiguousReference`; both are reported and leave the reference out.
+fn resolve_one<Id: Copy>(
+    target: &str,
+    table: &IdTable<Id>,
+    kind: &'static str,
+    xpath: &str,
+    problems: &mut Vec<MapProblem>,
+) -> Option<Id> {
+    let detail = match table.reference(target) {
+        Reference::Unique(id) => return Some(id),
+        Reference::Missing => MapProblemDetail::UnresolvedReference {
+            kind,
+            target: target.to_string(),
+        },
+        Reference::Ambiguous => MapProblemDetail::AmbiguousReference {
+            kind,
+            target: target.to_string(),
+        },
+    };
+    problems.push(MapProblem {
+        xpath: xpath.to_string(),
+        detail,
+    });
+    None
 }
 
 #[cfg(test)]
@@ -2092,7 +2093,7 @@ mod tests {
             DeviceId(1),
             "P-0001/0.xml",
             &BTreeMap::new(),
-            &BTreeMap::new(),
+            &IdTable::default(),
             "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance",
             &mut problems,
         );

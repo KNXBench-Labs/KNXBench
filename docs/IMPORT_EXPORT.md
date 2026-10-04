@@ -233,6 +233,12 @@ through `ImportReport::errors`, tagged `stage: "validate"`.
 | Duplicate `@Id` (`Area`, `Line`, `DeviceInstance`, `BinaryData`, `GroupRange`, `GroupAddress`, `BuildingPart`) | Error | Document-wide — ETS ids embed their installation |
 | Dangling `Connectors/Send\|Receive/@GroupAddressRefId` (schema 11) | Error | Document-wide, same reason |
 | Dangling `Links` target (schema ≥21, short ids such as `GA-3`) | Error | Per installation — a short id embeds no installation |
+
+Mapping follows the same scopes (ADR-0073): every element keeps its own
+internal id even when its `@Id` repeats, a reference to a repeated `@Id`
+is reported as `AmbiguousReference` (`stage: "map"`, error) instead of being
+resolved, and a schema ≥21 short id resolves only against the device's own
+installation.
 | Two devices on one individual address | Warning | Per installation |
 | Two group addresses on one address | Warning | Per installation |
 | Group address outside its enclosing `GroupRange`'s bounds | Warning | Per range |
@@ -824,6 +830,16 @@ T11 session log. CLI: `knx ga-export <store.knxdb> <out.csv>` and
 to a real import, then a trailing `store written: yes`/`no (…)` line makes
 explicit whether anything was actually saved. Web: two toolbar buttons in
 the group-address view (`GroupAddressCsvButtons.tsx`).
+
+**Installation scope (MODEL-01).** Both server routes accept an optional
+`installationId`; without it the first installation is read and written, as
+before. Rows are matched, group ranges looked up and new addresses created
+only in that installation — the same address may legitimately exist in
+another installation (ADR-0038). An unknown installation is refused without
+writing a file or changing the project. A destructive preview's
+confirmation token binds the installation together with the file and the
+project revision, so a preview for one installation cannot confirm an apply
+into another. The CLI and the web buttons still use the first installation.
 
 Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 

@@ -6,6 +6,11 @@
 
 **Local checkout:** `60613033648364b375338de2c8e4e00b4410d30b`; 140 commits behind that reference revision, with pre-existing changes belonging to other work.
 
+> **Post-snapshot additions (2026-10-03):** `KL-149`–`KL-153` from the public
+> product-download test run are tracked outside this 180-entry snapshot, in
+> [ALPHA_READINESS](docs/ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger)
+> and `alpha-release-goal.md` §8 (package AR06P).
+
 ## Context and scope
 
 This inventory combines Known Limitations, triage, research, the roadmap, all three goal files, ADRs, the product-data corpus, current implementation evidence and remaining manual/planning items. It also considers the **local, not yet fully versioned** research, statistics and Paperclip handover documents. Where sources conflict, current source code and tests take precedence over ADRs/technical documentation, followed by status/goal text; a historically unchecked box is not proof of a missing implementation.

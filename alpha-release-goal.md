@@ -334,6 +334,74 @@ Both review findings closed; task-owned cleanup then AR07 offline research next.
 
 **Exit evidence:** bounded compatibility/import report, malformed-input and atomicity tests, native save/load evidence and an explicit sample matrix. Missing independent samples remain `BLOCKED_EXTERNAL`, not “compatible”.
 
+### AR06P — Admit real-world product packages the supported grammar already covers
+
+**Sources (post-snapshot, outside the 180-ID ledger):** `KL-149`, `KL-150`, `KL-151`, `KL-152`, `KL-153`.
+**Origin:** test-only run of the release `knx products ingest` against 853 public
+manufacturer downloads on 2026-10-03 (`2cceea4e`; [corpus run](docs/PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
+644 installed. The refusals are real compatibility gaps for downloads a user
+actually gets from Siemens, ABB, Hager/Berker and MDT.
+**Dependencies:** AR06's import-boundary contract (`docs/IMPORT_BOUNDARY_CONTRACT.md`).
+`KL-150` touches the nested-module model of AR07/R-MODULE-04, so coordinate with
+the AR07 executor before changing `dynamic/parse.rs`. No dependency on UI or
+commissioning.
+**Status:** `IN_PROGRESS`. `KL-149` has a scoped candidate with independently
+verified public16 (Rust3000/0/165, Web1702, Chromium72,17 equal bindings,
+700 exact inputs), five CLI regressions and two compiled routing mutants.
+A separate same-release-profile baseline/candidate pair proves two named
+baseline REDs and candidate5/0/0. The full same853 original-filename measurement
+is independently accepted: installed644→687, Hager/Berker2→45,43 newly
+admitted; two ZIP-limit and one evidence-item refusal remain explicit and
+atomic. All originals unchanged, no private raw/item logs. Normal fresh U18
+merge dd5a350c independently passes NEW actual16: Rust3000/0/165/151 blocks,
+Web1702, Chromium82 inventory/pass,17 bindings,704 committed-exact inputs.
+All285 CLI Rust/build/test inputs equal the measured producer; private evidence
+retains its original run identity. Scoped KL-149 delivery362fec24 is
+published/live/fetched read back at equal0/0: source704 and ten exact owned
+artifacts, full owner history preserved. Final five acceptance Markdown gates
+passed;16 completed own build/snapshot/shadow/XDG directories removed with
+all aggregate/public evidence retained. Closing metadata cb5781c7 is also
+published/live/fetched byte-verified; final target, seventeen runner/config
+scaffolds, owned clean checkout and ancestor-confirmed branch removed.
+`KL-150` storage candidate is verified at 2026-10-03 20:56 CEST: exact synthetic
+UNIQUE-constraint RED, nine public focused tests/ProductDB625/0/25, three compiled
+scope mutants/five named failures and an exact committed pre-fix baseline RED.
+One authorized offline private nested package is baseline RED/candidate GREEN;
+independent lexical/stored scope counts, original/retained member bytes and
+retry agree, originals unchanged, no raw/private item logs. All706 candidate
+source/config inputs exact. Separate in-session review is not independent-model
+approval. Full853 CLI measurement, fresh broad/current-upstream acceptance,
+publication/readback and own cleanup remain; KL150 stays unchecked. No new
+R-MODULE-04 runtime semantics, migration/schema, limits, UI or bus behavior.
+`KL-151`/`KL-152` need measurement before
+any limit changes. `KL-153` is bounded research.
+
+Ordered by value per effort:
+
+- [x] `KL-149` (P2): compare `.knxprod`/`.vd*` extensions case-insensitively in `knx products ingest`, matching `install_package`. Add a CLI regression test with an upper-case name and a negative control showing that `.KNXPROJ` still routes to the project importer. Verified effect from the same853 original-filename release measurement: Hager/Berker installs go from 2 to 45 of 48.
+- [x] `KL-150` (P1): synthetic nested-definition RED, lexical identity/argument-position stack, atomic rollback/replay and three compiled mutants verified. Actual integrated cbe9952f public16/private pair accepted; code published as1b215d51 after preserving a foreign stats-only commit, live/fetched equal. Full853 Release CLI: installed687→688, one constraint refusal→installed, other outcomes unchanged; originals independently rehashed, no private raw/item records. Source706 unchanged;14 own build/snapshot/browser directories removed. Closing metadata/final checkout hygiene pending. AR07 receives the retained-source scope witness, not new R-MODULE-04 runtime semantics or a private committed fixture.
+- [ ] `KL-151` (P2): measure peak RSS, ingest time and database growth for the eight over-limit bundles and five over-limit members, using a temporary raised limit in a scratch build only. Then decide on a documented bound (or streaming) with a hostile-ZIP regression test. Do not just remove the limit. Siemens' only current download (1,006 MiB expanded) is the reference case.
+  - Research accepted at base5540dcac (2026-10-03 22:02 UTC): exact853 hashes,15 size-selected pairs including2 later dispatch admissions, scratch fixed member256MiB/expanded4GiB/compressed256MiB. Baseline15 atomic size refusals, raised14 installs/1 namespace refusal;16 hostile controls/six helper controls, source706/Release binaries exact. Max771.46MiB RSS/221.55s/7.038GiB DB, total638.04s/20.462GiB DB. Originals rehashed/private temporary data removed/no raw or item-vector output. Production caps unchanged; direct HTTP install/product mutex requires owner-aware latency/resource acceptance before a global raise. Research subpackage is not KL151 completion or a new UI task.
+- [ ] `KL-152` (P2): measure the actual evidence-item maxima of the two refused packages. Then either size the budget with a hostile-input test, or change evidence collection to a counted summary that stays explicit and loss-reporting.
+- [ ] `KL-153` (P2): collect grammar evidence for scheme 23 first (current ETS6 product downloads, 2 files) the same way schemes 12–14/21 were admitted. Scheme 10 (146 ABB ETS4-era files) follows only if its grammar differences are bounded. Any scheme without evidence stays an explicit refusal.
+
+**Exit evidence:** RED/GREEN regression tests per item, unchanged atomic refusal
+for anything still unsupported, a re-run of the 853-file measurement with a
+before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are
+private, unpinned evidence and never a committed fixture or CI gate.
+
+At 2026-10-03 22:35 CEST KL150 candidate a2aa4b7 has full offline853
+original-filename CLI evidence, independently reconciled: baseline687 installed,
+candidate688; exactly one database constraint refusal→installed, all other
+categories unchanged, no installed→refused regression. Original manifest/all
+inputs rehashed unchanged, successful retained package bytes/source blob hashes
+verified, refusal tables empty, private temp copies/DBs removed; aggregate-only
+receipts. Fresh complete public16 (Rust3009/0/166, Web1702, Chromium82,
+bindings17) and same-profile Release12 (baseline named RED/candidate storage7
+GREEN/CLI5 controls each) pass. Fresh upstream is still cb5781c7, source706
+exact. Integrated acceptance, final metadata/publication/readback and own cleanup
+remain; KL150 is still unchecked and R-MODULE-04 runtime remains separate.
+
 ### AR07 — Research and validate supported parameter semantics, never execute unknown vendor logic
 
 **Sources:** `KL-3`, `KL-146`, `PDB-01`, `PDB-02`, `PDB-03`, `PDB-05`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`.
@@ -461,6 +529,94 @@ checkout/two ancestor-confirmed branch cleanup follow separately. Continue
 earliest-ready AR07 external substitution/variable-output audit on fresh upstream;
 UI chain adoption, genuine nested products and whole AR07/Alpha remain open.
 
+2026-10-03 06:56 AR07 continuation: final module-provenance receipt14e2eb9a
+published/read back; actual clean checkout/two ancestor-confirmed branches and
+owned scaffolding removed, dirty root unchanged. Fresh alpha-text-output on14e2eb9a
+audits binding/label scalar copies. Initial ancestor-cost hypothesis rejected:
+ModuleScope::argument is deliberately local, already charged correctly; no
+inheritance/ancestor fee is authorized. ADR-0065 is proposed scalar admission,
+not new KNX semantics or old byte guarantee. proc_49808cde0743 compile0, three
+copy assertions101/0-1-0 independently verified; fourth inheritance expectation
+rejected and converted to positive non-inheritance regression (old-production1/0/0).
+Exact UTF-8-cost unit101/0-1-0 verified before core fix. Candidate core copy admission
+implemented, Core proc_c73947a5b170 independently5/5:355/0/0 library and66/0/6
+DynamicTree plus strict Clippy/fmt/whitespace/freeze, no private ignored cases
+executed. New HTTP cause test shares existing whole-prefix atomic assertions;
+proc_8ee608d8a643 independently5/5, named1/0/0/full39/0/0, strict lint/fmt/
+whitespace/freeze and complete-prefix atomic authority/source invariants.
+Omission/restoration proc_98b4f3f512f1 independently verifies3 compiled mutants,
+4 caught assertions, evaluator/all9 scoped hashes exact. Candidate-only broad
+public proc_2b136248f7f9 rejected at header158>157 after workspace2963/0/164.
+Required blank Rust doc separator fixed, unchanged ceiling; fix gate410/157/17
+passes, first rejected logs/receipt retained. Retry proc_230c3f7e4db9 independently
+passed13/13, workspace2963/0/164 across148 blocks, Web1665,615 frozen inputs and
+17 unchanged shadow bindings; copy policy renumbered0065 to preserve upstream0064;
+no integrated
+delivery yet. No consumer/UI/binding source edit
+or acceptance claimed. Outside-walk String-only projection and general allocation/
+RSS/latency remain explicit boundaries; whole AR07 and Alpha still open.
+
+## AR07 scalar-copy actual integration accepted — 2026-10-03 09:52 CEST
+
+Reviewed source2e7a41c3 conventionally merged with published c07e6403 at
+9f512ab3e302014d1b4c3d2af33cd33712a052ad; upstream ADR0064/owner histories
+preserved, own scalar policy ADR0065. Actual proc_3ea5d4e7afa4 exit1 is retained:
+private Dynamic Rust6/0/0 exit0 but closed skip classifier rejected two output
+signals. Private raw lines were not persisted; do not claim recovered text.
+Source-backed public regression proves bool-valued PackageInstallReport.skipped
+and registered libtest-prefix cases; corrected classifier5 positives/7 negatives
+pass, unknown or missing-data signals still rejected. No production change.
+Continuation proc_8dd254bb5c75 exit0 independently accepted20 stages: five public
+commands reused from the exact same committed617-input tree (not a wholly fresh
+20-command run),13 commands and2 final checks newly executed. Workspace2984/0/165
+over149 blocks, Web1665, intercepted Chromium61; newly selected private Dynamic
+6/0/0 and in-memory offline SimTunnel Download14/0/0, zero unknown skip signals.
+All617 current/committed source/config hashes and17 shadow bindings equal;
+420 originals including103 product archives unchanged across the complete new
+private window. Hashing420 files does not mean parsing420 files. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+Earlier candidate/header failure and three compiled omission mutants/restoration
+remain scoped to their actual runs, not relabelled. Separate in-session review,
+not an independent-model verdict. Acceptance-doc gates/publication/readback
+pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
+UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
+remain open. No live bus/vendor code or private raw logs; UI owner untouched.
+
+## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
+
+Source/actual acceptance published and fetched/live read back at
+cbc6b0b238fbeef2da41c4d38208850574c68760: owned HEAD/fetched/live main equal,
+divergence0/0; all617 actual-gated code/config inputs and7 acceptance documents
+exact remotely. Canonical dirty root/main/statistics unchanged. Actual9f512ab3
+continuation remains20 accepted stages with5 verified public commands reused,
+13 commands+2 checks new, workspace2984/0/165, Web1665/Chromium61, selected
+private Dynamic6/0/0 and offline SimTunnel14/0/0;17 equal bindings and420
+unchanged originals including103 archives. Four fresh-target nonempty
+intended-root acceptance-document audits and whitespace passed; zero code delta.
+ADR0065 accepted only for this bounded Core/HTTP scalar-content admission,
+not external String-only projections or full AR07/ETS/Alpha semantics. Initial
+header/classifier rejections and compiled mutant/restoration receipts retained.
+Six completed owned build targets actually removed after process checks;
+compact machine-readable evidence retained. Closing receipt-only metadata
+gates/publication and clean owned checkout/branch/scaffolding removal follow.
+Whole AR07/Alpha, ISSUE-08 checked-result consumer contract, UI diagnostics/
+identity adoption, native/hardware/vendor/general allocation/RSS remain open.
+
+### AR07 checked outside-walk subpackage accepted — 2026-10-03 13:32 CEST
+
+Scoped source a065ad94 / actual0369a56a, proc_39eb1bd6a2f3 exits0/22 commands:
+16 fresh public,3 compiled selected inventories,3 private executions (6+2+1).
+Workspace2995/0/165/150 blocks, Web1702/Chromium72,17 equal bindings,
+699 exact committed inputs,420 unchanged originals, no private raw logs/link.
+Five real compiled behavior mutants and separate in-session review accepted.
+ADR0066 is bounded backend text-overlay policy, not complete response memory,
+legacy SDK/UI-specific/native/ETS semantics. Acceptance documents, publication,
+readback and own cleanup pending. e2a40268's Markdown-only AR06P plan/findings
+integrated7bb0ee72 with complete owner histories and zero gated-code delta.
+Fresh queue now prioritizes AR06P KL-149 then coordinated KL-150; actual nested
+manufacturer evidence is a newly available prerequisite, not already validated.
+Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
+
 - [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
 - [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
 - [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.
@@ -550,7 +706,7 @@ UI chain adoption, genuine nested products and whole AR07/Alpha remain open.
 ### AR15 — Reconcile release documentation and limitations on the finished scope
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
-**Dependencies:** completed/explicitly blocked AR00–AR14; newest owner receipts.
+**Dependencies:** completed/explicitly blocked AR00–AR14 and AR06P; newest owner receipts.
 
 - [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
 - [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.
@@ -854,3 +1010,30 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
 
 Entries spanning supported and blocked subcases (notably `KL-13`, `KL-11`, `KL-61` and parameter semantics) require a subcase disposition in their AR package. `TODO` authorizes verification/planning within the stated boundaries, not guessing the missing semantics or claiming implementation is absent.
+
+## 8. Post-snapshot findings (outside the 180-ID count)
+
+These entries were found after the inventory snapshot. They have their own
+identities and do not change the 180-entry count above. Priority follows the
+`OFFENE_PUNKTE.md` scale.
+
+| Source ID | Priority | Primary route | Current status |
+| --- | --- | --- | --- |
+| `KL-150` | P1 | AR06P | TODO |
+| `KL-149` | P2 | AR06P | TODO |
+| `KL-151` | P2 | AR06P | TODO |
+| `KL-152` | P2 | AR06P | TODO |
+| `KL-153` | P2 | AR06P | TODO |
+
+
+## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
+
+Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded
+checkpoint: refs/trees equal0/0,699 actual-gated inputs and7 acceptance documents
+exact. Actual0369a56a's22 accepted commands and final five nonempty/root-explicit
+doc/whitespace gates retain their run scope; later delta is Markdown only.
+Twelve completed own build/snapshot/shadow/XDG directories removed after process
+checks; originals/foreign/root unchanged. Closing metadata gates/readback and
+clean checkout/branch/scaffolding removal remain, not new policy acceptance.
+AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
+open. Published statistics-owner artifact preserved, not a local statistics refresh.

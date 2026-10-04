@@ -1,5 +1,27 @@
 # Gira and MDT product-database corpus
 
+## Bounded ZIP resource pair — 2026-10-03 22:02 UTC
+
+Base5540dcac, original853 manifest/source hashes match independently. Current
+size-selected15 =7 member-only/5 expanded-only/3 both; one other archive remains
+metadata-unvalidated,837 are within these size caps. Directory census is not
+full ZIP validation. Same Release fresh-DB pair: unchanged baseline15 size
+refusals; scratch-only member256MiB/expanded4GiB/compressed256MiB produces14
+installs and1 unsupported namespace. Namespace/grammar/evidence budget unchanged;
+all706 source/config inputs match except two scratch constants. Structural
+hostile16/helper6 controls and22 build/test command logs/binary hashes verified.
+
+Raised cohort peak RSS789976KiB (771.46MiB), max ingest221.55s, total638.04s;
+max DB7556988928 bytes (7.038GiB), total21970833408 (20.462GiB). Baseline peak
+256492KiB, total2.43s, max0.513s, DB438272 bytes per case. All retained archive
+hashes and refusal empty tables checked; original manifest/all853 files rehashed
+again, private copies/DBs removed. Only aggregates/cohort commitments persisted,
+never item metrics/paths/raw stdout/stderr. First zero-pair PermissionError is
+preserved, not an importer refusal; corrected network-isolated retry is measured.
+This does not raise production limits, prove HTTP responsiveness/cancellation,
+semantic fidelity or ETS compatibility. KL151 cap/streaming decision remains
+open; direct synchronous HTTP/product-mutex caller needs owner-aware acceptance.
+
 Investigation date: **2026-09-23**.
 
 This note inventories the local, ignored corpora under
@@ -296,6 +318,101 @@ constructs nested below subtrees a specialized parser does not model. Values and
 original XML bytes are retained, but KNXBench does not claim to execute load
 procedures or reproduce manufacturer separator layout.
 
+## Public crawler corpus run (2026-10-03)
+
+A one-off test of the **production install path** against a second, much
+wider corpus: 853 files that the separate
+[`knxprod-crawler`](https://github.com/KNXBench-Labs/knxprod-crawler) tool
+(private repository) downloaded on 2026-10-03 from the public download
+pages of Siemens, ABB/Busch-Jaeger, Hager/Berker and MDT (1.25 GiB). This was
+testing only: no KNXBench code was changed, and the downloaded files stay
+outside the repository. These are publicly offered manufacturer files, not
+part of `OriginalData/`. Only 29 of the 102 loose `OriginalData` `.knxprod`
+files are byte-identical to a crawled file, and another 27 crawled files
+share a file name with an `OriginalData` file but differ in content (newer
+releases).
+
+**Method.** A release `knx` CLI was built from `origin/main` `c6b5a240`. Every
+file went through `knx products ingest <file> --product-db <db>` into **one
+fresh shared database**, ordered by content SHA-256. Exit code, the install
+summary line and stderr were recorded for each file. Failures were then
+re-run against a fresh isolated database to separate file-specific errors
+from shared-state effects. Afterwards the run executed `knx products
+verify`, `knx products coverage` and an aggregate `sqlite3` census.
+Schema versions come from the `knx_master.xml` namespace (read from the ZIP
+directory without extraction), not from file names.
+
+**Inventory by master-data scheme (all 853 files).**
+
+| Scheme | Files | Installed | Rejected |
+|---|---|---|---|
+| 10 | 146 | 0 | 145 unsupported namespace (§153), 1 size limit (§151) |
+| 11 | 395 | 347 | 44 CLI extension case (§149), 4 size limit (§151) |
+| 13 | 4 | 4 | – |
+| 14 | 4 | 2 | 1 CLI extension case (§149), 1 evidence item limit (§152) |
+| 20 | 298 | 288 | 8 size limit (§151), 1 CLI extension case (§149), 1 constraint crash (§150) |
+| 21 | 3 | 3 | – |
+| **23** | 2 | 0 | 2 unsupported namespace (§153) |
+| no ZIP | 1 | 0 | invalid ZIP: ABB serves a PDF named `.knxprod`. Correctly refused |
+
+**Outcome totals (shared run).** 644 installs (608 new packages and 36
+byte-identical re-deliveries reported as "already known"), 147
+unsupported-namespace refusals, 46 CLI extension-case refusals (all Hager),
+13 size-limit refusals, 1 evidence-item-limit refusal, 1 database
+constraint crash and 1 invalid ZIP: 853 in total. By source: Siemens 0/1
+(its only file is a 1 GiB-expanded bundle), ABB 547/707, Hager 2/48, MDT
+95/97.
+
+**Counterfactual for §149.** The same 46 Hager files given a lowercase
+`.knxprod` name (symlinks, fresh database) install 43 of 46. The remaining 3
+hit the size limit (2) or the evidence item limit (1). Fixing §149 alone
+would raise the overall result from 644 to 687 of 853 (80.5 %).
+
+**Loss accounting held.** Every one of the 644 installs reported unknown
+constructs (84,549 in total, at most 1,634 for one package). The final
+database holds 47,286 `package_install_unknown` rows covering 533 distinct
+(kind, name, XPath) constructs with 241 distinct names. The most common are
+master-data attributes (`Manufacturer/@KnxManufacturerId`,
+`@ImportRestriction`, `@DefaultLanguage`, `@CompatibilityGroup`,
+`DatapointType/@SizeInBit`, `@Default`) and `Static` children
+(`Options`, `Code`, `AddressTable`, `AssociationTable`, `LoadProcedures`,
+`LdCtrlWriteProp`), each present in 342–608 packages. Nothing was silently
+dropped. Cross-package ID collisions are recorded, not resolved:
+`package_conflict` holds 2,169 rows (catalog_section 1,818, hardware 118,
+product 116, hardware2program 46, application_program 40, catalog_item 31).
+The per-install reports sum to 2,373, because "already known" re-installs
+repeat their stored conflicts. In isolation, the sampled packages have
+zero conflicts.
+
+**Final shared database.** 608 packages, 1,167 application programs, 984
+products, 803 hardware, 1,088 catalog items, 584 catalog sections, 389
+datapoint types, 836 master-data manufacturers, 1,607,607 parameters and
+17,268,578 translations. The file is **13.2 GiB** for 1.25 GiB of input
+(about 10.6×). `products verify`: 0 mismatches in 4 s. Ingest wall time was
+438 s in total, at most 17.3 s for one file.
+
+**Download coverage** (`products coverage`, offline, 28 s): of 1,167
+programs, 0 are verified, 51 untested-plannable and 1,116 unsupported
+(not-memory-mapped 788, image-structure 204, parameter-evaluation 48,
+unmodelled-step 42, parameter-value 23, procedure-contents 9,
+procedure-shape 2). By mask, only `MV-0701` (16/238) and `MV-0705` (35/139)
+have any plannable programs. `MV-07B0` (664 programs) has none.
+
+**Module feature census** (read-only stream scan of the 852 ZIP packages'
+application XML). Exactly **one** package nests `ModuleDef`s: MDT
+`RF-TAL55Bx0x-01S` with 11 nested definitions at depth 2, the §150 failure.
+**Ten** packages pass module arguments through `NumericArg … AllocatorRefId=`,
+with 1,070 uses in total (ABB 4, MDT 5, Siemens HVAC bundle 1). Three more
+MDT packages declare an `Allocator` without referencing it. This is local
+evidence for the R-MODULE-03/04 rows in [ALPHA_READINESS](ALPHA_READINESS.md#post-snapshot-findings-outside-the-180-id-ledger).
+It is not a committed fixture.
+
+**What this run does not show.** It is parser/persistence evidence for
+publicly downloadable files at one point in time, not ETS parity, not
+semantic completeness and not commissioning evidence. It is not a pinned
+regression gate: the crawled files can change upstream, and they are not
+redistributed. Findings: KNOWN_LIMITATIONS §149–§153.
+
 ## Feature-shape observations relevant to implementation
 
 ### Parameters
@@ -468,3 +585,109 @@ ZIP filename decoding and schemes 12-14 are evidenced. The next priorities are
 (2) deeper typed coverage of parameter/dynamic/load-procedure semantics.
 That sequence maximizes usable products without pretending that successful
 catalogue installation is full ETS or commissioning compatibility.
+
+## CLI extension-case before/after measurement — 2026-10-03
+
+Scoped AR06P KL-149 candidate, independently reconciled before integration.
+Both binaries use the release profile: baseline `main.rs` is byte-exact
+committed f15f7cd2 pre-fix source; candidate changes only existing ASCII
+exact-extension dispatch. The same853 manifest downloads (751 unique byte
+contents) were each installed into a fresh isolated catalogue on both sides,
+using their original basenames in owned readonly copies.
+
+| Public download source | Inputs | Before installed | After installed |
+| --- | ---: | ---: | ---: |
+| ABB |707|547|547|
+| Hager/Berker |48|2|45|
+| MDT |97|95|95|
+| Siemens |1|0|0|
+| Total |853|644|687|
+
+All46 uppercase Hager/Berker inputs previously reached the wrong project
+importer.43 now install; two still meet ZIP limits and one the evidence-item
+limit, as explicit atomic refusals. All other outcome categories are unchanged.
+This neither changes limits nor admits another scheme/nested-module grammar.
+The remaining catalogue refusals include147 unsupported namespaces,15 ZIP
+limits,2 evidence-item limits,1 invalid ZIP and1 database constraint. These
+closed measured categories are not all deliberate unsupported-format outcomes.
+
+Successful retained package blobs were checked against original byte digests;
+refused isolated catalogues contain zero package/source_file/product rows.
+The manifest and every original path/size/content digest match before/after and
+an independent final readonly pass. All700 candidate code/config inputs and
+both binary identities remain exact. No private raw output, filenames, member
+paths or per-item records were persisted. All private input copies/databases
+were removed; only aggregate commitments/counts survive. An earlier debug
+partial run was deliberately interrupted after56 pairs and is not acceptance.
+
+The downloads remain unpinned private evidence, not committed fixtures or CI
+gates. This proves the measured filename-routing/importer behavior only, not
+semantic completeness, ETS/native/hardware compatibility or broader AR06P
+acceptance. Current-upstream U18 integration dd5a350c independently passes
+NEW actual16: Rust3000/0/165/151 blocks, Web1702, Chromium82 inventory/pass,
+17 equal bindings/704 committed-exact inputs. All285 CLI Rust/build/test
+inputs match the privately measured producer; that receipt keeps its original
+run identity, not a newly claimed private run. Delivery362fec24 is published/
+live/fetched read back: refs0/0, source704 and ten owned artifacts byte-exact.
+Only KL-149 dispatch is lifted; the existing115/113 pinned matrix is a different
+scope. Final metadata/own cleanup do not change measured format policy.
+
+## Nested-definition full CLI pair — 2026-10-03 22:35 CEST
+
+Delivery checkpoint 2026-10-03 23:05 CEST: actual integrated cbe9952f passes
+fresh public16 and the authorized one-case private baseline RED/candidate GREEN.
+Its706 producer/config inputs equal the measured full853 candidate. Code
+published as1b215d51/live/fetched equal after preserving an incoming stats-only
+commit byte-exact and rerunning doc5. Fourteen own build/snapshot/browser
+directories removed; final metadata/checkout hygiene pending. Storage admission
+is lifted only; selected115/113 and R-MODULE-04 runtime acceptance stay separate.
+
+KL-150 candidate a2aa4b7 now has a complete offline original-filename853
+before/after run, independently reconciled against the retained aggregate and
+unchanged manifest/all original input hashes. Same fresh Release profile;
+the baseline differs only by the exact committed pre-fix dynamic parser from
+the candidate's706 source/config inputs. The previous KL149 candidate histogram
+is reproduced exactly, not merely compared with an extrapolated count.
+
+| Coarse CLI outcome | Pre-KL150 baseline | Candidate |
+| --- | ---: | ---: |
+| Installed | 687 | 688 |
+| Unsupported namespace | 147 | 147 |
+| ZIP policy limit | 15 | 15 |
+| XML evidence item limit | 2 | 2 |
+| Database constraint | 1 | 0 |
+| Invalid ZIP | 1 | 1 |
+| Total measured original files | 853 | 853 |
+
+Exactly one constraint refusal becomes installed; no installed→refused change.
+Each input/side gets a fresh private database and readonly original-basename
+copy. Successful package BLOB bytes match input bytes, stored source BLOB hashes
+are internally consistent, and four catalog/package tables stay empty after
+refusal. Original manifest/all inputs independently rehashed unchanged; all
+private copies/databases removed. Only corpus-wide counts, closed categories,
+code/whole-cohort commitments survive; no per-item records/raw output.
+Public16 (Rust3009/0/166, Web1702, Chromium82, bindings17) and Release12
+(old-parser named RED/candidate storage7 GREEN/CLI5 controls each) also pass.
+Current-upstream integrated acceptance, final docs/publication/readback and own
+cleanup are pending. This is admission/storage evidence, not new nested runtime,
+allocation/parameter-write semantics, full ETS/vendor compatibility or a rerun
+of the separately pinned115/113 selected semantics matrix. No limits changed.
+
+## Nested-definition storage candidate — 2026-10-03 20:56 CEST
+
+AR06P KL-150 has a bounded one-package offline before/after witness, not a new
+853-file measurement. An exact committed pre-fix parser and the candidate were
+compiled with the same test profile and identical other705 source/config
+inputs. The explicitly authorized nested package fails the baseline's named
+private test and passes the candidate's exact ignored test (0-1-0 versus1-0-0).
+Candidate lexical scope counts independently agree with durable dynamic-node
+scope counts; every reported ZIP member matches its retained original bytes,
+retry succeeds, original package and853-entry manifest are unchanged. No raw
+private output/item records or temporary private directories remain.
+Public9 focused tests, ProductDB625/0/25, three compiled mutants/five named
+failures and a separate public exact-baseline RED support the same storage
+correction. Full original-filename853 CLI measurement, broad/current-upstream
+acceptance, publication/readback and owned cleanup are still pending. Do not
+infer a new full-corpus install total from this one-case witness or replace
+the separately pinned115/113 matrix. Nested runtime/allocation semantics remain
+AR07 work, not a side effect of successful source admission.

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "review": "in-session; no independent reviewer",
+  "featureCommit": "16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1",
+  "gatedMerge": "3d03aea5ee2905a98450ee193bdc1246d0f93c99",
+  "upstreamParent": "5540dcac5ce380630771de36ed6aa28366d7de6c",
+  "stages": [
+    {
+      "step": "install",
+      "exit": 0
+    },
+    {
+      "step": "web",
+      "exit": 0
+    },
+    {
+      "step": "build",
+      "exit": 0
+    },
+    {
+      "step": "production-browser",
+      "exit": 0
+    },
+    {
+      "step": "reference-browser",
+      "exit": 0
+    },
+    {
+      "step": "format",
+      "exit": 0
+    },
+    {
+      "step": "check-layering",
+      "exit": 0
+    },
+    {
+      "step": "check-headers",
+      "exit": 0
+    },
+    {
+      "step": "check-anchors",
+      "exit": 0
+    },
+    {
+      "step": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "step": "clippy",
+      "exit": 0
+    },
+    {
+      "step": "workspace",
+      "exit": 0
+    },
+    {
+      "step": "whitespace",
+      "exit": 0
+    }
+  ],
+  "webTests": 1739,
+  "webFiles": 98,
+  "productionBrowserGroups": 12,
+  "referenceBrowserGroups": 16,
+  "workspace": {
+    "passed": 3009,
+    "failed": 0,
+    "ignored": 166,
+    "blocks": 153
+  },
+  "gateExit": 0,
+  "scope": "ordinary workspace tests; ignored/private/hardware tests and native/Orca acceptance unclaimed",
+  "handoverPreservation": "full upstream handover suffix and both status prefixes verified",
+  "pushReadback": "verified local/fetched/live main d5c1080efb0cf66b5ea51d912e233130414125cd and feature16c9d774; current refs record the later source-identical acknowledgment tip",
+  "laterUpstream": "80a5500d84e6a21bcc31c2dc77b959ed0098fbc9; documentation-only delta; complete archives preserved and4 metadata gates repeated",
+  "cleanup": "owned fixture stopped; port4173 clear; own deps/dist/gate targets/named scratch removed; permanent evidence retained; dirty shared root unchanged except additive handover"
+}

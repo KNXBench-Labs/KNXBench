@@ -1283,6 +1283,25 @@ async fn work_limited_parameter_prefix_refuses_writes_without_changing_project_o
     );
     assert_eq!(source.matches("</ModuleDefs>").count(), 1);
     let source = source.replace("</ModuleDefs>", &format!("{definitions}</ModuleDefs>"));
+    assert_resource_limited_prefix_is_read_only(source).await;
+}
+
+// ADR-0065: a single literal label needs both retained and rendered content.
+// This is application cost admission, not a normative manufacturer text limit.
+#[tokio::test]
+async fn scalar_limited_parameter_prefix_refuses_writes_without_changing_project_or_source() {
+    let original_module = r#"<Module Id="MOD-1_M-1" RefId="MD-1" />"#;
+    assert_eq!(WRITE_PROGRAM.matches(original_module).count(), 1);
+    let label = "L".repeat(knx_productdb::dynamic::MAX_EVALUATION_WORK / 2 + 1);
+    let source = WRITE_PROGRAM.replace(
+        original_module,
+        &format!(r#"{original_module}<ParameterBlock Text="{label}" />{original_module}"#),
+    );
+    assert_resource_limited_prefix_is_read_only(source).await;
+}
+
+/// Same complete-panel authority/source invariants for both refusal causes.
+async fn assert_resource_limited_prefix_is_read_only(source: String) {
     let (_dir, products) = temp_product_db(&source);
     let state = Arc::new(state_with_device_and_modules(
         products,

@@ -1,0 +1,254 @@
+{
+  "kind": "U18 actual24 aggregate acceptance; not independent/native/alpha/hardware approval",
+  "actualGatedHead": "1660911bdd5bf350c6042bbeb9a2b694ad66fa41",
+  "candidateHead": "ce87478f8dfdba5b9d8b9427ffe53de8623ecbf1",
+  "markdownOnlyIntegratedHead": "ef4cfb929c08bdb94c98e25a2dea5688b58a0c84",
+  "publicRepositoryCommands": 18,
+  "offlineCommands": 6,
+  "commandExits": [
+    {
+      "name": "format",
+      "exit": 0
+    },
+    {
+      "name": "frontend-install",
+      "exit": 0
+    },
+    {
+      "name": "web-tests",
+      "exit": 0
+    },
+    {
+      "name": "types",
+      "exit": 0
+    },
+    {
+      "name": "fixture-types",
+      "exit": 0
+    },
+    {
+      "name": "production-build",
+      "exit": 0
+    },
+    {
+      "name": "browser",
+      "exit": 0
+    },
+    {
+      "name": "clippy",
+      "exit": 0
+    },
+    {
+      "name": "workspace-tests",
+      "exit": 0
+    },
+    {
+      "name": "ignored-inventory",
+      "exit": 0
+    },
+    {
+      "name": "workspace-build",
+      "exit": 0
+    },
+    {
+      "name": "projection-generation",
+      "exit": 0
+    },
+    {
+      "name": "dependency-policy",
+      "exit": 0
+    },
+    {
+      "name": "check-layering",
+      "exit": 0
+    },
+    {
+      "name": "check-headers",
+      "exit": 0
+    },
+    {
+      "name": "check-anchors",
+      "exit": 0
+    },
+    {
+      "name": "check-corpus-gates",
+      "exit": 0
+    },
+    {
+      "name": "whitespace",
+      "exit": 0
+    },
+    {
+      "name": "product-inventory",
+      "exit": 0
+    },
+    {
+      "name": "product-offline",
+      "exit": 0
+    },
+    {
+      "name": "server-simulator-inventory",
+      "exit": 0
+    },
+    {
+      "name": "server-simulator-offline",
+      "exit": 0
+    },
+    {
+      "name": "matrix-inventory",
+      "exit": 0
+    },
+    {
+      "name": "matrix-offline",
+      "exit": 0
+    }
+  ],
+  "webPassed": 1702,
+  "chromium": {
+    "startTime": "2026-10-03T12:22:55.848Z",
+    "duration": 77857.733,
+    "expected": 82,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "representativeMatrix": {
+    "startTime": "2026-10-03T12:22:17.725Z",
+    "duration": 16357.435000000001,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "ordinaryRust": {
+    "passed": 2995,
+    "failed": 0,
+    "ignored": 165,
+    "resultBlocks": 150
+  },
+  "renderedStyleControls": [
+    {
+      "role": "selection",
+      "exit": 1,
+      "expectedNamedAssertionDetected": true,
+      "kind": "rendered-style override, not source-format/protocol mutation"
+    },
+    {
+      "role": "focus",
+      "exit": 1,
+      "expectedNamedAssertionDetected": true,
+      "kind": "rendered-style override, not source-format/protocol mutation"
+    },
+    {
+      "role": "validation",
+      "exit": 1,
+      "expectedNamedAssertionDetected": true,
+      "kind": "rendered-style override, not source-format/protocol mutation"
+    }
+  ],
+  "protectedInputs": 703,
+  "sourceFreezeDigest": "5f8a24adef602ad5ed8623a873b267a49d08403f72f9fc94f3ccbbb04bca00b8",
+  "privateCasesExecuted": 28,
+  "privateInputFilesUnchanged": 421,
+  "privateIntegrityVerified": true,
+  "temporaryFixtureLinksRemoved": true,
+  "transientMatrixRemoved": true,
+  "matrixAggregates": {
+    "instances": 115,
+    "uniquePackages": 113
+  },
+  "sourceInputsRemainExactAfterDocsOnlyIntegration": true,
+  "selfReview": {
+    "baseline": "ad1395d490f0c23fd05013ee065f65fa1f5b6072",
+    "head": "1660911bdd5bf350c6042bbeb9a2b694ad66fa41",
+    "capturedDiffPaths": [
+      "apps/knx-server/src/settings_routes.rs",
+      "apps/knx-web/src/App.tsx",
+      "apps/knx-web/src/Overlay.tsx",
+      "apps/knx-web/src/SettingsPanel.test.tsx",
+      "apps/knx-web/src/SettingsPanel.tsx",
+      "apps/knx-web/src/ThemePackDiagnostic.tsx",
+      "apps/knx-web/src/ThemePackManager.integration.test.tsx",
+      "apps/knx-web/src/ThemePackManager.tsx",
+      "apps/knx-web/src/settingsStore.ts",
+      "apps/knx-web/src/theme.ts",
+      "apps/knx-web/src/themePack.test.ts",
+      "apps/knx-web/src/themePack.ts",
+      "apps/knx-web/src/themePackAgreement.test.ts",
+      "apps/knx-web/src/themePackDom.test.ts",
+      "apps/knx-web/src/themePackDom.ts",
+      "apps/knx-web/src/themePackFiles.test.ts",
+      "apps/knx-web/src/themePackFiles.ts",
+      "apps/knx-web/src/themePackFixtures.ts",
+      "apps/knx-web/src/themePackRoundtrip.test.ts",
+      "apps/knx-web/src/themePackRuntime.test.tsx",
+      "apps/knx-web/src/themePackStorage.test.ts",
+      "apps/knx-web/src/themePackStorage.ts",
+      "apps/knx-web/src/themePackStore.test.ts",
+      "apps/knx-web/src/themePreview.test.tsx"
+    ],
+    "verdict": "no new blocking production issue; U18-R1 fixed; MINOR stale current documentation fixed; self-review only"
+  },
+  "publication": {
+    "status": "PUBLISHED_READ_BACK",
+    "sourceDelivery": {
+      "head": "1964fd6bb0787cf3ffa95e3b153fb3961bcb7ddd",
+      "liveRemoteRefExact": true,
+      "fetchedRefExact": true,
+      "fullTreeExact": true,
+      "protectedInputsExact": 703,
+      "ownedArtifactsExact": 15,
+      "outgoingCommits": 0,
+      "sourceGatedHead": "1660911bdd5bf350c6042bbeb9a2b694ad66fa41",
+      "sourceDeltaSinceGate": false
+    },
+    "finalMetadata": "source-identical doc-only closure; its live readback follows commit"
+  },
+  "timestamp": "2026-10-03 15:47 CEST",
+  "fixtureTypeCanary": {
+    "expectedTS2322": true,
+    "module": "theme-state-fixture.tsx",
+    "restoredHistoricalDigest": "e4d147f393e4349bf0f24fecd427cb0004d93fdc4e42f5334c5cacdb2720c360",
+    "productionCSSCanonicalAfterControl": true
+  },
+  "closureDocGates": {
+    "commands": [
+      {
+        "name": "check-layering",
+        "exit": 0,
+        "outputBytes": 1085
+      },
+      {
+        "name": "check-headers",
+        "exit": 0,
+        "outputBytes": 454
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0,
+        "outputBytes": 414
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0,
+        "outputBytes": 436
+      }
+    ],
+    "backcompatAnchor": {
+      "slug": "u18-representative-theme-states--candidate-acceptance-running",
+      "firstControl": "SURVIVED_UNREFERENCED_IN_GATE_SCOPE",
+      "correctedNamedFailureDetected": true,
+      "restored": true,
+      "finalLinksChecked": 382,
+      "markdownFilesChecked": 248
+    }
+  },
+  "cleanup": {
+    "workersGone": true,
+    "noProcessesUsingOwnedCwd": true,
+    "ownScratchEntriesRemoved": 52,
+    "ownNodeModulesRemoved": true,
+    "rootAndForeignUntouched": true,
+    "finalDocExecutableAndCleanWorktreeCleanup": "after final metadata readback"
+  }
+}

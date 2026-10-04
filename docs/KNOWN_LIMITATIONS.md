@@ -1,13 +1,40 @@
 # Known limitations
 
-## Theme packs have runtime and persistence foundations, not a management workflow
+## CRT motion is browser-verified application behavior, not theme-pack v2
+
+The CRT interaction follow-up implements real App/ProjectExplorer/
+GroupAddressTable feedback through a separately selected motion style. Palette
+v1 remains declarative and unchanged; importing it cannot enable motion. Exact
+selection `#003300`, Save-only purple, additional input focus glow and all other
+component redesign remain outside this animation change. Native table markup,
+bulk-selection rail and existing delegated keyboard handlers are retained.
+
+Standard admits bounded light/flash; Subtle admits fill only. Off and OS reduced
+motion cancel active CRT effects. Scroll, resize, zoom/preference change, anchor
+retirement, drag start, window blur and disposal retire transient feedback.
+Save glow is a request-activation cue, never a success indicator; a failed Save
+still reports its error and keeps the project dirty. Autosave remains silent.
+
+Evidence uses only intercepted synthetic Chromium requests; there is no native
+WebKitGTK, Orca, full ARIA tree/grid, every-state contrast or WCAG acceptance claim.
+The native-frame screenshot uses paused test time; normal expiry/cancellation is
+checked separately. Authorized feature16c9d774 is integrated onto main as3d03aea5,
+with repeated frontend/browser/workspace gates. Publication is established by
+current refs/closure handover, not a palette import. The ordinary workspace gate
+passed3009 tests and left166 ignored/private/hardware tests unexecuted; this does
+not certify those scopes. See [CRT guide](DESIGN_RETRO_GREEN_CRT.md).
+
+<a id="theme-pack-management-is-a-local-candidate-not-release-acceptance"></a>
+## Verified theme pack management is not whole-extension release acceptance
 
 U15 admission/runtime is delivered. U16 delivers file transport as 1f94808d,
 acknowledged conditional installation/removal/selection and structured errors;
 the 16-check candidate and actual-merged 22-check gates passed. Source publication
-and exact remote artifact readback are verified. U17
-production controls, visible diagnostics and reversible preview are not yet
-implemented. The existing built-in picker is not the custom-pack manager.
+and exact remote artifact readback are verified. U17 Appearance management/
+diagnostics/preview passes actual merged23-command acceptance on f16f1e40:
+Web1702, Chromium72, Rust2984/0/165,27 explicitly selected private offline cases
+plus the115-instance matrix,697 unchanged source/config inputs and420 unchanged
+private files. Publication/readback is tracked in the current handover.
 
 Unknown raw entries are retained, not repaired. Recovery exports only observed
 browser JSON theme scope, not original lexical bytes, duplicate names or numeric
@@ -22,7 +49,24 @@ Admission targets serialized JSON/settings data, not isolation from already
 privileged hostile JavaScript proxies. Contrast covers the documented three
 role pairs and accents, not every component/WCAG criterion. Local intercepted
 Chromium/self-review is not native WebKitGTK/Orca, independent approval or
-release acceptance. U17–U18 remain open; U15 publication remains 9d1ae19d.
+release acceptance. U15 publication remains9d1ae19d. U18-R1 is closed by
+actual GroupAddressTable/Inspector/Overlay/diagnostic states over five built-ins,
+System light/dark and two admitted user palettes:10/10 representative cases,
+three named rendered-style failures, full Chromium82 and Web1702 on the
+actual-integrated703-input stand1660911b. The coupled24-command acceptance
+includes28 selected offline cases (matrix included);421 private files unchanged.
+This closes the fixture-coverage finding, not native/Orca/general WCAG or
+whole-application Alpha/ETS acceptance. Publication/readback is in the handover.
+
+Preview cancellation changes presentation only. Once a guarded write is
+dispatched, closing Settings cannot cancel its server operation; the UI states
+this and disables false-undo Cancel while awaiting acknowledgment. A definitive
+409 retains the last confirmed settings until the existing refresh sees a peer;
+an ambiguous 500 may require a read, never a silent write retry. Recovery exports
+currently observed data (possibly cache), not a fresh server-file backup. A local
+cache-write failure after server acknowledgment is separately reported.
+Older standalone builtin callers retain their ordinary callback; the actual
+managed Appearance selector uses guarded acknowledgment for all theme choices.
 
 ## Backup directory synchronization is not a disk-loss or confinement proof
 
@@ -6723,6 +6767,21 @@ recovery, durable history or hardware-support residues (ADR-0051 amendment).
 <a id="146-a-channel-without-text-has-no-name-of-its-own-and-some-activations-are-undetermined"></a>
 ## §146 Channel labels are shown; undetermined activation and missing DPT remain
 
+**Bounded text-refusal policy accepted (2026-10-03 13:32 CEST, ADR-0066).**
+Scoped FunctionText substitution and channel-text rendering/cached copies share
+one4,000,000-unit content/work context. Overflow refuses the whole DeviceDetail
+through existing HTTP400, no clipped output or changed activation/write authority.
+Actual0369a56a/22 commands passes: Rust2995/0/165, Web1702/Chromium72,
+selected private9,699 exact inputs/17 equal bindings/420 unchanged originals.
+No new generated/UI contract; dedicated language/refresh error/snapshot behavior
+is UI-owner verification. Legacy String SDK helper, unscoped/raw metadata/query/
+serializer allocations and total RSS remain outside this bound. Full AR07/ETS
+and the newly found AR06P nested-definition sample are not accepted by this gate.
+Final five document checks passed; scoped delivery 0b8ec935
+was published/fetched/live-read back,699 inputs/7 docs exact at that checkpoint.
+Whole AR07/Alpha and dedicated UI consumer acceptance remain open. See
+[decision](adr/0066-outside-walk-text-refusal.md).
+
 **AR07 candidate (2026-10-02, ADR-0061).** A resolved controller kind outside
 Number/Restriction (with the existing None exception retained) now emits
 UnsupportedControlKind, skips/names branch refs and marks activation potentially
@@ -7109,3 +7168,180 @@ branches, full backup contents/restoration, all terminal/cleanup/abort/restart f
 crash/power-loss durability, hardware/vendor/ETS compatibility and final integrated
 release acceptance. The simulated header2/2 fault is not an authentic WAL capture.
 See ADR-0067 and the maintained commissioning status/owner ledger for disposition.
+## §149 `knx products ingest` matches the `.knxprod` extension case-sensitively
+
+**Scoped resolution published362fec24 (2026-10-03):** The scoped AR06P CLI correction
+uses exact ASCII case-independent extension comparison, with five synthetic CLI
+regressions, four named compiled mutation failures, public workspace/build
+gates and same-release-profile baseline RED/candidate GREEN verification.
+`.KNXPROJ` remains project import; case-independent pre-destination legacy
+refusal remains unchanged. Full unpinned853 original-filename measurement
+is independently accepted on the same release profile:644→687 installs,
+Hager/Berker2→45;43 upper-case packages admitted, two ZIP-limit and one
+evidence-item refusal remain explicit/atomic. Originals and retained successful
+blobs verified unchanged; no private raw/item logs. Normal U18 merge dd5a350c
+is independently actual16 accepted: Rust3000/0/165, Web1702, Chromium82,
+17 bindings/704 committed-exact inputs. All285 CLI build/test inputs equal
+the measured producer. Delivery362fec24 live/fetched/local refs equal0/0,
+source704 and ten owned artifacts byte-exact; five acceptance Markdown gates
+pass. This lifts only the case-sensitive CLI dispatch limitation, not §150–153
+or full product/ETS/commissioning compatibility.
+
+**Historical baseline observed 2026-10-03** (PRODUCT_DATABASE_CORPUS §Public crawler corpus run).
+`run_products_ingest` (`apps/knx-cli/src/main.rs`) routes a file to
+`knx_productdb::install_package` only when its extension is exactly
+`knxprod` or `vd2`. Hager and Berker publish their product databases as
+`*.KNXPROD`. Those 46 files fall through to the `.knxproj` project importer
+and fail with the misleading `no P-*.signature entry; cannot determine the
+project part`. The same bytes under a lowercase name install 43 of 46 (the
+other 3 hit §151/§152).
+
+- Only the CLI is affected. The server install route calls
+  `install_package` directly with no extension switch, and the web file
+  picker's `accept=".knxprod"` matches case-insensitively per HTML.
+- `install_package` itself already compares legacy extensions
+  case-insensitively (`.vd3`–`.vd5`, `.pr3`–`.pr5`), so the two entry
+  points disagree.
+- **Historical workaround (older CLI builds):** rename or symlink to lowercase `.knxprod`.
+- **Lifted in the scoped delivery above:** exact ASCII case-independent routing
+  with uppercase/mixed-case, project negative-control, legacy-refusal, retained
+  byte/idempotence regressions and independently compiled routing mutants.
+
+## §150 A product with nested `ModuleDef`s crashes the install with a database constraint error
+
+**Scoped storage fix delivered 2026-10-03 23:05 CEST.** Actual integrated
+cbe9952f passed fresh public16 and the same authorized private baseline RED/
+candidate GREEN; code published as1b215d51, fetched/live refs equal. An incoming
+foreign stats-only commit was retained byte-exact, source706 unchanged, five
+fresh publication doc gates pass. Full853 measured installed687→688 with one
+constraint refusal→installed and unchanged other categories; all original
+hashes independently checked. Fourteen owned build/snapshot/browser directories
+removed; closing metadata and final checkout hygiene pending. Lift only this
+fresh-install storage/key-scoping bug. R-MODULE-04 runtime/allocation/parameter
+semantics, new limits/grammar, full vendor/ETS compatibility and automatic repair
+of already-admitted mis-scoped catalog rows remain outside this fix.
+
+**Full offline/public candidate evidence accepted 2026-10-03 22:35 CEST;
+integrated acceptance/publication/cleanup pending, not yet lifted.** Commit
+a2aa4b7 has fresh complete public16: Rust153 blocks/3009-0-166, ignored
+inventory166, Web1702, Chromium82 and shadow bindings17 token-exact. The first
+binding helper API rejection is retained separately, not a product/test failure.
+Fresh same-profile Release pair12 confirms old-parser named storage RED,
+candidate7 GREEN and CLI5 controls GREEN on both sides. Full853 original-name
+CLI pair independently reconciled: baseline687 installed/candidate688, exactly
+one database-constraint refusal becomes installed;147 namespace,15 ZIP-limit,
+two evidence-item-limit and one invalid-ZIP refusals unchanged. No installed-
+to-refused regression. Original manifest/all853 files independently rehashed,
+successful package bytes/source-blob hashes verified, four catalog/package
+tables empty after refusal, temporary inputs/databases gone; aggregate-only
+receipts, no private item/raw output. No new limits or runtime semantics.
+
+**Storage candidate verified 2026-10-03 20:56 CEST; not yet delivered/lifted.**
+Synthetic named UNIQUE-constraint RED confirms that a single mutable definition
+identity loses its enclosing scope at an inner End; Empty also clears it.
+The candidate stores lexical definition identity and argument position on a
+stack, preserving existing keys, source ownership and atomic transactions.
+Nine public focused tests and ProductDB625/0/25 pass with strict Clippy;
+three compiled mutants have five named failures, plus an exact committed
+pre-fix baseline RED. One authorized private nested-package pair is baseline
+RED/candidate GREEN, with independent lexical/stored scope-count agreement,
+original-ZIP/retained-member equality, successful retry and unchanged originals.
+No private raw/item records survive. Full853 CLI measurement, broad/current-
+upstream gates, publication/readback and cleanup remain pending. This does not
+claim R-MODULE-04 runtime/allocation semantics, new nested diagnostic XPath
+fidelity or automatic repair of previously admitted mis-scoped catalog rows.
+The existing idempotence policy still skips stored trees; eligible retained-
+source replay is synthetically verified, not a new database migration.
+
+**Observed 2026-10-03.** MDT `RF-TAL55Bx0x-01S_MDT_KP_V12.knxprod`
+(scheme 20, program `M-0083_A-00F2-12-05C4`) fails in a shared and in a
+fresh database with `UNIQUE constraint failed: dynamic_node.program_id,
+dynamic_node.module_def_id, dynamic_node.node_id`. The whole package is
+rolled back, so no partial rows are written, but nothing of it can be used.
+
+- The program declares 19 `ModuleDef`s, 11 of them nested inside another
+  `ModuleDef` (depth 2). It is the only one of 97 crawled MDT packages with
+  nested `ModuleDef`s, and every other MDT package installs.
+- **Hypothesis (unverified, no code changed):** `dynamic/parse.rs` clears
+  `module_def_id` at the end of a `ModuleDef` (around line 317). After an
+  inner definition ends, the outer one's remaining `Dynamic` content lands
+  under the wrong `(program_id, module_def_id)` key, where the per-key
+  monotonic `node_id` then collides.
+- This contradicts the earlier note that "the installed corpus measures
+  zero products that actually nest" (GAP_ANALYSIS_ETS A3). That note
+  remains true for `OriginalData`, but real downloadable products do nest. A full scan of the 852 crawled ZIP
+ packages found this one package as the *only* nested example, which makes
+ it the sole real R-MODULE-04 sample so far.
+ - Planned as alpha package AR06P (`alpha-release-goal.md`), P1.
+- **Lifted when** nested `ModuleDef`s parse into correctly scoped
+  `dynamic_node` rows, proven by a synthetic nested fixture plus this
+  package.
+
+## §151 Real manufacturer packages exceed the product-ZIP size limits
+
+**Bounded resource research verified 2026-10-03 22:02 UTC, base5540dcac.**
+All853 original hashes/manifest rechecked; declared-size selection15 is seven
+member-only, five total-only and three both (eight total/ten member violations).
+The extra two member-only cases follow KL149 dispatch admission. A scratch-only
+fixed member256MiB/expanded4GiB variant, compressed256MiB and other706 inputs
+unchanged, installs14 and explicitly refuses one unsupported namespace;
+production baseline refuses15 atomically. Same Release profile, fresh per-side
+DBs,16 registered public hostile controls/six helper controls verified. Raised
+cohort maxima:789976KiB RSS,221.55s ingest,7556988928-byte DB; total638.04s and
+21970833408 DB bytes. Original/retained archive hashes and refusal empty tables
+verified, private copies/DBs gone, no private raw/per-item vectors persisted.
+This is measured admission, not runtime/ETS compatibility. Production bounds
+remain unchanged: a blanket raise is not accepted by these corpus figures alone.
+The HTTP catalog route still performs synchronous install while holding the
+product DB mutex; CLI timings do not prove HTTP latency/progress/cancellation
+acceptance. Reconcile caller ownership/resource guards and add cap-boundary
+hostile regressions before choosing a smaller documented bound or streaming.
+
+**Observed 2026-10-03.** `MAX_EXPANDED_SIZE` (256 MiB) and
+`MAX_MEMBER_SIZE` (64 MiB) in `knx-productdb/src/package.rs` refuse 13 of
+853 crawled files, plus 2 more Hager packages once §149 is worked around.
+
+- **Expanded total > 256 MiB (8):** complete manufacturer bundles, 295 MiB
+  to 2,740 MiB expanded. These include Siemens' complete
+  `Siemens_HVAC_All_PDB_Oct_2023_ETS5_ETS6.knxprod` (1,006 MiB, which is
+  Siemens' *only* current download) and ABB's
+  `IBUS_ETS5_{ABB,BJE}_XX_V24-12-20_…` all-products bundles (2,740 and
+  1,700 MiB).
+- **Single member > 64 MiB (5):** individual ABB device packages whose
+  application XML is 65–139 MiB (e.g. `DGS_264511_…`, `6197_46_…`).
+- The refusal is clean and correct for the current limits. The limits
+  remain a deliberate denial-of-service bound and are not a defect in
+  themselves. But Siemens' entire public offering is currently unusable,
+  and so are several real single-device packages.
+- **Lifted when** the limits are revisited with measured memory/time costs,
+  for example a streaming ingest or a per-package opt-in raise, while
+  keeping a bound.
+
+## §152 The XML evidence item limit refuses two real packages
+
+**Observed 2026-10-03.** `MAX_EVIDENCE_ITEMS` (262,144,
+`knx-productdb/src/parse/scheme_evidence.rs`) refuses ABB
+`PS5604-KNX AC500.knxprod` and Hager `PS_TXA664D_V105_T5` (both scheme 14;
+the Hager one measured after the §149 workaround) with `XML evidence exceeds
+item limit 262144`. Reproduced in a fresh database. The refusal is atomic
+and explicit, so no data is lost silently. **Lifted when** the evidence
+budget is sized against measured real maxima, or evidence collection
+degrades to a counted summary instead of refusing the package.
+
+## §153 Master-data schemes 10 and 23 are refused for standalone `.knxprod`
+
+**Observed 2026-10-03.** Of 853 crawled files, 146 use namespace
+`http://knx.org/xml/project/10` (145 ABB plus 1 ABB bundle that also hits
+§151) and 2 use `…/project/23`: ABB `LKS_43_VD-TP_XX_V1-0_…_Rev_A` and MDT
+`SCN-LK001-03S_MDT_KP_V10_ETS6`. Both schemes are refused with
+`unsupported product master namespace`, consistent with the documented
+accepted set (11, 12, 13, 14, 20, exact 21).
+
+- Scheme 10 is the largest single refusal class. ABB still offers that
+  many ETS4-era packages.
+- Scheme 23 has so far been named only for `.knxproj` projects
+  (COMPATIBILITY.md). It now also appears in current ETS6 product
+  downloads, and the corpus documents' "schemes 15–19 and 22 remain
+  unmeasured" list did not mention it.
+- **Lifted when** each scheme is admitted with grammar evidence like
+  schemes 12–14/21 were. Until then, the refusal is the intended behaviour.

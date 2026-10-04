@@ -1417,12 +1417,13 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    if matches!(
-        Path::new(file)
-            .extension()
-            .and_then(|extension| extension.to_str()),
-        Some("knxprod" | "vd2")
-    ) {
+    if Path::new(file)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            extension.eq_ignore_ascii_case("knxprod") || extension.eq_ignore_ascii_case("vd2")
+        })
+    {
         let conn = match open_products_db(product_db.as_deref()) {
             Ok(conn) => conn,
             Err(e) => {

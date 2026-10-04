@@ -184,7 +184,7 @@ inputs exact, fresh changed ProductDB/root-bound xtask compiled, CLI hash/versio
 bound to actual HEAD. Previous failed attempts and historical Scheme23 controls
 remain distinct; no double counting or private access.
 
-Published cc2916f4 brings UI+AR14D documentation consolidation and check-ledger.
+Published cc2916c6 brings UI+AR14D documentation consolidation and check-ledger.
 Respect the learned freeze: no fresh status-doc/ledger-row edits. Preserve
 upstream archived history, put the count-contract dossier and any row proposal
 in permitted handover. New actual integration/gates needed, publication pending.

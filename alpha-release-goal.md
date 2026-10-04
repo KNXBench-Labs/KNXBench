@@ -737,10 +737,28 @@ boundaries. No bus run.
 
 **Exit evidence:** offline contract/regression dossier or retained documented boundaries. No real bus run, multi-tunnel redesign, automatic coupler traversal, scan speed promise or new hardware support. Monitor UI and discovery acceptance remain external owner work.
 
+### AR14D — Consolidate status tracking before AR15
+
+**Sources:** none in the 180-ID ledger; documentation hygiene requested by the user on 2026-10-04 (“what is redundant and worth merging, and what should be split for readability”).
+**Dependencies:** none for D1. D2–D5 need the *status-docs lock* below and run before AR15, so that AR15 reconciles one ledger instead of six.
+**Status:** `IN_PROGRESS` — D1 delivered, D2–D5 `TODO`.
+
+**Why.** The same per-ID status is kept in up to six places: the ledger in §7–§8 of this file, the per-ID ledger in [ALPHA_READINESS](docs/ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md) (42 rows), [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md) (24 rows), [LIMITATION_TRIAGE](docs/LIMITATION_TRIAGE.md) (priorities) and the frozen [OFFENE_PUNKTE](docs/archive/OFFENE_PUNKTE.md) snapshot. They already drift apart: on 2026-10-04 `KL-149` was `TODO` in §8 while the AR06P text called it a scoped candidate. Three very large files also make the current state hard to find: `IMPLEMENTATION_STATUS` (15.2k lines), `KNOWN_LIMITATIONS` (7.6k) and `RESEARCH` (6.8k).
+
+**Status-docs lock.** D2–D5 rewrite rows that other sessions also update. A session takes the lock with a handover-only commit pushed to `main` at once, carrying the line `Status-docs lock: taken by <session> for AR14D-<n>`, and releases it with the same line saying `released` in its merge entry. While another session holds it, do not edit ledger rows. Write the status change in your own handover entry under the heading *Ledger updates for AR14D* instead; the holder applies it and says so. One step per lock. Prefer a quiet window: no other session in the middle of a ledger-touching delivery.
+
+- [x] **D1 — Archive and slim the logs** (Claude session, 2026-10-04). `goal.md`, `OFFENE_PUNKTE.md` and `PROJECT_ANALYSIS_2026-09-15.md` moved verbatim to [docs/archive](docs/archive/README.md). The September tail of `IMPLEMENTATION_STATUS` (12.5k lines) moved verbatim to [docs/history](docs/history/IMPLEMENTATION_STATUS_2026-09.md). The handover `.ai/CURRENT_STATE.md` keeps its 75 newest entries; the 470 older ones moved verbatim to `.ai/archive/`. Only relative links changed; check-anchors 393 links / 262 files, none dead. `IDEA.md` and the empty `docs/Issues.md` stay: the latter is the user's inbox for observations.
+- [ ] **D2 — One source-ID ledger.** ADR first: which file is the status of record, its columns (ID, priority, route/owner, status, evidence link, last change) and who may change which rows (owners keep authority over their rows; only the location changes). Then create it, e.g. `docs/status/ALPHA_LEDGER.md` as one Markdown table, and replace §7–§8 here, the per-ID tables in ALPHA_READINESS, COMMISSIONING_ALPHA_LEDGER and UI_ALPHA_READINESS by links. Their evidence prose stays where it is. Before moving, reconcile every row whose status differs between the sources, with evidence, and list each correction; never pick the more flattering one silently.
+- [ ] **D3 — A ledger check in `xtask`.** Unique IDs, only the §2.2 status words, 180 snapshot rows plus the post-snapshot rows, every `KL-n` exists as a heading in `KNOWN_LIMITATIONS`, no second per-ID status table anywhere in `docs/` or the goal files. Test with positive and negative fixtures and a mutation of each rule. Add it to the doc gates in §5.
+- [ ] **D4 — Split `RESEARCH.md` by topic** into `docs/research/<topic>.md` (for example project import, product database, KNXnet/IP, DPT, device procedures). `RESEARCH.md` stays as the index; section numbers (§25 and so on) stay stable. Rewrite every inbound anchor link across `docs/`, the goal files, code comments and ADRs, keep `<a id>` aliases where a slug changes, and prove by script that the union of the new files contains every original line.
+- [ ] **D5 — Separate resolved from open in `KNOWN_LIMITATIONS`.** Move the body of resolved or withdrawn entries to `docs/history/KNOWN_LIMITATIONS_resolved.md`. The heading stays in place as a one-line stub with the resolution and a link, so numbering and the 130+ inbound links keep working. Recount with the LIMITATION_TRIAGE command and record the counts before and after. Then replace the *Where things stand* sections of `goal-ui.md` and `goal-commission.md`, and their `goal.md` ownership rows, with links to the ledger; this needs each owner session's agreement in the handover, because those files are theirs.
+
+**Exit evidence:** one ledger with a green `xtask` check, no duplicate per-ID status table, inbound links intact (check-anchors plus a plain-file link check), a line-preservation proof for every move, and counts recorded before and after. No status changes without evidence; this package moves and reconciles, it does not close items.
+
 ### AR15 — Reconcile release documentation and limitations on the finished scope
 
 **Sources:** `DOC-03`, `KL-9`, `KL-16`, `KL-46`, plus all earlier results and accepted/later routes.
-**Dependencies:** completed/explicitly blocked AR00–AR14 and AR06P; newest owner receipts.
+**Dependencies:** completed/explicitly blocked AR00–AR14, AR06P and AR14D (one consolidated ledger); newest owner receipts.
 
 - [ ] Reconcile `IMPLEMENTATION_STATUS`, `KNOWN_LIMITATIONS`, `LIMITATION_TRIAGE`, `ROADMAP`, `GAP_ANALYSIS_ETS`, `COMPATIBILITY`, `IMPORT_EXPORT` and the relevant model/architecture docs with actual source/tests.
 - [ ] Recount limitations and derived tables programmatically; preserve duplicate-ID disambiguation, historical anchors and new entries published by either other track.

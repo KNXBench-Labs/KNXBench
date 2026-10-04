@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 17:40
+Web lock: taken by claude-goal-ui-owner for DATA-03 web half (catalog `requestId` and safe retry)
+- **Completed:** Lock taken only, no code yet. The previous lock line (this session, MODEL-03 delivered `596697a6`) said released.
+- **Pending/Next Steps:** DATA-03 per *UI owner handoff*: one `requestId` per catalog submit; after a lost or ambiguous response, offer a retry with the same id; treat `replayed: true` as success without a second batch. Release the lock in the merge entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 17:39
 Web lock: released by claude-goal-ui-owner (MODEL-03 web half delivered)
 - **Completed:** MODEL-03 web half. The individual-address editor submits device number `0`; the server alone decides through the product database (`Hardware/@IsCoupler`, UA1 backend), and its refusal is shown in the field, which restores its previous value. The unused client refusal message was removed (en/de). RED first: 2 Inspector cases and 4 intercepted Chromium cases (en/de × accepted/refused). 3/3 mutants caught. Full gate, attempt 2 on the corrected candidate: web build, fmt, clippy -D warnings, workspace tests 3,145 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, four repository gates (headers 459 ok, ceiling 157), tsc, Vitest 1,763/100 files, the complete intercepted Chromium suite 94/94, whitespace; source frozen. Attempt 1 failed only `check-headers`: the new e2e header was 106 columns, the limit is 100. Shortened to 88 and re-gated in full; the failed attempt is kept, not relabelled. MODEL-03 is DONE in the Alpha ledger. Log: `.ai/logs/2026-10-04_claude_ui-model03-web.md`.

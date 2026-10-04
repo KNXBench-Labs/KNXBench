@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:02
+Web lock: taken by claude-goal-ui-owner for U20 (telegram-flow view: shared monitor feed, graph, immediate values)
+- **Completed:** Lock taken only. AR20 is integrated (`85bfab88`, TELEGRAM_FLOW_VISUALIZATION §10).
+- **Pending/Next Steps:** U20 per `goal-ui.md` §3c: a read-only flow view on the existing monitor session (no second poll loop or tunnel), a pure bounded reducer keyed by session and generation, value slots with a 7 s expiry, keyboard and Inspector access. Intercepted synthetic traffic only. Release the lock in the delivering entry; a multi-part delivery says "still held".
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 22:01
 Web lock: released by claude-goal-ui-owner (AR08 dialog `9bc36499` and KL-60 diff virtualisation delivered)
 - **Completed:** **KL-60 (AR11 user decision): the diff view's long tables filter and scroll instead of paging.** Tables over 20 entries get a search field (key/name), status toggles (`aria-pressed`), a live `role="status"` count and a windowed scroll viewport (`virtualWindow.ts`, measured row heights, `ResizeObserver`); rows above the view that grow shift `scrollTop`, a list at its end stays there, End/Home jump instantly, nested tables stay open while their row is windowed out, Escape clears a typed filter before closing the report. "Show more"/`DIFF_PAGE_SIZE` removed; backend diff API unchanged. Evidence: RED-first Vitest (window 7, filter 3, panel 6, memory 2); Chromium `e2e/diff-virtual.e2e.ts` on a synthetic 3,300-entry table (DOM < 120 rows, all positions reached, End/Home, anchor stability, filters) fails 4/4 on the old list; 14 mutants caught. Full gate attempt 3 on the tree rebased over AR20 (`85bfab88`) and `1a8acffa`: web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 497 ok; anchors 452 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,885/108 files, complete Chromium suite 118/118, whitespace; source frozen. Attempts 1 and 2 were aborted by the owner (review fix; upstream rebase), logs kept. Ledger `KL-60` DONE; goal-ui §3b rows UA7/UA8; KNOWN_LIMITATIONS §60, manual pages and IMPLEMENTATION_STATUS updated. Log: `.ai/logs/2026-10-04_claude_ui-kl60-diff-virtualisation.md`.

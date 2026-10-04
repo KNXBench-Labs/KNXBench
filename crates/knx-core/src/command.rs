@@ -41,6 +41,35 @@ pub struct CouplerEvidence {
     pub product_ref: String,
 }
 
+/// One topology slot a device can occupy: a line's device list or an
+/// installation's unassigned list. Names the placement the user keeps in a
+/// [`Command::RepairDevicePlacement`] (MODEL-02).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DevicePlacementSlot {
+    Line(LineId),
+    Unassigned(InstallationId),
+}
+
+/// One occurrence removed by a repair, in removal order: the container
+/// (`line: None` = the installation's unassigned list) and the index it
+/// had when it was removed. Reinserting in reverse order restores the exact
+/// imported lists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RemovedDevicePlacement {
+    pub installation: InstallationId,
+    pub line: Option<LineId>,
+    pub position: usize,
+}
+
+/// One area→line reference removed by [`Command::RepairLineOwner`], in
+/// removal order, with the index it had in that area's line list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RemovedLineReference {
+    pub installation: InstallationId,
+    pub area: AreaId,
+    pub position: usize,
+}
+
 /// A single reversible mutation. Commands addressed by an entity id act in
 /// the installation that owns that entity (MODEL-01); an id found in several
 /// installations is refused as ambiguous. Root-level creates take an
@@ -474,6 +503,38 @@ pub enum Command {
     SetGroupAddressStyle {
         style: GroupAddressStyle,
     },
+    /// MODEL-02 repair: `device` occurs in several topology slots (imported
+    /// ambiguity). Keeps the first occurrence in `keep` — which must be a
+    /// slot the device occupies now — and removes every other occurrence in
+    /// every installation. Addresses, links and building placement are
+    /// untouched. Refused when the device is placed at most once (a repair
+    /// is not a move).
+    RepairDevicePlacement {
+        device: DeviceId,
+        keep: DevicePlacementSlot,
+    },
+    /// Undo-only inverse of [`Command::RepairDevicePlacement`]: reinserts
+    /// `removed` in reverse removal order.
+    RestoreDevicePlacements {
+        device: DeviceId,
+        keep: DevicePlacementSlot,
+        removed: Vec<RemovedDevicePlacement>,
+    },
+    /// MODEL-02 repair: `line` is listed by several area entries (two areas,
+    /// twice in one area, or by an area of another installation). Keeps the
+    /// first reference in `keep`, which must list the line now and belong to
+    /// the line's installation; removes all other references. Line and device
+    /// addresses are untouched. Refused when the line has a single owner.
+    RepairLineOwner {
+        line: LineId,
+        keep: AreaId,
+    },
+    /// Undo-only inverse of [`Command::RepairLineOwner`].
+    RestoreLineOwners {
+        line: LineId,
+        keep: AreaId,
+        removed: Vec<RemovedLineReference>,
+    },
     /// Renames an installation (MODEL-01). Self-inverting: the inverse
     /// carries the previous name.
     RenameInstallation {
@@ -511,6 +572,12 @@ pub enum CommandError {
         from: InstallationId,
         to: InstallationId,
     },
+    /// A topology repair was requested for something that is not ambiguous;
+    /// use the ordinary edit command instead.
+    RepairNotNeeded,
+    /// The placement chosen to keep is not one the entity occupies now; a
+    /// repair only removes, it never adds.
+    RepairKeepNotPresent,
     /// A `DeleteGroupAddress` was refused because at least one
     /// communication object still links to it — deleting it now would
     /// leave a dangling `GroupLink` (`ValidationError::DanglingGroupLink`
@@ -695,6 +762,14 @@ impl fmt::Display for CommandError {
                 f,
                 "parameters of device {device} exist in several installations; repair the project before editing them"
             ),
+            CommandError::RepairNotNeeded => write!(
+                f,
+                "nothing to repair: the placement is not ambiguous; use the ordinary edit"
+            ),
+            CommandError::RepairKeepNotPresent => write!(
+                f,
+                "the placement to keep is not one of the current placements; a repair only removes duplicates"
+            ),
             CommandError::CrossInstallation { from, to } => write!(
                 f,
                 "installation {from} and installation {to} are separate infrastructures; this would connect them"
@@ -852,6 +927,216 @@ fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), Command
     } else {
         Ok(())
     }
+}
+
+/// MODEL-02: removes every occurrence of `device` except the first one in
+/// `keep`. Validates everything before the first removal so a refusal leaves
+/// the project untouched. Returns the removals in order.
+fn repair_device_placement(
+    project: &mut Project,
+    device: DeviceId,
+    keep: DevicePlacementSlot,
+) -> Result<Vec<RemovedDevicePlacement>, CommandError> {
+    if project.devices.get(device).is_none() {
+        return Err(CommandError::DeviceNotFound(device));
+    }
+    let keep_index = match keep {
+        DevicePlacementSlot::Line(line) => require_unique_line(project, line)?,
+        DevicePlacementSlot::Unassigned(id) => target_installation(project, Some(id))?,
+    };
+    let keep_present = match keep {
+        DevicePlacementSlot::Line(line) => project.installations[keep_index]
+            .topology
+            .lines
+            .iter()
+            .any(|l| l.id == line && l.devices.contains(&device)),
+        DevicePlacementSlot::Unassigned(_) => project.installations[keep_index]
+            .topology
+            .unassigned
+            .contains(&device),
+    };
+    let occurrences: usize = project
+        .installations
+        .iter()
+        .map(|installation| {
+            installation
+                .topology
+                .unassigned
+                .iter()
+                .chain(installation.topology.lines.iter().flat_map(|l| &l.devices))
+                .filter(|&&d| d == device)
+                .count()
+        })
+        .sum();
+    if occurrences < 2 {
+        return Err(CommandError::RepairNotNeeded);
+    }
+    if !keep_present {
+        return Err(CommandError::RepairKeepNotPresent);
+    }
+    let mut removed = Vec::new();
+    for (index, installation) in project.installations.iter_mut().enumerate() {
+        let id = installation.id;
+        let keeps_unassigned =
+            index == keep_index && matches!(keep, DevicePlacementSlot::Unassigned(_));
+        remove_occurrences(
+            &mut installation.topology.unassigned,
+            device,
+            keeps_unassigned,
+            |position| RemovedDevicePlacement {
+                installation: id,
+                line: None,
+                position,
+            },
+            &mut removed,
+        );
+        for line in &mut installation.topology.lines {
+            let keeps_line = index == keep_index && keep == DevicePlacementSlot::Line(line.id);
+            let line_id = line.id;
+            remove_occurrences(
+                &mut line.devices,
+                device,
+                keeps_line,
+                |position| RemovedDevicePlacement {
+                    installation: id,
+                    line: Some(line_id),
+                    position,
+                },
+                &mut removed,
+            );
+        }
+    }
+    Ok(removed)
+}
+
+/// Removes every `item` from `list`, sparing the first one when
+/// `keep_first`; records each removal (index at removal time) via `record`.
+fn remove_occurrences<T: PartialEq + Copy, R>(
+    list: &mut Vec<T>,
+    item: T,
+    keep_first: bool,
+    record: impl Fn(usize) -> R,
+    removed: &mut Vec<R>,
+) {
+    let mut spared = !keep_first;
+    let mut position = 0;
+    while position < list.len() {
+        if list[position] == item {
+            if spared {
+                list.remove(position);
+                removed.push(record(position));
+                continue;
+            }
+            spared = true;
+        }
+        position += 1;
+    }
+}
+
+/// Undo of [`repair_device_placement`]: reinserts in reverse removal order.
+/// Validates every container and index first.
+fn restore_device_placements(
+    project: &mut Project,
+    device: DeviceId,
+    removed: &[RemovedDevicePlacement],
+) -> Result<(), CommandError> {
+    let mut targets = Vec::with_capacity(removed.len());
+    for entry in removed {
+        let index = restore_installation(project, entry.installation)?;
+        let line = match entry.line {
+            Some(line_id) => Some(
+                project.installations[index]
+                    .topology
+                    .lines
+                    .iter()
+                    .position(|l| l.id == line_id)
+                    .ok_or(CommandError::LineNotFound(line_id))?,
+            ),
+            None => None,
+        };
+        targets.push((index, line, entry.position));
+    }
+    for &(index, line, position) in targets.iter().rev() {
+        let topology = &mut project.installations[index].topology;
+        let list = match line {
+            Some(line) => &mut topology.lines[line].devices,
+            None => &mut topology.unassigned,
+        };
+        list.insert(position.min(list.len()), device);
+    }
+    Ok(())
+}
+
+/// MODEL-02: removes every area reference to `line` except the first one in
+/// `keep`. All checks run before the first removal.
+fn repair_line_owner(
+    project: &mut Project,
+    line: LineId,
+    keep: AreaId,
+) -> Result<Vec<RemovedLineReference>, CommandError> {
+    let line_index = require_unique_line(project, line)?;
+    let area_index = require_unique_area(project, keep)?;
+    let references: usize = project
+        .installations
+        .iter()
+        .flat_map(|installation| &installation.topology.areas)
+        .map(|area| area.lines.iter().filter(|&&l| l == line).count())
+        .sum();
+    if references < 2 {
+        return Err(CommandError::RepairNotNeeded);
+    }
+    same_installation(project, line_index, area_index)?;
+    if !project.installations[area_index]
+        .topology
+        .areas
+        .iter()
+        .any(|area| area.id == keep && area.lines.contains(&line))
+    {
+        return Err(CommandError::RepairKeepNotPresent);
+    }
+    let mut removed = Vec::new();
+    for installation in &mut project.installations {
+        let id = installation.id;
+        for area in &mut installation.topology.areas {
+            let area_id = area.id;
+            remove_occurrences(
+                &mut area.lines,
+                line,
+                area_id == keep,
+                |position| RemovedLineReference {
+                    installation: id,
+                    area: area_id,
+                    position,
+                },
+                &mut removed,
+            );
+        }
+    }
+    Ok(removed)
+}
+
+/// Undo of [`repair_line_owner`]: reinserts in reverse removal order.
+fn restore_line_owners(
+    project: &mut Project,
+    line: LineId,
+    removed: &[RemovedLineReference],
+) -> Result<(), CommandError> {
+    let mut targets = Vec::with_capacity(removed.len());
+    for entry in removed {
+        let index = restore_installation(project, entry.installation)?;
+        let area = project.installations[index]
+            .topology
+            .areas
+            .iter()
+            .position(|a| a.id == entry.area)
+            .ok_or(CommandError::AreaNotFound(entry.area))?;
+        targets.push((index, area, entry.position));
+    }
+    for &(index, area, position) in targets.iter().rev() {
+        let lines = &mut project.installations[index].topology.areas[area].lines;
+        lines.insert(position.min(lines.len()), line);
+    }
+    Ok(())
 }
 
 /// Index of installation `id`, or of the first installation for `None` —
@@ -3033,6 +3318,44 @@ impl Command {
                 let previous = project.info.group_address_style;
                 project.info.group_address_style = style;
                 Ok(Command::SetGroupAddressStyle { style: previous })
+            }
+            Command::RepairDevicePlacement { device, keep } => {
+                let removed = repair_device_placement(project, *device, *keep)?;
+                Ok(Command::RestoreDevicePlacements {
+                    device: *device,
+                    keep: *keep,
+                    removed,
+                })
+            }
+            Command::RestoreDevicePlacements {
+                device,
+                keep,
+                removed,
+            } => {
+                restore_device_placements(project, *device, removed)?;
+                Ok(Command::RepairDevicePlacement {
+                    device: *device,
+                    keep: *keep,
+                })
+            }
+            Command::RepairLineOwner { line, keep } => {
+                let removed = repair_line_owner(project, *line, *keep)?;
+                Ok(Command::RestoreLineOwners {
+                    line: *line,
+                    keep: *keep,
+                    removed,
+                })
+            }
+            Command::RestoreLineOwners {
+                line,
+                keep,
+                removed,
+            } => {
+                restore_line_owners(project, *line, removed)?;
+                Ok(Command::RepairLineOwner {
+                    line: *line,
+                    keep: *keep,
+                })
             }
             Command::RenameInstallation { id, name } => {
                 let index = target_installation(project, Some(*id))?;

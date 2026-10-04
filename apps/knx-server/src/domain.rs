@@ -2319,6 +2319,46 @@ pub fn rename_line_impl(
     )
 }
 
+/// MODEL-02: keep exactly one placement of a multiply placed device.
+/// `keep_line` and `keep_unassigned_installation` are mutually exclusive;
+/// exactly one must be given.
+pub fn repair_device_placement_impl(
+    state: &AppState,
+    device: u32,
+    keep_line: Option<u32>,
+    keep_unassigned_installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let keep = match (keep_line, keep_unassigned_installation) {
+        (Some(line), None) => knx_core::DevicePlacementSlot::Line(knx_core::LineId(line)),
+        (None, Some(installation)) => {
+            knx_core::DevicePlacementSlot::Unassigned(knx_core::InstallationId(installation))
+        }
+        _ => return Err("give exactly one of keepLineId or keepUnassignedInstallationId".into()),
+    };
+    apply(
+        state,
+        knx_core::Command::RepairDevicePlacement {
+            device: knx_core::DeviceId(device),
+            keep,
+        },
+    )
+}
+
+/// MODEL-02: keep exactly one area reference of a multiply owned line.
+pub fn repair_line_owner_impl(
+    state: &AppState,
+    line: u32,
+    keep_area: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RepairLineOwner {
+            line: knx_core::LineId(line),
+            keep: knx_core::AreaId(keep_area),
+        },
+    )
+}
+
 pub fn move_line_to_area_impl(
     state: &AppState,
     id: u32,

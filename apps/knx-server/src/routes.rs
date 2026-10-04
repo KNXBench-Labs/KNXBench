@@ -68,6 +68,11 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/lines", post(create_line))
         .route("/api/lines/{id}", delete(delete_line).patch(rename_line))
         .route("/api/move-line-to-area", post(move_line_to_area))
+        .route(
+            "/api/repair/device-placement",
+            post(repair_device_placement),
+        )
+        .route("/api/repair/line-owner", post(repair_line_owner))
         .route("/api/move-device", post(move_device_to_line))
         .route("/api/move-building-part", post(move_building_part))
         .route(
@@ -2279,6 +2284,52 @@ async fn rename_line(
     Json(body): Json<RenameTopologyBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::rename_line_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepairDevicePlacementBody {
+    device_id: u32,
+    #[serde(default)]
+    keep_line_id: Option<u32>,
+    #[serde(default)]
+    keep_unassigned_installation_id: Option<u8>,
+}
+
+/// MODEL-02: `POST /api/repair/device-placement` keeps one placement of a
+/// multiply placed device and removes the rest (one undo step).
+async fn repair_device_placement(
+    State(state): State<SharedState>,
+    body: Result<Json<RepairDevicePlacementBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::repair_device_placement_impl(
+        &state,
+        body.device_id,
+        body.keep_line_id,
+        body.keep_unassigned_installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepairLineOwnerBody {
+    line_id: u32,
+    keep_area_id: u32,
+}
+
+/// MODEL-02: `POST /api/repair/line-owner` keeps one area reference of a
+/// line listed by several areas (one undo step).
+async fn repair_line_owner(
+    State(state): State<SharedState>,
+    body: Result<Json<RepairLineOwnerBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::repair_line_owner_impl(&state, body.line_id, body.keep_area_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

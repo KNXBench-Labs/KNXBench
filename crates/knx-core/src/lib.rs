@@ -31,7 +31,10 @@ pub use address::{
 };
 pub use allocation::{free_line_addresses, AddressAllocationError};
 pub use building::{BuildingPart, BuildingPartType};
-pub use command::{Command, CommandError, CommandStack, CouplerEvidence, IdKind};
+pub use command::{
+    Command, CommandError, CommandStack, CouplerEvidence, DevicePlacementSlot, IdKind,
+    RemovedDevicePlacement, RemovedLineReference,
+};
 pub use commissioning::mutation::{WriteAuthorisation, WriteScope};
 pub use commissioning::{
     CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,

@@ -1,0 +1,3 @@
+# Built previews are reproducible from candidates/ and are never committed.
+/dist/
+__pycache__/

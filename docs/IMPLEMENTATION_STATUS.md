@@ -32,7 +32,10 @@
   live cancellation of running growth by *Motion off* and by OS reduced motion,
   hostile-text rendering, no-JavaScript reading and zero CSP violations.
 - Not done: publication, hosting, final fonts, non-Chromium browsers, real
-  screen readers, cloud-session coverage. Content awaits manual review.
+  screen readers, cloud-session coverage.
+- Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
+  the built pages are now versioned in `story/previews/` (`build --preview`),
+  guarded by a rebuild-equality test (53 unit tests).
 
 ## AR06S KL153 scheme23 bounded research — 2026-10-04
 

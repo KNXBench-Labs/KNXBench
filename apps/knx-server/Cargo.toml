@@ -53,3 +53,6 @@ zip.workspace = true
 http-body-util = "0.1"
 knx-testsupport.workspace = true
 rusqlite.workspace = true
+
+[build-dependencies]
+knx-build-stamp.workspace = true

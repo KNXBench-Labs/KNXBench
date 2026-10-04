@@ -236,6 +236,12 @@ the core `Batch` command rolls back project changes if one child fails.
 If a response is lost after the request was sent or the server responds with
 an internal error, the client cannot know whether the batch was committed;
 it blocks a blind retry and directs the user to inspect or reload the project.
+Since ADR-0069 the server accepts an optional `requestId`: an identical resend
+replays the recorded outcome (`replayed: true`) instead of applying again, and
+the same ID with other content is refused. The record is in memory, bounded to
+256 requests and cleared when the project is replaced; a server restart forgets
+it. The web client does not send `requestId` yet (Web lock), so its retry
+block above still applies.
 Successful batch responses carry per-device diagnostics; a late core batch
 failure carries the zero-based child command index and its typed cause, which
 the catalog maps to the one-based device number (the reservation is child 0).

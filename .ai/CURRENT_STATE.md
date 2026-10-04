@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:28
+- **Completed:** UA10b: CLI `knx ga-export`/`ga-import --installation <id>` (MODEL-01 backend complete): planner/export per installation, unknown id refused with nothing written, non-numeric id is a usage error, the ga-import confirmation token binds the installation when the flag is present (byte-identical token without it). RED 3/4 (`unknown flag`) → GREEN 4/4 (`apps/knx-cli/tests/cli_ga_csv_installations.rs`), existing 7 CLI CSV tests green, 2/2 mutants.
+- **Pending/Next Steps:** No goal-ui backend work is open. Web halves stay with the Web-lock holder.
+- **Notes for Codex oder Claude:** —
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 13:25
 - **Completed:** UA10 (MODEL-01 remainder): CSV group-address import/export per installation. `knx_csv::plan_import_into` / `export_group_addresses_from` (old functions = first installation); server `installationId` on `/api/group-addresses/csv-import` and `/csv-export` (unknown → 400, nothing written); the destructive-preview confirmation token now binds the installation. RED 0/4 (server silently ignored `installationId` and imported into the first installation) → GREEN 4/4, 5/5 mutants, full gate green (164 blocks, 3,103 passed). Handoff table (`alpha-release-goal.md`) MODEL-01 row now includes the CSV contract and the CSV buttons' installation choice as web task.
 - **Pending/Next Steps:** No goal-ui backend work is open. Web halves (incl. CSV installation choice) stay with the Web-lock holder. CLI `ga-import`/`ga-export` still use the first installation (no installation flag yet).

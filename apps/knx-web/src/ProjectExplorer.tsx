@@ -15,6 +15,7 @@ import { deviceInstallations, nestGroupRanges, owningInstallation, type GroupRan
 import CatalogBrowser from "./CatalogBrowser";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
+import { writeDraggedGroupAddress } from "./groupAddressDrag";
 
 const DEVICE_DRAG_MIME = "application/x-knxbench-device-id";
 
@@ -489,6 +490,9 @@ function GroupAddressItem(props: { ga: GroupAddressNode; revealRequest?: RevealR
         (multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id))
       }
       onSelect={(e) => onItemClick(e, "group_address", ga.id, sel)}
+      // UX-01: drag onto a communication object's link row to link it.
+      draggable
+      onDragStart={(event) => writeDraggedGroupAddress(event.dataTransfer, ga.id)}
       revealGeneration={revealGeneration(
         props.revealRequest,
         selectionIs(props.revealRequest, "group_address", ga.id),

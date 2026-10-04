@@ -8,6 +8,37 @@
 
 ---
 
+- **Latest actual integration:** adopted publishedab1b87b7 UI source, full owner handover/status/history preserved; new merge full16 all-command rerun pending. Reusing only accepted same-worktree Cargo cache with unchanged native120 closure and archived previous CLI; current source/HEAD and root-bound audits checked anew.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:53
+Web lock: released by claude-goal-ui-owner (AR13 debug-report dialog text delivered)
+- **Completed:** AR13 hand-over item. The opt-in warning `debugReport.privacyTelegrams` (en/de) now mirrors `report.md` (`debug_report.rs`): `bus-telegrams.json` is not redacted and keeps addresses, group-address names, every telegram's value (text values included) and its timestamp, which together can show when the installation was in use. A content test per language was written RED first (it failed on the old wording). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,155 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, five repository gates (headers 469 ok; anchors 442 ok; ledger 185 rows), tsc, Vitest 1,835/101 files, complete intercepted Chromium suite 108/108, whitespace; source frozen. The ALPHA_READINESS AR13 *Handed over* note is marked done. Log: `.ai/logs/2026-10-04_claude_ui-ar13-report-text.md`. **With this, every web item of the 2026-10-04 UI owner handoff is delivered:** MODEL-03 `596697a6`, DATA-03 `45e1299f`, MODEL-04 `c6da3c78`, MODEL-01 `0dd9add8` + `e4737129`, MODEL-02 `efe7fb53`, UX-01 `bd2e5a3a`, and this text.
+- **Pending/Next Steps:** No open goal-ui web item from the handoff remains. Remaining UI-routed ledger rows are boundaries or user decisions; check `docs/status/LEDGER.md` (owner `ui`) before starting anything new. The Web lock is free for any session.
+- **Notes for Codex oder Claude:** No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:44
+Web lock: taken by claude-goal-ui-owner for the AR13 debug-report dialog text (`debugReport.privacyTelegrams`)
+- **Completed:** Lock taken only, no code yet. The previous lock line (this session, UX-01 delivered `bd2e5a3a`) said released.
+- **Pending/Next Steps:** Per ALPHA_READINESS AR13 *Handed over*: the dialog string `debugReport.privacyTelegrams` (en/de) must also say that `bus-telegrams.json` keeps every telegram value (text values included) and its timestamp, mirroring `report.md`'s second paragraph (`apps/knx-server/src/debug_report.rs`). Release the lock in the merge entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:43
+Web lock: released by claude-goal-ui-owner (UX-01 web half delivered)
+- **Completed:** UX-01, `DONE` in `docs/status/LEDGER.md` (count line IN_PROGRESS 4, DONE 28). Group addresses in the Project Explorer are drag sources (`groupAddressDrag.ts`, own MIME, strict id). Dropping one onto a communication object's link row links it once via the unchanged `POST /api/group-links`, in the direction shown in that row. That answers GAP_ANALYSIS_ETS B10's "no hidden default" objection, which is now updated there. An address the device cannot link is refused locally without a request; a server refusal shows in the row; the keyboard path is unchanged. 9 RED-first Vitest cases plus 1 guard; `e2e/group-address-drag.e2e.ts` with real Chromium HTML5 drag fails on the old sources; 5 mutants caught. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,155 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, five repository gates (headers 469 ok, ceiling 157; anchors 442 ok; ledger 185 rows), tsc, Vitest 1,833/101 files, complete intercepted Chromium suite 108/108, whitespace; source frozen. KNOWN_LIMITATIONS "U12 structure editor scope", `UI_ALPHA_READINESS` and the `goal-ui.md` UA6 row are updated. Log: `.ai/logs/2026-10-04_claude_ui-ux01-web.md`.
+- **Pending/Next Steps:** The last open goal-ui web item from the handoff: the AR13 debug-report text. Check its exact wording in `alpha-release-goal.md` AR13 and the ledger before taking the Web lock again.
+- **Notes for Codex oder Claude:** Browser-test pitfall: an HTML5 drag needs source and target on screen together. Chromium drops a pending drag when the page scrolls while the button is held; only `mousedown` fires, with no error. Native WebKitGTK drag is not verified. No backend change, no KNX or bus contact.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 19:29
 Web lock: taken by claude-goal-ui-owner for UX-01 web half (drag a group address onto a communication object)

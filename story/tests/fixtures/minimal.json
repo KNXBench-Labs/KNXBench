@@ -1,0 +1,75 @@
+{
+  "schema": "knxbench-evolution-story/1",
+  "edition": {
+    "id": "fixture-1",
+    "title": "Synthetic test fixture, not history",
+    "status": "private-candidate",
+    "cutoff": {
+      "label": "Synthetic fixture cutoff",
+      "git_ref": "origin/main",
+      "git_commit": "0000000000000000000000000000000000000000",
+      "git_commit_time": "2000-01-01T00:00:00+00:00",
+      "conversations_through": "2000-01-01T00:00:00+00:00"
+    },
+    "baseline_note": "Synthetic content used only by automated tests.",
+    "sources": [
+      {"id": "src-a", "label": "Synthetic source", "scope": "Test data", "status": "read", "note": "Not a real source."},
+      {"id": "src-b", "label": "Unavailable synthetic source", "scope": "Test data", "status": "unavailable"}
+    ]
+  },
+  "strands": [
+    {"id": "trunk", "label": "Trunk", "accent": "phosphor", "description": "Synthetic trunk."},
+    {"id": "left", "label": "Left branch", "accent": "violet", "description": "Synthetic branch."},
+    {"id": "right", "label": "Right branch", "accent": "amber", "description": "Synthetic branch."}
+  ],
+  "chapters": [
+    {"id": "ch-one", "number": 1, "title": "Seed", "kicker": "One", "lede": "A seed.", "body": ["Synthetic paragraph."], "events": ["seed"]},
+    {"id": "ch-two", "number": 2, "title": "Branches", "kicker": "Two", "lede": "Two branches.", "body": ["Synthetic paragraph."], "events": ["left-step", "right-step", "merge", "undated"]}
+  ],
+  "events": [
+    {
+      "id": "seed", "date": "2000-01-01", "date_precision": "day", "strand": "trunk", "kind": "starting-point",
+      "status": "recorded", "title": "Seed", "short": "Seed", "summary": "Synthetic seed.", "why": "Root of the fixture.",
+      "aside": "", "excerpts": [
+        {"speaker": "user", "kind": "quote", "original_language": "de", "transforms": ["translated", "edited_for_privacy"],
+         "text": "Synthetic translated and edited excerpt.", "note": "Fixture."}
+      ],
+      "evidence": [{"kind": "commit", "label": "Synthetic commit", "ref": "abcdef1", "source": "src-a"}],
+      "uncertainty": ["Synthetic uncertainty that must survive preparation."]
+    },
+    {
+      "id": "left-step", "date": "2000-01-02", "date_precision": "day", "strand": "left", "kind": "decision",
+      "status": "implemented", "title": "Left step", "short": "Left", "summary": "Synthetic left.", "why": "Branch one.",
+      "excerpts": [{"speaker": "agent", "kind": "paraphrase", "original_language": "en", "transforms": [], "text": "Synthetic paraphrase."}],
+      "evidence": [{"kind": "doc", "label": "Synthetic document", "ref": "docs/README.md", "source": "src-a"}],
+      "uncertainty": []
+    },
+    {
+      "id": "right-step", "date": "2000-01-02", "date_precision": "approximate", "strand": "right", "kind": "experiment",
+      "status": "abandoned", "title": "Right step", "short": "Right", "summary": "Synthetic right.", "why": "Branch two.",
+      "excerpts": [{"speaker": "user", "kind": "quote", "original_language": "en", "transforms": [], "text": "Synthetic verbatim quote."}],
+      "evidence": [{"kind": "conversation", "label": "Synthetic conversation", "source": "src-a"}],
+      "uncertainty": []
+    },
+    {
+      "id": "merge", "date": "2000-01-05", "date_precision": "day", "strand": "trunk", "kind": "capability",
+      "status": "verified", "title": "Merge", "short": "Merge", "summary": "Synthetic convergence.", "why": "Branches meet.",
+      "excerpts": [], "evidence": [{"kind": "adr", "label": "Synthetic ADR", "ref": "docs/adr/0001-technology-stack.md", "source": "src-a"}],
+      "uncertainty": ["Synthetic second uncertainty."]
+    },
+    {
+      "id": "undated", "date": null, "date_precision": "unknown", "strand": "right", "kind": "supporting-tool",
+      "status": "open", "title": "Undated", "short": "Undated", "summary": "Synthetic undated event.", "why": "Unknown dates stay unknown.",
+      "excerpts": [], "evidence": [{"kind": "local", "label": "Synthetic local note", "source": "src-b"}],
+      "uncertainty": ["Date unknown on purpose."]
+    }
+  ],
+  "relations": [
+    {"id": "rel-seed-left", "from": "seed", "to": "left-step", "type": "documented_cause", "note": "Fixture."},
+    {"id": "rel-seed-right", "from": "seed", "to": "right-step", "type": "documented_association", "note": "Fixture."},
+    {"id": "rel-left-merge", "from": "left-step", "to": "merge", "type": "documented_cause", "note": "Fixture."},
+    {"id": "rel-right-merge", "from": "right-step", "to": "merge", "type": "editorial", "note": "Fixture."},
+    {"id": "rel-merge-undated", "from": "merge", "to": "undated", "type": "editorial", "note": "Fixture."}
+  ],
+  "gaps": [{"id": "gap-fixture", "title": "Synthetic gap", "detail": "Fixture gap."}]
+}

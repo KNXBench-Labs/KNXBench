@@ -1,0 +1,3 @@
+# Scratch builds are reproducible from candidates/. Versioned pages live in previews/.
+/dist/
+__pycache__/

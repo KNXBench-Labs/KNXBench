@@ -1,4 +1,4 @@
-# ADR-0068: Admit exact product scheme 23 through the existing strict package adapter
+# ADR-0072: Admit exact product scheme 23 through the existing strict package adapter
 
 - Status: accepted implementation decision; candidate acceptance/publication tracked separately
 - Date: 2026-10-04

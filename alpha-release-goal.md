@@ -810,6 +810,17 @@ Never run every ignored test indiscriminately: some are hardware-writing tests. 
 
 ## 6. Completion and continuation
 
+**Commissioning scope decision, user, 2026-10-04:** new real-hardware,
+power-loss, vendor and ETS validation is accepted out of the commissioning
+goal, not a request waiting for the operator and not a commissioning completion
+blocker. Preserve the missing evidence as
+[KNXBench user notices](docs/manual/known-issues.md#commissioning-validation-boundary).
+This is not proof of compatibility or recovery and does not bypass runtime
+backup/authorization/refusal gates. Caller coverage, Web/client adoption,
+offline recovery contracts and owner admission remain required under
+[the commissioning goal](goal-commission.md). SAFE-03/AUDIT-01 are not marked
+done by this scope decision; unrelated Alpha acceptance conditions are unchanged.
+
 Distinguish these terminal states:
 
 1. **Offline work exhausted, readiness blocked:** all ready alpha-owned packages are delivered; named owner/external/user decisions remain. Report exact blockers and continue only when they resolve. This is **not** alpha readiness.
@@ -830,13 +841,76 @@ native/accessibility/multicast and optional boundaries remain disclosed.
 Technical rulings for KL-70/88/134 are not silently upgraded to user release
 waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 
+**Commissioning session checkpoint — 2026-10-04 08:30 CEST:** the commissioning
+owner updates its rows here at meaningful intermediate checkpoints, not only
+after final delivery. `IN_PROGRESS` below means active owner implementation,
+not whole-feature acceptance. Keep published work, local changes and pending
+verification separate; do not change another session's rows.
+
+| Commissioning work in this session | Status | Verified intermediate result | Still required |
+| --- | --- | --- | --- |
+| Remove new hardware/power-loss/vendor/ETS validation from the completion goal; retain user warnings | ACCEPTED_BOUNDARY | Scope and user notices published in `5d0271c1`; actual-root documentation gate: 388 links / 254 Markdown files / no dead anchors | Keep absent guarantees visible; no pending operator experiment and no relaxation of runtime safety gates |
+| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Bounded download lifecycle already published in `1c5dec07`, with receipt closure `bb62ae57`; further callers inspected | Broader caller integration, offline interruption/abort/recovery contracts and actual-current-source acceptance; bounded prior evidence does not close these rows |
+| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Web reservation published in `7234dd00`; strict format-2 HTTP reader passed 6 focused tests after semantic RED; actual diagnostics-parent missing-tab RED observed | History tab, separate device/restart/cleanup evidence and EN/DE notices are local changes; post-change parent tests, typecheck/build, browser proof, integrated gates and publication remain pending |
+| `SAFE-03` / `DEBUG-01`: offline recovery-record validation | IN_PROGRESS | Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged | Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
+
+The other commissioning rows retain their existing owner dispositions pending
+their exact scoped acceptance. The complete per-ID fallback/evidence inventory
+is in [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md); this newer
+checkpoint supersedes its older statements that Web adoption has not started.
+Excluded external validation is a user-visible boundary, not a renewed request
+for unavailable hardware evidence. No Alpha release, real bus contact or new
+write permission follows from this update.
+
+**UI owner checkpoint — 2026-10-04 10:00 CEST (Claude, `goal-ui.md` owner
+session):** the 24 `goal-ui.md` rows below now carry their owner status instead
+of the generic `WAITING_OWNER`. Per-row evidence stays in
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md).
+
+| UI rows | Status | Basis | Still required |
+| --- | --- | --- | --- |
+| `UI-01`, `UI-02` | DONE | U13 closure `dfa0cc79` (unchanged) | — |
+| `KL-82`, `KL-124`, `KL-121`, `UX-02`, `UX-03` | DONE | Published `8ceacf49` (KL-82) and `6c16fe5a` (the other four), integrated gates and remote readback in UI_ALPHA_READINESS | — ; their native/live qualifications fall under the boundary row below |
+| `KL-79`, `KL-137`, `KL-36`, `KL-133`, `UI-03`, `KL-130-ZOOM`, `KL-20` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** native WebKitGTK/Tauri, Orca, native file chooser, dead-WebView, real multicast and real-device web evidence leave the Alpha scope. Offline parts stay delivered (KL-20 keyboard/modal `2e57f8e5`, KL-79 offline UDP loopback at U13) | Nothing for the Alpha. Release notes must keep these as disclosed, unverified boundaries, not claims |
+| `KL-97`, `KL-98` | ACCEPTED_BOUNDARY | Owner decision (the user left this choice to the owner): truthful phase text without an invented percentage (ADR-0023) and decorative flavour text are intended behaviour | — |
+| `KL-43` | LATER | Owner decision: global motion level/style plus OS reduced motion ship; per-category motion is a separate scope | Own scope if ever wanted |
+| `DATA-03` | IN_PROGRESS | Server half delivered: optional `requestId` replay ledger ([ADR-0069](docs/adr/0069-catalog-batch-request-replay-token.md)), RED/GREEN and five caught mutants | Handed to the Web-lock holder (see handoff below): web client sends `requestId` and offers a safe retry |
+| `MODEL-04` | IN_PROGRESS | Server half delivered: opt-in `allocateAddresses`/`uniqueNames` with core `free_line_addresses`, RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): catalog dialog toggles |
+| `MODEL-01` | IN_PROGRESS | Core/server half delivered: owner-installation resolution for all id-addressed commands, explicit target for root creates, `RenameInstallation`, cross-installation refusal; RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): installation rename and target choice |
+| `MODEL-02` | IN_PROGRESS | Core/store/server half delivered (ADR-0071): explicit `RepairDevicePlacement` / `RepairLineOwner` with exact undo; `.knxdb` save now refuses an ambiguous topology instead of silently keeping the last placement; 10/10 mutants | Handed to the Web-lock holder (see handoff below): repair choice; duplicate-id renumbering stays a documented gap |
+| `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. No backend half needed — `POST /api/group-links` with the core's checks (now installation-scoped, ADR-0070) already exists | Handed to the Web-lock holder (see handoff below): drag gesture, keyboard equivalent kept |
+| `MODEL-03` | IN_PROGRESS | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants | Handed to the Web-lock holder (see handoff below): `.0` in the address editor |
+| `KL-127` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** without reliable evidence record a known gap and close. UA1 found no `Ground` sample in the corpus or eight public fixtures (RESEARCH §25, KNOWN_LIMITATIONS §127) | — ; installation rename moves to MODEL-01 |
+
+This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
+release, no hardware permission and no native-acceptance claim.
+
+**UI owner handoff — 2026-10-04 11:27 CEST (Claude, `goal-ui.md` owner session):** all
+backend halves of the open UI rows are published (`48d1cd2e`, `74dbd1a9`,
+`68f18755`, `8b075952`, `acbda83b`). The remaining work is web-only, and the
+Web lock is held by the commissioning session (`codex-commission-continuation`).
+**By user decision the web halves are handed over to that session**, which
+owns them from now on. Each row stays `IN_PROGRESS` until its web half is
+published with RED/GREEN, gates and browser evidence; the receiving session
+updates the rows. The `goal-ui.md` owner keeps the backend contracts and
+answers questions about them.
+
+| Row | Web task for the Web-lock holder | Backend contract (published) | Acceptance |
+| --- | --- | --- | --- |
+| `MODEL-03` | Let the individual-address editor submit device octet `0`; show the server's refusal text when the product is no evidenced coupler | `POST /api/individual-address` (`deviceId`, `address`) — the server uses `SetCouplerIndividualAddress` only when the installed product has `Hardware/@IsCoupler="true"` (RESEARCH §25) | `.0` accepted for a coupler, refused with message otherwise; undo restores |
+| `DATA-03` | Generate one `requestId` (1–128 chars `[A-Za-z0-9_-]`) per catalog submit; after a lost/ambiguous response offer **retry with the same id**; treat `replayed: true` as success without a second batch | `POST /api/devices` `requestId`; identical resend → `replayed: true`; same id with other content → 400 (ADR-0069) | Retry after simulated network loss creates the batch once |
+| `MODEL-04` | Two opt-in toggles in the catalog dialog: *allocate addresses* (only with a selected line) and *unique names* | `POST /api/devices` `allocateAddresses` (needs `lineId`), `uniqueNames`; both default `false` and are part of the replay fingerprint | Allocated addresses skip `.0`, used and excluded addresses; short supply refused as a whole |
+| `MODEL-01` | Installation rename control; installation choice for new areas, main ranges, root building parts and range-less group addresses; later-installation targets in dropdowns | `PATCH /api/installations/{id}` (`name`); optional `installationId` on `POST /api/areas`, `/api/group-ranges`, `/api/building-parts`, `/api/group-addresses`; cross-installation moves → 400 "separate infrastructures" (ADR-0070) | Edit and create in installation 2; one undo per action |
+| `MODEL-02` | Where the Inspector shows a placement/line-owner ambiguity, offer "keep this placement" per current slot | `POST /api/repair/device-placement` (`deviceId` + exactly one of `keepLineId` / `keepUnassignedInstallationId`), `POST /api/repair/line-owner` (`lineId`, `keepAreaId`); save refuses ambiguous topology (`AmbiguousTopology`, ADR-0071) | Repair enables ordinary editing; undo restores the exact imported state; save works after repair |
+| `UX-01` | Drag a group address onto a communication object; the existing keyboard/select path stays | `POST /api/group-links` (`comObjectId`, `gaId`, `direction`) — unchanged contract | Drop links once; invalid drop shows the server refusal |
+
 | Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |
 | `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-139` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-140` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `SAFE-01` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-79` | P1 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-79` | P1 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-61` | P1 | AR09 | TODO |
 | `KL-99` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-112` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -846,9 +920,9 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-142` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-7` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `KL-92` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `DEBUG-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `DEBUG-01` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
+| `SAFE-03` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `DATA-01` | P1 | AR02 | DONE |
 | `KL-129` | P1 | AR03 | WAITING_DECISION |
 | `KL-106` | P1 | AR13 | TODO |
@@ -896,19 +970,19 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `DATA-02` | P2 | AR04 | TODO |
-| `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `DATA-03` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
 | `KL-87` | P2 | AR05 | DONE |
-| `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-82` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `AUDIT-01` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
+| `KL-137` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-36` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-82` | P2 | `goal-ui.md` — owner only | DONE |
 | `DOC-03` | P2 | AR15 | TODO |
 | `RELEASE-03` | P2 | AR16 | WAITING_OWNER |
 | `RELEASE-04` | P2 | AR19 | WAITING_DECISION |
-| `KL-127` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-01` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-02` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `MODEL-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-127` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `MODEL-01` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `MODEL-02` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `MODEL-03` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
 | `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `IMPORT-06` | P2 | AR06 | TODO |
 | `KL-11` | P2 | AR06 | TODO |
@@ -939,7 +1013,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `R-DYNAMIC-01` | P2 | AR07 | TODO |
 | `R-MODULE-03` | P2 | AR07 | BLOCKED_EXTERNAL |
 | `R-MODULE-04` | P2 | AR07 | BLOCKED_EXTERNAL |
-| `KL-133` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-133` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `KL-38` | P2 | AR11 | TODO |
 | `KL-39` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `KL-40` | P2 | AR11 | TODO |
@@ -948,11 +1022,11 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `KL-51` | P2 | AR11 | TODO |
 | `KL-60` | P2 | AR11 | TODO |
 | `R-SEC-01` | P2 | Later / separate scope — not an alpha task | LATER |
-| `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UI-04` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-20` | P2 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-124` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `UI-03` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `UI-04` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
+| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-20` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-124` | P3 | `goal-ui.md` — owner only | DONE |
 | `KL-76` | P3 | AR14 | TODO |
 | `KL-102` | P3 | AR14 | TODO |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
@@ -961,7 +1035,7 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `HISTORY-01` | P3 | Later / separate scope — not an alpha task | LATER |
 | `HISTORY-02` | P3 | Later / separate scope — not an alpha task | LATER |
 | `DOC-02` | P3 | AR00 | DONE |
-| `MODEL-04` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `MODEL-04` | P3 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
 | `MODEL-05` | P3 | Later / separate scope — not an alpha task | LATER |
 | `MODEL-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `MODEL-07` | P3 | Later / separate scope — not an alpha task | LATER |
@@ -1005,13 +1079,13 @@ waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 | `TOOLS-04` | P3 | Later / separate scope — not an alpha task | LATER |
 | `TOOLS-05` | P3 | Later / separate scope — not an alpha task | LATER |
 | `FUTURE-08` | P3 | Later / separate scope — not an alpha task | LATER |
-| `KL-121` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-43` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-97` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `KL-98` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-01` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-02` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
-| `UX-03` | P3 | `goal-ui.md` — owner only | WAITING_OWNER |
+| `KL-121` | P3 | `goal-ui.md` — owner only | DONE |
+| `KL-43` | P3 | `goal-ui.md` — owner only | LATER |
+| `KL-97` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `KL-98` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
+| `UX-01` | P3 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `UX-02` | P3 | `goal-ui.md` — owner only | DONE |
+| `UX-03` | P3 | `goal-ui.md` — owner only | DONE |
 
 Entries spanning supported and blocked subcases (notably `KL-13`, `KL-11`, `KL-61` and parameter semantics) require a subcase disposition in their AR package. `TODO` authorizes verification/planning within the stated boundaries, not guessing the missing semantics or claiming implementation is absent.
 

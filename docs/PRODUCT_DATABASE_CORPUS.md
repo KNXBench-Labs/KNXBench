@@ -12,7 +12,7 @@ in-session review now complement that evidence. Three test-only changes leave
 all measured production inputs byte-identical. Earlier surviving field probes
 and verifier refusals remain separate. Current-upstream workspace/Web/build/
 integration/publication are still pending; see [research and limitations](PRODUCT_SCHEME_23_RESEARCH.md)
-and [ADR-0068](adr/0068-product-scheme23-namespace-gate.md). This is not full
+and [ADR-0072](adr/0072-product-scheme23-namespace-gate.md). This is not full
 manufacturer semantics, ETS parity, runtime compatibility or KL153 completion.
 
 ## Scheme23 structural research — 2026-10-04

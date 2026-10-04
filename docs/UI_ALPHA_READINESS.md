@@ -215,3 +215,19 @@ domain/application contracts open and distinct. Group-address/structural drag,
 general multi-installation editing, allocation/repair and other retained absent
 behaviors are not silently waived by this package. Do not mark all 24 rows DONE,
 create an alpha tag, reopen U13 or infer release consent from this owner receipt.
+
+**Owner checkpoint 2026-10-04.** The user decided that native/live evidence
+(KL-79, KL-137, KL-36, KL-133, UI-03, KL-130-ZOOM and the native part of KL-20)
+leaves the Alpha scope as `ACCEPTED_BOUNDARY`; these remain disclosed,
+unverified boundaries, not claims. MODEL-03 and KL-127 get research first and
+close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
+MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
+[goal-ui.md](../goal-ui.md). The parent ledger in
+[alpha-release-goal.md](../alpha-release-goal.md) carries the per-row status.
+
+**Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
+published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no
+backend change. By user decision every remaining web half is handed over to
+the Web-lock holder (commissioning session); the task table with API
+contracts and acceptance criteria is the *UI owner handoff* in the parent
+ledger. None of these rows is `DONE` before its web half is published.

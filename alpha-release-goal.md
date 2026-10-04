@@ -391,6 +391,15 @@ Ordered by value per effort:
 
   - Scheme23 bounded import is now locally verified on integrated `a346fa30` (ADR-0072): actual native6/caller4, four semantic baseline caller REDs and six compiled guard controls; original survivors/rejected wrappers retained. Original Release Full853 Source713690/161/2 is producer-bound,not a newly run current private matrix. Import/storage/evidence source and CLI entrypoint remain byte-identical; upstream query.rs only adds a read-only server helper/test. Actual Source770 public22:Rust3089/0/176 across161 blocks,ProductDB638/0/25,Web1739,Chromium82,17 fresh byte-bound shadow binding pairs,strict Clippy/build/docs/dependency gates. Separate integrated in-session review,no blocking product finding,no independent-model approval. Published as `aadd88204de154cfcf5c1638310831a0a316dd86`: live/fetched refs and17 exact owned blobs read back; actual final integrated10 repeats Rust3089/0/176,Web1739,Chromium82/all10 commands0 after preserving the owner story-only update. Original final wrapper old-vs-new Git-stamped binary hash refusal retained; current release version/hash independently archived. Scheme10 remains refused and KL153/AR06P/Alpha open.
 
+2026-10-04 AR06U research checkpoint: bounded scheme10 public/source investigation
+started after delivered exact23/hygiene c17b0f36. KNX format-family references are
+not namespace grammar proof; candidate mirror cover/body is unverified,
+full schema10 specification/XSD not recovered. Both package
+master admission and dedicated master-language evidence omit10. See
+[scheme10 research](docs/PRODUCT_SCHEME_10_RESEARCH.md). No production change,
+new private census/import result, namespace admission or compatibility claim.
+KL153/AR06P stay IN_PROGRESS; bounded structural probe/ownership evidence pending.
+
 **Exit evidence:** RED/GREEN regression tests per item, unchanged atomic refusal
 for anything still unsupported, a re-run of the 853-file measurement with a
 before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are

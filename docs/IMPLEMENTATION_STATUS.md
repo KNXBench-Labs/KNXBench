@@ -11,15 +11,20 @@ Rejected first verifier attempt stays rejected; source-derived archive-table
 correction has three public controls. See PRODUCT_DATABASE_CORPUS.md for scope.
 Candidate coupled ceilings1048576/256MiB preserve depth1024/ZIP/namespace limits,
 all-or-nothing scan and full retained data. Two public registered REDs and six
-new boundary/late-failure tests. Actual integrated ed03cb85 public18 accepted:
-Rust3015/0/166 in153 blocks,Web1739,Chromium82 inventory/pass,17 canonical
-bindings/eight negative controls; source712/logs/fresh Release binary exact.
-Current Release/private2 is independently GREEN:baseline2 atomic item refusals,
-candidate2 installs,all853 original hashes/archives exact,private temp0.
-Whole853 producer80a5500d remains separately identified:688 unchanged installs,
-163 unchanged normalized refusals,2 budget admissions→690 installs;440 non-Web
-source/build inputs byte-equivalent after CRT integration. This is not relabelled
-as a new integrated full853 run. Publication/readback/owned cleanup pending.
+new boundary/late-failure tests. Latest integrated7f57abbb public18 accepted:
+Rust3028/0/176 in153 blocks,Web1739,Chromium82 inventory/pass; source712,
+all18 logs and actual Release binary independently exact. Earlier ed03cb85
+public18/private2/binding17 receipts keep their original producer identities.
+Six subsequent owner Rust changes invalidated earlier440-input equivalence;
+a fresh full853 Release/Release comparison on7f57abbb is now independently
+reconciled:688 unchanged table-count installs,163 unchanged normalized refusals,
+2 budget admissions→690 installs. All853 original hashes independently
+rechecked descriptor-relatively/no-follow; retained archives/atomic refusals,
+both binaries/source/logs verified,private temp0. No raw/item vectors persisted.
+First latest18-command attempt had a rejected rebuild-verifier contract,not
+a test failure:CLI does not depend on server; corrected guard and actual18
+retry pass. Failed receipts remain separate. Publication/readback/owned cleanup
+pending; new upstreambb62ae57 is seven docs/evidence paths only,not new code.
 KL152 remains open until delivery. No UI/DTO/schema,
 bus, manufacturer runtime or ETS compatibility expansion. KL151/153 and Alpha
 remain open; KL151 research closing80a5500d delivered/cleaned.

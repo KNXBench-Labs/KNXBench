@@ -7327,13 +7327,15 @@ estimated evidence bytes, peak134552KiB RSS/max2.985s. Independent byte64MiB
 would still refuse an item-only raise. A coupled1048576-item/256MiB candidate
 retains depth1024, ZIP caps, namespaces and all-or-nothing reporting. Two
 registered REDs, six new inclusive-boundary/late-no-partial tests and focused
-GREEN and current integrated public18 are verified:Rust3015/0/166,Web1739,
-Chromium82,bindings17/eight negative controls,source712 exact. Actual current
-Release/private2 is baseline2 atomic refusals→candidate2 installs. Separate
-whole853 producer80a5500d has688 unchanged installs/163 unchanged diagnostic
-refusals/2 budget admissions→690;440 non-Web source/build inputs remain exact
-after CRT integration. Whole853 is not relabelled current; source/logs/binaries,
-originals/archives/private temp0 independently checked. Publication/readback
+GREEN and latest7f57abbb public18 are verified:Rust3028/0/176,Web1739,
+Chromium82,source712/logs/Release binary exact. Earlier ed03cb85 bindings17/eight
+negative controls and private2 retain their original producer identities.
+Six owner Rust changes invalidated earlier440-input equivalence; fresh full853
+on7f57abbb is independently reconciled:688 unchanged table-count installs,
+163 unchanged diagnostic refusals,2 item-budget admissions→690 installs.
+Both binaries/source/logs,original853 hashes/retained archives/atomic refusals
+and private temp0 independently checked. Rejected rebuild-verifier attempt
+stays rejected; corrected actual public18 retry passes. Publication/readback
 and own final hygiene remain. Original master-language64MiB/262144 limits
 and retained-source classification are explicitly preserved. No limit removal,
 data summary/truncation or compatibility

@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Bounded History Web closure
+
+Actual merged2057f86b is publicly accepted9/9: ordinary workspace3145/0/177
+across169 result blocks, Web1761/100 files, intercepted Chromium8,50 isolated
+behavioral guard controls, build/typecheck/strict-Clippy/fmt and four nonempty
+policy gates. The [delivery receipt](evidence/commission-history-web-delivery-offline-2026-10-04.json)
+retains exact source binding and scope. The separate private68/0/0 sweep stays
+bound to60d6a85f, with an unchanged selected-package source delta; it is not
+retagged as a new2057f86b run. Counts are not added across overlapping snapshots.
+
+History Web reservation is released by this closure; Git publication/readback
+is recorded separately in the handover. Caller production remains local WIP
+(Shared-App7, CLI admission2, Service-Control8 passing); CLI download/restore,
+broader sessions/clients and offline recovery remain open. No whole-goal,
+independent-review, native-package or hardware approval is implied.
+
+
 ## 2026-10-04 — Bounded History Web adoption accepted offline
 
 Current integrated code9fe69116, upstream4bc90aab (including public topology

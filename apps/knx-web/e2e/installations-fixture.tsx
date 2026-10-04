@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import * as api from "../src/api";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
+import type { Selection } from "../src/selection";
 import Inspector from "../src/Inspector";
 import ProjectExplorer from "../src/ProjectExplorer";
 import "../src/styles.css";
@@ -10,15 +11,16 @@ import "../src/styles.css";
 function Fixture() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>({ kind: "project", id: 0 });
   useEffect(() => { void api.currentProject().then(setTree, (e) => setError(api.errorMessage(e))); }, []);
   if (error) return <p role="alert">{error}</p>;
   if (!tree) return <p>Loading</p>;
   return (
     <main className="workbench" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
       <ProjectExplorer tree={tree} onTreeUpdate={setTree} onSummary={() => {}}
-        onError={(e) => setError(api.errorMessage(e))} selection={{ kind: "project", id: 0 }}
-        onSelect={() => {}} multiSelection={null} onItemClick={() => {}} />
-      <Inspector selection={{ kind: "project", id: 0 }} tree={tree} deviceDetail={null}
+        onError={(e) => setError(api.errorMessage(e))} selection={selection}
+        onSelect={setSelection} multiSelection={null} onItemClick={(_event, _kind, _id, item) => setSelection(item)} />
+      <Inspector selection={selection} tree={tree} deviceDetail={null}
         onApplied={setTree} onDeleted={setTree} />
     </main>
   );

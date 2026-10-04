@@ -187,45 +187,27 @@ export function deviceInstallation(tree: ProjectTree, deviceId: number): Install
   return deviceInstallations(tree).get(deviceId);
 }
 
-// Where a device currently sits in the *first* installation's topology —
-// `Command::MoveDeviceToLine` only ever targets `installations[0]`
-// (command.rs), the same restriction every other create/delete/rename
-// affordance in this codebase is already gated by. Returns a line id, `null`
-// for unassigned, or `undefined` if the device isn't in this installation's
-// topology at all (a building-only placement, or the device belongs to a
-// later installation) — `MoveDeviceToLine` can't target it either way, so
-// `undefined` is the signal to hide the move control rather than show a
-// misleading current value.
-export function findDeviceLineInFirstInstallation(
-  tree: ProjectTree,
-  deviceId: number,
-): number | null | undefined {
-  const inst = tree.installations[0];
+// Where a device sits in the topology of the one installation that places
+// it (MODEL-01 / ADR-0070): a line id, `null` for unassigned, or `undefined`
+// when no single installation places it (a building-only placement, or
+// placements in two installations). `undefined` hides the move controls
+// rather than showing a misleading current value.
+export function findDeviceLine(tree: ProjectTree, deviceId: number): number | null | undefined {
+  const inst = deviceInstallation(tree, deviceId);
   if (!inst) return undefined;
   for (const area of inst.topology) {
     for (const line of area.lines) {
       if (line.devices.some((d) => d.id === deviceId)) return line.id;
     }
   }
-  if (inst.unassigned.some((d) => d.id === deviceId)) return null;
-  return undefined;
+  return null;
 }
 
-// The building-part counterpart of `findDeviceLineInFirstInstallation`.
-// Building placement isn't exhaustive the way topology placement is
-// (`Command::MoveDeviceToBuildingPart`'s own doc comment) — a device
-// with no building part at all is a normal state, not a third bucket to
-// distinguish from "unreachable" the way `null` vs `undefined` does for
-// lines. So this only ever returns a part id or `null`; the "is this
-// device even reachable from installations[0]" question is already
-// answered by `findDeviceLineInFirstInstallation` wherever both fields
-// are shown together (`DeviceInspector`), since both commands share the
-// same `installations[0]`-only restriction.
-export function findDeviceBuildingPartInFirstInstallation(
-  tree: ProjectTree,
-  deviceId: number,
-): number | null {
-  const inst = tree.installations[0];
+// The building-part counterpart of `findDeviceLine`, inside the same
+// installation. Building placement is not exhaustive, so this only returns a
+// part id or `null`; reachability is `findDeviceLine`'s question.
+export function findDeviceBuildingPart(tree: ProjectTree, deviceId: number): number | null {
+  const inst = deviceInstallation(tree, deviceId);
   if (!inst) return null;
   for (const { node } of flattenBuildingParts(inst.buildings, [])) {
     if (node.devices.some((d) => d.id === deviceId)) return node.id;

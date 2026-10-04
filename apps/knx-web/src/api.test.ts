@@ -97,6 +97,25 @@ describe("api", () => {
     ]);
   });
 
+  it("names the CSV installation on export, import and confirmation only when given", async () => {
+    const bodies: unknown[] = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ warnings: [], tree: { installations: [] }, report: {}, applied: true, confirmationToken: null });
+      await call();
+      bodies.push(JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string));
+    };
+    await post(() => api.exportGroupAddressesCsv("out.csv", 2));
+    await post(() => api.exportGroupAddressesCsv("out.csv"));
+    await post(() => api.importGroupAddressesCsv("in.csv", undefined, 2));
+    await post(() => api.importGroupAddressesCsv("in.csv", "token-1", 2));
+    expect(bodies).toEqual([
+      { path: "out.csv", installationId: 2 },
+      { path: "out.csv" },
+      { path: "in.csv", installationId: 2 },
+      { path: "in.csv", confirmationToken: "token-1", installationId: 2 },
+    ]);
+  });
+
   it("renames an installation through PATCH /api/installations/{id}", async () => {
     mockFetchOnce({ installations: [] });
     await api.renameInstallation(2, "Annex");

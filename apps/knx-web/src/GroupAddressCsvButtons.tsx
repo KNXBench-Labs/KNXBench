@@ -1,4 +1,5 @@
 /** Buttons for exporting/importing group addresses in the project's own CSV format, not ETS's. */
+import { useState } from "react";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -75,6 +76,13 @@ export default function GroupAddressCsvButtons(props: {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
+  // MODEL-01: with several installations the user names the one the CSV
+  // exchange acts on; with one, the calls stay exactly as before.
+  const [chosen, setChosen] = useState<number | null>(null);
+  const installations = tree?.installations ?? [];
+  const target = installations.length > 1
+    ? (installations.find((installation) => installation.id === chosen) ?? installations[0]).id
+    : undefined;
 
   async function exportCsv() {
     const path = await pickSavePath(csvFilter, "group-addresses.csv");
@@ -85,7 +93,9 @@ export default function GroupAddressCsvButtons(props: {
     // never sits on screen through a subsequent success.
     onClearErrors();
     try {
-      const { warnings } = await api.exportGroupAddressesCsv(path);
+      const { warnings } = target === undefined
+        ? await api.exportGroupAddressesCsv(path)
+        : await api.exportGroupAddressesCsv(path, target);
       const n = warnings.length;
       onSummary(
         n === 0
@@ -102,7 +112,9 @@ export default function GroupAddressCsvButtons(props: {
     if (!path) return;
     onClearErrors();
     try {
-      let response = await api.importGroupAddressesCsv(path);
+      let response = target === undefined
+        ? await api.importGroupAddressesCsv(path)
+        : await api.importGroupAddressesCsv(path, undefined, target);
       if (!response.applied && response.confirmationToken) {
         const affectedLinks = response.report.destructiveChanges.reduce(
           (count, change) => count + change.affectedLinks.length,
@@ -145,7 +157,9 @@ export default function GroupAddressCsvButtons(props: {
           onSummary(t("groupAddressCsv.confirmCancelled"));
           return;
         }
-        response = await api.importGroupAddressesCsv(path, response.confirmationToken);
+        response = target === undefined
+          ? await api.importGroupAddressesCsv(path, response.confirmationToken)
+          : await api.importGroupAddressesCsv(path, response.confirmationToken, target);
       }
       onTreeUpdate(response.tree);
       onSummary(importSummary(t, response.report));
@@ -159,6 +173,14 @@ export default function GroupAddressCsvButtons(props: {
 
   return (
     <>
+      {target !== undefined && (
+        <select aria-label={t("groupAddressCsv.installation")} value={target}
+          onChange={(e) => setChosen(Number(e.target.value))}>
+          {installations.map((installation) => (
+            <option key={installation.id} value={installation.id}>{installation.name}</option>
+          ))}
+        </select>
+      )}
       <button onClick={exportCsv} disabled={!tree}>
         {t("groupAddressCsv.exportButton")}
       </button>

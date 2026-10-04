@@ -14,7 +14,8 @@ async function serve(page: Page) {
   let current: ProjectTree = {
     schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
     group_address_style: "ThreeLevel", server_incarnation: "installations-fixture", snapshot_revision: 1,
-    installations: [installation(1, "Main"), installation(2, "Annex")],
+    installations: [installation(1, "Main"), { ...installation(2, "Annex"),
+      topology: [{ id: 20, name: "Annex area", address: 2, lines: [{ id: 21, name: "Annex line", address: 1, devices: [] }] }] }],
   };
   await page.route("**/api/**", (route) => {
     const request = route.request();
@@ -30,6 +31,14 @@ async function serve(page: Page) {
         installations: current.installations.map((inst) => inst.id === sent.installationId
           ? { ...inst, topology: [...inst.topology, { id: 50, name: sent.name, address: sent.address, lines: [] }] }
           : inst) };
+      body = current;
+    } else if (path === "/api/lines/21" && method === "PATCH") {
+      const sent = request.postDataJSON() as { name: string };
+      writes.push({ method, path, body: sent });
+      current = { ...current, can_undo: true, is_modified: true,
+        installations: current.installations.map((inst) => inst.id !== 2 ? inst : { ...inst,
+          topology: inst.topology.map((area) => ({ ...area,
+            lines: area.lines.map((line) => line.id === 21 ? { ...line, name: sent.name } : line) })) }) };
       body = current;
     } else if (path === "/api/installations/2" && method === "PATCH") {
       const sent = request.postDataJSON() as { name: string };
@@ -75,5 +84,22 @@ test("creates a root area in the second installation and renames that installati
     { method: "POST", path: "/api/areas", body: { name: "Annex area", address: 5, installationId: 2 } },
     { method: "PATCH", path: "/api/installations/2", body: { name: "Annex hall" } },
   ]);
+  expect(unexpected).toEqual([]);
+});
+
+// MODEL-01 part 2: an entity of the second installation is edited in the
+// Inspector like any other (it used to be read-only there).
+test("renames a line of the second installation through the Inspector", async ({ page }) => {
+  const { writes, unexpected } = await serve(page);
+  await page.goto("/e2e/installations-fixture.html");
+  await installationItem(page, "Annex").locator("button.tree-label", { hasText: "Line 1: Annex line" }).click();
+  const name = page.locator("label.inspector-field", { hasText: "Name" }).locator("input").first();
+  await expect(name).toHaveValue("Annex line");
+  await expect(page.getByText("only available", { exact: false })).toHaveCount(0);
+  await name.fill("Annex backbone");
+  await name.press("Enter");
+  await expect(installationItem(page, "Annex").locator("button.tree-label", { hasText: "Line 1: Annex backbone" }))
+    .toHaveCount(1);
+  expect(writes).toEqual([{ method: "PATCH", path: "/api/lines/21", body: { name: "Annex backbone" } }]);
   expect(unexpected).toEqual([]);
 });

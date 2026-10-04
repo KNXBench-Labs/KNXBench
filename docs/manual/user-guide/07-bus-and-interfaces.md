@@ -215,7 +215,9 @@ send anything.
   marked ×*n*, and more than 160 at once are counted rather than drawn. A
   note above the map says so. Values and counts are always complete.
 
-See [known limitations §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c).
+Movement costs processor time: on a busy bus, or on a slower computer, *Motion
+Off* keeps the view light and loses no information. See [known limitations
+§154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
 ## Sending a value
 

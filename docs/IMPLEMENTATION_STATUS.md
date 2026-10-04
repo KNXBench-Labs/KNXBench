@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — U21 part C: measured, then made lighter
+
+- Production load study (`e2e/flow-load.load.ts`, `playwright.load.config.ts`,
+  `vite.study.config.ts`): dense burst of 200 telegrams/s over 230 nodes with
+  motion on and off, and a 3-minute session at 10/s. It records main-thread
+  share, frames, long tasks, marker lag and heap after GC. The data path is
+  cheap (6 % with motion off); motion is the cost, and the profile showed it to
+  be mostly native SVG painting. Drawing is now capped at ~30 fps: 0.35 → 0.21
+  main thread in the session, 0.89 → 0.69 in the burst, no long task left; values
+  appear 10–20 ms after their poll, up to ~150 ms in the burst. The heap
+  plateaus. Figures and method: docs/design/2026-10-04-telegram-flow-u21/.
+- A test written for a nudge optimisation instead exposed a real defect:
+  distances did not follow activity after the first settle. Activity classes
+  now reheat on a class change (RED first; 2 mutants). The sending ring is
+  written only on change.
+- The measurement itself had to be repaired twice. An init-script Motion
+  attribute is lost on parse, so motion was not actually off and an e2e test
+  passed without testing anything; the fixture now takes `motion` like the
+  app's bootstrap, and the test checks the attribute and counts frames. Marker
+  values were also replaced by same-batch traffic. Only the production run is
+  published.
+
 ## 2026-10-04 — U21 parts A and B: the flow view moves, and stops when asked
 
 - Reducer: 60 s sender window and leader (fan-out counts once; exact tie

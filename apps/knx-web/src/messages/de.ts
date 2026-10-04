@@ -346,6 +346,7 @@ export const messages: Record<MessageKey, string> = {
   "inspector.unlink": "Trennen",
   "inspector.unlinkBoth": "Beide lösen",
   "inspector.chooseGroupAddress": "(Gruppenadresse wählen)",
+  "inspector.dropNotLinkable": "Diese Gruppenadresse kann mit diesem Gerät nicht verknüpft werden.",
   "inspector.link": "Verknüpfen",
   "inspector.line": "Linie",
   "inspector.unassigned": "(nicht zugeordnet)",

@@ -22,16 +22,69 @@
 
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 mod bus_monitor_export;
 mod native_json_export;
 mod session_log_export;
+mod web_process;
 use bus_monitor_export::write_bus_capture;
 use session_log_export::write_session_log;
+use web_process::{CloseDecision, SharedSupervisor, WebProcessSupervisor};
+
+/// Shown only when the page can no longer ask (§133). English, because the
+/// language preference lives in the frontend that has just failed.
+const DISCARD_PROMPT: &str = "The KNXBench interface stopped working repeatedly and could not be \
+restarted. The open project has unsaved changes, and closing now discards them.";
+
+fn close_after_dead_frontend<R: tauri::Runtime>(window: &tauri::Window<R>) {
+    let app = window.app_handle();
+    let Some(supervisor) = app.try_state::<SharedSupervisor>() else {
+        return;
+    };
+    let unsaved = app
+        .try_state::<Arc<knx_server::AppState>>()
+        // Without the server state nothing can prove the project is clean.
+        .is_none_or(|state| state.has_unsaved_changes());
+    let decision = supervisor
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .on_close_requested(unsaved);
+    match decision {
+        CloseDecision::LeaveToFrontend | CloseDecision::AlreadyAsking => {}
+        CloseDecision::Close => destroy(window),
+        CloseDecision::ConfirmDiscard => {
+            let window = window.clone();
+            let supervisor = Arc::clone(&supervisor);
+            app.dialog()
+                .message(DISCARD_PROMPT)
+                .title("KNXBench")
+                .kind(MessageDialogKind::Warning)
+                .buttons(MessageDialogButtons::OkCancelCustom(
+                    "Close and discard changes".into(),
+                    "Keep window open".into(),
+                ))
+                .show(move |discard| {
+                    supervisor
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner())
+                        .discard_prompt_answered();
+                    if discard {
+                        destroy(&window);
+                    }
+                });
+        }
+    }
+}
+
+fn destroy<R: tauri::Runtime>(window: &tauri::Window<R>) {
+    if let Err(error) = window.destroy() {
+        eprintln!("knx-desktop: could not close the window: {error}");
+    }
+}
 
 #[tauri::command]
 async fn save_session_log(app: tauri::AppHandle, contents: String) -> Result<bool, String> {
@@ -112,9 +165,20 @@ pub fn run() {
         // `onWindowCloseRequested`), and while a JS listener exists `tauri`
         // itself calls `prevent_close()` and leaves the decision — the same
         // unsaved-changes check as File > Quit — to it (§132).
+        //
+        // The one exception is a frontend that is provably dead (§133): its
+        // web process terminated and reloading it kept failing, so nothing
+        // is left that could ever answer. Then the shell answers the user's
+        // explicit close itself, asking natively first if the server still
+        // holds unsaved edits. A busy or hung page is never treated as dead.
         .on_window_event(|window, event| {
-            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
-                window.app_handle().exit(0);
+            if window.label() != "main" {
+                return;
+            }
+            match event {
+                tauri::WindowEvent::Destroyed => window.app_handle().exit(0),
+                tauri::WindowEvent::CloseRequested { .. } => close_after_dead_frontend(window),
+                _ => {}
             }
         })
         .setup(|app| {
@@ -125,6 +189,7 @@ pub fn run() {
                 .join("projects");
             std::fs::create_dir_all(&data_dir)?;
             let state = Arc::new(knx_server::AppState::new(data_dir));
+            app.manage(Arc::clone(&state));
 
             let window_url = if cfg!(debug_assertions) {
                 let listener = TcpListener::bind(("127.0.0.1", knx_server::DEV_PORT))
@@ -143,7 +208,7 @@ pub fn run() {
                 format!("http://127.0.0.1:{port}")
             };
 
-            WebviewWindowBuilder::new(
+            let window = WebviewWindowBuilder::new(
                 app,
                 "main",
                 WebviewUrl::External(window_url.parse().unwrap()),
@@ -151,6 +216,13 @@ pub fn run() {
             .title("KNXBench")
             .inner_size(1200.0, 800.0)
             .build()?;
+
+            let supervisor: SharedSupervisor = Arc::new(Mutex::new(WebProcessSupervisor::new()));
+            app.manage(supervisor.clone());
+            #[cfg(target_os = "linux")]
+            web_process::watch(&window, supervisor)?;
+            #[cfg(not(target_os = "linux"))]
+            let _ = (window, supervisor);
             Ok(())
         })
         .run(tauri::generate_context!())

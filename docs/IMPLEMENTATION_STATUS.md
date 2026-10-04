@@ -24,6 +24,38 @@
   byte-boundary/caller/resource-owner acceptance or complete KL151/Alpha.
   No private corpus, hardware action or Web source change.
 
+## 2026-10-04 — DATA-03 web half: a lost catalog batch can be retried safely
+
+- Each catalog submit now sends one `requestId` (ADR-0069). When the response
+  is lost or the server answers 5xx, the batch counts as unconfirmed for any
+  quantity, including one device. **Retry safely** resends the identical
+  request after `GET /api/project` confirms the same `server_incarnation`, and
+  a `replayed: true` answer counts as success. A restarted server, an unknown
+  incarnation or a server that cannot be reached gets no new request: the user
+  is told to inspect the project, or the retry stays offered until the server
+  answers. No request with a new id is ever sent for an unconfirmed batch.
+- Evidence: six new `CatalogBrowser.test.tsx` cases, five of them written RED
+  first (the sixth guards the unchanged fail-closed case); four
+  intercepted Chromium cases in `e2e/catalog-retry.e2e.ts` (en/de, network
+  loss then replay, and restart). All four fail against the previous
+  component. Four guard mutants are caught: retry despite a restart, a new id
+  on retry, a retry without known identity, a single device not treated as
+  unconfirmed.
+
+## 2026-10-04 — MODEL-03 web half: device number 0 for evidenced couplers
+
+- The individual-address editor no longer refuses device number `0` itself. It
+  submits `.0`, and the server decides: an evidenced coupler (product database
+  `Hardware/@IsCoupler="true"`) gets it through `SetCouplerIndividualAddress`
+  with undo; anything else is refused, and the refusal text is shown in the
+  field, which restores its previous value. The unused client-side refusal
+  message is gone from both catalogues.
+- Evidence: two new `Inspector.test.tsx` cases written RED first; four new
+  intercepted Chromium cases in `e2e/coupler-address.e2e.ts` (en/de, accepted
+  and refused), with the existing device-editor browser cases still passing;
+  three behavioural mutants caught (client block restored, generic error text,
+  field not restored). Backend tests from UA1 are unchanged.
+
 ## 2026-10-04 — Bounded History Web closure
 
 Actual merged2057f86b is publicly accepted9/9: ordinary workspace3145/0/177

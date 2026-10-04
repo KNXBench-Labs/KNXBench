@@ -554,16 +554,18 @@ async fn poll_until_first_destination(app: &axum::Router) -> String {
     panic!("no telegram ever appeared on the poll");
 }
 
-/// Table-driven over both non-three-level styles rather than one function
-/// per style — Fix 1 from Task 5's review: the original version of this
-/// test covered `Free` only, leaving `TwoLevel` (a distinct code path in
-/// both `GroupAddress::parse` and `::format`, not just a different string)
-/// unverified.
+/// Table-driven over all three styles rather than one function per style —
+/// Fix 1 from Task 5's review: the original version of this test covered
+/// `Free` only, leaving `TwoLevel` (a distinct code path in both
+/// `GroupAddress::parse` and `::format`, not just a different string)
+/// unverified. AR14 added `ThreeLevel`, the default, which until then was
+/// only written to with a hand-typed address (KNOWN_LIMITATIONS §62 item 12).
 #[tokio::test]
-async fn a_non_three_level_projects_telegram_destination_round_trips_through_write() {
+async fn every_styles_telegram_destination_round_trips_through_write() {
     let cases = [
         (GroupAddressStyle::Free, "1"),
         (GroupAddressStyle::TwoLevel, "0/1"),
+        (GroupAddressStyle::ThreeLevel, "0/0/1"),
     ];
 
     for (style, expected_destination) in cases {

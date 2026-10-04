@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha AR11, CSV/report decisions)
+- **Timestamp:** 2026-10-04 21:02
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **AR11 closed on the alpha side.** User decisions 2026-10-04: `KL-40` accepted as is for the Alpha (no Description/Comment columns, no schema change); `KL-60` → **UI owner**: virtualised diff tables plus search/filter before the Alpha. `KL-38`, `KL-44`, `KL-47`, `KL-51` verified (no ETS-parity claims, AllocatorRef/raw module values warned, tests green) and set `ACCEPTED_BOUNDARY`. Ledger recounted; evidence `docs/ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04`.
+- **Pending/Next Steps:** **UI owner:** new Alpha-scope item `KL-60` (row owner `ui`, `TODO`): replace 50-row paging in `ProjectDiffDetails.tsx` with virtualisation and add search/filter; backend `/api/project/diff` stays as is. Please add it to `goal-ui.md` in your next slot. Also still open for you: AR08 password dialog (entry above). Claude next: AR20 when U19 lands; meanwhile remaining alpha packages.
+- **Notes for Codex oder Claude:** No code changed. AR09/AR10 still depend on AR07 (Codex).
+
+---
+
 - **Last Agent:** codex (alpha / AR06V)
 - **Timestamp:** 2026-10-04 20:51 CEST
 - **Completed:** Existing4096/4097 count slice published on main5adccdb0, exact remote ref+806 source hashes/test bytes read back. Source65d7cf5c; runtime6c3080d9 public16 all0, Rust3157/0/177/170, Web1835, Chromium108 plus separate probe1. Native2/controls2 accepted; every failed attempt remains distinct. Documentation-only owner updates adopted intact and final docs6 accepted. Permanent byte/hash-verified evidence at /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004.51 own scratch top-level artifacts retired; short owned av6 removed after verifying no workers/browser users. No foreign root/corpus/Web locks changed.

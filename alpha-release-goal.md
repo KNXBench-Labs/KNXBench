@@ -702,12 +702,14 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 **Sources:** `KL-38`, `KL-40`, `KL-44`, `KL-47`, `KL-51`, `KL-60`.
 **Dependencies:** AR06; AR07 for supported parameter output.
 
-- [ ] Reproduce current behavior and provide a bounded decision for the unaccepted §40 and §60 residues. Recommended default: derived counts stay read-only; add source-backed Description/Comment roundtrip only under an approved schema/CSV contract; retain explicit paging unless the UI owner adopts a measured alternative.
-- [ ] Obtain the reserved scope decision before calling either residue accepted or implementing a behavior change. Continue other packages while awaiting it.
-- [ ] Implement and test only the approved backend slice: malformed/duplicate CSV, address conflicts, atomic preview/apply, undo/redo, native roundtrip and no hidden lossy columns.
-- [ ] Keep raw module/AllocatorRef output explicitly warned where semantics are unknown. Document HTML/diff/custom-CSV scope without claiming ETS, ESF/OPC or layout parity.
+- [x] Reproduce current behavior and provide a bounded decision for the unaccepted §40 and §60 residues. Recommended default: derived counts stay read-only; add source-backed Description/Comment roundtrip only under an approved schema/CSV contract; retain explicit paging unless the UI owner adopts a measured alternative.
+- [x] Obtain the reserved scope decision before calling either residue accepted or implementing a behavior change. Continue other packages while awaiting it.
+- [x] Implement and test only the approved backend slice: malformed/duplicate CSV, address conflicts, atomic preview/apply, undo/redo, native roundtrip and no hidden lossy columns.
+- [x] Keep raw module/AllocatorRef output explicitly warned where semantics are unknown. Document HTML/diff/custom-CSV scope without claiming ETS, ESF/OPC or layout parity.
 
 **Exit evidence:** recorded decisions, approved slice tests and a UI handoff for any new display. DIN-26 CSV ranges, native PDF, prose catalog and diff application/correlation exclusions stay accepted, not reopened.
+
+**State 2026-10-04:** user decisions recorded: §40 accepted as is for the Alpha (no schema change), §60 handed to the UI owner (virtualisation plus search/filter before the Alpha). §38/§44/§47/§51 verified and accepted; no backend slice was approved, so none was built. Evidence: [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04); status in the ledger rows.
 
 ### AR12 — Resolve package-version policy before implementing selection
 

@@ -19,7 +19,7 @@ use std::future::Future;
 use std::net::SocketAddrV4;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -33,7 +33,7 @@ use knx_core::IndividualAddress;
 use knx_net::commissioning::programming_button_wait::{
     AddressProgrammingAuthorisation, ButtonWait,
 };
-use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
+use knx_net::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
 use knx_net::{
     ApplicationService, BusError, Destination, DiscoveredGateway, ManagementTransport,
     SessionTiming, Tpci, TunnelEvent,
@@ -52,7 +52,28 @@ fn original_data() -> PathBuf {
 }
 
 /// The server's tunnel, backed by one simulated device.
-struct SimTunnel(Arc<SimulatedDevice>);
+struct SimTunnel(
+    Arc<SimulatedDevice>,
+    Arc<AtomicUsize>,
+    Option<(PathBuf, Arc<CleanupFault>)>,
+);
+
+/// Test-only adapter faults around the device-result and cleanup boundaries.
+#[derive(Default)]
+struct CleanupFault {
+    return_error: AtomicBool,
+    panic: AtomicBool,
+    history_refusal: AtomicBool,
+    terminal_history_refusal: AtomicBool,
+    terminal_refusal_row: Mutex<Option<Value>>,
+    hold_during_write: AtomicBool,
+    write_entered: tokio::sync::Notify,
+    before_write_drop: Mutex<Option<Value>>,
+    hold: AtomicBool,
+    entered: tokio::sync::Notify,
+    refusal_database: Mutex<Option<Vec<u8>>>,
+    terminal_before_disconnect: Mutex<Option<Value>>,
+}
 
 impl BusTunnel for SimTunnel {
     fn assigned_address(&self) -> IndividualAddress {
@@ -78,21 +99,163 @@ impl BusTunnel for SimTunnel {
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         Box::pin(async move {
-            ManagementTransport::send_frame(self.0.as_ref(), destination, transport, service).await
+            let result =
+                ManagementTransport::send_frame(self.0.as_ref(), destination, transport, service)
+                    .await;
+            if result.is_ok() {
+                if let Some((path, fault)) = self
+                    .2
+                    .as_ref()
+                    .filter(|(_, fault)| fault.hold_during_write.load(Ordering::SeqCst))
+                {
+                    if self
+                        .0
+                        .seen()
+                        .iter()
+                        .any(|frame| matches!(frame, Seen::MemoryWrite { .. }))
+                        && fault.hold_during_write.swap(false, Ordering::SeqCst)
+                    {
+                        let history =
+                            knx_store::activity_history::ActivityHistory::open_existing(path)
+                                .expect("midwrite-shutdown/pre-drop-history");
+                        let (rows, _) = history
+                            .page(0, 100)
+                            .expect("midwrite-shutdown/pre-drop-page");
+                        let entry = rows.into_iter().find_map(|row| {
+                            let mut value: Value = serde_json::from_str(&row.document).ok()?;
+                            if value["kind"] != "deviceDownload" {
+                                return None;
+                            }
+                            value["sequence"] = json!(row.sequence);
+                            value["serverIncarnation"] = json!(row.incarnation);
+                            Some(value)
+                        });
+                        *fault.before_write_drop.lock().unwrap() = entry;
+                        drop(history);
+                        fault.write_entered.notify_one();
+                        // Keep the write outcome unwitnessed until owned runtime shutdown.
+                        std::future::pending::<()>().await;
+                    }
+                }
+                if let Some((path, fault)) = self
+                    .2
+                    .as_ref()
+                    .filter(|(_, fault)| fault.terminal_history_refusal.load(Ordering::SeqCst))
+                {
+                    if self
+                        .0
+                        .seen()
+                        .iter()
+                        .any(|frame| matches!(frame, Seen::Restart { .. }))
+                        && fault.terminal_history_refusal.swap(false, Ordering::SeqCst)
+                    {
+                        // Fault the owned metadata only after the simulator's restart send.
+                        let history =
+                            knx_store::activity_history::ActivityHistory::open_existing(path)
+                                .expect("terminal-storage/pre-fault-history");
+                        let (rows, _) = history
+                            .page(0, 100)
+                            .expect("terminal-storage/pre-fault-page");
+                        let entry = rows.into_iter().find_map(|row| {
+                            let mut value: Value = serde_json::from_str(&row.document).ok()?;
+                            if value["kind"] != "deviceDownload" {
+                                return None;
+                            }
+                            value["sequence"] = json!(row.sequence);
+                            value["serverIncarnation"] = json!(row.incarnation);
+                            Some(value)
+                        });
+                        *fault.terminal_refusal_row.lock().unwrap() = entry;
+                        drop(history);
+                        let mut database = std::fs::read(path).expect("terminal-storage/read");
+                        assert!(
+                            database.get(18..20) == Some(&[1, 1][..]),
+                            "terminal-storage/header"
+                        );
+                        database[18..20].copy_from_slice(&[2, 2]);
+                        std::fs::write(path, &database).expect("terminal-storage/inject");
+                        *fault.refusal_database.lock().unwrap() = Some(database);
+                    }
+                }
+            }
+            result
         })
     }
 
     fn disconnect(
         self: Box<Self>,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send>> {
-        Box::pin(async { Ok(()) })
+        Box::pin(async move {
+            self.1.fetch_add(1, Ordering::SeqCst);
+            if let Some((path, fault)) = self.2 {
+                if fault.return_error.load(Ordering::SeqCst)
+                    || fault.panic.load(Ordering::SeqCst)
+                    || fault.history_refusal.load(Ordering::SeqCst)
+                    || fault.hold.load(Ordering::SeqCst)
+                {
+                    let history =
+                        knx_store::activity_history::ActivityHistory::open_existing(&path)
+                            .expect("cleanup-fault/pre-cleanup-history");
+                    let (rows, _) = history
+                        .page(0, 100)
+                        .expect("cleanup-fault/pre-cleanup-page");
+                    let entry = rows.into_iter().find_map(|row| {
+                        let mut value: Value = serde_json::from_str(&row.document).ok()?;
+                        if value["kind"] != "deviceDownload" {
+                            return None;
+                        }
+                        // These API fields belong to the row, not its document.
+                        value["sequence"] = json!(row.sequence);
+                        value["serverIncarnation"] = json!(row.incarnation);
+                        Some(value)
+                    });
+                    *fault.terminal_before_disconnect.lock().unwrap() = entry;
+                    drop(history);
+                    if fault.hold.load(Ordering::SeqCst) {
+                        fault.entered.notify_one();
+                        // Shutdown drops this yielded future, never reporting disconnect success.
+                        std::future::pending::<()>().await;
+                    }
+                    if fault.history_refusal.load(Ordering::SeqCst) {
+                        // Synthetic unsupported-header admission fault, not a real WAL.
+                        let mut database = std::fs::read(&path).expect("cleanup-storage/read");
+                        assert!(
+                            database.get(18..20) == Some(&[1, 1][..]),
+                            "cleanup-storage/header"
+                        );
+                        database[18..20].copy_from_slice(&[2, 2]);
+                        std::fs::write(&path, &database).expect("cleanup-storage/inject");
+                        *fault.refusal_database.lock().unwrap() = Some(database);
+                        return Ok(());
+                    }
+                    assert!(
+                        !fault.panic.load(Ordering::SeqCst),
+                        "synthetic tunnel cleanup panic"
+                    );
+                    return Err(BusSessionError::Transport(BusError::Timeout));
+                }
+            }
+            Ok(())
+        })
     }
+}
+
+/// A local admission refusal after the durable start, not a real WAL/crash.
+#[derive(Default)]
+struct HistoryFault {
+    enabled: AtomicBool,
+    refusal_database: Mutex<Option<Vec<u8>>>,
 }
 
 /// Hands out the one simulated device as a tunnel and counts every ask.
 struct SimConnector {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
+    disconnects: Arc<AtomicUsize>,
+    history_fault: Arc<HistoryFault>,
+    cleanup_fault: Arc<CleanupFault>,
+    history_path: PathBuf,
+    start_receipts_at_connect: Arc<Mutex<Vec<Option<Value>>>>,
 }
 
 impl GatewayConnector for SimConnector {
@@ -102,7 +265,35 @@ impl GatewayConnector for SimConnector {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
-        let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(Arc::clone(&self.device)));
+        let receipt =
+            knx_store::activity_history::ActivityHistory::open_existing(&self.history_path)
+                .ok()
+                .and_then(|history| history.page(0, 100).ok())
+                .and_then(|(rows, _)| {
+                    rows.into_iter().find_map(|row| {
+                        let value: Value = serde_json::from_str(&row.document).ok()?;
+                        (value["kind"] == "deviceDownload").then_some(value)
+                    })
+                });
+        self.start_receipts_at_connect.lock().unwrap().push(receipt);
+        if self.history_fault.enabled.load(Ordering::SeqCst) {
+            // SQLite file-format §1.3.3: write/read versions, not user_version.
+            // A marker alone with a rollback header did not force admission error.
+            const JOURNAL_VERSION_BYTES: std::ops::Range<usize> = 18..20;
+            let mut database = std::fs::read(&self.history_path).unwrap();
+            assert!(database.get(JOURNAL_VERSION_BYTES) == Some(&[1, 1][..]));
+            database[JOURNAL_VERSION_BYTES].copy_from_slice(&[2, 2]);
+            std::fs::write(&self.history_path, &database).unwrap();
+            *self.history_fault.refusal_database.lock().unwrap() = Some(database);
+            let mut sidecar = self.history_path.as_os_str().to_os_string();
+            sidecar.push("-wal");
+            std::fs::write(PathBuf::from(sidecar), b"synthetic admission refusal").unwrap();
+        }
+        let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel(
+            Arc::clone(&self.device),
+            Arc::clone(&self.disconnects),
+            Some((self.history_path.clone(), Arc::clone(&self.cleanup_fault))),
+        ));
         Box::pin(async move { Ok(tunnel) })
     }
 
@@ -154,6 +345,10 @@ struct Harness {
     state: Arc<knx_server::AppState>,
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
+    disconnects: Arc<AtomicUsize>,
+    history_fault: Arc<HistoryFault>,
+    cleanup_fault: Arc<CleanupFault>,
+    start_receipts_at_connect: Arc<Mutex<Vec<Option<Value>>>>,
 }
 
 /// An app with the product file installed and the saved K3 project open,
@@ -184,12 +379,21 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
     knx_productdb::install_package(&products, PACKAGE, &std::fs::read(package).unwrap()).unwrap();
 
     let calls = Arc::new(AtomicUsize::new(0));
+    let disconnects = Arc::new(AtomicUsize::new(0));
+    let history_fault = Arc::new(HistoryFault::default());
+    let cleanup_fault = Arc::new(CleanupFault::default());
+    let start_receipts_at_connect = Arc::new(Mutex::new(Vec::new()));
     let state = Arc::new(knx_server::AppState {
         product_db: Some(Mutex::new(products)),
         data_dir: dir.path().to_path_buf(),
         connector: Box::new(SimConnector {
             device: Arc::clone(&device),
             calls: Arc::clone(&calls),
+            disconnects: Arc::clone(&disconnects),
+            history_fault: Arc::clone(&history_fault),
+            cleanup_fault: Arc::clone(&cleanup_fault),
+            history_path: dir.path().join("activity-history.sqlite"),
+            start_receipts_at_connect: Arc::clone(&start_receipts_at_connect),
         }),
         device_download_timing: timing,
         ..knx_server::AppState::new(dir.path().to_path_buf())
@@ -207,6 +411,10 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
         state,
         device,
         calls,
+        disconnects,
+        history_fault,
+        cleanup_fault,
+        start_receipts_at_connect,
     }
 }
 
@@ -278,6 +486,915 @@ async fn finish(h: &Harness) -> (Value, Vec<Value>) {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     panic!("the download did not end");
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_start_is_durable_before_tunnel_contact() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "simulated start refused");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        slot.as_mut().unwrap().join().await;
+    })
+    .await
+    .expect("simulated worker cleanup did not end");
+
+    let receipts = h.start_receipts_at_connect.lock().unwrap();
+    assert_eq!(receipts.len(), 1);
+    let entry = receipts[0]
+        .as_ref()
+        .expect("durable download start missing before tunnel contact");
+    assert!(entry["downloadEvidence"]["sessionId"] == shown["planId"]);
+    assert!(entry["state"] == "running");
+    assert!(entry["finishedAt"].is_null());
+    assert!(entry["downloadEvidence"]["written"].is_null());
+    assert!(entry["downloadEvidence"]["restart"].is_null());
+    assert!(entry["downloadEvidence"]["cleanup"] == "pending");
+    assert!(entry["writeEvidence"]["backupRecorded"] == false);
+    assert!(entry["writeEvidence"]["sendPossible"] == false);
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_terminal_receipt_survives_worker_completion() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "simulated start refused");
+    let end = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().unwrap();
+        worker.join().await;
+        serde_json::to_value(worker.status()).unwrap()
+    })
+    .await
+    .expect("simulated worker cleanup did not end");
+    assert!(
+        end["state"] == "finished",
+        "simulated download did not finish"
+    );
+    assert!(end["written"] == "yes", "simulated download did not write");
+    assert!(end["restart"] == "acknowledged");
+
+    let contacts = h.calls.load(Ordering::SeqCst);
+    let frames = h.device.seen().len();
+    let (status, history) = send(&h.app, get("/api/bus/history")).await;
+    assert!(
+        status == StatusCode::OK,
+        "history unavailable after cleanup"
+    );
+    assert!(history["format"] == 2);
+    assert!(history["coverage"] == "partial");
+    assert!(history["hasMore"] == false);
+    let entries = history["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    let entry = &entries[0];
+    assert!(
+        entry["state"] == end["state"],
+        "download terminal receipt missing after worker completion"
+    );
+    assert!(entry["kind"] == "deviceDownload");
+    assert!(entry["interrupted"] == false);
+    assert!(entry["downloadEvidence"]["sessionId"] == shown["planId"]);
+    assert!(entry["downloadEvidence"]["written"] == end["written"]);
+    assert!(entry["downloadEvidence"]["restart"] == end["restart"]);
+    assert!(entry["downloadEvidence"]["cleanup"] == "returnedOk");
+    assert!(entry["writeEvidence"]["backupRecorded"] == true);
+    assert!(entry["writeEvidence"]["sendPossible"] == true);
+    assert!(entry["finishedAt"].is_string());
+    let keys = [
+        "sequence",
+        "serverIncarnation",
+        "interrupted",
+        "id",
+        "kind",
+        "address",
+        "state",
+        "startedAt",
+        "finishedAt",
+        "writeEvidence",
+        "downloadEvidence",
+    ];
+    assert!(entry
+        .as_object()
+        .unwrap()
+        .keys()
+        .all(|key| keys.contains(&key.as_str())));
+    assert!(entry["writeEvidence"].as_object().unwrap().len() == 2);
+    assert!(entry["downloadEvidence"].as_object().unwrap().len() == 4);
+    assert_eq!(h.calls.load(Ordering::SeqCst), contacts);
+    assert_eq!(h.device.seen().len(), frames);
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_cleanup_error_preserves_witnessed_device_result() {
+    assert_cleanup_failure_preserves_result(false, "returnedError").await;
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_cleanup_panic_preserves_witnessed_device_result() {
+    assert_cleanup_failure_preserves_result(true, "unknown").await;
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_cleanup_recording_refusal_preserves_witnessed_result() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    h.cleanup_fault
+        .history_refusal
+        .store(true, Ordering::SeqCst);
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"]
+            .as_str()
+            .expect("cleanup-storage/phrase"),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "cleanup-storage/start");
+    let (end, backup, running) = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().expect("cleanup-storage/worker");
+        worker.join().await;
+        (
+            serde_json::to_value(worker.status()).expect("cleanup-storage/status-shape"),
+            worker.backup_file(),
+            worker.is_running(),
+        )
+    })
+    .await
+    .expect("cleanup-storage/timeout");
+    assert!(
+        end["state"] == "finished" && end["written"] == "yes" && end["restart"] == "acknowledged",
+        "cleanup-storage/device-outcome"
+    );
+    assert!(
+        !running && backup.is_some_and(|path| path.is_file()),
+        "cleanup-storage/backup-reservation"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1 && h.disconnects.load(Ordering::SeqCst) == 1,
+        "cleanup-storage/adapter-counts"
+    );
+    let before = h
+        .cleanup_fault
+        .terminal_before_disconnect
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("cleanup-storage/terminal-before-cleanup");
+    assert!(
+        before["state"] == "finished"
+            && before["downloadEvidence"]["written"] == "yes"
+            && before["downloadEvidence"]["restart"] == "acknowledged"
+            && before["downloadEvidence"]["cleanup"] == "pending"
+            && before["finishedAt"].is_string(),
+        "cleanup-storage/witnessed-terminal"
+    );
+    let frames = h.device.seen().len();
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert!(
+        status == StatusCode::OK && activity["historyState"] == "unavailable",
+        "cleanup-storage/unavailable-latch"
+    );
+    let (status, _) = send(&h.app, get("/api/bus/history")).await;
+    assert!(
+        status == StatusCode::SERVICE_UNAVAILABLE,
+        "cleanup-storage/history-refusal"
+    );
+    let fresh = plan(&h).await;
+    let (status, _) = start(
+        &h,
+        &fresh["planId"],
+        fresh["confirmationPhrase"]
+            .as_str()
+            .expect("cleanup-storage/fresh-phrase"),
+    )
+    .await;
+    assert!(
+        status == StatusCode::SERVICE_UNAVAILABLE,
+        "cleanup-storage/new-start-refusal"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1
+            && h.disconnects.load(Ordering::SeqCst) == 1
+            && h.device.seen().len() == frames,
+        "cleanup-storage/no-extra-contact"
+    );
+    let refusal = h.cleanup_fault.refusal_database.lock().unwrap();
+    assert!(
+        std::fs::read(h._dir.path().join("activity-history.sqlite"))
+            .expect("cleanup-storage/final-read")
+            .as_slice()
+            == refusal
+                .as_ref()
+                .expect("cleanup-storage/refusal-baseline")
+                .as_slice(),
+        "cleanup-storage/refused-input-preservation"
+    );
+    for suffix in ["-wal", "-shm", "-journal"] {
+        assert!(
+            !h._dir
+                .path()
+                .join(format!("activity-history.sqlite{suffix}"))
+                .exists(),
+            "cleanup-storage/no-sidecar-creation"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+fn download_runtime_shutdown_during_cleanup_preserves_witnessed_result() {
+    // Synchronous test: fully drop the worker runtime before observing its guard.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("cleanup-shutdown/runtime");
+    let (h, before, frames) = runtime.block_on(async {
+        let h = harness(SimulatorConfig::default()).await;
+        h.cleanup_fault.hold.store(true, Ordering::SeqCst);
+        let shown = plan(&h).await;
+        let (status, _) = start(
+            &h,
+            &shown["planId"],
+            shown["confirmationPhrase"]
+                .as_str()
+                .expect("cleanup-shutdown/phrase"),
+        )
+        .await;
+        assert!(status == StatusCode::OK, "cleanup-shutdown/start");
+        tokio::time::timeout(Duration::from_secs(5), h.cleanup_fault.entered.notified())
+            .await
+            .expect("cleanup-shutdown/entered-timeout");
+        {
+            let slot = h.state.device_download.lock().await;
+            let worker = slot.as_ref().expect("cleanup-shutdown/pending-worker");
+            let status =
+                serde_json::to_value(worker.status()).expect("cleanup-shutdown/pending-status");
+            assert!(
+                worker.is_running()
+                    && status["state"] == "finished"
+                    && status["written"] == "yes"
+                    && status["restart"] == "acknowledged",
+                "cleanup-shutdown/pending-reservation"
+            );
+            assert!(
+                worker.backup_file().is_some_and(|path| path.is_file()),
+                "cleanup-shutdown/pending-backup"
+            );
+        }
+        let before = h
+            .cleanup_fault
+            .terminal_before_disconnect
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("cleanup-shutdown/terminal-before-cleanup");
+        assert!(
+            before["state"] == "finished"
+                && before["finishedAt"].is_string()
+                && before["sequence"].is_u64()
+                && before["serverIncarnation"].is_string()
+                && before["downloadEvidence"]["written"] == "yes"
+                && before["downloadEvidence"]["restart"] == "acknowledged"
+                && before["downloadEvidence"]["cleanup"] == "pending",
+            "cleanup-shutdown/witnessed-terminal"
+        );
+        let frames = h.device.seen().len();
+        (h, before, frames)
+    });
+    drop(runtime);
+    let observer = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("cleanup-shutdown/observer-runtime");
+    observer.block_on(async {
+        {
+            let mut slot = h.state.device_download.lock().await;
+            let worker = slot.as_mut().expect("cleanup-shutdown/worker");
+            assert!(!worker.is_running(), "cleanup-shutdown/reservation-release");
+            tokio::time::timeout(Duration::from_secs(5), worker.join())
+                .await
+                .expect("cleanup-shutdown/join-timeout");
+            let status = serde_json::to_value(worker.status()).expect("cleanup-shutdown/status");
+            assert!(
+                status["state"] == "finished"
+                    && status["written"] == "yes"
+                    && status["restart"] == "acknowledged",
+                "cleanup-shutdown/device-outcome"
+            );
+            assert!(
+                worker.backup_file().is_some_and(|path| path.is_file()),
+                "cleanup-shutdown/backup"
+            );
+        }
+        let (status, history) = send(&h.app, get("/api/bus/history")).await;
+        assert!(status == StatusCode::OK, "cleanup-shutdown/history-status");
+        let entries = history["entries"]
+            .as_array()
+            .expect("cleanup-shutdown/history-shape");
+        assert!(entries.len() == 1, "cleanup-shutdown/history-count");
+        let after = &entries[0];
+        assert!(
+            after["state"] == before["state"]
+                && after["finishedAt"] == before["finishedAt"]
+                && after["id"] == before["id"]
+                && after["sequence"] == before["sequence"]
+                && after["serverIncarnation"] == before["serverIncarnation"]
+                && after["downloadEvidence"]["written"] == before["downloadEvidence"]["written"]
+                && after["downloadEvidence"]["restart"] == before["downloadEvidence"]["restart"],
+            "cleanup-shutdown/outcome-preservation"
+        );
+        assert!(
+            after["downloadEvidence"]["cleanup"] == "unknown",
+            "cleanup-shutdown/cleanup-unknown"
+        );
+        assert!(
+            after["writeEvidence"]["backupRecorded"] == true
+                && after["writeEvidence"]["sendPossible"] == true
+                && after["interrupted"] == false,
+            "cleanup-shutdown/write-evidence"
+        );
+        assert!(
+            h.calls.load(Ordering::SeqCst) == 1
+                && h.disconnects.load(Ordering::SeqCst) == 1
+                && h.device.seen().len() == frames,
+            "cleanup-shutdown/no-extra-contact"
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_terminal_recording_refusal_preserves_witnessed_result() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    h.cleanup_fault
+        .terminal_history_refusal
+        .store(true, Ordering::SeqCst);
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"]
+            .as_str()
+            .expect("terminal-storage/phrase"),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "terminal-storage/start");
+    let (end, backup, running) = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().expect("terminal-storage/worker");
+        worker.join().await;
+        (
+            serde_json::to_value(worker.status()).expect("terminal-storage/status-shape"),
+            worker.backup_file(),
+            worker.is_running(),
+        )
+    })
+    .await
+    .expect("terminal-storage/timeout");
+    assert!(
+        !h.cleanup_fault
+            .terminal_history_refusal
+            .load(Ordering::SeqCst),
+        "terminal-storage/fault-trigger"
+    );
+    assert!(
+        end["state"] == "finished" && end["written"] == "yes" && end["restart"] == "acknowledged",
+        "terminal-storage/device-outcome"
+    );
+    assert!(
+        !running && backup.is_some_and(|path| path.is_file()),
+        "terminal-storage/backup-reservation"
+    );
+    let before = h
+        .cleanup_fault
+        .terminal_refusal_row
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("terminal-storage/intent-before-fault");
+    assert!(
+        before["state"] == "running"
+            && before["finishedAt"].is_null()
+            && before["downloadEvidence"]["written"].is_null()
+            && before["downloadEvidence"]["restart"].is_null()
+            && before["downloadEvidence"]["cleanup"] == "pending"
+            && before["writeEvidence"]["backupRecorded"] == true
+            && before["writeEvidence"]["sendPossible"] == true,
+        "terminal-storage/persisted-intent"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1 && h.disconnects.load(Ordering::SeqCst) == 1,
+        "terminal-storage/adapter-counts"
+    );
+    let frames = h.device.seen().len();
+    assert!(
+        h.device
+            .seen()
+            .iter()
+            .filter(|frame| matches!(frame, Seen::Restart { .. }))
+            .count()
+            == 1,
+        "terminal-storage/restart-witness"
+    );
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert!(
+        status == StatusCode::OK && activity["historyState"] == "unavailable",
+        "terminal-storage/unavailable-latch"
+    );
+    let (status, _) = send(&h.app, get("/api/bus/history")).await;
+    assert!(
+        status == StatusCode::SERVICE_UNAVAILABLE,
+        "terminal-storage/history-refusal"
+    );
+    let fresh = plan(&h).await;
+    let (status, _) = start(
+        &h,
+        &fresh["planId"],
+        fresh["confirmationPhrase"]
+            .as_str()
+            .expect("terminal-storage/fresh-phrase"),
+    )
+    .await;
+    assert!(
+        status == StatusCode::SERVICE_UNAVAILABLE,
+        "terminal-storage/new-start-refusal"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1
+            && h.disconnects.load(Ordering::SeqCst) == 1
+            && h.device.seen().len() == frames,
+        "terminal-storage/no-extra-contact"
+    );
+    let refusal = h.cleanup_fault.refusal_database.lock().unwrap();
+    assert!(
+        std::fs::read(h._dir.path().join("activity-history.sqlite"))
+            .expect("terminal-storage/final-read")
+            .as_slice()
+            == refusal
+                .as_ref()
+                .expect("terminal-storage/refusal-baseline")
+                .as_slice(),
+        "terminal-storage/refused-input-preservation"
+    );
+    for suffix in ["-wal", "-shm", "-journal"] {
+        assert!(
+            !h._dir
+                .path()
+                .join(format!("activity-history.sqlite{suffix}"))
+                .exists(),
+            "terminal-storage/no-sidecar-creation"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+fn download_runtime_shutdown_during_write_preserves_uncertainty() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("midwrite-shutdown/runtime");
+    let (h, before, frames) = runtime.block_on(async {
+        let h = harness(SimulatorConfig::default()).await;
+        h.cleanup_fault
+            .hold_during_write
+            .store(true, Ordering::SeqCst);
+        let shown = plan(&h).await;
+        let (status, _) = start(
+            &h,
+            &shown["planId"],
+            shown["confirmationPhrase"]
+                .as_str()
+                .expect("midwrite-shutdown/phrase"),
+        )
+        .await;
+        assert!(status == StatusCode::OK, "midwrite-shutdown/start");
+        tokio::time::timeout(
+            Duration::from_secs(5),
+            h.cleanup_fault.write_entered.notified(),
+        )
+        .await
+        .expect("midwrite-shutdown/entered-timeout");
+        {
+            let slot = h.state.device_download.lock().await;
+            let worker = slot.as_ref().expect("midwrite-shutdown/pending-worker");
+            let status =
+                serde_json::to_value(worker.status()).expect("midwrite-shutdown/pending-status");
+            assert!(
+                worker.is_running() && status["state"] == "running",
+                "midwrite-shutdown/pending-reservation"
+            );
+            assert!(
+                worker.backup_file().is_some_and(|path| path.is_file()),
+                "midwrite-shutdown/pending-backup"
+            );
+        }
+        let before = h
+            .cleanup_fault
+            .before_write_drop
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("midwrite-shutdown/intent-before-drop");
+        assert!(
+            before["state"] == "running"
+                && before["finishedAt"].is_null()
+                && before["sequence"].is_u64()
+                && before["serverIncarnation"].is_string()
+                && before["downloadEvidence"]["written"].is_null()
+                && before["downloadEvidence"]["restart"].is_null()
+                && before["downloadEvidence"]["cleanup"] == "pending"
+                && before["writeEvidence"]["backupRecorded"] == true
+                && before["writeEvidence"]["sendPossible"] == true,
+            "midwrite-shutdown/persisted-intent"
+        );
+        assert!(
+            h.device
+                .seen()
+                .iter()
+                .any(|frame| matches!(frame, Seen::MemoryWrite { .. }))
+                && !h
+                    .device
+                    .seen()
+                    .iter()
+                    .any(|frame| matches!(frame, Seen::Restart { .. })),
+            "midwrite-shutdown/send-witness"
+        );
+        let frames = h.device.seen().len();
+        (h, before, frames)
+    });
+    drop(runtime);
+    let observer = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("midwrite-shutdown/observer-runtime");
+    observer.block_on(async {
+        {
+            let mut slot = h.state.device_download.lock().await;
+            let worker = slot.as_mut().expect("midwrite-shutdown/worker");
+            assert!(
+                !worker.is_running(),
+                "midwrite-shutdown/reservation-release"
+            );
+            tokio::time::timeout(Duration::from_secs(5), worker.join())
+                .await
+                .expect("midwrite-shutdown/join-timeout");
+            let status = serde_json::to_value(worker.status()).expect("midwrite-shutdown/status");
+            assert!(
+                status["state"] == "failed"
+                    && status["written"] == "partially"
+                    && status["restart"].is_null(),
+                "midwrite-shutdown/live-partial"
+            );
+            assert!(
+                worker.backup_file().is_some_and(|path| path.is_file()),
+                "midwrite-shutdown/backup"
+            );
+        }
+        let (status, history) = send(&h.app, get("/api/bus/history")).await;
+        assert!(status == StatusCode::OK, "midwrite-shutdown/history-status");
+        let entries = history["entries"]
+            .as_array()
+            .expect("midwrite-shutdown/history-shape");
+        assert!(entries.len() == 1, "midwrite-shutdown/history-count");
+        let after = &entries[0];
+        assert!(
+            after["state"] == "unknown"
+                && after["finishedAt"].is_string()
+                && after["id"] == before["id"]
+                && after["sequence"] == before["sequence"]
+                && after["serverIncarnation"] == before["serverIncarnation"],
+            "midwrite-shutdown/unknown-identity"
+        );
+        assert!(
+            after["downloadEvidence"]["written"].is_null()
+                && after["downloadEvidence"]["restart"].is_null()
+                && after["downloadEvidence"]["cleanup"] == "unknown",
+            "midwrite-shutdown/nullable-uncertainty"
+        );
+        assert!(
+            after["writeEvidence"]["backupRecorded"] == true
+                && after["writeEvidence"]["sendPossible"] == true
+                && after["interrupted"] == false,
+            "midwrite-shutdown/write-evidence"
+        );
+        assert!(
+            h.calls.load(Ordering::SeqCst) == 1
+                && h.disconnects.load(Ordering::SeqCst) == 0
+                && h.device.seen().len() == frames,
+            "midwrite-shutdown/no-extra-contact"
+        );
+    });
+}
+
+async fn assert_cleanup_failure_preserves_result(panics: bool, expected_cleanup: &str) {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    h.cleanup_fault
+        .return_error
+        .store(!panics, Ordering::SeqCst);
+    h.cleanup_fault.panic.store(panics, Ordering::SeqCst);
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"]
+            .as_str()
+            .expect("cleanup-fault/phrase"),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "cleanup-fault/start");
+    let (end, backup, running) = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().expect("cleanup-fault/worker");
+        worker.join().await;
+        (
+            serde_json::to_value(worker.status()).expect("cleanup-fault/status-shape"),
+            worker.backup_file(),
+            worker.is_running(),
+        )
+    })
+    .await
+    .expect("cleanup-fault/timeout");
+    assert!(
+        end["state"] == "finished" && end["written"] == "yes" && end["restart"] == "acknowledged",
+        "cleanup-fault/device-outcome"
+    );
+    assert!(!running, "cleanup-fault/reservation");
+    assert!(
+        backup.is_some_and(|path| path.is_file()),
+        "cleanup-fault/backup"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1,
+        "cleanup-fault/connect-count"
+    );
+    assert!(
+        h.disconnects.load(Ordering::SeqCst) == 1,
+        "cleanup-fault/cleanup-count"
+    );
+    let before = h
+        .cleanup_fault
+        .terminal_before_disconnect
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("cleanup-fault/terminal-before-cleanup");
+    assert!(
+        before["sequence"].is_u64() && before["serverIncarnation"].is_string(),
+        "cleanup-fault/pre-cleanup-identity"
+    );
+    assert!(
+        before["state"] == "finished"
+            && before["downloadEvidence"]["written"] == "yes"
+            && before["downloadEvidence"]["restart"] == "acknowledged"
+            && before["downloadEvidence"]["cleanup"] == "pending"
+            && before["finishedAt"].is_string(),
+        "cleanup-fault/pre-cleanup-result"
+    );
+    let frames = h.device.seen().len();
+    let (status, history) = send(&h.app, get("/api/bus/history")).await;
+    assert!(status == StatusCode::OK, "cleanup-fault/history-status");
+    let entries = history["entries"]
+        .as_array()
+        .expect("cleanup-fault/history-shape");
+    assert!(entries.len() == 1, "cleanup-fault/history-count");
+    let after = &entries[0];
+    assert!(
+        after["state"] == before["state"]
+            && after["finishedAt"] == before["finishedAt"]
+            && after["id"] == before["id"]
+            && after["sequence"] == before["sequence"]
+            && after["serverIncarnation"] == before["serverIncarnation"]
+            && after["downloadEvidence"]["written"] == before["downloadEvidence"]["written"]
+            && after["downloadEvidence"]["restart"] == before["downloadEvidence"]["restart"],
+        "cleanup-fault/history-outcome-preservation"
+    );
+    assert!(
+        after["downloadEvidence"]["cleanup"] == expected_cleanup,
+        "cleanup-fault/history-cleanup"
+    );
+    assert!(
+        after["writeEvidence"]["backupRecorded"] == true
+            && after["writeEvidence"]["sendPossible"] == true,
+        "cleanup-fault/history-write-evidence"
+    );
+    assert!(
+        after["interrupted"] == false,
+        "cleanup-fault/history-incarnation"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1 && h.device.seen().len() == frames,
+        "cleanup-fault/history-extra-contact"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_history_refusal_after_start_prevents_device_mutation() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    h.history_fault.enabled.store(true, Ordering::SeqCst);
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "simulated start refused");
+    let (end, retained_backup) = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().unwrap();
+        worker.join().await;
+        (
+            serde_json::to_value(worker.status()).unwrap(),
+            worker.backup_file(),
+        )
+    })
+    .await
+    .expect("simulated worker cleanup did not end");
+    assert!(
+        end["state"] == "failed",
+        "history refusal did not stop worker"
+    );
+    assert!(end["written"] != "yes");
+    assert!(
+        retained_backup.is_some_and(|path| path.is_file()),
+        "backup not retained before intent refusal"
+    );
+    let seen = h.device.seen();
+    assert!(seen
+        .iter()
+        .any(|frame| matches!(frame, Seen::PropertyRead { .. })));
+    assert!(
+        !seen.iter().any(|frame| matches!(
+            frame,
+            Seen::PropertyWrite { .. } | Seen::MemoryWrite { .. } | Seen::Restart { .. }
+        )),
+        "history refusal allowed a device mutation"
+    );
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(h.disconnects.load(Ordering::SeqCst), 1);
+    {
+        let snapshot = h.history_fault.refusal_database.lock().unwrap();
+        assert!(
+            std::fs::read(h._dir.path().join("activity-history.sqlite"))
+                .unwrap()
+                .as_slice()
+                == snapshot.as_ref().unwrap().as_slice()
+        );
+    }
+    assert!(
+        std::fs::read(h._dir.path().join("activity-history.sqlite-wal")).unwrap()
+            == b"synthetic admission refusal"
+    );
+    assert!(!h._dir.path().join("activity-history.sqlite-shm").exists());
+    let frames = h.device.seen().len();
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert!(status == StatusCode::OK);
+    assert!(activity["historyState"] == "unavailable");
+    let (status, _) = send(&h.app, get("/api/bus/history")).await;
+    assert!(status == StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(h.device.seen().len(), frames);
+
+    let fresh = plan(&h).await;
+    let (status, _) = start(
+        &h,
+        &fresh["planId"],
+        fresh["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert!(status == StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(h.device.seen().len(), frames);
+}
+
+#[tokio::test]
+#[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
+async fn download_backup_save_failure_prevents_device_mutation() {
+    let h = harness(SimulatorConfig::default()).await;
+    let shown = plan(&h).await;
+    // Black-box path of the route's private BACKUP_DIR; no permission assumptions.
+    let blocker = h.state.data_dir.join("device-backups");
+    assert!(!blocker.exists(), "backup-fault/blocker-precondition");
+    std::fs::write(&blocker, b"synthetic backup directory blocker")
+        .expect("backup-fault/blocker-creation");
+    let (status, _) = start(
+        &h,
+        &shown["planId"],
+        shown["confirmationPhrase"].as_str().unwrap(),
+    )
+    .await;
+    assert!(status == StatusCode::OK, "backup-fault/start-refused");
+    let (end, retained_backup) = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut slot = h.state.device_download.lock().await;
+        let worker = slot.as_mut().expect("backup-fault/worker-missing");
+        worker.join().await;
+        (
+            serde_json::to_value(worker.status()).expect("backup-fault/outcome-serialization"),
+            worker.backup_file(),
+        )
+    })
+    .await
+    .expect("backup-fault/cleanup-timeout");
+    assert!(
+        end["state"] == "failed",
+        "backup save failure did not stop worker"
+    );
+    assert!(end["written"] == "no", "backup-fault/worker-written");
+    assert!(
+        retained_backup.is_none(),
+        "failed backup was claimed retained"
+    );
+    let seen = h.device.seen();
+    assert!(
+        seen.iter()
+            .any(|frame| matches!(frame, Seen::PropertyRead { .. })),
+        "backup-fault/read-witness"
+    );
+    assert!(
+        !seen.iter().any(|frame| matches!(
+            frame,
+            Seen::PropertyWrite { .. } | Seen::MemoryWrite { .. } | Seen::Restart { .. }
+        )),
+        "backup save failure allowed a device mutation"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1,
+        "backup-fault/connect-count"
+    );
+    assert!(
+        h.disconnects.load(Ordering::SeqCst) == 1,
+        "backup-fault/cleanup-count"
+    );
+    assert!(
+        std::fs::read(&blocker).expect("backup-fault/blocker-read")
+            == b"synthetic backup directory blocker",
+        "backup-fault/blocker-preservation"
+    );
+    let frames = h.device.seen().len();
+    let (status, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert!(
+        status == StatusCode::OK && activity["historyState"] == "configured",
+        "backup-fault/history-availability"
+    );
+    let (status, history) = send(&h.app, get("/api/bus/history")).await;
+    assert!(status == StatusCode::OK, "backup-fault/history-status");
+    let entries = history["entries"]
+        .as_array()
+        .expect("backup-fault/history-shape");
+    assert!(entries.len() == 1, "backup-fault/history-row-count");
+    let entry = &entries[0];
+    assert!(
+        entry["kind"] == "deviceDownload" && entry["state"] == "failed",
+        "backup-fault/history-outcome"
+    );
+    assert!(
+        entry["downloadEvidence"]["written"] == "no",
+        "backup-fault/history-written"
+    );
+    assert!(
+        entry["downloadEvidence"]["cleanup"] == "returnedOk",
+        "backup-fault/history-cleanup"
+    );
+    assert!(
+        entry["writeEvidence"]["backupRecorded"] == false,
+        "backup-fault/history-backup"
+    );
+    assert!(
+        entry["writeEvidence"]["sendPossible"] == false,
+        "backup-fault/history-intent"
+    );
+    assert!(
+        entry["finishedAt"].is_string(),
+        "backup-fault/history-finished"
+    );
+    assert!(
+        h.calls.load(Ordering::SeqCst) == 1,
+        "backup-fault/connect-count"
+    );
+    assert!(
+        h.device.seen().len() == frames,
+        "backup-fault/history-extra-contact"
+    );
 }
 
 #[tokio::test]
@@ -704,7 +1821,11 @@ async fn a_waiting_simulated_address_programming_holds_off_the_download() {
         .fetch_add(1, Ordering::SeqCst);
     *h.state.address_programming.lock().await = Some(knx_server::AddressProgrammingSession::start(
         id,
-        Box::new(SimTunnel(Arc::clone(&h.device))),
+        Box::new(SimTunnel(
+            Arc::clone(&h.device),
+            Arc::clone(&h.disconnects),
+            None,
+        )),
         address,
         authorisation,
         fast(),

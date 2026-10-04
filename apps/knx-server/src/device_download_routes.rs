@@ -396,9 +396,9 @@ async fn start(
         }
     }
 
-    state
+    let activity = state
         .one_shot_activity
-        .ensure_write_available()
+        .start_download(body.plan_id, target)
         .map_err(|_| {
             ApiError::with_status(
                 StatusCode::SERVICE_UNAVAILABLE,
@@ -423,6 +423,7 @@ async fn start(
         state.device_download_timing,
         prepared,
         backups,
+        activity,
     ));
     drop(scan);
     drop(monitor);

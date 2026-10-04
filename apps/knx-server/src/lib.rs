@@ -25,6 +25,7 @@ pub use bus::*;
 
 mod bus_routes;
 mod bus_scan;
+mod catalog_requests;
 mod com_object_activation;
 mod debug_report;
 mod device_compare_routes;

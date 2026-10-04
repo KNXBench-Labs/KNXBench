@@ -208,6 +208,7 @@ mod tests {
         };
         let create = Command::CreateGroupAddress {
             entry: entry.clone(),
+            installation: None,
         };
         create.apply(&mut project).unwrap();
         sync_after_command(&conn, &project, &create).unwrap();

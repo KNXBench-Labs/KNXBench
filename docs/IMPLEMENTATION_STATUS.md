@@ -29,9 +29,133 @@ inputs remain byte-identical. Separate follow-up in-session review has no
 blocking product finding, not an independent-model approval. Current-upstream
 workspace/Web/bindings/build/doc/integration/publication gates remain open.
 This is not delivered manufacturer compatibility and does not close KL153 or
-the Alpha goal. Decision: `adr/0068-product-scheme23-namespace-gate.md`.
+the Alpha goal. Decision: `adr/0072-product-scheme23-namespace-gate.md`.
 See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 
+## 2026-10-04 — UA5: explicit topology repair (MODEL-02, core/store/server half)
+
+- [ADR-0071](adr/0071-ambiguous-topology-is-repaired-explicitly.md):
+  `Command::RepairDevicePlacement { device, keep: DevicePlacementSlot }` and
+  `Command::RepairLineOwner { line, keep }` keep the named existing placement
+  and remove every other occurrence, in one undo step with exact-order undo
+  (`RestoreDevicePlacements` / `RestoreLineOwners`). Refused when nothing is
+  ambiguous, when the kept slot is not current, or across installations.
+- **Data-integrity fix:** `.knxdb` save silently collapsed a multiply placed
+  device or multiply owned line to the last written placement (schema holds
+  one). Save now refuses with `StoreError::AmbiguousTopology` before writing.
+- Server: `POST /api/repair/device-placement`, `POST /api/repair/line-owner`.
+- Tests: `crates/knx-core/tests/topology_repair.rs` (RED: did not compile —
+  no repair API; GREEN 8/8), `apps/knx-server/tests/topology_repair_routes.rs`
+  (2), two store tests in `crates/knx-store/tests/command_persistence.rs`
+  (the first draft expected save/reopen to keep the ambiguity and exposed the
+  lossy save). 10/10 guard mutants caught.
+- Not covered: duplicate-id renumbering, building-part/group-range placement
+  repair, web UI choice of the kept placement (Web lock). MODEL-02 stays
+  `IN_PROGRESS` until the UI half lands.
+
+## 2026-10-04 — UA4: every installation editable in the core (MODEL-01, core/server half)
+
+- [ADR-0070](adr/0070-commands-act-in-the-owning-installation.md): `knx-core` commands no longer assume `installations[0]`: id-addressed
+  commands resolve the owning installation (ambiguous ids refused), Delete/
+  Restore pairs carry the installation, parameter rows are edited where they
+  live (else in the device's installation), and root creates
+  (`CreateArea`, `CreateGroupRange`, `CreateBuildingPart`, range-less
+  `CreateGroupAddress`) take `installation: Option<InstallationId>` with the
+  first installation as default. Nothing connects two installations:
+  cross-installation device/line/part/range/link moves are refused with
+  `CommandError::CrossInstallation`. New `Command::RenameInstallation`.
+- Server: `PATCH /api/installations/{id}` and optional `installationId` on
+  the four root create routes.
+- Tests: `crates/knx-core/tests/multi_installation.rs` (RED: 5 of 7
+  behaviour tests failed with first-installation `NotFound` errors before the
+  change), `apps/knx-server/tests/multi_installation_routes.rs`; one older
+  core test that pinned first-installation parameter semantics now pins the
+  in-place edit. Eight guard mutants caught.
+- CSV group-address import still creates in the first installation; the web
+  UI half (installation rename, choose installation for root creates) waits
+  for the Web lock. MODEL-01 stays `IN_PROGRESS` until then.
+
+## 2026-10-04 — UA3: opt-in address allocation and unique names (MODEL-04, server half)
+
+- `POST /api/devices` accepts `allocateAddresses` (needs `lineId`) and
+  `uniqueNames`, both default off. Allocation uses the new pure
+  `knx_core::free_line_addresses` (lowest free octet 1–255, skips 0, every
+  project address and the exclusion list; refuses ambiguous lines and short
+  supply) and adds one `SetIndividualAddress` per device to the same batch, so
+  the core validates every address and one undo removes everything. Items carry
+  their `address`. Both flags are part of the DATA-03 replay fingerprint.
+- Tests: `apps/knx-server/tests/catalog_allocation.rs` (RED 1/4 → GREEN 4/4),
+  `allocation::tests` (5), `allocated_batches_map_both_children_of_an_item_to_that_item`.
+  Eight guard mutants caught (one survivor found a missing two-area test, added).
+- The web catalog toggles wait for the Web lock; MODEL-04 stays `IN_PROGRESS`.
+
+## 2026-10-04 — UA2: catalog batch replay token (DATA-03, server half)
+
+- `POST /api/devices` accepts an optional `requestId`; a committed ID with
+  identical content replays its recorded outcome (`replayed: true`) without
+  applying again, other content under the same ID is refused, failed requests
+  are not recorded ([ADR-0069](adr/0069-catalog-batch-request-replay-token.md)).
+- Tests: `apps/knx-server/tests/catalog_request_replay.rs` (6/6 RED before:
+  the resend created a second batch; GREEN after) and the ledger unit tests in
+  `catalog_requests.rs`. Five guard mutants caught.
+- The web client half (send a per-action ID, offer a safe retry) waits for the
+  Web lock; DATA-03 stays `IN_PROGRESS` until then.
+
+## 2026-10-04 — UA1: coupler `.0` with manufacturer evidence; KL-127 closed as known gap
+
+- MODEL-03 backend: a device whose product's hardware has `IsCoupler` true in
+  the product database may take device octet 0 on its line
+  (`Command::SetCouplerIndividualAddress`, `CouplerEvidence`,
+  `knx_productdb::query::product_hardware_is_coupler`). Line prefix and
+  uniqueness stay enforced; undo/redo round-trips. Everything else keeps the
+  existing refusal. Evidence and tests: [RESEARCH §25](RESEARCH.md#25-ua1-coupler-0-evidence-and-siteground-samples-2026-10-04).
+- The web editor half (offer `.0` for an evidenced coupler) waits for the Web
+  lock; MODEL-03 stays `IN_PROGRESS` until then.
+- KL-127: no independent `Ground` sample found; closed for the Alpha as a
+  known gap on the user's instruction.
+
+## 2026-10-04 — Commissioning validation scope and requested continuation
+
+- User removed new real-hardware, power-loss, vendor and ETS validation from
+  the commissioning completion goal. This is an accepted evidence boundary,
+  not a hardware/compatibility/recovery claim or pending operator work.
+- [User notices](manual/known-issues.md#commissioning-validation-boundary) now
+  disclose it. Existing receipts and runtime safety/refusal gates are unchanged.
+- User requested implementation of broader caller/long-session coverage,
+  Web/client adoption and offline recovery/abort/restore contracts. These are
+  pending implementation, not newly accepted tests. SAFE-03/AUDIT-01 remains
+  partial; ADR0067 remains Proposed until software contracts and owner admission
+  are verified. No new hardware operation is authorized.
+
+## 2026-10-04 — Project-evolution story, first private version (companion, not product)
+
+- New, independent `story/` companion ([README](../story/README.md),
+  [ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
+  No product code, KNX domain, project file or bus is touched; the engineering
+  feature backlog is unchanged.
+- Source-backed edition: 36 development steps on 8 strands, 46 typed relations,
+  8 chapters, 6 disclosed gaps, baseline `origin/main` `75ad9650`. Earliest
+  surviving prompt 2026-09-02 13:50 CEST; the strategy document's origin is not
+  in any available source.
+- Stdlib Python tool: schema validation, pattern privacy scan, private-provenance
+  traceability and leak refusal, deterministic layout, immutable candidates with
+  diff and review checklist, loopback-only preview server, exact-digest approval
+  check, and a `publish` command that always refuses.
+- Verified: 49 unit tests (with five guard mutations each caught), and 41
+  Playwright/Chromium checks per candidate on 1440×900 and 390×844, including
+  live cancellation of running growth by *Motion off* and by OS reduced motion,
+  hostile-text rendering, no-JavaScript reading and zero CSP violations.
+- Not done: publication, hosting, final fonts, non-Chromium browsers, real
+  screen readers, cloud-session coverage.
+- Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
+  the built pages are now versioned in `story/previews/` (`build --preview`),
+  guarded by a rebuild-equality test (53 unit tests).
+- Narrator edition `2026-10-04.3` (user request): the story is told by a gloomy
+  AI narrator in homage to Marvin. Optional, schema-enforced `edition.narrator`
+  (hero, aside label, mandatory disclosure); editions without it render
+  byte-identically (`.1`/`.2` previews unchanged). Only narration and asides
+  changed; one new step and two relations record the request. 60 unit tests,
+  41/41 browser checks.
 
 ## AR06S KL153 scheme23 bounded research — 2026-10-04
 

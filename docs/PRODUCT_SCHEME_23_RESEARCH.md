@@ -151,7 +151,7 @@ All production inputs remain byte-identical to the completed Full853 producer;
 only the native fixture and two caller test files are strengthened. Current
 workspace/Web/bindings/build acceptance, upstream integration, documentation and
 publication remain pending. Separate follow-up in-session review is not an
-independent-model approval. See [ADR-0068](adr/0068-product-scheme23-namespace-gate.md).
+independent-model approval. See [ADR-0072](adr/0072-product-scheme23-namespace-gate.md).
 The candidate is **not delivered** and KL153 remains open.
 
 ## Sources

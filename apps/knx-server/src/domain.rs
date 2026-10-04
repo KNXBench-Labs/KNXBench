@@ -183,6 +183,11 @@ pub struct AppState {
     /// the same instant would otherwise both write back the document they
     /// read, and the later write would silently drop the earlier one.
     pub settings_lock: Mutex<()>,
+    /// Committed catalog requests by client `requestId` (DATA-03), so a
+    /// resent batch replays instead of applying twice. Cleared together with
+    /// the command stack whenever the open project is replaced. Lock order:
+    /// after `project`.
+    pub catalog_requests: Mutex<crate::catalog_requests::CatalogRequestLedger>,
 }
 
 impl AppState {
@@ -228,6 +233,7 @@ impl AppState {
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
             settings_lock: Mutex::new(()),
+            catalog_requests: Mutex::new(Default::default()),
         }
     }
 }
@@ -1777,11 +1783,14 @@ fn replace_project_state_transaction(
         .manufacturer_refs
         .lock()
         .expect("state mutex poisoned");
+    let mut catalog_requests = state.catalog_requests.lock().expect("state mutex poisoned");
 
     if !can_replace(project.as_ref(), clean_project.as_ref()) {
         return Err(UnsavedChanges);
     }
     after_guard();
+    // A recorded request belongs to the project it was committed into.
+    catalog_requests.clear();
 
     let clean_replacement = replacement.clone();
     *project = Some(replacement);
@@ -1954,13 +1963,49 @@ pub fn set_individual_address_impl(
         ),
         None => None,
     };
+    let device = knx_core::DeviceId(device_id);
+    if let Some(address) = address.filter(|a| a.device() == 0) {
+        if let Some(evidence) = coupler_evidence(state, device)? {
+            return apply(
+                state,
+                knx_core::Command::SetCouplerIndividualAddress {
+                    device,
+                    address,
+                    evidence,
+                },
+            );
+        }
+    }
     apply(
         state,
-        knx_core::Command::SetIndividualAddress {
-            device: knx_core::DeviceId(device_id),
-            address,
-        },
+        knx_core::Command::SetIndividualAddress { device, address },
     )
+}
+
+/// MODEL-03: manufacturer evidence that `device`'s hardware is a coupler,
+/// read from the product database (`Hardware/@IsCoupler`). `None` when the
+/// device, the database or a true flag is missing; the plain command then
+/// keeps refusing a new device octet 0. The project and product locks are
+/// taken one after the other, never together (see `device_detail`).
+fn coupler_evidence(
+    state: &AppState,
+    device: knx_core::DeviceId,
+) -> Result<Option<knx_core::CouplerEvidence>, String> {
+    let product_ref = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        match project.devices.get(device) {
+            Some(d) => d.product_ref.clone(),
+            None => return Ok(None),
+        }
+    };
+    let Some(products) = state.product_db.as_ref() else {
+        return Ok(None);
+    };
+    let products = products.lock().expect("state mutex poisoned");
+    let is_coupler = knx_productdb::query::product_hardware_is_coupler(&products, &product_ref)
+        .map_err(|e| e.to_string())?;
+    Ok((is_coupler == Some(true)).then_some(knx_core::CouplerEvidence { product_ref }))
 }
 
 pub fn set_com_object_dpt_impl(
@@ -2076,6 +2121,19 @@ pub fn create_group_address_impl(
     address: String,
     range_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_group_address_in_impl(state, name, address, range_id, None)
+}
+
+/// [`create_group_address_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_group_address_in_impl(
+    state: &AppState,
+    name: String,
+    address: String,
+    range_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2098,6 +2156,7 @@ pub fn create_group_address_impl(
                 unfiltered: false,
                 range: range_id.map(knx_core::GroupRangeId),
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2120,6 +2179,18 @@ pub fn create_area_impl(
     name: String,
     address: u8,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_area_in_impl(state, name, address, None)
+}
+
+/// [`create_area_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_area_in_impl(
+    state: &AppState,
+    name: String,
+    address: u8,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2139,6 +2210,7 @@ pub fn create_area_impl(
                 completion: knx_core::CompletionStatus::Editing,
                 lines: vec![],
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2149,6 +2221,26 @@ pub fn delete_area_impl(state: &AppState, id: u32) -> Result<knx_projection::Pro
         state,
         knx_core::Command::DeleteArea {
             id: knx_core::AreaId(id),
+        },
+    )
+}
+
+/// MODEL-01: renames installation `id` as one undoable command. A blank
+/// name is refused; the name is stored trimmed.
+pub fn rename_installation_impl(
+    state: &AppState,
+    id: u8,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("installation name must not be blank".into());
+    }
+    apply(
+        state,
+        knx_core::Command::RenameInstallation {
+            id: knx_core::InstallationId(id),
+            name: name.to_string(),
         },
     )
 }
@@ -2227,6 +2319,46 @@ pub fn rename_line_impl(
     )
 }
 
+/// MODEL-02: keep exactly one placement of a multiply placed device.
+/// `keep_line` and `keep_unassigned_installation` are mutually exclusive;
+/// exactly one must be given.
+pub fn repair_device_placement_impl(
+    state: &AppState,
+    device: u32,
+    keep_line: Option<u32>,
+    keep_unassigned_installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let keep = match (keep_line, keep_unassigned_installation) {
+        (Some(line), None) => knx_core::DevicePlacementSlot::Line(knx_core::LineId(line)),
+        (None, Some(installation)) => {
+            knx_core::DevicePlacementSlot::Unassigned(knx_core::InstallationId(installation))
+        }
+        _ => return Err("give exactly one of keepLineId or keepUnassignedInstallationId".into()),
+    };
+    apply(
+        state,
+        knx_core::Command::RepairDevicePlacement {
+            device: knx_core::DeviceId(device),
+            keep,
+        },
+    )
+}
+
+/// MODEL-02: keep exactly one area reference of a multiply owned line.
+pub fn repair_line_owner_impl(
+    state: &AppState,
+    line: u32,
+    keep_area: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RepairLineOwner {
+            line: knx_core::LineId(line),
+            keep: knx_core::AreaId(keep_area),
+        },
+    )
+}
+
 pub fn move_line_to_area_impl(
     state: &AppState,
     id: u32,
@@ -2262,6 +2394,20 @@ pub fn create_group_range_impl(
     end: String,
     parent_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_group_range_in_impl(state, name, start, end, parent_id, None)
+}
+
+/// [`create_group_range_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_group_range_in_impl(
+    state: &AppState,
+    name: String,
+    start: String,
+    end: String,
+    parent_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2285,6 +2431,7 @@ pub fn create_group_range_impl(
                 parent: parent_id.map(knx_core::GroupRangeId),
                 children: vec![],
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2355,6 +2502,19 @@ pub fn create_building_part_impl(
     kind: String,
     parent_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_building_part_in_impl(state, name, kind, parent_id, None)
+}
+
+/// [`create_building_part_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_building_part_in_impl(
+    state: &AppState,
+    name: String,
+    kind: String,
+    parent_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let kind = parse_building_part_kind(&kind)?;
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
@@ -2379,6 +2539,7 @@ pub fn create_building_part_impl(
                 devices: vec![],
                 parent: parent_id.map(knx_core::BuildingPartId),
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2587,13 +2748,20 @@ pub struct CreateDeviceResponse {
     pub tree: ProjectTree,
     pub diagnostics: Vec<CreationDiagnostic>,
     pub items: Vec<CreatedCatalogDevice>,
+    /// The request ID was already committed: `items`/`diagnostics` are the
+    /// recorded outcome, nothing was applied now, and `tree` is the current
+    /// project (which may since have been edited or undone).
+    pub replayed: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CreatedCatalogDevice {
     pub index: u32,
     pub device_id: knx_core::DeviceId,
     pub name: String,
+    /// The allocated address (MODEL-04), `None` when allocation was not
+    /// requested.
+    pub address: Option<knx_core::IndividualAddress>,
     pub diagnostics: Vec<CreationDiagnostic>,
 }
 
@@ -2687,18 +2855,58 @@ pub fn create_device_impl(
     create_devices_impl(state, line_id, catalog_item_id, name, 1)
 }
 
-/// The first batch child reserves IDs, so child index 1 is catalog item 1.
-/// Keep the underlying typed error's wording while identifying a late
-/// failure's exact device; do not report an ID reservation as a device.
-fn catalog_creation_error(quantity: u32, error: knx_core::CommandError) -> String {
+/// The first batch child reserves IDs; each catalog item then contributes
+/// `children_per_item` children (its `CreateDevice`, plus its
+/// `SetIndividualAddress` when addresses are allocated). Keep the underlying
+/// typed error's wording while identifying a late failure's exact device; do
+/// not report an ID reservation as a device.
+fn catalog_creation_error(
+    quantity: u32,
+    children_per_item: usize,
+    error: knx_core::CommandError,
+) -> String {
     match error {
         knx_core::CommandError::BatchItem { index, source }
-            if quantity > 1 && index > 0 && index <= quantity as usize =>
+            if index > 0 && index <= quantity as usize * children_per_item =>
         {
-            format!("item {index}: {source}")
+            let item = (index - 1) / children_per_item + 1;
+            format!("item {item}: {source}")
         }
         other => other.to_string(),
     }
+}
+
+/// Names for a catalog batch. Without `unique` this is the original rule:
+/// one device keeps the caller's exact name, several get `"<base> <n>"` for
+/// n = 1…quantity, even if another device already has that name. With
+/// `unique` (MODEL-04) a name already used by any project device is skipped:
+/// one device keeps its exact name when free, else takes the first free
+/// `"<base> <n>"` from n = 2; several take the first free indexed names.
+fn catalog_device_names(
+    project: &knx_core::Project,
+    name: &str,
+    base: &str,
+    quantity: u32,
+    unique: bool,
+) -> Vec<String> {
+    if !unique {
+        return if quantity == 1 {
+            vec![name.to_string()]
+        } else {
+            (1..=quantity).map(|n| format!("{base} {n}")).collect()
+        };
+    }
+    let used: std::collections::HashSet<&str> =
+        project.devices.iter().map(|d| d.name.as_str()).collect();
+    if quantity == 1 && !used.contains(name) {
+        return vec![name.to_string()];
+    }
+    let first = if quantity == 1 { 2 } else { 1 };
+    (first..)
+        .map(|n| format!("{base} {n}"))
+        .filter(|candidate| !used.contains(candidate.as_str()))
+        .take(quantity as usize)
+        .collect()
 }
 
 /// Creates one or more devices as a single undoable command. No physical
@@ -2710,6 +2918,140 @@ pub fn create_devices_impl(
     catalog_item_id: String,
     name: String,
     quantity: u32,
+) -> Result<CreateDeviceResponse, String> {
+    create_catalog_devices_impl(
+        state,
+        CatalogCreateRequest {
+            line_id,
+            catalog_item_id,
+            name,
+            quantity,
+            ..Default::default()
+        },
+    )
+}
+
+/// One catalog creation request as the HTTP route receives it.
+#[derive(Debug, Clone, Default)]
+pub struct CatalogCreateRequest {
+    pub line_id: Option<u32>,
+    pub catalog_item_id: String,
+    pub name: String,
+    pub quantity: u32,
+    /// DATA-03 replay token, see `catalog_requests`.
+    pub request_id: Option<String>,
+    /// MODEL-04: give each new device the lowest free address on `line_id`.
+    pub allocate_addresses: bool,
+    /// MODEL-04: skip generated names already used in the project.
+    pub unique_names: bool,
+}
+
+/// [`create_devices_impl`] with the optional request features. A committed
+/// `request_id` replays its recorded outcome instead of applying again; the
+/// same ID with different content is refused. See `catalog_requests`.
+pub fn create_catalog_devices_impl(
+    state: &AppState,
+    request: CatalogCreateRequest,
+) -> Result<CreateDeviceResponse, String> {
+    let CatalogCreateRequest {
+        line_id,
+        catalog_item_id,
+        name,
+        quantity,
+        request_id,
+        allocate_addresses,
+        unique_names,
+    } = request;
+    if allocate_addresses && line_id.is_none() {
+        return Err("address allocation needs a target line".into());
+    }
+    let options = CatalogCreateOptions {
+        allocate_addresses,
+        unique_names,
+    };
+    let request = match request_id {
+        None => None,
+        Some(id) => {
+            crate::catalog_requests::validate_request_id(&id)?;
+            let fingerprint = crate::catalog_requests::CatalogRequestFingerprint {
+                line_id,
+                catalog_item_id: catalog_item_id.clone(),
+                name: name.clone(),
+                quantity,
+                allocate_addresses,
+                unique_names,
+            };
+            Some((id, fingerprint))
+        }
+    };
+    // Answer a resend before consulting the product database: the product
+    // may have changed since, but the committed outcome has not.
+    if let Some((id, fingerprint)) = &request {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
+            return Ok(replay);
+        }
+    }
+    create_devices_recorded(
+        state,
+        line_id,
+        catalog_item_id,
+        name,
+        quantity,
+        options,
+        request,
+    )
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct CatalogCreateOptions {
+    allocate_addresses: bool,
+    unique_names: bool,
+}
+
+/// The recorded outcome for a committed request, with the current tree.
+/// The caller holds `project`; the ledger lock is taken after it.
+fn replay_catalog_request(
+    state: &AppState,
+    project: &knx_core::Project,
+    id: &str,
+    fingerprint: &crate::catalog_requests::CatalogRequestFingerprint,
+) -> Result<Option<CreateDeviceResponse>, String> {
+    let ledger = state.catalog_requests.lock().expect("state mutex poisoned");
+    let Some(recorded) = ledger.lookup(id, fingerprint)? else {
+        return Ok(None);
+    };
+    let recorded = recorded.clone();
+    drop(ledger);
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let clean_project = state.clean_project.lock().expect("state mutex poisoned");
+    let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
+    Ok(Some(CreateDeviceResponse {
+        tree: tree_with_state(
+            project,
+            clean_project.as_ref(),
+            &stack,
+            import_counts,
+            current_project_revision(state),
+            &state.server_incarnation,
+            last_saved_at.as_deref(),
+        ),
+        diagnostics: recorded.diagnostics,
+        items: recorded.items,
+        replayed: true,
+    }))
+}
+
+fn create_devices_recorded(
+    state: &AppState,
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+    quantity: u32,
+    options: CatalogCreateOptions,
+    request: Option<(String, crate::catalog_requests::CatalogRequestFingerprint)>,
 ) -> Result<CreateDeviceResponse, String> {
     const MAX_CATALOG_QUANTITY: u32 = 32;
     if !(1..=MAX_CATALOG_QUANTITY).contains(&quantity) {
@@ -2780,6 +3122,13 @@ pub fn create_devices_impl(
     // `product_db` is no longer held.
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
+    // A concurrent identical request may have committed while the product
+    // database was read; this check under `project` is the authoritative one.
+    if let Some((id, fingerprint)) = &request {
+        if let Some(replay) = replay_catalog_request(state, project, id, fingerprint)? {
+            return Ok(replay);
+        }
+    }
 
     // Locate the owning installation first. A line in the second installation
     // must not be forced into the first one, and an unknown line must not
@@ -2831,18 +3180,27 @@ pub fn create_devices_impl(
     {
         return Err("catalog ID range exhausted".into());
     }
-    let mut commands = Vec::with_capacity(quantity as usize);
+    // MODEL-04: both choices are made from the project as it is now, under
+    // the same lock that applies the batch, and refuse the whole request
+    // before any ID is reserved. The core re-validates every address.
+    let addresses = match (options.allocate_addresses, line_id) {
+        (true, Some(line)) => Some(
+            knx_core::free_line_addresses(project, knx_core::LineId(line), quantity as usize)
+                .map_err(|error| error.to_string())?,
+        ),
+        _ => None,
+    };
+    // The original single-create API stores the caller's exact name. The web
+    // UI trims its own input, but direct clients may have deliberate spacing
+    // that a new batch feature must not erase.
+    let names = catalog_device_names(project, &name, base_name, quantity, options.unique_names);
+    let batched = quantity > 1 || addresses.is_some();
+    let children_per_item = if addresses.is_some() { 2 } else { 1 };
+    let mut commands = Vec::with_capacity(quantity as usize * children_per_item);
     let mut created = Vec::with_capacity(quantity as usize);
-    for index in 1..=quantity {
+    for (index, device_name) in (1..=quantity).zip(names) {
         let device_id = ids.next_device_id().map_err(|error| error.to_string())?;
-        let device_name = if quantity == 1 {
-            // The original single-create API stores the caller's exact name.
-            // The web UI trims its own input, but direct clients may have
-            // deliberate spacing that a new batch feature must not erase.
-            name.clone()
-        } else {
-            format!("{base_name} {index}")
-        };
+        let address = addresses.as_ref().map(|all| all[index as usize - 1]);
         let mut com_objects = Vec::with_capacity(seeds.len());
         let mut enrich_inputs = Vec::with_capacity(seeds.len());
         for (ref_id, view) in &seeds {
@@ -2890,9 +3248,15 @@ pub fn create_devices_impl(
             installation,
             line: line_id.map(knx_core::LineId),
         });
-        created.push((index, device_id, device_name, enrich_inputs));
+        if let Some(address) = address {
+            commands.push(knx_core::Command::SetIndividualAddress {
+                device: device_id,
+                address: Some(address),
+            });
+        }
+        created.push((index, device_id, device_name, address, enrich_inputs));
     }
-    let cmd = if quantity == 1 {
+    let cmd = if !batched {
         commands.pop().expect("exactly one device requested")
     } else {
         // Reserve and create as one undoable command. The core's Batch
@@ -2910,8 +3274,10 @@ pub fn create_devices_impl(
     // itself: this function's return type carries creation diagnostics
     // `apply()` doesn't produce, and needs the enrichment pass below run
     // under the same `project` lock before releasing it).
-    let cmd_desc = if quantity == 1 {
+    let cmd_desc = if !batched {
         format!("{cmd:?}")
+    } else if addresses.is_some() {
+        format!("Catalog batch create: {quantity} devices with allocated addresses")
     } else {
         format!("Catalog batch create: {quantity} devices")
     };
@@ -2920,11 +3286,11 @@ pub fn create_devices_impl(
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
         stack
             .do_command(project, cmd)
-            .map_err(|error| catalog_creation_error(quantity, error))
+            .map_err(|error| catalog_creation_error(quantity, children_per_item, error))
     };
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
     result?;
-    if quantity == 1 {
+    if !batched {
         // Retain the legacy single-command undo/log shape, without leaking
         // allocator IDs when that command was rejected.
         project.ids = ids;
@@ -2940,7 +3306,7 @@ pub fn create_devices_impl(
     // are returned as creation diagnostics.
     let mut diagnostics = Vec::new();
     let mut items = Vec::with_capacity(created.len());
-    for (index, device_id, name, enrich_inputs) in created {
+    for (index, device_id, name, address, enrich_inputs) in created {
         let mut issues = Vec::new();
         for (com_id, ref_id, view) in &enrich_inputs {
             knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
@@ -2952,8 +3318,23 @@ pub fn create_devices_impl(
             index,
             device_id,
             name,
+            address,
             diagnostics: item_diagnostics,
         });
+    }
+    if let Some((id, fingerprint)) = request {
+        state
+            .catalog_requests
+            .lock()
+            .expect("state mutex poisoned")
+            .record(
+                id,
+                fingerprint,
+                crate::catalog_requests::RecordedCatalogRequest {
+                    diagnostics: diagnostics.clone(),
+                    items: items.clone(),
+                },
+            );
     }
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
@@ -2971,6 +3352,7 @@ pub fn create_devices_impl(
         ),
         diagnostics,
         items,
+        replayed: false,
     })
 }
 
@@ -5565,9 +5947,33 @@ mod tests {
             ))),
         };
         assert_eq!(
-            catalog_creation_error(3, error),
+            catalog_creation_error(3, 1, error),
             "item 2: device 7 not found"
         );
+    }
+
+    #[test]
+    fn allocated_batches_map_both_children_of_an_item_to_that_item() {
+        // Children: 0 ReserveIds, then (CreateDevice, SetIndividualAddress) per item.
+        for (index, item) in [(1, 1), (2, 1), (3, 2), (6, 3)] {
+            let error = knx_core::CommandError::BatchItem {
+                index,
+                source: Box::new(knx_core::CommandError::DeviceNotFound(knx_core::DeviceId(
+                    7,
+                ))),
+            };
+            assert_eq!(
+                catalog_creation_error(3, 2, error),
+                format!("item {item}: device 7 not found")
+            );
+        }
+        let reservation = knx_core::CommandError::BatchItem {
+            index: 0,
+            source: Box::new(knx_core::CommandError::DeviceNotFound(knx_core::DeviceId(
+                7,
+            ))),
+        };
+        assert!(!catalog_creation_error(3, 2, reservation).starts_with("item"));
     }
 
     #[test]

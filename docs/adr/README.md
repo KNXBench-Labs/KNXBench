@@ -67,3 +67,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0065](0065-dynamic-scalar-copy-admission.md) | Dynamic evaluation admits scalar copies before allocating them | Accepted (bounded Core/HTTP scalar admission; external projections open) | 2026-10-03 |
 | [0066](0066-outside-walk-text-refusal.md) | Outside-walk text substitution has explicit request-level refusal | Proposed (source audit and first public HTTP tracer; execution pending) | 2026-10-03 |
 | [0067](0067-download-lifecycle-preserves-uncertainty.md) | Download lifecycle receipts preserve uncertainty and legacy history | Proposed (scoped integrated offline gates passed; owner admission pending) | 2026-10-03 |
+| [0068](0068-project-evolution-story-is-a-static-offline-companion.md) | The project-evolution story is a static, offline companion with a separate publication gate | Accepted (first private version; publication not designed) | 2026-10-04 |
+| [0069](0069-catalog-batch-request-replay-token.md) | A catalog batch request may carry a replay token | Accepted (server half; web client pending) | 2026-10-04 |
+| [0070](0070-commands-act-in-the-owning-installation.md) | Commands act in the installation that owns their target | Accepted (core/server; web UI pending) | 2026-10-04 |
+| [0071](0071-ambiguous-topology-is-repaired-explicitly.md) | Ambiguous topology is repaired explicitly, never collapsed on save | Accepted (core/store/server; web UI pending) | 2026-10-04 |

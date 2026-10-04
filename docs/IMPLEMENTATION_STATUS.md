@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — U20 part 1: the telegram-flow reducer and wire validation
+
+- `apps/knx-web/src/flowWire.ts` validates the AR20 snapshot and the new row
+  fields (widths, canonical generation, all six flags, known names) and
+  refuses everything else. `flowModel.ts` is the pure, session-keyed reducer:
+  sequence dedupe and ordering, a bounded queue per unknown generation,
+  resolution of every row against its own generation only, exact/ambiguous/
+  unresolved/raw sources, configured targets from active members, value slots
+  with 7 s from observation time, at most three badges, and bounded growth
+  with counters. `api.ts` gains the additive fields and `fetchFlowSnapshot`.
+  Rules: TELEGRAM_FLOW_VISUALIZATION §11. Nothing renders it yet (part 2).
+- Evidence: RED first for wire (24), reducer (26) and API (1). 23 guard
+  mutants were run: 21 caught at once, and the two survivors exposed test gaps,
+  which are now closed. The in-session review found stale node evidence across
+  generations (`Object.assign` kept old candidates); this was fixed RED-first.
+  The companion's import-graph guard lists `flowWire.ts` with its isolation proof.
+
 ## 2026-10-04 — KL-60: the diff view's long tables filter and scroll instead of paging
 
 - `ProjectDiffDetails.tsx`: a table with more than 20 entries gets a

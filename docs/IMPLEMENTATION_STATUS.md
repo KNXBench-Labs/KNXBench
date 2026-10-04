@@ -1,5 +1,26 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Project-evolution story, first private version (companion, not product)
+
+- New, independent `story/` companion ([README](../story/README.md),
+  [ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
+  No product code, KNX domain, project file or bus is touched; the engineering
+  feature backlog is unchanged.
+- Source-backed edition: 36 development steps on 8 strands, 46 typed relations,
+  8 chapters, 6 disclosed gaps, baseline `origin/main` `75ad9650`. Earliest
+  surviving prompt 2026-09-02 13:50 CEST; the strategy document's origin is not
+  in any available source.
+- Stdlib Python tool: schema validation, pattern privacy scan, private-provenance
+  traceability and leak refusal, deterministic layout, immutable candidates with
+  diff and review checklist, loopback-only preview server, exact-digest approval
+  check, and a `publish` command that always refuses.
+- Verified: 49 unit tests (with five guard mutations each caught), and 41
+  Playwright/Chromium checks per candidate on 1440×900 and 390×844, including
+  live cancellation of running growth by *Motion off* and by OS reduced motion,
+  hostile-text rendering, no-JavaScript reading and zero CSP violations.
+- Not done: publication, hosting, final fonts, non-Chromium browsers, real
+  screen readers, cloud-session coverage. Content awaits manual review.
+
 ## AR06S KL153 scheme23 bounded research — 2026-10-04
 
 No production code changes. Base575a2d1d,source712 frozen; official Schema23

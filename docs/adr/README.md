@@ -67,3 +67,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0065](0065-dynamic-scalar-copy-admission.md) | Dynamic evaluation admits scalar copies before allocating them | Accepted (bounded Core/HTTP scalar admission; external projections open) | 2026-10-03 |
 | [0066](0066-outside-walk-text-refusal.md) | Outside-walk text substitution has explicit request-level refusal | Proposed (source audit and first public HTTP tracer; execution pending) | 2026-10-03 |
 | [0067](0067-download-lifecycle-preserves-uncertainty.md) | Download lifecycle receipts preserve uncertainty and legacy history | Proposed (scoped integrated offline gates passed; owner admission pending) | 2026-10-03 |
+| [0068](0068-project-evolution-story-is-a-static-offline-companion.md) | The project-evolution story is a static, offline companion with a separate publication gate | Accepted (first private version; publication not designed) | 2026-10-04 |

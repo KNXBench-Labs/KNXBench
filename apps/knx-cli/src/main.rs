@@ -18,7 +18,7 @@ mod scan;
 
 const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
-     \x20                  [--product-db <path>] [--no-product-db]\n\
+     \x20                  [--product-db <path>] [--no-product-db] [--password-stdin]\n\
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20                   [--installation <id>]\n\
@@ -180,6 +180,10 @@ struct ImportArgs {
     report_json: Option<String>,
     product_db: Option<String>,
     no_product_db: bool,
+    /// Read the project password from the first line of standard input.
+    /// There is deliberately no flag that takes the password as a value:
+    /// an argument vector is visible to every process on the machine.
+    password_stdin: bool,
 }
 
 /// Reads the value following a `--flag`. Refuses to treat the *next* flag
@@ -200,6 +204,7 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
     let mut report_json = None;
     let mut product_db = None;
     let mut no_product_db = false;
+    let mut password_stdin = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -217,6 +222,16 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
             }
             "--no-product-db" => {
                 no_product_db = true;
+            }
+            "--password-stdin" => {
+                password_stdin = true;
+            }
+            // Refused before anything else is read, and the value is never
+            // repeated back: it may already be the password.
+            flag if flag == "--password" || flag.starts_with("--password=") => {
+                return Err("a project password is never accepted on the command line; \
+                     pass it on standard input with --password-stdin"
+                    .to_string());
             }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag: {other}"));
@@ -236,7 +251,25 @@ fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
         report_json,
         product_db,
         no_product_db,
+        password_stdin,
     })
+}
+
+/// The first line of standard input as a project password: everything up
+/// to the first newline, with one trailing `\r\n` or `\n` removed and
+/// nothing else trimmed (a password may start or end with a space). The
+/// same rule `knx-server --hash-password` applies to its own secret.
+fn read_password_from_stdin() -> Result<knx_etsproj::ProjectPassword, String> {
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|e| format!("failed to read the project password from stdin: {e}"))?;
+    let line = line.strip_suffix('\n').unwrap_or(&line);
+    let line = line.strip_suffix('\r').unwrap_or(line);
+    if line.is_empty() {
+        return Err("refusing an empty password on stdin".to_string());
+    }
+    Ok(knx_etsproj::ProjectPassword::new(line))
 }
 
 /// Resolves the product database path: the explicit `--product-db` value,
@@ -265,6 +298,18 @@ fn run_import(args: &[String]) -> ExitCode {
         eprintln!("import refused: {error}");
         return ExitCode::FAILURE;
     }
+
+    let password = if parsed.password_stdin {
+        match read_password_from_stdin() {
+            Ok(password) => Some(password),
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+        }
+    } else {
+        None
+    };
 
     // `--store` names a persistent database; without it, this run's opaque
     // entries live only in a temp file for the duration of the process —
@@ -315,16 +360,26 @@ fn run_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let imported = match knx_app::import_ets_project_with(
+    let imported = match knx_app::import_ets_project_with_password(
         Path::new(&parsed.file),
         &conn,
         knx_app::ImportOptions {
             product_db: products_conn.as_ref(),
         },
+        password.as_ref(),
+        &(),
     ) {
         Ok(imported) => imported,
         Err(e) => {
             eprintln!("import failed for {}: {e}", parsed.file);
+            if matches!(
+                e,
+                knx_app::AppError::Import(knx_etsproj::ImportFailure::Container(
+                    knx_etsproj::ContainerError::PasswordProtected { .. }
+                ))
+            ) {
+                eprintln!("rerun with --password-stdin and type the project password on stdin");
+            }
             return ExitCode::FAILURE;
         }
     };

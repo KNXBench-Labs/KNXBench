@@ -88,6 +88,9 @@ pub struct Container {
     archive: ZipArchive<Cursor<Vec<u8>>>,
     entries: Vec<EntryInfo>,
     decrypted: BTreeMap<String, Vec<u8>>,
+    /// The nested payload `decrypted` came from (e.g. `P-0001.zip`), set
+    /// together with it by [`Container::open_with_password`].
+    decrypted_from: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -176,7 +179,8 @@ impl std::fmt::Display for ContainerError {
             ),
             ContainerError::WrongPassword { nested_entry } => write!(
                 f,
-                "wrong password for password-protected project (nested payload {nested_entry})"
+                "wrong password for password-protected project (nested payload {nested_entry}); \\
+                 a damaged encrypted entry is reported the same way"
             ),
             ContainerError::UnsupportedEncryption {
                 nested_entry,
@@ -424,12 +428,23 @@ impl Container {
                     },
                 })?;
 
-            let plain = decompress(
-                entry.compression(),
-                &compressed,
-                declared_size,
-                entry_path.clone(),
-            )?;
+            // A wrong password that slipped past the check byte decrypts
+            // to noise, and noise is almost never a valid deflate stream:
+            // inflating fails before the CRC below is ever reached. That
+            // failure is the same false accept the CRC check catches, so
+            // it is reported the same way, as a wrong password, not as a
+            // damaged archive (AR08). A method this reader does not
+            // support is still its own error, whatever the password.
+            let method = entry.compression();
+            let plain = match decompress(method, &compressed, declared_size, entry_path.clone()) {
+                Ok(plain) => plain,
+                Err(_) if method == CompressionMethod::Deflated => {
+                    return Err(ContainerError::WrongPassword {
+                        nested_entry: nested.clone(),
+                    });
+                }
+                Err(other) => return Err(other),
+            };
 
             // The check byte (APPNOTE §6.1.6) only rules out about 255 of
             // 256 wrong passwords per convention it is tried against — see
@@ -455,6 +470,9 @@ impl Container {
             container.decrypted.insert(entry_path, plain);
         }
 
+        if !container.decrypted.is_empty() {
+            container.decrypted_from = Some(nested);
+        }
         Ok(container)
     }
 
@@ -484,6 +502,7 @@ impl Container {
             archive,
             entries,
             decrypted: BTreeMap::new(),
+            decrypted_from: None,
         })
     }
 
@@ -507,6 +526,13 @@ impl Container {
     /// (finding 7 of the T15 branch review).
     pub fn was_decrypted(&self) -> bool {
         !self.decrypted.is_empty()
+    }
+
+    /// The nested payload this container's decrypted entries came from
+    /// (e.g. `P-0001.zip`); `None` exactly when
+    /// [`was_decrypted`](Container::was_decrypted) is `false`.
+    pub fn decrypted_payload(&self) -> Option<&str> {
+        self.decrypted_from.as_deref()
     }
 
     /// Reads one entry's bytes. Looked up case-insensitively via `find`, so

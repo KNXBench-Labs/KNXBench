@@ -666,12 +666,14 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 
 **Source:** `KL-13`. **Dependencies:** AR06 and existing secret-handling conventions.
 
-- [ ] Trace the existing ZipCrypto reader into application and CLI entry points; add only missing approved plumbing, not a second cipher implementation.
-- [ ] Test correct/wrong/missing password, corrupted data, decompression/size bounds, nested archives, failed-import atomicity and native roundtrip. Passwords must not enter persistent project data, process arguments, logs or compatibility reports.
-- [ ] Hand any new password dialog to UI rather than editing it here. Record whether the entry path is library-, CLI-, application- or end-to-end verified.
-- [ ] Leave AES project decryption sample-gated and encrypted manufacturer packages unsupported. Do not enable AES or make a real-ETS claim from synthetic success alone.
+- [x] Trace the existing ZipCrypto reader into application and CLI entry points; add only missing approved plumbing, not a second cipher implementation.
+- [x] Test correct/wrong/missing password, corrupted data, decompression/size bounds, nested archives, failed-import atomicity and native roundtrip. Passwords must not enter persistent project data, process arguments, logs or compatibility reports.
+- [x] Hand any new password dialog to UI rather than editing it here. Record whether the entry path is library-, CLI-, application- or end-to-end verified.
+- [x] Leave AES project decryption sample-gated and encrypted manufacturer packages unsupported. Do not enable AES or make a real-ETS claim from synthetic success alone.
 
 **Exit evidence:** supported entry-path tests and redaction checks, with genuine ETS/AES evidence gaps still visible. Secret transport must follow the repository's verified mechanism; if none exists for an intended surface, document/design it first.
+
+**State 2026-10-04:** library, application, CLI and server entry paths verified; Web dialog handed to the UI owner; evidence in [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04). Status: ledger row `KL-13`.
 
 ### AR09 — Verify DPT/model fidelity without changing wire rulings by guesswork
 

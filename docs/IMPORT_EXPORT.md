@@ -76,7 +76,7 @@ Six stages. Each has its own error type, and no stage knows the next one.
 
 ```text
 .knxproj (ZIP)
-  → Container    unpack, entry inventory (can decrypt ZipCrypto < 21 given a password; AES ≥ 21 refused — but no caller passes a password yet)
+  → Container    unpack, entry inventory (decrypts ZipCrypto < 21 when the caller passes a password; AES ≥ 21 refused)
   → Detect       schema version from the default namespace, never assumed
   → Parse        tolerant XML reader per schema version → SourceDocument
   → Validate     structural checks, reference resolution, conflicts
@@ -145,13 +145,33 @@ name (`ContainerError::UnsupportedEncryption`), not attempted — neither
 scheme may be described as *verified* before it has been tested against a
 real protected project.
 
-**Nothing in the import pipeline passes a password.** `import()` calls
-`Container::open`, not `open_with_password`; the only callers of the
-latter are its own tests. The decryption above is a capability of stage 1,
-not of the pipeline, and a protected project is still an import failure
-from the caller's point of view. It stays that way until a password
-reaches `import()` together with an `ImportReport` entry for the
-roundtrip gap a decrypted project carries (KNOWN_LIMITATIONS.md §13).
+**Password entry paths (AR08, 2026-10-04).** A password reaches stage 1
+through `knx_etsproj::import_knxproj_with`/`import_knxproj_bytes_with`
+(`Option<&ProjectPassword>`), `knx_app::import_ets_project_with_password`,
+`knx import --password-stdin` (first stdin line; `--password <value>` is
+refused because an argument vector is visible to every local process) and
+`POST /api/project/import` (optional `password` in the JSON body). Without
+a password the old entry points behave exactly as before. A protected
+project imported without a password, or with a wrong one, fails before
+anything is written; the server answers `422` with
+`kind: "projectPasswordRequired"` or `"projectPasswordWrong"`.
+`ProjectPassword` has a redacting `Debug`, no `Display`, `Clone` or
+serialization, and container errors name the nested entry, never the
+password. Tests assert that the password is absent from the report,
+`Debug` output, errors, CLI output, the `.knxdb` and product database
+files, `/api/log`, the load-progress record and the project tree.
+
+A ZipCrypto false accept that decrypts to an invalid deflate stream is
+reported as `WrongPassword` like a CRC mismatch is. A damaged encrypted
+entry under the right password reads the same way, and the message says so.
+
+**A decrypted import reports its own loss.** Downstream code keeps
+plaintext and the ciphertext is gone, so the import report gains an
+`unsupported` entry `project password protection (<P-xxxx>.zip, ZipCrypto)`
+saying the protection is not preserved (KNOWN_LIMITATIONS.md §13).
+Verified with a synthetic Info-ZIP fixture
+(`crates/knx-testsupport/fixtures/zipcrypto-minimal.knxproj`), not a real
+ETS4/ETS5 export.
 
 **Container entry size guard (Session 3, malformed-input hardening):** an
 entry whose declared uncompressed size exceeds 64 MB is refused before any

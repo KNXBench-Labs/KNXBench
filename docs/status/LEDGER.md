@@ -33,7 +33,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 
 ## Counts
 
-- **Snapshot IDs** (180 rows) — status: TODO=30, IN_PROGRESS=4, DONE=28, BLOCKED_EXTERNAL=4, WAITING_OWNER=41, WAITING_DECISION=6, ACCEPTED_BOUNDARY=46, LATER=21; owner: alpha=95, commission=42, later=19, ui=24; priority: P0=4, P1=29, P2=87, P3=60.
+- **Snapshot IDs** (180 rows) — status: TODO=29, IN_PROGRESS=5, DONE=28, BLOCKED_EXTERNAL=4, WAITING_OWNER=41, WAITING_DECISION=6, ACCEPTED_BOUNDARY=46, LATER=21; owner: alpha=95, commission=42, later=19, ui=24; priority: P0=4, P1=29, P2=87, P3=60.
 - **Post-snapshot IDs** (6 rows) — status: TODO=1, IN_PROGRESS=2, DONE=3; owner: alpha=6; priority: P1=2, P2=4.
 
 ## Snapshot IDs
@@ -65,7 +65,7 @@ former routing table.
 | `KL-106` | P1 | alpha | AR13 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §106; AR13: fixture audit across every class and channel; `report.md` now names every kept class and the telegram file's values/timestamps; dialog wording handed to the Web-lock holder; no anonymity claim |
 | `DOC-01` | P1 | alpha | AR00 | DONE | — | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
 | `KL-1` | P1 | alpha | AR06 | BLOCKED_EXTERNAL | — | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
-| `KL-13` | P1 | alpha | AR08 | TODO | — | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
+| `KL-13` | P1 | alpha | AR08 | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §13; AR08 2026-10-04: ZipCrypto import entry paths library/application/CLI/server verified with redaction tests on a synthetic fixture, decrypted import reports lost protection (docs/ALPHA_READINESS.md AR08). Remaining: Web password dialog (UI handoff, `422` kinds `projectPasswordRequired`/`projectPasswordWrong`); real ETS4/ETS5 sample and AES stay sample-gated |
 | `PDB-09` | P1 | alpha | AR05 | DONE | — | Published 04900fbc; master_language_evidence/master_evidence_rederive and three actual private cases verify Languages reporting, retained bytes and report history; manufacturer-report contract scopes the remaining unknown semantics |
 | `R-MODULE-01` | P1 | commission | `goal-commission.md` — owner only | WAITING_OWNER | BLOCKED_REFERENCE | docs/RESEARCH.md §19.11 / goal-commission.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-130-GATE` | P1 | alpha | AR01 | DONE | — | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |

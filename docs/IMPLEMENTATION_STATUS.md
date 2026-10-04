@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06T exact23 candidate — in progress (2026-10-04)
+## AR06T exact23 bounded import — verified locally, publication pending (2026-10-04)
 
 Local candidate on `9d719a4f`: exact product namespace23 admission with the
 existing scheme21 strict member-namespace/qualified-attribute boundary and
@@ -24,12 +24,23 @@ checks. Six compiled behavioral controls cover namespace/qualified guards,
 master evidence, member late-depth admission, unresearched24 and generic scope.
 Earlier parser-owned-field survivors and verifier refusals are retained; member
 scan wiring is proved by the real late-depth test, not field presence alone.
-Only three test files differ from the Full853 input manifest; all production
-inputs remain byte-identical. Separate follow-up in-session review has no
-blocking product finding, not an independent-model approval. Current-upstream
-workspace/Web/bindings/build/doc/integration/publication gates remain open.
-This is not delivered manufacturer compatibility and does not close KL153 or
-the Alpha goal. Decision: `adr/0072-product-scheme23-namespace-gate.md`.
+Before integration, only three test files differed from Full853 Source713.
+Current upstream adds a read-only coupler-query helper and its test; all other
+productdb source files and the whole CLI entrypoint are byte-identical, and the
+helper is only called by the owner's server domain path, not import/ingest.
+The original Full853 remains its producer-bound private result, not a new
+current-source private matrix. Current Source770 on `a346fa30` has actual public
+22-stage acceptance: 161 Rust blocks, 3089 passed/0 failed/176 ignored;
+ProductDB638/0/25; Web1739; Chromium82; strict Clippy/build/dependency/docs gates;
+17 freshly generated binding pairs byte-identical to the previously controlled
+closed lexical proof (not a new generic TS parser or rerun of its controls).
+The first broad attempt is a retained zero-stage namespace-proof PermissionError;
+separate correctly parent-bound isolated retry passed. Separate integrated
+in-session review has no blocking product finding, not independent-model approval.
+Publication/final upstream reconciliation remain pending. Exact23 is bounded
+import/storage/report/replay support, not full manufacturer or bus/runtime
+compatibility. Scheme10, KL153 and the Alpha goal remain open. Decision:
+`adr/0072-product-scheme23-namespace-gate.md`.
 See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 
 ## 2026-10-04 — UA5: explicit topology repair (MODEL-02, core/store/server half)

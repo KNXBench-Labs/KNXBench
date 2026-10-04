@@ -147,12 +147,21 @@ as kills. The master scanner has its own opaque witness, and the member scan's
 actual valid late-depth test kills its omission. Verifier-colon/fresh-cache
 refusals remain distinct from native outcomes.
 
-All production inputs remain byte-identical to the completed Full853 producer;
-only the native fixture and two caller test files are strengthened. Current
-workspace/Web/bindings/build acceptance, upstream integration, documentation and
-publication remain pending. Separate follow-up in-session review is not an
-independent-model approval. See [ADR-0072](adr/0072-product-scheme23-namespace-gate.md).
-The candidate is **not delivered** and KL153 remains open.
+Before integration, only the native fixture and two caller test files changed
+from the Full853 inputs. Current upstream adds a read-only coupler query/test;
+all other productdb source files and the complete CLI entrypoint remain
+byte-identical, and the query's only runtime caller is the owner's server domain,
+not installation. The original private Full853 is not relabelled as a new
+Source770 private execution. Actual current integrated public22 on `a346fa30`:
+Rust3089/0/176 across161 blocks,ProductDB638/0/25,Web1739,Chromium82,strict Clippy,
+build/dependency/docs gates and17 fresh shadow binding pairs matching both sides
+of the earlier controlled lexical proof. No Web sources were written. The first
+zero-stage `/proc/1/ns/net` PermissionError is retained; the separately captured
+parent-namespace retry passed. Separate integrated in-session review has no
+blocking product finding, not independent-model approval. See [ADR-0072](adr/0072-product-scheme23-namespace-gate.md).
+Final upstream/publication readback remains pending. Scheme10, KL153 and the
+Alpha goal remain open; exact23 support is bounded import/storage/report/replay,
+not complete manufacturer grammar, commissioning or runtime compatibility.
 
 ## Sources
 

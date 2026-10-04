@@ -1,19 +1,29 @@
 # Gira and MDT product-database corpus
 
-## Scheme23 import candidate — not delivered, 2026-10-04
+## Scheme23 bounded import acceptance — 2026-10-04
 
-The actual same-Release Full853 comparison is producer-bound to Source713 versus
-Source712:690 all-table-content-equal existing imports,161 diagnostically equal
-atomic refusals,2 exact23 admissions (baseline690/candidate692). All1382 installed
-archive copies and853 original post-run hashes were verified; private temp0 and
-no raw/item records persisted. Four actual CLI/HTTP caller GREENs and four
-semantic baseline REDs,current native6,six compiled guard controls and separate
-in-session review now complement that evidence. Three test-only changes leave
-all measured production inputs byte-identical. Earlier surviving field probes
-and verifier refusals remain separate. Current-upstream workspace/Web/build/
-integration/publication are still pending; see [research and limitations](PRODUCT_SCHEME_23_RESEARCH.md)
-and [ADR-0072](adr/0072-product-scheme23-namespace-gate.md). This is not full
-manufacturer semantics, ETS parity, runtime compatibility or KL153 completion.
+Original same-Release Full853 remains producer-bound to Source713 versus712:
+690 table-content-equal existing imports,161 diagnostically equal atomic
+refusals,2 exact23 admissions (baseline690/candidate692). All1382 installed
+archive copies and853 original post-run hashes verified; private temp0 and no
+raw/item records persisted. Four actual caller GREENs/four semantic baseline
+REDs,current native6 and six compiled guard controls supplement that receipt.
+Field-probe survivors and verifier refusals stay recorded rather than relabelled.
+
+Current integrated Source770/a346fa30 public22:161 Rust blocks,3089/0/176,
+ProductDB638/0/25,Web1739,Chromium82,strict Clippy/build/dependency/docs gates,
+17 fresh generated binding pairs byte-identical on both sides to the prior
+controlled lexical proof. Original Full853 is not new current private execution:
+all productdb source except an owner-added read-only query/test and the native
+fixture remains identical,and the complete CLI entrypoint unchanged. That query
+is only used by the owner's server path,not package installation. Separate
+in-session integrated review,no blocking product finding,no independent-model
+approval. First zero-stage namespace-proof PermissionError retained; separate
+parent-bound isolated retry passed. Final publication/readback remains pending.
+See [research/limits](PRODUCT_SCHEME_23_RESEARCH.md) and
+[ADR-0072](adr/0072-product-scheme23-namespace-gate.md). This is bounded import/
+storage/report/replay,not full manufacturer semantics,ETS parity or runtime
+compatibility. Scheme10/KL153 and the Alpha goal remain open.
 
 ## Scheme23 structural research — 2026-10-04
 

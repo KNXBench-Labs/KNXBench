@@ -30,6 +30,7 @@ const apiMock = vi.hoisted(() => ({
   renameLine: vi.fn(),
   setGroupAddressStyle: vi.fn(),
   renameInstallation: vi.fn(),
+  deleteGroupAddress: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -197,15 +198,20 @@ it("keeps the old building parent and shows a failed move instead of hiding it",
   expect(host!.querySelector(".field-error")?.textContent).toContain("parent is not available");
 });
 
-it("does not offer a building move for a later installation", async () => {
-  const tree = twoInstallationTree();
+// MODEL-01 / ADR-0070: a uniquely owned later-installation entity is edited
+// in its own installation (these four tests used to assert the old
+// first-installation-only rule).
+it("offers a building move for a later installation within that installation", async () => {
+  const tree = movableBuildingTree();
   tree.installations[1].buildings = [
-    { id: 501, name: "Later building", kind: "Building", devices: [], children: [] },
+    { id: 601, name: "Later building", kind: "Building", devices: [], children: [] },
+    { id: 602, name: "Later annex", kind: "Building", devices: [], children: [] },
   ];
-  await renderInspector({ kind: "building_part", id: 501 }, tree);
-  expect(host!.querySelector(".inspector-field select")).toBeNull();
-  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
-  expect(apiMock.moveBuildingPart).not.toHaveBeenCalled();
+  await renderInspector({ kind: "building_part", id: 601 }, tree);
+  const values = Array.from(host!.querySelectorAll<HTMLOptionElement>(".inspector-field select option"), (o) => o.value);
+  expect(values).toContain("602");
+  expect(values).not.toContain("500");
+  expect(host!.textContent).not.toContain("only available");
 });
 
 it("does not guess a parent when imported building placements are ambiguous", async () => {
@@ -273,11 +279,10 @@ it("keeps a group range's old parent and shows a rejected move", async () => {
   expect(host!.querySelector(".field-error")?.textContent).toContain("range outside parent");
 });
 
-it("does not offer group range moves for later installations", async () => {
+it("offers group range moves for a later installation", async () => {
   await renderInspector({ kind: "group_range", id: 301 }, twoInstallationTree());
-  expect(host!.querySelector(".inspector-field select")).toBeNull();
-  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
-  expect(apiMock.moveGroupRange).not.toHaveBeenCalled();
+  expect(host!.querySelector(".inspector-field select")).not.toBeNull();
+  expect(host!.textContent).not.toContain("only available");
 });
 
 it("does not guess a group range parent when ids or parent references are inconsistent", async () => {
@@ -308,17 +313,21 @@ it.each([
   expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
 });
 
-it.each(["area", "line"] as const)("refuses to rename a later-installation %s instead of guessing an owner", async (kind) => {
+it.each(["area", "line"] as const)("renames a later-installation %s in its owning installation", async (kind) => {
   const tree = twoInstallationTree();
   tree.installations[1].topology = [{ id: 71, name: "Later area", address: 2,
     lines: [{ id: 72, name: "Later line", address: 1, devices: [] }] }];
+  // Queue only the answer this case consumes: a leftover `…Once` would leak
+  // into the next test.
+  (kind === "area" ? apiMock.renameArea : apiMock.renameLine).mockResolvedValueOnce(tree);
   await renderInspector({ kind, id: kind === "area" ? 71 : 72 }, tree);
-  expect(host!.querySelector("label.inspector-field input")).toBeNull();
-  expect(host!.textContent).toContain(
-    kind === "line" ? "Rename, Move and Delete are only available" : "Rename and Delete are only available",
-  );
-  expect(apiMock.renameArea).not.toHaveBeenCalled();
-  expect(apiMock.renameLine).not.toHaveBeenCalled();
+  const input = host!.querySelector<HTMLInputElement>("label.inspector-field input")!;
+  await act(async () => {
+    setTextInputValue(input, "Renamed");
+    input.dispatchEvent(new Event("focusout", { bubbles: true }));
+  });
+  if (kind === "area") expect(apiMock.renameArea).toHaveBeenCalledExactlyOnceWith(71, "Renamed");
+  else expect(apiMock.renameLine).toHaveBeenCalledExactlyOnceWith(72, "Renamed");
 });
 
 it.each([
@@ -413,14 +422,16 @@ it("shows why a line move failed and leaves its original area selected", async (
   expect(host!.querySelector(".field-error")?.textContent).toContain("address differs from assigned line");
 });
 
-it("does not offer a line move for a later installation", async () => {
-  const tree = twoInstallationTree();
-  tree.installations[1].topology = [{ id: 71, name: "Later", address: 2,
-    lines: [{ id: 72, name: "Later line", address: 1, devices: [] }] }];
+it("offers a line move for a later installation among its own areas", async () => {
+  const tree = deviceMoveTree();
+  const later = twoInstallationTree().installations[1];
+  later.topology = [{ id: 71, name: "Later", address: 2, lines: [{ id: 72, name: "Later line", address: 1, devices: [] }] },
+    { id: 73, name: "Later two", address: 3, lines: [] }];
+  tree.installations.push(later);
   await renderInspector({ kind: "line", id: 72 }, tree);
-  expect(host!.querySelector(".inspector-field select")).toBeNull();
-  expect(host!.textContent).toContain("Rename, Move and Delete are only available");
-  expect(apiMock.moveLineToArea).not.toHaveBeenCalled();
+  const values = Array.from(host!.querySelectorAll<HTMLOptionElement>(".inspector-field select option"), (o) => o.value);
+  expect(values).toContain("73");
+  expect(values).not.toContain("10");
 });
 
 it("does not guess a source area when a line is projected under multiple areas", async () => {
@@ -492,27 +503,96 @@ function detailWithComObject(links: DeviceDetail["com_objects"][number]["links"]
   }] };
 }
 
-describe("Inspector — collapsed delete-restriction message", () => {
-  it("renders the 'Delete is only available for group addresses…' variant for a second-installation group address", async () => {
-    const tree = twoInstallationTree();
-    await renderInspector({ kind: "group_address", id: 201 }, tree);
+// MODEL-01 / ADR-0070: an entity is edited in the installation that owns it;
+// every move or link target list comes from that installation only. Only an
+// entity that does not belong to exactly one installation stays read-only.
+function laterInstallationTree(): ProjectTree {
+  const tree = twoInstallationTree();
+  const device = { id: 42, name: "Device D", address: null, description: null, com_object_count: 0 };
+  tree.installations[0].topology = [{ id: 10, name: "Area A", address: 1, lines: [
+    { id: 11, name: "Line A", address: 1, devices: [] }, { id: 12, name: "Line B", address: 2, devices: [] }] }];
+  tree.installations[0].buildings = [{ id: 500, name: "Main", kind: "Building", children: [], devices: [] }];
+  tree.installations[0].group_ranges = [groupRange(300, "First range", "1/0/0", "1/7/255")];
+  tree.installations[1].topology = [
+    { id: 20, name: "Area B", address: 2, lines: [
+      { id: 21, name: "Line C", address: 1, devices: [device] }, { id: 22, name: "Line D", address: 2, devices: [] }] },
+    { id: 23, name: "Area C", address: 3, lines: [] },
+  ];
+  tree.installations[1].buildings = [{ id: 600, name: "Annex", kind: "Building", devices: [], children: [
+    { id: 601, name: "Hall", kind: "Room", children: [], devices: [] }] },
+    { id: 602, name: "Shed", kind: "Building", children: [], devices: [] }];
+  tree.installations[1].group_ranges.push(groupRange(302, "Second main", "3/0/0", "3/7/255"));
+  return tree;
+}
 
-    expect(host!.textContent).toContain(
-      "Delete is only available for group addresses in the first installation.",
-    );
-    // The action clause is entity-specific text, not a raw discriminant —
-    // no leftover template placeholder should ever reach the DOM.
-    expect(host!.textContent).not.toContain("{action}");
-    expect(host!.textContent).not.toContain("{entity}");
+function optionValues(): string[] {
+  return Array.from(host!.querySelectorAll<HTMLOptionElement>("select option"), (option) => option.value);
+}
+
+describe("Inspector — entities of a later installation", () => {
+  it("moves a later-installation device only among that installation's lines and parts, and deletes it", async () => {
+    apiMock.moveDeviceToLine.mockResolvedValueOnce(laterInstallationTree());
+    await renderInspector({ kind: "device", id: 42 }, laterInstallationTree(), deviceDetail());
+    const values = optionValues();
+    expect(values).toEqual(expect.arrayContaining(["21", "22", "600", "601", "602"]));
+    for (const foreign of ["11", "12", "500"]) expect(values).not.toContain(foreign);
+    const lineSelect = Array.from(host!.querySelectorAll<HTMLLabelElement>("label.inspector-field"))
+      .find((field) => field.textContent?.startsWith("Line"))!.querySelector("select")!;
+    expect(lineSelect.value).toBe("21");
+    await act(async () => {
+      lineSelect.value = "22";
+      lineSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.moveDeviceToLine).toHaveBeenCalledExactlyOnceWith(42, 22);
+    expect(Array.from(host!.querySelectorAll("button")).some((b) => b.textContent === "Delete")).toBe(true);
+    expect(host!.textContent).not.toContain("only available");
   });
 
-  it("renders the 'Rename, Move and Delete are only available for group ranges…' variant for a second-installation group range", async () => {
-    const tree = twoInstallationTree();
-    await renderInspector({ kind: "group_range", id: 301 }, tree);
+  it("offers a later-installation line only that installation's areas", async () => {
+    await renderInspector({ kind: "line", id: 21 }, laterInstallationTree());
+    expect(host!.querySelector("label.inspector-field input")).not.toBeNull();
+    const values = optionValues();
+    expect(values).toContain("23");
+    expect(values).not.toContain("10");
+    expect(host!.textContent).not.toContain("only available");
+  });
 
-    expect(host!.textContent).toContain(
-      "Rename, Move and Delete are only available for group ranges in the first installation.",
-    );
+  it("offers a later-installation building part only that installation's parents", async () => {
+    await renderInspector({ kind: "building_part", id: 601 }, laterInstallationTree());
+    const values = optionValues();
+    expect(values).toContain("602");
+    expect(values).not.toContain("500");
+    expect(host!.textContent).not.toContain("only available");
+  });
+
+  it("renames and moves a later-installation group range among that installation's ranges", async () => {
+    await renderInspector({ kind: "group_range", id: 301 }, laterInstallationTree());
+    expect(host!.querySelector("label.inspector-field input")).not.toBeNull();
+    const values = optionValues();
+    expect(values).toContain("302");
+    expect(values).not.toContain("300");
+    expect(host!.textContent).not.toContain("only available");
+  });
+
+  it("deletes a later-installation group address", async () => {
+    apiMock.deleteGroupAddress.mockResolvedValueOnce(twoInstallationTree());
+    await renderInspector({ kind: "group_address", id: 201 }, twoInstallationTree());
+    const remove = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === "Delete");
+    expect(remove).toBeTruthy();
+    await act(async () => remove!.click());
+    expect(apiMock.deleteGroupAddress).toHaveBeenCalledExactlyOnceWith(201);
+  });
+
+  it.each(["en", "de"])("keeps a group address read-only when its id belongs to two installations (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    const tree = twoInstallationTree();
+    tree.installations[0].group_addresses = [ga(201, "Twin", "1/1/1")];
+    await renderInspector({ kind: "group_address", id: 201 }, tree);
+    expect(host!.textContent).toContain(language === "de"
+      ? "Löschen ist nur für Gruppenadressen verfügbar, die genau einer Installation angehören."
+      : "Delete is only available for group addresses that belong to exactly one installation.");
+    expect(host!.textContent).not.toContain("{action}");
+    expect(Array.from(host!.querySelectorAll("button")).some((b) => b.textContent === "Delete")).toBe(false);
   });
 });
 

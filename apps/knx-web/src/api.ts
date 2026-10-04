@@ -758,10 +758,12 @@ export interface CsvExportReport {
 // — a format this project defines and owns, not an ETS export. `path` is a
 // fresh write target resolved server-side, like every route that writes a
 // file the user named.
-export function exportGroupAddressesCsv(path: string): Promise<CsvExportReport> {
+// MODEL-01: `installationId` names the source installation; absent means the
+// first one.
+export function exportGroupAddressesCsv(path: string, installationId?: number): Promise<CsvExportReport> {
   return request("/api/group-addresses/csv-export", {
     method: "POST",
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, installationId }),
   });
 }
 
@@ -803,13 +805,17 @@ export interface CsvImportResponse {
 // (`request()` throws, `tree` never reaches the caller) and leaves the
 // open project untouched — see `import_group_addresses_csv` in
 // apps/knx-server/src/routes.rs.
+// MODEL-01: `installationId` names the target installation. The server binds
+// it into the confirmation token, so preview and confirmation must name the
+// same one.
 export function importGroupAddressesCsv(
   path: string,
   confirmationToken?: string,
+  installationId?: number,
 ): Promise<CsvImportResponse> {
   return request("/api/group-addresses/csv-import", {
     method: "POST",
-    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}) }),
+    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}), installationId }),
   });
 }
 

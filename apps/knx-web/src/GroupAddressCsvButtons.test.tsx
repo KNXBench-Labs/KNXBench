@@ -317,3 +317,59 @@ describe("GroupAddressCsvButtons", () => {
     root.unmount();
   });
 });
+
+// MODEL-01: with several installations the CSV buttons name the one they act
+// on; preview and confirmation must name the same one (the server binds the
+// installation into its confirmation token).
+describe("GroupAddressCsvButtons — installation choice", () => {
+  const twoInstallations = { installations: [{ id: 1, name: "Main" }, { id: 2, name: "Annex" }] } as unknown as ProjectTree;
+
+  function installationSelect(): HTMLSelectElement | null {
+    return host!.querySelector<HTMLSelectElement>('select[aria-label="Installation for CSV"]');
+  }
+
+  it("offers no choice with a single installation", async () => {
+    const { root } = await renderButtons({ installations: [{ id: 1, name: "Main" }] } as unknown as ProjectTree);
+    expect(installationSelect()).toBeNull();
+    root.unmount();
+  });
+
+  it("exports the chosen installation", async () => {
+    filePickerMock.pickSavePath.mockResolvedValueOnce("/data/annex.csv");
+    apiMock.exportGroupAddressesCsv.mockResolvedValueOnce({ warnings: [] });
+    const { root } = await renderButtons(twoInstallations);
+    const select = installationSelect()!;
+    expect(Array.from(select.options, (option) => option.textContent)).toEqual(["Main", "Annex"]);
+    expect(select.value).toBe("1");
+    await act(async () => {
+      select.value = "2";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await click(exportButton());
+    expect(apiMock.exportGroupAddressesCsv).toHaveBeenCalledExactlyOnceWith("/data/annex.csv", 2);
+    root.unmount();
+  });
+
+  it("previews and confirms a destructive import into the same chosen installation", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/annex.csv");
+    Object.defineProperty(window, "confirm", { configurable: true, value: vi.fn(() => true) });
+    const report = { separator: ",", rowsRead: 1, created: 0, updated: 0, readdressed: 0, deleted: 1, unchanged: 0,
+      destructiveChanges: [{ row: 2, action: "delete", id: 5, sourceAddress: 4352, targetAddress: null, affectedLinks: [] }],
+      ignoredColumns: [], problems: [] };
+    apiMock.importGroupAddressesCsv
+      .mockResolvedValueOnce({ tree: twoInstallations, report, applied: false, confirmationToken: "preview-token" })
+      .mockResolvedValueOnce({ tree: twoInstallations, report, applied: true, confirmationToken: null });
+    const { root } = await renderButtons(twoInstallations);
+    const select = installationSelect()!;
+    await act(async () => {
+      select.value = "2";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await click(importButton());
+    expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([
+      ["/data/annex.csv", undefined, 2],
+      ["/data/annex.csv", "preview-token", 2],
+    ]);
+    root.unmount();
+  });
+});

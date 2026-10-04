@@ -366,8 +366,7 @@ export const messages: Record<MessageKey, string> = {
   "inspector.restrictedAction.delete": "Löschen ist",
   "inspector.restrictedAction.renameAndDelete": "Umbenennen und Löschen sind",
   "inspector.restrictedAction.renameMoveAndDelete": "Umbenennen, Verschieben und Löschen sind",
-  "inspector.restrictedToFirstInstallation":
-    "{action} nur für {entity} in der ersten Installation verfügbar.",
+  "inspector.restrictedToOneInstallation": "{action} nur für {entity} verfügbar, die genau einer Installation angehören.",
   "inspector.entity.devices": "Geräte",
   "inspector.entity.groupAddresses": "Gruppenadressen",
   "inspector.entity.groupRanges": "Gruppenbereiche",
@@ -1005,6 +1004,7 @@ export const messages: Record<MessageKey, string> = {
   "bulkAction.unassigned": "(nicht zugewiesen)",
   "bulkAction.moveToBuildingPart": "Auf Gebäudeteil verschieben…",
   "bulkAction.none": "(keiner)",
+  "bulkAction.oneInstallation": "Verschieben braucht Geräte einer einzigen Installation.",
   "bulkAction.dismissSelection": "Auswahl aufheben",
 
   "busCompose.heading": "Wert senden",
@@ -1056,6 +1056,7 @@ export const messages: Record<MessageKey, string> = {
 
   "groupAddressCsv.exportButton": "Gruppenadressen exportieren (CSV)…",
   "groupAddressCsv.importButton": "Gruppenadressen importieren (CSV)…",
+  "groupAddressCsv.installation": "Installation für CSV",
   "groupAddressCsv.exportSummaryNone": "Gruppenadressen als CSV exportiert, keine Warnungen.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Gruppenadressen als CSV exportiert, {count} Warnung — siehe Log.",

@@ -153,9 +153,13 @@ their parent, devices move by drag and drop only inside one installation,
 and the project node renames installations. An unassigned catalog device
 still lands in the first installation, because the catalog route has no
 installation field; add it on a line of the target installation instead.
-**Until part 2, the Inspector's edit, delete, move and link controls act only
-on entities of the first installation**, as do the bulk toolbar targets and
-the group-address CSV buttons. The centre cannot
+Since part 2 (same day) the Inspector edits, deletes, moves and links an
+entity in the installation that owns it, and every move or link list offers
+only that installation's targets. The bulk toolbar moves a selection only
+when one installation places every selected device. With several
+installations the CSV buttons name the installation they read or write;
+preview and confirmation name the same one. An entity whose id is not owned
+by exactly one installation stays read-only. The centre cannot
 select an orphaned line that has no projected area, although the explicit
 line-move command can attach such an imported line by ID.
 

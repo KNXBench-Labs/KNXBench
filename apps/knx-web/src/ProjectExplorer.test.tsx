@@ -965,3 +965,49 @@ describe("ProjectExplorer — later installations", () => {
     await unmount(root);
   });
 });
+
+// MODEL-01: a bulk move offers the targets of the one installation that owns
+// every selected device; a selection spanning installations cannot be moved.
+describe("BulkActionToolbar — installations", () => {
+  function bulkTree(): ProjectTree {
+    const tree = treeWithBuildingTargets();
+    tree.installations[1].topology[0].lines[0].devices.push(device(10, "Third device"));
+    tree.installations[1].topology[0].lines.push({ id: 23, name: "Line 3", address: 3, devices: [] });
+    return tree;
+  }
+
+  function optionValues(role: string): string[] {
+    return Array.from(host!.querySelectorAll<HTMLOptionElement>(`.bulk-action-toolbar select[data-role='${role}'] option`),
+      (option) => option.value);
+  }
+
+  it("moves devices of a later installation among that installation's lines and parts", async () => {
+    apiMock.batchMoveDevicesToLine.mockResolvedValueOnce(bulkTree());
+    const { root } = await renderExplorer(bulkTree());
+    await click(labelFor("Second device"), { ctrlKey: true });
+    await click(labelFor("Third device"), { ctrlKey: true });
+    expect(optionValues("move-line")).toEqual(expect.arrayContaining(["22", "23"]));
+    expect(optionValues("move-line")).not.toContain("1");
+    expect(optionValues("move-building-part")).toContain("601");
+    expect(optionValues("move-building-part")).not.toContain("501");
+    const select = host!.querySelector<HTMLSelectElement>(".bulk-action-toolbar select[data-role='move-line']")!;
+    await act(async () => {
+      select.value = "23";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.batchMoveDevicesToLine).toHaveBeenCalledExactlyOnceWith([9, 10], 23);
+    await unmount(root);
+  });
+
+  it("offers no move for a selection spanning two installations, but still offers delete", async () => {
+    const { root } = await renderExplorer(bulkTree());
+    await click(labelFor("Device A"), { ctrlKey: true });
+    await click(labelFor("Second device"), { ctrlKey: true });
+    expect(host!.querySelector(".bulk-action-toolbar select")).toBeNull();
+    expect(host!.querySelector(".bulk-action-toolbar")?.textContent)
+      .toContain("Moving needs devices of one installation.");
+    expect(Array.from(host!.querySelectorAll(".bulk-action-toolbar button")).some((b) => b.textContent === "Delete"))
+      .toBe(true);
+    await unmount(root);
+  });
+});

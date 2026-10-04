@@ -138,11 +138,13 @@ forward requests to the development backend and every test intercepts API calls.
 
 ## All UI-routed inventory rows
 
-These are the exact 24 IDs from the parent ledger. `Open` names absent behavior,
+These are the exact 24 UI-owned IDs of the [source-ID ledger](status/LEDGER.md). `Open` names absent behavior,
 not merely missing validation. `Retained` describes the current contract, not
-release consent. Final parent-ledger status follows verified delivery.
+release consent. Final ledger status follows verified delivery.
 
-| ID | Disposition and current evidence | Remaining condition |
+Status of these rows: [source-ID ledger](status/LEDGER.md) (AR14D D2).
+
+| ID | Owner evidence | Remaining condition |
 | --- | --- | --- |
 | KL-79 | Existing offline UDP exchange and UI discovery remain verified at U13 scope; new metadata projection has focused coverage. | Native Search click and real multicast/firewall paths are not proved by fixtures; no deliberate live Search was accepted. The old-harness attempt has the unretained-traffic qualification above. |
 | UI-01 | Already DONE in U13; no duplicate implementation. | Preserve original native/network qualifications. |
@@ -152,15 +154,15 @@ release consent. Final parent-ledger status follows verified delivery.
 | KL-36 | Retained searchable/exportable bounded session log and atomic native writer, ADR-0047. | No reconstruction of evicted entries or lifetime audit; native chooser acceptance remains open. |
 | KL-82 | Delivered authoritative interpretation comparison, unavailable/legacy fail-closed state, pause/cursor and delayed-reply regressions at 8ceacf49; twelve integrated gates and eleven behavioral controls verified. | Point-in-time interpretation is not collaboration, historical reinterpretation, native/live-bus evidence or transaction-bound write authorization; retained §82 boundaries remain explicit. |
 | KL-127 | Site/property Ground workflow exists under ADR-0038; synthetic hierarchy/native storage tests retain unknown types honestly. | Independent ETS Ground/multiple-installation samples remain absent; do not infer ETS semantics from synthetic fixtures. |
-| MODEL-01 | Open domain/application dependency: first-installation structural mutations and link creation remain bounded; later installations are preserved. | Installation rename/selection and correctly scoped command/API/history contracts before a general multi-installation editor. |
-| MODEL-02 | Retained safe refusal of ambiguous IDs, multiply placed devices and inconsistent topology; original imported values remain intact. | No automatic lossless repair/renumbering workflow; define reference/opaque-data preservation and undo before offering repair. |
+| MODEL-01 | Delivered 2026-10-04 (ADR-0070): core/server half, web part 1 (creation, drag and drop and installation rename in every installation) and web part 2 (Inspector gates and move/link lists, bulk moves and CSV installation choice follow the owning installation). Nothing connects two installations. | An unassigned catalog device always lands in the first installation; an id not owned by exactly one installation stays read-only. |
+| MODEL-02 | Delivered 2026-10-04 (ADR-0071): the Inspector repairs a multiply placed device ("Keep this placement" per slot) and a line listed by several areas of one installation ("Keep under this area"), each one undoable step; nothing is repaired automatically. | Duplicate ids are not renumbered; ambiguous building-part or group-range placement has no repair; two different lines sharing an id get no repair button. |
 | MODEL-03 | Delivered 2026-10-04: the line-relative editor submits device number `0`; the server accepts it only for a product with `Hardware/@IsCoupler="true"` (RESEARCH §25) and its refusal is shown otherwise. Imported `.0` stays intact. | No guessed device classification: a product missing from the product database is still refused. |
 | KL-133 | Existing close guard protects unsaved project state; normal quit tests are not a dead-renderer test. | Native unresponsive/crashed-WebView reproduction and a data-safe close/recovery policy; never bypass the guard by inference. |
 | UI-03 | Retained read-only device-checks UI and explicit unsupported readiness/recovery states; commissioning owns complete recovery. | No full-image backup or universal device semantics follows from the UI; preserve device-specific commissioning prerequisites. |
 | KL-130-ZOOM | New native WebKitGTK static Inspector geometry evidence at three widths/scales; Chromium interaction evidence remains distinct. | Full Tauri zoom shortcuts, pane resize/hide/restart and hover workflow are not covered by this static probe. |
 | KL-20 | Delivered at 2e57f8e5: active-list scrolling, background inert/AX exclusion, stacked/dynamic modal ownership and viewport-safe HelpTip; twelve integrated gates and eighteen behavioral controls verified. | Actual native/Orca interaction and whole-app visual accessibility audit remain open, not a release waiver or full-source acceptance. |
 | KL-124 | Delivered raw Device Info retention, exact nullable HTTP projection, six labelled UI values and explicit unavailable state at 6c16fe5a. | Native/live Search remains KL-79, not new protocol or identity acceptance. |
-| MODEL-04 | Retained local 1–32-device batch with deterministic indexed names and no spontaneous individual-address allocation. | Unique-name/address-allocation policy and core validation before a new opt-in allocation workflow. |
+| MODEL-04 | Delivered 2026-10-04: the catalog offers two opt-in checkboxes, free-address allocation on the target line (disabled without one) and unique names; defaults keep indexed names and no address. Allocated addresses are listed per created device; a short supply is refused as a whole and shown as an error. | The allocator knows only the project, not devices on the real bus. |
 | KL-121 | Delivered authoritative cross-client settings refresh with write-generation and cleanup regressions at 6c16fe5a. | Not general project collaboration or instantaneous synchronization. |
 | KL-43 | Retained global motion level/style and OS-reduced-motion precedence; existing guard scope remains explicit. | Per-category motion/parser-backed wider guards require separate scope; no real-animation or assistive-technology conformance claim. |
 | KL-97 | Retained truthful phase/count progress under ADR-0023. | No guessed percentage for streaming work whose total is not known. |
@@ -222,8 +224,9 @@ leaves the Alpha scope as `ACCEPTED_BOUNDARY`; these remain disclosed,
 unverified boundaries, not claims. MODEL-03 and KL-127 get research first and
 close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
 MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
-[goal-ui.md](../goal-ui.md). The parent ledger in
-[alpha-release-goal.md](../alpha-release-goal.md) carries the per-row status.
+[goal-ui.md](../goal-ui.md). The [source-ID ledger](status/LEDGER.md) carries
+the per-row status (until 2026-10-04 the parent ledger in
+[alpha-release-goal.md](../alpha-release-goal.md) did).
 
 **Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
 published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no
@@ -231,3 +234,61 @@ backend change. By user decision every remaining web half is handed over to
 the Web-lock holder (commissioning session); the task table with API
 contracts and acceptance criteria is the *UI owner handoff* in the parent
 ledger. None of these rows is `DONE` before its web half is published.
+
+## Owner status history
+
+Moved verbatim from `goal-ui.md` on 2026-10-04 (AR14D D5, agreed by the
+goal-ui owner); only relative links changed. Every ID and status named here
+has its row in the [source-ID ledger](status/LEDGER.md), which is current.
+
+### Where things stood (goal-ui.md, updated 2026-10-02)
+
+U0–U12's UI slices are delivered: host/port discovery fields, catalog and
+device/structure editors, channel labels, monitor control, read-only device
+checks, Site/Property creation and the ADR-0051 Debug property action.
+The Debug route remains default-off and its durable backup is *property-only*;
+no new live device check or whole-image recovery follows. K6 confirmed public
+address writes now refuse before a tunnel without device-specific durable
+recovery (ADR-0059); the Web tab shows this availability rather than asking
+for consent prematurely. CLI/HTTP discovery succeeded after the user's
+firewall rule; native WebKitGTK Search remains unverified. ISSUE-04 and both
+ISSUE-12 acceptance rows are verified and ticked. **U0–U13 are complete**:
+the operator accepted the independent GPT-6.1-Sol review because Claude was
+unavailable; its three P1 findings are fixed with behavioral RED/GREEN and
+restored guard mutations. Actual offline UDP discovery roundtrip/no-response
+tests close the remaining transport-evidence gap, not the real-network or
+native Search boundaries. Integrated gates: 139 Rust suites / 2,820 passed /
+zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
+30 mock-only Chromium tests, strict Clippy/fmt/type/build/repository gates
+green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
+The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
+
+#### UI-owned alpha follow-up (user request, 2026-10-02)
+
+The user separately requested the `goal-ui` items from
+`docs/ALPHA_READINESS.md`. This does not reopen U0–U13 or authorize commissioning.
+All 24 routed rows have a current-source audit in
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). Four concrete gaps are
+implemented and fully offline-gated: UX-02 supported-only catalog picker,
+UX-03 command-backed project style selector, KL-121 cross-client settings
+refresh, and KL-124 lossless Device Info projection/disclosure. Publication
+`6c16fe5a` and complete remote/tree readback are verified; native/multicast/AT
+and domain-dependency qualifications stay explicit.
+KL-82's authoritative interpretation comparison, fail-closed uncertainty and
+pause/cursor/race guards are implemented; twelve complete candidate gates pass
+(Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
+acceptance repeated with the same counts on published `8ceacf49`; remote
+ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
+transactional write proof follows. The separately reserved `ui-alpha-keyboard`
+candidate now implements list auto-scroll, stacked/dynamic modal-background
+exclusion and viewport-safe HelpTip with a permanent local description.
+Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
+the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
+gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
+576-source freeze); first header failure remains recorded. All twelve gates
+repeated on integrated source as proc_490a156044df with the same counts; published
+2e57f8e5 and exact ref/tree/all 28 artifacts/zero outgoing commits verified.
+No ready keyboard/modal/help-tip implementation remains in this package.
+Documentation receipt/owned cleanup follow. Native/Orca, real-network,
+independent-sample and domain/application dependencies remain separate and open.
+Do not turn retained design boundaries into silently accepted alpha exceptions.

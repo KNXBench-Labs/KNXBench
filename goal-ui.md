@@ -9,64 +9,23 @@ There are now three goal files, and they do not overlap:
 
 | File | Session | Owns |
 |---|---|---|
-| `goal.md` | goal.md session (Claude) | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
+| [`alpha-release-goal.md`](alpha-release-goal.md) (took over from `goal.md`, now [archived](docs/archive/goal.md)) | alpha session | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
 | `goal-commission.md` | commissioning session (Claude) | T30 phase 3: device writes and their own programming UI |
 | **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, the routed alpha follow-up, and user-importable theme packs (U14–U18) |
 
 §5 below is the exact boundary. §6 describes how work crosses between
 sessions.
 
-## Where things stand (updated 2026-10-02)
+## Where things stand
 
-U0–U12's UI slices are delivered: host/port discovery fields, catalog and
-device/structure editors, channel labels, monitor control, read-only device
-checks, Site/Property creation and the ADR-0051 Debug property action.
-The Debug route remains default-off and its durable backup is *property-only*;
-no new live device check or whole-image recovery follows. K6 confirmed public
-address writes now refuse before a tunnel without device-specific durable
-recovery (ADR-0059); the Web tab shows this availability rather than asking
-for consent prematurely. CLI/HTTP discovery succeeded after the user's
-firewall rule; native WebKitGTK Search remains unverified. ISSUE-04 and both
-ISSUE-12 acceptance rows are verified and ticked. **U0–U13 are complete**:
-the operator accepted the independent GPT-6.1-Sol review because Claude was
-unavailable; its three P1 findings are fixed with behavioral RED/GREEN and
-restored guard mutations. Actual offline UDP discovery roundtrip/no-response
-tests close the remaining transport-evidence gap, not the real-network or
-native Search boundaries. Integrated gates: 139 Rust suites / 2,820 passed /
-zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
-30 mock-only Chromium tests, strict Clippy/fmt/type/build/repository gates
-green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
-The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
-
-### UI-owned alpha follow-up (user request, 2026-10-02)
-
-The user separately requested the `goal-ui` items from
-`docs/ALPHA_READINESS.md`. This does not reopen U0–U13 or authorize commissioning.
-All 24 routed rows have a current-source audit in
-[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md). Four concrete gaps are
-implemented and fully offline-gated: UX-02 supported-only catalog picker,
-UX-03 command-backed project style selector, KL-121 cross-client settings
-refresh, and KL-124 lossless Device Info projection/disclosure. Publication
-`6c16fe5a` and complete remote/tree readback are verified; native/multicast/AT
-and domain-dependency qualifications stay explicit.
-KL-82's authoritative interpretation comparison, fail-closed uncertainty and
-pause/cursor/race guards are implemented; twelve complete candidate gates pass
-(Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
-acceptance repeated with the same counts on published `8ceacf49`; remote
-ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
-transactional write proof follows. The separately reserved `ui-alpha-keyboard`
-candidate now implements list auto-scroll, stacked/dynamic modal-background
-exclusion and viewport-safe HelpTip with a permanent local description.
-Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
-the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
-gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
-576-source freeze); first header failure remains recorded. All twelve gates
-repeated on integrated source as proc_490a156044df with the same counts; published
-2e57f8e5 and exact ref/tree/all 28 artifacts/zero outgoing commits verified.
-No ready keyboard/modal/help-tip implementation remains in this package.
-Documentation receipt/owned cleanup follow. Native/Orca, real-network,
-independent-sample and domain/application dependencies remain separate and open.
-Do not turn retained design boundaries into silently accepted alpha exceptions.
+Row status of the 24 UI-owned source IDs lives in the
+[source-ID ledger](docs/status/LEDGER.md) (owner `ui`), per-row evidence in
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md), deliveries in
+[IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md). The status narrative
+that stood here (as of 2026-10-02) moved verbatim to
+[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md#owner-status-history) on
+2026-10-04 (AR14D D5, agreed by the goal-ui owner). The current top of
+`.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
 
 ---
 
@@ -526,9 +485,9 @@ commissioning session holds the Web lock at the time of writing.
 | --- | --- | --- | --- |
 | UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | backend done (RESEARCH §25); KL-127 closed as known gap; MODEL-03 web half done 2026-10-04 (`.0` submitted, server decides) |
 | UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | server half done (ADR-0069); client half done 2026-10-04 (same-id retry, same server only) |
-| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles open **[web]** |
-| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half done; UI open **[web]** |
-| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half done (ADR-0071); UI open **[web]** |
+| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles done 2026-10-04 |
+| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
+| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
 | UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); handed over **[web]** |
 
 Every package follows §2: RED first, mutation check per new guard, gates,

@@ -29,8 +29,11 @@ import {
 import {
   findArea,
   findBuildingPart,
-  findDeviceBuildingPartInFirstInstallation,
-  findDeviceLineInFirstInstallation,
+  deviceInstallation,
+  devicePlacementSlots,
+  findDeviceBuildingPart,
+  findDeviceLine,
+  owningInstallation,
   findGroupAddress,
   findGroupRange,
   findLine,
@@ -74,7 +77,7 @@ function buildingPartKindLabel(t: Translate, kind: string): string {
 // are") so the base sentence never needs to conjugate around how many
 // verbs it's naming — see `inspector.restrictedAction.*`'s own comment in
 // `messages/en.ts`.
-function restrictedToFirstInstallationMessage(
+function restrictedToOneInstallationMessage(
   t: Translate,
   action: "delete" | "renameAndDelete" | "renameMoveAndDelete",
   entityKey: MessageKey,
@@ -85,7 +88,7 @@ function restrictedToFirstInstallationMessage(
       : action === "renameAndDelete"
         ? "inspector.restrictedAction.renameAndDelete"
         : "inspector.restrictedAction.renameMoveAndDelete";
-  return t("inspector.restrictedToFirstInstallation", {
+  return t("inspector.restrictedToOneInstallation", {
     action: t(actionKey),
     entity: t(entityKey),
   });
@@ -498,7 +501,8 @@ function LineMoveField(props: {
 }) {
   const { detail, tree, onApplied } = props;
   const t = useTranslate();
-  const current = findDeviceLineInFirstInstallation(tree, detail.id);
+  const current = findDeviceLine(tree, detail.id);
+  const installation = deviceInstallation(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
 
   if (current === undefined) return null;
@@ -521,7 +525,7 @@ function LineMoveField(props: {
         onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
       >
         <option value="">{t("inspector.unassigned")}</option>
-        {tree.installations[0]?.topology.map((area) => (
+        {installation?.topology.map((area) => (
           <optgroup
             key={area.id}
             label={t("inspector.areaLabel", { address: area.address, name: area.name })}
@@ -556,8 +560,8 @@ function BuildingPartMoveField(props: {
 }) {
   const { detail, tree, onApplied } = props;
   const t = useTranslate();
-  const current = findDeviceLineInFirstInstallation(tree, detail.id);
-  const currentPart = findDeviceBuildingPartInFirstInstallation(tree, detail.id);
+  const current = findDeviceLine(tree, detail.id);
+  const currentPart = findDeviceBuildingPart(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
 
   if (current === undefined) return null;
@@ -572,7 +576,7 @@ function BuildingPartMoveField(props: {
     }
   }
 
-  const parts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+  const parts = flattenBuildingParts(deviceInstallation(tree, detail.id)?.buildings ?? [], []);
 
   return (
     <label className="inspector-field">
@@ -833,11 +837,23 @@ function ComObjectRow(props: {
   </li>;
 }
 
+// MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
+// in one installation links only to that installation's group addresses; a
+// device placed nowhere may link to any; one placed in two is refused.
+function linkableGroupAddresses(tree: ProjectTree, deviceId: number): GroupAddressNode[] {
+  const owner = deviceInstallation(tree, deviceId);
+  if (owner) return owner.group_addresses;
+  const placed = tree.installations.some((installation) =>
+    installation.unassigned.some((device) => device.id === deviceId)
+    || installation.topology.some((area) => area.lines.some((line) => line.devices.some((device) => device.id === deviceId))));
+  return placed ? [] : tree.installations.flatMap((installation) => installation.group_addresses);
+}
+
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, onApplied } = props;
-  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
+  const groupAddresses = linkableGroupAddresses(tree, detail.id);
   const t = useTranslate();
   const [tab, setTab] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<{ deviceId: number; keys: Set<string> }>({
@@ -925,15 +941,112 @@ export function DeviceWorkspace(props: {
   </section>;
 }
 
+// MODEL-02 / ADR-0071: a device listed in more than one topology slot is
+// repaired only by the user naming the slot to keep. Addresses, links,
+// parameters and building placement are left alone by the server.
+function DevicePlacementRepair(props: {
+  detail: DeviceDetail;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const t = useTranslate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const slots = devicePlacementSlots(tree, detail.id);
+  const total = slots.reduce((sum, slot) => sum + slot.count, 0);
+  if (total <= 1) return null;
+
+  async function keep(slot: (typeof slots)[number]) {
+    setBusy(true);
+    setError(null);
+    try {
+      onApplied(await api.repairDevicePlacement(detail.id, slot.kind === "line"
+        ? { lineId: slot.line.id } : { unassignedInstallationId: slot.installation.id }));
+    } catch (e) {
+      setError(api.errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="placement-repair">
+      <h3>{t("inspector.placementConflict")}</h3>
+      <p className="inspector-description">{t("inspector.placementConflictHint", { count: total })}</p>
+      <ul>
+        {slots.map((slot) => (
+          <li key={slot.kind === "line" ? `line-${slot.installation.id}-${slot.line.id}` : `unassigned-${slot.installation.id}`}>
+            <span>
+              {slot.kind === "line"
+                ? t("inspector.placementLine", { area: slot.area.address, line: slot.line.address,
+                  name: slot.line.name, installation: slot.installation.name })
+                : t("inspector.placementUnassigned", { installation: slot.installation.name })}
+              {slot.count > 1 && ` ${t("inspector.placementListedTimes", { count: slot.count })}`}
+            </span>
+            <button type="button" disabled={busy} onClick={() => void keep(slot)}>
+              {t("inspector.keepPlacement")}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && <span className="field-error">{error}</span>}
+    </section>
+  );
+}
+
+// MODEL-02 / ADR-0071: the same line listed by several areas of one
+// installation. Offered only when every occurrence is the same line (same
+// name, address and devices) in at least two areas; two different lines that
+// share an id are a duplicate-id problem with no repair here.
+function LineOwnerRepair(props: { tree: ProjectTree; lineId: number; onApplied: (tree: ProjectTree) => void }) {
+  const { tree, lineId, onApplied } = props;
+  const t = useTranslate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const holders = tree.installations.filter((installation) =>
+    installation.topology.some((area) => area.lines.some((line) => line.id === lineId)));
+  const areas = holders.length === 1
+    ? holders[0].topology.filter((area) => area.lines.some((line) => line.id === lineId)) : [];
+  const shapes = new Set(areas.flatMap((area) => area.lines.filter((line) => line.id === lineId))
+    .map((line) => JSON.stringify([line.name, line.address, line.devices.map((device) => device.id)])));
+  if (areas.length < 2 || shapes.size !== 1) return null;
+
+  async function keep(areaId: number) {
+    setBusy(true);
+    setError(null);
+    try {
+      onApplied(await api.repairLineOwner(lineId, areaId));
+    } catch (e) {
+      setError(api.errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="placement-repair">
+      <p className="inspector-description">{t("inspector.lineOwnerConflictHint", { count: areas.length })}</p>
+      <ul>
+        {areas.map((area) => (
+          <li key={area.id}>
+            <span>{t("inspector.areaLabel", { address: area.address, name: area.name })}</span>
+            <button type="button" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
+          </li>
+        ))}
+      </ul>
+      {error && <span className="field-error">{error}</span>}
+    </section>
+  );
+}
+
 function DeviceInspector(props: {
   propertiesOnly?: boolean;
   detail: DeviceDetail;
   tree: ProjectTree;
-  // Same `installations[0]`-only gate as every other Delete button in this
-  // file — `Command::DeleteDevice` only ever searches the first
-  // installation's topology (`remove_device_from_topology` in
-  // command.rs), the exact reachability `findDeviceLineInFirstInstallation`
-  // already reports for `LineMoveField`.
+  // Delete is offered for a device placed in the topology of exactly one
+  // installation (ADR-0070), the reachability `findDeviceLine` reports for
+  // `LineMoveField`.
   canDelete: boolean;
   onApplied: (tree: ProjectTree) => void;
   onDeleted: (tree: ProjectTree) => void;
@@ -962,10 +1075,11 @@ function DeviceInspector(props: {
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.devices")}
+          {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.devices")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      <DevicePlacementRepair detail={detail} tree={tree} onApplied={onApplied} />
       <AddressField detail={detail} tree={tree} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
@@ -1024,7 +1138,7 @@ function GroupAddressInspector(props: {
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
+          {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1166,7 +1280,7 @@ function GroupRangeInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.groupRanges")}
+          {restrictedToOneInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.groupRanges")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1223,18 +1337,28 @@ function ProjectInspector(props: { tree: ProjectTree; onApplied: (tree: ProjectT
         </select>
       </label>
       {error && <p className="field-error" role="alert">{error}</p>}
+      {/* MODEL-01: `Command::RenameInstallation`, one undo step each. */}
+      <h3>{t("inspector.installations")}</h3>
+      {props.tree.installations.map((installation, index) => (
+        <NameField key={installation.id} id={installation.id} name={installation.name}
+          label={t("inspector.name")} inputLabel={t("inspector.installationName", { n: index + 1 })}
+          rename={(value) => api.renameInstallation(installation.id, value)} onApplied={props.onApplied} />
+      ))}
     </div>
   );
 }
 
-function TopologyNameField(props: {
-  kind: "area" | "line";
+// A name edited in place and committed on blur/Enter; a refusal restores
+// the authoritative name and shows the server's reason.
+function NameField(props: {
   id: number;
   name: string;
+  label: string;
+  inputLabel?: string;
+  rename: (name: string) => Promise<ProjectTree>;
   onApplied: (tree: ProjectTree) => void;
 }) {
-  const { kind, id, name, onApplied } = props;
-  const t = useTranslate();
+  const { id, name, rename, onApplied } = props;
   const [value, setValue] = useState(name);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -1249,8 +1373,7 @@ function TopologyNameField(props: {
     }
     setError(null);
     try {
-      const tree = kind === "area" ? await api.renameArea(id, value) : await api.renameLine(id, value);
-      onApplied(tree);
+      onApplied(await rename(value));
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(name);
@@ -1258,11 +1381,23 @@ function TopologyNameField(props: {
   }
 
   return <label className="inspector-field">
-    {t("inspector.name")}
-    <input value={value} onChange={(e) => setValue(e.target.value)} onBlur={apply}
+    {props.label}
+    <input value={value} aria-label={props.inputLabel} onChange={(e) => setValue(e.target.value)} onBlur={apply}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
     {error && <span className="field-error">{error}</span>}
   </label>;
+}
+
+function TopologyNameField(props: {
+  kind: "area" | "line";
+  id: number;
+  name: string;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { kind, id } = props;
+  const t = useTranslate();
+  return <NameField id={id} name={props.name} label={t("inspector.name")} onApplied={props.onApplied}
+    rename={(value) => kind === "area" ? api.renameArea(id, value) : api.renameLine(id, value)} />;
 }
 
 function AreaInspector(props: {
@@ -1299,7 +1434,7 @@ function AreaInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameAndDelete", "inspector.entity.areas")}
+          {restrictedToOneInstallationMessage(t, "renameAndDelete", "inspector.entity.areas")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1318,7 +1453,7 @@ function LineInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
-  const areas = tree.installations[0]?.topology ?? [];
+  const areas = owningInstallation(tree, "line", line.id)?.topology ?? [];
   const owners = areas.flatMap((area) =>
     area.lines.filter((candidate) => candidate.id === line.id).map(() => area),
   );
@@ -1388,7 +1523,7 @@ function LineInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.lines")}
+          {restrictedToOneInstallationMessage(t, "renameMoveAndDelete", "inspector.entity.lines")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -1454,7 +1589,7 @@ function BuildingPartInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
-  const allParts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+  const allParts = flattenBuildingParts(owningInstallation(tree, "building_part", node.id)?.buildings ?? [], []);
   const occurrences = allParts.filter((entry) => entry.node.id === node.id).length;
   const parentMatches = allParts.filter((entry) =>
     entry.node.children.some((child) => child.id === node.id),
@@ -1530,7 +1665,7 @@ function BuildingPartInspector(props: {
         </>
       ) : (
         <p className="inspector-description">
-          {restrictedToFirstInstallationMessage(
+          {restrictedToOneInstallationMessage(
             t,
             "renameMoveAndDelete",
             "inspector.entity.buildingParts",
@@ -1565,7 +1700,7 @@ export default function Inspector(props: {
 
   if (selection.kind === "device") {
     if (!deviceDetail || deviceDetail.id !== selection.id) return null;
-    const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
+    const canDelete = deviceInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector
         propertiesOnly={props.propertiesOnly}
@@ -1581,7 +1716,7 @@ export default function Inspector(props: {
   if (selection.kind === "group_address") {
     const ga = findGroupAddress(tree, selection.id);
     if (!ga) return null;
-    const canDelete = tree.installations[0]?.group_addresses.some((g) => g.id === ga.id) ?? false;
+    const canDelete = owningInstallation(tree, "group_address", ga.id) !== undefined;
     return <GroupAddressInspector ga={ga} canDelete={canDelete} onDeleted={onDeleted} />;
   }
 
@@ -1602,18 +1737,21 @@ export default function Inspector(props: {
     ).length;
   }, 0);
   if (matchingStructureIds > 1) {
-    return <p role="alert" className="inspector-description">{t("inspector.duplicateStructureId")}</p>;
+    return <>
+      <p role="alert" className="inspector-description">{t("inspector.duplicateStructureId")}</p>
+      {selection.kind === "line" && <LineOwnerRepair tree={tree} lineId={selection.id} onApplied={onApplied} />}
+    </>;
   }
 
   if (selection.kind === "group_range") {
     const range = findGroupRange(tree, selection.id);
     if (!range) return null;
-    const canEdit = tree.installations[0]?.group_ranges.some((r) => r.id === range.id) ?? false;
+    const owner = owningInstallation(tree, "group_range", range.id);
     return (
       <GroupRangeInspector
         range={range}
-        ranges={tree.installations[0]?.group_ranges ?? []}
-        canEdit={canEdit}
+        ranges={owner?.group_ranges ?? []}
+        canEdit={owner !== undefined}
         onApplied={onApplied}
         onDeleted={onDeleted}
       />
@@ -1623,23 +1761,20 @@ export default function Inspector(props: {
   if (selection.kind === "area") {
     const area = findArea(tree, selection.id);
     if (!area) return null;
-    const canEdit = tree.installations[0]?.topology.some((a) => a.id === area.id) ?? false;
+    const canEdit = owningInstallation(tree, "area", area.id) !== undefined;
     return <AreaInspector area={area} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />;
   }
 
   if (selection.kind === "line") {
     const line = findLine(tree, selection.id);
     if (!line) return null;
-    const canEdit =
-      tree.installations[0]?.topology.some((a) => a.lines.some((l) => l.id === line.id)) ?? false;
+    const canEdit = owningInstallation(tree, "line", line.id) !== undefined;
     return <LineInspector line={line} tree={tree} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />;
   }
 
   const found = findBuildingPart(tree, selection.id);
   if (!found) return null;
-  const canEdit = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []).some(
-    ({ node }) => node.id === found.node.id,
-  );
+  const canEdit = owningInstallation(tree, "building_part", found.node.id) !== undefined;
   return (
     <BuildingPartInspector
       node={found.node}

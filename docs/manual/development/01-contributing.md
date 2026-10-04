@@ -122,6 +122,7 @@ The repository's own architecture gates, which live in the `xtask` crate:
 cargo run -p xtask -- check-layering
 cargo run -p xtask -- check-headers
 cargo run -p xtask -- check-anchors
+cargo run -p xtask -- check-ledger
 ```
 
 - **`check-layering`** walks the resolved dependency graph from `cargo metadata` and fails
@@ -141,6 +142,12 @@ cargo run -p xtask -- check-anchors
   suggestion for any in-repo link whose target heading does not exist. This manual is
   covered by it, which is why every cross-reference in it points at a heading that was
   actually read.
+- **`check-ledger`** keeps [`docs/status/LEDGER.md`](../../status/LEDGER.md) the only
+  status record for tracked source IDs (ADR-0076): unique IDs, known status/owner/priority
+  words, exactly 180 snapshot rows, count lines that match the rows, a
+  `KNOWN_LIMITATIONS` heading for every `KL-n`, and no table row elsewhere in `docs/` or
+  the root Markdown that pairs a ledger ID with a status word. `docs/archive/` and
+  `docs/history/` are exempt.
 
 The license and advisory gate, which needs `cargo install cargo-deny` once:
 

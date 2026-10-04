@@ -57,6 +57,94 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3 });
   });
 
+  // MODEL-04: both options are opt-in and only true values travel, so a
+  // request without them keeps the exact pre-MODEL-04 body and fingerprint.
+  it("posts the catalog allocation and unique-name options only when chosen", async () => {
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(9, "cat-1", "Actuator", 3, "req-1", { allocateAddresses: true, uniqueNames: false });
+    let [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3, requestId: "req-1", allocateAddresses: true,
+    });
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(9, "cat-1", "Actuator", 3, "req-2", { allocateAddresses: false, uniqueNames: true });
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3, requestId: "req-2", uniqueNames: true,
+    });
+  });
+
+  // MODEL-01 / ADR-0070: root creates and CSV exchange may name their
+  // installation; absent keeps the server's first-installation default.
+  it("names the target installation on root creates only when given", async () => {
+    const bodies: unknown[] = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ installations: [] });
+      await call();
+      bodies.push(JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string));
+    };
+    await post(() => api.createArea("Area", 1, 2));
+    await post(() => api.createArea("Area", 1));
+    await post(() => api.createGroupRange("Range", "1/0/0", "1/7/255", undefined, 2));
+    await post(() => api.createBuildingPart("Site", "Ground", undefined, 2));
+    await post(() => api.createGroupAddress("Light", "1/1/1", undefined, 2));
+    expect(bodies).toEqual([
+      { name: "Area", address: 1, installationId: 2 },
+      { name: "Area", address: 1 },
+      { name: "Range", start: "1/0/0", end: "1/7/255", installationId: 2 },
+      { name: "Site", kind: "Ground", installationId: 2 },
+      { name: "Light", address: "1/1/1", installationId: 2 },
+    ]);
+  });
+
+  it("names the CSV installation on export, import and confirmation only when given", async () => {
+    const bodies: unknown[] = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ warnings: [], tree: { installations: [] }, report: {}, applied: true, confirmationToken: null });
+      await call();
+      bodies.push(JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string));
+    };
+    await post(() => api.exportGroupAddressesCsv("out.csv", 2));
+    await post(() => api.exportGroupAddressesCsv("out.csv"));
+    await post(() => api.importGroupAddressesCsv("in.csv", undefined, 2));
+    await post(() => api.importGroupAddressesCsv("in.csv", "token-1", 2));
+    expect(bodies).toEqual([
+      { path: "out.csv", installationId: 2 },
+      { path: "out.csv" },
+      { path: "in.csv", installationId: 2 },
+      { path: "in.csv", confirmationToken: "token-1", installationId: 2 },
+    ]);
+  });
+
+  // MODEL-02 / ADR-0071: a repair names exactly one slot to keep.
+  it("posts placement and line-owner repairs with exactly the kept slot", async () => {
+    const calls: Array<[string, unknown]> = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ installations: [] });
+      await call();
+      const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(init.method).toBe("POST");
+      calls.push([url, JSON.parse(init.body as string)]);
+    };
+    await post(() => api.repairDevicePlacement(42, { lineId: 11 }));
+    await post(() => api.repairDevicePlacement(42, { unassignedInstallationId: 2 }));
+    await post(() => api.repairLineOwner(11, 20));
+    expect(calls).toEqual([
+      ["/api/repair/device-placement", { deviceId: 42, keepLineId: 11 }],
+      ["/api/repair/device-placement", { deviceId: 42, keepUnassignedInstallationId: 2 }],
+      ["/api/repair/line-owner", { lineId: 11, keepAreaId: 20 }],
+    ]);
+  });
+
+  it("renames an installation through PATCH /api/installations/{id}", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.renameInstallation(2, "Annex");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/installations/2");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Annex" });
+  });
+
   it("encodes the service-control target for GET and names only the debug scope on POST", async () => {
     const reading = { address: "1.1.67", raw: "0000", mask: "0701", individualAddressWriteEnabled: false };
     mockFetchOnce(reading);

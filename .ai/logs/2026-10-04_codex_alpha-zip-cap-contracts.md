@@ -188,3 +188,20 @@ Published cc2916c6 brings UI+AR14D documentation consolidation and check-ledger.
 Respect the learned freeze: no fresh status-doc/ledger-row edits. Preserve
 upstream archived history, put the count-contract dossier and any row proposal
 in permitted handover. New actual integration/gates needed, publication pending.
+
+## Published owner consolidation integration
+
+Receipt actual owner cc2916c6; unverified short cc2916f4 in the checkpoint was
+corrected. Invalid-ref merge refused and ignored-dir git-add refusal left no
+product execution; tracked-only add succeeded. Both preserved as bookkeeping
+failures, not tests. Current actual published source6abf557b integrated; one
+IMPLEMENTATION_STATUS conflict preserved then resolved with exact full-owner
+body plus scoped dossier prefix. Existing-file write guard correctly refused
+an incomplete-read overwrite; exact-source patch applied afterward.
+
+Full owner handover preserved as exact suffix; archived history/source untouched.
+The18:45 owner entry releases the AR14D freeze; ledger evidence-only update
+keeps KL151 IN_PROGRESS, other owner rows/counts unchanged. New dossier retains
+all original native/control/gate evidence. Web UX-01 lock remains foreign;
+no own Web changes. Actual fresh integrated public16 (new check-ledger) queued
+next; earlier0e3e90b2 evidence is not relabeled. Publication/hygiene pending.

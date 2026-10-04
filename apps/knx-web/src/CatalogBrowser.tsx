@@ -139,7 +139,10 @@ function describeCreationDiagnostic(t: Translate, diagnostic: CreationDiagnostic
 // picks the highlighted item, pre-filling the name field exactly as
 // clicking the row does — it does not create the device, since creation
 // stays behind the name field's own Enter/Create.
-type CreateArgs = [lineId: number | null, catalogItemId: string, name: string, quantity: number, requestId: string];
+type CreateArgs = [
+  lineId: number | null, catalogItemId: string, name: string, quantity: number, requestId: string,
+  options: api.CatalogCreateOptions,
+];
 
 /** One id per user submit (ADR-0069: 1–128 of `[A-Za-z0-9_-]`); a UUID fits. */
 function newRequestId(): string {
@@ -176,6 +179,9 @@ export default function CatalogBrowser(props: {
   const [creating, setCreating] = useState(false);
   const [createdWithDiagnostics, setCreatedWithDiagnostics] = useState(false);
   const [batchOutcomeUnconfirmed, setBatchOutcomeUnconfirmed] = useState(false);
+  // MODEL-04: both opt-in; allocation needs a target line to take addresses from.
+  const [allocateAddresses, setAllocateAddresses] = useState(false);
+  const [uniqueNames, setUniqueNames] = useState(false);
   // DATA-03: the exact request whose outcome is unknown, kept for a resend
   // with the same requestId; `retry` says whether that resend is offered.
   const pendingRef = useRef<{ args: CreateArgs; incarnation: string } | null>(null);
@@ -291,7 +297,8 @@ export default function CatalogBrowser(props: {
 
   async function create() {
     if (!selected || name.trim() === "" || !validQuantity || createInFlightRef.current || createdWithDiagnostics) return;
-    await submit([lineId, selected.id, name.trim(), quantityNumber, newRequestId()], serverIncarnation);
+    await submit([lineId, selected.id, name.trim(), quantityNumber, newRequestId(),
+      { allocateAddresses: allocateAddresses && lineId !== null, uniqueNames }], serverIncarnation);
   }
 
   async function retryPending() {
@@ -526,6 +533,21 @@ export default function CatalogBrowser(props: {
               {creating ? t("catalog.creating") : t("catalog.create")}
             </button>
           </div>
+          <fieldset className="catalog-create-options">
+            <legend>{t("catalog.optionsLegend")}</legend>
+            <label>
+              <input type="checkbox" name="allocateAddresses" checked={allocateAddresses && lineId !== null}
+                disabled={lineId === null} aria-describedby={lineId === null ? "catalog-allocate-hint" : undefined}
+                onChange={(e) => setAllocateAddresses(e.target.checked)} />
+              {t("catalog.allocateAddresses")}
+            </label>
+            {lineId === null && <small id="catalog-allocate-hint">{t("catalog.allocateNeedsLine")}</small>}
+            <label>
+              <input type="checkbox" name="uniqueNames" checked={uniqueNames}
+                onChange={(e) => setUniqueNames(e.target.checked)} />
+              {t("catalog.uniqueNames")}
+            </label>
+          </fieldset>
           <section className="catalog-create-preview" aria-live="polite">
             <h3>{t("catalog.preview")}</h3>
             {!validQuantity ? <p>{t("catalog.quantityInvalid")}</p> : (
@@ -534,7 +556,8 @@ export default function CatalogBrowser(props: {
               ))}</ul>
             )}
             <p>{lineId === null ? t("catalog.noTargetLine") : t("catalog.targetLine", { lineId })}</p>
-            <p>{t("catalog.addressUnassigned")}</p>
+            <p>{allocateAddresses && lineId !== null ? t("catalog.addressAllocated") : t("catalog.addressUnassigned")}</p>
+            {uniqueNames && <p>{t("catalog.uniqueNamesNote")}</p>}
           </section>
         </>
       )}
@@ -544,6 +567,7 @@ export default function CatalogBrowser(props: {
           <ul>{createdItems.map((item) => (
             <li className="catalog-created-item" key={item.deviceId}>
               <strong>{t("catalog.itemLabel", { index: item.index, name: item.name })}</strong>
+              {item.address && <span className="catalog-created-address"> — {t("catalog.itemAddress", { address: item.address })}</span>}
               {item.diagnostics.length > 0 ? (
                 <ul>{item.diagnostics.map((diagnostic, index) => (
                   <li key={`${diagnostic.kind}-${index}`}>{describeCreationDiagnostic(t, diagnostic)}</li>

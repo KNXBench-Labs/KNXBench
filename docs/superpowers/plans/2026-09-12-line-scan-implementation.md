@@ -2,7 +2,7 @@
 
 Closes **T17** in [GAP_ANALYSIS_ETS.md](../../GAP_ANALYSIS_ETS.md)'s Tier 4
 and, with it, **E2**. The research is done and is not reopened here:
-[RESEARCH.md §8.5](../../RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5](../../research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 names the procedure (`NM_IndividualAddress_Check`, `03_05_02 Management
 Procedures v02.01.02 AS.md` §2.19), rules out the two services that look
 plausible and are not, and carries a full-line measurement. What is left is

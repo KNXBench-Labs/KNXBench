@@ -26,8 +26,10 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 - **Owner values:** `alpha` (an AR package or a recorded boundary in
   alpha-release-goal), `ui` (`goal-ui.md`), `commission` (`goal-commission.md`),
   `later` (separate scope, not an alpha task).
-- **Recount** after an edit; the counts below are part of the file. An `xtask`
-  check of this file is planned (AR14D D3).
+- **Recount** after an edit; the counts below are part of the file.
+  `cargo run -p xtask -- check-ledger` checks the rows, the counts and that no
+  other document carries a per-ID status; on a stale count it prints the
+  expected line.
 
 ## Counts
 

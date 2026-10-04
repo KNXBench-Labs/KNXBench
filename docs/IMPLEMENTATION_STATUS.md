@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06R KL-152 measured coupled-budget candidate — 2026-10-03
+
+Original853 identity/source80a5500d/706 inputs verified. Four size-admitted
+scheme14 packages/16 XML documents select two item refusals. Actual bounded
+scratch Release/Release pair: baseline2 atomic refusals, observer2 installs;
+max802433 items/155281510 estimated bytes, peak134552KiB RSS/max2.985s.
+Archive bytes/original853/empty refusal tables verified; private temp0.
+Rejected first verifier attempt stays rejected; source-derived archive-table
+correction has three public controls. See PRODUCT_DATABASE_CORPUS.md for scope.
+Candidate coupled ceilings1048576/256MiB preserve depth1024/ZIP/namespace limits,
+all-or-nothing scan and full retained data. Two public registered REDs and six
+new boundary/late-failure tests; focused GREEN/fmt accepted, broad real gates
+running. Actual candidate private checks, review, complete acceptance and
+publication/readback/owned cleanup pending. KL152 remains open. No UI/DTO/schema,
+bus, manufacturer runtime or ETS compatibility expansion. KL151/153 and Alpha
+remain open; KL151 research closing80a5500d delivered/cleaned.
+
+Broad attempt1 is RED on three retained-source classification regressions;
+release CLI unstarted. Dedicated master-language work/input limits were
+implicitly shared with the scheme scanner. Candidate separates them and keeps
+their original64MiB/262144 values, including retained-source preflight. Failed
+logs/inputs are preserved; corrected full real-source gates remain pending.
+
 ## AR06Q KL-151 resource research accepted — 2026-10-03 22:02 UTC
 
 Base5540dcac/source706 unchanged. Secure853 declared-size census selects15:

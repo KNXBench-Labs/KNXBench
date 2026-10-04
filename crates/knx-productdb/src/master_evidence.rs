@@ -7,8 +7,7 @@
 use rusqlite::{params, Connection};
 
 use crate::ingest::{classify, FileKind};
-use crate::parse::master_language::master_language_unknowns;
-use crate::parse::scheme_evidence::MAX_EVIDENCE_BYTES;
+use crate::parse::master_language::{master_language_unknowns, MAX_MASTER_LANGUAGE_BYTES};
 use crate::ProductDbError;
 
 const FAILURE_KIND: &str = "MasterLanguageEvidenceError";
@@ -124,7 +123,7 @@ fn rederive(conn: &Connection) -> Result<MasterLanguageEvidenceReport, ProductDb
         let declared_len: i64 = row.get(1)?;
         let actual_len: i64 = row.get(2)?;
         let was_master: bool = row.get(3)?;
-        if actual_len < 0 || actual_len > MAX_EVIDENCE_BYTES as i64 {
+        if actual_len < 0 || actual_len > MAX_MASTER_LANGUAGE_BYTES as i64 {
             if was_master {
                 report.master_sources += 1;
                 report.failed_sources += 1;

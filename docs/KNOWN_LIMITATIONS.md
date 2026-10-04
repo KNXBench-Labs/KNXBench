@@ -7227,6 +7227,19 @@ hostile regressions before choosing a smaller documented bound or streaming.
 
 ## §152 The XML evidence item limit refuses two real packages
 
+**2026-10-03 candidate update (not delivered):** exact original853 hashes and a
+bounded raw-item census select the same two cases from four size-admitted
+scheme14 packages/16 XML documents. Actual same-Release scratch pair proves
+baseline2 atomic item refusals/observer2 installs, max802433 items and155281510
+estimated evidence bytes, peak134552KiB RSS/max2.985s. Independent byte64MiB
+would still refuse an item-only raise. A coupled1048576-item/256MiB candidate
+retains depth1024, ZIP caps, namespaces and all-or-nothing reporting. Two
+registered REDs, six new inclusive-boundary/late-no-partial tests and focused
+GREEN/fmt are verified; broad gates/actual candidate private checks/review and
+publication remain. No limit removal, data summary/truncation or compatibility
+claim. Detailed producer identities/rejected verifier attempt/scope are in
+PRODUCT_DATABASE_CORPUS.md. This limitation stays open until real delivery.
+
 **Observed 2026-10-03.** `MAX_EVIDENCE_ITEMS` (262,144,
 `knx-productdb/src/parse/scheme_evidence.rs`) refuses ABB
 `PS5604-KNX AC500.knxprod` and Hager `PS_TXA664D_V105_T5` (both scheme 14;

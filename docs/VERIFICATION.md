@@ -56,6 +56,15 @@ code in a fresh per-worktree `CARGO_TARGET_DIR`, confirm compilation, and keep
 sources stable during verification. A stale pre-AR01 binary still has its bug;
 Git pruning cannot rewrite its baked-in path. Do not silently bless it.
 
+## Release build provenance
+
+Build every release candidate (AR17's AppImage included) with
+`KNX_REQUIRE_CLEAN_TREE=1` in the environment. The build then fails unless
+the checkout is clean and `HEAD` resolves, so the artifact's `--version`
+names exactly the commit it was built from (ADR-0018 amendment,
+KNOWN_LIMITATIONS §65). A plain development build stamps the last commit and
+says nothing about uncommitted edits.
+
 ## Regression evidence
 
 `xtask/tests/gate_scope.rs` exercises selected fixtures, unrelated/deleted

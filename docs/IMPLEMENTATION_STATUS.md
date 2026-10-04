@@ -1,5 +1,32 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — U20 part 2: the bus monitor gets a Flow view
+
+- The bus monitor now has **Telegrams | Flow** tabs. The flow view
+  (`TelegramFlowView.tsx`) is fed by the monitor's own poll loop through
+  `flowFeed.ts` (one model per session, one snapshot fetch per generation,
+  one expiry timer); it opens nothing, polls nothing and writes nothing.
+  Senders, configured members (solid, "configured, not received") and
+  unresolved group addresses (box, dashed) sit on a static hex layout. Up to
+  three current values per node, with ◇ on inferred member values, 7 s from
+  observation. An HTML Inspector lists values, connections and per-object
+  flags from the row's own generation. Keyboard: roving tab stop in name
+  order, Enter selects, Shift+arrows pans, +/− zoom, 0 resets. Theme
+  variables only; nothing is announced per telegram. en/de. Guide: "The flow
+  view" in 07-bus-and-interfaces; residue KNOWN_LIMITATIONS §154.
+- Evidence: feed 6, layout 5, view 7 (written after the component, so RED was
+  shown against a stub: 7/7 failed), panel integration 8 (incl. reattach
+  without revived values, new session, loss notice) and model additions
+  (edge evidence, re-addressed device). The Chromium e2e
+  `e2e/telegram-flow.e2e.ts` (7 cases, real panel, intercepted synthetic
+  traffic, `page.clock` for expiry, live theme switch) fails 6/6 against the
+  previous panel. Mutants: reducer 23/23, view 11/11, panel 7/7 (two
+  survivors exposed missing reattach/new-session tests), feed 1/1. One feed
+  guard was removed as equivalent: a late reply can only reach its own model.
+  Screenshots in docs/design/2026-10-04-telegram-flow-u20/ were inspected;
+  they showed invisible lines in an unthemed fixture, arrowheads under text
+  and an overflowing flag table, all fixed.
+
 ## 2026-10-04 — U20 part 1: the telegram-flow reducer and wire validation
 
 - `apps/knx-web/src/flowWire.ts` validates the AR20 snapshot and the new row

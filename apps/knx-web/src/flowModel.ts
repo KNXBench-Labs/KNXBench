@@ -10,7 +10,7 @@
 // decoded it — never with a newer project. Rows whose context is not known
 // yet wait in a bounded, sequence-ordered queue.
 
-import { rowFlowFacts, type FlowDevice, type FlowGroup, type FlowSnapshot } from "./flowWire";
+import { rowFlowFacts, type FlowDevice, type FlowGroup, type FlowMember, type FlowSnapshot } from "./flowWire";
 
 export const VALUE_TTL_MS = 7_000;
 export const MAX_BADGES = 3;
@@ -57,6 +57,19 @@ export interface FlowNode {
   context?: RawReason;
 }
 
+/** One linked object as the project states it; configuration, not receipt. */
+export type FlowObjectEvidence = Omit<FlowMember, "deviceId">;
+
+/** Per group address on an edge: how often, and which objects link it. */
+export interface FlowEdgeGroup {
+  label: string;
+  count: number;
+  /** Generation the object evidence below was read from (the latest row's). */
+  generation: string;
+  sourceObjects: FlowObjectEvidence[];
+  targetObjects: FlowObjectEvidence[];
+}
+
 export interface FlowEdge {
   id: string;
   from: string;
@@ -66,8 +79,8 @@ export interface FlowEdge {
   count: number;
   lastSeq: number;
   lastObservedAtMs: number;
-  /** Raw group address → formatted label and observed count. */
-  groups: Map<number, { label: string; count: number }>;
+  /** Raw group address → label, count and linked-object evidence. */
+  groups: Map<number, FlowEdgeGroup>;
 }
 
 export interface ValueSlot {
@@ -273,6 +286,8 @@ interface Resolution {
   source: FlowNode;
   sourceLabel: string;
   targets: FlowNode[];
+  /** The one project group with this address, when there is exactly one. */
+  group: FlowGroup | null;
 }
 
 function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }): Resolution {
@@ -283,6 +298,7 @@ function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; 
       source: { id: `ia:${sourceRaw}`, kind: "rawSource", label: row.source, address: row.source, context: context.reason },
       sourceLabel: row.source,
       targets: [groupNode],
+      group: null,
     };
   }
   const holders = context.devicesByAddress.get(sourceRaw) ?? [];
@@ -299,15 +315,23 @@ function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; 
   // Configured endpoints: every active member of the one group with this
   // address (Send or Receive), except whatever may have sent the telegram.
   const groups = context.groupsByAddress.get(destinationRaw) ?? [];
-  if (groups.length !== 1) return { source, sourceLabel, targets: [{ ...groupNode, ambiguous: groups.length > 1 }] };
+  if (groups.length !== 1) return { source, sourceLabel, targets: [{ ...groupNode, ambiguous: groups.length > 1 }], group: null };
   const excluded = new Set(holders);
   const ids = [...new Set(groups[0].members.filter((m) => m.active && !excluded.has(m.deviceId)).map((m) => m.deviceId))];
   ids.sort((a, b) => a - b);
   const targets = ids.map((id) => deviceNode(context, id));
-  return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }] };
+  return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }], group: groups[0] };
 }
 
-function touchEdge(model: FlowModel, from: string, to: FlowNode, entry: QueuedRow): void {
+function objectsOf(group: FlowGroup | null, node: FlowNode): FlowObjectEvidence[] {
+  if (group === null || node.deviceId === undefined) return [];
+  return group.members
+    .filter((m) => m.deviceId === node.deviceId)
+    .map(({ comObjectId, direction, active, flags }) => ({ comObjectId, direction, active, flags }));
+}
+
+function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: QueuedRow, group: FlowGroup | null): void {
+  const from = source.id;
   const id = `${from}→${to.id}`;
   let edge = model.edges.get(id);
   if (!edge) {
@@ -324,9 +348,14 @@ function touchEdge(model: FlowModel, from: string, to: FlowNode, entry: QueuedRo
   edge.count += 1;
   edge.lastSeq = Math.max(edge.lastSeq, entry.row.seq);
   if (entry.observedAtMs !== null) edge.lastObservedAtMs = Math.max(edge.lastObservedAtMs, entry.observedAtMs);
-  const group = edge.groups.get(entry.destinationRaw) ?? { label: entry.row.destination, count: 0 };
-  group.count += 1;
-  edge.groups.set(entry.destinationRaw, group);
+  const previous = edge.groups.get(entry.destinationRaw);
+  edge.groups.set(entry.destinationRaw, {
+    label: entry.row.destination,
+    count: (previous?.count ?? 0) + 1,
+    generation: entry.generation,
+    sourceObjects: objectsOf(group, source),
+    targetObjects: objectsOf(group, to),
+  });
 }
 
 function setSlot(model: FlowModel, nodeId: string, slot: ValueSlot): void {
@@ -351,11 +380,11 @@ const VALUE_SERVICES = new Set(["GroupValueWrite", "GroupValueResponse"]);
 function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: number): void {
   if (context.kind === "pending") throw new Error("flow: a queued row was applied before its context was known");
   model.counters.admitted += 1;
-  const { source, sourceLabel, targets } = resolve(entry, context);
+  const { source, sourceLabel, targets, group } = resolve(entry, context);
   const sourceKept = ensureNode(model, source);
   const keptTargets = targets.filter((target) => ensureNode(model, target));
   if (sourceKept) {
-    for (const target of keptTargets) touchEdge(model, source.id, target, entry);
+    for (const target of keptTargets) touchEdge(model, source, target, entry, group);
   } else if (keptTargets.length > 0) {
     model.counters.refusedEdges += keptTargets.length;
   }

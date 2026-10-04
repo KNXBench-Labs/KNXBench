@@ -36,12 +36,23 @@ limits remain unchanged. No summary fallback or truncation is introduced.
 Two registered public REDs prove the old item and byte ceilings; six new tests
 cover bounded admission, inclusive ceilings/next-item refusal, and late scan
 failure preserving preexisting evidence. Corrected actual public6 passed,
-then current CRT integration ed03cb85 passed fresh public18:Rust3015/0/166 in
-153 blocks,Web1739,Chromium82 inventory/pass,fresh Release CLI/source712 exact.
+then CRT integration ed03cb85 passed public18 and private2. After six owner Rust
+changes, latest7f57abbb public18 passed:Rust3028/0/176 in153 blocks,Web1739,
+Chromium82 inventory/pass,actual Release CLI/source712/all18 logs exact.
 17 generated/current frontend DTOs are lexically token-equal in a fail-closed
 closed subset;8 negative,1 positive and1 unsupported-token controls pass.
-Current isolated same-Release private2 passes baseline2 atomic item refusals→
-candidate2 installs,all853 originals/retained archives exact,private temp0.
+Earlier ed03cb85 same-Release private2 passes baseline2 atomic item refusals→
+candidate2 installs; these receipts retain their original producer identities.
+Fresh full853 on7f57abbb is separately accepted and independently reconciled:
+688 unchanged table-count installs,163 unchanged normalized refusals,2 item-limit
+admissions→690 installs. Both Release binaries,source712/logs and all853 original
+hashes independently match; no private temporary inputs/DBs remain. Retained
+archives are exact and refusals atomic. Latest cohort CLI peak RSS baseline
+275128/candidate275440KiB,max wall13.658/13.468s; not HTTP/RSS-policy guarantees.
+The first latest public18 attempt exited0 in all commands but a wrong rebuild
+postcheck rejected it:CLI has no server dependency. CLI/store rebuild in Release,
+server rebuild in workspace; corrected guard1 positive/3 negative controls and
+actual18 retry pass. Rejected public/private-precondition receipts stay separate.
 Publication/readback/own final hygiene remain; scratch observation alone is not
 accepted as evidence for the built real binary.
 This changes no runtime/module semantics, schema, DTOs, UI or ETS compatibility.
@@ -66,8 +77,10 @@ cohort observations,not HTTP latency or RSS-policy guarantees. Foreign CRT
 upstream75ad9650 adds no Rust/Cargo/npm-manifest changes;30 non-overlap blobs
 remain byte-exact and full foreign handover suffix is preserved. All440 frozen
 non-Web product-ingest/source/build inputs stay exact across integration. The
-whole853 receipt keeps its original producer identity; separate actual integrated
-public18 and fresh Release/private2 bind current source/binary. Detailed separate
+whole853 receipt keeps its original producer identity; earlier ed03cb85 public18
+and Release/private2 were separate. Six later Rust changes required the fresh
+7f57abbb full853 described above; old440-input equivalence is not its evidence.
+Detailed separate
 receipts remain in ar06r scratch,never private per-item data or configurations.
 
 ## Bounded ZIP resource pair — 2026-10-03 22:02 UTC

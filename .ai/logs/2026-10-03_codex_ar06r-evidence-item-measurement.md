@@ -22,6 +22,45 @@ Broad attempt1 passed focused/fmt/check/clippy, then failed three registered ret
 
 ## Pending
 
+2026-10-04 02:53 UTC: latest7f57abbb full853 completed exit0 and separately
+reconciled:688 unchanged table-count installs,163 unchanged normalized refusals,
+2 item-budget admissions→690 installs. Independently rehashed all853 originals
+descriptor-relative/no-follow;source712/all18 logs and both Release binaries
+exact,atomic/retained checks reviewed,private temp0/no raw or item records.
+latest-full853-independently-verified.json retained; actual cohort CLI peak RSS
+275128/275440KiB,max wall13.658/13.468s,not HTTP responsiveness guarantees.
+Fresh upstreambb62ae57 adds seven documentation/evidence paths only; no new
+Rust/config/input changes. Preserve commissioning owner's full handover and
+closure evidence. Current primary docs updated; bindings/current doc5/review,
+safe docs-only upstream integration/publication/readback/own hygiene pending.
+All prior producer receipts and rejected verifier attempts remain separate.
+
+2026-10-04 02:32 UTC: actual latest public18 on7f57abbb independently GREEN:
+Rust3028/0/176/153 blocks,Web1739,Chromium82,source712/Release/logs exact.
+First latest postcheck was a verifier phase-contract refusal:all18 commands
+exit0,but CLI has no knx-server dependency. Cargo tree/manifests show13 workspace
+dependencies,store/cli/app Release recompilation and server workspace rebuild.
+Rejected18/source/logs and zero-pair private precondition refusal remain separate.
+Corrected guard1 positive/3 negative controls reran actual18;prior recompilation
+evidence bound to exact same source/head/log hashes,not acceptance relabelling.
+Fresh current full853 process proc_a90d324f1839/PID1010905 is active,546 pairs
+completed at02:32 UTC,NOT accepted. Config stayed sealed RAM-only and parent FD
+closed after consumption. Original names/same Release/12GiB600s2MiB child ceilings,
+2700s work budget separate from3600s lease queue;no private raw/item records.
+Whole current evidence/reconciliation/docs/gates/review/publication/hygiene still
+pending. Do not clean active targets/runner/source snapshot or claim final temp0.
+
+2026-10-04 02:03 UTC: upstream1c5dec0 integrated as7f57abbb.9 non-overlap
+owner blobs/full authoritative new handover suffix exact;own history retained,
+status blocks combined,known-limit merge clean. Six foreign Rust changes mean
+old all-source equivalence is no longer current. Changed HTTP tests are mocked/
+metadata-only; private simulated no-socket cases remain ignored. Fresh latest
+public18 source capture/same-worktree target/rebuild proof is prepared. Fresh
+full853 Release pairing will separately bind latest source;old80a and ed03
+receipts are retained as earlier producer evidence,not relabelled current.
+No publication or KL152 closing. Keep original data immutable and private output
+RAM-only;actual latest gates/current docs/review/normal delivery/hygiene remain.
+
 2026-10-04 01:54 UTC: current ed03cb85 Markdown5/privacy review passed.
 Fresh publication preflight stopped BEFORE commit/push:main advanced to
 1c5dec0760c1e0a98e998e9047102689be05b1f6,12 owner paths including6 Rust files

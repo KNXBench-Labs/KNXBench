@@ -10,6 +10,26 @@ that excluded part, and **only** that part. If an item would change something
 `goal.md` owns, it does not belong here: see §5 for the boundary, and §6 for
 how work is handed across.
 
+## User scope decision — 2026-10-04
+
+The user removed the status report's item 4 (new real-hardware, power-loss,
+vendor and ETS validation) from this goal because they cannot provide it.
+Those experiments are **accepted out of scope**, not pending operator work
+and not completion blockers. Keep their absence explicit in
+[user notices](docs/manual/known-issues.md#commissioning-validation-boundary).
+Existing bounded evidence is retained; no certification, general hardware
+compatibility, ETS parity or power-loss recovery guarantee follows.
+
+The user separately requested implementation of items 1–3: broader caller /
+long-session lifecycle coverage, Web/client adoption, and recovery/abort/restore
+contracts verified offline. These remain in scope. Recovery must preserve the
+original values, including `PID_DEVICE_CONTROL`, before any property mutation;
+a failed backup must prevent every property write. An unsupported device-specific
+recovery contract remains fail-closed, not silently enabled by this decision.
+
+The hardware rules in §1 remain binding if a future, separately authorized live
+operation is proposed. Do not reopen the excluded experiments automatically.
+
 ## Where things stand (2026-10-01)
 
 K1–K19 have historical implementation evidence at their documented scope.
@@ -238,8 +258,11 @@ K1–K19 have delivered their documented simulator, product-command and
 bounded live evidence. Do not reopen them as an ordered queue. Future
 commissioning work is complete only when the **specific** pending safety
 contract (§3) is verified in code and tests, docs reflect its actual scope,
-the required gates pass on the integrated tree, and the handover names any
-remaining hardware-only or user-owned decisions. A new target, mask or
+the required gates pass on the integrated tree, and the handover records any
+unsupported operations and the accepted validation boundary above. New
+real-hardware, power-loss, vendor and ETS experiments are not required for
+completion; their absence must stay visible to users. This does not close
+remaining software recovery, caller or Web contracts. A new target, mask or
 procedure is a new scope with a fresh go; RF remains simulator-only.
 
 

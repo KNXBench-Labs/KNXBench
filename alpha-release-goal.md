@@ -810,6 +810,17 @@ Never run every ignored test indiscriminately: some are hardware-writing tests. 
 
 ## 6. Completion and continuation
 
+**Commissioning scope decision, user, 2026-10-04:** new real-hardware,
+power-loss, vendor and ETS validation is accepted out of the commissioning
+goal, not a request waiting for the operator and not a commissioning completion
+blocker. Preserve the missing evidence as
+[KNXBench user notices](docs/manual/known-issues.md#commissioning-validation-boundary).
+This is not proof of compatibility or recovery and does not bypass runtime
+backup/authorization/refusal gates. Caller coverage, Web/client adoption,
+offline recovery contracts and owner admission remain required under
+[the commissioning goal](goal-commission.md). SAFE-03/AUDIT-01 are not marked
+done by this scope decision; unrelated Alpha acceptance conditions are unchanged.
+
 Distinguish these terminal states:
 
 1. **Offline work exhausted, readiness blocked:** all ready alpha-owned packages are delivered; named owner/external/user decisions remain. Report exact blockers and continue only when they resolve. This is **not** alpha readiness.

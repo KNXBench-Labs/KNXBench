@@ -826,8 +826,9 @@ pub(crate) struct GroupAddressContext {
 
 impl GroupAddressContext {
     /// Builds the snapshot. Mirrors `apps/knx-cli/src/main.rs`'s
-    /// `load_group_address_names`/`load_group_address_dpts`, minus the
-    /// store round-trip those need (the CLI reads a `.knxdb` path; a
+    /// `load_project_bus_view` (both use the same two `knx_core`
+    /// resolvers for names and DPTs), minus the
+    /// store round-trip it needs (the CLI reads a `.knxdb` path; a
     /// running server already holds the live `knx_core::Project` in
     /// `AppState.project`, so there is nothing to open here, only to
     /// borrow once).
@@ -838,19 +839,11 @@ impl GroupAddressContext {
                 dpts: HashMap::new(),
                 names: HashMap::new(),
             },
-            Some(project) => {
-                let mut names = HashMap::new();
-                for installation in &project.installations {
-                    for entry in &installation.group_addresses {
-                        names.insert(entry.address.raw(), entry.name.clone());
-                    }
-                }
-                Self {
-                    style: Some(project.info.group_address_style),
-                    dpts: knx_core::resolve_project_group_address_dpts(project),
-                    names,
-                }
-            }
+            Some(project) => Self {
+                style: Some(project.info.group_address_style),
+                dpts: knx_core::resolve_project_group_address_dpts(project),
+                names: knx_core::resolve_project_group_address_names(project),
+            },
         }
     }
 
@@ -2267,6 +2260,69 @@ mod tests {
             }
             other => panic!("expected Error, got {other:?}"),
         }
+    }
+
+    /// AR14 / KNOWN_LIMITATIONS §29: a telegram carries only the raw
+    /// address, so when installations name the same address differently the
+    /// row shows every distinct name (installation order) instead of
+    /// whichever installation happened to be read last.
+    #[test]
+    fn names_shared_across_installations_are_all_shown() {
+        use knx_core::{
+            GroupAddressEntry, GroupAddressId, Installation, InstallationId, Language, SourceRef,
+        };
+        let installation = |id: u8, entries: &[(u32, u16, &str)]| Installation {
+            id: InstallationId(id),
+            name: format!("I{id}"),
+            default_line: None,
+            multicast_address: None,
+            completion: knx_core::CompletionStatus::FinishedDesign,
+            topology: knx_core::Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: entries
+                .iter()
+                .map(|&(id, raw, name)| GroupAddressEntry {
+                    id: GroupAddressId(id),
+                    source: SourceRef {
+                        path: "t".into(),
+                        ets_id: "t".into(),
+                    },
+                    name: name.into(),
+                    address: GroupAddress::from_raw(raw),
+                    central: false,
+                    unfiltered: false,
+                    range: None,
+                })
+                .collect(),
+            parameters: vec![],
+        };
+        let mut project = knx_core::Project::new(Language("en".into()));
+        project.installations.push(installation(
+            0,
+            &[(1, 1, "Home light"), (2, 2, "Only home")],
+        ));
+        project
+            .installations
+            .push(installation(1, &[(3, 1, "Garage light")]));
+        project
+            .installations
+            .push(installation(2, &[(4, 1, "Home light")]));
+
+        let ctx = GroupAddressContext::from_project(Some(&project));
+        assert_eq!(
+            ctx.name(GroupAddress::from_raw(1)).as_deref(),
+            Some("Home light | Garage light")
+        );
+        assert_eq!(
+            ctx.name(GroupAddress::from_raw(2)).as_deref(),
+            Some("Only home")
+        );
+        assert_eq!(ctx.name(GroupAddress::from_raw(9)), None);
     }
 
     /// The fake connector's scripted search is repeatable — every call

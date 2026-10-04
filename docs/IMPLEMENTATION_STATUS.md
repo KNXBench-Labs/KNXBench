@@ -97,6 +97,12 @@
 - Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
   the built pages are now versioned in `story/previews/` (`build --preview`),
   guarded by a rebuild-equality test (53 unit tests).
+- Narrator edition `2026-10-04.3` (user request): the story is told by a gloomy
+  AI narrator in homage to Marvin. Optional, schema-enforced `edition.narrator`
+  (hero, aside label, mandatory disclosure); editions without it render
+  byte-identically (`.1`/`.2` previews unchanged). Only narration and asides
+  changed; one new step and two relations record the request. 60 unit tests,
+  41/41 browser checks.
 
 ## AR06S KL153 scheme23 bounded research — 2026-10-04
 

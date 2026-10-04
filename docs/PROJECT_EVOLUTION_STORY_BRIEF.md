@@ -10,8 +10,8 @@ It records the intended experience, not permission to publish.
 documentation and local Claude Code, Codex, Hermes and Paperclip records. The
 stack is a static, offline companion prepared by a stdlib-only tool
 ([ADR-0068](adr/0068-project-evolution-story-is-a-static-offline-companion.md)).
-Its candidates (`2026-10-04.1`, `2026-10-04.2`) are private and await manual
-content review. No hosting provider, schedule, publication mechanism or
+Its candidates (`2026-10-04.1` to `2026-10-04.3`) are private; `.2` was
+reviewed without changes, `.3` awaits review. No hosting provider, schedule, publication mechanism or
 production integration has been selected.
 
 The central question is:
@@ -163,6 +163,23 @@ All visitor-facing narrative and public prompt excerpts are in English. Use plai
 specific explanations with restrained, playful commentary. Humor belongs in the
 presentation, not in altered historical facts, inflated compatibility claims, or
 invented incidents.
+
+**Narrator (user decision, 2026-10-04):** the story is told from the AI's point
+of view, in a voice that pays homage to Marvin, the gloomy robot from Douglas
+Adams' *The Hitchhiker's Guide to the Galaxy*, matching the depressed-robot
+commit messages the project has used since 10 September. Rules for that voice:
+
+- The persona lives only in narration (hero, chapter ledes and bodies) and in
+  the asides. Event summaries, *why it mattered*, excerpts, evidence,
+  uncertainty, relations and gaps state the record without persona.
+- Write original lines. Do not borrow Adams' text; the only exception is a
+  quotation that is itself project evidence (a commit message).
+- The narrator speaks for itself, not for the agents in the record; it must not
+  imply that it personally wrote code the record does not attribute to it.
+- Gloom never shrinks a safety, privacy or compatibility limit. Where a limit
+  is stated, the narrator steps back and lets it stand as written.
+- Every narrated edition shows a visible disclosure of the persona and its
+  inspiration (`edition.narrator.disclosure`, enforced by the schema).
 
 Illustrative copy, **not historical quotations or final chapter titles**:
 

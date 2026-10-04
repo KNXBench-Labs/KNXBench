@@ -1,17 +1,34 @@
 # IMPLEMENTATION_STATUS.md
 
-## 2026-10-04 — AR06V: existing product-ZIP count contracts
+## 2026-10-04 — AR06V: existing product-ZIP count contracts verified
 
-- Public synthetic exact4096 install/replay and4097 seeded all-table refusal
-  contracts delivered as65d7cf5c; no production constant or grammar change.
-  Native2 and two compiled cap controls independently accepted; branch public8
-  and actual integrated4dbca7e5/0e3e90b2 public15 checks passed.
-- [PRODUCT_ZIP_COUNT_CONTRACTS](PRODUCT_ZIP_COUNT_CONTRACTS.md) retains precise
-  source/count evidence and original failed infrastructure attempts. Latest
-  published6abf557b owner consolidation is adopted intact; actual integrated
-  source/ledger gates on the new candidate remain pending. Source-ID status
-  belongs solely in status/LEDGER.md; count-only evidence does not settle the
-  resource/byte/caller decision or whole Alpha acceptance.
+- Existing4096-entry inclusive install/replay and4097-entry seeded all-table
+  refusal contracts added as65d7cf5c. Native2 and two compiled cap controls
+  accepted; no production cap or grammar change.
+- Actual latest source6c3080d9 accepted all16 commands: Rust3157/0/177 across170
+  blocks, Web1835, Chromium108 plus separate probe1;806 source/config/log
+  hashes and current CLI verified. Same-root accepted cache/native120
+  unchanged, no fresh-target claim or private/hardware test passes.
+- [PRODUCT_ZIP_COUNT_CONTRACTS](PRODUCT_ZIP_COUNT_CONTRACTS.md) retains original
+  failures, exact checkpoint identities and bounds. Incoming2231d87c changes
+  Markdown only; final doc audits/publication pending. Ledger status stays
+  unresolved for byte/caller/resource policy; no whole Alpha acceptance.
+
+## 2026-10-04 — Telegram-flow nervous-system Alpha scope approved (planning only)
+
+The user confirmed the focused interview and authorized the owning sessions to
+implement [the flow contract](TELEGRAM_FLOW_VISUALIZATION.md). U19–U21 own design,
+shared-monitor UI, values/layout/pulses and UI acceptance; AR20 owns the read-only
+session-bound semantic contract; AR21 adopts integrated Alpha evidence. These
+are open packages, not shipped code, a benchmark or a new hardware authorization.
+Values update immediately and expire after 7 seconds, independently of pulse
+arrival; configured target badges are not confirmed device state. Quiet observed
+edges remain visible for the session; themes, freeze and motion policy apply.
+[ADR-0077](adr/0077-session-local-telegram-flow-view.md) narrowly supersedes the
+older no-animation-first recommendation without introducing physical coordinates
+or a persistent history store. The new feature is required before final Alpha
+readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact.
+
 
 ## 2026-10-04 — AR13 hand-over: the debug-report dialog names every kept telegram field
 

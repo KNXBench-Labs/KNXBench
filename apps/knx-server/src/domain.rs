@@ -1758,6 +1758,21 @@ fn project_is_modified(
     clean_project.is_none_or(|clean| !project.same_user_content_as(clean))
 }
 
+impl AppState {
+    /// Whether closing now would discard edits: the same predicate the
+    /// project tree publishes as `is_modified`, for a caller that cannot ask
+    /// the frontend (the desktop shell after its web process died, §133).
+    /// Locks `project` before `clean_project`, the order every replacement
+    /// transaction uses.
+    pub fn has_unsaved_changes(&self) -> bool {
+        let project = self.project.lock().expect("state mutex poisoned");
+        let clean_project = self.clean_project.lock().expect("state mutex poisoned");
+        project
+            .as_ref()
+            .is_some_and(|project| project_is_modified(project, clean_project.as_ref()))
+    }
+}
+
 fn replace_project_state(
     state: &AppState,
     replacement: knx_core::Project,
@@ -5413,6 +5428,24 @@ mod tests {
         assert_eq!(name, "Project B");
         assert_eq!(saved_opaque, expected_opaque);
         assert_eq!(saved_manufacturer, expected_manufacturer);
+    }
+
+    #[test]
+    fn has_unsaved_changes_mirrors_the_published_modified_flag() {
+        let state = AppState::default();
+        assert!(!state.has_unsaved_changes(), "no project open");
+        new_project_impl(&state, None, None, None, None, true).unwrap();
+        assert!(!state.has_unsaved_changes(), "fresh project");
+
+        create_area_impl(&state, "Unsaved area".into(), 1).unwrap();
+        assert!(state.has_unsaved_changes(), "after an edit");
+        assert!(current_project_tree(&state).unwrap().tree.is_modified);
+
+        undo_impl(&state).unwrap();
+        assert!(!state.has_unsaved_changes(), "undone to the baseline");
+
+        state.project.lock().unwrap().as_mut().unwrap().info.name = "direct".into();
+        assert!(state.has_unsaved_changes(), "direct mutation");
     }
 
     #[test]

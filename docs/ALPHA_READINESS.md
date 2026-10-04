@@ -209,6 +209,24 @@ Retained: real ETS4/ETS5 protected export and AES (ETS6) stay sample-gated
 (COMPATIBILITY §3); `knx diff`, `POST /api/project/diff` and
 `knx products ingest` take no password (KNOWN_LIMITATIONS §13).
 
+## AR11 CSV/report decisions (2026-10-04)
+
+Checked on `44746183`. User decisions: `KL-40` accepted as is for the Alpha
+(derived CSV columns read-only, no Description/Comment, no schema change);
+`KL-60` handed to the UI owner (virtualised diff tables plus search/filter
+before the Alpha; backend API unchanged). No backend slice was approved, so
+none was built.
+
+| ID | Evidence |
+| --- | --- |
+| `KL-38` | No "ETS CSV" claim in Web catalogues, CLI or manual (repository grep); `knx-csv` 61 tests green |
+| `KL-44` | Rendered report says "not an ETS report" (`knx-report` test at `render.rs:1322`); 48 tests green |
+| `KL-47` | `unrenderable_parameter_kinds_and_allocator_refs_keep_raw_values_and_warn` and 2 more in `crates/knx-app/tests/documentation_composition.rs` green |
+| `KL-51` | `knx-diff` module doc and the manual call it a "KNXBench project diff", never an ETS comparison |
+
+All four stay sample- or semantics-gated as their KNOWN_LIMITATIONS
+sections say.
+
 ## AR13 privacy and deployment-security dossier
 
 Claude session, 2026-10-04, on user request alongside the Codex alpha

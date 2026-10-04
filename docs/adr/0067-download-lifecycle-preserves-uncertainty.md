@@ -1,8 +1,25 @@
 # ADR-0067: Download lifecycle receipts preserve uncertainty and legacy history
 
 Date: 2026-10-03
-Status: Proposed (implementation and acceptance gates pending)
+Status: Proposed (bounded offline implementation and integrated gates passed; broader owner admission pending)
 Scope: SAFE-03 / AUDIT-01, offline server/storage lifecycle only
+
+## Integrated scoped acceptance — 2026-10-04
+
+The bounded implementation is published as `1c5dec07` after renewed merged
+source32/public Rust-Cargo369/tracked Web acceptance: scoped125/0/0, required
+ordinary3022/0 with176 ignored, Web typecheck/offline build and Vitest1739/98.
+All26 actual command stages/dual leases/original private commitments are bound
+in the [permanent receipt](../evidence/commission-download-lifecycle-offline-2026-10-04.json).
+The initial stale inner receipt namespace safely refused before Cargo/input
+selection; initial three successful stages and corrected17-phase continuation
+are separately retained. No product/fixture change was needed. Five actual
+semantic controls were executed on the pre-integration source, not on this
+merged context. Review remains in-session. History stays partial metadata,
+not recovery or device-effect proof. Broader callers/Web adoption, full owner
+admission and crash/power-loss/hostile-race/hardware/vendor/ETS acceptance are
+not established; therefore the ADR remains Proposed. Older pending notices
+below describe their explicitly historical snapshots, not this current gate.
 
 ## Fault-fixture correction researched 2026-10-03
 

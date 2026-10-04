@@ -23,7 +23,7 @@ use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_with_backup, Progress, RestartOutcome,
 };
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 
 use crate::bus::{BusTunnel, TunnelEvent};
@@ -81,7 +81,7 @@ pub struct BackupDestination {
 
 /// Whether anything was written to the device, as the CLI says it
 /// (`written to the device: yes | no | partially`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Written {
     Yes,
@@ -90,7 +90,7 @@ pub enum Written {
 }
 
 /// What became of the closing restart.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Restart {
     Acknowledged,
@@ -155,7 +155,9 @@ pub struct DeviceDownloadSession {
 impl DeviceDownloadSession {
     /// Starts the run on `tunnel`. The caller has already checked the
     /// authorisation, the plan and that no other bus session runs.
-    pub fn start(
+    // Keep authorisation, recovery and lifecycle capabilities explicit at admission.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn start(
         id: u64,
         tunnel: Box<dyn BusTunnel>,
         authorisation: WriteAuthorisation,
@@ -163,6 +165,7 @@ impl DeviceDownloadSession {
         timing: knx_net::SessionTiming,
         prepared: PreparedDownload,
         backups: BackupDestination,
+        activity: crate::one_shot_activity::DownloadGuard,
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
@@ -193,6 +196,7 @@ impl DeviceDownloadSession {
             prepared,
             backups,
             shared,
+            activity,
         ));
         Self {
             task: Some(task),
@@ -320,6 +324,8 @@ fn written_so_far(shared: &Shared) -> Written {
     }
 }
 
+// Mirror the admitted capabilities without hiding independent effects in an options bag.
+#[allow(clippy::too_many_arguments)]
 async fn run(
     tunnel: Box<dyn BusTunnel>,
     authorisation: WriteAuthorisation,
@@ -328,6 +334,7 @@ async fn run(
     prepared: PreparedDownload,
     backups: BackupDestination,
     shared: Arc<Shared>,
+    mut activity: crate::one_shot_activity::DownloadGuard,
 ) {
     let status = {
         let transport = TunnelTransport(tunnel.as_ref());
@@ -362,6 +369,7 @@ async fn run(
                     };
                     let path = write_backup(&backups.dir, &stored).map_err(|e| e.to_string())?;
                     *keeper.backup_file.lock().expect("download backup poisoned") = Some(path);
+                    activity.mark_send_possible().map_err(|e| e.to_string())?;
                     Ok(())
                 };
                 let result = run_memory_download_with_backup(
@@ -407,8 +415,11 @@ async fn run(
             }
         }
     };
+    // Recording failure must not alter the worker outcome or skip cleanup.
+    let _ = activity.record_result(&status);
     *shared.status.lock().expect("download status poisoned") = status;
-    let _ = tunnel.disconnect().await;
+    let cleanup = tunnel.disconnect().await;
+    let _ = activity.record_cleanup(cleanup.is_ok());
 }
 
 fn record(shared: &Shared, progress: Progress) {

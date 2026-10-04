@@ -4,9 +4,44 @@
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
 
-## Local version-evolution/lifecycle candidate (delivery pending)
+## Integrated offline lifecycle acceptance — 2026-10-04
 
-Latest local candidate, checked 2026-10-04: **125 distinct registered tests
+The bounded implementation is published as `1c5dec07`, integrating candidate
+`a8c9342c` with upstream `75ad9650`. Both the fetched and live `main` ref matched
+that exact gated commit before this documentation-only closure. The permanent
+[acceptance receipt](evidence/commission-download-lifecycle-offline-2026-10-04.json)
+records commands, exits, source/configuration digests and scope boundaries.
+
+Renewed integrated evidence: **125 distinct registered tests, 0 failed,
+0 ignored** = Store94 + OneShot18 + ten explicit offline workers + API3.
+Separately, the seven required ordinary workspace commands passed with
+**3022 passed, 0 failed, 176 ignored**, across153 result blocks. Those176 were
+not executed; the selected ten private-input workers have separate receipts.
+Frontend typecheck and pinned offline install/build passed; Vitest passed
+**1739 tests in98 files**. Do not add overlapping ordinary/scoped counts.
+
+All26 actual command stages completed on the same merged HEAD and unchanged
+source32/public Rust-Cargo369/current tracked Web inputs, with actual dual
+leases and an initially absent, package-owned build target. Three prerequisite
+phases succeeded before the first worker's inner receipt namespace mistakenly
+named a historical attempt. The never-overwrite guard refused before input
+selection/Cargo (exit74); no test ran or new private receipt was created. The
+remaining17 phases used corrected fresh inner IDs for all ten workers. Both
+actual dispatch identities are retained; this is not one invented chain hash.
+Original input commitments stayed unchanged; no raw private output was saved.
+Five semantic production controls below remain **pre-integration** evidence,
+not new mutations on the merged tree. Owned Rust stayed byte-identical to the
+reviewed candidate; integration review was in-session, not independent approval.
+
+This accepts the bounded backend implementation, not full SAFE-03/AUDIT-01.
+`PARTIAL_BACKEND`, partial coverage and proposed ADR0067 remain. History is not
+recovery; broader callers/Web adoption, genuine power-loss/hostile-race behavior,
+device-specific recovery and hardware/vendor/ETS acceptance remain separate.
+No locked Web source, generated binding or product data was manually changed.
+
+## Pre-integration lifecycle candidate evidence
+
+Pre-integration candidate, checked 2026-10-04: **125 distinct registered tests
 passed, 0 failed, 0 ignored**: full Store94, OneShot18, ten actual offline
 worker cases and three public HTTP history cases. History13 is included in
 Store94; the new 25-case synthetic malformed-download matrix is one included

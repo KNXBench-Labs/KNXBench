@@ -1,0 +1,1713 @@
+{
+  "schema_version": 1,
+  "scope": "SAFE-03/AUDIT-01 bounded offline download lifecycle; PARTIAL_BACKEND; not full owner/release/hardware/ETS admission",
+  "verified_at": "2026-10-04 03:42 CEST",
+  "baseline": "a7dc3a69",
+  "candidate_commit": "a8c9342c96d299ca64c172569f4eb45a843dc397",
+  "gated_integrated_commit": "1c5dec0760c1e0a98e998e9047102689be05b1f6",
+  "integrated_upstream": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
+  "published_code_readback": {
+    "ref": "refs/heads/main",
+    "local_head": "1c5dec0760c1e0a98e998e9047102689be05b1f6",
+    "fetched_ref": "1c5dec0760c1e0a98e998e9047102689be05b1f6",
+    "live_ref": "1c5dec0760c1e0a98e998e9047102689be05b1f6"
+  },
+  "owned_rust_paths": [
+    "apps/knx-server/src/device_download.rs",
+    "apps/knx-server/src/device_download_routes.rs",
+    "apps/knx-server/src/one_shot_activity.rs",
+    "apps/knx-server/tests/http_activity_history.rs",
+    "apps/knx-server/tests/http_device_download.rs",
+    "crates/knx-store/src/activity_history.rs"
+  ],
+  "review": {
+    "kind": "in-session; not independent whole-goal approval",
+    "critical": [],
+    "important": [],
+    "receipt_sha256": "d197807299b2e549010a845fdaadb95331b8097b49629f973a3e9e0c2652037b",
+    "critical_incoming_diff_sha256": {
+      "0": "49e3a34b22ec3d77c3d69cc159da5dc01118b9ff203842c66d739cf8f648f897",
+      "1": "0bcd4dc219eeb6925cdb59264d1b2ebf888d22ccf278ad00384af33dcb781081",
+      "2": "66ff3f6b36b05e1650a1b17c6ddcad4cceb4ea5671a9e48404d5dfa849880938",
+      "3": "450c4f2db12f06c4941a2d0810a443aba387db997f30c307e329dff5b48a9c80",
+      "4": "95889d45c20f29de768fcb3c9976bd54f77c3dfd8e20746b996d05116427b8cb"
+    }
+  },
+  "scope32": {
+    "repository_inputs": {
+      ".cargo/config": null,
+      ".cargo/config.toml": null,
+      "Cargo.lock": "4c695dd4c8160ad9e04036945ac1f37bb5c74e5f46194051a16b245feb7c61c0",
+      "Cargo.toml": "b599e5a22d2ff25928b348009f1f2d9048ecb6125bf7cee5ccf585ffc191f448",
+      "apps/knx-cli/Cargo.toml": "60392932f8860302a6706681614fd22c0d75c38896008de470c9f47aaf445a1e",
+      "apps/knx-desktop/src-tauri/Cargo.toml": "c02dc2a22a4c07ca14858897c2ca4aa7d2dbe393fc4b3b4ae9a76e4f4d0c81c1",
+      "apps/knx-server/Cargo.toml": "5cbf7fdadfe59090714b1e62ba8fea1a497c7eab0443707cbd6956f43a8e7608",
+      "apps/knx-server/src/bus_activity_routes.rs": "cfa11d1ba0b1ecce82db63e343cfd86d37a673fcfde20d3ddf089b3e4349a0b4",
+      "apps/knx-server/src/device_download.rs": "b16fb0eeaa40b8eefea3f84300f3dc022d74932eedccd99d950b48788e0b614a",
+      "apps/knx-server/src/device_download_routes.rs": "9b87bd6bf491a865cc7943116e21eaa4200c507520ec62f653c151a99054ae23",
+      "apps/knx-server/src/device_download_task_tests.rs": "b7a81e03a5551ba690c0996962e2d8c18eecd4706950bc40a13f210b2e886583",
+      "apps/knx-server/src/download_history.rs": null,
+      "apps/knx-server/src/lib.rs": "feb4ef7f0b007f2819c4adfe9ff959cecb3e5beac5309dae29d426a26a5a7c68",
+      "apps/knx-server/src/one_shot_activity.rs": "992f2a4875879b2e1fc448ff9b887956211c3d88f43d0eceb4415a7f00f539cd",
+      "apps/knx-server/tests/http_activity_history.rs": "3183da2dbb66697fb9e27523b5fdf2e592469b9f4b54a7dbd38663f244c5db63",
+      "apps/knx-server/tests/http_device_download.rs": "9fec72f64415379c1f810be260068a5d8a7151f527f22a74d5e27529e64c933f",
+      "crates/knx-app/Cargo.toml": "e15a230c5811c4d6ecb4e622016704fed498d7ea108710cd1d23f52a1208dbb5",
+      "crates/knx-core/Cargo.toml": "83ba087777ef7bd63e93248ed1d6c0c2eadb27468647e5312787c67d250e00be",
+      "crates/knx-csv/Cargo.toml": "aaeaea43929a51920d2f96a17e7f796cd955590291194b6f89dc72ed958b9c8c",
+      "crates/knx-diff/Cargo.toml": "51b560133d3f15e7047b4cb402f35efc04756e112c71dae9db42cfe72c8c10a4",
+      "crates/knx-etsproj/Cargo.toml": "eb8321c2259085699161c34d0e88a885d54cd7c76b8232bc66cf7ed538116fd6",
+      "crates/knx-net/Cargo.toml": "25dd468067b28854940ae23360a4205b38cd5d51d1adc1b592530fc733bdcf83",
+      "crates/knx-productdb/Cargo.toml": "c766a7df2ef67f240bb3978902b999d7cfa71f9eae4aa758da4612900a04e6cd",
+      "crates/knx-projection/Cargo.toml": "0ec1c03c2b43e73f03d03075a6a6423701271eddae8bb8622d26b3e4d71fa926",
+      "crates/knx-report/Cargo.toml": "3d91a33ce7bc0f283ea95470c3b77c785f32452d1df78aacf70a79f65e7c8f84",
+      "crates/knx-secure/Cargo.toml": "a5c62dc3992c6b859a4864a21eddb82d076c3652ddb63640d4fd395d09027d86",
+      "crates/knx-store/Cargo.toml": "7b0bab8551e82f8e93500318d6877932f545b99a12008d696154d6fcdb8fd2bd",
+      "crates/knx-store/src/activity_history.rs": "3ed916b38cbadd2c209a0126523640ab374f480eb6e584eb252c7d444d6b28ed",
+      "crates/knx-testsupport/Cargo.toml": "6a69c7b7eb5ba539768b23391193f2c0b0fb5f769a0fc2f8143eef59979e5eca",
+      "xtask/Cargo.toml": "98c4332b3c67835f012f8106b1ab577b01bff001eb5f2358432f2c1ef5267856"
+    },
+    "helper_digests": {
+      "run-merged-focused.py": "31a34414b87dcc34c94d6cb74b8eaf1646d93d900edce6c075922a56cbb9bedf",
+      "run-start-fixture.py": "404a492dfb45aef8b4e3f299ba82e28d00a0dc39db287712926f5653d5dab530"
+    },
+    "count": 32,
+    "not_every_repository_file": true
+  },
+  "public_rust_cargo_inputs": {
+    "Cargo.lock": "4c695dd4c8160ad9e04036945ac1f37bb5c74e5f46194051a16b245feb7c61c0",
+    "Cargo.toml": "b599e5a22d2ff25928b348009f1f2d9048ecb6125bf7cee5ccf585ffc191f448",
+    "apps/knx-cli/Cargo.toml": "60392932f8860302a6706681614fd22c0d75c38896008de470c9f47aaf445a1e",
+    "apps/knx-cli/build.rs": "a2d8f185b27d2759f655c5398d0b6cf369ea5df60546ba3b1144dc53b6cd230a",
+    "apps/knx-cli/src/device_address.rs": "6d8a813c0b14aab5f9abc7e1f142653b680cecc24fd26291323a4e49ec93ea2e",
+    "apps/knx-cli/src/device_compare.rs": "48dfa86821f1f85033038a838fcc266efd097e14842fa77b0594801e74b1a80b",
+    "apps/knx-cli/src/device_download.rs": "97581434d5876ca8226313c4571578cffa5c10c5b6114b3292b9063bf81c51d1",
+    "apps/knx-cli/src/device_readiness.rs": "baf755c4adabbb86f6a689a057c9679a63ec6a3e8bbab23f20ddf4e482d83651",
+    "apps/knx-cli/src/device_reset_address.rs": "e9561fd063e7d27b44640d83774f14a5b582b9be96e336a91c4937ee671e7691",
+    "apps/knx-cli/src/device_serial.rs": "3452dca5be109eba162df050f7f2191628696be2d82740514ed5547ff004e8ae",
+    "apps/knx-cli/src/device_service_control.rs": "9d0ec4ecab4c2b79a3bd057be4bca409717c6669e75851731459b25e206d1eaa",
+    "apps/knx-cli/src/main.rs": "9d25fdae633798d6c51c28e90f4a06cb5fb11718a86eee4b2179e6ed7835c373",
+    "apps/knx-cli/src/scan.rs": "575da281a43afbfafae1d94e18a35636550e42b2c3edb604051aa5579de0a55e",
+    "apps/knx-cli/tests/catalog_metadata.rs": "b3ad53bb922b64f8a2a12622157019c69d6f4ba5161c836d0cfb9791f1e59bd7",
+    "apps/knx-cli/tests/cli_address_programming_recovery.rs": "cb2ea0376aee60b5afe750ccc74976d1fefa08835b084ea126ab13876be2abc2",
+    "apps/knx-cli/tests/cli_address_reset_recovery.rs": "cda483fabd9274c2069a3e5b03c4736aa21cdc2d3887cdab791dc1dd835e7607",
+    "apps/knx-cli/tests/cli_bus_dpt.rs": "8bcb7ce37c7b2e4b861f81363375c0f3233bac25b719e99fc9e3900d5d1afeee",
+    "apps/knx-cli/tests/cli_documentation_export.rs": "9c56597fc2a06fcde168f859273e37a9cc55f1bcad201207599243f8a2572274",
+    "apps/knx-cli/tests/cli_group_address_csv.rs": "e5190d212dd35e7198f0258785eed7ec994b906160f90872e21e88e3ed149b99",
+    "apps/knx-cli/tests/cli_import.rs": "d99af98870a8392967356a4f60c5a3bd414a1a7e95722676763f23cd68e082c5",
+    "apps/knx-cli/tests/cli_product_extension_case.rs": "359df06d72ad803d5507bb5511804333c41e548e8c2b949fa30fdc97dd0cdbb6",
+    "apps/knx-cli/tests/cli_product_identity.rs": "843bd3a68972eccfdb7a009ed4dbdf549ef3a89c6e09f8aa09004281900d187d",
+    "apps/knx-cli/tests/cli_project_diff.rs": "32f28882dac26bf33c49668f06fc37f855cf1cb92fcaefa1a1c7856c227b4fd4",
+    "apps/knx-cli/tests/cli_version.rs": "472194c6297dd55045778fcf07b4b1a5369ccbdc01c24a4f885618172e4c1c37",
+    "apps/knx-cli/tests/live_memory_download.rs": "65931ed6476e71e809e619697b554784a0562d4ef9414e699225b32b9b8d0dea",
+    "apps/knx-cli/tests/memory_download_simulated.rs": "1ae95b07e53fbcee18a71108b27d471e6132087c69277ba6c738362255f9e77e",
+    "apps/knx-desktop/src-tauri/Cargo.toml": "c02dc2a22a4c07ca14858897c2ca4aa7d2dbe393fc4b3b4ae9a76e4f4d0c81c1",
+    "apps/knx-desktop/src-tauri/build.rs": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f",
+    "apps/knx-desktop/src-tauri/src/bus_monitor_export.rs": "fe44e81cae0939e162f09b049ec595d3e89333a9f032ebb4dce3186acbb75970",
+    "apps/knx-desktop/src-tauri/src/lib.rs": "62da0ea7de2b65799f7cdd2368b84cb8eeefcd8ac4f20593866241834681af47",
+    "apps/knx-desktop/src-tauri/src/main.rs": "e9f4286f63a64970e32bb3dca23413f17cc80a7f6553f68269a55a9d5f986e00",
+    "apps/knx-desktop/src-tauri/src/native_json_export.rs": "2ac13ef512bfccad618e63ea8220eb29f45f9fbb80df71cab3033c650b4ba20a",
+    "apps/knx-desktop/src-tauri/src/session_log_export.rs": "8662b3b00b70513977ed16128ee2dd50bc91eb37242c25830d9afe4b37fa9782",
+    "apps/knx-server/Cargo.toml": "5cbf7fdadfe59090714b1e62ba8fea1a497c7eab0443707cbd6956f43a8e7608",
+    "apps/knx-server/build.rs": "a2d8f185b27d2759f655c5398d0b6cf369ea5df60546ba3b1144dc53b6cd230a",
+    "apps/knx-server/src/address_programming.rs": "91bd81d2438e26fbae328eb643ddd35ec279fb57e4f8edf36d794fd42e547551",
+    "apps/knx-server/src/address_programming_routes.rs": "4030935a462e80b579189953d1490d8bff2f5c860fbe4c93e4e3f34f4ac2ae11",
+    "apps/knx-server/src/auth.rs": "8ef7c2679277780b3a71957bb7cc8797ffc547c1dfea3c7a2ab561ff94a78a2f",
+    "apps/knx-server/src/auth_password.rs": "3b4e3815d0902ca9ccec475492644ab26b3c18e91c7d773ca7d9adb4c8cb93e7",
+    "apps/knx-server/src/auth_routes.rs": "48cd8f36c876e779729991236fccee0601eafbb1f685dadc9a846c67287113b5",
+    "apps/knx-server/src/bus.rs": "0bb31e2139992b2de0f8f992d967ec1a946a184d0219cecc8fd5c6ec4fc43ecb",
+    "apps/knx-server/src/bus_activity_routes.rs": "cfa11d1ba0b1ecce82db63e343cfd86d37a673fcfde20d3ddf089b3e4349a0b4",
+    "apps/knx-server/src/bus_routes.rs": "523f1889b4a7e32d3ad16783cca405a991bda9ace7b7d9e1d7c114a579dfb825",
+    "apps/knx-server/src/bus_scan.rs": "122df9cadb0d9f30b476f41796322f39667373b6e56f1cba982e04ab85881359",
+    "apps/knx-server/src/com_object_activation.rs": "fd0c7160fbda357c40373be25100480f412238872b6939401d08ad3ceadd0b3e",
+    "apps/knx-server/src/debug_report.rs": "85f8aad410e1f5b6748ee6bd6ef13c0487ad852772156a8994659fc006672e52",
+    "apps/knx-server/src/debug_report_routes.rs": "b1893f9a1dd7ab30895456a7fd64a5e2bc78f1176246a686964b7473931ae884",
+    "apps/knx-server/src/device_compare_routes.rs": "0342523c7ae4268b6ed481828281fb9a7b052beef4142593bf21aef3a627e4f2",
+    "apps/knx-server/src/device_download.rs": "b16fb0eeaa40b8eefea3f84300f3dc022d74932eedccd99d950b48788e0b614a",
+    "apps/knx-server/src/device_download_routes.rs": "9b87bd6bf491a865cc7943116e21eaa4200c507520ec62f653c151a99054ae23",
+    "apps/knx-server/src/device_download_task_tests.rs": "b7a81e03a5551ba690c0996962e2d8c18eecd4706950bc40a13f210b2e886583",
+    "apps/knx-server/src/device_readiness_routes.rs": "8e46e58f07127efc6917e0d2afa232b592ac49763417bfa8d1e4135224e14880",
+    "apps/knx-server/src/domain.rs": "416a606cdf3ef6c6c00f4ef2d957eb5011ffcc8739b036051932950279e61aa4",
+    "apps/knx-server/src/errors.rs": "c571dadcd632750a55bb1b9b45a371e4e5c7d109d10b5c3befed977c265bef54",
+    "apps/knx-server/src/fs_routes.rs": "ffb659e723a23544422b9ea9ac7628a3ab989ed93459d3a96a5b1a9bceb790f9",
+    "apps/knx-server/src/lib.rs": "feb4ef7f0b007f2819c4adfe9ff959cecb3e5beac5309dae29d426a26a5a7c68",
+    "apps/knx-server/src/load_progress.rs": "8a245459b42db9c9fca4ea0f4d9019788502074f55e7dfaa232f8a1ab9621a77",
+    "apps/knx-server/src/main.rs": "2892b2824f944b1e9d20523e9ec70c6c1415e84416dc4917e6868b2fe450be04",
+    "apps/knx-server/src/one_shot_activity.rs": "992f2a4875879b2e1fc448ff9b887956211c3d88f43d0eceb4415a7f00f539cd",
+    "apps/knx-server/src/paths.rs": "4a3909be5dbcb33ae199676fcd357fd054a6ab8eccc4f2cccf9acd35bed14d4f",
+    "apps/knx-server/src/routes.rs": "7f5477588464327ea3a89afff0f1126d52ef9c7dc18f57f3adf7124f77c37884",
+    "apps/knx-server/src/serial_address_routes.rs": "49acd61c5c2cf1201c77c0333561b8902928fe814396d130fc62d4ea060b0b54",
+    "apps/knx-server/src/service_control_routes.rs": "1610414dfe87d008391bea300eb38c722e985c79023b7d2c1bee2ce9075e6c9b",
+    "apps/knx-server/src/session_log.rs": "ef37e3b1d0b7fab4d0cb144397a1b5b2dfd5b8b3e7f559f14f0d44440d965925",
+    "apps/knx-server/src/settings.rs": "fc2110e88550d7323b4825773f27d657ff2a1f13160577ec2e2e8de44abc18c4",
+    "apps/knx-server/src/settings_routes.rs": "8581f2d2732fa6b7948d3c902a50f3359bc58755f3e4c35185a5313a36769e49",
+    "apps/knx-server/tests/bin_version.rs": "184eab7ec0c865e3205a82fd6a698524323d4531431e51db2c969350760609d3",
+    "apps/knx-server/tests/com_object_activation_corpus.rs": "772f4122b7a42838ba27435f3a3519bbf61f5dcb1e1c0aea031eab993dcb399c",
+    "apps/knx-server/tests/command_dispatch.rs": "37ca8870dfd15b041b6e169d3c844471866cb6858f659869016e4d2a2b32cf1d",
+    "apps/knx-server/tests/device_detail.rs": "49d4ba22a4a7aa92f37183585e5e7bb53472c9c5fd648bfb6132b00299c6ccdc",
+    "apps/knx-server/tests/healthz.rs": "bdac7a76667bc3e69d3d04f1b50990ec4d85fa56db996d29ccca7e67cff2e20c",
+    "apps/knx-server/tests/http_activity_history.rs": "3183da2dbb66697fb9e27523b5fdf2e592469b9f4b54a7dbd38663f244c5db63",
+    "apps/knx-server/tests/http_address_programming.rs": "1748bc4910c765a8004a45dc544a131a971abbdcb9ebd518ea2d28cbf175dca4",
+    "apps/knx-server/tests/http_auth.rs": "68e5cb9b02e0929a71c4d8439144bb93ed5cbfea490b42720a323ff3401b28c5",
+    "apps/knx-server/tests/http_batch_routes.rs": "22d9d458125017e456c45b31c73e96427dd641d30cc345c491b798219ec16a66",
+    "apps/knx-server/tests/http_bus_activity.rs": "d6fa52164368aa0bb35278a8464fc3aedcdc29654a07e787db1586bb2ad9f26e",
+    "apps/knx-server/tests/http_bus_discover.rs": "b390a83e00fa25f5ec96ae844d0b8c341ea7d4e9bbf8962fbcc459995b2f451e",
+    "apps/knx-server/tests/http_bus_monitor.rs": "13c4fa58014964cc8ab1807137f9ef763bb164191ba65d1a260fb6a38cd6affd",
+    "apps/knx-server/tests/http_bus_scan.rs": "9a492f84de04c29dfa0a6f012c94d8209de613e4a553210b0ee584b02987b74a",
+    "apps/knx-server/tests/http_bus_write.rs": "98723ca2903bb7bb1ef33dd5eaff962e1a7d5d8efc9ab3bd2f01001b6797ac17",
+    "apps/knx-server/tests/http_catalog_to_device.rs": "c463c8ae1b24495afea361cbe476c07e7a209ac2ab95e6142721d6dca7fc57fc",
+    "apps/knx-server/tests/http_catalog_translation.rs": "69c86e8c9f6edf1310415d1730ee5f77a0cebb0cecfd6833ee5b210d18b15bed",
+    "apps/knx-server/tests/http_com_object_language.rs": "1f749e25a47ef3ceb240aae1b5b3bb06ec4b0cb1fba22a932b66f683cad342b8",
+    "apps/knx-server/tests/http_debug_report.rs": "053f42927395ddf231e61c9f957ccb75522680f8d7bb1729d7d17bc0f84feae6",
+    "apps/knx-server/tests/http_device_compare.rs": "6c7ae84c9aedb7359aeb8dd85ecc1c85bb97ec48a3144907c4d87e1a8938f92e",
+    "apps/knx-server/tests/http_device_detail.rs": "05718b755dab788d7dc6535f0b09aeff5d939e4c89641d597fce190799847375",
+    "apps/knx-server/tests/http_device_download.rs": "9fec72f64415379c1f810be260068a5d8a7151f527f22a74d5e27529e64c933f",
+    "apps/knx-server/tests/http_device_product.rs": "10727384d8289587da701bd1034fc6f14db05b86f75e84aba67da0d52a7bb2eb",
+    "apps/knx-server/tests/http_device_readiness.rs": "e909f3cf62885cd7a490dc6ba479ad3d7a82d82297b761160c380608ac743601",
+    "apps/knx-server/tests/http_device_routes.rs": "31c230f5b8067b4584d0451a8de6129f8734c0a43e9baeb1aacdbcc105656df8",
+    "apps/knx-server/tests/http_documentation_export.rs": "79c731b654685600b37ef046a1d1b13adf572343c7e7f01a49c6e836223004f1",
+    "apps/knx-server/tests/http_edit_routes.rs": "1c7e458b13eeaf3930bddc9fc16757309972c4fccae1cb8f8d378fbcd3b7dac7",
+    "apps/knx-server/tests/http_external_text_budget.rs": "f9c8ac4abb31f0b5381ba56727dad9c4368f0e0b6f8cdd7df6c7e7523e43b028",
+    "apps/knx-server/tests/http_fs_routes.rs": "b7553280faa3a11cd2bc20626e3fd1e8d2a21c640c4a51154953eed7c568ff91",
+    "apps/knx-server/tests/http_group_address_csv.rs": "1e8e7c6e2e90a829aff794d231f9c51643ce4fb7d94bd7e258927a99e9e13b93",
+    "apps/knx-server/tests/http_load_progress.rs": "dcb1adfd0c69ee384bc6b9b97c11d3823160144b994fbc52e35223f2df76c532",
+    "apps/knx-server/tests/http_log_route.rs": "960542bd423f339afd7fb4ba041c299526dcfcaf0e3912b0ad3da13e4f308a33",
+    "apps/knx-server/tests/http_parameter_panel.rs": "bc16b0f6e11165752efd70d252eaa6cc22bf84fcb36d94fa521624515d6a7aef",
+    "apps/knx-server/tests/http_product_install.rs": "3370794626349f26eefef74d3cb8e466c63e1bdcb101a60601151be1f5ef0c68",
+    "apps/knx-server/tests/http_product_language.rs": "6b8856b46c73453fdaad0b8d42b5ca80d5cd4d6278b0dc947a81fcb0f3ac4d65",
+    "apps/knx-server/tests/http_project_diff.rs": "b330e7d6476be6c489f9337ed232517a9edf82dbe47816b5e90bee589c99d808",
+    "apps/knx-server/tests/http_project_routes.rs": "053e6a7eb688a30055364fbc9ab10681888aa70ddcb1670fbdbba6a0d868e3e2",
+    "apps/knx-server/tests/http_serial_address.rs": "dc137f85f1fe7db9545eee7fbdedeee99fa074fda48848ef3a5c5107f7d47460",
+    "apps/knx-server/tests/http_service_control.rs": "d317d7a8cfb9a0a48fb2d12f9f8d7c96f6987326a0c634fee57ab7d951229cd3",
+    "apps/knx-server/tests/http_settings.rs": "64a184e0d96866e13f4a11c472351bfee978204469f0948f7667906eb31f0bd7",
+    "apps/knx-server/tests/http_settings_conditional.rs": "e8aa7ae2cf24da25cff95addb1948601ab0ee85667c5da8671741927a1887f96",
+    "apps/knx-server/tests/http_validation_errors.rs": "36b847d0b4af64a9207ee4b74deca31d6c2c4877e415ed2742e2f8002ca8f5af",
+    "apps/knx-server/tests/http_version_route.rs": "ca085c11d60c453584a7889447e4e913de31de249b2d7ae7de92968ee1fbd6a1",
+    "apps/knx-server/tests/open_reference_project.rs": "ab979c5ee455508f63586842e3e68a1eda332e8d95b9c9a489e9913f3ea6534d",
+    "apps/knx-server/tests/project_download_request.rs": "11a310ad738c298128e6c2a64a7710cdccacc514476249873346735dc1f49bf5",
+    "apps/knx-server/tests/save_load_roundtrip.rs": "6707153ad3b116a798a7dfa4ff685f24d0001fec6c3d178b29f2f981b4de6701",
+    "crates/knx-app/Cargo.toml": "e15a230c5811c4d6ecb4e622016704fed498d7ea108710cd1d23f52a1208dbb5",
+    "crates/knx-app/src/access_key.rs": "efc170fefa712207cc61b839389250eaee4ab7d23b365930eb248e1cc4387750",
+    "crates/knx-app/src/backup_directory.rs": "6c24ddeeb852a9611c0ee3538146f8c26bef6724f11fc768f3aa67b6bcce0550",
+    "crates/knx-app/src/comparison.rs": "b1328fbd3b13cbbbaaee5be137ed60f085cb19ceeb999876c4aea069eb9df8e2",
+    "crates/knx-app/src/device_backup.rs": "052b690c07c25d2e30b8468d2c93e1a91388a6e8bfdf94642e955136319a7942",
+    "crates/knx-app/src/device_download.rs": "e37eccb81b74c221c408f169fc9a8b31b28b217c20c3e1826f1f169f5be91d3e",
+    "crates/knx-app/src/documentation.rs": "9f4e4a13b5d5db361536671caf577158c104c19e7851e07f6e5197897e605964",
+    "crates/knx-app/src/download_support.rs": "3eb771b8164badda573a55baa7321094cf642faa7923c59f4f615180d18fab10",
+    "crates/knx-app/src/import.rs": "4edbafc265e398a1d9ecb6e2ad38403d9347b03f6d8924bb6526b18f587facb6",
+    "crates/knx-app/src/individual_address_programming_recovery.rs": "490a9b9d4f90e8058ea44c4632f38d635067131147d7de965f149de4c7a58f20",
+    "crates/knx-app/src/individual_address_reset_recovery.rs": "99e2eb7330fd6deaa5c5563be1681bf2ce584858b8cadb17119dc558fa3591a9",
+    "crates/knx-app/src/lib.rs": "0f211d5ab2ab20cac7d17b5cb5f9f1b7590b22d1397291089544badf0144f64e",
+    "crates/knx-app/src/progress.rs": "b69da30357871ab70e46bf8bd6c0dcbeb8af3d983b4c0036e20d2f19da89dd5f",
+    "crates/knx-app/src/project_readiness.rs": "fb4b559049228fa1268cc9b8d159d7d558f1a0e1543cbf848276c11beb88af3a",
+    "crates/knx-app/src/serial_address_recovery.rs": "897d027dd16610bfb9a527120fccd0ef7eedd6271cf0c7efefe83c3abc5088e0",
+    "crates/knx-app/src/serial_number.rs": "db53f6b90200ae58b7cac7bfe3183ab48a45777dd0ddf94685a70d3ce537bc99",
+    "crates/knx-app/src/service_control_backup.rs": "d56a9f0719c5d9c6dbe2124c18d3598bad45aa03457dfb185a19357f57be9bd6",
+    "crates/knx-app/tests/comparison_input.rs": "657fca03b409e074048b5c88cc4546eaf919f497146c4d658845d93cc5e81a60",
+    "crates/knx-app/tests/csv_roundtrip.rs": "5113f1f7c46763f66bcdd447504a8d64ad893e1e11c5107aa94489e249d2ef0c",
+    "crates/knx-app/tests/diff_correlation_measurement.rs": "be6024c669e58698c25c1b6558cd603bd3f9e05790133a2cad32c9cc51bfbe4f",
+    "crates/knx-app/tests/documentation_composition.rs": "aff0578ea2390aa4cc534ac37f59ac4ce03af376df7843763d8a5c1e1f4bca2f",
+    "crates/knx-app/tests/documentation_export.rs": "3c3569ccbe11c2cea9a6ce7cf0dcc36a105ed68c3cf05c7f8706bc36479266f4",
+    "crates/knx-app/tests/download_coverage_corpus.rs": "cc8a24f1b29da55717755709109d3ff2435f85472bcc972cabd5c63442159d57",
+    "crates/knx-app/tests/enrichment_gap_measurement.rs": "89d227c53f858f5ab93b66573eee23daaa0a5a25658170726dee54cfeb49b46d",
+    "crates/knx-app/tests/ets6_device_local_enrichment.rs": "45b68bf7ac1c5ce0397f22d2b3704b683f9e84030a5edfc085e7b1a79d9384e9",
+    "crates/knx-app/tests/house_instance_flags.rs": "f6d7cea04d401a4c676985a35c3acd78224912ffdb7d1f7aa5265a81984cc403",
+    "crates/knx-app/tests/house_readiness.rs": "3d33c9e37b7974c8b9cdfa98a0fdfb4219ab22bfa2f3c96b0c4da07f6b98b547",
+    "crates/knx-app/tests/id_allocation_integrity.rs": "68abfde544086bf1a3a13375466d6416356eb4d7594fda2776a6309050c8aa81",
+    "crates/knx-app/tests/id_exhaustion.rs": "c0782e9d92dd16c1fc1dbc3553927bf8d0ec43be45f741bf731a731e6b12e62e",
+    "crates/knx-app/tests/import_service.rs": "c33ada289c3e6d022adfc188bb084954b23ea15210c19dadcd204291828454e5",
+    "crates/knx-app/tests/load_progress.rs": "f0cb5048440ea3d2e157d801f00bf9aedae61733b35c609654605e5265417115",
+    "crates/knx-app/tests/perf_baseline.rs": "63870ccdc3b606971157e0dd9e2547fd83a8fc69b55576b476d95c79ab5bf318",
+    "crates/knx-app/tests/product_db.rs": "44f8c94d15ad5a8cf7125cb991a3c4919479e132bdfa5faece0a8a6338feb6e2",
+    "crates/knx-app/tests/project_diff.rs": "44aeb962afdbd7205d256cd63d53c8128ee581e6316f44a7ebf66005847b17a0",
+    "crates/knx-core/Cargo.toml": "83ba087777ef7bd63e93248ed1d6c0c2eadb27468647e5312787c67d250e00be",
+    "crates/knx-core/src/address.rs": "a92c2f100c87a7adda8d562f88463f3e6ec5af5d8d05e875c27e5f7d1a6cfd2d",
+    "crates/knx-core/src/building.rs": "0018fa2eabf53798130c6b5e4762bf89540500d01687050f2c34e55de31993c7",
+    "crates/knx-core/src/command.rs": "8c39551258af443dadc0c4a9018159e63e5e26adbfca676d6845615444815bcb",
+    "crates/knx-core/src/commissioning.rs": "fc060e7caa3b75b5bdc3eb549315a919e32790135c803ef3f7cfe9b1f2ab911d",
+    "crates/knx-core/src/commissioning/authorisation.rs": "0278b63a46cd2f205e0ff3e2ba00be6bc93f4fb4dd97bd9caf48a75358fd89bc",
+    "crates/knx-core/src/commissioning/device_backup.rs": "f72bb518b54c5505270e6ad3ee26350b5e2b2b7eb6674363b8b32c796b74e321",
+    "crates/knx-core/src/commissioning/domain_address.rs": "0d0fcfe7151ef3ee894cf04a459f4aa8e6f2096fd18123499e6ada3df2d8598a",
+    "crates/knx-core/src/commissioning/error_code.rs": "b5510847132df6ee75bde4ca51611cee0fafcc2ea14ca8b3bcadd357b924955b",
+    "crates/knx-core/src/commissioning/group_object_table.rs": "b254783bed75a7f5e140fcaecf5822bca6478e8783fcfe657114443d5c3f51ba",
+    "crates/knx-core/src/commissioning/group_tables.rs": "36686dba84fde4a3d94cdeebc2f65a788eea344161f0e5bcf4efb4bb759ba466",
+    "crates/knx-core/src/commissioning/load_control.rs": "d54f80ace047fcdf349ef4a77f262b397d59dc813742ac9f63a909cf154b9d56",
+    "crates/knx-core/src/commissioning/load_control_memory.rs": "7d2f2a0dcb7ac50548d78ff7b13033c0e843930f5dd2696779acaaca7f449ead",
+    "crates/knx-core/src/commissioning/load_state.rs": "6429d0f3078c2c1373192d6690de02cf764c1c54ae202ba9185e57544bc47f51",
+    "crates/knx-core/src/commissioning/master_reset.rs": "c79d867c18f00ed1f0db3b2eda3ac7045dbef0a0a81e270db239b3bd417b2607",
+    "crates/knx-core/src/commissioning/mcb.rs": "779bf175f21bcfc79a303f1ffccfa8d0784e6e0803fe54a5707f49ffd03054a4",
+    "crates/knx-core/src/commissioning/memory.rs": "854013d82d2e69c188b722f1c169d1547740c5421db2f08e18700ac334874d9e",
+    "crates/knx-core/src/commissioning/memory_download.rs": "27ac3a5fd48df747b56e7ba903c8a14a62f37e3ceaced7e115b30a4b384d4a08",
+    "crates/knx-core/src/commissioning/mutation.rs": "9e4d6f96159b736356059b4561516e579f4bcfda46abe022bc2347678be01703",
+    "crates/knx-core/src/commissioning/parameter_image.rs": "b525586482c1c8234518753f991f4f0cb39b760cfa9c2b946c541819e91ada19",
+    "crates/knx-core/src/commissioning/partial_download_variant.rs": "8448d9deee048f89c3a7c01d0275b52317385eff52f7b9c3313fe4cd35276d4c",
+    "crates/knx-core/src/commissioning/partial_memory_download.rs": "a1d3773562c4a1b0e8ca6cad09810449031ce74799adabb1e2e58a4d454210e2",
+    "crates/knx-core/src/commissioning/procedure.rs": "5d9198fe84830195d3e36ea8a6d9b031dae2b7240f79326b3f769160baed4bb9",
+    "crates/knx-core/src/commissioning/programming_mode.rs": "950f888b9aac1aeca0413785dce6a293f15b5b9bf55cbf9c81e4ca02cc532558",
+    "crates/knx-core/src/commissioning/properties.rs": "82ea6c797287a52a9550a256456c90fcaff67c8573783205edb694f7a83c3f71",
+    "crates/knx-core/src/commissioning/rf_configuration.rs": "521d29d75d29933481e2128efb0bf2edf44fd78031b30208c190a651e13c3c64",
+    "crates/knx-core/src/commissioning/serial_number.rs": "cf7a2c8784a9248d874e4d45b8d47685513de9602b9601389bd329e8cf4fbf8d",
+    "crates/knx-core/src/device.rs": "4650b6ea3e8d6e5789fed6173dfb1a69c61adff1192e359014f6ce8f8b1d7e3c",
+    "crates/knx-core/src/devices.rs": "c66b237b5eca6d8ed52e9cc1c999f47436061acb0deea808b93b9919747e0df4",
+    "crates/knx-core/src/dpt/codec.rs": "fd5e002f3d693d82a659c6d0a88a5421a2693f22c721c913ad8b2d5029ae7e7d",
+    "crates/knx-core/src/dpt/mod.rs": "c08d80303083e0ade2f4d49fe5357af58de809ecc07c72ea137f112c95731933",
+    "crates/knx-core/src/dpt/resolve.rs": "bc56aa306c1f509cddaebdda4ff7d7bd916bf23439fc8884af9a967aafb8e99a",
+    "crates/knx-core/src/flags.rs": "d8260c3f1189e6396ea0ee31b59180ec979ae2e969af15ee69ae1da77aeb0479",
+    "crates/knx-core/src/group.rs": "0caee288a3bd2df53b91a9e749fe32212d4e8c8db15de3bb8bf8d9a14797a3e6",
+    "crates/knx-core/src/ids.rs": "8c9cf3b53ae57a3cfae093d520a5bb96521bc2f955ca59e191c8ae19ecadee93",
+    "crates/knx-core/src/installation.rs": "051fd6e6422ac5349908de0c1837244bb1dc1b68edcc5d5dd766bfdb3cb928c0",
+    "crates/knx-core/src/lib.rs": "c72d1d1931bb44669dc3a1734f08a564c1a925c16cd4f044446a38d5a4debe7a",
+    "crates/knx-core/src/module.rs": "412c64047b1b9f161be4864fa30caa0f8363e200b732e54e18941df105ccd555",
+    "crates/knx-core/src/parameter.rs": "70c83694a918f160202e41af95d1e325e3f90e9d6c8cc19393d2a62caa8f83de",
+    "crates/knx-core/src/project.rs": "30e36f934c0e6791fbbaf76700a59d89c1af7a3850d409f4c727362b56f03ca9",
+    "crates/knx-core/src/provenance.rs": "cd7f84af2339e06b7858ca69c432f353b7ef367d95b360400792a6c49b72c3a9",
+    "crates/knx-core/src/scan.rs": "144b81f896fe16b360618d2a1eea14ad428ac73573c12adb0fe402eff8cc9304",
+    "crates/knx-core/src/string_table.rs": "892d294a7a8447d27197620d9f99cbacc7231d7600a5e0f2e5bd6ac638631727",
+    "crates/knx-core/src/topology.rs": "2fc2f7dc0c570a38cc490efe6d04b1b13e91767a2e8d3184b62494243c6c5e0f",
+    "crates/knx-core/src/validation.rs": "bae4daec42eff515fc4fbb0d73378932a1b545a88c115831621d5c22ab900d3f",
+    "crates/knx-csv/Cargo.toml": "aaeaea43929a51920d2f96a17e7f796cd955590291194b6f89dc72ed958b9c8c",
+    "crates/knx-csv/src/lib.rs": "6e3da0b15da465f65670771032389800a506c0a2134a0e0cd930d2dc4f035b51",
+    "crates/knx-csv/src/plan.rs": "678ebf4cc694101c5bbebae016bd2484f1ece462322e9b2ae739112513741741",
+    "crates/knx-csv/src/read.rs": "77a46fbc66fd94225df4b730c5966f1ed8260fdf410805d33eec1a6e0fdee0b5",
+    "crates/knx-csv/src/testutil.rs": "1f9a871c3cbf652cfcb0837f73a2e91bc64ac66d54aa2f9b06d9888bdc37cb16",
+    "crates/knx-csv/src/write.rs": "709cb2628be8be806d0f83302ed5a3de0fd5c8abc2647ba59b4f29bb9712ecc5",
+    "crates/knx-diff/Cargo.toml": "51b560133d3f15e7047b4cb402f35efc04756e112c71dae9db42cfe72c8c10a4",
+    "crates/knx-diff/src/diff.rs": "41e7e54c3a3216837057ee3649c36e1617176c79d41eb91d68ca9335392358d4",
+    "crates/knx-diff/src/key.rs": "50373fe4cb3ab6cfac28ed36159b4c6dacb37c6a738b0853ea904a5bc39b46ab",
+    "crates/knx-diff/src/lib.rs": "67a3857efe3701ff72289336883af87e7f52177f5b3ed9d69875ff15d39002d4",
+    "crates/knx-diff/src/semantic.rs": "9779ffd6e65f29140b77247cea03237cfc273a1f368424f8e58b12e739504151",
+    "crates/knx-diff/src/testutil.rs": "2bd4df429717744097df1682be2c91c3ba496ee170a678077c98c43d6fcdb84d",
+    "crates/knx-etsproj/Cargo.toml": "eb8321c2259085699161c34d0e88a885d54cd7c76b8232bc66cf7ed538116fd6",
+    "crates/knx-etsproj/src/compare.rs": "9c0658b86a08421a096de4518fdc6be756bc521160b1518120685d8c8607345b",
+    "crates/knx-etsproj/src/container.rs": "6764dad04b168c147f76c3d35442b2b0771a47e429a0f9f5c7340b10fcae115c",
+    "crates/knx-etsproj/src/detect.rs": "6d30a52ba293aa1ab159b5501c31262807b5bfde6578835882678e238e5c348c",
+    "crates/knx-etsproj/src/infer.rs": "835282cac092b6a930d2ed0c78ad5b967122966d7a406eae1801b116bb9a956e",
+    "crates/knx-etsproj/src/known.rs": "ad7b14c67469492607249780d7bc195e7509528d00ffc7758191c0397205185c",
+    "crates/knx-etsproj/src/lib.rs": "655c2567dfdf2cc6922725f1e5032bc1e45d21fcf9e31de729989a3a4739d391",
+    "crates/knx-etsproj/src/map.rs": "8399d88f838b31f63351eb83d2cf513f1c1d1b7f976b1db2e4bfa5224fb43064",
+    "crates/knx-etsproj/src/opaque.rs": "9526de8c3ef80f20796a44f3a40c5875aa067e299158e29ce8d112ab8f115893",
+    "crates/knx-etsproj/src/parse/installation.rs": "3e79694b0da5d85ad50e57faa4b29a05607a423ee4e9a7edee90b7856c89f27d",
+    "crates/knx-etsproj/src/parse/installation_v21.rs": "e56cfb25998e2ad09402d604dcf09eb6b08842d3738b49c6a5138cd5f78618e6",
+    "crates/knx-etsproj/src/parse/mod.rs": "083c34c2a4240c2dfcb3edfd6b33ce3b74264e53291866593aeabf059c02be0a",
+    "crates/knx-etsproj/src/parse/project_info.rs": "196f62ebe7d5b2d6a687ddb7408e4db292b294b7d1218d17d891ea23e0a5b5bc",
+    "crates/knx-etsproj/src/progress.rs": "2d830a8ab6ab73c476db8f9be8a93e581f3f40c512faf7c819c46016c95197cc",
+    "crates/knx-etsproj/src/report.rs": "5249ad09f583b41bbb06090710698db38d1d97e676b2d53f60fc2045ab627738",
+    "crates/knx-etsproj/src/source.rs": "a473782668b5c1fd79b7ecbd43103181569f53f3f88d63e042a1080f9f32bdc9",
+    "crates/knx-etsproj/src/testutil.rs": "820dc4fd3ad281d63c1bf0a8ec9c7b964fa0b9969c782c60fec2b9e94c2a4c7f",
+    "crates/knx-etsproj/src/validate.rs": "4dd67e79b8013d128360e966377bb411b3d1629f688bd5a2cbe3c6907d483db1",
+    "crates/knx-etsproj/src/values.rs": "cc2f097df695ae039f5467e7e113952e3e01c17baef66996d9a03821d4d9a009",
+    "crates/knx-etsproj/src/xpath.rs": "e9edb05ecc36d955b53fd11bf8710808f40df213a0cf9cbca65320312449435a",
+    "crates/knx-etsproj/tests/com_object_activity.rs": "5967b61a98fe4cacd530c353965f902b61cb6a83a73646da6f19e7290a2f8fe6",
+    "crates/knx-etsproj/tests/device_local_com_object_refs.rs": "8333707d48e05c3cd9e9d98864ea8821cffcf338e2f7888a458397c945ca2456",
+    "crates/knx-etsproj/tests/download_state.rs": "5f22995e34a681eea01dcfe709db88f9f8b2d30d91d700f4119a6dc20233119e",
+    "crates/knx-etsproj/tests/golden_reference_project.rs": "3ed28211f141216bc5254b76ac8b123986fc67d3045746b7ec7c42cbaa64610f",
+    "crates/knx-etsproj/tests/links_direction.rs": "fa6031991d56362d686aa29c7bf2bbeb4be228ff64c787e751fa277533e555f0",
+    "crates/knx-etsproj/tests/malformed_input.rs": "5b12df28e344306ad9f2c99580f5200ece3fbe9117a786fe13f015594027698f",
+    "crates/knx-etsproj/tests/oracle_xknxproject.rs": "fbff9c60739e0c793b5595bc9578f6898a2927d6079292095874926298642271",
+    "crates/knx-etsproj/tests/site_hierarchy.rs": "c04e2ef572bbad4b71822a5ca841e6f868019bd4ff232180e6e2500c62e0fa98",
+    "crates/knx-etsproj/tests/support/mod.rs": "10227dabf4ba23547d80634815ab585bd1e1197239fab71b645160b5f7864481",
+    "crates/knx-net/Cargo.toml": "25dd468067b28854940ae23360a4205b38cd5d51d1adc1b592530fc733bdcf83",
+    "crates/knx-net/src/cemi.rs": "5a5cabcb32963f881c2e71d43bc99ef6dccdedd508ad82684f1138e1bfba644b",
+    "crates/knx-net/src/client.rs": "80ac3dc9e6e2e8e996683dfb71746aa37de264d347ab13bd5adbd6acff23d6f6",
+    "crates/knx-net/src/commissioning.rs": "32a7ab75af327e5ed594a9a7d5f9f0654f0331877841c231a37c44826a248c0e",
+    "crates/knx-net/src/commissioning/domain_address.rs": "f581c74243997d42ee2aebed1d250c5160def573d1c60848f5d60dd6227f920a",
+    "crates/knx-net/src/commissioning/download.rs": "f0642f45195e8a04f822cce04d6137e09de2c7331f260531d5139efef4e231a7",
+    "crates/knx-net/src/commissioning/individual_address_reset.rs": "24c495dd35654d014aef8a197dbb85c28d78a8ae04d8405857686cc8c915770b",
+    "crates/knx-net/src/commissioning/individual_address_write.rs": "e37ae7ee7e9c2f137a32b498719ed331bf8add1f3b7cf5efaa76c8e9be6b8dd4",
+    "crates/knx-net/src/commissioning/master_reset.rs": "19753042891a9e6360f637ef5b52eeda4e9f6411557ff0bf747a7213c2aa7108",
+    "crates/knx-net/src/commissioning/memory_download.rs": "237e9496601a1234f3f2ea4673f67daecad817973c7ef924bc786d9161b726ee",
+    "crates/knx-net/src/commissioning/programming_button_wait.rs": "57e72e0f53b12929f23c2e7e7d651d8c845e29b77f6d38cb60f3682aed1b48bc",
+    "crates/knx-net/src/commissioning/rf_configuration.rs": "d9068ec64834d7cbb2a1ee2b9a3a33965dc6c14b35d87e043f26023eda33a0b6",
+    "crates/knx-net/src/commissioning/serial_number_write.rs": "dedb923b032be5a9e57ee0f5831571a0d4d05708e11a39ac3ac5521edbcb9215",
+    "crates/knx-net/src/commissioning/service_control.rs": "38250230854813c0675467052a4792d02a8747cc450fb8ecaac7f13ab087bfc3",
+    "crates/knx-net/src/commissioning/simulator.rs": "77082cda6c6dfc45598978234754ceb6cb96a37e3b64f2eb40ba3fb4b295d211",
+    "crates/knx-net/src/core/dib.rs": "cb6282be0af6035d1909814275269c94697e9ba600a538ff4fa6fa04e0cefd05",
+    "crates/knx-net/src/core/hpai.rs": "31ca2b7e83871a3b4b893b94b72e2fc9afd6bd8492b1374eb9a07b652965d448",
+    "crates/knx-net/src/core/mod.rs": "a17d52e46a43355a5d3f3d64b61d144c739bd914f278b7dfea6f4096a4954936",
+    "crates/knx-net/src/core/services.rs": "dd20d5f59ea52f2c7e901117a8958eabfa94782409a0a8b477e1983c13893858",
+    "crates/knx-net/src/discovery.rs": "3db638af0bc8f0f772868cef0852361483cd4e99caa1e2b476a588f6ba4f6da8",
+    "crates/knx-net/src/frame.rs": "8f6919175b6cac7949a04d1b8d93e64a35c352c22173c401139620362dacdbb6",
+    "crates/knx-net/src/lib.rs": "dd49b3d396bc4ba90fcf1cb91f1f604e561279dee764ae4fae8b1df94dc25601",
+    "crates/knx-net/src/management.rs": "246a444124a2a568942007fa7b4d506dbc604032e11ddcc3d2980676a1ef2de8",
+    "crates/knx-net/src/routing.rs": "57c531015656c92767ac758553d199b99b5853ea9c2ff7e140326248a256cd5e",
+    "crates/knx-net/src/scan.rs": "d61f234ec6ff8e493948d196defeecfc44d11a6399198cb148714b5a3e8f9214",
+    "crates/knx-net/src/tunnelling.rs": "0d3aba4ba5e642caf9fc16e67cb8e133edffc4e8ca35b8b30a50207c6bf58714",
+    "crates/knx-net/tests/hardware_write_gate.rs": "3fef975a0df0cfc482be6eded69671c685c35fdc4d5dc462b5f8ad606b1a24b2",
+    "crates/knx-net/tests/live_commissioning_readonly.rs": "e8c3b6d0ae4fcfe5e43083d11748501d73d6cd7154d4043838295d862cc7c4f2",
+    "crates/knx-net/tests/live_gateway.rs": "89f527fc99d7e25e25955757dc3fc190003adba4f73af16a0c67c04d0a14d0ae",
+    "crates/knx-net/tests/live_identify.rs": "d99af9b3930db19cf17f905732bc826b67f698986b2a9384e99d35e18c36d9d1",
+    "crates/knx-net/tests/live_individual_address_write.rs": "3a0d7b7ae813cc3e26e1db7b209e0b8c97e0cfa8ec8947913da0b5e7e52a7e5f",
+    "crates/knx-net/tests/live_memory_readonly.rs": "d2007b8c99ac201daf35274c9b704cbf7933f80d7e24620f5e60c8437f3dc2e1",
+    "crates/knx-net/tests/live_programming_mode.rs": "dee625a452b69a0d9206f437db3c54bb10025fb43ea9f85a0ce6df494154065a",
+    "crates/knx-net/tests/private_telegram_log.rs": "0ea2d1c5ddc392776d65ca446f5a04301e279a14ecb610a004f88d7a5003e3f1",
+    "crates/knx-productdb/Cargo.toml": "c766a7df2ef67f240bb3978902b999d7cfa71f9eae4aa758da4612900a04e6cd",
+    "crates/knx-productdb/src/baggage.rs": "57b40f4c76cf5449ba07d9ccc0d8873c592cb3718aa57ce4ed84e54ee8c8f965",
+    "crates/knx-productdb/src/blob.rs": "80586a3957834ed4e186cf07150afb8a79868944d8a37e05afb718b5a576cc5c",
+    "crates/knx-productdb/src/code.rs": "80eff5beb76c615291977f1eebb839b81eac43c4522ea7bf9275c28b7bf9528a",
+    "crates/knx-productdb/src/download_plan.rs": "23218e49574a44d6280d2351c6d7147877caa0d038e93fe407e0951cf26b2ff8",
+    "crates/knx-productdb/src/dynamic/evaluate.rs": "a5e1095a3c7a82ff6ce707b53089fc5683f7c75f29a9ecc83dace142d327427d",
+    "crates/knx-productdb/src/dynamic/evaluate/text_projection_tests.rs": "56c0ba46fcd33d23a6d90930a7722fe9ceeaaa2eb65afccf71153fdc74c3e8a0",
+    "crates/knx-productdb/src/dynamic/evaluate/work_budget_tests.rs": "165aff76c8ad3a4a6b5d742041ec27ee6b97d451c502ac6cb65120ce7724608f",
+    "crates/knx-productdb/src/dynamic/mod.rs": "6a8da43514b98a0d782f3fc1a44f82a51dec91d772f3702151759c979056cda8",
+    "crates/knx-productdb/src/dynamic/parse.rs": "71ddd4ff3f18ad234a838e5f68bba34c6375baca4b6e93b96d46e85a23a5374e",
+    "crates/knx-productdb/src/enrich.rs": "f891ad8996ef5c9b690320fbadc3922bd9cf523c55d99c4e7beba4bf473bc0d9",
+    "crates/knx-productdb/src/identity.rs": "d4e4a668ed2d6abe0996fe87091eba01f8ce02c946c6bfc5e9eb5e0d5bc7f128",
+    "crates/knx-productdb/src/image.rs": "012d4b3d2b8ca5ba4173330ecf5692e085617d94009d486185198ace5a9e64ea",
+    "crates/knx-productdb/src/image_request.rs": "52921c07dce604fd29594653f444c94af2f32db35a7ce49736251dbab7cb3133",
+    "crates/knx-productdb/src/ingest.rs": "40961bf56f7e090d0cc127e5b4616cd489146026644cdcebb86ab4cc59c5010e",
+    "crates/knx-productdb/src/lib.rs": "7b9c95620353a61a1bca9812241917d7eb8439f4677e31d28c18bc6795d07fff",
+    "crates/knx-productdb/src/master_evidence.rs": "afe7cd98a0593b5a1452cfea21fdc4c38a1893f8983beca2b434f2967ac71cdc",
+    "crates/knx-productdb/src/migration.rs": "d7a8a79aa20039ed2aed9ff9f0c8444b5664d63143aa8f8fd3f16f80bbe26e9e",
+    "crates/knx-productdb/src/package.rs": "b9fe2a8e527c95a2409b5d4a91c74f4ade66f5f0e20ca77763fc2f9289276a50",
+    "crates/knx-productdb/src/parse/baggage.rs": "530d0cb6f6f0e04f97b0a5f2ef29bab27b078b4e1e73364fbcf65168ea7c6843",
+    "crates/knx-productdb/src/parse/catalog.rs": "adfd77d10322638cd7143e74b9d9611eb42bfa0a723ef9f2c27cc409b3b88ae1",
+    "crates/knx-productdb/src/parse/comobject.rs": "3b01a9dcc654446d870dd0b626a365026892c85726def32fb9f802c6b795b4e2",
+    "crates/knx-productdb/src/parse/hardware.rs": "07137d39ea01b7c2746d9bef05991913317371b2e08e2b4003e069d2732c829f",
+    "crates/knx-productdb/src/parse/master.rs": "57910705c1db8002ad36e6d966e925055f5adcf12963607211eddefce65e792f",
+    "crates/knx-productdb/src/parse/master_language.rs": "ab47286ee7f3b8512e89a60fbfe055e980308c37bc039feb1a7b0b07fa94c982",
+    "crates/knx-productdb/src/parse/mod.rs": "3b35070cb99c4c9e000d8b97a07c13ada0350dea874588950015ce884d343c00",
+    "crates/knx-productdb/src/parse/program.rs": "e6c51199e0d30509c528da998cde487e1fdff1803bf3a7d8e47333509f04f7da",
+    "crates/knx-productdb/src/parse/scheme_evidence.rs": "7487cf79f811b37873db6095d444601e1e65cdc96672ea94a5fae080820aea46",
+    "crates/knx-productdb/src/parse/translation.rs": "49c15b6158fa678859aba41baae6419299ce38101d0e0af02f4d262b16996391",
+    "crates/knx-productdb/src/query.rs": "2c8cd7eb7c06a9313e0c392e4009114f0edbf7c829e7a56503565d7c99a363f7",
+    "crates/knx-productdb/src/report.rs": "2705391f59d7149a8b7494f634d795b884d799f63dcf25ea8ef5fc407f281bb4",
+    "crates/knx-productdb/src/xml.rs": "6efd6888761faf1cfe5d511dce4c4bbed2158a344bd986eaa55ea518873c5abd",
+    "crates/knx-productdb/tests/ar05_corpus_upgrade.rs": "45059944f1384aa029e4191a0a156daf516f2c1010c3f46160312d00de25b55d",
+    "crates/knx-productdb/tests/ar05_language_probe.rs": "30adf18b4ff3b0426f28cdd462f91a8f4d3058cc3f04e79ebb4ee3e3999757d6",
+    "crates/knx-productdb/tests/baggage_inventory.rs": "7eb7657d8abf11e60d2ad7223fa793bfe026119a9604735826b40a487502c89b",
+    "crates/knx-productdb/tests/catalog_metadata.rs": "ed57d957c6fbea628223fdb543cdc7680946a8544662e368e37a6ed2402b529c",
+    "crates/knx-productdb/tests/channel_name_number.rs": "f1a57931abd684ed160bc19f520ecc74f940e905947ae831676932bdd59b3cb1",
+    "crates/knx-productdb/tests/corpus_compatibility_matrix.rs": "f26f904ffc620980982c006d9e8487fb7b710c8300846b84c8d8c700facb8eeb",
+    "crates/knx-productdb/tests/corpus_support/mod.rs": "dff6b990f7101589047f776160b859125fe56548ada805f6fae092e0c98dbebc",
+    "crates/knx-productdb/tests/corpus_support/output.rs": "f458ae4ea9d4a85b577785f568d81f196f7ddb7bce670314f10c909fad2297fd",
+    "crates/knx-productdb/tests/dynamic_channel_owner.rs": "f6c7bbb0fbe3ccadf6aeeec87f7f17b66d04625cd35577a4fbecca5b13624268",
+    "crates/knx-productdb/tests/dynamic_control_kind.rs": "6ff124045c1a7f194445464dd01cf5bae8eb73429c8a09372aaa3b8f9fa05e2a",
+    "crates/knx-productdb/tests/dynamic_scalar_copy/mod.rs": "5039dc005344de9656b8bef90dc1b3acb50d14e19a0b33c3513bd914b1fae463",
+    "crates/knx-productdb/tests/dynamic_tree.rs": "116dfacf8bdbbb4b48521bfb7e3446ac7f779f1c46cc9dcf246dfcc681f1a33b",
+    "crates/knx-productdb/tests/golden_reference_products.rs": "1b9a39ca03c7e7c92edd4beaa96eedfec0e2c70ea17652d99aa28225fd5967d4",
+    "crates/knx-productdb/tests/install_reports.rs": "0c8c3e90a1f539bb3be544499bd53db6eb8295579dba05fdc71a9c05728940eb",
+    "crates/knx-productdb/tests/large_member_memory.rs": "429f91b364d4bbd73460a36897198625c84e7ea0c33d60d96035570da9f998ef",
+    "crates/knx-productdb/tests/legacy_member_names_corpus.rs": "36646f3c278d679ef4f9454332ab5398bf44fa529361cf0fef8b20e237d97088",
+    "crates/knx-productdb/tests/malformed_input.rs": "5204d6b74bf262ae8debe332b90f3d45e4e2076e20830fa1f8132544c80e7a53",
+    "crates/knx-productdb/tests/master_evidence_rederive.rs": "199f7eac7acbb3a2d95ea6aafd68a252413f52d7721c9f6c7bf6320d09687957",
+    "crates/knx-productdb/tests/master_language_evidence.rs": "9408683a8119f94b2f8c879ee07f0383ba49c820158cc3d39537b7e099d49799",
+    "crates/knx-productdb/tests/nested_module_private.rs": "89a59ae99687a7eb489f01af6af89655ca98c3a73d13a7305749107ece158cab",
+    "crates/knx-productdb/tests/nested_module_storage.rs": "7cac475233bf97cf004974679cda8a432933a6a5c22bf49e81aaf6333e5c5299",
+    "crates/knx-productdb/tests/package_identity.rs": "fd0546ec23c3724e09d4fa5b4eb1f4cbdb315d5f1c4ce01d82dadae329549fd7",
+    "crates/knx-productdb/tests/parameter_kinds.rs": "e2982958b577f4972aedafd007c4e3e55fa160f3f08a63d995ee75ffe627fc82",
+    "crates/knx-productdb/tests/parameter_views_corpus.rs": "16e81df8e3e380dc32df0dc114f7901b34d38de297fa07b91491b7c8dd841793",
+    "crates/knx-productdb/tests/program_code.rs": "2c056437178e083f81342eeb861f39314ca799c8f3d75c57d9260573c69bb6a5",
+    "crates/knx-productdb/tests/public_api_compat.rs": "f95dfaa84a9e08a0c912ae587874a2400cb06cf7ad33ff66a8d23130c6892916",
+    "crates/knx-productdb/tests/scheme12_14.rs": "a8be20f85b003a81c1263bfd576098452a230295911937b7d200d28fca9ba247",
+    "crates/knx-productdb/tests/scheme13.rs": "008c651d189d2fc5f45a4f1899986572951769e8b9bb1be2a36abe104a0d2b80",
+    "crates/knx-productdb/tests/scheme21.rs": "5907d178537aee7654d4a8848a035c86f5238428b0df3e11810938a6b9deadb9",
+    "crates/knx-productdb/tests/standalone_packages.rs": "36c8baf7f69e68aee8b4ab799f0605f81f042b5ca3629482ed458c7e8242aa83",
+    "crates/knx-productdb/tests/v16_rewind/mod.rs": "3dfa49d102f4b697cccafb68028ec3bd4523e100e3f77af356c17f531a5c5df2",
+    "crates/knx-productdb/tests/v17_rewind/mod.rs": "a36f42ba598f8ed61729644d7df2c1d620bfb4c2786662901177ad0ebb8dd54b",
+    "crates/knx-productdb/tests/v18_rewind/mod.rs": "52cc9f2b6c95f462a00861b71760d454cf487adfceb349aabeb31304baa1b3a8",
+    "crates/knx-projection/Cargo.toml": "0ec1c03c2b43e73f03d03075a6a6423701271eddae8bb8622d26b3e4d71fa926",
+    "crates/knx-projection/src/lib.rs": "5ffd7ddaecde7e4fc3b22aa93faf7feea2c28c7e097e7fca37b08232a49fe8f6",
+    "crates/knx-report/Cargo.toml": "3d91a33ce7bc0f283ea95470c3b77c785f32452d1df78aacf70a79f65e7c8f84",
+    "crates/knx-report/src/html.rs": "badbe0708e92cfcb0afe79e63a83d17aeb3905df40161459bf9e7bf2e0e5d29b",
+    "crates/knx-report/src/lib.rs": "54c745a463edf093b7eca0e31b7c190dfb1a8069c5449f11a00cbf5f8128ab18",
+    "crates/knx-report/src/model.rs": "5ccc6741824cb4409c093f21ab2611d90e6a22f60c19256534f4c04d07a9cd3d",
+    "crates/knx-report/src/render.rs": "2b317d4d43f83b5262ca8801c061d4e26d40381910d8ee34a5f4ddf44e1d83ee",
+    "crates/knx-report/src/testutil.rs": "646b334016ec7fbd9de2f5cf3b5f6ea019f687de3f3f5b660a856651b69fac45",
+    "crates/knx-secure/Cargo.toml": "a5c62dc3992c6b859a4864a21eddb82d076c3652ddb63640d4fd395d09027d86",
+    "crates/knx-secure/src/lib.rs": "fbe11bbd6af3af922f2061825d83bd6f77233732a6c76ac0276310981c71b7dc",
+    "crates/knx-secure/src/zipcrypto.rs": "ab27592a04955ef799e05470f6c15ac931185c699987ef4623afb85e43f740d3",
+    "crates/knx-store/Cargo.toml": "7b0bab8551e82f8e93500318d6877932f545b99a12008d696154d6fcdb8fd2bd",
+    "crates/knx-store/src/activity_history.rs": "3ed916b38cbadd2c209a0126523640ab374f480eb6e584eb252c7d444d6b28ed",
+    "crates/knx-store/src/building.rs": "368e17c45e8f8ceafdbcc623e9a78d5b0f45245ce1132211e5781a1d10022c5f",
+    "crates/knx-store/src/command_sync.rs": "aff0b56d6a7c06dd25d367a1fc724e39013f54524f0a03c882c4383ad3e78187",
+    "crates/knx-store/src/devices.rs": "06f77786a0e16a881d3df0767053bc802821bc331f0bf98621cbe5562f0e1f61",
+    "crates/knx-store/src/group.rs": "1d6e7c7f3a0ab7d5b1e509c412cf0fca65d03fbf348425935898da093b411e83",
+    "crates/knx-store/src/lib.rs": "3f1e541364b00584e45e2930b520d10a20f5688ba56a5bd5d617334ce1735860",
+    "crates/knx-store/src/manifest.rs": "2f082825159577d1b551194cc9df558104897748f8511f39cb86c5beae35ccbe",
+    "crates/knx-store/src/migration.rs": "0883a6525c4de867b2f1a75938862290ea59a72409e86f452f25d6467ecff2e2",
+    "crates/knx-store/src/module_instance.rs": "c3b2f9b39b6f1bc55a68faf4e0f9a20278c5b897f546ef46eba22167076a40b3",
+    "crates/knx-store/src/opaque.rs": "65846a4c4193ae4c7fd48b89777270db27bb6531d31d63cbee8b62e683b7a1f2",
+    "crates/knx-store/src/parameter.rs": "38567116dcbdd318f7562fc9b60af9e6d03e829d390ce39b53d1fae9f890384c",
+    "crates/knx-store/src/project.rs": "2aca1e8f07205bb9a0b6938a220d142b01b49aa86849e501b501b1bcd2bbd9ad",
+    "crates/knx-store/src/strings.rs": "31ea287fa1dc9d70eedacb806e15519cb3e93661e5ebd8af1149e65a4dafe00d",
+    "crates/knx-store/src/topology.rs": "bcd317ab8389bbb633439524d49ef3e9fad10c7db7959c41544658d4e80b08b8",
+    "crates/knx-store/tests/command_persistence.rs": "192fe01af64a3310ea46f73a99ad2db6cf4e7ddb891ef6dc5a98baf460a95439",
+    "crates/knx-store/tests/reference_project.rs": "185001e2e6d91517a6891cdaae39d136640f70e0fc6d9329030edbc6e6b6472d",
+    "crates/knx-testsupport/Cargo.toml": "6a69c7b7eb5ba539768b23391193f2c0b0fb5f769a0fc2f8143eef59979e5eca",
+    "crates/knx-testsupport/src/lib.rs": "11fb1a43d69587ade13ef996da0ef2d10360cfb558865d2974c398276ccd517f",
+    "xtask/Cargo.toml": "98c4332b3c67835f012f8106b1ab577b01bff001eb5f2358432f2c1ef5267856",
+    "xtask/src/anchors.rs": "bb0f096c42d450e61b67a1bf32094ee99747360917795ccc626cbd7adf7c5de4",
+    "xtask/src/appimage.rs": "7d661a68918a5b0285f7aa1d0edc73c40074fca514ba271c6ac01db9cc127716",
+    "xtask/src/corpus_gates.rs": "4ee48a56df21a4b527ab2931ac7c8980238afcfbd91cee77f2005e5d63db1c94",
+    "xtask/src/headers.rs": "f77aed6c5b1f2dafed48900cb73007482dd8c44c92a69ab7363b1e5ccd816088",
+    "xtask/src/layering.rs": "5917432d69d77fe14ac87f07042560e9cb931d2a82383cb2989e7a7ae1247fc6",
+    "xtask/src/main.rs": "bf5e9da7c2b2794ab2b4221935c1501d8a3b0952dffd9d4d18f91700a3a0a221",
+    "xtask/src/scope.rs": "1a2f2a8609c5905a293c2956b4849bb38267d0740a744974f291dbff4437b911",
+    "xtask/tests/gate_scope.rs": "637e9ef68731bd3354f59d88de0e50d8ee1be7bcccb67ea1a14f1698d126c044"
+  },
+  "tracked_web_inputs": {
+    "apps/knx-web/.gitignore": "13aa37d97d9df62c1345fcd5a3263c8d8dd4757dfa2e05c0b6c735b8c0772d82",
+    "apps/knx-web/e2e/address-unavailable-fixture.html": "7e42cd86fb47df88379daddcc98c7f2b66e3c2c427612655f0d47b6fef0089c3",
+    "apps/knx-web/e2e/address-unavailable-fixture.tsx": "603779eb59d62e65c3e8e88d1e2a3078a5613c137da54e9544bb599663f60369",
+    "apps/knx-web/e2e/address-unavailable.e2e.ts": "4a8ab28d7b89030b5f5168c545f03a76b6c5139f28ab86b693cf22d9d91425c2",
+    "apps/knx-web/e2e/device-checks-fixture.html": "649077c1385c1d1c721aa22a784d286831a5cd3f294ad4fa90f5ff460d12ad20",
+    "apps/knx-web/e2e/device-checks-fixture.tsx": "80f97a96b15af87e044b74de476af6289175be346f2349d613cc6b91b7b7c07a",
+    "apps/knx-web/e2e/device-checks.e2e.ts": "c97f463ae2fc9531c563cbe2d334fa5b5e75be99a04d4c317e128ac59998565a",
+    "apps/knx-web/e2e/device-editor-fixture.html": "4e95e9fc3a79ef582ca7987685ad8562e8c459f61e58980e4932de4490705ea5",
+    "apps/knx-web/e2e/device-editor-fixture.tsx": "bb1b89fe7152ab9d9180f684e4694fa4161809b1d2912b05e741ab1fa9927d45",
+    "apps/knx-web/e2e/device-editor-layout.e2e.ts": "fe496c8c9f77ac1439d62ed7edc088fb968616353504c635ba8518574a66f893",
+    "apps/knx-web/e2e/keyboard-contract.e2e.ts": "7a193e7471606a8e83802a5489ec731e347cc5686d61a19b3173f1a0ae7f999f",
+    "apps/knx-web/e2e/keyboard-fixture.html": "4783d869dd8a0f7eb771785529af70d263312cbd3709e99963d5cf22d9077a38",
+    "apps/knx-web/e2e/keyboard-fixture.tsx": "0ca41415f178133b06e560dcd578b2bafac7a81f5f9c8f665654a913ab32b56c",
+    "apps/knx-web/e2e/monitor-control-fixture.html": "3cbafe8b254cdff1822744de1e6becac515669795abbe64c82628c05d609fea2",
+    "apps/knx-web/e2e/monitor-control-fixture.tsx": "4f6b87b6a11168bd023ec897e73d7bc6529a0eef3c57324d610e022b23244d6d",
+    "apps/knx-web/e2e/monitor-control.e2e.ts": "93a00f6ddf1f3684eabd3a6b1752da6c1b983490656f42b87b79bb55ee8fdfbd",
+    "apps/knx-web/e2e/new-project.e2e.ts": "c0d849136bab974d950a89b474f731b7c667660a15aacb399c75b7e810028ba6",
+    "apps/knx-web/e2e/service-control-fixture.html": "3cb839aba7ab92eca6ce4b55c30bb636f15bd1194bf681ea7dfe270f501d482c",
+    "apps/knx-web/e2e/service-control-fixture.tsx": "93f1a1d03318e5e9b9717087b035bddfdca5965aea1f4833ad6a6c74e54e5a5f",
+    "apps/knx-web/e2e/service-control.e2e.ts": "c28be2fd7ed729c34fa5dad618a4a6fb7108e84ae86749bd624fdb6a3621bdc5",
+    "apps/knx-web/e2e/site-fixture-data.ts": "72b536832aa0e8084c12af1ed2def7837b57b7f77c66bcf777b2bcabe6a9b5b3",
+    "apps/knx-web/e2e/site-fixture.html": "44b2a1f5e6e8bfd695efeefdb59a0aa728e6ea69cb8e64b2dbc15ed5099fdef4",
+    "apps/knx-web/e2e/site-fixture.tsx": "cd2759128bc77f24c1e16317b5b35f614ba1b069092066c62b64723beda6e42f",
+    "apps/knx-web/e2e/site.e2e.ts": "4e3d29c27e85058aa3508ca16f756f8f4b6a85999251e6497447e720631eb344",
+    "apps/knx-web/e2e/theme-manager-fixture.html": "0a21746349a13dd8052281529e02d8953b7e94e962a48190c438eacfda02b90d",
+    "apps/knx-web/e2e/theme-manager-fixture.tsx": "a1d4d61c80a2e3d36e37bfd80286550d7ceeb783a770bb726abed0f08a1bfa8b",
+    "apps/knx-web/e2e/theme-manager.e2e.ts": "ad162d7371950f39afe1ae86df477f8f801e32f3e3e4088bd92b0004f3d84696",
+    "apps/knx-web/e2e/theme-pack-fixture.html": "9df479edcf952834b44088efe7dc12b89ddf843932b5d2adb93e02c885d54b28",
+    "apps/knx-web/e2e/theme-pack-fixture.tsx": "e7b5b0dc93cf74f84e186f41b1c7b6a78f280e294a7d8493e358797ccbe7ff11",
+    "apps/knx-web/e2e/theme-pack.e2e.ts": "6cee3844c54e3df489797160bf01dd5bc38abda1e6b08842e61ed3ecbfe8bed6",
+    "apps/knx-web/e2e/theme-state-data.ts": "51ff918b2165d057c39c5e2d48d015acf2e80b68825f3fbcdaca3720c990ca15",
+    "apps/knx-web/e2e/theme-state-fixture.tsx": "e4d147f393e4349bf0f24fecd427cb0004d93fdc4e42f5334c5cacdb2720c360",
+    "apps/knx-web/e2e/theme-state.e2e.ts": "35f423a9892ac6cc0be0287f3158d4b766fe9dfb38a75710f5a83564d4286b00",
+    "apps/knx-web/index.html": "55ac62d7701d027c8f35411f87165cfa177d8a708c7260bbff4c767e0ababfd2",
+    "apps/knx-web/package-lock.json": "dc804ac76beaf5b14aac7aae27ffd28af4e52a58b9227f45ad36614a72282393",
+    "apps/knx-web/package.json": "e02b8ed583e0bb8718a609ae2dfed0b0ce401480fb457b95465a4cdafb1337e5",
+    "apps/knx-web/playwright.address-unavailable.config.ts": "078bf29c4b18a8e22b5e068898cd1838989adb9e8af1173160950ef6ba53b456",
+    "apps/knx-web/playwright.config.ts": "6890afff22764a7726cd32730cc9fd9be5015b394e64c0cec1a83d5a6a6636d7",
+    "apps/knx-web/playwright.device-checks.config.ts": "41ad7585942f4b8d0ac9a8bef49f4a767ae697a5feb5d176809529d78f40fca7",
+    "apps/knx-web/playwright.issue09.config.ts": "f3c686c29f1e969623c7a07f2df9dfb80ab9882dcf98e17d94260cf046de63ad",
+    "apps/knx-web/playwright.monitor-control.config.ts": "761c40ede54ca2ba9a104778b52a492aa874b18c005472436724c38ed0864ae0",
+    "apps/knx-web/playwright.service-control.config.ts": "331ec0b9a132eb9cce5e23b6f4f28bb350d38fbca13f7365134d1e1c46d38a5f",
+    "apps/knx-web/playwright.site.config.ts": "21b6389581dab1f40023ab6e76c21bdfaf8ab492518ed72cd1d5dd5975b1da2d",
+    "apps/knx-web/scripts/workbench-browser-proof.mjs": "dd3ee7ae95527d369190a975cd32f8db7ddb1f75f7d0fd9a70934b1f69cbffcb",
+    "apps/knx-web/src/AboutDialog.test.tsx": "a55343fa496e2193334a6ce653b8ca873b847facdf7985c8a114efe0b9c9f66e",
+    "apps/knx-web/src/AboutDialog.tsx": "8ab4df2772c7be94c43d462bc809762c482d3916263ce82be60d3201cca13d3b",
+    "apps/knx-web/src/AddressProgrammingPanel.test.tsx": "025be8619ea17f67eb436f1fcc79df579c9473620d020b9d0c5c3ca2fe133d56",
+    "apps/knx-web/src/AddressProgrammingPanel.tsx": "e578ece10689bc721010828bffbbd0ebd07b9742be88e5b958a815742ace8ace",
+    "apps/knx-web/src/App.test.tsx": "d25e4f4905d54b7d2b0e7f18b5a6f3d4584e9cbfcc5469792a0c8eb6038e5cde",
+    "apps/knx-web/src/App.tsx": "50cf88f35845faa3031a19790ac9d31ce25da1af2659fc7e387bd3508b7ac16c",
+    "apps/knx-web/src/AuthGate.test.tsx": "dab23e654c34c4779fb77418d739160bab1e9d73ec59ed5b715b3b358f7a0451",
+    "apps/knx-web/src/AuthGate.tsx": "524c9ad3a3b6ccbb7051d71fb48cdf63dcb619eac4dd4f2029d823a7115cea8d",
+    "apps/knx-web/src/BulkActionToolbar.tsx": "cbab8d1fd2359ee2a56cf21fdd1313c02c2f65907ff8eb1127feb97422ac8d50",
+    "apps/knx-web/src/BusComposeForm.test.tsx": "a1237995ae63de3d11f88163b78fd94fa38cb62cd5122827705adeda6aaa0654",
+    "apps/knx-web/src/BusComposeForm.tsx": "a74796caa4142bfad2388c2648b53357e4bcadfbc283c9ab668631402f5e6c04",
+    "apps/knx-web/src/BusDiagnosticsPanel.test.tsx": "2a5aeb1d7d5f284d2858451f840ad32010fb30827e31843082c025c0aa1e6bae",
+    "apps/knx-web/src/BusDiagnosticsPanel.tsx": "5bdc0a3c51a26ef20bc7c7d19494a513c5651de968cc574bb67069c5412a708c",
+    "apps/knx-web/src/BusMonitorPanel.test.tsx": "d80c46e69274842ef547019260a0870afd649cfa42e8ba2300bba688d14963f1",
+    "apps/knx-web/src/BusMonitorPanel.tsx": "e1f4dfba38804d6760d692062282b062347469b292c25ef5040c097d6462b2bd",
+    "apps/knx-web/src/CatalogBrowser.test.tsx": "551c4f0f1175ea8fac34e3d2d23b6747cc71bbcb59fd927418016c9ea5b46ddf",
+    "apps/knx-web/src/CatalogBrowser.tsx": "3dd41bf5ba72305b06b0b76c70e08f96cb0d305be44fb6bfb704c487b280867b",
+    "apps/knx-web/src/CommandPalette.test.tsx": "f9fab0959603bc897ec44a16e47e76dfb4df766ce445a8e02c76d054b5b45362",
+    "apps/knx-web/src/CommandPalette.tsx": "ae80a168018033efb0cfb0b8cc2dae5126e6dc61bab78f56b5554e801514be7f",
+    "apps/knx-web/src/Dashboard.tsx": "89badd0edee7486e46697b117480e5cff91a0d9d5bbc9bf5aaac1ec20e2c212e",
+    "apps/knx-web/src/DebugReportButton.test.tsx": "8bf9f5d35a4fac5f139a2e5bcb57336ee495ec9c30cb7a6deeb79d366789a22e",
+    "apps/knx-web/src/DebugReportButton.tsx": "5e962ef041b3d9dc289c97f1ddcd64f6ef29d00c90dce40310613032bfe60ff6",
+    "apps/knx-web/src/DeviceDownloadPanel.test.tsx": "92a94cdb1b54323a8f4a696606f19e52f00245f17914c64047a3f267c164354a",
+    "apps/knx-web/src/DeviceDownloadPanel.tsx": "dda9313ddbdcc01ad33561e04e645df3821ccb674916a6dfb8254c2efc44aa4b",
+    "apps/knx-web/src/DeviceInspectionPanel.test.tsx": "f379445fd13cbe07ccae9064c2c5e7600da320bcd95e7a3ce49077d714d49fd4",
+    "apps/knx-web/src/DeviceInspectionPanel.tsx": "4027d81623da4f18240672af8591fd3f07c8dda936a2a5ad9698b2370118950c",
+    "apps/knx-web/src/DeviceWorkspace.test.tsx": "6c4250262f3851e64ced479e07e93e77cb5b79c86c38a331b862d230fc861c0e",
+    "apps/knx-web/src/DiagnosticsCompanion.test.tsx": "505405c0e74013c8a1458534e9552128541c330d9acc291c96ef7abc8e61608d",
+    "apps/knx-web/src/DiagnosticsCompanion.tsx": "b1e083310dbc80b8346e574aa33d2e90c24bd5839d7650ff9c365beed335822f",
+    "apps/knx-web/src/DocumentationDialog.test.tsx": "2d623ed4ec0b772d74621ce71d3abeb24e8486dfce010da60c039a93deb75820",
+    "apps/knx-web/src/DocumentationDialog.tsx": "77bcc059508086411db7c9c0b2c715e259f75e5769c10052b606c9a7635ecb62",
+    "apps/knx-web/src/DocumentationExportButton.test.tsx": "383ddc5f521ddd8ace612766a439d4dfd80ee1e4d5be56620613a05b5cb9a277",
+    "apps/knx-web/src/DocumentationExportButton.tsx": "3bcacfcf36f72acb7ff4cc53abdb9e11d9597c6a0a141f439261c70dc782f0e1",
+    "apps/knx-web/src/FsPicker.test.tsx": "e958843dd06a17558693a6b8ebe0d7e9a53d0df3b17829c266e9db8f0d3aee9c",
+    "apps/knx-web/src/FsPicker.tsx": "ee464195c85428ec9fffb1e04b2ab4f1eaa424fc18451c2dfa318fa92ba42a09",
+    "apps/knx-web/src/GroupAddressCsvButtons.test.tsx": "4c3ae9d36c8604615f67d8744b65710f1354b5b1432e9a6598da543345c85be4",
+    "apps/knx-web/src/GroupAddressCsvButtons.tsx": "2396f28fc6446f8e200bffe1ba79a226552708fcf0856079208e1d7efcf61df5",
+    "apps/knx-web/src/GroupAddressTable.test.tsx": "9096d84c20cd8a218af8f922d578505db4acd61a5160fb7216de642bebf785c5",
+    "apps/knx-web/src/GroupAddressTable.tsx": "e9d8883a5f33dc28096f5bdf2f1218d9edc1a692113f255a57e87ea70ce67657",
+    "apps/knx-web/src/HelpPanel.test.tsx": "c7efdbfd107a0de6f4ccafeb5f092c29695b11ec7825c1c35790b2d7482786a8",
+    "apps/knx-web/src/HelpPanel.tsx": "f7f0ba5780ac7384158e22cc36d078b025628d10eb6657e09097796e7da21bb4",
+    "apps/knx-web/src/HelpTip.test.tsx": "cd2452be25758bd758bf89c06b4a526826fbb441037fd0d8eba634ab4e3f8c8a",
+    "apps/knx-web/src/HelpTip.tsx": "49d1af19d6512ae38d4d0f1c9eb907b8fc3b4f8da6b7fc102ad41a2a567841f4",
+    "apps/knx-web/src/Inspector.test.tsx": "18c39869281eefadfa84c06e2e8589949e2f6f5e2080b350f0a96aa3e0b024cc",
+    "apps/knx-web/src/Inspector.tsx": "4f0b324875c4a05d8e3ee5f29162546df7f5da85d77f7f383789629e22139dec",
+    "apps/knx-web/src/LineScanExclusionsEditor.test.tsx": "43e64031bbc5a3490c4c85c111dcc2921f541e3d4bc09fffbc5ccbfb5dd4f539",
+    "apps/knx-web/src/LineScanExclusionsEditor.tsx": "fd9b595e98dbed3b139005af9a6606fbd7b204e9a7a692603cdc5720478b4720",
+    "apps/knx-web/src/LineScanPanel.test.tsx": "663e072173d4201b02f7c7b80648ff1c437f2921042991bbe879285f3bd7c72c",
+    "apps/knx-web/src/LineScanPanel.tsx": "49332ebe88c4f09829cac57eec6c32bb0026a21b457e04df1ff02887cf50793b",
+    "apps/knx-web/src/LoadProgressBanner.test.tsx": "fde9b389920c6b3e597e8402b3c516551b55a7ab43eb05a1049f3add0f29f731",
+    "apps/knx-web/src/LoadProgressBanner.tsx": "928b2eaacaf156022732eff34b3c3648190915425620f636187374f61cfe5664",
+    "apps/knx-web/src/LogPanel.test.tsx": "c15fc2592ec7fd586f84ac6041c7f0400d7653c47d69ab23b12fa4ee88e5f7b5",
+    "apps/knx-web/src/LogPanel.tsx": "8e70c992901f9b3c3bdefb88da319e9813f213348cd55f738f8d88d67d49efd7",
+    "apps/knx-web/src/LoginScreen.tsx": "9109fa678a6adda0caa8b52ba7786ebb957180f61db9316012c2a3f30b55027c",
+    "apps/knx-web/src/NewProjectDialog.test.tsx": "cda3b1db1c74f18792ee3633d22f2749079946ee58bcc4585dab6587faf2e9a2",
+    "apps/knx-web/src/NewProjectDialog.tsx": "c1672761f474b0699b27492ca5361043bb376dd3c9bd69a55ef3ddd795873a43",
+    "apps/knx-web/src/Overlay.test.tsx": "4a7cfb9f84f3cc1609f7d6148397983be5998ce465388c520afdb2e715d80cee",
+    "apps/knx-web/src/Overlay.tsx": "f285e19ebb752c91926bf6cf821921163ca0eec367a6939882b8cdbd6f9c5883",
+    "apps/knx-web/src/PaneSplitter.test.tsx": "43beb346676b6ecb89ff0b09e38b567ab2ae79a39a85c31d203de97d91a1a7f1",
+    "apps/knx-web/src/PaneSplitter.tsx": "002a5ff4064e0c937699eb726b7b00dc8a852153bb9a84183960a9050385842b",
+    "apps/knx-web/src/ParameterPanel.test.tsx": "c771a10d0726c09f27498c4056e7ffc39fba3d759f52fb5fb009cfea8af12a76",
+    "apps/knx-web/src/ParameterPanel.tsx": "52b94c21f6347e0cc07cc9332311a7af18a9e7c36f3e14698490a4798c14b2a6",
+    "apps/knx-web/src/ProgrammingConsentDialog.tsx": "c2e512a6f91c3a0db05de6ec93d47cced0eb7180149388c6b26e570f5e5513d1",
+    "apps/knx-web/src/ProjectDiffDetails.tsx": "d2a219d167783f60242ae7d874021cd7062f776b8ce52fc6d3f300d435a50f39",
+    "apps/knx-web/src/ProjectDiffImportDiagnostics.tsx": "b7b3cf218e65dfee8149b2b2cc6af2706008d9d7113e559130195cc8255644b4",
+    "apps/knx-web/src/ProjectDiffPanel.test.tsx": "4abe874eb74ef5d816c84a8015df39df0e3fad79c93ac1b21ac2ff49783d4e7c",
+    "apps/knx-web/src/ProjectDiffPanel.tsx": "d67d63783511459eea889ffe3456d6f8533f90c6766bd11dffda347e853748f9",
+    "apps/knx-web/src/ProjectExplorer.test.tsx": "64d50a561b5598a83d473eac506d37e0658fbd7061428647e8c358ae579c18de",
+    "apps/knx-web/src/ProjectExplorer.tsx": "572ddc88808bdf96e37b1af5862b763638fbf7e82fc9fba45d046e946f9cd96b",
+    "apps/knx-web/src/ResizablePane.tsx": "76e3966d1b45e545109e77348709f7c15c4183af7f74a745d2e7318b968f4577",
+    "apps/knx-web/src/Search.test.tsx": "d86a5878c43d3137299e63a09b5b246db27ab11004d616de9e4cfee89562fc83",
+    "apps/knx-web/src/Search.tsx": "eca8436bf60477fa8ed858be8b61e7eb90dfee0dc8cac40afbcaa5d86e8d62b9",
+    "apps/knx-web/src/ServiceControlDebugSetting.test.tsx": "4fd076a24582fa6c321b77a83b0d9b2174c74e4a8c41b8d5a4414dc1dc7629eb",
+    "apps/knx-web/src/ServiceControlDebugSetting.tsx": "8416dae6b17ddf76958a49d357b9a7ccac04643aace2838d70313fbae07b2c87",
+    "apps/knx-web/src/ServiceControlPanel.test.tsx": "a24531c38ee8696a7c9104eafe22f543600ec9be0cf9070609fcc5d923988b18",
+    "apps/knx-web/src/ServiceControlPanel.tsx": "37cc7e7e430d42b91290aa876d4069c936a2aa8c04cc9e43058f2126ac1cc6c7",
+    "apps/knx-web/src/SettingsPanel.test.tsx": "163bb6c7cb3f89b2ad6c95894f9d2c41ec2f5f7664f9317ab4576cf34702a028",
+    "apps/knx-web/src/SettingsPanel.tsx": "058f9d47327d724f7987fbd0df7eb0a32b012c026bdc84633da52b4a52185a98",
+    "apps/knx-web/src/StructureWorkspace.test.tsx": "0ab8e6b46b1edb37aedc19ae10b4f38f0c0fe7111e118f71cff61cae5aa8ca0c",
+    "apps/knx-web/src/StructureWorkspace.tsx": "7a2211b78f0e2435453fa094ec41d0820b96081dd99357f51f243c7c11105f9d",
+    "apps/knx-web/src/ThemePackDiagnostic.tsx": "ac65584a203d103bde9140de6f81149f93c21e36280c3ae5b138577e4723bcfc",
+    "apps/knx-web/src/ThemePackManager.integration.test.tsx": "5a7f73cb8887c1297120a6413d8c3750a3a01a099ac49d44efc02260bde08e47",
+    "apps/knx-web/src/ThemePackManager.tsx": "5db53196bb852dd136cea5ea6b014d54b2fe92cfc6b8c68a46c416d1a0ce55d0",
+    "apps/knx-web/src/Toast.test.tsx": "d48bd063c13c1387a692ba099bc85762034dda11430e84b6eaaad89fa8cfa52a",
+    "apps/knx-web/src/Toast.tsx": "490809fc5166f93b2504b8f2f73a4bc9d326325c99519c04654a7361c650a9d0",
+    "apps/knx-web/src/Workbench.test.tsx": "0f0555f4924577f757db67aa0649af82887d73580714e3ef3455e38da0474424",
+    "apps/knx-web/src/WorkbenchIcon.tsx": "982dbf26df222fdcc2e450f29cb2d9324a748077f21fe7cfd691fac82b968f04",
+    "apps/knx-web/src/api.test.ts": "c49e5c9315b51f5549625070655e95c470944e26936ae35805182088bd8140ea",
+    "apps/knx-web/src/api.ts": "3545394db7a9085879b8f74b1a2c3c4bb990f49a18cfcd100bf1b13535b2e05e",
+    "apps/knx-web/src/appearance.test.tsx": "9f53158d9eb6e445767f72e95365fc7326b8943936e020639e20620fc61d53fd",
+    "apps/knx-web/src/appearance.ts": "bc6f8cbf539ca7b1edba0f0b7c47f1402f7f0f7f93a9f1ee9e38df3063250b99",
+    "apps/knx-web/src/autosaveSettings.test.ts": "10ed4fca79c3f0c3b1d31564fb8b5acb896a00af9ece93caa43759fd56c10189",
+    "apps/knx-web/src/autosaveSettings.ts": "4f0771dd99fe18da12a95565e9d3de00460c9113bbd0dc4730eb56a9b4d1ad37",
+    "apps/knx-web/src/bindings/AreaNode.ts": "d5cc53ea4b30bf6f5444b340cae7bb1f0df21feae3e1335a37c6904acdf23550",
+    "apps/knx-web/src/bindings/BuildingNode.ts": "3adf2ed21ab7b8e65a4d3693490e43f88790f01af9d6a3087d11e1c4230d00be",
+    "apps/knx-web/src/bindings/ComObjectActivation.ts": "87289a59569180621fce0ab1a99387cc99f6b725a717d1c89c5e38a6a8dccd13",
+    "apps/knx-web/src/bindings/ComObjectChannel.ts": "3f4c4945692dde6832b101faa3144529639025d8e97d9ba321d91d8c1d1551ac",
+    "apps/knx-web/src/bindings/ComObjectNode.ts": "3f25973fcd95c23e497514e2119a365c7cd9e22df9256fcea12e2aaf7da7fd07",
+    "apps/knx-web/src/bindings/DeviceDetail.ts": "462ede3cf580b1e65ebcf97964d641c1d744243b5463f990c05cd48e22596481",
+    "apps/knx-web/src/bindings/DeviceNode.ts": "b43642cd2f21f96175eed2f615370cf4c4021bf8d4d07e8ebadd630e6e47ee4e",
+    "apps/knx-web/src/bindings/DeviceProductCatalog.ts": "3c6c4fbe3e8075eabeb00a36251e77c0224227f3caa200c91a1bdd12c84febbd",
+    "apps/knx-web/src/bindings/DeviceProductNode.ts": "5270ad10f3ad01b61c6f2f481a4f2ba62fb68f4222b8c10ef4b3564ed96d5782",
+    "apps/knx-web/src/bindings/GroupAddressLinkNode.ts": "b528ede830ef2c369a000d7b47f7880a747c439c3c5221f787fdca61ace99ffd",
+    "apps/knx-web/src/bindings/GroupAddressNode.ts": "d1b1d22ed97e33823c2933339c0cfb5b83d043f4de3ea63ac952a3a6a0b2d3dd",
+    "apps/knx-web/src/bindings/GroupLinkNode.ts": "0189c6fcbedab754b1b29aead04bc38b0a9c2c0116983eb7934920bdd95eec9b",
+    "apps/knx-web/src/bindings/GroupRangeNode.ts": "75278eb15eb043a03c7587fc3b690cfbadf986d51e97ee3e297d849d8ff71a6d",
+    "apps/knx-web/src/bindings/InstallationNode.ts": "1fc22e90005327f586e85da94f1dd3be2afac15ffc27082e9ee6b8996e76ef13",
+    "apps/knx-web/src/bindings/LineNode.ts": "9a1ad77b89f9349fcd3b5dd469cf1444bd24beea82786632c9a905e688e2341c",
+    "apps/knx-web/src/bindings/ProductResolution.ts": "c0fafdeae95bae20870c84c86dac52a52ecb4b445e4ca0420eaa3f5a28560d1d",
+    "apps/knx-web/src/bindings/ProjectTree.ts": "6d8bb4669557ceb7c36fcf12ded2ced75143a4e17c1a166de2531b5ff8239265",
+    "apps/knx-web/src/busContext.test.ts": "0b8ec97461b231040c09ef866c4fa61c25f11acc60f22d5152f00c82947342d9",
+    "apps/knx-web/src/busContext.ts": "ae36f53218593db39a3cd55e3be9b6ced2c80d294088ff21904462f989f2dee4",
+    "apps/knx-web/src/busDiscovery.test.ts": "793e9d1e4fc138d08826b2cefbd3ee67d5ffd41892117a8645d6848c9bded88e",
+    "apps/knx-web/src/busDiscovery.ts": "73e6f6f3f41855117520998f71469a154f3a3fc9e65ab129ce2ff216bdf29746",
+    "apps/knx-web/src/busMonitorCapture.test.ts": "f869f8c35f6423b3516dc1741c26a95ad3e289faf64ad6b599dc2c42db91ab11",
+    "apps/knx-web/src/busMonitorCapture.ts": "a1683e672209f16382f31a48a5379402e29a2ee96ae0a1408eb4cac401c22ef5",
+    "apps/knx-web/src/busMonitorCaptureDelivery.test.ts": "59bb65968a6c472255df7d545272b2045611fcc5f38c876103c94b1172993dd6",
+    "apps/knx-web/src/busMonitorStatistics.test.ts": "f814abd01475c4391285820e7a57fab478032ee0b0c8e5dc234df2cf3ce29f15",
+    "apps/knx-web/src/busMonitorStatistics.ts": "92423e7a1c8edd2f36fe9a99ea5b86c910c9f4a7b0d4eaf53262ed54c2567a83",
+    "apps/knx-web/src/canonicalJson.ts": "59dab9936aec1c58ce441ab8ad1abb94142f24f36caa343013ee9cc93f4b3b99",
+    "apps/knx-web/src/commandRegistry.test.ts": "9edd74e83e33065cc1ca00509abb79074367769cc99defe1177b6943a4300957",
+    "apps/knx-web/src/commandRegistry.ts": "27a405e16a1fcb78a546f2a28e3a8b5947470619c4162985ccf4f32eddfbd649",
+    "apps/knx-web/src/crtInteractions.test.ts": "f269008b97bd295a604c6d17d39106c08509b097231c3bd1437557d3a2a88c8b",
+    "apps/knx-web/src/crtInteractions.ts": "5fcca39027185519e337771b6240296a2267fd8cde8782c489bf2351c9c1f7f5",
+    "apps/knx-web/src/crtStyles.test.ts": "33974b019f66382fd4e4464c4b9128f323d9521007bfc0e6b96fc3f7fb073dcb",
+    "apps/knx-web/src/dashboardStats.test.ts": "b669b8184fa11887d6414632de0bb32a332fe2875ded45472c63875b03aeec87",
+    "apps/knx-web/src/dashboardStats.ts": "796e0b370a9f46aabcdac28b73f7e086193fca430ab8b9dbbf1f915026779e3d",
+    "apps/knx-web/src/diagnosticShell.test.ts": "2f1b16d15efe502d74dcec6afb2ba5652b28e81a05db813c76a25dd30af508ac",
+    "apps/knx-web/src/diagnosticsWindow.test.ts": "a29695cea4da386b6197f179e8bb2f7a179aa7bdbe5765c18d118bc08bbe5e84",
+    "apps/knx-web/src/diagnosticsWindow.ts": "cb54a520d5ce0789ab47440b3fcac81af02e9a64b4a916f9056645cc5d44dc9d",
+    "apps/knx-web/src/documentationOptions.test.ts": "ccd0e2b318efac2759ae9e1d9b5ec4aed85346ad001c8a398de76a26f1b3cd88",
+    "apps/knx-web/src/documentationOptions.ts": "d2ffe966f4531ed1ed1d8f6e490595fe2c6e79b61c524e8883b601a27c4ca43e",
+    "apps/knx-web/src/filePicker.test.ts": "6f4911e6c3dcf80904d989064b0eb30108d7a67c282c54ce4a8028d7c40e478b",
+    "apps/knx-web/src/filePicker.ts": "6beb5f344d3eb9083b29b12193b27f05f33f21b4b34a93e3a04d86d9842dd14e",
+    "apps/knx-web/src/fixtureServer.test.ts": "3741060cb7c2c88c4cbf45417d919fd1bb557867634894973cddd474e3d56cfa",
+    "apps/knx-web/src/gaNotation.test.tsx": "9b025b9dffcab6c48eca0713a3c2d34b7ca5a4d4671e19d632b9b78ba5b52701",
+    "apps/knx-web/src/gaNotation.ts": "3bd9540ddbf5256f3b40145481a133b4df947d940f0a5b08211d5512404122c9",
+    "apps/knx-web/src/gatewayEndpoint.test.ts": "b63b9ce7a86294ae1fd9e5a2689cba8a645c9625db44b5bd8db35b1475a71a55",
+    "apps/knx-web/src/gatewayEndpoint.ts": "09fbf955652cf6b8d0793cdc49446bdb473815d0403d6ab14debb4fdb589ecc5",
+    "apps/knx-web/src/gatewayPreference.test.tsx": "ac5b076cbfbab99b25ed0de77467bb5cd86352da827d72d7a039284b8b3cc00d",
+    "apps/knx-web/src/gatewayPreference.ts": "e7f1a64bad74f33c49fbf85d84da92779ffb18302da072e91c44563f69de3e65",
+    "apps/knx-web/src/githubIssue.test.ts": "4dc732f96dc8bc8005c9ac4ac9c0a95e410cee4c45f3cd4d3a8d68a1c3be451d",
+    "apps/knx-web/src/githubIssue.ts": "2753334297fda6a119894cb89a8ea499432b1a964f815a25243af44c0b4ff31b",
+    "apps/knx-web/src/groupAddressView.ts": "37ae5a37a44a81f5288da2c25fa7b4499b95e05b637f45bd57fdf0ded03a7cd9",
+    "apps/knx-web/src/help.test.ts": "636b7fd7fecd5a96b9a8e1d7d77044a13f9b03cac0fd62f00f3fc4dd0f81f042",
+    "apps/knx-web/src/help.ts": "f02e3a10b32597a232bc42248311ae16e847c99980b9ce3dd9c745c575097e1e",
+    "apps/knx-web/src/i18n.fallback.test.ts": "ea53c59391280db5507a11b3447a8b1e5e28ab75d4240b9c92e6b1f48968cf86",
+    "apps/knx-web/src/i18n.test.tsx": "2494d772bdec1b6e57cb0924d89a1befbcabc32109332a8a09d4aa539b914a29",
+    "apps/knx-web/src/i18n.ts": "67b6e6c5641b590c874f7f5cf99cb7eb4559360507288cf403fadcac4a8abc09",
+    "apps/knx-web/src/languagePack.test.tsx": "b7896a3fa99ec1d5198956b53a2330194c4edeec9b03ed140dd8dfbd65cbe473",
+    "apps/knx-web/src/languagePack.ts": "98d8d4d2e2bf580b2bf0e8ff34407bd0a6c9f1a745e248c39d706e7723a31587",
+    "apps/knx-web/src/lineScanExclusions.test.ts": "1dab38f00294aa5710646d61694596f8503aacdfde2e486a48e5fefbc9eef495",
+    "apps/knx-web/src/lineScanExclusions.ts": "c3ddb13d936e5ed5312680ff28ba2867910b3609b3fc6c8fb6c2c2776172a190",
+    "apps/knx-web/src/loadFlavour.test.ts": "0a9095e8962d48a88d1824d930568c6d506399746572637f973c7d96f2576e77",
+    "apps/knx-web/src/loadFlavour.ts": "0fdf6d729ad6020627b4e6d6b19731afb36735d140b2ab4ab3d95d03a1611bcf",
+    "apps/knx-web/src/loadProgress.test.ts": "a8d48f23a871bd363c32dd90da26340ed0332085dfaa4485863ecfcb28d0017e",
+    "apps/knx-web/src/loadProgress.ts": "85a4ae47323fb4cf2437ee2aa299471f107089082efac28ec03936c252311df8",
+    "apps/knx-web/src/localJsonDownload.ts": "004f066c3cd96ea71b857a263c0d4ac6300ecbf517330498a5e8c343e396767b",
+    "apps/knx-web/src/main.tsx": "69db18b9919bf42443324cb3d69b2811cf5a73ac300ede68a28e7e29fe9f6b15",
+    "apps/knx-web/src/messages/de.ts": "ceb718620f8839752a65c9d7c56f3121de675afc8503b5c43fa1fec8c8e00df2",
+    "apps/knx-web/src/messages/en.ts": "67334f82b5c1f093946f8e7636eb26a9ca87901c7ddaa4369bd36a661b0a064f",
+    "apps/knx-web/src/modalIsolation.ts": "72abb5696efefec5c79c64ce0605316f10c3ddcf22dd829547e2e677fb0fccfa",
+    "apps/knx-web/src/motion.test.ts": "a0781230f498283e6cb6a26d704fdec63337de7b9775f37dfecc03698bb1cb17",
+    "apps/knx-web/src/motion.ts": "1bd2543b4c25df76691f95014010068bf690133be92e93da164e80d39af96bc3",
+    "apps/knx-web/src/motionGuard.test.ts": "d5b056c1fc4fa1e025e0b0f4cc9ae66a40cf17ac8b4d662280aad9471dc5acb8",
+    "apps/knx-web/src/multiSelection.ts": "65fca036403d199f93cde58bee9435b15589697d4da79c4f3555177136e3794d",
+    "apps/knx-web/src/node-builtins.d.ts": "1696dbdd13e840606ddd44068e9e3b90b7372c8966aada34fc322a5becd8456a",
+    "apps/knx-web/src/overlayShell.test.ts": "f835c998fb9abffe84d5bf758377812f6ea4e5afde4dbb2465ae9aa572217d83",
+    "apps/knx-web/src/productLanguage.test.tsx": "71c40aea4c1163b12af59e47326a8a0141257a3584a1074d0ba8b57d231ac07b",
+    "apps/knx-web/src/productLanguage.ts": "239b7f901ccace58e630b1a8726fa95c325a57cb650dacd2cf53e6173abc8823",
+    "apps/knx-web/src/programmingConsent.test.ts": "cdb3289580390e5cd78c62496d698a262943bf074bbc781037837a56b61c1ae8",
+    "apps/knx-web/src/programmingConsent.ts": "1fbd3abde75a9e38ef49712f2e0aafb7808c8070d05a28dd935a9085ed0ca461",
+    "apps/knx-web/src/projectDiffView.test.ts": "c8f1f1e48cd99cb300535050498560df32ca1cf5ce15fabc922646873b016790",
+    "apps/knx-web/src/projectDiffView.ts": "a3bc16d18326c7e5d3b3a18d3fe1d97aaf64ba2f39eab13885b88d57bb31af1d",
+    "apps/knx-web/src/quit.ts": "4c0596859ea1e1bd5bbff7f113141a0c78836275b4f3ac7f312ff1fcc30b28e7",
+    "apps/knx-web/src/retroGreenTheme.test.ts": "19191d8168c8dc9c36ce9d334f746981f6343f927c6c3cd594641bdf7badb2e0",
+    "apps/knx-web/src/searchMatch.test.ts": "c24e56ce3bee14c31bf0ee530032908de0dc7179c892412d42eafa12958158cf",
+    "apps/knx-web/src/searchMatch.ts": "40bf45d9a92b97a85d109f3cf3d6597e3f6af1abe264f0c82906dd038db7c6e6",
+    "apps/knx-web/src/selection.ts": "8e205bc42ae418955093d72c212a5039631c8d7430b2e76f2607d57df471e93e",
+    "apps/knx-web/src/session.ts": "d4516acfb6d5ce755b1de40cdc26366e837df685a114e99356d65584746b0071",
+    "apps/knx-web/src/sessionLogExport.test.ts": "3e50bbb15d3e9611fb6637eb278fa3033e4839bd12d218ea0dd7316a7ea0cba6",
+    "apps/knx-web/src/sessionLogExport.ts": "e4741e1a21dec36a6e6021d1bbdac1ceefd72fe0215bdd27c458c1c71e756ea2",
+    "apps/knx-web/src/sessionLogExportDelivery.test.ts": "52c70ddc8111b2341279dde4055a46365b2c32668ac78dc03d49a18e4fe117c9",
+    "apps/knx-web/src/settingsAcknowledgement.test.ts": "84b25c3421bdbd5cd4b5cab142d18ed01dd9fd2e7c4e95d6adb11fdec9aa8036",
+    "apps/knx-web/src/settingsDiagnostic.test.ts": "e3bf21295d297894816af3b07dfe4e159819c079bb5606c16a18de4ec1347dc5",
+    "apps/knx-web/src/settingsDiagnostic.ts": "1a6ef2c7533432c9dfb24b205f59be496898540e619d18a84829b0603107e704",
+    "apps/knx-web/src/settingsStore.test.ts": "d6b391684ab4ef63fe032a54d3f9d06e1e2e649d43b5dbb21113101943bbbb2c",
+    "apps/knx-web/src/settingsStore.ts": "768ac1b0891aa6e7d4f165ae0e2e7f4495399a390b794572c8965e80fe6c90aa",
+    "apps/knx-web/src/styles.css": "e8f884c01943efce2d0212682fec93b1a7fbc167d86e9ae4feb1171aa2766932",
+    "apps/knx-web/src/theme.test.ts": "307c6767e2a3bdef685fc13284c9417bacf815972aa346fe92fc7220e1d4a73d",
+    "apps/knx-web/src/theme.ts": "7b33daaca77c173212afc180f341421704fba05054c5b1b3e2107288ed26c46f",
+    "apps/knx-web/src/themePack.test.ts": "e7b095faa0e68958a6daa0b04221c840736c0abafa17eb74c9d29257e0dc6d11",
+    "apps/knx-web/src/themePack.ts": "1b4948fec472203cbb3eda4d9967626f9c903216fbc43f52d40007c1c818bf4a",
+    "apps/knx-web/src/themePackAgreement.test.ts": "76388910089abbfba2875257ff9c11c22159e60e212cc8cf718e8b5f2a85bdab",
+    "apps/knx-web/src/themePackDom.test.ts": "88ffd3b6a4420855c01d72b65d6af3c6e5d5af4827cfa630dad68197f180669a",
+    "apps/knx-web/src/themePackDom.ts": "f852ea260f14ea34c578f6d4a5ce7f2f6077b535e29593f4b42a001bcdfecaa6",
+    "apps/knx-web/src/themePackFiles.test.ts": "a39bb9acb2d25c132fbad23af4546d14391543d163bebc260444540ea8b3f617",
+    "apps/knx-web/src/themePackFiles.ts": "b6dd07cdcfcfcb852ee1468b284a44eaf1ff818b1f7aa6c56b6e2bbfdf88d5e6",
+    "apps/knx-web/src/themePackFixtures.ts": "84f3d5fd6642781583c23a5dd6c607ee02cc6438733dc9e77c328ea728760657",
+    "apps/knx-web/src/themePackRoundtrip.test.ts": "78f4b212f371a9e30e0a11fc9bb7251325349e48ea5fc8729b39ebcebf83ab6d",
+    "apps/knx-web/src/themePackRuntime.test.tsx": "a16b3de5f1983688e664b689801f8552d7a92184be94ddb7b753bc472a4bdb29",
+    "apps/knx-web/src/themePackStorage.test.ts": "033cb07e34f43f35b19f239d06553081b5cbc877f99c689f0e6fad49207675bf",
+    "apps/knx-web/src/themePackStorage.ts": "22d58550d42151a7dc9fbd233a3b3acdbfa7aae4eb467b2581bc279207eb57ea",
+    "apps/knx-web/src/themePackStore.test.ts": "4861ae652e18875e1b1a6d70ece7a2f1110cc14ab487e5855b770fa89bbcb9ea",
+    "apps/knx-web/src/themePreview.test.tsx": "a379faf449986b797b56b86ec00855140c4c63ff407d65af4b886a7cbaaebbf2",
+    "apps/knx-web/src/themeTokens.test.ts": "b4f1614c1525f33948f27406a80842b50c9ff86fe4785eb21e2965ce261c0e59",
+    "apps/knx-web/src/themeTokens.ts": "e7f34a2d6da43f3fe536239986c224645ff69b8be98eedd59791018b02c1c68b",
+    "apps/knx-web/src/toast.test.ts": "feea73e5ad3d8a7fae3007671e235e12ed54c85e59ce39ac21fa621c48dce8b9",
+    "apps/knx-web/src/toast.ts": "e5cfd10a039b000465d4147ed56cd50ac7001f6d3233df85a4ef2a9dbea49350",
+    "apps/knx-web/src/toastCopy.ts": "08f5c0508053f19e37c851a88d565416c92ad748d1bb257a8a470613dbaee740",
+    "apps/knx-web/src/treeUtils.test.ts": "fda3bb210533b9b7dba9abdaf159bfad76d4c920d0d59227a3c64260ea6195f6",
+    "apps/knx-web/src/treeUtils.ts": "617863b5afbc5e9eb8d2c52805a5d4d641cdf61d5cf464cb381aa68098fdb386",
+    "apps/knx-web/src/uiLanguage.test.tsx": "ae0f005c568baa79ec7333943115e8520fc4f89ec6d25b1d30eecb573580182a",
+    "apps/knx-web/src/uiLanguage.ts": "330266e6aef148fa5956e8bba71764dafeb7e2e4231f291b02f0f02fb493c4f0",
+    "apps/knx-web/src/useActiveOptionScroll.test.tsx": "58f37e777a816d8bdf50f17d295d46f454346bb25f84b49a59fadd796d7b4c93",
+    "apps/knx-web/src/useActiveOptionScroll.ts": "b59cbbd5579338a9e2f59da211cad7f2e8052062259ea44cee7de67451952e49",
+    "apps/knx-web/src/useAutosave.test.tsx": "84a49b0ebb4668f988f272b3facd21f0e92fc42fdc93731ed9b1286d4be95467",
+    "apps/knx-web/src/useAutosave.ts": "0cdbb4d675caf60c7a31a8b41cbdb10e40f53379d16d1f5bc06527da2f6df88b",
+    "apps/knx-web/src/useCrtInteractions.ts": "09ae481e7b668ad311791fb046954474e8a52a720dd0943cc2fdc5783d5a34fe",
+    "apps/knx-web/src/useProgrammingConsent.test.tsx": "3f96e1aac1f2dbf0e4e2547dbcfb31d1c5574e5df88ba46579ef0ec7ad852387",
+    "apps/knx-web/src/useProgrammingConsent.tsx": "688c43be15dcebd29312fce1abfe4711143c8892de888f17ee91385a35423044",
+    "apps/knx-web/src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "apps/knx-web/themes/modern-retro-green-crt.knx-theme.json": "367a150a90a40bc3d86332f35ef3c1593d244123a99c1d4bb8b176362f895499",
+    "apps/knx-web/tsconfig.json": "1103540815beff5bd5ee7c657bdf30c87f5692de58bd983721bcd4f088207887",
+    "apps/knx-web/tsconfig.theme-fixtures.json": "b0f68ec7aaab1ed64dcdb44a974845359dedc5f674c5041c132a04d4e37c988d",
+    "apps/knx-web/vite.config.ts": "b788def2140680d28bf0c9f86b438ba967cc3ea0a3c57ecdb6df99f71f6a165c",
+    "apps/knx-web/vite.fixtures.config.ts": "cf197cd4ab43c624706be08f4cf1acc42d13e07f649be2c5ad9cb91d7fa88220",
+    "apps/knx-web/vitest.config.ts": "2d4ac4b984c9b3891a9eabb63b9b5c9e6164b291453e8071055a56d68d67bfda"
+  },
+  "command_receipts": [
+    {
+      "phase": "merged-download-web-build",
+      "command": [
+        "bash",
+        "-c",
+        "npm --prefix apps/knx-web ci --offline && npm --prefix apps/knx-web run build"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "369064f15380c1d5a1d2066fb413b9fc2e11b0e915191bbe202a47fb415419bd",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged-download-clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-server",
+        "-p",
+        "knx-store",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "979c980a4fd170cab02ba3cd7cf47d1c4a1493014fd49b19bc79d8fc4a81017d",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged-download-worker-compile",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-server",
+        "--test",
+        "http_device_download",
+        "--no-run"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "d14f1b66699c8e3828561bd51977b9d9faef1dcb871a82883b9b2ad16fb60026",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-1",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-1",
+        "download_history_refusal_after_start_prevents_device_mutation"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "15ad42c09f5d615b636aaa8b701dd301d00ea30c9ca47eb39c53d3f96d857ade",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-2",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-2",
+        "download_runtime_shutdown_during_write_preserves_uncertainty"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "0dd0a469a5b5ba36be5a0e387354f17e63ecb1c1d965c4b852fb834ab9475f04",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-3",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-3",
+        "download_terminal_recording_refusal_preserves_witnessed_result"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "5e22131584815a99f83c9d0ba7d948d032871ebc638a02c481bc52a494887102",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-4",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-4",
+        "download_runtime_shutdown_during_cleanup_preserves_witnessed_result"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "83b2471cc8a43c87e749c9c5c0babc3e4cc4ae10d4d2b675ea830582308a1cec",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-5",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-5",
+        "download_cleanup_recording_refusal_preserves_witnessed_result"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "3f52b1f78641569c1ef1375173eccde2affbee9df410c9c6ac5c65c574dc6cae",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-6",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-6",
+        "download_cleanup_error_preserves_witnessed_device_result"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "aa7b7949fef3b2c51ac8a19c7f7447453dc2f336f090f352fad8bb7ae9d3c99b",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-7",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-7",
+        "download_cleanup_panic_preserves_witnessed_device_result"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "8aeca3da6fd7c20f85f62363c7be893750eeed59d0bdfb8f03dc3076a7309c2c",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-8",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-8",
+        "download_terminal_receipt_survives_worker_completion"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "49b4fba13be7f3eb0a57dbff23404e34eddb66f16cd766b17ccdc08d552e771f",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-9",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-9",
+        "download_start_is_durable_before_tunnel_contact"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "753d2157d3efba5cee31c0fd0b74c3edf9dab1d243b7a0417ad7bbb90284da24",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-worker-10",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-start-fixture.py",
+        "merged2-download-worker-10",
+        "download_backup_save_failure_prevents_device_mutation"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "ce675c7a82f3087eddbd2055a776a6092aadf204af1c4cd30bb5239380a1c773",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-api-compile",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-server",
+        "--test",
+        "http_activity_history",
+        "--no-run"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "ae68da4b8814372e66fe657ea91562bd2a47c145c78d7445019a920daa9f56cb",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-api-runtime",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-server",
+        "--test",
+        "http_activity_history"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "0d0382887c6e855dceb08261a36c818a43e2a668ca879dc98727909f467e1886",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-store-all",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-store",
+        "--lib"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "48b92ce2334941c403a828e3ec8c80e8647cda351879498da1a7d3cb11b647b6",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-one-shot",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "-p",
+        "knx-server",
+        "--lib",
+        "one_shot_activity::tests"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "8bc763a63425e998da36f266fa829a15d6f38a1d8a3162c194cadd68f4cc21fe",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged-workspace-download-required-gates",
+      "command": [
+        "python",
+        "/home/knxbench/.hermes/profiles/knxbench/cache/scratch/iaw/download-lifecycle/run-merged-workspace-download-gates.py"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "0216a7bccbf1b70b7bc2fcea1a8762d803715e3ef82c6e2727f7a5f73ff79c96",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-web-tsc",
+      "command": [
+        "bash",
+        "-c",
+        "cd apps/knx-web && npx --no-install tsc --noEmit"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    },
+    {
+      "phase": "merged2-download-web-vitest",
+      "command": [
+        "bash",
+        "-c",
+        "cd apps/knx-web && npx --no-install vitest run"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "48bca0f63b3f269f36c74bd7918bbaa7a6405d48ae4c2456958eea081596efb9",
+      "source_stable": true,
+      "both_canonical_locks_held": true
+    }
+  ],
+  "ordinary_command_receipts": [
+    {
+      "step": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "step": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--workspace",
+        "--all-targets",
+        "-j",
+        "4",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "e149bd8030c5df44def06cddd1cf67cb7107dac7abfa3c0567d678097a85902e"
+    },
+    {
+      "step": "test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--workspace",
+        "--no-fail-fast",
+        "-j",
+        "4"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "f46ce53d3df00a9fa858a923b1c997489611ed547bd71677652f40903e26918a"
+    },
+    {
+      "step": "layering",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle",
+        "check-layering"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "f54ae415db6900c56ce57f8a40fd09392581999cc327fac5506502c9ff2a14cd"
+    },
+    {
+      "step": "headers",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle",
+        "check-headers"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "6e7fafe675fbe7a8fbdc347d56d6afa540190b2c36fc8ac008f04c9e282f43b8"
+    },
+    {
+      "step": "anchors",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle",
+        "check-anchors"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "f14a761ba4b13f1e5058d9017c4e8edd48fb8b04bda4e6b261fab0678258e411"
+    },
+    {
+      "step": "corpus-gates",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "/mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle",
+        "check-corpus-gates"
+      ],
+      "actual_exit": 0,
+      "log_sha256": "0f93c7eb193edc7c57091d8dd57bb9c89e701d2536ff200d9cad3fa38285d6bb"
+    }
+  ],
+  "ordinary_results": {
+    "passed": 3022,
+    "failed": 0,
+    "ignored": 176,
+    "measured": 0,
+    "filtered": 0,
+    "result_blocks": 153
+  },
+  "scoped_results": {
+    "passed": 125,
+    "failed": 0,
+    "ignored": 0,
+    "groups": {
+      "workers": 10,
+      "api": 3,
+      "store": 94,
+      "one-shot": 18
+    },
+    "registered_tests": [
+      [
+        "worker",
+        "download_history_refusal_after_start_prevents_device_mutation"
+      ],
+      [
+        "worker",
+        "download_runtime_shutdown_during_write_preserves_uncertainty"
+      ],
+      [
+        "worker",
+        "download_terminal_recording_refusal_preserves_witnessed_result"
+      ],
+      [
+        "worker",
+        "download_runtime_shutdown_during_cleanup_preserves_witnessed_result"
+      ],
+      [
+        "worker",
+        "download_cleanup_recording_refusal_preserves_witnessed_result"
+      ],
+      [
+        "worker",
+        "download_cleanup_error_preserves_witnessed_device_result"
+      ],
+      [
+        "worker",
+        "download_cleanup_panic_preserves_witnessed_device_result"
+      ],
+      [
+        "worker",
+        "download_terminal_receipt_survives_worker_completion"
+      ],
+      [
+        "worker",
+        "download_start_is_durable_before_tunnel_contact"
+      ],
+      [
+        "worker",
+        "download_backup_save_failure_prevents_device_mutation"
+      ],
+      [
+        "api",
+        "invalid_bounds_do_not_create_the_database"
+      ],
+      [
+        "api",
+        "empty_history_declares_its_version_and_partial_coverage"
+      ],
+      [
+        "api",
+        "foreign_and_future_history_returns_unavailable_without_overwriting"
+      ],
+      [
+        "store",
+        "building::tests::a_hierarchy_with_siblings_round_trips_with_correct_flat_order_and_sibling_order"
+      ],
+      [
+        "store",
+        "command_sync::tests::command_sync_persists_a_previously_unsupported_parameter_edit"
+      ],
+      [
+        "store",
+        "command_sync::tests::create_and_delete_group_address_persist_through_whole_project_fallback"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_device_description_persists_the_description"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_com_object_description_preserves_the_description_override_provenance"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_com_object_dpt_preserves_the_dpt_override_provenance"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_group_address_style_persists_the_project_metadata"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_individual_address_keeps_a_device_in_its_own_installation"
+      ],
+      [
+        "store",
+        "command_sync::tests::set_individual_address_persists_the_address"
+      ],
+      [
+        "store",
+        "command_sync::tests::undo_restores_an_imported_coupler_address_in_the_device_row"
+      ],
+      [
+        "store",
+        "devices::tests::a_com_object_instance_round_trips_every_override_state"
+      ],
+      [
+        "store",
+        "devices::tests::a_device_with_binary_data_round_trips"
+      ],
+      [
+        "store",
+        "devices::tests::a_device_without_an_address_or_description_round_trips"
+      ],
+      [
+        "store",
+        "devices::tests::a_localized_text_override_round_trips_distinct_from_a_literal_one"
+      ],
+      [
+        "store",
+        "devices::tests::an_unknown_override_attribute_is_an_error_not_a_panic"
+      ],
+      [
+        "store",
+        "devices::tests::bulk_loader_preserves_device_ownership_positions_and_links"
+      ],
+      [
+        "store",
+        "devices::tests::group_links_round_trip_in_order"
+      ],
+      [
+        "store",
+        "devices::tests::program_defaults_round_trip_and_an_empty_replacement_clears_the_row"
+      ],
+      [
+        "store",
+        "devices::tests::re_upserting_a_placed_device_does_not_reset_its_placement"
+      ],
+      [
+        "store",
+        "devices::tests::set_device_line_updates_placement_without_touching_other_fields"
+      ],
+      [
+        "store",
+        "devices::tests::upsert_com_object_description_override_touches_only_the_description_row"
+      ],
+      [
+        "store",
+        "devices::tests::upsert_com_object_dpt_override_touches_only_the_dpt_row"
+      ],
+      [
+        "store",
+        "group::tests::a_group_address_round_trips_and_deletes_cleanly"
+      ],
+      [
+        "store",
+        "group::tests::a_group_address_without_a_range_is_valid"
+      ],
+      [
+        "store",
+        "group::tests::a_range_with_two_children_round_trips_with_correct_flat_order_and_sibling_order"
+      ],
+      [
+        "store",
+        "activity_history::tests::invalid_bounds_and_ids_do_not_change_history"
+      ],
+      [
+        "store",
+        "migration::tests::a_file_from_a_newer_schema_version_is_rejected"
+      ],
+      [
+        "store",
+        "activity_history::tests::admitted_connections_use_extra_synchronization"
+      ],
+      [
+        "store",
+        "activity_history::tests::claimed_format_with_a_foreign_schema_is_preserved_and_refused"
+      ],
+      [
+        "store",
+        "activity_history::tests::wal_history_is_refused_before_sidecar_creation_or_checkpoint"
+      ],
+      [
+        "store",
+        "activity_history::tests::foreign_and_future_databases_are_preserved_on_refusal"
+      ],
+      [
+        "store",
+        "activity_history::tests::records_reopen_and_updates_do_not_duplicate_an_operation"
+      ],
+      [
+        "store",
+        "activity_history::tests::legacy_upgrade_preserves_documents_keys_and_cursor_sequence"
+      ],
+      [
+        "store",
+        "migration::tests::a_populated_pre_v9_project_survives_the_v9_migration_unchanged"
+      ],
+      [
+        "store",
+        "migration::tests::in_memory_connection_migrates_to_current_version"
+      ],
+      [
+        "store",
+        "activity_history::tests::legacy_foreign_schema_is_refused_before_upgrade_by_both_openers"
+      ],
+      [
+        "store",
+        "migration::tests::a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false"
+      ],
+      [
+        "store",
+        "activity_history::tests::orphan_sqlite_sidecar_is_refused_before_any_history_open"
+      ],
+      [
+        "store",
+        "activity_history::tests::legacy_upgrade_write_failure_preserves_version_and_nonempty_history"
+      ],
+      [
+        "store",
+        "activity_history::tests::legacy_upgrade_reader_blocked_commit_preserves_nonempty_history"
+      ],
+      [
+        "store",
+        "manifest::tests::the_manifest_round_trips_in_insertion_order"
+      ],
+      [
+        "store",
+        "manifest::tests::the_manifest_records_a_file_the_project_no_longer_carries"
+      ],
+      [
+        "store",
+        "migration::tests::a_fresh_file_migrates_to_the_current_version_and_has_the_opaque_table"
+      ],
+      [
+        "store",
+        "migration::tests::a_fresh_file_migrates_to_version_four_and_has_every_entity_table"
+      ],
+      [
+        "store",
+        "migration::tests::a_fresh_file_migrates_to_version_three_and_has_the_manifest_table"
+      ],
+      [
+        "store",
+        "migration::tests::v4_to_v5_adds_the_module_instance_table_and_column"
+      ],
+      [
+        "store",
+        "manifest::tests::saving_the_same_store_twice_does_not_duplicate_rows"
+      ],
+      [
+        "store",
+        "migration::tests::v5_to_v6_backfills_a_pre_existing_module_instance_to_an_empty_instance_ets_id"
+      ],
+      [
+        "store",
+        "module_instance::tests::module_instances_round_trip_in_position_order"
+      ],
+      [
+        "store",
+        "parameter::tests::parameters_round_trip_in_position_order"
+      ],
+      [
+        "store",
+        "project::tests::a_com_object_unreachable_from_its_device_is_refused_not_dropped"
+      ],
+      [
+        "store",
+        "project::tests::a_counter_below_a_stored_id_is_raised_on_load_and_reported"
+      ],
+      [
+        "store",
+        "project::tests::a_dangling_parent_reference_is_still_rejected_at_commit"
+      ],
+      [
+        "store",
+        "project::tests::a_device_unreachable_from_the_topology_is_refused_not_dropped"
+      ],
+      [
+        "store",
+        "activity_history::tests::orphan_sidecar_entries_are_not_followed_or_cleaned"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v6_fixture_migrates_forward_to_v7"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v7_fixture_migrates_forward_to_v9"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v5_fixture_migrates_forward_to_v6"
+      ],
+      [
+        "store",
+        "project::tests::a_ground_site_over_two_buildings_on_one_line_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::a_non_default_group_address_style_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::a_post_order_hierarchy_round_trips_the_way_the_importer_builds_it"
+      ],
+      [
+        "store",
+        "migration::tests::foreign_keys_are_enforced"
+      ],
+      [
+        "store",
+        "project::tests::a_reachable_unknown_override_attribute_is_reported_by_project_load"
+      ],
+      [
+        "store",
+        "project::tests::a_project_with_one_device_and_an_unassigned_one_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::a_project_with_nested_buildings_and_group_ranges_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::a_repaired_project_can_still_be_saved_if_unchanged"
+      ],
+      [
+        "store",
+        "project::tests::allocator_state_survives_a_round_trip_and_next_id_does_not_collide"
+      ],
+      [
+        "store",
+        "project::tests::an_unrecognized_persisted_style_is_refused_not_defaulted"
+      ],
+      [
+        "store",
+        "project::tests::an_empty_project_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::building_unknown_persisted_kind_is_refused"
+      ],
+      [
+        "store",
+        "project::tests::building_documented_kinds_survive_native_load_and_resave"
+      ],
+      [
+        "store",
+        "project::tests::compare_and_save_commits_when_the_preview_still_matches"
+      ],
+      [
+        "store",
+        "project::tests::loading_a_never_saved_database_is_not_saved_not_an_empty_project"
+      ],
+      [
+        "store",
+        "project::tests::compare_and_save_rejects_a_project_changed_after_preview"
+      ],
+      [
+        "store",
+        "project::tests::counters_at_or_above_every_stored_id_load_unchanged_and_unreported"
+      ],
+      [
+        "store",
+        "project::tests::module_instances_round_trip_through_save_and_load"
+      ],
+      [
+        "store",
+        "project::tests::orphaned_com_object_graph_rows_are_ignored_during_project_load"
+      ],
+      [
+        "store",
+        "project::tests::set_group_address_style_overwrites_the_one_column"
+      ],
+      [
+        "store",
+        "strings::tests::an_empty_string_table_round_trips"
+      ],
+      [
+        "store",
+        "project::tests::sibling_order_follows_the_children_field_not_the_flat_list_order"
+      ],
+      [
+        "store",
+        "strings::tests::a_string_table_round_trips"
+      ],
+      [
+        "store",
+        "strings::tests::upsert_replaces_rather_than_accumulates"
+      ],
+      [
+        "store",
+        "topology::tests::area_and_line_round_trip_with_topology"
+      ],
+      [
+        "store",
+        "topology::tests::installation_row_round_trips"
+      ],
+      [
+        "store",
+        "migration::tests::fresh_file_migrates_to_current_version"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v4_fixture_migrates_forward_to_v5"
+      ],
+      [
+        "store",
+        "migration::tests::opaque_bytes_survive_a_round_trip_through_sqlite_unchanged"
+      ],
+      [
+        "store",
+        "migration::tests::reopening_an_already_migrated_file_is_a_no_op"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v1_fixture_migrates_forward_to_the_current_version"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v1_fixture_still_opens"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v3_fixture_migrates_forward_to_v4"
+      ],
+      [
+        "store",
+        "migration::tests::the_frozen_v2_fixture_migrates_forward_to_v3"
+      ],
+      [
+        "store",
+        "opaque::tests::saving_the_same_store_twice_does_not_duplicate_rows"
+      ],
+      [
+        "store",
+        "activity_history::tests::hot_journal_refusal_preserves_database_and_journal"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::abandoned_write_retains_the_observed_prewrite_boundary"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::a_dropped_action_is_unknown_and_a_witnessed_result_is_not"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::write_guard_cannot_claim_verified_without_a_recorded_backup_boundary"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::retention_never_evicts_an_in_flight_action"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::download_without_evidence_is_refused_before_history_creation"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::download_metadata_keeps_written_restart_and_cleanup_distinct"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::removed_history_is_not_silently_recreated_during_the_server_lifetime"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::observed_history_corruption_blocks_intent_and_is_not_overwritten_on_finish"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::download_guard_cannot_mark_send_possible_after_terminal_result"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::previous_incarnation_running_is_unknown_without_rewriting_the_record"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::invalid_history_read_latches_write_refusal"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::previous_incarnation_pending_cleanup_is_unknown_without_erasing_device_result"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::download_guard_cannot_replace_a_witnessed_terminal_result"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::concurrent_first_history_reads_do_not_latch_a_spurious_storage_failure"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::invalid_write_receipts_are_not_accepted"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::invalid_persisted_metadata_is_refused_not_rendered"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::invalid_download_receipts_are_refused_without_overwriting_or_partial_history"
+      ],
+      [
+        "one-shot",
+        "one_shot_activity::tests::persisted_history_outlives_the_volatile_ring_and_server"
+      ]
+    ],
+    "history13_is_subset_of_store94": true,
+    "malformed25_cases_are_one_one_shot_leaf": true,
+    "overlaps_ordinary_results_do_not_add": true
+  },
+  "frontend_results": {
+    "files": 98,
+    "tests": 1739,
+    "typecheck_exit": 0,
+    "offline_install_build_exit": 0,
+    "tracked_web_unchanged": true
+  },
+  "phase_count": 20,
+  "actual_command_stage_count": 26,
+  "orchestration": {
+    "initial_same_source_prefix": 3,
+    "corrected_remaining_phases": 17,
+    "initial_namespace_refusal_exit": 74,
+    "refusal": "Existing historical inner receipt namespace refused before selected-input discovery/cargo. No worker executed or new private receipt created. All ten fresh inner phase IDs corrected without code/helper/fixture/target change. Historical evidence unchanged. Failed setup is not a product test or a pass.",
+    "two_distinct_dispatches_not_one_chain_identity": true,
+    "owned_wrappers_terminated": true,
+    "fresh_integrated_target_initially_absent": true
+  },
+  "private_evidence": {
+    "selected_offline_workers": 10,
+    "original_commitment_unchanged": true,
+    "originals_unchanged": true,
+    "skip_absent": true,
+    "raw_output_saved": false,
+    "private_paths_names_individual_hashes_not_published": true
+  },
+  "pre_integration_controls": {
+    "source_head": "c07e64036cded4ced518fefd71dd49b815d1ff92",
+    "semantic_production_controls": 5,
+    "compile_exit_each": 0,
+    "runtime_exit_each": 101,
+    "canonical_bookend": 112,
+    "not_rerun_on_integrated_context": true,
+    "receipt_sha256": "dbc9c4303884cfdba65e9a3372e2a00e5a89be5bd4a749587a9b68f32e0ad450"
+  },
+  "acceptance_receipt_sha256": "80616d433576e0ad5fd73c61cb8d019a043f71706a098a34b72b2ef466a9b13d",
+  "documentation_closure": {
+    "actual_command": [
+      "bash",
+      "-c",
+      "git diff --check && cargo run --locked --offline -p xtask -- --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle check-anchors && cargo run --locked --offline -p xtask -- --root /mnt/daten-i/Sourcecode/KNXBench.worktrees/iaw-commission-download-lifecycle check-headers"
+    ],
+    "actual_exit": 0,
+    "log_sha256": "bc3c4fe876fb03e2333d3332c4add16154861f96eef9bbdb6aba3d7bb7c3cd87",
+    "source_head": "1c5dec0760c1e0a98e998e9047102689be05b1f6",
+    "source_stable": true,
+    "both_canonical_locks_held": true,
+    "anchors": {
+      "links": 382,
+      "markdown_files": 250,
+      "dead": 0
+    },
+    "headers": {
+      "headed": 431,
+      "without": 157,
+      "generated_skipped": 34
+    },
+    "json_privacy_source_checks": true,
+    "scope": "metadata-only closure, not a second product/test gate; final changed receipt/AI metadata validated separately before publication"
+  },
+  "limitations": [
+    "four legacy one-shot kinds remain partial baseline; bounded download does not instrument all commissioning",
+    "176 ordinary ignored tests not executed; selected10 workers admitted separately",
+    "history is metadata, not recovery/device-success evidence",
+    "no locked Web/manual binding edit, live hardware/vendor/ETS/contact, power-loss or hostile-race proof",
+    "parent SAFE-03/AUDIT-01 owner admission remains open"
+  ]
+}

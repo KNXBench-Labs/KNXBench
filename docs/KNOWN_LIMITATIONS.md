@@ -7102,8 +7102,23 @@ acceptance remains separate from the mock/simulator evidence here.
 
 ## Download lifecycle history admission — SAFE-03 / AUDIT-01 evidence boundary
 
-**Limitation.** The isolated lifecycle candidate remains partial and unpublished.
-Latest local candidate acceptance 2026-10-04 is125 distinct/0 failed/0 ignored:
+**Limitation.** The bounded lifecycle is integrated and published as `1c5dec07`,
+not full SAFE-03/AUDIT-01. Actual merged-source renewed125/0/0, ordinary3022/0
+(with176 ignored/unexecuted), Web typecheck/build and Vitest1739/98 passed.
+All26 command stages kept source32/public Rust-Cargo369/tracked Web unchanged,
+actual leases, initially fresh target and original private commitments/no raw.
+Three positive prerequisite phases precede a retained namespace setup refusal
+(exit74 before input discovery/Cargo); corrected17-phase continuation is a
+separate exact dispatch. This refuses overwriting historical receipts, not a
+product test failure. In-session integrated review is not independent approval.
+See the [permanent receipt](evidence/commission-download-lifecycle-offline-2026-10-04.json).
+`PARTIAL_BACKEND`/proposed ADR0067 and broader owner/hardware/ETS/crash/recovery/
+caller/Web-adoption limitations remain. Ordinary/scoped counts overlap; ignored
+tests were not accepted. Earlier local controls/counts below are historical,
+not retroactive mutations on the merged tree. Earlier integrated/publication
+pending notices below are superseded only at this bounded package scope.
+
+Pre-integration candidate acceptance 2026-10-04 was125 distinct/0 failed/0 ignored:
 full Store94 (including History13), OneShot18 (including one25-case malformed
 download leaf), ten actual offline workers and three public HTTP history cases.
 All16 phases used the declared source32/HEAD/each actual dual lease; all-target

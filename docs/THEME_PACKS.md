@@ -378,7 +378,7 @@ Sources are registered from retrieved primary pages; access date 2026-10-02.
 
 ## U18 representative-state closing verification
 
-The [original candidate-status anchor](IMPLEMENTATION_STATUS.md#u18-representative-theme-states--candidate-acceptance-running)
+The [original candidate-status anchor](history/IMPLEMENTATION_STATUS_2026-09.md#u18-representative-theme-states--candidate-acceptance-running)
 is retained for backward-compatible links; its current section records actual acceptance.
 
 The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Inspector`, contextual inline-address validation, `Overlay` and structured theme diagnostics to the offline real Appearance/root fixture. Five built-ins, both System resolutions and admitted imported light/dark palettes are exercised. The frozen final-source matrix passed 10/10; three rendered-style sabotage controls were detected by named state assertions and a new-module TS2322 type-inclusion canary was detected/restored. Dedicated `npm run check:theme-fixtures` includes the new modules and test in the TypeScript project.

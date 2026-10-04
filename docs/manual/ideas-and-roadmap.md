@@ -91,13 +91,13 @@ idea list, and where an entry has a condition attached, it is a technical
 dependency somebody noticed — not a queue position.
 
 **Natural-language and MCP interaction.** Researched in
-[RESEARCH.md §13](../RESEARCH.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19),
+[RESEARCH.md §13](../research/features-and-ui.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19),
 not scheduled. The current command, authorization, revision and audit
 boundaries are not sufficient for mutation. Any later start is bounded reads
 and typed proposals with exact human approval, never raw commands or bus work.
 
 **Automating repetitive tasks.** Researched in
-[RESEARCH.md §14](../RESEARCH.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20),
+[RESEARCH.md §14](../research/features-and-ui.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20),
 not scheduled. The supported future direction is a parameterised template over
 an explicit selection, expanded into a previewed, revision-bound and atomic
 `Command::Batch` with one-step undo. Raw command recording, partial mutation,
@@ -106,7 +106,7 @@ a script engine and bus-facing macros are not the plan.
 **A live "who talks to whom" view.** Research now narrows this to an
 evidence-labelled flow for one selected bus-monitor telegram, not a topology
 canvas that pretends configured recipients were observed. See
-[RESEARCH §16](../RESEARCH.md#16-who-talks-to-whom-flow-view-decision-2026-09-22).
+[RESEARCH §16](../research/features-and-ui.md#16-who-talks-to-whom-flow-view-decision-2026-09-22).
 It is designed neither implemented nor scheduled.
 
 **A mobile application.** Possible in principle over a KNX IP interface. It

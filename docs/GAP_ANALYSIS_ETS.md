@@ -636,7 +636,7 @@ Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
   `03_03_04 Transport Layer v01.02.03 AS`, clause 4, page 16 of 38 — 6 s
   connection timeout, 3 s acknowledgement timeout), not by a client
   policy choice made independently of it; see
-  [RESEARCH.md §8.5 Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+  [RESEARCH.md §8.5 Finding 1](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
   for the correction and why the fast preset is `[A]`, not the default.
   The same 2026-09-12 scan found two more implementation requirements (a
   scanner must exclude its own tunnelling connection, and tunnelling
@@ -680,7 +680,7 @@ Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
   one-sample fact about this run, not evidence the outcome cannot occur).
   Full detail, including the caveat against generalizing either run's
   numbers, is in
-  [RESEARCH.md §8.5 Finding 4](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13).
+  [RESEARCH.md §8.5 Finding 4](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13).
 
   What remains open, tracked in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md):
   no product identity, manufacturer, or serial number from a scan alone;
@@ -797,7 +797,7 @@ Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
   Closes **A2**, **E3**.
 - **T20. `Functions` domain concept.** **Specification prerequisite resolved
   2026-09-22 for Project Schema 23** by direct PDF review
-  ([RESEARCH.md §15](RESEARCH.md#15-knx-function-project-semantics-feasibility-2026-09-22)).
+  ([RESEARCH.md §15](research/features-and-ui.md#15-knx-function-project-semantics-feasibility-2026-09-22)).
   A project `Function` entity, import, projection, storage, commands and UI
   still need their own ADR/design. Schema 11/21 behavior and real-project usage
   remain unverified and must not be inferred from Schema 23. Closes **A1**.

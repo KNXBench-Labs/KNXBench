@@ -19,7 +19,7 @@ fail closed before any tunnel until action- and device-specific durable
 pre-write recovery exists (ADRs 0057–0059). This is **not** full ETS,
 manufacturer or KNX hardware coverage.
 Remaining v1 decisions and UI/manual/release work are tracked in
-[`goal.md`](../goal.md), [`goal-ui.md`](../goal-ui.md) and
+[`goal.md`](archive/goal.md), [`goal-ui.md`](../goal-ui.md) and
 [`goal-commission.md`](../goal-commission.md). Historical milestone detail
 remains in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 

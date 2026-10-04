@@ -3,7 +3,7 @@ import { useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection } from "./selection";
-import { flattenBuildingParts } from "./treeUtils";
+import { deviceInstallations, flattenBuildingParts } from "./treeUtils";
 import { useTranslate } from "./i18n";
 
 // The bulk-action counterpart of `Inspector.tsx`'s single-entity Delete
@@ -57,13 +57,22 @@ export default function BulkActionToolbar(props: {
       ? t("bulkAction.deviceLabel", { count })
       : t("bulkAction.groupAddressLabel", { count });
 
-  const parts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+  // MODEL-01 / ADR-0070: move targets come from the one installation that
+  // places every selected device; a selection spanning installations (or
+  // holding a device without one owner) cannot be moved as a batch.
+  const owners = deviceInstallations(tree);
+  const selectedOwners = new Set(ids.map((id) => owners.get(id)));
+  const installation = selectedOwners.size === 1 ? [...selectedOwners][0] : undefined;
+  const parts = flattenBuildingParts(installation?.buildings ?? [], []);
 
   return (
     <div className="bulk-action-toolbar">
       <span className="bulk-action-label">{label}</span>
       <button onClick={deleteSelected}>{t("bulkAction.delete")}</button>
-      {multiSelection.kind === "device" && (
+      {multiSelection.kind === "device" && !installation && (
+        <span className="bulk-action-hint">{t("bulkAction.oneInstallation")}</span>
+      )}
+      {multiSelection.kind === "device" && installation && (
         <>
           <select
             data-role="move-line"
@@ -78,7 +87,7 @@ export default function BulkActionToolbar(props: {
               {t("bulkAction.moveToLine")}
             </option>
             <option value="unassigned">{t("bulkAction.unassigned")}</option>
-            {tree.installations[0]?.topology.map((area) => (
+            {installation.topology.map((area) => (
               <optgroup
                 key={area.id}
                 label={t("explorer.areaLabel", { address: area.address, name: area.name })}

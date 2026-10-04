@@ -6,6 +6,7 @@ which the executable was compiled. From the intended repository root:
 ```sh
 cargo run -p xtask -- check-headers
 cargo run -p xtask -- check-anchors
+cargo run -p xtask -- check-ledger
 cargo run -p xtask -- check-corpus-gates
 cargo run -p xtask -- check-layering
 ```

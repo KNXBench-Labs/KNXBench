@@ -4,6 +4,7 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
+import type { InstallationNode } from "./bindings/InstallationNode";
 import type { LineNode } from "./bindings/LineNode";
 
 export type SearchEntry =
@@ -130,48 +131,116 @@ export function nestGroupRanges(ranges: GroupRangeNode[]): GroupRangeTreeNode[] 
   return build(null);
 }
 
-// Where a device currently sits in the *first* installation's topology —
-// `Command::MoveDeviceToLine` only ever targets `installations[0]`
-// (command.rs), the same restriction every other create/delete/rename
-// affordance in this codebase is already gated by. Returns a line id, `null`
-// for unassigned, or `undefined` if the device isn't in this installation's
-// topology at all (a building-only placement, or the device belongs to a
-// later installation) — `MoveDeviceToLine` can't target it either way, so
-// `undefined` is the signal to hide the move control rather than show a
-// misleading current value.
-export function findDeviceLineInFirstInstallation(
+export type OwnedEntityKind = "area" | "line" | "building_part" | "group_range" | "group_address";
+
+function occurrences(installation: InstallationNode, kind: OwnedEntityKind, id: number): number {
+  switch (kind) {
+    case "area": return installation.topology.filter((area) => area.id === id).length;
+    case "line": return installation.topology.flatMap((area) => area.lines).filter((line) => line.id === id).length;
+    case "building_part":
+      return flattenBuildingParts(installation.buildings, []).filter(({ node }) => node.id === id).length;
+    case "group_range": return installation.group_ranges.filter((range) => range.id === id).length;
+    case "group_address": return installation.group_addresses.filter((address) => address.id === id).length;
+  }
+}
+
+/** MODEL-01 / ADR-0070: the one installation holding an entity, as the core
+ * resolves it. `undefined` when it is absent or occurs more than once
+ * anywhere — never the first of several. */
+export function owningInstallation(
   tree: ProjectTree,
-  deviceId: number,
-): number | null | undefined {
-  const inst = tree.installations[0];
+  kind: OwnedEntityKind,
+  id: number,
+): InstallationNode | undefined {
+  let owner: InstallationNode | undefined;
+  let total = 0;
+  for (const installation of tree.installations) {
+    const count = occurrences(installation, kind, id);
+    if (count > 0) { total += count; owner = installation; }
+  }
+  return total === 1 ? owner : undefined;
+}
+
+/** Every topology-placed device (on a line or unassigned) mapped to the one
+ * installation that places it, in a single pass — the core's
+ * `device_installation`. A building-only placement does not count; a device
+ * placed in two installations is ambiguous and left out. */
+export function deviceInstallations(tree: ProjectTree): Map<number, InstallationNode> {
+  const placements = new Map<number, Set<InstallationNode>>();
+  for (const installation of tree.installations) {
+    const devices = [...installation.unassigned, ...installation.topology.flatMap((area) =>
+      area.lines.flatMap((line) => line.devices))];
+    for (const device of devices) {
+      const owners = placements.get(device.id) ?? new Set<InstallationNode>();
+      owners.add(installation);
+      placements.set(device.id, owners);
+    }
+  }
+  const unique = new Map<number, InstallationNode>();
+  for (const [deviceId, owners] of placements) {
+    if (owners.size === 1) unique.set(deviceId, [...owners][0]);
+  }
+  return unique;
+}
+
+export function deviceInstallation(tree: ProjectTree, deviceId: number): InstallationNode | undefined {
+  return deviceInstallations(tree).get(deviceId);
+}
+
+// Where a device sits in the topology of the one installation that places
+// it (MODEL-01 / ADR-0070): a line id, `null` for unassigned, or `undefined`
+// when no single installation places it (a building-only placement, or
+// placements in two installations). `undefined` hides the move controls
+// rather than showing a misleading current value.
+export function findDeviceLine(tree: ProjectTree, deviceId: number): number | null | undefined {
+  const inst = deviceInstallation(tree, deviceId);
   if (!inst) return undefined;
   for (const area of inst.topology) {
     for (const line of area.lines) {
       if (line.devices.some((d) => d.id === deviceId)) return line.id;
     }
   }
-  if (inst.unassigned.some((d) => d.id === deviceId)) return null;
-  return undefined;
+  return null;
 }
 
-// The building-part counterpart of `findDeviceLineInFirstInstallation`.
-// Building placement isn't exhaustive the way topology placement is
-// (`Command::MoveDeviceToBuildingPart`'s own doc comment) — a device
-// with no building part at all is a normal state, not a third bucket to
-// distinguish from "unreachable" the way `null` vs `undefined` does for
-// lines. So this only ever returns a part id or `null`; the "is this
-// device even reachable from installations[0]" question is already
-// answered by `findDeviceLineInFirstInstallation` wherever both fields
-// are shown together (`DeviceInspector`), since both commands share the
-// same `installations[0]`-only restriction.
-export function findDeviceBuildingPartInFirstInstallation(
-  tree: ProjectTree,
-  deviceId: number,
-): number | null {
-  const inst = tree.installations[0];
+// The building-part counterpart of `findDeviceLine`, inside the same
+// installation. Building placement is not exhaustive, so this only returns a
+// part id or `null`; reachability is `findDeviceLine`'s question.
+export function findDeviceBuildingPart(tree: ProjectTree, deviceId: number): number | null {
+  const inst = deviceInstallation(tree, deviceId);
   if (!inst) return null;
   for (const { node } of flattenBuildingParts(inst.buildings, [])) {
     if (node.devices.some((d) => d.id === deviceId)) return node.id;
   }
   return null;
+}
+
+/** One topology slot of a device (MODEL-02): a line, or an installation's
+ * unassigned bucket. `count` is how often the device is listed there. */
+export type PlacementSlot =
+  | { kind: "line"; installation: InstallationNode; area: AreaNode; line: LineNode; count: number }
+  | { kind: "unassigned"; installation: InstallationNode; count: number };
+
+/** Every distinct topology slot of a device across installations. A line the
+ * projection shows under two areas is one slot (its devices are listed once
+ * per line), so only a real multiple placement adds up to more than one. */
+export function devicePlacementSlots(tree: ProjectTree, deviceId: number): PlacementSlot[] {
+  const slots: PlacementSlot[] = [];
+  for (const installation of tree.installations) {
+    const lines = new Map<number, Extract<PlacementSlot, { kind: "line" }>>();
+    for (const area of installation.topology) {
+      for (const line of area.lines) {
+        const count = line.devices.filter((device) => device.id === deviceId).length;
+        if (count === 0) continue;
+        const known = lines.get(line.id);
+        if (known) { known.count = Math.max(known.count, count); continue; }
+        const slot = { kind: "line" as const, installation, area, line, count };
+        lines.set(line.id, slot);
+        slots.push(slot);
+      }
+    }
+    const unassigned = installation.unassigned.filter((device) => device.id === deviceId).length;
+    if (unassigned > 0) slots.push({ kind: "unassigned", installation, count: unassigned });
+  }
+  return slots;
 }

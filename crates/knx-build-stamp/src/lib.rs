@@ -24,6 +24,11 @@ pub const REQUIRE_CLEAN_TREE_VAR: &str = "KNX_REQUIRE_CLEAN_TREE";
 pub const BUILD_SHA_VAR: &str = "KNX_BUILD_SHA";
 /// How many modified paths a refusal lists before summarising the rest.
 const LISTED_PATHS: usize = 10;
+/// A watched path that never exists: cargo then re-runs the build script on
+/// every build, so a release build cannot reuse an earlier clean verdict.
+/// Without it an edit after a clean release build was stamped with the
+/// clean commit (measured, AR13).
+pub const ALWAYS_RERUN: &str = ".knx-build-stamp-always-rerun";
 
 /// Whether a build may name a commit it cannot prove it was built from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,16 +144,8 @@ pub fn emit() {
         .ok()
         .map(|dir| PathBuf::from(dir).join("../.."));
     let facts = workspace.as_deref().and_then(git_facts);
-    match mode {
-        // A path that never exists makes cargo re-run this script on every
-        // build, so the cleanliness check cannot be skipped by a cached
-        // result from an earlier, clean build.
-        Mode::Release => println!("cargo:rerun-if-changed=.knx-build-stamp-always-rerun"),
-        Mode::Development => {
-            if let Some(workspace) = &workspace {
-                watch_head(workspace);
-            }
-        }
+    for path in rerun_paths(mode, workspace.as_deref()) {
+        println!("cargo:rerun-if-changed={path}");
     }
     let explicit = std::env::var(BUILD_SHA_VAR).ok();
     match stamp(explicit.as_deref(), facts.as_ref(), mode) {
@@ -157,25 +154,33 @@ pub fn emit() {
     }
 }
 
-/// Development watches: `HEAD`, its reflog (appended on every commit,
-/// checkout and reset, packed refs or not) and the loose branch ref.
-fn watch_head(workspace: &Path) {
+/// The paths cargo watches to decide whether to re-run the build script.
+///
+/// Release: only [`ALWAYS_RERUN`], so the tree is re-checked on every build.
+/// Development: `HEAD`, its reflog (appended on every commit, checkout and
+/// reset, packed refs or not) and the loose branch ref, so the stamp follows
+/// commits without re-running on every build.
+pub fn rerun_paths(mode: Mode, workspace: Option<&Path>) -> Vec<String> {
+    let workspace = match (mode, workspace) {
+        (Mode::Release, _) => return vec![ALWAYS_RERUN.to_string()],
+        (Mode::Development, None) => return Vec::new(),
+        (Mode::Development, Some(workspace)) => workspace,
+    };
+    let mut paths = Vec::new();
     for watched in ["HEAD", "logs/HEAD"] {
         if let Some(path) = git(workspace, &["rev-parse", "--git-path", watched]) {
-            println!(
-                "cargo:rerun-if-changed={}",
-                absolute(workspace, &path).display()
-            );
+            paths.push(absolute(workspace, &path).display().to_string());
         }
     }
     if let Some(branch) = git(workspace, &["symbolic-ref", "-q", "HEAD"]) {
         if let Some(path) = git(workspace, &["rev-parse", "--git-path", &branch]) {
             let path = absolute(workspace, &path);
             if path.exists() {
-                println!("cargo:rerun-if-changed={}", path.display());
+                paths.push(path.display().to_string());
             }
         }
     }
+    paths
 }
 
 fn absolute(workspace: &Path, path: &str) -> PathBuf {

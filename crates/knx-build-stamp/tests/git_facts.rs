@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use knx_build_stamp::{git_facts, stamp, Mode};
+use knx_build_stamp::{git_facts, rerun_paths, stamp, Mode, ALWAYS_RERUN};
 
 fn git(dir: &Path, args: &[&str]) {
     let status = Command::new("git")
@@ -69,4 +69,24 @@ fn a_tree_inside_a_foreign_repository_borrows_nothing() {
     std::fs::create_dir(&inner).unwrap();
     assert_eq!(git_facts(&inner), None);
     assert!(stamp(None, None, Mode::Release).is_err());
+}
+
+/// A release build re-checks the tree on every build: it watches only a
+/// path that never exists, never the `HEAD` files a clean verdict could
+/// hide behind. Development builds follow `HEAD` and its reflog instead.
+#[test]
+fn release_re_runs_every_build_and_development_follows_head() {
+    let repo = committed_repo();
+    assert_eq!(
+        rerun_paths(Mode::Release, Some(repo.path())),
+        [ALWAYS_RERUN]
+    );
+    assert!(!repo.path().join(ALWAYS_RERUN).exists());
+    let watched = rerun_paths(Mode::Development, Some(repo.path()));
+    assert!(watched.iter().any(|p| p.ends_with("HEAD")), "{watched:?}");
+    assert!(
+        watched.iter().any(|p| p.ends_with("logs/HEAD")),
+        "{watched:?}"
+    );
+    assert!(!watched.contains(&ALWAYS_RERUN.to_string()));
 }

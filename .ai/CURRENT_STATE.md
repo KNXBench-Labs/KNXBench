@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:29
+Web lock: taken by claude-goal-ui-owner for UX-01 web half (drag a group address onto a communication object)
+- **Completed:** Lock taken only, no code yet. The previous lock line (this session, MODEL-02 delivered `efe7fb53`) said released.
+- **Pending/Next Steps:** UX-01 per the ledger row: drag a group address onto a communication object through the unchanged `POST /api/group-links` (`comObjectId`, `gaId`, `direction`); the existing keyboard/select path stays; a drop links once and an invalid drop shows the server refusal. Release the lock in the merge entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 19:28
 Web lock: released by claude-goal-ui-owner (MODEL-02 web half delivered)
 - **Completed:** MODEL-02 web half (ADR-0071), `DONE` in `docs/status/LEDGER.md` (count line IN_PROGRESS 5, DONE 27). The device Inspector shows a *Placement conflict* with **Keep this placement** per current slot (line, or an installation's unassigned bucket). A line listed by several areas of one installation adds **Keep under this area** under the duplicate-id alert, but only when every occurrence is the same line; two different lines sharing an id, or an id in two installations, get no button. Each repair is one undoable server step; a refusal stays visible. 9 RED-first Vitest cases plus 3 guards, and 2 tests added after their guard mutants survived; `e2e/repair.e2e.ts` (both repairs in Chromium, failing on the old Inspector); 7 mutants caught. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,155 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, five repository gates (headers 466 ok, ceiling 157; anchors 442 ok; ledger 185 rows), tsc, Vitest 1,817/100 files, complete intercepted Chromium suite 106/106, whitespace; source frozen. KNOWN_LIMITATIONS "U12 structure editor scope", the `UI_ALPHA_READINESS` evidence row and the `goal-ui.md` UA5 row are updated. Log: `.ai/logs/2026-10-04_claude_ui-model02-web.md`.

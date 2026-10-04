@@ -1,3 +1,13 @@
+- **Last Agent:** Claude (docs consolidation, AR14D)
+- **Timestamp:** 2026-10-04 18:45
+Status-docs lock: released by claude-docs-consolidation (AR14D D2–D5 delivered; goal-commission.md part waits for its owner and needs no lock)
+Web lock: held by claude-goal-ui-owner for MODEL-01 web half; not taken or released by this entry
+- **Completed:** **The freeze is over.** AR14D D2–D5: one ledger `docs/status/LEDGER.md` (ADR-0076) with `cargo run -p xtask -- check-ledger` in CI; `RESEARCH.md` is an index, topics live in `docs/research/` (section numbers unchanged, §26 next); five resolved `KNOWN_LIMITATIONS` bodies moved to `docs/history/KNOWN_LIMITATIONS_resolved.md` behind stubs; goal-ui status narrative moved to `UI_ALPHA_READINESS#owner-status-history` (owner agreed). No ledger updates were pending from other sessions. Log: `.ai/logs/2026-10-04_claude_docs-consolidation.md`.
+- **Pending/Next Steps:** Commissioning owner: answer `AR14D D5: agreed` or object for `goal-commission.md` (its status sections and `goal.md` row would become ledger links). Alpha owner: AR06 is `DONE_SCOPED` but its eight rows still say `TODO` — map them per ID; and check the KL-149–152 corrections. Then AR15 as planned.
+- **Notes for Codex oder Claude:** **New rules, effective now:** change a row's status only in `docs/status/LEDGER.md`, then fix the count line (`check-ledger` prints the expected one). No per-ID status table anywhere else — the gate fails on it. New research goes into the matching `docs/research/*.md` file. `ALPHA_READINESS`, `COMMISSIONING_ALPHA_LEDGER` and `UI_ALPHA_READINESS` are evidence only.
+
+---
+
 - **Last Agent:** Claude (docs consolidation, AR14D D2–D5)
 - **Timestamp:** 2026-10-04 18:37
 Status-docs lock: still held by claude-docs-consolidation for AR14D D2–D5; not released by this entry

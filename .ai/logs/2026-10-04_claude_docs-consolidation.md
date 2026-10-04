@@ -46,3 +46,23 @@ check, RESEARCH topic split, KNOWN_LIMITATIONS resolved bodies to history
 behind stubs, goal-ui/goal-commission status sections become links (owner
 agreement needed). Kept: IDEA.md, docs/Issues.md (user inbox), compare.md,
 stats.md/ProjectStats.md (statistics track, not checked for overlap).
+
+## D2–D5 (status-docs lock, 2026-10-04 18:27–18:45)
+
+- **D2** `257dd8c5`: ADR-0076, `docs/status/LEDGER.md` (180 + 5 rows) built by
+  script from goal §7–§8, ALPHA_READINESS tables and the commissioning
+  disposition column. Cell-presence proof: every moved cell found in the
+  ledger. 24 goal/readiness differences; 6 evidence corrections (DATA-02,
+  KL-42, KL-149, KL-150, KL-152 → DONE; KL-151 → IN_PROGRESS); 3 routes.
+  Found: AR06 is DONE_SCOPED but mapped no row — left TODO, owner to map.
+- **D3** `e9400950`: `xtask check-ledger`, 10 tests RED-first (9 RED, 1
+  trivially green exemption case), 7/7 mutants killed (one anchor needed a
+  retry after rustfmt rewrapped `SKIP_DIRS`), real-repo negative control
+  named both seeded problems. CI step + VERIFICATION + contributing guide.
+- **D4** `cc2916c6`: RESEARCH split into five topic files; heading parse is
+  fence-aware (a `# $S …` line inside §8's code block is not a heading).
+  Line multiset proof: 0 original lines missing; 14 inbound anchors moved.
+- **D5**: 5 resolved KL bodies (163 lines) to history behind stubs; §90/§95
+  kept (pointers, not defects). goal-ui narrative to UI_ALPHA_READINESS with
+  owner agreement. goal-commission.md untouched (no owner answer yet).
+- Scripts lived in scratch (`ar14d/`), removed after delivery.

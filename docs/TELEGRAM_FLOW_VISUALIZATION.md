@@ -714,6 +714,77 @@ Part C (measured, `docs/design/2026-10-04-telegram-flow-u21/`):
   off, up to 150 ms during a 200/s burst with motion. Heap reaches a plateau
   (burst ~6.9 MiB, session ~5.3 MiB including the monitor capture).
 
+## 13. AR21 acceptance review (alpha, 2026-10-05)
+
+Receipt under review: U19 `51a6004e`, AR20 `85bfab88`, U20 `4525c36e` +
+`dc298b78`, U21 `9d432d17` + `deb6813a` + `fb40a99a` (tree at `fb40a99a`).
+**Result: not accepted yet; returned to the UI owner.** `FLOW-01` stays
+`IN_PROGRESS`.
+
+**Verified by the alpha session (run, not adopted):**
+
+- Productive path: one poll loop in `BusMonitorPanel.tsx` hands every
+  admitted batch to `flowFeed` (poll and reattach); the view fetches nothing,
+  the feed fetches one snapshot per generation. `flowAnimator.ts` and
+  `flowDynamics.ts` do not write the model. The U20 e2e asserts no
+  unexpected request.
+- The §7 scenarios map to named unit and browser tests (`flowModel.test.ts`,
+  `flowFeed.test.tsx`, `flowAnimator.test.ts`, `flowDynamics.test.ts`,
+  `flowLayout.test.ts`, `flowMotion.test.tsx`, `TelegramFlowView.test.tsx`,
+  `e2e/telegram-flow.e2e.ts`, `e2e/telegram-flow-motion.e2e.ts`; Rust:
+  `http_bus_flow.rs` 9, `flow::tests` 7).
+- Gates rerun on `fb40a99a`: fmt; clippy `-D warnings` (workspace without
+  `knx-desktop`); workspace tests without `knx-desktop` 3,184 passed / 0
+  failed / 177 ignored in 172 blocks (the receipt's 3,196 / 175 includes
+  `knx-desktop`); web build; tsc; `check:flow-study`; Vitest 2,001 / 116
+  files. Chromium full suite: 130 / 131, see finding 3; both flow e2e files
+  13 / 13, three times in a row.
+- Badge text uses `--knx-foreground` (inferred: `--knx-muted`) with a
+  `--knx-surface` halo, not `--knx-success-color`, so the §9.3 contrast
+  concern does not apply to the shipped view (code read, no contrast
+  measurement).
+
+**Probe at the §7 starting load** (the U21 load study with only the scenario
+list changed, not committed; production build, headless Chromium 152, Ryzen 7
+5800X, one sample each): 500 devices, 1,250 groups, 998 edges and 500 nodes
+drawn (the study's member formula repeats, so not 2,500 edges), ~985
+telegrams/s for 15 s.
+
+| Motion | Main thread | Long tasks | Frame interval p50 / p95 / max | Heap after GC |
+| --- | --- | --- | --- | --- |
+| On | 0.98 | 111, 6,876 ms total, max 111 ms | 50 / 133 / 200 ms | 6.1 → 13.8 MiB, flat |
+| Off | 0.136 | 1, 64 ms | — | 5.3 → 12.7 MiB, flat |
+
+The marker values were not detected in either run, so no value lag is
+reported for this load; the cause was not determined.
+
+**Findings for the UI owner:**
+
+1. **IMPORTANT — local reheat (§9.3 binding requirement).** `reheat()` in
+   `flowDynamics.ts` sets one map-wide `alpha`; `flowAnimator.ts` (`sync`, the
+   5 s nudge) reheats the whole map on any new node, new edge, leader change or
+   activity-class change, and every step moves every node. §9.3 requires a
+   new node or edge to heat only itself and its neighbours, with settled
+   regions not rewritten. §12 and KNOWN_LIMITATIONS §154 do not record this
+   deviation, and the U21 measurements stop at 230 nodes / 240 edges /
+   200 telegrams/s. Needed: implement it (RED test, mutant, a measurement at
+   the §7 load), or record the deviation and the measured motion-on envelope
+   in §12, §154 and the user guide, so the alpha can accept an explicit
+   envelope instead of an unstated one.
+2. **MINOR — hub readability (§9.3 binding requirement).** Collision
+   separation still uses the fixed `REPULSION_RADIUS = 60` in
+   `flowDynamics.ts`; it does not account for badge height, and hub badges are
+   not limited to selection. No test or screenshot of a busy hub. Needed:
+   implement and show it, or record the deviation.
+3. **MINOR — flaky Chromium test outside the flow view.**
+   `e2e/group-address-drag.e2e.ts`: line 60 failed once in the full suite
+   (`.group-link-list .tree-new-row` stayed hidden in `serve()`), line 69 failed
+   twice in a three-times-repeated mixed run, and 10 / 10 passed alone. A
+   likely suspect is the `for … of summaries.all()` click loop in `serve()`
+   (not verified). The full suite is not reliably green.
+
+No hardware, no real bus and no KNX socket were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

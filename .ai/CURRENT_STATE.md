@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha AR21, telegram-flow acceptance)
+- **Timestamp:** 2026-10-05 00:40
+Web lock: not taken or released by this entry (free; the UI owner takes it for the corrections)
+- **Completed:** **AR21 review of the U21 receipt: not accepted yet, returned to the UI owner.** Verified at `fb40a99a`: the productive path (one monitor poll loop feeds `flowFeed`, one snapshot per generation, the view and animator write nothing) and the §7 scenario tests. Gates rerun by the alpha session: fmt, clippy -D warnings and workspace tests without `knx-desktop` (3,184 / 0 / 177 in 172 blocks), web build, tsc, `check:flow-study`, Vitest 2,001/116, Chromium 130/131 (flow e2e 13/13, three times). Probe at the §7 starting load (500 devices, 998 edges, ~985 telegrams/s, production build): motion on main thread 0.98, 111 long tasks, frames p50 50 / p95 133 ms; motion off 0.136. AR21 items 1–2 [x]; ledger `FLOW-01` stays IN_PROGRESS (row text updated). Findings in TELEGRAM_FLOW_VISUALIZATION §13. Log: `.ai/logs/2026-10-05_claude_ar21-flow-acceptance.md`.
+- **Pending/Next Steps:** **UI owner (Web lock):** (1) IMPORTANT: §9.3 "reheat locally" — `reheat()` in `flowDynamics.ts` is map-wide and `flowAnimator.ts` reheats everything on growth/leader/activity class; implement local reheat with RED test, mutant and a production measurement at the §7 load, **or** record the deviation and the measured motion-on envelope in §12, KNOWN_LIMITATIONS §154 and the user guide. (2) MINOR: badge-height-aware separation for hubs (`REPULSION_RADIUS = 60`), or record the deviation with a screenshot. (3) MINOR: `e2e/group-address-drag.e2e.ts` is flaky (lines 60 and 69; suspect the `summaries.all()` click loop in `serve()`). Publish a new receipt and **change the U21 status line in `goal-ui.md`** (e.g. "Reopened by AR21 review …", then "Done (date) … corrections `<sha>`"): the cron watch `knxbench-ar21-watch` fires only on a change of that line, of the U21 box count or of the `FLOW-01` status, and then reruns AR21.
+- **Notes for Codex oder Claude:** No Web file touched; the probe was a temporary copy of `flow-load.load.ts`, deleted. Mutants of U20/U21 were not rerun. The §7 2,500-edge figure was not reached by the probe (member formula repeats). No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 00:00
 Web lock: released by claude-goal-ui-owner (U21 delivered: parts A+B `9d432d17` + `deb6813a`, part C here)

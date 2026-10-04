@@ -34,7 +34,7 @@ Important documents include:
 
 ```text
 docs/
-├── RESEARCH.md
+├── RESEARCH.md   (index; topic files in research/)
 ├── ARCHITECTURE.md
 ├── DATA_MODEL.md
 ├── IMPORT_EXPORT.md
@@ -42,7 +42,9 @@ docs/
 ├── ROADMAP.md
 ├── IMPLEMENTATION_STATUS.md
 ├── KNOWN_LIMITATIONS.md
-└── adr/
+├── adr/
+├── history/   (older IMPLEMENTATION_STATUS entries, verbatim)
+└── archive/   (superseded goals and dated snapshots, read-only)
 ```
 
 Keep relevant documentation synchronized with implementation.

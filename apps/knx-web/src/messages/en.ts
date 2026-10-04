@@ -333,7 +333,7 @@ export const messages = {
   "toast.lateNight.busLineClocksOut": "The bus line clocks out. You, evidently, do not.",
 
   // `Inspector.tsx`. `inspector.entity.*` and `inspector.restrictedAction.*`
-  // are the two halves `inspector.restrictedToFirstInstallation` composes
+  // are the two halves `inspector.restrictedToOneInstallation` composes
   // itself from — see that key's own comment for why it's built this way
   // instead of six near-duplicate sentences.
   "inspector.address": "Address",
@@ -361,6 +361,14 @@ export const messages = {
   "inspector.areaLabel": "Area {address}: {name}",
   "inspector.assignedArea": "Assigned area",
   "inspector.duplicateStructureId": "This structure ID occurs more than once. Editing is disabled until the imported IDs are unambiguous.",
+  "inspector.placementConflict": "Placement conflict",
+  "inspector.placementConflictHint": "This device is listed {count} times in the topology. Keep one placement; the others are removed in one undoable step. Addresses, links, parameters and building placement stay unchanged.",
+  "inspector.placementLine": "Line {area}.{line} {name} — {installation}",
+  "inspector.placementUnassigned": "Unassigned — {installation}",
+  "inspector.placementListedTimes": "(listed {count} times)",
+  "inspector.keepPlacement": "Keep this placement",
+  "inspector.lineOwnerConflictHint": "This line is listed by {count} areas. Keep it under one of them; the other references are removed in one undoable step.",
+  "inspector.keepLineOwner": "Keep under this area",
   "inspector.linePlacementAmbiguous": "Cannot move this line: it appears under multiple areas or area ids are ambiguous. Repair the topology first.",
   "inspector.lineLabel": "Line {address}: {name}",
   "inspector.buildingPart": "Building part",
@@ -372,13 +380,13 @@ export const messages = {
   "inspector.rangePlacementAmbiguous": "Cannot move this range: duplicate or missing parent references need repair first.",
   "inspector.none": "(none)",
   "inspector.delete": "Delete",
-  // The two verb clauses `inspector.restrictedToFirstInstallation`'s
+  // The two verb clauses `inspector.restrictedToOneInstallation`'s
   // `{action}` slot takes — carrying their own verb (`is`/`are`) so the
   // base sentence never has to conjugate around how many verbs it's naming.
   "inspector.restrictedAction.delete": "Delete is",
   "inspector.restrictedAction.renameAndDelete": "Rename and Delete are",
   "inspector.restrictedAction.renameMoveAndDelete": "Rename, Move and Delete are",
-  "inspector.restrictedToFirstInstallation": "{action} only available for {entity} in the first installation.",
+  "inspector.restrictedToOneInstallation": "{action} only available for {entity} that belong to exactly one installation.",
   "inspector.entity.devices": "devices",
   "inspector.entity.groupAddresses": "group addresses",
   "inspector.entity.groupRanges": "group ranges",
@@ -417,6 +425,8 @@ export const messages = {
   "explorer.project": "Project",
   "inspector.project": "Project",
   "inspector.groupAddressStyle": "Group address style",
+  "inspector.installations": "Installations",
+  "inspector.installationName": "Installation name {n}",
 
   // Shared between `Inspector.tsx` and `ProjectExplorer.tsx` — see the
   // header comment above for why this one namespace isn't per-surface.
@@ -791,6 +801,13 @@ export const messages = {
   "catalog.quantityInvalid": "Choose 1–32 devices.",
   "catalog.preview": "Devices to create",
   "catalog.addressUnassigned": "Physical addresses remain unassigned; assign them after creation.",
+  "catalog.optionsLegend": "Options",
+  "catalog.allocateAddresses": "Assign free addresses on the line",
+  "catalog.allocateNeedsLine": "Addresses can only be assigned on a target line; select a line first.",
+  "catalog.uniqueNames": "Keep names unique",
+  "catalog.addressAllocated": "Free addresses on the line are assigned in order, skipping .0 and addresses already used or excluded. If too few are free, nothing is created.",
+  "catalog.uniqueNamesNote": "Names already in the project are skipped; the final names are listed after creating.",
+  "catalog.itemAddress": "address {address}",
   "catalog.targetLine": "Target line: {lineId}",
   "catalog.noTargetLine": "No line selected; devices will be unassigned.",
   "catalog.createdMany": "Devices created. Review the results below.",
@@ -1105,6 +1122,7 @@ export const messages = {
   "bulkAction.unassigned": "(unassigned)",
   "bulkAction.moveToBuildingPart": "Move to building part…",
   "bulkAction.none": "(none)",
+  "bulkAction.oneInstallation": "Moving needs devices of one installation.",
   "bulkAction.dismissSelection": "Dismiss selection",
 
   // `BusComposeForm.tsx` — `BusMonitorPanel.tsx`'s compose/send sibling.
@@ -1173,6 +1191,7 @@ export const messages = {
   // the join punctuation itself (", ") needs no localization.
   "groupAddressCsv.exportButton": "Export group addresses (CSV)…",
   "groupAddressCsv.importButton": "Import group addresses (CSV)…",
+  "groupAddressCsv.installation": "Installation for CSV",
   "groupAddressCsv.exportSummaryNone": "Group addresses exported to CSV, no warnings.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Group addresses exported to CSV, {count} warning — see Log.",

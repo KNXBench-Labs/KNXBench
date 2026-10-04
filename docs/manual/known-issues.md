@@ -541,7 +541,7 @@ other. These are the ones found while writing this manual.
 - **Affected:** statements about authentication elsewhere in the repository.
 - **Limitation:** the manual was rewritten on 2026-09-20 for the password
   login and the browser login screen that arrived the same day. Older
-  engineering documents — `docs/PROJECT_ANALYSIS_2026-09-15.md`, for one —
+  engineering documents — `docs/archive/PROJECT_ANALYSIS_2026-09-15.md`, for one —
   still describe a server with no authentication at all, because that was
   true when they were written. The internal triage list also still carries
   the Read-on-Init entry as open, although it was closed the same day.

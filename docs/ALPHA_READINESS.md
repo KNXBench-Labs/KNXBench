@@ -4,10 +4,10 @@
 
 User-started offline alpha queue, 2026-10-01. Inspected source/maintained docs
 at `307a5970ad5147437dffce4a86047e85e3319186`; the dated input inventory
-[OFFENE_PUNKTE](../OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
+[OFFENE_PUNKTE](archive/OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
 reconciliation, not a fresh full implementation, security or compatibility audit.
 The execution owner is [alpha-release-goal](../alpha-release-goal.md); historical
-[goal](../goal.md) is not a second executor. UI/commissioning remain their owners.
+[goal](archive/goal.md) is not a second executor. UI/commissioning remain their owners.
 
 ### Evidence adopted, not relabelled
 
@@ -310,190 +310,10 @@ implementation was freshly tested. Open alpha code contracts are verified in
 their named AR package. Owner rows have the shared fallback/unblock contract
 above and are not new tasks assigned to an already closed owner queue.
 
-| Source ID | Priority | Primary route | Status | Evidence / remaining disposition |
-| --- | --- | --- | --- | --- |
-| `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §116; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-139` | P0 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §139; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-140` | P0 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §140; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `SAFE-01` | P0 | `goal-commission.md` — owner only | WAITING_OWNER | goal-commission.md status / docs/RESEARCH.md §22–24; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-79` | P1 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §79; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-61` | P1 | AR09 | TODO | docs/KNOWN_LIMITATIONS.md §61; Retained boundary; AR09 verifies subcases before changing status |
-| `KL-99` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §99; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-112` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §112; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-136` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §136; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-138` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §138; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-141` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §141; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-142` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §142; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-7` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §7; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-92` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §92; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DEBUG-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | goal-commission.md status / ADR-0051; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Commissioning readiness / ADR-0049; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §7 / goal-commission.md §3; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DATA-01` | P1 | AR02 | DONE | Nine checked allocators; synthetic maximum-ID/native/CSV/CLI/HTTP/mapper and rollback regressions; three behavioral mutants; final offline gate receipt .ai/logs/2026-10-01_codex_alpha-id-exhaustion.md. Parked mutation enforcement and catalog UI scope remain separate. |
-| `KL-129` | P1 | AR03 | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §129; Reserved user decision; see decision contract above |
-| `KL-106` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §106; AR13: fixture audit across every class and channel; `report.md` now names every kept class and the telegram file's values/timestamps; dialog wording handed to the Web-lock holder; no anonymity claim |
-| `DOC-01` | P1 | AR00 | DONE | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
-| `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
-| `KL-13` | P1 | AR08 | TODO | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
-| `PDB-09` | P1 | AR05 | DONE | Published 04900fbc; master_language_evidence/master_evidence_rederive and three actual private cases verify Languages reporting, retained bytes and report history; manufacturer-report contract scopes the remaining unknown semantics |
-| `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §19.11 / goal-commission.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-130-GATE` | P1 | AR01 | DONE | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |
-| `RELEASE-01` | P1 | AR18 | WAITING_OWNER | goal.md §9–10; Named final acceptance prerequisites above; not ready on historical receipts alone |
-| `RELEASE-02` | P1 | AR18 | WAITING_OWNER | goal.md §1 / §10; Named final acceptance prerequisites above; not ready on historical receipts alone |
-| `KL-22` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §22; AR13: every declared route (97 pairs) checked unauthenticated; bind address has no override; TLS/roles/audit/CSRF remain deployer boundaries (checklist in ALPHA_READINESS) |
-| `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §63; goal.md §6: T22 explicitly parked outside v1 must-haves |
-| `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §8/26; goal.md §6: Secure deferred 2026-09-11; not Secure support |
-| `UI-01` | P1 | `goal-ui.md` — owner only | DONE | goal-ui.md §0 / docs/IMPLEMENTATION_STATUS.md: U13; U13 closure dfa0cc79 / receipt 8a51b74d; source 36e6b6af; native/multicast boundaries retained |
-| `UI-02` | P1 | `goal-ui.md` — owner only | DONE | goal-ui.md §0 / docs/superpowers/plans/2026-09-21-user-reported-issues.md; U13 closure dfa0cc79 / receipt 8a51b74d; source 36e6b6af; native/multicast boundaries retained |
-| `KL-126` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §126; AR14: four untested guards pinned by `reconciliation_refuses_foreign_duplicate_ambiguous_and_stale_selections` (4/4 mutants); identity is never inferred from occupancy |
-| `KL-29` | P2 | AR14 | DONE | docs/KNOWN_LIMITATIONS.md §29; AR14: CLI `bus monitor`/`route-monitor`/`bus write --project` parse and print in the project style; names of all installations shown (`knx_core::resolve_project_group_address_names`, shared with the server). Tests `cli_bus_address_style` (RED 3/5), `monitor_line_uses_the_project_style_and_all_names`, `names_shared_across_installations_are_all_shown`; 7/7 mutants. Residue: `route-send` has no `--project`, keeps three-level |
-| `KL-31` | P2 | AR14 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §31; AR14: found and fixed cross-group delivery on Linux (`IP_MULTICAST_ALL` off; `a_custom_group_telegram_reaches_its_group_and_not_the_default_one`, RED then GREEN, mutant caught). Missing: real router traffic on a custom group — authorized live owner; fallback: default group unchanged, custom group documented unverified; unblock: an authorized custom-group run |
-| `KL-62` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §62; AR14: item 13 fixed (CLI style), item 12 closed (`every_styles_telegram_destination_round_trips_through_write` adds ThreeLevel). Tunnelling-only/single-session/client-filter scope retained; live transmit evidence external; row cap is UI-owner work |
-| `KL-72` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §72; AR14: Standard-fixed per-address cost, not liftable; pacing/exclusion contract pinned by existing knx-core/knx-net/CLI/HTTP scan tests (dossier in ALPHA_READINESS) |
-| `KL-73` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §73; AR14: pinned by `a_probe_asks_only_for_the_mask_version` (mutant caught); identity needs a separate verified procedure |
-| `KL-74` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §74; AR14: protocol limit pinned by `a_negative_l2_confirm_is_vacant_like_total_silence` and `a_negative_l2_confirm_still_waits_out_the_whole_window` |
-| `KL-75` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §75; AR14: trade-off pinned by `a_slow_answer_is_vacant_after_a_short_window_and_occupied_within_a_long_one` (mutant caught); default stays 6000 ms |
-| `KL-77` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §77; AR14: one-line scope pinned by the range-spanning-two-lines rejections (knx-core and CLI); no coupler traversal |
-| `KL-78` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §78; AR14: only the own tunnel address is skipped (`self_address_is_skipped_without_sending_a_single_frame`); an immediate answer stays `Occupied`; no timing heuristic without multi-gateway evidence |
-| `KL-105` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §105; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-108` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §108; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-101` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §101; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-104` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §104; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-109` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §109; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-111` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §111; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-113` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §113; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-114` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §114; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-143` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §143; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-144` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §144; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-145` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §145; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-93` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §93; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-03` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.6.7 / §8.7.15; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-07` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-08` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-09` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.14–15 / docs/superpowers/specs/2026-09-13-commissioning-download-design.md §12; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.6.7; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / commissioning-download-design.md R11; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `DATA-02` | P2 | AR04 | DONE | STORAGE_COMMAND_CONTRACT.md; published 216c673e full-save fallback/native failure-history tests, integrated gates and exact remote/artifact verified; U12 editor scope is not lifted |
-| `DATA-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-87` | P2 | AR05 | DONE | Published 04900fbc; exact master Languages attribute reporting, namespaces and retained bytes verified by master_language_evidence; untyped Version semantics remain explicit, not a compatibility claim |
-| `AUDIT-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-137` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §137; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-36` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §36; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-82` | P2 | `goal-ui.md` — owner only | DONE | Scoped authoritative interpretation comparison and unavailable/legacy fail-closed UI delivered at 8ceacf49; pause/cursor/race and eleven behavioral controls, all twelve integrated gates and exact remote/tree/artifact readback verified. Point-in-time/native/live/transactional limitations remain in §82 and docs/UI_ALPHA_READINESS.md; not an alpha waiver. |
-| `DOC-03` | P2 | AR15 | TODO | docs/manual/known-issues.md / docs/manual/ideas-and-roadmap.md; Retained boundary; AR15 verifies subcases before changing status |
-| `RELEASE-03` | P2 | AR16 | WAITING_OWNER | goal.md §5 / docs/manual/README.md / ADR-0024; Named final acceptance prerequisites above; not ready on historical receipts alone |
-| `RELEASE-04` | P2 | AR19 | WAITING_DECISION | goal.md §5 / docs/ROADMAP.md Session 7; Reserved user decision; see decision contract above |
-| `KL-127` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §127; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `MODEL-01` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 device editor scope / U12 structure editor scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `MODEL-02` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 device editor scope / U12 structure editor scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `MODEL-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 device editor scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/manual/ideas-and-roadmap.md / docs/COMPATIBILITY.md; manual ideas-and-roadmap / COMPATIBILITY: encrypted product packages explicitly excluded |
-| `IMPORT-06` | P2 | AR06 | TODO | docs/manual/known-issues.md / docs/KNOWN_LIMITATIONS.md §2; Retained boundary; AR06 verifies subcases before changing status |
-| `KL-11` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md §11; Retained boundary; AR06 verifies subcases before changing status |
-| `KL-125` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md §125; Retained boundary; AR06 verifies subcases before changing status |
-| `KL-128` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md §128; Retained boundary; AR06 verifies subcases before changing status |
-| `KL-15` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md §15; Retained boundary; AR06 verifies subcases before changing status |
-| `KL-2` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §2; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-14` | P2 | AR10 | TODO | docs/KNOWN_LIMITATIONS.md §14; Retained boundary; AR10 verifies subcases before changing status |
-| `KL-37` | P2 | AR10 | TODO | docs/KNOWN_LIMITATIONS.md §37; Retained boundary; AR10 verifies subcases before changing status |
-| `KL-64` | P2 | AR10 | TODO | docs/KNOWN_LIMITATIONS.md §64; Retained boundary; AR10 verifies subcases before changing status |
-| `KL-66` | P2 | AR10 | TODO | docs/KNOWN_LIMITATIONS.md §66; Retained boundary; AR10 verifies subcases before changing status |
-| `KL-12` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §12; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-135` | P2 | AR12 | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §135; Reserved user decision; see decision contract above |
-| `KL-146` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md §146; Retained boundary; AR07 verifies subcases before changing status |
-| `KL-3` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md §3; Retained boundary; AR07 verifies subcases before changing status |
-| `KL-6` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §6; goal.md §6: vendor binaries not executed |
-| `KL-68` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §68 / docs/RESEARCH.md §4.4 (RepeatIndex); goal.md §6: dated 2026-09-20 module boundary decision |
-| `KL-69` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §69; goal.md §6: dated 2026-09-20 module boundary decision |
-| `KL-71` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §71; goal.md §6: dated 2026-09-20 module boundary decision |
-| `KL-85` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §85; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-86` | P2 | AR05 | DONE | Published 04900fbc; scoped duplicate/DPT audit in install_reports verifies first normalized values, retained losing declarations, counts, reopen/retry; §86 missing source-winner provenance remains open, not implemented or release-waived |
-| `PDB-01` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
-| `PDB-02` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
-| `PDB-05` | P2 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
-| `PDB-06` | P2 | AR05 | DONE | Published 04900fbc; dynamic_tree mixed active/skipped regression verifies one shared budget and truncation disclosure; value-dependent/unexpanded semantics stay unsupported, not exhaustively enumerated |
-| `PDB-08` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-3 report history and coverage boundary; Retained boundary; AR06 verifies subcases before changing status |
-| `PDB-10` | P2 | AR06 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-7 catalogue metadata are source strings; Retained boundary; AR06 verifies subcases before changing status |
-| `R-DYNAMIC-01` | P2 | AR07 | TODO | docs/RESEARCH.md §4.3 / Open questions; Retained boundary; AR07 verifies subcases before changing status |
-| `R-MODULE-03` | P2 | AR07 | BLOCKED_EXTERNAL | docs/RESEARCH.md §4.4 / docs/KNOWN_LIMITATIONS.md: PDB-9; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
-| `R-MODULE-04` | P2 | AR07 | BLOCKED_EXTERNAL | docs/RESEARCH.md §4.4 / docs/GAP_ANALYSIS_ETS.md A3; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
-| `KL-133` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §133; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-38` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §38; Retained boundary; AR11 verifies subcases before changing status |
-| `KL-39` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §39; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-40` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §40; Retained boundary; AR11 verifies subcases before changing status |
-| `KL-44` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §44; Retained boundary; AR11 verifies subcases before changing status |
-| `KL-47` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §47; Retained boundary; AR11 verifies subcases before changing status |
-| `KL-51` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §51; Retained boundary; AR11 verifies subcases before changing status |
-| `KL-60` | P2 | AR11 | TODO | docs/KNOWN_LIMITATIONS.md §60; Retained boundary; AR11 verifies subcases before changing status |
-| `R-SEC-01` | P2 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §9 / Open questions; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `UI-03` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Device-checks UI boundary; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `UI-04` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: Partial commissioning bus-activity snapshot / ADR-0055/0056; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §130 (Zoom); U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-20` | P2 | `goal-ui.md` — owner only | DONE | UI owner keyboard/modal/help-tip implementation delivered at 2e57f8e5; twelve integrated gates/eighteen controls verified; docs/UI_ALPHA_READINESS.md retains actual native/Orca/full-theme residue, not entire-source acceptance or a release waiver |
-| `KL-124` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
-| `KL-76` | P3 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §76; AR14: both deliberate choices pinned: `an_indeterminate_probe_is_not_retried`, `a_negative_l2_confirm_still_waits_out_the_whole_window` (mutants caught) |
-| `KL-102` | P3 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §102; AR14: branch unreachable through the public API; codec symmetry guarded by 41 per-type round-trip tests at sampled values; no fabricated trigger |
-| `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §110; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `KL-115` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §115; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `HISTORY-01` | P3 | Later / separate scope — not an alpha task | LATER | docs/GAP_ANALYSIS_ETS.md B11; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `HISTORY-02` | P3 | Later / separate scope — not an alpha task | LATER | docs/GAP_ANALYSIS_ETS.md C1 / D8; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `DOC-02` | P3 | AR00 | DONE | docs/KNOWN_LIMITATIONS.md / docs/LIMITATION_TRIAGE.md; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
-| `MODEL-04` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md: U11 catalog batch scope; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `MODEL-05` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §17.3; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `MODEL-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | goal.md §6 / ADR-0019; accepted ADR-0019 / goal.md §6: topological model, no spatial canvas |
-| `MODEL-07` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §15 / docs/ROADMAP.md: Functions; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `IMPORT-01` | P3 | Later / separate scope — not an alpha task | LATER | docs/GAP_ANALYSIS_ETS.md C3; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `IMPORT-02` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md: local installation data (uncommitted addition); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `IMPORT-03` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md: telegram-capture audit (uncommitted addition) / goal-commission.md K19; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
-| `IMPORT-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md: local installation data (uncommitted addition); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `KL-100` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §100; accepted ADR-0024 §2: catalogue paragraphs, not a second help store |
-| `KL-48` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §48; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-134` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §134; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
-| `KL-70` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §70; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
-| `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §88; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
-| `PDB-03` | P3 | AR07 | TODO | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
-| `PDB-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `PDB-07` | P3 | AR05 | DONE | Published 04900fbc; scoped Dynamic/report audit and budget/migration regressions; complete acceptance and private cases pass without claiming exhaustive subordinate coverage or reconstructing install history |
-| `PDB-11` | P3 | AR05 | DONE | Published 04900fbc; master_evidence_rederive, master_language_evidence and real v18 upgrade verify atomic byte-only current evidence, missing/unexamined sources and immutable measured-zero/unavailable install snapshots |
-| `FUTURE-01` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §13 / goal.md §7; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-02` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §14 / goal.md §7; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-03` | P3 | Later / separate scope — not an alpha task | LATER | ADR-0031 / goal.md §7 / docs/ROADMAP.md: In-application help; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/RESEARCH.md §16 / goal.md §7; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-05` | P3 | Recorded boundary — AR00 provenance / AR15 claims | LATER | goal.md §6 / docs/GAP_ANALYSIS_ETS.md C6; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | goal.md §6; goal.md §6: Linux-first platform exclusion |
-| `FUTURE-07` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | goal.md §6; goal.md §6: logo remains user-owned |
-| `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §107; accepted ADR-0025 and goal.md §6: data extension, no code plug-in API |
-| `KL-16` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §16; Retained boundary; AR15 verifies subcases before changing status |
-| `KL-42` | P3 | AR04 | DONE | docs/KNOWN_LIMITATIONS.md §42; published 216c673e no-op/doc correction, native/mutation/full-gate evidence and exact remote/artifact readback |
-| `KL-65` | P3 | AR13 | DONE | docs/KNOWN_LIMITATIONS.md §65; AR13: `KNX_REQUIRE_CLEAN_TREE=1` release builds refuse a modified tree (`crates/knx-build-stamp`, ADR-0018 amendment); development builds still name a commit, not a tree; AR17 must build with the flag |
-| `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §41; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §45; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-46` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §46; Retained boundary; AR15 verifies subcases before changing status |
-| `KL-52` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §52; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-53` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §53; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-54` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §54; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-55` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §55; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-56` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §56; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-9` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §9; Retained boundary; AR15 verifies subcases before changing status |
-| `TOOLS-06` | P3 | AR00 | DONE | docs/paperclip-shutdown/STATUS.md / goal.md §12; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
-| `TOOLS-01` | P3 | Later / separate scope — not an alpha task | LATER | .ai/CURRENT_STATE.md (local statistics handover) / docs/AI_STATS_TELEMETRY_PLAN.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `TOOLS-02` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `TOOLS-03` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md / .ai/CURRENT_STATE.md (local); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `TOOLS-04` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md / .ai/CURRENT_STATE.md (local); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `TOOLS-05` | P3 | Later / separate scope — not an alpha task | LATER | docs/AI_STATS_TELEMETRY_PLAN.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `FUTURE-08` | P3 | Later / separate scope — not an alpha task | LATER | docs/manual/ideas-and-roadmap.md; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
-| `KL-121` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
-| `KL-43` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §43; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-97` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §97; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `KL-98` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §98; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `UX-01` | P3 | `goal-ui.md` — owner only | WAITING_OWNER | docs/GAP_ANALYSIS_ETS.md B10 / docs/IMPLEMENTATION_STATUS.md T11; U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
-| `UX-02` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
-| `UX-03` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
-
-**Mechanically counted execution statuses:** ACCEPTED_BOUNDARY=24, BLOCKED_EXTERNAL=3, DONE=6, LATER=20, TODO=54, WAITING_DECISION=6, WAITING_OWNER=67; total=180.
+The 180-row table and its status count moved to the
+[source-ID ledger](status/LEDGER.md#snapshot-ids) on 2026-10-04 (AR14D D2,
+[ADR-0076](adr/0076-one-ledger-is-the-status-of-record.md)); its evidence
+column is the ledger's *Evidence* column.
 
 ## Post-snapshot findings (outside the 180-ID ledger)
 
@@ -503,15 +323,7 @@ commit `2cceea4e`). They have their own identities. The 180-ID ledger, its
 mechanically counted statuses and the 110-heading recount above are a dated
 snapshot and stay unchanged. AR15 recounts them.
 
-| Source ID | Priority | Primary route | Status | Evidence / remaining disposition |
-| --- | --- | --- | --- | --- |
-| `KL-150` | P1 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §150; a real MDT product with nested `ModuleDef`s fails atomically on a `dynamic_node` UNIQUE constraint; synthetic RED fixture first, local package as private evidence only |
-| `KL-149` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §149; CLI extension check is case-sensitive; 43/46 refused Hager files install under a lowercase name |
-| `KL-151` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §151; 13 real packages exceed the ZIP size limits, including Siemens' only current download; measure before changing the bound |
-| `KL-152` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §152; 2 real packages exceed the XML evidence item limit; measure before resizing |
-| `KL-153` | P2 | AR06P | TODO | docs/KNOWN_LIMITATIONS.md §153; schemes 10 (146 files) and 23 (2 files) are refused; grammar evidence for scheme 23 first; unsupported schemes stay explicit refusals |
-
-**Post-snapshot counts:** P1=1, P2=4; TODO=5; total=5.
+Their rows and counts are in the [ledger](status/LEDGER.md#post-snapshot-ids).
 
 **Unblock input for AR07 (status unchanged here):** the same corpus contains
 sample evidence that the ledger above reports as missing. Its status change is

@@ -5,11 +5,14 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import {
+  devicePlacementSlots,
+  deviceInstallation,
+  owningInstallation,
   buildSearchIndex,
   findArea,
   findBuildingPart,
-  findDeviceBuildingPartInFirstInstallation,
-  findDeviceLineInFirstInstallation,
+  findDeviceBuildingPart,
+  findDeviceLine,
   findGroupAddress,
   findGroupRange,
   findLine,
@@ -233,7 +236,7 @@ describe("nestGroupRanges", () => {
   });
 });
 
-describe("findDeviceLineInFirstInstallation", () => {
+describe("findDeviceLine", () => {
   function withTopology(overrides: {
     topology?: InstallationNode["topology"];
     unassigned?: DeviceNode[];
@@ -252,42 +255,152 @@ describe("findDeviceLineInFirstInstallation", () => {
         },
       ],
     });
-    expect(findDeviceLineInFirstInstallation(t, 9)).toBe(7);
+    expect(findDeviceLine(t, 9)).toBe(7);
   });
 
   it("returns null for a device in the unassigned bucket", () => {
     const t = withTopology({ unassigned: [device(9, "Switch")] });
-    expect(findDeviceLineInFirstInstallation(t, 9)).toBeNull();
+    expect(findDeviceLine(t, 9)).toBeNull();
   });
 
-  it("returns undefined for a device absent from the first installation's topology", () => {
+  it("returns undefined for a device absent from every installation's topology", () => {
     const t = withTopology({});
-    expect(findDeviceLineInFirstInstallation(t, 9)).toBeUndefined();
+    expect(findDeviceLine(t, 9)).toBeUndefined();
   });
 
-  it("returns undefined when there is no first installation at all", () => {
-    expect(findDeviceLineInFirstInstallation(tree([]), 9)).toBeUndefined();
+  it("returns undefined when there is no installation at all", () => {
+    expect(findDeviceLine(tree([]), 9)).toBeUndefined();
   });
 });
 
-describe("findDeviceBuildingPartInFirstInstallation", () => {
-  it("finds a device nested inside a building part", () => {
+describe("findDeviceBuildingPart", () => {
+  it("finds a device nested inside a building part of its own installation", () => {
     const t = tree([
       installation({
+        unassigned: [device(9, "Switch")],
         buildings: [building(1, "Main building", "Building", [
           building(2, "Living room", "Room", [], [device(9, "Switch")]),
         ])],
       }),
     ]);
-    expect(findDeviceBuildingPartInFirstInstallation(t, 9)).toBe(2);
+    expect(findDeviceBuildingPart(t, 9)).toBe(2);
+  });
+
+  // MODEL-01: the part is looked up in the installation whose topology
+  // places the device; a building-only device has no such installation.
+  it("looks in a later installation and ignores a building-only device", () => {
+    const t = tree([
+      installation({ buildings: [building(1, "Main", "Building", [], [device(5, "Room only")])] }),
+      installation({ id: 2, unassigned: [device(9, "Switch")],
+        buildings: [building(3, "Annex", "Building", [], [device(9, "Switch")])] }),
+    ]);
+    expect(findDeviceBuildingPart(t, 9)).toBe(3);
+    expect(findDeviceLine(t, 9)).toBeNull();
+    expect(findDeviceBuildingPart(t, 5)).toBeNull();
+    expect(findDeviceLine(t, 5)).toBeUndefined();
   });
 
   it("returns null for a device not placed in any building part", () => {
     const t = tree([installation({ buildings: [building(1, "Main building", "Building")] })]);
-    expect(findDeviceBuildingPartInFirstInstallation(t, 9)).toBeNull();
+    expect(findDeviceBuildingPart(t, 9)).toBeNull();
   });
 
-  it("returns null when there is no first installation at all", () => {
-    expect(findDeviceBuildingPartInFirstInstallation(tree([]), 9)).toBeNull();
+  it("returns null when there is no installation at all", () => {
+    expect(findDeviceBuildingPart(tree([]), 9)).toBeNull();
+  });
+});
+
+// MODEL-01 / ADR-0070: the UI asks the same question as the core — which one
+// installation holds this entity — and never falls back to the first.
+describe("owningInstallation", () => {
+  const ga = { id: 30, name: "Light", address: "1/1/1", range: null, dpts: [], links: [] };
+  function twoInstallations(): ProjectTree {
+    return tree([
+      installation({ topology: [{ id: 1, name: "A", address: 1, lines: [{ id: 7, name: "L", address: 1, devices: [] }] }] }),
+      installation({
+        id: 2,
+        name: "Annex",
+        topology: [{ id: 2, name: "B", address: 2, lines: [{ id: 8, name: "M", address: 1, devices: [] }] }],
+        buildings: [building(5, "Room", "Room", [building(6, "Nook", "RoomPart")])],
+        group_ranges: [{ id: 20, name: "R", start: "1/0/0", end: "1/7/255", parent: null }],
+        group_addresses: [ga],
+      }),
+    ]);
+  }
+
+  it("finds the installation holding each kind of entity, a later one included", () => {
+    const t = twoInstallations();
+    expect(owningInstallation(t, "area", 1)?.id).toBe(0);
+    expect(owningInstallation(t, "area", 2)?.id).toBe(2);
+    expect(owningInstallation(t, "line", 8)?.id).toBe(2);
+    expect(owningInstallation(t, "building_part", 6)?.id).toBe(2);
+    expect(owningInstallation(t, "group_range", 20)?.id).toBe(2);
+    expect(owningInstallation(t, "group_address", 30)?.id).toBe(2);
+    expect(owningInstallation(t, "area", 99)).toBeUndefined();
+  });
+
+  it("never picks the first of several occurrences", () => {
+    const t = twoInstallations();
+    t.installations[1].topology.push({ id: 1, name: "Copy", address: 3, lines: [] });
+    expect(owningInstallation(t, "area", 1)).toBeUndefined();
+    t.installations[1].group_ranges.push({ id: 20, name: "Twin", start: "2/0/0", end: "2/7/255", parent: null });
+    expect(owningInstallation(t, "group_range", 20)).toBeUndefined();
+  });
+});
+
+describe("deviceInstallation", () => {
+  it("is the installation whose topology places the device, on a line or unassigned", () => {
+    const t = tree([
+      installation({ unassigned: [device(4, "Spare")] }),
+      installation({ id: 2, topology: [{ id: 2, name: "B", address: 2, lines: [
+        { id: 8, name: "M", address: 1, devices: [device(9, "Switch")] }] }] }),
+    ]);
+    expect(deviceInstallation(t, 4)?.id).toBe(0);
+    expect(deviceInstallation(t, 9)?.id).toBe(2);
+  });
+
+  it("ignores a building-only placement and refuses topology placements in two installations", () => {
+    const t = tree([
+      installation({ buildings: [building(5, "Room", "Room", [], [device(3, "Only in a room")])], unassigned: [device(9, "Twice")] }),
+      installation({ id: 2, unassigned: [device(9, "Twice")] }),
+    ]);
+    expect(deviceInstallation(t, 3)).toBeUndefined();
+    expect(deviceInstallation(t, 9)).toBeUndefined();
+  });
+});
+
+// MODEL-02 / ADR-0071: the distinct topology slots of a device, each with how
+// often the device is listed there. A line shown under two areas is one slot.
+describe("devicePlacementSlots", () => {
+  const line = (id: number, devices: DeviceNode[]) => ({ id, name: `Line ${id}`, address: id, devices });
+  const total = (t: ProjectTree, id: number) => devicePlacementSlots(t, id).reduce((sum, slot) => sum + slot.count, 0);
+
+  it("lists one slot for a device placed once", () => {
+    const t = tree([installation({ topology: [{ id: 1, name: "A", address: 1, lines: [line(7, [device(9, "S")])] }] })]);
+    expect(devicePlacementSlots(t, 9).map((slot) => slot.kind)).toEqual(["line"]);
+    expect(total(t, 9)).toBe(1);
+  });
+
+  it("lists every distinct slot across lines, unassigned buckets and installations", () => {
+    const t = tree([
+      installation({ unassigned: [device(9, "S")],
+        topology: [{ id: 1, name: "A", address: 1, lines: [line(7, [device(9, "S")]), line(8, [])] }] }),
+      installation({ id: 2, unassigned: [device(9, "S")] }),
+    ]);
+    const slots = devicePlacementSlots(t, 9);
+    expect(slots.map((slot) => slot.kind === "line" ? `line ${slot.line.id}` : `unassigned ${slot.installation.id}`))
+      .toEqual(["line 7", "unassigned 0", "unassigned 2"]);
+    expect(total(t, 9)).toBe(3);
+  });
+
+  it("counts a device listed twice in one line, but not a line shown under two areas", () => {
+    const twice = tree([installation({ topology: [{ id: 1, name: "A", address: 1,
+      lines: [line(7, [device(9, "S"), device(9, "S")])] }] })]);
+    expect(devicePlacementSlots(twice, 9)).toHaveLength(1);
+    expect(total(twice, 9)).toBe(2);
+    const shared = line(7, [device(9, "S")]);
+    const twoAreas = tree([installation({ topology: [
+      { id: 1, name: "A", address: 1, lines: [shared] }, { id: 2, name: "B", address: 2, lines: [shared] }] })]);
+    expect(total(twoAreas, 9)).toBe(1);
   });
 });

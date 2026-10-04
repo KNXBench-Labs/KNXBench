@@ -284,14 +284,17 @@ export function setComObjectFlag(
   });
 }
 
+// MODEL-01 / ADR-0070: `installationId` names the installation of a
+// range-less address; absent keeps the server's first-installation default.
 export function createGroupAddress(
   name: string,
   address: string,
   rangeId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/group-addresses", {
     method: "POST",
-    body: JSON.stringify({ name, address, rangeId }),
+    body: JSON.stringify({ name, address, rangeId, installationId }),
   });
 }
 
@@ -304,10 +307,11 @@ export function createGroupRange(
   start: string,
   end: string,
   parentId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/group-ranges", {
     method: "POST",
-    body: JSON.stringify({ name, start, end, parentId }),
+    body: JSON.stringify({ name, start, end, parentId, installationId }),
   });
 }
 
@@ -330,10 +334,11 @@ export function createBuildingPart(
   name: string,
   kind: string,
   parentId?: number,
+  installationId?: number,
 ): Promise<ProjectTree> {
   return request("/api/building-parts", {
     method: "POST",
-    body: JSON.stringify({ name, kind, parentId }),
+    body: JSON.stringify({ name, kind, parentId, installationId }),
   });
 }
 
@@ -391,8 +396,29 @@ export function unlinkComObject(
   });
 }
 
-export function createArea(name: string, address: number): Promise<ProjectTree> {
-  return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address }) });
+export function createArea(name: string, address: number, installationId?: number): Promise<ProjectTree> {
+  return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address, installationId }) });
+}
+
+// MODEL-02 / ADR-0071: an explicit repair keeps exactly the named slot and
+// removes every other placement (one undo step); the server refuses when
+// nothing is ambiguous or the slot is not a current placement.
+export type PlacementKeep = { lineId: number } | { unassignedInstallationId: number };
+
+export function repairDevicePlacement(deviceId: number, keep: PlacementKeep): Promise<ProjectTree> {
+  const body = "lineId" in keep
+    ? { deviceId, keepLineId: keep.lineId }
+    : { deviceId, keepUnassignedInstallationId: keep.unassignedInstallationId };
+  return request("/api/repair/device-placement", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function repairLineOwner(lineId: number, keepAreaId: number): Promise<ProjectTree> {
+  return request("/api/repair/line-owner", { method: "POST", body: JSON.stringify({ lineId, keepAreaId }) });
+}
+
+// MODEL-01: `Command::RenameInstallation`, one undo step.
+export function renameInstallation(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/installations/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
 export function deleteArea(id: number): Promise<ProjectTree> {
@@ -564,6 +590,8 @@ export interface CreatedCatalogDevice {
   index: number;
   deviceId: number;
   name: string;
+  /** MODEL-04: the address the server allocated, `null`/absent when none was requested. */
+  address?: string | null;
   diagnostics: CreationDiagnostic[];
 }
 
@@ -665,17 +693,27 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   return response.json() as Promise<CatalogInstallReport>;
 }
 
+/** MODEL-04: opt-in catalog batch options; both are part of the replay fingerprint. */
+export interface CatalogCreateOptions {
+  allocateAddresses: boolean;
+  uniqueNames: boolean;
+}
+
 export function createDevice(
   lineId: number | null,
   catalogItemId: string,
   name: string,
   quantity = 1,
   requestId?: string,
+  options: CatalogCreateOptions = { allocateAddresses: false, uniqueNames: false },
 ): Promise<CreateDeviceResponse> {
   return request("/api/devices", {
     method: "POST",
     body: JSON.stringify({ ...(lineId === null ? {} : { lineId }), catalogItemId, name,
-      ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }) }),
+      ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }),
+      // Both default to false on the server; only a chosen option travels.
+      ...(options.allocateAddresses ? { allocateAddresses: true } : {}),
+      ...(options.uniqueNames ? { uniqueNames: true } : {}) }),
   });
 }
 
@@ -736,10 +774,12 @@ export interface CsvExportReport {
 // — a format this project defines and owns, not an ETS export. `path` is a
 // fresh write target resolved server-side, like every route that writes a
 // file the user named.
-export function exportGroupAddressesCsv(path: string): Promise<CsvExportReport> {
+// MODEL-01: `installationId` names the source installation; absent means the
+// first one.
+export function exportGroupAddressesCsv(path: string, installationId?: number): Promise<CsvExportReport> {
   return request("/api/group-addresses/csv-export", {
     method: "POST",
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, installationId }),
   });
 }
 
@@ -781,13 +821,17 @@ export interface CsvImportResponse {
 // (`request()` throws, `tree` never reaches the caller) and leaves the
 // open project untouched — see `import_group_addresses_csv` in
 // apps/knx-server/src/routes.rs.
+// MODEL-01: `installationId` names the target installation. The server binds
+// it into the confirmation token, so preview and confirmation must name the
+// same one.
 export function importGroupAddressesCsv(
   path: string,
   confirmationToken?: string,
+  installationId?: number,
 ): Promise<CsvImportResponse> {
   return request("/api/group-addresses/csv-import", {
     method: "POST",
-    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}) }),
+    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}), installationId }),
   });
 }
 

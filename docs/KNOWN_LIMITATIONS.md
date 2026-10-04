@@ -146,10 +146,20 @@ command in the installation that owns the entity, and refuses ids found in
 several installations or moves that would connect two installations
 (`CommandError::CrossInstallation`). Root creates take an optional
 `installationId` (absent = first installation) and `PATCH
-/api/installations/{id}` renames an installation. The **web editor still
-offers creation only in the first installation** and has no installation
-rename control yet (Web lock); edits of existing entities in later
-installations work through the same Inspector commands. The centre cannot
+/api/installations/{id}` renames an installation. Since MODEL-01 web part 1
+(2026-10-04) the Project Explorer and the centre workspace offer creation in
+every installation: root creates name their installation, children follow
+their parent, devices move by drag and drop only inside one installation,
+and the project node renames installations. An unassigned catalog device
+still lands in the first installation, because the catalog route has no
+installation field; add it on a line of the target installation instead.
+Since part 2 (same day) the Inspector edits, deletes, moves and links an
+entity in the installation that owns it, and every move or link list offers
+only that installation's targets. The bulk toolbar moves a selection only
+when one installation places every selected device. With several
+installations the CSV buttons name the installation they read or write;
+preview and confirmation name the same one. An entity whose id is not owned
+by exactly one installation stays read-only. The centre cannot
 select an orphaned line that has no projected area, although the explicit
 line-move command can attach such an imported line by ID.
 
@@ -163,8 +173,14 @@ commands refuse ambiguous IDs too. Since MODEL-02 (ADR-0071) a multiply
 placed device and a line listed by several areas can be repaired
 **explicitly**: the user names the placement or area to keep
 (`POST /api/repair/device-placement`, `POST /api/repair/line-owner`), every
-other occurrence is removed in one undoable step. The web UI does not offer
-that choice yet (Web lock). Nothing is repaired automatically, duplicate ids
+other occurrence is removed in one undoable step. Since 2026-10-04 the web
+Inspector offers that choice: a device listed more than once shows every
+current slot with "Keep this placement", and a line listed by several areas of
+one installation offers "Keep under this area". The line choice is offered
+only when every occurrence is the same line; two different lines sharing an
+id, or a line id found in two installations, get no repair button. A device
+listed twice by one line counts as a conflict, while a line shown under two
+areas does not make its devices conflicts. Nothing is repaired automatically, duplicate ids
 are not renumbered, and ambiguous building-part or group-range placement has
 no repair command. Since ADR-0074 a native save is exact or refused: duplicate
 entity ids, orphaned lines, inconsistent parent/child lists and a device
@@ -253,8 +269,9 @@ device the lowest free device octet 1–255 on that line in the same undo step,
 skipping octet 0, every address used anywhere in the project and the project
 exclusion list (`knx_core::free_line_addresses`). Too few free addresses
 refuse the whole batch before any ID is reserved. The allocator knows only the
-project, not devices on the real bus. The web catalog does not offer the two
-flags yet (Web lock). This is a local project edit, not a KNX download or
+project, not devices on the real bus. Since 2026-10-04 the web catalog offers
+both flags as unchecked checkboxes; address allocation is disabled without a
+target line. This is a local project edit, not a KNX download or
 ETS-compatibility claim.
 
 An older server may ignore the additive `quantity` field and return a legacy
@@ -1532,40 +1549,7 @@ manufacturer references under the project lock. The desktop delegates to that
 domain. `http_project_routes::importing_replaces_a_dirty_project_with_a_clean_baseline`
 asserts the imported snapshot has no store path. Do not redispatch the old fix.
 
-**Limitation.** `AppState.store_path` (the `.knxdb` file a subsequent plain
-`save_project` writes to) is only ever set by `save_project_as` and
-`open_native_project`. The Tauri `open_project` command — ETS `.knxproj`
-import — loads a fresh in-memory project but never touches `store_path`.
-If a `.knxdb` was open and the user then imports a `.knxproj`, `store_path`
-still points at that old `.knxdb` file.
-
-**Cause.** `open_project` and `open_native_project` were added in
-different cycles (`.knxproj` import predates the native `.knxdb` format)
-and were never made to share a single "what file, if any, backs the
-in-memory project" invariant.
-
-**Impact.** None reachable through the current UI: `apps/knx-web/src/
-App.tsx` resets its own `hasStorePath` flag to `false` on ETS import, so
-"Save" always falls back to "Save As…" in that state. But the backend has
-no equivalent guard — `save_project` just writes wherever `store_path`
-points, with no check that the loaded project actually originated from
-that path — so a future UI change that calls `save_project` without first
-re-deriving `hasStorePath` from a real backend query could silently
-overwrite the old `.knxdb` with the newly-imported project's data.
-
-**Lifted when.** Either `open_project` clears `store_path` to `None`, or
-`save_project` verifies the in-memory project actually originated from
-`store_path` before writing.
-
-**Related (2026-09-10, T10).** `export_project` used to be a second
-consumer of a stale `store_path`: it re-opened `store_path` off disk to
-read the opaque passthrough table and manufacturer manifest, so the same
-stale-pointer scenario above could attach one project's opaque/manifest
-data to a different project's export. Closed for that one code path by
-reading `AppState.opaque`/`AppState.manufacturer_refs` (the live,
-in-memory copies) instead of re-opening the file — see
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
-above (`store_path` itself can point at the wrong file) is unchanged.
+The historical description moved verbatim to [resolved limitations](history/KNOWN_LIMITATIONS_resolved.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) (AR14D D5).
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 
@@ -1750,24 +1734,7 @@ deployer's, exactly as stated above.
 The historical heading is retained for fragment links. Temporary SQLite
 serialization remains; it is not a whole-file response buffer.
 
-**Resolution.** The route freshly serializes the current in-memory project,
-including unsaved edits, opaque entries, and manufacturer references, into
-one temporary SQLite file. `tower_http::services::ServeFile` streams that
-file in bounded 64 KiB chunks instead of copying it into a whole-file
-`Vec<u8>`. Content type and attachment filename remain unchanged.
-
-The response body owns the temporary path until it is dropped, including
-after the HTTP response is split into its headers and body. Both completed
-and abandoned bodies remove their temporary file; response extensions alone
-would not guarantee this lifetime.
-
-**Proof.** Unit tests consume a file larger than three small test chunks,
-require multiple non-empty frames bounded by the configured chunk size,
-compare every byte, and verify cleanup after completed and abandoned
-downloads. The HTTP regression downloads an unsaved project and opens the
-result as a KNX store, preserving its latest edit, installation, opaque
-entries, and manufacturer references. Serialization still creates one
-temporary SQLite file before streaming begins.
+The historical description moved verbatim to [resolved limitations](history/KNOWN_LIMITATIONS_resolved.md#23-apiprojectdownload-buffers-the-whole-knxdb-file-in-memory) (AR14D D5).
 
 ## 24. `FsPicker` has no drag-and-drop or multi-select
 
@@ -1775,26 +1742,7 @@ temporary SQLite file before streaming begins.
 The historical heading remains for fragment links. Single-project selection
 is intentional and does not make the implemented upload gestures absent.
 
-**Final-review hardening, 2026-09-22.** Duplicate basenames are explicit 409
-conflicts, including pre-existing upload files; no destination is overwritten.
-The earlier successful count and filename/error remain visible on partial
-failure. Closing/selecting/unmounting stops the remaining queue. A reopened
-picker waits for the previous in-flight request, which may still finish on the
-server; closing is not a rollback of that request.
-
-**Resolution, 2026-09-22.** The browser picker still returns one
-`Promise<string | null>` path because project open/import remains a singular
-human choice. Its local file input now accepts multiple files, and its upload
-label accepts native file drops. A shared routine sends each file to the
-existing one-file `/api/fs/upload` route sequentially, refreshes the
-`uploads` listing after successful requests, and announces a completed batch
-as a polite status. It never auto-selects an uploaded project.
-
-**Failure handling.** The first failed request stops that batch, keeps earlier
-successful uploads intact, and names the failed file plus server error and
-completed count. It does not announce batch success. During protected-mode
-dragover the picker inspects only `DataTransfer.types`; it reads dropped files
-only at drop time.
+The historical description moved verbatim to [resolved limitations](history/KNOWN_LIMITATIONS_resolved.md#24-fspicker-has-no-drag-and-drop-or-multi-select) (AR14D D5).
 
 ## 26. `BusConnection` does not yet support KNX IP Secure
 
@@ -2373,22 +2321,10 @@ arms and row-only persistence claims are removed; adjacent low-level helper
 comments and tests no longer imply a live incremental engine. Current production
 save paths remain complete saves and do not call this helper.
 
-**Evidence.** A previously unsupported parameter edit failed behaviorally before
-the fix. File-backed regressions verify nested structural batches, exact reopened
-models/high-water marks, undo/redo, middle-sibling order, unchanged opaque and
-manufacturer rows, and a late SQL failure retaining the prior durable state.
-Three compiled behavioral mutants were caught and all touched source hashes
-restored. See [the storage contract](STORAGE_COMMAND_CONTRACT.md) and the AR04
-receipt in `.ai/logs/2026-10-01_codex_alpha-storage-contract.md` for final gates
-and publication; a planned gate is not a passing result.
-
-**Retained boundary, not this former defect.** No incremental-performance claim,
-automatic in-memory/history rollback, combined opaque/model transaction or new
-multi-user conflict policy is introduced. Use `save_project_if_unchanged` for
-the existing expected-state contract. UI/editor and commissioning scopes remain
-with their original owners. This heading/fragment is a historical waypoint.
+The historical description moved verbatim to [resolved limitations](history/KNOWN_LIMITATIONS_resolved.md#42-command_syncrss-module-doc-overstates-its-own-role--pre-existing-not-introduced-by-t12) (AR14D D5).
 
 <a id="43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference"></a>
+
 ## 43. Animation controls exist; some motion surfaces remain outside their guard
 
 **Limitation.** Resolved for the two axes T27 (2026-09-12) shipped,
@@ -3881,7 +3817,7 @@ not a way to distinguish `Module` nodes. Unchanged, in full.
 **Lifted when.** RESEARCH.md's sharpest unknown #1 (what
 `ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
 whether/how it legitimately exceeds `1`,
-[docs/RESEARCH.md §4.4](RESEARCH.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
+[docs/RESEARCH.md §4.4](research/product-database.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
 would have to be settled — by a normative worked example or a hand-built
 multi-repeat fixture — before a scoped key that tells repeated copies
 apart could be designed without inventing one.
@@ -4015,7 +3951,7 @@ with pacing (`--pause-ms`, default 100 ms) and an exclusion list
 implementation slack: (1) each vacant address costs one Transport Layer
 connection timeout, fixed by the Standard at 6 s
 (`03_03_04 Transport Layer v01.02.03 AS`, clause 4, page 16 of 38 — see
-[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5, Finding 1](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 for the correction of an earlier, wrong attribution of this cost to a
 client library's own policy choice); and (2) a real line is mostly
 vacant addresses, not mostly occupied ones, so the expensive case
@@ -4125,7 +4061,7 @@ five-address live run observed neither a negative confirm nor an
 `OccupiedSilent` result among its five vacant addresses (a one-sample
 fact about that run, not evidence either case is rare or cannot occur;
 see
-[RESEARCH.md §8.5 Finding 4](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)).
+[RESEARCH.md §8.5 Finding 4](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)).
 
 `OccupiedSilent`'s own citation rests on a hedge in the Standard's own
 text, not a certainty: **[D]** `03_06_03 EMI_IMI v01.04.02 AS` §4.1.5.3.4
@@ -4256,7 +4192,7 @@ reported `Occupied`, indistinguishable from a real twisted-pair device.
 **Cause.** `probe_address` short-circuits to `SelfAddress` only when
 `addr == transport.assigned_address()` (`crates/knx-net/src/scan.rs:298-300`);
 no other exclusion exists. **[V]**
-[RESEARCH.md §8.5 Finding 2](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5 Finding 2](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 found a candidate signal in three samples on one gateway: two tunnelling
 endpoints answered in 13.6 ms and 14.0 ms, roughly an order of magnitude
 faster than the 100-150 ms a real bus device typically needs. That
@@ -6663,43 +6599,7 @@ decision is inferred here; until then this entry stays open.
 
 **Status.** Resolved by AR01 (2026-10-01); historical heading/anchor retained.
 
-Before AR01, `xtask`'s checks derived their repository root at **compile time** from
-`env!("CARGO_MANIFEST_DIR")` (`xtask/src/main.rs:41`, `:234`, `:283`), not from
-the working directory at run time. A cached `xtask` binary built inside a
-different worktree therefore keeps checking *that* worktree's path. When the
-worktree is deleted, `check-anchors` fails with `cannot read .../DIN-3`, while
-`check-headers` reports `0 files with a well-formed header ... 0 without one`
-and still **exits 0** — a gate that inspected nothing and called it success.
-
-**Evidence.** After the `din-3-goal-migration` worktree was removed,
-`strings target/debug/xtask` still contained
-`/mnt/daten-i/Sourcecode/.paperclip-worktrees/KNXBench/DIN-3`. `git worktree
-prune` did not help (the path is in the binary, not in git metadata), and
-`touch xtask/src/main.rs && cargo build -p xtask` did **not** rebuild it on
-this ntfs3 mount. A build with a fresh `CARGO_TARGET_DIR` produced a binary
-carrying `/mnt/daten-i/Sourcecode/KNXBench`, after which the same three gates
-reported real magnitudes: anchors **382 links / 214 files**, headers **215**,
-layering ok, all exit 0 **[V]**.
-
-**Cost.** Any documentation gate run from a stale binary is worthless but
-looks green. This is the skip-vs-pass failure of §129's corpus tests one layer
-up: exit code 0 is not evidence that work happened.
-
-**Resolution.** Current gate binaries select the exact runtime workspace root
-from CWD or an explicit leading `--root PATH`, validate its Cargo workspace and
-named members, and print that canonical target. They never climb to a parent
-or fall back to the build tree. Required source/documentation scan roots must
-be nonempty; layering requires every checked policy root as a workspace member
-and resolved node. Corpus-gate output now includes actual Rust-file coverage.
-See [verification targets](VERIFICATION.md) and `xtask/tests/gate_scope.rs`.
-
-AR01 reproduced the old success over zero sources after deleting its own build
-worktree, then verified new deleted-target refusal, valid/wrong targets,
-intentional fixtures and behavioral guard mutations. A pre-AR01 executable
-still has the old bug and must be rebuilt. The caller must still verify that
-the emitted target/revision is the intended candidate; nonempty coverage does
-not certify completeness or concurrent-tree stability. No native UI or bus
-claim is added; the separate zoom entry numbered 130 remains open.
+The historical description moved verbatim to [resolved limitations](history/KNOWN_LIMITATIONS_resolved.md#130-a-gate-binary-can-verify-a-directory-that-no-longer-exists) (AR14D D5).
 
 ## §133 A dead webview cannot be closed with the window manager's close button
 

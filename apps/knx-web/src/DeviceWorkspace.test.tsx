@@ -515,3 +515,30 @@ it("never tells a German reader the state is simply unknown, which the English a
   }
   expect(germanMessages["deviceIdentity.resolution.unrecognised"]).toBe("Zustand nicht erkannt");
 });
+
+// MODEL-01 / ADR-0070: a link never connects two installations, so a device
+// is only offered the group addresses of the installation that places it.
+it("offers a later-installation device only that installation's group addresses to link", async () => {
+  const ga = (id: number, name: string, address: string) => ({ id, name, address, range: null, dpts: [], links: [] });
+  const device = { id: 9, name: "Example", address: null, description: null, com_object_count: 1 };
+  const installation = (id: number, name: string) => ({ id, name, topology: [], buildings: [], unassigned: [],
+    group_addresses: [], group_ranges: [] });
+  const twoInstallations: ProjectTree = { ...tree, installations: [
+    { ...installation(1, "First"), group_addresses: [ga(70, "First light", "1/1/1")] },
+    { ...installation(2, "Second"), group_addresses: [ga(80, "Second light", "2/1/1")],
+      topology: [{ id: 5, name: "Area", address: 2, lines: [{ id: 6, name: "Line", address: 1, devices: [device] }] }] },
+  ] };
+  const com = {
+    id: 7, number: 1, name: "Switch", dpt: "DPST-1-1", dpt_layer: null, description: null, description_layer: null,
+    is_active: true, activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,
+    read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false, links: [],
+  } as unknown as DeviceDetail["com_objects"][number];
+  const host = document.createElement("div"); document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => root.render(<DeviceWorkspace detail={detail(NO_REFERENCE, [com])} tree={twoInstallations}
+    onApplied={() => {}} />));
+  const values = Array.from(host.querySelectorAll<HTMLOptionElement>("select option"), (option) => option.value);
+  expect(values).toContain("80");
+  expect(values).not.toContain("70");
+  await act(async () => root.unmount()); host.remove();
+});

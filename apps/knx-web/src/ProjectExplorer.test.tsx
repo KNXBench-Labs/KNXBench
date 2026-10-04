@@ -19,6 +19,10 @@ const apiMock = vi.hoisted(() => ({
   moveDeviceToLine: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
   createBuildingPart: vi.fn(),
+  createArea: vi.fn(),
+  createLine: vi.fn(),
+  createGroupRange: vi.fn(),
+  createGroupAddress: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -650,14 +654,25 @@ describe("ProjectExplorer — external selection reveal", () => {
 });
 
 describe("ProjectExplorer structural drag source", () => {
-  it("exposes only first-installation topology devices as drag sources", async () => {
+  // MODEL-01 / ADR-0070: every installation's topology devices can be
+  // dragged within their own installation; a device placed in two
+  // installations has no owner and stays put.
+  it("exposes topology devices of every installation, but not one placed in two", async () => {
     const { root } = await renderExplorer(treeWithSecondInstallation());
 
     expect(labelFor("Device A").getAttribute("draggable")).toBe("true");
     expect(labelFor("Device D").getAttribute("draggable")).toBe("true");
-    expect(labelFor("Second device").getAttribute("draggable")).not.toBe("true");
-
+    expect(labelFor("Second device").getAttribute("draggable")).toBe("true");
     await unmount(root);
+
+    const twice = treeWithSecondInstallation();
+    twice.installations[0].unassigned.push(device(9, "Second device"));
+    const again = await renderExplorer(twice);
+    const copies = Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
+      .filter((label) => label.textContent === "Second device");
+    expect(copies).toHaveLength(2);
+    expect(copies.every((label) => label.getAttribute("draggable") !== "true")).toBe(true);
+    await unmount(again.root);
   });
 
   it("drag source writes only the typed decimal device id", async () => {
@@ -849,6 +864,150 @@ describe("ProjectExplorer building-part drop", () => {
     expect(event.defaultPrevented).toBe(false);
     expect(target.getAttribute("data-drop-ready")).toBeNull();
     expect(apiMock.moveDeviceToBuildingPart).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+});
+
+// MODEL-01 / ADR-0070: every installation is editable in its own right.
+// Creates and moves stay inside one installation; nothing connects two.
+describe("ProjectExplorer — later installations", () => {
+  function laterTree(): ProjectTree {
+    const tree = treeWithBuildingTargets();
+    tree.installations[1].topology[0].lines.push({ id: 23, name: "Line 3", address: 3, devices: [] });
+    return tree;
+  }
+
+  function within(installationName: string): HTMLElement {
+    return labelFor(installationName).closest("li")!;
+  }
+
+  async function type(input: HTMLInputElement, value: string) {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+
+  it("creates a root area in the installation it was typed into", async () => {
+    apiMock.createArea.mockResolvedValueOnce(laterTree());
+    const { root, onTreeUpdate } = await renderExplorer(laterTree());
+    const second = within("Second installation");
+    const row = second.querySelector<HTMLInputElement>('input[placeholder="New area"]')!.closest("li")!;
+    const [address, name] = Array.from(row.querySelectorAll("input"));
+    await type(address, "5");
+    await type(name, "Annex area");
+    await click(row.querySelector("button")!);
+    expect(apiMock.createArea).toHaveBeenCalledExactlyOnceWith("Annex area", 5, 2);
+    expect(onTreeUpdate).toHaveBeenCalledTimes(1);
+    await unmount(root);
+  });
+
+  it("offers root ranges, buildings and group addresses there too, each naming the installation", async () => {
+    apiMock.createGroupRange.mockResolvedValue(laterTree());
+    apiMock.createBuildingPart.mockResolvedValue(laterTree());
+    apiMock.createGroupAddress.mockResolvedValue(laterTree());
+    const { root } = await renderExplorer(laterTree());
+    const second = within("Second installation");
+    const rangeRow = second.querySelector<HTMLInputElement>('input[placeholder="New group range"]')!.closest("li")!;
+    const [start, end, rangeName] = Array.from(rangeRow.querySelectorAll("input"));
+    await type(start, "2/0/0"); await type(end, "2/7/255"); await type(rangeName, "Annex range");
+    await click(rangeRow.querySelector("button")!);
+    expect(apiMock.createGroupRange).toHaveBeenCalledExactlyOnceWith("Annex range", "2/0/0", "2/7/255", undefined, 2);
+    const buildingRow = second.querySelector<HTMLInputElement>('input[placeholder="New building"]')!.closest("li")!;
+    await type(buildingRow.querySelector("input")!, "Annex hall");
+    await click(buildingRow.querySelector("button")!);
+    expect(apiMock.createBuildingPart).toHaveBeenCalledExactlyOnceWith("Annex hall", "Room", undefined, 2);
+    const gaRow = second.querySelector<HTMLInputElement>('input[placeholder="New group address"]')!.closest("li")!;
+    const [gaAddress, gaName] = Array.from(gaRow.querySelectorAll("input"));
+    await type(gaAddress, "2/1/1"); await type(gaName, "Annex light");
+    await click(gaRow.querySelector("button")!);
+    expect(apiMock.createGroupAddress).toHaveBeenCalledExactlyOnceWith("Annex light", "2/1/1", undefined, 2);
+    await unmount(root);
+  });
+
+  it("adds lines under a later area and devices on its lines, but unassigned devices only in the first", async () => {
+    const { root } = await renderExplorer(laterTree());
+    const second = within("Second installation");
+    expect(second.querySelector('input[placeholder="New line"]')).not.toBeNull();
+    const addButtons = Array.from(second.querySelectorAll("button")).filter((b) => b.textContent === "+ Add device");
+    expect(addButtons).toHaveLength(2);
+    expect(Array.from(within("Installation").querySelectorAll("button"))
+      .filter((b) => b.textContent === "+ Add device")).toHaveLength(2);
+    await unmount(root);
+  });
+
+  it("moves a later-installation device to another line of the same installation", async () => {
+    apiMock.moveDeviceToLine.mockResolvedValueOnce(laterTree());
+    const { root } = await renderExplorer(laterTree());
+    await dragAndDrop(labelFor("Second device"), labelFor("Line 3: Line 3"));
+    expect(apiMock.moveDeviceToLine).toHaveBeenCalledExactlyOnceWith(9, 23);
+    await unmount(root);
+  });
+
+  it("moves a later-installation device to a building part of the same installation", async () => {
+    apiMock.moveDeviceToBuildingPart.mockResolvedValueOnce(laterTree());
+    const { root } = await renderExplorer(laterTree());
+    await dragAndDrop(labelFor("Second device"), labelFor("Other room (Room)"));
+    expect(apiMock.moveDeviceToBuildingPart).toHaveBeenCalledExactlyOnceWith(9, 601);
+    await unmount(root);
+  });
+
+  it("never offers a first-installation line to a later-installation device", async () => {
+    const { root } = await renderExplorer(laterTree());
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(labelFor("Second device"), "dragstart", transfer);
+    const target = labelFor("Line 1: Line 1");
+    const event = await dispatchDrag(target, "dragover", transfer);
+    await dispatchDrag(target, "drop", transfer);
+    expect(event.defaultPrevented).toBe(false);
+    expect(target.getAttribute("data-drop-ready")).toBeNull();
+    expect(apiMock.moveDeviceToLine).not.toHaveBeenCalled();
+    await unmount(root);
+  });
+});
+
+// MODEL-01: a bulk move offers the targets of the one installation that owns
+// every selected device; a selection spanning installations cannot be moved.
+describe("BulkActionToolbar — installations", () => {
+  function bulkTree(): ProjectTree {
+    const tree = treeWithBuildingTargets();
+    tree.installations[1].topology[0].lines[0].devices.push(device(10, "Third device"));
+    tree.installations[1].topology[0].lines.push({ id: 23, name: "Line 3", address: 3, devices: [] });
+    return tree;
+  }
+
+  function optionValues(role: string): string[] {
+    return Array.from(host!.querySelectorAll<HTMLOptionElement>(`.bulk-action-toolbar select[data-role='${role}'] option`),
+      (option) => option.value);
+  }
+
+  it("moves devices of a later installation among that installation's lines and parts", async () => {
+    apiMock.batchMoveDevicesToLine.mockResolvedValueOnce(bulkTree());
+    const { root } = await renderExplorer(bulkTree());
+    await click(labelFor("Second device"), { ctrlKey: true });
+    await click(labelFor("Third device"), { ctrlKey: true });
+    expect(optionValues("move-line")).toEqual(expect.arrayContaining(["22", "23"]));
+    expect(optionValues("move-line")).not.toContain("1");
+    expect(optionValues("move-building-part")).toContain("601");
+    expect(optionValues("move-building-part")).not.toContain("501");
+    const select = host!.querySelector<HTMLSelectElement>(".bulk-action-toolbar select[data-role='move-line']")!;
+    await act(async () => {
+      select.value = "23";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.batchMoveDevicesToLine).toHaveBeenCalledExactlyOnceWith([9, 10], 23);
+    await unmount(root);
+  });
+
+  it("offers no move for a selection spanning two installations, but still offers delete", async () => {
+    const { root } = await renderExplorer(bulkTree());
+    await click(labelFor("Device A"), { ctrlKey: true });
+    await click(labelFor("Second device"), { ctrlKey: true });
+    expect(host!.querySelector(".bulk-action-toolbar select")).toBeNull();
+    expect(host!.querySelector(".bulk-action-toolbar")?.textContent)
+      .toContain("Moving needs devices of one installation.");
+    expect(Array.from(host!.querySelectorAll(".bulk-action-toolbar button")).some((b) => b.textContent === "Delete"))
+      .toBe(true);
     await unmount(root);
   });
 });

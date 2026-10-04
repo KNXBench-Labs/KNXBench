@@ -11,7 +11,7 @@ import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
-import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
+import { deviceInstallations, nestGroupRanges, owningInstallation, type GroupRangeTreeNode } from "./treeUtils";
 import CatalogBrowser from "./CatalogBrowser";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
@@ -316,8 +316,9 @@ export function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTre
   );
 }
 
-export function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
-  const { onCreated } = props;
+// `installationId` names the installation the area is created in (MODEL-01).
+export function NewAreaRow(props: { installationId?: number; onCreated: (tree: ProjectTree) => void }) {
+  const { installationId, onCreated } = props;
   const t = useTranslate();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -328,7 +329,7 @@ export function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createArea(name, Number(address));
+      const tree = await api.createArea(name, Number(address), installationId);
       onCreated(tree);
       setName("");
       setAddress("");
@@ -367,8 +368,9 @@ export function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
 
 // The trigger for CatalogBrowser (T2, GAP_ANALYSIS_ETS.md) — opens the
 // modal targeting this line (or `null` for the Unassigned bucket below).
-// `isFirst`-gated like every other create affordance: `Command::CreateDevice`
-// only ever targets `installations[0]`.
+// A device on a line goes to that line's installation (ADR-0070); the
+// catalog route has no installation field, so an unassigned device always
+// lands in the first installation and only that one offers the row.
 function AddDeviceRow(props: { onAdd: () => void }) {
   const t = useTranslate();
   return (
@@ -379,13 +381,13 @@ function AddDeviceRow(props: { onAdd: () => void }) {
 }
 
 function LineItem(
-  props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void }
+  props: { line: LineNode; onAddDevice: (lineId: number) => void }
     & SelectionProps
     & DeviceDragProps
     & LineDropProps
     & { revealRequest?: RevealRequest | null },
 ) {
-  const { line, isFirst, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
+  const { line, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
   const lineReveals = lineContainsSelection(line, props.revealRequest);
   return (
@@ -393,9 +395,11 @@ function LineItem(
       label={t("explorer.lineLabel", { address: line.address, name: line.name })}
       selected={selection?.kind === "line" && selection.id === line.id}
       onSelect={() => onSelect({ kind: "line", id: line.id })}
-      dropReady={isFirst && props.dragSource !== null
+      // `eligibleDeviceIds` holds only devices of this line's installation:
+      // nothing connects two installations (ADR-0070).
+      dropReady={props.dragSource !== null
         && props.eligibleDeviceIds.has(props.dragSource.deviceId)}
-      onDragOver={isFirst ? (event) => {
+      onDragOver={(event) => {
         if (!acceptsDraggedDevice(
           event.dataTransfer,
           props.dragSource,
@@ -403,8 +407,8 @@ function LineItem(
         )) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
-      } : undefined}
-      onDrop={isFirst ? (event) => props.onDeviceDropOnLine(line, event) : undefined}
+      }}
+      onDrop={(event) => props.onDeviceDropOnLine(line, event)}
       revealGeneration={revealGeneration(props.revealRequest, lineReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "line", line.id)}
     >
@@ -427,7 +431,7 @@ function LineItem(
           scrollOnReveal={selectionIs(props.revealRequest, "device", d.id)}
         />
       ))}
-      {isFirst && <AddDeviceRow onAdd={() => onAddDevice(line.id)} />}
+      <AddDeviceRow onAdd={() => onAddDevice(line.id)} />
     </TreeNode>
   );
 }
@@ -435,12 +439,11 @@ function LineItem(
 function AreaItem(
   props: {
     area: AreaNode;
-    isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number) => void;
   } & SelectionProps & DeviceDragProps & LineDropProps & { revealRequest?: RevealRequest | null },
 ) {
-  const { area, isFirst, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
+  const { area, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
     props;
   const t = useTranslate();
   const areaReveals = areaContainsSelection(area, props.revealRequest);
@@ -456,7 +459,6 @@ function AreaItem(
         <LineItem
           key={l.id}
           line={l}
-          isFirst={isFirst}
           onAddDevice={onAddDevice}
           selection={selection}
           onSelect={onSelect}
@@ -470,7 +472,7 @@ function AreaItem(
           revealRequest={props.revealRequest}
         />
       ))}
-      {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
+      <NewLineRow areaId={area.id} onCreated={onCreated} />
     </TreeNode>
   );
 }
@@ -499,18 +501,18 @@ function GroupAddressItem(props: { ga: GroupAddressNode; revealRequest?: RevealR
 // One of two affordances in the tree that create a domain object rather
 // than select one (the other is `NewGroupRangeRow`, below) — kept as an
 // inline row rather than a dialog, the same way `AddressField`/`DptField`
-// (Inspector.tsx) edit inline rather than popping a modal. Only rendered
-// under the first installation (`InstallationItem`'s `isFirst`):
-// `Command::apply` only ever targets `installations[0]` (command.rs), so
-// this is the only installation the affordance could honestly promise to
-// create into. `ranges` is the installation's own flat `group_ranges` list
+// (Inspector.tsx) edit inline rather than popping a modal. Rendered under
+// every installation: a range-less address names `installationId`, one in a
+// range goes to the range's installation (ADR-0070). `ranges` is the
+// installation's own flat `group_ranges` list
 // (main and middle ranges alike) — an unset selection creates the address
 // with no range, same as every group address created before this cycle.
 function NewGroupAddressRow(props: {
   ranges: GroupRangeNode[];
+  installationId: number;
   onCreated: (tree: ProjectTree) => void;
 }) {
-  const { ranges, onCreated } = props;
+  const { ranges, installationId, onCreated } = props;
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const [address, setAddress] = useState("");
@@ -523,13 +525,12 @@ function NewGroupAddressRow(props: {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createGroupAddress(
-        name,
-        // Both notations accepted whatever is on screen; the API only
-        // ever sees the canonical `/` form (`gaNotation.ts`).
-        canonicalGroupAddress(address),
-        rangeId === "" ? undefined : Number(rangeId),
-      );
+      // Both notations accepted whatever is on screen; the API only ever
+      // sees the canonical `/` form (`gaNotation.ts`).
+      const canonical = canonicalGroupAddress(address);
+      const tree = rangeId === ""
+        ? await api.createGroupAddress(name, canonical, undefined, installationId)
+        : await api.createGroupAddress(name, canonical, Number(rangeId));
       onCreated(tree);
       setAddress("");
       setName("");
@@ -582,9 +583,11 @@ function NewGroupAddressRow(props: {
 // comment in knx-core), even though the model itself doesn't cap nesting.
 export function NewGroupRangeRow(props: {
   parentId?: number;
+  /** Installation of a main range (no `parentId`), MODEL-01. */
+  installationId?: number;
   onCreated: (tree: ProjectTree) => void;
 }) {
-  const { parentId, onCreated } = props;
+  const { parentId, installationId, onCreated } = props;
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const [name, setName] = useState("");
@@ -597,12 +600,10 @@ export function NewGroupRangeRow(props: {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createGroupRange(
-        name,
-        canonicalGroupAddress(start),
-        canonicalGroupAddress(end),
-        parentId,
-      );
+      const tree = parentId === undefined && installationId !== undefined
+        ? await api.createGroupRange(name, canonicalGroupAddress(start), canonicalGroupAddress(end),
+          undefined, installationId)
+        : await api.createGroupRange(name, canonicalGroupAddress(start), canonicalGroupAddress(end), parentId);
       onCreated(tree);
       setName("");
       setStart("");
@@ -678,9 +679,11 @@ const BUILDING_PART_KINDS = [
 export function NewBuildingPartRow(props: {
   parentId?: number;
   fixedKind?: "Ground";
+  /** Installation of a root part (no `parentId`), MODEL-01. */
+  installationId?: number;
   onCreated: (tree: ProjectTree) => void;
 }) {
-  const { parentId, fixedKind, onCreated } = props;
+  const { parentId, fixedKind, installationId, onCreated } = props;
   const t = useTranslate();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<(typeof BUILDING_PART_KINDS)[number]>("Room");
@@ -691,7 +694,9 @@ export function NewBuildingPartRow(props: {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createBuildingPart(name, fixedKind ?? kind, parentId);
+      const tree = parentId === undefined && installationId !== undefined
+        ? await api.createBuildingPart(name, fixedKind ?? kind, undefined, installationId)
+        : await api.createBuildingPart(name, fixedKind ?? kind, parentId);
       onCreated(tree);
       setName("");
     } catch (e) {
@@ -733,12 +738,11 @@ export function NewBuildingPartRow(props: {
 function BuildingItem(
   props: {
     building: BuildingNode;
-    isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
     buildingDeviceRevealTarget?: BuildingDeviceRevealTarget;
   } & SelectionProps & DeviceDragProps & BuildingDropProps & { revealRequest?: RevealRequest | null },
 ) {
-  const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
+  const { building, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
   const buildingReveals = buildingContainsSelection(
     building,
@@ -750,9 +754,9 @@ function BuildingItem(
       label={t("explorer.buildingLabel", { name: building.name, kind: buildingPartKindLabel(t, building.kind) })}
       selected={selection?.kind === "building_part" && selection.id === building.id}
       onSelect={() => onSelect({ kind: "building_part", id: building.id })}
-      dropReady={isFirst && props.dragSource !== null
+      dropReady={props.dragSource !== null
         && props.eligibleDeviceIds.has(props.dragSource.deviceId)}
-      onDragOver={isFirst ? (event) => {
+      onDragOver={(event) => {
         if (!acceptsDraggedDevice(
           event.dataTransfer,
           props.dragSource,
@@ -760,10 +764,8 @@ function BuildingItem(
         )) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
-      } : undefined}
-      onDrop={isFirst
-        ? (event) => props.onDeviceDropOnBuildingPart(building, event)
-        : undefined}
+      }}
+      onDrop={(event) => props.onDeviceDropOnBuildingPart(building, event)}
       revealGeneration={revealGeneration(props.revealRequest, buildingReveals)}
       scrollOnReveal={selectionIs(props.revealRequest, "building_part", building.id)}
     >
@@ -771,7 +773,6 @@ function BuildingItem(
         <BuildingItem
           key={c.id}
           building={c}
-          isFirst={isFirst}
           onCreated={onCreated}
           selection={selection}
           onSelect={onSelect}
@@ -809,7 +810,7 @@ function BuildingItem(
             && props.buildingDeviceRevealTarget.deviceId === d.id}
         />
       ))}
-      {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
+      <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />
     </TreeNode>
   );
 }
@@ -821,11 +822,10 @@ function BuildingItem(
 function GroupRangeItem(
   props: {
     node: GroupRangeTreeNode;
-    isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
   } & Pick<SelectionProps, "selection" | "onSelect"> & { revealRequest?: RevealRequest | null },
 ) {
-  const { node, isFirst, onCreated, selection, onSelect } = props;
+  const { node, onCreated, selection, onSelect } = props;
   const formatGa = useGroupAddressFormat();
   const { range, children } = node;
   const rangeReveals = groupRangeContainsSelection(node, props.revealRequest);
@@ -841,14 +841,13 @@ function GroupRangeItem(
         <GroupRangeItem
           key={c.range.id}
           node={c}
-          isFirst={isFirst}
           onCreated={onCreated}
           selection={selection}
           onSelect={onSelect}
           revealRequest={props.revealRequest}
         />
       ))}
-      {isFirst && range.parent === null && (
+      {range.parent === null && (
         <NewGroupRangeRow parentId={range.id} onCreated={onCreated} />
       )}
     </TreeNode>
@@ -858,6 +857,7 @@ function GroupRangeItem(
 function InstallationItem(
   props: {
     installation: InstallationNode;
+    /** Only the first installation receives unassigned catalog devices. */
     isFirst: boolean;
     onTreeUpdate: (tree: ProjectTree) => void;
     onAddDevice: (lineId: number | null) => void;
@@ -901,7 +901,6 @@ function InstallationItem(
           <AreaItem
             key={a.id}
             area={a}
-            isFirst={isFirst}
             onCreated={onTreeUpdate}
             onAddDevice={onAddDevice}
             selection={selection}
@@ -916,14 +915,13 @@ function InstallationItem(
             revealRequest={props.revealRequest}
           />
         ))}
-        {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
+        <NewAreaRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
       <TreeNode label={t("explorer.buildings")} revealGeneration={revealGeneration(props.revealRequest, buildingsReveal)}>
         {installation.buildings.map((b) => (
           <BuildingItem
             key={b.id}
             building={b}
-            isFirst={isFirst}
             onCreated={onTreeUpdate}
             selection={selection}
             onSelect={onSelect}
@@ -938,7 +936,7 @@ function InstallationItem(
             buildingDeviceRevealTarget={buildingDeviceRevealTarget}
           />
         ))}
-        {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
+        <NewBuildingPartRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
       {(installation.unassigned.length > 0 || isFirst) && (
         <TreeNode label={t("explorer.unassigned")} revealGeneration={revealGeneration(props.revealRequest, unassignedReveal)}>
@@ -976,23 +974,21 @@ function InstallationItem(
             revealRequest={props.revealRequest}
           />
         ))}
-        {isFirst && (
-          <NewGroupAddressRow ranges={installation.group_ranges} onCreated={onTreeUpdate} />
-        )}
+        <NewGroupAddressRow ranges={installation.group_ranges} installationId={installation.id}
+          onCreated={onTreeUpdate} />
       </TreeNode>
       <TreeNode label={t("explorer.groupRanges")} revealGeneration={revealGeneration(props.revealRequest, groupRangesReveal)}>
         {nestGroupRanges(installation.group_ranges).map((node) => (
           <GroupRangeItem
             key={node.range.id}
             node={node}
-            isFirst={isFirst}
             onCreated={onTreeUpdate}
             selection={selection}
             onSelect={onSelect}
             revealRequest={props.revealRequest}
           />
         ))}
-        {isFirst && <NewGroupRangeRow onCreated={onTreeUpdate} />}
+        <NewGroupRangeRow installationId={installation.id} onCreated={onTreeUpdate} />
       </TreeNode>
     </TreeNode>
   );
@@ -1010,24 +1006,25 @@ export default function ProjectExplorer(
   const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
   // `undefined` = closed; `number | null` = open, targeting that line
-  // (or `null` for unassigned) — CatalogBrowser (T2) is only ever opened
-  // from the first installation, same restriction every other create
-  // affordance here already carries.
+  // (or `null` for unassigned, which always means the first installation).
   const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
   const [dragSource, setDragSource] = useState<DragSource | null>(null);
-  const firstInstallation = tree.installations[0];
-  const eligibleDeviceIds = new Set([
-    ...(firstInstallation?.topology.flatMap((area) =>
-      area.lines.flatMap((line) => line.devices.map((device) => device.id)),
-    ) ?? []),
-    ...(firstInstallation?.unassigned.map((device) => device.id) ?? []),
+  // MODEL-01 / ADR-0070: a device can be moved inside the one installation
+  // whose topology places it; each installation only accepts its own.
+  const topologyDevices = tree.installations.flatMap((installation) => [
+    ...installation.topology.flatMap((area) => area.lines.flatMap((line) => line.devices)),
+    ...installation.unassigned,
   ]);
+  const owners = deviceInstallations(tree);
+  const eligibleByInstallation = new Map<number, Set<number>>(
+    tree.installations.map((installation) => [installation.id, new Set<number>()]));
+  for (const [deviceId, owner] of owners) eligibleByInstallation.get(owner.id)?.add(deviceId);
 
   function onDeviceDragStart(
     device: DeviceNode,
     event: React.DragEvent<HTMLButtonElement>,
   ): void {
-    if (!eligibleDeviceIds.has(device.id)) return;
+    if (!owners.has(device.id)) return;
     event.dataTransfer.setData(DEVICE_DRAG_MIME, String(device.id));
     event.dataTransfer.effectAllowed = "move";
     setDragSource({ deviceId: device.id });
@@ -1036,12 +1033,14 @@ export default function ProjectExplorer(
   function currentDraggedDevice(dataTransfer: DataTransfer): DeviceNode | null {
     const deviceId = parseDraggedDevice(dataTransfer);
     if (deviceId === null || deviceId !== dragSource?.deviceId) return null;
-    return firstInstallation?.topology
-      .flatMap((area) => area.lines)
-      .flatMap((candidate) => candidate.devices)
-      .find((candidate) => candidate.id === deviceId)
-      ?? firstInstallation?.unassigned.find((candidate) => candidate.id === deviceId)
-      ?? null;
+    return topologyDevices.find((candidate) => candidate.id === deviceId) ?? null;
+  }
+
+  // A drop arrives even when the target refused the dragover, so the drop
+  // itself checks that source and target share one installation (ADR-0070).
+  function sameInstallation(device: DeviceNode, target: InstallationNode | undefined): boolean {
+    const source = owners.get(device.id);
+    return source !== undefined && source === target;
   }
 
   async function onDeviceDropOnLine(
@@ -1049,7 +1048,7 @@ export default function ProjectExplorer(
     event: React.DragEvent<HTMLButtonElement>,
   ): Promise<void> {
     const device = currentDraggedDevice(event.dataTransfer);
-    if (!device) return;
+    if (!device || !sameInstallation(device, owningInstallation(tree, "line", line.id))) return;
 
     event.preventDefault();
     try {
@@ -1071,7 +1070,7 @@ export default function ProjectExplorer(
     event: React.DragEvent<HTMLButtonElement>,
   ): Promise<void> {
     const device = currentDraggedDevice(event.dataTransfer);
-    if (!device) return;
+    if (!device || !sameInstallation(device, owningInstallation(tree, "building_part", building.id))) return;
 
     event.preventDefault();
     try {
@@ -1121,7 +1120,7 @@ export default function ProjectExplorer(
             onSelect={onSelect}
             multiSelection={multiSelection}
             onItemClick={onItemClick}
-            eligibleDeviceIds={eligibleDeviceIds}
+            eligibleDeviceIds={eligibleByInstallation.get(inst.id) ?? new Set()}
             dragSource={dragSource}
             onDeviceDragStart={onDeviceDragStart}
             onDeviceDragEnd={() => setDragSource(null)}

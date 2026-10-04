@@ -303,3 +303,15 @@ pre-convention module doc without inventing a tag like `//! @header`.
   pre-release; cargo's own SemVer parsing on every manifest. Not enforced,
   and said so: the alpha bump rule, the truth of any header sentence, and
   a pre-convention file edited without gaining one.
+
+## Amendment, 2026-10-04 (AR13): release builds verify their tree
+
+Decision 2 is unchanged for development builds. Release builds add one
+opt-in rule: with `KNX_REQUIRE_CLEAN_TREE=1`, the shared build-script crate
+`crates/knx-build-stamp` re-runs on every build and refuses to build unless
+git confirms this workspace, a resolvable `HEAD`, no modified or untracked
+non-ignored path, and an explicit `KNX_BUILD_SHA` (if given) equal to `HEAD`.
+This closes the false-clean direction for artifacts without the stale-marker
+trade Decision 2 rejected: there is no `.dirty` suffix; a release either names
+its exact commit or does not build. Docker builds without `.git` are not
+release builds under this rule and keep passing `KNX_BUILD_SHA` explicitly.

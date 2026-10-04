@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 18:19
+Web lock: taken by claude-goal-ui-owner for MODEL-01 web half (installation rename and target choice)
+- **Completed:** Lock taken only, no code yet. The previous lock line (this session, MODEL-04 delivered `c6da3c78`) said released.
+- **Pending/Next Steps:** MODEL-01 per *UI owner handoff*: installation rename (`PATCH /api/installations/{id}`), the installation choice for root creates and CSV import/export (`installationId`), later-installation targets in dropdowns. Release the lock in the merge entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 18:18
 Web lock: released by claude-goal-ui-owner (MODEL-04 web half delivered)
 - **Completed:** MODEL-04 web half. The catalog dialog offers two unchecked checkboxes, *Assign free addresses on the line* (disabled with a hint without a target line) and *Keep names unique*. Only `true` options travel (`allocateAddresses`/`uniqueNames`), so old requests keep their body and replay fingerprint, and a DATA-03 safe retry resends them unchanged. The created-device list shows each allocated address; a short supply is shown as an ordinary error without a retry offer. 5 new Vitest cases (RED first); 4 intercepted Chromium cases (en/de), all failing on the old client; 4/4 mutants. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,145 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, four repository gates (headers 462 ok, ceiling 157; anchors 393 ok), tsc, Vitest 1,774/100 files, complete intercepted Chromium suite 102/102, whitespace; source frozen. MODEL-04 is DONE in the Alpha ledger. Log: `.ai/logs/2026-10-04_claude_ui-model04-web.md`.

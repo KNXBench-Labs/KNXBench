@@ -1,0 +1,288 @@
+{
+  "format": 1,
+  "checked_at": "2026-10-04T16:58:45+02:00",
+  "gated_head": "2057f86b31774a5e2020b1ca5be140798d5419e2",
+  "upstream_base": "1b282578f8fa4a6bdefa6d4a8239aa4456817ec5",
+  "scope": "Bounded History Web offline delivery; no whole-commissioning, native-package or hardware acceptance",
+  "review": {
+    "method": "in-session source/security pass; prior complete Web implementation review retained",
+    "independent_model_approval": false
+  },
+  "frozen_public_input_count": 1054,
+  "frozen_web_input_count": 279,
+  "frozen_manifest_sha256": "d0dca57fa3ae30dd6465d2a8fe20f5dcabe5104e049907d9469d0f078d9b45da",
+  "stages": [
+    {
+      "phase": "guard-controls",
+      "command": [
+        "/usr/bin/python",
+        "<task-scratch>/run-history-web-mutations.py",
+        "<task-scratch>/history-scheme10-desktop-final/mutations"
+      ],
+      "exit": 0,
+      "duration_seconds": 112.73507499694824,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "web",
+      "command": [
+        "/usr/bin/python",
+        "<task-scratch>/run-history-web-corrected.py",
+        "<task-scratch>/history-scheme10-desktop-final/web"
+      ],
+      "exit": 0,
+      "duration_seconds": 22.999444723129272,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "duration_seconds": 1.9196844100952148,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "duration_seconds": 68.46747636795044,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "workspace",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--workspace",
+        "--no-fail-fast"
+      ],
+      "exit": 0,
+      "duration_seconds": 319.58508348464966,
+      "metrics": {
+        "passed": 3145,
+        "failed": 0,
+        "ignored": 177,
+        "result_blocks": 169
+      },
+      "source_stable": true
+    },
+    {
+      "phase": "check-layering",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<repository>",
+        "check-layering"
+      ],
+      "exit": 0,
+      "duration_seconds": 6.8952577114105225,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "check-headers",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<repository>",
+        "check-headers"
+      ],
+      "exit": 0,
+      "duration_seconds": 0.21547222137451172,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "check-anchors",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<repository>",
+        "check-anchors"
+      ],
+      "exit": 0,
+      "duration_seconds": 0.6666343212127686,
+      "metrics": null,
+      "source_stable": true
+    },
+    {
+      "phase": "check-corpus-gates",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "-p",
+        "xtask",
+        "--",
+        "--root",
+        "<repository>",
+        "check-corpus-gates"
+      ],
+      "exit": 0,
+      "duration_seconds": 0.3664257526397705,
+      "metrics": null,
+      "source_stable": true
+    }
+  ],
+  "web_stages": [
+    {
+      "phase": "browser",
+      "command": [
+        "npx",
+        "playwright",
+        "test",
+        "e2e/activity-history.e2e.ts",
+        "--reporter=json",
+        "--output",
+        "<task-scratch>/history-scheme10-desktop-final/web/browser-artifacts"
+      ],
+      "exit": 0,
+      "metrics": {
+        "startTime": "2026-10-04T14:37:47.199Z",
+        "duration": 7740.1810000000005,
+        "expected": 8,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "duration_seconds": 8.549371719360352,
+      "source_stable": true
+    },
+    {
+      "phase": "vitest",
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "--reporter=json",
+        "--outputFile=<task-scratch>/history-scheme10-desktop-final/web/vitest-results.json"
+      ],
+      "exit": 0,
+      "metrics": {
+        "numTotalTests": 1761,
+        "numPassedTests": 1761,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true,
+        "fileCount": 100
+      },
+      "duration_seconds": 13.130675315856934,
+      "source_stable": true
+    },
+    {
+      "phase": "build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "exit": 0,
+      "metrics": null,
+      "duration_seconds": 1.2289166450500488,
+      "source_stable": true
+    }
+  ],
+  "guard_controls": {
+    "cases": 50,
+    "all_compiled": true,
+    "all_failed_named_behavioral_assertions": true,
+    "runtime_exit": 1
+  },
+  "canonical_never_mutated": true,
+  "typechecker_probe": {
+    "exit": 1,
+    "expected_diagnostic_seen": true,
+    "scope": "separate negative compilation control, not a killed behavioral mutant"
+  },
+  "selected_private_regressions": {
+    "gated_head": "60d6a85f0db60a0347e627cae46b743431bf7d73",
+    "accepted": true,
+    "stages": [
+      {
+        "phase": "products",
+        "exit": 0,
+        "registered_tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "source_stable": true
+      },
+      {
+        "phase": "importer",
+        "exit": 0,
+        "registered_tests": 55,
+        "passed": 55,
+        "failed": 0,
+        "ignored": 0,
+        "source_stable": true
+      },
+      {
+        "phase": "native-roundtrip",
+        "exit": 0,
+        "registered_tests": 3,
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "source_stable": true
+      },
+      {
+        "phase": "cli-import",
+        "exit": 0,
+        "registered_tests": 8,
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "source_stable": true
+      }
+    ],
+    "original_input_commitment_unchanged": true,
+    "raw_private_output_discarded": true,
+    "selected_package_source_delta_to_delivery": [],
+    "not_relabelled_as_a_new_delivery_head_run": true,
+    "workspace_cargo_declarations_changed_for_desktop": true
+  },
+  "prior_negative_attempts_retained": true,
+  "whole_goal_done": false,
+  "publication": "Recorded separately through exact Git remote readback; this receipt alone does not assert publication"
+}

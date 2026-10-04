@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR21 review: the flow view goes back for one more lap
+
+- The alpha session reviewed the integrated telegram-flow receipt (U19, AR20,
+  U20, U21 up to `fb40a99a`) and reran the gates itself: fmt, clippy
+  `-D warnings` and workspace tests without `knx-desktop` (3,184 / 0 / 177),
+  web build, tsc, `check:flow-study`, Vitest 2,001, Chromium 130 / 131.
+  The productive path (one monitor poll loop, one snapshot per generation,
+  no writes) and the §7 scenario tests hold.
+- Not accepted yet. Two §9.3 binding requirements for U21 (local reheat,
+  badge-height separation) are neither met nor recorded as deviations, and a
+  probe at the §7 starting load (500 devices, ~1,000 edges, ~985 telegrams/s)
+  keeps the main thread 98 % busy with motion on (13.6 % with motion off).
+  `group-address-drag.e2e.ts` is flaky. Details:
+  TELEGRAM_FLOW_VISUALIZATION §13. `FLOW-01` stays `IN_PROGRESS`.
+
 ## 2026-10-04 — U21 part C: measured, then made lighter
 
 - Production load study (`e2e/flow-load.load.ts`, `playwright.load.config.ts`,

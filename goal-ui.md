@@ -490,6 +490,58 @@ and U17 historical23/23 are not substituted for actual24/24 acceptance.
 Native WebKitGTK/Orca, general WCAG, Alpha/ETS and real KNX commissioning remain
 separate; this theme extension never grants a hardware-write go.
 
+---
+
+## 3b. Alpha owner queue (Claude owner session, 2026-10-04)
+
+The user made this Claude session the `goal-ui.md` owner and asked it to work
+through the UI rows at the end of `alpha-release-goal.md`. Row statuses and the
+decisions behind them are in that file's *UI owner checkpoint*. Native/live
+evidence rows are `ACCEPTED_BOUNDARY` by user decision; these packages cover
+the remaining absent behaviour. Domain/backend halves come first because the
+commissioning session holds the Web lock at the time of writing.
+
+| Package | Rows | Content | Status |
+| --- | --- | --- | --- |
+| UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | backend done (RESEARCH §25); KL-127 closed as known gap; MODEL-03 web half done 2026-10-04 (`.0` submitted, server decides) |
+| UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | server half done (ADR-0069); client half done 2026-10-04 (same-id retry, same server only) |
+| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles done 2026-10-04 |
+| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
+| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
+| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); web half done 2026-10-04 |
+
+Every package follows §2: RED first, mutation check per new guard, gates,
+docs, merge, push, handover, cleanup.
+
+**Handoff 2026-10-04 11:27:** all backend halves are published. By user decision the
+**[web]** halves of UA1–UA5 and all of UA6 are handed over to the Web-lock
+holder (the commissioning session). Tasks, API contracts and acceptance
+criteria are in `alpha-release-goal.md` → *UI owner handoff*. This owner
+session keeps the backend contracts.
+
+**Owner takeover 2026-10-04 15:38:** the previous owner session closed at 15:28. By user
+decision, the Claude UI session that delivered the §133 desktop-shell fix
+(`2ab5698f`) is now the `goal-ui.md` owner. It keeps the backend contracts
+above and answers questions about them. The web halves stay with the Web-lock
+holder as handed over, and this takeover neither takes nor releases the Web lock.
+
+**User decision 2026-10-04 15:41:** the six web halves of UA1–UA6 and the AR13
+`debugReport.privacyTelegrams` text move from the commissioning session back to
+the `goal-ui.md` owner session. That session starts on them only after the
+commissioning session releases the Web lock, then takes the lock through the
+`goal-ui.md` §3 procedure. Until then the commissioning session keeps the lock
+for its own package and owes nothing on these rows. As of this decision, no web
+half had been started anywhere.
+
+---
+
+## 3c. Telegram-flow extension — U19–U21 (approved Alpha scope)
+
+Execute after reconciling the owner's active package and outstanding assigned
+work. Dependency order is **U19 → AR20 → U20 → U21 → AR21 → final Alpha gates**;
+AR20/AR21 live only in `alpha-release-goal.md`. Nothing here reimplements capture,
+DPT decoding, completed settings/themes or commissioning.
+
 ### U19 — Resolve the flow contract and evaluated visual slice
 
 **Open; implementation authorized by the user on 2026-10-04.** Dependencies:
@@ -575,49 +627,6 @@ intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
 **Acceptance:** every flow-contract scenario has named, actual evidence;
 no source/domain/store mutation or hardware action. AR21 adopts, not duplicates,
 this owner's rendering implementation and acceptance.
-
----
-
-## 3b. Alpha owner queue (Claude owner session, 2026-10-04)
-
-The user made this Claude session the `goal-ui.md` owner and asked it to work
-through the UI rows at the end of `alpha-release-goal.md`. Row statuses and the
-decisions behind them are in that file's *UI owner checkpoint*. Native/live
-evidence rows are `ACCEPTED_BOUNDARY` by user decision; these packages cover
-the remaining absent behaviour. Domain/backend halves come first because the
-commissioning session holds the Web lock at the time of writing.
-
-| Package | Rows | Content | Status |
-| --- | --- | --- | --- |
-| UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | backend done (RESEARCH §25); KL-127 closed as known gap; MODEL-03 web half done 2026-10-04 (`.0` submitted, server decides) |
-| UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | server half done (ADR-0069); client half done 2026-10-04 (same-id retry, same server only) |
-| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles done 2026-10-04 |
-| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
-| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
-| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); web half done 2026-10-04 |
-
-Every package follows §2: RED first, mutation check per new guard, gates,
-docs, merge, push, handover, cleanup.
-
-**Handoff 2026-10-04 11:27:** all backend halves are published. By user decision the
-**[web]** halves of UA1–UA5 and all of UA6 are handed over to the Web-lock
-holder (the commissioning session). Tasks, API contracts and acceptance
-criteria are in `alpha-release-goal.md` → *UI owner handoff*. This owner
-session keeps the backend contracts.
-
-**Owner takeover 2026-10-04 15:38:** the previous owner session closed at 15:28. By user
-decision, the Claude UI session that delivered the §133 desktop-shell fix
-(`2ab5698f`) is now the `goal-ui.md` owner. It keeps the backend contracts
-above and answers questions about them. The web halves stay with the Web-lock
-holder as handed over, and this takeover neither takes nor releases the Web lock.
-
-**User decision 2026-10-04 15:41:** the six web halves of UA1–UA6 and the AR13
-`debugReport.privacyTelegrams` text move from the commissioning session back to
-the `goal-ui.md` owner session. That session starts on them only after the
-commissioning session releases the Web lock, then takes the lock through the
-`goal-ui.md` §3 procedure. Until then the commissioning session keeps the lock
-for its own package and owes nothing on these rows. As of this decision, no web
-half had been started anywhere.
 
 ---
 

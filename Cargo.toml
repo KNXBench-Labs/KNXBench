@@ -48,6 +48,12 @@ tempfile = "3"
 tauri = "2.11"
 tauri-build = "2.6"
 tauri-plugin-dialog = "2.7"
+# The desktop shell's only use is observing WebKit's `web-process-terminated`
+# signal (KNOWN_LIMITATIONS §133): `tauri` hands out the native
+# `webkit2gtk::WebView` but no way to name its signal trait. Already resolved
+# at this exact version through `wry`, so depending on it directly adds an
+# edge, not a crate. Linux-only in the one crate that uses it.
+webkit2gtk = "2.0"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 crc32fast = "1"
 # Decompresses a ZipCrypto entry's compressed data once knx-secure has

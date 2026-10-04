@@ -741,7 +741,7 @@ boundaries. No bus run.
 
 **Sources:** none in the 180-ID ledger; documentation hygiene requested by the user on 2026-10-04 (“what is redundant and worth merging, and what should be split for readability”).
 **Dependencies:** none for D1. D2–D5 need the *status-docs lock* below and run before AR15, so that AR15 reconciles one ledger instead of six.
-**Status:** `IN_PROGRESS` — D1 delivered; D2–D5 running under the status-docs lock (Claude docs-consolidation session, taken 2026-10-04).
+**Status:** `IN_PROGRESS` — D1 and D2 delivered; D3–D5 running under the status-docs lock (Claude docs-consolidation session, taken 2026-10-04).
 
 **Why.** The same per-ID status is kept in up to six places: the ledger in §7–§8 of this file, the per-ID ledger in [ALPHA_READINESS](docs/ALPHA_READINESS.md), [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md) (42 rows), [UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md) (24 rows), [LIMITATION_TRIAGE](docs/LIMITATION_TRIAGE.md) (priorities) and the frozen [OFFENE_PUNKTE](docs/archive/OFFENE_PUNKTE.md) snapshot. They already drift apart: on 2026-10-04 `KL-149` was `TODO` in §8 while the AR06P text called it a scoped candidate. Three very large files also make the current state hard to find: `IMPLEMENTATION_STATUS` (15.2k lines), `KNOWN_LIMITATIONS` (7.6k) and `RESEARCH` (6.8k).
 
@@ -752,7 +752,7 @@ boundaries. No bus run.
 **User decision 2026-10-04:** the lock is held for the whole D2–D5 rebuild, not one step at a time; other sessions keep the freeze until the holder writes `Status-docs lock: released`. Pausing code work is not required (decided as the less disruptive option).
 
 - [x] **D1 — Archive and slim the logs** (Claude session, 2026-10-04). `goal.md`, `OFFENE_PUNKTE.md` and `PROJECT_ANALYSIS_2026-09-15.md` moved verbatim to [docs/archive](docs/archive/README.md). The September tail of `IMPLEMENTATION_STATUS` (12.5k lines) moved verbatim to [docs/history](docs/history/IMPLEMENTATION_STATUS_2026-09.md). The handover `.ai/CURRENT_STATE.md` keeps its newest entries (77 at the cut); the 470 older ones moved verbatim to `.ai/archive/`. Only relative links changed; check-anchors 393 links / 262 files, none dead. `IDEA.md` and the empty `docs/Issues.md` stay: the latter is the user's inbox for observations.
-- [ ] **D2 — One source-ID ledger.** ADR first: which file is the status of record, its columns (ID, priority, route/owner, status, evidence link, last change) and who may change which rows (owners keep authority over their rows; only the location changes). Then create it, e.g. `docs/status/ALPHA_LEDGER.md` as one Markdown table, and replace §7–§8 here, the per-ID tables in ALPHA_READINESS, COMMISSIONING_ALPHA_LEDGER and UI_ALPHA_READINESS by links. Their evidence prose stays where it is. Before moving, reconcile every row whose status differs between the sources, with evidence, and list each correction; never pick the more flattering one silently.
+- [x] **D2 — One source-ID ledger.** ADR first: which file is the status of record, its columns (ID, priority, route/owner, status, evidence link, last change) and who may change which rows (owners keep authority over their rows; only the location changes). Then create it, e.g. `docs/status/ALPHA_LEDGER.md` as one Markdown table, and replace §7–§8 here, the per-ID tables in ALPHA_READINESS, COMMISSIONING_ALPHA_LEDGER and UI_ALPHA_READINESS by links. Their evidence prose stays where it is. Before moving, reconcile every row whose status differs between the sources, with evidence, and list each correction; never pick the more flattering one silently. **Delivered 2026-10-04:** [ADR-0076](docs/adr/0076-one-ledger-is-the-status-of-record.md) and [docs/status/LEDGER.md](docs/status/LEDGER.md), 180 + 5 rows. §7–§8 here, the two tables and the stale count line in ALPHA_READINESS, the priority/disposition columns of COMMISSIONING_ALPHA_LEDGER and the owner checkpoint tables were moved there; a script proved every moved cell is present. 24 rows differed between the goal and ALPHA_READINESS, six statuses were corrected on evidence (`DATA-02`, `KL-42`, `KL-149`, `KL-150`, `KL-152` → `DONE`, `KL-151` → `IN_PROGRESS`) and three stale routes fixed; every case is listed in the ledger's reconciliation record.
 - [ ] **D3 — A ledger check in `xtask`.** Unique IDs, only the §2.2 status words, 180 snapshot rows plus the post-snapshot rows, every `KL-n` exists as a heading in `KNOWN_LIMITATIONS`, no second per-ID status table anywhere in `docs/` or the goal files. Test with positive and negative fixtures and a mutation of each rule. Add it to the doc gates in §5.
 - [ ] **D4 — Split `RESEARCH.md` by topic** into `docs/research/<topic>.md` (for example project import, product database, KNXnet/IP, DPT, device procedures). `RESEARCH.md` stays as the index; section numbers (§25 and so on) stay stable. Rewrite every inbound anchor link across `docs/`, the goal files, code comments and ADRs, keep `<a id>` aliases where a slug changes, and prove by script that the union of the new files contains every original line.
 - [ ] **D5 — Separate resolved from open in `KNOWN_LIMITATIONS`.** Move the body of resolved or withdrawn entries to `docs/history/KNOWN_LIMITATIONS_resolved.md`. The heading stays in place as a one-line stub with the resolution and a link, so numbering and the 130+ inbound links keep working. Recount with the LIMITATION_TRIAGE command and record the counts before and after. Then replace the *Where things stand* sections of `goal-ui.md` and `goal-commission.md`, and their `goal.md` ownership rows, with links to the ledger; this needs each owner session's agreement in the handover, because those files are theirs.
@@ -883,59 +883,10 @@ Do not use a completion percentage for unequal tasks. Report completed packages,
 
 ## 7. Complete source-ID routing ledger
 
-The following table is the authoritative one-primary-route map for the 180 main-table entries in `OFFENE_PUNKTE.md`. Priority is copied from that inventory, not recomputed. The inventory contains the corresponding descriptions and exact source paths. Preserve IDs when updating status; new post-snapshot findings receive their own documented identity and do not silently change the input count.
-
-**Current execution state:** AR00 reconciliation on baseline `307a5970`;
-[ALPHA_READINESS](docs/ALPHA_READINESS.md) records each row's evidence and
-unblock contract. Owner references and accepted/later entries are not unchecked
-implementation jobs here. U13/ISSUE-12's dated tasks are done, while their
-native/accessibility/multicast and optional boundaries remain disclosed.
-Technical rulings for KL-70/88/134 are not silently upgraded to user release
-waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
-
-**Commissioning session checkpoint — 2026-10-04 11:13 CEST:** the commissioning
-owner updates its rows here at meaningful intermediate checkpoints, not only
-after final delivery. `IN_PROGRESS` below means active owner implementation,
-not whole-feature acceptance. Keep published work, local changes and pending
-verification separate; do not change another session's rows.
-
-| Commissioning work in this session | Status | Verified intermediate result | Still required |
-| --- | --- | --- | --- |
-| Remove new hardware/power-loss/vendor/ETS validation from the completion goal; retain user warnings | ACCEPTED_BOUNDARY | Scope and user notices published in `5d0271c1`; actual-root documentation gate: 388 links / 254 Markdown files / no dead anchors | Keep absent guarantees visible; no pending operator experiment and no relaxation of runtime safety gates |
-| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Published bounded backend lifecycle remains; local Shared-App production7 tests, CLI admission2 and Service-Control8 tests now pass; caller code is not yet delivered | CLI download/restore, integrated server/caller acceptance and long sessions remain open; no whole-track completion |
-| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Actual merged2057f86b public9/9 accepted: workspace3145/0/177 over169 blocks, Web1761/100, Chromium8,50 guards; permanent delivery receipt. Separate selected private68/0/0 evidence remains bound60d6a85f | Bounded Web package published/read back on main at871518dc; Web reservation free. Other client surfaces, caller/session and offline recovery work remain open; no whole-track acceptance |
-| `SAFE-03` / `DEBUG-01`: offline recovery-record validation | IN_PROGRESS | Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged | Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
-
-The other commissioning rows retain their existing owner dispositions pending
-their exact scoped acceptance. The complete per-ID fallback/evidence inventory
-is in [COMMISSIONING_ALPHA_LEDGER](docs/COMMISSIONING_ALPHA_LEDGER.md); this newer
-checkpoint supersedes its older statements that Web adoption has not started.
-Excluded external validation is a user-visible boundary, not a renewed request
-for unavailable hardware evidence. No Alpha release, real bus contact or new
-write permission follows from this update.
-
-**UI owner checkpoint — 2026-10-04 10:00 CEST (Claude, `goal-ui.md` owner
-session):** the 24 `goal-ui.md` rows below now carry their owner status instead
-of the generic `WAITING_OWNER`. Per-row evidence stays in
-[UI_ALPHA_READINESS](docs/UI_ALPHA_READINESS.md).
-
-| UI rows | Status | Basis | Still required |
-| --- | --- | --- | --- |
-| `UI-01`, `UI-02` | DONE | U13 closure `dfa0cc79` (unchanged) | — |
-| `KL-82`, `KL-124`, `KL-121`, `UX-02`, `UX-03` | DONE | Published `8ceacf49` (KL-82) and `6c16fe5a` (the other four), integrated gates and remote readback in UI_ALPHA_READINESS | — ; their native/live qualifications fall under the boundary row below |
-| `KL-79`, `KL-137`, `KL-36`, `KL-133`, `UI-03`, `KL-130-ZOOM`, `KL-20` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** native WebKitGTK/Tauri, Orca, native file chooser, dead-WebView, real multicast and real-device web evidence leave the Alpha scope. Offline parts stay delivered (KL-20 keyboard/modal `2e57f8e5`, KL-79 offline UDP loopback at U13) | Nothing for the Alpha. Release notes must keep these as disclosed, unverified boundaries, not claims |
-| `KL-97`, `KL-98` | ACCEPTED_BOUNDARY | Owner decision (the user left this choice to the owner): truthful phase text without an invented percentage (ADR-0023) and decorative flavour text are intended behaviour | — |
-| `KL-43` | LATER | Owner decision: global motion level/style plus OS reduced motion ship; per-category motion is a separate scope | Own scope if ever wanted |
-| `DATA-03` | DONE | Server half delivered: optional `requestId` replay ledger ([ADR-0069](docs/adr/0069-catalog-batch-request-replay-token.md)), RED/GREEN and five caught mutants; web half delivered 2026-10-04: one `requestId` per submit, a safe retry with the same id only while the server incarnation is unchanged; `CatalogBrowser.test.tsx` (6 new cases, 5 of them RED first), `e2e/catalog-retry.e2e.ts` (4 intercepted Chromium cases, en/de; all 4 fail on the old component), 4/4 mutants | Mixed-version residue only: a newer web client against a pre-ADR-0069 server would re-apply a retried batch (KNOWN_LIMITATIONS U11 catalog batch scope) |
-| `MODEL-04` | DONE | Server half delivered: opt-in `allocateAddresses`/`uniqueNames` with core `free_line_addresses`, RED/GREEN and eight caught mutants; web half delivered 2026-10-04: catalog checkboxes *Assign free addresses on the line* (disabled without a target line) and *Keep names unique*, both off by default, only `true` sent, allocated address listed per created device, refusal shown without a retry offer; `CatalogBrowser.test.tsx` 4 new + `api.test.ts` 1 new case (RED first), `e2e/catalog-allocation.e2e.ts` 4 intercepted Chromium cases (en/de, all fail on the old client), 4/4 mutants | The allocator sees only the project, not devices on the real bus (KNOWN_LIMITATIONS U11 catalog batch scope) |
-| `MODEL-01` | IN_PROGRESS | Core/server half delivered: owner-installation resolution for all id-addressed commands, explicit target for root creates, `RenameInstallation`, cross-installation refusal; RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): installation rename and target choice |
-| `MODEL-02` | IN_PROGRESS | Core/store/server half delivered (ADR-0071): explicit `RepairDevicePlacement` / `RepairLineOwner` with exact undo; `.knxdb` save now refuses an ambiguous topology instead of silently keeping the last placement; 10/10 mutants | Handed to the Web-lock holder (see handoff below): repair choice; duplicate-id renumbering stays a documented gap |
-| `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. No backend half needed — `POST /api/group-links` with the core's checks (now installation-scoped, ADR-0070) already exists | Handed to the Web-lock holder (see handoff below): drag gesture, keyboard equivalent kept |
-| `MODEL-03` | DONE | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants; web half delivered 2026-10-04: the editor submits `.0`, the server decides and its refusal is shown; `Inspector.test.tsx` (2 new RED/GREEN cases), `e2e/coupler-address.e2e.ts` (4 intercepted Chromium cases, en/de), 3/3 mutants | — |
-| `KL-127` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** without reliable evidence record a known gap and close. UA1 found no `Ground` sample in the corpus or eight public fixtures (RESEARCH §25, KNOWN_LIMITATIONS §127) | — ; installation rename moves to MODEL-01 |
-
-This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
-release, no hardware permission and no native-acceptance claim.
+Status, owner and route of every source ID live in the
+[source-ID ledger](docs/status/LEDGER.md) ([ADR-0076](docs/adr/0076-one-ledger-is-the-status-of-record.md),
+AR14D D2). The routing table, the owner checkpoints and their counts that
+stood here moved there on 2026-10-04. Update the ledger row, not this file.
 
 **UI owner handoff — 2026-10-04 11:27 CEST (Claude, `goal-ui.md` owner session):** all
 backend halves of the open UI rows are published (`48d1cd2e`, `74dbd1a9`,
@@ -964,189 +915,6 @@ commissioning session releases the Web lock, then takes the lock through the
 for its own package and owes nothing on these rows. As of this decision, no web
 half had been started anywhere.
 
-| Source ID | Priority | Primary route | Current status |
-| --- | --- | --- | --- |
-| `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-139` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-140` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `SAFE-01` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-79` | P1 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-61` | P1 | AR09 | TODO |
-| `KL-99` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-112` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-136` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-138` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-141` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-142` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-7` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-92` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `DEBUG-01` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `SAFE-02` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `SAFE-03` | P1 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `DATA-01` | P1 | AR02 | DONE |
-| `KL-129` | P1 | AR03 | WAITING_DECISION |
-| `KL-106` | P1 | AR13 | ACCEPTED_BOUNDARY |
-| `DOC-01` | P1 | AR00 | DONE |
-| `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL |
-| `KL-13` | P1 | AR08 | TODO |
-| `PDB-09` | P1 | AR05 | DONE |
-| `R-MODULE-01` | P1 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-130-GATE` | P1 | AR01 | DONE |
-| `RELEASE-01` | P1 | AR18 | WAITING_OWNER |
-| `RELEASE-02` | P1 | AR18 | WAITING_OWNER |
-| `KL-22` | P1 | AR13 | ACCEPTED_BOUNDARY |
-| `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `UI-01` | P1 | `goal-ui.md` — owner only | DONE |
-| `UI-02` | P1 | `goal-ui.md` — owner only | DONE |
-| `KL-126` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-29` | P2 | AR14 | DONE |
-| `KL-31` | P2 | AR14 | BLOCKED_EXTERNAL |
-| `KL-62` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-72` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-73` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-74` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-75` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-77` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-78` | P2 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-105` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-108` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-101` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-104` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-109` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-111` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-113` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-114` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-143` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-144` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-145` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-93` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-03` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-07` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-08` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-09` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `DATA-02` | P2 | AR04 | TODO |
-| `DATA-03` | P2 | `goal-ui.md` owner — backend and web half delivered | DONE |
-| `KL-87` | P2 | AR05 | DONE |
-| `AUDIT-01` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `KL-137` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-36` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-82` | P2 | `goal-ui.md` — owner only | DONE |
-| `DOC-03` | P2 | AR15 | TODO |
-| `RELEASE-03` | P2 | AR16 | WAITING_OWNER |
-| `RELEASE-04` | P2 | AR19 | WAITING_DECISION |
-| `KL-127` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `MODEL-01` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
-| `MODEL-02` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
-| `MODEL-03` | P2 | `goal-ui.md` owner — backend and web half delivered | DONE |
-| `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `IMPORT-06` | P2 | AR06 | TODO |
-| `KL-11` | P2 | AR06 | TODO |
-| `KL-125` | P2 | AR06 | TODO |
-| `KL-128` | P2 | AR06 | TODO |
-| `KL-15` | P2 | AR06 | TODO |
-| `KL-2` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-14` | P2 | AR10 | TODO |
-| `KL-37` | P2 | AR10 | TODO |
-| `KL-64` | P2 | AR10 | TODO |
-| `KL-66` | P2 | AR10 | TODO |
-| `KL-12` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-135` | P2 | AR12 | WAITING_DECISION |
-| `KL-146` | P2 | AR07 | TODO |
-| `KL-3` | P2 | AR07 | TODO |
-| `KL-6` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-68` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-69` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-71` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-85` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-86` | P2 | AR05 | DONE |
-| `PDB-01` | P2 | AR07 | TODO |
-| `PDB-02` | P2 | AR07 | TODO |
-| `PDB-05` | P2 | AR07 | TODO |
-| `PDB-06` | P2 | AR05 | DONE |
-| `PDB-08` | P2 | AR06 | TODO |
-| `PDB-10` | P2 | AR06 | TODO |
-| `R-DYNAMIC-01` | P2 | AR07 | TODO |
-| `R-MODULE-03` | P2 | AR07 | BLOCKED_EXTERNAL |
-| `R-MODULE-04` | P2 | AR07 | BLOCKED_EXTERNAL |
-| `KL-133` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-38` | P2 | AR11 | TODO |
-| `KL-39` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-40` | P2 | AR11 | TODO |
-| `KL-44` | P2 | AR11 | TODO |
-| `KL-47` | P2 | AR11 | TODO |
-| `KL-51` | P2 | AR11 | TODO |
-| `KL-60` | P2 | AR11 | TODO |
-| `R-SEC-01` | P2 | Later / separate scope — not an alpha task | LATER |
-| `UI-03` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `UI-04` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
-| `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-20` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-124` | P3 | `goal-ui.md` — owner only | DONE |
-| `KL-76` | P3 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-102` | P3 | AR14 | ACCEPTED_BOUNDARY |
-| `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `KL-115` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `HISTORY-01` | P3 | Later / separate scope — not an alpha task | LATER |
-| `HISTORY-02` | P3 | Later / separate scope — not an alpha task | LATER |
-| `DOC-02` | P3 | AR00 | DONE |
-| `MODEL-04` | P3 | `goal-ui.md` owner — backend and web half delivered | DONE |
-| `MODEL-05` | P3 | Later / separate scope — not an alpha task | LATER |
-| `MODEL-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `MODEL-07` | P3 | Later / separate scope — not an alpha task | LATER |
-| `IMPORT-01` | P3 | Later / separate scope — not an alpha task | LATER |
-| `IMPORT-02` | P3 | Later / separate scope — not an alpha task | LATER |
-| `IMPORT-03` | P3 | `goal-commission.md` — owner only | WAITING_OWNER |
-| `IMPORT-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `KL-100` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-48` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-134` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
-| `KL-70` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
-| `KL-88` | P3 | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION |
-| `PDB-03` | P3 | AR07 | TODO |
-| `PDB-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `PDB-07` | P3 | AR05 | DONE |
-| `PDB-11` | P3 | AR05 | DONE |
-| `FUTURE-01` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-02` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-03` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-05` | P3 | Recorded boundary — AR00 provenance / AR15 claims | LATER |
-| `FUTURE-06` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `FUTURE-07` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-16` | P3 | AR15 | TODO |
-| `KL-42` | P3 | AR04 | TODO |
-| `KL-65` | P3 | AR13 | DONE |
-| `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-46` | P3 | AR15 | TODO |
-| `KL-52` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-53` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-54` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-55` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-56` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
-| `KL-9` | P3 | AR15 | TODO |
-| `TOOLS-06` | P3 | AR00 | DONE |
-| `TOOLS-01` | P3 | Later / separate scope — not an alpha task | LATER |
-| `TOOLS-02` | P3 | Later / separate scope — not an alpha task | LATER |
-| `TOOLS-03` | P3 | Later / separate scope — not an alpha task | LATER |
-| `TOOLS-04` | P3 | Later / separate scope — not an alpha task | LATER |
-| `TOOLS-05` | P3 | Later / separate scope — not an alpha task | LATER |
-| `FUTURE-08` | P3 | Later / separate scope — not an alpha task | LATER |
-| `KL-121` | P3 | `goal-ui.md` — owner only | DONE |
-| `KL-43` | P3 | `goal-ui.md` — owner only | LATER |
-| `KL-97` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `KL-98` | P3 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
-| `UX-01` | P3 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
-| `UX-02` | P3 | `goal-ui.md` — owner only | DONE |
-| `UX-03` | P3 | `goal-ui.md` — owner only | DONE |
-
 Entries spanning supported and blocked subcases (notably `KL-13`, `KL-11`, `KL-61` and parameter semantics) require a subcase disposition in their AR package. `TODO` authorizes verification/planning within the stated boundaries, not guessing the missing semantics or claiming implementation is absent.
 
 ## 8. Post-snapshot findings (outside the 180-ID count)
@@ -1155,14 +923,7 @@ These entries were found after the inventory snapshot. They have their own
 identities and do not change the 180-entry count above. Priority follows the
 `OFFENE_PUNKTE.md` scale.
 
-| Source ID | Priority | Primary route | Current status |
-| --- | --- | --- | --- |
-| `KL-150` | P1 | AR06P | TODO |
-| `KL-149` | P2 | AR06P | TODO |
-| `KL-151` | P2 | AR06P | TODO |
-| `KL-152` | P2 | AR06P | TODO |
-| `KL-153` | P2 | AR06P | IN_PROGRESS |
-
+Their rows are in the [ledger](docs/status/LEDGER.md#post-snapshot-ids).
 
 ## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
 

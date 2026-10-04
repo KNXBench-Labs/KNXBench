@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR14D D2: one source-ID ledger instead of six status tables
+
+- [docs/status/LEDGER.md](status/LEDGER.md) is the status of record for the
+  180 snapshot IDs and the five post-snapshot IDs
+  ([ADR-0076](adr/0076-one-ledger-is-the-status-of-record.md)). Columns: ID,
+  priority, owner, route, status, owner disposition, evidence. Counts are part
+  of the file.
+- Moved there: the routing table and owner checkpoint tables of
+  `alpha-release-goal.md` §7–§8, the per-ID and post-snapshot tables of
+  `ALPHA_READINESS` with their count lines, and the priority/disposition
+  columns of `COMMISSIONING_ALPHA_LEDGER`. The evidence documents keep their
+  evidence and link to the ledger. A script compared the old files with the
+  ledger and found every moved cell present.
+- Reconciliation: 24 rows differed between the goal and `ALPHA_READINESS`;
+  owner checkpoints won where they had written the goal table. Six statuses
+  were corrected on evidence: `DATA-02`, `KL-42` (AR04 published `216c673e`),
+  `KL-149`, `KL-150`, `KL-152` (AR06P delivered) to `DONE`, `KL-151` to
+  `IN_PROGRESS`. Three stale routes (`MODEL-01`, `MODEL-02`, `UX-01`) point to
+  the `goal-ui.md` owner again. All cases are listed in the ledger.
+- AR06 is `DONE_SCOPED` as a package but mapped none of its eight rows; they
+  stay `TODO` until their owner records per-ID dispositions.
+- check-anchors 400 links / 265 files, none dead. Documentation only.
+
 ## 2026-10-04 — AR14D D1: status documents slimmed, consolidation planned before AR15
 
 - Retired and dated documents moved verbatim to [docs/archive](archive/README.md):

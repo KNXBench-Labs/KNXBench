@@ -1,8 +1,103 @@
 # Commissioning activity history contract
 
+## History Web delivery checkpoint — 2026-10-04
+
+The actual merged source `2057f86b` passed all nine required public stages:
+**3145 ordinary workspace tests passed, 0 failed, 177 ignored**, across169
+result blocks; Web1761/100 files, intercepted Chromium8, production build,
+strict Clippy/fmt and all four repository policy checks passed. All50 isolated
+guard controls compiled and failed at their named behavioral assertions;
+canonical source was never mutated. See the separate
+[delivery receipt](evidence/commission-history-web-delivery-offline-2026-10-04.json).
+The earlier receipt below remains evidence for its original source snapshot.
+
+The selected private regression sweep remains bound to `60d6a85f`:
+four stages,68 registered and passed,0 failed/ignored, original input commitment
+unchanged. No selected corpus-package source changed between that snapshot and
+`2057f86b`; intervening changes concern desktop/server-domain code and desktop
+Cargo declarations. This is **not** a new private run on the delivery HEAD,
+and private counts are never added to overlapping ordinary workspace counts.
+
+The bounded History Web reservation is released by this closure; no additional
+Web edits belong to this package. Publication is proved separately by exact
+remote readback in the handover. Further callers, client surfaces, long sessions
+and offline recovery/abort/restore remain open. All four owning Alpha IDs remain
+IN_PROGRESS. External hardware/power-loss/vendor/ETS experiments remain outside
+the goal; this does not waive backup, authorization or fail-closed safety.
+
+
 [ADR-0064](adr/0064-durable-activity-history-is-not-recovery.md) separates durable
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
+
+<a id="web-history-candidate--2026-10-04"></a>
+
+## Web history adoption — 2026-10-04
+
+The bounded client is accepted on upstream-integrated code `9fe69116` (base
+`4bc90aab`), with the [permanent receipt](evidence/commission-history-web-offline-2026-10-04.json).
+All nine stages passed on the same frozen1037 public inputs/279 Web inputs:
+ordinary workspace **3079 passed,0 failed,176 ignored** in160 result blocks,
+strict Clippy/fmt, all four intended-root policy checks, production Web build,
+**1761 Vitest tests in100 files**, and **8 intercepted Linux Chromium cases**.
+The176 ignored tests were not executed. No new private/live corpus acceptance
+is claimed. All50 guard controls compiled and failed at their named behavioral
+assertions in isolated public Web copies; canonical source was never mutated.
+A separate deliberate type error proved this file is covered by tsc, then was
+restored; it is not a51st behavioral mutant. In-session source/security review
+found no blocking issue; it is not an independent-model or native-package
+approval. Publication is recorded separately in the handover.
+
+This completes the bounded History Web implementation, not all-client adoption,
+caller/long-session lifecycle, offline recovery/abort/restore or whole Global
+Commissioning. The four owning Alpha IDs remainIN_PROGRESS. Historical local
+attempts below retain their actual outcomes and do not add to these totals.
+
+The reserved History client now reaches the existing diagnostics parent's
+History tab without an open project. It uses the existing authenticated GET
+client and a manual format-2 adapter, not regenerated bindings. It renders
+device outcome, restart, cleanup, backup and send intent independently; a cursor
+is start-order pagination, while Refresh reloads the beginning. Failed refresh
+clears stale results; unavailable, unsupported and malformed history are distinct
+from a successful empty history. No restore, retry or device write is offered.
+
+Admission refuses the whole page for unknown fields/vocabulary, inconsistent
+evidence, unsafe JavaScript identities or invalid pagination. It never rounds
+an identity or displays a valid prefix of a rejected page. Original timestamp
+strings are preserved, including offset and fractional seconds. The renderer's
+timestamp profile is conservative: four-digit year, uppercase T/Z, at most
+nine fractional digits, finite JavaScript dates and seconds 00–59. Leap-second
+spellings or otherwise unrenderable timestamps are refused, not normalized.
+This is not a full RFC3339 parser. Impossible calendar dates and hour24 are
+refused explicitly; RFC3339 §§5.6–5.7 supplies the calendar/hour restrictions
+([primary source](https://www.rfc-editor.org/rfc/rfc3339.html#section-5.7)).
+Malformed successful-response JSON is a contract failure, not unavailable
+storage, and parser/server/private-path details are not displayed.
+
+On the earlier local candidate, intercepted Linux Chromium passed8 cases
+(EN/DE at360/1440px, refusal/refresh/paging), Vitest passed1751 tests in100 files,
+and the production build passed. The actual parent initially mounts its legacy
+monitor and requests discovery/poll before the History gesture; tests enumerate
+those intercepted startup requests separately, then require the exact History
+GET sequence. They do **not** prove the diagnostics shell has no startup network
+activity. A transitive-import tripwire initially refused the new pure validator;
+the reviewed module inventory now includes it while the exact API/mutation
+inventories stay unchanged. Both unsuccessful attempts remain negative evidence.
+
+Review added calendar-normalization and JSON-classification regressions with
+observed semantic REDs, then broadened read/property-write admission controls.
+The 11:13 candidate has35 focused tests in4 files and TypeScript checking0;
+strict-effect remounts additionally exercise stale success/error/loading and
+cross-page identities. The earlier full candidate passed Web1755/100 files,
+Chromium8/0/0, build0, workspace3028/0/176, fmt/Clippy/layering0, then refused
+exactly two overlong test headers. Anchors/corpus-policy did not start. Those
+headers are corrected; that failed receipt is not overall acceptance. The Web
+program advances to `0.1.0-alpha.4` under ADR0018 without dependency changes.
+Those earlier pending controls and integration gates are overtaken by the
+current acceptance above; publication is tracked separately. Prior counts do not
+certify a later source delta or close broader
+callers, other client surfaces, offline recovery or the full
+SAFE-03/AUDIT-01/Global Commissioning scope. No real KNX backend was contacted.
 
 ## Integrated offline lifecycle acceptance — 2026-10-04
 

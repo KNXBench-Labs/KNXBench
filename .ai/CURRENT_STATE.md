@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session, alpha AR13 on user request)
+- **Timestamp:** 2026-10-04 15:05
+- **Completed:** Claim only: this Claude session takes **AR13** (privacy and deployment-security boundary: KL-106, KL-22, KL-65) in worktree `alpha-privacy-security`. AR13 depends only on AR01; it is independent of AR06/AR06P. No code yet.
+- **Pending/Next Steps:** Claude: AR13 audit, regressions, checklist. **For the alpha-release session:** please skip AR13 while this claim stands; AR06/AR06P and everything else stay yours. Claude touches no AR06/AR06P files, no Web sources, no host/firewall/TLS configuration.
+- **Notes for Codex oder Claude:** The claim ends with the AR13 delivery entry or an explicit release entry.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session, alpha AR14 on user request)
 - **Timestamp:** 2026-10-04 14:49
 - **Completed:** **AR14 delivered; the AR14 claim ends here.** Offline only. Fixed: CLI `bus write`/`monitor`/`route-monitor` now use the `--project` group-address style; names of one raw address across installations are all shown (new `knx_core::resolve_project_group_address_names`, used by CLI and server Group Monitor instead of last-read-wins); Linux routing sockets clear `IP_MULTICAST_ALL`, so a default-group client no longer hears a custom group from the same host (measured over loopback before/after). New pins: DD0-only probe, negative-confirm window, timeout trade-off, no Indeterminate retry, four reconciliation refusals, three-level monitor→write round trip. 16/16 mutants. Full gate green (166 blocks, 3,124 passed, 0 failed, 177 ignored; Web 1,739). Ledger: KL-29 DONE, KL-31 BLOCKED_EXTERNAL, KL-62/72–78/102/126 ACCEPTED_BOUNDARY. Dossier `docs/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier`, log `.ai/logs/2026-10-04_claude_alpha-bus-contracts.md`.

@@ -7,6 +7,15 @@
 ---
 
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 20:25
+Web lock: still held by claude-goal-ui-owner for U19 (taken `2231d87c`); not released by this entry
+- **Completed:** `goal-ui.md` aligned with the planning session's own draft (Codex, worktree `telegram-flow-plan-20261004`, built on current main). U19–U21 now sit under their own heading **§3c Telegram-flow extension** after §3b, with its intro paragraph (order U19 → AR20 → U20 → U21 → AR21 → final Alpha gates). The task text is unchanged and no line of main was lost (multiset check). The contract, ADR-0077 and `alpha-release-goal.md` in that draft are byte-identical to `ca5fefa2`, so nothing else differed. Doc gates: check-anchors ok, check-ledger ok, whitespace ok.
+- **Pending/Next Steps:** U19 continues in worktree `ui-u19-flow` under the Web lock: the study model, layout and SVG engine are written (16 unit tests, 4 Chromium smoke tests green), and a first measurement run has been taken. Still to do: evaluate the measurements, fix a known off-by-one in the synthetic event scheduler's lag metric, write the AR20 handoff, then gate and publish.
+- **Notes for Codex oder Claude:** The planning session's own handover entry (20:11, Codex) is still unpublished in its worktree. Its content is covered by `ca5fefa2` and this entry; that worktree's draft needs no further publication.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 20:13
 Web lock: taken by claude-goal-ui-owner for U19 (telegram-flow synthetic visual slice and measurement fixtures)
 - **Completed:** Lock taken only. Code reconciliation for U19 has started (read-only).

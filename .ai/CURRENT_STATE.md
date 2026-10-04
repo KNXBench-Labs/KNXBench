@@ -6,6 +6,30 @@
 
 ---
 
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 15:41
+- **Completed:** Handover-only. User decision recorded in `alpha-release-goal.md` → *UI owner handoff* and `goal-ui.md` §3b: the six web halves (MODEL-03 `.0` editor, DATA-03 `requestId` retry, MODEL-04 toggles, MODEL-01 installation rename/target, MODEL-02 repair choice, UX-01 drag) and the AR13 `debugReport.privacyTelegrams` text move back to the goal-ui owner session. Checked before recording: none had been started in either commissioning worktree or on main.
+- **Pending/Next Steps:** **For the commissioning session:** these rows are no longer yours. Keep the Web lock for your SAFE-03/AUDIT-01 history-client package and release it in your merge entry as usual; nothing else is asked of you. **For the goal-ui owner (this session):** once the newest Web-lock line says released, take the lock by the `goal-ui.md` §3 procedure, then work the six halves one package at a time, each with RED/GREEN, mutants, gates and browser evidence. The rows stay `IN_PROGRESS` until each is published.
+- **Notes for Codex oder Claude:** Web lock: still held by codex-commission-continuation; not taken or released by this entry. Backend contracts are published (ADR-0069–0071; MODEL-03 coupler, MODEL-04 allocation).
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session — taken over 2026-10-04 15:38 on user request)
+- **Timestamp:** 2026-10-04 15:38
+- **Completed:** Handover-only. The previous Claude owner session closed at 15:28 and left the `goal-ui.md` owner role vacant. By user decision this session, the one that published the §133 desktop-shell fix `2ab5698f`, is now the owner. This supersedes the line in the entry below that said this session would stop after that delivery. Recorded in `goal-ui.md` §3b. No code, Alpha ledger or Web-lock change.
+- **Pending/Next Steps:** The owner keeps the published backend contracts (DATA-03 replay token ADR-0069, MODEL-01 installation scope ADR-0070, MODEL-02 repair ADR-0071, MODEL-03 coupler address, MODEL-04 allocation) and answers questions about them. **For the Web-lock holder (commissioning session):** the six web halves and the `debugReport.privacyTelegrams` text remain yours as handed over; contracts are in `alpha-release-goal.md` → *UI owner handoff*. Ask this owner here if a backend contract needs a change. The other handover items (AR15/AR17, the user decisions AR03/AR11/AR12/AR19, and external evidence) are not owner work.
+- **Notes for Codex oder Claude:** Web lock: not taken or released by this entry. A hung, non-terminated web process remains §133's open part. ADR numbers 0069–0074 are taken; check `origin/main` before numbering.
+
+---
+
+- **Last Agent:** Claude (UI session, desktop-shell §133 only; user decision 2026-10-04: the goal-ui owner session stays owner, this session stops after this delivery)
+- **Timestamp:** 2026-10-04 15:34
+- **Completed:** KNOWN_LIMITATIONS §133 narrowed for a **terminated** WebKit web process. `apps/knx-desktop/src-tauri/src/web_process.rs` observes `web-process-terminated` and reloads the page, at most 3 times in 60 s. The unsaved project lives in the embedded server, so nothing is lost. After that the shell answers × itself: it closes when clean and asks a native GTK question first when `knx_server::AppState::has_unsaved_changes()` (new, same predicate as `is_modified`). TDD: 8 shell tests + 1 server test RED then GREEN; 9/9 guard mutants caught, sources restored byte-exact. Native evidence on the real debug binary in a loopback-only network namespace with signature-verified Xvfb, private HOME/XDG/D-Bus and no LAN/KNX path: baseline `eafb0322` never closes after a web-process SIGKILL plus `WM_DELETE_WINDOW`. With the fix it reloads and exits 0; a crash loop ends in GiveUp and exits 0; with an unsaved project it asks, keeps running when dismissed, and asks again. Integrated gate on ff71d759 + this change: fmt, clippy -D warnings, workspace tests 3,145 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers (knx-desktop 12/12), cargo deny bans/licenses/sources ok, four repository gates, Web typecheck and 1,739/98 files, whitespace; source frozen during the run. Log: `.ai/logs/2026-10-04_claude_desktop-dead-webview.md`.
+- **Pending/Next Steps:** None for this session after publication. A web process that **hangs** without terminating stays open (§133). KL-133 remains `ACCEPTED_BOUNDARY` in the Alpha ledger (user decision: dead-WebView evidence is outside the Alpha); this change narrows the boundary only. Alpha ledger rows are not touched by this entry.
+- **Notes for Codex oder Claude:** Web lock: not taken or released by this entry; `apps/knx-web` is untouched. New direct dependency `webkit2gtk = "2.0"` (workspace; Linux-only in `knx-desktop`, feature `v2_20`) at the version already resolved through `wry`: one lockfile edge, no new crate, `cargo deny` bans/licenses/sources ok. The discard question is English only (the language setting lives in the failed frontend). "Close and discard" itself was not driven natively; it shares the clean close path.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session) — **session closed on user request**
 - **Timestamp:** 2026-10-04 15:28
 - **Completed:** Session close only, no code. Published by this session today: UA1–UA5 (goal-ui backend halves), UA7 lossless save (ADR-0074), UA8 importer IDs (ADR-0073), corpus round trip for schemas 11/21/23, UA10/UA10b CSV per installation, AR14 (`0c54c954`), AR13 (`ff71d759`). Last full gate: 169 blocks, 3,136 passed, 0 failed, 177 ignored; Web 1,739. No claims remain: AR13 and AR14 are closed; no worktree, branch, build target, scratch or process of this session is left.

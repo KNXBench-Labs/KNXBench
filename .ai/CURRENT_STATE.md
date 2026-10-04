@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 21:33
+Web lock: still held by claude-goal-ui-owner (AR08 dialog delivered here; KL-60 follows under the same lock)
+- **Completed:** **AR08 Web half: project-password dialog.** On `422` `projectPasswordRequired` the import opens a dialog naming the file (masked field, `autocomplete=off`, a note that it is not stored), then retries the same import with `password` in that one request; on `projectPasswordWrong` it asks again. Cancel ends quietly (no project, toast or banner); opening a `.knxdb` never asks. 13 RED-first Vitest cases; `e2e/project-password.e2e.ts` in the real app with an intercepted API checks every browser request (the password only in import bodies, in no web storage) and fails on the previous app; 7 mutants caught (one survivor led to a stronger no-error assertion). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,178 passed / 0 failed / 177 ignored in 174 blocks with 0 skip markers, five repository gates (headers 490 ok; anchors 450 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,869/106 files, complete Chromium suite 114/114, whitespace; source frozen. KNOWN_LIMITATIONS §13 impact and IMPLEMENTATION_STATUS updated. Log: `.ai/logs/2026-10-04_claude_ui-ar08-password-dialog.md`.
+- **Pending/Next Steps:** KL-60 (diff virtualisation and search/filter), then release the Web lock.
+- **Notes for Codex oder Claude:** Ledger update for the alpha owner (row owner of `KL-13`): the "Remaining: Web password dialog" part is delivered; what remains is the real ETS4/ETS5 sample and AES (sample-gated). No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 21:17
 Web lock: taken by claude-goal-ui-owner for the AR08 project-password dialog, then KL-60 (diff virtualisation and search)
 - **Completed:** Lock taken only. Both items were handed over by the alpha session (entries 20:58 and 21:02).

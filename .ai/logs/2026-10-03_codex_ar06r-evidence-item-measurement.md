@@ -22,6 +22,15 @@ Broad attempt1 passed focused/fmt/check/clippy, then failed three registered ret
 
 ## Pending
 
+2026-10-04 03:10 UTC: code and acceptance docs published as2b2a267f7873137ccbf3d0a5052a541a76573d59
+with normal main push/live/fetched refs/all9 blobs exact. Current source712
+and runtime7f57abbb producer remain exact after docs-only20a3 integration.
+Fresh binding17/controls and publication doc5 passed; in-session/privacy/outgoing
+review accepted,not independent-model approval. Removed own raised-snapshot,
+observer-target,policy-target and browser output after worker absence checks.
+Primary docs/checklist mark measured KL152 correction delivered; closing doc5,
+metadata publication/final two targets/runners/worktree hygiene remain.
+
 2026-10-04 03:02 UTC: current premerge doc5 and fresh binding17/eight negative
 controls GREEN. Own six acceptance docs banked c354e4bc; commissioning docs-only
 bb62ae57 integrated as20a3c4cd. Four foreign non-overlap blobs exact; complete

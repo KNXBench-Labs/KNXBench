@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Telegram-flow nervous-system Alpha scope approved (planning only)
+
+The user confirmed the focused interview and authorized the owning sessions to
+implement [the flow contract](TELEGRAM_FLOW_VISUALIZATION.md). U19–U21 own design,
+shared-monitor UI, values/layout/pulses and UI acceptance; AR20 owns the read-only
+session-bound semantic contract; AR21 adopts integrated Alpha evidence. These
+are open packages, not shipped code, a benchmark or a new hardware authorization.
+Values update immediately and expire after 7 seconds, independently of pulse
+arrival; configured target badges are not confirmed device state. Quiet observed
+edges remain visible for the session; themes, freeze and motion policy apply.
+[ADR-0077](adr/0077-session-local-telegram-flow-view.md) narrowly supersedes the
+older no-animation-first recommendation without introducing physical coordinates
+or a persistent history store. The new feature is required before final Alpha
+readiness; prior U/UA/AR/K delivery receipts and accepted boundaries stay intact.
+
+
 ## 2026-10-04 — AR13 hand-over: the debug-report dialog names every kept telegram field
 
 - The opt-in warning for `bus-telegrams.json` (`debugReport.privacyTelegrams`,

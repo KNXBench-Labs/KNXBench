@@ -6,6 +6,18 @@ section index and the sources. Section numbers are global and stable;
 dated entries are newest first. Moved here verbatim from `RESEARCH.md` on
 2026-10-04 (AR14D D4); only relative links changed.
 
+## 2026-10-04 — Telegram-flow Alpha design
+
+[The focused research/contract](../TELEGRAM_FLOW_VISUALIZATION.md) records the
+confirmed interview, direct KNX PDF chapters with independently checked printed
+pages, existing monitor/projection evidence, browser/layout primary sources and
+U19–U21 / AR20–AR21 acceptance. The user authorized implementation by the owning
+sessions, not this planning session. Values update immediately rather than at
+animation arrival; project recipients are inferred, not receipt confirmations.
+This narrowly supersedes §16's no-animation-first recommendation; its evidence
+and snapshot safeguards and ADR-0019's no-physical-coordinates rule remain.
+No code, hardware or benchmark result is claimed by the research.
+
 ## 2026-09-29 — U6 root zoom and persisted pane geometry
 
 - **[D]** CSS `zoom` changes layout dimensions as well as the rendering of

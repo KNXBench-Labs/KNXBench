@@ -1,4 +1,4 @@
-# KNXBench goal — UI/UX track (user-reported issues and theme packs)
+# KNXBench goal — UI/UX track (issues, theme packs and telegram flow)
 
 Written 2026-09-28 against `main` at `99e2a6d`. Use this file as the
 instruction passed to `/goal` in the **UI session**. That session runs on
@@ -11,7 +11,7 @@ There are now three goal files, and they do not overlap:
 |---|---|---|
 | [`alpha-release-goal.md`](alpha-release-goal.md) (took over from `goal.md`, now [archived](docs/archive/goal.md)) | alpha session | everything else: data integrity, product database, import, docs hygiene, manual, alpha, final review |
 | `goal-commission.md` | commissioning session (Claude) | T30 phase 3: device writes and their own programming UI |
-| **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, the routed alpha follow-up, and user-importable theme packs (U14–U18) |
+| **`goal-ui.md`** (this file) | **UI session (GPT/Codex)** | the user-reported UX/UI issues of `goal.md` §11, the routed alpha follow-up, user-importable theme packs (U14–U18), and session-local telegram flow (U19–U21) |
 
 §5 below is the exact boundary. §6 describes how work crosses between
 sessions.
@@ -48,6 +48,26 @@ settings record via `settingsStore.ts`, and the token/contrast boundary in
 not yet validation of user-supplied runtime packs. ADR-0022's original
 localStorage persistence sentence is historical: the server's settings file
 is authoritative and browser storage is only its cache.
+
+## Telegram-flow Alpha addition — user decision 2026-10-04
+
+The user confirmed [the nervous-system contract](docs/TELEGRAM_FLOW_VISUALIZATION.md)
+and authorized the responsible Goal sessions to implement it. **This is required
+Alpha scope**, unlike the earlier optional theme extension. U19–U21 below are
+new, open packages; completed U0–U18, owner follow-up/UA receipts and active work
+are not reopened or interrupted. Reconcile current published owner evidence at
+startup; stale local theme checkboxes do not overrule its delivery receipts.
+
+The alpha session owns only AR20's read-only participant/event contract and
+AR21's integrated acceptance. This UI session owns U19 design/handoff and all
+rendering in U20/U21, under the existing Web lock. Commissioning gets no new
+K-package. Geometry is session-local, not project/physical coordinates; values
+update immediately, not when an illustrative pulse arrives. Approval does not
+start a run, take/release a lock, authorize new bus contact or publish a release.
+
+This addition extends the scope/completion/boundary rules below: this goal cannot
+close its newly approved scope before U19–U21 have named, integrated evidence.
+The alpha owner must adopt the U21 receipt in AR21 before final readiness.
 
 ## 0. Scope: what this goal owns
 
@@ -470,6 +490,92 @@ and U17 historical23/23 are not substituted for actual24/24 acceptance.
 Native WebKitGTK/Orca, general WCAG, Alpha/ETS and real KNX commissioning remain
 separate; this theme extension never grants a hardware-write go.
 
+### U19 — Resolve the flow contract and evaluated visual slice
+
+**Open; implementation authorized by the user on 2026-10-04.** Dependencies:
+latest owner/lock reconciliation and [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
+Use the Web lock if editing any Web sources, fixtures or generated bindings.
+
+- [ ] Inspect current monitor/session/context/projection/Inspector and primary
+  research; preserve observed versus configured versus ambiguous evidence.
+  Send associations do not exclude receiving membership; no fabricated receipt.
+- [ ] Produce a bounded, visibly synthetic visual slice of direct devices,
+  unknown group nodes, group-address labels, directed pulses and separate value
+  badges, using existing themes/motion. Record an actually rendered screenshot
+  and keyboard/static fallback; do not claim a study is productive integration.
+- [ ] Evaluate native SVG first and a bounded layout approach. Record real
+  frame/lag/memory evidence for the specified workloads before selecting a
+  solver/dependency/Canvas/worker. Specify readable resting edges, model/pulse
+  limits, overflow disclosure, rolling window, damping and live tie behavior.
+- [ ] Freeze an exact handoff to AR20: session/context identities, typed raw
+  addresses, participant evidence/flags/activation, value/error states,
+  observation age, cursor/drops, stale/restart handling and legacy fallback.
+  Proposed fields/routes are not claimed existing; no parallel polling/tunnel.
+- [ ] Record resolved contract/tuning and reproducible test inputs in the flow
+  document/ADR and handover to the alpha owner. Preserve current owner work and
+  original native/Orca/live accepted boundaries, not a blanket new certification.
+
+**Acceptance:** an evaluated visual/semantic slice and exact AR20 input contract,
+not a shipped graph or a hypothetical benchmark. Acquire no lock merely to plan.
+
+### U20 — Integrate the shared monitor feed, graph and immediate values [web]
+
+**Open.** Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
+wire names and revision. Reuse one session/event controller with existing
+attachment/pause/cursor/context guards; do not implement another capture service.
+
+- [ ] Add a read-only Telegram flow view to the existing diagnostics/monitor
+  navigation. Opening it does not connect/start/write; main/companion views
+  share event/session handling and do not duplicate poll loops or tunnels.
+- [ ] Implement a pure, bounded session-keyed reducer and deterministic graph
+  identities. Display exact/unresolved/ambiguous sources, configured target
+  endpoints, group labels and a loss/context/overflow legend. No first-match
+  device selection, formatted-address guessing or current-project relabelling
+  of historical rows; preserve per-object evidence in the Inspector.
+- [ ] Immediately update source and configured-target per-group value slots
+  from admitted value-bearing events, at most three current badges per device
+  plus Inspector overflow. Expire at 7 seconds using trustworthy age/monotonic
+  deadlines; newer same-slot sequences win. Reads/errors/old rows do not invent
+  a value or renew stale TTL; pulse completion has no data-write authority.
+- [ ] Add keyboard selection/navigation/pan/zoom/freeze controls and semantic
+  HTML/Inspector access, focus/selection styling, localized explanations and
+  no screen-reader event storm. Follow admitted built-in/System/imported themes.
+- [ ] Prove fake-clock expiry boundaries, multi-group/multi-source replacement,
+  duplicate poll delivery, delayed/out-of-order replies, capture loss, tab change,
+  restart, no project, changed links/flags/addresses and historical reattachment
+  with named RED/GREEN and restored behavioral guard controls.
+
+**Acceptance:** actual application consumer/reducer/Inspector evidence using
+intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
+
+### U21 — Make the nervous system dynamic, honest and bounded [web]
+
+**Open.** Dependency: U20. Keep data admission independent of solver/rendering.
+
+- [ ] Add event-triggered directional traveling pulses, opposite-direction
+  traffic, group-specific paths/labels and brief source feedback. Values stay
+  immediate; no animation queue masquerades as physical bus timing or receipt.
+- [ ] Implement activity-dependent bounded distances, stable/damped layout and
+  the observed-sender leader in the labelled rolling window. Window expiry and
+  ties are deterministic; fan-out counts once. Freeze fixes geometry only;
+  values/counts/pulses stay live, and the current leader remains labelled.
+- [ ] Fade quiet edges only to a theme-readable resting line for the session.
+  Keep semantic graph membership independent of activity-window/value expiry.
+  Coalesce high-load pulses with represented counts; visible capacity/loss
+  diagnostics preserve existing edges, not silent eviction or complete-map claims.
+- [ ] Prove live theme changes, motion Off/OS-reduce changed mid-effect, hidden
+  tab/resume/unmount cleanup, static directional fallback and continued value
+  expiry. Stop actual solver/timers/frames, not just CSS. Record real dense-burst
+  and long-session CPU/memory/frame/lag results, including reduced rendering.
+- [ ] Run integrated UI/full gates and a separate in-session review; restore and
+  verify behavioral mutants, update focused docs/manual/limitations and publish
+  the exact U21 receipt to the alpha owner for AR21. Keep evidence provenance
+  and user-accepted native/Orca/live boundaries explicit; do not self-certify Alpha.
+
+**Acceptance:** every flow-contract scenario has named, actual evidence;
+no source/domain/store mutation or hardware action. AR21 adopts, not duplicates,
+this owner's rendering implementation and acceptance.
+
 ---
 
 ## 3b. Alpha owner queue (Claude owner session, 2026-10-04)
@@ -526,6 +632,8 @@ Finish only when:
 - every U14–U18 checklist item has named acceptance evidence or an explicit
   user-approved scope disposition; existing alpha follow-up is reconciled
   without treating this extension as alpha-release approval;
+- U19–U21 have named integrated evidence and a handoff to AR21; the approved
+  Telegram-flow Alpha feature is not silently deferred;
 - all gates from §2.5 are green on the merged `main`;
 - the closing review has run and its findings are fixed;
 - the web lock is released.
@@ -546,6 +654,8 @@ session.
 | `docs/LIMITATION_TRIAGE.md` recount, `stats.md`, `goal.md`, the manual's T23 acceptance, doc hygiene `goal.md` §8, the alpha decision, the final whole-goal review | `goal.md` |
 | Device programming: download, individual address, restart. Their UI (K5 download tab, K6 address dialog), their server routes, the server-side consent decision (ADR-0045) | `goal-commission.md` |
 | The ADR-0040 consent hook and dialog | built and closed. The commissioning session calls it; this goal does not change it |
+| Telegram-flow visual design/handoff, shared-feed UI, reducer, layout, pulses, theme/motion/keyboard/load evidence | **this goal**, U19–U21 under the Web lock; consumes integrated AR20 |
+| Telegram-flow pure participant/event-type/age/context contract and whole-feature Alpha acceptance | `alpha-release-goal.md`, AR20/AR21; no UI rendering or commissioning work |
 | `apps/knx-web` in general | this goal, under the web lock (§3). The commissioning session takes the lock for its own views only |
 
 If a package turns up something from another column, do not do it here.

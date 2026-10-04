@@ -214,3 +214,33 @@ export function findDeviceBuildingPart(tree: ProjectTree, deviceId: number): num
   }
   return null;
 }
+
+/** One topology slot of a device (MODEL-02): a line, or an installation's
+ * unassigned bucket. `count` is how often the device is listed there. */
+export type PlacementSlot =
+  | { kind: "line"; installation: InstallationNode; area: AreaNode; line: LineNode; count: number }
+  | { kind: "unassigned"; installation: InstallationNode; count: number };
+
+/** Every distinct topology slot of a device across installations. A line the
+ * projection shows under two areas is one slot (its devices are listed once
+ * per line), so only a real multiple placement adds up to more than one. */
+export function devicePlacementSlots(tree: ProjectTree, deviceId: number): PlacementSlot[] {
+  const slots: PlacementSlot[] = [];
+  for (const installation of tree.installations) {
+    const lines = new Map<number, Extract<PlacementSlot, { kind: "line" }>>();
+    for (const area of installation.topology) {
+      for (const line of area.lines) {
+        const count = line.devices.filter((device) => device.id === deviceId).length;
+        if (count === 0) continue;
+        const known = lines.get(line.id);
+        if (known) { known.count = Math.max(known.count, count); continue; }
+        const slot = { kind: "line" as const, installation, area, line, count };
+        lines.set(line.id, slot);
+        slots.push(slot);
+      }
+    }
+    const unassigned = installation.unassigned.filter((device) => device.id === deviceId).length;
+    if (unassigned > 0) slots.push({ kind: "unassigned", installation, count: unassigned });
+  }
+  return slots;
+}

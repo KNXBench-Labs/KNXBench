@@ -30,6 +30,7 @@ import {
   findArea,
   findBuildingPart,
   deviceInstallation,
+  devicePlacementSlots,
   findDeviceBuildingPart,
   findDeviceLine,
   owningInstallation,
@@ -940,15 +941,112 @@ export function DeviceWorkspace(props: {
   </section>;
 }
 
+// MODEL-02 / ADR-0071: a device listed in more than one topology slot is
+// repaired only by the user naming the slot to keep. Addresses, links,
+// parameters and building placement are left alone by the server.
+function DevicePlacementRepair(props: {
+  detail: DeviceDetail;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const t = useTranslate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const slots = devicePlacementSlots(tree, detail.id);
+  const total = slots.reduce((sum, slot) => sum + slot.count, 0);
+  if (total <= 1) return null;
+
+  async function keep(slot: (typeof slots)[number]) {
+    setBusy(true);
+    setError(null);
+    try {
+      onApplied(await api.repairDevicePlacement(detail.id, slot.kind === "line"
+        ? { lineId: slot.line.id } : { unassignedInstallationId: slot.installation.id }));
+    } catch (e) {
+      setError(api.errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="placement-repair">
+      <h3>{t("inspector.placementConflict")}</h3>
+      <p className="inspector-description">{t("inspector.placementConflictHint", { count: total })}</p>
+      <ul>
+        {slots.map((slot) => (
+          <li key={slot.kind === "line" ? `line-${slot.installation.id}-${slot.line.id}` : `unassigned-${slot.installation.id}`}>
+            <span>
+              {slot.kind === "line"
+                ? t("inspector.placementLine", { area: slot.area.address, line: slot.line.address,
+                  name: slot.line.name, installation: slot.installation.name })
+                : t("inspector.placementUnassigned", { installation: slot.installation.name })}
+              {slot.count > 1 && ` ${t("inspector.placementListedTimes", { count: slot.count })}`}
+            </span>
+            <button type="button" disabled={busy} onClick={() => void keep(slot)}>
+              {t("inspector.keepPlacement")}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && <span className="field-error">{error}</span>}
+    </section>
+  );
+}
+
+// MODEL-02 / ADR-0071: the same line listed by several areas of one
+// installation. Offered only when every occurrence is the same line (same
+// name, address and devices) in at least two areas; two different lines that
+// share an id are a duplicate-id problem with no repair here.
+function LineOwnerRepair(props: { tree: ProjectTree; lineId: number; onApplied: (tree: ProjectTree) => void }) {
+  const { tree, lineId, onApplied } = props;
+  const t = useTranslate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const holders = tree.installations.filter((installation) =>
+    installation.topology.some((area) => area.lines.some((line) => line.id === lineId)));
+  const areas = holders.length === 1
+    ? holders[0].topology.filter((area) => area.lines.some((line) => line.id === lineId)) : [];
+  const shapes = new Set(areas.flatMap((area) => area.lines.filter((line) => line.id === lineId))
+    .map((line) => JSON.stringify([line.name, line.address, line.devices.map((device) => device.id)])));
+  if (areas.length < 2 || shapes.size !== 1) return null;
+
+  async function keep(areaId: number) {
+    setBusy(true);
+    setError(null);
+    try {
+      onApplied(await api.repairLineOwner(lineId, areaId));
+    } catch (e) {
+      setError(api.errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="placement-repair">
+      <p className="inspector-description">{t("inspector.lineOwnerConflictHint", { count: areas.length })}</p>
+      <ul>
+        {areas.map((area) => (
+          <li key={area.id}>
+            <span>{t("inspector.areaLabel", { address: area.address, name: area.name })}</span>
+            <button type="button" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
+          </li>
+        ))}
+      </ul>
+      {error && <span className="field-error">{error}</span>}
+    </section>
+  );
+}
+
 function DeviceInspector(props: {
   propertiesOnly?: boolean;
   detail: DeviceDetail;
   tree: ProjectTree;
-  // Same `installations[0]`-only gate as every other Delete button in this
-  // file — `Command::DeleteDevice` only ever searches the first
-  // installation's topology (`remove_device_from_topology` in
-  // command.rs), the exact reachability `findDeviceLineInFirstInstallation`
-  // already reports for `LineMoveField`.
+  // Delete is offered for a device placed in the topology of exactly one
+  // installation (ADR-0070), the reachability `findDeviceLine` reports for
+  // `LineMoveField`.
   canDelete: boolean;
   onApplied: (tree: ProjectTree) => void;
   onDeleted: (tree: ProjectTree) => void;
@@ -981,6 +1079,7 @@ function DeviceInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      <DevicePlacementRepair detail={detail} tree={tree} onApplied={onApplied} />
       <AddressField detail={detail} tree={tree} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
@@ -1638,7 +1737,10 @@ export default function Inspector(props: {
     ).length;
   }, 0);
   if (matchingStructureIds > 1) {
-    return <p role="alert" className="inspector-description">{t("inspector.duplicateStructureId")}</p>;
+    return <>
+      <p role="alert" className="inspector-description">{t("inspector.duplicateStructureId")}</p>
+      {selection.kind === "line" && <LineOwnerRepair tree={tree} lineId={selection.id} onApplied={onApplied} />}
+    </>;
   }
 
   if (selection.kind === "group_range") {

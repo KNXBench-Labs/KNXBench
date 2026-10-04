@@ -400,6 +400,22 @@ export function createArea(name: string, address: number, installationId?: numbe
   return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address, installationId }) });
 }
 
+// MODEL-02 / ADR-0071: an explicit repair keeps exactly the named slot and
+// removes every other placement (one undo step); the server refuses when
+// nothing is ambiguous or the slot is not a current placement.
+export type PlacementKeep = { lineId: number } | { unassignedInstallationId: number };
+
+export function repairDevicePlacement(deviceId: number, keep: PlacementKeep): Promise<ProjectTree> {
+  const body = "lineId" in keep
+    ? { deviceId, keepLineId: keep.lineId }
+    : { deviceId, keepUnassignedInstallationId: keep.unassignedInstallationId };
+  return request("/api/repair/device-placement", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function repairLineOwner(lineId: number, keepAreaId: number): Promise<ProjectTree> {
+  return request("/api/repair/line-owner", { method: "POST", body: JSON.stringify({ lineId, keepAreaId }) });
+}
+
 // MODEL-01: `Command::RenameInstallation`, one undo step.
 export function renameInstallation(id: number, name: string): Promise<ProjectTree> {
   return request(`/api/installations/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });

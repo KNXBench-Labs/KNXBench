@@ -234,3 +234,61 @@ backend change. By user decision every remaining web half is handed over to
 the Web-lock holder (commissioning session); the task table with API
 contracts and acceptance criteria is the *UI owner handoff* in the parent
 ledger. None of these rows is `DONE` before its web half is published.
+
+## Owner status history
+
+Moved verbatim from `goal-ui.md` on 2026-10-04 (AR14D D5, agreed by the
+goal-ui owner); only relative links changed. Every ID and status named here
+has its row in the [source-ID ledger](status/LEDGER.md), which is current.
+
+### Where things stood (goal-ui.md, updated 2026-10-02)
+
+U0–U12's UI slices are delivered: host/port discovery fields, catalog and
+device/structure editors, channel labels, monitor control, read-only device
+checks, Site/Property creation and the ADR-0051 Debug property action.
+The Debug route remains default-off and its durable backup is *property-only*;
+no new live device check or whole-image recovery follows. K6 confirmed public
+address writes now refuse before a tunnel without device-specific durable
+recovery (ADR-0059); the Web tab shows this availability rather than asking
+for consent prematurely. CLI/HTTP discovery succeeded after the user's
+firewall rule; native WebKitGTK Search remains unverified. ISSUE-04 and both
+ISSUE-12 acceptance rows are verified and ticked. **U0–U13 are complete**:
+the operator accepted the independent GPT-6.1-Sol review because Claude was
+unavailable; its three P1 findings are fixed with behavioral RED/GREEN and
+restored guard mutations. Actual offline UDP discovery roundtrip/no-response
+tests close the remaining transport-evidence gap, not the real-network or
+native Search boundaries. Integrated gates: 139 Rust suites / 2,820 passed /
+zero failed / 161 ignored / zero corpus skips; Web 82 files / 1,312 tests;
+30 mock-only Chromium tests, strict Clippy/fmt/type/build/repository gates
+green. Evidence: `.ai/logs/2026-10-01_codex_ui-u13-fixes.md`.
+The current top of `.ai/CURRENT_STATE.md` owns the Web-lock/publication state.
+
+#### UI-owned alpha follow-up (user request, 2026-10-02)
+
+The user separately requested the `goal-ui` items from
+`docs/ALPHA_READINESS.md`. This does not reopen U0–U13 or authorize commissioning.
+All 24 routed rows have a current-source audit in
+[UI_ALPHA_READINESS](UI_ALPHA_READINESS.md). Four concrete gaps are
+implemented and fully offline-gated: UX-02 supported-only catalog picker,
+UX-03 command-backed project style selector, KL-121 cross-client settings
+refresh, and KL-124 lossless Device Info projection/disclosure. Publication
+`6c16fe5a` and complete remote/tree readback are verified; native/multicast/AT
+and domain-dependency qualifications stay explicit.
+KL-82's authoritative interpretation comparison, fail-closed uncertainty and
+pause/cursor/race guards are implemented; twelve complete candidate gates pass
+(Web 1,343, Chromium 35, Rust 2,890 / zero failed / 163 ignored). Integrated
+acceptance repeated with the same counts on published `8ceacf49`; remote
+ref/tree/twenty artifacts and zero outgoing range verified. No hardware or
+transactional write proof follows. The separately reserved `ui-alpha-keyboard`
+candidate now implements list auto-scroll, stacked/dynamic modal-background
+exclusion and viewport-safe HelpTip with a permanent local description.
+Seventeen mocked Chromium cases and eighteen restored behavioral controls pass;
+the new hook is demonstrably checked by TypeScript. Twelve renewed candidate
+gates pass (Web 1,357, Chromium 52, Rust 2,890 / zero failed / 163 ignored,
+576-source freeze); first header failure remains recorded. All twelve gates
+repeated on integrated source as proc_490a156044df with the same counts; published
+2e57f8e5 and exact ref/tree/all 28 artifacts/zero outgoing commits verified.
+No ready keyboard/modal/help-tip implementation remains in this package.
+Documentation receipt/owned cleanup follow. Native/Orca, real-network,
+independent-sample and domain/application dependencies remain separate and open.
+Do not turn retained design boundaries into silently accepted alpha exceptions.

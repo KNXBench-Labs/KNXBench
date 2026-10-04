@@ -1,5 +1,22 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR14D D5: resolved limitation bodies to history, goal-ui status to its dossier
+
+- Five `KNOWN_LIMITATIONS` entries whose own status line says resolved (§18,
+  §23, §24, §42, §130 gate) keep heading, number and status line as a stub;
+  their historical descriptions (163 lines) moved verbatim to
+  [history/KNOWN_LIMITATIONS_resolved.md](history/KNOWN_LIMITATIONS_resolved.md).
+  §90 and §95 stay in place: they are pointers, not resolved defects. The
+  heading count (115) and every fragment link are unchanged; a script proved
+  no original line is missing.
+- `goal-ui.md` (owner agreed 18:30): its *Where things stand* narrative moved
+  verbatim to [UI_ALPHA_READINESS](UI_ALPHA_READINESS.md#owner-status-history)
+  and the section now links to the ledger; the `goal.md` ownership row points
+  to `alpha-release-goal.md` and the archived file. The five IDs it named all
+  have ledger rows.
+- Open: `goal-commission.md`, which waits for its owner's agreement.
+- The status-docs lock is released with this delivery. Documentation only.
+
 ## 2026-10-04 — AR14D D4: RESEARCH split by topic
 
 - `docs/RESEARCH.md` (6,759 lines) is now an index of 181 lines: the evidence

@@ -56,6 +56,10 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  // clearAllMocks keeps queued `…Once` values; a test that stops early must
+  // not hand them to the next one.
+  apiMock.createDevice.mockReset();
+  apiMock.currentProject.mockReset();
   apiMock.catalogManufacturers.mockResolvedValue([]);
   apiMock.catalogItems.mockResolvedValue([]);
   resetSettingsForTests();
@@ -86,12 +90,12 @@ const item2 = {
   hardware2programRefId: "HP-2",
 };
 
-async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncarnation?: string) {
+async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncarnation?: string, lineId: number | null = null) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<CatalogBrowser lineId={null} onCreated={onCreated} onClose={onClose}
+    root.render(<CatalogBrowser lineId={lineId} onCreated={onCreated} onClose={onClose}
       serverIncarnation={serverIncarnation} />);
   });
   return { root, onCreated, onClose };
@@ -319,7 +323,8 @@ describe("CatalogBrowser", () => {
     expect(host!.textContent).toContain("Actuator 3");
     expect(host!.textContent).toContain("Physical addresses remain unassigned");
     await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
-    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 3, expect.stringMatching(REQUEST_ID));
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 3, expect.stringMatching(REQUEST_ID),
+      { allocateAddresses: false, uniqueNames: false });
     expect(onCreated).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("Actuator 3");
@@ -466,6 +471,83 @@ describe("CatalogBrowser", () => {
     expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
     expect(host!.textContent).toContain("still offline");
     expect(retryButton()).toBeTruthy();
+    root.unmount();
+  });
+
+  const allocateBox = () => host!.querySelector<HTMLInputElement>('input[type="checkbox"][name="allocateAddresses"]')!;
+  const uniqueBox = () => host!.querySelector<HTMLInputElement>('input[type="checkbox"][name="uniqueNames"]')!;
+
+  // MODEL-04: both options are opt-in; addresses can only be taken from a line.
+  it("offers address allocation only when a target line is selected", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    const unassigned = await renderBrowser();
+    await pickAndSetQuantity("2");
+    expect(allocateBox().disabled).toBe(true);
+    expect(allocateBox().checked).toBe(false);
+    expect(uniqueBox().disabled).toBe(false);
+    expect(host!.textContent).toContain("Addresses can only be assigned on a target line");
+    unassigned.root.unmount();
+    host?.remove();
+    const onLine = await renderBrowser(vi.fn(), vi.fn(), "inc-1", 7);
+    await pickAndSetQuantity("2");
+    expect(allocateBox().disabled).toBe(false);
+    expect(allocateBox().checked).toBe(false);
+    expect(uniqueBox().checked).toBe(false);
+    onLine.root.unmount();
+  });
+
+  it("sends the chosen options and shows each allocated address", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue({
+      tree: { installations: [] }, diagnostics: [], replayed: false,
+      items: [["1.1.2", "Actuator 3"], ["1.1.4", "Actuator 4"], ["1.1.5", "Actuator 5"]].map(([address, deviceName], i) => ({
+        index: i + 1, deviceId: i + 1, name: deviceName, address, diagnostics: [],
+      })),
+    });
+    const { root } = await renderBrowser(vi.fn(), vi.fn(), "inc-1", 7);
+    await pickAndSetQuantity("3");
+    await act(async () => { allocateBox().click(); uniqueBox().click(); });
+    expect(host!.textContent).toContain("Free addresses on the line are assigned in order");
+    expect(host!.textContent).toContain("Names already in the project are skipped");
+    await act(async () => createButton().click());
+    expect(apiMock.createDevice).toHaveBeenCalledWith(7, "cat-1", "Actuator", 3, expect.stringMatching(REQUEST_ID),
+      { allocateAddresses: true, uniqueNames: true });
+    const created = Array.from(host!.querySelectorAll(".catalog-created-item")).map((li) => li.textContent);
+    expect(created).toHaveLength(3);
+    expect(created[0]).toContain("Actuator 3");
+    expect(created[0]).toContain("1.1.2");
+    expect(created[2]).toContain("1.1.5");
+    root.unmount();
+  });
+
+  it("shows a refused allocation as an ordinary error without a retry offer", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(Object.assign(new Error("line 1.1 has 2 free device addresses, 3 requested"), { status: 400 }));
+    const { root, onCreated } = await renderBrowser(vi.fn(), vi.fn(), "inc-1", 7);
+    await pickAndSetQuantity("3");
+    await act(async () => allocateBox().click());
+    await act(async () => createButton().click());
+    expect(host!.querySelector(".field-error")?.textContent).toContain("line 1.1 has 2 free device addresses, 3 requested");
+    expect(retryButton()).toBeNull();
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(createButton().disabled).toBe(false);
+    root.unmount();
+  });
+
+  it("resends the chosen options unchanged on a safe retry", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice
+      .mockRejectedValueOnce(new TypeError("connection lost"))
+      .mockResolvedValueOnce({ tree: { installations: [] }, diagnostics: [], items: [], replayed: true });
+    apiMock.currentProject.mockResolvedValue({ installations: [], server_incarnation: "inc-1" });
+    const { root } = await renderBrowser(vi.fn(), vi.fn(), "inc-1", 7);
+    await pickAndSetQuantity("2");
+    await act(async () => allocateBox().click());
+    await act(async () => createButton().click());
+    await act(async () => retryButton()!.click());
+    const [first, retried] = apiMock.createDevice.mock.calls;
+    expect(first[5]).toEqual({ allocateAddresses: true, uniqueNames: false });
+    expect(retried).toEqual(first);
     root.unmount();
   });
 

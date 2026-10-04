@@ -564,6 +564,8 @@ export interface CreatedCatalogDevice {
   index: number;
   deviceId: number;
   name: string;
+  /** MODEL-04: the address the server allocated, `null`/absent when none was requested. */
+  address?: string | null;
   diagnostics: CreationDiagnostic[];
 }
 
@@ -665,17 +667,27 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   return response.json() as Promise<CatalogInstallReport>;
 }
 
+/** MODEL-04: opt-in catalog batch options; both are part of the replay fingerprint. */
+export interface CatalogCreateOptions {
+  allocateAddresses: boolean;
+  uniqueNames: boolean;
+}
+
 export function createDevice(
   lineId: number | null,
   catalogItemId: string,
   name: string,
   quantity = 1,
   requestId?: string,
+  options: CatalogCreateOptions = { allocateAddresses: false, uniqueNames: false },
 ): Promise<CreateDeviceResponse> {
   return request("/api/devices", {
     method: "POST",
     body: JSON.stringify({ ...(lineId === null ? {} : { lineId }), catalogItemId, name,
-      ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }) }),
+      ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }),
+      // Both default to false on the server; only a chosen option travels.
+      ...(options.allocateAddresses ? { allocateAddresses: true } : {}),
+      ...(options.uniqueNames ? { uniqueNames: true } : {}) }),
   });
 }
 

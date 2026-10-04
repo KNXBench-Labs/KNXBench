@@ -4,10 +4,10 @@
 
 User-started offline alpha queue, 2026-10-01. Inspected source/maintained docs
 at `307a5970ad5147437dffce4a86047e85e3319186`; the dated input inventory
-[OFFENE_PUNKTE](../OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
+[OFFENE_PUNKTE](archive/OFFENE_PUNKTE.md) is unchanged. This is dispatch/provenance
 reconciliation, not a fresh full implementation, security or compatibility audit.
 The execution owner is [alpha-release-goal](../alpha-release-goal.md); historical
-[goal](../goal.md) is not a second executor. UI/commissioning remain their owners.
+[goal](archive/goal.md) is not a second executor. UI/commissioning remain their owners.
 
 ### Evidence adopted, not relabelled
 

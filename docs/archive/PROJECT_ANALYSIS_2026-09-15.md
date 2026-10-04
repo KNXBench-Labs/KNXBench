@@ -176,7 +176,7 @@ rewrite.
    Same-file `ApplicationProgram/@Id` collisions now use the shared occurrence
    tracking and report the second declaration. Datapoint-type inserts still
    report only a drop count, not winning/losing provenance
-   ([KNOWN_LIMITATIONS.md §86](KNOWN_LIMITATIONS.md#86-duplicate-identifiers-inside-one-file--recorded-for-normalized-product-identifiers-dpt-provenance-remains-limited)).
+   ([KNOWN_LIMITATIONS.md §86](../KNOWN_LIMITATIONS.md#86-duplicate-identifiers-inside-one-file--recorded-for-normalized-product-identifiers-dpt-provenance-remains-limited)).
    Add source hash/provenance to DPT definitions and distinguish
    byte/semantic-identical repetition from an actual conflict after the active
    D10 migration work is integrated.

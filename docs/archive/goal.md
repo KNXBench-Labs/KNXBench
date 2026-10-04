@@ -1,11 +1,11 @@
 # KNXBench goal — everything still open, minus commissioning
 
 **Execution routing (2026-10-01, AR00):** the user has started
-[`alpha-release-goal.md`](alpha-release-goal.md). Its AR queue is the sole
+[`alpha-release-goal.md`](../../alpha-release-goal.md). Its AR queue is the sole
 executor for overlapping non-UI/non-commissioning work; this file is retained
 as historical scope and decision evidence, not a parallel dispatch queue.
 Current per-ID evidence and unresolved decisions are in
-[`docs/ALPHA_READINESS.md`](docs/ALPHA_READINESS.md).
+[`docs/ALPHA_READINESS.md`](../ALPHA_READINESS.md).
 
 Current open work outside commissioning and the UI-owned track. The old
 Paperclip takeover, T01–T17 and PDB-1–PDB-11 have been completed or retired;
@@ -20,8 +20,8 @@ release tag is authorized.
 ## 0. What this goal deliberately excludes
 
 This file excludes commissioning and every real-device write; those are
-owned by [`goal-commission.md`](goal-commission.md). UI work and the Web lock
-are owned by [`goal-ui.md`](goal-ui.md). See §12.3 for current handover.
+owned by [`goal-commission.md`](../../goal-commission.md). UI work and the Web lock
+are owned by [`goal-ui.md`](../../goal-ui.md). See §12.3 for current handover.
 
 Commissioning has a narrow live-verified `070nh` path on one MDT device,
 not a general device-support claim. No approval from that track transfers to
@@ -105,9 +105,9 @@ not blanket permission for new experiments.
 
 T01–T07 and PDB-1–PDB-11 have landed; do not run their original
 implementation checklists again. Verified boundaries, rather than new work,
-remain in [COMPATIBILITY](docs/COMPATIBILITY.md),
-[KNOWN_LIMITATIONS](docs/KNOWN_LIMITATIONS.md) (§1, §2, §3, §11–§13,
-§61, §85, §92) and [PRODUCT_DATABASE_CORPUS](docs/PRODUCT_DATABASE_CORPUS.md).
+remain in [COMPATIBILITY](../COMPATIBILITY.md),
+[KNOWN_LIMITATIONS](../KNOWN_LIMITATIONS.md) (§1, §2, §3, §11–§13,
+§61, §85, §92) and [PRODUCT_DATABASE_CORPUS](../PRODUCT_DATABASE_CORPUS.md).
 The user's accepted exclusions are in §6; the open command-invariant finding
 (ADR-0039 phases 3–5) stays in §8. Any new manufacturer scheme or hardware
 claim needs independent evidence and a separate scoped decision.
@@ -118,7 +118,7 @@ claim needs independent evidence and a separate scoped decision.
 
 The diagnostics UI, scan reconciliation, settings, drag/drop, discovery,
 project creation and the closed search/accessibility bugs have shipped. The
-remaining user-facing backlog is in [`goal-ui.md`](goal-ui.md), not in old
+remaining user-facing backlog is in [`goal-ui.md`](../../goal-ui.md), not in old
 T08–T13 checklists. AR00 verified the formerly listed §23/§24 assertions
 against the existing implementation and regression tests: downloads stream
 bounded chunks while retaining temporary SQLite serialization, and the
@@ -146,7 +146,7 @@ evidence limits, not claims that a new renderer can recover absent data.
 ## 5. Priority 4 — platform, packaging and the manual
 
 - **D12, user manual acceptance — after UI U13.** A manual already exists in
-  [`docs/manual/`](docs/manual/README.md). It still needs the ADR-0024
+  [`docs/manual/`](../manual/README.md). It still needs the ADR-0024
   location decision, screenshot decision and claim-by-claim verification on
   the finished UI; do not describe it as unwritten.
 - **Alpha release — user decision.** An x86_64 AppImage has been built and
@@ -203,7 +203,7 @@ the run its credibility.
   fold it into packaging.
 - **Twelve documented boundaries from DIN-26** — accepted 2026-09-27 by the
   user as permanent documented boundaries, no work scheduled
-  ([decision](docs/superpowers/plans/2026-09-26-din26-oos-board-decision.md),
+  ([decision](../superpowers/plans/2026-09-26-din26-oos-board-decision.md),
   `e0c1f37`): §45 native PDF, §48 the full report prose catalogue,
   §52/§53/§54 diff correlation, §55 applying a diff, §56 three-way compare,
   §39 CSV ranges and renaming, §41 spreadsheet transforms, §12's remaining
@@ -219,7 +219,7 @@ Research for MCP/natural-language interaction, task automation, project
 notes and a "who talks to whom" view is recorded in `docs/RESEARCH.md`
 §13/§14/§16 and ADR-0031. None is a scheduled v1 implementation. The
 legacy `.vd`/`.pr` design prerequisite is in
-[`docs/VD4_PRODUCT_DATABASE_IMPORT.md`](docs/VD4_PRODUCT_DATABASE_IMPORT.md)
+[`docs/VD4_PRODUCT_DATABASE_IMPORT.md`](../VD4_PRODUCT_DATABASE_IMPORT.md)
 and the reviewed format spec; modern `.knxprod` is a different format.
 Do not dispatch completed research as implementation without a new scope
 and data-integrity decision.
@@ -271,7 +271,7 @@ path and unresolved safety boundaries belong to `goal-commission.md`.
 ## 11. User-reported UX and workflow issues
 
 The thirteen original reports have an evidence checklist in
-[`docs/superpowers/plans/2026-09-21-user-reported-issues.md`](docs/superpowers/plans/2026-09-21-user-reported-issues.md).
+[`docs/superpowers/plans/2026-09-21-user-reported-issues.md`](../superpowers/plans/2026-09-21-user-reported-issues.md).
 Delivered slices are not pending tasks. `goal-ui.md` owns the remaining UI
 checks; ISSUE-04's saved-baseline and locale-aware timestamp rows are already
 tested and ticked (§12.2). New domain or compatibility questions remain investigation-first.

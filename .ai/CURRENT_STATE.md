@@ -1,3 +1,12 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 15:19
+Web lock: taken by codex-commission-continuation
+- **Completed:** Reloaded all17 requested skills; current goal items1–3 remain justified. Public required9 accepted on c24dd52a076173c8bd18d11f2a8d253b55040407: Workspace3107/0/177 across165 result blocks;50 controls, Web/fmt/strict Clippy/four policy gates0. Separate selected incoming offline corpus regressions accepted: products2, importer55, native-roundtrip3, CLI-import8; total68 registered and passed,0failed/0ignored. Original input commitment closed, source stable, raw private output discarded. Shared root untouched, no hardware contact.
+- **Pending/Next Steps:** History-Web publication/readback and closure metadata gate still pending. Caller work has six new App-boundary tests, compilation RED queued as proc_345d48a4cabd; original two CLI Missing-Interface REDs remain open. Shared App production extraction, CLI/long-session adoption, and offline recovery/abort/restore remain open. No total-DONE or owner acceptance.
+- **Notes for Claude:** Current public/private receipts: history-delivery-current/receipt.json and history-delivery-private/receipt.json. Do not substitute them for older permanent evidence or add these snapshots together.177 ordinary ignored tests remain separate from68 explicitly executed selected corpus tests. All inherited handover content retained; Web reservation stays taken. Prior attempted checkpoint patches were refused before writing; this entry is the actual persisted checkpoint.
+
+---
+
 - **Last Agent:** codex (iaw commissioning session)
 - **Timestamp:** 2026-10-04 13:45
 Web lock: taken by codex-commission-continuation

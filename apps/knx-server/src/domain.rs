@@ -861,10 +861,25 @@ pub fn export_group_addresses_csv_impl(
     state: &AppState,
     path: &Path,
 ) -> Result<knx_csv::CsvExport, String> {
+    export_group_addresses_csv_from_impl(state, path, None)
+}
+
+/// [`export_group_addresses_csv_impl`] for installation `installation`
+/// (MODEL-01); `None` keeps the first one. An unknown installation writes
+/// nothing.
+pub fn export_group_addresses_csv_from_impl(
+    state: &AppState,
+    path: &Path,
+    installation: Option<u8>,
+) -> Result<knx_csv::CsvExport, String> {
     let result = (|| -> Result<knx_csv::CsvExport, String> {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
-        let export = knx_csv::export_group_addresses(project);
+        let export = knx_csv::export_group_addresses_from(
+            project,
+            installation.map(knx_core::InstallationId),
+        )
+        .map_err(|error| error.to_string())?;
         std::fs::write(path, export.text.as_bytes()).map_err(|e| e.to_string())?;
         Ok(export)
     })();
@@ -1123,9 +1138,22 @@ pub fn import_group_addresses_csv_impl(
     path: &Path,
     confirmation_token: Option<&str>,
 ) -> Result<CsvImportOutcome, String> {
+    import_group_addresses_csv_into_impl(state, path, confirmation_token, None)
+}
+
+/// [`import_group_addresses_csv_impl`] into installation `installation`
+/// (MODEL-01); `None` keeps the first one. The confirmation token of a
+/// destructive preview also binds the installation.
+pub fn import_group_addresses_csv_into_impl(
+    state: &AppState,
+    path: &Path,
+    confirmation_token: Option<&str>,
+    installation: Option<u8>,
+) -> Result<CsvImportOutcome, String> {
+    let installation = installation.map(knx_core::InstallationId);
     let result = (|| -> Result<CsvImportOutcome, String> {
         let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let planned = plan_csv_import(state, &text)?;
+        let planned = plan_csv_import(state, &text, installation)?;
         apply_planned_csv_import(state, &text, planned, confirmation_token)
     })();
 
@@ -1156,21 +1184,28 @@ pub fn import_group_addresses_csv_impl(
     result
 }
 
-/// A CSV import plan and the project revision it was computed against.
+/// A CSV import plan, the project revision it was computed against and the
+/// installation it targets.
 struct PlannedCsvImport {
     plan: knx_csv::ImportPlan,
     revision: u64,
+    installation: Option<knx_core::InstallationId>,
 }
 
 /// Parses `text` and plans it against the live project under one lock
 /// acquisition, recording the revision the plan is valid for.
-fn plan_csv_import(state: &AppState, text: &str) -> Result<PlannedCsvImport, String> {
+fn plan_csv_import(
+    state: &AppState,
+    text: &str,
+    installation: Option<knx_core::InstallationId>,
+) -> Result<PlannedCsvImport, String> {
     let project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_ref().ok_or("no project open")?;
     let parsed = knx_csv::parse_group_addresses(text, project.info.group_address_style);
     Ok(PlannedCsvImport {
-        plan: knx_csv::plan_import(project, &parsed),
+        plan: knx_csv::plan_import_into(project, &parsed, installation),
         revision: current_project_revision(state),
+        installation,
     })
 }
 
@@ -1188,6 +1223,7 @@ fn apply_planned_csv_import(
     let PlannedCsvImport {
         plan,
         revision: planned_revision,
+        installation,
     } = planned;
     {
         let mut log = state.session_log.lock().expect("state mutex poisoned");
@@ -1219,6 +1255,12 @@ fn apply_planned_csv_import(
         let mut hasher = Sha256::new();
         hasher.update(state.server_incarnation.as_bytes());
         hasher.update(planned_revision.to_le_bytes());
+        // A preview for one installation must not confirm another one's
+        // plan: the same address names different entries there.
+        match installation {
+            None => hasher.update([0u8]),
+            Some(id) => hasher.update([1u8, id.0]),
+        }
         hasher.update(text.as_bytes());
         format!("{:x}", hasher.finalize())
     });
@@ -5075,7 +5117,7 @@ mod tests {
         }
         let text = "Address,Name\n1/1/1,From CSV\n";
 
-        let planned = plan_csv_import(&state, text).unwrap();
+        let planned = plan_csv_import(&state, text, None).unwrap();
         create_group_address_impl(&state, "Interleaved".into(), "1/1/2".into(), None).unwrap();
         let after_edit = state.project.lock().unwrap().clone().unwrap();
 
@@ -5086,7 +5128,7 @@ mod tests {
         assert!(err.contains("preview again"), "{err}");
         assert_eq!(state.project.lock().unwrap().as_ref(), Some(&after_edit));
 
-        let replanned = plan_csv_import(&state, text).unwrap();
+        let replanned = plan_csv_import(&state, text, None).unwrap();
         let outcome = apply_planned_csv_import(&state, text, replanned, None).unwrap();
         assert!(outcome.applied);
         let names: Vec<String> = state

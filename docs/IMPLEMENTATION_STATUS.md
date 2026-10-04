@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA10: CSV group-address exchange per installation (MODEL-01)
+
+- `knx-csv`: `plan_import_into(project, parsed, Option<InstallationId>)` and
+  `export_group_addresses_from(…) -> Result<_, UnknownInstallation>`; the old
+  functions delegate with `None` (first installation). Rows match, ranges
+  resolve and range-less creates land only in the chosen installation.
+- Server: optional `installationId` on `POST /api/group-addresses/csv-import`
+  and `/csv-export`; unknown installation → 400, nothing written. The
+  destructive-preview confirmation token now also binds the installation.
+- Test `apps/knx-server/tests/csv_installation_scope.rs`: RED 0/4 (the
+  server silently ignored `installationId` and imported into the first
+  installation), GREEN 4/4, 5/5 mutants caught. CLI and web buttons still use
+  the first installation.
+
 ## 2026-10-04 — UA7/UA8: no silent loss between import, memory and `.knxdb`
 
 - [ADR-0073](adr/0073-imported-elements-keep-their-own-ids.md) (`knx-etsproj`):
@@ -106,7 +120,8 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
   change), `apps/knx-server/tests/multi_installation_routes.rs`; one older
   core test that pinned first-installation parameter semantics now pins the
   in-place edit. Eight guard mutants caught.
-- CSV group-address import still creates in the first installation; the web
+- CSV group-address import originally still created in the first installation
+  (since UA10 the server routes take `installationId`); the web
   UI half (installation rename, choose installation for root creates) waits
   for the Web lock. MODEL-01 stays `IN_PROGRESS` until then.
 

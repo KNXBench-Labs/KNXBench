@@ -1,3 +1,21 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 12:56
+Web lock: taken by codex-commission-continuation; six-row UI-owner handoff retained
+- **Completed:** af082db8 renewed offline integration accepted9/9,1038 public/279 Web hashes exact: Rust3079/0/176 in160 blocks;Web1761/100;Chromium8/0/0;build/fmt/strict Clippy and four policy gates0.50 unique compiled/intended-failure controls and tsc control verified. Incoming independent story regression60 unit/46 Chromium checks passed. First fresh publication wrapper refused missing inner mutations dispatch before compile/runtime; old negative retained, corrected namespace has both inner dispatches and fresh target. No private/live/ignored/native acceptance. Source remained frozen and shared root untouched.
+- **Pending/Next Steps:** Publication still open: fetched aadd8820 introduces already-published ProductDB scheme23 code/CLI/server tests and ADR0072. Commit this acceptance checkpoint, integrate complete upstream handover/status/Alpha changes without losing185 source rows, then renew actual merged gates and relevant upstream corpus scope before main push/readback. Broader CLI/client/long-session/recovery contracts remain open. Caller branch starts fromaf082db8, has proposed extraction ADR and actual2-test runtime RED on unknown --activity-history; no production implementation yet.
+- **Notes for Codex oder Claude:** Retain Web reservation for six assigned MODEL/DATA/UX frontend halves; earlier “UI handoff belongs elsewhere” is overtaken by the published assignment. Caller proposal ADR0072 must be renumbered before integration because upstream now owns that number. External hardware/power-loss/vendor/ETS work stays user notices, not completion blockers; no new write authorisation. New source acceptance is not borrowed from historical private source713690. Complete inherited handover retained below.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 12:31
+Web lock: taken by codex-commission-continuation for SAFE-03/AUDIT-01 history-client package and published UI-owner handoff
+- **Completed:** Reloaded all16 requested skills and rechecked current tasks. History closure metadata committed3f590a38; corrected diagnostic anchors/headers/staged-whitespace gate passed, restoring the former candidate-heading anchor as an alias. Earlier negative diagnostic retained. Incoming story-only code and metadata46c8c4cb integrated ataf082db8; complete authoritative handover/status preserved and all Rust/Web/build inputs from accepted9fe69116 remain byte-identical. No new private/live/ignored coverage claimed. Shared root untouched.
+- **Pending/Next Steps:** Renew complete offline integrated gate onaf082db8 in fresh history-publication-final namespace/target, including incoming story regression scope, then publish/read back reviewed package. Caller/long-session, other-client and recovery tasks remain open. Current repository also assigns MODEL-03/DATA-03/MODEL-04/MODEL-01/MODEL-02/UX-01 web halves to this session; retain the reservation for those follow-ups instead of reopening the UI-owner backend work. Keep all commissioning IDs IN_PROGRESS until their full contracts are accepted.
+- **Notes for Codex oder Claude:** Excluded external hardware/power-loss/vendor/ETS experiments stay user notices. No real writes. owned-recovery-wip.rs remains unintegrated recovery-reader work. Story is an independent static companion, not KNX app code; its input delta does not transfer old whole-snapshot acceptance to this merge. Receipt paths under scratch/iaw/commission-continuation retain earlier negatives and current source bindings. Complete previous entries below remain unchanged.
+
+---
+
 - **Last Agent:** codex (iaw commissioning session)
 - **Timestamp:** 2026-10-04 12:19
 Web lock: taken by codex-commission-continuation for SAFE-03/AUDIT-01 history-client package

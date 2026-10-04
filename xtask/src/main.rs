@@ -8,14 +8,15 @@ mod appimage;
 mod corpus_gates;
 mod headers;
 mod layering;
+mod ledger;
 mod scope;
 
 use std::path::Path;
 use std::process::ExitCode;
 
 const AVAILABLE_TASKS: &str =
-    "check-layering, check-headers, check-anchors, check-corpus-gates, check-appimage, \
-     freeze-fixture <path>";
+    "check-layering, check-headers, check-anchors, check-ledger, check-corpus-gates, \
+     check-appimage, freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
@@ -34,7 +35,11 @@ fn main() -> ExitCode {
     if task.is_some_and(|task| {
         matches!(
             task,
-            "check-layering" | "check-headers" | "check-anchors" | "check-corpus-gates"
+            "check-layering"
+                | "check-headers"
+                | "check-anchors"
+                | "check-ledger"
+                | "check-corpus-gates"
         )
     }) && args.len() != 1
     {
@@ -47,6 +52,7 @@ fn main() -> ExitCode {
             "check-layering"
                 | "check-headers"
                 | "check-anchors"
+                | "check-ledger"
                 | "check-corpus-gates"
                 | "check-appimage"
         )
@@ -69,6 +75,7 @@ fn main() -> ExitCode {
         Some("check-layering") => check_layering(gate_root),
         Some("check-headers") => check_headers(gate_root),
         Some("check-anchors") => check_anchors(gate_root),
+        Some("check-ledger") => check_ledger(gate_root),
         Some("check-corpus-gates") => check_corpus_gates(gate_root),
         Some("check-appimage") => check_appimage(gate_root, &args[1..]),
         Some("freeze-fixture") => freeze_fixture(args.get(1).cloned()),
@@ -357,6 +364,28 @@ fn check_headers(root: &Path) -> ExitCode {
 /// (see the fix-round history around ADR-0018 and `KNOWN_LIMITATIONS.md`);
 /// this is the check that makes that a compile-time, not a review-time,
 /// discovery from now on.
+fn check_ledger(root: &Path) -> ExitCode {
+    let report = match ledger::check(root) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if report.problems.is_empty() {
+        println!("ledger ok: {} rows in {}", report.rows, ledger::LEDGER);
+        return ExitCode::SUCCESS;
+    }
+    for p in &report.problems {
+        eprintln!("ledger: {}:{}: {}", p.file.display(), p.line, p.message);
+    }
+    eprintln!(
+        "\n{} ledger problem(s); see ADR-0076.",
+        report.problems.len()
+    );
+    ExitCode::FAILURE
+}
+
 fn check_anchors(root: &Path) -> ExitCode {
     let report = match anchors::scan(root) {
         Ok(r) => r,

@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR14D D3: `xtask check-ledger` guards the single status record
+
+- New repository gate `cargo run -p xtask -- check-ledger`
+  (`xtask/src/ledger.rs`, ADR-0076), wired into CI next to the anchor gate and
+  listed in [VERIFICATION](VERIFICATION.md) and the contributing guide. It
+  fails on: a duplicate ID, an unknown status/owner/priority word, a row
+  without seven cells, a snapshot table that is not exactly 180 rows, a count
+  line that does not match the rows (it prints the expected line), a `KL-n`
+  without a `KNOWN_LIMITATIONS` heading, and any table row in `docs/` or the
+  root Markdown that pairs a ledger ID with a status word. `docs/archive/` and
+  `docs/history/` are exempt; prose that mentions a status word is not a row.
+- Evidence: ten unit tests written first against a stub (9 RED, the exemption
+  case trivially green), then GREEN; 7/7 behavioural mutants caught; a
+  real-repository negative control failed with both seeded problems named.
+  xtask 85 + 12 tests, strict Clippy and fmt green; headers 463/157; the real
+  ledger passes with 185 rows. The workspace product suite was not run: no
+  crate other than `xtask` changed.
+
 ## 2026-10-04 — AR14D D2: one source-ID ledger instead of six status tables
 
 - [docs/status/LEDGER.md](status/LEDGER.md) is the status of record for the

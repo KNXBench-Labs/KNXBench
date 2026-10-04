@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 17:20
+Web lock: taken by claude-goal-ui-owner for MODEL-03 web half (`.0` in the individual-address editor)
+- **Completed:** Lock taken only, no code yet. The newest lock line before this entry (codex, 17:06) said free and was published on remote main. The user decided the goal-ui owner takes the six web halves once the lock is free.
+- **Pending/Next Steps:** MODEL-03 web half per *UI owner handoff*: the editor may submit device octet `0`, shows the server's refusal when the product is not an evidenced coupler, and undo restores the address. Then release the lock in the merge entry and take it again for the next package (DATA-03, MODEL-04, MODEL-01, MODEL-02, UX-01, AR13 debug-report text), one package at a time.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released. The commissioning caller work does not need the Web lock (its own 17:06 note).
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-04 17:06
 Web lock: free (History package published and reservation released; caller/recovery work does not reserve Web)

@@ -40,6 +40,137 @@ fn installed(output: Output) -> String {
     stdout
 }
 
+fn scheme23_package_bytes() -> Vec<u8> {
+    let master = String::from_utf8(MASTER.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23")
+        .replace("</Manufacturers>", "</Manufacturers><DatapointTypes><DatapointType Id=\"D-23\" Number=\"23\" VariableLength=\"true\"/></DatapointTypes>");
+    let hardware = String::from_utf8(HARDWARE.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23")
+        .replace(
+            "<Hardware2Program Id=",
+            "<Hardware2Program CouplerCapabilities=\"opaque\" Id=",
+        );
+    let program = String::from_utf8(PROGRAM.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23")
+        .replace(
+            " Name=\"Synthetic\"",
+            " Name=\"Synthetic\" HardwareType=\"opaque\"",
+        );
+    knx_testsupport::zip_with_entries(&[
+        ("knx_master.xml", master.as_bytes()),
+        ("M-0001/Hardware.xml", hardware.as_bytes()),
+        ("M-0001/M-0001_A-0001-02-0000.xml", program.as_bytes()),
+    ])
+}
+
+#[test]
+fn scheme23_cli_installs_reports_opaque_evidence_and_replays_retained_archive() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("synthetic-23.knxprod");
+    let database = dir.path().join("products.sqlite");
+    let data_home = dir.path().join("data");
+    let bytes = scheme23_package_bytes();
+    std::fs::write(&input, &bytes).unwrap();
+    let first = installed(ingest(&input, &database, &data_home));
+    assert!(first.contains("scheme 23"), "{first}");
+    assert!(!first.contains("already known"), "{first}");
+    let db = knx_productdb::open_and_migrate(&database).unwrap();
+    for name in ["HardwareType", "CouplerCapabilities", "VariableLength"] {
+        let count: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM package_install_unknown WHERE name=?1 AND kind='Attribute'",
+                [name],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "CLI must retain explicit opaque {name} evidence");
+    }
+    let retained: Vec<u8> = db
+        .query_row("SELECT bytes FROM package", [], |row| row.get(0))
+        .unwrap();
+    assert!(retained == bytes, "CLI retained archive bytes changed");
+    let member_count: i64 = db
+        .query_row("SELECT COUNT(*) FROM source_file", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(member_count, 3);
+    let replay = installed(ingest(&input, &database, &data_home));
+    assert!(
+        replay.contains("(already known; 1 source name(s))"),
+        "{replay}"
+    );
+    let facts = |stdout: &str| -> serde_json::Value {
+        let encoded = stdout
+            .lines()
+            .find_map(|line| line.strip_prefix("install_facts_json "))
+            .expect("CLI must expose measured JSON facts");
+        serde_json::from_str(encoded).unwrap()
+    };
+    let first_facts = facts(&first);
+    assert_eq!(first_facts["status"], "measured");
+    for (name, suffix, sample) in [
+        ("HardwareType", "/ApplicationProgram", "opaque"),
+        ("CouplerCapabilities", "/Hardware2Program", "opaque"),
+        ("VariableLength", "/DatapointType", "true"),
+    ] {
+        let matching: Vec<_> = first_facts["facts"]["unknownConstructs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| row["name"] == name && row["kind"] == "Attribute")
+            .collect();
+        assert_eq!(
+            matching.len(),
+            1,
+            "CLI must report exact opaque {name} evidence"
+        );
+        assert!(matching[0]["xpath"].as_str().unwrap().ends_with(suffix));
+        assert_eq!(matching[0]["sample"], sample);
+        assert_eq!(matching[0]["occurrences"], 1);
+    }
+    assert_eq!(
+        facts(&replay),
+        first_facts,
+        "replay must preserve measured public evidence"
+    );
+    assert!(std::fs::read(&input).unwrap() == bytes);
+}
+
+#[test]
+fn scheme23_cli_refuses_foreign_members_without_changing_seeded_database() {
+    let dir = tempfile::tempdir().unwrap();
+    let seed = dir.path().join("seed.knxprod");
+    let input = dir.path().join("foreign-23.knxprod");
+    let database = dir.path().join("products.sqlite");
+    let data_home = dir.path().join("data");
+    std::fs::write(&seed, synthetic_package_bytes()).unwrap();
+    installed(ingest(&seed, &database, &data_home));
+    let before = std::fs::read(&database).unwrap();
+    let master = String::from_utf8(MASTER.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23");
+    let bytes = knx_testsupport::zip_with_entries(&[
+        ("knx_master.xml", master.as_bytes()),
+        ("M-0001/Hardware.xml", HARDWARE),
+    ]);
+    std::fs::write(&input, &bytes).unwrap();
+    let output = ingest(&input, &database, &data_home);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("scheme-23 XML contains a non-KNX element namespace"),
+        "{stderr}"
+    );
+    assert!(
+        std::fs::read(&database).unwrap() == before,
+        "caller refusal changed persisted seed database bytes"
+    );
+    assert!(std::fs::read(&input).unwrap() == bytes);
+}
+
 #[test]
 fn uppercase_knxprod_installs_and_retries_the_same_retained_package() {
     let dir = tempfile::tempdir().unwrap();

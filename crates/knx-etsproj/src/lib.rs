@@ -8,6 +8,7 @@
 pub mod compare;
 pub mod container;
 pub mod detect;
+mod id_table;
 pub mod infer;
 pub mod known;
 pub mod map;

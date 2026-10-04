@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — DATA-03 web half: a lost catalog batch can be retried safely
+
+- Each catalog submit now sends one `requestId` (ADR-0069). When the response
+  is lost or the server answers 5xx, the batch counts as unconfirmed for any
+  quantity, including one device. **Retry safely** resends the identical
+  request after `GET /api/project` confirms the same `server_incarnation`, and
+  a `replayed: true` answer counts as success. A restarted server, an unknown
+  incarnation or a server that cannot be reached gets no new request: the user
+  is told to inspect the project, or the retry stays offered until the server
+  answers. No request with a new id is ever sent for an unconfirmed batch.
+- Evidence: six new `CatalogBrowser.test.tsx` cases, five of them written RED
+  first (the sixth guards the unchanged fail-closed case); four
+  intercepted Chromium cases in `e2e/catalog-retry.e2e.ts` (en/de, network
+  loss then replay, and restart). All four fail against the previous
+  component. Four guard mutants are caught: retry despite a restart, a new id
+  on retry, a retry without known identity, a single device not treated as
+  unconfirmed.
+
 ## 2026-10-04 — MODEL-03 web half: device number 0 for evidenced couplers
 
 - The individual-address editor no longer refuses device number `0` itself. It

@@ -34,7 +34,11 @@
   function motionAllowed() { return !reduceQuery.matches && !motionBox.checked; }
 
   function settleEffects() {
-    document.querySelectorAll(".is-new").forEach((node) => node.classList.remove("is-new"));
+    document.querySelectorAll(".is-new, .is-refocus").forEach((node) => node.classList.remove("is-new", "is-refocus"));
+    document.querySelectorAll(".is-leaving").forEach((node) => {
+      node.classList.remove("is-leaving");
+      node.classList.add("is-hidden");
+    });
     if (document.getAnimations) {
       for (const animation of document.getAnimations()) {
         try { animation.finish(); } catch (_) { animation.cancel(); }
@@ -107,9 +111,13 @@
     });
     const edges = new Map();
     data.relations.forEach((relation) => {
-      const attributes = { class: `edge ${relation.type}`, d: edgePath(relation.from, relation.to) };
+      const d = edgePath(relation.from, relation.to);
+      const attributes = { class: `edge ${relation.type}`, d };
       if (relation.type === "documented_cause") attributes.pathLength = 1;
-      edges.set(relation.id, svg("path", attributes, edgeLayer));
+      const edge = svg("path", attributes, edgeLayer);
+      edges.set(relation.id, edge);
+      const pulse = svg("path", { class: `pulse ${relation.type}`, d, pathLength: 1 }, edgeLayer);
+      pacePulse(pulse, edge);
     });
     const nodes = new Map();
     data.events.forEach((event) => {
@@ -131,7 +139,26 @@
       }
       nodes.set(event.id, node);
     });
+    pauseWhenOffscreen(graph);
     return { graph, nodes, edges, dateLabels };
+  }
+
+  // Signals travel at roughly constant speed, so long connections take longer. Random negative
+  // delays start every loop somewhere along its way instead of all at once.
+  const PULSE_SPEED = 120; // graph units per second while travelling
+  function pacePulse(pulse, edge) {
+    let length = 300;
+    try { length = edge.getTotalLength() || length; } catch (_) { /* not measurable yet */ }
+    const duration = Math.min(7, Math.max(1.8, length / PULSE_SPEED / 0.7));
+    pulse.style.setProperty("--pulse-dur", `${duration.toFixed(2)}s`);
+    pulse.style.setProperty("--pulse-delay", `${(-Math.random() * duration).toFixed(2)}s`);
+  }
+
+  function pauseWhenOffscreen(graph) {
+    if (!("IntersectionObserver" in window)) return;
+    new IntersectionObserver((entries) => {
+      entries.forEach((entry) => graph.classList.toggle("is-offscreen", !entry.isIntersecting));
+    }).observe(graph);
   }
 
   // Keeps labels legible at any scale: higher-priority labels win, overlapping ones are hidden
@@ -182,6 +209,33 @@
     let storyScale = 1;
     let activeIds = new Set();
     let visibleIds = new Set();
+    let retreat = 0;
+
+    // A retreating element is hidden when its animation ends (or is cancelled). A timer backs
+    // this up for cases where no animation runs at all, for example a graph that is not rendered.
+    function finishRetreat(element) {
+      if (!element.classList.contains("is-leaving")) return;
+      element.classList.remove("is-leaving");
+      element.classList.add("is-hidden");
+    }
+    function onEffectEnd(event) {
+      const element = event.target;
+      if (!element.classList) return;
+      finishRetreat(element);
+      if (event.animationName === "refocus") element.classList.remove("is-refocus");
+      // A finished growth effect leaves its final state; dropping the marker lets the
+      // connection's signal pulse start only once the line has been drawn.
+      if (event.type === "animationend" && element.classList.contains("is-new")) element.classList.remove("is-new");
+    }
+    graph.graph.addEventListener("animationend", onEffectEnd);
+    graph.graph.addEventListener("animationcancel", onEffectEnd);
+
+    function startRetreat(element, delay) {
+      element.classList.remove("is-hidden");
+      element.style.animationDelay = `${delay}ms`;
+      void element.getBoundingClientRect();
+      element.classList.add("is-leaving");
+    }
 
     function tidy() {
       declutter(graph, storyScale, activeIds, () => 0, (row) => visibleIds.has(rowEvent.get(row)));
@@ -213,14 +267,22 @@
       const before = previous >= 0 ? stateFor(previous).visible : new Set();
       const { visible, active } = stateFor(index);
       const grow = animate && motionAllowed() && index > previous;
+      const shrink = animate && motionAllowed() && previous >= 0 && index < previous && stage.clientWidth > 0;
+      const token = ++retreat;
       let edgeOrder = 0;
+      let leaveOrder = 0;
       data.relations.forEach((relation) => {
         const edge = graph.edges.get(relation.id);
         const shown = visible.has(relation.from) && visible.has(relation.to);
         const wasShown = before.has(relation.from) && before.has(relation.to);
-        edge.classList.toggle("is-hidden", !shown);
+        edge.classList.remove("is-new", "is-leaving");
         edge.classList.toggle("is-past", shown && !active.has(relation.from) && !active.has(relation.to));
-        edge.classList.remove("is-new");
+        if (shrink && wasShown && !shown) {
+          startRetreat(edge, Math.min(leaveOrder, 8) * 45);
+          leaveOrder += 1;
+          return;
+        }
+        edge.classList.toggle("is-hidden", !shown);
         if (shown && grow && !wasShown) {
           edge.style.animationDelay = `${Math.min(edgeOrder, 8) * 110}ms`;
           void edge.getBoundingClientRect();
@@ -232,10 +294,20 @@
       data.events.forEach((event) => {
         const node = graph.nodes.get(event.id);
         const shown = visible.has(event.id);
-        node.classList.toggle("is-hidden", !shown);
+        node.classList.remove("is-new", "is-leaving", "is-refocus");
         node.classList.toggle("is-active", active.has(event.id));
         node.classList.toggle("is-past", shown && !active.has(event.id));
-        node.classList.remove("is-new");
+        if (shrink && before.has(event.id) && !shown) {
+          startRetreat(node, 120 + Math.min(leaveOrder, 10) * 35);
+          leaveOrder += 1;
+          return;
+        }
+        node.classList.toggle("is-hidden", !shown);
+        if (shrink && active.has(event.id)) {
+          node.style.animationDelay = "380ms";
+          void node.getBoundingClientRect();
+          node.classList.add("is-refocus");
+        }
         if (shown && grow && !before.has(event.id)) {
           node.style.animationDelay = `${300 + Math.min(nodeOrder, 10) * 90}ms`;
           void node.getBoundingClientRect();
@@ -244,8 +316,16 @@
         }
       });
       graph.dateLabels.forEach(({ label, row }) => {
-        label.classList.toggle("is-hidden", !visible.has(rowEvent.get(row)));
+        const id = rowEvent.get(row);
+        label.classList.remove("is-leaving");
+        if (shrink && before.has(id) && !visible.has(id)) startRetreat(label, 120);
+        else label.classList.toggle("is-hidden", !visible.has(id));
       });
+      if (shrink) {
+        window.setTimeout(() => {
+          if (token === retreat) graph.graph.querySelectorAll(".is-leaving").forEach(finishRetreat);
+        }, 1400);
+      }
       activeIds = active;
       visibleIds = visible;
       tidy();
@@ -307,6 +387,84 @@
     }
     show(0, false);
     return { fit, show, get current() { return current; } };
+  })();
+
+  /* ---------- Headlines: random letters roll through in place ---------- */
+  // Each heading keeps its text as its accessible name; the per-letter boxes are hidden from
+  // assistive technology. Only ASCII whitespace separates words, so a non-breaking space keeps
+  // its words together. Swaps use the Web Animations API, so settling motion finishes them.
+  const letters = (() => {
+    const headings = Array.from(document.querySelectorAll(
+      ".hero h1, .chapter-section h2, .atlas > h2, .all-steps > h2, .sources > h2"));
+    const boxes = new Map();
+    const SWAP = { duration: 720, easing: "cubic-bezier(.65,0,.35,1)", id: "ambient-char-swap" };
+    const CLIP = "inset(-0.4em -0.06em)";
+
+    function split(heading) {
+      heading.setAttribute("aria-label", heading.textContent.replace(/\s+/g, " ").trim());
+      const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+      const texts = [];
+      while (walker.nextNode()) texts.push(walker.currentNode);
+      const found = [];
+      texts.forEach((text) => {
+        const fragment = document.createDocumentFragment();
+        text.data.split(/([ \t\n\r\f]+)/).forEach((part) => {
+          if (!part) return;
+          if (/^[ \t\n\r\f]+$/.test(part)) { fragment.appendChild(document.createTextNode(part)); return; }
+          const word = document.createElement("span");
+          word.className = "char-word";
+          word.setAttribute("aria-hidden", "true");
+          Array.from(part).forEach((character) => {
+            const box = document.createElement("span");
+            box.className = "char";
+            box.dataset.char = character;
+            const glyph = document.createElement("span");
+            glyph.className = "char-glyph";
+            glyph.textContent = character;
+            box.appendChild(glyph);
+            word.appendChild(box);
+            if (/\S/.test(character)) found.push(box);
+          });
+          fragment.appendChild(word);
+        });
+        text.parentNode.replaceChild(fragment, text);
+      });
+      return found;
+    }
+
+    function roll(box, delay) {
+      const timing = { ...SWAP, delay };
+      box.animate([{ clipPath: CLIP }, { clipPath: CLIP }], timing);
+      box.firstChild.animate([{ transform: "translateX(0)" }, { transform: "translateX(105%)" }], timing);
+      box.animate([{ transform: "translateX(-105%)", opacity: 1 }, { transform: "translateX(0)", opacity: 1 }],
+        { ...timing, pseudoElement: "::after" });
+    }
+
+    const onScreen = new Set();
+    function tick() {
+      if (motionAllowed() && !document.hidden && onScreen.size) {
+        const pool = [];
+        onScreen.forEach((heading) => boxes.get(heading).forEach((box) => {
+          if (!box.getAnimations({ subtree: true }).length) pool.push(box);
+        }));
+        for (let picked = 0; picked < 2 && pool.length; picked += 1) {
+          const [box] = pool.splice(Math.floor(Math.random() * pool.length), 1);
+          roll(box, picked ? 60 + Math.random() * 160 : 0);
+        }
+      }
+      window.setTimeout(tick, 2200 + Math.random() * 1600);
+    }
+
+    headings.forEach((heading) => boxes.set(heading, split(heading)));
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
+        if (entry.isIntersecting) onScreen.add(entry.target);
+        else onScreen.delete(entry.target);
+      }));
+      headings.forEach((heading) => observer.observe(heading));
+      window.setTimeout(tick, 1200);
+    }
+    return { count: () => Array.from(boxes.values()).reduce((sum, list) => sum + list.length, 0) };
   })();
 
   /* ---------- Full complexity view: pan, zoom, search, strand focus, inspector ---------- */
@@ -589,5 +747,6 @@
     view: () => ({ ...atlas.view }),
     selected: () => atlas.selected,
     motionOff: () => root.classList.contains("motion-off"),
+    letters: () => letters.count(),
   });
 })();

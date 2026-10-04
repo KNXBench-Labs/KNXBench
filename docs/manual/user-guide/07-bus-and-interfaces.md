@@ -167,6 +167,42 @@ file if validation fails. Both paths refuse files over 16 MiB. **This is only
 a bounded session snapshot, not a complete bus history.** It contains addresses
 and payloads; treat the exported file as private.
 
+## The flow view
+
+Above the telegram table, **Telegrams** and **Flow** switch between two views
+of the same session (arrow keys move between them). The flow view reads the
+telegrams the monitor already receives. Opening it does not connect, start or
+send anything.
+
+- **Circles** are senders and the devices configured in the project as
+  members of the group address. A **solid line** to a device means *configured
+  in the project*. It does not mean the device received or processed the
+  telegram. A **box** is a group address without a resolved member, reached by
+  a **dashed line**.
+- A sender whose address belongs to several project devices is drawn once,
+  marked ambiguous, and names its candidates; KNXBench does not pick one. A
+  sender with no project device, and every sender the project could not
+  interpret (no project open, an older project state), is drawn by its
+  address only, and the Inspector says why.
+- Under each node, up to three **current values** appear with their group
+  addresses, newest first. A value at a configured member is marked **◇**: it
+  was seen on the group address, not read back from that device. A value stays
+  for 7 seconds after it was observed. A read request shows no value and does
+  not extend one.
+- Select a node with the arrow keys and **Enter**, or by clicking it. The
+  **Inspector** lists all current values with their sender, every connection
+  with its group addresses, and the linked objects of both ends with
+  direction, activation and the six flags (*unknown* where the project does
+  not state one). **Shift**+arrows pans, **+**/**−** zoom, **0** resets the
+  view.
+- Telegrams are always matched against the project state the server used when
+  it received them, never against a later edit. A new session starts a new
+  map; nothing is stored.
+
+The layout is fixed in this version: a node keeps its place once drawn.
+Activity-dependent distances, travelling pulses and fading follow (see
+[known limitations §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-static-and-checked-in-chromium-only)).
+
 ## Sending a value
 
 The bus monitor includes a **Send a value** form, with three fields — Destination,

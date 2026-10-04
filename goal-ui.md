@@ -576,30 +576,31 @@ not a shipped graph or a hypothetical benchmark. Acquire no lock merely to plan.
 
 ### U20 — Integrate the shared monitor feed, graph and immediate values [web]
 
-**In progress (2026-10-04).** AR20 is integrated (`85bfab88`, §10). Part 1
-(wire validation and pure reducer, TELEGRAM_FLOW_VISUALIZATION §11) is
-published. Part 2 (monitor wiring, view, Inspector, keyboard, e2e) follows
-under the same Web lock. Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
+**Done (2026-10-04).** AR20 integrated (`85bfab88`, §10). Part 1 `4525c36e`
+(wire validation, reducer), part 2 in the delivering commit (feed, view,
+Inspector, keyboard, e2e); rules in TELEGRAM_FLOW_VISUALIZATION §11, residue in
+KNOWN_LIMITATIONS §154. *Freeze* moves to U21: U20's layout is static, so a
+freeze control would do nothing until U21 adds motion. Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
 wire names and revision. Reuse one session/event controller with existing
 attachment/pause/cursor/context guards; do not implement another capture service.
 
-- [ ] Add a read-only Telegram flow view to the existing diagnostics/monitor
+- [x] Add a read-only Telegram flow view to the existing diagnostics/monitor
   navigation. Opening it does not connect/start/write; main/companion views
   share event/session handling and do not duplicate poll loops or tunnels.
-- [ ] Implement a pure, bounded session-keyed reducer and deterministic graph
+- [x] Implement a pure, bounded session-keyed reducer and deterministic graph
   identities. Display exact/unresolved/ambiguous sources, configured target
   endpoints, group labels and a loss/context/overflow legend. No first-match
   device selection, formatted-address guessing or current-project relabelling
   of historical rows; preserve per-object evidence in the Inspector.
-- [ ] Immediately update source and configured-target per-group value slots
+- [x] Immediately update source and configured-target per-group value slots
   from admitted value-bearing events, at most three current badges per device
   plus Inspector overflow. Expire at 7 seconds using trustworthy age/monotonic
   deadlines; newer same-slot sequences win. Reads/errors/old rows do not invent
   a value or renew stale TTL; pulse completion has no data-write authority.
-- [ ] Add keyboard selection/navigation/pan/zoom/freeze controls and semantic
+- [x] Add keyboard selection/navigation/pan/zoom/freeze controls and semantic
   HTML/Inspector access, focus/selection styling, localized explanations and
   no screen-reader event storm. Follow admitted built-in/System/imported themes.
-- [ ] Prove fake-clock expiry boundaries, multi-group/multi-source replacement,
+- [x] Prove fake-clock expiry boundaries, multi-group/multi-source replacement,
   duplicate poll delivery, delayed/out-of-order replies, capture loss, tab change,
   restart, no project, changed links/flags/addresses and historical reattachment
   with named RED/GREEN and restored behavioral guard controls.

@@ -624,6 +624,32 @@ not KNX protocol facts.
 - For U21: an edge whose rows all had unknown age has no observation time
   (`lastObservedAtMs` is `-Infinity`); fading must treat it as unknown.
 
+Part 2 (rendered):
+
+- **One feed, no second loop.** `flowFeed.ts` keeps one model per session
+  identity. The monitor panel hands it every batch it admits (polls and the
+  reattach backlog), resets it on Connect and when another session answers,
+  and keeps it while the table tab is shown. Each new generation's snapshot
+  is fetched once. A late reply only ever reaches the model that asked, and
+  a refused or failed snapshot draws the waiting rows raw. One timer tracks
+  the earliest value deadline; renderers read values at the current
+  monotonic time, so a late timer never shows an expired value.
+- **Edge evidence.** Every edge keeps, per group address, the linked objects
+  of both ends (object, direction, activation, six flags) from the generation
+  of its latest row. The Inspector shows them; nothing infers flag behaviour.
+- **View.** Native SVG (§9.3). Nodes sit on hex rings in order of appearance
+  and never move (U21 owns motion and Freeze). Edges bend to the left of
+  their direction, so the two directions of one pair never share a line.
+  Arrowheads end in a clearance gap below and above node text, and text has a
+  halo in the canvas colour. Colours come from theme variables only; the e2e
+  checks the edge stroke against the theme's value before and after a live
+  theme switch. Screenshots: `docs/design/2026-10-04-telegram-flow-u20/`.
+- **Access.** Nodes are buttons with a roving tab stop, ordered by name:
+  arrows and Home/End move, Enter/Space select, Shift+arrows pan, +/− zoom,
+  0 resets. Values, lines and labels are hidden from assistive technology.
+  The node name says what kind of node it is, and the HTML Inspector holds
+  every value and fact, so a busy bus produces no announcements.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

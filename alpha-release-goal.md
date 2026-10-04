@@ -391,6 +391,15 @@ Ordered by value per effort:
 
   - Scheme23 bounded import is now locally verified on integrated `a346fa30` (ADR-0072): actual native6/caller4, four semantic baseline caller REDs and six compiled guard controls; original survivors/rejected wrappers retained. Original Release Full853 Source713690/161/2 is producer-bound,not a newly run current private matrix. Import/storage/evidence source and CLI entrypoint remain byte-identical; upstream query.rs only adds a read-only server helper/test. Actual Source770 public22:Rust3089/0/176 across161 blocks,ProductDB638/0/25,Web1739,Chromium82,17 fresh byte-bound shadow binding pairs,strict Clippy/build/docs/dependency gates. Separate integrated in-session review,no blocking product finding,no independent-model approval. Published as `aadd88204de154cfcf5c1638310831a0a316dd86`: live/fetched refs and17 exact owned blobs read back; actual final integrated10 repeats Rust3089/0/176,Web1739,Chromium82/all10 commands0 after preserving the owner story-only update. Original final wrapper old-vs-new Git-stamped binary hash refusal retained; current release version/hash independently archived. Scheme10 remains refused and KL153/AR06P/Alpha open.
 
+2026-10-04 AR06U research checkpoint: bounded scheme10 public/source investigation
+started after delivered exact23/hygiene c17b0f36. KNX format-family references are
+not namespace grammar proof; candidate mirror cover/body is unverified,
+full schema10 specification/XSD not recovered. Both package
+master admission and dedicated master-language evidence omit10. See
+[scheme10 research](docs/PRODUCT_SCHEME_10_RESEARCH.md). No production change,
+new private census/import result, namespace admission or compatibility claim.
+KL153/AR06P stay IN_PROGRESS; bounded structural probe/ownership evidence pending.
+
 **Exit evidence:** RED/GREEN regression tests per item, unchanged atomic refusal
 for anything still unsupported, a re-run of the 853-file measurement with a
 before/after table, and updated KNOWN_LIMITATIONS entries. The crawled files are
@@ -871,8 +880,8 @@ verification separate; do not change another session's rows.
 | Commissioning work in this session | Status | Verified intermediate result | Still required |
 | --- | --- | --- | --- |
 | Remove new hardware/power-loss/vendor/ETS validation from the completion goal; retain user warnings | ACCEPTED_BOUNDARY | Scope and user notices published in `5d0271c1`; actual-root documentation gate: 388 links / 254 Markdown files / no dead anchors | Keep absent guarantees visible; no pending operator experiment and no relaxation of runtime safety gates |
-| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Bounded download lifecycle already published in `1c5dec07`, with receipt closure `bb62ae57`; further callers inspected | Broader caller integration, offline interruption/abort/recovery contracts and actual-current-source acceptance; bounded prior evidence does not close these rows |
-| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Bounded Web History accepted on integrated9fe69116:50 compiled behavioral guards, Chromium8, Web1761/100 files, build/typecheck/strict-Clippy/fmt and four policy gates0; ordinary workspace3079/0/176. Public receipt records frozen1037/279 inputs and exclusions | Publication/readback and bounded Web-lock release pending; other client surfaces, caller/lifecycle and offline recovery remain open. Prior header/browser/import-graph negatives retained, no whole-track acceptance |
+| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Published bounded backend lifecycle remains; local Shared-App production7 tests, CLI admission2 and Service-Control8 tests now pass; caller code is not yet delivered | CLI download/restore, integrated server/caller acceptance and long sessions remain open; no whole-track completion |
+| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Integrated60d6a85f public9/9 accepted: workspace3136/0/177 over169 blocks,50 guards; separate selected offline corpus sweep4 stages/68 registered and passed/0 failed/0 ignored, original commitment unchanged | New1b282578 integration/current-source delivery gate, publication/readback and reservation reconciliation pending; other clients and offline recovery remain open. Earlier negatives and historical receipts retained |
 | `SAFE-03` / `DEBUG-01`: offline recovery-record validation | IN_PROGRESS | Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged | Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
 
 The other commissioning rows retain their existing owner dispositions pending
@@ -924,6 +933,14 @@ answers questions about them.
 | `MODEL-01` | Installation rename control; installation choice for new areas, main ranges, root building parts, range-less group addresses and the CSV import/export buttons; later-installation targets in dropdowns | `PATCH /api/installations/{id}` (`name`); optional `installationId` on `POST /api/areas`, `/api/group-ranges`, `/api/building-parts`, `/api/group-addresses` and on `/api/group-addresses/csv-import` / `csv-export`; cross-installation moves → 400 "separate infrastructures" (ADR-0070) | Edit and create in installation 2; one undo per action |
 | `MODEL-02` | Where the Inspector shows a placement/line-owner ambiguity, offer "keep this placement" per current slot | `POST /api/repair/device-placement` (`deviceId` + exactly one of `keepLineId` / `keepUnassignedInstallationId`), `POST /api/repair/line-owner` (`lineId`, `keepAreaId`); save refuses ambiguous topology (`AmbiguousTopology`, ADR-0071) | Repair enables ordinary editing; undo restores the exact imported state; save works after repair |
 | `UX-01` | Drag a group address onto a communication object; the existing keyboard/select path stays | `POST /api/group-links` (`comObjectId`, `gaId`, `direction`) — unchanged contract | Drop links once; invalid drop shows the server refusal |
+
+**User decision 2026-10-04 15:41:** the six web halves above and the AR13
+`debugReport.privacyTelegrams` text move from the commissioning session back to
+the `goal-ui.md` owner session. That session starts on them only after the
+commissioning session releases the Web lock, then takes the lock through the
+`goal-ui.md` §3 procedure. Until then the commissioning session keeps the lock
+for its own package and owes nothing on these rows. As of this decision, no web
+half had been started anywhere.
 
 | Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |

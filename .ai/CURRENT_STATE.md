@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 20:13
+Web lock: taken by claude-goal-ui-owner for U19 (telegram-flow synthetic visual slice and measurement fixtures)
+- **Completed:** Lock taken only. Code reconciliation for U19 has started (read-only).
+- **Pending/Next Steps:** U19: evaluated synthetic SVG slice with keyboard/static fallback and screenshot, measured renderer/load envelope (500 devices / 2,500 edges / 1,000 events/s), and the exact AR20 handoff contract recorded in `docs/TELEGRAM_FLOW_VISUALIZATION.md`. Release the lock in the delivery entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released. The study is test-only fixture code, not a shipped view.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 20:12
 - **Completed:** Published the user-approved **Telegram-flow Alpha plan** (user decision 2026-10-04: integrate onto current main and publish). It had been written uncommitted into the root checkout, which is 110 commits behind `origin/main`. Carried over verbatim: `docs/TELEGRAM_FLOW_VISUALIZATION.md`, `docs/adr/0077-session-local-telegram-flow-view.md` (plus an ADR index row), `goal-ui.md` U19–U21 with intro, completion bullet and boundary rows, `alpha-release-goal.md` AR20/AR21 with intro, routing rows and terminal state 2, and the top notes in IMPLEMENTATION_STATUS, KNOWN_LIMITATIONS, ROADMAP, ARCHITECTURE, ALPHA_READINESS and UI_ALPHA_READINESS. Adapted to the AR14D rules: the research note is a dated entry at the top of `docs/research/features-and-ui.md` with an index row in `RESEARCH.md`, and the status lives in a new post-snapshot ledger row **`FLOW-01`** (P1, owner alpha, route U19 → AR20 → U20 → U21 → AR21, `TODO`). P1 is my reading of "required before AR15–AR18", stated as such in the ledger. **Not carried over:** hunks that only reflected the author's older base (U14–U18 reset to open, a deleted 2026-10-03 gate receipt). goal-ui still has 22 ticked items plus 15 new open ones. Doc gates: check-ledger 186 rows ok, check-anchors 443 ok, check-headers ok, whitespace ok. No code changed.
 - **Pending/Next Steps:** goal-ui owner starts **U19** (inspect monitor/session/context code, research, evaluated synthetic visual slice, exact AR20 handoff). The Web lock is needed only once web sources or fixtures are edited. Then AR20 for the alpha session, then U20/U21.

@@ -540,6 +540,12 @@ holder (the commissioning session). Tasks, API contracts and acceptance
 criteria are in `alpha-release-goal.md` → *UI owner handoff*. This owner
 session keeps the backend contracts.
 
+**Owner takeover 2026-10-04 15:38:** the previous owner session closed at 15:28. By user
+decision, the Claude UI session that delivered the §133 desktop-shell fix
+(`2ab5698f`) is now the `goal-ui.md` owner. It keeps the backend contracts
+above and answers questions about them. The web halves stay with the Web-lock
+holder as handed over, and this takeover neither takes nor releases the Web lock.
+
 ---
 
 ## 4. Completion condition

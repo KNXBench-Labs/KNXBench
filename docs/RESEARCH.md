@@ -21,6 +21,7 @@ stay at the end of this file.
 | Section | Where |
 | --- | --- |
 | [2026-10-04 — Product scheme23: project documentation is not manufacturer grammar](research/product-database.md#2026-10-04--product-scheme23-project-documentation-is-not-manufacturer-grammar) | Manufacturer and product data |
+| [2026-10-04 — Telegram-flow Alpha design](research/features-and-ui.md#2026-10-04--telegram-flow-alpha-design) | Features and UI research |
 | [2026-10-01 — Backup directory chains, not only the final directory](research/commissioning.md#2026-10-01--backup-directory-chains-not-only-the-final-directory) | Commissioning and device download |
 | [2026-09-29 — Parameter fields across an octet boundary; module instances measured](research/commissioning.md#2026-09-29--parameter-fields-across-an-octet-boundary-module-instances-measured) | Commissioning and device download |
 | [2026-09-29 — Rename leaves no longer block a download image](research/commissioning.md#2026-09-29--rename-leaves-no-longer-block-a-download-image) | Commissioning and device download |

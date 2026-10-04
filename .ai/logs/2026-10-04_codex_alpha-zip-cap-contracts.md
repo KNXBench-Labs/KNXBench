@@ -237,3 +237,23 @@ merge requires all16 commands, but same-root accepted dependency cache may
 be reused with complete source/provenance guards; never an old execution
 identity or a target built in a different worktree. New CLI must match HEAD.
 No publication, ignored/private coverage or whole KL151/Alpha completion.
+
+## Actual latest UI merge all-command dispatch
+
+Actual6c3080d9 adopts all publishedab1b87b7 UI source; owner status/handover
+preserved intact, ledger only own evidence changed with status/counts stable.
+proc_f7d36bee3edc/PID80179 notify-on-completion, latest-ui-owner-public16/summary.
+All16 commands rerun; verified same-root dependency cache from acceptedfffdc319,
+120 native inputs unchanged;11 changed inputs all Web, previous CLI archived.
+Current root-bound audits/workspace/bindings/Clippy/browser/CLI stamp all must
+pass; no fresh-target claim or relabeled execution. Publication still pending.
+
+## Latest all16 accepted; incoming source-identical documentation
+
+proc_f7d36bee3edc6c3080d9 actual16/16 accepted:806 hashes, Rust3157/0/177/170,
+Web1835, Chromium108 plus probe1; unchanged native120, root-bound cache/CLI
+provenance verified. Archive exact original16 receipt/logs and stamped CLI.
+Remote2231d87c differs from prior owner only in Markdown; non-MD delta empty.
+Strict ancestor guard refused publication of an outdated merge; not a test
+failure. Adopt complete owner docs, execute docs6 on actual final candidate;
+retain code CLI6c3080d9 identity distinct from doc-only publication revision.

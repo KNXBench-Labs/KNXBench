@@ -173,8 +173,14 @@ commands refuse ambiguous IDs too. Since MODEL-02 (ADR-0071) a multiply
 placed device and a line listed by several areas can be repaired
 **explicitly**: the user names the placement or area to keep
 (`POST /api/repair/device-placement`, `POST /api/repair/line-owner`), every
-other occurrence is removed in one undoable step. The web UI does not offer
-that choice yet (Web lock). Nothing is repaired automatically, duplicate ids
+other occurrence is removed in one undoable step. Since 2026-10-04 the web
+Inspector offers that choice: a device listed more than once shows every
+current slot with "Keep this placement", and a line listed by several areas of
+one installation offers "Keep under this area". The line choice is offered
+only when every occurrence is the same line; two different lines sharing an
+id, or a line id found in two installations, get no repair button. A device
+listed twice by one line counts as a conflict, while a line shown under two
+areas does not make its devices conflicts. Nothing is repaired automatically, duplicate ids
 are not renumbered, and ambiguous building-part or group-range placement has
 no repair command. Since ADR-0074 a native save is exact or refused: duplicate
 entity ids, orphaned lines, inconsistent parent/child lists and a device

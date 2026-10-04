@@ -116,6 +116,26 @@ describe("api", () => {
     ]);
   });
 
+  // MODEL-02 / ADR-0071: a repair names exactly one slot to keep.
+  it("posts placement and line-owner repairs with exactly the kept slot", async () => {
+    const calls: Array<[string, unknown]> = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ installations: [] });
+      await call();
+      const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(init.method).toBe("POST");
+      calls.push([url, JSON.parse(init.body as string)]);
+    };
+    await post(() => api.repairDevicePlacement(42, { lineId: 11 }));
+    await post(() => api.repairDevicePlacement(42, { unassignedInstallationId: 2 }));
+    await post(() => api.repairLineOwner(11, 20));
+    expect(calls).toEqual([
+      ["/api/repair/device-placement", { deviceId: 42, keepLineId: 11 }],
+      ["/api/repair/device-placement", { deviceId: 42, keepUnassignedInstallationId: 2 }],
+      ["/api/repair/line-owner", { lineId: 11, keepAreaId: 20 }],
+    ]);
+  });
+
   it("renames an installation through PATCH /api/installations/{id}", async () => {
     mockFetchOnce({ installations: [] });
     await api.renameInstallation(2, "Annex");

@@ -31,6 +31,8 @@ const apiMock = vi.hoisted(() => ({
   setGroupAddressStyle: vi.fn(),
   renameInstallation: vi.fn(),
   deleteGroupAddress: vi.fn(),
+  repairDevicePlacement: vi.fn(),
+  repairLineOwner: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -1022,5 +1024,107 @@ describe("Inspector — line-bound physical address (ISSUE-09)", () => {
     expect(field.querySelector<HTMLInputElement>("input")!.disabled).toBe(true);
     expect(field.querySelector(".field-error")?.textContent).toContain("no unambiguous owning area and line");
     expect(apiMock.setIndividualAddress).not.toHaveBeenCalled();
+  });
+});
+
+// MODEL-02 / ADR-0071: an ambiguous placement is repaired only by an explicit
+// choice of the slot to keep; nothing is chosen for the user.
+describe("Inspector — placement repair", () => {
+  const keepButtons = (label: string) =>
+    Array.from(host!.querySelectorAll("button")).filter((button) => button.textContent === label);
+
+  it("offers to keep each current placement of a device placed twice", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].unassigned.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    const repaired = deviceMoveTree();
+    apiMock.repairDevicePlacement.mockResolvedValueOnce(repaired);
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    expect(host!.textContent).toContain("Placement conflict");
+    const buttons = keepButtons("Keep this placement");
+    expect(buttons).toHaveLength(2);
+    await act(async () => buttons[0].click());
+    expect(apiMock.repairDevicePlacement).toHaveBeenCalledExactlyOnceWith(42, { lineId: 11 });
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(repaired);
+  });
+
+  it("keeps the unassigned slot of the named installation", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].unassigned.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    apiMock.repairDevicePlacement.mockResolvedValueOnce(deviceMoveTree());
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    await act(async () => keepButtons("Keep this placement")[1].click());
+    expect(apiMock.repairDevicePlacement).toHaveBeenCalledExactlyOnceWith(42, { unassignedInstallationId: 1 });
+  });
+
+  it("shows a refused repair and keeps the conflict on screen", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].topology[0].lines[1].devices.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    apiMock.repairDevicePlacement.mockRejectedValueOnce(new Error("repair not needed"));
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    await act(async () => keepButtons("Keep this placement")[1].click());
+    expect(apiMock.repairDevicePlacement).toHaveBeenCalledExactlyOnceWith(42, { lineId: 12 });
+    expect(host!.querySelector(".placement-repair .field-error")?.textContent).toBe("repair not needed");
+    expect(onApplied).not.toHaveBeenCalled();
+    expect(keepButtons("Keep this placement")).toHaveLength(2);
+  });
+
+  it.each(["en", "de"])("offers no repair for a device placed once (%s)", async (language) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    await renderInspector({ kind: "device", id: 42 }, deviceMoveTree(), deviceDetail());
+    expect(host!.querySelector(".placement-repair")).toBeNull();
+  });
+
+  it("names the conflict in German", async () => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+    const tree = deviceMoveTree();
+    tree.installations[0].unassigned.push(tree.installations[0].topology[0].lines[0].devices[0]);
+    await renderInspector({ kind: "device", id: 42 }, tree, deviceDetail());
+    expect(host!.textContent).toContain("Platzierungskonflikt");
+    expect(keepButtons("Diese Platzierung behalten")).toHaveLength(2);
+  });
+
+  it("offers to keep a line listed by two areas under one of them", async () => {
+    const tree = deviceMoveTree();
+    const line = tree.installations[0].topology[0].lines[0];
+    tree.installations[0].topology.push({ id: 20, name: "Area B", address: 2, lines: [line] });
+    const repaired = deviceMoveTree();
+    apiMock.repairLineOwner.mockResolvedValueOnce(repaired);
+    const onApplied = await renderInspector({ kind: "line", id: 11 }, tree);
+    expect(host!.textContent).toContain("This structure ID occurs more than once");
+    const buttons = keepButtons("Keep under this area");
+    expect(buttons).toHaveLength(2);
+    await act(async () => buttons[1].click());
+    expect(apiMock.repairLineOwner).toHaveBeenCalledExactlyOnceWith(11, 20);
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(repaired);
+  });
+
+  it("offers no line-owner repair for two different lines that share an id", async () => {
+    const tree = deviceMoveTree();
+    tree.installations[0].topology.push({ id: 20, name: "Area B", address: 2,
+      lines: [{ id: 11, name: "Other line", address: 5, devices: [] }] });
+    await renderInspector({ kind: "line", id: 11 }, tree);
+    expect(host!.textContent).toContain("This structure ID occurs more than once");
+    expect(keepButtons("Keep under this area")).toHaveLength(0);
+  });
+
+  it("offers no line-owner repair when the shared line's id also occurs in another installation", async () => {
+    const tree = deviceMoveTree();
+    const line = tree.installations[0].topology[0].lines[0];
+    tree.installations[0].topology.push({ id: 20, name: "Area B", address: 2, lines: [line] });
+    const later = twoInstallationTree().installations[1];
+    later.topology = [{ id: 30, name: "Later area", address: 3, lines: [{ ...line }] }];
+    tree.installations.push(later);
+    await renderInspector({ kind: "line", id: 11 }, tree);
+    expect(keepButtons("Keep under this area")).toHaveLength(0);
+  });
+
+  it("offers no line-owner repair when the line id occurs in two installations", async () => {
+    const tree = deviceMoveTree();
+    const later = twoInstallationTree().installations[1];
+    later.topology = [{ id: 30, name: "Later area", address: 3, lines: [{ id: 11, name: "Twin", address: 1, devices: [] }] }];
+    tree.installations.push(later);
+    await renderInspector({ kind: "line", id: 11 }, tree);
+    expect(host!.textContent).toContain("This structure ID occurs more than once");
+    expect(keepButtons("Keep under this area")).toHaveLength(0);
   });
 });

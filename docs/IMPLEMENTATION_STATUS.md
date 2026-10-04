@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — MODEL-02 web half: ambiguous placements are repaired by an explicit choice
+
+- The device Inspector shows a **Placement conflict** when the topology lists
+  a device more than once: twice in one line, on two lines, on a line and
+  unassigned, or across installations. Every current slot gets **Keep this
+  placement** (`POST /api/repair/device-placement` with `keepLineId` or
+  `keepUnassignedInstallationId`). A line the projection shows under two
+  areas does not turn its devices into conflicts.
+- A line listed by several areas of one installation keeps the duplicate-id
+  alert and adds **Keep under this area** per area
+  (`POST /api/repair/line-owner`). The button appears only when every
+  occurrence is the same line; two different lines sharing an id, or an id in
+  two installations, stay without a repair, as before.
+- Each repair is one undoable server step; a refusal stays on screen with
+  the server's reason. `treeUtils.devicePlacementSlots` lists the distinct
+  slots with their counts.
+- Evidence: 9 Vitest cases written RED first, plus 3 guards that already
+  held. Two more line-owner tests (different lines sharing an id; an id also
+  in another installation) were added after their guard mutants survived the
+  first mutation run. Full Vitest 1,817 in 100 files. `e2e/repair.e2e.ts`
+  performs both repairs in Chromium against the real Inspector; both fail
+  against the previous Inspector. 7 guard mutants caught.
+
 ## 2026-10-04 — MODEL-01 web half, part 2: every installation is edited in place
 
 - The Inspector no longer gates on the first installation. Edit, delete,

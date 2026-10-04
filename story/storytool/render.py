@@ -269,8 +269,12 @@ def render_body(payload: dict, story_sha: str) -> str:
     return "\n".join(out)
 
 
-def build(candidate_dir: Path, out_dir: Path) -> Path:
-    """Verifies the candidate, then writes out_dir/index.html; returns the file path."""
+def build(candidate_dir: Path, out_dir: Path, filename: str = "index.html") -> Path:
+    """Verifies the candidate, then writes out_dir/filename; returns the file path.
+
+    The output is a pure function of the candidate and the site sources (no timestamps),
+    so a committed preview can be checked by rebuilding it.
+    """
     manifest = verify_candidate(candidate_dir)
     payload = json.loads((candidate_dir / "story.json").read_text(encoding="utf-8"))
     css = (SITE_DIR / "style.css").read_text(encoding="utf-8")
@@ -293,6 +297,6 @@ def build(candidate_dir: Path, out_dir: Path) -> Path:
         + f"<script>{script}</script>\n</body>\n</html>\n"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / "index.html"
+    target = out_dir / filename
     target.write_text(document, encoding="utf-8")
     return target

@@ -17,6 +17,7 @@ STORY_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_CONTENT = STORY_DIR / "content" / "edition.json"
 DEFAULT_CANDIDATES = STORY_DIR / "candidates"
 DEFAULT_DIST = STORY_DIR / "dist"
+DEFAULT_PREVIEWS = STORY_DIR / "previews"
 
 EXIT_OK, EXIT_INVALID, EXIT_REFUSED = 0, 1, 3
 
@@ -44,6 +45,10 @@ def _cmd_prepare(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     source = Path(args.candidates) / args.candidate
+    if args.preview:
+        target = render.build(source, DEFAULT_PREVIEWS, f"{args.candidate}.html")
+        print(f"wrote versioned preview {target} (commit it together with its candidate)")
+        return EXIT_OK
     target = render.build(source, Path(args.out) if args.out else DEFAULT_DIST / args.candidate)
     print(f"built private preview {target}")
     return EXIT_OK
@@ -102,7 +107,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("build", help="render a candidate into a self-contained offline preview")
     p.add_argument("candidate")
     p.add_argument("--candidates", default=str(DEFAULT_CANDIDATES))
-    p.add_argument("--out", help="output directory (default: story/dist/<candidate>)")
+    output = p.add_mutually_exclusive_group()
+    output.add_argument("--out", help="output directory (default: story/dist/<candidate>)")
+    output.add_argument("--preview", action="store_true",
+                        help="write the versioned preview story/previews/<candidate>.html")
     p.set_defaults(func=_cmd_build)
 
     p = sub.add_parser("serve", help="serve a built preview on a loopback address only")

@@ -16,7 +16,8 @@ Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-
 | `storytool/` | Stdlib-only Python tool: validate, prepare, build, serve (loopback), release-check, publish (always refuses). |
 | `site/` | `style.css` and `app.js`, inlined into each preview. No framework, no remote assets. |
 | `candidates/<id>/` | Immutable, read-only prepared candidates: `story.json`, `manifest.json`, `CHANGES.md`, `REVIEW.md`. |
-| `dist/<id>/index.html` | Built single-file preview (git-ignored, reproducible from the candidate). |
+| `previews/<id>.html` | Versioned single-file page for each candidate, committed so it can be opened without the tool. A test rebuilds each one and fails if it is stale. |
+| `dist/<id>/index.html` | Scratch build (git-ignored, reproducible from the candidate). |
 | `tests/` | Unit tests, a synthetic fixture (not history) and the Playwright browser check. |
 
 Private provenance (session identifiers, local paths, raw prompt extracts) lives
@@ -31,12 +32,15 @@ Run from this directory.
 python3 -m storytool validate
 python3 -m storytool prepare --private-provenance ../../KNXBench.story-private/provenance.json
 python3 -m storytool build 2026-10-04.2          # writes dist/2026-10-04.2/index.html
+python3 -m storytool build 2026-10-04.2 --preview  # writes previews/2026-10-04.2.html (commit it)
 python3 -m storytool serve 2026-10-04.2          # http://127.0.0.1:8765/, loopback only
 python3 -m storytool release-check 2026-10-04.2 --approval <approval.json>
 python3 -m storytool publish                     # always refuses, exit code 3
 ```
 
-The built `index.html` can also be opened directly from disk.
+Every built page opens directly from disk, including the committed
+`previews/<id>.html`. On GitHub a page shows as source text only: download it
+(or use the raw file) and open it locally. Online hosting comes later.
 
 Tests:
 
@@ -64,6 +68,9 @@ local path. It is not a repository dependency.
    one. Earlier candidates are never rewritten.
 4. Read `CHANGES.md` and `REVIEW.md`, then `build` and read the preview on a
    desktop and a phone. Run the tests and the browser check.
+5. Write the versioned page with `build <id> --preview` and commit it with the
+   candidate. After any change to `site/`, regenerate every page in `previews/`;
+   the preview test names the stale ones.
 
 **Publishing this version** is a different decision. It needs an approval
 record naming the exact `story_sha256` of one candidate

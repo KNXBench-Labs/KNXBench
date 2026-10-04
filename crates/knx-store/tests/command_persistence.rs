@@ -5,8 +5,9 @@
 use std::path::PathBuf;
 
 use knx_core::{
-    Area, BuildingPart, BuildingPartType, Command, CommandStack, CompletionStatus, Direction,
-    GroupAddress, GroupAddressEntry, IndividualAddress, Line, Project, SourceRef,
+    Area, BuildingPart, BuildingPartType, Command, CommandStack, CompletionStatus,
+    DevicePlacementSlot, Direction, GroupAddress, GroupAddressEntry, IndividualAddress, Line,
+    Project, SourceRef,
 };
 use knx_store::{
     insert_manufacturer_refs, insert_opaque, load_manufacturer_refs, load_opaque, load_project,
@@ -258,4 +259,66 @@ fn a_late_sql_failure_preserves_the_saved_state_but_not_the_already_applied_memo
     drop(conn);
     fixture.apply(&inverse);
     assert!(fixture.project.same_user_content_as(&before));
+}
+
+/// MODEL-02: the schema holds one placement per device, so an ambiguous
+/// topology is refused on save (the saved file stays as it was) instead of
+/// silently keeping the last placement. After an explicit repair the
+/// project saves and reopens exactly; undoing the repair is refused again.
+#[test]
+fn an_ambiguous_topology_is_refused_on_save_and_saves_after_repair() {
+    let mut fixture = Fixture::new();
+    let saved = fixture.project.clone();
+    let device = fixture.project.installations[0].topology.lines[0].devices[0];
+    let line = fixture.project.installations[0].topology.lines[0].id;
+    fixture.project.installations[0]
+        .topology
+        .unassigned
+        .push(device);
+    let conn = open_and_migrate(&fixture.path).unwrap();
+    let error = save_project(&conn, &fixture.project).unwrap_err();
+    assert!(
+        matches!(&error, knx_store::StoreError::AmbiguousTopology { devices, lines }
+            if devices == &[device] && lines.is_empty()),
+        "{error}"
+    );
+    drop(conn);
+    fixture.assert_reopened(&saved);
+
+    let ambiguous = fixture.project.clone();
+    let inverse = fixture.apply(&Command::RepairDevicePlacement {
+        device,
+        keep: DevicePlacementSlot::Line(line),
+    });
+    assert_eq!(
+        fixture.project, saved,
+        "keeping the line restores the clean state"
+    );
+    inverse.apply(&mut fixture.project).unwrap();
+    assert_eq!(fixture.project, ambiguous);
+    let conn = open_and_migrate(&fixture.path).unwrap();
+    assert!(save_project(&conn, &fixture.project).is_err());
+    drop(conn);
+    fixture.assert_reopened(&saved);
+}
+
+/// A line listed by two areas is refused the same way.
+#[test]
+fn a_line_with_two_owners_is_refused_on_save() {
+    let fixture = Fixture::new();
+    let mut project = fixture.project.clone();
+    let line = project.installations[0].topology.lines[0].id;
+    let mut second = project.installations[0].topology.areas[0].clone();
+    second.id = project.ids.next_area_id().unwrap();
+    second.address = 9;
+    project.installations[0].topology.areas.push(second);
+    let conn = open_and_migrate(&fixture.path).unwrap();
+    let error = save_project(&conn, &project).unwrap_err();
+    assert!(
+        matches!(&error, knx_store::StoreError::AmbiguousTopology { devices, lines }
+            if devices.is_empty() && lines == &[line]),
+        "{error}"
+    );
+    drop(conn);
+    fixture.assert_reopened(&fixture.project);
 }

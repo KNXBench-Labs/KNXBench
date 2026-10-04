@@ -1,5 +1,24 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR14D D1: status documents slimmed, consolidation planned before AR15
+
+- Retired and dated documents moved verbatim to [docs/archive](archive/README.md):
+  `goal.md`, `OFFENE_PUNKTE.md`, `PROJECT_ANALYSIS_2026-09-15.md`. This log
+  keeps everything since the last October entry; the 12.5k-line September tail
+  moved verbatim to [docs/history](history/IMPLEMENTATION_STATUS_2026-09.md).
+  The handover `.ai/CURRENT_STATE.md` keeps its 75 newest entries, the 470
+  older ones moved verbatim to `.ai/archive/`.
+- Only relative links changed, two cross-file anchors were re-pointed;
+  check-anchors 393 links / 262 files, none dead. A plain-file link check finds
+  no new dead link (17 pre-existing ones in old plans and `../CLA.md` are
+  unchanged and not part of this package).
+- The harder steps are planned as package AR14D D2–D5 in
+  [alpha-release-goal.md](../alpha-release-goal.md#ar14d--consolidate-status-tracking-before-ar15)
+  before AR15: one source-ID ledger with an ADR and an `xtask` check, a topic
+  split of `RESEARCH.md`, resolved `KNOWN_LIMITATIONS` bodies moved to history
+  behind stable stubs. They run under a new status-docs lock.
+- Documentation only; no code, test or behaviour change.
+
 ## 2026-10-04 — MODEL-04 web half: catalog address allocation and unique names
 
 - The catalog dialog has an *Options* group with two unchecked checkboxes:

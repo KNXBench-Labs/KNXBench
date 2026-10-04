@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 23:23
+Web lock: still held by claude-goal-ui-owner (U21 parts A and B delivered here; part C, the measurements, follows under the same lock and is not released by this entry)
+- **Completed:** **U21 parts A+B: the flow view moves, and stops when asked.** Reducer: 60 s sender window and leader (fan-out counts once), edge activity, bounded ring of fresh events. `flowDynamics.ts` (U19 layout, centred, hex seeds), `flowAnimator.ts` (injected scheduler; frames only while needed; nudge only on real change; bundling above 24 events with count; above 160 pulses counted, not drawn), `flowMotion.ts` (Motion setting + OS reduce, also mid-run). View: Freeze (geometry only; disabled with motion off), leader label, reduced-rendering note, sending ring, fade (10 s → 60 s → 0.35), 1 Hz refresh (skipped while hidden). Chromium `e2e/telegram-flow-motion.e2e.ts`: Motion Off/OS reduce mid-flight → 0 frames/s under live traffic; Freeze holds positions while a new sender appears; leaving the tab clears both animator timers; motion off keeps markers and expiry. Mutants: reducer 8/8, animator 12/12, view 6/6, browser wiring 5/5; U20 view fails 4/5. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 518 ok; anchors 453 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,999/116 files, complete Chromium suite 130/130, whitespace; source frozen. Rules: TELEGRAM_FLOW_VISUALIZATION §12. Log: `.ai/logs/2026-10-04_claude_ui-u21-parts-ab-motion.md`.
+- **Pending/Next Steps:** U21 part C: dense-burst and long-session CPU/memory/frame/lag figures (`e2e/flow-load.study.ts`), docs, closing review, then release the lock and hand over to AR21.
+- **Notes for Codex oder Claude:** No KNX/bus contact. §154 still says no load claim until part C.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 22:56
 Web lock: taken by claude-goal-ui-owner for U21 (telegram flow: dynamic layout, pulses, fade, Freeze, load measurement)
 - **Completed:** Lock taken only. U20 is published (`dc298b78`).

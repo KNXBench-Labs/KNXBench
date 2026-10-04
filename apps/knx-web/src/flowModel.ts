@@ -14,12 +14,22 @@ import { rowFlowFacts, type FlowDevice, type FlowGroup, type FlowMember, type Fl
 
 export const VALUE_TTL_MS = 7_000;
 export const MAX_BADGES = 3;
+/** U21: the labelled rolling window for sender ranking and edge activity. */
+export const WINDOW_MS = 60_000;
+/** U21: only rows observed this recently become pulse events, so a
+ * reattached backlog or a delayed batch does not replay as live traffic. */
+export const FRESH_EVENT_MS = 2_000;
+const MAX_TIMES_PER_SOURCE = 10_000;
+const MAX_TIMES_PER_EDGE = 1_000;
+const DEFAULT_MAX_EVENTS = 2_048;
 
 export interface FlowModelLimits {
   maxNodes: number;
   maxEdges: number;
   maxSlots: number;
   maxPending: number;
+  /** Pulse events kept for the renderer; defaults to 2,048. */
+  maxEvents?: number;
 }
 
 export const DEFAULT_FLOW_LIMITS: FlowModelLimits = { maxNodes: 1_000, maxEdges: 5_000, maxSlots: 10_000, maxPending: 5_000 };
@@ -79,6 +89,8 @@ export interface FlowEdge {
   count: number;
   lastSeq: number;
   lastObservedAtMs: number;
+  /** Observation times inside the activity window (bounded). */
+  recentTimes: number[];
   /** Raw group address → label, count and linked-object evidence. */
   groups: Map<number, FlowEdgeGroup>;
 }
@@ -116,6 +128,17 @@ interface QueuedRow {
   observedAtMs: number | null;
 }
 
+/** U21: one admitted, fresh row for the renderer's pulses. */
+export interface FlowEvent {
+  seq: number;
+  from: string;
+  to: string[];
+  gaRaw: number;
+  gaLabel: string;
+  service: string;
+  observedAtMs: number;
+}
+
 export interface FlowCounters {
   admitted: number;
   duplicates: number;
@@ -129,6 +152,7 @@ export interface FlowCounters {
   refusedEdges: number;
   refusedSlots: number;
   pendingOverflow: number;
+  eventsDropped: number;
 }
 
 export interface FlowModel {
@@ -144,6 +168,12 @@ export interface FlowModel {
   slotCount: number;
   closed: boolean;
   counters: FlowCounters;
+  /** Observed send times per source node inside the window. Fan-out to
+   * configured members never adds to it: one row, one observation. */
+  sendTimes: Map<string, number[]>;
+  leader: string | null;
+  /** Fresh admitted rows, oldest first, bounded by `maxEvents`. */
+  events: FlowEvent[];
 }
 
 export function createFlowModel(
@@ -163,8 +193,11 @@ export function createFlowModel(
     closed: false,
     counters: {
       admitted: 0, duplicates: 0, legacy: 0, malformed: 0, markers: 0, reads: 0, noValue: 0, unknownAge: 0,
-      refusedNodes: 0, refusedEdges: 0, refusedSlots: 0, pendingOverflow: 0,
+      refusedNodes: 0, refusedEdges: 0, refusedSlots: 0, pendingOverflow: 0, eventsDropped: 0,
     },
+    sendTimes: new Map(),
+    leader: null,
+    events: [],
   };
 }
 
@@ -341,13 +374,17 @@ function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: Queu
     }
     edge = {
       id, from, to: to.id, configured: to.kind === "device" || to.kind === "unknownDevice",
-      count: 0, lastSeq: entry.row.seq, lastObservedAtMs: entry.observedAtMs ?? Number.NEGATIVE_INFINITY, groups: new Map(),
+      count: 0, lastSeq: entry.row.seq, lastObservedAtMs: entry.observedAtMs ?? Number.NEGATIVE_INFINITY, recentTimes: [],
+      groups: new Map(),
     };
     model.edges.set(id, edge);
   }
   edge.count += 1;
   edge.lastSeq = Math.max(edge.lastSeq, entry.row.seq);
-  if (entry.observedAtMs !== null) edge.lastObservedAtMs = Math.max(edge.lastObservedAtMs, entry.observedAtMs);
+  if (entry.observedAtMs !== null) {
+    edge.lastObservedAtMs = Math.max(edge.lastObservedAtMs, entry.observedAtMs);
+    pushBounded(edge.recentTimes, entry.observedAtMs, MAX_TIMES_PER_EDGE);
+  }
   const previous = edge.groups.get(entry.destinationRaw);
   edge.groups.set(entry.destinationRaw, {
     label: entry.row.destination,
@@ -356,6 +393,31 @@ function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: Queu
     sourceObjects: objectsOf(group, source),
     targetObjects: objectsOf(group, to),
   });
+}
+
+function pushBounded(times: number[], at: number, limit: number): void {
+  times.push(at);
+  if (times.length > limit) times.splice(0, times.length - limit);
+}
+
+function recordActivity(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number): void {
+  const at = entry.observedAtMs;
+  // Without an observation time a row cannot be placed in the window.
+  if (at === null) return;
+  const times = model.sendTimes.get(source.id) ?? [];
+  pushBounded(times, at, MAX_TIMES_PER_SOURCE);
+  model.sendTimes.set(source.id, times);
+  if (at < nowMs - FRESH_EVENT_MS) return;
+  model.events.push({
+    seq: entry.row.seq, from: source.id, to: targets.map((target) => target.id), gaRaw: entry.destinationRaw,
+    gaLabel: entry.row.destination, service: entry.row.service, observedAtMs: at,
+  });
+  const limit = model.limits.maxEvents ?? DEFAULT_MAX_EVENTS;
+  if (model.events.length > limit) {
+    const dropped = model.events.length - limit;
+    model.events.splice(0, dropped);
+    model.counters.eventsDropped += dropped;
+  }
 }
 
 function setSlot(model: FlowModel, nodeId: string, slot: ValueSlot): void {
@@ -385,6 +447,7 @@ function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: 
   const keptTargets = targets.filter((target) => ensureNode(model, target));
   if (sourceKept) {
     for (const target of keptTargets) touchEdge(model, source, target, entry, group);
+    recordActivity(model, entry, source, keptTargets, nowMs);
   } else if (keptTargets.length > 0) {
     model.counters.refusedEdges += keptTargets.length;
   }
@@ -448,4 +511,37 @@ export function nextExpiryAt(model: FlowModel): number | null {
     for (const slot of own.values()) if (next === null || slot.deadlineMs < next) next = slot.deadlineMs;
   }
   return next;
+}
+
+const inWindow = (times: number[], nowMs: number): number[] => times.filter((at) => at > nowMs - WINDOW_MS);
+
+/** Observations on one edge inside the activity window. */
+export function edgeActivity(edge: FlowEdge, nowMs: number): number {
+  edge.recentTimes = inWindow(edge.recentTimes, nowMs);
+  return edge.recentTimes.length;
+}
+
+/**
+ * The most active observed sender inside the window. An exact tie keeps the
+ * current leader; otherwise the lowest identity wins; no traffic, no leader.
+ */
+export function currentLeader(model: FlowModel, nowMs: number): string | null {
+  const counts = new Map<string, number>();
+  for (const [source, times] of model.sendTimes) {
+    const recent = inWindow(times, nowMs);
+    if (recent.length === 0) {
+      model.sendTimes.delete(source);
+      continue;
+    }
+    model.sendTimes.set(source, recent);
+    counts.set(source, recent.length);
+  }
+  if (counts.size === 0) {
+    model.leader = null;
+    return null;
+  }
+  const best = Math.max(...counts.values());
+  if (model.leader !== null && counts.get(model.leader) === best) return model.leader;
+  model.leader = [...counts].filter(([, count]) => count === best).map(([id]) => id).sort()[0];
+  return model.leader;
 }

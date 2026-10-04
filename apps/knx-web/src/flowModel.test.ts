@@ -1,8 +1,12 @@
 /** U20: the session-keyed flow reducer — identities, configured targets, value slots, limits. */
 import { describe, expect, it } from "vitest";
 import {
+  FRESH_EVENT_MS,
   VALUE_TTL_MS,
+  WINDOW_MS,
   admitRows,
+  currentLeader,
+  edgeActivity,
   createFlowModel,
   currentBadges,
   expireSlots,
@@ -314,5 +318,65 @@ describe("flow reducer — values", () => {
     const badges = currentBadges(model, "d:2", 1000);
     expect(badges.current.map((slot) => slot.gaLabel)).toEqual(["2/0/4", "2/0/3", "2/0/2"]);
     expect(badges.overflow).toBe(2);
+  });
+});
+
+describe("flow reducer — activity window", () => {
+  it("names the most active observed sender of the last 60 s, counting fan-out once", () => {
+    const model = ready();
+    admitRows(model, [row(1), row(2), row(3, { source: "1.1.2", sourceRaw: IA(1, 1, 2) })], 1000);
+    expect(currentLeader(model, 1000)).toBe("d:1");
+    expect(model.sendTimes.get("d:1")).toHaveLength(2);
+  });
+
+  it("keeps the current leader on an exact tie and otherwise picks the lowest identity", () => {
+    const model = ready();
+    admitRows(model, [row(1, { source: "1.1.3", sourceRaw: IA(1, 1, 3) })], 1000);
+    expect(currentLeader(model, 1000)).toBe("d:3");
+    admitRows(model, [row(2)], 1100);
+    expect(currentLeader(model, 1100)).toBe("d:3");
+    const fresh = ready();
+    admitRows(fresh, [row(1, { source: "1.1.3", sourceRaw: IA(1, 1, 3) }), row(2)], 1000);
+    expect(currentLeader(fresh, 1000)).toBe("d:1");
+  });
+
+  it("drops observations at exactly 60 s and has no leader without traffic", () => {
+    const model = ready();
+    expect(currentLeader(model, 0)).toBeNull();
+    admitRows(model, [row(1)], 1000);
+    expect(currentLeader(model, 1000 + WINDOW_MS - 1)).toBe("d:1");
+    expect(currentLeader(model, 1000 + WINDOW_MS)).toBeNull();
+    expect(model.sendTimes.has("d:1")).toBe(false);
+  });
+
+  it("does not place rows of unknown age in the window", () => {
+    const model = ready();
+    admitRows(model, [row(1, { observedAgeMs: null })], 1000);
+    expect(currentLeader(model, 1000)).toBeNull();
+    expect(edgeActivity(model.edges.get("d:1→d:2")!, 1000)).toBe(0);
+  });
+
+  it("counts edge activity within the window", () => {
+    const model = ready();
+    admitRows(model, [row(1), row(2)], 1000);
+    admitRows(model, [row(3)], 30_000);
+    const edge = model.edges.get("d:1→d:2")!;
+    expect(edgeActivity(edge, 30_000)).toBe(3);
+    expect(edgeActivity(edge, 1000 + WINDOW_MS)).toBe(1);
+  });
+
+  it("records fresh rows as events for pulses, but not a reattached backlog", () => {
+    const model = ready();
+    admitRows(model, [row(1, { observedAgeMs: FRESH_EVENT_MS + 1 }), row(2)], 10_000);
+    expect(model.events.map((event) => [event.seq, event.from, event.to])).toEqual([[2, "d:1", ["d:2", "d:3"]]]);
+    expect(model.events[0]).toMatchObject({ gaRaw: LIGHT, gaLabel: "1/0/1", service: "GroupValueWrite" });
+  });
+
+  it("bounds the event ring and counts what it dropped", () => {
+    const model = createFlowModel(IDENTITY, { maxNodes: 100, maxEdges: 100, maxSlots: 100, maxPending: 100, maxEvents: 3 });
+    provideContext(model, "1", snapshot("1", DEVICES, GROUPS), 0);
+    admitRows(model, [1, 2, 3, 4, 5].map((seq) => row(seq)), 1000);
+    expect(model.events.map((event) => event.seq)).toEqual([3, 4, 5]);
+    expect(model.counters.eventsDropped).toBe(2);
   });
 });

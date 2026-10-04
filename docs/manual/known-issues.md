@@ -473,16 +473,17 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   [§49](../KNOWN_LIMITATIONS.md#49-project-documentation-export-has-no-in-application-print-preview),
   [§50](../KNOWN_LIMITATIONS.md#50-project-documentation-export-has-no-section-selection)
 
-### Project comparison is read-only and paged in the web panel
+### Project comparison is read-only in the web panel
 
 - **Affected:** comparing two projects.
-- **Limitation:** the web panel lists entities and before/after values in
-  pages of 50 rows per table, with no search inside the result. A
+- **Limitation:** the web panel lists entities and before/after values;
+  long tables scroll and can be filtered by text and status, but there is
+  no search across tables. A
   comparison cannot merge or apply a
   difference back onto a project, does not do a three-way comparison, and
   has no exit code for use in a pipeline.
-- **Consequence:** a very large comparison is read page by page rather than
-  searched.
+- **Consequence:** finding one entity in a large comparison means
+  opening its table and filtering there.
 - **Details:** [§55](../KNOWN_LIMITATIONS.md#55-project-diff-cannot-merge-or-apply-a-diff-back-onto-a-project),
   [§56](../KNOWN_LIMITATIONS.md#56-project-diff-does-not-do-a-three-way-comparison),
   [§57](../KNOWN_LIMITATIONS.md#57-project-diff-cannot-compare-against-a-raw-knxproj),

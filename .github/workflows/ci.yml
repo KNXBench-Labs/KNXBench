@@ -75,6 +75,9 @@ jobs:
       - name: Anchor gate
         run: cargo run -p xtask -- check-anchors
 
+      - name: Ledger gate (one status of record, ADR-0076)
+        run: cargo run -p xtask -- check-ledger
+
       - name: Corpus gate (a missing corpus is never a pass)
         run: cargo run -p xtask -- check-corpus-gates
 

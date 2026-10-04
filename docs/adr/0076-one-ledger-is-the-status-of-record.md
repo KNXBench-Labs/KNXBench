@@ -55,7 +55,7 @@ owner, route, status, owner disposition, and evidence with the remaining work.
 - **Earlier checkpoint tables** that carried statuses are moved verbatim into
   the ledger file as dated history and marked superseded. Nobody updates them.
 
-A repository check (`xtask`, AR14D D3) enforces the format: unique IDs, only
+A repository check (`cargo run -p xtask -- check-ledger`, AR14D D3) enforces the format: unique IDs, only
 the vocabulary above, exactly 180 snapshot rows, and no per-ID status table
 elsewhere in `docs/` or the goal files.
 

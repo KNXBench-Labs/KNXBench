@@ -3882,7 +3882,7 @@ not a way to distinguish `Module` nodes. Unchanged, in full.
 **Lifted when.** RESEARCH.md's sharpest unknown #1 (what
 `ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
 whether/how it legitimately exceeds `1`,
-[docs/RESEARCH.md §4.4](RESEARCH.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
+[docs/RESEARCH.md §4.4](research/product-database.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
 would have to be settled — by a normative worked example or a hand-built
 multi-repeat fixture — before a scoped key that tells repeated copies
 apart could be designed without inventing one.
@@ -4016,7 +4016,7 @@ with pacing (`--pause-ms`, default 100 ms) and an exclusion list
 implementation slack: (1) each vacant address costs one Transport Layer
 connection timeout, fixed by the Standard at 6 s
 (`03_03_04 Transport Layer v01.02.03 AS`, clause 4, page 16 of 38 — see
-[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5, Finding 1](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 for the correction of an earlier, wrong attribution of this cost to a
 client library's own policy choice); and (2) a real line is mostly
 vacant addresses, not mostly occupied ones, so the expensive case
@@ -4126,7 +4126,7 @@ five-address live run observed neither a negative confirm nor an
 `OccupiedSilent` result among its five vacant addresses (a one-sample
 fact about that run, not evidence either case is rare or cannot occur;
 see
-[RESEARCH.md §8.5 Finding 4](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)).
+[RESEARCH.md §8.5 Finding 4](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)).
 
 `OccupiedSilent`'s own citation rests on a hedge in the Standard's own
 text, not a certainty: **[D]** `03_06_03 EMI_IMI v01.04.02 AS` §4.1.5.3.4
@@ -4257,7 +4257,7 @@ reported `Occupied`, indistinguishable from a real twisted-pair device.
 **Cause.** `probe_address` short-circuits to `SelfAddress` only when
 `addr == transport.assigned_address()` (`crates/knx-net/src/scan.rs:298-300`);
 no other exclusion exists. **[V]**
-[RESEARCH.md §8.5 Finding 2](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5 Finding 2](research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 found a candidate signal in three samples on one gateway: two tunnelling
 endpoints answered in 13.6 ms and 14.0 ms, roughly an order of magnitude
 faster than the 100-150 ms a real bus device typically needs. That

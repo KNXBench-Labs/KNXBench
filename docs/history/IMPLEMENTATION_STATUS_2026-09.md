@@ -3084,7 +3084,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `tools/inspect_knxproj.py` | Stdlib-only inspector that reproduces every container/project number quoted in `RESEARCH.md`. |
 | `monitor_bus.py` | Captures live telegrams from the KNXnet/IP gateway into `bus_traffic.jsonl`. |
 | `Unser Zuhause ets4 - 2025-12-15.knxproj` | Real ETS 4.1.8 reference project (schema 11), unprotected. |
-| `Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj` | Same installation, re-exported unchanged from ETS 6.3.7959.0 (schema 23), unprotected. Diffed against the ETS4 export in [RESEARCH.md §2.4/§3.3](../RESEARCH.md#24-container-differences-ets4-schema-11-vs-ets6-schema-23-v). |
+| `Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj` | Same installation, re-exported unchanged from ETS 6.3.7959.0 (schema 23), unprotected. Diffed against the ETS4 export in [RESEARCH.md §2.4/§3.3](../research/project-format.md#24-container-differences-ets4-schema-11-vs-ets6-schema-23-v). |
 | `project_dump.json`, `group_addresses.json`, `devices.json` | `xknxproject` output for the same project — a cross-check baseline, known to be lossy (RESEARCH.md §7.1). |
 | `bus_traffic.jsonl` | 280 captured live telegrams (gitignored). |
 
@@ -6314,7 +6314,7 @@ the fifth and last: documentation only, plus one permitted line of code.
 
 Docs updated: `docs/GAP_ANALYSIS_ETS.md` — **T17**'s backlog entry moves
 to Done (2026-09-13), recording what shipped against what
-[RESEARCH.md §8.5](../RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+[RESEARCH.md §8.5](../research/knxnet-ip-and-bus.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
 specified, plus the corrected timeout-policy citation and the
 2026-09-13 live-validation figures; **E2**'s row moves from an open gap
 to partially closed — the scan reports where the bus and a project

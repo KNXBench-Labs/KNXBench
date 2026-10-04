@@ -1095,10 +1095,10 @@ struct CsvExportReportDto {
 /// route that writes a file the user named.
 async fn export_group_addresses_csv(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
+    Json(body): Json<CsvExportBody>,
 ) -> Result<Json<CsvExportReportDto>, ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::export_group_addresses_csv_impl(&state, &path)
+    domain::export_group_addresses_csv_from_impl(&state, &path, body.installation_id)
         .map(|export| CsvExportReportDto {
             warnings: export.warnings.iter().map(CsvProblemDto::from).collect(),
         })
@@ -2162,6 +2162,18 @@ struct CsvImportResponseDto {
 struct CsvImportBody {
     path: String,
     confirmation_token: Option<String>,
+    /// MODEL-01: target installation; absent means the first one.
+    #[serde(default)]
+    installation_id: Option<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvExportBody {
+    path: String,
+    /// MODEL-01: source installation; absent means the first one.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 /// Reads `body.path` as "KNXBench group-address CSV v1" and plans/applies
@@ -2176,15 +2188,20 @@ async fn import_group_addresses_csv(
     Json(body): Json<CsvImportBody>,
 ) -> Result<Json<CsvImportResponseDto>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::import_group_addresses_csv_impl(&state, &path, body.confirmation_token.as_deref())
-        .map(|outcome| CsvImportResponseDto {
-            tree: outcome.tree,
-            report: CsvImportReportDto::from(&outcome.report),
-            applied: outcome.applied,
-            confirmation_token: outcome.confirmation_token,
-        })
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::import_group_addresses_csv_into_impl(
+        &state,
+        &path,
+        body.confirmation_token.as_deref(),
+        body.installation_id,
+    )
+    .map(|outcome| CsvImportResponseDto {
+        tree: outcome.tree,
+        report: CsvImportReportDto::from(&outcome.report),
+        applied: outcome.applied,
+        confirmation_token: outcome.confirmation_token,
+    })
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 #[derive(Deserialize)]

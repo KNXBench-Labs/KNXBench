@@ -34,7 +34,7 @@ async fn empty_history_declares_its_version_and_partial_coverage() {
     });
     let (status, body) = history(state, "").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["format"], 1);
+    assert_eq!(body["format"], 2);
     assert_eq!(body["coverage"], "partial");
     assert_eq!(body["entries"], json!([]));
     assert_eq!(body["hasMore"], false);
@@ -73,7 +73,7 @@ async fn foreign_and_future_history_returns_unavailable_without_overwriting() {
             drop(knx_store::activity_history::ActivityHistory::open(&path).unwrap());
             rusqlite::Connection::open(&path)
                 .unwrap()
-                .pragma_update(None, "user_version", 2)
+                .pragma_update(None, "user_version", 3)
                 .unwrap();
         } else {
             rusqlite::Connection::open(&path).unwrap().execute_batch("CREATE TABLE unrelated(value TEXT); INSERT INTO unrelated VALUES ('retained');").unwrap();

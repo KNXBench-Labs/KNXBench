@@ -22,6 +22,48 @@ Broad attempt1 passed focused/fmt/check/clippy, then failed three registered ret
 
 ## Pending
 
+2026-10-04 01:54 UTC: current ed03cb85 Markdown5/privacy review passed.
+Fresh publication preflight stopped BEFORE commit/push:main advanced to
+1c5dec0760c1e0a98e998e9047102689be05b1f6,12 owner paths including6 Rust files
+in server download/activity and project-store activity history. New owner
+handover preserves75ad suffix. No normal push or KL152 closing yet. Previous
+ed03cb85 source712/440 equivalence/public18/private2 are producer-scoped and
+must NOT be relabelled after the next source merge. Preserve new work and rerun
+actual merged source/caller/Release/private acceptance before final delivery.
+
+2026-10-04 01:43 UTC: actual integrated ed03cb85 public18 and current isolated
+Release/private2 completed exit0 and independently reconciled. Source712/logs/
+fresh binary exact,Rust3015/0/166/153 blocks,Web1739,Chromium82 inventory/pass.
+Baseline2 atomic item refusals→candidate2 installs,all853 originals/archives
+verified,temp0,no observer/raw/private item records. Sealed RAM-only memfd
+parent closed after input consumption. Whole853 still binds producer80a5500d,
+not relabelled;440 non-Web source/build inputs equal,current pair binds new CLI.
+17 current generated/frontend DTOs are closed-subset lexical-token equal,14 raw
+equal,eight negative/one positive/one unsupported-token controls pass. Scratch
+Node compiler-API attempt refused ERR_MODULE_NOT_FOUND; actual installed native
+compiler has no requested JS API file. This is not a DTO/product failure and no
+new dependency was added. Primary acceptance docs updated; fresh current doc5,
+in-session/privacy review/normal publication/readback/closing/hygiene pending.
+
+2026-10-04 01:16 UTC: full853 original-filename Release/Release pair completed
+and independently reconciled on source80a5500d.688 unchanged installs,163
+unchanged normalized diagnostic refusals,exactly2 item-budget admissions:
+688→690 installs. All853 originals independently rehashed with no-follow
+descriptor-relative access; source706/logs/binaries/archives exact,private temp0.
+Same-result installed cases compare all table counts; same refusals compare
+RAM-only normalized diagnostics. No observer/raw/per-item persistence.
+Full853 peak RSS baseline275144/candidate275108KiB,max wall18.605/18.117s;
+these are CLI cohort observations,not process-memory or HTTP response guarantees.
+Baseline-current Markdown5 passed. Internal candidate d3aa1f65 is not published.
+Publication preflight discovered CRT upstream75ad9650:33 paths,no Rust/Cargo/npm
+manifest changes. Integrated ed03cb85;30 non-overlap foreign blobs byte-exact,
+authoritative CURRENT suffix75ad and own complete prepend history preserved,
+implementation-status additions combined,known-limit merge clean. All old frozen
+non-Web inputs stay exact;7 changed existing Web inputs are expected upstream.
+Fresh actual integrated public18/source capture/fresh target is prepared.
+Historical full853 receipt is NOT relabelled integrated; current actual private2,
+code-path source equivalence,current doc5/review/publication/hygiene remain.
+
 2026-10-04 00:31 UTC: corrected actual public6 independently accepted:
 Rust3015/0/166 in153 blocks, source706/release CLI exact. Actual no-observer
 original-filename private2 independently GREEN with unchanged853 originals,

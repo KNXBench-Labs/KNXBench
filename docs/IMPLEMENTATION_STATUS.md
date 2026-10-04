@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06R KL-152 measured coupled-budget candidate — 2026-10-03
+## AR06R KL-152 verified coupled-budget candidate — 2026-10-04
 
 Original853 identity/source80a5500d/706 inputs verified. Four size-admitted
 scheme14 packages/16 XML documents select two item refusals. Actual bounded
@@ -11,9 +11,16 @@ Rejected first verifier attempt stays rejected; source-derived archive-table
 correction has three public controls. See PRODUCT_DATABASE_CORPUS.md for scope.
 Candidate coupled ceilings1048576/256MiB preserve depth1024/ZIP/namespace limits,
 all-or-nothing scan and full retained data. Two public registered REDs and six
-new boundary/late-failure tests; focused GREEN/fmt accepted, broad real gates
-running. Actual candidate private checks, review, complete acceptance and
-publication/readback/owned cleanup pending. KL152 remains open. No UI/DTO/schema,
+new boundary/late-failure tests. Actual integrated ed03cb85 public18 accepted:
+Rust3015/0/166 in153 blocks,Web1739,Chromium82 inventory/pass,17 canonical
+bindings/eight negative controls; source712/logs/fresh Release binary exact.
+Current Release/private2 is independently GREEN:baseline2 atomic item refusals,
+candidate2 installs,all853 original hashes/archives exact,private temp0.
+Whole853 producer80a5500d remains separately identified:688 unchanged installs,
+163 unchanged normalized refusals,2 budget admissions→690 installs;440 non-Web
+source/build inputs byte-equivalent after CRT integration. This is not relabelled
+as a new integrated full853 run. Publication/readback/owned cleanup pending.
+KL152 remains open until delivery. No UI/DTO/schema,
 bus, manufacturer runtime or ETS compatibility expansion. KL151/153 and Alpha
 remain open; KL151 research closing80a5500d delivered/cleaned.
 
@@ -21,7 +28,7 @@ Broad attempt1 is RED on three retained-source classification regressions;
 release CLI unstarted. Dedicated master-language work/input limits were
 implicitly shared with the scheme scanner. Candidate separates them and keeps
 their original64MiB/262144 values, including retained-source preflight. Failed
-logs/inputs are preserved; corrected full real-source gates remain pending.
+logs/inputs are preserved; corrected real-source and integrated gates now pass.
 
 ## CRT authorized integration/publication follow-up
 

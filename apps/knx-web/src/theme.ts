@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect } from "react";
 import { getSetting, settingsStorage, useSettingsRevision } from "./settingsStore";
-import { loadAppearance } from "./appearance";
-import { readThemePackStore } from "./themePack";
+import { ACCENTS, loadAppearance, type Accent } from "./appearance";
+import { readThemePackStore, validateThemePack } from "./themePack";
 import type { ThemePack, ThemePackStore } from "./themePack";
 import { applyThemePack } from "./themePackDom";
 
@@ -91,22 +91,51 @@ export function resolveThemeId(id: string, dark: boolean): string {
 export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void {
   try { storage.setItem(STORAGE_KEY, id); } catch { /* Session preference still works. */ }
 }
-export function useThemeId(): [string, (id: string) => void] {
+/** An ephemeral visual candidate, owned by the same root runtime as normal themes. */
+export interface ThemePreview { readonly themeId: string; readonly pack?: ThemePack; }
+/** Advertise only variations the same admitted visual candidate can apply. */
+export function getThemeAccentOptions(id: string, preview?: ThemePreview): readonly Accent[] {
+  const admitted = preview?.pack && preview.pack.id === preview.themeId
+    ? validateThemePack(preview.pack) : undefined;
+  if (admitted?.ok) return ACCENTS.filter((accent) => Object.hasOwn(admitted.pack.accents ?? {}, accent));
+  const builtinPreview = !preview?.pack && THEMES.some((theme) => theme.id === preview?.themeId);
+  const effectiveId = builtinPreview ? preview!.themeId : id;
+  const builtin = THEMES.find((theme) => theme.id === effectiveId);
+  if (builtin) return builtin.hasAccentVariations ? ACCENTS : [];
+  const stored = readThemePackStore(getSetting("uiThemePacks")).packs.find((pack) => pack.id === effectiveId);
+  return ACCENTS.filter((accent) => Object.hasOwn(stored?.accents ?? {}, accent));
+}
+/** A theme consumer must not acquire another root DOM lease. */
+export function useSavedThemeId(): string {
+  useSettingsRevision();
+  return readThemeSelection(settingsStorage, getSetting("uiThemePacks")).id;
+}
+export function useThemeId(preview?: ThemePreview): [string, (id: string) => void] {
   const revision = useSettingsRevision();
   const { id, pack } = readThemeSelection(settingsStorage, getSetting("uiThemePacks"));
+  const previewPack = preview?.pack;
+  const previewId = (previewPack ? previewPack.id === preview?.themeId
+    : THEMES.some((theme) => theme.id === preview?.themeId)) ? preview?.themeId : undefined;
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const root = document.documentElement;
-    const application = pack ? applyThemePack(root, pack, loadAppearance(settingsStorage).accent) : undefined;
-    const appliedId = application && !application.ok ? "system" : id;
+    const admitted = previewPack ? validateThemePack(previewPack) : undefined;
+    const previewActive = previewId !== undefined && (!previewPack || admitted?.ok);
+    const visualPack = previewActive ? (admitted?.ok ? admitted.pack : undefined) : pack;
+    const application = visualPack ? applyThemePack(root, visualPack, loadAppearance(settingsStorage).accent) : undefined;
+    const appliedId = application && !application.ok ? "system" : ((previewActive ? previewId : undefined) ?? id);
     const apply = () => { root.dataset.theme = resolveThemeId(appliedId, query.matches); };
     apply();
     query.addEventListener("change", apply);
     return () => {
       query.removeEventListener("change", apply);
       if (application?.ok) application.release();
+      if (previewId !== undefined) {
+        const current = readThemeSelection(settingsStorage, getSetting("uiThemePacks"));
+        root.dataset.theme = resolveThemeId(current.id, query.matches);
+      }
     };
-  }, [id, revision]);
+  }, [id, revision, previewId, previewPack]);
   return [id, (next) => {
     if (getThemeDefinitions().some((theme) => theme.id === next)) saveThemeId(settingsStorage, next);
   }];

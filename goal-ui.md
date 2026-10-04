@@ -73,7 +73,7 @@ Do not turn retained design boundaries into silently accepted alpha exceptions.
 ### Theme-pack extension (user request, 2026-10-02)
 
 **U14 contract, U15 runtime and U16 persistence/file foundations delivered.**
-**U17–U18 remain open.** The user requested
+**U17 implementation acceptance passed; publication is tracked in the current handover. U18 remains open.** The user requested
 theme follow-up tasks after
 confirming the existing UI can switch built-in themes. U14–U18 add importable,
 exportable declarative theme packs; they do not rebuild the existing palette
@@ -351,7 +351,7 @@ claim disguised as research. Record any deliberate change to ADR-0022.
 
 ### U15 — Validate packs and integrate the existing theme engine [web]
 
-**Delivered as 9d1ae19d; runtime foundation only. U16 subsequently delivered; U17–U18 remain open.**
+**Delivered as9d1ae19d; runtime foundation only. U16/U17/U18 subsequently delivered and read back; native/global-alpha acceptance remains separate.**
 Depends on U14's resolved contract. Keep parsing/validation pure and
 separate from DOM effects and persistence; do not add theme logic to KNX Core.
 
@@ -423,21 +423,33 @@ regressions pass with unrelated settings unchanged; no new KNX API dependency.
 
 ### U17 — Add accessible theme management and reversible preview [web]
 
-**Open.** Depends on U15 and U16. Extend Settings → Appearance; do not create a
+**DONE — management delivered/read back as 4d9073ca; U18 remains open.**
+Actual merged chain proc_cdcd42b97d47 passed all23 commands:17 repository and
+six offline inventory/execution commands. Web1,702/95 files, Chromium72 (zero
+failed/skipped/flaky), Rust2,984/0/165 across149 blocks,17 equal bindings and697
+unchanged source/config inputs. Compiled ignored inventory165; separately selected
+six offline suites execute27 private cases plus the115-instance/113-unique matrix.
+All420 private input files unchanged; transient corpus link removed.
+31 actual parent/five root and eleven manager browser cases cover the management
+contract. Eight original behavioral controls plus three added compiled browser
+controls are caught/restored; diagnostic-module type canary is caught/restored.
+Earlier cancelled/lifecycle-interrupted attempts remain non-acceptance evidence.
+In-session self-review, not independent/native/Orca/global-alpha approval.
+Depends on U15 and U16. Extend Settings → Appearance; do not create a
 second settings screen or require a visual theme editor for this slice.
 
-- [ ] Show built-in and installed packs with understandable names, origin,
+- [x] Show built-in and installed packs with understandable names, origin,
   version and any incompatibility diagnostic. Add Import, Export and Remove
   actions, replacement confirmation, and a clear reset to System/built-ins.
   Accent controls reflect the selected pack's actual capabilities.
-- [ ] Provide a temporary preview with explicit Apply/Cancel. Preview alone
+- [x] Provide a temporary preview with explicit Apply/Cancel. Preview alone
   does not write settings; Cancel, Escape, dialog close/unmount or a failed
   apply restores the previous acknowledged theme without retaining overrides.
   Define/test what an authoritative cross-client change does during preview.
-- [ ] Keep reset/cancel usable for poor palettes. Use existing overlay/focus
+- [x] Keep reset/cancel usable for poor palettes. Use existing overlay/focus
   patterns; localize every label and structured error, announce outcomes and
   provide full keyboard operation without disrupting stacked modals.
-- [ ] Add behavioral component tests and fully mocked browser flows for valid
+- [x] Add behavioral component tests and fully mocked browser flows for valid
   import, rejection, ID collision, preview rollback, active removal, reset,
   persistence failure and System mode. Browser tests intercept all backend
   traffic; no live server, gateway or productive bus is involved.
@@ -446,36 +458,58 @@ second settings screen or require a visual theme editor for this slice.
 controls. Disclose native WebKitGTK and real assistive-technology evidence
 separately; mocked Chromium is not native/screen-reader acceptance.
 
+Named evidence: `ThemePackManager.integration.test.tsx`, `themePreview.test.tsx`,
+`SettingsPanel.test.tsx` and all eleven `theme-manager.e2e.ts` flows. The U17 log
+records findings, negative controls, integration provenance and actual counts.
+
 ### U18 — Review and close the theme-pack extension
 
-**Open.** Depends on U14–U17. Does not reopen the completed U13 review or close
-unrelated alpha/domain/native evidence gaps.
+**DONE — source delivery1964fd6b published/read back; final metadata housekeeping in the handover.** U18 depends on the delivered U14–U17 extension, does not reopen U13 and does not close unrelated alpha/domain/native gates.
 
-- [ ] Run semantic roundtrip and migration/settings regressions plus hostile
-  pack fixtures. Mutation-check every new rejection, rollback and persistence
-  guard; retain evidence of initially surviving controls and their corrections.
-- [ ] Exercise representative editor, table, inspector, dialog and diagnostic
-  states across built-ins, System and imported palettes; cover focus, selection,
-  disabled controls, validation/status feedback and accent switching. Keep
-  runtime contrast-pair guarantees separate from broader visual acceptance.
-- [ ] Review the full extension diff in a separate in-session pass, explicitly
-  labelled self-review. Use an independent review only if separately available
-  and authorized; never fabricate an independent verdict or start subagents.
-  Fix substantive findings, repeat §2.5 gates after integration and run the
-  production Web build plus the fully mocked browser regressions.
-- [ ] Update implementation status, roadmap, theme-format/ADR documentation
-  and known limitations to actual delivered behavior. Add user instructions
-  for import/export, preview, replacement, recovery and fallback, with no
-  unsupported full-accessibility or native-platform claim.
-- [ ] Hand completion and remaining limitations to the goal.md owner for
-  global acceptance/triage; release only this package's Web lock and clean up
-  only its own artifacts. Publishing this extension does not authorize an
-  alpha release, reopen commissioning or grant a hardware-write go.
+U18-R1 is closed by an opt-in, explicitly typed harness using actual
+GroupAddressTable, Inspector, inline address validation, Overlay and structured
+diagnostics. Nine palette paths cover five built-ins, System light/dark and two
+admitted user palettes; the harness-presence case makes10/10. Three rendered-style
+controls fail named assertions, not invented production-source mutation results.
+The fixture-module TS2322 inclusion canary was detected and restored. Initial
+shared-lease refusals remain infrastructure-only, not successful mutant evidence.
 
-**Acceptance:** every extension checkbox has named evidence or an explicit
-user-approved disposition; integrated gates and documented review findings are
-settled. Built-in theming remains functional and original U0–U13 provenance,
-alpha-owner decisions and all hardware boundaries remain intact.
+- [x] Semantic roundtrip, migration/settings and hostile-pack regressions:
+  `themePackRoundtrip.test.ts`, `themePackFiles.test.ts`, `themePackStorage.test.ts`,
+  settings client/HTTP regressions and U15/U16/U17 restored guard evidence.
+  The actual Web1702/Rust2995 suites execute these contracts; U18 adds no new
+  production rejection/persistence guard needing a separate source mutant.
+- [x] Representative editor/table/inspector/dialog/diagnostic states:
+  `e2e/theme-state.e2e.ts` passes10/10, full mocked Chromium82. Focus, selection,
+  filtering, invalid editable drafts, disabled controls, dialog trap/Escape/restore,
+  diagnostic kinds/paths and supported/disabled accent choices are asserted.
+  Selection/focus/validation rendered-style controls fail their named assertions.
+  Three contrast-pair guarantees remain separate from all-component acceptance.
+- [x] Full extension reviewed in a separate in-session **self-review** pass,
+  admission → plans → queue/API → root runtime → manager/selector/diagnostics →
+  semantic roundtrip/real states. No new blocking production finding; no claimed
+  independent approval or subagents. Source-freeze703 binds actual1660911b;
+  18 repository plus six explicit offline commands pass24/24. Web1702,
+  Chromium82, Rust2995/0/165 over150 blocks,17 equal bindings. Offline inventories
+  reconcile11 product+16 injected-server+1 matrix=28; matrix115/113 unique;
+  421 private files unchanged and own temporary inputs/matrix removed.
+- [x] Status, roadmap, theme format/ADR and owned known-limitations section
+  reconciled. `docs/THEME_PACKS.md` documents import/export, preview/Cancel,
+  explicit replacement, recovery, System reset and unavailable-data fallback.
+  Closing self-review also corrects live candidate/open U18-R1 documentation drift.
+- [x] Source delivery1964fd6b published/read back: live/fetched refs, full tree,
+  all703 gated inputs and15 owned artifacts exact; zero outgoing commits.
+  Completion/remaining limitations handed to the goal.md owner; UI reservation
+  released in the current handover.52 completed own scratch entries and own
+  node_modules cleaned; final clean worktree/branch housekeeping follows the
+  metadata readback. Root/foreign worktrees and all other reservations untouched.
+
+**Evidence:** `.ai/logs/2026-10-03_codex_ui-theme-closing.md` and its aggregate
+receipt; actual gate1660911b, normal Markdown-only upstream integrationef4cfb92,
+all703 protected inputs exact. No private raw output is retained. Candidate18/18
+and U17 historical23/23 are not substituted for actual24/24 acceptance.
+Native WebKitGTK/Orca, general WCAG, Alpha/ETS and real KNX commissioning remain
+separate; this theme extension never grants a hardware-write go.
 
 ---
 
@@ -530,3 +564,5 @@ Hand it over (§6).
 - **From the goal.md session to you:** the chosen U13 independent review
   returns concrete findings and an actual verdict. A refused review request
   is not a verdict; do not close U13 until findings and gates are settled.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

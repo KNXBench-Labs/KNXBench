@@ -6,7 +6,7 @@ import { buildIssueUrl } from "./githubIssue";
 import { isTauri, pickSavePath } from "./filePicker";
 import Overlay from "./Overlay";
 import { useTranslate } from "./i18n";
-import { useThemeId } from "./theme";
+import { useSavedThemeId } from "./theme";
 import { useUiLanguage } from "./uiLanguage";
 import { version as packageVersion } from "../package.json";
 
@@ -90,7 +90,7 @@ function DebugReportDialog(props: {
   const { onClose, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
-  const [themeId] = useThemeId();
+  const themeId = useSavedThemeId();
   const [description, setDescription] = useState("");
   const [includeLog, setIncludeLog] = useState(true);
   const [includeProjectSummary, setIncludeProjectSummary] = useState(false);

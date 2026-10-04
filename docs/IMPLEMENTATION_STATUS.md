@@ -227,6 +227,479 @@ Later fresh upstream `5ca570a0` includes productdb scalar-copy admission and
 its ADR0065; own unpublished lifecycle ADR was renumbered0066. No direct
 commissioning-source overlap, but eventual integration must retest planning.
 Root/statistics and the ui-theme-management/U17 Web surface remain untouched.
+## CRT authorized integration/publication follow-up
+
+- User authorized commit/main integration/push. Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1
+  integrated onto upstream5540dcac as3d03aea5ee2905a98450ee193bdc1246d0f93c99.
+  Complete upstream handover archive and both status prefixes preserved exactly.
+- Actual merged-result gates: Web1739/98, build,12 production/16 reference browser
+  groups, Clippy workspace/all-targets with warnings denied, Rust3009 passed,
+  166 ignored across153 result blocks, fmt and4 repository gates. All executed
+  stages exit0; ignored/private/hardware/native/Orca scopes remain unclaimed.
+- Retained merged receipt/closure log and fresh native-frame screenshot. Source
+  unchanged after the accepted merge; closure changes are documentation/evidence.
+  Current refs and latest handover establish the final publication state.
+- Shared dirty/stale root main remains deliberately unsynchronized; no foreign
+  product/stats/research/UI-plan edits were staged or overwritten. Earlier local-
+  only/no-commit/no-merge entries below describe the original delivery, not this
+  authorized follow-up. Separate semantic-role/acceptance limitations remain.
+
+## 2026-10-03 — Productive CRT interactions (local feature worktree)
+
+- Implemented the user-requested animations in real App/ProjectExplorer/
+  GroupAddressTable, not only the offline study. Independent motion style `crt`
+  is admitted by both the actual pre-mount bootstrap and runtime registry.
+- Standard: 250ms ease-out fill, inert clipped light, bounded activation glow.
+  Subtle: existing 120ms fill only. Off/OS reduced motion cancel running feedback.
+  A disposable per-workbench controller handles timers/observers and retirement;
+  existing delegated keyboard, native selection and bulk-selection rail remain.
+- Manual Save/Save As glows only on its existing request path, after cancellation/
+  stale-snapshot checks; autosave is silent. The glow does not certify success.
+  Browser refusal assertions verify error reporting; source review confirms the
+  existing dirty-state/error path is unchanged, not a real persistence test.
+- Reviewed final Web **1739 tests / 98 files**, TypeScript/Vite build and **12**
+  actual-app Chromium groups pass. Receipt records zero page errors, unexpected
+  requests and real backend requests; two Save requests are intercepted synthetic
+  refusals. The native-frame screenshot has been visually inspected.
+- Added controller/CSS/bootstrap regressions and a reproducible real-App browser
+  verifier with a synthetic project and intercepted file-picker/open/settings/
+  discovery/Save flow. No actual project/settings/backend/KNX write or new
+  dependency. No WebKitGTK/Orca/full-WCAG or independent-review claim.
+- In-session review removed redundant keyboard handlers in favor of the already
+  delegated production implementations; transient feedback is presentation-only.
+  Updated ADR-0022, CRT/theme guide, roadmap, limitations and handover/log.
+- Worktree: /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-interactions-20261003,
+  branch feat/crt-interactions-20261003, base 3337e4ef. Changes remain local and
+  uncommitted; no feature push/main merge/root product synchronization. Native
+  acceptance, exact selection/Save-only roles and broader component styling
+  remain separate. Own test-runtime cleanup is recorded in the task handover.
+
+## 2026-10-03 — CRT 1.1 branch publication
+
+- User-authorized source commit879c69b2f11c825c1d4f10b5409e5a5148f06e67 is
+  published on design-retro-green-crt-20261003; exact local/fetched/live refs
+  matched at20:19 CEST. No main merge or dirty-root product synchronization.
+- Fresh Web1712/96 files and TypeScript/Vite build pass; separate in-session
+  review/static scan found no blocking issue. Existing16-group browser receipt
+  covers unchanged source. Author/committer github@knxbench.com; no co-author.
+- The following local design notes are historical; palette/study and proposed
+  production limitations are unchanged. This acknowledgment changes Markdown only.
+
+## 2026-10-03 — CRT 1.1 reference-image development (local)
+
+- Evolved the existing design from the user reference: softer phosphor ink,
+  green-black surfaces, fine green rules, mint action gradients and compact
+  chrome. Same theme ID, palette version1.1.0, unchanged safe v1 token contract.
+- Replaced the study's layout-button rows with twelve native table rows and
+  independent checkbox/address-button controls. Added a bounded leading light,
+  violet Save flare and shared activation guard; cancellation handles user Off,
+  OS reduced motion, scroll and resize. All data and actions remain synthetic.
+- Ten theme/study tests pass (new revision observed RED before implementation);
+  focused329, complete Web1712/96 files and TypeScript/Vite build pass.
+- Retained reproducible `design/verify-crt-reference.mjs` and JSON receipt:16
+  Chromium groups, including actual manager refused/confirmed same-ID replacement,
+  exact reload/export and mid-effect cancellation. One guarded mock settings write,
+  zero page errors/unexpected requests. Screenshot samples a paused native frame.
+- Updated [design guide](DESIGN_RETRO_GREEN_CRT.md) with actual palette behavior,
+  reproduction and specific token/component/motion proposals. No production
+  component, protocol, core, dependency or storage change; no native/Orca/WCAG claim,
+  commit, push or root product synchronization. Earlier 1.0 results below are
+  historical; retained current design artifacts are now1.1.
+
+## 2026-10-03 — Modern Retro Green CRT design artifacts (local)
+
+- Added an importable complete theme-pack v1 palette: black `#050505`, neon
+  green `#39ff14`, installed JetBrains Mono throughout, small radii, green
+  elevation/hover-shadow tokens and distinct error/warning colors.
+- Added a self-contained interactive HTML design study with embedded licensed
+  JetBrains Mono, purple Save, left-to-right fill, activation glow, filtering,
+  keyboard navigation and user/OS motion guards. This is a standalone reference,
+  not React/Tailwind/Tauri component integration or actual project operations.
+- The production v1 pack cannot separate Save from the shared accent, set exact
+  `#003300` row fill, inject animation rules or add input focus-shadow consumers.
+  These remain explicitly proposed component/versioned-token changes in
+  [the design guide](DESIGN_RETRO_GREEN_CRT.md); no theme-contract weakening,
+  dependency, domain, protocol, persistence or production-component change.
+- Seven palette tests observed RED, then GREEN. Intermediate test-harness
+  environment/URL issues were corrected without changing runtime code. Focused
+  suite: 326/326; full Web: 1,709/1,709 in 96 files; TypeScript/Vite build passes.
+- Ten actual Chromium verification groups pass: real manager import preview,
+  conditional acknowledged apply, reload/all-token paint and UI export, plus
+  six standalone-design checks including keyboard activation, actual 250ms fill,
+  Off/reduced-motion and 390px layout. Settings were intercepted/synthetic;
+  one mock conditional write, zero unexpected requests or page errors.
+- Local isolated branch `design-retro-green-crt-20261003` at baseline `e7f9db8e`;
+  no root synchronization, commit/push, native/Orca/full-WCAG or hardware claim.
+
+## AR06Q KL-151 resource research accepted — 2026-10-03 22:02 UTC
+
+Base5540dcac/source706 unchanged. Secure853 declared-size census selects15:
+7 member-only/5 total-only/3 both. Scratch-only fixed member256MiB/expanded4GiB
+variant (compressed256MiB, same grammar/evidence) admits14 and refuses1 namespace;
+baseline15 size refusals remain atomic. Fresh Release profiles,22 build/test
+commands/16 hostile ZIP controls/six helper controls verified. Peak789976KiB
+RSS, max221.55s/7556988928-byte DB;638.04s/21970833408 DB bytes total. All originals
+independently rehashed, retained archives checked, private temporary data gone,
+closed aggregate-only output. First zero-pair namespace-guard PermissionError
+retained as infrastructure rejection; corrected isolated retry is the accepted
+measurement. No production limit/code change or general compatibility claim.
+KL151 remains open pending bounded cap/streaming/caller safety decision; direct
+HTTP catalog install/product mutex needs owner-aware latency acceptance before
+a global raise. KL152/153 and wider Alpha remain open. KL1505540dcac fully
+delivered and owned checkout/branches/targets/scaffolds cleaned.
+
+## AR06P KL-150 scoped code delivered — 2026-10-03 23:05 CEST
+
+Actual integrated cbe9952f passed fresh complete public16 and the authorized
+private same-profile baseline RED/candidate GREEN. Source706 is identical to
+the full853 Release CLI pair (installed687→688, one constraint refusal admitted,
+all other outcomes unchanged; originals rehashed, no raw/private item output).
+Code published as1b215d51 after adopting a foreign stats-only commit byte-exact;
+fresh doc5 gates and live/fetched equality verified. Fourteen owned build/
+snapshot/browser directories removed; final metadata/checkout hygiene remains.
+KL150 fresh-install storage/key-scoping is lifted, not nested runtime/allocation/
+parameter-write semantics or automatic old-catalog repair. AR06P/AR07/full
+Alpha remain open; KL151/152 require measurements, KL153 bounded research.
+
+## AR06P KL-150 full candidate verification — 2026-10-03 22:35 CEST
+
+Owned candidate a2aa4b7 is committed, source706 exact; not published yet.
+Fresh complete public16 retry: Rust153 blocks/3009-0-166, compiled ignored166,
+Web1702, Chromium inventory/pass82, shadow bindings17 significant-token exact
+with eight controls; strict workspace Clippy/build/deny/format and all audits.
+First broad eight commands exited0; the added binding helper's pre-v7 absolute
+directory API assumption rejected verification, not product tests or semantics.
+Original evidence retained and whole16 rerun, never fixture-origin weakening.
+Release pair12 separately reconciled: exact committed old-parser named RED,
+candidate storage7 GREEN, CLI5 GREEN each; both profiles Release, binaries/logs
+hash-exact. Full853 original-filename CLI pair accepted and independently
+rehashed/reconciled: installed687→688, one database-constraint refusal→installed;
+all other categories unchanged, no installed→refused regression. Every side has
+a fresh private DB; successful archive bytes/source blob digests verified and
+four catalog/package tables empty on refusal. Original manifest/all inputs
+unchanged, temporary copies/DBs removed, only aggregate receipts survive.
+Fresh current-upstream integrated acceptance, final metadata/publication/readback
+and owned cleanup remain pending; KL150 remains unchecked. R-MODULE-04 runtime,
+new limit/grammar claims and automatic repair of old stored rows are not included.
+
+## AR06P KL-150 lexical storage candidate — 2026-10-03 20:56 CEST
+
+The nested-definition UNIQUE-constraint bug has an exact synthetic package RED.
+The smallest private parser scope stack preserves enclosing definition identity
+and argument position, including Empty and deeper/sibling scopes. No public
+API, schema/version, evaluator, UI, protocol or limit change. Nine focused
+ordinary tests and ProductDB625/0/25 pass; compiled ignored inventory25 and
+strict Clippy/format/whitespace verified. Three separately compiled mutants
+have five named failures; a fourth exact committed pre-fix parser has its own
+public RED. Canonical706 source/config inputs remain unchanged during gates.
+One authorized offline private nested package passes only with the candidate:
+same-profile baseline RED/candidate GREEN, independent lexical/stored scope
+counts agree, all original ZIP member bytes match retained blobs, retry passes,
+original package/manifest unchanged, zero private temporary directories and
+no private raw/item records. This is not a new full853 or115/113 matrix run.
+Separate in-session review has no blocking finding, not independent-model
+approval. Fresh broad/current-upstream acceptance, full853 CLI measurement,
+publication/readback and owned cleanup remain open; KL150 is not lifted.
+R-MODULE-04 runtime/allocation semantics and automatic repair of old admitted
+mis-scoped rows remain outside this storage correction. KL149 closing metadata
+cb5781c7 is published/live/fetched byte-verified and its own final target,
+seventeen runner/config scaffolds, checkout and branch have been removed.
+
+## AR06P KL-149 scoped delivery checked — 2026-10-03 18:45 CEST
+
+Only CLI exact-extension dispatch now uses ASCII case-independent comparison.
+Five synthetic CLI regressions cover fresh uppercase/mixed install, retained
+byte/idempotent retry, uppercase project routing, eight legacy refusals and
+three lookalikes. No parser/schema/legacy/UI admission added. Original RED and
+seven-command expanded GREEN are verified; two separate compiled snapshot
+mutants yield four named behavioral failures, canonical never mutated.
+Fresh candidate public16 accepted: Rust3000/0/165 (151 blocks), Web1702,
+Chromium72 in a network namespace retaining exact4173 safety guards,17 equal
+bindings and700 frozen inputs. Both port/origin rejections retained.
+Release-pair nine stages accepted: pre-fix committed producer two named REDs,
+candidate5/0/0, exact same release profile and source inputs. Incomplete debug
+measurement deliberately interrupted after56 pairs; zero private temporaries,
+no final accepted result, receipt retained. Full offline original-filename853
+release measurement proc_1fcfbf5cdfa3 is independently accepted:644→687
+installed, Hager/Berker2→45;43 new installs and three still explicit refusals.
+All originals, retained successful blobs, source700 and binary hashes verified;
+refused package/source_file/product tables empty, no private raw/item records
+or temporary private directories. This is unpinned measurement, not a CI or
+semantic compatibility claim. Normal current-U18 e7f9db8e integration dd5a350c
+passes NEW actual16 independently: Rust3000/0/165/151 blocks, Web1702,
+Chromium82 inventory/pass,17 equal bindings/704 committed-exact inputs.
+All285 CLI Rust/build/test inputs equal the privately measured producer; that
+receipt retains its original run identity. Delivery362fec24 published/live/
+fetched read back at refs0/0, source704 and ten owned artifacts exact, complete
+owner history retained. Five acceptance Markdown gates passed.16 completed
+own build/snapshot/shadow/XDG directories removed, all aggregate/public logs
+retained. Closing metadata/final target/checkout/branch cleanup remain; broader
+AR06P/AR07/Alpha open, next KL150 scoping RED; package limits unchanged.
+
+## AR07 checked outside-walk scoped delivery — 2026-10-03 13:54 CEST
+
+Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded
+checkpoint: refs/trees equal0/0,699 actual-gated inputs and7 acceptance documents
+exact. Actual0369a56a's22 accepted commands and final five nonempty/root-explicit
+doc/whitespace gates retain their run scope; later delta is Markdown only.
+Twelve completed own build/snapshot/shadow/XDG directories removed after process
+checks; originals/foreign/root unchanged. Closing metadata gates/readback and
+clean checkout/branch/scaffolding removal remain, not new policy acceptance.
+AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
+open. Published statistics-owner artifact preserved, not a local statistics refresh.
+
+## AR07 checked text overlay actual acceptance — 2026-10-03 13:32 CEST
+
+Source a065ad94 / actual0369a56a, proc_39eb1bd6a2f3:22/22 accepted,
+16 fresh public+3 compiled selected inventories+3 private runs. Rust2995/0/165
+(150 blocks), Web1702, intercepted Chromium72,17 equal bindings,699 exact
+committed inputs. Selected private6+2+1 cases pass;420 originals unchanged,
+no private raw logs, transient link removed. Five real compiled behavior mutants,
+separate in-session review, not independent-model/native/ETS approval.
+ADR0066 accepts only checked scoped FunctionText/channel-copy admission and
+whole existing400 refusal; loaded project/product bytes preserved, no new DTO.
+Legacy SDK/unscoped/general metadata/query/serializer/RSS and UI-specific
+language/refresh snapshot/localization remain explicit separate boundaries.
+Post-gate e2a40268 Markdown-only AR06P/owner history merged7bb0ee72, source699
+unchanged. Acceptance docs/publication/readback/own cleanup PENDING. Next ready
+queue is new AR06P KL-149 then coordinated nested parser KL-150; broader AR07
+matrix/full Alpha remain open. U18 Web reservation untouched.
+
+## AR07 outside-walk candidate Broad accepted — 2026-10-03 12:45 CEST
+
+Public candidate fourteen-command evidence reconciled independently in-session:
+13 verified reused commands plus1 new, Workspace2995/0/165 (150 result blocks),
+Web1665, Chromium61,17 semantically equal shadow bindings,619 unchanged inputs.
+Four runner-only rejections retained; final actual inventory/type/placeholder
+checks follow source/Git facts, without changing production or audit limits.
+Seven-command focused GREEN and five compiled behavioral mutants remain valid.
+Separate complete code/test review has no blocker, not an independent-model
+verdict. Current upstream c6b5a240 contains U17 Web changes; candidate evidence
+is not integrated acceptance. ADR0066 remains Proposed pending fresh merged
+public/private-safe compatibility gates, acceptance/docs/publication/readback.
+UI retains U18 ownership/lock; full AR07, semantics matrix and Alpha stay open.
+
+## AR07 remaining public audit inventory correction — 2026-10-03 12:27 CEST
+
+Continuation proc_b03d8af2339a rejected only for own erroneous >400 source-count
+assertion: both new audits exit0, anchors376 links/247 MD files, corpus340 Rust
+files. Source-backed independent census apps105/crates235 (xtask excluded by
+that scanner) matches340 exactly; predicate corrected to actual inventory, not
+another magic minimum. No production/619-input change. First and continuation
+rejections remain preserved, not GREEN. Thirteen actual commands passed; final
+whitespace/17-shadow-binding/source checks dispatched proc_173bac7ae3af, queued
+under both shared leases, final PENDING. Complete candidate acceptance must say
+13 verified reused+1 new, not fresh14 or actual merged/private/owner evidence.
+Reviewed commit/integration/applicable private-safe gates/docs/push/readback/
+cleanup and full AR07/Alpha remain open.
+
+## AR07 public broad runner rejection — 2026-10-03 12:14 CEST
+
+First proc_3d0b6f570fda retained rejected solely for header-output parser mismatch,
+not Rust/Clippy/header-audit failure. Eleven actual commands exit0 independently
+reconciled; workspace2995/0/165 over150 result blocks, Web1665/Chromium61,
+strict Clippy/build/dependency/fmt/layering and headers414/157 ceiling157/17
+nonempty intended-root audit. Header source template in xtask:330-339 verified,
+parser corrected with2 public positives/9 negatives; no production/source change.
+Canonical619 inputs/HEAD5ca570a0 exact, raw logs hash-pinned for continuation.
+Remaining3 commands/final17-shadow-binding checks dispatched proc_b03d8af2339a
+under shared leases; complete broad still PENDING, not a fresh14-stage run or
+integration acceptance. Foreground queue timeout at420s produced no stage/summary
+and no own survivor; retained separately, corrected to notified background launch.
+No foreign process/lock bypass/private output. Review/ADR0066 still candidate;
+actual integration/applicable private-safe gates/docs/push/readback/cleanup follow.
+
+## AR07 outside-walk current public acceptance — 2026-10-03 11:47 CEST
+
+Current candidate remains uncommitted/ADR0066 Proposed. Actual expanded
+proc_3ceb5030b9ba independently accepted7/7 public stages: complete HTTP2/0/0,
+ProductDB363/0/0, DynamicTree66/0/6, Server214/0/2, strict Clippy/fmt/whitespace,
+619 current source/config inputs byte-equal. Five compiled behavioral mutants
+caught; each compile/inventory0 and exact named Rust101/0-1-0: independent
+projection/raw admission, cached copy, checked scoped caller and per-object
+reset. No compiler/zero-selection/timeout/OOM substitute, no private input.
+Canonical never mutated; isolated snapshots/fresh per-snapshot Cargo targets.
+Separate in-session full source/test review: zero blocking code findings,
+loaded-project wording clarified (not native save/reopen atomicity evidence);
+no independent-model review claimed. Test harness isolates XDG default opener.
+Fourteen-step fresh-target ordinary workspace/Web/intercepted Chromium/binding/
+dependency-policy/repository-audit broad gate dispatched proc_3d0b6f570fda,
+PID2863725 under both common locks; final verdict PENDING, not accepted branch
+or merged/corpus/ETS/native/owner UI evidence. Source619 frozen and index empty;
+only explicit Markdown notice delta allowed. After broad: actual integration
+and applicable private-safe selected gates, fresh docs, publication/readback
+and cleanup; entire AR07/Alpha still open. No bus/vendor/subagents/quota checks.
+
+## AR07 outside-walk text refusal — candidate only, 2026-10-03 11:23 CEST
+
+ADR0066 stays Proposed. Public HTTP RED independently accepted compile0 and
+Rust101/0-1-0: active ordinary detail first, then unexpected HTTP200 versus400,
+nonempty project and product-file equality before failure; no timeout/OOM.
+Candidate uses one substitution scanner, independent sticky TextProjectionBudget,
+pre-admission raw/lookup/UTF8 output, per-device sharing and cached-text copy
+admission. Two production consumers now propagate checked Results through the
+existing domain/device GET400 error envelope. No DTO/UI/persistence/grammar,
+parameter authority or manufacturer semantics change; legacy String helper stays
+unmetered, other loaders/metadata/serializer/RSS are not bounded by this policy.
+First public GREEN7/7 accepted HTTP1, ProductDB355/0/0, Dynamic66/0/6,
+Server213/0/2, strict Clippy/fmt/whitespace and618 source/config inputs. Later
+public Core363/0/0 exercised eight new checked-text unit regressions; its HTTP
+selection still excluded the new cached-copy case. Current619-input candidate
+adds scoped FunctionText unchanged-activation oracle and HTTP exact2-vs3 cache
+copies/whole-error/privacy/project-product equality. Expanded GREEN then five
+isolated compiled mutants dispatched proc_3ceb5030b9ba: PENDING, not an accepted
+mutation/full/merged verdict. Snapshot preparation's symlink rejection and stale
+count/preflight assumptions retained as orchestration failures, not test REDs.
+Fresh fetched remote and own base5ca570a0 equal; U17 Web lock remains held by
+ui-theme-management, not touched. No bus/vendor/private inputs or new model
+review. Full review, broad/actual integration, doc gates, publication/readback,
+cleanup and complete AR07/Alpha remain pending.
+
+## 2026-10-03 — Product install tested against 853 public manufacturer downloads (test only)
+
+No code changed. The release `knx products ingest` from `c6b5a240` ran over
+853 files that the separate `knxprod-crawler` tool downloaded from Siemens,
+ABB/Busch-Jaeger, Hager/Berker and MDT, into one fresh shared database
+(content order). 644 installed (608 new, 36 byte-identical). 147 were refused
+by namespace (scheme 10: 145, scheme 23: 2), 46 hit a case-sensitive CLI
+extension check, 13 hit the size limits, and 1 each hit the evidence item
+limit, a database constraint crash (nested `ModuleDef`s) and an invalid ZIP
+(a PDF named `.knxprod`, correctly refused). `products verify` reported 0
+mismatches. Coverage: 51 of 1,167 programs are plannable for download.
+Database size 13.2 GiB for 1.25 GiB of input. Details and method:
+PRODUCT_DATABASE_CORPUS §Public crawler corpus run. New limitations:
+KNOWN_LIMITATIONS §149–§153. The run is evidence, not a pinned gate; the
+downloaded files are not part of the repository.
+
+## 2026-10-03 — U17 Appearance manager (delivered/read back as 4d9073ca)
+
+Settings → Appearance now manages immutable builtins and admitted installed
+packs with origin/version/saved status, import/export/recovery, explicit Apply/
+Cancel, content-bound replacement/removal questions and System reset. The root
+runtime is the sole visual owner; the Debug report reads without acquiring a
+second DOM lease. Live EN/DE outcomes and all actual admission kinds are typed;
+accent controls expose only variations the displayed palette can apply.
+
+31 actual parent cases and five root cases cover stale/late/out-of-order intake,
+cross-client contents/selection, repeated Apply, definitive 409 and uncertain
+500 reconciliation without write replay, close during acknowledgment, exact Blob
+roundtrip/recovery and independent preference preservation. Both manager and
+original selector report server success separately from local cache failure.
+Latest scoped 74 and TypeScript pass without stderr. Six behavioral guard
+controls were caught/restored; the new diagnostic module's TS2322 inclusion
+canary was caught and restored. Final frontend candidate: Web1,702/95 files,
+Chromium69 without skip/flaky/failure, build/types and262 frozen inputs unchanged.
+Eight behavioral controls were caught and restored. Full branch13/13 repository commands pass: Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending.
+U17-R1 acceptance audit found missing explicit manager-browser rejection/reset/
+HTTP500 gestures. Added three fully intercepted cases:11 manager browser cases
+and three further compiled controls pass/restored, no production change. Earlier
+full69-browser source predates this test-only delta; renewed actual gates pending.
+Full legacy Web suite emits fixture stderr; no warning-free whole-suite claim.
+Native WebKitGTK/Orca/global-alpha/ETS and U18 acceptance remain separate/open.
+
+The candidate-only statements above are superseded by actual chain
+proc_cdcd42b97d47 on f16f1e40:23/23 commands passed,17 repository and six offline
+inventory/execution commands; Web1702, Chromium72 (zero failed/skipped/flaky),
+Rust2984/0/165 across149 blocks, compiled ignored inventory165,17 equal bindings,
+697 unchanged source/config inputs. Six selected offline suites execute27 private
+cases plus one115-instance/113-unique matrix case;420 private files unchanged,
+temporary corpus link removed. Earlier cancelled/interrupted runs are not
+acceptance. Integration with upstream5ca570a0 changes only Markdown and preserves
+complete owner histories/gated source; document gates/publication/readback are
+tracked in the current handover. U18-R1 remains IMPORTANT: representative
+editor/inspector/table/dialog/diagnostic state coverage across palettes is not
+established by the current generic root-switch fixture. U17 management acceptance
+does not close U18, native/Orca, general WCAG, ETS or global-alpha release.
+
+Publication4d9073ca092198b23fbb52411cd68edc7fab8c4a verified: owned HEAD,
+fetched main and live main equal; full Git trees equal, all697 gated source/config
+inputs and25 owned artifacts exact remotely, zero outgoing commits. Subsequent
+changes from gated f16f1e40 are Markdown only; four nonempty intended-root
+documentation audits and whitespace passed. U18 stays open with U18-R1.
+
+## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
+
+Source/actual acceptance published and fetched/live read back at
+cbc6b0b238fbeef2da41c4d38208850574c68760: owned HEAD/fetched/live main equal,
+divergence0/0; all617 actual-gated code/config inputs and7 acceptance documents
+exact remotely. Canonical dirty root/main/statistics unchanged. Actual9f512ab3
+continuation remains20 accepted stages with5 verified public commands reused,
+13 commands+2 checks new, workspace2984/0/165, Web1665/Chromium61, selected
+private Dynamic6/0/0 and offline SimTunnel14/0/0;17 equal bindings and420
+unchanged originals including103 archives. Four fresh-target nonempty
+intended-root acceptance-document audits and whitespace passed; zero code delta.
+ADR0065 accepted only for this bounded Core/HTTP scalar-content admission,
+not external String-only projections or full AR07/ETS/Alpha semantics. Initial
+header/classifier rejections and compiled mutant/restoration receipts retained.
+Six completed owned build targets actually removed after process checks;
+compact machine-readable evidence retained. Closing receipt-only metadata
+gates/publication and clean owned checkout/branch/scaffolding removal follow.
+Whole AR07/Alpha, ISSUE-08 checked-result consumer contract, UI diagnostics/
+identity adoption, native/hardware/vendor/general allocation/RSS remain open.
+
+## AR07 scalar-copy actual integration accepted — 2026-10-03 09:52 CEST
+
+Reviewed source2e7a41c3 conventionally merged with published c07e6403 at
+9f512ab3e302014d1b4c3d2af33cd33712a052ad; upstream ADR0064/owner histories
+preserved, own scalar policy ADR0065. Actual proc_3ea5d4e7afa4 exit1 is retained:
+private Dynamic Rust6/0/0 exit0 but closed skip classifier rejected two output
+signals. Private raw lines were not persisted; do not claim recovered text.
+Source-backed public regression proves bool-valued PackageInstallReport.skipped
+and registered libtest-prefix cases; corrected classifier5 positives/7 negatives
+pass, unknown or missing-data signals still rejected. No production change.
+Continuation proc_8dd254bb5c75 exit0 independently accepted20 stages: five public
+commands reused from the exact same committed617-input tree (not a wholly fresh
+20-command run),13 commands and2 final checks newly executed. Workspace2984/0/165
+over149 blocks, Web1665, intercepted Chromium61; newly selected private Dynamic
+6/0/0 and in-memory offline SimTunnel Download14/0/0, zero unknown skip signals.
+All617 current/committed source/config hashes and17 shadow bindings equal;
+420 originals including103 product archives unchanged across the complete new
+private window. Hashing420 files does not mean parsing420 files. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+Earlier candidate/header failure and three compiled omission mutants/restoration
+remain scoped to their actual runs, not relabelled. Separate in-session review,
+not an independent-model verdict. Acceptance-doc gates/publication/readback
+pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
+UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
+remain open. No live bus/vendor code or private raw logs; UI owner untouched.
+
+## AR07 scalar-copy audit — three valid public REDs (2026-10-03)
+
+The preceding bounded module-provenance source and final receipt14e2eb9a are
+published/read back; clean own checkout/two ancestor-confirmed branches and
+build scaffolding actually removed, foreign dirty root untouched. New clean
+alpha-text-output starts from14e2eb9a, not the older canonical root checkout.
+Read-only audit confirms unmetered binding/label scalar copies. Initial ancestor
+lookup hypothesis rejected: ModuleScope::argument deliberately searches only its
+own vector, already charged correctly; do not invent inheritance or ancestor fees.
+ADR-0065 proposes scalar cost admission only. proc_49808cde0743 compiled0 and
+executed four assertions; independently accept three valid copy REDs101/0-1-0
+(8,000,002/8,408,071/8,393,618 bytes versus proposed4,000,000), no timeout/OOM.
+Fourth expected ancestor search incorrectly;4096 unresolved names prove the
+non-inheritance rule, now a positive regression, not a correctness RED.
+Six production/consumer files frozen unchanged during RED. Additional UTF-8
+exact-cost unit101/0-1-0 and positive non-inheritance baseline1/0/0 verified.
+Candidate core now admits binding bytes, raw length before reservation/scan and
+whole output slices before copy using existing quota/marker; no ancestor or API
+change. Public Core GREEN proc_c73947a5b170 independently accepted5/5: library
+355/0/0, DynamicTree66/0/6 (private ignores not executed), strict Clippy/fmt/
+whitespace and frozen inputs; five consumer sources unchanged. Added new-cause
+HTTP regression shares existing full-prefix authority/atomic project+source
+checks with inert-work case; proc_8ee608d8a643 independently5/5, named1/0/0 and
+complete39/0/0, strict server/PDB Clippy/fmt/whitespace/frozen inputs. Compiled
+copy-guard omission/restoration proc_98b4f3f512f1 independently accepted3 compiled
+mutants caught by4 actual assertions, canonical evaluator/all9 source hashes
+restored. Candidate-only broad proc_2b136248f7f9 rejected at actual headers
+158>157 after workspace2963/0/164 and other runtime stages passed. Fixed only
+new test doc separator per ADR0018, not ceiling; fix gate410 valid/157 absent
+passes. First rejected receipt/logs retained; retry proc_230c3f7e4db9 independently
+passed13/13, workspace2963/0/164 across148 blocks, Web1665,615 frozen inputs and
+17 unchanged shadow bindings. Separate in-session review has no blocking finding,
+not independent-model approval. Upstream owns ADR0064; copy policy renamed0065;
+no actual-source delivery or full
+AR07 acceptance yet. Outside-walk String-only ISSUE-08 projection remains
+coordinated owner work; no Web lock, caller or generated binding changed.
 
 ## Commissioning bounded history source delivered — 2026-10-03 07:10 CEST
 
@@ -14287,3 +14760,18 @@ section-selection limitations §§49/50 remain deferred: the required T14 crate/
 report was absent at T12 Task 7 preflight, so this batch did not invent a frontend
 contract ahead of that work. No KNX, multicast, LAN, gateway, or hardware traffic
 was generated by the implementation or final verification.
+
+<a id="u18-representative-theme-states--candidate-acceptance-running"></a>
+## U18 representative theme states — actual acceptance verified
+
+The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Inspector`, contextual inline-address validation, `Overlay` and structured theme diagnostics to the offline real Appearance/root fixture. Five built-ins, both System resolutions and admitted imported light/dark palettes are exercised. The frozen final-source matrix passed 10/10; three rendered-style sabotage controls were detected by named state assertions and a new-module TS2322 type-inclusion canary was detected/restored. Dedicated `npm run check:theme-fixtures` includes the new modules and test in the TypeScript project.
+
+**Actual-integrated extension acceptance verified (2026-10-03 15:23 CEST):** Persistent `proc_e95dfc308724` completed normally; the coupled receipts on `1660911bdd5bf350c6042bbeb9a2b694ad66fa41` were checked against committed blobs and the final working tree. **24/24 commands** passed (18 repository, six explicit offline inventory/execution commands): Web **1,702**, intercepted Chromium **82** with zero failures/skips/flaky, representative matrix **10/10**, ordinary Rust **2,995 passed / 0 failed / 165 ignored across 150 blocks**, and 17 generated bindings identical. Three rendered-style controls failed the named selection/focus/validation assertions; the TS2322 fixture-inclusion canary remains separately recorded. All **703** protected source/config inputs match exactly.
+
+Offline inventories reconcile **11 product + 16 injected-server + 1 matrix cases = 28 executed cases**. The matrix measured **115 instances / 113 unique packages**; its case is already included in28. All **421** private source files (420 OriginalData files plus project_dump) remained unchanged. Private stdout was classified in memory; only aggregate receipts were persisted. Own fixture links and transient matrix output were removed. Simulator download tests use injected transport, not a real KNX tunnel.
+
+The separately labelled in-session full-extension self-review traces admission/file decoding → immutable plans → conditional queue/API acknowledgment → single root DOM lease → manager/selector/diagnostics → semantic export/reimport and representative states. U18-R1 is closed by real components, not generic markup. No new blocking production finding; this is **self-review, not independent approval**. Historical running/candidate-only observations are superseded for their stated scopes. Later integration `ef4cfb92` brings eight upstream Markdown paths, zero protected-source changes; all703 actual-gated inputs remain exact. Closure Markdown/integrity gates passed; source delivery1964fd6b was pushed and read back with live/fetched refs, full tree, all703 inputs and15 owned artifacts exact, zero outgoing commits.52 completed own scratch entries and own node_modules were removed after worker/cwd checks; only final metadata housekeeping remains. The UI reservation is released in the current handover.
+
+No native WebKitGTK/Orca, all-component WCAG, Alpha/ETS compatibility or real discovery/tunnel/commissioning/hardware acceptance follows. User instructions for import/export, reversible preview, explicit replacement, recovery and fallback are in [THEME_PACKS](THEME_PACKS.md).
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

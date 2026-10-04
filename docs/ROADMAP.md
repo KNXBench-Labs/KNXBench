@@ -1,5 +1,16 @@
 # Roadmap
 
+## Integrated CRT animation follow-up (2026-10-03)
+
+Application-owned CRT feedback is implemented separately from the completed
+declarative theme-pack delivery: real tree/address-table fills, bounded light
+and manual Save activation. Existing keyboard/selection paths and the v1 palette
+contract are retained. See [CRT guide](DESIGN_RETRO_GREEN_CRT.md) and ADR-0022.
+Authorized main integration is3d03aea5 (feature16c9d774) with repeated merged-result
+gates; current refs/handover establish publication. Native WebKitGTK/Orca evidence,
+Save-only semantic color roles and broader component redesign remain separate; this is not a
+reopening of the completed theme-pack format milestone or Alpha/ETS acceptance.
+
 The original Session 0–7 delivery sequence is complete at its evidenced
 scope: Sessions 0–6 shipped, and Session 7 includes a first, safety-gated
 `070nh` download and a historically verified button-address path on one MDT
@@ -75,9 +86,18 @@ and reversible theme application are delivered as 9d1ae19d with complete
 candidate/combined gates and exact remote readback. U16 delivers acknowledged
 storage/file roundtrip as 1f94808d (144 focused passes, restored
 controls, complete 16-check candidate and 22-check actual-merged gates), with
-exact source publication/artifact readback verified. U17–U18 in
-[goal-ui](../goal-ui.md) still own reversible management/preview and final
-regression/review acceptance.
+exact source publication/artifact readback verified. U17 management/preview
+passes actual-merged23-command acceptance on f16f1e40: Web1702, Chromium72,
+Rust2984/0/165,27 selected private offline cases plus the115-instance matrix,
+17 equal bindings and697 source/config inputs/420 private files unchanged.
+Publication/readback is recorded in the current handover. Eleven manager browser
+flows and31 actual parent/five root cases cover the management contract.
+U18 in [goal-ui](../goal-ui.md) passes actual24-command extension acceptance
+on1660911b: Web1702, Chromium82, representative10/10, Rust2995/0/165,28
+offline cases including the115-instance matrix;703 source/config inputs and421
+private files unchanged. Closing self-review settles U18-R1 with real component
+states and detected rendered-style controls, not native/Orca/general WCAG proof.
+Publication/readback and owned cleanup are tracked in the current handover.
 Existing built-ins/System stay
 available; no arbitrary CSS, external assets or new alpha release blocker.
 

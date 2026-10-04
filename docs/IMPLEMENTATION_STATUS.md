@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — UA4: every installation editable in the core (MODEL-01, core/server half)
+
+- [ADR-0070](adr/0070-commands-act-in-the-owning-installation.md): `knx-core` commands no longer assume `installations[0]`: id-addressed
+  commands resolve the owning installation (ambiguous ids refused), Delete/
+  Restore pairs carry the installation, parameter rows are edited where they
+  live (else in the device's installation), and root creates
+  (`CreateArea`, `CreateGroupRange`, `CreateBuildingPart`, range-less
+  `CreateGroupAddress`) take `installation: Option<InstallationId>` with the
+  first installation as default. Nothing connects two installations:
+  cross-installation device/line/part/range/link moves are refused with
+  `CommandError::CrossInstallation`. New `Command::RenameInstallation`.
+- Server: `PATCH /api/installations/{id}` and optional `installationId` on
+  the four root create routes.
+- Tests: `crates/knx-core/tests/multi_installation.rs` (RED: 5 of 7
+  behaviour tests failed with first-installation `NotFound` errors before the
+  change), `apps/knx-server/tests/multi_installation_routes.rs`; one older
+  core test that pinned first-installation parameter semantics now pins the
+  in-place edit. Eight guard mutants caught.
+- CSV group-address import still creates in the first installation; the web
+  UI half (installation rename, choose installation for root creates) waits
+  for the Web lock. MODEL-01 stays `IN_PROGRESS` until then.
+
 ## 2026-10-04 — UA3: opt-in address allocation and unique names (MODEL-04, server half)
 
 - `POST /api/devices` accepts `allocateAddresses` (needs `lineId`) and

@@ -110,6 +110,7 @@ fn structural_nested_batch_and_history_reopen_the_complete_post_state() {
                 completion: CompletionStatus::Undefined,
                 lines: vec![],
             },
+            installation: None,
         },
         Command::CreateLine {
             area,
@@ -140,6 +141,7 @@ fn structural_nested_batch_and_history_reopen_the_complete_post_state() {
                 devices: vec![],
                 parent: None,
             },
+            installation: None,
         },
         Command::Batch(vec![
             Command::SetIndividualAddress {
@@ -169,6 +171,7 @@ fn structural_nested_batch_and_history_reopen_the_complete_post_state() {
                 unfiltered: false,
                 range: Some(range),
             },
+            installation: None,
         },
         Command::LinkComObject {
             com_object,
@@ -213,6 +216,7 @@ fn deleting_and_restoring_a_middle_group_address_preserves_sibling_order() {
                 unfiltered: false,
                 range: None,
             },
+            installation: None,
         });
     }
     let before = fixture.project.clone();

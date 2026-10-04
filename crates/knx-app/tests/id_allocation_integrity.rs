@@ -71,6 +71,7 @@ fn a_stale_csv_plan_can_no_longer_make_save_drop_a_group_address() {
     let user_id = project.ids.next_group_address_id().unwrap();
     Command::CreateGroupAddress {
         entry: group_address(user_id, 200, "User"),
+        installation: None,
     }
     .apply(&mut project)
     .unwrap();
@@ -116,6 +117,7 @@ fn reserve_ids_from_a_stale_snapshot_never_lowers_what_an_earlier_edit_consumed(
     let taken = project.ids.next_group_address_id().unwrap();
     Command::CreateGroupAddress {
         entry: group_address(taken, 1, "Taken"),
+        installation: None,
     }
     .apply(&mut project)
     .unwrap();

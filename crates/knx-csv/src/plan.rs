@@ -388,7 +388,10 @@ fn plan_create(
         unfiltered: row.unfiltered.unwrap_or(false),
         range,
     };
-    commands.push(Command::CreateGroupAddress { entry });
+    commands.push(Command::CreateGroupAddress {
+        entry,
+        installation: None,
+    });
 }
 
 /// Compares `row` against `existing` and, if anything applied differs,
@@ -463,7 +466,7 @@ mod tests {
             panic!("expected a Batch command, got {:?}", plan.command);
         };
         assert_eq!(cmds.len(), 2);
-        let Command::CreateGroupAddress { entry } = &cmds[0] else {
+        let Command::CreateGroupAddress { entry, .. } = &cmds[0] else {
             panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
         };
         assert_eq!(entry.name, "Kitchen Light");
@@ -644,7 +647,7 @@ mod tests {
         let Some(Command::Batch(cmds)) = plan.command else {
             panic!("expected a Batch command, got {:?}", plan.command);
         };
-        let Command::CreateGroupAddress { entry } = &cmds[0] else {
+        let Command::CreateGroupAddress { entry, .. } = &cmds[0] else {
             panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
         };
         assert_eq!(entry.range, Some(GroupRangeId(2)));
@@ -663,7 +666,7 @@ mod tests {
         let Some(Command::Batch(cmds)) = &plan.command else {
             panic!("expected a Batch command, got {:?}", plan.command);
         };
-        let Command::CreateGroupAddress { entry } = &cmds[0] else {
+        let Command::CreateGroupAddress { entry, .. } = &cmds[0] else {
             panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
         };
         assert_eq!(entry.range, None);
@@ -757,7 +760,7 @@ mod tests {
         let Some(Command::Batch(cmds)) = plan.command else {
             panic!("expected a Batch command, got {:?}", plan.command);
         };
-        let Command::CreateGroupAddress { entry } = &cmds[0] else {
+        let Command::CreateGroupAddress { entry, .. } = &cmds[0] else {
             panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
         };
         assert!(!entry.central, "expected central to default to false");

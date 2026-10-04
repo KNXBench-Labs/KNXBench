@@ -7496,6 +7496,19 @@ rolled back, so no partial rows are written, but nothing of it can be used.
 
 ## §151 Real manufacturer packages exceed the product-ZIP size limits
 
+**2026-10-04 AR06V count-boundary evidence, not a limit decision.** Public
+synthetic Scheme11 ZIPs assert actual reader counts:4096 entries install,
+retain the exact original archive and replay without changing any database
+value;4097 entries receive SizeLimit while all seeded tables/columns/values
+and the original seed archive remain unchanged. Native2/0/0 and two freshly
+compiled semantic controls at4095/4097 independently verified with source,
+test, log and binary hashes. Canonical cap4096 never mutated. This does not
+cover compressed/member/expanded byte boundaries, real manufacturer workload
+resources or CLI/HTTP ownership/latency. Branch public8 all exit0,ProductDB
+640/0/25, strict Clippy/fmt/doc-policy/whitespace verified; integrated gates
+and publication remain pending;
+no new private corpus run, production raise or KL151 closure.
+
 **Bounded resource research verified 2026-10-03 22:02 UTC, base5540dcac.**
 All853 original hashes/manifest rechecked; declared-size selection15 is seven
 member-only, five total-only and three both (eight total/ten member violations).

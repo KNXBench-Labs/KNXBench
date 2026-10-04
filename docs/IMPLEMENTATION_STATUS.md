@@ -1,5 +1,23 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR06V: existing product-ZIP count contracts
+
+- `knx-productdb/tests/zip_cap_boundaries.rs`: two public synthetic Scheme11
+  contracts verify inclusive4096 entries with byte-exact retained archive and
+  stable replay, and4097-entry SizeLimit refusal with a nonempty seeded DB.
+  The refusal snapshot compares every value/column in every non-system table,
+  including BLOBs; fixture counts come from the actual ZIP reader.
+- Native2/0/0 and two separately fresh compiled semantic controls at4095/4097
+  independently verified against logs, source/test/binary hashes and120 frozen
+  dependency inputs. Canonical source never mutated; no production change.
+- Branch public8 independently accepted:ProductDB640/0/25 across31 result
+  blocks, strict package Clippy, fmt, four freshly root-bound doc/policy audits
+  and whitespace all exit0;784 public source/config hashes exact. Native2 is
+  included in640, not counted again;25 ignored tests are not passes.
+- Integration, full merged-result gates and publication pending. This does not establish
+  byte-boundary/caller/resource-owner acceptance or complete KL151/Alpha.
+  No private corpus, hardware action or Web source change.
+
 ## 2026-10-04 — Desktop shell recovers a terminated web process (§133)
 
 - **§133, terminated web process.** `apps/knx-desktop/src-tauri/src/web_process.rs`

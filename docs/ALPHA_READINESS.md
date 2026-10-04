@@ -116,6 +116,93 @@ matched the remote ref and exact source/contract artifacts; author/committer and
 no-co-author policy verified. Closing doc publication/owned cleanup follows.
 No parked ADR phase, U12 control, schema or commissioning gate is changed.
 
+## AR14 offline bus/CLI contract dossier
+
+Claude session, 2026-10-04, on user request alongside the Codex alpha
+session (AR06/AR06P untouched). Offline only: fakes, local adapters and
+loopback multicast; no gateway, no bus traffic. Each claim below is either
+fixed, pinned by a named test whose guard was checked with a reverting
+mutant, or retained as a documented boundary.
+
+### Defects found and fixed
+
+| ID | Finding | Fix and evidence |
+| --- | --- | --- |
+| KL-29, KL-62 item 13 | CLI `bus write`/`monitor`/`route-monitor` parsed and printed group addresses three-level even for two-level/free projects (a free project's `2049` was refused; its `1/0/1` spelling was silently accepted). Names of the same raw address in several installations: last one read won (CLI **and** server Group Monitor). | `--project` now supplies the style; `route-send` (no `--project`) keeps three-level. New `knx_core::resolve_project_group_address_names` lists every distinct name (`A \| B`), used by CLI and server. `cli_bus_address_style` RED 3/5 → 5/5; server `names_shared_across_installations_are_all_shown` RED; 7/7 mutants. |
+| KL-31 | On Linux a routing client bound to `0.0.0.0:3671` received every multicast group joined anywhere on the host (`IP_MULTICAST_ALL`, default on, ip(7)). A default-group client heard a custom group's telegrams, defeating the separation a custom group exists for. | `set_multicast_all_v4(false)` on Linux. `a_custom_group_telegram_reaches_its_group_and_not_the_default_one` failed before the fix with the leaked frame, passes after (three runs, no skip), mutant caught. Other platforms unverified. |
+| KL-62 item 12 | The receive→write round trip was tested for free and two-level only. | `every_styles_telegram_destination_round_trips_through_write` adds three-level. |
+
+### Contracts pinned by new tests
+
+| ID | Claim | Test (mutant) |
+| --- | --- | --- |
+| KL-73 | A probe asks for DD0 only, never identity. | `a_probe_asks_only_for_the_mask_version` (descriptor type changed → caught) |
+| KL-74, KL-76 | A negative L2 confirm is not a fast path to `Vacant`. | `a_negative_l2_confirm_still_waits_out_the_whole_window` (fast path → caught) |
+| KL-75 | The window is the boundary for a slow-but-present device. | `a_slow_answer_is_vacant_after_a_short_window_and_occupied_within_a_long_one` (window ×10 → caught) |
+| KL-76 | `Indeterminate` is not retried. | `an_indeterminate_probe_is_not_retried` (retry → caught) |
+| KL-126 | Reconciliation refuses foreign session, duplicate, ambiguous and stale selections without changing project, undo history or bus. | `reconciliation_refuses_foreign_duplicate_ambiguous_and_stale_selections` (4/4 guards reverted → caught) |
+
+### Contracts already pinned before AR14 (inspected, not rebuilt)
+
+| ID | Existing evidence |
+| --- | --- |
+| KL-72 | `default_policy_matches_the_ruling` (6000/1/100), CLI `overrides_timeout_and_pause`, `zero_timeout_is_rejected_rather_than_silently_misreporting_every_device_as_vacant`; exclusion by construction: knx-core `line_scan_omits_excluded_addresses_and_contains_every_other`, `verify_catches_a_smuggled_excluded_address_without_panicking`, knx-net `a_plan_that_fails_verify_aborts_before_any_frame_is_sent`, HTTP `an_excluded_address_never_reaches_the_transport`. |
+| KL-74 | `a_negative_l2_confirm_is_vacant_like_total_silence`, `a_positive_l2_confirm_with_no_application_answer_is_occupied_but_silent`, `a_disconnect_with_no_descriptor_is_busy_not_vacant`. |
+| KL-77 | knx-core `a_range_spanning_two_lines_is_rejected`, CLI `range_spanning_two_lines_is_rejected`, `range_implying_a_different_line_than_line_flag_is_rejected`. |
+| KL-78 | `self_address_is_skipped_without_sending_a_single_frame`; an immediate answer is `Occupied` (`occupied_address_reports_its_mask_version`), i.e. no timing heuristic filters fast responders. |
+| KL-126 | `selected_scan_findings_apply_as_one_batch_and_undo_restores_content_exactly` (product-less device, one batch, exact undo, no frames), `empty_reconciliation_is_a_true_no_op_and_excluded_evidence_is_not_actionable`, `running_and_cancelled_scans_cannot_be_reconciled`, `scan_reconciliation_uses_a_matching_line_in_a_later_installation`. |
+| KL-62 | Single session `409`, buffer cap and individual-frame exclusion: existing `bus.rs`/`http_bus_monitor.rs` tests and the 2026-09-16/19 passive real-gateway receipts. |
+
+### Retained boundaries
+
+KL-62/72/73/74/75/76/77/78/102/126 stay documented limitations: the
+Standard's 6 s cost, occupancy-only evidence, the busy/vacant ambiguity,
+the timeout trade-off, no retry/fast path, one line per scan, no tunnel
+endpoint heuristic, an unreachable decode-error branch (codec symmetry is
+guarded by 41 per-type round-trip tests at sampled values — not
+exhaustively) and no identity inference. KL-31's only remainder is a real
+custom-group run. Real-gateway transmit, routing, reconnect and multi-gateway
+evidence are external live work; Group Monitor UI, row cap and discovery
+acceptance belong to the UI owner. No scan speed promise, multi-tunnel
+design or hardware support is added.
+
+## AR13 privacy and deployment-security dossier
+
+Claude session, 2026-10-04, on user request alongside the Codex alpha
+session. Offline only; no TLS service, role system, host or firewall change.
+
+| Strand | Finding | Change and evidence |
+| --- | --- | --- |
+| Privacy (KL-106) | Redaction of the four classes held in every channel. Gap: `report.md` named only what it removes, and described `bus-telegrams.json` as carrying addresses — not its values (text included) and timestamps, which can show when the installation was in use. | `report.md` now names every kept class and the telegram file's content. `every_privacy_class_is_either_redacted_or_named_in_the_report`: one synthetic fixture per class through description, client facts and log fields (RED on the warning, GREEN after); 3/3 mutants. |
+| Authentication (KL-22) | The guard test covered seven hand-picked routes; a route added outside the guard would only fail if someone also listed it. | `every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four` scans all route declarations (97 method/path pairs); an added unguarded route is caught only by this test (mutant). Bind address has no override (`bind_address(auth_required)` only). |
+| Provenance (KL-65) | `--version` named the last commit even for a modified tree. | `crates/knx-build-stamp` (shared by both binaries): `KNX_REQUIRE_CLEAN_TREE=1` re-runs on every build and refuses a modified/unconfirmed tree. Unit + real-git tests (10), 5 mutants; end-to-end on a real checkout: clean → stamped, edit → refused, without the always-re-run watch → falsely stamped (measured, now pinned by a test). |
+
+### Deployment and privacy checklist (for AR15/AR17 and release notes)
+
+1. Build release artifacts with `KNX_REQUIRE_CLEAN_TREE=1`; a development
+   build's `+g<sha>` names a commit, not a tree.
+2. A networked `knx-server` binds `0.0.0.0` only with `KNX_AUTH_PASSWORD_HASH`
+   (preferred) or `KNX_AUTH_PASSWORD`; without either it binds `127.0.0.1`.
+3. Put a TLS-terminating reverse proxy in front and set
+   `KNX_AUTH_COOKIE_SECURE=1` there; plain HTTP exposes password and cookie.
+4. One shared password: no accounts, roles, audit trail or CSRF tokens; not
+   safe for direct Internet exposure; not multi-user isolation (§63).
+5. Debug reports: IPs, home prefix and hostname are replaced in `report.md`,
+   `environment.json`, `log.json`; everything else stays, as `report.md`
+   says. `bus-telegrams.json` is unredacted (addresses, names, values,
+   timestamps) and opt-in. Nothing is uploaded; review before sharing.
+
+### Handed over
+
+**For the UI session / Web-lock holder:** the dialog string
+`debugReport.privacyTelegrams` (en/de) names addresses and names only; add
+that the file also keeps every telegram value (text values included) and its
+timestamp. Backend wording to mirror: `report.md`'s second paragraph
+(`apps/knx-server/src/debug_report.rs`, `report_markdown`).
+
+**For the alpha-release session (AR17):** build the candidate with
+`KNX_REQUIRE_CLEAN_TREE=1`.
+
 ## Stable limitation identity
 
 AR05 implementation/audit is published as
@@ -244,7 +331,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §7 / goal-commission.md §3; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `DATA-01` | P1 | AR02 | DONE | Nine checked allocators; synthetic maximum-ID/native/CSV/CLI/HTTP/mapper and rollback regressions; three behavioral mutants; final offline gate receipt .ai/logs/2026-10-01_codex_alpha-id-exhaustion.md. Parked mutation enforcement and catalog UI scope remain separate. |
 | `KL-129` | P1 | AR03 | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §129; Reserved user decision; see decision contract above |
-| `KL-106` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §106; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-106` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §106; AR13: fixture audit across every class and channel; `report.md` now names every kept class and the telegram file's values/timestamps; dialog wording handed to the Web-lock holder; no anonymity claim |
 | `DOC-01` | P1 | AR00 | DONE | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
 | `KL-13` | P1 | AR08 | TODO | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
@@ -253,21 +340,21 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-130-GATE` | P1 | AR01 | DONE | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER | goal.md §9–10; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `RELEASE-02` | P1 | AR18 | WAITING_OWNER | goal.md §1 / §10; Named final acceptance prerequisites above; not ready on historical receipts alone |
-| `KL-22` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §22; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-22` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §22; AR13: every declared route (97 pairs) checked unauthenticated; bind address has no override; TLS/roles/audit/CSRF remain deployer boundaries (checklist in ALPHA_READINESS) |
 | `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §63; goal.md §6: T22 explicitly parked outside v1 must-haves |
 | `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §8/26; goal.md §6: Secure deferred 2026-09-11; not Secure support |
 | `UI-01` | P1 | `goal-ui.md` — owner only | DONE | goal-ui.md §0 / docs/IMPLEMENTATION_STATUS.md: U13; U13 closure dfa0cc79 / receipt 8a51b74d; source 36e6b6af; native/multicast boundaries retained |
 | `UI-02` | P1 | `goal-ui.md` — owner only | DONE | goal-ui.md §0 / docs/superpowers/plans/2026-09-21-user-reported-issues.md; U13 closure dfa0cc79 / receipt 8a51b74d; source 36e6b6af; native/multicast boundaries retained |
-| `KL-126` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §126; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-29` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §29; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-31` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §31; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-62` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §62; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-72` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §72; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-73` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §73; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-74` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §74; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-75` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §75; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-77` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §77; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-78` | P2 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §78; Retained boundary; AR14 verifies subcases before changing status |
+| `KL-126` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §126; AR14: four untested guards pinned by `reconciliation_refuses_foreign_duplicate_ambiguous_and_stale_selections` (4/4 mutants); identity is never inferred from occupancy |
+| `KL-29` | P2 | AR14 | DONE | docs/KNOWN_LIMITATIONS.md §29; AR14: CLI `bus monitor`/`route-monitor`/`bus write --project` parse and print in the project style; names of all installations shown (`knx_core::resolve_project_group_address_names`, shared with the server). Tests `cli_bus_address_style` (RED 3/5), `monitor_line_uses_the_project_style_and_all_names`, `names_shared_across_installations_are_all_shown`; 7/7 mutants. Residue: `route-send` has no `--project`, keeps three-level |
+| `KL-31` | P2 | AR14 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §31; AR14: found and fixed cross-group delivery on Linux (`IP_MULTICAST_ALL` off; `a_custom_group_telegram_reaches_its_group_and_not_the_default_one`, RED then GREEN, mutant caught). Missing: real router traffic on a custom group — authorized live owner; fallback: default group unchanged, custom group documented unverified; unblock: an authorized custom-group run |
+| `KL-62` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §62; AR14: item 13 fixed (CLI style), item 12 closed (`every_styles_telegram_destination_round_trips_through_write` adds ThreeLevel). Tunnelling-only/single-session/client-filter scope retained; live transmit evidence external; row cap is UI-owner work |
+| `KL-72` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §72; AR14: Standard-fixed per-address cost, not liftable; pacing/exclusion contract pinned by existing knx-core/knx-net/CLI/HTTP scan tests (dossier in ALPHA_READINESS) |
+| `KL-73` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §73; AR14: pinned by `a_probe_asks_only_for_the_mask_version` (mutant caught); identity needs a separate verified procedure |
+| `KL-74` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §74; AR14: protocol limit pinned by `a_negative_l2_confirm_is_vacant_like_total_silence` and `a_negative_l2_confirm_still_waits_out_the_whole_window` |
+| `KL-75` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §75; AR14: trade-off pinned by `a_slow_answer_is_vacant_after_a_short_window_and_occupied_within_a_long_one` (mutant caught); default stays 6000 ms |
+| `KL-77` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §77; AR14: one-line scope pinned by the range-spanning-two-lines rejections (knx-core and CLI); no coupler traversal |
+| `KL-78` | P2 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §78; AR14: only the own tunnel address is skipped (`self_address_is_skipped_without_sending_a_single_frame`); an immediate answer stays `Occupied`; no timing heuristic without multi-gateway evidence |
 | `KL-105` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §105; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-108` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §108; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-101` | P2 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §101; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
@@ -346,8 +433,8 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-130-ZOOM` | P2 | `goal-ui.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §130 (Zoom); U13 implementation closed; retain this source's platform/optional residue; UI owner contract above |
 | `KL-20` | P2 | `goal-ui.md` — owner only | DONE | UI owner keyboard/modal/help-tip implementation delivered at 2e57f8e5; twelve integrated gates/eighteen controls verified; docs/UI_ALPHA_READINESS.md retains actual native/Orca/full-theme residue, not entire-source acceptance or a release waiver |
 | `KL-124` | P3 | `goal-ui.md` — owner only | DONE | UI owner implementation delivered at 6c16fe5a; docs/UI_ALPHA_READINESS.md retains exact scope and native/design residues, not a release waiver |
-| `KL-76` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §76; Retained boundary; AR14 verifies subcases before changing status |
-| `KL-102` | P3 | AR14 | TODO | docs/KNOWN_LIMITATIONS.md §102; Retained boundary; AR14 verifies subcases before changing status |
+| `KL-76` | P3 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §76; AR14: both deliberate choices pinned: `an_indeterminate_probe_is_not_retried`, `a_negative_l2_confirm_still_waits_out_the_whole_window` (mutants caught) |
+| `KL-102` | P3 | AR14 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §102; AR14: branch unreachable through the public API; codec symmetry guarded by 41 per-type round-trip tests at sampled values; no fabricated trigger |
 | `KL-110` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §110; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `KL-115` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §115; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `GAP-T30-04` | P3 | `goal-commission.md` — owner only | WAITING_OWNER | docs/RESEARCH.md §8.7.15 / docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
@@ -381,7 +468,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §107; accepted ADR-0025 and goal.md §6: data extension, no code plug-in API |
 | `KL-16` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §16; Retained boundary; AR15 verifies subcases before changing status |
 | `KL-42` | P3 | AR04 | DONE | docs/KNOWN_LIMITATIONS.md §42; published 216c673e no-op/doc correction, native/mutation/full-gate evidence and exact remote/artifact readback |
-| `KL-65` | P3 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §65; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-65` | P3 | AR13 | DONE | docs/KNOWN_LIMITATIONS.md §65; AR13: `KNX_REQUIRE_CLEAN_TREE=1` release builds refuse a modified tree (`crates/knx-build-stamp`, ADR-0018 amendment); development builds still name a commit, not a tree; AR17 must build with the flag |
 | `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §41; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §45; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-46` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §46; Retained boundary; AR15 verifies subcases before changing status |

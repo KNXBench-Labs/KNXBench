@@ -1728,6 +1728,16 @@ login) and was the sharpest edge of this limitation — answers `401` with the u
 to the internet. It is safe to expose to a network you have thought about,
 over a transport you have secured yourself.
 
+**AR13 (2026-10-04) — verified offline, boundary retained.** The guard test
+no longer samples seven routes: `every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four`
+reads every `.route(...)` declaration from `apps/knx-server/src/` (97
+method/path pairs on 89 paths at the time) and expects `401` from each,
+except `/healthz` and the three `/api/auth/*` routes; a reverting mutant that
+adds one unguarded `/api` route fails it, while the old seven-route test
+stays green. The listening address has no override: `main.rs` binds only
+`bind_address(auth_required)`. TLS, roles, audit and CSRF remain the
+deployer's, exactly as stated above.
+
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
 **Status, reconciled 2026-10-01 (AR00): resolved for whole-file buffering.**
@@ -1877,6 +1887,20 @@ ride along with a feature branch. See
 [§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
+**Update, 2026-10-04 (AR14) — lifted for the CLI.** `bus monitor`,
+`route-monitor` and `bus write` now parse and print group addresses in the
+style of the `--project` they were given; without `--project` (and always
+for `route-send`, which has none) three-level stays the default. A raw
+address named differently in several installations shows every distinct
+name, in installation order, joined by ` | ` — both here and in the
+server's Group Monitor — through the shared
+`knx_core::resolve_project_group_address_names` instead of last-read-wins.
+The joined text is for display only: a name containing ` | ` itself is not
+escaped. Tests: `apps/knx-cli/tests/cli_bus_address_style.rs`,
+`monitor_line_uses_the_project_style_and_all_names`,
+`names_shared_across_installations_are_all_shown`. See
+[ALPHA_READINESS](ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+
 <a id="31-knxnetip-routing-has-no-custom-multicast-address-override--resolved-routing-half"></a>
 ## 31. Routing multicast override exists; discovery and real custom-group traffic unverified
 
@@ -1936,6 +1960,19 @@ standard KNXnet/IP System Setup Multicast Address, `224.0.23.12:3671`
 different group. Session 6 Cycle 4's design spec deliberately hardcoded
 it, the same call as Cycle 3's discovery multicast address — no
 environment at the time needed a non-default group.
+
+**Update, 2026-10-04 (AR14) — a host-side isolation defect, fixed.** The
+routing socket binds `0.0.0.0:3671`. On Linux such a socket receives every
+multicast group joined by *any* socket on the host unless
+`IP_MULTICAST_ALL` is switched off (ip(7); default on). A default-group
+client therefore heard telegrams sent on a custom group by another client on
+the same machine — measured over loopback by
+`a_custom_group_telegram_reaches_its_group_and_not_the_default_one`, which
+received the leaked frame before the fix. `RoutingClient` now clears
+`IP_MULTICAST_ALL` on Linux; the test passes and a reverting mutant fails it.
+Other platforms' delivery policy is unverified. This is loopback evidence
+for the host's socket delivery only; a real router on a custom group remains
+unverified, as stated above.
 
 <a id="36-session-log-t11-the-log-tab-was-unreachable-without-an-open-project-and-had-no-growth-cap--resolved-2026-09-10"></a>
 ## 36. Session-log export is a bounded retained window, not a lifetime audit
@@ -3300,6 +3337,12 @@ cap with its own honestly-reported gap notice, a full-round-trip test (and,
 ideally, a fix) for the CLI's `ThreeLevel` hardcoding, and separately authorized
 real-installation evidence for transmit behavior and longer-running stability.
 
+**Update, 2026-10-04 (AR14).** Item 12: the round trip now covers
+`ThreeLevel` too (`every_styles_telegram_destination_round_trips_through_write`).
+Item 13: the CLI uses the project's style (see §29's AR14 update). The
+Group Monitor's names for a raw address shared by several installations are
+all shown, not the last one read. Items 1–11 are unchanged.
+
 ## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all
 
 **Limitation.** `apps/knx-server`'s web/Docker deployment target holds
@@ -3619,6 +3662,18 @@ git at all, or with `.git` excluded (the Docker build), the metadata is
 simply absent — `knx 0.1.0-alpha.1` — unless `KNX_BUILD_SHA` is passed
 in. Absence is the intended failure direction; a false number is the one
 this section, and the ADR, exist to rule out.
+
+**Update, 2026-10-04 (AR13) — lifted for release builds.** Both build
+scripts now call `crates/knx-build-stamp`. Development builds stamp exactly
+as described above. With `KNX_REQUIRE_CLEAN_TREE=1` the build script re-runs
+on every build (it watches a path that never exists) and fails unless git
+confirms this workspace, resolves `HEAD`, reports no modified or untracked
+non-ignored path and any explicit `KNX_BUILD_SHA` names that commit. Measured
+on a real checkout: clean → `+g345d0bc5`; one edit afterwards → the next
+build refuses and names the path; without the always-re-run watch the same
+edit was silently stamped with the clean commit. So a release artifact built
+this way names only a commit it was built from; a development build still
+names a commit, never a tree.
 
 <a id="66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14"></a>
 <a id="66-server-composed-prose-and-documentation-are-only-partly-localized--partially-resolved-2026-09-23-t14"></a>
@@ -4033,6 +4088,10 @@ encounter even supports Property services, versus only Memory-based
 access as some older masks do, is unverified and would need checking
 before that step could be relied on unconditionally.
 
+**AR14 (2026-10-04).** Pinned by `a_probe_asks_only_for_the_mask_version`:
+every frame a probe sends is `T_Connect`/`T_Disconnect` or
+`A_DeviceDescriptor_Read` type 0.
+
 ## 74. A line scan cannot distinguish a busy-but-present device from an absent one
 
 **Limitation.** If a device's Layer 2 acknowledge for the scan's
@@ -4081,6 +4140,9 @@ would not resolve this either. A second, independent signal (a different
 management procedure, or a manual check) would be needed to fully
 disambiguate a negative confirm from true absence.
 
+**AR14 (2026-10-04).** Unchanged. A negative confirm also does not end the
+probe early (`a_negative_l2_confirm_still_waits_out_the_whole_window`).
+
 ## 75. A shorter `--timeout-ms` is a real option, but not the default — a slow-but-present device can look vacant
 
 **Limitation.** `bus scan --timeout-ms` accepts values below the 6000 ms
@@ -4105,6 +4167,11 @@ suspect.
 the mechanism, not a bug. It stays a documented, explicit, opt-in choice
 via `--timeout-ms`, and the shipped default stays anchored to the
 Standard's own connection timeout for exactly this reason.
+
+**AR14 (2026-10-04).** Pinned offline:
+`a_slow_answer_is_vacant_after_a_short_window_and_occupied_within_a_long_one`
+shows the same 150 ms device `Vacant` behind a 40 ms window and `Occupied`
+behind a 2 s one.
 
 ## 76. A negative Layer 2 confirm's fast path was deliberately not built; `Indeterminate` does not retry
 
@@ -4144,6 +4211,11 @@ across more than one gateway/device combination, or against corpus text
 this spike did not find. Retrying `Indeterminate` is a considered
 trade-off, not a gap, and would need a positive reason (a demonstrated,
 common cause of transient lag worth papering over) before revisiting it.
+
+**AR14 (2026-10-04).** Both choices are now pinned by tests:
+`a_negative_l2_confirm_still_waits_out_the_whole_window` and
+`an_indeterminate_probe_is_not_retried` (one `T_Connect` even when the
+policy allows three passes).
 
 ## 77. A line scan covers one line at a time; it does not cross couplers
 
@@ -5385,6 +5457,12 @@ that asymmetry appears, because none exists to break.
 for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
+
+**AR14 (2026-10-04) — one correction.** "No regression test will notice"
+is too strong: 41 per-type round-trip tests in `crates/knx-core/src/dpt/codec.rs`
+(`*_round_trips_*`) would fail if an asymmetry appeared at their sampled
+values (minimum, maximum, zero, interior). Values between those samples are
+not covered. The branch itself is still not reachable through the public API.
 ## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
 
 **Limitation.** Since C19, a connected request whose four transmissions
@@ -5537,6 +5615,20 @@ token, no credential, no `POST` from the application, and no upload anywhere.
 worth adding — MAC addresses are the obvious candidate — it goes in as
 another shape-recognising pass next to the existing four, with the same
 requirement that it name what it removes rather than silently blanking text.
+
+**AR13 (2026-10-04) — audited with one fixture per class.**
+`every_privacy_class_is_either_redacted_or_named_in_the_report` feeds IPv4
+(private and public), IPv6 (including IPv4-mapped), the home prefix and the
+hostname (bare and FQDN) through every input channel — description, the four
+client facts, log message/location/detail — and finds none of them in
+`report.md`, `environment.json` or `log.json`. MAC addresses, serial numbers,
+e-mail addresses, paths outside the home directory, KNX addresses and names
+survive as written, and `report.md` (also the GitHub issue body) now names
+each of them. It also says `bus-telegrams.json` is not redacted and carries
+values — text values included — and timestamps, which together can show when
+the installation was in use; before, only its addresses were mentioned.
+`project-summary.json` stays counts-only (existing test). The in-app dialog
+text is Web-owned; the matching wording is handed to the Web-lock holder.
 
 ## 107. There is no plugin API — a third party cannot add a format, a protocol, a report template or a UI panel without forking
 
@@ -6405,6 +6497,12 @@ selections. No reconciliation action sends KNX traffic **[V]**.
 **Lifted when.** Identity may be attached only when a separately verified
 protocol procedure or explicit user selection supplies it. A scan response by
 itself never becomes product evidence.
+
+**AR14 (2026-10-04).** The four refusals above that had no test —
+foreign session, duplicate selection, an address shared by two project
+devices and a selection made stale by later project edits — are pinned by
+`reconciliation_refuses_foreign_duplicate_ambiguous_and_stale_selections`;
+each refusal leaves project, undo history and bus untouched.
 
 ## 127. A site over several buildings rests on schema text and synthetic tests, not on an ETS sample
 

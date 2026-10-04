@@ -2999,31 +2999,18 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let ga_names: std::collections::HashMap<u16, String> = match &parsed.project {
-        Some(path) => match load_group_address_names(Path::new(path)) {
-            Ok(names) => names,
-            Err(e) => {
-                eprintln!("could not load project {path}: {e}");
-                return ExitCode::FAILURE;
-            }
-        },
-        None => std::collections::HashMap::new(),
+    let Ok(view) = load_optional_project_bus_view(parsed.project.as_deref()) else {
+        return ExitCode::FAILURE;
     };
-    // `None` (not `Some(empty map)`) means "no --project", so `format_telegram`
-    // can tell "nothing resolved" from "resolution was never attempted" and
-    // stay byte-identical to today's output when the caller passed no
-    // `--project` at all (spec E4-D8).
-    let ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>> =
-        match &parsed.project {
-            Some(path) => match load_group_address_dpts(Path::new(path)) {
-                Ok(dpts) => Some(dpts),
-                Err(e) => {
-                    eprintln!("could not load project {path}: {e}");
-                    return ExitCode::FAILURE;
-                }
-            },
-            None => None,
-        };
+    let style = bus_address_style(view.as_ref());
+    // `None` (not `Some(empty map)`) for the DPTs means "no --project", so
+    // `format_telegram` can tell "nothing resolved" from "resolution was
+    // never attempted" and stay byte-identical to today's output when the
+    // caller passed no `--project` at all (spec E4-D8).
+    let (ga_names, ga_dpts) = match view {
+        Some(view) => (view.names, Some(view.dpts)),
+        None => (std::collections::HashMap::new(), None),
+    };
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -3038,6 +3025,7 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
 
     runtime.block_on(run_bus_monitor_async(
         gateway,
+        style,
         ga_names,
         ga_dpts,
         parsed.control,
@@ -3046,6 +3034,7 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
 
 async fn run_bus_monitor_async(
     gateway: std::net::SocketAddrV4,
+    style: knx_core::GroupAddressStyle,
     ga_names: std::collections::HashMap<u16, String>,
     ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
     show_control: bool,
@@ -3075,7 +3064,7 @@ async fn run_bus_monitor_async(
             }
             received = telegrams.recv() => match received {
                 Ok(knx_net::TunnelEvent::Telegram(telegram)) => {
-                    let line = format_telegram(&telegram, &ga_names, ga_dpts.as_ref());
+                    let line = format_telegram(&telegram, style, &ga_names, ga_dpts.as_ref());
                     if show_control {
                         println!("{line}{}", format_control(&telegram));
                     } else {
@@ -3204,6 +3193,7 @@ fn parse_group_value(s: &str) -> Result<knx_net::GroupValue, String> {
 fn resolve_write_value(
     parsed: &BusWriteArgs,
     ga: knx_core::GroupAddress,
+    view: Option<&ProjectBusView>,
 ) -> Result<(String, knx_net::GroupValue), String> {
     if let Some(dpt_str) = &parsed.dpt {
         let dpt = knx_core::DptRef::parse(dpt_str).map_err(|e| e.to_string())?;
@@ -3214,11 +3204,9 @@ fn resolve_write_value(
         .map_err(|e| e.to_string())?;
         return Ok((dpt.to_string(), value));
     }
-    if let Some(project_path) = &parsed.project {
-        let dpts = load_group_address_dpts(Path::new(project_path))
-            .map_err(|e| format!("could not load project {project_path}: {e}"))?;
-        let formatted = ga.format(knx_core::GroupAddressStyle::ThreeLevel);
-        return match dpts.get(&ga.raw()) {
+    if let Some(view) = view {
+        let formatted = ga.format(view.style);
+        return match view.dpts.get(&ga.raw()) {
             None => Err(format!(
                 "no datapoint type resolved for group address {formatted}; pass --dpt"
             )),
@@ -3240,7 +3228,7 @@ fn resolve_write_value(
                 .map_err(|e| e.to_string())?;
                 Ok((dpt.to_string(), value))
             }
-            // `load_group_address_dpts` never stores `None` — a missing key
+            // `resolve_project_group_address_dpts` never stores `None` — a missing key
             // means the same thing, and is handled above.
             Some(knx_core::GroupAddressDpt::None) => Err(format!(
                 "no datapoint type resolved for group address {formatted}; pass --dpt"
@@ -3269,19 +3257,21 @@ fn run_bus_write(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let group_address = match knx_core::GroupAddress::parse(
-        &parsed.group_address,
-        knx_core::GroupAddressStyle::ThreeLevel,
-    ) {
+    // Everything — project, address, DPT, value — is parsed and validated
+    // here, before a socket is ever opened in any path. A given project is
+    // read even next to `--dpt`: its style decides how the address is read.
+    let Ok(view) = load_optional_project_bus_view(parsed.project.as_deref()) else {
+        return ExitCode::FAILURE;
+    };
+    let style = bus_address_style(view.as_ref());
+    let group_address = match knx_core::GroupAddress::parse(&parsed.group_address, style) {
         Ok(ga) => ga,
         Err(e) => {
             eprintln!("invalid group address {}: {e}", parsed.group_address);
             return ExitCode::FAILURE;
         }
     };
-    // Everything — address, project, DPT, value — is parsed and validated
-    // here, before a socket is ever opened in any path.
-    let (dpt_label, value) = match resolve_write_value(&parsed, group_address) {
+    let (dpt_label, value) = match resolve_write_value(&parsed, group_address, view.as_ref()) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("{e}");
@@ -3292,7 +3282,7 @@ fn run_bus_write(args: &[String]) -> ExitCode {
     if parsed.dry_run {
         println!(
             "{} {dpt_label} {} -> {}",
-            group_address.format(knx_core::GroupAddressStyle::ThreeLevel),
+            group_address.format(style),
             parsed.value,
             format_group_value_payload(&value),
         );
@@ -3309,11 +3299,12 @@ fn run_bus_write(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    runtime.block_on(run_bus_write_async(gateway, group_address, value))
+    runtime.block_on(run_bus_write_async(gateway, style, group_address, value))
 }
 
 async fn run_bus_write_async(
     gateway: std::net::SocketAddrV4,
+    style: knx_core::GroupAddressStyle,
     group_address: knx_core::GroupAddress,
     value: knx_net::GroupValue,
 ) -> ExitCode {
@@ -3337,10 +3328,7 @@ async fn run_bus_write_async(
     }
     match result {
         Ok(()) => {
-            println!(
-                "wrote to {}",
-                group_address.format(knx_core::GroupAddressStyle::ThreeLevel)
-            );
+            println!("wrote to {}", group_address.format(style));
             ExitCode::SUCCESS
         }
         Err(e) => {
@@ -3400,16 +3388,11 @@ fn run_bus_route_monitor(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let ga_names: std::collections::HashMap<u16, String> = match &parsed.project {
-        Some(path) => match load_group_address_names(Path::new(path)) {
-            Ok(names) => names,
-            Err(e) => {
-                eprintln!("could not load project {path}: {e}");
-                return ExitCode::FAILURE;
-            }
-        },
-        None => std::collections::HashMap::new(),
+    let Ok(view) = load_optional_project_bus_view(parsed.project.as_deref()) else {
+        return ExitCode::FAILURE;
     };
+    let style = bus_address_style(view.as_ref());
+    let ga_names = view.map(|view| view.names).unwrap_or_default();
     let multicast_group: Option<std::net::Ipv4Addr> = match &parsed.multicast_group {
         Some(addr) => match addr.parse() {
             Ok(a) => Some(a),
@@ -3433,6 +3416,7 @@ fn run_bus_route_monitor(args: &[String]) -> ExitCode {
     };
     runtime.block_on(run_bus_route_monitor_async(
         own_address,
+        style,
         ga_names,
         multicast_group,
     ))
@@ -3440,6 +3424,7 @@ fn run_bus_route_monitor(args: &[String]) -> ExitCode {
 
 async fn run_bus_route_monitor_async(
     own_address: knx_core::IndividualAddress,
+    style: knx_core::GroupAddressStyle,
     ga_names: std::collections::HashMap<u16, String>,
     multicast_group: Option<std::net::Ipv4Addr>,
 ) -> ExitCode {
@@ -3465,7 +3450,7 @@ async fn run_bus_route_monitor_async(
                 // `route-monitor` does not resolve DPTs (out of scope for
                 // T29, spec E4-D7/D8 name only `monitor`/`write`) — `None`
                 // keeps its output exactly what it was before this task.
-                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names, None)),
+                Ok(telegram) => println!("{}", format_telegram(&telegram, style, &ga_names, None)),
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     eprintln!("warning: {n} telegram(s) dropped (receiver too slow)");
                 }
@@ -3803,34 +3788,46 @@ fn load_project_individual_addresses(
     Ok(project.devices.iter().filter_map(|d| d.address).collect())
 }
 
-/// Loads `group_address -> name` for every installation in a stored
-/// project, so `format_telegram` can annotate a raw group address with the
-/// name the user gave it in ETS. Silently returns an empty map only when
-/// the caller passed no `--project` at all (see `run_bus_monitor`) — any
-/// failure to open or read a *given* path is reported, never swallowed.
-fn load_group_address_names(path: &Path) -> Result<std::collections::HashMap<u16, String>, String> {
-    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
-    let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
-    let mut names = std::collections::HashMap::new();
-    for installation in &project.installations {
-        for entry in &installation.group_addresses {
-            names.insert(entry.address.raw(), entry.name.clone());
-        }
-    }
-    Ok(names)
+/// What a bus command's `--project` contributes, read from the store once
+/// so nothing touches the project again per telegram (spec E4-D8).
+struct ProjectBusView {
+    /// The project's own group-address style: destinations are parsed and
+    /// printed in it (AR14, KNOWN_LIMITATIONS §29).
+    style: knx_core::GroupAddressStyle,
+    /// Raw address -> display name; several installations' distinct names
+    /// are all listed (`knx_core::resolve_project_group_address_names`).
+    names: std::collections::HashMap<u16, String>,
+    /// Raw address -> resolved DPT; a missing key means "no DPT resolved"
+    /// (`knx_core::resolve_project_group_address_dpts`).
+    dpts: std::collections::HashMap<u16, knx_core::GroupAddressDpt>,
 }
 
-/// Loads the group-address (raw 16-bit) -> resolved-DPT map for a stored
-/// project, once, so `format_telegram` never touches the project again per
-/// telegram (spec E4-D8). See `knx_core::resolve_project_group_address_dpts`
-/// for what "resolved" means; a missing key is the common case, not this
-/// function's problem to flag.
-fn load_group_address_dpts(
-    path: &Path,
-) -> Result<std::collections::HashMap<u16, knx_core::GroupAddressDpt>, String> {
+/// Loads [`ProjectBusView`] from a stored project. Any failure to open or
+/// read a *given* path is reported, never swallowed.
+fn load_project_bus_view(path: &Path) -> Result<ProjectBusView, String> {
     let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
     let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
-    Ok(knx_core::resolve_project_group_address_dpts(&project))
+    Ok(ProjectBusView {
+        style: project.info.group_address_style,
+        names: knx_core::resolve_project_group_address_names(&project),
+        dpts: knx_core::resolve_project_group_address_dpts(&project),
+    })
+}
+
+/// Loads `--project` when given; reports a failure on stderr.
+fn load_optional_project_bus_view(project: Option<&str>) -> Result<Option<ProjectBusView>, ()> {
+    match project {
+        None => Ok(None),
+        Some(path) => load_project_bus_view(Path::new(path))
+            .map(Some)
+            .map_err(|e| eprintln!("could not load project {path}: {e}")),
+    }
+}
+
+/// The style a bus command parses and prints group addresses in: the
+/// project's own, or three-level when no `--project` was given.
+fn bus_address_style(view: Option<&ProjectBusView>) -> knx_core::GroupAddressStyle {
+    view.map_or(knx_core::GroupAddressStyle::ThreeLevel, |view| view.style)
 }
 
 /// Renders a raw `GroupValue` the way it always has been rendered — a
@@ -3884,13 +3881,14 @@ fn format_control(telegram: &knx_net::LDataFrame) -> String {
 
 fn format_telegram(
     telegram: &knx_net::LDataFrame,
+    style: knx_core::GroupAddressStyle,
     ga_names: &std::collections::HashMap<u16, String>,
     ga_dpts: Option<&std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
 ) -> String {
     use knx_net::Destination;
     let dest = match telegram.destination {
         Destination::Group(ga) => {
-            let formatted = ga.format(knx_core::GroupAddressStyle::ThreeLevel);
+            let formatted = ga.format(style);
             match ga_names.get(&ga.raw()) {
                 Some(name) => format!("{formatted} ({name})"),
                 None => formatted,
@@ -4029,7 +4027,7 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_control, format_version_line, load_project_individual_addresses,
+        format_control, format_telegram, format_version_line, load_project_individual_addresses,
         parse_bus_monitor_args, parse_bus_route_monitor_args, parse_bus_route_send_args,
         DISCOVER_EMPTY_HINT,
     };
@@ -4097,6 +4095,25 @@ mod tests {
                     Some(control)
                 )),
                 format!(" [priority {name}, hop count 7]")
+            );
+        }
+    }
+
+    /// AR14 / KNOWN_LIMITATIONS §29: the monitor line prints the
+    /// destination in the project's style, with every installation's name.
+    #[test]
+    fn monitor_line_uses_the_project_style_and_all_names() {
+        use knx_core::GroupAddressStyle;
+        let frame = monitor_frame(knx_net::LDataMessageKind::Indication, None);
+        let names = std::collections::HashMap::from([(1u16, "Home | Garage".to_string())]);
+        for (style, shown) in [
+            (GroupAddressStyle::ThreeLevel, "0/0/1"),
+            (GroupAddressStyle::TwoLevel, "0/1"),
+            (GroupAddressStyle::Free, "1"),
+        ] {
+            assert_eq!(
+                format_telegram(&frame, style, &names, None),
+                format!("1.1.9 -> {shown} (Home | Garage): GroupValueRead")
             );
         }
     }

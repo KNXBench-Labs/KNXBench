@@ -729,6 +729,9 @@ mod tests {
         fail_on_connect: StdMutex<std::collections::HashSet<IndividualAddress>>,
         /// Every frame sent, in order, for tests to inspect.
         sent: AsyncMutex<Vec<(Destination, Tpci, ApplicationService)>>,
+        /// Per-address delay before a scripted reply is broadcast, to model
+        /// a slow-but-present device against the probe's window (§75).
+        reply_delay: StdMutex<std::collections::HashMap<IndividualAddress, Duration>>,
     }
 
     impl FakeTransport {
@@ -743,7 +746,14 @@ mod tests {
                 decoys: StdMutex::new(std::collections::HashMap::new()),
                 fail_on_connect: StdMutex::new(std::collections::HashSet::new()),
                 sent: AsyncMutex::new(Vec::new()),
+                reply_delay: StdMutex::new(std::collections::HashMap::new()),
             }
+        }
+
+        /// Broadcasts `addr`'s scripted replies `delay` after its read
+        /// instead of immediately.
+        fn delay_replies(&self, addr: IndividualAddress, delay: Duration) {
+            self.reply_delay.lock().unwrap().insert(addr, delay);
         }
 
         /// Makes `addr`'s `T_Connect` send fail with `BusError::Timeout`
@@ -868,10 +878,10 @@ mod tests {
                 })
             };
 
-            match reply {
+            let frame = match reply {
                 Some(ScriptedReply::Descriptor(mask_version)) => {
                     let bytes = mask_version.to_be_bytes();
-                    let frame = LDataFrame {
+                    LDataFrame {
                         kind: LDataMessageKind::Indication,
                         source: target,
                         destination: Destination::Individual(self.assigned),
@@ -881,21 +891,29 @@ mod tests {
                             data: bytes.to_vec(),
                         },
                         control: None,
-                    };
+                    }
+                }
+                Some(ScriptedReply::Disconnect) => LDataFrame {
+                    kind: LDataMessageKind::Indication,
+                    source: target,
+                    destination: Destination::Individual(self.assigned),
+                    transport: Tpci::Disconnect,
+                    service: ApplicationService::NoApplicationPdu,
+                    control: None,
+                },
+                None => return Ok(()), // no script entry left for this address: silence
+            };
+            match self.reply_delay.lock().unwrap().get(&target).copied() {
+                None => {
                     let _ = self.tx.send(TunnelEvent::Telegram(frame));
                 }
-                Some(ScriptedReply::Disconnect) => {
-                    let frame = LDataFrame {
-                        kind: LDataMessageKind::Indication,
-                        source: target,
-                        destination: Destination::Individual(self.assigned),
-                        transport: Tpci::Disconnect,
-                        service: ApplicationService::NoApplicationPdu,
-                        control: None,
-                    };
-                    let _ = self.tx.send(TunnelEvent::Telegram(frame));
+                Some(delay) => {
+                    let tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(delay).await;
+                        let _ = tx.send(TunnelEvent::Telegram(frame));
+                    });
                 }
-                None => {} // no script entry left for this address: silence
             }
             Ok(())
         }
@@ -1075,6 +1093,117 @@ mod tests {
             "a lagged event channel means evidence may have been dropped; that must never be \
              reported as Vacant"
         );
+    }
+
+    fn connects_to(
+        sent: &[(Destination, Tpci, ApplicationService)],
+        target: IndividualAddress,
+    ) -> usize {
+        sent.iter()
+            .filter(|(destination, transport, _)| {
+                *destination == Destination::Individual(target)
+                    && matches!(transport, Tpci::Connect)
+            })
+            .count()
+    }
+
+    /// KNOWN_LIMITATIONS §76: a lagged channel is reported once, as
+    /// `Indeterminate`, even when the policy would allow further passes —
+    /// a retry could fold the dropped evidence into a decisive-looking
+    /// verdict.
+    #[tokio::test]
+    async fn an_indeterminate_probe_is_not_retried() {
+        let target = addr(1, 1, 10);
+        let transport = FakeTransport::new(addr(1, 1, 1));
+        transport.flood_on_connect(target, 128);
+        let policy = ProbePolicy::new(Duration::from_millis(30), 3, Duration::from_millis(1))
+            .expect("3 is a valid vacant_confirmations");
+
+        let outcome = probe_address(&transport, target, &policy).await.unwrap();
+
+        assert_eq!(outcome, ProbeOutcome::Indeterminate);
+        assert_eq!(connects_to(&transport.sent_frames().await, target), 1);
+    }
+
+    /// KNOWN_LIMITATIONS §76: a negative `L_Data.con` is not a fast path to
+    /// `Vacant`; the probe still waits out its whole window.
+    #[tokio::test]
+    async fn a_negative_l2_confirm_still_waits_out_the_whole_window() {
+        let target = addr(1, 1, 11);
+        let transport = FakeTransport::new(addr(1, 1, 1));
+        transport.confirm_for(target, ConnectConfirm::Negative);
+        let window = Duration::from_millis(80);
+        let policy = ProbePolicy::new(window, 1, Duration::from_millis(1))
+            .expect("1 is a valid vacant_confirmations");
+
+        let started = tokio::time::Instant::now();
+        let outcome = probe_address(&transport, target, &policy).await.unwrap();
+
+        assert_eq!(outcome, ProbeOutcome::Vacant);
+        assert!(
+            started.elapsed() >= window,
+            "a negative confirm ended the probe after {:?}, before the {window:?} window",
+            started.elapsed()
+        );
+    }
+
+    /// KNOWN_LIMITATIONS §75: the window is the boundary. The same
+    /// slow-but-present device is `Vacant` behind a short window and
+    /// `Occupied` behind a long one; nothing flags the short-window miss.
+    #[tokio::test]
+    async fn a_slow_answer_is_vacant_after_a_short_window_and_occupied_within_a_long_one() {
+        let target = addr(1, 1, 12);
+        let answer_after = Duration::from_millis(150);
+
+        let short = FakeTransport::new(addr(1, 1, 1));
+        short.script_for(target, vec![ScriptedReply::Descriptor(0x0705)]);
+        short.delay_replies(target, answer_after);
+        let short_policy = ProbePolicy::new(Duration::from_millis(40), 1, Duration::from_millis(1))
+            .expect("valid policy");
+        assert_eq!(
+            probe_address(&short, target, &short_policy).await.unwrap(),
+            ProbeOutcome::Vacant
+        );
+
+        let long = FakeTransport::new(addr(1, 1, 1));
+        long.script_for(target, vec![ScriptedReply::Descriptor(0x0705)]);
+        long.delay_replies(target, answer_after);
+        let long_policy =
+            ProbePolicy::new(Duration::from_millis(2000), 1, Duration::from_millis(1))
+                .expect("valid policy");
+        assert_eq!(
+            probe_address(&long, target, &long_policy).await.unwrap(),
+            ProbeOutcome::Occupied {
+                mask_version: Some(0x0705)
+            }
+        );
+    }
+
+    /// KNOWN_LIMITATIONS §73: a probe asks for DD0 (the mask version) and
+    /// nothing else, so it cannot learn product, manufacturer or serial.
+    #[tokio::test]
+    async fn a_probe_asks_only_for_the_mask_version() {
+        let target = addr(1, 1, 13);
+        let transport = FakeTransport::new(addr(1, 1, 1));
+        transport.script_for(target, vec![ScriptedReply::Descriptor(0x0705)]);
+
+        probe_address(&transport, target, &fast_policy())
+            .await
+            .unwrap();
+
+        let sent = transport.sent_frames().await;
+        assert!(!sent.is_empty());
+        for (destination, _, service) in &sent {
+            assert_eq!(*destination, Destination::Individual(target));
+            assert!(
+                matches!(
+                    service,
+                    ApplicationService::NoApplicationPdu
+                        | ApplicationService::DeviceDescriptorRead { descriptor_type: 0 }
+                ),
+                "unexpected service in a probe: {service:?}"
+            );
+        }
     }
 
     #[tokio::test]

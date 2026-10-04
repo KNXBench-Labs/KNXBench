@@ -12,7 +12,8 @@
 //!    what each one contains, and how it becomes a zip on disk.
 //!
 //! Redaction covers `report.md`, `environment.json` and `log.json` — and
-//! covers the four pattern classes above, not KNX addresses: `log.json`
+//! covers the four pattern classes above, not KNX addresses (`report.md`
+//! names every class it keeps, AR13): `log.json`
 //! records import conflicts by group address and by element name, which is
 //! the only thing that makes a conflict diagnosable, and the dialog says so
 //! rather than implying the file is anonymous. It does
@@ -466,8 +467,14 @@ fn report_markdown(input: &BundleInput, included: &[&'static str]) -> String {
     md.push_str(
         "\nIP addresses, the home directory prefix and the machine hostname have been \
          replaced by placeholders in `report.md`, `environment.json` and `log.json`. \
-         `bus-telegrams.json`, when present, keeps its KNX individual and group addresses \
-         — that is what makes it useful, and why it is off by default.\n",
+         Nothing else is replaced: KNX addresses, project and element names, file paths \
+         outside the home directory, MAC addresses, serial numbers, e-mail addresses and \
+         anything else typed into the description stay as written. Review the files before \
+         sharing them.\n\n\
+         `bus-telegrams.json`, when present, is not redacted at all: it keeps KNX individual \
+         and group addresses, group address names, every telegram's values (text values \
+         included) and their timestamps, which together can show when the installation was \
+         in use. That is what makes it useful, and why it is off by default.\n",
     );
     md
 }
@@ -478,7 +485,9 @@ fn describe_file(name: &str) -> &'static str {
         ENVIRONMENT_JSON => "the same facts, machine-readable",
         LOG_JSON => "this session's log entries",
         PROJECT_SUMMARY_JSON => "counts and structural statistics only, no names or addresses",
-        BUS_TELEGRAMS_JSON => "the bus monitor buffer, including real device addresses",
+        BUS_TELEGRAMS_JSON => {
+            "the bus monitor buffer, unredacted: addresses, names, values and timestamps"
+        }
         _ => "an artifact this build does not describe",
     }
 }
@@ -1089,6 +1098,101 @@ mod tests {
         // The whole point of the opt-in: this file keeps its addresses.
         assert!(text(BUS_TELEGRAMS_JSON).contains("203.0.113.4"));
         assert!(text(BUS_TELEGRAMS_JSON).contains("1.1.5"));
+    }
+
+    /// AR13 / KNOWN_LIMITATIONS §106: one synthetic fixture per pattern
+    /// class, fed through every input channel the bundle reads. Each class is
+    /// either gone from the redacted files or named in the report's own
+    /// warning — never silently kept. The bus-telegram file is unredacted by
+    /// design, so its warning has to name what it carries: addresses, names,
+    /// values (text values included) and timestamps.
+    #[test]
+    fn every_privacy_class_is_either_redacted_or_named_in_the_report() {
+        const REDACTED: &[&str] = &[
+            "192.168.178.20",
+            "203.0.113.9",
+            "2001:db8::42",
+            "::ffff:10.0.0.7",
+            "/home/alice",
+            "alice-laptop",
+        ];
+        // Kept as written, each with the words the warning must use for it.
+        const KEPT: &[(&str, &str)] = &[
+            ("00:1a:2b:3c:4d:5e", "MAC addresses"),
+            ("00FA:10203040", "serial numbers"),
+            ("alice@example.org", "e-mail addresses"),
+            (
+                "/srv/knx/villa.knxproj",
+                "file paths outside the home directory",
+            ),
+            ("1/2/3", "KNX addresses"),
+            ("Villa Alice", "project and element names"),
+        ];
+        let everything = format!(
+            "{} {} {} {}",
+            REDACTED.join(" "),
+            KEPT.iter().map(|(v, _)| *v).collect::<Vec<_>>().join(" "),
+            "/home/alice/projects/villa.knxproj",
+            "alice-laptop.example.org",
+        );
+        let all = BundleInput {
+            description: everything.clone(),
+            app_version: Some(format!("0.1.0 {everything}")),
+            shell: Some(everything.clone()),
+            ui_language: Some(everything.clone()),
+            theme: Some(everything.clone()),
+            log: Some(serde_json::json!([{
+                "message": everything,
+                "location": everything,
+                "detail": everything,
+            }])),
+            project_summary: Some(serde_json::json!({ "installations": 1 })),
+            bus_telegrams: Some(serde_json::json!([{
+                "timestamp": "2026-10-04T07:15:00Z",
+                "destination": "1/2/3",
+                "destinationName": "Villa Alice door display",
+                "decoded": { "kind": "value", "text": "Welcome alice@example.org" },
+            }])),
+            ..input()
+        };
+        let redactor = Redactor::new(Some("/home/alice".into()), Some("alice-laptop".into()));
+        let bundle = build_bundle(&all, &redactor);
+        let text = |name: &str| {
+            String::from_utf8(
+                bundle
+                    .files
+                    .iter()
+                    .find(|f| f.name == name)
+                    .unwrap()
+                    .bytes
+                    .clone(),
+            )
+            .unwrap()
+        };
+
+        for file in [REPORT_MD, ENVIRONMENT_JSON, LOG_JSON] {
+            let body = text(file);
+            for value in REDACTED {
+                assert!(!body.contains(value), "{file} still carries {value:?}");
+            }
+            for (value, _) in KEPT {
+                assert!(body.contains(value), "{file} lost {value:?}");
+            }
+        }
+        let report = text(REPORT_MD);
+        for (_, words) in KEPT {
+            assert!(
+                report.contains(words),
+                "the report does not warn about {words}"
+            );
+        }
+        for words in ["values", "text values", "timestamps", "not redacted"] {
+            assert!(
+                report.contains(words),
+                "the report does not say bus-telegrams.json carries {words}"
+            );
+        }
+        assert!(text(BUS_TELEGRAMS_JSON).contains("Welcome alice@example.org"));
     }
 
     #[test]

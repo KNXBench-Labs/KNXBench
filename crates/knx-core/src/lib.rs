@@ -14,6 +14,7 @@ pub mod devices;
 pub mod dpt;
 pub mod flags;
 pub mod group;
+pub mod group_address_names;
 pub mod ids;
 pub mod installation;
 pub mod module;
@@ -49,6 +50,7 @@ pub use dpt::{
 };
 pub use flags::{ComFlagKind, ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};
 pub use group::{GroupAddressEntry, GroupRange};
+pub use group_address_names::{resolve_project_group_address_names, GROUP_ADDRESS_NAME_SEPARATOR};
 pub use ids::*;
 pub use installation::Installation;
 pub use module::ModuleInstance;

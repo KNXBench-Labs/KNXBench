@@ -18,6 +18,9 @@ import {
 import { FRESH_EVENT_MS, currentLeader, edgeActivity, type FlowEvent, type FlowModel } from "./flowModel";
 
 export const PULSE_MS = 700;
+/** At most one drawn frame per interval (~30 fps). The U21 load study found
+ * motion's cost to be painting, which grows with every drawn frame. */
+export const FRAME_INTERVAL_MS = 32;
 /** Simultaneous pulse elements; beyond this telegrams are counted, not drawn. */
 export const MAX_PULSES = 160;
 /** More events than this in one batch are bundled per pair and group address. */
@@ -26,6 +29,16 @@ const NUDGE_EVERY_MS = 5_000;
 const NUDGE_ALPHA = 0.08;
 const GROWTH_ALPHA = 0.3;
 const REFRESH_MS = 1_000;
+
+/** Coarse activity classes: a pair's distance adapts when its class
+ * changes, not on every observation inside the same class. */
+export function activityClass(rate: number): number {
+  if (rate <= 0) return 0;
+  if (rate <= 2) return 1;
+  if (rate <= 5) return 2;
+  if (rate < RATE_SATURATION) return 3;
+  return 4;
+}
 
 export interface AnimatorScheduler {
   frame(callback: (now: number) => void): number;
@@ -86,6 +99,7 @@ export class FlowAnimator {
   private edgeSignature = "";
   private leader: string | null = null;
   private model: FlowModel | null = null;
+  private lastDrawnAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     box: { width: number; height: number },
@@ -133,11 +147,12 @@ export class FlowAnimator {
     const before = this.layout.nodes.size;
     ensureDynamicNodes(this.layout, model.nodes.keys());
     const edgeCount = this.edges.length;
-    this.refreshEdges(now);
+    const activityChanged = this.refreshEdges(now);
     const leader = currentLeader(model, now);
     const leaderChanged = leader !== this.leader;
     this.leader = leader;
     if (this.layout.nodes.size > before || this.edges.length > edgeCount || leaderChanged) reheat(this.layout, GROWTH_ALPHA);
+    else if (activityChanged) reheat(this.layout, NUDGE_ALPHA);
 
     const fresh = model.events.filter((event) => event.seq > this.lastEventSeq);
     if (fresh.length > 0) this.lastEventSeq = fresh[fresh.length - 1].seq;
@@ -167,7 +182,7 @@ export class FlowAnimator {
   private refreshEdges(now: number): boolean {
     if (!this.model) return false;
     this.edges = [...this.model.edges.values()].map((edge) => ({ from: edge.from, to: edge.to, rate: edgeActivity(edge, now) }));
-    const signature = this.edges.map((edge) => `${edge.from}>${edge.to}:${Math.min(edge.rate, RATE_SATURATION)}`).join("|");
+    const signature = this.edges.map((edge) => `${edge.from}>${edge.to}:${activityClass(edge.rate)}`).join("|");
     const changed = signature !== this.edgeSignature;
     this.edgeSignature = signature;
     return changed;
@@ -239,6 +254,11 @@ export class FlowAnimator {
 
   private frame(now: number): void {
     this.frameId = null;
+    if (now - this.lastDrawnAt < FRAME_INTERVAL_MS) {
+      this.wake();
+      return;
+    }
+    this.lastDrawnAt = now;
     this.metrics.frames += 1;
     if (!this.frozen && this.layout.alpha >= ALPHA_MIN) {
       step(this.layout, this.edges, { leader: this.leader });

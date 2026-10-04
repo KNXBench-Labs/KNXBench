@@ -610,26 +610,28 @@ intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
 
 ### U21 — Make the nervous system dynamic, honest and bounded [web]
 
-**In progress (2026-10-04).** Parts A (window, leader, events) and B (layout,
-animator, motion, Freeze, fade, coalescing) are published; part C records the
-dense-burst and long-session figures and closes the package. Dependency: U20. Keep data admission independent of solver/rendering.
+**Done (2026-10-04).** Parts A and B `9d432d17` (+ whitespace fix `deb6813a`),
+part C in the delivering commit (activity classes, 30 fps cap, production load
+figures in docs/design/2026-10-04-telegram-flow-u21/). Rules:
+TELEGRAM_FLOW_VISUALIZATION §12; residue: KNOWN_LIMITATIONS §154 (one path per
+pair, one machine measured, no WebKitGTK/Orca). Dependency: U20. Keep data admission independent of solver/rendering.
 
-- [ ] Add event-triggered directional traveling pulses, opposite-direction
+- [x] Add event-triggered directional traveling pulses, opposite-direction
   traffic, group-specific paths/labels and brief source feedback. Values stay
   immediate; no animation queue masquerades as physical bus timing or receipt.
-- [ ] Implement activity-dependent bounded distances, stable/damped layout and
+- [x] Implement activity-dependent bounded distances, stable/damped layout and
   the observed-sender leader in the labelled rolling window. Window expiry and
   ties are deterministic; fan-out counts once. Freeze fixes geometry only;
   values/counts/pulses stay live, and the current leader remains labelled.
-- [ ] Fade quiet edges only to a theme-readable resting line for the session.
+- [x] Fade quiet edges only to a theme-readable resting line for the session.
   Keep semantic graph membership independent of activity-window/value expiry.
   Coalesce high-load pulses with represented counts; visible capacity/loss
   diagnostics preserve existing edges, not silent eviction or complete-map claims.
-- [ ] Prove live theme changes, motion Off/OS-reduce changed mid-effect, hidden
+- [x] Prove live theme changes, motion Off/OS-reduce changed mid-effect, hidden
   tab/resume/unmount cleanup, static directional fallback and continued value
   expiry. Stop actual solver/timers/frames, not just CSS. Record real dense-burst
   and long-session CPU/memory/frame/lag results, including reduced rendering.
-- [ ] Run integrated UI/full gates and a separate in-session review; restore and
+- [x] Run integrated UI/full gates and a separate in-session review; restore and
   verify behavioral mutants, update focused docs/manual/limitations and publish
   the exact U21 receipt to the alpha owner for AR21. Keep evidence provenance
   and user-accepted native/Orca/live boundaries explicit; do not self-certify Alpha.

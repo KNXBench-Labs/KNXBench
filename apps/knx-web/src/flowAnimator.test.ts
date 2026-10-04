@@ -1,6 +1,6 @@
 /** U21: the animator stops frames and timers, freezes geometry only, bundles pulses. */
 import { describe, expect, it } from "vitest";
-import { COALESCE_ABOVE, FlowAnimator, MAX_PULSES, PULSE_MS, type AnimatorScheduler, type DrawnPulse } from "./flowAnimator";
+import { COALESCE_ABOVE, FRAME_INTERVAL_MS, FlowAnimator, MAX_PULSES, PULSE_MS, type AnimatorScheduler, type DrawnPulse } from "./flowAnimator";
 import { admitRows, createFlowModel, provideContext, type FlowModel, type FlowRowInput } from "./flowModel";
 import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
@@ -185,6 +185,37 @@ describe("FlowAnimator", () => {
     animator.sync(m);
     expect(animator.layout.alpha).toBeGreaterThan(0);
     expect(scheduler.frames.size).toBe(1);
+  });
+
+  it("adapts distances when a pair changes its activity class, but not on every flicker", () => {
+    const { scheduler, animator } = setup();
+    const m = model([2]);
+    admitRows(m, [row(1), row(2), row(3)], 0);
+    animator.sync(m);
+    scheduler.run(12_000);
+    expect(animator.layout.alpha).toBe(0);
+    const settled = animator.metrics.steps;
+    // 3 → 4 observations in the window: same class (3–5), the map stays at rest.
+    admitRows(m, [row(4)], scheduler.time);
+    animator.sync(m);
+    scheduler.run(6_000);
+    expect(animator.metrics.steps).toBe(settled);
+    // 4 → 7: a new class (6–9), the distances adapt.
+    admitRows(m, [row(5), row(6), row(7)], scheduler.time);
+    animator.sync(m);
+    scheduler.run(1_000);
+    expect(animator.metrics.steps).toBeGreaterThan(settled);
+  });
+
+  it("draws at most about 30 frames a second, because painting cost grows with every frame", () => {
+    const { scheduler, animator, drawn } = setup();
+    const m = model();
+    admitRows(m, [row(1)], 0);
+    animator.sync(m);
+    scheduler.run(600);
+    expect(FRAME_INTERVAL_MS).toBeGreaterThanOrEqual(30);
+    expect(drawn.pulses.length).toBeLessThanOrEqual(Math.ceil(600 / FRAME_INTERVAL_MS) + 1);
+    expect(drawn.pulses.length).toBeGreaterThan(10);
   });
 
   it("refreshes once a second while visible and cancels everything on dispose", () => {

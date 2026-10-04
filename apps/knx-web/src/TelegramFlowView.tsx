@@ -274,6 +274,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   const nodeRefs = useRef(new Map<string, SVGGElement>());
   const edgeRefs = useRef(new Map<string, EdgeElements>());
   const pulseLayer = useRef<SVGGElement | null>(null);
+  const sendingNodes = useRef(new Set<string>());
   const drag = useRef<{ x: number; y: number; view: View } | null>(null);
   const animatorRef = useRef<FlowAnimator | null>(null);
   const nowMs = flowNow();
@@ -307,11 +308,16 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
       pulses: (pulses) => {
         const animator = animatorRef.current;
         drawPulses(pulseLayer.current, pulses, (id) => animator?.layout.nodes.get(id));
+        // Only changes are written: an attribute write per node and frame
+        // invalidated styles the measurement showed as native work.
         const sending = new Set(pulses.filter((pulse) => pulse.progress < SENDING_UNTIL).map((pulse) => pulse.from));
-        for (const [id, element] of nodeRefs.current) {
-          if (sending.has(id)) element.setAttribute("data-sending", "true");
-          else element.removeAttribute("data-sending");
+        for (const id of sendingNodes.current) {
+          if (!sending.has(id)) nodeRefs.current.get(id)?.removeAttribute("data-sending");
         }
+        for (const id of sending) {
+          if (!sendingNodes.current.has(id)) nodeRefs.current.get(id)?.setAttribute("data-sending", "true");
+        }
+        sendingNodes.current = sending;
       },
       refresh: () => setTick((tick) => tick + 1),
     };
@@ -327,6 +333,7 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
     animatorRef.current?.setMotion(motion);
     if (!motion) {
       for (const element of nodeRefs.current.values()) element.removeAttribute("data-sending");
+      sendingNodes.current = new Set();
     }
   }, [motion]);
 

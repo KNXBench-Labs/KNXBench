@@ -114,17 +114,27 @@ test("leaving the flow tab stops its frames and its refresh timer", async ({ pag
   traffic.stop();
 });
 
-test("with motion off, direction markers stay and values still expire on time", async ({ page }) => {
-  await page.addInitScript(() => document.documentElement.setAttribute("data-motion-level", "off"));
+test("with motion off from the start, no frame runs under live traffic and markers stay", async ({ page }) => {
+  await instrument(page);
+  const server = await fakeServer(page);
+  const traffic = feed(server);
+  await openFlow(page, "en", "porcelain", "off");
+  expect(await page.evaluate(() => document.documentElement.getAttribute("data-motion-level"))).toBe("off");
+  await expect(node(page, "Dimmer").locator(".flow-badge")).toBeVisible();
+  expect(await framesStopped(page)).toBe(0);
+  await expect(page.locator(".flow-pulse")).toHaveCount(0);
+  await expect(page.locator(".flow-edge path").first()).toHaveAttribute("marker-end", /url\(#flow-arrow-/);
+  traffic.stop();
+});
+
+test("with motion off, values still expire on time", async ({ page }) => {
   await page.clock.install();
   const server = await fakeServer(page);
   server.rows.push(telegram(1, "1", "On"));
-  await openFlow(page);
+  await openFlow(page, "en", "porcelain", "off");
+  expect(await page.evaluate(() => document.documentElement.getAttribute("data-motion-level"))).toBe("off");
   const badge = node(page, "Dimmer").locator(".flow-badge");
   await expect(badge).toHaveText("◇ 1/0/1 On");
-  await expect(page.locator(".flow-edge path").first()).toHaveAttribute("marker-end", /url\(#flow-arrow-/);
-  await expect(page.locator(".flow-pulse")).toHaveCount(0);
   await page.clock.runFor(7_500);
   await expect(badge).toHaveCount(0);
-  await expect(page.locator(".flow-pulse")).toHaveCount(0);
 });

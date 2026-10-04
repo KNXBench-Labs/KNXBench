@@ -1014,7 +1014,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         </section>
       )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
-        onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }} />}
+        serverIncarnation={tree?.server_incarnation} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }} />}
       {tree && selection?.kind === "device" && deviceDetail?.id === selection.id && !logOpen && !monitorOpen && view !== "catalog" && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
     </div>
   );

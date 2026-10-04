@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 18:02
+Web lock: released by claude-goal-ui-owner (DATA-03 web half delivered)
+- **Completed:** DATA-03 web half (ADR-0069). Each catalog submit sends one `requestId`. After a lost or 5xx response the batch is unconfirmed for any quantity, and **Retry safely** resends the identical request only after `GET /api/project` shows the same `server_incarnation`; `replayed: true` counts as success. A restart, an unknown identity or an unreachable server never gets a request with a new id. 6 new Vitest cases (5 RED first); 4 intercepted Chromium cases (en/de), all failing against the old component; 4/4 mutants caught. Full gate, attempt 2: web build, fmt, clippy -D warnings (rechecked the workspace, 33 s), workspace tests 3,145 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, four repository gates (headers 461 ok, ceiling 157), tsc, Vitest 1,769/100 files, the complete intercepted Chromium suite 98/98, whitespace; source frozen. Attempt 1 failed only because `clippy-driver` was killed by SIGKILL under memory pressure (no lint finding; the same code compiled in its test step). Re-gated in full; the failed attempt is kept, not relabelled. DATA-03 is DONE in the Alpha ledger; ADR-0069 status updated. Log: `.ai/logs/2026-10-04_claude_ui-data03-web.md`.
+- **Pending/Next Steps:** Next web half: MODEL-04 opt-in allocation and unique-name toggles; the goal-ui owner takes the lock again. Then MODEL-01, MODEL-02, UX-01 and the AR13 debug-report text.
+- **Notes for Codex oder Claude:** Residue disclosed in KNOWN_LIMITATIONS U11 catalog batch scope: a newer web client against a pre-ADR-0069 server would re-apply a retried batch. No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 17:40
 Web lock: taken by claude-goal-ui-owner for DATA-03 web half (catalog `requestId` and safe retry)
 - **Completed:** Lock taken only, no code yet. The previous lock line (this session, MODEL-03 delivered `596697a6`) said released.

@@ -13,6 +13,17 @@ No production code, manufacturer grammar, hardware behavior or Web source was
 changed by this slice. Fixtures are public synthetic Scheme11 XML and safe
 empty directories; no new private corpus access or import matrix was run.
 
+## Verified source publication
+
+Published on `main` as `5adccdb0`; the exact remote ref and all806 public
+source/config hashes were read back, including the native fixture bytes.
+Runtime/CLI acceptance is `6c3080d9` (public16); subsequent publication
+changes are Markdown only with independently executed docs6. This is delivery
+of the existing-count contract slice, not closure of the resource policy or
+Alpha release. Permanent evidence, including original failures and distinct
+HEAD-stamped executables, is archived under
+`/home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004`.
+
 ## Native contracts
 
 `crates/knx-productdb/tests/zip_cap_boundaries.rs` registers:

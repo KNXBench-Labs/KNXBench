@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 10:55
+- **Completed:** UA1. MODEL-03 backend: `Command::SetCouplerIndividualAddress` + `CouplerEvidence` (core), `query::product_hardware_is_coupler` (productdb), server uses it only for `IsCoupler`=true products. Runtime RED→GREEN (`apps/knx-server/tests/coupler_address.rs`), 6/6 mutants caught, full Rust/repo gates green (3,036 passed / 0 failed / 176 ignored). KL-127: no Ground sample anywhere → ACCEPTED_BOUNDARY (known gap) per user instruction. RESEARCH §25, KNOWN_LIMITATIONS U11/§127, IMPLEMENTATION_STATUS, alpha ledger and goal-ui §3b updated. Log `.ai/logs/2026-10-04_claude_ui-ua1-coupler.md`.
+- **Pending/Next Steps:** UA2 DATA-03 server half (catalog `requestId` replay ledger), then UA3–UA5 backend halves. All UI halves (MODEL-03 editor `.0`, DATA-03 safe retry, etc.) and UA6 need the Web lock.
+- **Notes for Codex oder Claude:** Web lock still held by codex-commission-continuation; this session did not touch `apps/knx-web` (only `npm ci`/`npm run build` for the Tauri build script). Worktree `ui-alpha-owner`, target `.target-ui`.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 10:00
 - **Completed:** The user made this Claude session the `goal-ui.md` owner and asked it to work off the UI rows at the end of `alpha-release-goal.md`. Owner checkpoint: the 24 UI rows now carry real statuses instead of generic WAITING_OWNER — 7 DONE (UI-01/02 plus the already published KL-82/KL-124/KL-121/UX-02/UX-03), 9 ACCEPTED_BOUNDARY (native/live evidence by user decision: KL-79/137/36/133, UI-03, KL-130-ZOOM, KL-20; KL-97/98 by delegated owner decision), KL-43 LATER, 7 IN_PROGRESS. New queue UA1–UA6 in `goal-ui.md` §3b; UI_ALPHA_READINESS has an owner-checkpoint paragraph. Docs only.
 - **Pending/Next Steps:** UA1 research (MODEL-03 coupler `.0`, KL-127 Site/Ground samples): implement on reliable evidence, else known gap and close. Then backend halves of UA2 (DATA-03 idempotent catalog batch), UA3 (MODEL-04 allocation/unique names), UA4 (MODEL-01 installation-scoped commands), UA5 (MODEL-02 repair). UI halves and UA6 (UX-01 drag GA→object) need the Web lock.

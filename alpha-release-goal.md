@@ -875,7 +875,8 @@ of the generic `WAITING_OWNER`. Per-row evidence stays in
 | `KL-97`, `KL-98` | ACCEPTED_BOUNDARY | Owner decision (the user left this choice to the owner): truthful phase text without an invented percentage (ADR-0023) and decorative flavour text are intended behaviour | — |
 | `KL-43` | LATER | Owner decision: global motion level/style plus OS reduced motion ship; per-category motion is a separate scope | Own scope if ever wanted |
 | `DATA-03`, `MODEL-01`, `MODEL-02`, `MODEL-04`, `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. Domain/backend halves first; UI halves need the Web lock, which the commissioning session holds at this checkpoint | Implementation, RED/GREEN, gates, publication |
-| `MODEL-03`, `KL-127` | IN_PROGRESS | **User decision 2026-10-04:** research first (KNX specification/corpus); implement only on reliable evidence, otherwise record a known gap and close the row | Research outcome |
+| `MODEL-03` | IN_PROGRESS | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants | Web editor half (Web lock) |
+| `KL-127` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** without reliable evidence record a known gap and close. UA1 found no `Ground` sample in the corpus or eight public fixtures (RESEARCH §25, KNOWN_LIMITATIONS §127) | — ; installation rename moves to MODEL-01 |
 
 This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
 release, no hardware permission and no native-acceptance claim.
@@ -955,7 +956,7 @@ release, no hardware permission and no native-acceptance claim.
 | `DOC-03` | P2 | AR15 | TODO |
 | `RELEASE-03` | P2 | AR16 | WAITING_OWNER |
 | `RELEASE-04` | P2 | AR19 | WAITING_DECISION |
-| `KL-127` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
+| `KL-127` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `MODEL-01` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
 | `MODEL-02` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |
 | `MODEL-03` | P2 | `goal-ui.md` — owner only | IN_PROGRESS |

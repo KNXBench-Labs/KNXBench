@@ -22,6 +22,16 @@ Broad attempt1 passed focused/fmt/check/clippy, then failed three registered ret
 
 ## Pending
 
+2026-10-04 03:02 UTC: current premerge doc5 and fresh binding17/eight negative
+controls GREEN. Own six acceptance docs banked c354e4bc; commissioning docs-only
+bb62ae57 integrated as20a3c4cd. Four foreign non-overlap blobs exact; complete
+upstream CURRENT suffix and independently constructed implementation blob exact.
+Initial integration wrapper interrupted after resolution/staging; inspected
+actual state and confirmed normal merge commit on retry. Source712 and binaries
+unchanged; producer7f57abbb public18/full853 receipts retain original identities.
+Current publication doc5/review/remote preflight/push/readback/closing/hygiene
+remain. No new bus/private ingestion,source changes or compatibility expansion.
+
 2026-10-04 02:53 UTC: latest7f57abbb full853 completed exit0 and separately
 reconciled:688 unchanged table-count installs,163 unchanged normalized refusals,
 2 item-budget admissions→690 installs. Independently rehashed all853 originals

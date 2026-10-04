@@ -13,6 +13,41 @@
   belongs solely in status/LEDGER.md; count-only evidence does not settle the
   resource/byte/caller decision or whole Alpha acceptance.
 
+## 2026-10-04 — AR13 hand-over: the debug-report dialog names every kept telegram field
+
+- The opt-in warning for `bus-telegrams.json` (`debugReport.privacyTelegrams`,
+  en/de) now says what `report.md` says: the file is not redacted and keeps
+  addresses, group-address names, every telegram's value (text values
+  included) and its timestamp, which together can show when the installation
+  was in use. Before, it named addresses and names only.
+- Evidence: a content test written RED first checks each kept part in both
+  catalogues (the existing test only compared the dialog with the catalogue
+  string). Full Vitest 1,835 in 101 files. With this, every web item from the
+  2026-10-04 UI owner handoff is delivered.
+
+## 2026-10-04 — UX-01: drag a group address onto a communication object
+
+- Group addresses in the Project Explorer are drag sources. They carry one
+  decimal id under `application/x-knxbench-group-address-id`
+  (`groupAddressDrag.ts`), with `effectAllowed: link`.
+- The drop target is a communication object's link row in the device
+  workspace, the row of the keyboard path. During dragover only the type is
+  checked, because the browser protects the data then. On drop the id is
+  parsed strictly and must be one this device may link (its installation's,
+  MODEL-01); otherwise the row reports it locally and sends nothing. A valid
+  drop calls the unchanged `POST /api/group-links` once, in the direction
+  shown in the row. That is the answer to GAP_ANALYSIS_ETS B10's objection:
+  there is no hidden default direction. A server refusal (for example an
+  existing link) appears in the row.
+- Evidence: 9 Vitest cases written RED first (payload module, Explorer source,
+  drop target), plus one guard (foreign drags) that already held. Full Vitest
+  1,833 in 101 files. `e2e/group-address-drag.e2e.ts` drives a real HTML5
+  drag in Chromium from the Explorer to the link row (direction Receive, and
+  a server refusal); both cases fail against the previous sources. 5 guard
+  mutants are caught. The e2e needs a viewport that shows source and target
+  together: Chromium drops a pending drag when the page scrolls while the
+  button is held.
+
 ## 2026-10-04 — MODEL-02 web half: ambiguous placements are repaired by an explicit choice
 
 - The device Inspector shows a **Placement conflict** when the topology lists

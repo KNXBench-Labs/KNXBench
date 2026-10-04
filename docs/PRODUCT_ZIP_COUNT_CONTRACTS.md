@@ -66,6 +66,13 @@ These are accepted negative controls, not production test failures.
   hash/version is bound to this HEAD, not the prior binary. No ignored/private
   or hardware tests are represented as passes.
 
+- Actual integrated `fffdc319` public16 after owner6abf557b: all16 commands0,
+  including new `check-ledger`; Rust3157/0/177 over170 blocks, Web1817,
+  Chromium106 plus separate probe1.803 frozen source/config inputs and logs
+  verified; fresh ProductDB/root-bound xtask compilation and revision-bound
+  release CLI accepted. Original failed attempts remain distinct. Later UI
+  ownerab1b87b7 needs its own actual merged all-command acceptance.
+
 Separate in-session whole-slice review found no blocking findings; it is not an
 independent-model approval. Subsequent published UI/ledger changes require their
 own actual integrated gates before publication; these checkpoints retain their

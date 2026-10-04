@@ -488,7 +488,7 @@ commissioning session holds the Web lock at the time of writing.
 | UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles done 2026-10-04 |
 | UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
 | UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
-| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); handed over **[web]** |
+| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); web half done 2026-10-04 |
 
 Every package follows §2: RED first, mutation check per new guard, gates,
 docs, merge, push, handover, cleanup.

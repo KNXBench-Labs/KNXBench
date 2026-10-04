@@ -1011,3 +1011,18 @@ describe("BulkActionToolbar — installations", () => {
     await unmount(root);
   });
 });
+
+// UX-01: a group address in the tree is a drag source for linking.
+describe("ProjectExplorer — group address drag source", () => {
+  it("makes a group address draggable and writes its id for linking", async () => {
+    const { root } = await renderExplorer(baseTree());
+    const label = labelFor("1/1/1 GA A");
+    expect(label.getAttribute("draggable")).toBe("true");
+    const transfer = new TestDataTransfer();
+    await dispatchDrag(label, "dragstart", transfer);
+    expect(transfer.types).toEqual(["application/x-knxbench-group-address-id"]);
+    expect(transfer.getData("application/x-knxbench-group-address-id")).toBe("101");
+    expect(transfer.effectAllowed).toBe("link");
+    await unmount(root);
+  });
+});

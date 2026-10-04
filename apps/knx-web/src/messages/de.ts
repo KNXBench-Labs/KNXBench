@@ -346,6 +346,7 @@ export const messages: Record<MessageKey, string> = {
   "inspector.unlink": "Trennen",
   "inspector.unlinkBoth": "Beide lösen",
   "inspector.chooseGroupAddress": "(Gruppenadresse wählen)",
+  "inspector.dropNotLinkable": "Diese Gruppenadresse kann mit diesem Gerät nicht verknüpft werden.",
   "inspector.link": "Verknüpfen",
   "inspector.line": "Linie",
   "inspector.unassigned": "(nicht zugeordnet)",
@@ -1552,7 +1553,7 @@ export const messages: Record<MessageKey, string> = {
   "debugReport.privacyRedacted":
     "IP-Adressen, Ihr Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen und Namen aus Ihrem Projekt werden nirgends ersetzt.",
   "debugReport.privacyTelegrams":
-    "bus-telegrams.json behält die physikalischen und Gruppenadressen Ihrer Anlage und, soweit das geöffnete Projekt sie kennt, die Namen der Gruppenadressen — „Küche Deckenlicht“. Ohne diese Angaben sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nehmen Sie die Datei nur auf, wenn Sie das weitergeben wollen.",
+    "bus-telegrams.json wird nicht geschwärzt. Die Datei behält die physikalischen Adressen und die Gruppenadressen Ihrer Anlage, die Namen der Gruppenadressen, soweit das geöffnete Projekt sie kennt — „Küche Deckenlicht“ —, sowie jeden Telegrammwert (auch Textwerte) mit seinem Zeitstempel. Zusammen können diese Angaben zeigen, wann die Anlage benutzt wurde. Ohne sie sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nehmen Sie die Datei nur auf, wenn Sie all das weitergeben wollen.",
   "debugReport.save": "Zip speichern…",
   "debugReport.openIssue": "GitHub-Issue öffnen…",
   "debugReport.close": "Schließen",

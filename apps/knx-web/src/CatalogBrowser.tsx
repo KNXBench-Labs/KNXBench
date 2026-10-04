@@ -139,13 +139,24 @@ function describeCreationDiagnostic(t: Translate, diagnostic: CreationDiagnostic
 // picks the highlighted item, pre-filling the name field exactly as
 // clicking the row does — it does not create the device, since creation
 // stays behind the name field's own Enter/Create.
+type CreateArgs = [lineId: number | null, catalogItemId: string, name: string, quantity: number, requestId: string];
+
+/** One id per user submit (ADR-0069: 1–128 of `[A-Za-z0-9_-]`); a UUID fits. */
+function newRequestId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function CatalogBrowser(props: {
   lineId: number | null;
   active?: boolean;
   onCreated: (tree: ProjectTree) => void;
   onClose: () => void;
+  /** The `server_incarnation` of the project tree on screen. A retry is only
+   * safe while the same server process still holds the request (ADR-0069). */
+  serverIncarnation?: string;
 }) {
-  const { lineId, active = true, onCreated, onClose } = props;
+  const { lineId, active = true, onCreated, onClose, serverIncarnation } = props;
   const t = useTranslate();
   const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
@@ -165,6 +176,10 @@ export default function CatalogBrowser(props: {
   const [creating, setCreating] = useState(false);
   const [createdWithDiagnostics, setCreatedWithDiagnostics] = useState(false);
   const [batchOutcomeUnconfirmed, setBatchOutcomeUnconfirmed] = useState(false);
+  // DATA-03: the exact request whose outcome is unknown, kept for a resend
+  // with the same requestId; `retry` says whether that resend is offered.
+  const pendingRef = useRef<{ args: CreateArgs; incarnation: string } | null>(null);
+  const [retry, setRetry] = useState<"none" | "available" | "restarted">("none");
   // Guards against a slower, earlier request's response landing after a
   // faster, later one's — the same stale-reply hazard `App.tsx`'s
   // `selectedDeviceIdRef` guards for device selection, applied here to a
@@ -276,11 +291,46 @@ export default function CatalogBrowser(props: {
 
   async function create() {
     if (!selected || name.trim() === "" || !validQuantity || createInFlightRef.current || createdWithDiagnostics) return;
+    await submit([lineId, selected.id, name.trim(), quantityNumber, newRequestId()], serverIncarnation);
+  }
+
+  async function retryPending() {
+    const pending = pendingRef.current;
+    if (!pending || createInFlightRef.current) return;
+    createInFlightRef.current = true;
+    setCreating(true);
+    let incarnation: string | undefined;
+    try {
+      incarnation = (await api.currentProject()).server_incarnation;
+    } catch (e) {
+      // Still unreachable: the record may well survive, keep the offer.
+      setError(api.errorMessage(e));
+      return;
+    } finally {
+      createInFlightRef.current = false;
+      setCreating(false);
+    }
+    if (incarnation !== pending.incarnation) {
+      // A restarted server forgot the request; resending could add the
+      // devices a second time.
+      pendingRef.current = null;
+      setRetry("restarted");
+      setError(t("catalog.retryServerRestarted"));
+      return;
+    }
+    await submit(pending.args, pending.incarnation);
+  }
+
+  async function submit(args: CreateArgs, incarnation: string | undefined) {
+    const quantityNumber = args[3];
     createInFlightRef.current = true;
     setCreating(true);
     setError(null);
     try {
-      const response = await api.createDevice(lineId, selected.id, name.trim(), quantityNumber);
+      const response = await api.createDevice(...args);
+      pendingRef.current = null;
+      setRetry("none");
+      setBatchOutcomeUnconfirmed(false);
       onCreated(response.tree);
       setDiagnostics(response.diagnostics);
       setCreatedItems(response.items ?? []);
@@ -297,13 +347,19 @@ export default function CatalogBrowser(props: {
       }
     } catch (e) {
       const status = (e as { status?: unknown } | null)?.status;
-      if (quantityNumber > 1 && (typeof status !== "number" || status >= 500)) {
-        // A lost response does not prove the server rolled back. Never invite
-        // a blind retry that could make a second batch of the same devices.
+      if (typeof status !== "number" || status >= 500) {
+        // A lost response does not prove the server rolled back. Never send a
+        // new request that could make a second batch of the same devices; only
+        // the same request (same requestId) may be resent, and only to the
+        // same server process (ADR-0069).
         setError(`${api.errorMessage(e)} ${t("catalog.unconfirmedBatch")}`);
         setBatchOutcomeUnconfirmed(true);
         setCreatedWithDiagnostics(true);
+        pendingRef.current = incarnation ? { args, incarnation } : null;
+        setRetry(incarnation ? "available" : "none");
       } else {
+        pendingRef.current = null;
+        setRetry("none");
         setError(api.errorMessage(e));
       }
     } finally {
@@ -509,10 +565,16 @@ export default function CatalogBrowser(props: {
       {createdWithDiagnostics && (
         <div className="catalog-create-row">
           <span>{error ? t("catalog.creationNeedsReview") : quantityNumber > 1 ? t("catalog.createdMany") : t("catalog.createdWithDiagnostics")}</span>
+          {retry === "available" && (
+            <button type="button" className="catalog-retry" disabled={creating} onClick={() => void retryPending()}>
+              {t("catalog.retrySafely")}
+            </button>
+          )}
           <button onClick={onClose}>{t("catalog.done")}</button>
         </div>
       )}
       {error && <span className="field-error">{error}</span>}
+      {retry === "available" && <p className="catalog-retry-hint">{t("catalog.retryHint")}</p>}
     </section>
   );
 }

@@ -199,11 +199,12 @@ select controls, not a new drag gesture.
 ## U11 device editor scope (ISSUE-09)
 
 A device placed in a line shows its line-derived area.line prefix and lets the
-user change only the device octet (1–255). New `.0` assignments are refused
+user change only the device octet (1–255, or 0 for an evidenced coupler). New `.0` assignments are refused
 unless the product database classifies the device's hardware as a coupler
 (`Hardware/@IsCoupler`, RESEARCH §25): the server then uses
-`SetCouplerIndividualAddress`. The web editor does not offer `.0` yet, and a
-device whose product is not installed stays refused. Imported `.0` addresses
+`SetCouplerIndividualAddress`. Since 2026-10-04 the web editor submits `.0` and
+shows the server's refusal otherwise; a device whose product is not installed
+stays refused. Imported `.0` addresses
 remain intact, including after undo. An imported
 address with a line prefix mismatch is shown for repair, not silently
 rewritten. Until repaired, moving that device to another line is refused; a
@@ -269,8 +270,13 @@ Since ADR-0069 the server accepts an optional `requestId`: an identical resend
 replays the recorded outcome (`replayed: true`) instead of applying again, and
 the same ID with other content is refused. The record is in memory, bounded to
 256 requests and cleared when the project is replaced; a server restart forgets
-it. The web client does not send `requestId` yet (Web lock), so its retry
-block above still applies.
+it. Since 2026-10-04 the web client sends one `requestId` per submit. After a
+lost or 5xx response it treats the batch as unconfirmed for any quantity and
+offers **Retry safely** with the same request, but only after checking that
+the server's `server_incarnation` is unchanged; a restarted server gets no
+retry, only the request to inspect the project. A newer web client against a
+pre-ADR-0069 server would have its retried batch applied again; the desktop
+app and `knx-server` serving its own bundle always pair matching versions.
 Successful batch responses carry per-device diagnostics; a late core batch
 failure carries the zero-based child command index and its typed cause, which
 the catalog maps to the one-based device number (the reservation is child 0).

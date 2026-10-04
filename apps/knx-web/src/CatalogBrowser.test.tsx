@@ -22,6 +22,7 @@ const apiMock = vi.hoisted(() => ({
   catalogItems: vi.fn().mockResolvedValue([]),
   installProductPackage: vi.fn<(file: File) => Promise<CatalogInstallReport>>(),
   createDevice: vi.fn(),
+  currentProject: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -62,6 +63,9 @@ afterEach(() => {
   resetUiLanguageForTests();
 });
 
+// ADR-0069: 1–128 ASCII letters, digits, `-`, `_`.
+const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 const item = {
   id: "cat-1",
   manufacturerId: "M-1",
@@ -82,12 +86,13 @@ const item2 = {
   hardware2programRefId: "HP-2",
 };
 
-async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn()) {
+async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncarnation?: string) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<CatalogBrowser lineId={null} onCreated={onCreated} onClose={onClose} />);
+    root.render(<CatalogBrowser lineId={null} onCreated={onCreated} onClose={onClose}
+      serverIncarnation={serverIncarnation} />);
   });
   return { root, onCreated, onClose };
 }
@@ -314,7 +319,7 @@ describe("CatalogBrowser", () => {
     expect(host!.textContent).toContain("Actuator 3");
     expect(host!.textContent).toContain("Physical addresses remain unassigned");
     await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
-    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 3);
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 3, expect.stringMatching(REQUEST_ID));
     expect(onCreated).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("Actuator 3");
@@ -340,16 +345,23 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
-  it("does not invite another batch request after a network error with unknown commit status", async () => {
-    apiMock.catalogItems.mockResolvedValue([item]);
-    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
-    const { root, onCreated, onClose } = await renderBrowser();
+  async function pickAndSetQuantity(value: string) {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
     await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
     const quantity = host!.querySelector<HTMLInputElement>('input[aria-label="Quantity"]')!;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
-    await act(async () => { setter.call(quantity, "3"); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
-    await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!.click());
+    await act(async () => { setter.call(quantity, value); quantity.dispatchEvent(new Event("input", { bubbles: true })); });
+  }
+
+  const createButton = () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!;
+  const retryButton = () => host!.querySelector<HTMLButtonElement>(".catalog-retry");
+
+  it("never sends a second batch with a new requestId after a network error with unknown commit status", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
+    const { root, onCreated, onClose } = await renderBrowser();
+    await pickAndSetQuantity("3");
+    await act(async () => createButton().click());
     expect(onCreated).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
@@ -358,6 +370,102 @@ describe("CatalogBrowser", () => {
     expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
     expect(host!.querySelector(".catalog-create-row")?.textContent).toContain("Done");
     expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  // DATA-03 / ADR-0069: one requestId per submit makes a resend after a lost
+  // response safe, as long as the same server process still holds the record.
+  it("sends a fresh requestId with each catalog submit", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue({ tree: { installations: [] }, diagnostics: [], replayed: false });
+    const first = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("1");
+    await act(async () => createButton().click());
+    first.root.unmount();
+    host?.remove();
+    const second = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("1");
+    await act(async () => createButton().click());
+    const ids = apiMock.createDevice.mock.calls.map((call) => call[4]);
+    expect(ids).toHaveLength(2);
+    for (const id of ids) expect(id).toMatch(REQUEST_ID);
+    expect(ids[0]).not.toBe(ids[1]);
+    second.root.unmount();
+  });
+
+  it("retries a lost batch with the same requestId and accepts a replayed outcome once", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    const created = [1, 2, 3].map((index) => ({ index, deviceId: index, name: `Actuator ${index}`, diagnostics: [] }));
+    apiMock.createDevice
+      .mockRejectedValueOnce(new TypeError("connection lost"))
+      .mockResolvedValueOnce({ tree: { installations: [] }, diagnostics: [], items: created, replayed: true });
+    apiMock.currentProject.mockResolvedValue({ installations: [], server_incarnation: "inc-1" });
+    const { root, onCreated } = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("3");
+    await act(async () => createButton().click());
+    expect(retryButton()).toBeTruthy();
+    expect(host!.textContent).toContain("cannot add the devices twice");
+    await act(async () => retryButton()!.click());
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(2);
+    const [firstCall, retryCall] = apiMock.createDevice.mock.calls;
+    expect(retryCall).toEqual(firstCall);
+    expect(firstCall[4]).toMatch(REQUEST_ID);
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(host!.querySelectorAll(".catalog-created-item")).toHaveLength(3);
+    expect(host!.textContent).not.toContain("Could not confirm whether the server added the devices");
+    expect(retryButton()).toBeNull();
+    root.unmount();
+  });
+
+  it("treats a lost single-device response as unconfirmed and offers the same safe retry", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(Object.assign(new Error("Internal Server Error"), { status: 500 }));
+    const { root } = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("1");
+    await act(async () => createButton().click());
+    expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
+    expect(retryButton()).toBeTruthy();
+    expect(host!.querySelector(".catalog-create-row")?.textContent).toContain("Done");
+    root.unmount();
+  });
+
+  it("refuses to retry once the server has restarted and forgotten the request", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
+    apiMock.currentProject.mockResolvedValue({ installations: [], server_incarnation: "inc-2" });
+    const { root, onCreated } = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("3");
+    await act(async () => createButton().click());
+    await act(async () => retryButton()!.click());
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("The server has restarted");
+    expect(retryButton()).toBeNull();
+    root.unmount();
+  });
+
+  it("offers no retry when the server identity is unknown", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
+    const { root } = await renderBrowser();
+    await pickAndSetQuantity("3");
+    await act(async () => createButton().click());
+    expect(host!.textContent).toContain("Could not confirm whether the server added the devices");
+    expect(retryButton()).toBeNull();
+    root.unmount();
+  });
+
+  it("keeps the retry available when the server cannot be asked yet", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValue(new TypeError("connection lost"));
+    apiMock.currentProject.mockRejectedValue(new TypeError("still offline"));
+    const { root } = await renderBrowser(vi.fn(), vi.fn(), "inc-1");
+    await pickAndSetQuantity("3");
+    await act(async () => createButton().click());
+    await act(async () => retryButton()!.click());
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    expect(host!.textContent).toContain("still offline");
+    expect(retryButton()).toBeTruthy();
     root.unmount();
   });
 

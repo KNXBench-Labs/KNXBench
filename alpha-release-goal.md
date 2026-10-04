@@ -905,12 +905,12 @@ of the generic `WAITING_OWNER`. Per-row evidence stays in
 | `KL-79`, `KL-137`, `KL-36`, `KL-133`, `UI-03`, `KL-130-ZOOM`, `KL-20` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** native WebKitGTK/Tauri, Orca, native file chooser, dead-WebView, real multicast and real-device web evidence leave the Alpha scope. Offline parts stay delivered (KL-20 keyboard/modal `2e57f8e5`, KL-79 offline UDP loopback at U13) | Nothing for the Alpha. Release notes must keep these as disclosed, unverified boundaries, not claims |
 | `KL-97`, `KL-98` | ACCEPTED_BOUNDARY | Owner decision (the user left this choice to the owner): truthful phase text without an invented percentage (ADR-0023) and decorative flavour text are intended behaviour | — |
 | `KL-43` | LATER | Owner decision: global motion level/style plus OS reduced motion ship; per-category motion is a separate scope | Own scope if ever wanted |
-| `DATA-03` | IN_PROGRESS | Server half delivered: optional `requestId` replay ledger ([ADR-0069](docs/adr/0069-catalog-batch-request-replay-token.md)), RED/GREEN and five caught mutants | Handed to the Web-lock holder (see handoff below): web client sends `requestId` and offers a safe retry |
+| `DATA-03` | DONE | Server half delivered: optional `requestId` replay ledger ([ADR-0069](docs/adr/0069-catalog-batch-request-replay-token.md)), RED/GREEN and five caught mutants; web half delivered 2026-10-04: one `requestId` per submit, a safe retry with the same id only while the server incarnation is unchanged; `CatalogBrowser.test.tsx` (6 new cases, 5 of them RED first), `e2e/catalog-retry.e2e.ts` (4 intercepted Chromium cases, en/de; all 4 fail on the old component), 4/4 mutants | Mixed-version residue only: a newer web client against a pre-ADR-0069 server would re-apply a retried batch (KNOWN_LIMITATIONS U11 catalog batch scope) |
 | `MODEL-04` | IN_PROGRESS | Server half delivered: opt-in `allocateAddresses`/`uniqueNames` with core `free_line_addresses`, RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): catalog dialog toggles |
 | `MODEL-01` | IN_PROGRESS | Core/server half delivered: owner-installation resolution for all id-addressed commands, explicit target for root creates, `RenameInstallation`, cross-installation refusal; RED/GREEN and eight caught mutants | Handed to the Web-lock holder (see handoff below): installation rename and target choice |
 | `MODEL-02` | IN_PROGRESS | Core/store/server half delivered (ADR-0071): explicit `RepairDevicePlacement` / `RepairLineOwner` with exact undo; `.knxdb` save now refuses an ambiguous topology instead of silently keeping the last placement; 10/10 mutants | Handed to the Web-lock holder (see handoff below): repair choice; duplicate-id renumbering stays a documented gap |
 | `UX-01` | IN_PROGRESS | Owner decision (delegated by the user): genuinely absent behaviour that the Alpha gets. No backend half needed — `POST /api/group-links` with the core's checks (now installation-scoped, ADR-0070) already exists | Handed to the Web-lock holder (see handoff below): drag gesture, keyboard equivalent kept |
-| `MODEL-03` | IN_PROGRESS | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants | Handed to the Web-lock holder (see handoff below): `.0` in the address editor |
+| `MODEL-03` | DONE | **User decision 2026-10-04:** research first, implement on reliable evidence. UA1 found it: manufacturer `Hardware/@IsCoupler` (RESEARCH §25); backend `SetCouplerIndividualAddress` delivered with RED/GREEN and six caught mutants; web half delivered 2026-10-04: the editor submits `.0`, the server decides and its refusal is shown; `Inspector.test.tsx` (2 new RED/GREEN cases), `e2e/coupler-address.e2e.ts` (4 intercepted Chromium cases, en/de), 3/3 mutants | — |
 | `KL-127` | ACCEPTED_BOUNDARY | **User decision 2026-10-04:** without reliable evidence record a known gap and close. UA1 found no `Ground` sample in the corpus or eight public fixtures (RESEARCH §25, KNOWN_LIMITATIONS §127) | — ; installation rename moves to MODEL-01 |
 
 This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
@@ -1009,7 +1009,7 @@ half had been started anywhere.
 | `R-DL-01` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `R-DL-02` | P2 | `goal-commission.md` — owner only | WAITING_OWNER |
 | `DATA-02` | P2 | AR04 | TODO |
-| `DATA-03` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `DATA-03` | P2 | `goal-ui.md` owner — backend and web half delivered | DONE |
 | `KL-87` | P2 | AR05 | DONE |
 | `AUDIT-01` | P2 | `goal-commission.md` — owner only | IN_PROGRESS |
 | `KL-137` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
@@ -1021,7 +1021,7 @@ half had been started anywhere.
 | `KL-127` | P2 | `goal-ui.md` — owner only | ACCEPTED_BOUNDARY |
 | `MODEL-01` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
 | `MODEL-02` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
-| `MODEL-03` | P2 | `goal-ui.md` backend done — web half: Web-lock holder (commissioning session) | IN_PROGRESS |
+| `MODEL-03` | P2 | `goal-ui.md` owner — backend and web half delivered | DONE |
 | `IMPORT-05` | P2 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY |
 | `IMPORT-06` | P2 | AR06 | TODO |
 | `KL-11` | P2 | AR06 | TODO |

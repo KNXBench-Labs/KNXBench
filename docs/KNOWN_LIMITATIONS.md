@@ -166,7 +166,14 @@ placed device and a line listed by several areas can be repaired
 other occurrence is removed in one undoable step. The web UI does not offer
 that choice yet (Web lock). Nothing is repaired automatically, duplicate ids
 are not renumbered, and ambiguous building-part or group-range placement has
-no repair command. `.knxdb` save refuses an ambiguous topology
+no repair command. Since ADR-0074 a native save is exact or refused: duplicate
+entity ids, orphaned lines, inconsistent parent/child lists and a device
+listed twice in one building part are refused with
+`StoreError::Unrepresentable` before any write, where they used to reopen
+different. Orphaned lines can be attached with the line move; hierarchy
+mismatches and duplicate ids have no in-app repair, so such a project cannot
+be saved natively until it is fixed elsewhere. ETS import no longer creates
+duplicate internal ids (ADR-0073). `.knxdb` save refuses an ambiguous topology
 (`StoreError::AmbiguousTopology`) instead of silently keeping the last
 placement, as it did before; a `knx-cli` import producing such a project
 therefore fails at save. Building-part moves refuse new
@@ -509,9 +516,10 @@ half, and it is unchanged. What is narrower than this entry used to claim is
 the validation half. As of **T06 (2026-09-21)** stage 4 checks:
 
 * duplicate `@Id` across `Area`, `Line`, `DeviceInstance`, `BinaryData`,
-  `GroupRange`, `GroupAddress` and `BuildingPart` — an error, because
-  `map.rs` keys each of those by that string and a repeat silently collapses
-  two entities into one identity;
+  `GroupRange`, `GroupAddress` and `BuildingPart` — an error. Until
+  2026-10-04 a repeat collapsed two entities onto one internal id; since
+  ADR-0073 every element keeps its own id, and a reference to the repeated
+  `@Id` is reported as `AmbiguousReference` instead of being resolved;
 * dangling communication-object → group-address links, in **both** spellings:
   schema 11's `Connectors/Send|Receive/@GroupAddressRefId` and schema ≥21's
   flat `Links` attribute of short ids — an error;

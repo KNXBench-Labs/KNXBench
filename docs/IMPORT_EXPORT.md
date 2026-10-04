@@ -233,6 +233,12 @@ through `ImportReport::errors`, tagged `stage: "validate"`.
 | Duplicate `@Id` (`Area`, `Line`, `DeviceInstance`, `BinaryData`, `GroupRange`, `GroupAddress`, `BuildingPart`) | Error | Document-wide — ETS ids embed their installation |
 | Dangling `Connectors/Send\|Receive/@GroupAddressRefId` (schema 11) | Error | Document-wide, same reason |
 | Dangling `Links` target (schema ≥21, short ids such as `GA-3`) | Error | Per installation — a short id embeds no installation |
+
+Mapping follows the same scopes (ADR-0073): every element keeps its own
+internal id even when its `@Id` repeats, a reference to a repeated `@Id`
+is reported as `AmbiguousReference` (`stage: "map"`, error) instead of being
+resolved, and a schema ≥21 short id resolves only against the device's own
+installation.
 | Two devices on one individual address | Warning | Per installation |
 | Two group addresses on one address | Warning | Per installation |
 | Group address outside its enclosing `GroupRange`'s bounds | Warning | Per range |

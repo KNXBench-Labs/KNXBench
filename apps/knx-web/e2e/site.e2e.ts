@@ -46,7 +46,9 @@ for (const language of ["en", "de"] as const) {
         await page.locator(".structure-context-editor select").selectOption("20");
         await expect(page.locator('.building-diagram > .building-diagram-node')).toHaveCount(id === 4 ? 2 : 1);
       }
-      expect(created).toEqual([{ name: "Campus", kind: "Ground" }]);
+      // MODEL-01: a root create names its installation explicitly; this is the
+      // same (only) installation the server's default would have chosen.
+      expect(created).toEqual([{ name: "Campus", kind: "Ground", installationId: 1 }]);
       expect(moved).toEqual([{ id: 4, parentId: 20 }, { id: 6, parentId: 20 }]);
       expect(unmocked).toEqual([]);
       await expect(page.locator('.building-diagram .diagram-device')).toHaveCount(2);

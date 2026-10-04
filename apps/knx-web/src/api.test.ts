@@ -74,6 +74,38 @@ describe("api", () => {
     });
   });
 
+  // MODEL-01 / ADR-0070: root creates and CSV exchange may name their
+  // installation; absent keeps the server's first-installation default.
+  it("names the target installation on root creates only when given", async () => {
+    const bodies: unknown[] = [];
+    const post = async (call: () => Promise<unknown>) => {
+      mockFetchOnce({ installations: [] });
+      await call();
+      bodies.push(JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string));
+    };
+    await post(() => api.createArea("Area", 1, 2));
+    await post(() => api.createArea("Area", 1));
+    await post(() => api.createGroupRange("Range", "1/0/0", "1/7/255", undefined, 2));
+    await post(() => api.createBuildingPart("Site", "Ground", undefined, 2));
+    await post(() => api.createGroupAddress("Light", "1/1/1", undefined, 2));
+    expect(bodies).toEqual([
+      { name: "Area", address: 1, installationId: 2 },
+      { name: "Area", address: 1 },
+      { name: "Range", start: "1/0/0", end: "1/7/255", installationId: 2 },
+      { name: "Site", kind: "Ground", installationId: 2 },
+      { name: "Light", address: "1/1/1", installationId: 2 },
+    ]);
+  });
+
+  it("renames an installation through PATCH /api/installations/{id}", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.renameInstallation(2, "Annex");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/installations/2");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Annex" });
+  });
+
   it("encodes the service-control target for GET and names only the debug scope on POST", async () => {
     const reading = { address: "1.1.67", raw: "0000", mask: "0701", individualAddressWriteEnabled: false };
     mockFetchOnce(reading);

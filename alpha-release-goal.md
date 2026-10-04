@@ -2,7 +2,7 @@
 
 **Created:** 2026-10-01 20:50 CEST.
 **Planning baseline:** `origin/main` at `dfa0cc79ca50bc7da747058e97978c7e3a2de25c`, refreshed after the UI closure receipt published during planning.
-**Input inventory:** [OFFENE_PUNKTE.md](OFFENE_PUNKTE.md), all 180 main-table IDs; its original audit revision and date remain unchanged.
+**Input inventory:** [OFFENE_PUNKTE.md](docs/archive/OFFENE_PUNKTE.md), all 180 main-table IDs; its original audit revision and date remain unchanged.
 
 Use **this file** as the instruction for the autonomous alpha-readiness session. Do not create or use a second `goals.md`. Creating this plan does **not** start implementation, authorize a hardware operation, approve a release tag or publish anything.
 
@@ -14,7 +14,7 @@ This goal owns remaining **non-UI, non-commissioning** correctness, data-integri
 
 - [`goal-ui.md`](goal-ui.md) remains the sole execution owner of its issues, their existing server/domain halves, U13 review findings, UI acceptance and the Web lock. **No U-package is copied into this queue.**
 - [`goal-commission.md`](goal-commission.md) remains the sole execution owner of programming, download/recovery, commissioning research, their server/CLI/UI paths and hardware evidence. **No K-package is copied into this queue.**
-- [`goal.md`](goal.md) remains historical/contextual evidence for the other backlog, accepted exclusions and decisions. When this new goal is explicitly started, use its AR packages as the execution queue for the overlapping non-UI/non-commissioning scope; do **not** simultaneously run a second `goal.md` executor on those same tasks. This file does not change either other track's instructions or approvals.
+- [`goal.md`](docs/archive/goal.md) remains historical/contextual evidence for the other backlog, accepted exclusions and decisions. When this new goal is explicitly started, use its AR packages as the execution queue for the overlapping non-UI/non-commissioning scope; do **not** simultaneously run a second `goal.md` executor on those same tasks. This file does not change either other track's instructions or approvals.
 - [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md), current source/tests, ADRs and current maintained documentation win over the dated inventory, historical checkboxes and this planning snapshot. Never treat a branch name or old success count as current proof.
 - Accepted DIN-26 exclusions, Secure/Functions/multi-user deferrals, unknown manufacturer semantics and withdrawn `.knxproj` export remain intact. This plan is not a blanket scope expansion.
 

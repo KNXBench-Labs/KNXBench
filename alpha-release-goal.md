@@ -8,6 +8,26 @@ Use **this file** as the instruction for the autonomous alpha-readiness session.
 
 The outcome is an honestly scoped, tested Linux-first alpha candidate and an evidence-backed release decision, not the disappearance of every limitation. An accepted boundary is not a bug waiting to be secretly volunteered for overtime.
 
+## Telegram-flow Alpha addition — user decision 2026-10-04
+
+The user confirmed [the session-local nervous-system contract](docs/TELEGRAM_FLOW_VISUALIZATION.md)
+and explicitly authorized the responsible Goal sessions to implement it.
+**It belongs in the Alpha**; omission needs a new explicit user scope decision.
+The new packages are AR20 (read-only data/server evidence contract) and AR21
+(integrated acceptance); UI U19–U21 stay exclusively in `goal-ui.md`.
+No commissioning package, spatial domain entity, persistent traffic store or new
+bus operation is added. The older flow-inspector-first recommendation is narrowly
+superseded by [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md), not by
+reopening accepted floor-plan/spatial-editor exclusions.
+
+Schedule **U19 → AR20 → U20 → U21 → AR21** as prerequisites of the finished
+AR15–AR18 dossier/artifact/review, not after AR19 merely because the additive IDs
+are higher. Existing unrelated packages/owner work continue; an owner dependency
+is not permission to bypass its lock. AR19's exact release approval stays separate.
+Approval does not auto-start/resume another session or authorize this planning
+session to implement. Package checklists track this new user feature; the frozen
+180-ID source inventory and existing canonical ledger dispositions stay unchanged.
+
 ## 0. Scope and source of truth
 
 This goal owns remaining **non-UI, non-commissioning** correctness, data-integrity, import/product-data, backend reporting, documentation, packaging and whole-product acceptance work derived from the inventory. It turns the list into small work packages with explicit prerequisites, evidence and stop boundaries.
@@ -35,6 +55,8 @@ Commissioning has subsequently hardened failed-download cleanup, worker outcome 
 | General core ID exhaustion, command invariants, storage contracts, manufacturer import/reporting and backend projection | This goal, only outside another track's assigned package | Coordinate shared modules before editing; preserve public contracts and hand over any new UI-dependent behavior. |
 | CSV/report policy, backend catalog-version policy, compatibility claims | This goal | Prepare or implement the approved data/backend half; disputed product-policy choices remain explicit decisions. |
 | Triage/status reconciliation, manual acceptance, local alpha artifact, final whole-product review | This goal | Consume both owners' receipts, preserve their detailed evidence and do not substitute a product review for U13/K-track acceptance. |
+| Telegram-flow read-only participant/type/age/session-context contract | This goal, AR20 after U19 handoff | Publish exact semantic contract and named regressions; no Web rendering/binding edits without the UI owner. |
+| Telegram-flow visualization and owner acceptance | `goal-ui.md`, U19–U21 under the Web lock | Consume the exact U21 receipt in AR21; no duplicated UI package or new K-package. |
 | Statistics collector, private captures and historical Paperclip material | Separate tooling/private evidence | Use only permitted aggregate evidence and already authorized bookkeeping; no collector rewrite, publication of private inputs or revival of historical board tasks. |
 
 Mixed items have **one primary route** in the appendix, not two implementation jobs. In particular:
@@ -817,6 +839,73 @@ boundaries. No bus run.
 
 **Exit evidence:** a recorded release decision, and only if authorized an actual verified publication. A “go” to continue alpha hardening is not consent to create a hosted release.
 
+### AR20 — Publish the read-only, session-bound telegram-flow contract
+
+**Open; implementation authorized by user decision 2026-10-04.** Source: new
+approved Alpha feature, [flow research](docs/TELEGRAM_FLOW_VISUALIZATION.md),
+[ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
+**Dependencies:** U19's exact contract handoff and current monitor/project
+contracts. Ready independently of unrelated import/commissioning packages;
+required before U20 and final AR15–AR18 acceptance. No Web implementation here.
+
+- [ ] Trace current capture/rows/context/projection and all consumers against
+  directly read KNX clauses; reuse application/service resolution and existing
+  associations. Distinguish observed source from configured participant, flag
+  handling and unresolved/ambiguous mappings; Send is not a receiver exclusion.
+- [ ] Implement the smallest pure read-only participant snapshot and service
+  adapter: typed raw destination/source identity, per-object membership/evidence,
+  existing decoded/raw states and reliable event age. Keep domain/core independent
+  of UI and format; no new core graph, coordinates, project/product migration.
+- [ ] Bind evidence to server incarnation, monitor session and full flow context.
+  Extend exact comparison to relevant device/link/flag/activation facts;
+  preserve atomic snapshots, cursor/drops/restarts and old-consumer compatibility.
+  Do not remap retained events against an edited project or round unsafe counters.
+- [ ] Specify bounded response/model/age admission and visible unavailable,
+  historical, stale and overflow states. Capture repeats with distinct sequences
+  are observed frames; duplicate poll delivery is not another event. No new
+  tunnel, active probe, persistence, decryption, write API or UI-only inference.
+- [ ] Add RED/GREEN semantic/service regressions for Write/Read/Response,
+  no/multiple recipients, Send-associated receiving candidates, unknown flags,
+  inactive/dangling objects, duplicate addresses/IDs, multiple installations,
+  DPT conflict/error, individual/opaque services, link-only edits, delayed rows,
+  session/server restart, invalid counters, bounded refusal and capture gaps.
+- [ ] Run actual owning-crate/integration/full gates and restored guard mutations;
+  document exact final wire fields/routes, revision and named tests in the U20
+  handover. Coordinate bindings with the UI owner/Web lock; no alpha edits under
+  the Web tree by stealth. A data-only receipt does not close the vertical feature.
+
+**Exit evidence:** integrated, version-compatible, read-only semantic contract
+and named regressions, consumed next by U20. No hardware or recipient-state proof.
+
+### AR21 — Accept the integrated telegram-flow Alpha feature
+
+**Open.** Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
+covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
+The alpha session does not reimplement the UI or take its lock for bookkeeping.
+
+- [ ] Consume and verify both owners' exact integrated revisions/contracts/tests;
+  confirm productive use of the existing monitor feed, not an isolated study or
+  second connection. Check snapshot/sequence/age/flag semantics across layers.
+- [ ] Exercise the contract's synthetic end-to-end cases: immediate same-slot
+  values/7-second expiry, three badges plus Inspector, current-source leader,
+  layout-only freeze, bidirectional/group-labelled pulses, persistent quiet
+  edges, high-load coalescing versus actual loss, stale/restart and no-project
+  fallback. Use intercepted/fake adapters only; never open a real KNX socket.
+- [ ] Reconcile actual renderer/load/long-session measurements, limits and
+  leak/motion/theme/keyboard evidence with the supported Alpha envelope.
+  Existing accepted native/Orca/live boundaries remain disclosed, not silently
+  reopened or certified from Chromium. Do not report unexecuted benchmark targets.
+- [ ] Update manual, implementation status, architecture/research, limitations,
+  roadmap and AR15–AR18 scope/artifact/review inputs. Required flow behavior is
+  not waived by old optional/spatial dispositions; record any new user exception
+  explicitly. Keep the canonical source-ID ledger's historical rows intact.
+- [ ] Run actual integrated affected/full gates and a separate feature review;
+  hand the named flow acceptance receipt to AR18's independent whole-product
+  review. Any feature/fix after AR18 reruns affected final acceptance.
+
+**Exit evidence:** source-bound whole-feature receipt and accurate Alpha
+scope/artifact/review, not a release tag or KNX/ETS compatibility claim.
+
 ## 4. Accepted boundaries, later work and external prerequisites
 
 The appendix accounts for every main-table ID. It is a routing ledger, **not 180 new implementation tasks**.
@@ -878,7 +967,7 @@ done by this scope decision; unrelated Alpha acceptance conditions are unchanged
 Distinguish these terminal states:
 
 1. **Offline work exhausted, readiness blocked:** all ready alpha-owned packages are delivered; named owner/external/user decisions remain. Report exact blockers and continue only when they resolve. This is **not** alpha readiness.
-2. **Alpha-ready, not published:** AR18 is green for the actual candidate, both tracks' relevant receipts/accepted boundaries and manual/release exceptions are settled, and the independent whole-product review has no blocking findings. AR19 may still wait for publication approval.
+2. **Alpha-ready, not published:** AR21 has adopted the integrated Telegram-flow receipt and AR18 is green for the actual candidate, both tracks' relevant receipts/accepted boundaries and manual/release exceptions are settled, and the independent whole-product review has no blocking findings. AR19 may still wait for publication approval.
 3. **Published alpha:** the user explicitly approved the exact release action and its target/artifact have been read back and verified. Do not claim this from a local AppImage or a version string.
 
 Do not use a completion percentage for unequal tasks. Report completed packages, current verification, owner/external blockers, accepted limitations and the next ready package or exact unblock action. Once this goal is explicitly started, a normal green package boundary is not a stop boundary.

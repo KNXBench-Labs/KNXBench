@@ -1,5 +1,18 @@
 # Alpha-readiness evidence and dispositions
 
+## New Telegram-flow Alpha prerequisite — user decision 2026-10-04
+
+The user confirmed and authorized [the session-local flow contract](TELEGRAM_FLOW_VISUALIZATION.md)
+for the Alpha. UI U19–U21 and alpha AR20/AR21 are additional open package work,
+not a reinterpretation of completed source IDs or a silent scope waiver.
+Final readiness/artifact/review requires AR21's integrated flow acceptance;
+AR19 still requires separate release consent. Existing owner exceptions,
+commissioning safety gates and the frozen source-ID inventory remain intact.
+A plan is not a vertical feature receipt: immediate values/7-second expiry,
+configured recipients, directed traffic, freeze, retained resting lines,
+theme/motion and explicit overload/loss handling must be actually verified.
+
+
 ## AR00 reconciliation baseline
 
 User-started offline alpha queue, 2026-10-01. Inspected source/maintained docs

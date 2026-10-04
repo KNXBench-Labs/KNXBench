@@ -34,7 +34,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 ## Counts
 
 - **Snapshot IDs** (180 rows) — status: TODO=30, IN_PROGRESS=4, DONE=28, BLOCKED_EXTERNAL=4, WAITING_OWNER=41, WAITING_DECISION=6, ACCEPTED_BOUNDARY=46, LATER=21; owner: alpha=95, commission=42, later=19, ui=24; priority: P0=4, P1=29, P2=87, P3=60.
-- **Post-snapshot IDs** (5 rows) — status: IN_PROGRESS=2, DONE=3; owner: alpha=5; priority: P1=1, P2=4.
+- **Post-snapshot IDs** (6 rows) — status: TODO=1, IN_PROGRESS=2, DONE=3; owner: alpha=6; priority: P1=2, P2=4.
 
 ## Snapshot IDs
 
@@ -227,16 +227,24 @@ former routing table.
 ## Post-snapshot IDs
 
 Found after the inventory snapshot; they have their own identities and do not
-change the 180-row count. Origin: the public product-download run of
-2026-10-03 ([corpus run](../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
+change the 180-row count. Origin of the `KL-149`–`KL-153` rows: the public
+product-download run of 2026-10-03
+([corpus run](../PRODUCT_DATABASE_CORPUS.md#public-crawler-corpus-run-2026-10-03)).
+Origin of `FLOW-01`: the user's 2026-10-04 decision to put the session-local
+telegram-flow view into the Alpha
+([contract](../TELEGRAM_FLOW_VISUALIZATION.md),
+[ADR-0077](../adr/0077-session-local-telegram-flow-view.md)). Its priority P1 is
+the integrating goal-ui owner's reading of "required before AR15–AR18", not a
+user-set value; the package checklists (U19–U21, AR20/AR21) carry the work.
 
 | ID | P | Owner | Route | Status | Owner disposition | Evidence and remaining work |
 | --- | --- | --- | --- | --- | --- | --- |
 | `KL-150` | P1 | alpha | AR06P | DONE | — | docs/KNOWN_LIMITATIONS.md §150; a real MDT product with nested `ModuleDef`s fails atomically on a `dynamic_node` UNIQUE constraint; synthetic RED fixture first, local package as private evidence only. **AR14D D2 correction 2026-10-04:** `TODO` → `DONE`. AR06P checklist item ticked; code `1b215d51` and closing `5540dcac` published and read back (goal AR06P status). Both post-snapshot tables still said `TODO`. |
 | `KL-149` | P2 | alpha | AR06P | DONE | — | docs/KNOWN_LIMITATIONS.md §149; CLI extension check is case-sensitive; 43/46 refused Hager files install under a lowercase name. **AR14D D2 correction 2026-10-04:** `TODO` → `DONE`. AR06P checklist item ticked; scoped delivery `362fec24` published and read back (goal AR06P status). Both post-snapshot tables still said `TODO`. |
-| `KL-151` | P2 | alpha | AR06P | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §151; 13 real packages exceed the ZIP size limits, including Siemens' only current download; measure before changing the bound. **AR14D D2 correction 2026-10-04:** `TODO` → `IN_PROGRESS`. Resource research delivered at `80a5500d`; production cap and caller acceptance open (goal AR06P status). Both post-snapshot tables still said `TODO`.  AR06V existing-count contracts:65d7cf5c; native2, compiled lower/upper controls2 and source-bound integrated public15 on0e3e90b2 accepted (no cap change); dossier docs/PRODUCT_ZIP_COUNT_CONTRACTS.md. Byte/caller/resource and newer integrated publication acceptance remain separate.  Subsequent actualfffdc319 public16 independently accepted, including check-ledger (Rust3157/0/177, Web1817, Chromium106); newer owner integration and publication pending, not full KL151 closure. |
+| `KL-151` | P2 | alpha | AR06P | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §151; 13 real packages exceed the ZIP size limits, including Siemens' only current download; measure before changing the bound. **AR14D D2 correction 2026-10-04:** `TODO` → `IN_PROGRESS`. Resource research delivered at `80a5500d`; production cap and caller acceptance open (goal AR06P status). Both post-snapshot tables still said `TODO`.  AR06V existing-count contracts:65d7cf5c; native2, compiled lower/upper controls2 and source-bound integrated public15 on0e3e90b2 accepted (no cap change); dossier docs/PRODUCT_ZIP_COUNT_CONTRACTS.md. Byte/caller/resource and newer integrated publication acceptance remain separate.  Subsequent actualfffdc319 public16 independently accepted, including check-ledger (Rust3157/0/177, Web1817, Chromium106); newer owner integration and publication pending, not full KL151 closure.  Latest actual6c3080d9 public16 accepted (Rust3157/0/177, Web1835, Chromium108),806 hashes; doc-only2231d87c adopted, publication pending. Byte/caller/resource policy not settled. |
 | `KL-152` | P2 | alpha | AR06P | DONE | — | docs/KNOWN_LIMITATIONS.md §152; 2 real packages exceed the XML evidence item limit; measure before resizing. **AR14D D2 correction 2026-10-04:** `TODO` → `DONE`. AR06P checklist item ticked; code published as `2b2a267f` with remote readback; closing metadata and hygiene listed separately (goal AR06P status). Both post-snapshot tables still said `TODO`. |
 | `KL-153` | P2 | alpha | AR06P | IN_PROGRESS | — | docs/KNOWN_LIMITATIONS.md §153; schemes 10 (146 files) and 23 (2 files) are refused; grammar evidence for scheme 23 first; unsupported schemes stay explicit refusals |
+| `FLOW-01` | P1 | alpha | U19 (`goal-ui.md`) → AR20 → U20 → U21 (`goal-ui.md`) → AR21 | TODO | — | docs/TELEGRAM_FLOW_VISUALIZATION.md, ADR-0077; required Alpha feature by user decision 2026-10-04. Plan published 2026-10-04, no implementation yet. AR21 sets the final status after adopting the U21 receipt; the UI owner reports U19–U21 progress in its handover. |
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

@@ -75,3 +75,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0073](0073-imported-elements-keep-their-own-ids.md) | Imported elements keep their own ids; ambiguous references are not guessed | Accepted | 2026-10-04 |
 | [0074](0074-native-save-is-exact-or-refused.md) | A native save is exact or refused | Accepted | 2026-10-04 |
 | [0076](0076-one-ledger-is-the-status-of-record.md) | One ledger is the status of record for tracked source IDs | Accepted | 2026-10-04 |
+| [0077](0077-session-local-telegram-flow-view.md) | A session-local telegram-flow view is not physical topology | Accepted (implementation pending) | 2026-10-04 |

@@ -71,7 +71,17 @@ These are accepted negative controls, not production test failures.
   Chromium106 plus separate probe1.803 frozen source/config inputs and logs
   verified; fresh ProductDB/root-bound xtask compilation and revision-bound
   release CLI accepted. Original failed attempts remain distinct. Later UI
-  ownerab1b87b7 needs its own actual merged all-command acceptance.
+  ownerab1b87b7 is covered by the separate actual6c3080d9 checkpoint below.
+
+- Actual integrated `6c3080d9` public16 after ownerab1b87b7: all16 actual
+  commands0, Rust3157/0/177 over170 blocks, Web1835, Chromium108 plus
+  separate probe1;806 source/config inputs and every log exact. The accepted
+  same-worktree Cargo target was reused only after verifying native120 inputs
+  unchanged and11 input changes limited to Web sources; all16 commands were
+  executed again. Root-bound audits and current revision-stamped CLI passed;
+  no new-fresh-target claim. Original predecessor CLI/logs retained byte-exact.
+  Subsequent owner2231d87c changes Markdown only: source-identical publication
+  needs doc audits, not a relabeled runtime execution.
 
 Separate in-session whole-slice review found no blocking findings; it is not an
 independent-model approval. Subsequent published UI/ledger changes require their

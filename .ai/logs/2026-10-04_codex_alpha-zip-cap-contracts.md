@@ -257,3 +257,13 @@ Remote2231d87c differs from prior owner only in Markdown; non-MD delta empty.
 Strict ancestor guard refused publication of an outdated merge; not a test
 failure. Adopt complete owner docs, execute docs6 on actual final candidate;
 retain code CLI6c3080d9 identity distinct from doc-only publication revision.
+
+## Source-identical final documentation merge
+
+Published2231d87c adopted; expected single IMPLEMENTATION_STATUS conflict
+resolved with complete owner body plus scoped current evidence prefix. Full
+owner handover and history preserved, ledger only own evidence/status unchanged.
+All806 accepted6c3080d9 non-MD source/config hashes remain exact. Runtime/code
+acceptance retains6c3080d9 identity; doc publication is separate. Actual final
+docs6 and remote readback/hygiene remain pending. No new public/private totals
+or manufacturer/runtime/Alpha claims.

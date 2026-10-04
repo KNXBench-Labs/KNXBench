@@ -1,5 +1,17 @@
 # UI alpha-readiness owner audit and follow-ups
 
+## Telegram-flow owner addition — user decision 2026-10-04
+
+[The approved Alpha feature](TELEGRAM_FLOW_VISUALIZATION.md) adds UI U19–U21
+and alpha AR20/AR21 without reopening completed UI source-ID/UA/theme receipts.
+The UI owner resolves a tested design/handoff in U19, consumes integrated AR20
+in U20, and closes productive layout/pulse/value/theme/motion/load evidence in
+U21. The alpha owner adopts it in AR21 before final readiness. Coordinate the
+existing Web lock and active package; this plan takes/releases no lock and
+starts no bus operation. Current source-ID status remains in its canonical
+ledger, not duplicated here. No implementation evidence is claimed by this note.
+
+
 Date: 2026-10-02. Candidate: isolated `ui-alpha-readiness` checkout, based on
 `65b91777`, with reservation `bfb6fec1`. This is new owner evidence, not a
 reopening of the completed U0–U13 issue queue or an alpha-release approval.

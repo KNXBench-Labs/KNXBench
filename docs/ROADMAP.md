@@ -1,5 +1,20 @@
 # Roadmap
 
+## Cross-cutting — Telegram-flow nervous system (Alpha addition, 2026-10-04)
+
+Approved and authorized for the responsible Goal sessions, **not implemented**.
+The [contract/research](TELEGRAM_FLOW_VISUALIZATION.md) and
+[ADR-0077](adr/0077-session-local-telegram-flow-view.md) define a session-local,
+read-only dynamic communication map: directional/group-labelled pulses, immediate
+per-group values with 7-second expiry, an observed-sender activity center,
+freezable layout and resting edges that never silently vanish. Theme/motion
+preferences apply; inferred endpoints stay visibly distinct from receipt proof.
+Execution order: UI U19 → alpha AR20 → UI U20/U21 → alpha AR21, then finished
+AR15–AR18 acceptance; AR19 still needs a separate exact release decision.
+No new commissioning work, floor-plan editor, permanent coordinates or traffic
+history. Existing historical milestones and owner work are not reopened.
+
+
 ## Integrated CRT animation follow-up (2026-10-03)
 
 Application-owned CRT feedback is implemented separately from the completed

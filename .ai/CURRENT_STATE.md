@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-04 11:17
+- **Completed:** Story edition `2026-10-04.3` (user request): the project-evolution story is narrated by a gloomy AI in homage to Marvin (Hitchhiker's Guide). `storytool` gained an optional, schema-enforced `edition.narrator` (hero, aside label, mandatory disclosure; CHANGES/REVIEW report it; editions without it render byte-identically). Only narration and asides changed; one new step `story-narrator` plus two relations. User reviewed without changes. Verified: 60/60 story unit tests, 41/41 Playwright checks, check-anchors 389/255 none dead. Log: `.ai/logs/2026-10-04_claude_story-marvin-narrator.md`.
+- **Pending/Next Steps:** Publication of any edition remains a separate, exact-digest approval. Next story update needs a new edition id; keep the narrator rules in `docs/PROJECT_EVOLUTION_STORY_BRIEF.md` (Voice and accessibility).
+- **Notes for Codex oder Claude:** From a worktree, pass the private ledger to `prepare` by absolute path (`/mnt/daten-i/Sourcecode/KNXBench.story-private/provenance.json`). The persona must never enter record fields or soften stated limits.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 11:15
 - **Completed:** UA4 core/server half (MODEL-01, ADR-0070): `knx-core` commands act in the installation owning their target instead of `installations[0]`; ambiguous ids refused; Delete/Restore inverses carry the installation; parameter rows edited where they live; root creates (`CreateArea`, `CreateGroupRange`, `CreateBuildingPart`, range-less `CreateGroupAddress`) take `installation: Option<InstallationId>` (None = first, as before); cross-installation moves/links refused with `CommandError::CrossInstallation`; new `Command::RenameInstallation` and undo-only `RestoreDeviceBuildingPlacement`. Server: `PATCH /api/installations/{id}`, optional `installationId` on the four root create routes. RED 5/7 → GREEN 10/10 (`crates/knx-core/tests/multi_installation.rs`), HTTP 2/2 (`apps/knx-server/tests/multi_installation_routes.rs`), 8/8 mutants + 1 undo-inverse mutant caught, full gates green. Earlier handover timestamps of this session (10:55/11:40/12:25) were ahead of the clock and are corrected to the commit times.

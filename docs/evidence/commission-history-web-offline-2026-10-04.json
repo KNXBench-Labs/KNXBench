@@ -1,0 +1,464 @@
+{
+  "format": 1,
+  "checked_at": "2026-10-04T11:54:43+02:00",
+  "gated_head": "9fe691168d3c89efded8c61c3156a5f7769eb246",
+  "upstream_base": "4bc90aab1922f20d62129153755775ecbfe9e396",
+  "scope": "bounded format-2 History Web adoption and integrated ordinary offline gates; not whole commissioning completion",
+  "review": "separate in-session review, zero blocking findings; not independent approval",
+  "frozen_public_input_count": 1037,
+  "frozen_web_input_count": 279,
+  "frozen_manifest_sha256": "37a04844128b065128dfe95ff4656a77473da60291c4403eb05ef8f13d9f6e3b",
+  "stages": [
+    {
+      "phase": "guard-controls",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "web",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "fmt",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "clippy",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "workspace",
+      "exit": 0,
+      "metrics": {
+        "passed": 3079,
+        "failed": 0,
+        "ignored": 176,
+        "result_blocks": 160
+      }
+    },
+    {
+      "phase": "check-layering",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "check-headers",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "check-anchors",
+      "exit": 0,
+      "metrics": null
+    },
+    {
+      "phase": "check-corpus-gates",
+      "exit": 0,
+      "metrics": null
+    }
+  ],
+  "web_stages": [
+    {
+      "phase": "browser",
+      "exit": 0,
+      "metrics": {
+        "startTime": "2026-10-04T09:46:09.233Z",
+        "duration": 7882.492,
+        "expected": 8,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    {
+      "phase": "vitest",
+      "exit": 0,
+      "metrics": {
+        "numTotalTests": 1761,
+        "numPassedTests": 1761,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true,
+        "fileCount": 100
+      }
+    },
+    {
+      "phase": "build",
+      "exit": 0,
+      "metrics": null
+    }
+  ],
+  "guard_controls": [
+    {
+      "name": "query-before-http",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "refuses unsafe or invalid query bounds",
+      "killed": true
+    },
+    {
+      "name": "closed-fields",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects the whole page",
+      "killed": true
+    },
+    {
+      "name": "safe-integers",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "refuses unsafe or invalid query bounds",
+      "killed": true
+    },
+    {
+      "name": "backup-before-intent",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "terminal-restart",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects the whole page",
+      "killed": true
+    },
+    {
+      "name": "cleanup-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects the whole page",
+      "killed": true
+    },
+    {
+      "name": "calendar-normalization",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects calendar and hour normalization",
+      "killed": true
+    },
+    {
+      "name": "json-classification",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "classifies invalid response JSON",
+      "killed": true
+    },
+    {
+      "name": "required-fields",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "classifies malformed envelopes",
+      "killed": true
+    },
+    {
+      "name": "minimum-integers",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "refuses unsafe or invalid query bounds",
+      "killed": true
+    },
+    {
+      "name": "query-limit",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "refuses unsafe or invalid query bounds",
+      "killed": true
+    },
+    {
+      "name": "format-version",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects the whole page",
+      "killed": true
+    },
+    {
+      "name": "coverage-profile",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "classifies malformed envelopes",
+      "killed": true
+    },
+    {
+      "name": "page-size",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "untracked-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "untracked-duplicates",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "operation-identity",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "incarnation-boundary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "recorded-kind",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "interruption-boolean",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "finish-lifecycle",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "serial-lookup-address",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "address-range",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "read-no-write-evidence",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "read-state-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "write-evidence-booleans",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "service-write-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "service-write-witness",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "service-not-sent",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "download-session",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects unsafe identities",
+      "killed": true
+    },
+    {
+      "name": "write-result-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "restart-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "running-result",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "failed-result",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "unknown-result",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects invalid metadata across every recorded kind",
+      "killed": true
+    },
+    {
+      "name": "download-state-vocabulary",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects the whole page",
+      "killed": true
+    },
+    {
+      "name": "cursor-last-sequence",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects unsafe identities",
+      "killed": true
+    },
+    {
+      "name": "empty-page-has-more",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects unsafe identities",
+      "killed": true
+    },
+    {
+      "name": "hour-normalization",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects calendar and hour normalization",
+      "killed": true
+    },
+    {
+      "name": "finite-time",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "timestamp-profile",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "append-identity",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects a duplicate operation identity across admitted cursor pages",
+      "killed": true
+    },
+    {
+      "name": "stale-success",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "ignores a stale success after strict-effect remount",
+      "killed": true
+    },
+    {
+      "name": "stale-error",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "ignores a stale error after strict-effect remount",
+      "killed": true
+    },
+    {
+      "name": "stale-loading",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "does not let a stale completion end loading",
+      "killed": true
+    },
+    {
+      "name": "object-shape",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "classifies malformed envelopes",
+      "killed": true
+    },
+    {
+      "name": "page-more-boolean",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "classifies malformed envelopes",
+      "killed": true
+    },
+    {
+      "name": "strict-sequence",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "service-no-download-evidence",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    },
+    {
+      "name": "download-write-witness",
+      "compile_exit": 0,
+      "runtime_exit": 1,
+      "named_assertion": "rejects each read and write vocabulary",
+      "killed": true
+    }
+  ],
+  "canonical_never_mutated": true,
+  "typechecker_probe": {"exit": 1, "expected_diagnostic_seen": true, "scope": "separate negative compilation control, not a killed behavioral mutant"},
+  "excluded": [
+    "176 ignored workspace tests were not executed",
+    "private corpus acceptance",
+    "real KNX backend, hardware, power-loss, vendor and ETS experiments",
+    "native packaged UI/screen-reader acceptance",
+    "broader callers and recovery/abort/restore acceptance"
+  ],
+  "delivery": "publication separately verified after this receipt",
+  "counts_overlap": true,
+  "prior_negative_attempts_retained": [
+    "first Chromium request-inventory failure",
+    "Companion transitive-import inventory failure",
+    "calendar and malformed-JSON semantic REDs",
+    "candidate header-check refusal"
+  ],
+  "whole_goal_done": false
+}

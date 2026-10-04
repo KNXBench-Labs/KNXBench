@@ -10,6 +10,12 @@
 
 ## Pending
 
+2026-10-04 04:14 UTC: research published as87df5d82a126384da904fc47277b0bd0101bf198
+normal main push/live+fetched/eight exact blobs,doc5/current source712 and
+in-session/privacy review GREEN. Corpus/real-baseline receipts keep original
+575a producer. Production namespace set unchanged; KL153 still open. Closing
+bookkeeping and own baseline-target/runners/PDF-text/worktree hygiene remain.
+
 2026-10-04 03:59 UTC: census and real baseline independently reconciled.
 Original853/852 master XML/one BadZipFile scan refusal;2 scheme23 packages/8
 complete XML with2 each Master/Catalog/Hardware/ApplicationProgram,namespace

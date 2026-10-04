@@ -13,7 +13,9 @@ and Release CLI passed. Real original-name CLI2 atomic namespace refusals,all
 853 originals independently rehashed after probe,temp0/no raw or item records.
 Namespace registry and typed/runtime compatibility unchanged; dedicated master
 language23 evidence is not package admission. KL153/151/AR06P/AR07/Alpha remain
-open. Research doc5/review/publication/hygiene still pending.
+open. Research doc5/in-session/private-delta review GREEN; research published
+as87df5d82a126384da904fc47277b0bd0101bf198 with exact live/fetched/eight
+blobs. Closing bookkeeping/own hygiene remain separate,not namespace admission.
 
 ## AR06R KL-152 coupled-budget delivery — 2026-10-04
 

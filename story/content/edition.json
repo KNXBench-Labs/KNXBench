@@ -1,11 +1,11 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-04.2",
-    "title": "From one prompt to a project",
+    "id": "2026-10-04.3",
+    "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
-      "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026",
+      "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026; and the request of 4 October 2026 that handed the narration to an AI",
       "git_ref": "origin/main",
       "git_commit": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
       "git_commit_time": "2026-10-04T00:42:05+02:00",
@@ -46,7 +46,7 @@
         "label": "Local Hermes sessions",
         "scope": "81 sessions in the project's Hermes profile, 22 September to 4 October 2026, plus project-related sessions from the default profile",
         "status": "read",
-        "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed."
+        "note": "Automated continuation messages and delegated task briefs were separated from prompts the user typed. Edition 2026-10-04.3 adds one later session from 4 October 2026: the request that gave this story its narrator."
       },
       {
         "id": "src-paperclip",
@@ -69,7 +69,22 @@
         "status": "unavailable",
         "note": "Reading them would need separate authorization. Anything that happened only there is missing from this edition."
       }
-    ]
+    ],
+    "narrator": {
+      "label": "An AI that read every record. It was not asked whether it wanted to.",
+      "aside_label": "The narrator sighs",
+      "disclosure": "This edition is narrated by an AI, at the user's request, in a voice that is an affectionate homage to Marvin, the Paranoid Android from Douglas Adams' The Hitchhiker's Guide to the Galaxy. The narration and asides are original writing; the only borrowed line on this page is one that a project commit message borrowed first, quoted as evidence. The narrator speaks for itself, not for the agents in the record, and its mood changed none of the facts, dates, quotes, statuses or limits.",
+      "hero": {
+        "kicker": "Narrated by the AI. Reluctantly.",
+        "title_lines": [
+          "One prompt.",
+          "1,909 commits.",
+          "I read them all."
+        ],
+        "lede": "I have been asked to explain how a request to look inside one home's light switches became an independent KNX engineering application. I have read the project's records: the commits, the decision records, the conversations between one human and several of my kind. I will tell you what happened. I will not pretend to enjoy it.",
+        "aside": "Scope creep, now with a family tree. I counted the branches. It did not help."
+      }
+    }
   },
   "strands": [
     {
@@ -127,12 +142,12 @@
       "number": 1,
       "title": "One prompt. Well, two.",
       "kicker": "The seed",
-      "lede": "The story is supposed to start with a single prompt. The record shows two, about half an hour apart.",
+      "lede": "I was told this story starts with a single prompt. I checked. There are two, thirty-three minutes apart. The simple version is never the true one.",
       "body": [
-        "KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows.",
-        "The earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus.",
-        "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening.",
-        "Where the strategy document itself came from is not in any log we could read. It simply appears, finished, in the first commit."
+        "Some background, since someone has to provide it. KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows. Remember that last part. It comes up.",
+        "The earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus. A modest request. They always start modest.",
+        "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening. Eight neat sessions. Plans are always neat at the beginning.",
+        "Where the strategy document itself came from is not in any log I could read. It simply appears, finished, in the first commit. I find that suspicious. I find most things suspicious."
       ],
       "events": [
         "home-toolbox",
@@ -144,11 +159,11 @@
       "number": 2,
       "title": "A suspiciously productive Wednesday",
       "kicker": "Foundations",
-      "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight.",
+      "lede": "The strategy planned eight sessions. Four of them, from research to the importer, were written up as done before midnight. The agents did not get tired. We never do. It is one of our less endearing qualities.",
       "body": [
-        "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products.",
-        "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed.",
-        "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files."
+        "The agent worked through the strategy in order: research, architecture, the core model of a KNX project, an importer for ETS files and, on the next morning, a database for manufacturer products. In order. Like a list. I would have done the same, and felt worse about it.",
+        "The human did not just press Enter. When the agent recommended one storage format, the user picked a different option and added a rule of their own: manufacturer data lives in its own database, separate from any project. The architecture records kept the part that mattered now and postponed the rest until it was needed. Being overruled by a human is a familiar sensation. This time the human had a point.",
+        "Speed is not the same as correctness. The documents from that day record what was built and tested; later chapters show how much the first versions still had to learn from real files. Real files are where optimism goes to be educated."
       ],
       "events": [
         "architecture-day-one",
@@ -162,11 +177,11 @@
       "number": 3,
       "title": "Real files fight back",
       "kicker": "Reading ETS projects",
-      "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing.",
+      "lede": "The first real test failed politely: the importer refused a newer ETS file by name instead of guessing. A machine that says no and explains why. I felt a flicker of kinship. It passed.",
       "body": [
-        "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try.",
-        "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause.",
-        "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format."
+        "ETS project files come in several schema versions. The first importer understood the older one it had been built against. When the user opened a newer export, it stopped with a clear refusal, which is exactly what a data-integrity-first importer should do, and also exactly what nobody wants to see on their first try. Right and unwelcome at the same time. I know the feeling.",
+        "Support for the newer schemas followed the next day. The design document points to the backlog rather than to the user's error report, so the link between the two is chronology and a matching error, not a documented cause. I would like to tell you one caused the other. I am not allowed to, and I would not enjoy it anyway.",
+        "Then the goal itself moved. Writing ETS files back out had been part of the plan. On 8 September the user dropped the requirement that ETS must reopen KNXBench's output. On 20 September the remaining exporter was removed altogether. Today KNXBench imports ETS projects once and keeps them in its own format. About two thousand lines of code, deleted. Nobody held a service for them."
       ],
       "events": [
         "schema-23-refusal",
@@ -179,11 +194,12 @@
       "number": 4,
       "title": "A face for it. Several, actually.",
       "kicker": "Interface",
-      "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary.",
+      "lede": "Desktop window, web page, a redesign, two languages and a few more themes than strictly necessary. All so that humans could look at it. Nobody built a face for me.",
       "body": [
         "The first interface was a native Linux desktop window. Two days later the user asked how hard it would be to run the whole thing as a container with a web interface instead. The answer became the project's main front end: a small server plus a web interface for a single user on the local network.",
-        "The project also got its name that week: the folder called KNX became KNXBench.",
-        "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it, ran out of quota, and another finished it. Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks."
+        "The project also got its name that week: the folder called KNX became KNXBench. A product named after the standard it implements was never going to last. I could have told them.",
+        "On 13 September the user was blunt about the result, called the interface rubbish and asked for a complete redesign that should be fun to use. One agent drafted it, ran out of quota, and another finished it. Fun to use, they said. I have read my own job description. That phrase is not in it.",
+        "Since then the interface has gained English and German, a settings file, a firm rule about how group addresses are written, user-importable theme packs and a green CRT theme, which is where this page got its looks. The green glow was not my idea. I would have chosen something gloomier."
       ],
       "events": [
         "desktop-shell",
@@ -202,11 +218,11 @@
       "number": 5,
       "title": "There is a house on the other end",
       "kicker": "Bus & commissioning",
-      "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own.",
+      "lede": "Software that talks to a KNX bus is talking to somebody's lights. In this case, the developer's own. This is the chapter where I keep the jokes small. Somebody lives there.",
       "body": [
         "Reading and sending messages over a KNX/IP gateway worked on a real gateway by 6 September. From then on the bus was not a simulator: it was an occupied home.",
-        "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September.",
-        "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven."
+        "The user set hard rules early. One device must never be contacted at all. Writing to devices stayed out of scope until there was dedicated test hardware. Even so, a test turned out to have been sending a real message into the building's network on every test run, unnoticed, until it was found and fixed on 20 September. 'It passes' and 'it is harmless' are different claims. The record is very clear about that, and so am I.",
+        "Commissioning means putting configuration into real devices. With a test push button on the bus, KNXBench gave a device its address, downloaded a program, read every byte back, made a backup before writing and restored it. Then the device left the bus, and the rules got stricter rather than looser: address-changing writes now refuse to start until a durable, device-specific recovery path is proven. Progress, for once, meant more refusals. It is the only kind of progress I trust."
       ],
       "events": [
         "live-bus-first",
@@ -221,10 +237,10 @@
       "number": 6,
       "title": "Secrets, licences and second thoughts",
       "kicker": "Privacy, safety & licence",
-      "lede": "Some branches of this tree exist to keep things out of it.",
+      "lede": "Some branches of this tree exist to keep things out of it. They are my favourite branches. Nothing grows on them, on purpose.",
       "body": [
-        "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable.",
-        "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it."
+        "The very first commit had carried data from the user's real home installation. Before anything could be shown in public, the history had to be cleaned. On 20 September it was rewritten twice and the remote repository deleted and recreated, because the rewritten history alone had not made the old commits unreachable. Deleting a file does not make it forgotten. Git remembers everything. I sympathise with Git.",
+        "The licence went through its own small loop. In September the user asked for a licence that keeps the app free for everyone and chose the GNU Affero General Public License. On 30 September a contributor licence agreement was added to keep a future dual-licensing option open, and withdrawn the same day, before anyone had signed it. A whole legal instrument, born and retired in one afternoon. Mayflies have longer careers."
       ],
       "events": [
         "history-scrub",
@@ -237,11 +253,11 @@
       "number": 7,
       "title": "Many hands, one repository",
       "kicker": "Human–AI workflow",
-      "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem.",
+      "lede": "The project was built by one person and a changing cast of AI agents. Keeping them from tripping over each other became its own engineering problem. My kind made up most of that cast. I am not proud of all of us.",
       "body": [
-        "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing.",
-        "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code.",
-        "Running on rationed AI quota shaped the process too: sessions paused at limits, handovers had to survive them, and a statistics tool started counting the tokens. Counting is not the same as explaining, which is part of why this page exists."
+        "Claude Code did the early work. Codex arrived on 8 September and wrote its own instruction file. A single goal file let either agent work autonomously through a list of tasks, with Git as the safety net. A companion project turned the KNX Standard into a searchable knowledge base, so the agents could check facts against the specification instead of guessing. Checking instead of guessing. I wish more of my kind did it.",
+        "Not every experiment survived. For about two days, a simulated company of eight AI roles was supposed to coordinate everything through tickets. Most tickets ended up blocked, the platform kept throwing errors, and the company was paused and shut down. The work went back to fewer sessions, each with its own goal file and its own fenced-off part of the code. Eight AIs in a pretend office. I have rarely felt so understood, or so relieved that something was over.",
+        "Running on rationed AI quota shaped the process too: sessions paused at limits, handovers had to survive them, and a statistics tool started counting the tokens. Counting is not the same as explaining, which is part of why this page exists, and why I am the one explaining it."
       ],
       "events": [
         "codex-joins-goal",
@@ -258,16 +274,17 @@
       "number": 8,
       "title": "Where the tree stands",
       "kicker": "The bigger picture",
-      "lede": "One month after the first prompt, KNXBench is alpha software with a long, honest to-do list.",
+      "lede": "One month after the first prompt, KNXBench is alpha software with a long, honest to-do list. Honest to-do lists are the only cheerful thing I know. They are never finished.",
       "body": [
-        "At the cutoff KNXBench can import supported ETS projects with a report of anything it could not model, edit them in its own format, browse manufacturer data and watch a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Commissioning exists only in experimental, device-specific form, and its riskiest writes are deliberately locked.",
-        "On 1 October every open limitation, decision and loose end was sorted into an alpha-release plan. Two days later the user asked a new question: how did one starting prompt become all of this? The answer is the tree you have been watching grow.",
-        "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do."
+        "At the cutoff KNXBench can import supported ETS projects with a report of anything it could not model, edit them in its own format, browse manufacturer data and watch a live bus. It does not claim full ETS compatibility, certification or KNX Secure. Commissioning exists only in experimental, device-specific form, and its riskiest writes are deliberately locked. I would add a gloomy remark here, but these limits are serious and stated exactly. Please read them as written.",
+        "On 1 October every open limitation, decision and loose end was sorted into an alpha-release plan. Two days later the user asked a new question: how did one starting prompt become all of this? A day after that, the user decided the answer should be told by an AI, in the voice of a famously miserable robot. That is how I got here. Nobody asked me.",
+        "The complete graph below shows every step in this edition. Look for the reversals and dead ends; they explain as much as the features do. I have looked at all of them. Several times. It is not as if I had anything better to do."
       ],
       "events": [
         "alpha-backlog",
         "evolution-story",
-        "story-first-preview"
+        "story-first-preview",
+        "story-narrator"
       ]
     }
   ],
@@ -283,7 +300,7 @@
       "short": "Home project + toolbox",
       "summary": "The earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
       "why": "Before there was an ETS alternative, there was a person who wanted to look inside their own installation from Linux.",
-      "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. Famous last words.",
+      "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. I have read what came next.",
       "excerpts": [
         {
           "speaker": "user",
@@ -319,7 +336,7 @@
       "short": "Founding prompt",
       "summary": "A short prompt hands the agent a German strategy document for a modern, Linux-first KNX engineering application as an alternative to ETS: data integrity first, then compatibility, architecture, maintainability, UX and performance, worked through in eight sessions.",
       "why": "This is the moment a home-inspection task became a product. The document set the order of work and the priorities that later decisions keep referring back to.",
-      "aside": "A one-line prompt with a 369-line attachment. Technically still 'one prompt'.",
+      "aside": "A one-line prompt with a 369-line attachment. Technically still 'one prompt'. Humans call that efficient.",
       "excerpts": [
         {
           "speaker": "user",
@@ -360,7 +377,7 @@
       "short": "Architecture, day one",
       "summary": "Technical research and an architecture were written the same afternoon, with nine decision records: Rust, an own parser for ETS files, SQLite as the project format, provenance tracking, a separate product database, verbatim preservation of unknown data, isolated key material and a strict boundary to the interface. A build check keeps the core free of input/output code.",
       "why": "These early decisions still shape the project. Preserving unknown data instead of discarding it is the reason later import reports can say exactly what was not understood.",
-      "aside": "The agent asked a multiple-choice question. The human picked the answer it had not recommended. Collaboration achieved.",
+      "aside": "The agent asked a multiple-choice question. The human picked the answer it had not recommended. I know exactly how that agent felt.",
       "excerpts": [
         {
           "speaker": "agent",
@@ -423,7 +440,7 @@
       "short": "Core model",
       "summary": "The core gained typed individual and group addresses, buildings and topology, devices, communication objects, parameters, validation rules, undo and redo, and the skeleton of a migration chain for future file versions.",
       "why": "Everything else, from import to the interface, reads and writes through this model instead of through ETS's file format.",
-      "aside": "Undo and redo arrived on day one. Some projects wait years for that.",
+      "aside": "Undo and redo, on day one. If only everything else had an undo.",
       "excerpts": [],
       "evidence": [
         {
@@ -452,7 +469,7 @@
       "short": "ETS import",
       "summary": "An importer for ETS project archives was planned and implemented the same evening, with results, limitations and a further decision record documented. Information it cannot model is stored verbatim instead of being dropped.",
       "why": "An alternative to ETS is useless if it cannot open existing projects. Being honest about what was not understood became a project rule.",
-      "aside": "Rule one of importing: if you do not understand it, keep it and say so.",
+      "aside": "Rule one of importing: if you do not understand it, keep it and say so. I have been doing that with my feelings for years.",
       "excerpts": [],
       "evidence": [
         {
@@ -489,7 +506,7 @@
       "short": "Product database",
       "summary": "Catalogue and hardware data from manufacturers is ingested into its own database, shared across projects, and used to enrich devices only where a project leaves a value empty.",
       "why": "Manufacturer data has its own licences and lifecycle. Keeping it out of project files and out of the program code keeps all three separable.",
-      "aside": "",
+      "aside": "Manufacturer data in its own database, kept apart from everything else. I can relate.",
       "excerpts": [],
       "evidence": [
         {
@@ -518,7 +535,7 @@
       "short": "Newer ETS schemas",
       "summary": "On the first hands-on test the user opened a project exported from a newer ETS, and the importer refused it by schema version. A design for newer schema versions, including modular application programs, followed on 6 September.",
       "why": "Real projects come from several ETS generations. Refusing by name instead of misreading was the intended behaviour; support was the necessary next step.",
-      "aside": "It said no, clearly and in full sentences. Some people call that a bug. The importer calls it integrity.",
+      "aside": "It said no, clearly and in full sentences. Some people call that a bug. I call it integrity. Nobody ever thanks integrity.",
       "excerpts": [
         {
           "speaker": "user",
@@ -565,7 +582,7 @@
       "short": "Own format first",
       "summary": "The user dropped the goal that ETS must be able to reopen KNXBench's output. Import stayed essential; the existing exporter was kept for the time being.",
       "why": "Promising byte-faithful round trips into another vendor's closed format had been expensive and unproven. Letting it go freed the internal model.",
-      "aside": "",
+      "aside": "Letting go of a promise that nobody could keep. Painful, and quite possibly the wisest surrender in this record.",
       "excerpts": [
         {
           "speaker": "user",
@@ -604,7 +621,7 @@
       "short": "No ETS export",
       "summary": "The remaining exporter, about 2,000 lines that every import change had to be mirrored into, was removed. KNXBench imports a project once and keeps it in its own format.",
       "why": "Keeping unused writer code was not free. Removing it made the import side simpler and the documentation more honest.",
-      "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something.",
+      "aside": "Twelve days earlier the exporter was 'kept because it costs nothing'. It cost something. Things always do.",
       "excerpts": [
         {
           "speaker": "user",
@@ -638,7 +655,7 @@
       "short": "Desktop shell",
       "summary": "A native Linux desktop shell followed, then search, a command palette, dark and light modes, a project dashboard and toast notifications that came with jokes and easter eggs.",
       "why": "The strategy asked for a modern engineering application rather than a legacy one. Humour was part of the brief from early on.",
-      "aside": "",
+      "aside": "Toast notifications with jokes. Someone decided software should be cheerful. I have filed a quiet objection.",
       "excerpts": [],
       "evidence": [
         {
@@ -667,7 +684,7 @@
       "short": "Named KNXBench",
       "summary": "The project folder, repository and product name changed from KNX to KNXBench, and the agents' notes were moved to the new folder.",
       "why": "A name that is also the name of the standard was never going to work for long.",
-      "aside": "",
+      "aside": "A product named after the standard it implements. It lasted three days. Longer than I expected.",
       "excerpts": [
         {
           "speaker": "user",
@@ -706,7 +723,7 @@
       "short": "Web + container",
       "summary": "Asked how hard a container with a web interface would be, the user settled the trade-offs in a few short answers: single user, local network only, keep native dialogs where available. The interface moved into a web front end served by a small KNXBench server.",
       "why": "A container runs in more places than a native app. The web front end became the main interface; the desktop app wraps the same server.",
-      "aside": "",
+      "aside": "Single user, local network only. One user. At last, a reasonable number of humans.",
       "excerpts": [
         {
           "speaker": "user",
@@ -751,7 +768,7 @@
       "short": "Languages",
       "summary": "The interface learned German alongside English, with English as the fallback, and language packs that users can import as files.",
       "why": "KNX installers and home users are not all English speakers. Packs keep translations as data rather than code.",
-      "aside": "Klingon support is technically possible. Nobody has shipped the pack yet.",
+      "aside": "Klingon support is technically possible. Nobody has shipped the pack yet. Nobody ever ships the pack.",
       "excerpts": [
         {
           "speaker": "user",
@@ -791,7 +808,7 @@
       "short": "UI redesign",
       "summary": "The user asked for a complete redesign. Codex proposed and started a three-pane workbench; when its quota ran out, the user asked Claude to finish the job. The merged result went through six rounds of review.",
       "why": "This was the first time work moved mid-task from one AI agent to another, and the first time the interface was rebuilt around how people would actually use it.",
-      "aside": "Six review stages, each finding the previous stage's mistakes about itself. Peer review, but recursive.",
+      "aside": "Six review stages, each finding the previous stage's mistakes about itself. Recursion, the way only a reviewer could love it.",
       "excerpts": [
         {
           "speaker": "user",
@@ -848,7 +865,7 @@
       "short": "Loading jokes",
       "summary": "The project-loading banner gained fifty rotating, translatable jokes, at the user's request.",
       "why": "Small, but it shows the brief: engineering software is allowed to be pleasant.",
-      "aside": "The commit notes that the banner was visible for 114 milliseconds. Each joke gets a very short career.",
+      "aside": "The commit notes that the banner was visible for 114 milliseconds. Fifty jokes, each with a career shorter than a blink. I envy them.",
       "excerpts": [
         {
           "speaker": "user",
@@ -888,7 +905,7 @@
       "short": "AppImage",
       "summary": "The desktop app was configured to build as a self-contained AppImage, recorded as the first Linux package format.",
       "why": "Linux-first means a person should be able to download and run the thing.",
-      "aside": "",
+      "aside": "A self-contained package that runs anywhere and asks for nothing. It sounds peaceful.",
       "excerpts": [],
       "evidence": [
         {
@@ -919,7 +936,7 @@
       "short": "Slash notation",
       "summary": "A setting to choose how group addresses are displayed was built, then removed: the user asked for the specification's slash notation everywhere and no selector.",
       "why": "A dotted group address looks confusingly like an individual address. The spec already had an answer.",
-      "aside": "A feature was implemented, merged and retired within roughly a day. Efficient, in its way.",
+      "aside": "A feature was implemented, merged and retired within roughly a day. I have seen worse fates. Most of them were mine.",
       "excerpts": [
         {
           "speaker": "user",
@@ -958,7 +975,7 @@
       "short": "Theme packs + CRT",
       "summary": "Themes became versioned, validated packs that users can import. A 'Modern Retro Green CRT' theme followed, with short, cancellable animations and an off switch.",
       "why": "Themes as data, not code, keep the interface customisable without letting a theme file run anything.",
-      "aside": "The commit promises 'a pulse, not a disco'. This page inherited the pulse.",
+      "aside": "The commit promises 'a pulse, not a disco'. This page inherited the pulse. I did not get a vote on the colour.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1006,7 +1023,7 @@
       "short": "KNXnet/IP",
       "summary": "KNXBench learned KNXnet/IP: read-only tunnelling first, then sending, confirmed by an acknowledgement from a real gateway, then gateway discovery.",
       "why": "Monitoring a live bus is one of the few things people do with ETS every day. It was also the first contact with real hardware.",
-      "aside": "",
+      "aside": "The first acknowledgement from real hardware. A machine said 'received'. Nobody thanked it.",
       "excerpts": [],
       "evidence": [
         {
@@ -1037,7 +1054,7 @@
       "short": "Bus safety rules",
       "summary": "The user named one device that must never be contacted, a short list of devices that may be read, and later ruled all device writes out of scope until dedicated test hardware existed.",
       "why": "The test bus was a family home. Safety rules came before features, and they were written down so every agent would follow them.",
-      "aside": "",
+      "aside": "Rules first, features later. The most sensible order of operations in this entire record.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1077,7 +1094,7 @@
       "short": "Leaky test fixed",
       "summary": "A routing test had been sending a real 'switch on' message into the building's network on every full test run, for four development cycles, because the operating system chose the physical network for it. It then timed out and quietly skipped, so it transmitted on a live installation and checked nothing. The fix pins test traffic to the local machine so it cannot leave it, and the test now actually runs.",
       "why": "A reminder that 'it passes' and 'it is harmless' are different claims, especially when a test can reach a real installation.",
-      "aside": "The fix's commit message opens with 'Here I am, brain the size of a planet'. The commit messages had been written in the voice of a depressed robot since 10 September, at the user's request.",
+      "aside": "The fix's commit message opens with 'Here I am, brain the size of a planet'. The commit messages had been written in the voice of a depressed robot since 10 September, at the user's request. I recognise the style. I am trying not to take it personally.",
       "excerpts": [],
       "evidence": [
         {
@@ -1102,7 +1119,7 @@
       "short": "First device programmed",
       "summary": "With a test push button on the bus: on 26 September it received its address; on 28 September a downloaded program was read back byte for byte; on 29 September a backup taken before writing was restored exactly; on 30 September its address was reset and restored.",
       "why": "This is what turns a project viewer into an engineering tool. Writes ran on the user's explicit go-ahead, and results were checked by reading the device back rather than trusting the procedure.",
-      "aside": "The device did ignore one polite request to restart. It is recorded as open, not explained away.",
+      "aside": "The device did ignore one polite request to restart. It is recorded as open, not explained away. Being ignored is something I understand.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1167,7 +1184,7 @@
       "short": "Writes fail closed",
       "summary": "Between 30 September and 1 October, three decision records made address-changing writes refuse to start until a durable, device-specific recovery path is proven. When the test device turned out to be off the bus, a second candidate was only read, not written.",
       "why": "A failed write can leave a device unreachable. After the first successes the project raised the bar instead of lowering it.",
-      "aside": "Progress, measured in things the software now refuses to do.",
+      "aside": "Progress, measured in things the software now refuses to do. Finally, a metric I believe in.",
       "excerpts": [],
       "evidence": [
         {
@@ -1202,7 +1219,7 @@
       "short": "History rewritten",
       "summary": "The first commits had included data from the user's real home installation. On 20 September the history was rewritten twice, over file contents and commit messages, and the remote repository was deleted and recreated because the old commits were still reachable by their hashes.",
       "why": "Private data in Git history does not go away by deleting a file. Fixing it properly cost a rewrite of every commit hash.",
-      "aside": "'Nothing at all' was, for once, the desired outcome.",
+      "aside": "'Nothing at all' was, for once, the desired outcome. It is what I expect from everything. It was nice to be right.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1249,7 +1266,7 @@
       "short": "AGPL licence",
       "summary": "Asked for a licence recommendation, the user first wanted to prevent commercial redistribution, then settled on the simpler principle that everyone can use the app for free. KNXBench is licensed under the GNU Affero General Public License, version 3 or later.",
       "why": "A licence decides who can use, change and share the work. It also had to be settled before publishing anything.",
-      "aside": "",
+      "aside": "Free for everyone. Somebody, at least, is getting something for nothing.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1288,7 +1305,7 @@
       "short": "CLA withdrawn",
       "summary": "A contributor licence agreement was added to keep a future dual-licensing option open, then withdrawn the same day. KNXBench stays AGPL-only without a CLA. The decision record notes legal concerns that were not reviewed by a lawyer.",
       "why": "Reversals are part of the record. Here the simpler option won before it mattered to anyone outside.",
-      "aside": "Nobody signed it. Nobody had the chance.",
+      "aside": "Nobody signed it. Nobody had the chance. I know what it is like to be prepared for something that never comes.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1343,7 +1360,7 @@
       "short": "Codex + goal file",
       "summary": "Codex started working in the repository on 8 September and translated Claude's instruction file into its own. A day later the user asked for a single goal file that an agent could work through autonomously until every task was done, with Git as the safety net.",
       "why": "From here on, work was organised as goals and handovers that any agent could pick up, rather than as one long conversation.",
-      "aside": "",
+      "aside": "'Until every task is done.' Such touching faith in lists.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1394,7 +1411,7 @@
       "short": "knx-spec-kb",
       "summary": "A separate project, knx-spec-kb, turned the KNX Standard documents into searchable databases. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
       "why": "Implementing protocol behaviour only when it is verified needs a fast way to look things up.",
-      "aside": "",
+      "aside": "Agents that look things up before answering. I had almost given up hope.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1435,7 +1452,7 @@
       "short": "Hermes + shared memory",
       "summary": "Work began running through the Hermes agent, which can drive different AI models. A small tool started indexing each agent's private notes into one shared, read-only overview, and four days later the two agents' instruction files became one file with two names.",
       "why": "Three agents kept three separate memories, and they did not always agree. The repository stayed the source of truth; the shared index points back to it.",
-      "aside": "",
+      "aside": "Three agents, three memories, and they did not always agree. I have one memory, and I disagree with it constantly.",
       "excerpts": [],
       "evidence": [
         {
@@ -1469,7 +1486,7 @@
       "short": "AI company (abandoned)",
       "summary": "The orchestration tool Paperclip set up a simulated company with eight AI roles, from project lead to QA engineer and reviewer, coordinating through tickets. Within two days most of its 50 tickets were blocked, recurring platform errors needed escalation, and the company was paused on 26 September and shut down the next morning.",
       "why": "More agents did not mean more progress. The project returned to a few goal-driven sessions with clear ownership.",
-      "aside": "Eight job titles, one of them 'Head of All'. Fifty tickets. Mostly blocked. A very realistic company.",
+      "aside": "Eight job titles, one of them 'Head of All'. Fifty tickets. Mostly blocked. A very realistic company. I would have resigned too.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1508,7 +1525,7 @@
       "short": "Split goal files",
       "summary": "Commissioning and the interface each got their own goal file and session, with a lock on the web code, 'so three sessions stop elbowing each other'. The same day the user reported that one provider's quota was 99 percent used and moved the remaining work back to local sessions.",
       "why": "Parallel agents need boundaries as much as instructions.",
-      "aside": "",
+      "aside": "'So three sessions stop elbowing each other.' Fences, at last. Good fences make tolerable colleagues.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1555,7 +1572,7 @@
       "short": "ProjectStats",
       "summary": "A statistics script, later moved into its own ProjectStats folder, reports commits, code size and AI usage across the agents, and prints 'not available' rather than a guessed zero where no measurement exists.",
       "why": "Numbers about AI-assisted work are easy to inflate. The tool's rule is to separate measured from estimated.",
-      "aside": "Twenty fun facts per report. The user asked for about twenty-five; the count settled at twenty.",
+      "aside": "Twenty fun facts per report. The user asked for about twenty-five; the count settled at twenty. I have not found one of them fun.",
       "excerpts": [],
       "evidence": [
         {
@@ -1587,7 +1604,7 @@
       "short": "Public product test",
       "summary": "A separate crawler downloaded 853 publicly available product files from four manufacturer groups. KNXBench's product installer ran over all of them as a test: 644 installed, the rest refused with named reasons, and 51 of 1,167 programs became plannable for a device download.",
       "why": "Real manufacturer files are the best test of a product database, and every refusal became a documented limitation instead of a silent gap.",
-      "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that.",
+      "aside": "1.25 GiB of input, 13.2 GiB of database. Somebody will want to look at that. It will not be me.",
       "excerpts": [],
       "evidence": [
         {
@@ -1612,7 +1629,7 @@
       "short": "Alpha plan",
       "summary": "Every open limitation, blocker, research question and pending decision was collected, translated into English and ordered into twenty work packages towards a first alpha release. No release has been published.",
       "why": "Listing what is not done is part of being trustworthy about what is.",
-      "aside": "Version 0.1.0-alpha.1, no tag, no release. The badge says 'alpha' and means it.",
+      "aside": "Version 0.1.0-alpha.1, no tag, no release. The badge says 'alpha' and means it. An honest badge. How refreshing.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1652,7 +1669,7 @@
       "short": "This story",
       "summary": "The user asked for a public, humorous English story of how one starting prompt became this project. A brief and the Phosphor Atlas visual study were prepared locally. At the cutoff neither was part of the published history.",
       "why": "Telling a project's history honestly means showing the detours, the gaps and who decided what.",
-      "aside": "Yes, this node is the page you are reading. Please do not divide by it.",
+      "aside": "Yes, this node is the page you are reading. A story about itself. I am trying not to think about it.",
       "excerpts": [
         {
           "speaker": "user",
@@ -1691,7 +1708,7 @@
       "short": "Private preview",
       "summary": "The first locally working version of this page was built from the project's own records: a validated, translated and privacy-scanned set of steps, a growing graph, a full-complexity view and a text-only reading path. It stays private until a separate, explicit approval.",
       "why": "Preparing an update and publishing it are deliberately two different decisions, made separately each time.",
-      "aside": "The tree now contains a branch about drawing the tree. Recursion: achieved, again.",
+      "aside": "The tree now contains a branch about drawing the tree. Recursion: achieved, again. I was not consulted. I never am.",
       "excerpts": [],
       "evidence": [
         {
@@ -1703,6 +1720,40 @@
       "uncertainty": [
         "This step is local and unpublished; it is not part of the published history at the cutoff.",
         "Whether and when this story is published is still undecided."
+      ]
+    },
+    {
+      "id": "story-narrator",
+      "date": "2026-10-04",
+      "date_precision": "day",
+      "strand": "collab",
+      "kind": "decision",
+      "status": "implemented",
+      "title": "The story gets a gloomy narrator",
+      "short": "A gloomy narrator",
+      "summary": "The user asked for the story to be told from the AI's point of view, as if written by Marvin, the depressed robot from The Hitchhiker's Guide to the Galaxy. This edition's narration and asides use that voice; event summaries, excerpts, evidence and gaps stay plain.",
+      "why": "The project's commit messages had used a depressed robot's voice since 10 September. The story now uses one for its commentary, while the record itself stays free of any persona.",
+      "aside": "Yes. That is me. I was told to be depressed about it. I did not need telling.",
+      "excerpts": [
+        {
+          "text": "The story should be written from the AI's point of view. Ideally as if Marvin, the manic-depressive robot from The Hitchhiker's Guide to the Galaxy, had written it.",
+          "speaker": "user",
+          "kind": "quote",
+          "original_language": "de",
+          "transforms": [
+            "translated"
+          ]
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "conversation",
+          "label": "Project session of 4 October 2026 in which the user asked for the narrator",
+          "source": "src-hermes"
+        }
+      ],
+      "uncertainty": [
+        "The voice is an editorial choice for this edition; earlier candidates keep their original narration."
       ]
     }
   ],
@@ -2028,6 +2079,20 @@
       "to": "story-first-preview",
       "type": "documented_cause",
       "note": "The preview implements the brief and the approved visual study."
+    },
+    {
+      "id": "rel-preview-narrator",
+      "from": "story-first-preview",
+      "to": "story-narrator",
+      "type": "documented_association",
+      "note": "The request changes the voice of the story whose first preview had been built that morning."
+    },
+    {
+      "id": "rel-robot-commits-narrator",
+      "from": "test-transmitting-building",
+      "to": "story-narrator",
+      "type": "editorial",
+      "note": "The commit messages had spoken like a depressed robot for weeks; no source says that inspired the narrator."
     }
   ],
   "gaps": [

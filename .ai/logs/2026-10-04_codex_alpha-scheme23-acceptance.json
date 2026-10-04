@@ -75,5 +75,13 @@
   ],
   "private_raw_or_item_records_persisted": false,
   "bus_actions": 0,
-  "cleanup": "pending separate final hygiene"
+  "cleanup": "completed:176 verified permanent public/synthetic receipt/log files and working release preserved; two owned worktrees,one published branch and completed owned scratch/build/snapshots removed; foreign root/data/locks untouched",
+  "closing_metadata_revision": "d69278e7138568f371064741ee2c363667df20d7",
+  "closing_metadata_doc5_exits": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
 }

@@ -19,8 +19,9 @@ mod scan;
 const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
-     \x20     knx ga-export <store.knxdb> <out.csv>\n\
+     \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
+     \x20                   [--installation <id>]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
@@ -430,13 +431,29 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
 struct GaExportArgs {
     store: String,
     output: String,
+    /// MODEL-01: `None` = the first installation.
+    installation: Option<knx_core::InstallationId>,
+}
+
+/// `--installation <id>`: an installation id (0–255).
+fn parse_installation(value: String) -> Result<knx_core::InstallationId, String> {
+    value
+        .parse::<u8>()
+        .map(knx_core::InstallationId)
+        .map_err(|_| format!("invalid --installation {value:?}: expected 0-255"))
 }
 
 fn parse_ga_export_args(args: &[String]) -> Result<GaExportArgs, String> {
     let mut store = None;
     let mut output = None;
-    for arg in args {
-        match arg.as_str() {
+    let mut installation = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--installation" => {
+                i += 1;
+                installation = Some(parse_installation(take_value(args, i, "--installation")?)?);
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag: {other}"));
             }
@@ -444,10 +461,15 @@ fn parse_ga_export_args(args: &[String]) -> Result<GaExportArgs, String> {
             other if output.is_none() => output = Some(other.to_string()),
             other => return Err(format!("unexpected extra argument: {other}")),
         }
+        i += 1;
     }
     let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
     let output = output.ok_or_else(|| "missing <out.csv>".to_string())?;
-    Ok(GaExportArgs { store, output })
+    Ok(GaExportArgs {
+        store,
+        output,
+        installation,
+    })
 }
 
 /// `knx ga-export` — writes every group address in the store's project as
@@ -479,7 +501,13 @@ fn run_ga_export(args: &[String]) -> ExitCode {
         }
     };
 
-    let export = knx_csv::export_group_addresses(&project);
+    let export = match knx_csv::export_group_addresses_from(&project, parsed.installation) {
+        Ok(export) => export,
+        Err(e) => {
+            eprintln!("{e}; nothing written");
+            return ExitCode::FAILURE;
+        }
+    };
 
     if let Err(e) = std::fs::write(&parsed.output, export.text.as_bytes()) {
         eprintln!("failed to write {}: {e}", parsed.output);
@@ -931,6 +959,8 @@ struct GaImportArgs {
     input: String,
     dry_run: bool,
     confirmation_token: Option<String>,
+    /// MODEL-01: `None` = the first installation.
+    installation: Option<knx_core::InstallationId>,
 }
 
 fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
@@ -938,10 +968,15 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
     let mut input = None;
     let mut dry_run = false;
     let mut confirmation_token = None;
+    let mut installation = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--dry-run" => dry_run = true,
+            "--installation" => {
+                i += 1;
+                installation = Some(parse_installation(take_value(args, i, "--installation")?)?);
+            }
             "--confirm" => {
                 i += 1;
                 confirmation_token = Some(take_value(args, i, "--confirm")?);
@@ -962,6 +997,7 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
         input,
         dry_run,
         confirmation_token,
+        installation,
     })
 }
 
@@ -1030,7 +1066,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     };
 
     let parsed_csv = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
-    let plan = knx_csv::plan_import(&project, &parsed_csv);
+    let plan = knx_csv::plan_import_into(&project, &parsed_csv, parsed.installation);
 
     print_import_report(&parsed.input, &plan.report);
 
@@ -1049,7 +1085,11 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     }
 
     if !plan.report.destructive_changes.is_empty() {
-        let token = ga_import_confirmation_token(project_snapshot.as_bytes(), text.as_bytes());
+        let token = ga_import_confirmation_token(
+            project_snapshot.as_bytes(),
+            text.as_bytes(),
+            parsed.installation,
+        );
         println!("confirmation token: {token}");
         if parsed.dry_run || parsed.confirmation_token.is_none() {
             println!("store written: no (destructive confirmation required)");
@@ -1098,13 +1138,23 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn ga_import_confirmation_token(project: &[u8], csv: &[u8]) -> String {
+fn ga_import_confirmation_token(
+    project: &[u8],
+    csv: &[u8],
+    installation: Option<knx_core::InstallationId>,
+) -> String {
     use sha2::{Digest as _, Sha256};
 
     let mut hasher = Sha256::new();
     hasher.update(b"knxbench-ga-import-v1\0");
     hasher.update((project.len() as u64).to_le_bytes());
     hasher.update(project);
+    // MODEL-01: a preview for one installation must not confirm another.
+    // Without `--installation` the token is unchanged from before.
+    if let Some(id) = installation {
+        hasher.update(b"\0installation\0");
+        hasher.update([id.0]);
+    }
     hasher.update(csv);
     format!("{:x}", hasher.finalize())
 }

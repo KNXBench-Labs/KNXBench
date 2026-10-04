@@ -39,6 +39,8 @@ export default function Overlay(props: {
   label?: string;
   className?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Used only when the opening trigger disappeared with the dismissed draft. */
+  restoreFocusRef?: RefObject<HTMLElement | null>;
   /** Opt-in shared dimensions. CSS also caps the panel at the viewport edge. */
   resizable?: OverlayResize;
   onClose: () => void;
@@ -60,7 +62,9 @@ export default function Overlay(props: {
     const target = initialFocusRef?.current ?? (panel ? (focusableIn(panel)[0] ?? panel) : null);
     const restoreBackground = panel ? isolateModalBackground(panel, () => target?.focus()) : () => true;
     return () => {
-      if (restoreBackground() && previous?.isConnected && !previous.closest("[inert]")) previous.focus();
+      if (!restoreBackground()) return;
+      const target = previous?.isConnected ? previous : props.restoreFocusRef?.current;
+      if (target?.isConnected && !target.closest("[inert]")) target.focus();
     };
   }, []);
 

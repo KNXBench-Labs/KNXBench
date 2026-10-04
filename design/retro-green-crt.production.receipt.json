@@ -1,0 +1,30 @@
+{
+  "componentScope": [
+    "App",
+    "ProjectExplorer",
+    "GroupAddressTable"
+  ],
+  "paletteVersion": "1.1.0",
+  "motionStyle": "crt",
+  "verifiedAt": "2026-10-03T22:20:35.150Z",
+  "checks": 12,
+  "passed": [
+    "real workbench loads the cached v1 CRT palette and persisted CRT style; 250ms fill",
+    "one actual inert light sweeps outside native table markup and expires normally",
+    "native arrow focus preserves selection; Enter selects and flashes once, then clears",
+    "checkbox multiselection stays independent, including the existing bulk-selection rail",
+    "existing explorer arrow/Home and Left/Right expansion survive CRT without duplicate key handlers",
+    "Motion Off cancels live effects and allows immediate native selection without new effects",
+    "Subtle uses 120ms fill only; no transient flash or light",
+    "OS reduced motion cancels ongoing effects and suppresses subsequent click effects",
+    "actual manual Save path glows but preserves errors; Enter issues exactly one mocked request",
+    "root zoom 1.5 aligns/clips the portal to the visible table; resize cancels it",
+    "Smooth remains free of CRT paint/flash/light when switching the motion style",
+    "fixed-viewport production screenshot samples a real native 125ms frame; timing tests run separately"
+  ],
+  "mockedSaveRequests": 2,
+  "realBackendRequests": 0,
+  "pageErrors": 0,
+  "unexpectedRequests": 0,
+  "screenshotFrame": "native animation at 125ms with Playwright Clock paused; lifecycle tested separately with real timers"
+}

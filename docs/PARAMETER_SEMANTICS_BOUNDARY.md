@@ -1,5 +1,51 @@
 # AR07 supported parameter semantics — research boundary
 
+## AR07 bounded scalar-copy policy delivered — 2026-10-03 09:59 CEST
+
+Source/actual acceptance published and fetched/live read back at
+cbc6b0b238fbeef2da41c4d38208850574c68760: owned HEAD/fetched/live main equal,
+divergence0/0; all617 actual-gated code/config inputs and7 acceptance documents
+exact remotely. Canonical dirty root/main/statistics unchanged. Actual9f512ab3
+continuation remains20 accepted stages with5 verified public commands reused,
+13 commands+2 checks new, workspace2984/0/165, Web1665/Chromium61, selected
+private Dynamic6/0/0 and offline SimTunnel14/0/0;17 equal bindings and420
+unchanged originals including103 archives. Four fresh-target nonempty
+intended-root acceptance-document audits and whitespace passed; zero code delta.
+ADR0065 accepted only for this bounded Core/HTTP scalar-content admission,
+not external String-only projections or full AR07/ETS/Alpha semantics. Initial
+header/classifier rejections and compiled mutant/restoration receipts retained.
+Six completed owned build targets actually removed after process checks;
+compact machine-readable evidence retained. Closing receipt-only metadata
+gates/publication and clean owned checkout/branch/scaffolding removal follow.
+Whole AR07/Alpha, ISSUE-08 checked-result consumer contract, UI diagnostics/
+identity adoption, native/hardware/vendor/general allocation/RSS remain open.
+
+## AR07 scalar-copy actual integration accepted — 2026-10-03 09:52 CEST
+
+Reviewed source2e7a41c3 conventionally merged with published c07e6403 at
+9f512ab3e302014d1b4c3d2af33cd33712a052ad; upstream ADR0064/owner histories
+preserved, own scalar policy ADR0065. Actual proc_3ea5d4e7afa4 exit1 is retained:
+private Dynamic Rust6/0/0 exit0 but closed skip classifier rejected two output
+signals. Private raw lines were not persisted; do not claim recovered text.
+Source-backed public regression proves bool-valued PackageInstallReport.skipped
+and registered libtest-prefix cases; corrected classifier5 positives/7 negatives
+pass, unknown or missing-data signals still rejected. No production change.
+Continuation proc_8dd254bb5c75 exit0 independently accepted20 stages: five public
+commands reused from the exact same committed617-input tree (not a wholly fresh
+20-command run),13 commands and2 final checks newly executed. Workspace2984/0/165
+over149 blocks, Web1665, intercepted Chromium61; newly selected private Dynamic
+6/0/0 and in-memory offline SimTunnel Download14/0/0, zero unknown skip signals.
+All617 current/committed source/config hashes and17 shadow bindings equal;
+420 originals including103 product archives unchanged across the complete new
+private window. Hashing420 files does not mean parsing420 files. Strict
+Clippy/build/fmt/dependency and four nonempty intended-root audits pass.
+Earlier candidate/header failure and three compiled omission mutants/restoration
+remain scoped to their actual runs, not relabelled. Separate in-session review,
+not an independent-model verdict. Acceptance-doc gates/publication/readback
+pending. Broader AR07/Alpha, external String-only ISSUE-08 projections,
+UI diagnostics/identity adoption, native/ETS and general allocation/RSS/latency
+remain open. No live bus/vendor code or private raw logs; UI owner untouched.
+
 Status: controller checkpoint published; bounded Float guard integrated and
 accepted20/20 and published as da3bc947. Selected private/offline
 witnesses pass; broader AR07 and UI/native/ETS acceptance remain separate.
@@ -415,3 +461,137 @@ removed after process checks, minimal aggregates retained. Final receipt-only
 publication and clean checkout/branch removal follow separately. UI manual
 nodeChain/fallback adoption, genuine nested manufacturer, external substitution
 and whole AR07/Alpha stay open. No source/schema/authority or lock change.
+
+### Scalar-copy source audit and rejected inheritance hypothesis — 2026-10-03
+
+Delivered14e2eb9a's checkout/two branches and own build scaffolding are actually
+removed after ancestry/process/cleanliness checks; dirty canonical root unchanged.
+Fresh clean alpha-text-output starts exactly from that current remote snapshot.
+The source audit traces binding name/value copies and literal/replacement label
+copies uncharged by the current counter. Initial ancestor-search hypothesis
+rejected before any production edit: ModuleScope::argument is explicitly local,
+parent means provenance/depth/cycle, not lexical inheritance. Lookup width already
+matches that actual rule; never infer name inheritance from full node_chain.
+This is stronger proposed scalar admission, not an old byte guarantee. ADR-0065
+records UTF-8/minimum-reservation facts, one quota, no partial label/scope and
+existing full-panel read-only behavior.
+
+Actual compile0; three copy families independently verified101/0-1-0 with
+8,000,002/8,408,071/8,393,618 observed content bytes versus proposed4,000,000,
+no timeout/OOM and public tree/production restoration. Fourth inheritance
+assertion rejected;4096 unresolved warnings establish the positive non-inheritance
+case instead. Additional exact UTF-8 cost unit101/0-1-0 and old-production
+non-inheritance baseline1/0/0 verified. Candidate core copy admission implemented;
+public GREEN proc_c73947a5b170 independently accepted5/5: library355/0/0,
+DynamicTree66/0/6, strict Clippy/fmt/whitespace/source freeze. Six private ignored
+cases not executed; five consumer sources unchanged. New-cause literal-label
+HTTP regression reuses full-prefix authority/atomic source/project checks;
+proc_8ee608d8a643 independently5/5, named1/0/0 and full39/0/0 plus strict server/
+PDB Clippy/fmt/whitespace/frozen inputs. All-prefix null authority, scoped/
+unscoped400 and project/source atomicity verified. Compiled omissions/restoration
+proc_98b4f3f512f1 independently verifies3 compiled omissions caught by4 assertions,
+canonical evaluator/all9 scoped hashes restored. Candidate-only broad public
+proc_2b136248f7f9 rejected at headers158>157 after workspace2963/0/164.
+Only new test doc separator fixed (ADR0018), no runtime/ceiling change;
+actual fix gate410 valid/157 absent/17 generated passes. Full retry
+proc_230c3f7e4db9 independently passed13/13 with615 frozen inputs and17 unchanged
+shadow bindings; workspace2963/0/164 and Web1665. Rejected first proof retained.
+No integrated/publication acceptance.
+No API, native schema, generated binding
+or Web source changed. Public outside-walk String-only
+substitute_text and its two ISSUE-08 projection callers have no Activation/refusal
+reporting and remain an explicit coordinated consumer boundary, not fixed by this
+core candidate. Other metadata/source/diagnostic copies, allocator capacity/RSS,
+general latency and whole AR07/Alpha remain outside the limited proposal.
+
+
+## Outside-walk text refusal proposal — 2026-10-03
+
+Bounded scalar policy/final receipt5ca570a0 is published/read back, own old
+checkout/branch and seven targets actually removed;74 compact receipts retained,
+canonical root/originals unchanged. New alpha-external-text begins from fresh
+remote5ca570a0, preserving the existing complete history. Source confirms two
+String-only ISSUE-08 callers and repeated cached-channel text copies with no
+request-level refusal. Existing domain Result/HTTP400 can report a whole-detail
+rendering refusal without a new DTO or Web/binding change. ADR-0066 is Proposed,
+not accepted semantics. Independent projection content budget must not mutate
+completed activation or parameter write authority, reset per object, silently
+clip output or replace an unresolved placeholder. Application policy, not KNX
+length rule. All metadata/query/raw-source/RSS/native/ETS boundaries stay open.
+
+First public synthetic HTTP tracer uses Small for the evaluated channel, then
+2,000,001 ASCII translation bytes (proposed input+output4,000,002 >4,000,000).
+Positive untranslated active/channel control and nonempty project/product-file
+equality run before expected HTTP400; no partial detail. Compilation/runtime
+RED are still pending, no production implementation or GREEN. AppState.new
+opens its default product path even when later overwritten; RED environment
+therefore redirects XDG_DATA_HOME into owned scratch as well as explicitly
+setting synthetic ProductDB and data_dir. No host database/private corpus, bus
+or vendor path is authorized. U17 Web lock remains held by ui-theme-management
+(10:00 owner note), not released or touched; commissioning lifecycle is separate.
+
+
+## Checked outside-walk backend policy accepted — 2026-10-03 13:32 CEST
+
+ADR0066 producer/source a065ad94 and actual0369a56a integrate U17 without Web
+or binding changes. proc_39eb1bd6a2f3 exits0/22 actual commands: fresh public16,
+selected inventory3 and execution3. Workspace2995/0/165/150 blocks, Web1702,
+intercepted Chromium72,17 equal bindings and699 exact committed source inputs.
+Private Dynamic6/server-library2/com-object1 execute9 cases without missing/skip
+signals;420 originals unchanged, raw private output not persisted, link removed.
+Five compiled behavior mutants and separate in-session review retain their scope.
+Post-gate e2a40268 Markdown-only history/AR06P findings integrated7bb0ee72;
+source delta zero. Final docs/publication/readback pending, not delivered yet.
+
+Whole-device400 reports rendering refusal, not Inactive activation or source
+loss. Project/product-file equality is loaded-model/source evidence, not native
+project save/reopen. Supported local tokens/UTF8/raw/output/lookup admission and
+repeated cache copies share one context; legacy public String helper and general
+metadata/query/source/serializer/RSS remain unmetered boundaries. UI request
+source forwards existing errors; dedicated language/refresh presentation and
+snapshot consumer acceptance stays with UI, no new U-package assigned here.
+
+Fresh AR06P now precedes AR07 in the queue. Its synthetic nested-definition
+parser fixture/private one-off sample must be handled before claiming new real
+R-MODULE-04 semantics;853 crawler files are not this selected9-case gate or a
+committed fixture. Current broader supported-semantics matrix/AR07/Alpha open.
+
+AR06P KL-150 storage candidate checkpoint (2026-10-03 20:56 CEST): lexical
+definition/argument-position restoration has public RED/GREEN, whole-package
+rollback, eligible-source replay and three compiled scope mutants. The one
+authorized nested-package private pair is baseline RED/candidate GREEN;
+independent lexical/stored scope counts and original/retained ZIP bytes agree,
+retry succeeds, originals unchanged and raw/private-item outputs discarded.
+This supplies an offline stored-scope witness for the later R-MODULE-04 work,
+not evidence that nested allocation, substitution or parameter-write semantics
+are implemented. No evaluator/API/UI/binding change. Full853 CLI measurement,
+broad/current-upstream delivery/readback and owned cleanup remain pending;
+keep AR07/runtime acceptance and KL150 delivery open.
+
+At 2026-10-03 22:35 CEST KL150 candidate a2aa4b7 has complete offline
+original-filename853 CLI evidence: baseline687/candidate688 installed, exactly
+one constraint refusal admitted; all other outcomes unchanged, originals
+independently rehashed, no raw/private item records and all copies/DBs removed.
+Fresh public16 and same-profile Release12 also pass; integrated acceptance and
+publication remain pending. This closes the candidate's storage-admission
+evidence gap only. Keep R-MODULE-04 runtime/allocation/parameter-write behavior
+and the separate115/113 selected semantics acceptance outside this claim.
+
+The storage fix's actual cbe9952f public16/private pair is accepted and code is
+published as1b215d51 (2026-10-03 23:05 CEST), source706 unchanged and incoming
+stats-only documentation preserved. This makes the retained-source scope
+witness available to AR07; it does not close R-MODULE-04 runtime/allocation/
+parameter-write semantics or the selected115/113 acceptance.
+
+
+## Checked outside-walk scoped delivery receipt — 2026-10-03 13:54 CEST
+
+Scoped delivery 0b8ec935362d06642a81bafcbbb74824236c39b8 was pushed/fetched/live-read back at the recorded
+checkpoint: refs/trees equal0/0,699 actual-gated inputs and7 acceptance documents
+exact. Actual0369a56a's22 accepted commands and final five nonempty/root-explicit
+doc/whitespace gates retain their run scope; later delta is Markdown only.
+Twelve completed own build/snapshot/shadow/XDG directories removed after process
+checks; originals/foreign/root unchanged. Closing metadata gates/readback and
+clean checkout/branch/scaffolding removal remain, not new policy acceptance.
+AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
+open. Published statistics-owner artifact preserved, not a local statistics refresh.

@@ -2,9 +2,10 @@
 
 Contract resolved by U14, 2026-10-02. **U15 runtime foundation delivered;
 U16 persistence/file foundations are delivered/read back as 1f94808d;
-U17 management and U18 extension-wide acceptance remain pending.**
+U17 management is delivered/read back as4d9073ca. U18 extension-wide actual
+acceptance is delivered/read back as1964fd6b; final metadata is in the handover.**
 This document defines a KNXBench-owned format, not an existing interoperability
-standard or a claim that the application already imports themes. Decision:
+standard or a whole-application release/compatibility claim. Decision:
 [ADR-0060](adr/0060-versioned-declarative-theme-packs.md).
 
 ## Runtime implementation boundary
@@ -107,6 +108,95 @@ historical twenty-case scope. The product matrix measured 115 instances and
 Source 1f94808d5d9985b38fcf85021403bb4b05fea3e7 is published; exact remote ref,
 20 owned artifacts and all 622 gated inputs read back equal. U17 still owns visible controls/diagnostics and
 preview; U18 owns extension-wide acceptance. This is not independent approval.
+
+<a id="u17-local-management-candidate-and-operator-workflow"></a>
+## U17 verified management and operator workflow
+
+Implementation passes the actual merged acceptance below; publication/readback
+is recorded in the current handover, not inferred from a candidate run. Open
+Settings → Appearance. Builtins are immutable and show application origin;
+admitted imported entries show ID/name/version and saved selection. Preview is
+temporary. Use Apply to confirm a guarded selection/install; Cancel/Escape or
+closing the manager releases the candidate and restores the current confirmed
+rendering. The root theme runtime owns the only DOM lease; report consumers are
+read-only. Cross-client theme/map/accent changes revoke stale drafts/consent.
+
+Import a `.knx-theme.json` file. File admission shows the actual structured kind
+and path with live localized explanation. An ID collision opens a question
+showing the old/new identity/version, initially focused on Cancel. Same ID/version
+never implies consent or equivalent contents. Export on a validated installed
+row downloads canonical JSON text; it preserves admitted values and metadata.
+Builtins are not exported as misleading lossless v1 packs. Export recovery data
+preserves the observed raw theme area and is deliberately non-importable; keep
+the original settings file when original lexical bytes are required.
+
+Remove requires a content-bound confirmation. Removing the active pack couples
+map removal with System selection, retaining foreign entries and other settings.
+Use system theme resets selection without deleting the map or rewriting accent,
+density, motion or language. Available accent options follow the admitted visual
+candidate; an unsupported stored accent remains retained and explained.
+
+Apply uses U16's existing conditional queue. A dispatched write is not undone by
+closing Settings; this is stated while pending, with false-undo Cancel disabled.
+Repeated Apply dispatches once. A 409 restores the last known acknowledgment;
+the normal focus refresh adopts a later peer snapshot. An uncertain response can
+read once for reconciliation without replaying the write. Server acknowledgment
+and local cache failure are reported separately in manager and original selector.
+
+Historical candidate evidence:31 actual parent and five root cases, latest scoped74/TypeScript
+without stderr, six caught/restored behavioral controls and a caught/restored
+new-module TS2322 inclusion canary. The final frontend candidate passed
+Web1,702/95 files, Chromium69/no skip/no flaky, production build and types over262
+unchanged inputs. Eight behavioral controls were caught/restored. Full branch13/13 repository commands pass, Rust2940/0/164,17 equal bindings
+and693 inputs unchanged; actual-merged acceptance/publication remain pending. Legacy full Web
+suite emits fixture stderr; no warning-free whole-suite claim. Actual intercepted
+Chromium is not native WebKitGTK/Orca or general WCAG/ETS/global-alpha approval.
+
+U17-R1 acceptance audit added explicit actual-manager hostile-file rejection,
+System reset/OS transitions and HTTP500 rollback/no replay. Eleven manager
+browser cases and three further compiled browser guard controls pass, canonical
+runtime restored unchanged. The previous full69-browser receipt predates this
+test-only delta; renewed full actual-merged gates are recorded below. The cancelled first
+actual attempt and initial unused-import mutant compilation are retained as
+non-acceptance/instrumentation records, not successful behavioral evidence.
+
+Actual chain proc_cdcd42b97d47 on f16f1e40 passed23 commands:17 repository
+and six explicitly selected offline inventory/execution commands. Web1702 in95
+files, Chromium72 with zero failure/skip/flaky, ordinary Rust2984/0/165 across149
+result blocks, compiled ignored inventory165 and17 generated bindings equal.
+Six selected offline suites execute27 private cases; the release matrix is one
+additional case measuring115 instances/113 unique packages with status-only
+per-item output. All697 source/configuration inputs and420 private files remain
+unchanged; temporary corpus link removed. This is not a broad ignored/live sweep.
+The deliberately cancelled attempt1 and lifecycle-interrupted attempt2 remain
+non-acceptance records. Subsequent integration with upstream5ca570a0 changes
+Markdown only; all697 gated inputs remain equal, with document gates required
+before publication. U18-R1 cross-palette representative-component state coverage
+was open at U17; U18 closes it in the actual extension receipt below.
+
+## Local design example: Modern Retro Green CRT
+
+An importable complete v1 phosphor-green palette and a separately labelled
+interactive target-design study are documented in
+[Modern Retro Green CRT](DESIGN_RETRO_GREEN_CRT.md). The study's animation,
+dedicated selection fill and Save-only purple are not injected by its v1 pack.
+The guide proposes explicit component/token-version changes for those effects;
+this example does not expand the accepted format or claim new runtime features.
+The reference-image revision is palette version1.1.0 with the same ID; replacing
+an installed1.0 pack requires the existing explicit confirmation. Its softer
+ink, quiet green rules and mint primary gradient are token-only changes. The
+updated standalone native-table study and reproducible browser receipt remain
+separate from production component behavior.
+
+The 2026-10-03 production animation follow-up is independently selected as
+**Motion style → CRT**, not injected by the pack. The real workbench/tree/address
+table now have application-owned fill and bounded light/activation, with Off/OS
+reduced-motion cancellation. Save-only purple and exact selection colors remain
+unimplemented semantic-role proposals. The v1 token/schema boundary is unchanged;
+see the guide's production section and ADR-0022 follow-up. The authorized delivery
+committed it as16c9d774 and integrated it as3d03aea5 onto current main, with merged
+frontend/browser/workspace gates. Current refs/handover establish publication;
+importing a pack still cannot implicitly enable CRT or override Motion Off.
 
 ## Evidence and inspected baseline
 
@@ -285,3 +375,20 @@ Sources are registered from retrieved primary pages; access date 2026-10-02.
 [4] https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
 [5] https://react.dev/reference/react-dom/components/common
 [6] https://www.rfc-editor.org/rfc/rfc8259.html
+
+## U18 representative-state closing verification
+
+The [original candidate-status anchor](IMPLEMENTATION_STATUS.md#u18-representative-theme-states--candidate-acceptance-running)
+is retained for backward-compatible links; its current section records actual acceptance.
+
+The `ui-theme-closing` candidate adds test-only actual `GroupAddressTable`, `Inspector`, contextual inline-address validation, `Overlay` and structured theme diagnostics to the offline real Appearance/root fixture. Five built-ins, both System resolutions and admitted imported light/dark palettes are exercised. The frozen final-source matrix passed 10/10; three rendered-style sabotage controls were detected by named state assertions and a new-module TS2322 type-inclusion canary was detected/restored. Dedicated `npm run check:theme-fixtures` includes the new modules and test in the TypeScript project.
+
+**Actual-integrated extension acceptance verified (2026-10-03 15:23 CEST):** Persistent `proc_e95dfc308724` completed normally; the coupled receipts on `1660911bdd5bf350c6042bbeb9a2b694ad66fa41` were checked against committed blobs and the final working tree. **24/24 commands** passed (18 repository, six explicit offline inventory/execution commands): Web **1,702**, intercepted Chromium **82** with zero failures/skips/flaky, representative matrix **10/10**, ordinary Rust **2,995 passed / 0 failed / 165 ignored across 150 blocks**, and 17 generated bindings identical. Three rendered-style controls failed the named selection/focus/validation assertions; the TS2322 fixture-inclusion canary remains separately recorded. All **703** protected source/config inputs match exactly.
+
+Offline inventories reconcile **11 product + 16 injected-server + 1 matrix cases = 28 executed cases**. The matrix measured **115 instances / 113 unique packages**; its case is already included in28. All **421** private source files (420 OriginalData files plus project_dump) remained unchanged. Private stdout was classified in memory; only aggregate receipts were persisted. Own fixture links and transient matrix output were removed. Simulator download tests use injected transport, not a real KNX tunnel.
+
+The separately labelled in-session full-extension self-review traces admission/file decoding → immutable plans → conditional queue/API acknowledgment → single root DOM lease → manager/selector/diagnostics → semantic export/reimport and representative states. U18-R1 is closed by real components, not generic markup. No new blocking production finding; this is **self-review, not independent approval**. Historical running/candidate-only observations are superseded for their stated scopes. Later integration `ef4cfb92` brings eight upstream Markdown paths, zero protected-source changes; all703 actual-gated inputs remain exact. Closure Markdown/integrity gates passed; source delivery1964fd6b was pushed and read back with live/fetched refs, full tree, all703 inputs and15 owned artifacts exact, zero outgoing commits.52 completed own scratch entries and own node_modules were removed after worker/cwd checks; only final metadata housekeeping remains. The UI reservation is released in the current handover.
+
+No native WebKitGTK/Orca, all-component WCAG, Alpha/ETS compatibility or real discovery/tunnel/commissioning/hardware acceptance follows. User instructions for import/export, reversible preview, explicit replacement, recovery and fallback are in the U17 user instructions above.
+
+**Candidate gate verified (2026-10-03 13:48 CEST):** The notified runner completed normally and its complete receipt was checked:18/18 commands, Web1702, Chromium82 (zero failures/skips/flaky), final palette matrix10/10, Rust2984 passed/0 failed/165 ignored across149 result blocks; all701 frozen source/config inputs remain exact. This supersedes the earlier running-candidate observations, not the still-pending actual-integrated/offline/private acceptance or publication. In-session review found no new blocking production issue; it is not an independent third-party approval. Integration against fetched documentation-only upstream8af45464 is next.

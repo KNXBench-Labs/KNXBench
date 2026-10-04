@@ -112,6 +112,8 @@ function TreeNode(props: {
           ref={labelRef}
           type="button"
           className={labelClasses.join(" ")}
+          data-crt-surface="tree"
+          data-crt-activate={labelClick ? "" : undefined}
           onClick={labelClick}
           aria-pressed={props.onSelect ? !!props.selected : undefined}
           aria-expanded={!props.onSelect && hasChildren ? open : undefined}

@@ -270,8 +270,13 @@ Since ADR-0069 the server accepts an optional `requestId`: an identical resend
 replays the recorded outcome (`replayed: true`) instead of applying again, and
 the same ID with other content is refused. The record is in memory, bounded to
 256 requests and cleared when the project is replaced; a server restart forgets
-it. The web client does not send `requestId` yet (Web lock), so its retry
-block above still applies.
+it. Since 2026-10-04 the web client sends one `requestId` per submit. After a
+lost or 5xx response it treats the batch as unconfirmed for any quantity and
+offers **Retry safely** with the same request, but only after checking that
+the server's `server_incarnation` is unchanged; a restarted server gets no
+retry, only the request to inspect the project. A newer web client against a
+pre-ADR-0069 server would have its retried batch applied again; the desktop
+app and `knx-server` serving its own bundle always pair matching versions.
 Successful batch responses carry per-device diagnostics; a late core batch
 failure carries the zero-based child command index and its typed cause, which
 the catalog maps to the one-based device number (the reservation is child 0).

@@ -556,6 +556,8 @@ export interface CreateDeviceResponse {
   diagnostics: CreationDiagnostic[];
   /** Additive batch result; older servers may omit it for single-device responses. */
   items?: CreatedCatalogDevice[];
+  /** ADR-0069: true when the server answered a resend from its record without applying it again. */
+  replayed?: boolean;
 }
 
 export interface CreatedCatalogDevice {
@@ -668,11 +670,12 @@ export function createDevice(
   catalogItemId: string,
   name: string,
   quantity = 1,
+  requestId?: string,
 ): Promise<CreateDeviceResponse> {
   return request("/api/devices", {
     method: "POST",
     body: JSON.stringify({ ...(lineId === null ? {} : { lineId }), catalogItemId, name,
-      ...(quantity === 1 ? {} : { quantity }) }),
+      ...(quantity === 1 ? {} : { quantity }), ...(requestId === undefined ? {} : { requestId }) }),
   });
 }
 

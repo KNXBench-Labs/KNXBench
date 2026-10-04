@@ -12,6 +12,21 @@ Every statement below is tagged:
 
 ---
 
+## 2026-10-04 — Product scheme23: project documentation is not manufacturer grammar
+
+- **[D]** The official Project Schema23 v01.00.00 (2024-03-01) describes
+  project interchange and explicitly excludes complete manufacturer product
+  definition/runtime semantics. See [bounded research and primary source](PRODUCT_SCHEME_23_RESEARCH.md).
+- **[V]** Independently reconciled offline census:853 original hashes,852
+  master XML/one BadZipFile scan refusal;2 scheme23 packages/8 XML documents,
+  no observed namespace mismatch/foreign elements/qualified attributes.
+- **[V]** Fresh unchanged importer:631 ProductDB tests/0 failed/25 ignored,
+  strict Clippy/Release build passed. Actual original-name CLI has2 atomic
+  exact namespace refusals;original853 independently rehashed after probe.
+- **[A]** Structural agreement is not typed/semantic or runtime acceptance.
+  Product admission remains exact11/12/13/14/20/21; retained-language evidence
+  accepting23 is a separate contract. No namespace/runtime widening yet.
+
 ## 2026-10-01 — Backup directory chains, not only the final directory
 
 - **[D]** Linux [`fsync(2)`](https://man7.org/linux/man-pages/man2/fsync.2.html)

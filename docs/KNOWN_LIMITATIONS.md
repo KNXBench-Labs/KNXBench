@@ -7371,6 +7371,17 @@ degrades to a counted summary instead of refusing the package.
 
 ## §153 Master-data schemes 10 and 23 are refused for standalone `.knxprod`
 
+**Research 2026-10-04,not admission.** Base575a2d1d/source712:bounded offline
+census rechecks853 hashes/852 master documents/one explicit scan refusal;two
+scheme23 packages have8 complete XML (2 each Master/Catalog/Hardware/
+ApplicationProgram),no observed namespace mismatch/foreign elements/qualified
+attributes. Fresh ProductDB631/0/25/28 blocks,strict Clippy/Release build passed.
+Real unchanged original-name CLI has2 exact atomic namespace refusals;all853
+originals independently rehashed after probe,temp0/no item records. Primary
+project Schema23 v01.00.00 excludes full manufacturer semantics;retained-language
+23 evidence is not typed product acceptance. See PRODUCT_SCHEME_23_RESEARCH.md.
+No whitelist/namespace/ZIP/runtime changes and no scheme10 acceptance.
+
 **Observed 2026-10-03.** Of 853 crawled files, 146 use namespace
 `http://knx.org/xml/project/10` (145 ABB plus 1 ABB bundle that also hits
 §151) and 2 use `…/project/23`: ABB `LKS_43_VD-TP_XX_V1-0_…_Rev_A` and MDT

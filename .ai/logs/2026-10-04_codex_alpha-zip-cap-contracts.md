@@ -76,3 +76,67 @@ in-session whole-slice review, no CRITICAL/IMPORTANT/MINOR findings; not an
 independent-model approval. Source admission is at package.rs:840, seeded archive
 INSERT at2389, replay source-name INSERT OR IGNORE at2370. Integrated gates and
 remote publication/hygiene remain pending. No new private-corpus result.
+
+## Local integration and full public14 retry
+
+Six-path commit65d7cf5c merged published959605a2 into4dbca7e5. Upstream changes
+only Web/code outside120 native dependency inputs, which remain byte-identical.
+One real content conflict in IMPLEMENTATION_STATUS; exact own-prefix/full-owner
+status and handover preserved, goal exact owner plus one checkpoint. No root
+checkout or own Web source edits. Merge committed clean.
+
+First dispatch proc_c975e247e0d3 exited1 at startup before receipt/gate stages:
+runner wrongly assumed tracked dist/.gitkeep, while exact git inventory has
+none. Actual fatal first log line retained in startup-refusal.json; original
+runner untouched. Zero gates/tests, not a product failure. Corrected optional
+lookup startup prefix exercised against exact HEAD,no invented placeholder.
+
+Fresh actual retry proc_c1d85106f9ff/PID3526801 notify-on-completion; authoritative
+receipt integrated-public14-retry/summary.json; acceptance PENDING. Own fresh
+Cargo target, serialized canonical leases, offline Cargo+NPM and isolated lo.
+Web install/build/unit/Chromium, workspace/binding EOL-policy/strict Clippy/
+release CLI/docs4/fmt/whitespace. Restore only proven generated artifacts;
+HEAD/source/config frozen. Async handover/log metadata may mark CLI dirty:
+not a claim of an official clean release. No publication/KL151 completion.
+
+## Actual Chromium setup failure and bounded correction
+
+proc_c1d85106f9ff exited1 after actual Web install/build/unit0. Fourth stage
+Chromium1:90 registered cases, each browser launch fails before DOM behavior,
+actual FATAL SingletonSocket path too long beneath deep TMPDIR. Original
+receipt/four logs rehashed/source793 still exact; failed browser trace artifacts
+copied before later runs can replace output. Not a product assertion failure;
+workspace, Clippy, release and following gates NOT STARTED.
+
+Fresh public15 proc_57713447a1ae/PID3601716 notify started. Same HEAD/source,
+new fresh target; one named actual Chromium environment/case probe before full
+90-case browser scope. Short owned TMPDIR scratch/av6, ownership marker and
+100-byte example socket path; include it in final own-only cleanup. No system
+temporary dirs or unrelated artifacts selected. Current receipt
+integrated-public15-short-tmp/summary.json, acceptance PENDING. No repainting
+previous attempts green, no test double counting or publication claim.
+
+## Integrated first-five actual readback
+
+proc_57713447a1ae first5 actual commands exit0/log hashes exact. Web units1761
+passed; single actual Chromium environment probe1 passed and full suite90
+passed, not summed to91. The short TMPDIR correction is now exercised, not
+merely planned. Original startup0 refusal and90 failed browser launches remain
+separate. Same integrated4dbca7e5; workspace compilation/later gates pending.
+No complete integrated acceptance or remote publication yet.
+
+## Full public15 and consolidated delayed notification batch
+
+Both delayed failures reverified together:no new tests/gates or repeated totals.
+Startup proc_c975e247e0d3 remains exit1/zero repository stages; retry
+proc_c1d85106f9ff retains0/0/0/1 and90 socket-path launch failures, later Rust
+stages not started. Original runner/log/receipt hashes verified, failures intact.
+
+Current proc_57713447a1ae completed exit0 and all15 commands independently
+accepted on4dbca7e5. Rust3147/0/177 across170 blocks;Web1761;Chromium90 plus
+separate probe1 (not91). Native2 is a subset of the Rust total;177 ignored
+not passes.793 frozen source hashes and all stage logs exact, fresh changed
+crate/root-bound xtask compilation; strict CI binding policy passes with0 EOL
+restores. CLI release binary hash/version bound to4dbca7e5,not a prior HEAD.
+Metadata gates/latest-upstream publication and own-only archive/hygiene pending;
+no cap change,private corpus,Scheme10 admission or KL151/Alpha completion.

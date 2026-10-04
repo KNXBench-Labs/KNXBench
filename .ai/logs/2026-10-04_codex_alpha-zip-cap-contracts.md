@@ -267,3 +267,11 @@ All806 accepted6c3080d9 non-MD source/config hashes remain exact. Runtime/code
 acceptance retains6c3080d9 identity; doc publication is separate. Actual final
 docs6 and remote readback/hygiene remain pending. No new public/private totals
 or manufacturer/runtime/Alpha claims.
+
+## Actual source-identical final docs6
+
+948f9382 six actual commands0, root target correct; headers470/157,443 anchors
+over274 files,186 ledger rows,365 Rust corpus-policy files, layering/whitespace.
+806 runtime sources unchanged; product execution/CLI code identity6c3080d9
+retained. Final checkpoint metadata gates/publication/readback and own-only
+hygiene pending. No cap changes, new private work or whole Alpha closure.

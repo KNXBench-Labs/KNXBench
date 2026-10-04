@@ -67,6 +67,133 @@ fn state() -> (tempfile::TempDir, knx_server::AppState) {
     (dir, state)
 }
 
+fn scheme23_catalog_package(catalog: &str) -> Vec<u8> {
+    let master = String::from_utf8(MASTER.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23")
+        .replace("</Manufacturers>", "</Manufacturers><DatapointTypes><DatapointType Id=\"D-23\" Number=\"23\" VariableLength=\"true\"/></DatapointTypes>");
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (path, bytes) in [
+        ("knx_master.xml", master.as_bytes()),
+        ("M-0001/Catalog.xml", catalog.as_bytes()),
+    ] {
+        writer
+            .start_file(path, SimpleFileOptions::default())
+            .unwrap();
+        std::io::Write::write_all(&mut writer, bytes).unwrap();
+    }
+    writer.finish().unwrap().into_inner()
+}
+
+#[tokio::test]
+async fn scheme23_http_projects_measured_opaque_evidence_and_replays_exact_archive() {
+    let (_dir, state) = state();
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let catalog = String::from_utf8(CATALOG.to_vec())
+        .unwrap()
+        .replace("project/11", "project/23");
+    let bytes = scheme23_catalog_package(&catalog);
+    let first = app
+        .clone()
+        .oneshot(multipart("private-name-23.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::OK);
+    let first = json(first).await;
+    assert_eq!(first["scheme"], 23);
+    assert_eq!(first["skipped"], false);
+    let matching: Vec<_> = first["facts"]["unknownConstructs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["name"] == "VariableLength" && row["kind"] == "Attribute")
+        .collect();
+    assert_eq!(matching.len(), 1);
+    assert_eq!(matching[0]["sample"], "true");
+    assert_eq!(matching[0]["occurrences"], 1);
+    assert!(matching[0]["xpath"]
+        .as_str()
+        .unwrap()
+        .ends_with("/DatapointType"));
+    let encoded = first.to_string();
+    assert!(!encoded.contains("private-name-23.knxprod"));
+    assert!(!encoded.contains("sourceName"));
+    assert!(!encoded.contains("source_name"));
+    {
+        let connection = state.product_db.as_ref().unwrap().lock().unwrap();
+        let retained: Vec<u8> = connection
+            .query_row("SELECT bytes FROM package", [], |row| row.get(0))
+            .unwrap();
+        assert!(retained == bytes, "HTTP retained archive bytes changed");
+        let retained: Vec<u8> = connection
+            .query_row(
+                "SELECT bytes FROM source_file WHERE source_path='M-0001/Catalog.xml'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(retained, catalog.as_bytes());
+    }
+    let replay = app
+        .clone()
+        .oneshot(multipart("renamed-23.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(replay.status(), StatusCode::OK);
+    let replay = json(replay).await;
+    assert_eq!(replay["scheme"], 23);
+    assert_eq!(replay["skipped"], true);
+    assert_eq!(replay["sha256"], first["sha256"]);
+    assert_eq!(replay["facts"], first["facts"]);
+    let found = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/catalog/items?manufacturer=M-0001")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(found.status(), StatusCode::OK);
+    assert_eq!(json(found).await[0]["id"], "M-0001_CI-1");
+}
+
+#[tokio::test]
+async fn scheme23_http_foreign_member_refusal_preserves_seeded_database() {
+    let (dir, state) = state();
+    let app = knx_server::app(Arc::new(state), None);
+    let seed = app
+        .clone()
+        .oneshot(multipart("seed.knxprod", &package()))
+        .await
+        .unwrap();
+    assert_eq!(seed.status(), StatusCode::OK);
+    let database = dir.path().join("products.sqlite");
+    let before = std::fs::read(&database).unwrap();
+    let catalog = String::from_utf8(CATALOG.to_vec()).unwrap();
+    let response = app
+        .oneshot(multipart(
+            "foreign-23.knxprod",
+            &scheme23_catalog_package(&catalog),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let error = json(response).await;
+    assert!(
+        error["error"]
+            .as_str()
+            .unwrap()
+            .contains("scheme-23 XML contains a non-KNX element namespace"),
+        "{error}"
+    );
+    assert!(
+        std::fs::read(&database).unwrap() == before,
+        "HTTP refusal changed persisted seed database bytes"
+    );
+}
+
 #[tokio::test]
 async fn installing_a_package_returns_report_and_makes_catalog_item_discoverable() {
     let (_dir, state) = state();

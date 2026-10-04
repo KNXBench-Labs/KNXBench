@@ -1196,6 +1196,7 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
                         "http://knx.org/xml/project/14" => return Ok(14),
                         "http://knx.org/xml/project/20" => return Ok(20),
                         "http://knx.org/xml/project/21" => return Ok(21),
+                        "http://knx.org/xml/project/23" => return Ok(23),
                         _ => {}
                     }
                 }
@@ -1208,10 +1209,14 @@ fn master_scheme(bytes: &[u8]) -> Result<u32, PackageError> {
 }
 
 // Domain readers currently dispatch by local name. Reject foreign elements and
-// qualified attributes in scheme 21 rather than publishing extension data as
+// qualified attributes in schemes 21/23 rather than publishing extension data as
 // typed KNX rows. This is a deliberately narrow, corpus-evidenced boundary.
-fn validate_scheme21_member_namespace(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
-    const NAMESPACE: &str = "http://knx.org/xml/project/21";
+fn validate_extended_member_namespace(
+    path: &str,
+    bytes: &[u8],
+    scheme: u32,
+) -> Result<(), PackageError> {
+    let expected_namespace = format!("http://knx.org/xml/project/{scheme}");
     let mut reader = quick_xml::NsReader::from_reader(bytes);
     loop {
         let (namespace, event) = reader
@@ -1219,10 +1224,11 @@ fn validate_scheme21_member_namespace(path: &str, bytes: &[u8]) -> Result<(), Pa
             .map_err(|error| xml_error(path, error))?;
         match event {
             Event::Start(element) | Event::Empty(element) => {
-                if !matches!(namespace, ResolveResult::Bound(uri) if uri.as_ref() == NAMESPACE) {
+                if !matches!(namespace, ResolveResult::Bound(uri) if uri.as_ref() == expected_namespace.as_str())
+                {
                     return Err(xml_error(
                         path,
-                        "scheme-21 XML contains a non-KNX element namespace",
+                        format!("scheme-{scheme} XML contains a non-KNX element namespace"),
                     ));
                 }
                 for attribute in element.attributes().with_checks(true) {
@@ -1231,7 +1237,7 @@ fn validate_scheme21_member_namespace(path: &str, bytes: &[u8]) -> Result<(), Pa
                     if name.contains(':') && !name.starts_with("xmlns:") {
                         return Err(xml_error(
                             path,
-                            "scheme-21 XML contains a qualified attribute",
+                            format!("scheme-{scheme} XML contains a qualified attribute"),
                         ));
                     }
                 }
@@ -2307,7 +2313,7 @@ pub fn install_package(
         });
     }
     let scheme = scheme.ok_or(PackageError::MissingMaster)?;
-    if scheme == 21 {
+    if matches!(scheme, 21 | 23) {
         for validated in &validated_members {
             if !matches!(
                 validated.member.role.as_str(),
@@ -2328,7 +2334,7 @@ pub fn install_package(
             {
                 return Err(zip_error("member changed between validation passes"));
             }
-            validate_scheme21_member_namespace(&validated.member.path, &data)?;
+            validate_extended_member_namespace(&validated.member.path, &data, scheme)?;
         }
     }
     if !has_manufacturer_data {
@@ -2475,7 +2481,7 @@ pub fn install_package(
         ) {
             // A retained raw member is not proof its domain rows were parsed.
             // The package hash, not the blob hash, controls package retries.
-            ingest_file_in_transaction(&tx, &path, &data, true, scheme == 21)?
+            ingest_file_in_transaction(&tx, &path, &data, true, matches!(scheme, 21 | 23))?
         } else {
             let stored = crate::store_source_file(
                 &tx,
@@ -2530,7 +2536,7 @@ pub fn install_package(
                 unsupported_sections,
                 uninterpreted_subtrees,
             } = master;
-            if scheme == 21 {
+            if matches!(scheme, 21 | 23) {
                 crate::parse::scheme_evidence::reconcile_package_unknowns(
                     &data,
                     &path,

@@ -1,5 +1,38 @@
 # IMPLEMENTATION_STATUS.md
 
+## AR06T exact23 candidate — in progress (2026-10-04)
+
+Local candidate on `9d719a4f`: exact product namespace23 admission with the
+existing scheme21 strict member-namespace/qualified-attribute boundary and
+package-scoped opaque-field evidence. No schema/budget/runtime/UI change.
+Independently reconciled public evidence: six native GREENs, ProductDB
+637 passed/0 failed/25 ignored (29 blocks), strict Clippy and two real CLI builds.
+Real private2: two atomic namespace refusals become two retained/queryable
+installs; exact opaque reporting/reopen replay and original853 rehash verified.
+The actual Release CLI Full853 comparison completed on this frozen Source713
+candidate: 690 existing installs have equal table contents, 161 refusals remain
+diagnostically equal and atomic, and two exact23 packages become installs
+(baseline 690/candidate 692). All 1382 installed archive copies were checked
+byte-exact; all 853 originals were rehashed afterward. Aggregate receipt,
+public/private prerequisite commitments and both release-binary hashes were
+reconciled without reopening the private corpus. No raw/item records persisted.
+Caller acceptance now adds four source-bound baseline REDs and four fresh-target
+CLI/HTTP GREENs: measured opaque facts, exact archive/member retention, replay,
+wire privacy/catalog discovery and seeded-database refusal integrity. Current
+native six remain GREEN with scanner-owned master evidence and exact path/count
+checks. Six compiled behavioral controls cover namespace/qualified guards,
+master evidence, member late-depth admission, unresearched24 and generic scope.
+Earlier parser-owned-field survivors and verifier refusals are retained; member
+scan wiring is proved by the real late-depth test, not field presence alone.
+Only three test files differ from the Full853 input manifest; all production
+inputs remain byte-identical. Separate follow-up in-session review has no
+blocking product finding, not an independent-model approval. Current-upstream
+workspace/Web/bindings/build/doc/integration/publication gates remain open.
+This is not delivered manufacturer compatibility and does not close KL153 or
+the Alpha goal. Decision: `adr/0068-product-scheme23-namespace-gate.md`.
+See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
+
+
 ## AR06S KL153 scheme23 bounded research — 2026-10-04
 
 No production code changes. Base575a2d1d,source712 frozen; official Schema23

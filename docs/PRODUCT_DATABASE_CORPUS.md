@@ -1,5 +1,20 @@
 # Gira and MDT product-database corpus
 
+## Scheme23 import candidate — not delivered, 2026-10-04
+
+The actual same-Release Full853 comparison is producer-bound to Source713 versus
+Source712:690 all-table-content-equal existing imports,161 diagnostically equal
+atomic refusals,2 exact23 admissions (baseline690/candidate692). All1382 installed
+archive copies and853 original post-run hashes were verified; private temp0 and
+no raw/item records persisted. Four actual CLI/HTTP caller GREENs and four
+semantic baseline REDs,current native6,six compiled guard controls and separate
+in-session review now complement that evidence. Three test-only changes leave
+all measured production inputs byte-identical. Earlier surviving field probes
+and verifier refusals remain separate. Current-upstream workspace/Web/build/
+integration/publication are still pending; see [research and limitations](PRODUCT_SCHEME_23_RESEARCH.md)
+and [ADR-0068](adr/0068-product-scheme23-namespace-gate.md). This is not full
+manufacturer semantics, ETS parity, runtime compatibility or KL153 completion.
+
 ## Scheme23 structural research — 2026-10-04
 
 Base575a2d1d,all853 original hashes independently exact. Bounded offline

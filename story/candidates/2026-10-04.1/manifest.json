@@ -1,0 +1,118 @@
+{
+ "base_candidate": null,
+ "candidate_id": "2026-10-04.1",
+ "content_sha256": "9f9204602bccc827e274763f2221dd02f69270c000d89b152ab9c14ba3a1083a",
+ "counts": {
+  "chapters": 8,
+  "editorial_relations": 8,
+  "events": 35,
+  "events_with_uncertainty": 19,
+  "excerpts": 29,
+  "gaps": 6,
+  "relations": 45
+ },
+ "cutoff": {
+  "conversations_through": "2026-10-04T00:51+02:00",
+  "git_commit": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
+  "git_commit_time": "2026-10-04T00:42:05+02:00",
+  "git_ref": "origin/main",
+  "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening"
+ },
+ "diff": {
+  "base": null,
+  "events": {
+   "added": [
+    "home-toolbox",
+    "strategy-seed",
+    "architecture-day-one",
+    "core-model",
+    "ets-import",
+    "product-database",
+    "desktop-shell",
+    "schema-23-refusal",
+    "rename-knxbench",
+    "web-docker",
+    "live-bus-first",
+    "own-format",
+    "codex-joins-goal",
+    "spec-knowledge-base",
+    "languages",
+    "home-bus-boundary",
+    "ui-redesign",
+    "licence-agpl",
+    "appimage",
+    "loading-jokes",
+    "drop-ets-export",
+    "test-transmitting-building",
+    "history-scrub",
+    "notation-reversal",
+    "hermes-shared-memory",
+    "project-stats",
+    "paperclip-experiment",
+    "first-device-programmed",
+    "split-goals",
+    "licence-cla-reversal",
+    "fail-closed-writes",
+    "alpha-backlog",
+    "theme-packs-crt",
+    "crawler-corpus",
+    "evolution-story"
+   ],
+   "changed": {},
+   "removed": []
+  },
+  "initial": true,
+  "target": "2026-10-04.1"
+ },
+ "privacy_warnings": [
+  {
+   "category": "possible KNX individual address or version number",
+   "excerpt": "Version 0.1.0-alpha.1, no tag, no…",
+   "location": "events[33].aside",
+   "severity": "warning"
+  }
+ ],
+ "provenance": {
+  "events_without_private_provenance": [],
+  "private_entries_without_public_event": 0,
+  "private_locators_found_in_payload": 0,
+  "status": "checked"
+ },
+ "publication": {
+  "approved": false,
+  "note": "Prepared for private review only. Publishing requires a separate explicit approval of this exact story_sha256."
+ },
+ "schema": "knxbench-evolution-manifest/1",
+ "source_coverage": [
+  {
+   "id": "src-git",
+   "status": "read"
+  },
+  {
+   "id": "src-docs",
+   "status": "read"
+  },
+  {
+   "id": "src-claude",
+   "status": "read"
+  },
+  {
+   "id": "src-codex",
+   "status": "read"
+  },
+  {
+   "id": "src-hermes",
+   "status": "read"
+  },
+  {
+   "id": "src-paperclip",
+   "status": "partial"
+  },
+  {
+   "id": "src-cloud",
+   "status": "unavailable"
+  }
+ ],
+ "story_sha256": "45274796a16111081df96139e34ffe8cfd8dc15652e864719523c7bd83cc1715",
+ "tool_version": "0.1.0"
+}

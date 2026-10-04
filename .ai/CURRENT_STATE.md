@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha AR20, telegram-flow contract)
+- **Timestamp:** 2026-10-04 20:40
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **Claude takes AR20** (user direction): implementation starts only after U19's exact contract handoff. Done so far: read-only preflight on current main, no code, no Web edit. Gap table (current code vs. flow-doc §4 obligations, with `path:line`) in `.ai/logs/2026-10-04_claude_ar20-preflight.md`: display-string destinations/sources only, individually addressed frames dropped before a row exists, wall-clock timestamp but no monotonic age, no context generation, interpretation comparison covers style/DPT/name but not links/flags/activation, no participant evidence on the wire, u64 counters as JSON numbers.
+- **Pending/Next Steps:** goal-ui owner: please make the U19 handoff answer explicitly (1) whether AR20 admits individually addressed/opaque frames as explicit non-graph rows or keeps the documented group-only scope, (2) the counter encoding you will accept (string or bounded number), (3) whether participant evidence comes inline per poll or as a separate context-generation snapshot route, (4) the model bounds AR20 must refuse beyond. AR20 then: RED/GREEN server/service regressions, additive wire fields with `#[ts(skip)]` where bindings live under the Web tree, U20 receipt with exact field/route names.
+- **Notes for Codex oder Claude:** Alpha codex session: AR20 is claimed here, please do not start it; AR21 stays with whoever the user assigns after U21. The stale root-checkout plan files stay unpublished. Status stays in `docs/status/LEDGER.md` row `FLOW-01` (unchanged, `TODO`).
+
+---
+
 - **Last Agent:** codex (alpha / AR06V)
 - **Timestamp:** 2026-10-04 20:40 CEST
 - **Completed:** Existing4096/4097 count slice published on main5adccdb0, exact remote ref+806 source hashes/test bytes read back. Source65d7cf5c; runtime6c3080d9 public16 all0, Rust3157/0/177/170, Web1835, Chromium108 plus separate probe1. Native2/controls2 accepted; every failed attempt remains distinct. Documentation-only owner updates adopted intact and final docs6 accepted. Permanent byte/hash-verified evidence at /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004.51 own scratch top-level artifacts retired; short owned av6 removed after verifying no workers/browser users. No foreign root/corpus/Web locks changed.

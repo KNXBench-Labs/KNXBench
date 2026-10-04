@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — MODEL-03 web half: device number 0 for evidenced couplers
+
+- The individual-address editor no longer refuses device number `0` itself. It
+  submits `.0`, and the server decides: an evidenced coupler (product database
+  `Hardware/@IsCoupler="true"`) gets it through `SetCouplerIndividualAddress`
+  with undo; anything else is refused, and the refusal text is shown in the
+  field, which restores its previous value. The unused client-side refusal
+  message is gone from both catalogues.
+- Evidence: two new `Inspector.test.tsx` cases written RED first; four new
+  intercepted Chromium cases in `e2e/coupler-address.e2e.ts` (en/de, accepted
+  and refused), with the existing device-editor browser cases still passing;
+  three behavioural mutants caught (client block restored, generic error text,
+  field not restored). Backend tests from UA1 are unchanged.
+
 ## 2026-10-04 — Bounded History Web closure
 
 Actual merged2057f86b is publicly accepted9/9: ordinary workspace3145/0/177

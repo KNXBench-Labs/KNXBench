@@ -327,7 +327,6 @@ export const messages: Record<MessageKey, string> = {
   "inspector.address": "Adresse",
   "inspector.address.deviceOctet": "Gerätenummer",
   "inspector.address.invalidDevice": "Eine Gerätenummer von 1 bis 255 eingeben.",
-  "inspector.address.couplerOnly": "Gerätenummer 0 ist Kopplern vorbehalten; ohne gesicherte Kopplerkennung kann sie hier nicht vergeben werden.",
   "inspector.address.ambiguous": "Adresse nicht bearbeitbar: Das Gerät hat keinen eindeutigen Bereich und keine eindeutige Linie.",
   "inspector.address.mismatch": "Gespeicherte Adresse {address} passt nicht zur zugeordneten Linie {line}. Sie bleibt unverändert, bis du die Gerätenummer bearbeitest.",
   "inspector.description": "Beschreibung",

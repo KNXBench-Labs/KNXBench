@@ -143,10 +143,10 @@ function AddressField(props: { detail: DeviceDetail; tree: ProjectTree; onApplie
         return;
       }
       address = `${prefix}${Number(address)}`;
-      if (address !== current && Number(value) === 0) {
-        setError(t("inspector.address.couplerOnly"));
-        return;
-      }
+      // Device number 0 is reserved for couplers. Whether this product is
+      // one is a product-database fact only the server can check
+      // (`Hardware/@IsCoupler`, MODEL-03), so the server decides and its
+      // refusal is shown like any other address error.
     }
     if ((address ?? "") === current) {
       setDirty(false);

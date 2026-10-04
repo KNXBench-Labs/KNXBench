@@ -138,11 +138,13 @@ forward requests to the development backend and every test intercepts API calls.
 
 ## All UI-routed inventory rows
 
-These are the exact 24 IDs from the parent ledger. `Open` names absent behavior,
+These are the exact 24 UI-owned IDs of the [source-ID ledger](status/LEDGER.md). `Open` names absent behavior,
 not merely missing validation. `Retained` describes the current contract, not
-release consent. Final parent-ledger status follows verified delivery.
+release consent. Final ledger status follows verified delivery.
 
-| ID | Disposition and current evidence | Remaining condition |
+Status of these rows: [source-ID ledger](status/LEDGER.md) (AR14D D2).
+
+| ID | Owner evidence | Remaining condition |
 | --- | --- | --- |
 | KL-79 | Existing offline UDP exchange and UI discovery remain verified at U13 scope; new metadata projection has focused coverage. | Native Search click and real multicast/firewall paths are not proved by fixtures; no deliberate live Search was accepted. The old-harness attempt has the unretained-traffic qualification above. |
 | UI-01 | Already DONE in U13; no duplicate implementation. | Preserve original native/network qualifications. |
@@ -222,8 +224,9 @@ leaves the Alpha scope as `ACCEPTED_BOUNDARY`; these remain disclosed,
 unverified boundaries, not claims. MODEL-03 and KL-127 get research first and
 close as known gaps without reliable evidence. DATA-03, MODEL-01, MODEL-02,
 MODEL-04 and UX-01 are now implementation packages UA2–UA6 in
-[goal-ui.md](../goal-ui.md). The parent ledger in
-[alpha-release-goal.md](../alpha-release-goal.md) carries the per-row status.
+[goal-ui.md](../goal-ui.md). The [source-ID ledger](status/LEDGER.md) carries
+the per-row status (until 2026-10-04 the parent ledger in
+[alpha-release-goal.md](../alpha-release-goal.md) did).
 
 **Handoff 2026-10-04 11:27.** The backend halves of MODEL-01/02/03/04 and DATA-03 are
 published (ADR-0069, ADR-0070, ADR-0071, RESEARCH §25); UX-01 needs no

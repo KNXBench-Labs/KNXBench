@@ -20,6 +20,9 @@
   `crates/knx-etsproj/tests/malformed_input.rs`, `id_table` unit test;
   10/10 guard mutants caught. Corpus import output unchanged (no repeated ids,
   one installation each).
+- Corpus save/reopen equality now covers all three reference projects
+  (schemas 11, 21, 23; previously ETS4 only, from when schema 23 was refused):
+  `knx-store/tests/reference_project.rs`, 3/3 green with `--ignored`.
 
 ## AR06T exact23 bounded import — delivered (2026-10-04, `aadd8820`)
 

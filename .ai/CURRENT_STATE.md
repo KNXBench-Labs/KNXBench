@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:15
+- **Completed:** Corpus save/reopen equality extended from ETS4 only to all three reference projects (KV schema 21, ETS 6.3.0 schema 23): `knx-store/tests/reference_project.rs::the_schema_21_and_23_reference_projects_round_trip_through_save_and_load`, 3/3 green with `--ignored`; the old header claiming schema 23 is refused was stale. COMPATIBILITY row added (native model equality only, not bytes or ETS re-import). Post-push corpus run of `7e94daae`: knx-store 2, save_load_roundtrip 1, open_reference_project 1, cli_import 8, knx-etsproj 50 green; its 5 failures are the xknxproject oracle tests without the local `project_dump.json` (green when linked).
+- **Pending/Next Steps:** No goal-ui backend work is open; web halves stay with the Web-lock holder.
+- **Notes for Codex oder Claude:** ADR numbers: 0072 is scheme23 (other session, now indexed), 0073 importer ids, 0074 lossless save.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 12:58
 - **Completed:** UA7/UA8 data-integrity follow-up (user: "keep on going"). ADR-0074: `.knxdb` save is exact or refused — `knx_store::representable::check_representable` refuses duplicate entity ids, orphaned lines, foreign line references, parent/child mismatches and a device twice in one building part (`StoreError::Unrepresentable`) before any write; a probe had shown seven such states saving "successfully" and reopening different. ADR-0073: the ETS mapper gives every element its own internal id even when its `@Id` repeats (`knx-etsproj/src/id_table.rs`), reports references to a repeated id as `MapProblemDetail::AmbiguousReference`, and resolves schema ≥21 short `Links` ids within the device's own installation (old mapper linked installation 0's device to installation 1's `GA-1`, silently). RED evidence, 10/10 mutants, workspace gate + all corpus-gated tests green (details in `.ai/logs/2026-10-04_claude_ui-ua78-lossless-import-save.md`).
 - **Pending/Next Steps:** No goal-ui backend work is open; the six web halves stay with the Web-lock holder (handoff table in `alpha-release-goal.md`). Possible later scope, deliberately not built: hierarchy repair and duplicate-id renumbering commands — no supported importer produces those states any more, so they would be speculative.

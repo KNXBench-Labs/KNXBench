@@ -1865,11 +1865,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "knx-build-stamp"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "knx-cli"
 version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-app",
+ "knx-build-stamp",
  "knx-core",
  "knx-csv",
  "knx-diff",
@@ -2005,6 +2013,7 @@ dependencies = [
  "http-body",
  "http-body-util",
  "knx-app",
+ "knx-build-stamp",
  "knx-core",
  "knx-csv",
  "knx-diff",

@@ -166,7 +166,7 @@ renamed area/line, reparented building/range and moved line. Device drag/drop
 keeps using its existing validated device commands; structure reparenting
 uses keyboard-accessible selects, not an unverified drag gesture. Scope and
 remaining limits are recorded in
-[IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md#2026-09-30--u12--issue-05-structure-editor-published-on-main)
+[IMPLEMENTATION_STATUS.md](../../history/IMPLEMENTATION_STATUS_2026-09.md#2026-09-30--u12--issue-05-structure-editor-published-on-main)
 and [KNOWN_LIMITATIONS.md](../../KNOWN_LIMITATIONS.md#u12-structure-editor-scope-issue-05).
 
 ### ISSUE-06: Site/property hierarchy decision

@@ -7,6 +7,7 @@ import type { SettingsDiagnostic } from "./settingsStore";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { DocumentationOptions } from "./documentationOptions";
 import { notifySessionExpired } from "./session";
+import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type HistoryPage } from "./activityHistory";
 
 /**
  * The three endpoints a login screen talks to (ADR-0026). Their own 401 is
@@ -16,6 +17,17 @@ import { notifySessionExpired } from "./session";
  * on the desktop shell would conjure one out of nothing.
  */
 const AUTH_PATH_PREFIX = "/api/auth/";
+
+/** Read-only history: no tunnel, retry, restore or bus command is requested. */
+export async function activityHistory(after = 0, limit = 50): Promise<HistoryPage> {
+  assertHistoryBounds(after, limit);
+  try {
+    return admitHistoryPage(await request(`/api/bus/history?after=${after}&limit=${limit}`), after, limit);
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new HistoryContractError("malformed");
+    throw error;
+  }
+}
 
 /**
  * The one place the frontend learns that the server wants a session.

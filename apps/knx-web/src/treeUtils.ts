@@ -4,6 +4,7 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
+import type { InstallationNode } from "./bindings/InstallationNode";
 import type { LineNode } from "./bindings/LineNode";
 
 export type SearchEntry =
@@ -128,6 +129,62 @@ export function nestGroupRanges(ranges: GroupRangeNode[]): GroupRangeTreeNode[] 
     return (byParent.get(parent) ?? []).map((range) => ({ range, children: build(range.id) }));
   }
   return build(null);
+}
+
+export type OwnedEntityKind = "area" | "line" | "building_part" | "group_range" | "group_address";
+
+function occurrences(installation: InstallationNode, kind: OwnedEntityKind, id: number): number {
+  switch (kind) {
+    case "area": return installation.topology.filter((area) => area.id === id).length;
+    case "line": return installation.topology.flatMap((area) => area.lines).filter((line) => line.id === id).length;
+    case "building_part":
+      return flattenBuildingParts(installation.buildings, []).filter(({ node }) => node.id === id).length;
+    case "group_range": return installation.group_ranges.filter((range) => range.id === id).length;
+    case "group_address": return installation.group_addresses.filter((address) => address.id === id).length;
+  }
+}
+
+/** MODEL-01 / ADR-0070: the one installation holding an entity, as the core
+ * resolves it. `undefined` when it is absent or occurs more than once
+ * anywhere — never the first of several. */
+export function owningInstallation(
+  tree: ProjectTree,
+  kind: OwnedEntityKind,
+  id: number,
+): InstallationNode | undefined {
+  let owner: InstallationNode | undefined;
+  let total = 0;
+  for (const installation of tree.installations) {
+    const count = occurrences(installation, kind, id);
+    if (count > 0) { total += count; owner = installation; }
+  }
+  return total === 1 ? owner : undefined;
+}
+
+/** Every topology-placed device (on a line or unassigned) mapped to the one
+ * installation that places it, in a single pass — the core's
+ * `device_installation`. A building-only placement does not count; a device
+ * placed in two installations is ambiguous and left out. */
+export function deviceInstallations(tree: ProjectTree): Map<number, InstallationNode> {
+  const placements = new Map<number, Set<InstallationNode>>();
+  for (const installation of tree.installations) {
+    const devices = [...installation.unassigned, ...installation.topology.flatMap((area) =>
+      area.lines.flatMap((line) => line.devices))];
+    for (const device of devices) {
+      const owners = placements.get(device.id) ?? new Set<InstallationNode>();
+      owners.add(installation);
+      placements.set(device.id, owners);
+    }
+  }
+  const unique = new Map<number, InstallationNode>();
+  for (const [deviceId, owners] of placements) {
+    if (owners.size === 1) unique.set(deviceId, [...owners][0]);
+  }
+  return unique;
+}
+
+export function deviceInstallation(tree: ProjectTree, deviceId: number): InstallationNode | undefined {
+  return deviceInstallations(tree).get(deviceId);
 }
 
 // Where a device currently sits in the *first* installation's topology —

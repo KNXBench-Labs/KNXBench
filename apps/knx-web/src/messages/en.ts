@@ -417,6 +417,8 @@ export const messages = {
   "explorer.project": "Project",
   "inspector.project": "Project",
   "inspector.groupAddressStyle": "Group address style",
+  "inspector.installations": "Installations",
+  "inspector.installationName": "Installation name {n}",
 
   // Shared between `Inspector.tsx` and `ProjectExplorer.tsx` — see the
   // header comment above for why this one namespace isn't per-surface.

@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:53
+Web lock: released by claude-goal-ui-owner (AR13 debug-report dialog text delivered)
+- **Completed:** AR13 hand-over item. The opt-in warning `debugReport.privacyTelegrams` (en/de) now mirrors `report.md` (`debug_report.rs`): `bus-telegrams.json` is not redacted and keeps addresses, group-address names, every telegram's value (text values included) and its timestamp, which together can show when the installation was in use. A content test per language was written RED first (it failed on the old wording). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,155 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, five repository gates (headers 469 ok; anchors 442 ok; ledger 185 rows), tsc, Vitest 1,835/101 files, complete intercepted Chromium suite 108/108, whitespace; source frozen. The ALPHA_READINESS AR13 *Handed over* note is marked done. Log: `.ai/logs/2026-10-04_claude_ui-ar13-report-text.md`. **With this, every web item of the 2026-10-04 UI owner handoff is delivered:** MODEL-03 `596697a6`, DATA-03 `45e1299f`, MODEL-04 `c6da3c78`, MODEL-01 `0dd9add8` + `e4737129`, MODEL-02 `efe7fb53`, UX-01 `bd2e5a3a`, and this text.
+- **Pending/Next Steps:** No open goal-ui web item from the handoff remains. Remaining UI-routed ledger rows are boundaries or user decisions; check `docs/status/LEDGER.md` (owner `ui`) before starting anything new. The Web lock is free for any session.
+- **Notes for Codex oder Claude:** No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 19:44
 Web lock: taken by claude-goal-ui-owner for the AR13 debug-report dialog text (`debugReport.privacyTelegrams`)
 - **Completed:** Lock taken only, no code yet. The previous lock line (this session, UX-01 delivered `bd2e5a3a`) said released.

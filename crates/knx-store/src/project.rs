@@ -117,47 +117,8 @@ pub fn save_project_if_unchanged(
     save_project_transaction(tx, replacement)
 }
 
-/// The schema stores one placement per device (`device.line_id`) and one
-/// area per line (`line.area_id`). A project that places a device twice or
-/// lists a line under several area entries would be collapsed by the upserts
-/// below — last write wins, silently. Refused instead; the user repairs it
-/// explicitly first (MODEL-02 `RepairDevicePlacement` / `RepairLineOwner`).
-fn check_unambiguous_topology(project: &Project) -> Result<(), StoreError> {
-    let mut device_counts: std::collections::BTreeMap<DeviceId, usize> = Default::default();
-    let mut line_counts: std::collections::BTreeMap<knx_core::ids::LineId, usize> =
-        Default::default();
-    for installation in &project.installations {
-        let topology = &installation.topology;
-        for device in topology
-            .unassigned
-            .iter()
-            .chain(topology.lines.iter().flat_map(|line| &line.devices))
-        {
-            *device_counts.entry(*device).or_default() += 1;
-        }
-        for line in topology.areas.iter().flat_map(|area| &area.lines) {
-            *line_counts.entry(*line).or_default() += 1;
-        }
-    }
-    let devices: Vec<DeviceId> = device_counts
-        .into_iter()
-        .filter(|&(_, count)| count > 1)
-        .map(|(id, _)| id)
-        .collect();
-    let lines: Vec<knx_core::ids::LineId> = line_counts
-        .into_iter()
-        .filter(|&(_, count)| count > 1)
-        .map(|(id, _)| id)
-        .collect();
-    if devices.is_empty() && lines.is_empty() {
-        Ok(())
-    } else {
-        Err(StoreError::AmbiguousTopology { devices, lines })
-    }
-}
-
 fn save_project_transaction(tx: Transaction<'_>, project: &Project) -> Result<(), StoreError> {
-    check_unambiguous_topology(project)?;
+    crate::representable::check_representable(project)?;
     // Defer every foreign-key check to `COMMIT`, for two reasons that both
     // come from `building_part`/`group_range` self-referencing via
     // `parent_id`:
@@ -1491,8 +1452,14 @@ mod tests {
         let project = project_with_hierarchy(vec![floor], vec![main_range, mid_range], vec![ga]);
 
         let err = save_project(&conn, &project).unwrap_err();
+        // ADR-0074: the representability check now names the problem before
+        // any write; the deferred FK check is still pinned by
+        // `tests/lossless_save.rs` (a dangling group-address range pointer).
         assert!(
-            matches!(err, StoreError::Sqlite(_)),
+            matches!(&err, StoreError::Unrepresentable(issues) if issues.iter().any(|issue|
+            matches!(issue, crate::representable::RepresentationIssue::HierarchyMismatch {
+                kind: crate::representable::EntityKind::BuildingPart, ..
+            }))),
             "a dangling parent_id must still fail: {err}"
         );
     }

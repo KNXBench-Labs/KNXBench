@@ -1,0 +1,27 @@
+{
+  "paletteVersion": "1.1.0",
+  "baseline": "e7f9db8e",
+  "checks": 16,
+  "passed": [
+    "reference palette: phosphor ink, purple Save, embedded Mono, twelve native rows",
+    "desktop chrome and footer fit the viewport; only the table scrolls",
+    "native arrow focus does not select; Enter activates once and paints actual flash",
+    "checkbox multiselection is independent of primary row selection",
+    "real 250ms native-row fill and transient overlay align without table pseudo-cells",
+    "beam retires after its bounded pulse; no persistent white flare over data",
+    "filter preserves rows; keyboard skips hidden native rows",
+    "Off cancels live fill, feedback and beam instead of waiting for old transitions",
+    "OS reduced motion cancels running effects but retains static selection",
+    "Save uses a real bounded violet flash and never claims a real file write",
+    "390px layout keeps the native table intact in local horizontal scrolling",
+    "actual manager: reference palette previews without mutating installed pack",
+    "actual manager: refusing same-ID replacement preserves old contents and selection",
+    "actual manager: explicit 1.1 replacement acknowledges one guarded mock write",
+    "actual manager: cold reload restores every exact v1.1 palette token",
+    "actual manager: exported 1.1 values and metadata roundtrip without loss"
+  ],
+  "screenshotFrame": "paused native animation at 125ms; lifetime tests use real timers",
+  "mockSettingsWrites": 1,
+  "pageErrors": 0,
+  "unexpectedRequests": 0
+}

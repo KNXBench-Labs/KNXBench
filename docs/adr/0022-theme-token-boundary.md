@@ -198,3 +198,39 @@ offending value, not only the name of the referring token.
 
 This is a role-pair invariant, not an audit of every possible component
 composition, browser rendering difference, or assistive technology.
+
+## CRT interaction follow-up (2026-10-03)
+
+The CRT motion style extends the application-owned style registry with `crt`.
+It is independently selected in Settings, not encoded in a palette and not
+implicitly enabled when a theme is imported. Existing defaults remain unchanged.
+The pre-mount bootstrap and runtime registry admit the same third identifier;
+an execution test covers the actual bootstrap, not only its literal array.
+
+Standard CRT uses a 250ms ease-out fill. Subtle keeps the existing 120ms duration
+and omits transient light/flash; Off and OS reduced motion use an explicitly
+motion-free baseline. All animated rules retain the no-preference media guard.
+Palette roles remain the existing 27-token v1 boundary. No arbitrary pack CSS,
+new palette role, settings migration or project-model change is introduced.
+
+Native table rows and tree labels paint their own fill with background-size.
+One disposable UI controller per workspace owns the bounded activation flags,
+timers, two observers and an inert, aria-hidden decorative span outside the
+table. Its bounds are intersected with scroll clipping and the viewport, then
+converted for the application's existing root zoom. It cancels on preference
+changes, anchor retirement, scroll/resize, drag start, window blur and disposal.
+It never prevents an action, synthesizes clicks, changes selection or calls an
+application/backend service. The existing delegated tree/workspace keyboard
+handlers are reused; no second keyboard controller is installed.
+
+Manual Save/Save As emits only a presentation signal immediately before its
+existing API request, after Save-As cancellation/stale-snapshot checks. The glow
+is an activation cue, not a persistence acknowledgment; error handling and dirty
+state are unchanged. Autosave does not emit decorative feedback. Each transient
+effect stream has a 600ms admission gap; the native actions are not throttled.
+
+Evidence and narrower compatibility claims are in
+[the CRT guide](../DESIGN_RETRO_GREEN_CRT.md) and the production browser receipt.
+The screenshot samples a paused native animation; normal expiry/cancellation is
+verified separately with real timers. This is not WebKitGTK/Orca or broad WCAG
+acceptance, and it does not supply Save-only purple or an exact selection color.

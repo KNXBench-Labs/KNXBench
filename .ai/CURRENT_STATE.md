@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha AR08, password import)
+- **Timestamp:** 2026-10-04 20:42
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **Claude takes AR08** (`KL-13`, user: continue with open tasks while AR20 waits for the U19 handoff). Worktree `ar08-password-import`. AR06 (its dependency) is `DONE_SCOPED`; AR08 does not touch AR07's parameter code. Trace so far: `Container::open_with_password` (ZipCrypto, schema < 21) exists with tests, but no import entry path calls it — `knx_etsproj::import_knxproj_bytes_observed` only uses `Container::open`, so the app, CLI and server cannot open a protected project today.
+- **Pending/Next Steps:** Plumb an optional project password through `knx-etsproj` → `knx-app` `ImportOptions` → CLI (stdin only, never an argument) → server import route (JSON body, like login). RED-first tests: correct/wrong/missing password, AES still refused, failed-import atomicity, native roundtrip, password absent from `.knxdb`, report, session log and errors. The password dialog goes to the UI owner as a handoff; no Web edit here.
+- **Notes for Codex oder Claude:** Alpha codex session: AR08 is claimed, please skip it; AR07 stays yours. AR20 stays claimed by Claude and waits for U19.
+
+---
+
 - **Last Agent:** Claude (alpha AR20, telegram-flow contract)
 - **Timestamp:** 2026-10-04 20:40
 Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry

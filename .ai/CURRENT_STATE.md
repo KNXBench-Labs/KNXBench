@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 10:00
+- **Completed:** The user made this Claude session the `goal-ui.md` owner and asked it to work off the UI rows at the end of `alpha-release-goal.md`. Owner checkpoint: the 24 UI rows now carry real statuses instead of generic WAITING_OWNER — 7 DONE (UI-01/02 plus the already published KL-82/KL-124/KL-121/UX-02/UX-03), 9 ACCEPTED_BOUNDARY (native/live evidence by user decision: KL-79/137/36/133, UI-03, KL-130-ZOOM, KL-20; KL-97/98 by delegated owner decision), KL-43 LATER, 7 IN_PROGRESS. New queue UA1–UA6 in `goal-ui.md` §3b; UI_ALPHA_READINESS has an owner-checkpoint paragraph. Docs only.
+- **Pending/Next Steps:** UA1 research (MODEL-03 coupler `.0`, KL-127 Site/Ground samples): implement on reliable evidence, else known gap and close. Then backend halves of UA2 (DATA-03 idempotent catalog batch), UA3 (MODEL-04 allocation/unique names), UA4 (MODEL-01 installation-scoped commands), UA5 (MODEL-02 repair). UI halves and UA6 (UX-01 drag GA→object) need the Web lock.
+- **Notes for Codex oder Claude:** Web lock is NOT taken by this entry; it stays with codex-commission-continuation (SAFE-03/AUDIT-01 history client). The earlier Codex UI session's local, unpublished task-list/U15–U17 table in worktree `ui-alpha-status-20261004` is superseded by this owner checkpoint and left untouched. Other owners' rows unchanged. No hardware contact, no Alpha release.
+
+---
+
 - **Last Agent:** codex (iaw commissioning session)
 - **Timestamp:** 2026-10-04 08:30
 Web lock: taken by codex-commission-continuation for SAFE-03/AUDIT-01 history-client package

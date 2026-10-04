@@ -33,7 +33,7 @@ evidence, fallback, unblock) and [UI_ALPHA_READINESS](../UI_ALPHA_READINESS.md)
 
 ## Counts
 
-- **Snapshot IDs** (180 rows) — status: TODO=24, IN_PROGRESS=5, DONE=28, BLOCKED_EXTERNAL=4, WAITING_OWNER=41, WAITING_DECISION=6, ACCEPTED_BOUNDARY=51, LATER=21; owner: alpha=94, commission=42, later=19, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
+- **Snapshot IDs** (180 rows) — status: TODO=24, IN_PROGRESS=5, DONE=28, BLOCKED_EXTERNAL=4, WAITING_OWNER=41, WAITING_DECISION=1, ACCEPTED_BOUNDARY=56, LATER=21; owner: alpha=94, commission=42, later=19, ui=25; priority: P0=4, P1=29, P2=87, P3=60.
 - **Post-snapshot IDs** (6 rows) — status: TODO=1, IN_PROGRESS=2, DONE=3; owner: alpha=6; priority: P1=2, P2=4.
 
 ## Snapshot IDs
@@ -61,7 +61,7 @@ former routing table.
 | `SAFE-02` | P1 | commission | `goal-commission.md` — owner only | WAITING_OWNER | BLOCKED_HARDWARE | docs/KNOWN_LIMITATIONS.md: Commissioning readiness / ADR-0049; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `SAFE-03` | P1 | commission | `goal-commission.md` — owner only | IN_PROGRESS | PARTIAL_BACKEND | docs/KNOWN_LIMITATIONS.md §7 / goal-commission.md §3; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above. Commissioning owner checkpoint 2026-10-04 11:13 (`SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage): Published bounded backend lifecycle remains; local Shared-App production7 tests, CLI admission2 and Service-Control8 tests now pass; caller code is not yet delivered. Still required: CLI download/restore, integrated server/caller acceptance and long sessions remain open; no whole-track completion. Commissioning owner checkpoint 2026-10-04 11:13 (`SAFE-03` / `DEBUG-01`: offline recovery-record validation): Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged. Still required: Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
 | `DATA-01` | P1 | alpha | AR02 | DONE | — | Nine checked allocators; synthetic maximum-ID/native/CSV/CLI/HTTP/mapper and rollback regressions; three behavioral mutants; final offline gate receipt .ai/logs/2026-10-01_codex_alpha-id-exhaustion.md. Parked mutation enforcement and catalog UI scope remain separate. |
-| `KL-129` | P1 | alpha | AR03 | WAITING_DECISION | — | docs/KNOWN_LIMITATIONS.md §129; Reserved user decision; see decision contract above |
+| `KL-129` | P1 | alpha | AR03 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §129; **User decision 2026-10-04:** ADR-0039 phases 3–5 stay deferred past the Alpha; phases 1–2 (collision refusal, no counter rewind) and AR02 exhaustion refusal are the Alpha boundary. Audit: docs/ADR0039_ENFORCEMENT_AUDIT.md |
 | `KL-106` | P1 | alpha | AR13 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §106; AR13: fixture audit across every class and channel; `report.md` now names every kept class and the telegram file's values/timestamps; dialog wording handed to the Web-lock holder; no anonymity claim |
 | `DOC-01` | P1 | alpha | AR00 | DONE | — | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
 | `KL-1` | P1 | alpha | AR06 | BLOCKED_EXTERNAL | — | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
@@ -132,7 +132,7 @@ former routing table.
 | `KL-64` | P2 | alpha | AR10 | TODO | — | docs/KNOWN_LIMITATIONS.md §64; Retained boundary; AR10 verifies subcases before changing status |
 | `KL-66` | P2 | alpha | AR10 | TODO | — | docs/KNOWN_LIMITATIONS.md §66; Retained boundary; AR10 verifies subcases before changing status |
 | `KL-12` | P2 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §12; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-135` | P2 | alpha | AR12 | WAITING_DECISION | — | docs/KNOWN_LIMITATIONS.md §135; Reserved user decision; see decision contract above |
+| `KL-135` | P2 | alpha | AR12 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §135; **User decision 2026-10-04:** no version/pinning policy for the Alpha; first-installed winner with all candidates disclosed (`knx products identity`) is the Alpha boundary. No selector built |
 | `KL-146` | P2 | alpha | AR07 | TODO | — | docs/KNOWN_LIMITATIONS.md §146; Retained boundary; AR07 verifies subcases before changing status |
 | `KL-3` | P2 | alpha | AR07 | TODO | — | docs/KNOWN_LIMITATIONS.md §3; Retained boundary; AR07 verifies subcases before changing status |
 | `KL-6` | P2 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §6; goal.md §6: vendor binaries not executed |
@@ -182,9 +182,9 @@ former routing table.
 | `IMPORT-04` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/RESEARCH.md: local installation data (uncommitted addition); Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `KL-100` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §100; accepted ADR-0024 §2: catalogue paragraphs, not a second help store |
 | `KL-48` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §48; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
-| `KL-134` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | — | docs/KNOWN_LIMITATIONS.md §134; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
-| `KL-70` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | — | docs/KNOWN_LIMITATIONS.md §70; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
-| `KL-88` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | WAITING_DECISION | — | docs/KNOWN_LIMITATIONS.md §88; Technical ruling is documented; explicit user release waiver missing; see decision contract above |
+| `KL-134` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §134; **User decision 2026-10-04:** baggage stays inventoried only, never opened or executed; accepted as an Alpha boundary |
+| `KL-70` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §70; **User decision 2026-10-04:** refusing writes to a parameter the panel does not currently show is accepted as an Alpha boundary |
+| `KL-88` | P3 | alpha | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §88; **User decision 2026-10-04:** last-ingested `knx_master.xml` manufacturer name wins; accepted as an Alpha boundary |
 | `PDB-03` | P3 | alpha | AR07 | TODO | — | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Retained boundary; AR07 verifies subcases before changing status |
 | `PDB-04` | P3 | later | Later / separate scope — not an alpha task | LATER | — | docs/KNOWN_LIMITATIONS.md: PDB-9 parameter and Dynamic coverage boundary; Separate future/tooling scope; not an authorized alpha implementation or release waiver |
 | `PDB-07` | P3 | alpha | AR05 | DONE | — | Published 04900fbc; scoped Dynamic/report audit and budget/migration regressions; complete acceptance and private cases pass without claiming exhaustive subordinate coverage or reconstructing install history |

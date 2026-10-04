@@ -205,6 +205,8 @@ and the mutation gate remain unimplemented. Activation question unanswered;
 `KL-129`/AR03 stay `WAITING_DECISION`, with no runtime test or acceptance claim
 from this docs-only audit. Continue independent AR04.
 
+**State 2026-10-04:** user decision: phases 3–5 deferred past the Alpha; phases 1–2 plus AR02 are the boundary. Ledger row `KL-129`.
+
 ### AR04 — Make storage guarantees match actual command coverage
 
 **Sources:** `DATA-02`, `KL-42`. **Dependencies:** AR02; coordinate any AR03 surface changes.
@@ -721,6 +723,8 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 - [ ] Hand user selection UI to its owner. A backend selector without its agreed consumer remains partial, not a delivered whole feature.
 
 **Exit evidence:** explicit policy and tests/owner receipt where activated. No speculative online catalog or firmware/device update.
+
+**State 2026-10-04:** user decision: continued deferral. First-installed winner with disclosed candidates is the Alpha boundary; nothing implemented. Ledger row `KL-135`.
 
 ### AR13 — Verify privacy and the actual deployment-security boundary
 

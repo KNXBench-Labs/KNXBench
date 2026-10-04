@@ -320,6 +320,12 @@ section, not silently invented as a numbered issue.
 
 ## Decision and external-gate contracts
 
+**User decisions 2026-10-04:** `KL-129`/AR03 deferred past the Alpha
+(phases 1–2 plus AR02 are the boundary); `KL-135`/AR12 deferred
+(first-installed winner, candidates disclosed); `KL-70`, `KL-88`, `KL-134`
+accepted as Alpha boundaries; `KL-40` accepted, `KL-60` handed to the UI
+owner (AR11 section). Only `RELEASE-04` (AR19) still waits for a decision.
+
 | Gate / rows | Missing input and responsible owner | Safe fallback | Exact unblock condition |
 | --- | --- | --- | --- |
 | KL-70, KL-88, KL-134 | Maintainer-selected behavior/safety rules exist, but an explicit user **release-scope waiver** was not found in the inspected decision sources | Keep active-parameter refusal, current master-name policy and inert baggage; no new feature or execution | User accepts these precise residual boundaries for alpha, or requests scoped work; do not label technical rulings user consent |

@@ -1,5 +1,21 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR08: password-protected projects reach the importer
+
+- A ZipCrypto (ETS4/ETS5) protected `.knxproj` now imports through
+  `knx_etsproj::import_knxproj_with`, `knx_app::import_ets_project_with_password`,
+  `knx import --password-stdin` and `POST /api/project/import` (`password`
+  field; `422` `projectPasswordRequired`/`projectPasswordWrong`). The
+  existing reader is reused; no new cipher code.
+- `ProjectPassword` redacts its `Debug`; redaction is asserted across
+  report, errors, CLI output, saved files, session log, load progress and
+  project tree. A decrypted import adds an `unsupported` report entry for
+  the lost protection.
+- Fix found on the way: a wrong password that passed the check byte surfaced
+  as "corrupt deflate stream"; it is now `WrongPassword`.
+- Open: Web password dialog (UI handoff), real ETS4/ETS5 sample, AES.
+  Details: [ALPHA_READINESS](ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04).
+
 ## 2026-10-04 — AR06V: existing product-ZIP count contracts verified
 
 - Existing4096-entry inclusive install/replay and4097-entry seeded all-table

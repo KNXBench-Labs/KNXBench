@@ -56,6 +56,15 @@ project file.
 | `--report-json <path.json>` | Write the full import report as JSON |
 | `--product-db <path>` | Use this product database instead of the default one |
 | `--no-product-db` | Do not touch a product database at all |
+| `--password-stdin` | Read the project password from the first line of standard input (ETS4/ETS5 password-protected projects) |
+
+A password-protected project needs `--password-stdin`, for example
+`knx import house.knxproj --store house.knxdb --password-stdin < pw.txt`, or
+type it after starting the command. There is deliberately no `--password
+<value>` flag: anything on a command line is visible to other programs on the
+same machine. Only ETS4/ETS5 (ZipCrypto) protection can be opened; an ETS6
+(AES) protected project is refused by name. The import report then notes that
+the project's password protection is not kept.
 
 It prints a summary:
 

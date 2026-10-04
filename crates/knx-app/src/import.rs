@@ -127,8 +127,23 @@ pub fn import_ets_project_observed(
     options: ImportOptions<'_>,
     observer: &dyn LoadObserver,
 ) -> Result<ImportedProject, AppError> {
+    import_ets_project_with_password(path, conn, options, None, observer)
+}
+
+/// [`import_ets_project_observed`] for a project that may be
+/// password-protected (KNOWN_LIMITATIONS §13). `password` reaches only the
+/// container decryptor; it is not stored, reported or logged. A missing or
+/// wrong password fails before the first row is written, like every other
+/// import failure, so the store is left untouched.
+pub fn import_ets_project_with_password(
+    path: &Path,
+    conn: &Connection,
+    options: ImportOptions<'_>,
+    password: Option<&knx_etsproj::ProjectPassword>,
+    observer: &dyn LoadObserver,
+) -> Result<ImportedProject, AppError> {
     let mut outcome =
-        knx_etsproj::import_knxproj_observed(path, &crate::progress::ParseStages(observer))?;
+        knx_etsproj::import_knxproj_with(path, password, &crate::progress::ParseStages(observer))?;
 
     // The manifest is written whichever way the manufacturer files are
     // stored: it describes what the project was imported with, not where

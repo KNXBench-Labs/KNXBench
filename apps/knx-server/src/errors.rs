@@ -49,6 +49,9 @@ pub struct ApiError {
     status: StatusCode,
     message: String,
     validation: Option<ValidationHint>,
+    /// A stable machine-readable reason the client acts on (see
+    /// [`ApiError::refused`]); `None` for the plain `{ error }` body.
+    kind: Option<&'static str>,
 }
 
 #[derive(Debug)]
@@ -64,6 +67,7 @@ impl ApiError {
             status: StatusCode::BAD_REQUEST,
             message: message.into(),
             validation: None,
+            kind: None,
         }
     }
 
@@ -72,6 +76,7 @@ impl ApiError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message: message.into(),
             validation: None,
+            kind: None,
         }
     }
 
@@ -85,6 +90,19 @@ impl ApiError {
             status,
             message: message.into(),
             validation: None,
+            kind: None,
+        }
+    }
+
+    /// A `422` the client answers with a specific action rather than just
+    /// showing the text, for example asking for a project password. The
+    /// body is `{ error, kind }`; `kind` is a stable camelCase token.
+    pub fn refused(kind: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::UNPROCESSABLE_ENTITY,
+            message: message.into(),
+            validation: None,
+            kind: Some(kind),
         }
     }
 
@@ -104,6 +122,7 @@ impl ApiError {
                 syntax,
                 example,
             }),
+            kind: None,
         }
     }
 }
@@ -122,7 +141,14 @@ impl IntoResponse for ApiError {
                 })),
             )
                 .into_response(),
-            None => (self.status, Json(json!({ "error": self.message }))).into_response(),
+            None => match self.kind {
+                Some(kind) => (
+                    self.status,
+                    Json(json!({ "error": self.message, "kind": kind })),
+                )
+                    .into_response(),
+                None => (self.status, Json(json!({ "error": self.message }))).into_response(),
+            },
         }
     }
 }

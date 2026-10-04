@@ -179,6 +179,36 @@ evidence are external live work; Group Monitor UI, row cap and discovery
 acceptance belong to the UI owner. No scan speed promise, multi-tunnel
 design or hardware support is added.
 
+## AR08 password-import entry paths (2026-10-04)
+
+`KL-13`, data/application half. The existing ZipCrypto reader
+(`Container::open_with_password`) was reachable only from its own tests; no
+second cipher was written. Entry paths now verified, each with RED-first
+tests against the synthetic Info-ZIP fixture
+`crates/knx-testsupport/fixtures/zipcrypto-minimal.knxproj`:
+
+| Level | Entry path | Tests |
+| --- | --- | --- |
+| Library | `knx_etsproj::import_knxproj_with` / `import_knxproj_bytes_with` (`Option<&ProjectPassword>`) | `crates/knx-etsproj/tests/password_import.rs` (7) |
+| Application | `knx_app::import_ets_project_with_password` | `crates/knx-app/tests/password_import.rs` (3) |
+| CLI | `knx import --password-stdin`; `--password[=…]` refused without echo | `apps/knx-cli/tests/cli_password_import.rs` (5) |
+| Server | `POST /api/project/import` `{ path, clientToken?, password? }`; `422` `kind: projectPasswordRequired` / `projectPasswordWrong` | `apps/knx-server/tests/http_password_import.rs` (6) |
+| End to end (Web) | not done: password dialog handed to the UI owner | — |
+
+Covered: right/wrong/missing/empty password, password on an unprotected
+project, a wrong password that passes the check byte (found by the CLI
+test: it used to surface as "corrupt deflate stream" and is now
+`WrongPassword`), failed-import atomicity (empty store; the previously open
+server project stays), native save/reload roundtrip, the lost protection
+reported as an `unsupported` report entry, and redaction (password absent
+from report, `Debug`, errors, CLI output, every file the import leaves,
+`/api/log`, load progress, project tree). Existing container tests keep
+covering corruption, size bounds, nested-path collisions and AES refusal.
+
+Retained: real ETS4/ETS5 protected export and AES (ETS6) stay sample-gated
+(COMPATIBILITY §3); `knx diff`, `POST /api/project/diff` and
+`knx products ingest` take no password (KNOWN_LIMITATIONS §13).
+
 ## AR13 privacy and deployment-security dossier
 
 Claude session, 2026-10-04, on user request alongside the Codex alpha

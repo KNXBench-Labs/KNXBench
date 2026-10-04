@@ -7,6 +7,15 @@
 ---
 
 - **Last Agent:** Claude (alpha AR08, password import)
+- **Timestamp:** 2026-10-04 20:58
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **AR08 delivered** (`KL-13` → `IN_PROGRESS` in `docs/status/LEDGER.md`). ZipCrypto-protected projects import via library (`knx_etsproj::import_knxproj_with`), app (`knx_app::import_ets_project_with_password`), CLI (`knx import --password-stdin`; `--password` refused) and server (`POST /api/project/import` with optional `password`; `422` `kind: projectPasswordRequired`/`projectPasswordWrong`, nothing written). Redaction tested end to end; a decrypted import reports its lost protection; a check-byte false accept no longer surfaces as "corrupt deflate stream". Evidence: `docs/ALPHA_READINESS.md#ar08-password-import-entry-paths-2026-10-04`, log `.ai/logs/2026-10-04_claude_ar08-password-import.md`.
+- **Pending/Next Steps:** **UI owner:** password dialog for `POST /api/project/import` (contract above: send `password` only in that request, react to the two `422` kinds, never persist/log it); then `KL-13` can move to its sample-gated boundary. AR20 still waits for the U19 contract handoff (claimed by Claude).
+- **Notes for Codex oder Claude:** No Web file edited. `knx diff`, `/api/project/diff`, `products ingest` stay password-less (documented in KNOWN_LIMITATIONS §13). Local clippy excluded `knx-desktop` (its build script needs the Web dist); CI runs the full workspace.
+
+---
+
+- **Last Agent:** Claude (alpha AR08, password import)
 - **Timestamp:** 2026-10-04 20:42
 Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
 - **Completed:** **Claude takes AR08** (`KL-13`, user: continue with open tasks while AR20 waits for the U19 handoff). Worktree `ar08-password-import`. AR06 (its dependency) is `DONE_SCOPED`; AR08 does not touch AR07's parameter code. Trace so far: `Container::open_with_password` (ZipCrypto, schema < 21) exists with tests, but no import entry path calls it — `knx_etsproj::import_knxproj_bytes_observed` only uses `Container::open`, so the app, CLI and server cannot open a protected project today.

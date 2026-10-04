@@ -57,6 +57,23 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3 });
   });
 
+  // MODEL-04: both options are opt-in and only true values travel, so a
+  // request without them keeps the exact pre-MODEL-04 body and fingerprint.
+  it("posts the catalog allocation and unique-name options only when chosen", async () => {
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(9, "cat-1", "Actuator", 3, "req-1", { allocateAddresses: true, uniqueNames: false });
+    let [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3, requestId: "req-1", allocateAddresses: true,
+    });
+    mockFetchOnce({ tree: { installations: [] }, diagnostics: [], items: [] });
+    await api.createDevice(9, "cat-1", "Actuator", 3, "req-2", { allocateAddresses: false, uniqueNames: true });
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      lineId: 9, catalogItemId: "cat-1", name: "Actuator", quantity: 3, requestId: "req-2", uniqueNames: true,
+    });
+  });
+
   it("encodes the service-control target for GET and names only the debug scope on POST", async () => {
     const reading = { address: "1.1.67", raw: "0000", mask: "0701", individualAddressWriteEnabled: false };
     mockFetchOnce(reading);

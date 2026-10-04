@@ -1,5 +1,25 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — MODEL-04 web half: catalog address allocation and unique names
+
+- The catalog dialog has an *Options* group with two unchecked checkboxes:
+  **Assign free addresses on the line** and **Keep names unique**. Address
+  allocation is disabled, with an explanation, when no target line is
+  selected. The client sends `allocateAddresses` / `uniqueNames` only when
+  they are `true`, so a request without them keeps its pre-MODEL-04 body and
+  replay fingerprint. A safe retry (DATA-03) resends the options unchanged.
+- The preview states the allocation rule (.0, used and excluded addresses
+  skipped; too few free means nothing is created) and that existing names are
+  skipped. After a batch, every created device lists its allocated address.
+  The server's refusal (`line 1.1 has 2 free device addresses, 3 requested`)
+  appears as an ordinary error without a retry offer.
+- Evidence: 4 new `CatalogBrowser.test.tsx` cases and 1 new `api.test.ts` case,
+  written RED first. 4 intercepted Chromium cases in
+  `e2e/catalog-allocation.e2e.ts` (en/de) all fail against the old client.
+  4 guard mutants are caught. The test file's `beforeEach` now resets the
+  `createDevice`/`currentProject` mocks, because queued `…Once` answers from a
+  test that stopped early leaked into later tests.
+
 ## 2026-10-04 — DATA-03 web half: a lost catalog batch can be retried safely
 
 - Each catalog submit now sends one `requestId` (ADR-0069). When the response

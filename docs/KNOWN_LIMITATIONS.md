@@ -2311,6 +2311,10 @@ dedicated range-exchange contract named in §39. `Description`/`Comment`
 becoming available is tied to `GroupAddressEntry` gaining those fields in
 the domain model — no task currently schedules either.
 
+**Alpha decision (user, 2026-10-04, AR11).** Accepted boundary for the
+Alpha: derived columns stay read-only and there are no Description/Comment
+columns. No schema change before the release.
+
 <a id="41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user"></a>
 ## 41. German-locale separators are supported; unverified spreadsheet transformations remain
 
@@ -2775,6 +2779,11 @@ string. Escape still closes the report first, as before.
   and no screen reader was used to check it.
 - The panel never applies or merges a diff (§55) and has no three-way
   mode (§56). Raw `.knxproj` inputs are accepted since CT-6 (§57).
+
+**Alpha decision (user, 2026-10-04, AR11).** Paging is not accepted for
+the Alpha: the UI owner replaces it with virtualised tables plus search/
+filter inside the diff view before the Alpha. The backend diff API does
+not change for this.
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 

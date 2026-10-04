@@ -872,7 +872,7 @@ native/accessibility/multicast and optional boundaries remain disclosed.
 Technical rulings for KL-70/88/134 are not silently upgraded to user release
 waivers; FUTURE-05 is unscheduled (`LATER`), not an accepted release exception.
 
-**Commissioning session checkpoint — 2026-10-04 08:30 CEST:** the commissioning
+**Commissioning session checkpoint — 2026-10-04 11:13 CEST:** the commissioning
 owner updates its rows here at meaningful intermediate checkpoints, not only
 after final delivery. `IN_PROGRESS` below means active owner implementation,
 not whole-feature acceptance. Keep published work, local changes and pending
@@ -881,8 +881,8 @@ verification separate; do not change another session's rows.
 | Commissioning work in this session | Status | Verified intermediate result | Still required |
 | --- | --- | --- | --- |
 | Remove new hardware/power-loss/vendor/ETS validation from the completion goal; retain user warnings | ACCEPTED_BOUNDARY | Scope and user notices published in `5d0271c1`; actual-root documentation gate: 388 links / 254 Markdown files / no dead anchors | Keep absent guarantees visible; no pending operator experiment and no relaxation of runtime safety gates |
-| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Bounded download lifecycle already published in `1c5dec07`, with receipt closure `bb62ae57`; further callers inspected | Broader caller integration, offline interruption/abort/recovery contracts and actual-current-source acceptance; bounded prior evidence does not close these rows |
-| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Web reservation published in `7234dd00`; strict format-2 HTTP reader passed 6 focused tests after semantic RED; actual diagnostics-parent missing-tab RED observed | History tab, separate device/restart/cleanup evidence and EN/DE notices are local changes; post-change parent tests, typecheck/build, browser proof, integrated gates and publication remain pending |
+| `SAFE-03` / `AUDIT-01`: broader caller and long-session lifecycle coverage | IN_PROGRESS | Published bounded backend lifecycle remains; local Shared-App production7 tests, CLI admission2 and Service-Control8 tests now pass; caller code is not yet delivered | CLI download/restore, integrated server/caller acceptance and long sessions remain open; no whole-track completion |
+| `UI-04` / `AUDIT-01`: Web/client history adoption | IN_PROGRESS | Actual merged2057f86b public9/9 accepted: workspace3145/0/177 over169 blocks, Web1761/100, Chromium8,50 guards; permanent delivery receipt. Separate selected private68/0/0 evidence remains bound60d6a85f | Bounded Web package published/read back on main at871518dc; Web reservation free. Other client surfaces, caller/session and offline recovery work remain open; no whole-track acceptance |
 | `SAFE-03` / `DEBUG-01`: offline recovery-record validation | IN_PROGRESS | Local strict recovery-record deserialization passed 5 service-control backup tests after semantic RED; original properties roundtrip unchanged | Owned change retained separately, not published; broader abort/restore behavior and delivery remain pending; no whole-device or power-loss recovery guarantee |
 
 The other commissioning rows retain their existing owner dispositions pending

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AddressProgrammingPanel from "./AddressProgrammingPanel";
+import BusActivityHistory from "./BusActivityHistory";
 import BusMonitorPanel from "./BusMonitorPanel";
 import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import DeviceInspectionPanel from "./DeviceInspectionPanel";
@@ -18,7 +19,7 @@ export default function BusDiagnosticsPanel({
   onTreeUpdate: (tree: ProjectTree) => void | Promise<void>;
 }) {
   const t = useTranslate();
-  const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service">("monitor");
+  const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service" | "history">("monitor");
   return (
     <section className="bus-diagnostics-panel">
       <nav className="bus-diagnostics-tabs" aria-label={t("lineScan.diagnosticsTabs")}>
@@ -28,6 +29,7 @@ export default function BusDiagnosticsPanel({
         <button aria-current={tab === "download" ? "page" : undefined} onClick={() => setTab("download")}>{t("deviceDownload.title")}</button>
         <button aria-current={tab === "address" ? "page" : undefined} onClick={() => setTab("address")}>{t("addressProgramming.tab")}</button>
         <button aria-current={tab === "service" ? "page" : undefined} onClick={() => setTab("service")}>{t("serviceControl.tab")}</button>
+        <button aria-current={tab === "history" ? "page" : undefined} onClick={() => setTab("history")}>{t("activityHistory.title")}</button>
       </nav>
       {tab === "monitor" && <BusMonitorPanel projectOpen={project !== null} />}
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
@@ -35,6 +37,7 @@ export default function BusDiagnosticsPanel({
       {tab === "download" && <DeviceDownloadPanel project={project} />}
       {tab === "address" && <AddressProgrammingPanel project={project} />}
       {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project} />}
+      {tab === "history" && <BusActivityHistory />}
     </section>
   );
 }

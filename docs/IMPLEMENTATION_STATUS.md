@@ -18,6 +18,71 @@
   byte-boundary/caller/resource-owner acceptance or complete KL151/Alpha.
   No private corpus, hardware action or Web source change.
 
+## 2026-10-04 — Bounded History Web closure
+
+Actual merged2057f86b is publicly accepted9/9: ordinary workspace3145/0/177
+across169 result blocks, Web1761/100 files, intercepted Chromium8,50 isolated
+behavioral guard controls, build/typecheck/strict-Clippy/fmt and four nonempty
+policy gates. The [delivery receipt](evidence/commission-history-web-delivery-offline-2026-10-04.json)
+retains exact source binding and scope. The separate private68/0/0 sweep stays
+bound to60d6a85f, with an unchanged selected-package source delta; it is not
+retagged as a new2057f86b run. Counts are not added across overlapping snapshots.
+
+History Web reservation is released by this closure; Git publication/readback
+is recorded separately in the handover. Caller production remains local WIP
+(Shared-App7, CLI admission2, Service-Control8 passing); CLI download/restore,
+broader sessions/clients and offline recovery remain open. No whole-goal,
+independent-review, native-package or hardware approval is implied.
+
+
+## 2026-10-04 — Bounded History Web adoption accepted offline
+
+Current integrated code9fe69116, upstream4bc90aab (including public topology
+repair), passed9/9 required stages on frozen1037 public/279 Web inputs.
+Workspace3079/0/176 over160 result blocks; ignored176 were not executed.
+Vitest1761/100 files, intercepted Chromium8, production build/strict Clippy/fmt
+and all four intended-root repository checks passed. Fifty compiled guard
+mutants failed at their named semantic assertions in isolated public copies;
+canonical source never mutated. Separate tsc error-control detected/restored.
+See [acceptance receipt](evidence/commission-history-web-offline-2026-10-04.json).
+In-session review has no blocking finding, not independent approval. Exact14
+Web paths remain byte-identical to the earlier parked candidate; dependency
+versions unchanged except program alpha4. Earlier failed browser/import-graph
+and header attempts remain rejected historical evidence, not erased receipts.
+
+The shared authenticated GET path exposes independent device/restart/cleanup/
+backup/intent meaning, strict whole-page admission, start-order cursor paging,
+refresh-from-start and stale-response refusal. No write/retry/restore control,
+raw private error, payload, host path or new bus contact follows. Publication
+and Web-reservation release are recorded separately in the handover. Broader
+caller/client and recovery/abort/restore software remains open; Global
+Commissioning stays partial and owning Alpha IDsIN_PROGRESS. Excluded external
+hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
+
+
+## 2026-10-04 — Commissioning History Web candidate, not whole-track acceptance
+
+- Published Web reservation7234dd00 remains owned by the commissioning session.
+  Local History tab uses the existing diagnostics parent/authenticated GET and
+  strict payload-free format2 admission, with EN/DE evidence and scope notices.
+- Earlier local candidate: Chromium8/0/0, Web1751 tests in100 files, production
+  build0. Initial browser attribution and transitive-import tripwire failures
+  are retained; they are not retroactively green. Network-free validation adds
+  no companion API call or project-mutating path.
+- Current review fixes refuse calendar/hour normalization and classify invalid
+  response JSON without exposing parser details. Semantic REDs are retained;
+  read/property-write and whole-page refusal matrices extend coverage.
+- Renewed pre-header-fix candidate: Chromium8, Web1755/100 files, ordinary
+  workspace3028/0/176, fmt/Clippy/layering0; header gate refused two overlong
+  new test headers, and anchors/corpus-policy did not start. Corrected headers;
+  latest focused35/4 files and tsc0 include strict-effect stale success/error/
+  loading and cross-page identity probes. Web alpha4 manifest/lock change only
+  the application version, not dependencies (ADR0018).
+- Renewed candidate/guard/workspace gates, integration and publication remain
+  pending. See [History contract](COMMISSIONING_ACTIVITY_HISTORY.md#web-history-candidate--2026-10-04).
+  Broader callers/long sessions and offline recovery remain separate open work;
+  excluded hardware/power-loss/vendor/ETS experiments remain user notices.
+
 ## 2026-10-04 — Desktop shell recovers a terminated web process (§133)
 
 - **§133, terminated web process.** `apps/knx-desktop/src-tauri/src/web_process.rs`

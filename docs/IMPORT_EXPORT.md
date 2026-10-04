@@ -831,6 +831,16 @@ to a real import, then a trailing `store written: yes`/`no (…)` line makes
 explicit whether anything was actually saved. Web: two toolbar buttons in
 the group-address view (`GroupAddressCsvButtons.tsx`).
 
+**Installation scope (MODEL-01).** Both server routes accept an optional
+`installationId`; without it the first installation is read and written, as
+before. Rows are matched, group ranges looked up and new addresses created
+only in that installation — the same address may legitimately exist in
+another installation (ADR-0038). An unknown installation is refused without
+writing a file or changing the project. A destructive preview's
+confirmation token binds the installation together with the file and the
+project revision, so a preview for one installation cannot confirm an apply
+into another. The CLI and the web buttons still use the first installation.
+
 Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 
 ## 12. Project documentation export

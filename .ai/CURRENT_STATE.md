@@ -7,6 +7,14 @@
 ---
 
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:25
+- **Completed:** UA10 (MODEL-01 remainder): CSV group-address import/export per installation. `knx_csv::plan_import_into` / `export_group_addresses_from` (old functions = first installation); server `installationId` on `/api/group-addresses/csv-import` and `/csv-export` (unknown → 400, nothing written); the destructive-preview confirmation token now binds the installation. RED 0/4 (server silently ignored `installationId` and imported into the first installation) → GREEN 4/4, 5/5 mutants, full gate green (164 blocks, 3,103 passed). Handoff table (`alpha-release-goal.md`) MODEL-01 row now includes the CSV contract and the CSV buttons' installation choice as web task.
+- **Pending/Next Steps:** No goal-ui backend work is open. Web halves (incl. CSV installation choice) stay with the Web-lock holder. CLI `ga-import`/`ga-export` still use the first installation (no installation flag yet).
+- **Notes for Codex oder Claude:** `plan_csv_import` (domain.rs) takes an installation parameter now; in-crate tests pass `None`.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 13:15
 - **Completed:** Corpus save/reopen equality extended from ETS4 only to all three reference projects (KV schema 21, ETS 6.3.0 schema 23): `knx-store/tests/reference_project.rs::the_schema_21_and_23_reference_projects_round_trip_through_save_and_load`, 3/3 green with `--ignored`; the old header claiming schema 23 is refused was stale. COMPATIBILITY row added (native model equality only, not bytes or ETS re-import). Post-push corpus run of `7e94daae`: knx-store 2, save_load_roundtrip 1, open_reference_project 1, cli_import 8, knx-etsproj 50 green; its 5 failures are the xknxproject oracle tests without the local `project_dump.json` (green when linked).
 - **Pending/Next Steps:** No goal-ui backend work is open; web halves stay with the Web-lock holder.

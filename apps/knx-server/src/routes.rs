@@ -5,7 +5,7 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 
@@ -62,11 +62,17 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/group-addresses/csv-import",
             post(import_group_addresses_csv),
         )
+        .route("/api/installations/{id}", patch(rename_installation))
         .route("/api/areas", post(create_area))
         .route("/api/areas/{id}", delete(delete_area).patch(rename_area))
         .route("/api/lines", post(create_line))
         .route("/api/lines/{id}", delete(delete_line).patch(rename_line))
         .route("/api/move-line-to-area", post(move_line_to_area))
+        .route(
+            "/api/repair/device-placement",
+            post(repair_device_placement),
+        )
+        .route("/api/repair/line-owner", post(repair_line_owner))
         .route("/api/move-device", post(move_device_to_line))
         .route("/api/move-building-part", post(move_building_part))
         .route(
@@ -1005,6 +1011,9 @@ struct CreateGroupAddressBody {
     address: String,
     #[serde(default)]
     range_id: Option<u32>,
+    /// MODEL-01: target installation for a range-less address.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_group_address(
@@ -1029,9 +1038,15 @@ async fn create_group_address(
             ApiError::validation("group_address", error.to_string(), syntax, example)
         })?;
     }
-    domain::create_group_address_impl(&state, body.name, body.address, body.range_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_group_address_in_impl(
+        &state,
+        body.name,
+        body.address,
+        body.range_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_group_address(
@@ -2173,16 +2188,35 @@ async fn import_group_addresses_csv(
 }
 
 #[derive(Deserialize)]
+struct RenameInstallationBody {
+    name: String,
+}
+
+/// MODEL-01: `PATCH /api/installations/{id}` renames one installation.
+async fn rename_installation(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u8>,
+    Json(body): Json<RenameInstallationBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_installation_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
 struct CreateAreaBody {
     name: String,
     address: u8,
+    /// MODEL-01: target installation; absent means the first one.
+    #[serde(default, rename = "installationId")]
+    installation_id: Option<u8>,
 }
 
 async fn create_area(
     State(state): State<SharedState>,
     Json(body): Json<CreateAreaBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_area_impl(&state, body.name, body.address)
+    domain::create_area_in_impl(&state, body.name, body.address, body.installation_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -2255,6 +2289,52 @@ async fn rename_line(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepairDevicePlacementBody {
+    device_id: u32,
+    #[serde(default)]
+    keep_line_id: Option<u32>,
+    #[serde(default)]
+    keep_unassigned_installation_id: Option<u8>,
+}
+
+/// MODEL-02: `POST /api/repair/device-placement` keeps one placement of a
+/// multiply placed device and removes the rest (one undo step).
+async fn repair_device_placement(
+    State(state): State<SharedState>,
+    body: Result<Json<RepairDevicePlacementBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::repair_device_placement_impl(
+        &state,
+        body.device_id,
+        body.keep_line_id,
+        body.keep_unassigned_installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RepairLineOwnerBody {
+    line_id: u32,
+    keep_area_id: u32,
+}
+
+/// MODEL-02: `POST /api/repair/line-owner` keeps one area reference of a
+/// line listed by several areas (one undo step).
+async fn repair_line_owner(
+    State(state): State<SharedState>,
+    body: Result<Json<RepairLineOwnerBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+    domain::repair_line_owner_impl(&state, body.line_id, body.keep_area_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MoveLineToAreaBody {
     id: u32,
@@ -2295,15 +2375,25 @@ struct CreateGroupRangeBody {
     end: String,
     #[serde(default)]
     parent_id: Option<u32>,
+    /// MODEL-01: target installation for a main range.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_group_range(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupRangeBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_group_range_impl(&state, body.name, body.start, body.end, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_group_range_in_impl(
+        &state,
+        body.name,
+        body.start,
+        body.end,
+        body.parent_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_group_range(
@@ -2355,15 +2445,24 @@ struct CreateBuildingPartBody {
     kind: String,
     #[serde(default)]
     parent_id: Option<u32>,
+    /// MODEL-01: target installation for a root part.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_building_part(
     State(state): State<SharedState>,
     Json(body): Json<CreateBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_building_part_impl(&state, body.name, body.kind, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_building_part_in_impl(
+        &state,
+        body.name,
+        body.kind,
+        body.parent_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_building_part(
@@ -2566,6 +2665,14 @@ struct CreateDeviceBody {
     name: String,
     #[serde(default = "default_catalog_quantity")]
     quantity: u32,
+    /// DATA-03: optional client token that makes a resend replay safely.
+    #[serde(default)]
+    request_id: Option<String>,
+    /// MODEL-04: opt-in, both default off.
+    #[serde(default)]
+    allocate_addresses: bool,
+    #[serde(default)]
+    unique_names: bool,
 }
 
 fn default_catalog_quantity() -> u32 {
@@ -2646,6 +2753,7 @@ struct CreateDeviceResponseDto {
     tree: knx_projection::ProjectTree,
     diagnostics: Vec<CreationDiagnosticDto>,
     items: Vec<CreatedCatalogDeviceDto>,
+    replayed: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -2654,6 +2762,7 @@ struct CreatedCatalogDeviceDto {
     index: u32,
     device_id: u32,
     name: String,
+    address: Option<String>,
     diagnostics: Vec<CreationDiagnosticDto>,
 }
 
@@ -2663,6 +2772,7 @@ impl From<domain::CreatedCatalogDevice> for CreatedCatalogDeviceDto {
             index: value.index,
             device_id: value.device_id.0,
             name: value.name,
+            address: value.address.map(|a| a.to_string()),
             diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
         }
     }
@@ -2674,6 +2784,7 @@ impl From<domain::CreateDeviceResponse> for CreateDeviceResponseDto {
             tree: value.tree,
             diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
             items: value.items.into_iter().map(Into::into).collect(),
+            replayed: value.replayed,
         }
     }
 }
@@ -2682,12 +2793,17 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_devices_impl(
+    domain::create_catalog_devices_impl(
         &state,
-        body.line_id,
-        body.catalog_item_id,
-        body.name,
-        body.quantity,
+        domain::CatalogCreateRequest {
+            line_id: body.line_id,
+            catalog_item_id: body.catalog_item_id,
+            name: body.name,
+            quantity: body.quantity,
+            request_id: body.request_id,
+            allocate_addresses: body.allocate_addresses,
+            unique_names: body.unique_names,
+        },
     )
     .map(CreateDeviceResponseDto::from)
     .map(Json)

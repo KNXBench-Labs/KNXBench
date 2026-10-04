@@ -1,5 +1,17 @@
 # Known limitations
 
+## Accepted commissioning validation boundary — user decision 2026-10-04
+
+New real-hardware, power-loss, vendor and ETS validation is not required to
+complete the commissioning goal: the user explicitly removed these experiments
+because they cannot provide them. Their absence remains disclosed in
+[KNXBench user notices](manual/known-issues.md#commissioning-validation-boundary)
+and is not a hardware/ETS compatibility or recovery guarantee. Existing scoped
+evidence and historical limitations stay intact. Broader caller coverage,
+Web/client adoption and offline recovery/abort/restore contracts remain open;
+original-value backup, authorization and fail-closed runtime gates are unchanged.
+This decision does not mark SAFE-03/AUDIT-01 or the Alpha release complete.
+
 ## CRT motion is browser-verified application behavior, not theme-pack v2
 
 The CRT interaction follow-up implements real App/ProjectExplorer/
@@ -129,11 +141,17 @@ belong to their older source; corrected integrated acceptance is still pending.
 Area/line renames and line, building-part and group-range reparenting are
 local, undoable project commands. The centre workspace reuses the same
 creation forms and Inspector commands as the project explorer and Properties.
-All structure mutations still target **only the first installation**; later
-installations remain visible and savable. The centre cannot select an orphaned
-line that has no projected area, although the explicit line-move command can
-attach such an imported line by ID. Installation renaming is also still
-absent (§127).
+Since MODEL-01 (2026-10-04) the core resolves every id-addressed structure
+command in the installation that owns the entity, and refuses ids found in
+several installations or moves that would connect two installations
+(`CommandError::CrossInstallation`). Root creates take an optional
+`installationId` (absent = first installation) and `PATCH
+/api/installations/{id}` renames an installation. The **web editor still
+offers creation only in the first installation** and has no installation
+rename control yet (Web lock); edits of existing entities in later
+installations work through the same Inspector commands. The centre cannot
+select an orphaned line that has no projected area, although the explicit
+line-move command can attach such an imported line by ID.
 
 A line move changes its area relationship, **not** its numeric line address
 or any device's individual address. It refuses a destination with a duplicate
@@ -141,8 +159,17 @@ line number or an addressed device outside the target area.line prefix.
 Duplicate line/area IDs, multiple owners and multiply placed devices are
 not guessed away. Area, line, building-part and group-range IDs repeated in
 one or more installations disable structural editing in the Inspector; direct
-commands refuse ambiguous IDs too. The UI does not repair or renumber
-imported duplicate identities automatically. Building-part moves refuse new
+commands refuse ambiguous IDs too. Since MODEL-02 (ADR-0071) a multiply
+placed device and a line listed by several areas can be repaired
+**explicitly**: the user names the placement or area to keep
+(`POST /api/repair/device-placement`, `POST /api/repair/line-owner`), every
+other occurrence is removed in one undoable step. The web UI does not offer
+that choice yet (Web lock). Nothing is repaired automatically, duplicate ids
+are not renumbered, and ambiguous building-part or group-range placement has
+no repair command. `.knxdb` save refuses an ambiguous topology
+(`StoreError::AmbiguousTopology`) instead of silently keeping the last
+placement, as it did before; a `knx-cli` import producing such a project
+therefore fails at save. Building-part moves refuse new
 cycles and ambiguous parent references. Group-range moves additionally
 require destination-span containment and no sibling overlap. The undo-only
 placement commands retain original sibling positions and may restore
@@ -166,8 +193,11 @@ select controls, not a new drag gesture.
 
 A device placed in a line shows its line-derived area.line prefix and lets the
 user change only the device octet (1–255). New `.0` assignments are refused
-because the normalized device model has no verified coupler discriminator;
-imported `.0` addresses remain intact, including after undo. An imported
+unless the product database classifies the device's hardware as a coupler
+(`Hardware/@IsCoupler`, RESEARCH §25): the server then uses
+`SetCouplerIndividualAddress`. The web editor does not offer `.0` yet, and a
+device whose product is not installed stays refused. Imported `.0` addresses
+remain intact, including after undo. An imported
 address with a line prefix mismatch is shown for repair, not silently
 rewritten. Until repaired, moving that device to another line is refused; a
 move never auto-allocates an address. Unassigned devices retain the full
@@ -176,17 +206,17 @@ just in the browser. If a device appears in multiple topology placements
 (two lines, twice on one line, both a line and the unassigned list, or
 twice unassigned), or
 its line belongs to two areas, the editor refuses to choose a prefix and
-stays disabled until the topology is repaired outside this editor; imported
-values are preserved. Clearing an address through the core remains an
+stays disabled until the topology is repaired (MODEL-02 repair commands,
+server/API only so far); imported values are preserved. Clearing an address through the core remains an
 undoable repair step even when placement is malformed.
 
-The existing line-move command and its dropdown operate on the **first
-installation** only. A later installation may display and edit its
-line-relative address, but moving its device between lines is not yet offered.
-This is a known topology-command boundary, not evidence that its line is
-missing. Likewise, new group links currently target the first installation's
-group-address list. Do not infer full multi-installation editing from the
-address display.
+The line-move command and new group links act in the device's own
+installation (MODEL-01): a device may move between lines of its installation
+and link to that installation's group addresses. Moving a device to a line,
+building part or group address of **another** installation is refused, as is
+any edit of an id that occurs in several installations. Whether the web
+dropdowns list later-installation targets is a UI question still open under
+the Web lock.
 
 “Send + Receive” and “unlink both” are one atomic project edit and one undo
 step. If either direction is already linked when adding both, the operation
@@ -206,11 +236,18 @@ WebKitGTK, hardware behavior and screen-reader announcements remain unverified.
 
 The product catalog can request 1–32 devices in one project command/undo
 step. Generated names use the entered base followed by a one-based index for
-multiple devices; the application does not deduplicate against pre-existing
-names. A selected line places the devices in that topology line, but **no
-physical addresses are allocated** (including when no device octets remain).
-Addresses must be assigned separately and validated by the address editor.
-This is a local project edit, not a KNX download or ETS-compatibility claim.
+multiple devices; by default the application does not deduplicate against
+pre-existing names. A selected line places the devices in that topology line,
+and by default **no physical addresses are allocated**. Two opt-in request
+flags (MODEL-04, server side) change that: `uniqueNames` skips names already
+used in the project, and `allocateAddresses` (requires a line) gives each new
+device the lowest free device octet 1–255 on that line in the same undo step,
+skipping octet 0, every address used anywhere in the project and the project
+exclusion list (`knx_core::free_line_addresses`). Too few free addresses
+refuse the whole batch before any ID is reserved. The allocator knows only the
+project, not devices on the real bus. The web catalog does not offer the two
+flags yet (Web lock). This is a local project edit, not a KNX download or
+ETS-compatibility claim.
 
 An older server may ignore the additive `quantity` field and return a legacy
 single-device response. The web client then refreshes the returned project,
@@ -221,6 +258,12 @@ the core `Batch` command rolls back project changes if one child fails.
 If a response is lost after the request was sent or the server responds with
 an internal error, the client cannot know whether the batch was committed;
 it blocks a blind retry and directs the user to inspect or reload the project.
+Since ADR-0069 the server accepts an optional `requestId`: an identical resend
+replays the recorded outcome (`replayed: true`) instead of applying again, and
+the same ID with other content is refused. The record is in memory, bounded to
+256 requests and cleared when the project is replaced; a server restart forgets
+it. The web client does not send `requestId` yet (Web lock), so its retry
+block above still applies.
 Successful batch responses carry per-device diagnostics; a late core batch
 failure carries the zero-based child command index and its typed cause, which
 the catalog maps to the one-based device number (the reservation is child 0).
@@ -6379,16 +6422,17 @@ Mocked UI tests cover two buildings under one root without duplicated
 devices. This does not supply independent ETS `Ground` export evidence or
 make later installations editable.
 
-Found on the way and not addressed: no command renames an `Installation`
-after creation. `Installation.name` comes only from `NewProjectDialog` or
-import. That matters once a user splits separate infrastructures into
-separate installations. Larger than that: **no command edits any
-installation but the first.** Every `Command` applies to `installations[0]`
-(`knx-core` `command.rs`; `CreateBuildingPart` uses
-`installations.first_mut()`), so a second installation brought in by import
-is kept and saved but cannot be edited. ADR-0038's "separate infrastructures
-are separate installations" is therefore a representation KNXBench can hold,
-not yet a workflow it offers.
+Found on the way, and since addressed in the core and server by MODEL-01
+(2026-10-04): `Command::RenameInstallation` renames an installation, and
+commands act in the installation that owns the addressed entity instead of
+`installations[0]`; root creates accept an explicit installation. The web UI
+does not yet expose installation rename or later-installation creation.
+
+**Alpha disposition (2026-10-04).** A renewed search found no `Ground`
+sample in the corpus or in eight public xknxproject fixtures (RESEARCH §25).
+On the user's instruction this stays a known gap and is closed for the Alpha
+(`KL-127` → `ACCEPTED_BOUNDARY`); it is not evidence that ETS accepts the
+ADR-0038 shape.
 
 **Lifted when.** A real ETS export containing a `Ground` root (ideally with
 several `Building` children, or several installations) is added to the
@@ -7382,7 +7426,7 @@ are retained. Only three test files differ from those frozen corpus inputs;
 production bytes are unchanged. Current-upstream workspace/Web/build/integration
 and publication are pending: this is **not delivered**,not complete manufacturer
 semantics or bus/runtime support. Scheme10 remains refused and KL153 remains
-open. See PRODUCT_SCHEME_23_RESEARCH.md and ADR-0068.
+open. See PRODUCT_SCHEME_23_RESEARCH.md and ADR-0072.
 
 **Research 2026-10-04,not admission.** Base575a2d1d/source712:bounded offline
 census rechecks853 hashes/852 master documents/one explicit scan refusal;two

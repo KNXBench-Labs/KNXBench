@@ -513,6 +513,35 @@ separate; this theme extension never grants a hardware-write go.
 
 ---
 
+## 3b. Alpha owner queue (Claude owner session, 2026-10-04)
+
+The user made this Claude session the `goal-ui.md` owner and asked it to work
+through the UI rows at the end of `alpha-release-goal.md`. Row statuses and the
+decisions behind them are in that file's *UI owner checkpoint*. Native/live
+evidence rows are `ACCEPTED_BOUNDARY` by user decision; these packages cover
+the remaining absent behaviour. Domain/backend halves come first because the
+commissioning session holds the Web lock at the time of writing.
+
+| Package | Rows | Content | Status |
+| --- | --- | --- | --- |
+| UA1 | `MODEL-03`, `KL-127` | Research coupler addressing (`.0`) and ETS Site/Ground samples; implement on reliable evidence, otherwise record a known gap and close | backend done (RESEARCH §25); KL-127 closed as known gap; MODEL-03 web half open **[web]** |
+| UA2 | `DATA-03` | Idempotent catalog batch: client request key, server replays the recorded outcome instead of applying twice; the client may then retry safely **[web]** for the client half | server half done (ADR-0069); client half open **[web]** |
+| UA3 | `MODEL-04` | Opt-in address allocation and unique names for catalog batches, validated in the core **[web]** for the UI half | server half done; UI toggles open **[web]** |
+| UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half done; UI open **[web]** |
+| UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half done (ADR-0071); UI open **[web]** |
+| UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); handed over **[web]** |
+
+Every package follows §2: RED first, mutation check per new guard, gates,
+docs, merge, push, handover, cleanup.
+
+**Handoff 2026-10-04 11:27:** all backend halves are published. By user decision the
+**[web]** halves of UA1–UA5 and all of UA6 are handed over to the Web-lock
+holder (the commissioning session). Tasks, API contracts and acceptance
+criteria are in `alpha-release-goal.md` → *UI owner handoff*. This owner
+session keeps the backend contracts.
+
+---
+
 ## 4. Completion condition
 
 Finish only when:

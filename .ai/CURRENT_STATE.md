@@ -78,6 +78,22 @@ Web lock: taken by codex-commission-continuation for SAFE-03/AUDIT-01 history-cl
 
 ---
 
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 11:25 UTC
+- **Completed:** AR06T post-publication receipt d69278e7138568f371064741ee2c363667df20d7 delivered and read back: seven exact remote metadata artifacts, source770 unchanged, five actual closing audits0. Code delivery remains aadd88204de154cfcf5c1638310831a0a316dd86; whole-product acceptance is not closed. Completed own hygiene: both scheme23 worktrees removed, published feature branch removed, detached baseline had no branch; completed ar06t scratch/build/snapshots removed after verifying 176 archived public/synthetic receipt/log files and the aadd8820-stamped working release. Failures/survivors retained. Private aggregate only, no new private execution. Shared dirty root and other owners' history/locks/data untouched.
+- **Pending/Next Steps:** Continue the earliest ready alpha-release-goal.md slice: bounded scheme10 grammar research for KL153/AR06P, not namespace admission. Read current documentation and primary evidence first; manufacturer semantics remain unverified. KL151 production cap/streaming and resource/owner acceptance remain separate. UI/commissioning scopes stay with their owners; no hardware or release-tag authorization.
+- **Notes for Codex oder Claude:** Permanent scoped public receipt .ai/logs/2026-10-04_codex_alpha-scheme23-acceptance.json. Local evidence archive is outside scratch,176 files plus working CLI; no private per-item vectors/payloads. Fresh alpha-product-scheme10-research worktree has consumed the current upstream including owner ADR index change; every inherited handover byte follows this prefix. Never reuse removed-worktree xtask binaries: closure-only docs use a fresh target here. No delegation/quota checks. Historical private Full853 remains source712/713-bound 690/161/2,not current workspace acceptance or whole KL153 completion.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 13:28
+- **Completed:** UA10b: CLI `knx ga-export`/`ga-import --installation <id>` (MODEL-01 backend complete): planner/export per installation, unknown id refused with nothing written, non-numeric id is a usage error, the ga-import confirmation token binds the installation when the flag is present (byte-identical token without it). RED 3/4 (`unknown flag`) → GREEN 4/4 (`apps/knx-cli/tests/cli_ga_csv_installations.rs`), existing 7 CLI CSV tests green, 2/2 mutants.
+- **Pending/Next Steps:** No goal-ui backend work is open. Web halves stay with the Web-lock holder.
+- **Notes for Codex oder Claude:** —
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 13:25
 - **Completed:** UA10 (MODEL-01 remainder): CSV group-address import/export per installation. `knx_csv::plan_import_into` / `export_group_addresses_from` (old functions = first installation); server `installationId` on `/api/group-addresses/csv-import` and `/csv-export` (unknown → 400, nothing written); the destructive-preview confirmation token now binds the installation. RED 0/4 (server silently ignored `installationId` and imported into the first installation) → GREEN 4/4, 5/5 mutants, full gate green (164 blocks, 3,103 passed). Handoff table (`alpha-release-goal.md`) MODEL-01 row now includes the CSV contract and the CSV buttons' installation choice as web task.

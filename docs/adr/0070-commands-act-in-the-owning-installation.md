@@ -45,7 +45,7 @@ exactly one installation; malformed imports can repeat an id.
 - A device cannot be moved between installations; that would need explicit
   rules for its links and parameters and is not offered.
 - CSV group-address import/export targets the first installation unless the
-  server request names `installationId` (added later the same day, IMPORT_EXPORT
-  §11); the CLI still uses the first installation.
+  server request names `installationId` or the CLI gets `--installation`
+  (added later the same day, IMPORT_EXPORT §11).
 - The web UI must still offer installation rename and a target choice for
   root creates before MODEL-01 is complete for users.

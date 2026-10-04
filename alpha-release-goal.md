@@ -925,6 +925,14 @@ answers questions about them.
 | `MODEL-02` | Where the Inspector shows a placement/line-owner ambiguity, offer "keep this placement" per current slot | `POST /api/repair/device-placement` (`deviceId` + exactly one of `keepLineId` / `keepUnassignedInstallationId`), `POST /api/repair/line-owner` (`lineId`, `keepAreaId`); save refuses ambiguous topology (`AmbiguousTopology`, ADR-0071) | Repair enables ordinary editing; undo restores the exact imported state; save works after repair |
 | `UX-01` | Drag a group address onto a communication object; the existing keyboard/select path stays | `POST /api/group-links` (`comObjectId`, `gaId`, `direction`) — unchanged contract | Drop links once; invalid drop shows the server refusal |
 
+**User decision 2026-10-04 15:41:** the six web halves above and the AR13
+`debugReport.privacyTelegrams` text move from the commissioning session back to
+the `goal-ui.md` owner session. That session starts on them only after the
+commissioning session releases the Web lock, then takes the lock through the
+`goal-ui.md` §3 procedure. Until then the commissioning session keeps the lock
+for its own package and owes nothing on these rows. As of this decision, no web
+half had been started anywhere.
+
 | Source ID | Priority | Primary route | Current status |
 | --- | --- | --- | --- |
 | `KL-116` | P0 | `goal-commission.md` — owner only | WAITING_OWNER |

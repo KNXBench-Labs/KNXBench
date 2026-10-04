@@ -355,6 +355,7 @@ export const messages = {
   "inspector.unlink": "Unlink",
   "inspector.unlinkBoth": "Unlink both",
   "inspector.chooseGroupAddress": "(choose a group address)",
+  "inspector.dropNotLinkable": "This group address cannot be linked to this device.",
   "inspector.link": "Link",
   "inspector.line": "Line",
   "inspector.unassigned": "(unassigned)",
@@ -1715,7 +1716,7 @@ export const messages = {
   "debugReport.privacyRedacted":
     "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json. KNX addresses and names taken from your project are not replaced anywhere.",
   "debugReport.privacyTelegrams":
-    "bus-telegrams.json keeps the individual and group addresses of your installation and, where the open project knows them, the names of the group addresses — \u201cKitchen ceiling light\u201d. Without those a telegram dump says nothing, which is why they stay. Include the file only if you are willing to share them.",
+    "bus-telegrams.json is not redacted. It keeps the individual and group addresses of your installation, the names of the group addresses where the open project knows them — \u201cKitchen ceiling light\u201d — and every telegram's value (text values included) with its timestamp. Together these can show when the installation was in use. Without them a telegram dump says nothing, which is why they stay. Include the file only if you are willing to share all of that.",
   "debugReport.save": "Save zip…",
   "debugReport.openIssue": "Open a GitHub issue…",
   "debugReport.close": "Close",

@@ -1,5 +1,6 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
 import { useEffect, useRef, useState } from "react";
+import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
@@ -443,13 +444,13 @@ function NewGroupLinkRow(props: {
   const [gaId, setGaId] = useState("");
   const [direction, setDirection] = useState<"Send" | "Receive" | "Both">("Send");
   const [error, setError] = useState<string | null>(null);
+  const [dropReady, setDropReady] = useState(false);
   const canLink = gaId !== "";
 
-  async function link() {
-    if (!canLink) return;
+  async function linkTo(id: number) {
     setError(null);
     try {
-      const tree = await api.linkComObject(com.id, Number(gaId), direction);
+      const tree = await api.linkComObject(com.id, id, direction);
       onApplied(tree);
       setGaId("");
     } catch (e) {
@@ -457,8 +458,38 @@ function NewGroupLinkRow(props: {
     }
   }
 
+  async function link() {
+    if (!canLink) return;
+    await linkTo(Number(gaId));
+  }
+
+  // UX-01: a group address dropped on this row is linked exactly like
+  // choosing it here and pressing Link, in the direction chosen in the row.
+  // Only addresses this device may link (its installation's, MODEL-01) are
+  // sent; anything else stays a local refusal without a request.
+  function drop(event: React.DragEvent<HTMLLIElement>) {
+    if (!carriesGroupAddress(event.dataTransfer)) return;
+    event.preventDefault();
+    setDropReady(false);
+    const id = readDraggedGroupAddress(event.dataTransfer);
+    if (id === null) return;
+    if (!groupAddresses.some((ga) => ga.id === id)) {
+      setError(t("inspector.dropNotLinkable"));
+      return;
+    }
+    void linkTo(id);
+  }
+
   return (
-    <li className="tree-new-row">
+    <li className="tree-new-row" data-drop-ready={dropReady ? "true" : undefined}
+      onDragOver={(event) => {
+        if (!carriesGroupAddress(event.dataTransfer)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "link";
+        setDropReady(true);
+      }}
+      onDragLeave={() => setDropReady(false)}
+      onDrop={drop}>
       <select value={gaId} onChange={(e) => setGaId(e.target.value)}>
         <option value="">{t("inspector.chooseGroupAddress")}</option>
         {groupAddresses.map((ga) => (

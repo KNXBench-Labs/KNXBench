@@ -1,5 +1,20 @@
 # Architecture
 
+## Approved Telegram-flow extension — session-local, not physical topology
+
+[ADR-0077](adr/0077-session-local-telegram-flow-view.md) and
+[the contract](TELEGRAM_FLOW_VISUALIZATION.md) approve the new Alpha capability,
+not an implementation. Reuse existing capture/decoding, add the minimal read-only
+application/service participant/type/age contract in AR20, and keep disposable
+layout/pulses and the value-display reducer in UI U19–U21. No KNX core UI
+dependency, project graph entity, position field, project/product migration or
+persistent traffic store. Bind inferred participants to the exact session flow
+context; flags/links/device edits invalidate that evidence even if DPT decoding
+is unchanged. Values update on admitted observations, never animation arrival;
+project targets do not establish real device state. AR21 owns integrated Alpha
+acceptance, and no commissioning or release authorization follows.
+
+
 The binding architecture for this repository. Decisions recorded here are
 argued in [docs/adr/](adr/); the evidence they rest on is in
 [RESEARCH.md](RESEARCH.md), cited by section throughout.

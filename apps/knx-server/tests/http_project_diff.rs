@@ -494,11 +494,14 @@ async fn a_knxproj_with_an_error_diagnostic_is_refused_with_its_report() {
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     let body = body_json(response).await;
 
+    // Two since ADR-0073: the repeated `@Id` (validate) and the device's
+    // link to it, which is no longer attached to one of the two by guesswork
+    // (map, `AmbiguousReference`).
     assert!(
         body["error"]
             .as_str()
             .unwrap()
-            .contains("1 error diagnostic"),
+            .contains("2 error diagnostic"),
         "{body}"
     );
     assert_eq!(body["inputKind"], "knxproj", "{body}");

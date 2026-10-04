@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use knx_core::{
     ComObjectInstanceId, Command, Direction, GroupAddress, GroupAddressEntry, GroupAddressId,
-    GroupRange, GroupRangeId, Project, SourceRef,
+    GroupRange, GroupRangeId, InstallationId, Project, SourceRef,
 };
 
 use crate::read::{CsvAction, CsvProblem, CsvRow, IgnoredColumn, ParsedCsv, Severity};
@@ -79,7 +79,26 @@ pub struct CsvAffectedLink {
 /// the ids it hands out are only real once a caller actually applies the
 /// returned `Command`.
 pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
-    let installation = project.installations.first();
+    plan_import_into(project, parsed, None)
+}
+
+/// [`plan_import`] against installation `target_installation` (MODEL-01); `None` keeps
+/// the first installation. Rows are matched, ranges looked up and new
+/// addresses created only in that installation — the same address may
+/// exist in another one, which is a separate infrastructure (ADR-0038). An
+/// unknown installation is a file-level error: no command at all.
+pub fn plan_import_into(
+    project: &Project,
+    parsed: &ParsedCsv,
+    target_installation: Option<InstallationId>,
+) -> ImportPlan {
+    let installation = match target_installation {
+        None => project.installations.first(),
+        Some(id) => match project.installations.iter().find(|i| i.id == id) {
+            Some(installation) => Some(installation),
+            None => return unknown_installation_plan(parsed, id),
+        },
+    };
     let existing_ranges: &[GroupRange] = installation
         .map(|i| i.group_ranges.as_slice())
         .unwrap_or(&[]);
@@ -145,7 +164,14 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
 
         match (row.action, existing) {
             (CsvAction::Upsert, None) => {
-                plan_create(row, existing_ranges, &mut ids, &mut commands, &mut problems);
+                plan_create(
+                    row,
+                    existing_ranges,
+                    target_installation,
+                    &mut ids,
+                    &mut commands,
+                    &mut problems,
+                );
                 created += 1;
             }
             (CsvAction::Upsert, Some(existing)) => {
@@ -263,6 +289,30 @@ pub fn plan_import(project: &Project, parsed: &ParsedCsv) -> ImportPlan {
     }
 }
 
+fn unknown_installation_plan(parsed: &ParsedCsv, id: InstallationId) -> ImportPlan {
+    let mut problems = parsed.problems.clone();
+    problems.push(CsvProblem {
+        row: None,
+        severity: Severity::Error,
+        detail: format!("installation {id} does not exist"),
+    });
+    ImportPlan {
+        command: None,
+        report: CsvImportReport {
+            separator: parsed.separator,
+            rows_read: parsed.rows.len(),
+            created: 0,
+            updated: 0,
+            readdressed: 0,
+            deleted: 0,
+            unchanged: 0,
+            destructive_changes: Vec::new(),
+            ignored_columns: parsed.ignored_columns.clone(),
+            problems,
+        },
+    }
+}
+
 fn affected_links(project: &Project, id: GroupAddressId) -> Vec<CsvAffectedLink> {
     project
         .devices
@@ -346,6 +396,7 @@ fn validate_read_only_cell(
 fn plan_create(
     row: &CsvRow,
     ranges: &[GroupRange],
+    installation: Option<InstallationId>,
     ids: &mut knx_core::IdAllocators,
     commands: &mut Vec<Command>,
     problems: &mut Vec<CsvProblem>,
@@ -390,7 +441,7 @@ fn plan_create(
     };
     commands.push(Command::CreateGroupAddress {
         entry,
-        installation: None,
+        installation,
     });
 }
 

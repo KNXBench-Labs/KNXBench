@@ -19,7 +19,7 @@ fixture remains identical,and the complete CLI entrypoint unchanged. That query
 is only used by the owner's server path,not package installation. Separate
 in-session integrated review,no blocking product finding,no independent-model
 approval. First zero-stage namespace-proof PermissionError retained; separate
-parent-bound isolated retry passed. Final publication/readback remains pending.
+parent-bound isolated retry passed. Published `aadd88204de154cfcf5c1638310831a0a316dd86`,live/fetched refs and17 blobs exact. Actual final integrated10 repeats Rust3089/0/176,Web1739,Chromium82; all10 commands0. Old-vs-new Git-stamp binary assertion refusal retained; current version/hash independently archived.
 See [research/limits](PRODUCT_SCHEME_23_RESEARCH.md) and
 [ADR-0072](adr/0072-product-scheme23-namespace-gate.md). This is bounded import/
 storage/report/replay,not full manufacturer semantics,ETS parity or runtime

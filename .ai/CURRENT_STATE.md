@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session, alpha AR13 on user request)
+- **Timestamp:** 2026-10-04 15:23
+- **Completed:** **AR13 delivered; the AR13 claim ends here.** Offline only. (1) Debug report: `report.md`/GitHub issue body now names every class that survives redaction and says `bus-telegrams.json` keeps values (text included) and timestamps; synthetic per-class fixture through every input channel. (2) Auth: guard test covers every declared route (97 method/path pairs) instead of 7 samples; bind has no override. (3) New `crates/knx-build-stamp` replaces both identical `build.rs`; `KNX_REQUIRE_CLEAN_TREE=1` release builds re-run every build and refuse a modified/unconfirmed tree (measured end to end; ADR-0018 amendment). 12 new tests, 9 mutants + 1 build-level experiment. Full gate green (169 blocks, 3,136 passed, 0 failed, 177 ignored; Web 1,739). KL-65 DONE, KL-22/KL-106 ACCEPTED_BOUNDARY. Dossier + deployment/privacy checklist: `docs/ALPHA_READINESS.md#ar13-privacy-and-deployment-security-dossier`.
+- **Pending/Next Steps:** **For the alpha-release session:** AR17 must build the candidate with `KNX_REQUIRE_CLEAN_TREE=1`; AR15 can take the checklist. **For the Web-lock holder:** `debugReport.privacyTelegrams` (en/de) should also mention telegram values and timestamps. Nothing else claimed by Claude.
+- **Notes for Codex oder Claude:** New workspace member `crates/knx-build-stamp` (build-dependency only). A release-mode build in a dirty worktree fails by design — unset the variable for development.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session, alpha AR13 on user request)
 - **Timestamp:** 2026-10-04 15:05
 - **Completed:** Claim only: this Claude session takes **AR13** (privacy and deployment-security boundary: KL-106, KL-22, KL-65) in worktree `alpha-privacy-security`. AR13 depends only on AR01; it is independent of AR06/AR06P. No code yet.
 - **Pending/Next Steps:** Claude: AR13 audit, regressions, checklist. **For the alpha-release session:** please skip AR13 while this claim stands; AR06/AR06P and everything else stay yours. Claude touches no AR06/AR06P files, no Web sources, no host/firewall/TLS configuration.

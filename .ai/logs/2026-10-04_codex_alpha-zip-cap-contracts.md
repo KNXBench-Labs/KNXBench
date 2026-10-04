@@ -205,3 +205,35 @@ keeps KL151 IN_PROGRESS, other owner rows/counts unchanged. New dossier retains
 all original native/control/gate evidence. Web UX-01 lock remains foreign;
 no own Web changes. Actual fresh integrated public16 (new check-ledger) queued
 next; earlier0e3e90b2 evidence is not relabeled. Publication/hygiene pending.
+
+## Actual fresh public16 dispatched
+
+Merged clean candidatefffdc319, full owner6abf557b body/suffix and history exact.
+All foreign non-Markdown sources match published owner; only new executable
+source is original unchanged native count test65d7cf5c. Worker proc_b82c18c962c2
+(PID4185823), notify-on-completion, consolidated-owner-public16/summary.json.
+Sixteen real commands including new ledger gate; clean dispatch, fresh target,
+canonical serialized leases, offline/isolated-loopback and short owned av6.
+Public15 still accepted only for0e3e90b2. Complete actual16 acceptance/publication
+and hygiene pending. No private/cap/whole-source closure claim.
+
+## Accepted predecessor archive before live-run cleanup
+
+Permanent evidence/ar06v-zip-count-20261004/predecessor-archive-manifest.json
+verified280 files/193514140 bytes: original public receipts/logs, failed browser
+traces, native+two-control executables, source files and two distinct stamped
+CLIs. Active public16 directory/target untouched, no scratch deletions. Latest
+five completed commands0/log/source hashes exact; proc poll and OS4185823 live.
+Workspace compilation and remaining stages pending, no acceptance/publication.
+
+## Actual16 independent acceptance and subsequent UI owner delta
+
+Actualfffdc319 accepted:16 command exits0,803 source/config inputs exact,
+Rust3157/0/177/170, Web1817, Chromium106 plus separate probe1; current CLI
+hash/version boundfffdc319. Original attempts remain distinct. Actual16
+receipt/logs/CLI archived byte-exact before cache reuse. Published ab1b87b7
+changes11 Web executable/config inputs; native120 unchanged. Next actual
+merge requires all16 commands, but same-root accepted dependency cache may
+be reused with complete source/provenance guards; never an old execution
+identity or a target built in a different worktree. New CLI must match HEAD.
+No publication, ignored/private coverage or whole KL151/Alpha completion.

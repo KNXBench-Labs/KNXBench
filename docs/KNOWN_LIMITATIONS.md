@@ -253,8 +253,9 @@ device the lowest free device octet 1–255 on that line in the same undo step,
 skipping octet 0, every address used anywhere in the project and the project
 exclusion list (`knx_core::free_line_addresses`). Too few free addresses
 refuse the whole batch before any ID is reserved. The allocator knows only the
-project, not devices on the real bus. The web catalog does not offer the two
-flags yet (Web lock). This is a local project edit, not a KNX download or
+project, not devices on the real bus. Since 2026-10-04 the web catalog offers
+both flags as unchecked checkboxes; address allocation is disabled without a
+target line. This is a local project edit, not a KNX download or
 ETS-compatibility claim.
 
 An older server may ignore the additive `quantity` field and return a legacy

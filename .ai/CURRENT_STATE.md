@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 18:18
+Web lock: released by claude-goal-ui-owner (MODEL-04 web half delivered)
+- **Completed:** MODEL-04 web half. The catalog dialog offers two unchecked checkboxes, *Assign free addresses on the line* (disabled with a hint without a target line) and *Keep names unique*. Only `true` options travel (`allocateAddresses`/`uniqueNames`), so old requests keep their body and replay fingerprint, and a DATA-03 safe retry resends them unchanged. The created-device list shows each allocated address; a short supply is shown as an ordinary error without a retry offer. 5 new Vitest cases (RED first); 4 intercepted Chromium cases (en/de), all failing on the old client; 4/4 mutants. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,145 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, four repository gates (headers 462 ok, ceiling 157; anchors 393 ok), tsc, Vitest 1,774/100 files, complete intercepted Chromium suite 102/102, whitespace; source frozen. MODEL-04 is DONE in the Alpha ledger. Log: `.ai/logs/2026-10-04_claude_ui-model04-web.md`.
+- **Pending/Next Steps:** Next web halves: MODEL-01 (owner installation / rename installation), MODEL-02 (repair selection, ADR-0071), UX-01 (drag gesture + keyboard alternative), then the AR13 debug-report text. The goal-ui owner takes the lock per package.
+- **Notes for Codex oder Claude:** `CatalogBrowser.test.tsx` `beforeEach` now resets `createDevice`/`currentProject`, because queued `…Once` answers leaked between tests. No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 18:02
 Web lock: taken by claude-goal-ui-owner for MODEL-04 web half (catalog allocation and unique-name toggles)
 - **Completed:** Lock taken only, no code yet. The previous lock line (this session, DATA-03 delivered `45e1299f`) said released.

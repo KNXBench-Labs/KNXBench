@@ -199,11 +199,12 @@ select controls, not a new drag gesture.
 ## U11 device editor scope (ISSUE-09)
 
 A device placed in a line shows its line-derived area.line prefix and lets the
-user change only the device octet (1–255). New `.0` assignments are refused
+user change only the device octet (1–255, or 0 for an evidenced coupler). New `.0` assignments are refused
 unless the product database classifies the device's hardware as a coupler
 (`Hardware/@IsCoupler`, RESEARCH §25): the server then uses
-`SetCouplerIndividualAddress`. The web editor does not offer `.0` yet, and a
-device whose product is not installed stays refused. Imported `.0` addresses
+`SetCouplerIndividualAddress`. Since 2026-10-04 the web editor submits `.0` and
+shows the server's refusal otherwise; a device whose product is not installed
+stays refused. Imported `.0` addresses
 remain intact, including after undo. An imported
 address with a line prefix mismatch is shown for repair, not silently
 rewritten. Until repaired, moving that device to another line is refused; a

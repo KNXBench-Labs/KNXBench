@@ -23,6 +23,7 @@ vi.mock("./filePicker", () => pickerMock);
 
 import DebugReportButton from "./DebugReportButton";
 import { messages as en } from "./messages/en";
+import { messages as de } from "./messages/de";
 
 let host: HTMLDivElement | undefined;
 let activeRoot: ReturnType<typeof createRoot> | undefined;
@@ -172,6 +173,16 @@ describe("DebugReportButton", () => {
     const warning = document.querySelector(".debug-report-warning");
     expect(warning).not.toBeNull();
     expect(warning!.textContent).toBe(en["debugReport.privacyTelegrams"]);
+  });
+
+  // AR13: the warning mirrors `report.md` (debug_report.rs): the unredacted
+  // telegram file keeps addresses, names, every value (text values too) and
+  // the timestamps, which together show when the installation was in use.
+  it.each([
+    ["en", en["debugReport.privacyTelegrams"], ["addresses", "names", "every telegram's value", "text values", "timestamp"]],
+    ["de", de["debugReport.privacyTelegrams"], ["Adressen", "Namen", "jeden Telegrammwert", "Textwerte", "Zeitstempel"]],
+  ])("names everything the telegram file keeps (%s)", (_language, text, parts) => {
+    for (const part of parts) expect(text).toContain(part);
   });
 
   it("says what is redacted before anything can be written", async () => {

@@ -1,0 +1,179 @@
+{
+  "measuredAt": "2026-10-04T21:41:09.419Z",
+  "results": [
+    {
+      "scenario": {
+        "name": "dense-burst-motion",
+        "devices": 300,
+        "groups": 120,
+        "ratePerSecond": 200,
+        "seconds": 15,
+        "motion": true
+      },
+      "telegrams": 3644,
+      "wallSeconds": 18,
+      "mainThreadBusyShare": 0.893,
+      "heapMiB": {
+        "start": 4.4,
+        "samplesAfterGc": [
+          6.5,
+          6.8,
+          6.9,
+          6.9,
+          6.8
+        ],
+        "endAfterGc": 6.8
+      },
+      "frames": {
+        "count": 786,
+        "intervalP50": 16.7,
+        "intervalP95": 33.4,
+        "intervalMax": 300
+      },
+      "longTasks": {
+        "count": 1,
+        "totalMs": 52,
+        "maxMs": 52
+      },
+      "markerLagMs": {
+        "values": [
+          83,
+          61,
+          75,
+          156,
+          14
+        ],
+        "max": 156
+      },
+      "dom": {
+        "nodes": 230,
+        "edges": 240,
+        "svgElements": 2486
+      },
+      "reducedRenderingNote": "Reduced rendering: 3644 telegrams were drawn as bundled pulses, 1506 without a pulse. Values and counts are complete.",
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    },
+    {
+      "scenario": {
+        "name": "dense-burst-motion-off",
+        "devices": 300,
+        "groups": 120,
+        "ratePerSecond": 200,
+        "seconds": 15,
+        "motion": false
+      },
+      "telegrams": 3460,
+      "wallSeconds": 17.4,
+      "mainThreadBusyShare": 0.059,
+      "heapMiB": {
+        "start": 4.2,
+        "samplesAfterGc": [
+          5.9,
+          6.2,
+          6.4,
+          6.5,
+          6.5
+        ],
+        "endAfterGc": 6.4
+      },
+      "frames": {
+        "count": 0,
+        "intervalP50": null,
+        "intervalP95": null,
+        "intervalMax": null
+      },
+      "longTasks": {
+        "count": 1,
+        "totalMs": 69,
+        "maxMs": 69
+      },
+      "markerLagMs": {
+        "values": [
+          17,
+          17,
+          17,
+          17,
+          19
+        ],
+        "max": 19
+      },
+      "dom": {
+        "nodes": 230,
+        "edges": 240,
+        "svgElements": 2006
+      },
+      "reducedRenderingNote": null,
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    },
+    {
+      "scenario": {
+        "name": "long-session-motion",
+        "devices": 60,
+        "groups": 40,
+        "ratePerSecond": 10,
+        "seconds": 180,
+        "motion": true
+      },
+      "telegrams": 1826,
+      "wallSeconds": 182.3,
+      "mainThreadBusyShare": 0.349,
+      "heapMiB": {
+        "start": 3.3,
+        "samplesAfterGc": [
+          4.8,
+          5.1,
+          5.2,
+          5.3,
+          5.4
+        ],
+        "endAfterGc": 5.3
+      },
+      "frames": {
+        "count": 10422,
+        "intervalP50": 16.7,
+        "intervalP95": 16.7,
+        "intervalMax": 300.1
+      },
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "markerLagMs": {
+        "values": [
+          7,
+          5,
+          13,
+          13,
+          13
+        ],
+        "max": 13
+      },
+      "dom": {
+        "nodes": 58,
+        "edges": 80,
+        "svgElements": 658
+      },
+      "reducedRenderingNote": null,
+      "environment": {
+        "chromium": "152.0.7977.82",
+        "cpu": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16,
+        "headless": true,
+        "build": "production (vite build)"
+      }
+    }
+  ]
+}

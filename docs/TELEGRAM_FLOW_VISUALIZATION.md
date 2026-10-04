@@ -697,6 +697,23 @@ Parts A and B (published before the measurements of part C):
   and one label; they are told apart in the label (two plus "+n") and in the
   Inspector, not by separate paths.
 
+Part C (measured, `docs/design/2026-10-04-telegram-flow-u21/`):
+
+- **Activity classes.** A pair's distance adapts when its windowed rate
+  changes class (0, 1–2, 3–5, 6–9, ≥ 10), checked at every sync and by the
+  5 s nudge. Before this, `sync` absorbed rate changes without reheating, so
+  distances never followed activity after the first settle unless a node
+  appeared. Found by a test written for an optimisation idea that turned out
+  wrong.
+- **Frame cap.** At most one drawn frame per 32 ms (~30 fps). Production
+  measurement: main thread 0.35 → 0.21 at 10 telegrams/s, 0.89 → 0.69 in a
+  200/s burst, no long task left. Motion off: 0.06 in the same burst. The
+  sending ring is written only when it changes.
+- **Measured envelope** (Ryzen 7 5800X, headless Chromium, production build):
+  value shown 10–20 ms after its poll answer when the bus is quiet or motion is
+  off, up to 150 ms during a 200/s burst with motion. Heap reaches a plateau
+  (burst ~6.9 MiB, session ~5.3 MiB including the monitor capture).
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

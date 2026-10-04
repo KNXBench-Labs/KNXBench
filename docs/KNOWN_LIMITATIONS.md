@@ -7625,7 +7625,9 @@ accepted set (11, 12, 13, 14, 20, exact 21).
   tested. Exact23 now has bounded verified import/storage/report/replay support;
   unknown manufacturer semantics and full runtime compatibility remain unsupported.
 
-## 154. The telegram-flow view is checked in Chromium only; load figures follow in U21 part C
+## 154. The telegram-flow view is checked and measured in Chromium only
+
+<a id="154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c"></a>
 
 <a id="154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"></a>
 
@@ -7643,8 +7645,14 @@ loop and the AR20 snapshot route. It is read-only.
 - **One path per pair.** Several group addresses between the same two nodes
   share one curved path; the label names two and counts the rest, and the
   Inspector lists all.
-- **Load.** Dense-burst and long-session CPU, memory, frame and lag figures
-  are U21 part C; until they are recorded, no load claim is made.
+- **Load (measured, one machine).** On a Ryzen 7 5800X with headless
+  Chromium and the production build, motion keeps the main thread about 21 %
+  busy at 10 telegrams/s and about 69 % in a 200/s burst over 230 nodes;
+  Motion Off brings the burst to about 6 %. Values appear 10–20 ms after their
+  poll answer, up to about 150 ms in the burst with motion. Above 160
+  simultaneous pulses, telegrams are counted instead of drawn, and the view
+  says so. Slower hardware and the packaged WebKitGTK app were not measured
+  (docs/design/2026-10-04-telegram-flow-u21/).
 - **Evidence.** Unit tests (happy-dom, fake scheduler) and Chromium e2e with
   intercepted synthetic traffic (`e2e/telegram-flow.e2e.ts`,
   `e2e/telegram-flow-motion.e2e.ts`, frames and intervals counted in the

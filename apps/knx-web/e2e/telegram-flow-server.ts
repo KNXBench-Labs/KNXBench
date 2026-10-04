@@ -73,7 +73,7 @@ export async function fakeServer(page: Page) {
 
 export const node = (page: Page, name: string) => page.locator(`g.flow-node[aria-label^="${name}."]`);
 
-export async function openFlow(page: Page, language = "en", theme = "porcelain") {
-  await page.goto(`/e2e/telegram-flow-fixture.html?lang=${language}&theme=${theme}`);
+export async function openFlow(page: Page, language = "en", theme = "porcelain", motion?: string) {
+  await page.goto(`/e2e/telegram-flow-fixture.html?lang=${language}&theme=${theme}${motion ? `&motion=${motion}` : ""}`);
   await page.getByRole("tab", { name: language === "de" ? "Fluss" : "Flow" }).click();
 }

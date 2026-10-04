@@ -11,6 +11,9 @@ document.documentElement.lang = language;
 // The app always carries a resolved `data-theme`; without it no theme
 // variable is defined and the drawing would not be what users see.
 document.documentElement.dataset.theme = params.get("theme") ?? "porcelain";
+// The app's bootstrap sets the Motion level before mount, too. An init
+// script cannot: its attribute is lost when the document is parsed.
+if (params.get("motion")) document.documentElement.setAttribute("data-motion-level", params.get("motion")!);
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 createRoot(document.getElementById("root")!).render(
   <main className="workbench">

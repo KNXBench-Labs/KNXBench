@@ -544,26 +544,28 @@ DPT decoding, completed settings/themes or commissioning.
 
 ### U19 — Resolve the flow contract and evaluated visual slice
 
-**Open; implementation authorized by the user on 2026-10-04.** Dependencies:
+**Done 2026-10-04 (goal-ui owner).** Evidence and the exact AR20 handoff:
+[TELEGRAM_FLOW_VISUALIZATION §9](docs/TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04);
+study code under `apps/knx-web/e2e/flow-study/`. Originally: dependencies:
 latest owner/lock reconciliation and [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
 Use the Web lock if editing any Web sources, fixtures or generated bindings.
 
-- [ ] Inspect current monitor/session/context/projection/Inspector and primary
+- [x] Inspect current monitor/session/context/projection/Inspector and primary
   research; preserve observed versus configured versus ambiguous evidence.
   Send associations do not exclude receiving membership; no fabricated receipt.
-- [ ] Produce a bounded, visibly synthetic visual slice of direct devices,
+- [x] Produce a bounded, visibly synthetic visual slice of direct devices,
   unknown group nodes, group-address labels, directed pulses and separate value
   badges, using existing themes/motion. Record an actually rendered screenshot
   and keyboard/static fallback; do not claim a study is productive integration.
-- [ ] Evaluate native SVG first and a bounded layout approach. Record real
+- [x] Evaluate native SVG first and a bounded layout approach. Record real
   frame/lag/memory evidence for the specified workloads before selecting a
   solver/dependency/Canvas/worker. Specify readable resting edges, model/pulse
   limits, overflow disclosure, rolling window, damping and live tie behavior.
-- [ ] Freeze an exact handoff to AR20: session/context identities, typed raw
+- [x] Freeze an exact handoff to AR20: session/context identities, typed raw
   addresses, participant evidence/flags/activation, value/error states,
   observation age, cursor/drops, stale/restart handling and legacy fallback.
   Proposed fields/routes are not claimed existing; no parallel polling/tunnel.
-- [ ] Record resolved contract/tuning and reproducible test inputs in the flow
+- [x] Record resolved contract/tuning and reproducible test inputs in the flow
   document/ADR and handover to the alpha owner. Preserve current owner work and
   original native/Orca/live accepted boundaries, not a blanket new certification.
 

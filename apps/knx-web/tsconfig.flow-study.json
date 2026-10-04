@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "e2e/flow-study",
+    "e2e/flow-study-fixture.tsx",
+    "e2e/flow-study.e2e.ts",
+    "e2e/flow-study.study.ts"
+  ]
+}

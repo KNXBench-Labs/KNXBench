@@ -49,6 +49,11 @@ The companion lives in `story/`, independent of the application:
   inert JSON data island with `<`, `>`, `&`, U+2028 and U+2029 escaped, and a
   Content-Security-Policy admits only the hashes of the shipped style and
   script. The vanilla-JavaScript layer uses `textContent` and DOM APIs only.
+  The output has no timestamps, so it is a pure function of the candidate and
+  `site/`. `build --preview` writes the versioned page `previews/<id>.html`,
+  which is committed so the page can be opened anywhere without the tool; a test
+  rebuilds every committed page and fails when one is stale. Scratch builds in
+  `dist/` stay ignored.
 - `serve` binds to loopback addresses only. `release-check` reports whether an
   approval record matches one exact candidate digest. `publish` always refuses:
   no deployment target, host or workflow has been chosen or authorized.
@@ -75,6 +80,11 @@ preparation only. A real release step needs its own design and approval.
 
 - Each edition is reproducible from `content/edition.json`; earlier candidates
   remain byte-identical evidence of what was reviewed.
+- Committed previews duplicate content that is already in `candidates/` (about
+  240 KB per edition). A change to `site/` regenerates every committed page, so
+  older editions are always shown with the current page code; the candidate, not
+  the page, is the reviewed record. Revisited 2026-10-04 at the user's request:
+  the first version kept all built pages out of Git.
 - Updating the story means editing the content, preparing a new edition id,
   reading `CHANGES.md` and `REVIEW.md`, and checking the preview in a browser.
 - The privacy scan and the provenance canary check are review aids, not proof.

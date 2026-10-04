@@ -1,6 +1,6 @@
 /** U20: stable node placement and curved, direction-distinct edge paths for the flow view. */
 import { describe, expect, it } from "vitest";
-import { NODE_SPACING, edgeGeometry, placeNodes } from "./flowLayout";
+import { FADE_MS, NODE_SPACING, QUIET_AFTER_MS, RESTING_OPACITY, edgeGeometry, edgeOpacity, placeNodes, pointOnEdge } from "./flowLayout";
 
 const ids = (count: number) => Array.from({ length: count }, (_, i) => `n${i}`);
 
@@ -43,5 +43,31 @@ describe("edgeGeometry", () => {
     const { start, end } = edgeGeometry(a, b);
     expect(Math.hypot(start.x - a.x, start.y - a.y)).toBeGreaterThan(20);
     expect(Math.hypot(end.x - b.x, end.y - b.y)).toBeGreaterThan(20);
+  });
+});
+
+describe("edgeOpacity", () => {
+  it("stays full while active, then fades over a minute to a readable resting line", () => {
+    expect(edgeOpacity(1000, 1000 + QUIET_AFTER_MS)).toBe(1);
+    const halfway = edgeOpacity(1000, 1000 + QUIET_AFTER_MS + FADE_MS / 2);
+    expect(halfway).toBeLessThan(1);
+    expect(halfway).toBeGreaterThan(RESTING_OPACITY);
+    expect(edgeOpacity(1000, 1000 + QUIET_AFTER_MS + FADE_MS)).toBe(RESTING_OPACITY);
+    expect(edgeOpacity(1000, 1000 + 3_600_000)).toBe(RESTING_OPACITY);
+  });
+
+  it("shows an edge of unknown observation time as a resting line, not as fresh", () => {
+    expect(edgeOpacity(Number.NEGATIVE_INFINITY, 5000)).toBe(RESTING_OPACITY);
+  });
+});
+
+describe("pointOnEdge", () => {
+  it("runs from the start of the curve to its end", () => {
+    const geometry = edgeGeometry({ x: 0, y: 0 }, { x: 300, y: 0 });
+    expect(pointOnEdge(geometry, 0)).toEqual(geometry.start);
+    expect(pointOnEdge(geometry, 1)).toEqual(geometry.end);
+    const middle = pointOnEdge(geometry, 0.5);
+    expect(middle.x).toBeCloseTo(geometry.label.x, 5);
+    expect(middle.y).toBeCloseTo((geometry.start.y + geometry.end.y) / 4 + geometry.control.y / 2, 5);
   });
 });

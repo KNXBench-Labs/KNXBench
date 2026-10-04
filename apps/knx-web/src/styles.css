@@ -3404,6 +3404,39 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   stroke-width: 5;
 }
 
+/* U21 motion. Pulses and the sending ring are drawn by script and stop with
+   motion Off or the OS reduce preference (flowMotion.ts), not by CSS. */
+.flow-pulse circle {
+  fill: var(--knx-accent);
+}
+
+.flow-pulse text {
+  font-family: var(--knx-font-mono);
+  font-size: 10px;
+  fill: var(--knx-foreground);
+  paint-order: stroke;
+  stroke: var(--knx-surface);
+  stroke-width: 3px;
+}
+
+.flow-node[data-sending="true"] circle {
+  stroke-width: 5;
+}
+
+.flow-node-leader circle {
+  stroke-width: 3.5;
+}
+
+.telegram-flow .flow-leader,
+.telegram-flow .flow-motion-off {
+  margin: 0.25rem 0;
+}
+
+.telegram-flow .flow-reduced {
+  margin: 0.25rem 0;
+  color: var(--knx-warning-color);
+}
+
 .flow-badge-inferred {
   font-style: italic;
   fill: var(--knx-muted);

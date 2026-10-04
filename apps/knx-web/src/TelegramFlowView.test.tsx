@@ -18,6 +18,7 @@ let host: HTMLDivElement | undefined;
 let root: Root | undefined;
 
 afterEach(async () => {
+  document.documentElement.removeAttribute("data-motion-level");
   if (root) await act(async () => root!.unmount());
   root = undefined;
   host?.remove();
@@ -154,5 +155,45 @@ describe("TelegramFlowView", () => {
     expect(button("Vergrößern")).toBeTruthy();
     expect(node("Switch").getAttribute("aria-label")).toBe("Switch. Projektgerät.");
     expect(host!.textContent).toContain("kein Nachweis, dass das Gerät das Telegramm empfangen");
+  });
+});
+
+// U21: motion controls, the activity leader and honest load reporting.
+describe("TelegramFlowView motion", () => {
+  async function rerender(m: FlowModel, version: number) {
+    const feed: FlowFeed = { model: m, version, admit: () => {}, reset: () => {} };
+    await act(async () => root!.render(<TelegramFlowView feed={feed} />));
+  }
+
+  it("offers Freeze with motion on, and disables it with an explanation when motion is off", async () => {
+    await render(model());
+    const freeze = button("Freeze layout");
+    expect(freeze.disabled).toBe(false);
+    expect(freeze.getAttribute("aria-pressed")).toBe("false");
+    await act(async () => freeze.click());
+    expect(freeze.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => { document.documentElement.setAttribute("data-motion-level", "off"); await Promise.resolve(); });
+    expect(button("Freeze layout").disabled).toBe(true);
+    expect(host!.textContent).toContain("Motion is off: the layout stays still and no pulses are drawn.");
+  });
+
+  it("names the most active sender of the last 60 s and marks its node", async () => {
+    await render(model());
+    expect(host!.querySelector(".flow-leader")!.textContent).toBe("Most active sender (last 60 s): Switch");
+    expect(node("Switch").classList.contains("flow-node-leader")).toBe(true);
+    expect(node("Dimmer").classList.contains("flow-node-leader")).toBe(false);
+  });
+
+  it("says when pulses were bundled, and that values and counts stay complete", async () => {
+    const m = model((x) => admitRows(x, Array.from({ length: 30 }, (_, i) => row(i + 2)), flowNow()));
+    await render(m);
+    await rerender(m, 2);
+    expect(host!.querySelector(".flow-reduced")!.textContent).toContain("telegrams were drawn as bundled pulses");
+    expect(host!.querySelector(".flow-reduced")!.textContent).toContain("Values and counts are complete.");
+  });
+
+  it("draws a fresh edge at full emphasis", async () => {
+    await render(model());
+    expect((host!.querySelector(".flow-edge") as SVGGElement).style.opacity).toBe("1");
   });
 });

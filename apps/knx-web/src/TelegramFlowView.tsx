@@ -4,12 +4,16 @@
 // decoration for sighted users and hidden from assistive technology; every
 // fact is reachable as text through keyboard selection and the Inspector,
 // so a busy bus does not turn into a stream of announcements.
-import { useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
+import { createDynamics, type DynamicNode } from "./flowDynamics";
+import { useFlowMotion } from "./flowMotion";
 import { flowNow, type FlowFeed } from "./flowFeed";
-import { NODE_RADIUS, edgeGeometry, placeNodes } from "./flowLayout";
+import { NODE_RADIUS, edgeGeometry, edgeOpacity, pointOnEdge, type Point } from "./flowLayout";
 import {
   allCurrentValues,
   currentBadges,
+  currentLeader,
   type FlowEdge,
   type FlowModel,
   type FlowNode,
@@ -206,22 +210,134 @@ function edgeLabel(edge: FlowEdge): string {
   return labels.length > EDGE_LABELS ? `${shown} +${labels.length - EDGE_LABELS}` : shown;
 }
 
+const BOX = { width: VIEW_WIDTH, height: VIEW_HEIGHT };
+/** A pulse lights its sender for the first part of its way. */
+const SENDING_UNTIL = 0.35;
+
+const browserScheduler: AnimatorScheduler = {
+  frame: (callback) => requestAnimationFrame(callback),
+  cancelFrame: (id) => cancelAnimationFrame(id),
+  every: (ms, callback) => window.setInterval(callback, ms),
+  cancelEvery: (id) => window.clearInterval(id),
+  now: flowNow,
+  hidden: () => document.visibilityState === "hidden",
+};
+
+interface EdgeElements {
+  from: string;
+  to: string;
+  path: SVGPathElement;
+  label: SVGTextElement;
+}
+
+function drawPulses(layer: SVGGElement | null, pulses: readonly DrawnPulse[], position: (id: string) => Point | undefined) {
+  if (!layer) return;
+  while (layer.childNodes.length > pulses.length) layer.lastChild!.remove();
+  while (layer.childNodes.length < pulses.length) {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", "flow-pulse");
+    group.append(document.createElementNS("http://www.w3.org/2000/svg", "circle"), document.createElementNS("http://www.w3.org/2000/svg", "text"));
+    layer.append(group);
+  }
+  pulses.forEach((pulse, index) => {
+    const group = layer.childNodes[index] as SVGGElement;
+    const from = position(pulse.from);
+    const to = position(pulse.to);
+    if (!from || !to) {
+      group.setAttribute("visibility", "hidden");
+      return;
+    }
+    const at = pointOnEdge(edgeGeometry(from, to), pulse.progress);
+    group.removeAttribute("visibility");
+    group.setAttribute("transform", `translate(${at.x.toFixed(1)} ${at.y.toFixed(1)})`);
+    const circle = group.firstChild as SVGCircleElement;
+    circle.setAttribute("r", String(pulse.count > 1 ? 7 : 4.5));
+    const text = group.lastChild as SVGTextElement;
+    text.textContent = pulse.count > 1 ? `×${pulse.count}` : "";
+    text.setAttribute("x", "9");
+    text.setAttribute("y", "-6");
+  });
+}
+
 export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
   const t = useTranslate();
   const markerId = `flow-arrow-${useId().replace(/:/g, "")}`;
   const model = feed.model;
+  const motion = useFlowMotion();
+  const [frozen, setFrozen] = useState(false);
   const [view, setView] = useState<View>(HOME);
   const [selected, setSelected] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
+  // Once a second (while visible) the animator asks for a refresh: fades,
+  // the leader label and value expiry move with time, not only with data.
+  const [, setTick] = useState(0);
   const nodeRefs = useRef(new Map<string, SVGGElement>());
+  const edgeRefs = useRef(new Map<string, EdgeElements>());
+  const pulseLayer = useRef<SVGGElement | null>(null);
   const drag = useRef<{ x: number; y: number; view: View } | null>(null);
+  const animatorRef = useRef<FlowAnimator | null>(null);
   const nowMs = flowNow();
 
-  const positions = useMemo(
-    () => placeNodes(model ? [...model.nodes.keys()] : []),
+  // Before the animator's first sync, positions come from the same seeding
+  // (hex slots, clamped to the box), so nothing jumps when it takes over.
+  const seeded = useMemo(
+    () => createDynamics(model ? [...model.nodes.keys()] : [], BOX).nodes,
     // `version` changes whenever the model changed in place.
     [model, feed.version],
   );
+  const position = (id: string): Point | undefined => animatorRef.current?.layout.nodes.get(id) ?? seeded.get(id);
+
+  useEffect(() => {
+    const sink: AnimatorSink = {
+      positions: (nodes: ReadonlyMap<string, DynamicNode>) => {
+        for (const [id, element] of nodeRefs.current) {
+          const node = nodes.get(id);
+          if (node) element.setAttribute("transform", `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`);
+        }
+        for (const edge of edgeRefs.current.values()) {
+          const from = nodes.get(edge.from);
+          const to = nodes.get(edge.to);
+          if (!from || !to) continue;
+          const geometry = edgeGeometry(from, to);
+          edge.path.setAttribute("d", geometry.path);
+          edge.label.setAttribute("x", geometry.label.x.toFixed(1));
+          edge.label.setAttribute("y", geometry.label.y.toFixed(1));
+        }
+      },
+      pulses: (pulses) => {
+        const animator = animatorRef.current;
+        drawPulses(pulseLayer.current, pulses, (id) => animator?.layout.nodes.get(id));
+        const sending = new Set(pulses.filter((pulse) => pulse.progress < SENDING_UNTIL).map((pulse) => pulse.from));
+        for (const [id, element] of nodeRefs.current) {
+          if (sending.has(id)) element.setAttribute("data-sending", "true");
+          else element.removeAttribute("data-sending");
+        }
+      },
+      refresh: () => setTick((tick) => tick + 1),
+    };
+    const animator = new FlowAnimator(BOX, browserScheduler, sink);
+    animatorRef.current = animator;
+    return () => {
+      animator.dispose();
+      animatorRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    animatorRef.current?.setMotion(motion);
+    if (!motion) {
+      for (const element of nodeRefs.current.values()) element.removeAttribute("data-sending");
+    }
+  }, [motion]);
+
+  useEffect(() => {
+    animatorRef.current?.setFrozen(frozen);
+  }, [frozen]);
+
+  useEffect(() => {
+    if (model) animatorRef.current?.sync(model);
+  }, [model, feed.version]);
+
   const order = useMemo(
     () => (model ? [...model.nodes.values()].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id)).map((n) => n.id) : []),
     [model, feed.version],
@@ -239,6 +355,8 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
 
   const tabStop = focused !== null && model.nodes.has(focused) ? focused : order[0];
   const selectedNode = selected !== null ? model.nodes.get(selected) ?? null : null;
+  const leader = currentLeader(model, nowMs);
+  const metrics = animatorRef.current?.metrics;
 
   function zoomBy(factor: number) {
     setView((current) => ({ ...current, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current.zoom * factor)) }));
@@ -296,9 +414,21 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
         <button type="button" onClick={() => zoomBy(1 / ZOOM_STEP)}>{t("flow.zoomOut")}</button>
         <button type="button" onClick={() => zoomBy(ZOOM_STEP)}>{t("flow.zoomIn")}</button>
         <button type="button" onClick={() => setView(HOME)}>{t("flow.resetView")}</button>
+        <button type="button" aria-pressed={frozen} disabled={!motion} onClick={() => setFrozen((value) => !value)}>
+          {t("flow.freeze")}
+        </button>
         <span className="flow-keys">{t("flow.keys")}</span>
       </div>
+      {!motion && <p className="flow-motion-off">{t("flow.motionOff")}</p>}
       <p className="flow-summary">{t("flow.summary", { nodes: model.nodes.size, edges: model.edges.size })}</p>
+      <p className="flow-leader">
+        {leader ? t("flow.leader", { name: model.nodes.get(leader)?.label ?? leader }) : t("flow.noLeader")}
+      </p>
+      {metrics?.reduced && (
+        <p className="flow-reduced">
+          {t("flow.reduced", { bundled: metrics.coalescedEvents, dropped: metrics.overCapacityEvents })}
+        </p>
+      )}
       <Diagnostics model={model} />
       <div className="flow-body">
         <div className="flow-canvas" onKeyDown={onKeyDown}>
@@ -319,21 +449,35 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
             <g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`} data-zoom={view.zoom}>
               <g aria-hidden="true">
                 {[...model.edges.values()].map((edge) => {
-                  const from = positions.get(edge.from);
-                  const to = positions.get(edge.to);
+                  const from = position(edge.from);
+                  const to = position(edge.to);
                   if (!from || !to) return null;
                   const geometry = edgeGeometry(from, to);
                   return (
-                    <g key={edge.id} className={`flow-edge ${edge.configured ? "flow-edge-configured" : "flow-edge-group"}`}>
+                    <g
+                      key={edge.id}
+                      ref={(element) => {
+                        if (element) {
+                          edgeRefs.current.set(edge.id, {
+                            from: edge.from, to: edge.to,
+                            path: element.querySelector("path")!, label: element.querySelector("text")!,
+                          });
+                        } else edgeRefs.current.delete(edge.id);
+                      }}
+                      className={`flow-edge ${edge.configured ? "flow-edge-configured" : "flow-edge-group"}`}
+                      style={{ opacity: edgeOpacity(edge.lastObservedAtMs, nowMs) }}
+                      data-edge-id={edge.id}
+                    >
                       <path d={geometry.path} markerEnd={`url(#${markerId})`} />
                       <text x={geometry.label.x} y={geometry.label.y} className="flow-edge-label">{edgeLabel(edge)}</text>
                     </g>
                   );
                 })}
               </g>
+              <g className="flow-pulses" aria-hidden="true" ref={pulseLayer} />
               {order.map((id) => {
                 const node = model.nodes.get(id)!;
-                const at = positions.get(id)!;
+                const at = position(id)!;
                 const badges = currentBadges(model, id, nowMs);
                 return (
                   <g
@@ -342,8 +486,8 @@ export default function TelegramFlowView({ feed }: { feed: FlowFeed }) {
                       if (element) nodeRefs.current.set(id, element);
                       else nodeRefs.current.delete(id);
                     }}
-                    className={`flow-node flow-node-${node.kind}${node.ambiguous ? " flow-node-ambiguous" : ""}${selected === id ? " flow-node-selected" : ""}`}
-                    transform={`translate(${at.x} ${at.y})`}
+                    className={`flow-node flow-node-${node.kind}${node.ambiguous ? " flow-node-ambiguous" : ""}${selected === id ? " flow-node-selected" : ""}${leader === id ? " flow-node-leader" : ""}`}
+                    transform={`translate(${at.x.toFixed(1)} ${at.y.toFixed(1)})`}
                     role="button"
                     tabIndex={id === tabStop ? 0 : -1}
                     aria-pressed={selected === id}

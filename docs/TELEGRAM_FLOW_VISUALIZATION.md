@@ -650,6 +650,53 @@ Part 2 (rendered):
   The node name says what kind of node it is, and the HTML Inspector holds
   every value and fact, so a busy bus produces no announcements.
 
+## 12. U21 motion decisions (goal-ui owner, 2026-10-04)
+
+Parts A and B (published before the measurements of part C):
+
+- **Window and leader in the reducer.** `flowModel.ts` keeps observed send
+  times per source (one per row, so fan-out to configured members never
+  counts) and per edge, inside a 60 s window that drops an observation at
+  exactly 60 s. Leader: most observations; an exact tie keeps the current
+  leader, otherwise the lowest identity; no traffic, no leader. Rows of
+  unknown age are not placed in the window.
+- **Pulse events.** Only rows observed within 2 s of their admission become
+  events (bounded ring of 2,048, overflow counted). The animator again
+  accepts only events observed within 2 s of its own clock, so neither a
+  reattached backlog, a hidden page nor opening the tab later replays
+  history.
+- **Animator** (`flowAnimator.ts`): no React and no DOM; frames, timers,
+  clock and visibility are injected. It steps the solver (`flowDynamics.ts`,
+  the U19 layout centred on 0/0 and seeded from the stable hex slots) and
+  animates pulses of 700 ms. A batch of more than 24 events is bundled per
+  pair and group address with the represented count, and more than 160
+  simultaneous pulses are counted instead of drawn. It requests frames only
+  while the layout cools or pulses run, and stops completely at rest.
+  Growth or a leader change reheats it (0.3). The 5 s nudge (0.08) fires only
+  when the windowed rates or the leader actually changed. The U19 study
+  nudged unconditionally, so its map never came to rest.
+- **Motion.** `flowMotion.ts` reads the app's Motion level
+  (`data-motion-level`, observed) and the OS `prefers-reduced-motion`
+  (observed). Off cancels the pending frame, the nudge timer and every pulse
+  at once; positions stay where they are. Values, direction markers, the
+  Inspector, fading and expiry continue.
+- **Freeze** fixes geometry only: no solver step and no nudge, while pulses,
+  values, counts and the leader label stay live. It is disabled with motion
+  off, because the layout is already still.
+- **Fade and refresh.** `edgeOpacity`: full for 10 s after the last
+  observation, then down to 0.35 over 60 s, never lower; an edge of unknown
+  observation time stays at 0.35. A once-a-second refresh, skipped while the
+  page is hidden, re-renders the flow view only, which updates fades, the
+  leader label and value expiry. It is not motion and runs with motion off
+  too.
+- **Drawing.** Frames write node transforms, edge paths and pulse elements
+  directly (refs); React re-renders only for data and the refresh. A
+  sender is marked while its pulses start (`data-sending`), and the leader
+  node is emphasised. All colours are theme variables.
+- **Not done:** distinct group addresses between one pair share one path
+  and one label; they are told apart in the label (two plus "+n") and in the
+  Inspector, not by separate paths.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

@@ -7625,28 +7625,29 @@ accepted set (11, 12, 13, 14, 20, exact 21).
   tested. Exact23 now has bounded verified import/storage/report/replay support;
   unknown manufacturer semantics and full runtime compatibility remain unsupported.
 
-## 154. The telegram-flow view is static and checked in Chromium only
+## 154. The telegram-flow view is checked in Chromium only; load figures follow in U21 part C
 
-**Status.** Introduced by U20 (2026-10-04). The bus monitor's **Flow** view
-(`TelegramFlowView.tsx`, reducer `flowModel.ts`, rules in
-TELEGRAM_FLOW_VISUALIZATION §11) is fed by the monitor's own poll loop and
-the AR20 snapshot route. It is read-only.
+<a id="154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"></a>
+
+**Status.** Introduced by U20 (2026-10-04); motion added by U21 parts A and B.
+The bus monitor's **Flow** view (`TelegramFlowView.tsx`, reducer
+`flowModel.ts`, animator `flowAnimator.ts`; rules in
+TELEGRAM_FLOW_VISUALIZATION §11 and §12) is fed by the monitor's own poll
+loop and the AR20 snapshot route. It is read-only.
 
 **What remains.**
 
-- **Static layout.** Nodes are placed by order of appearance on hex rings and
-  never move. Activity-dependent distances, the observed-sender leader,
-  travelling pulses, quiet-edge fading and the *Freeze layout* control are U21
-  scope. A frozen-layout button without a moving layout would be a control that
-  does nothing, so it is not offered yet.
 - **Configured, not received.** Lines to devices are project configuration.
   Values at configured members are inferred from the group address, not read
   back. This is the intended meaning and is stated in the view and the guide.
-- **Re-rendering.** Every admitted batch and every value expiry re-renders the
-  whole monitor panel, including its table of up to 1,000 rows. U21 measures
-  dense bursts and long sessions; no load claim is made here.
-- **Evidence.** Unit tests (happy-dom) and Chromium e2e with intercepted,
-  synthetic traffic (`e2e/telegram-flow.e2e.ts`). There is no real-bus
-  evidence, no native WebKitGTK run and no screen-reader check. Values and
-  lines are hidden from assistive technology on purpose; the Inspector is the
-  accessible path, and it has not been tried with Orca.
+- **One path per pair.** Several group addresses between the same two nodes
+  share one curved path; the label names two and counts the rest, and the
+  Inspector lists all.
+- **Load.** Dense-burst and long-session CPU, memory, frame and lag figures
+  are U21 part C; until they are recorded, no load claim is made.
+- **Evidence.** Unit tests (happy-dom, fake scheduler) and Chromium e2e with
+  intercepted synthetic traffic (`e2e/telegram-flow.e2e.ts`,
+  `e2e/telegram-flow-motion.e2e.ts`, frames and intervals counted in the
+  page). No real-bus evidence, no native WebKitGTK run, no screen-reader
+  check. Values and lines are hidden from assistive technology on purpose;
+  the Inspector is the accessible path, and it has not been tried with Orca.

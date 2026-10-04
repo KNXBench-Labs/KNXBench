@@ -269,7 +269,11 @@ describe("one editing workspace", () => {
     // and `TelegramFlowView.tsx` renders. None of them calls the API itself;
     // the panel passes `fetchFlowSnapshot`, a read, which is the one new
     // entry in the API inventory below. No mutation is added.
-    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx"]) {
+    // U21 adds the motion modules: `flowDynamics.ts` (pure solver),
+    // `flowAnimator.ts` (frames and timers through an injected scheduler) and
+    // `flowMotion.ts` (reads the Motion setting and the OS preference). None
+    // touches the API or project state.
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts"]) {
       const moduleGraph = valueImportGraph(module);
       expect(apiCallsIn(moduleGraph)).toEqual([]);
       expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
@@ -301,9 +305,12 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
+      "flowAnimator.ts",
+      "flowDynamics.ts",
       "flowFeed.ts",
       "flowLayout.ts",
       "flowModel.ts",
+      "flowMotion.ts",
       "flowWire.ts",
       "gaNotation.ts",
       "gatewayEndpoint.ts",

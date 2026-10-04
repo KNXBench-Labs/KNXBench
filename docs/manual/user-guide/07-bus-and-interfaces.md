@@ -199,9 +199,23 @@ send anything.
   it received them, never against a later edit. A new session starts a new
   map; nothing is stored.
 
-The layout is fixed in this version: a node keeps its place once drawn.
-Activity-dependent distances, travelling pulses and fading follow (see
-[known limitations §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-static-and-checked-in-chromium-only)).
+- **Motion.** Each telegram sends a short pulse along its lines; the sender's
+  ring lights up as it leaves. Pairs that talk often move closer, quiet ones
+  drift apart, and the most active sender of the last 60 seconds moves
+  towards the centre and is named above the map. Lines that stay quiet fade
+  after ten seconds to a faint resting line; they never disappear while the
+  session lasts. A pulse is an illustration: the value is already shown when
+  the telegram arrives, not when the pulse does.
+- **Freeze layout** stops the movement of the nodes. Pulses, values and the
+  sender ranking keep running.
+- **Motion Off** (in the settings) or the system's *reduce motion* stops all
+  movement and pulses at once; values, arrows and the Inspector stay. Freeze
+  is then not needed and is greyed out.
+- On a very busy bus, many telegrams on the same path are drawn as one pulse
+  marked ×*n*, and more than 160 at once are counted rather than drawn. A
+  note above the map says so. Values and counts are always complete.
+
+See [known limitations §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c).
 
 ## Sending a value
 

@@ -166,6 +166,43 @@ evidence are external live work; Group Monitor UI, row cap and discovery
 acceptance belong to the UI owner. No scan speed promise, multi-tunnel
 design or hardware support is added.
 
+## AR13 privacy and deployment-security dossier
+
+Claude session, 2026-10-04, on user request alongside the Codex alpha
+session. Offline only; no TLS service, role system, host or firewall change.
+
+| Strand | Finding | Change and evidence |
+| --- | --- | --- |
+| Privacy (KL-106) | Redaction of the four classes held in every channel. Gap: `report.md` named only what it removes, and described `bus-telegrams.json` as carrying addresses — not its values (text included) and timestamps, which can show when the installation was in use. | `report.md` now names every kept class and the telegram file's content. `every_privacy_class_is_either_redacted_or_named_in_the_report`: one synthetic fixture per class through description, client facts and log fields (RED on the warning, GREEN after); 3/3 mutants. |
+| Authentication (KL-22) | The guard test covered seven hand-picked routes; a route added outside the guard would only fail if someone also listed it. | `every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four` scans all route declarations (97 method/path pairs); an added unguarded route is caught only by this test (mutant). Bind address has no override (`bind_address(auth_required)` only). |
+| Provenance (KL-65) | `--version` named the last commit even for a modified tree. | `crates/knx-build-stamp` (shared by both binaries): `KNX_REQUIRE_CLEAN_TREE=1` re-runs on every build and refuses a modified/unconfirmed tree. Unit + real-git tests (10), 5 mutants; end-to-end on a real checkout: clean → stamped, edit → refused, without the always-re-run watch → falsely stamped (measured, now pinned by a test). |
+
+### Deployment and privacy checklist (for AR15/AR17 and release notes)
+
+1. Build release artifacts with `KNX_REQUIRE_CLEAN_TREE=1`; a development
+   build's `+g<sha>` names a commit, not a tree.
+2. A networked `knx-server` binds `0.0.0.0` only with `KNX_AUTH_PASSWORD_HASH`
+   (preferred) or `KNX_AUTH_PASSWORD`; without either it binds `127.0.0.1`.
+3. Put a TLS-terminating reverse proxy in front and set
+   `KNX_AUTH_COOKIE_SECURE=1` there; plain HTTP exposes password and cookie.
+4. One shared password: no accounts, roles, audit trail or CSRF tokens; not
+   safe for direct Internet exposure; not multi-user isolation (§63).
+5. Debug reports: IPs, home prefix and hostname are replaced in `report.md`,
+   `environment.json`, `log.json`; everything else stays, as `report.md`
+   says. `bus-telegrams.json` is unredacted (addresses, names, values,
+   timestamps) and opt-in. Nothing is uploaded; review before sharing.
+
+### Handed over
+
+**For the UI session / Web-lock holder:** the dialog string
+`debugReport.privacyTelegrams` (en/de) names addresses and names only; add
+that the file also keeps every telegram value (text values included) and its
+timestamp. Backend wording to mirror: `report.md`'s second paragraph
+(`apps/knx-server/src/debug_report.rs`, `report_markdown`).
+
+**For the alpha-release session (AR17):** build the candidate with
+`KNX_REQUIRE_CLEAN_TREE=1`.
+
 ## Stable limitation identity
 
 AR05 implementation/audit is published as
@@ -294,7 +331,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `SAFE-03` | P1 | `goal-commission.md` — owner only | WAITING_OWNER | docs/KNOWN_LIMITATIONS.md §7 / goal-commission.md §3; Adopt scoped owner evidence, retain safety/spec/hardware residue; commissioning gate contract above |
 | `DATA-01` | P1 | AR02 | DONE | Nine checked allocators; synthetic maximum-ID/native/CSV/CLI/HTTP/mapper and rollback regressions; three behavioral mutants; final offline gate receipt .ai/logs/2026-10-01_codex_alpha-id-exhaustion.md. Parked mutation enforcement and catalog UI scope remain separate. |
 | `KL-129` | P1 | AR03 | WAITING_DECISION | docs/KNOWN_LIMITATIONS.md §129; Reserved user decision; see decision contract above |
-| `KL-106` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §106; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-106` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §106; AR13: fixture audit across every class and channel; `report.md` now names every kept class and the telegram file's values/timestamps; dialog wording handed to the Web-lock holder; no anonymity claim |
 | `DOC-01` | P1 | AR00 | DONE | goal.md §3 / §12.2 / docs/LIMITATION_TRIAGE.md / apps/knx-server/src/domain.rs; AR00 source/test and provenance reconciliation above; doc/ledger gate receipt in alpha-queue log |
 | `KL-1` | P1 | AR06 | BLOCKED_EXTERNAL | docs/KNOWN_LIMITATIONS.md §1; Missing independent sample/source; exact fallback/unblock contract above; no invented semantics |
 | `KL-13` | P1 | AR08 | TODO | docs/KNOWN_LIMITATIONS.md §13; Retained boundary; AR08 verifies subcases before changing status |
@@ -303,7 +340,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-130-GATE` | P1 | AR01 | DONE | docs/KNOWN_LIMITATIONS.md §130 (Gate); AR01 runtime-root/coverage CLI and scan regressions, old removed-tree reproduction, five behavioral mutants; verification delivery above |
 | `RELEASE-01` | P1 | AR18 | WAITING_OWNER | goal.md §9–10; Named final acceptance prerequisites above; not ready on historical receipts alone |
 | `RELEASE-02` | P1 | AR18 | WAITING_OWNER | goal.md §1 / §10; Named final acceptance prerequisites above; not ready on historical receipts alone |
-| `KL-22` | P1 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §22; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-22` | P1 | AR13 | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §22; AR13: every declared route (97 pairs) checked unauthenticated; bind address has no override; TLS/roles/audit/CSRF remain deployer boundaries (checklist in ALPHA_READINESS) |
 | `KL-63` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §63; goal.md §6: T22 explicitly parked outside v1 must-haves |
 | `KL-8` | P1 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §8/26; goal.md §6: Secure deferred 2026-09-11; not Secure support |
 | `UI-01` | P1 | `goal-ui.md` — owner only | DONE | goal-ui.md §0 / docs/IMPLEMENTATION_STATUS.md: U13; U13 closure dfa0cc79 / receipt 8a51b74d; source 36e6b6af; native/multicast boundaries retained |
@@ -431,7 +468,7 @@ above and are not new tasks assigned to an already closed owner queue.
 | `KL-107` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §107; accepted ADR-0025 and goal.md §6: data extension, no code plug-in API |
 | `KL-16` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §16; Retained boundary; AR15 verifies subcases before changing status |
 | `KL-42` | P3 | AR04 | DONE | docs/KNOWN_LIMITATIONS.md §42; published 216c673e no-op/doc correction, native/mutation/full-gate evidence and exact remote/artifact readback |
-| `KL-65` | P3 | AR13 | TODO | docs/KNOWN_LIMITATIONS.md §65; Retained boundary; AR13 verifies subcases before changing status |
+| `KL-65` | P3 | AR13 | DONE | docs/KNOWN_LIMITATIONS.md §65; AR13: `KNX_REQUIRE_CLEAN_TREE=1` release builds refuse a modified tree (`crates/knx-build-stamp`, ADR-0018 amendment); development builds still name a commit, not a tree; AR17 must build with the flag |
 | `KL-41` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §41; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-45` | P3 | Recorded boundary — AR00 provenance / AR15 claims | ACCEPTED_BOUNDARY | docs/KNOWN_LIMITATIONS.md §45; DIN-26 decision, 2026-09-27 (all twelve accepted; ambiguous-DPT residue only for KL-12) |
 | `KL-46` | P3 | AR15 | TODO | docs/KNOWN_LIMITATIONS.md §46; Retained boundary; AR15 verifies subcases before changing status |

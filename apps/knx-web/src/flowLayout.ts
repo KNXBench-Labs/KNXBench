@@ -5,6 +5,10 @@
 // TELEGRAM_FLOW_VISUALIZATION.md §5, §9.4).
 
 export const NODE_SPACING = 150;
+/** U21 fade: full emphasis while active, then down to a resting line. */
+export const QUIET_AFTER_MS = 10_000;
+export const FADE_MS = 60_000;
+export const RESTING_OPACITY = 0.35;
 export const NODE_RADIUS = 22;
 const MAX_BEND = 60;
 
@@ -22,29 +26,34 @@ function axialToPoint(q: number, r: number): Point {
 /** Positions by order: the centre, then ring after ring of the hex lattice. */
 export function placeNodes(ids: readonly string[]): Map<string, Point> {
   const placed = new Map<string, Point>();
-  let index = 0;
-  const take = (q: number, r: number) => {
-    if (index < ids.length) placed.set(ids[index++], axialToPoint(q, r));
-  };
-  take(0, 0);
-  for (let ring = 1; index < ids.length; ring++) {
+  const slots = hexSlots(ids.length);
+  ids.forEach((id, index) => placed.set(id, slots[index]));
+  return placed;
+}
+
+/** The first `count` lattice positions in placement order. */
+export function hexSlots(count: number): Point[] {
+  const slots: Point[] = [];
+  if (count > 0) slots.push(axialToPoint(0, 0));
+  for (let ring = 1; slots.length < count; ring++) {
     let q = -ring;
     let r = ring;
     for (const [dq, dr] of AXIAL_DIRECTIONS) {
       for (let step = 0; step < ring; step++) {
-        take(q, r);
+        if (slots.length < count) slots.push(axialToPoint(q, r));
         q += dq;
         r += dr;
       }
     }
   }
-  return placed;
+  return slots;
 }
 
 export interface EdgeGeometry {
   path: string;
   start: Point;
   end: Point;
+  control: Point;
   /** Midpoint of the curve, where the group-address label sits. */
   label: Point;
 }
@@ -72,5 +81,25 @@ export function edgeGeometry(from: Point, to: Point): EdgeGeometry {
   const start = trim(from, control);
   const end = trim(to, control);
   const f = (n: number) => n.toFixed(1);
-  return { path: `M${f(start.x)},${f(start.y)} Q${f(control.x)},${f(control.y)} ${f(end.x)},${f(end.y)}`, start, end, label };
+  return { path: `M${f(start.x)},${f(start.y)} Q${f(control.x)},${f(control.y)} ${f(end.x)},${f(end.y)}`, start, end, control, label };
+}
+
+/** A point on the drawn curve: 0 at the start, 1 at the end. */
+export function pointOnEdge(geometry: EdgeGeometry, t: number): Point {
+  const u = 1 - t;
+  const { start, control, end } = geometry;
+  return {
+    x: u * u * start.x + 2 * u * t * control.x + t * t * end.x,
+    y: u * u * start.y + 2 * u * t * control.y + t * t * end.y,
+  };
+}
+
+/** U21: an edge's emphasis from its last observation; never invisible.
+ * Unknown observation time (`-Infinity`) is a resting line, not fresh. */
+export function edgeOpacity(lastObservedAtMs: number, nowMs: number): number {
+  if (!Number.isFinite(lastObservedAtMs)) return RESTING_OPACITY;
+  const quiet = nowMs - lastObservedAtMs;
+  if (quiet <= QUIET_AFTER_MS) return 1;
+  const share = Math.min(1, (quiet - QUIET_AFTER_MS) / FADE_MS);
+  return share >= 1 ? RESTING_OPACITY : 1 - (1 - RESTING_OPACITY) * share;
 }

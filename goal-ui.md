@@ -610,7 +610,9 @@ intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
 
 ### U21 — Make the nervous system dynamic, honest and bounded [web]
 
-**Open.** Dependency: U20. Keep data admission independent of solver/rendering.
+**In progress (2026-10-04).** Parts A (window, leader, events) and B (layout,
+animator, motion, Freeze, fade, coalescing) are published; part C records the
+dense-burst and long-session figures and closes the package. Dependency: U20. Keep data admission independent of solver/rendering.
 
 - [ ] Add event-triggered directional traveling pulses, opposite-direction
   traffic, group-specific paths/labels and brief source feedback. Values stay

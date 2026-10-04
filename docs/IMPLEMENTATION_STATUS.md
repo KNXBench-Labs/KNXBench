@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — U21 parts A and B: the flow view moves, and stops when asked
+
+- Reducer: 60 s sender window and leader (fan-out counts once; exact tie
+  keeps the leader), edge activity, bounded ring of fresh events.
+  `flowDynamics.ts` promotes the U19 layout (centred, seeded from the stable
+  hex slots). `flowAnimator.ts` runs solver and pulses through an injected
+  scheduler: it bundles more than 24 events per batch with their count,
+  counts beyond 160 pulses instead of drawing them, requests frames only
+  while needed and nudges only on real change. `flowMotion.ts` follows the
+  Motion setting and the OS reduce preference, including changes mid-run.
+  The view adds Freeze (geometry only), the leader label, a reduced-rendering
+  note, the sending ring, fading (10 s, then 60 s down to 0.35) and a 1 Hz
+  refresh that is skipped while hidden. Rules: TELEGRAM_FLOW_VISUALIZATION
+  §12. Load figures follow in part C.
+- Evidence: RED first for the reducer (7), motion (2), dynamics (9, ported
+  from U19 plus seeding and growth), animator (11, fake scheduler) and
+  fade/curve (3). View tests (4) were written after the code and covered by 6
+  mutants. Chromium `e2e/telegram-flow-motion.e2e.ts` (5) counts frames and
+  intervals in the page. Motion Off and OS reduce mid-flight leave 0 frames
+  in a second of live traffic. Freeze holds positions while a new sender
+  appears. Leaving the tab clears both animator timers. With motion off,
+  markers stay and values expire. The U20 view fails 4/5. Mutants: reducer
+  8/8, animator 12/12, view 6/6, browser wiring 5/5.
+
 ## 2026-10-04 — U20 part 2: the bus monitor gets a Flow view
 
 - The bus monitor now has **Telegrams | Flow** tabs. The flow view

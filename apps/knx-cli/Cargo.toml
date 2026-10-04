@@ -31,3 +31,6 @@ tokio = { workspace = true, features = ["rt", "signal"] }
 tempfile.workspace = true
 zip.workspace = true
 knx-testsupport.workspace = true
+
+[build-dependencies]
+knx-build-stamp.workspace = true

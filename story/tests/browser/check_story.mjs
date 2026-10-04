@@ -40,8 +40,34 @@ async function openPage(browser, viewport, options = {}) {
 
 const totalSteps = (page) => page.evaluate(() => JSON.parse(document.getElementById("story-data").textContent).events.length);
 const state = (page, key) => page.evaluate((k) => window.__storyState[k](), key);
-const runningAnimations = (page) => page.evaluate(() =>
-  document.getAnimations().filter((animation) => animation.playState === "running").length);
+// Ambient loops (signal pulses, letter swaps) are named "ambient-…" and never end on their own;
+// every other effect (growth, retreat, refocus) must. Both kinds must stop when motion is off.
+const runningAnimations = (page) => page.evaluate(() => document.getAnimations().filter((animation) =>
+  animation.playState === "running" && !(animation.animationName || animation.id || "").startsWith("ambient")).length);
+const runningAmbient = (page, name) => page.evaluate((n) => document.getAnimations().filter((animation) =>
+  animation.playState === "running" && (animation.animationName || animation.id || "") === n).length, name);
+async function waitForAmbient(page, name, timeout) {
+  for (let waited = 0; waited <= timeout; waited += 100) {
+    if (await runningAmbient(page, name)) return true;
+    await page.waitForTimeout(100);
+  }
+  return false;
+}
+// Samples for the whole window, so a short effect between two samples cannot slip through.
+async function ambientDuring(page, ms) {
+  let seen = 0;
+  for (let waited = 0; waited < ms; waited += 50) {
+    seen = Math.max(seen, (await runningAmbient(page, "ambient-pulse")) + (await runningAmbient(page, "ambient-char-swap")));
+    await page.waitForTimeout(50);
+  }
+  return seen;
+}
+const expectedVisible = (page, index) => page.evaluate((i) => {
+  const data = JSON.parse(document.getElementById("story-data").textContent);
+  const order = new Map(data.chapters.map((chapter, n) => [chapter.id, n]));
+  return data.events.filter((event) => order.get(event.chapter) <= i).length;
+}, index);
+const visibleStoryNodes = (page) => page.$$eval("#story-graph .node:not(.is-hidden)", (nodes) => nodes.length);
 
 async function scrollToChapter(page, number) {
   await page.evaluate((n) => document.getElementById(`chapter-${n}`).scrollIntoView({ block: "start" }), number);
@@ -197,15 +223,18 @@ async function motion(browser) {
   await page.waitForTimeout(50);
   check("motion off prevents new growth effects", (await runningAnimations(page)) === 0);
 
+  const stillWhileOff = await ambientDuring(page, 4500);
+  check("motion off keeps connections and headlines still", stillWhileOff === 0, stillWhileOff);
+
   await page.uncheck("#motion-off");
   await page.click("#next-chapter");
   await page.waitForTimeout(160);
   const runningAgain = await runningAnimations(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.waitForTimeout(30);
-  const runningReduced = await runningAnimations(page);
+  await page.waitForSelector("#reduced-note", { state: "visible", timeout: 2000 }).catch(() => {});
+  const runningReduced = (await runningAnimations(page)) + (await ambientDuring(page, 3000));
   const note = await page.isVisible("#reduced-note");
-  check("OS reduced motion cancels growth while it is running",
+  check("OS reduced motion cancels growth and ambient loops while they run",
     runningAgain > 0 && runningReduced === 0 && note, { runningAgain, runningReduced, note });
   await page.click("#replay-growth");
   await page.waitForTimeout(50);
@@ -218,6 +247,56 @@ async function motion(browser) {
   const replayDone = await runningAnimations(page);
   check("replay grows again and every effect ends on its own", replayRunning > 0 && replayDone === 0,
     { replayRunning, replayDone });
+  await context.close();
+}
+
+async function ambient(browser) {
+  const { context, page } = await openPage(browser, { width: 1440, height: 900 });
+  await page.goto(storyUrl);
+  await scrollToChapter(page, 3);
+  await page.waitForTimeout(1600);
+  const pulses = await runningAmbient(page, "ambient-pulse");
+  check("visible connections carry looping signal pulses", pulses > 0, pulses);
+  const swapped = await waitForAmbient(page, "ambient-char-swap", 6000);
+  const heading = await page.evaluate(() => {
+    const h = document.getElementById("chapter-3-title");
+    return { label: h.getAttribute("aria-label"), text: h.textContent, boxes: h.querySelectorAll(".char").length };
+  });
+  const title = await page.evaluate(() => JSON.parse(document.getElementById("story-data").textContent).chapters[2].title);
+  const named = await page.getByRole("heading", { name: title, exact: true }).count();
+  check("headline letters roll through in place and headings keep their text and name",
+    swapped && heading.label === title && heading.text === title && heading.boxes > 0 && named === 1,
+    { swapped, heading, named });
+  await context.close();
+}
+
+async function scrollBack(browser) {
+  const { context, page } = await openPage(browser, { width: 1440, height: 900 });
+  await page.goto(storyUrl);
+  for (const n of [1, 2, 3, 4]) {
+    await scrollToChapter(page, n);
+    await page.waitForTimeout(600);
+  }
+  await page.waitForTimeout(1200);
+  await scrollToChapter(page, 2);
+  const leaving = await page.$$eval("#story-graph .is-leaving", (nodes) => nodes.length);
+  const retreating = await runningAnimations(page);
+  await page.waitForTimeout(1600);
+  const visible = await visibleStoryNodes(page);
+  const expected = await expectedVisible(page, 1);
+  const left = await page.$$eval("#story-graph .is-leaving", (nodes) => nodes.length);
+  const settled = await runningAnimations(page);
+  check("scrolling back retracts later steps with an animation and ends in the earlier chapter's state",
+    leaving > 0 && retreating > 0 && visible === expected && left === 0 && settled === 0 &&
+    (await state(page, "chapter")) === 1, { leaving, retreating, visible, expected, left, settled });
+
+  await page.check("#motion-off");
+  await scrollToChapter(page, 4);
+  await scrollToChapter(page, 1);
+  const instant = { leaving: await page.$$eval("#story-graph .is-leaving", (nodes) => nodes.length),
+    visible: await visibleStoryNodes(page), expected: await expectedVisible(page, 0) };
+  check("with motion off, scrolling back is immediate",
+    instant.leaving === 0 && instant.visible === instant.expected, instant);
   await context.close();
 }
 
@@ -267,6 +346,8 @@ for (const [label, viewport, mobile] of [["desktop 1440×900", { width: 1440, he
   await context.close();
 }
 await motion(browser);
+await ambient(browser);
+await scrollBack(browser);
 await noScript(browser);
 await hostile(browser);
 await browser.close();

@@ -161,6 +161,13 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
   the built pages are now versioned in `story/previews/` (`build --preview`),
   guarded by a rebuild-equality test (53 unit tests).
+- Story motion update (user request, site only, no content change): scrolling
+  back retracts later steps and refocuses the current chapter; looping signal
+  pulses travel each visible connection (paused off screen); random headline
+  letters roll through in place (Web Animations API, accessible names kept).
+  All of this stops with *Motion off* and reduced motion. Previews of `.1`–`.3`
+  were rebuilt from unchanged candidates. Browser check: 46/46; two
+  realistic mutants (no retreat; swaps ignoring motion) are each caught.
 - Narrator edition `2026-10-04.3` (user request): the story is told by a gloomy
   AI narrator in homage to Marvin. Optional, schema-enforced `edition.narrator`
   (hero, aside label, mandatory disclosure); editions without it render

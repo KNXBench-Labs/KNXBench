@@ -1,5 +1,21 @@
 # Gira and MDT product-database corpus
 
+## Scheme23 structural research — 2026-10-04
+
+Base575a2d1d,all853 original hashes independently exact. Bounded offline
+census852 master documents/one BadZipFile scan refusal selects2 scheme23
+packages with8 complete XML documents,2 each Master/Catalog/Hardware/
+ApplicationProgram. No observed cross-document namespace mismatch,foreign
+elements or qualified attributes;4 positive/3 negative controls. These are
+census units,not importer acceptance or losslessness. Actual unchanged fresh
+Release CLI refuses both original-name inputs with exact namespace23 errors
+and atomic empty tables. Source712/logs/binary and all853 originals independently
+verified after probe,private temp0/config files0/raw or item vectors0.
+Public ProductDB631/0/25/28 blocks,strict Clippy/Release build passed. Official
+project Schema23 documentation excludes complete manufacturer grammar/runtime
+semantics; see [primary source and admission prerequisites](PRODUCT_SCHEME_23_RESEARCH.md).
+Production namespace set unchanged;KL153 remains open. Research delivery pending.
+
 ## KL-152 coupled evidence-work budget — delivered, 2026-10-04
 
 At base80a5500d, a bounded descriptor-relative census reverified all853 original

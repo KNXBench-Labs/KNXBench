@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:56
+Web lock: taken by claude-goal-ui-owner for U21 (telegram flow: dynamic layout, pulses, fade, Freeze, load measurement)
+- **Completed:** Lock taken only. U20 is published (`dc298b78`).
+- **Pending/Next Steps:** U21 per `goal-ui.md` §3c: event-triggered pulses, activity-dependent bounded layout with the observed-sender leader, Freeze for geometry only, quiet-edge fade, coalescing under load, motion Off and OS reduce stopping the solver, timers and frames, and real burst and long-session measurements. Release the lock in the delivering entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 22:55
 Web lock: released by claude-goal-ui-owner (U20 delivered: part 1 `4525c36e`, part 2 here)
 - **Completed:** **U20 done: the bus monitor gets a Flow view.** Telegrams | Flow tabs. `TelegramFlowView.tsx` is fed by the monitor's own poll loop via `flowFeed.ts` (one model per session, one snapshot fetch per generation, one expiry timer); it opens, polls and writes nothing. Senders, configured members (solid = configured, not received), unresolved GAs (box, dashed), static hex layout, up to 3 values per node (◇ = inferred member value, 7 s from observation), HTML Inspector with values, connections and per-object flags of the row's own generation, keyboard (roving tab stop, Enter, Shift+arrows, +/−, 0), theme variables only, nothing announced per telegram, en/de, user guide "The flow view", KNOWN_LIMITATIONS §154. Evidence: Chromium `e2e/telegram-flow.e2e.ts` 7 cases (real panel, intercepted synthetic traffic, `page.clock`, live theme switch), 6/6 red on the old panel; mutants reducer 23/23, view 11/11 (incl. stub), panel 7/7, feed 1/1; screenshots in docs/design/2026-10-04-telegram-flow-u20/ inspected. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 510 ok; anchors 453 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,963/113 files, complete Chromium suite 125/125, whitespace; source frozen. goal-ui U20 [x] (Freeze moves to U21: static layout). Log: `.ai/logs/2026-10-04_claude_ui-u20-part2-view.md`.

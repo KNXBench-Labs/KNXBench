@@ -1,6 +1,6 @@
 # Gira and MDT product-database corpus
 
-## KL-152 coupled evidence-work budget — candidate, 2026-10-03
+## KL-152 coupled evidence-work budget — delivered, 2026-10-04
 
 At base80a5500d, a bounded descriptor-relative census reverified all853 original
 hashes and counted the four size-admitted scheme14 packages (16 XML documents).
@@ -30,7 +30,7 @@ archives belong in `package`, not member-blob `source_file`, and three synthetic
 storage controls precede the accepted corrected pair. The rejected attempt
 remains separate evidence, not an importer failure or acceptance.
 
-The current **unpublished policy candidate** sets coupled scan ceilings to
+The **published bounded policy** sets coupled scan ceilings to
 1048576 items/256MiB estimated bytes. Depth1024 and all ZIP/namespace/grammar
 limits remain unchanged. No summary fallback or truncation is introduced.
 Two registered public REDs prove the old item and byte ceilings; six new tests
@@ -53,8 +53,11 @@ The first latest public18 attempt exited0 in all commands but a wrong rebuild
 postcheck rejected it:CLI has no server dependency. CLI/store rebuild in Release,
 server rebuild in workspace; corrected guard1 positive/3 negative controls and
 actual18 retry pass. Rejected public/private-precondition receipts stay separate.
-Publication/readback/own final hygiene remain; scratch observation alone is not
-accepted as evidence for the built real binary.
+Code and acceptance docs are published as2b2a267f7873137ccbf3d0a5052a541a76573d59;
+normal main push,live/fetched refs and all9 blobs match. Docs-only commissioning
+closurebb62ae57 preserved,source712 unchanged; runtime receipts remain producer
+7f57abbb. Four own runtime directories removed; closing metadata/final hygiene
+remain separate. Scratch observation alone is not real-binary acceptance.
 This changes no runtime/module semantics, schema, DTOs, UI or ETS compatibility.
 
 Broad attempt1 exposed three registered retained-source regressions: dedicated

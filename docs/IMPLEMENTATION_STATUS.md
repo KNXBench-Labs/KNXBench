@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-## AR06R KL-152 verified coupled-budget candidate — 2026-10-04
+## AR06R KL-152 coupled-budget delivery — 2026-10-04
 
 Original853 identity/source80a5500d/706 inputs verified. Four size-admitted
 scheme14 packages/16 XML documents select two item refusals. Actual bounded
@@ -23,9 +23,12 @@ rechecked descriptor-relatively/no-follow; retained archives/atomic refusals,
 both binaries/source/logs verified,private temp0. No raw/item vectors persisted.
 First latest18-command attempt had a rejected rebuild-verifier contract,not
 a test failure:CLI does not depend on server; corrected guard and actual18
-retry pass. Failed receipts remain separate. Publication/readback/owned cleanup
-pending; new upstreambb62ae57 is seven docs/evidence paths only,not new code.
-KL152 remains open until delivery. No UI/DTO/schema,
+retry pass. Failed receipts remain separate. Docs-only commissioningbb62ae57
+was preserved as20a3c4cd with source712 unchanged. Code and acceptance docs
+published as2b2a267f7873137ccbf3d0a5052a541a76573d59; live/fetched refs and
+all9 outgoing blobs exact. Four own runtime directories removed; closing
+metadata/final two targets/runner/worktree cleanup are tracked separately.
+KL152 scoped correction is delivered. No UI/DTO/schema,
 bus, manufacturer runtime or ETS compatibility expansion. KL151/153 and Alpha
 remain open; KL151 research closing80a5500d delivered/cleaned.
 

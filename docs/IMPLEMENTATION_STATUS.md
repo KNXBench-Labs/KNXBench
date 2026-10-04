@@ -1,5 +1,17 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR13: privacy, authentication and provenance (Claude session)
+
+- Debug report: `report.md` (also the GitHub issue body) names every class
+  that survives redaction and says `bus-telegrams.json` keeps values (text
+  included) and timestamps. One synthetic fixture per class through every
+  input channel pins the redaction (KL-106).
+- Auth: the guard test now covers every declared route (97 method/path
+  pairs) instead of seven samples (KL-22).
+- New `crates/knx-build-stamp` replaces both identical build scripts;
+  `KNX_REQUIRE_CLEAN_TREE=1` makes a release build refuse a modified or
+  unconfirmed tree (KL-65, ADR-0018 amendment).
+
 ## 2026-10-04 — AR14: offline bus/CLI contracts (Claude session)
 
 - CLI `bus monitor`/`route-monitor`/`bus write` honour the `--project`

@@ -201,6 +201,34 @@ html:not(.js) .story{grid-template-columns:minmax(0,1fr)}
 .graph .edge.is-new.documented_cause{stroke-dasharray:1;animation:grow-thread 760ms cubic-bezier(.3,0,.2,1) backwards}
 .graph .edge.is-new:not(.documented_cause){animation:fade-in 520ms ease-out backwards}
 .graph .node.is-new{animation:arrive 380ms ease-out backwards;transform-box:fill-box;transform-origin:center}
+
+/* Scrolling back: later steps retract (growth in reverse), then the chapter that is current again
+   pulses once. Finite like the growth; .is-hidden is applied when the retreat ends. */
+@keyframes refocus{0%,100%{transform:none}40%{transform:scale(1.6)}}
+.graph .edge.is-leaving.documented_cause{stroke-dasharray:1;animation:grow-thread 460ms cubic-bezier(.4,0,.8,.4) reverse forwards}
+.graph .edge.is-leaving:not(.documented_cause){animation:fade-in 380ms ease-in reverse forwards}
+.graph .node.is-leaving{animation:arrive 320ms ease-in reverse forwards;transform-box:fill-box;transform-origin:center}
+.graph .date-label.is-leaving{animation:fade-in 300ms ease-in reverse forwards}
+.graph .node.is-refocus{animation:refocus 560ms ease-out;transform-box:fill-box;transform-origin:center}
+
+/* Ambient life (user request, 4 Oct 2026): a signal dot travels each visible connection, start to end,
+   in a loop, like a telegram on the bus. It pauses off screen and stops with Motion off and reduced motion. */
+@keyframes ambient-pulse{0%{stroke-dashoffset:1;opacity:0}6%,62%{opacity:1}70%,100%{stroke-dashoffset:0;opacity:0}}
+.graph .pulse{fill:none;stroke:var(--phosphor);stroke-width:calc(var(--px)*6);stroke-linecap:round;stroke-dasharray:.035 .965;
+ opacity:0;pointer-events:none;animation:ambient-pulse var(--pulse-dur,3s) linear var(--pulse-delay,0s) infinite}
+.graph .pulse.editorial{stroke:var(--violet);stroke-width:calc(var(--px)*4.2)}
+.story-graph .graph .edge:not(.is-past)+.pulse{filter:drop-shadow(0 0 calc(var(--px)*4) #88ffadcc)}
+.graph .edge.is-past+.pulse{stroke-width:calc(var(--px)*3.6);stroke-dasharray:0 1;filter:opacity(.45)}
+.graph .edge.is-hidden+.pulse,.graph .edge.is-new+.pulse,.graph .edge.is-leaving+.pulse{display:none}
+.graph .edge.is-dimmed+.pulse{filter:opacity(.16)}
+.graph.is-offscreen .pulse{animation-play-state:paused}
+
+/* Headline letters roll through in place, a random one or two at a time. The glyph slides out to the
+   right while its twin (::after) slides in from the left; the word itself never changes. */
+.char-word{display:inline;white-space:nowrap}
+.char{display:inline-block;position:relative}
+.char::after{content:attr(data-char);position:absolute;left:0;top:0;opacity:0;transform:translateX(-100%)}
+.char-glyph{display:inline-block}
 .event-card{transition:box-shadow 200ms ease-out}
 html.motion-off *,html.motion-off *::before,html.motion-off *::after{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

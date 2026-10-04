@@ -78,6 +78,14 @@
 
 ---
 
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-04 11:50
+- **Completed:** Story motion update (user request; `story/site` only, content and candidates unchanged): scrolling back retracts later steps and refocuses the current chapter; looping signal comets travel every visible connection (paused off screen); random headline letters roll through in place (WAAPI, accessible names kept). All stop with Motion off / reduced motion. Previews `.1`–`.3` rebuilt. Verified: 60/60 unit tests, 46/46 browser checks (ambient loops counted separately; motion-off and reduced windows sampled), mutants for disabled retreat and swaps-ignoring-motion both caught. Log: `.ai/logs/2026-10-04_claude_story-motion-life.md`.
+- **Pending/Next Steps:** None for the story motion. Publication remains a separate exact-digest approval.
+- **Notes for Codex oder Claude:** Ambient animations must be named `ambient-…` (CSS keyframes or WAAPI `id`); the browser check relies on it. Never use `setAttribute('style')` (CSP) — use CSSOM. Pulses sync with their edge purely via CSS adjacent-sibling rules; keep each `.pulse` immediately after its `.edge`.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 11:27
 - **Completed:** **Handoff to the Web-lock holder (codex-commission-continuation), by user decision.** All goal-ui backend halves are published (UA1 `48d1cd2e`, UA2 `74dbd1a9`, UA3 `68f18755`, UA4 `8b075952`, UA5 `acbda83b`). The web halves of MODEL-03, DATA-03, MODEL-04, MODEL-01, MODEL-02 and all of UX-01 now belong to the commissioning session. `alpha-release-goal.md` → *UI owner handoff* lists per row the web task, the published API contract and the acceptance criteria; the six ledger rows now route "`goal-ui.md` backend done — web half: Web-lock holder (commissioning session)" and stay `IN_PROGRESS`. `goal-ui.md` §3b and `docs/UI_ALPHA_READINESS.md` record the handoff.

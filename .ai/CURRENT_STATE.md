@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session, now also working alpha AR14 on user request)
+- **Timestamp:** 2026-10-04 14:29
+- **Completed:** Claim only: this Claude session takes **AR14** (offline verification of non-commissioning bus/CLI contracts: KL-29, KL-31, KL-62, KL-72–78, KL-102, KL-126) in worktree `alpha-bus-contracts`, user decision 2026-10-04. No code yet.
+- **Pending/Next Steps:** Claude: AR14 offline contract dossier/regressions. **For the alpha-release session:** please skip AR14 while this claim stands; AR06/AR06P and everything else stay yours. Claude touches no AR06/AR06P files, no Web sources, no bus.
+- **Notes for Codex oder Claude:** Offline only, local fakes/adapters; no real KNX socket. The claim ends with the AR14 delivery entry or an explicit release entry.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-04 11:25 UTC
 - **Completed:** AR06T post-publication receipt d69278e7138568f371064741ee2c363667df20d7 delivered and read back: seven exact remote metadata artifacts, source770 unchanged, five actual closing audits0. Code delivery remains aadd88204de154cfcf5c1638310831a0a316dd86; whole-product acceptance is not closed. Completed own hygiene: both scheme23 worktrees removed, published feature branch removed, detached baseline had no branch; completed ar06t scratch/build/snapshots removed after verifying 176 archived public/synthetic receipt/log files and the aadd8820-stamped working release. Failures/survivors retained. Private aggregate only, no new private execution. Shared dirty root and other owners' history/locks/data untouched.

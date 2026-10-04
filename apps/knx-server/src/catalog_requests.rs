@@ -29,6 +29,8 @@ pub struct CatalogRequestFingerprint {
     pub catalog_item_id: String,
     pub name: String,
     pub quantity: u32,
+    pub allocate_addresses: bool,
+    pub unique_names: bool,
 }
 
 /// The recorded result of one committed catalog request.
@@ -111,6 +113,8 @@ mod tests {
             catalog_item_id: "CI".into(),
             name: name.into(),
             quantity: 2,
+            allocate_addresses: false,
+            unique_names: false,
         }
     }
 

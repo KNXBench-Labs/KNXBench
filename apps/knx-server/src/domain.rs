@@ -2643,6 +2643,9 @@ pub struct CreatedCatalogDevice {
     pub index: u32,
     pub device_id: knx_core::DeviceId,
     pub name: String,
+    /// The allocated address (MODEL-04), `None` when allocation was not
+    /// requested.
+    pub address: Option<knx_core::IndividualAddress>,
     pub diagnostics: Vec<CreationDiagnostic>,
 }
 
@@ -2736,18 +2739,58 @@ pub fn create_device_impl(
     create_devices_impl(state, line_id, catalog_item_id, name, 1)
 }
 
-/// The first batch child reserves IDs, so child index 1 is catalog item 1.
-/// Keep the underlying typed error's wording while identifying a late
-/// failure's exact device; do not report an ID reservation as a device.
-fn catalog_creation_error(quantity: u32, error: knx_core::CommandError) -> String {
+/// The first batch child reserves IDs; each catalog item then contributes
+/// `children_per_item` children (its `CreateDevice`, plus its
+/// `SetIndividualAddress` when addresses are allocated). Keep the underlying
+/// typed error's wording while identifying a late failure's exact device; do
+/// not report an ID reservation as a device.
+fn catalog_creation_error(
+    quantity: u32,
+    children_per_item: usize,
+    error: knx_core::CommandError,
+) -> String {
     match error {
         knx_core::CommandError::BatchItem { index, source }
-            if quantity > 1 && index > 0 && index <= quantity as usize =>
+            if index > 0 && index <= quantity as usize * children_per_item =>
         {
-            format!("item {index}: {source}")
+            let item = (index - 1) / children_per_item + 1;
+            format!("item {item}: {source}")
         }
         other => other.to_string(),
     }
+}
+
+/// Names for a catalog batch. Without `unique` this is the original rule:
+/// one device keeps the caller's exact name, several get `"<base> <n>"` for
+/// n = 1…quantity, even if another device already has that name. With
+/// `unique` (MODEL-04) a name already used by any project device is skipped:
+/// one device keeps its exact name when free, else takes the first free
+/// `"<base> <n>"` from n = 2; several take the first free indexed names.
+fn catalog_device_names(
+    project: &knx_core::Project,
+    name: &str,
+    base: &str,
+    quantity: u32,
+    unique: bool,
+) -> Vec<String> {
+    if !unique {
+        return if quantity == 1 {
+            vec![name.to_string()]
+        } else {
+            (1..=quantity).map(|n| format!("{base} {n}")).collect()
+        };
+    }
+    let used: std::collections::HashSet<&str> =
+        project.devices.iter().map(|d| d.name.as_str()).collect();
+    if quantity == 1 && !used.contains(name) {
+        return vec![name.to_string()];
+    }
+    let first = if quantity == 1 { 2 } else { 1 };
+    (first..)
+        .map(|n| format!("{base} {n}"))
+        .filter(|candidate| !used.contains(candidate.as_str()))
+        .take(quantity as usize)
+        .collect()
 }
 
 /// Creates one or more devices as a single undoable command. No physical
@@ -2760,20 +2803,56 @@ pub fn create_devices_impl(
     name: String,
     quantity: u32,
 ) -> Result<CreateDeviceResponse, String> {
-    create_devices_with_request_impl(state, line_id, catalog_item_id, name, quantity, None)
+    create_catalog_devices_impl(
+        state,
+        CatalogCreateRequest {
+            line_id,
+            catalog_item_id,
+            name,
+            quantity,
+            ..Default::default()
+        },
+    )
 }
 
-/// [`create_devices_impl`] with an optional client `requestId` (DATA-03).
-/// A committed ID replays its recorded outcome instead of applying again;
-/// the same ID with different content is refused. See `catalog_requests`.
-pub fn create_devices_with_request_impl(
+/// One catalog creation request as the HTTP route receives it.
+#[derive(Debug, Clone, Default)]
+pub struct CatalogCreateRequest {
+    pub line_id: Option<u32>,
+    pub catalog_item_id: String,
+    pub name: String,
+    pub quantity: u32,
+    /// DATA-03 replay token, see `catalog_requests`.
+    pub request_id: Option<String>,
+    /// MODEL-04: give each new device the lowest free address on `line_id`.
+    pub allocate_addresses: bool,
+    /// MODEL-04: skip generated names already used in the project.
+    pub unique_names: bool,
+}
+
+/// [`create_devices_impl`] with the optional request features. A committed
+/// `request_id` replays its recorded outcome instead of applying again; the
+/// same ID with different content is refused. See `catalog_requests`.
+pub fn create_catalog_devices_impl(
     state: &AppState,
-    line_id: Option<u32>,
-    catalog_item_id: String,
-    name: String,
-    quantity: u32,
-    request_id: Option<String>,
+    request: CatalogCreateRequest,
 ) -> Result<CreateDeviceResponse, String> {
+    let CatalogCreateRequest {
+        line_id,
+        catalog_item_id,
+        name,
+        quantity,
+        request_id,
+        allocate_addresses,
+        unique_names,
+    } = request;
+    if allocate_addresses && line_id.is_none() {
+        return Err("address allocation needs a target line".into());
+    }
+    let options = CatalogCreateOptions {
+        allocate_addresses,
+        unique_names,
+    };
     let request = match request_id {
         None => None,
         Some(id) => {
@@ -2783,6 +2862,8 @@ pub fn create_devices_with_request_impl(
                 catalog_item_id: catalog_item_id.clone(),
                 name: name.clone(),
                 quantity,
+                allocate_addresses,
+                unique_names,
             };
             Some((id, fingerprint))
         }
@@ -2796,7 +2877,21 @@ pub fn create_devices_with_request_impl(
             return Ok(replay);
         }
     }
-    create_devices_recorded(state, line_id, catalog_item_id, name, quantity, request)
+    create_devices_recorded(
+        state,
+        line_id,
+        catalog_item_id,
+        name,
+        quantity,
+        options,
+        request,
+    )
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct CatalogCreateOptions {
+    allocate_addresses: bool,
+    unique_names: bool,
 }
 
 /// The recorded outcome for a committed request, with the current tree.
@@ -2839,6 +2934,7 @@ fn create_devices_recorded(
     catalog_item_id: String,
     name: String,
     quantity: u32,
+    options: CatalogCreateOptions,
     request: Option<(String, crate::catalog_requests::CatalogRequestFingerprint)>,
 ) -> Result<CreateDeviceResponse, String> {
     const MAX_CATALOG_QUANTITY: u32 = 32;
@@ -2968,18 +3064,27 @@ fn create_devices_recorded(
     {
         return Err("catalog ID range exhausted".into());
     }
-    let mut commands = Vec::with_capacity(quantity as usize);
+    // MODEL-04: both choices are made from the project as it is now, under
+    // the same lock that applies the batch, and refuse the whole request
+    // before any ID is reserved. The core re-validates every address.
+    let addresses = match (options.allocate_addresses, line_id) {
+        (true, Some(line)) => Some(
+            knx_core::free_line_addresses(project, knx_core::LineId(line), quantity as usize)
+                .map_err(|error| error.to_string())?,
+        ),
+        _ => None,
+    };
+    // The original single-create API stores the caller's exact name. The web
+    // UI trims its own input, but direct clients may have deliberate spacing
+    // that a new batch feature must not erase.
+    let names = catalog_device_names(project, &name, base_name, quantity, options.unique_names);
+    let batched = quantity > 1 || addresses.is_some();
+    let children_per_item = if addresses.is_some() { 2 } else { 1 };
+    let mut commands = Vec::with_capacity(quantity as usize * children_per_item);
     let mut created = Vec::with_capacity(quantity as usize);
-    for index in 1..=quantity {
+    for (index, device_name) in (1..=quantity).zip(names) {
         let device_id = ids.next_device_id().map_err(|error| error.to_string())?;
-        let device_name = if quantity == 1 {
-            // The original single-create API stores the caller's exact name.
-            // The web UI trims its own input, but direct clients may have
-            // deliberate spacing that a new batch feature must not erase.
-            name.clone()
-        } else {
-            format!("{base_name} {index}")
-        };
+        let address = addresses.as_ref().map(|all| all[index as usize - 1]);
         let mut com_objects = Vec::with_capacity(seeds.len());
         let mut enrich_inputs = Vec::with_capacity(seeds.len());
         for (ref_id, view) in &seeds {
@@ -3027,9 +3132,15 @@ fn create_devices_recorded(
             installation,
             line: line_id.map(knx_core::LineId),
         });
-        created.push((index, device_id, device_name, enrich_inputs));
+        if let Some(address) = address {
+            commands.push(knx_core::Command::SetIndividualAddress {
+                device: device_id,
+                address: Some(address),
+            });
+        }
+        created.push((index, device_id, device_name, address, enrich_inputs));
     }
-    let cmd = if quantity == 1 {
+    let cmd = if !batched {
         commands.pop().expect("exactly one device requested")
     } else {
         // Reserve and create as one undoable command. The core's Batch
@@ -3047,8 +3158,10 @@ fn create_devices_recorded(
     // itself: this function's return type carries creation diagnostics
     // `apply()` doesn't produce, and needs the enrichment pass below run
     // under the same `project` lock before releasing it).
-    let cmd_desc = if quantity == 1 {
+    let cmd_desc = if !batched {
         format!("{cmd:?}")
+    } else if addresses.is_some() {
+        format!("Catalog batch create: {quantity} devices with allocated addresses")
     } else {
         format!("Catalog batch create: {quantity} devices")
     };
@@ -3057,11 +3170,11 @@ fn create_devices_recorded(
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
         stack
             .do_command(project, cmd)
-            .map_err(|error| catalog_creation_error(quantity, error))
+            .map_err(|error| catalog_creation_error(quantity, children_per_item, error))
     };
     log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
     result?;
-    if quantity == 1 {
+    if !batched {
         // Retain the legacy single-command undo/log shape, without leaking
         // allocator IDs when that command was rejected.
         project.ids = ids;
@@ -3077,7 +3190,7 @@ fn create_devices_recorded(
     // are returned as creation diagnostics.
     let mut diagnostics = Vec::new();
     let mut items = Vec::with_capacity(created.len());
-    for (index, device_id, name, enrich_inputs) in created {
+    for (index, device_id, name, address, enrich_inputs) in created {
         let mut issues = Vec::new();
         for (com_id, ref_id, view) in &enrich_inputs {
             knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
@@ -3089,6 +3202,7 @@ fn create_devices_recorded(
             index,
             device_id,
             name,
+            address,
             diagnostics: item_diagnostics,
         });
     }
@@ -5717,9 +5831,33 @@ mod tests {
             ))),
         };
         assert_eq!(
-            catalog_creation_error(3, error),
+            catalog_creation_error(3, 1, error),
             "item 2: device 7 not found"
         );
+    }
+
+    #[test]
+    fn allocated_batches_map_both_children_of_an_item_to_that_item() {
+        // Children: 0 ReserveIds, then (CreateDevice, SetIndividualAddress) per item.
+        for (index, item) in [(1, 1), (2, 1), (3, 2), (6, 3)] {
+            let error = knx_core::CommandError::BatchItem {
+                index,
+                source: Box::new(knx_core::CommandError::DeviceNotFound(knx_core::DeviceId(
+                    7,
+                ))),
+            };
+            assert_eq!(
+                catalog_creation_error(3, 2, error),
+                format!("item {item}: device 7 not found")
+            );
+        }
+        let reservation = knx_core::CommandError::BatchItem {
+            index: 0,
+            source: Box::new(knx_core::CommandError::DeviceNotFound(knx_core::DeviceId(
+                7,
+            ))),
+        };
+        assert!(!catalog_creation_error(3, 2, reservation).starts_with("item"));
     }
 
     #[test]

@@ -221,11 +221,18 @@ WebKitGTK, hardware behavior and screen-reader announcements remain unverified.
 
 The product catalog can request 1–32 devices in one project command/undo
 step. Generated names use the entered base followed by a one-based index for
-multiple devices; the application does not deduplicate against pre-existing
-names. A selected line places the devices in that topology line, but **no
-physical addresses are allocated** (including when no device octets remain).
-Addresses must be assigned separately and validated by the address editor.
-This is a local project edit, not a KNX download or ETS-compatibility claim.
+multiple devices; by default the application does not deduplicate against
+pre-existing names. A selected line places the devices in that topology line,
+and by default **no physical addresses are allocated**. Two opt-in request
+flags (MODEL-04, server side) change that: `uniqueNames` skips names already
+used in the project, and `allocateAddresses` (requires a line) gives each new
+device the lowest free device octet 1–255 on that line in the same undo step,
+skipping octet 0, every address used anywhere in the project and the project
+exclusion list (`knx_core::free_line_addresses`). Too few free addresses
+refuse the whole batch before any ID is reserved. The allocator knows only the
+project, not devices on the real bus. The web catalog does not offer the two
+flags yet (Web lock). This is a local project edit, not a KNX download or
+ETS-compatibility claim.
 
 An older server may ignore the additive `quantity` field and return a legacy
 single-device response. The web client then refreshes the returned project,

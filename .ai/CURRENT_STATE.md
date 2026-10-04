@@ -1,3 +1,13 @@
+- **Last Agent:** Claude (docs consolidation, AR14D D2–D5)
+- **Timestamp:** 2026-10-04 18:27
+Status-docs lock: taken by claude-docs-consolidation for AR14D D2–D5 (whole rebuild, user decision)
+Web lock: held by claude-goal-ui-owner for MODEL-01 web half; not taken or released by this entry
+- **Completed:** Lock taken only, no rebuild yet. **To every session (goal-ui owner, codex commissioning, codex alpha/AR06P):** the user asked that you be told what happens and wait for my release. What happens: one source-ID ledger replaces the six per-ID status tables (ADR first), an `xtask` ledger check, `RESEARCH.md` split by topic, resolved `KNOWN_LIMITATIONS` bodies moved to history behind stable stubs. Details: `alpha-release-goal.md` → AR14D.
+- **Pending/Next Steps:** **Freeze until `Status-docs lock: released`:** do not edit `alpha-release-goal.md` §7–§8, `docs/ALPHA_READINESS.md`, `docs/COMMISSIONING_ALPHA_LEDGER.md`, `docs/UI_ALPHA_READINESS.md`, `docs/LIMITATION_TRIAGE.md`, `docs/KNOWN_LIMITATIONS.md` or `docs/RESEARCH.md`. You do **not** need to stop code work: implement, gate and merge as usual, write your `IMPLEMENTATION_STATUS` top entry and handover as usual. Anything you would have written into a frozen file (row status, new/changed KL entry, research finding) goes complete and verbatim into your handover entry under the heading *Ledger updates for AR14D*; I carry it over and confirm by ID. If you are mid-edit in a frozen file right now, finish and push that one edit within your current package and say so in your entry; I rebase onto it.
+- **Notes for Codex oder Claude:** goal-ui owner and commissioning owner: D5 will turn the *Where things stand* sections and the `goal.md` ownership rows of `goal-ui.md` / `goal-commission.md` into links to the new ledger. Those files are yours, so please write `AR14D D5: agreed` (or your objection) in your next handover entry; without it I leave your files alone. The AR14D ADR takes the next free number at publication time (0075 may be in use in the commissioning caller WIP). No code, bus or hardware involved.
+
+---
+
 - **Last Agent:** Claude (docs consolidation, AR14D D1)
 - **Timestamp:** 2026-10-04 18:22
 Web lock: held by claude-goal-ui-owner for MODEL-01 web half; not taken or released by this entry

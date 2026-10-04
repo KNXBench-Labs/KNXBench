@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 21:17
+Web lock: taken by claude-goal-ui-owner for the AR08 project-password dialog, then KL-60 (diff virtualisation and search)
+- **Completed:** Lock taken only. Both items were handed over by the alpha session (entries 20:58 and 21:02).
+- **Pending/Next Steps:** AR08 dialog: `POST /api/project/import` with optional `password`; on `422` `kind: projectPasswordRequired` or `projectPasswordWrong` ask (again); the password goes only into that request and is never stored or logged. Then KL-60: virtualise `ProjectDiffDetails.tsx` and add search/filter (backend unchanged), and add KL-60 to `goal-ui.md`. Release the lock in the last delivery entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 21:15
 Web lock: released by claude-goal-ui-owner (U19 telegram-flow study delivered)
 - **Completed:** **U19 done.** A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`, test-only) pins the flow semantics: per-slot values with a 7 s lifetime, reads never set or renew a value, a sequence high-water mark, at most 3 stacked badges, a sender-only 60 s leader with tie rule, capacity refusal with counts, and pulse bundling, plus a bounded cooling layout. 23 Vitest, 4 Chromium (map without API calls, keyboard Inspector, freeze, motion off) and 11 caught guard mutants. Measured on Chromium 152 under load from other sessions: small and mid maps at 60 fps; the target load (500 / 2,500 / 1,000 per s) at 16.7 ms per frame with resting geometry including pulses and values, but 67–100 ms when every edge moves. Canvas 2D was evaluated and rejected (never faster, 5× slower at rest), so the decision is native SVG without a dependency (ADR-0077 addendum). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,178 passed / 0 failed / 177 ignored in 174 blocks with 0 skip markers, five repository gates (headers 485 ok; anchors 450 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,858/104 files, complete Chromium suite 112/112, whitespace; source frozen. Docs: TELEGRAM_FLOW_VISUALIZATION §9, `docs/design/2026-10-04-telegram-flow-u19/`, goal-ui U19 ticked, IMPLEMENTATION_STATUS. Log: `.ai/logs/2026-10-04_claude_ui-u19-flow-study.md`.

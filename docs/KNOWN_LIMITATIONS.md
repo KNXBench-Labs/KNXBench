@@ -7413,7 +7413,27 @@ and explicit, so no data is lost silently. **Lifted when** the evidence
 budget is sized against measured real maxima, or evidence collection
 degrades to a counted summary instead of refusing the package.
 
-## §153 Master-data schemes 10 and 23 are refused for standalone `.knxprod`
+<a id="153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod"></a>
+## §153 Product scheme10 is refused; exact23 support is bounded
+
+**2026-10-04 verified local exact23 support; publication pending.** Exact
+namespace23 reuses the strict21 typed-member/qualified-attribute boundary,
+package-scoped opaque evidence and unchanged storage/ZIP/work/depth limits.
+Original producer-bound Release Full853:690 equal existing installs,161 equal
+atomic refusals,2 exact23 admissions;853 original hashes and1382 retained archives
+verified. Current source770 public22:Rust3089/0/176,ProductDB638/0/25,Web1739,
+Chromium82,17 fresh byte-bound binding pairs,strict Clippy/build/docs/dependencies.
+Caller4 baseline RED/current GREEN,native6 and six compiled guard controls are
+recorded without double counting them in workspace totals. Initial field-probe
+survivors,verifier refusals and zero-stage namespace-proof PermissionError remain
+retained. All productdb source except an owner-added read-only coupler query/test
+and native fixture is byte-identical; CLI entrypoint unchanged. Original Full853
+is not a newly run current private matrix. Separate in-session review,no
+independent-model approval. Final publication/readback pending; no full
+manufacturer semantics,signature/runtime/commissioning or ETS parity claim.
+Scheme10 remains refused, and KL153 remains open. See PRODUCT_SCHEME_23_RESEARCH.md
+and ADR-0072. The original namespace-refusal census below is historical evidence,
+not the current exact23 outcome.
 
 **Research 2026-10-04,not admission.** Base575a2d1d/source712:bounded offline
 census rechecks853 hashes/852 master documents/one explicit scan refusal;two
@@ -7439,5 +7459,6 @@ accepted set (11, 12, 13, 14, 20, exact 21).
   (COMPATIBILITY.md). It now also appears in current ETS6 product
   downloads, and the corpus documents' "schemes 15–19 and 22 remain
   unmeasured" list did not mention it.
-- **Lifted when** each scheme is admitted with grammar evidence like
-  schemes 12–14/21 were. Until then, the refusal is the intended behaviour.
+- **Remaining boundary:** scheme10 stays refused until separately researched and
+  tested. Exact23 now has bounded verified import/storage/report/replay support;
+  unknown manufacturer semantics and full runtime compatibility remain unsupported.

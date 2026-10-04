@@ -48,6 +48,49 @@ hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
   Broader callers/long sessions and offline recovery remain separate open work;
   excluded hardware/power-loss/vendor/ETS experiments remain user notices.
 
+## AR06T exact23 bounded import — verified locally, publication pending (2026-10-04)
+
+Local candidate on `9d719a4f`: exact product namespace23 admission with the
+existing scheme21 strict member-namespace/qualified-attribute boundary and
+package-scoped opaque-field evidence. No schema/budget/runtime/UI change.
+Independently reconciled public evidence: six native GREENs, ProductDB
+637 passed/0 failed/25 ignored (29 blocks), strict Clippy and two real CLI builds.
+Real private2: two atomic namespace refusals become two retained/queryable
+installs; exact opaque reporting/reopen replay and original853 rehash verified.
+The actual Release CLI Full853 comparison completed on this frozen Source713
+candidate: 690 existing installs have equal table contents, 161 refusals remain
+diagnostically equal and atomic, and two exact23 packages become installs
+(baseline 690/candidate 692). All 1382 installed archive copies were checked
+byte-exact; all 853 originals were rehashed afterward. Aggregate receipt,
+public/private prerequisite commitments and both release-binary hashes were
+reconciled without reopening the private corpus. No raw/item records persisted.
+Caller acceptance now adds four source-bound baseline REDs and four fresh-target
+CLI/HTTP GREENs: measured opaque facts, exact archive/member retention, replay,
+wire privacy/catalog discovery and seeded-database refusal integrity. Current
+native six remain GREEN with scanner-owned master evidence and exact path/count
+checks. Six compiled behavioral controls cover namespace/qualified guards,
+master evidence, member late-depth admission, unresearched24 and generic scope.
+Earlier parser-owned-field survivors and verifier refusals are retained; member
+scan wiring is proved by the real late-depth test, not field presence alone.
+Before integration, only three test files differed from Full853 Source713.
+Current upstream adds a read-only coupler-query helper and its test; all other
+productdb source files and the whole CLI entrypoint are byte-identical, and the
+helper is only called by the owner's server domain path, not import/ingest.
+The original Full853 remains its producer-bound private result, not a new
+current-source private matrix. Current Source770 on `a346fa30` has actual public
+22-stage acceptance: 161 Rust blocks, 3089 passed/0 failed/176 ignored;
+ProductDB638/0/25; Web1739; Chromium82; strict Clippy/build/dependency/docs gates;
+17 freshly generated binding pairs byte-identical to the previously controlled
+closed lexical proof (not a new generic TS parser or rerun of its controls).
+The first broad attempt is a retained zero-stage namespace-proof PermissionError;
+separate correctly parent-bound isolated retry passed. Separate integrated
+in-session review has no blocking product finding, not independent-model approval.
+Publication/final upstream reconciliation remain pending. Exact23 is bounded
+import/storage/report/replay support, not full manufacturer or bus/runtime
+compatibility. Scheme10, KL153 and the Alpha goal remain open. Decision:
+`adr/0072-product-scheme23-namespace-gate.md`.
+See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
+
 ## 2026-10-04 — UA5: explicit topology repair (MODEL-02, core/store/server half)
 
 - [ADR-0071](adr/0071-ambiguous-topology-is-repaired-explicitly.md):

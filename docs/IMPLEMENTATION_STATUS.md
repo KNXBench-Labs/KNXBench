@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — U19: telegram-flow study measured, AR20 handoff written
+
+- A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`) covers
+  the flow semantics: per-slot values with a 7-second lifetime, reads without
+  a value, a sequence high-water mark, at most 3 badges, a sender-only 60-second
+  leader with tie rule, capacity refusal, pulse bundling, and a bounded,
+  cooling layout. 23 Vitest cases, 4 Chromium checks (map, keyboard Inspector,
+  freeze, motion off) and 11 guard mutants, all caught. One survivor was
+  initially equivalent; a test for a read row that carries a value made it
+  catchable.
+- Measurements (Chromium 152, Ryzen 7 5800X, under load from other sessions):
+  small and mid maps run at 60 fps. The target load (500 / 2,500 / 1,000 per
+  s) runs at 16.7 ms per frame with resting geometry, including pulses and live
+  values, but 67–100 ms while every edge moves. Canvas 2D was never better and
+  five times slower at rest, so the decision is native SVG without a dependency;
+  U21 must reheat locally and bundle pulses over their lifetime.
+- The exact AR20 proposal covers raw addresses, server-monotonic
+  `observedAgeMs`, a `flowGeneration` covering links, flags and activation,
+  and a bounded `flow-snapshot` route. It is in
+  [TELEGRAM_FLOW_VISUALIZATION §9](TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04),
+  with an ADR-0077 addendum. Nothing is wired to the monitor feed; U20 needs
+  AR20 first.
+
 ## 2026-10-04 — AR08: password-protected projects reach the importer
 
 - A ZipCrypto (ETS4/ETS5) protected `.knxproj` now imports through

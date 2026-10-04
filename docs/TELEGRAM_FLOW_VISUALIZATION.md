@@ -298,6 +298,190 @@ The original frozen 180-ID inventory and existing source-ID dispositions are
 unchanged; this new user feature is tracked by package checklists, not by
 reopening an accepted spatial-editor row.
 
+## 9. U19 resolution (goal-ui owner, 2026-10-04)
+
+U19 delivers an evaluated, **visibly synthetic** study and the exact AR20
+handoff. It is not the productive view: nothing reads the monitor feed, and
+U20 owns the shipped reducer and integration. Study code lives under
+`apps/knx-web/e2e/flow-study/` (test-only, typed by
+`tsconfig.flow-study.json`); screenshots and measurements are in
+[design/2026-10-04-telegram-flow-u19](design/2026-10-04-telegram-flow-u19/README.md).
+
+### 9.1 Code reconciliation (source at `2231d87c`)
+
+- `apps/knx-server/src/bus.rs:665-671`: a row's `timestamp` is an RFC3339
+  **string** of server wall-clock time at drain, not a bus time and not a
+  monotonic age. A client cannot derive a trustworthy age from it, because the
+  clocks may differ.
+- `bus.rs:672-680`: `source` and `destination` are **formatted strings**, and
+  `destination` follows the project's group-address style. No typed raw value
+  reaches the client.
+- `bus.rs:1048-1060`: individually addressed frames are dropped before a row
+  exists (no row, no `seq`, no `droppedBefore`). The graph therefore never
+  sees them, which matches §2 item 8.
+- `bus.rs:650, 985-1040`: a 5,000-row ring buffer. Eviction and lagged
+  receivers both add to `droppedBefore`; the two causes are indistinguishable,
+  which is acceptable for a visible gap marker.
+- `bus.rs:821-846, 1359-1368`: the interpretation context and its `current` /
+  `stale` comparison cover style, DPTs and names **only**. Device, link, flag
+  and activation edits are invisible to it, as §3 suspected.
+- `bus_routes.rs:736-748, 788-797`: the row and poll DTOs (`seq`, `timestamp`,
+  `source`, `destination`, `destinationName`, `service`, `rawPayload`,
+  `decoded`, `control`; `sessionId`, `serverIncarnation`, `contextStatus`,
+  `projectOpen`, `status`, `nextSince`, `droppedBefore`). `seq` is serialised
+  as a JSON number.
+- `BusMonitorPanel.tsx:63`: one poll per second, one session. `crates/knx-projection/src/lib.rs:195-212`
+  already projects every group link with device, object and direction
+  (`Send`/`Receive`). `lib.rs:568-598` projects the object flags and
+  `is_active`. The participant facts exist; what is missing is a
+  session-bound, generation-tagged snapshot of them.
+
+### 9.2 Handoff to AR20 — proposed contract
+
+These fields and routes are **proposals** for AR20 to implement, test and
+then name in its receipt; none of them exists today. Everything is additive,
+and existing consumers keep their fields.
+
+**Per telegram row** (`GET /api/bus/monitor/telegrams`):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `sourceRaw` | integer 0–65535 | Individual address of the observed sender, unformatted |
+| `destinationRaw` | integer 0–65535 | Group address, unformatted. Rows exist only for group destinations (`bus.rs:1048`) |
+| `observedAgeMs` | integer ≥ 0 or `null` | Server-monotonic age of the row at response time (an `Instant` stored at push). The client's deadline is its own monotonic receive time minus this age. `null` means unknown: no live value badge |
+| `flowGeneration` | decimal string | Generation of the participant snapshot the row was interpreted under, fixed at push |
+
+**Per poll response:** `flowGeneration` (decimal string, current). The client
+fetches a snapshot only when it sees a generation it does not hold.
+
+**New route** `GET /api/bus/monitor/flow-snapshot?sessionId=&generation=`:
+read-only and bounded. It returns `serverIncarnation`, `sessionId`,
+`generation`, `status` (`current` | `historical` | `unavailable`),
+`groupAddressStyle`, and the following:
+
+- `devices`: `deviceId`, `installationId`, `name`, `individualAddressRaw | null`.
+- `groups`: `gaRaw`, `gaId`, `name`, `dpt | null`, and `members`. Each member
+  has `deviceId`, `comObjectId`, `direction` (`Send` | `Receive`), `active`
+  (`true` | `false` | `null`) and `flags`: `communication`, `read`, `write`,
+  `transmit`, `update`, `readOnInit`, or `null` when unknown.
+- `diagnostics`: duplicate individual addresses, dangling links, ambiguous
+  group or device ids, and objects without resolvable flags.
+- `truncated`: counts per list.
+
+The server keeps only the current generation's snapshot. Rows of an older
+generation are shown raw and marked historical, unless the client already
+holds that generation's immutable snapshot.
+
+**Generation rule:** the generation counter increases whenever the extended
+comparison changes: style, DPT and name as today, **plus** device identity,
+address and name, object ownership, every group link, flags and activation. A
+link-only edit must bump it even when DPT and name are equal (§4).
+
+**Counters:** `seq`, `nextSince` and `droppedBefore` are u64 on the server.
+AR20 either guarantees values ≤ 2^53−1 or moves them to decimal strings. The
+client refuses an unsafe number instead of rounding it.
+
+**What stays as it is:** one tunnel and one poll loop, no persistence, no
+write or decryption API, no active probing. Sender ranking counts observed
+rows only; fan-out never counts.
+
+### 9.3 Measured renderer and layout evaluation
+
+Workloads (§7): a deterministic synthetic installation (`9.x.y` addresses,
+one group in ten unresolved), skewed group choice, 80 % Write, 10 % Read and
+10 % independently sourced Response. Each scenario runs after a 3-second
+warm-up and is then measured for 8–30 s. The environment is an AMD Ryzen 7
+5800X with Chromium 152, headless under Playwright. **Other sessions and the
+Hermes UI were running throughout**, even though all shared gate leases were
+held; `load1` is recorded per scenario. Absolute values are therefore upper
+bounds under contention, while comparisons within one run are fair.
+
+| Scenario | devices / edges | frame ms p50 / p95 | script ms | draw ms | value lag ms | layout steps | edge writes / frame | load1 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `slice` | 17 / 21 | 16.7 / 16.8 | 0.7 / 1.4 | 0.6 / 1 | 11.3 / 61.4 | 644 | 17.1 | 24.41 |
+| `mid-svg` | 182 / 609 | 16.7 / 33.3 | 5.1 / 7.7 | 4.3 / 6.8 | 13.2 / 29.9 | 603 | 477.7 | 22.38 |
+| `target-svg-full` | 631 / 3110 | 66.7 / 83.4 | 22.6 / 30.5 | 17.4 / 24.8 | 66.1 / 83.2 | 252 | 2816 | 17.22 |
+| `target-svg-frozen-geometry` | 631 / 3103 | 16.7 / 33.4 | 7.2 / 11.4 | 6.4 / 9.9 | 16.4 / 33.1 | 63 | 1.7 | 16.64 |
+| `target-svg-motion-off` | 631 / 3088 | 16.7 / 16.8 | 5.7 / 8.4 | 5.1 / 7.3 | 16.1 / 16.7 | 0 | 1.5 | 16.3 |
+| `target-svg-labels` | 632 / 3199 | 283.3 / 566.7 | 48.3 / 104.5 | 39.7 / 83.2 | 283.1 / 566.1 | 67 | 2958.1 | 17.06 |
+| `target-canvas-full` | 631 / 3107 | 66.8 / 100 | 22.5 / 28.2 | 17.4 / 22.4 | 66.6 / 99.5 | 231 | 0 | 15.97 |
+| `target-canvas-motion-off` | 631 / 3106 | 66.7 / 100.1 | 14.8 / 22.4 | 13.8 / 20.7 | 66.2 / 99.9 | 0 | 0 | 15.35 |
+| `long-growth` | 1000 / 4477 | 100 / 133.3 | 32.6 / 43.2 | 24.4 / 33.1 | 98.3 / 131.53 | 405 | 3332.6 | 23.19 |
+| `long-growth-canvas` | 1000 / 4464 | 100 / 133.3 | 29.3 / 35.7 | 21.3 / 25.6 | 99.2 / 132.27 | 418 | 0 | 20.11 |
+
+The `target-*` scenarios run 1,000 events/s, `mid` runs 100/s, `long-growth`
+runs 300/s for 30 s, and the small slice runs 4/s. The value lag is the age
+of a batch's oldest event when it becomes visible. It equals one frame
+interval, so values appear in the next frame and never wait for a pulse.
+
+**Decisions:**
+
+1. **Native SVG; no Canvas, WebGL, worker or graph dependency.** At rest the
+   target load renders at 16.7 / 16.8 ms in SVG; Canvas 2D needed 66.7 /
+   100 ms because it repaints every curve each frame. With moving geometry
+   both measured 67–100 ms. Canvas wins in no scenario measured here.
+2. **The cost is moving geometry, not traffic.** Pulses and live values over
+   frozen geometry at the full target load run at 16.7 / 33.4 ms. A layout
+   that keeps every edge moving costs 2,800 path writes per frame.
+3. **Own bounded layout, no force library:** springs toward an
+   activity-dependent distance, grid-local repulsion and centre/leader pull,
+   O(nodes + edges) per tick, with cooling (`alpha`) and reheats. At target
+   load it stays unsettled, because new edges keep appearing and each one
+   reheats the whole map.
+4. **Labels:** an address label on every edge costs 283 ms per frame at target
+   size. Beyond small maps, labels appear only on active or selected edges,
+   and all addresses stay in the Inspector.
+
+**Binding requirements for U21 from these numbers:**
+
+- **Reheat locally:** a new node or edge heats only itself and its
+  neighbours, never the whole map, and settled regions are not rewritten.
+- **Bundle pulses over a pulse's lifetime**, not per frame. At 1,000
+  events/s a frame held about 16 events, so per-frame bundling rarely
+  triggered, and 21,000 pulses in 10 s exceeded the 160-element capacity.
+  The represented count and the over-capacity count must both be visible.
+- **Keep the activity hub readable:** collision separation must account for
+  badge height, or hub badges appear only on selection. The screenshots show
+  neighbours' badges piling up around the leader.
+- **Contrast:** check badge text (`--knx-success-color`) on the surface in
+  light palettes; in Porcelain it is legible but weak.
+
+### 9.4 Resolved study tuning (inputs for U20/U21, not protocol constants)
+
+| Parameter | Value | Evidence |
+| --- | --- | --- |
+| Value lifetime | 7,000 ms from observation; expired at exactly 7,000 | `model.test.ts` boundary test |
+| Same-slot rule | Per device and group address; a sequence at or below the high-water mark is dropped (repeat or stale delivery) | `model.test.ts` |
+| Reads | Never set a value or renew a deadline, even if a row carries one | `model.test.ts` |
+| Badges | At most 3, newest first, stacked one per line, `+n more` | `model.test.ts`, screenshots |
+| Activity window | 60 s rolling. Sender counts only; an exact tie keeps the leader, otherwise the lowest id; no traffic means no leader | `model.test.ts` |
+| Quiet edge | Fades after 10 s over 60 s to 0.35 opacity, never lower; membership persists | engine constants, screenshots |
+| Distances | 40–220 px × area scale (0.6–2.5); busier pairs closer | `layout.test.ts` |
+| Cooling | alpha × 0.985 per step, rest below 0.005; reheat 0.3 on growth or leader change, 0.08 every 5 s | `layout.test.ts` |
+| Pulses | 700 ms, at most 160 elements; bundled when a frame holds more than 24 events | engine; see the U21 requirement above |
+| Model limits | 1,000 nodes, 5,000 edges. Growth beyond them is refused and counted (`long-growth`: 2,433 nodes / 1,963 edges refused in 30 s); existing edges are kept and values are still admitted | `model.test.ts`, measurements |
+| Motion Off / OS reduce | No layout steps and no pulses; values keep arriving | `flow-study.e2e.ts` |
+
+### 9.5 Reproduce
+
+```text
+cd apps/knx-web
+npx vitest run e2e/flow-study            # 23 study semantics tests
+npx playwright test e2e/flow-study.e2e.ts # 4 browser checks (normal suite)
+npm run check:flow-study                 # type-check the study
+FLOW_STUDY_OUT=/tmp/flow npx playwright test -c playwright.study.config.ts
+```
+
+The last command is the measurement run (about 3.5 minutes). It is not part
+of the normal suite, and its numbers depend on the machine and its load.
+
+### 9.6 Boundaries
+
+Synthetic data only; no monitor feed, project, bus or hardware. Chromium only:
+native WebKitGTK rendering cost, Orca and real traffic are not measured. Guard
+mutants (11, all caught) cover the study's semantics. The productive U20/U21
+code still needs its own RED/GREEN and mutation evidence.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

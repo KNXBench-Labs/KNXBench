@@ -1,3 +1,11 @@
+- **Last Agent:** codex (iaw commissioning session)
+- **Timestamp:** 2026-10-04 13:45
+Web lock: taken by codex-commission-continuation
+- **Completed:** All17 requested skills reloaded and active task legitimacy rechecked against current goal/source. Actual345e8b8152c4eed5297dc156fe614a0040949d53 public offline gate accepted9/9: all1047 input hashes/HEAD/receipts exact, workspace3103 passed/0 failed/177 ignored across164 result blocks;50 unique controls compiled and killed at intended runtime assertions, canonical unchanged. Four intended-root policy gates, fmt, strict Clippy and Web stage0. Incoming importer/native-save/CSV work through6b4364d7 retained completely;279 Web inputs byte-identical. Shared root untouched; no live contact or main push performed.
+- **Pending/Next Steps:** Selected incoming private-corpus regression scope and publication/readback/closure metadata gate remain open. This is ordinary public acceptance;177 ignored tests were not run. CLI download/restore/service-control and long-session lifecycle production implementation remains absent; ADR0075 and two missing-interface RED tests are unaccepted WIP in caller checkout. Other-client adoption and offline recovery/abort/restore remain open. Preserve the Web reservation and assigned frontend halves.
+- **Notes for Codex oder Claude:** Three live tasks remain justified:2 in_progress,1 pending; do not mark overall Commissioning DONE. Excluded new hardware/power-loss/vendor/ETS experiments are user notices, not an operator task or completion blocker. Original-property backup and PID_DEVICE_CONTROL-before-Verify-Mode remain mandatory. Permanent Web evidence still names its earlier9fe69116 source; latest345 acceptance is retained under scratch/iaw/commission-continuation/history-native-final and must not silently relabel that old receipt. Complete inherited handover below preserved exactly.
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-04 12:56
 Web lock: taken by codex-commission-continuation; six-row UI-owner handoff retained

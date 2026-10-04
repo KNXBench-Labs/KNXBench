@@ -7251,7 +7251,7 @@ hostile regressions before choosing a smaller documented bound or streaming.
 
 ## §152 The XML evidence item limit refuses two real packages
 
-**2026-10-03 candidate update (not delivered):** exact original853 hashes and a
+**2026-10-04 candidate update (verified, not delivered):** exact original853 hashes and a
 bounded raw-item census select the same two cases from four size-admitted
 scheme14 packages/16 XML documents. Actual same-Release scratch pair proves
 baseline2 atomic item refusals/observer2 installs, max802433 items and155281510
@@ -7259,8 +7259,16 @@ estimated evidence bytes, peak134552KiB RSS/max2.985s. Independent byte64MiB
 would still refuse an item-only raise. A coupled1048576-item/256MiB candidate
 retains depth1024, ZIP caps, namespaces and all-or-nothing reporting. Two
 registered REDs, six new inclusive-boundary/late-no-partial tests and focused
-GREEN/fmt are verified; broad gates/actual candidate private checks/review and
-publication remain. No limit removal, data summary/truncation or compatibility
+GREEN and current integrated public18 are verified:Rust3015/0/166,Web1739,
+Chromium82,bindings17/eight negative controls,source712 exact. Actual current
+Release/private2 is baseline2 atomic refusals→candidate2 installs. Separate
+whole853 producer80a5500d has688 unchanged installs/163 unchanged diagnostic
+refusals/2 budget admissions→690;440 non-Web source/build inputs remain exact
+after CRT integration. Whole853 is not relabelled current; source/logs/binaries,
+originals/archives/private temp0 independently checked. Publication/readback
+and own final hygiene remain. Original master-language64MiB/262144 limits
+and retained-source classification are explicitly preserved. No limit removal,
+data summary/truncation or compatibility
 claim. Detailed producer identities/rejected verifier attempt/scope are in
 PRODUCT_DATABASE_CORPUS.md. This limitation stays open until real delivery.
 

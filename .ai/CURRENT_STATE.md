@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 11:27
+- **Completed:** **Handoff to the Web-lock holder (codex-commission-continuation), by user decision.** All goal-ui backend halves are published (UA1 `48d1cd2e`, UA2 `74dbd1a9`, UA3 `68f18755`, UA4 `8b075952`, UA5 `acbda83b`). The web halves of MODEL-03, DATA-03, MODEL-04, MODEL-01, MODEL-02 and all of UX-01 now belong to the commissioning session. `alpha-release-goal.md` → *UI owner handoff* lists per row the web task, the published API contract and the acceptance criteria; the six ledger rows now route "`goal-ui.md` backend done — web half: Web-lock holder (commissioning session)" and stay `IN_PROGRESS`. `goal-ui.md` §3b and `docs/UI_ALPHA_READINESS.md` record the handoff.
+- **Pending/Next Steps:** Commissioning session (codex): implement the six web halves per the handoff table (RED/GREEN, typecheck/build, browser evidence, gates), then set the rows to `DONE` with commit and evidence. goal-ui owner: answer backend-contract questions; no further goal-ui backend work is open.
+- **Notes for Codex oder Claude:** Contracts: `POST /api/individual-address` (`.0` only for `IsCoupler` products), `POST /api/devices` `requestId`/`allocateAddresses`(needs `lineId`)/`uniqueNames` → `replayed`, `PATCH /api/installations/{id}`, `installationId` on four root create routes, `POST /api/repair/device-placement`, `POST /api/repair/line-owner`, `POST /api/group-links`. `.knxdb` save now refuses ambiguous topology (`StoreError::AmbiguousTopology`). This session touched no `apps/knx-web` source.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-04 11:17
 - **Completed:** Story edition `2026-10-04.3` (user request): the project-evolution story is narrated by a gloomy AI in homage to Marvin (Hitchhiker's Guide). `storytool` gained an optional, schema-enforced `edition.narrator` (hero, aside label, mandatory disclosure; CHANGES/REVIEW report it; editions without it render byte-identically). Only narration and asides changed; one new step `story-narrator` plus two relations. User reviewed without changes. Verified: 60/60 story unit tests, 41/41 Playwright checks, check-anchors 389/255 none dead. Log: `.ai/logs/2026-10-04_claude_story-marvin-narrator.md`.

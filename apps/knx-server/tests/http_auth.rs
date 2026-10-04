@@ -400,3 +400,116 @@ async fn concurrent_failed_logins_are_serialised() {
          that they overlapped"
     );
 }
+
+/// Every `.route("…", …)` the server declares, as `(method, path)` pairs,
+/// read from its own sources so a route added anywhere is checked without
+/// anyone remembering to list it. Path parameters become `1`.
+fn declared_routes() -> Vec<(String, String)> {
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut routes = Vec::new();
+    for entry in std::fs::read_dir(&src).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap();
+        let mut rest = text.as_str();
+        while let Some(at) = rest.find(".route(") {
+            rest = &rest[at + ".route(".len()..];
+            let args = balanced_arguments(rest);
+            let Some(open) = args.find('"') else { continue };
+            let close = open + 1 + args[open + 1..].find('"').unwrap();
+            let uri = args[open + 1..close]
+                .split('/')
+                .map(|segment| {
+                    if segment.starts_with('{') {
+                        "1"
+                    } else {
+                        segment
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("/");
+            for method in ["get", "post", "put", "patch", "delete"] {
+                let needle = format!("{method}(");
+                let handlers = &args[close..];
+                let found = handlers.match_indices(&needle).any(|(i, _)| {
+                    i == 0 || {
+                        let before = handlers.as_bytes()[i - 1];
+                        !(before.is_ascii_alphanumeric() || before == b'_')
+                    }
+                });
+                if found {
+                    routes.push((method.to_uppercase(), uri.clone()));
+                }
+            }
+        }
+    }
+    routes.sort();
+    routes.dedup();
+    routes
+}
+
+/// The text up to the parenthesis that closes the one just opened.
+fn balanced_arguments(text: &str) -> &str {
+    let mut depth = 1;
+    for (i, c) in text.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return &text[..i];
+                }
+            }
+            _ => {}
+        }
+    }
+    text
+}
+
+/// AR13 / KNOWN_LIMITATIONS §22: not one route per group, but every route
+/// the server declares refuses a caller without a session — except the
+/// documented four. A route added outside the guard fails here by name.
+#[tokio::test]
+async fn every_declared_route_refuses_a_caller_without_a_session_except_the_documented_four() {
+    const OPEN: &[(&str, &str)] = &[
+        ("GET", "/healthz"),
+        ("GET", "/api/auth/status"),
+        ("POST", "/api/auth/login"),
+        ("POST", "/api/auth/logout"),
+    ];
+    let routes = declared_routes();
+    // The parser must see what the hand-picked list and the exceptions name,
+    // or an empty scan would pass this test vacuously.
+    for (method, uri) in GUARDED_ROUTES.iter().chain(OPEN) {
+        assert!(
+            routes.contains(&(method.to_string(), uri.to_string())),
+            "the route scan missed {method} {uri}; found {} routes",
+            routes.len()
+        );
+    }
+    assert!(routes.len() > 50, "only {} routes found", routes.len());
+
+    let app = guarded_app();
+    let mut unguarded = Vec::new();
+    for (method, uri) in &routes {
+        if OPEN.contains(&(method.as_str(), uri.as_str())) {
+            continue;
+        }
+        let request = Request::builder()
+            .method(method.as_str())
+            .uri(uri.as_str())
+            .header("content-type", "application/json")
+            .body(Body::from("{}"))
+            .unwrap();
+        let response = send(&app, request).await;
+        if response.status() != StatusCode::UNAUTHORIZED {
+            unguarded.push(format!("{method} {uri} -> {}", response.status()));
+        }
+    }
+    assert!(
+        unguarded.is_empty(),
+        "reachable without a session: {unguarded:#?}"
+    );
+}

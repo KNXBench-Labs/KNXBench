@@ -29,6 +29,12 @@ the first installation (`installations.first()` in `knx-csv`).
   create → first, export ignores target, token unbound.
 - Gates: first run red on two in-crate test call sites of `plan_csv_import` (new parameter; fixed with `None`); rerun green: fmt, clippy -D warnings, workspace tests 164 blocks / 3,103 passed / 0 failed / 177 ignored, layering, headers, anchors, corpus gates, diff-check.
 
+## Follow-up UA10b (CLI)
+`--installation <id>` on `knx ga-export`/`ga-import`; token bound to the
+installation only when the flag is present, so existing tokens and scripts
+are unchanged. RED 3/4 → GREEN 4/4, 2/2 mutants (token binding, flag
+ignored).
+
 ## Not done
-CLI `ga-import`/`ga-export` and the web CSV buttons still use the first
-installation (web half handed to the Web-lock holder, table updated).
+The web CSV buttons still use the first installation (web half handed to the
+Web-lock holder, table updated).

@@ -59,8 +59,11 @@ hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
   destructive-preview confirmation token now also binds the installation.
 - Test `apps/knx-server/tests/csv_installation_scope.rs`: RED 0/4 (the
   server silently ignored `installationId` and imported into the first
-  installation), GREEN 4/4, 5/5 mutants caught. CLI and web buttons still use
-  the first installation.
+  installation), GREEN 4/4, 5/5 mutants caught.
+- CLI: `--installation <id>` on `knx ga-export`/`ga-import`, token bound to
+  it (unchanged without the flag). `apps/knx-cli/tests/cli_ga_csv_installations.rs`:
+  RED 3/4 (`unknown flag`), GREEN 4/4, 2/2 mutants. The web CSV buttons still
+  use the first installation (web half, handed over).
 
 ## 2026-10-04 — UA7/UA8: no silent loss between import, memory and `.knxdb`
 

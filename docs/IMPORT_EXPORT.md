@@ -839,7 +839,9 @@ another installation (ADR-0038). An unknown installation is refused without
 writing a file or changing the project. A destructive preview's
 confirmation token binds the installation together with the file and the
 project revision, so a preview for one installation cannot confirm an apply
-into another. The CLI and the web buttons still use the first installation.
+into another. The CLI offers the same as `--installation <id>` on `knx
+ga-export`/`ga-import` (its token is unchanged when the flag is absent). The
+web buttons still use the first installation.
 
 Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 

@@ -1,5 +1,22 @@
 # Known limitations
 
+## Telegram-flow visualization is approved but not implemented
+
+User scope decision 2026-10-04: [the session-local nervous-system view](TELEGRAM_FLOW_VISUALIZATION.md)
+is required for the Alpha and authorized for UI U19–U21 / alpha AR20–AR21.
+No runtime, performance or recipient-reception claim follows from this plan.
+Until its integrated acceptance, use the existing monitor rows/details; no new
+hardware contact is authorized. Project membership can identify configured
+participants, not measured reception or actuator state. Unknown/ambiguous flags,
+addresses, DPTs, stale context, capture loss and capacity limits must remain
+visible; old values cannot be revived on resume. Existing physical-coordinate/
+floor-plan exclusions remain accepted; the new transient activity layout does
+not remove them. [ADR-0077](adr/0077-session-local-telegram-flow-view.md) records
+the bounded supersession of the older inspector-first recommendation. Renderer,
+limits and timing tuning are implementation decisions with mandatory measured
+acceptance; previously accepted native/Orca/live evidence boundaries stay intact.
+
+
 ## Accepted commissioning validation boundary — user decision 2026-10-04
 
 New real-hardware, power-loss, vendor and ETS validation is not required to

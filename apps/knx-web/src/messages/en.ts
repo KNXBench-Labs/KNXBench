@@ -355,6 +355,7 @@ export const messages = {
   "inspector.unlink": "Unlink",
   "inspector.unlinkBoth": "Unlink both",
   "inspector.chooseGroupAddress": "(choose a group address)",
+  "inspector.dropNotLinkable": "This group address cannot be linked to this device.",
   "inspector.link": "Link",
   "inspector.line": "Line",
   "inspector.unassigned": "(unassigned)",

@@ -210,7 +210,12 @@ first-installation UI was tested with mocked local API responses and Chromium;
 native WebKitGTK drag/drop, screen-reader operation and live bus behavior are
 not covered. Existing device-to-line/device-to-building drag/drop remains
 bound to its already validated commands; structural moves use labelled native
-select controls, not a new drag gesture.
+select controls, not a new drag gesture. Since UX-01 (2026-10-04) a group
+address can be dragged from the Project Explorer onto a communication
+object's link row. The drop links it once through `POST /api/group-links` in
+the direction shown in that row (default Send, the same default as the
+keyboard path); an address the device cannot link is refused locally. Verified
+in headless Chromium with real HTML5 drag events, not in native WebKitGTK.
 
 ## U11 device editor scope (ISSUE-09)
 

@@ -167,7 +167,7 @@ Status of these rows: [source-ID ledger](status/LEDGER.md) (AR14D D2).
 | KL-43 | Retained global motion level/style and OS-reduced-motion precedence; existing guard scope remains explicit. | Per-category motion/parser-backed wider guards require separate scope; no real-animation or assistive-technology conformance claim. |
 | KL-97 | Retained truthful phase/count progress under ADR-0023. | No guessed percentage for streaming work whose total is not known. |
 | KL-98 | Retained decorative, accessibility-excluded flavour text; slow rotation is intentional. | No artificial slowing or invented progress merely to show more jokes. |
-| UX-01 | Retained two validated device drag gestures with keyboard selects, GAP_ANALYSIS_ETS B10. | Group-address-to-object/structural drag gestures remain absent; not implied by the existing two gestures. |
+| UX-01 | Delivered 2026-10-04: besides the two device gestures, a group address can be dragged from the Project Explorer onto a communication object's link row and is linked once in the direction shown there; the keyboard selects stay. | Structural drag gestures (lines, parts, ranges) remain select-only; native WebKitGTK drag is not verified. |
 | UX-02 | Delivered supported-only catalog picker at 6c16fe5a. | `.vd2` backend refusal remains deliberate. |
 | UX-03 | Delivered project style selector through the existing command-backed route at 6c16fe5a. | Unchanged/unknown/refused/pending/Undo cases remain covered. |
 

@@ -35,9 +35,15 @@ The current **unpublished policy candidate** sets coupled scan ceilings to
 limits remain unchanged. No summary fallback or truncation is introduced.
 Two registered public REDs prove the old item and byte ceilings; six new tests
 cover bounded admission, inclusive ceilings/next-item refusal, and late scan
-failure preserving preexisting evidence. Focused GREEN/fmt passed; broad real
-checkout gates, actual candidate private validation, review and delivery are
-still pending. The scratch pair is not evidence for an unbuilt real binary.
+failure preserving preexisting evidence. Corrected actual public6 passed,
+then current CRT integration ed03cb85 passed fresh public18:Rust3015/0/166 in
+153 blocks,Web1739,Chromium82 inventory/pass,fresh Release CLI/source712 exact.
+17 generated/current frontend DTOs are lexically token-equal in a fail-closed
+closed subset;8 negative,1 positive and1 unsupported-token controls pass.
+Current isolated same-Release private2 passes baseline2 atomic item refusals→
+candidate2 installs,all853 originals/retained archives exact,private temp0.
+Publication/readback/own final hygiene remain; scratch observation alone is not
+accepted as evidence for the built real binary.
 This changes no runtime/module semantics, schema, DTOs, UI or ETS compatibility.
 
 Broad attempt1 exposed three registered retained-source regressions: dedicated
@@ -48,7 +54,21 @@ master-language module explicit original64MiB/262144 ceilings and shares its
 64MiB constant with retained-source preflight; depth1024 remains unchanged.
 Only scheme-evidence scan work is enlarged. Old failed logs/input hashes remain
 under `policy-attempt1-summary.json`; its CLI release stage never started. Full
-current-source gates must pass after this correction before any delivery claim.
+current-source gates passed after this correction,including integrated acceptance.
+
+Whole853 Release/Release original-filename pairing is independently accepted
+on producer80a5500d/source706:688 unchanged installs,163 unchanged normalized
+refusal diagnostics,exactly2 item-budget admissions→690 installs. Same installed
+cases compare all table counts; all refusals are atomic,all retained package
+bytes and853 originals verified,no private raw/item vectors or temporary data.
+Peak CLI RSS baseline275144/candidate275108KiB,max wall18.605/18.117s; these are
+cohort observations,not HTTP latency or RSS-policy guarantees. Foreign CRT
+upstream75ad9650 adds no Rust/Cargo/npm-manifest changes;30 non-overlap blobs
+remain byte-exact and full foreign handover suffix is preserved. All440 frozen
+non-Web product-ingest/source/build inputs stay exact across integration. The
+whole853 receipt keeps its original producer identity; separate actual integrated
+public18 and fresh Release/private2 bind current source/binary. Detailed separate
+receipts remain in ar06r scratch,never private per-item data or configurations.
 
 ## Bounded ZIP resource pair — 2026-10-03 22:02 UTC
 

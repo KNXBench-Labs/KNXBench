@@ -4,6 +4,53 @@
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
 
+## Web history candidate — 2026-10-04
+
+The reserved History client now reaches the existing diagnostics parent's
+History tab without an open project. It uses the existing authenticated GET
+client and a manual format-2 adapter, not regenerated bindings. It renders
+device outcome, restart, cleanup, backup and send intent independently; a cursor
+is start-order pagination, while Refresh reloads the beginning. Failed refresh
+clears stale results; unavailable, unsupported and malformed history are distinct
+from a successful empty history. No restore, retry or device write is offered.
+
+Admission refuses the whole page for unknown fields/vocabulary, inconsistent
+evidence, unsafe JavaScript identities or invalid pagination. It never rounds
+an identity or displays a valid prefix of a rejected page. Original timestamp
+strings are preserved, including offset and fractional seconds. The renderer's
+timestamp profile is conservative: four-digit year, uppercase T/Z, at most
+nine fractional digits, finite JavaScript dates and seconds 00–59. Leap-second
+spellings or otherwise unrenderable timestamps are refused, not normalized.
+This is not a full RFC3339 parser. Impossible calendar dates and hour24 are
+refused explicitly; RFC3339 §§5.6–5.7 supplies the calendar/hour restrictions
+([primary source](https://www.rfc-editor.org/rfc/rfc3339.html#section-5.7)).
+Malformed successful-response JSON is a contract failure, not unavailable
+storage, and parser/server/private-path details are not displayed.
+
+On the earlier local candidate, intercepted Linux Chromium passed8 cases
+(EN/DE at360/1440px, refusal/refresh/paging), Vitest passed1751 tests in100 files,
+and the production build passed. The actual parent initially mounts its legacy
+monitor and requests discovery/poll before the History gesture; tests enumerate
+those intercepted startup requests separately, then require the exact History
+GET sequence. They do **not** prove the diagnostics shell has no startup network
+activity. A transitive-import tripwire initially refused the new pure validator;
+the reviewed module inventory now includes it while the exact API/mutation
+inventories stay unchanged. Both unsuccessful attempts remain negative evidence.
+
+Review added calendar-normalization and JSON-classification regressions with
+observed semantic REDs, then broadened read/property-write admission controls.
+The 11:13 candidate has35 focused tests in4 files and TypeScript checking0;
+strict-effect remounts additionally exercise stale success/error/loading and
+cross-page identities. The earlier full candidate passed Web1755/100 files,
+Chromium8/0/0, build0, workspace3028/0/176, fmt/Clippy/layering0, then refused
+exactly two overlong test headers. Anchors/corpus-policy did not start. Those
+headers are corrected; that failed receipt is not overall acceptance. The Web
+program advances to `0.1.0-alpha.4` under ADR0018 without dependency changes.
+Expanded compiled guard controls, renewed full gates, integration and publication
+remain pending. Prior counts do not certify this source delta or close broader
+callers, other client surfaces, offline recovery or the full
+SAFE-03/AUDIT-01/Global Commissioning scope. No real KNX backend was contacted.
+
 ## Integrated offline lifecycle acceptance — 2026-10-04
 
 The bounded implementation is published as `1c5dec07`, integrating candidate

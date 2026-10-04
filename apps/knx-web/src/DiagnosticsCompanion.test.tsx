@@ -254,6 +254,13 @@ describe("one editing workspace", () => {
     // leases only. No API, storage, protocol or project mutation is introduced.
     // U16 adds `canonicalJson.ts` through the existing settings client: pure
     // JSON ordering only, with no imports, IO or new project capability.
+    // History admission adds `activityHistory.ts` through the shared API:
+    // pure validation only. The companion does not call the new history reader.
+    // Keep the exact API and mutation inventories below unchanged.
+    const historyGraph = valueImportGraph("activityHistory.ts");
+    expect([...historyGraph.keys()]).toEqual(["activityHistory.ts"]);
+    expect(apiCallsIn(historyGraph)).toEqual([]);
+    expect(historyGraph.get("activityHistory.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -262,6 +269,7 @@ describe("one editing workspace", () => {
       "HelpTip.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
+      "activityHistory.ts",
       "api.ts",
       "busContext.ts",
       "busDiscovery.ts",

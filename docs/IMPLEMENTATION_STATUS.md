@@ -1,5 +1,28 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Commissioning History Web candidate, not whole-track acceptance
+
+- Published Web reservation7234dd00 remains owned by the commissioning session.
+  Local History tab uses the existing diagnostics parent/authenticated GET and
+  strict payload-free format2 admission, with EN/DE evidence and scope notices.
+- Earlier local candidate: Chromium8/0/0, Web1751 tests in100 files, production
+  build0. Initial browser attribution and transitive-import tripwire failures
+  are retained; they are not retroactively green. Network-free validation adds
+  no companion API call or project-mutating path.
+- Current review fixes refuse calendar/hour normalization and classify invalid
+  response JSON without exposing parser details. Semantic REDs are retained;
+  read/property-write and whole-page refusal matrices extend coverage.
+- Renewed pre-header-fix candidate: Chromium8, Web1755/100 files, ordinary
+  workspace3028/0/176, fmt/Clippy/layering0; header gate refused two overlong
+  new test headers, and anchors/corpus-policy did not start. Corrected headers;
+  latest focused35/4 files and tsc0 include strict-effect stale success/error/
+  loading and cross-page identity probes. Web alpha4 manifest/lock change only
+  the application version, not dependencies (ADR0018).
+- Renewed candidate/guard/workspace gates, integration and publication remain
+  pending. See [History contract](COMMISSIONING_ACTIVITY_HISTORY.md#web-history-candidate--2026-10-04).
+  Broader callers/long sessions and offline recovery remain separate open work;
+  excluded hardware/power-loss/vendor/ETS experiments remain user notices.
+
 ## 2026-10-04 — UA5: explicit topology repair (MODEL-02, core/store/server half)
 
 - [ADR-0071](adr/0071-ambiguous-topology-is-repaired-explicitly.md):

@@ -7,6 +7,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
+import { useCrtInteractions } from "./useCrtInteractions";
+import { requestCrtActivation } from "./crtInteractions";
 import BulkActionToolbar from "./BulkActionToolbar";
 import { useMultiSelection } from "./multiSelection";
 import ResizablePane from "./ResizablePane";
@@ -271,6 +273,9 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // two things that agree only by luck.
   const [addressScope, setAddressScope] = useState<number | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(true);
+  const workbenchRef = useRef<HTMLElement>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  useCrtInteractions(workbenchRef);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   useEffect(() => {
@@ -809,6 +814,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     ) return false;
     clearErrors();
     try {
+      requestCrtActivation(saveButtonRef.current);
       await api.saveProjectAs(path);
       return await refreshSavedProject();
     } catch (e) {
@@ -822,6 +828,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     autosave.cancelCountdown();
     clearErrors();
     try {
+      requestCrtActivation(saveButtonRef.current);
       await api.saveProject();
       return await refreshSavedProject();
     } catch (e) {
@@ -1013,7 +1020,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   );
 
   return (
-    <main className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
+    <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
@@ -1066,7 +1073,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
         </div>
         <button className="workbench-search" onClick={() => tree && setSearchOpen(true)} disabled={!tree}>{t("toolbar.search")}<kbd>Ctrl K</kbd></button>
         <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
-        <button className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
+        <button ref={saveButtonRef} data-crt-surface="save" className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
         <button onClick={() => requestHelpTopic(DEFAULT_HELP_TOPIC_ID)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
         <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>

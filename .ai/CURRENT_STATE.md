@@ -30,6 +30,62 @@
 
 ---
 
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 22:39
+- **Completed:** Authorized CRT delivery committed, integrated and pushed. Feature16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1 published on feat/crt-interactions-20261003; source merge3d03aea5 onto upstream5540dcac passed Web1739/98, build,12 production/16 reference Chromium groups, workspace Clippy/-D warnings, Rust3009 passed/166 ignored/153 result blocks, fmt and4 fresh-root repository gates. Concurrent upstream ZIP measurement was documentation-only, reconciled without losing its complete handover suffix; repeated metadata gates passed. Published main d5c1080efb0cf66b5ea51d912e233130414125cd matched local/fetched/live refs and contains the feature/design ancestors. Separate in-session review; no independent/native/private-corpus/hardware acceptance claim. Source/config unchanged after accepted full gate. Own servers stopped, port4173 clear; owned deps/dist/gate targets/named scratch removed after retaining PNGs/receipts/log/source.
+- **Pending/Next Steps:** This is a source-identical Markdown publication acknowledgment; verify its eventual Git HEAD against current origin/main for the latest bookkeeping tip. No remaining CRT implementation/merge/push package, only separately scoped native/Orca/semantic-role proposals. Root checkout intentionally stays old and dirty; no root synchronization or foreign publication authorized. Retain the clean integrated checkout as the current review artifact; reinstall dependencies for new runs.
+- **Notes for Codex oder Claude:** Timestamp is UTC; older entries may use CEST. Current deliverable /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-main-20261003. Closure log/receipt .ai/logs/2026-10-03_codex_crt-merge-publication.* record exact admitted scope; ignored166 tests were not counted as passed. No real project/backend/settings/KNX operation or private reference-image publication. Root HEAD/index unchanged; concurrent storytelling edits to its brief/handover preserved, not staged. Earlier pending/no-push/local-only entries below are historical. Commit identity github@knxbench.com, no co-author.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-04 00:18
+- **Completed:** User authorized CRT commit/main integration/push with “dann bitte”. Feature committed as16c9d774688c2e7e9a0c0b6bf436c788a7ce79e1; owned integration checkout merged it with current upstream5540dcac as3d03aea5ee2905a98450ee193bdc1246d0f93c99. Only handover/status conflicts; programmatic full-blob assertions preserve the complete authoritative upstream handover suffix and both append-only status prefixes. Fresh branch gates Web1739/98, build,12 productive and16 reference Chromium groups, fmt and4 fresh-root xtask gates pass. Separate in-session review, no independent reviewer; cheap header/evidence-wording findings fixed. No push yet; dirty/stale root main untouched.
+- **Pending/Next Steps:** Run complete merged-result gates on /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-main-20261003, including Clippy/workspace. Publish feature and integrated HEAD to origin/main only after acceptance; re-fetch/check concurrent main advances before pushing, verify exact local/fetched/live refs. Update closure docs/log, clean only owned runtimes/deps/build/gate scratch after retaining receipts. Native WebKitGTK/Orca/full-WCAG and separate semantic-role proposals stay unclaimed.
+- **Notes for Codex oder Claude:** Gate runner is owned scratch crt-publication-gate.py (mode merged), with fresh worktree-root-specific target and established common gate/fixture locks. Scope explicitly excludes live KNX env; no real backend/project/settings/KNX operations. Main root remains dirty on307a5970; never move its checked-out ref or stage foreign edits. This pending entry is metadata only; no source changes after merge. Original local-only entries below are historical. Closure log: .ai/logs/2026-10-03_codex_crt-merge-publication.md.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 22:38
+- **Completed:** Implemented user-requested productive CRT animations in real App/ProjectExplorer/GroupAddressTable, independently selected as motion style crt. Standard250ms fill/bounded light120ms activation; Subtle120ms fill only; Off/OS reduced motion cancels. Presentation-only disposable controller clips portals/handles zoom and lifecycle. Manual Save/Save As signals existing request path, not success; autosave silent. Existing delegated keyboard/selection/bulk rail preserved; redundant new keyboard handlers removed during in-session review. Frozen-source Web1739/98 files, TypeScript/Vite build and12 actual-App Chromium groups pass; zero page errors/unexpected/real-backend requests. Final screenshot visually inspected. Updated relevant docs/ADR/log. Own fixture PID4163503 stopped by verified SIGTERM after manager kill was incomplete; PID absent and port4173 has no listener. Removed own node_modules/dist and12 named scratch files, retaining production verifier/PNG/receipt/source/log.
+- **Pending/Next Steps:** Local uncommitted work only on feat/crt-interactions-20261003, base3337e4ef; no feature commit/push/main merge/root product synchronization. Any publication/integration is separately scoped. Native WebKitGTK/Orca/full-WCAG acceptance, exact selection/Save-only semantic roles and broader styling remain separate. Reinstall dependencies before rerunning using the CRT guide; do not use the normal proxy server for offline QA.
+- **Notes for Codex oder Claude:** Worktree /mnt/daten-i/Sourcecode/KNXBench.worktrees/crt-interactions-20261003; .ai/logs/2026-10-03_codex_crt-interactions.md and docs/DESIGN_RETRO_GREEN_CRT.md are the current source/evidence pointer. Controller/CSS/bootstrap tests and production receipt retained; no independent reviewer or real backend/project/settings/KNX write. Own ignored log must be included explicitly if a later authorized commit is made; never force-add all logs. Root foreign/product changes preserved. Earlier design-only/publication/pending-animation entries below are historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:19
+- **Completed:** Committed CRT1.1 as879c69b2f11c825c1d4f10b5409e5a5148f06e67 and published design-retro-green-crt-20261003 after explicit user authorization. Exact local/fetched/live remote source refs matched. Fresh pre-publication Web1712/96 files and TypeScript/Vite build pass; in-session review/static scan has no blocking findings. Author/committer github@knxbench.com, no co-author. Palette/study/test/browser receipt and owned logs are tracked; this acknowledgment is source-identical Markdown bookkeeping.
+- **Pending/Next Steps:** Production component/token/motion integration and any main merge remain separately scoped/unauthorized. Retain design branch/worktree for review; Git HEAD/upstream identify the metadata tip. This record acknowledges already measured source publication, not a speculative main integration.
+- **Notes for Codex oder Claude:** See .ai/logs/2026-10-03_codex_crt-publication.md and docs/DESIGN_RETRO_GREEN_CRT.md. No independent-review/native/Orca/full-WCAG claim. No root product synchronization or live settings/project/KNX writes. Earlier uncommitted/no-push entries below are historical.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 20:16
+- **Completed:** CRT1.1 packaging reviewed in-session for explicitly authorized commit/push on design-retro-green-crt-20261003. Fresh Web1712/96 files and TypeScript/Vite build pass; retained16-group Chromium receipt covers unchanged source. Static scan, local design links, syntax and whitespace checks pass. See .ai/logs/2026-10-03_codex_crt-publication.md; no independent-review claim.
+- **Pending/Next Steps:** Commit owned artifacts only, publish this design branch and verify exact remote equality before acknowledging delivery. No main merge/root product synchronization; production token/component/motion integration remains separate.
+- **Notes for Codex oder Claude:** Author and committer must be github@knxbench.com without co-author trailer. Private reference photograph is not published. Preceding local delivery entries are historical; fresh publication acknowledgment will identify the verified source commit.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-03 18:35
+- **Completed:** Developed CRT from the user reference in the retained isolated branch: same-ID palette1.1.0, softer phosphor ink/quiet rules/mint actions, compact HTML shell, native twelve-row table, independent checkbox controls, transient leading light and violet Save flare. Added reproducible QA source/receipt and updated screenshot/docs. Focused329, complete Web1712/96 files, TypeScript/Vite build and16 distinct Chromium groups pass; actual manager refused/confirmed replacement, exact reload/export use intercepted synthetic settings only. Final screenshot samples a native125ms animation at a fixed viewport. Owned Vite stopped, port4173 free, own dependencies/build/scratch removed.
+- **Pending/Next Steps:** Requested image-driven design and code-change proposals complete locally/uncommitted. Production Save-only purple, exact selection fill/light, focus-glow consumers and complete tree-keyboard behavior still require separately scoped component/token-version/motion work. No commit/push/root product synchronization authorized.
+- **Notes for Codex oder Claude:** Read docs/DESIGN_RETRO_GREEN_CRT.md and .ai/logs/2026-10-03_codex_crt-reference.md. Receipt at design/retro-green-crt-reference.receipt.json; reproduce QA after reinstalling existing Web deps and starting the local fixture only. Pack remains a safe declarative v1 palette; study is not React/Tailwind/native integration. No real settings/backend/project/KNX write or native/Orca/full-WCAG claim. Private reference photograph was inspected, not embedded/published. Previous notes below are historical and preserved.
+
+---
+
+- **Last Agent:** codex (Hermes Agent, Modern Retro Green CRT design)
+- **Timestamp:** 2026-10-03 16:31 CEST
+- **Completed:** Created complete importable CRT v1 palette, seven RED/GREEN palette/roundtrip/DOM tests, self-contained interactive target-design HTML with embedded licensed JetBrains Mono and actual Chromium screenshot, and focused design/implementation proposal. Updated theme documentation and implementation status. Focused 326/326, full Web 1709/1709 across96 files, final TypeScript/Vite build pass. Ten Chromium verification groups pass against real manager with intercepted settings and standalone demo; one mock conditional write, zero unexpected requests/page errors. Worktree `/mnt/daten-i/Sourcecode/KNXBench.worktrees/retro-green-crt-20261003`, branch `design-retro-green-crt-20261003`, baseline e7f9db8e. No production component/core/protocol/dependency changes.
+- **Pending/Next Steps:** Requested palette/design/proposals delivered locally, uncommitted; no commit/push/root synchronization authorized. Actual Save-only purple, exact003300 selection fill, added input-focus glow, animation and full arrow-tree behavior remain proposed production work, not v1-pack functionality. Retain the worktree/branch/artifacts until user decides integration/publication.
+- **Notes for Codex oder Claude:** Main palette keeps shared accent green for readable selected ink; do not replace it with purple to fake Save-only coloring. Standalone HTML demonstrates full target but is not a React/Tailwind/native implementation. See docs/DESIGN_RETRO_GREEN_CRT.md and own log. Root foreign edits preserved; no KNX/hardware/native/Orca/general WCAG/full Alpha claim, no settings-file write. Existing Web lock owner/release history below is untouched by this design-only entry.
+
+---
+
 - **Last Agent:** codex (alpha / KL-151 research published; final hygiene)
 - **Timestamp:** 2026-10-03 22:20 UTC
 - **Completed:** Research fc5f2db1 published/live/fetched six reviewed Markdown blobs exact; doc5 source706/hash-exact, private-value/secret scan passed and separate in-session review had no blocker. Full853 original hashes and15 Resource pairs/14 scratch installs/1 namespace refusal independently verified. Production code/caps unchanged; 3 owned experiment build/snapshot directories removed, private inputs/DBs absent. Public logs/aggregate receipts retained. Named catalog-caller boundary and safe atomic refusal documented; KL151 itself not closed.

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 11:40
+- **Completed:** UA2 server half (DATA-03): optional `requestId` on `POST /api/devices` with an in-memory, bounded, per-project replay ledger (`apps/knx-server/src/catalog_requests.rs`, ADR-0069). Identical resend → `replayed: true`, no second batch; same ID/other content refused; failed requests not recorded; cleared on project replacement. RED 0/6 → GREEN 6/6, 5/5 mutants caught, full gates green (155 blocks / 3,045 passed / 0 failed / 176 ignored). KNOWN_LIMITATIONS U11 batch scope, IMPLEMENTATION_STATUS, ledger/goal-ui updated. Log `.ai/logs/2026-10-04_claude_ui-ua2-catalog-replay.md`.
+- **Pending/Next Steps:** UA3 MODEL-04 backend (opt-in address allocation + unique names), then UA4 MODEL-01, UA5 MODEL-02. Web halves (MODEL-03 `.0` editor, DATA-03 client retry, allocation/unique-name toggles, UX-01) wait for the Web lock.
+- **Notes for Codex oder Claude:** Web lock still with codex-commission-continuation; no `apps/knx-web` source touched. New `AppState.catalog_requests` field: struct-literal fixtures must add `catalog_requests: Default::default()`.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 10:55
 - **Completed:** UA1. MODEL-03 backend: `Command::SetCouplerIndividualAddress` + `CouplerEvidence` (core), `query::product_hardware_is_coupler` (productdb), server uses it only for `IsCoupler`=true products. Runtime RED→GREEN (`apps/knx-server/tests/coupler_address.rs`), 6/6 mutants caught, full Rust/repo gates green (3,036 passed / 0 failed / 176 ignored). KL-127: no Ground sample anywhere → ACCEPTED_BOUNDARY (known gap) per user instruction. RESEARCH §25, KNOWN_LIMITATIONS U11/§127, IMPLEMENTATION_STATUS, alpha ledger and goal-ui §3b updated. Log `.ai/logs/2026-10-04_claude_ui-ua1-coupler.md`.
 - **Pending/Next Steps:** UA2 DATA-03 server half (catalog `requestId` replay ledger), then UA3–UA5 backend halves. All UI halves (MODEL-03 editor `.0`, DATA-03 safe retry, etc.) and UA6 need the Web lock.

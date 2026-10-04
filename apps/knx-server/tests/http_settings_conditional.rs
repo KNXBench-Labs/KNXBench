@@ -42,6 +42,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         load_operations: Default::default(),
         data_dir: dir.path().to_path_buf(),
         settings_lock: Default::default(),
+        catalog_requests: Default::default(),
     };
     (Arc::new(state), dir)
 }

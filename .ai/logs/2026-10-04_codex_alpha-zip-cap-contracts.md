@@ -140,3 +140,51 @@ crate/root-bound xtask compilation; strict CI binding policy passes with0 EOL
 restores. CLI release binary hash/version bound to4dbca7e5,not a prior HEAD.
 Metadata gates/latest-upstream publication and own-only archive/hygiene pending;
 no cap change,private corpus,Scheme10 admission or KL151/Alpha completion.
+
+## Latest owner source update:actual next gate
+
+Published0028a58c added/changed12 Web source inputs while4dbca7e5 gates ran.
+Current full15 remains evidence for4dbca7e5, not automatically latest source.
+Checkpoint metadata doc5 passed, committedf9ef62e3; latest owner integrated
+as0e3e90b2, one expected status content conflict. Exact complete owner
+handover/status and all other goal/limitation bytes preserved; native120
+inputs unchanged. No root changes or own Web source edits.
+
+Actual new worker proc_1661bcf0b34d/PID3756841 notify dispatched for
+latest-owner-public15/summary.json, fresh target and same serialized/offline/
+loopback-only constraints. Short owned av6 remains in final cleanup scope.
+Latest acceptance PENDING, no publication or KL151/Alpha closure. Both delayed
+notifications remain one reconciled failure batch; no reruns caused by them.
+
+## Delayed original Scheme23 Master survivor
+
+proc_affa390cc323 is the already reconciled first AR06T sweep.12 original
+archived log hashes exact; namespace/qualified controls killed, Master
+compile/inventory/behavior all0 with1 passed/0 failed. Real surviving mutant
+exposed a weak parser-owned-only fixture, not a compiler issue or harmless
+marker mismatch. Later scanner-owned Resource/@Optional yields separately
+bound named RED101; first survivor remains in consolidated proof. No new
+execution, cap controls, double counting or restart of cleaned Scheme23 work.
+Current proc_1661bcf0b34d still running, five initial commands0; final latest
+acceptance pending.
+
+## Delayed accepted public15 success
+
+proc_57713447a1ae notification is already accepted4dbca7e5 public15. Producer
+receipt,15 actual exit0/log hashes, Rust3147/0/177/170 and CLI hash/version log
+reverified. No new execution or totals; original failed attempts retained.
+Do not relabel as0e3e90b2 evidence. Latest proc_1661bcf0b34d remains running;
+complete latest acceptance/publication pending.
+
+## Latest owner public15 independent acceptance
+
+proc_1661bcf0b34d completed0 on0e3e90b2. All15 command/log/input hashes verified,
+Rust3147/0/177/170, Web1769, Chromium98 plus separate probe1.797 source/config
+inputs exact, fresh changed ProductDB/root-bound xtask compiled, CLI hash/version
+bound to actual HEAD. Previous failed attempts and historical Scheme23 controls
+remain distinct; no double counting or private access.
+
+Published cc2916f4 brings UI+AR14D documentation consolidation and check-ledger.
+Respect the learned freeze: no fresh status-doc/ledger-row edits. Preserve
+upstream archived history, put the count-contract dossier and any row proposal
+in permitted handover. New actual integration/gates needed, publication pending.

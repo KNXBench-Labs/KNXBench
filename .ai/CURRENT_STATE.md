@@ -1,5 +1,14 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-04 19:14
+Web lock: taken by claude-goal-ui-owner for MODEL-02 web half (repair choice for ambiguous placement and line owner)
+- **Completed:** Lock taken only, no code yet. The previous lock line (this session, MODEL-01 delivered `e4737129`) said released.
+- **Pending/Next Steps:** MODEL-02 per the ledger row: where the Inspector shows a placement or line-owner ambiguity, offer "keep this placement" per current slot (`POST /api/repair/device-placement`, `POST /api/repair/line-owner`, ADR-0071); undo restores the exact imported state; save works after the repair. Release the lock in the merge entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 19:14
 Web lock: released by claude-goal-ui-owner (MODEL-01 web half delivered, parts 1 and 2)
 - **Completed:** MODEL-01 web half, part 2, so MODEL-01 is `DONE` in `docs/status/LEDGER.md` (count line IN_PROGRESS 6, DONE 26). The Inspector edits, deletes, moves and links every entity in the installation that owns it. Every move/link list offers only that installation's targets; links mirror `LinkComObject`, so a device placed nowhere may link anywhere. Ids owned by no single installation stay read-only, with the reworded message "… that belong to exactly one installation". The bulk toolbar moves only a selection owned by one installation. With several installations the CSV buttons name the installation for export, preview and confirmation (the server binds it into the token). 14 RED-first Vitest cases plus 1 guard; 5 old tests that pinned the first-installation rule were converted; a second e2e (line rename in installation 2 via the Inspector) fails on the old Inspector; 7 mutants caught. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,155 passed / 0 failed / 177 ignored in 169 blocks with 0 skip markers, four repository gates (headers 465 ok, ceiling 157; anchors 442 ok) plus `check-ledger` (185 rows), tsc, Vitest 1,803/100 files, complete intercepted Chromium suite 104/104, whitespace; source frozen. KNOWN_LIMITATIONS "U12 structure editor scope", the `UI_ALPHA_READINESS` evidence row and the `goal-ui.md` UA4 row are updated. Log: `.ai/logs/2026-10-04_claude_ui-model01-web-part2.md`.
 - **Pending/Next Steps:** Next web halves for the goal-ui owner, one Web lock each: MODEL-02 (repair choice for ambiguous placement/line owner, ADR-0071), UX-01 (drag a group address onto a communication object, keyboard path kept), then the AR13 debug-report text.

@@ -41,9 +41,12 @@ pub struct CouplerEvidence {
     pub product_ref: String,
 }
 
-/// A single reversible mutation. Most commands target the first installation;
-/// `CreateDevice` can explicitly target the installation owning a selected
-/// line. Other commands still need per-installation routing.
+/// A single reversible mutation. Commands addressed by an entity id act in
+/// the installation that owns that entity (MODEL-01); an id found in several
+/// installations is refused as ambiguous. Root-level creates take an
+/// optional explicit installation (`None` = the first one). No command
+/// connects two installations: such a move or link is refused with
+/// `CommandError::CrossInstallation`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     SetIndividualAddress {
@@ -179,6 +182,10 @@ pub enum Command {
     /// `Project::ids::next_group_address_id`.
     CreateGroupAddress {
         entry: GroupAddressEntry,
+        /// Target installation when `entry.range` is `None`; `None` means
+        /// the first installation (legacy default). With a range, the range's
+        /// installation is used and a different explicit target is refused.
+        installation: Option<InstallationId>,
     },
     DeleteGroupAddress {
         id: GroupAddressId,
@@ -188,6 +195,7 @@ pub enum Command {
     RestoreGroupAddress {
         entry: GroupAddressEntry,
         position: usize,
+        installation: InstallationId,
     },
     /// Overwrites `name`, `central`, and `unfiltered` on an existing group
     /// address — `address` and `range` are untouched, matching
@@ -216,6 +224,8 @@ pub enum Command {
     /// `Project::ids::next_area_id`.
     CreateArea {
         area: Area,
+        /// `None` means the first installation (legacy default).
+        installation: Option<InstallationId>,
     },
     DeleteArea {
         id: AreaId,
@@ -224,6 +234,7 @@ pub enum Command {
     RestoreArea {
         area: Area,
         position: usize,
+        installation: InstallationId,
     },
     RenameArea {
         id: AreaId,
@@ -245,6 +256,7 @@ pub enum Command {
         line: Line,
         line_position: usize,
         area_position: usize,
+        installation: InstallationId,
     },
     RenameLine {
         id: LineId,
@@ -334,6 +346,10 @@ pub enum Command {
     /// into its parent's `children`, same as `CreateGroupRange`.
     CreateBuildingPart {
         part: BuildingPart,
+        /// Target installation for a root part; `None` means the first
+        /// installation. A part with a parent goes to the parent's
+        /// installation, and a different explicit target is refused.
+        installation: Option<InstallationId>,
     },
     /// Refuses (`CommandError::BuildingPartNotEmpty`) if the part still
     /// has children or devices — the building-part equivalent of
@@ -348,6 +364,7 @@ pub enum Command {
         part: BuildingPart,
         position: usize,
         child_position: Option<usize>,
+        installation: InstallationId,
     },
     RenameBuildingPart {
         id: BuildingPartId,
@@ -377,10 +394,22 @@ pub enum Command {
         device: DeviceId,
         part: Option<BuildingPartId>,
     },
+    /// Undo-only inverse of [`Command::MoveDeviceToBuildingPart`]: puts the
+    /// device back into its previous part without the cross-installation
+    /// check, so an imported placement in another installation stays
+    /// undoable. Its own inverse is the checked forward move.
+    RestoreDeviceBuildingPlacement {
+        device: DeviceId,
+        part: Option<BuildingPartId>,
+    },
     /// `range.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_range_id`.
     CreateGroupRange {
         range: GroupRange,
+        /// Target installation for a main range; `None` means the first
+        /// installation. A middle range goes to its parent's installation,
+        /// and a different explicit target is refused.
+        installation: Option<InstallationId>,
     },
     DeleteGroupRange {
         id: GroupRangeId,
@@ -390,6 +419,7 @@ pub enum Command {
         range: GroupRange,
         position: usize,
         child_position: Option<usize>,
+        installation: InstallationId,
     },
     RenameGroupRange {
         id: GroupRangeId,
@@ -444,6 +474,12 @@ pub enum Command {
     SetGroupAddressStyle {
         style: GroupAddressStyle,
     },
+    /// Renames an installation (MODEL-01). Self-inverting: the inverse
+    /// carries the previous name.
+    RenameInstallation {
+        id: InstallationId,
+        name: String,
+    },
     /// Applies every sub-command as one atomic, one-undo-step unit — see
     /// `docs/superpowers/specs/2026-09-10-bulk-operations-design.md` for the
     /// rollback rationale. On any sub-command's `Err`, every already-applied
@@ -464,6 +500,17 @@ pub enum CommandError {
     },
     ComObjectNotFound(ComObjectInstanceId),
     GroupAddressNotFound(GroupAddressId),
+    /// A group address id occurs in several installations.
+    GroupAddressPlacementAmbiguous(GroupAddressId),
+    /// Parameter rows for one device and `ets_id` exist in several
+    /// installations; no single row can be edited safely.
+    ParameterPlacementAmbiguous(DeviceId),
+    /// A move, link or create would connect two installations, which are
+    /// separate infrastructures (ADR-0038).
+    CrossInstallation {
+        from: InstallationId,
+        to: InstallationId,
+    },
     /// A `DeleteGroupAddress` was refused because at least one
     /// communication object still links to it — deleting it now would
     /// leave a dangling `GroupLink` (`ValidationError::DanglingGroupLink`
@@ -640,6 +687,18 @@ impl fmt::Display for CommandError {
                 write!(f, "communication object instance {id} not found")
             }
             CommandError::GroupAddressNotFound(id) => write!(f, "group address {id} not found"),
+            CommandError::GroupAddressPlacementAmbiguous(id) => write!(
+                f,
+                "group address {id} exists in several installations; repair the project before editing it"
+            ),
+            CommandError::ParameterPlacementAmbiguous(device) => write!(
+                f,
+                "parameters of device {device} exist in several installations; repair the project before editing them"
+            ),
+            CommandError::CrossInstallation { from, to } => write!(
+                f,
+                "installation {from} and installation {to} are separate infrastructures; this would connect them"
+            ),
             CommandError::GroupAddressInUse(id) => {
                 write!(
                     f,
@@ -795,95 +854,188 @@ fn check_id_free(project: &Project, kind: IdKind, id: u32) -> Result<(), Command
     }
 }
 
+/// Index of installation `id`, or of the first installation for `None` —
+/// the legacy target of a create that names no parent.
+fn target_installation(
+    project: &Project,
+    id: Option<InstallationId>,
+) -> Result<usize, CommandError> {
+    match id {
+        Some(id) => project
+            .installations
+            .iter()
+            .position(|installation| installation.id == id)
+            .ok_or(CommandError::InstallationNotFound),
+        None if project.installations.is_empty() => Err(CommandError::InstallationNotFound),
+        None => Ok(0),
+    }
+}
+
+/// The one installation that holds an entity. `count` reports how often the
+/// entity occurs in one installation; zero in total is `not_found`, more than
+/// one occurrence anywhere is `ambiguous` — never the first of several.
+fn owning_installation(
+    project: &Project,
+    count: impl Fn(&Installation) -> usize,
+    not_found: CommandError,
+    ambiguous: CommandError,
+) -> Result<usize, CommandError> {
+    let mut owner = None;
+    let mut total = 0usize;
+    for (index, installation) in project.installations.iter().enumerate() {
+        let occurrences = count(installation);
+        if occurrences > 0 {
+            total += occurrences;
+            owner = Some(index);
+        }
+    }
+    match (owner, total) {
+        (None, _) => Err(not_found),
+        (Some(index), 1) => Ok(index),
+        _ => Err(ambiguous),
+    }
+}
+
 /// Commands addressed only by a numeric id must not select the first of
 /// several imported rows. The UI projection may show these ids in several
 /// installations; the core still has to refuse a direct HTTP caller.
-fn require_unique_area(project: &Project, id: AreaId) -> Result<(), CommandError> {
-    let first = project
-        .installations
-        .first()
-        .ok_or(CommandError::InstallationNotFound)?;
-    if !first.topology.areas.iter().any(|area| area.id == id) {
-        return Err(CommandError::AreaNotFound(id));
-    }
-    if project
-        .installations
-        .iter()
-        .flat_map(|i| &i.topology.areas)
-        .filter(|area| area.id == id)
-        .take(2)
-        .count()
-        != 1
-    {
-        return Err(CommandError::AreaPlacementAmbiguous(id));
-    }
-    Ok(())
+fn require_unique_area(project: &Project, id: AreaId) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |i| i.topology.areas.iter().filter(|area| area.id == id).count(),
+        CommandError::AreaNotFound(id),
+        CommandError::AreaPlacementAmbiguous(id),
+    )
 }
 
-fn require_unique_line(project: &Project, id: LineId) -> Result<(), CommandError> {
-    let first = project
-        .installations
-        .first()
-        .ok_or(CommandError::InstallationNotFound)?;
-    if !first.topology.lines.iter().any(|line| line.id == id) {
-        return Err(CommandError::LineNotFound(id));
-    }
-    if project
-        .installations
-        .iter()
-        .flat_map(|i| &i.topology.lines)
-        .filter(|line| line.id == id)
-        .take(2)
-        .count()
-        != 1
-    {
-        return Err(CommandError::LinePlacementAmbiguous(id));
-    }
-    Ok(())
+fn require_unique_line(project: &Project, id: LineId) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |i| i.topology.lines.iter().filter(|line| line.id == id).count(),
+        CommandError::LineNotFound(id),
+        CommandError::LinePlacementAmbiguous(id),
+    )
 }
 
-fn require_unique_building_part(project: &Project, id: BuildingPartId) -> Result<(), CommandError> {
-    let first = project
-        .installations
-        .first()
-        .ok_or(CommandError::InstallationNotFound)?;
-    if !first.buildings.iter().any(|part| part.id == id) {
-        return Err(CommandError::BuildingPartNotFound(id));
-    }
-    if project
-        .installations
-        .iter()
-        .flat_map(|i| &i.buildings)
-        .filter(|part| part.id == id)
-        .take(2)
-        .count()
-        != 1
-    {
-        return Err(CommandError::BuildingPartPlacementAmbiguous(id));
-    }
-    Ok(())
+fn require_unique_building_part(
+    project: &Project,
+    id: BuildingPartId,
+) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |i| i.buildings.iter().filter(|part| part.id == id).count(),
+        CommandError::BuildingPartNotFound(id),
+        CommandError::BuildingPartPlacementAmbiguous(id),
+    )
 }
 
-fn require_unique_group_range(project: &Project, id: GroupRangeId) -> Result<(), CommandError> {
-    let first = project
-        .installations
-        .first()
-        .ok_or(CommandError::InstallationNotFound)?;
-    if !first.group_ranges.iter().any(|range| range.id == id) {
-        return Err(CommandError::GroupRangeNotFound(id));
+fn require_unique_group_range(project: &Project, id: GroupRangeId) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |i| i.group_ranges.iter().filter(|range| range.id == id).count(),
+        CommandError::GroupRangeNotFound(id),
+        CommandError::GroupRangePlacementAmbiguous(id),
+    )
+}
+
+fn require_unique_group_address(
+    project: &Project,
+    id: GroupAddressId,
+) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |i| {
+            i.group_addresses
+                .iter()
+                .filter(|entry| entry.id == id)
+                .count()
+        },
+        CommandError::GroupAddressNotFound(id),
+        CommandError::GroupAddressPlacementAmbiguous(id),
+    )
+}
+
+/// The installation whose topology places `device` (on a line or
+/// unassigned), `None` when no installation places it. Placements in two
+/// installations are refused rather than guessed.
+fn device_installation(project: &Project, device: DeviceId) -> Result<Option<usize>, CommandError> {
+    let mut owner = None;
+    for (index, installation) in project.installations.iter().enumerate() {
+        let placed = installation.topology.unassigned.contains(&device)
+            || installation
+                .topology
+                .lines
+                .iter()
+                .any(|line| line.devices.contains(&device));
+        if placed && owner.replace(index).is_some() {
+            return Err(ValidationError::MultipleTopologyPlacements { device }.into());
+        }
     }
-    if project
-        .installations
-        .iter()
-        .flat_map(|i| &i.group_ranges)
-        .filter(|range| range.id == id)
-        .take(2)
-        .count()
-        != 1
-    {
-        return Err(CommandError::GroupRangePlacementAmbiguous(id));
+    Ok(owner)
+}
+
+/// Refuses an operation joining installation `from` with `to`.
+fn same_installation(project: &Project, from: usize, to: usize) -> Result<(), CommandError> {
+    if from == to {
+        Ok(())
+    } else {
+        Err(CommandError::CrossInstallation {
+            from: project.installations[from].id,
+            to: project.installations[to].id,
+        })
     }
-    Ok(())
+}
+
+/// Where a create lands: the parent's installation if it has a parent,
+/// otherwise the explicit target (or the first installation). An explicit
+/// target that differs from the parent's installation is refused.
+fn create_installation(
+    project: &Project,
+    parent_owner: Option<usize>,
+    explicit: Option<InstallationId>,
+) -> Result<usize, CommandError> {
+    match (parent_owner, explicit) {
+        (Some(owner), Some(id)) => {
+            let target = target_installation(project, Some(id))?;
+            same_installation(project, owner, target)?;
+            Ok(owner)
+        }
+        (Some(owner), None) => Ok(owner),
+        (None, explicit) => target_installation(project, explicit),
+    }
+}
+
+/// The installation holding the parameter row for `(device, ets_id)`, or,
+/// for a new row, the device's own installation (first as a fallback for a
+/// device placed nowhere).
+fn parameter_installation(
+    project: &Project,
+    device: DeviceId,
+    ets_id: &str,
+) -> Result<usize, CommandError> {
+    match owning_installation(
+        project,
+        |i| {
+            i.parameters
+                .iter()
+                .filter(|p| p.device == device && p.source.ets_id == ets_id)
+                .count()
+        },
+        CommandError::DeviceNotFound(device),
+        CommandError::ParameterPlacementAmbiguous(device),
+    ) {
+        Ok(index) => Ok(index),
+        Err(CommandError::DeviceNotFound(_)) => match device_installation(project, device)? {
+            Some(index) => Ok(index),
+            None => target_installation(project, None),
+        },
+        Err(other) => Err(other),
+    }
+}
+
+/// Index of installation `id` for an undo-only restore.
+fn restore_installation(project: &Project, id: InstallationId) -> Result<usize, CommandError> {
+    target_installation(project, Some(id))
 }
 
 /// A malformed topology may attach the same line to two areas. Never let
@@ -1633,23 +1785,17 @@ impl Command {
                     .clone();
                 // Only a *new* instance inserts `id`; overwriting the value
                 // of an existing (device, ets_id) row keeps that row's id.
-                // Same scope as `upsert_parameter_value` below — the first
-                // installation — so a matching row elsewhere cannot hide
-                // that this push needs a free id.
-                let is_new_instance = !project
-                    .installations
-                    .first()
-                    .ok_or(CommandError::InstallationNotFound)?
+                // The row lives in the installation that already holds it,
+                // else in the device's own installation (MODEL-01).
+                let index = parameter_installation(project, device_id, ets_id)?;
+                let is_new_instance = !project.installations[index]
                     .parameters
                     .iter()
                     .any(|p| p.device == device_id && p.source.ets_id == *ets_id);
                 if is_new_instance {
                     check_id_free(project, IdKind::ParameterInstance, id.0)?;
                 }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 match upsert_parameter_value(installation, id, device_id, ets_id, raw, source_path)
                 {
                     Some((previous_id, previous_raw)) => Ok(Command::RestoreParameterValue {
@@ -1673,10 +1819,8 @@ impl Command {
                 raw,
             } => {
                 let device_id = *device;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = parameter_installation(project, device_id, ets_id)?;
+                let installation = &mut project.installations[index];
                 match raw {
                     Some(prior) => {
                         // Constructed only from a prior overwrite (`SetParameterValue`'s
@@ -1714,12 +1858,17 @@ impl Command {
                     }
                 }
             }
-            Command::CreateGroupAddress { entry } => {
+            Command::CreateGroupAddress {
+                entry,
+                installation,
+            } => {
                 check_id_free(project, IdKind::GroupAddress, entry.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let parent = entry
+                    .range
+                    .map(|range| require_unique_group_range(project, range))
+                    .transpose()?;
+                let index = create_installation(project, parent, *installation)?;
+                let installation = &mut project.installations[index];
                 check_no_duplicate_group_address(installation, entry.id, entry.address)?;
                 if let Some(range_id) = entry.range {
                     let range = installation
@@ -1742,10 +1891,8 @@ impl Command {
                 {
                     return Err(CommandError::GroupAddressInUse(id));
                 }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_group_address(project, id)?;
+                let installation = &mut project.installations[index];
                 let pos = installation
                     .group_addresses
                     .iter()
@@ -1755,13 +1902,16 @@ impl Command {
                 Ok(Command::RestoreGroupAddress {
                     entry,
                     position: pos,
+                    installation: installation.id,
                 })
             }
-            Command::RestoreGroupAddress { entry, position } => {
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+            Command::RestoreGroupAddress {
+                entry,
+                position,
+                installation,
+            } => {
+                let index = restore_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 check_no_duplicate_group_address(installation, entry.id, entry.address)?;
                 if let Some(range_id) = entry.range {
                     let range = installation
@@ -1776,12 +1926,10 @@ impl Command {
                 installation.group_addresses.insert(position, entry.clone());
                 Ok(Command::DeleteGroupAddress { id })
             }
-            Command::CreateArea { area } => {
+            Command::CreateArea { area, installation } => {
                 check_id_free(project, IdKind::Area, area.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = target_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 check_no_duplicate_area_address(&installation.topology, area.id, area.address)?;
                 let id = area.id;
                 installation.topology.areas.push(area.clone());
@@ -1789,11 +1937,8 @@ impl Command {
             }
             Command::DeleteArea { id } => {
                 let id = *id;
-                require_unique_area(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_area(project, id)?;
+                let installation = &mut project.installations[index];
                 let pos = installation
                     .topology
                     .areas
@@ -1807,14 +1952,17 @@ impl Command {
                 Ok(Command::RestoreArea {
                     area,
                     position: pos,
+                    installation: installation.id,
                 })
             }
-            Command::RestoreArea { area, position } => {
+            Command::RestoreArea {
+                area,
+                position,
+                installation,
+            } => {
                 check_id_free(project, IdKind::Area, area.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = restore_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 if *position > installation.topology.areas.len() {
                     return Err(CommandError::InvalidStructurePosition {
                         kind: IdKind::Area,
@@ -1827,11 +1975,8 @@ impl Command {
             }
             Command::RenameArea { id, name } => {
                 let id = *id;
-                require_unique_area(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_area(project, id)?;
+                let installation = &mut project.installations[index];
                 let area = installation
                     .topology
                     .areas
@@ -1843,12 +1988,9 @@ impl Command {
             }
             Command::CreateLine { area, line } => {
                 check_id_free(project, IdKind::Line, line.id.0)?;
-                require_unique_area(project, *area)?;
+                let index = require_unique_area(project, *area)?;
                 let area_id = *area;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let area_ref = installation
                     .topology
                     .areas
@@ -1875,11 +2017,8 @@ impl Command {
             }
             Command::DeleteLine { id } => {
                 let id = *id;
-                require_unique_line(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_line(project, id)?;
+                let installation = &mut project.installations[index];
                 let (pos, placement) = line_placement(&installation.topology, id)?;
                 let (area_id, area_position) = placement.ok_or(CommandError::LineNotFound(id))?;
                 if !installation.topology.lines[pos].devices.is_empty() {
@@ -1898,6 +2037,7 @@ impl Command {
                     line,
                     line_position: pos,
                     area_position,
+                    installation: installation.id,
                 })
             }
             Command::RestoreLine {
@@ -1905,12 +2045,11 @@ impl Command {
                 line,
                 line_position,
                 area_position,
+                installation,
             } => {
                 check_id_free(project, IdKind::Line, line.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = restore_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 if *line_position > installation.topology.lines.len() {
                     return Err(CommandError::InvalidStructurePosition {
                         kind: IdKind::Line,
@@ -1953,11 +2092,8 @@ impl Command {
             }
             Command::RenameLine { id, name } => {
                 let id = *id;
-                require_unique_line(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_line(project, id)?;
+                let installation = &mut project.installations[index];
                 let line = installation
                     .topology
                     .lines
@@ -1968,12 +2104,10 @@ impl Command {
                 Ok(Command::RenameLine { id, name: previous })
             }
             Command::MoveLineToArea { id, area } => {
-                require_unique_line(project, *id)?;
-                require_unique_area(project, *area)?;
-                let installation = project
-                    .installations
-                    .first()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_line(project, *id)?;
+                let area_index = require_unique_area(project, *area)?;
+                same_installation(project, index, area_index)?;
+                let installation = &project.installations[index];
                 let (line_index, previous) = line_placement(&installation.topology, *id)?;
                 if previous.map(|(owner, _)| owner) != Some(*area) {
                     for &device in &installation.topology.lines[line_index].devices {
@@ -1987,10 +2121,7 @@ impl Command {
                     }
                 }
                 let devices = &project.devices;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_area, position) =
                     relocate_line(installation, devices, *id, Some(*area), None, true)?;
                 Ok(Command::RestoreLinePlacement {
@@ -2000,13 +2131,10 @@ impl Command {
                 })
             }
             Command::RestoreLinePlacement { id, area, position } => {
-                require_unique_line(project, *id)?;
+                let index = require_unique_line(project, *id)?;
                 // Undo may restore an imported area id that also exists in another installation.
                 let devices = &project.devices;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_area, old_position) =
                     relocate_line(installation, devices, *id, *area, Some(*position), false)?;
                 Ok(Command::RestoreLinePlacement {
@@ -2031,10 +2159,21 @@ impl Command {
                     // its address explicitly before changing its placement.
                     check_individual_address_on_line(device, address, area, current_line, true)?;
                 }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let current = device_installation(project, device)?;
+                let index = match line {
+                    Some(line_id) => {
+                        let target = require_unique_line(project, line_id)?;
+                        if let Some(current) = current {
+                            same_installation(project, current, target)?;
+                        }
+                        target
+                    }
+                    None => match current {
+                        Some(current) => current,
+                        None => target_installation(project, None)?,
+                    },
+                };
+                let installation = &mut project.installations[index];
                 if let Some(line_id) = line {
                     if !installation.topology.lines.iter().any(|l| l.id == line_id) {
                         return Err(CommandError::LineNotFound(line_id));
@@ -2275,15 +2414,14 @@ impl Command {
                     position,
                 })
             }
-            Command::CreateBuildingPart { part } => {
+            Command::CreateBuildingPart { part, installation } => {
                 check_id_free(project, IdKind::BuildingPart, part.id.0)?;
-                if let Some(parent) = part.parent {
-                    require_unique_building_part(project, parent)?;
-                }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let parent = part
+                    .parent
+                    .map(|parent| require_unique_building_part(project, parent))
+                    .transpose()?;
+                let index = create_installation(project, parent, *installation)?;
+                let installation = &mut project.installations[index];
                 if let Some(parent_id) = part.parent {
                     if !installation.buildings.iter().any(|p| p.id == parent_id) {
                         return Err(CommandError::BuildingPartNotFound(parent_id));
@@ -2304,11 +2442,8 @@ impl Command {
             }
             Command::DeleteBuildingPart { id } => {
                 let id = *id;
-                require_unique_building_part(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_building_part(project, id)?;
+                let installation = &mut project.installations[index];
                 let pos = installation
                     .buildings
                     .iter()
@@ -2340,18 +2475,18 @@ impl Command {
                     part,
                     position: pos,
                     child_position: parent.map(|_| child_position),
+                    installation: installation.id,
                 })
             }
             Command::RestoreBuildingPart {
                 part,
                 position,
                 child_position,
+                installation,
             } => {
                 check_id_free(project, IdKind::BuildingPart, part.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = restore_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 if *position > installation.buildings.len() {
                     return Err(CommandError::InvalidStructurePosition {
                         kind: IdKind::BuildingPart,
@@ -2403,11 +2538,8 @@ impl Command {
             }
             Command::RenameBuildingPart { id, name } => {
                 let id = *id;
-                require_unique_building_part(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_building_part(project, id)?;
+                let installation = &mut project.installations[index];
                 let part = installation
                     .buildings
                     .iter_mut()
@@ -2417,14 +2549,12 @@ impl Command {
                 Ok(Command::RenameBuildingPart { id, name: previous })
             }
             Command::MoveBuildingPart { id, parent } => {
-                require_unique_building_part(project, *id)?;
+                let index = require_unique_building_part(project, *id)?;
                 if let Some(parent_id) = parent {
-                    require_unique_building_part(project, *parent_id)?;
+                    let parent_index = require_unique_building_part(project, *parent_id)?;
+                    same_installation(project, index, parent_index)?;
                 }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_parent, position) =
                     relocate_building_part(installation, *id, *parent, None, true)?;
                 Ok(Command::RestoreBuildingPartPlacement {
@@ -2438,12 +2568,9 @@ impl Command {
                 parent,
                 position,
             } => {
-                require_unique_building_part(project, *id)?;
+                let index = require_unique_building_part(project, *id)?;
                 // Restoring an imported parent reference must not become a new edit.
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_parent, old_position) =
                     relocate_building_part(installation, *id, *parent, Some(*position), false)?;
                 Ok(Command::RestoreBuildingPartPlacement {
@@ -2458,22 +2585,63 @@ impl Command {
                 if project.devices.get(device).is_none() {
                     return Err(CommandError::DeviceNotFound(device));
                 }
-                let installation = project
+                // The device's current building placement, in any installation.
+                let placed_in = project
                     .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
-                if let Some(part_id) = part {
-                    if !installation.buildings.iter().any(|p| p.id == part_id) {
-                        return Err(CommandError::BuildingPartNotFound(part_id));
+                    .iter()
+                    .position(|i| i.buildings.iter().any(|p| p.devices.contains(&device)));
+                let target = part
+                    .map(|part_id| require_unique_building_part(project, part_id))
+                    .transpose()?;
+                if let Some(target) = target {
+                    if let Some(current) = device_installation(project, device)? {
+                        same_installation(project, current, target)?;
                     }
                 }
-                let previous = remove_device_from_buildings(installation, device);
-                if let Some(part_id) = part {
-                    installation
+                let previous = match placed_in {
+                    Some(index) => {
+                        remove_device_from_buildings(&mut project.installations[index], device)
+                    }
+                    None => None,
+                };
+                if let (Some(part_id), Some(index)) = (part, target) {
+                    project.installations[index]
                         .buildings
                         .iter_mut()
                         .find(|p| p.id == part_id)
                         .unwrap()
+                        .devices
+                        .push(device);
+                }
+                Ok(Command::RestoreDeviceBuildingPlacement {
+                    device,
+                    part: previous,
+                })
+            }
+            Command::RestoreDeviceBuildingPlacement { device, part } => {
+                let device = *device;
+                if project.devices.get(device).is_none() {
+                    return Err(CommandError::DeviceNotFound(device));
+                }
+                let target = part
+                    .map(|part_id| require_unique_building_part(project, part_id))
+                    .transpose()?;
+                let placed_in = project
+                    .installations
+                    .iter()
+                    .position(|i| i.buildings.iter().any(|p| p.devices.contains(&device)));
+                let previous = match placed_in {
+                    Some(index) => {
+                        remove_device_from_buildings(&mut project.installations[index], device)
+                    }
+                    None => None,
+                };
+                if let (Some(part_id), Some(index)) = (*part, target) {
+                    project.installations[index]
+                        .buildings
+                        .iter_mut()
+                        .find(|p| p.id == part_id)
+                        .expect("require_unique_building_part found it")
                         .devices
                         .push(device);
                 }
@@ -2482,15 +2650,17 @@ impl Command {
                     part: previous,
                 })
             }
-            Command::CreateGroupRange { range } => {
+            Command::CreateGroupRange {
+                range,
+                installation,
+            } => {
                 check_id_free(project, IdKind::GroupRange, range.id.0)?;
-                if let Some(parent) = range.parent {
-                    require_unique_group_range(project, parent)?;
-                }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let parent = range
+                    .parent
+                    .map(|parent| require_unique_group_range(project, parent))
+                    .transpose()?;
+                let index = create_installation(project, parent, *installation)?;
+                let installation = &mut project.installations[index];
                 check_group_range_is_well_ordered(range.id, range.start, range.end)?;
                 if let Some(parent_id) = range.parent {
                     let parent = installation
@@ -2524,11 +2694,8 @@ impl Command {
             }
             Command::DeleteGroupRange { id } => {
                 let id = *id;
-                require_unique_group_range(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_group_range(project, id)?;
+                let installation = &mut project.installations[index];
                 let pos = installation
                     .group_ranges
                     .iter()
@@ -2566,18 +2733,18 @@ impl Command {
                     range,
                     position: pos,
                     child_position: parent.map(|_| child_position),
+                    installation: installation.id,
                 })
             }
             Command::RestoreGroupRange {
                 range,
                 position,
                 child_position,
+                installation,
             } => {
                 check_id_free(project, IdKind::GroupRange, range.id.0)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = restore_installation(project, *installation)?;
+                let installation = &mut project.installations[index];
                 if *position > installation.group_ranges.len() {
                     return Err(CommandError::InvalidStructurePosition {
                         kind: IdKind::GroupRange,
@@ -2629,11 +2796,8 @@ impl Command {
             }
             Command::RenameGroupRange { id, name } => {
                 let id = *id;
-                require_unique_group_range(project, id)?;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_group_range(project, id)?;
+                let installation = &mut project.installations[index];
                 let range = installation
                     .group_ranges
                     .iter_mut()
@@ -2643,14 +2807,12 @@ impl Command {
                 Ok(Command::RenameGroupRange { id, name: previous })
             }
             Command::MoveGroupRange { id, parent } => {
-                require_unique_group_range(project, *id)?;
+                let index = require_unique_group_range(project, *id)?;
                 if let Some(parent_id) = parent {
-                    require_unique_group_range(project, *parent_id)?;
+                    let parent_index = require_unique_group_range(project, *parent_id)?;
+                    same_installation(project, index, parent_index)?;
                 }
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_parent, position) =
                     relocate_group_range(installation, *id, *parent, None, true)?;
                 Ok(Command::RestoreGroupRangePlacement {
@@ -2664,12 +2826,9 @@ impl Command {
                 parent,
                 position,
             } => {
-                require_unique_group_range(project, *id)?;
+                let index = require_unique_group_range(project, *id)?;
                 // Undo may recover an imported parent id shared with another installation.
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = &mut project.installations[index];
                 let (old_parent, old_position) =
                     relocate_group_range(installation, *id, *parent, Some(*position), false)?;
                 Ok(Command::RestoreGroupRangePlacement {
@@ -2687,10 +2846,8 @@ impl Command {
                 let id = *id;
                 let central = *central;
                 let unfiltered = *unfiltered;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_group_address(project, id)?;
+                let installation = &mut project.installations[index];
                 let entry = installation
                     .group_addresses
                     .iter_mut()
@@ -2710,10 +2867,12 @@ impl Command {
                 let id = *id;
                 let address = *address;
                 let range = *range;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let index = require_unique_group_address(project, id)?;
+                if let Some(range_id) = range {
+                    let range_index = require_unique_group_range(project, range_id)?;
+                    same_installation(project, index, range_index)?;
+                }
+                let installation = &mut project.installations[index];
                 check_no_duplicate_group_address(installation, id, address)?;
                 if let Some(range_id) = range {
                     let target_range = installation
@@ -2744,10 +2903,29 @@ impl Command {
                 let com_object = *com_object;
                 let ga = *ga;
                 let direction = *direction;
-                let installation = project
-                    .installations
-                    .first()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let device = project
+                    .devices
+                    .com_object(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?
+                    .device;
+                let index = match require_unique_group_address(project, ga) {
+                    Ok(index) => index,
+                    // Keep the existing dangling-link diagnostic for an absent id.
+                    Err(CommandError::GroupAddressNotFound(_)) => {
+                        target_installation(project, None)?
+                    }
+                    Err(other) => return Err(other),
+                };
+                if let Some(current) = device_installation(project, device)? {
+                    if project.installations[index]
+                        .group_addresses
+                        .iter()
+                        .any(|entry| entry.id == ga)
+                    {
+                        same_installation(project, current, index)?;
+                    }
+                }
+                let installation = &project.installations[index];
                 check_group_link_target_exists(installation, com_object, ga)?;
                 let com = project
                     .devices
@@ -2855,6 +3033,15 @@ impl Command {
                 let previous = project.info.group_address_style;
                 project.info.group_address_style = style;
                 Ok(Command::SetGroupAddressStyle { style: previous })
+            }
+            Command::RenameInstallation { id, name } => {
+                let index = target_installation(project, Some(*id))?;
+                let previous =
+                    std::mem::replace(&mut project.installations[index].name, name.clone());
+                Ok(Command::RenameInstallation {
+                    id: *id,
+                    name: previous,
+                })
             }
             Command::Batch(commands) => {
                 // A rollback is not an undo: `ReserveIds` never rewinds on
@@ -3611,6 +3798,7 @@ mod tests {
                 &mut project,
                 Command::CreateGroupAddress {
                     entry: entry.clone(),
+                    installation: None,
                 },
             )
             .unwrap();
@@ -3695,6 +3883,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                 },
+                installation: None,
             },
         );
         assert!(matches!(
@@ -4127,7 +4316,13 @@ mod tests {
             lines: vec![],
         };
         stack
-            .do_command(&mut project, Command::CreateArea { area: area.clone() })
+            .do_command(
+                &mut project,
+                Command::CreateArea {
+                    area: area.clone(),
+                    installation: None,
+                },
+            )
             .unwrap();
         assert_eq!(project.installations[0].topology.areas.len(), 1);
         stack
@@ -4278,6 +4473,7 @@ mod tests {
                         BuildingPartType::Room,
                         Some(BuildingPartId(1)),
                     ),
+                    installation: None,
                 },
                 CommandError::BuildingPartPlacementAmbiguous(BuildingPartId(1)),
             ),
@@ -4304,6 +4500,7 @@ mod tests {
             (
                 Command::CreateGroupRange {
                     range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
+                    installation: None,
                 },
                 CommandError::GroupRangePlacementAmbiguous(GroupRangeId(1)),
             ),
@@ -4416,7 +4613,11 @@ mod tests {
         };
         let cases = vec![
             (
-                Command::RestoreArea { area, position: 3 },
+                Command::RestoreArea {
+                    area,
+                    position: 3,
+                    installation: InstallationId(0),
+                },
                 CommandError::InvalidStructurePosition {
                     kind: IdKind::Area,
                     id: 2,
@@ -4429,6 +4630,7 @@ mod tests {
                     line: test_line(LineId(2), 2, vec![]),
                     line_position: 3,
                     area_position: 0,
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidStructurePosition {
                     kind: IdKind::Line,
@@ -4442,6 +4644,7 @@ mod tests {
                     line: test_line(LineId(2), 2, vec![]),
                     line_position: 0,
                     area_position: 3,
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidLinePosition {
                     area: AreaId(1),
@@ -4457,6 +4660,7 @@ mod tests {
                     ),
                     position: 3,
                     child_position: Some(0),
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidStructurePosition {
                     kind: IdKind::BuildingPart,
@@ -4473,6 +4677,7 @@ mod tests {
                     ),
                     position: 1,
                     child_position: Some(3),
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidBuildingPartPosition {
                     parent: BuildingPartId(1),
@@ -4484,6 +4689,7 @@ mod tests {
                     range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
                     position: 3,
                     child_position: Some(0),
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidStructurePosition {
                     kind: IdKind::GroupRange,
@@ -4496,6 +4702,7 @@ mod tests {
                     range: test_range(GroupRangeId(2), 0, 99, Some(GroupRangeId(1))),
                     position: 1,
                     child_position: Some(3),
+                    installation: InstallationId(0),
                 },
                 CommandError::InvalidGroupRangePosition {
                     parent: GroupRangeId(1),
@@ -4535,6 +4742,7 @@ mod tests {
                     completion: CompletionStatus::FinishedDesign,
                     lines: vec![],
                 },
+                installation: None,
             },
         );
         assert!(matches!(
@@ -5578,6 +5786,7 @@ mod tests {
                 &mut project,
                 Command::CreateGroupRange {
                     range: range.clone(),
+                    installation: None,
                 },
             )
             .unwrap();
@@ -5688,6 +5897,7 @@ mod tests {
                 &mut project,
                 Command::CreateGroupRange {
                     range: test_range(GroupRangeId(2), 0, 255, Some(GroupRangeId(1))),
+                    installation: None,
                 },
             )
             .unwrap();
@@ -5710,6 +5920,7 @@ mod tests {
             &mut project,
             Command::CreateGroupRange {
                 range: test_range(GroupRangeId(2), 0, 2047, Some(GroupRangeId(1))),
+                installation: None,
             },
         );
         assert!(matches!(
@@ -5728,6 +5939,7 @@ mod tests {
             &mut project,
             Command::CreateGroupRange {
                 range: test_range(GroupRangeId(1), 255, 0, None),
+                installation: None,
             },
         );
         assert!(matches!(
@@ -5747,6 +5959,7 @@ mod tests {
             &mut project,
             Command::CreateGroupRange {
                 range: test_range(GroupRangeId(1), 0, 255, Some(GroupRangeId(99))),
+                installation: None,
             },
         );
         assert_eq!(
@@ -5766,6 +5979,7 @@ mod tests {
             &mut project,
             Command::CreateGroupRange {
                 range: test_range(GroupRangeId(2), 200, 500, None),
+                installation: None,
             },
         );
         assert!(matches!(
@@ -6234,6 +6448,7 @@ mod tests {
                     unfiltered: false,
                     range: Some(GroupRangeId(1)),
                 },
+                installation: None,
             },
         );
         assert!(matches!(
@@ -6264,6 +6479,7 @@ mod tests {
                         unfiltered: false,
                         range: Some(GroupRangeId(1)),
                     },
+                    installation: None,
                 },
             )
             .unwrap();
@@ -6286,6 +6502,7 @@ mod tests {
                     unfiltered: false,
                     range: Some(GroupRangeId(99)),
                 },
+                installation: None,
             },
         );
         assert_eq!(
@@ -6762,7 +6979,10 @@ mod tests {
         stack
             .do_command(
                 &mut project,
-                Command::CreateBuildingPart { part: part.clone() },
+                Command::CreateBuildingPart {
+                    part: part.clone(),
+                    installation: None,
+                },
             )
             .unwrap();
         assert_eq!(project.installations[0].buildings.len(), 1);
@@ -6884,6 +7104,7 @@ mod tests {
                         BuildingPartType::Floor,
                         Some(BuildingPartId(1)),
                     ),
+                    installation: None,
                 },
             )
             .unwrap();
@@ -6907,6 +7128,7 @@ mod tests {
                     BuildingPartType::Room,
                     Some(BuildingPartId(99)),
                 ),
+                installation: None,
             },
         );
         assert_eq!(
@@ -7306,7 +7528,13 @@ mod tests {
             ),
         ] {
             stack
-                .do_command(&mut project, Command::CreateBuildingPart { part })
+                .do_command(
+                    &mut project,
+                    Command::CreateBuildingPart {
+                        part,
+                        installation: None,
+                    },
+                )
                 .unwrap();
         }
         for target in [BuildingPartId(2), BuildingPartId(3)] {
@@ -7455,9 +7683,11 @@ mod tests {
         let batch = Command::Batch(vec![
             Command::CreateGroupAddress {
                 entry: test_group_address_entry(GroupAddressId(1), 1),
+                installation: None,
             },
             Command::CreateGroupAddress {
                 entry: test_group_address_entry(GroupAddressId(2), 2),
+                installation: None,
             },
         ]);
         stack.do_command(&mut project, batch).unwrap();
@@ -7479,10 +7709,12 @@ mod tests {
         let batch = Command::Batch(vec![
             Command::CreateGroupAddress {
                 entry: test_group_address_entry(GroupAddressId(1), 1),
+                installation: None,
             },
             Command::DeleteDevice { id: DeviceId(99) },
             Command::CreateGroupAddress {
                 entry: test_group_address_entry(GroupAddressId(2), 2),
+                installation: None,
             },
         ]);
         let result = stack.do_command(&mut project, batch);
@@ -8000,8 +8232,14 @@ mod id_integrity_tests {
     #[test]
     fn create_group_address_refuses_an_id_in_use() {
         assert_second_is_refused(
-            Command::CreateGroupAddress { entry: ga(1, 1) },
-            Command::CreateGroupAddress { entry: ga(1, 2) },
+            Command::CreateGroupAddress {
+                entry: ga(1, 1),
+                installation: None,
+            },
+            Command::CreateGroupAddress {
+                entry: ga(1, 2),
+                installation: None,
+            },
             IdKind::GroupAddress,
             1,
         );
@@ -8010,8 +8248,14 @@ mod id_integrity_tests {
     #[test]
     fn create_area_refuses_an_id_in_use() {
         assert_second_is_refused(
-            Command::CreateArea { area: area(1, 1) },
-            Command::CreateArea { area: area(1, 2) },
+            Command::CreateArea {
+                area: area(1, 1),
+                installation: None,
+            },
+            Command::CreateArea {
+                area: area(1, 2),
+                installation: None,
+            },
             IdKind::Area,
             1,
         );
@@ -8021,8 +8265,14 @@ mod id_integrity_tests {
     fn create_line_refuses_an_id_in_use_even_in_another_area() {
         assert_second_is_refused(
             Command::Batch(vec![
-                Command::CreateArea { area: area(1, 1) },
-                Command::CreateArea { area: area(2, 2) },
+                Command::CreateArea {
+                    area: area(1, 1),
+                    installation: None,
+                },
+                Command::CreateArea {
+                    area: area(2, 2),
+                    installation: None,
+                },
                 Command::CreateLine {
                     area: AreaId(1),
                     line: line(1, 1),
@@ -8042,9 +8292,11 @@ mod id_integrity_tests {
         assert_second_is_refused(
             Command::CreateGroupRange {
                 range: range(1, 0, 2047),
+                installation: None,
             },
             Command::CreateGroupRange {
                 range: range(1, 2048, 4095),
+                installation: None,
             },
             IdKind::GroupRange,
             1,
@@ -8054,8 +8306,14 @@ mod id_integrity_tests {
     #[test]
     fn create_building_part_refuses_an_id_in_use() {
         assert_second_is_refused(
-            Command::CreateBuildingPart { part: part(1) },
-            Command::CreateBuildingPart { part: part(1) },
+            Command::CreateBuildingPart {
+                part: part(1),
+                installation: None,
+            },
+            Command::CreateBuildingPart {
+                part: part(1),
+                installation: None,
+            },
             IdKind::BuildingPart,
             1,
         );
@@ -8139,7 +8397,13 @@ mod id_integrity_tests {
         let mut p = project();
         let mut stack = CommandStack::new();
         stack
-            .do_command(&mut p, Command::CreateGroupAddress { entry: ga(1, 1) })
+            .do_command(
+                &mut p,
+                Command::CreateGroupAddress {
+                    entry: ga(1, 1),
+                    installation: None,
+                },
+            )
             .unwrap();
         stack
             .do_command(
@@ -8176,7 +8440,10 @@ mod id_integrity_tests {
                 &mut p,
                 Command::Batch(vec![
                     Command::ReserveIds { through: clone },
-                    Command::CreateGroupAddress { entry: ga(id.0, 1) },
+                    Command::CreateGroupAddress {
+                        entry: ga(id.0, 1),
+                        installation: None,
+                    },
                 ]),
             )
             .unwrap();
@@ -8208,6 +8475,7 @@ mod id_integrity_tests {
                 &mut p,
                 Command::CreateGroupAddress {
                     entry: ga(live.0, 10),
+                    installation: None,
                 },
             )
             .unwrap();
@@ -8218,6 +8486,7 @@ mod id_integrity_tests {
             Command::Batch(vec![
                 Command::CreateGroupAddress {
                     entry: ga(planned.0, 20),
+                    installation: None,
                 },
                 Command::ReserveIds { through: stale },
             ]),
@@ -8248,7 +8517,11 @@ mod id_integrity_tests {
         second_installation(&mut p);
         p.installations[1].group_addresses.push(ga(3, 9));
         let before = format!("{p:#?}");
-        let result = Command::CreateGroupAddress { entry: ga(3, 1) }.apply(&mut p);
+        let result = Command::CreateGroupAddress {
+            entry: ga(3, 1),
+            installation: None,
+        }
+        .apply(&mut p);
         assert_eq!(
             result,
             Err(CommandError::IdInUse {
@@ -8259,11 +8532,11 @@ mod id_integrity_tests {
         assert_eq!(format!("{p:#?}"), before);
     }
 
-    /// The edited row lives in `installations[0]` (where `upsert` writes); a
-    /// same-(device, ets_id) row elsewhere must not hide that this is a new
-    /// instance whose id is already taken.
+    /// MODEL-01: an existing `(device, ets_id)` row is edited where it lives,
+    /// even in a later installation — never duplicated into the first one.
+    /// A genuinely new row still needs a free id.
     #[test]
-    fn a_parameter_row_in_another_installation_does_not_bypass_the_check() {
+    fn a_parameter_row_in_another_installation_is_edited_in_place() {
         let mut p = project();
         second_installation(&mut p);
         let row = |id: u32| crate::parameter::ParameterInstance {
@@ -8286,11 +8559,26 @@ mod id_integrity_tests {
                 ..row(7)
             });
         create_device(1, "d", &[]).apply(&mut p).unwrap();
+        Command::SetParameterValue {
+            id: ParameterInstanceId(99),
+            device: DeviceId(1),
+            ets_id: "P-1".into(),
+            raw: "1".into(),
+        }
+        .apply(&mut p)
+        .unwrap();
+        assert_eq!(p.installations[1].parameters[0].raw, "1");
+        assert_eq!(p.installations[1].parameters[0].id, ParameterInstanceId(5));
+        assert!(!p.installations[0]
+            .parameters
+            .iter()
+            .any(|row| row.source.ets_id == "P-1"));
+
         let before = format!("{p:#?}");
         let result = Command::SetParameterValue {
             id: ParameterInstanceId(5),
             device: DeviceId(1),
-            ets_id: "P-1".into(),
+            ets_id: "P-3".into(),
             raw: "1".into(),
         }
         .apply(&mut p);
@@ -8310,16 +8598,22 @@ mod id_integrity_tests {
     #[test]
     fn a_failed_batch_rolls_back_its_own_reservation() {
         let mut p = project();
-        Command::CreateArea { area: area(1, 1) }
-            .apply(&mut p)
-            .unwrap();
+        Command::CreateArea {
+            area: area(1, 1),
+            installation: None,
+        }
+        .apply(&mut p)
+        .unwrap();
         let before = format!("{p:#?}");
         let mut through = p.ids.clone();
         through.next_area_id().unwrap();
         through.next_area_id().unwrap();
         let result = Command::Batch(vec![
             Command::ReserveIds { through },
-            Command::CreateArea { area: area(1, 2) },
+            Command::CreateArea {
+                area: area(1, 2),
+                installation: None,
+            },
         ])
         .apply(&mut p);
         assert!(matches!(

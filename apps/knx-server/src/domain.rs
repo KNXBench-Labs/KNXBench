@@ -2121,6 +2121,19 @@ pub fn create_group_address_impl(
     address: String,
     range_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_group_address_in_impl(state, name, address, range_id, None)
+}
+
+/// [`create_group_address_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_group_address_in_impl(
+    state: &AppState,
+    name: String,
+    address: String,
+    range_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2143,6 +2156,7 @@ pub fn create_group_address_impl(
                 unfiltered: false,
                 range: range_id.map(knx_core::GroupRangeId),
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2165,6 +2179,18 @@ pub fn create_area_impl(
     name: String,
     address: u8,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_area_in_impl(state, name, address, None)
+}
+
+/// [`create_area_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_area_in_impl(
+    state: &AppState,
+    name: String,
+    address: u8,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2184,6 +2210,7 @@ pub fn create_area_impl(
                 completion: knx_core::CompletionStatus::Editing,
                 lines: vec![],
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2194,6 +2221,26 @@ pub fn delete_area_impl(state: &AppState, id: u32) -> Result<knx_projection::Pro
         state,
         knx_core::Command::DeleteArea {
             id: knx_core::AreaId(id),
+        },
+    )
+}
+
+/// MODEL-01: renames installation `id` as one undoable command. A blank
+/// name is refused; the name is stored trimmed.
+pub fn rename_installation_impl(
+    state: &AppState,
+    id: u8,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("installation name must not be blank".into());
+    }
+    apply(
+        state,
+        knx_core::Command::RenameInstallation {
+            id: knx_core::InstallationId(id),
+            name: name.to_string(),
         },
     )
 }
@@ -2307,6 +2354,20 @@ pub fn create_group_range_impl(
     end: String,
     parent_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_group_range_in_impl(state, name, start, end, parent_id, None)
+}
+
+/// [`create_group_range_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_group_range_in_impl(
+    state: &AppState,
+    name: String,
+    start: String,
+    end: String,
+    parent_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_mut().ok_or("no project open")?;
@@ -2330,6 +2391,7 @@ pub fn create_group_range_impl(
                 parent: parent_id.map(knx_core::GroupRangeId),
                 children: vec![],
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)
@@ -2400,6 +2462,19 @@ pub fn create_building_part_impl(
     kind: String,
     parent_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
+    create_building_part_in_impl(state, name, kind, parent_id, None)
+}
+
+/// [`create_building_part_impl`] with an explicit target installation (MODEL-01). `None` keeps
+/// the first installation; with a parent the parent's installation wins and
+/// a conflicting target is refused by the core.
+pub fn create_building_part_in_impl(
+    state: &AppState,
+    name: String,
+    kind: String,
+    parent_id: Option<u32>,
+    installation: Option<u8>,
+) -> Result<knx_projection::ProjectTree, String> {
     let kind = parse_building_part_kind(&kind)?;
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
@@ -2424,6 +2499,7 @@ pub fn create_building_part_impl(
                 devices: vec![],
                 parent: parent_id.map(knx_core::BuildingPartId),
             },
+            installation: installation.map(knx_core::InstallationId),
         }
     };
     apply(state, cmd)

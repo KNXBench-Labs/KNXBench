@@ -5,7 +5,7 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 
@@ -62,6 +62,7 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/group-addresses/csv-import",
             post(import_group_addresses_csv),
         )
+        .route("/api/installations/{id}", patch(rename_installation))
         .route("/api/areas", post(create_area))
         .route("/api/areas/{id}", delete(delete_area).patch(rename_area))
         .route("/api/lines", post(create_line))
@@ -1005,6 +1006,9 @@ struct CreateGroupAddressBody {
     address: String,
     #[serde(default)]
     range_id: Option<u32>,
+    /// MODEL-01: target installation for a range-less address.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_group_address(
@@ -1029,9 +1033,15 @@ async fn create_group_address(
             ApiError::validation("group_address", error.to_string(), syntax, example)
         })?;
     }
-    domain::create_group_address_impl(&state, body.name, body.address, body.range_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_group_address_in_impl(
+        &state,
+        body.name,
+        body.address,
+        body.range_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_group_address(
@@ -2173,16 +2183,35 @@ async fn import_group_addresses_csv(
 }
 
 #[derive(Deserialize)]
+struct RenameInstallationBody {
+    name: String,
+}
+
+/// MODEL-01: `PATCH /api/installations/{id}` renames one installation.
+async fn rename_installation(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u8>,
+    Json(body): Json<RenameInstallationBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_installation_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
 struct CreateAreaBody {
     name: String,
     address: u8,
+    /// MODEL-01: target installation; absent means the first one.
+    #[serde(default, rename = "installationId")]
+    installation_id: Option<u8>,
 }
 
 async fn create_area(
     State(state): State<SharedState>,
     Json(body): Json<CreateAreaBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_area_impl(&state, body.name, body.address)
+    domain::create_area_in_impl(&state, body.name, body.address, body.installation_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -2295,15 +2324,25 @@ struct CreateGroupRangeBody {
     end: String,
     #[serde(default)]
     parent_id: Option<u32>,
+    /// MODEL-01: target installation for a main range.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_group_range(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupRangeBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_group_range_impl(&state, body.name, body.start, body.end, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_group_range_in_impl(
+        &state,
+        body.name,
+        body.start,
+        body.end,
+        body.parent_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_group_range(
@@ -2355,15 +2394,24 @@ struct CreateBuildingPartBody {
     kind: String,
     #[serde(default)]
     parent_id: Option<u32>,
+    /// MODEL-01: target installation for a root part.
+    #[serde(default)]
+    installation_id: Option<u8>,
 }
 
 async fn create_building_part(
     State(state): State<SharedState>,
     Json(body): Json<CreateBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_building_part_impl(&state, body.name, body.kind, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    domain::create_building_part_in_impl(
+        &state,
+        body.name,
+        body.kind,
+        body.parent_id,
+        body.installation_id,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 async fn delete_building_part(

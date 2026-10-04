@@ -1,5 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
-- **Timestamp:** 2026-10-04 12:25
+- **Timestamp:** 2026-10-04 11:15
+- **Completed:** UA4 core/server half (MODEL-01, ADR-0070): `knx-core` commands act in the installation owning their target instead of `installations[0]`; ambiguous ids refused; Delete/Restore inverses carry the installation; parameter rows edited where they live; root creates (`CreateArea`, `CreateGroupRange`, `CreateBuildingPart`, range-less `CreateGroupAddress`) take `installation: Option<InstallationId>` (None = first, as before); cross-installation moves/links refused with `CommandError::CrossInstallation`; new `Command::RenameInstallation` and undo-only `RestoreDeviceBuildingPlacement`. Server: `PATCH /api/installations/{id}`, optional `installationId` on the four root create routes. RED 5/7 → GREEN 10/10 (`crates/knx-core/tests/multi_installation.rs`), HTTP 2/2 (`apps/knx-server/tests/multi_installation_routes.rs`), 8/8 mutants + 1 undo-inverse mutant caught, full gates green. Earlier handover timestamps of this session (10:55/11:40/12:25) were ahead of the clock and are corrected to the commit times.
+- **Pending/Next Steps:** UA5 MODEL-02 (repair ambiguous imported topology). Web halves (MODEL-03 `.0`, DATA-03 retry, MODEL-04 toggles, MODEL-01 rename/target choice) and UA6 UX-01 wait for the Web lock.
+- **Notes for Codex oder Claude:** All `Command::Create{Area,GroupRange,BuildingPart,GroupAddress}` literals need the new `installation` field (`None` keeps old behaviour); patterns need `..`. CSV group-address import still targets the first installation. Web lock still with codex-commission-continuation.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 10:52
 - **Completed:** UA3 server half (MODEL-04): opt-in `allocateAddresses` (needs `lineId`) and `uniqueNames` on `POST /api/devices`; new pure `knx_core::free_line_addresses` (octets 1–255, skips 0/used/excluded, refuses ambiguous line or short supply); allocation is part of the same undoable batch and re-validated by the core; items carry `address`; flags are in the replay fingerprint. RED 1/4 → GREEN 4/4, 8 mutants caught (one survivor fixed by a two-area test), full gates green (156 blocks / 3,055 passed / 0 failed / 176 ignored). Log `.ai/logs/2026-10-04_claude_ui-ua3-allocation.md`.
 - **Pending/Next Steps:** UA4 MODEL-01 core/server: owner-installation resolution for the ~40 first-installation command sites, explicit installation for root creates, installation rename. Then UA5 MODEL-02. Web halves wait for the Web lock.
 - **Notes for Codex oder Claude:** `create_devices_with_request_impl` is replaced by `create_catalog_devices_impl(state, CatalogCreateRequest)`. Web lock still with codex-commission-continuation.
@@ -7,7 +15,7 @@
 ---
 
 - **Last Agent:** Claude (goal-ui.md owner session)
-- **Timestamp:** 2026-10-04 11:40
+- **Timestamp:** 2026-10-04 10:44
 - **Completed:** UA2 server half (DATA-03): optional `requestId` on `POST /api/devices` with an in-memory, bounded, per-project replay ledger (`apps/knx-server/src/catalog_requests.rs`, ADR-0069). Identical resend → `replayed: true`, no second batch; same ID/other content refused; failed requests not recorded; cleared on project replacement. RED 0/6 → GREEN 6/6, 5/5 mutants caught, full gates green (155 blocks / 3,045 passed / 0 failed / 176 ignored). KNOWN_LIMITATIONS U11 batch scope, IMPLEMENTATION_STATUS, ledger/goal-ui updated. Log `.ai/logs/2026-10-04_claude_ui-ua2-catalog-replay.md`.
 - **Pending/Next Steps:** UA3 MODEL-04 backend (opt-in address allocation + unique names), then UA4 MODEL-01, UA5 MODEL-02. Web halves (MODEL-03 `.0` editor, DATA-03 client retry, allocation/unique-name toggles, UX-01) wait for the Web lock.
 - **Notes for Codex oder Claude:** Web lock still with codex-commission-continuation; no `apps/knx-web` source touched. New `AppState.catalog_requests` field: struct-literal fixtures must add `catalog_requests: Default::default()`.
@@ -15,7 +23,7 @@
 ---
 
 - **Last Agent:** Claude (goal-ui.md owner session)
-- **Timestamp:** 2026-10-04 10:55
+- **Timestamp:** 2026-10-04 10:35
 - **Completed:** UA1. MODEL-03 backend: `Command::SetCouplerIndividualAddress` + `CouplerEvidence` (core), `query::product_hardware_is_coupler` (productdb), server uses it only for `IsCoupler`=true products. Runtime RED→GREEN (`apps/knx-server/tests/coupler_address.rs`), 6/6 mutants caught, full Rust/repo gates green (3,036 passed / 0 failed / 176 ignored). KL-127: no Ground sample anywhere → ACCEPTED_BOUNDARY (known gap) per user instruction. RESEARCH §25, KNOWN_LIMITATIONS U11/§127, IMPLEMENTATION_STATUS, alpha ledger and goal-ui §3b updated. Log `.ai/logs/2026-10-04_claude_ui-ua1-coupler.md`.
 - **Pending/Next Steps:** UA2 DATA-03 server half (catalog `requestId` replay ledger), then UA3–UA5 backend halves. All UI halves (MODEL-03 editor `.0`, DATA-03 safe retry, etc.) and UA6 need the Web lock.
 - **Notes for Codex oder Claude:** Web lock still held by codex-commission-continuation; this session did not touch `apps/knx-web` (only `npm ci`/`npm run build` for the Tauri build script). Worktree `ui-alpha-owner`, target `.target-ui`.

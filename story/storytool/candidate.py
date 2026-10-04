@@ -64,6 +64,15 @@ def _review_markdown(payload: dict, manifest: dict, findings: list[privacy.Findi
         "- [ ] Commit references are acceptable to show publicly (repository visibility checked).",
         "- [ ] Source gaps and coverage are stated accurately.",
         "- [ ] The rendered preview was read on desktop and mobile.",
+    ]
+    if payload["edition"].get("narrator"):
+        lines += [
+            "- [ ] The narrator's voice stays in chapter text and asides; summaries, excerpts, evidence,",
+            "      uncertainty and gaps state the record without persona.",
+            "- [ ] The voice never makes a safety, privacy or compatibility limit look smaller than it is.",
+            "- [ ] The narrator disclosure is accurate (no borrowed lines beyond quoted evidence).",
+        ]
+    lines += [
         "",
         "Automatic scanning cannot prove that content is safe to publish; it only flags patterns.",
         "",

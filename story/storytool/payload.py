@@ -125,6 +125,7 @@ def diff_payloads(old: dict | None, new: dict) -> dict:
     result["initial"] = False
     result["cutoff_changed"] = old["edition"].get("cutoff") != new["edition"].get("cutoff")
     result["sources_changed"] = old["edition"].get("sources") != new["edition"].get("sources")
+    result["narrator_changed"] = old["edition"].get("narrator") != new["edition"].get("narrator")
     for section in ("events", "relations", "chapters", "gaps", "strands"):
         before, after = _index(old[section]), _index(new[section])
         ignore = _DERIVED_EVENT_FIELDS if section == "events" else set()
@@ -159,6 +160,7 @@ def diff_markdown(diff: dict, new: dict) -> str:
     lines += [f"Compared with candidate `{diff['base']}`.", ""]
     lines.append(f"- Evidence cutoff changed: {'yes' if diff['cutoff_changed'] else 'no'}")
     lines.append(f"- Source coverage changed: {'yes' if diff['sources_changed'] else 'no'}")
+    lines.append(f"- Narrator voice changed: {'yes' if diff.get('narrator_changed') else 'no'}")
     for section in ("events", "relations", "chapters", "gaps", "strands"):
         part = diff[section]
         lines += ["", f"## {section.capitalize()}", ""]

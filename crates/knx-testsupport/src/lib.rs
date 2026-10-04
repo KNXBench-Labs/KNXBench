@@ -113,6 +113,27 @@ pub fn write_minimal_knxproj(dir: &Path) -> PathBuf {
     path
 }
 
+/// The ZipCrypto password of [`zipcrypto_minimal_knxproj_bytes`]: a public
+/// test-fixture value, not a secret. Tests also use it as a canary — it must
+/// never show up in a report, log, error or saved store.
+pub const ZIPCRYPTO_MINIMAL_PASSWORD: &str = "ar08-Hunter-Secret";
+
+/// [`minimal_knxproj_bytes`]' project, with `P-0001/` moved into a nested
+/// `P-0001.zip` that Info-ZIP `zip -P` protected with ZipCrypto (ETS4/ETS5
+/// password protection). Generated outside this repository's code; the
+/// exact commands are in `fixtures/README.md`.
+pub fn zipcrypto_minimal_knxproj_bytes() -> Vec<u8> {
+    include_bytes!("../fixtures/zipcrypto-minimal.knxproj").to_vec()
+}
+
+/// Writes [`zipcrypto_minimal_knxproj_bytes`] into `dir` and returns its path.
+pub fn write_zipcrypto_minimal_knxproj(dir: &Path) -> PathBuf {
+    let path = dir.join("protected.knxproj");
+    std::fs::write(&path, zipcrypto_minimal_knxproj_bytes())
+        .expect("writing a fixture into a temp dir");
+    path
+}
+
 /// Builds a synthetic ZIP from explicit entries for cross-crate import tests.
 /// No entries, signatures or XML schemas are inferred or validated here.
 pub fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {

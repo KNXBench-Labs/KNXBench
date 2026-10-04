@@ -633,11 +633,13 @@ async fn tracked_load(
     kind: crate::LoadKind,
     path: std::path::PathBuf,
     client_token: Option<String>,
-    work: fn(
-        &crate::AppState,
-        &std::path::Path,
-        &crate::LoadHandle,
-    ) -> Result<knx_projection::ProjectTree, String>,
+    work: impl FnOnce(
+            &crate::AppState,
+            &std::path::Path,
+            &crate::LoadHandle,
+        ) -> Result<knx_projection::ProjectTree, domain::LoadFailure>
+        + Send
+        + 'static,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let handle = state
         .load_operations
@@ -647,27 +649,50 @@ async fn tracked_load(
         let outcome = work(&state, &path, &handle);
         match &outcome {
             Ok(_) => handle.succeed(),
-            Err(error) => handle.fail(error.clone()),
+            Err(failure) => handle.fail(failure.message.clone()),
         }
         outcome
     })
     .await
     .map_err(|e| ApiError::internal(format!("the load task did not finish: {e}")))?
     .map(Json)
-    .map_err(ApiError::internal)
+    .map_err(|failure| match failure.kind {
+        Some(kind) => ApiError::refused(kind, failure.message),
+        None => ApiError::internal(failure.message),
+    })
+}
+
+/// `POST /api/project/import`'s body: [`PathBody`] plus an optional
+/// project password for a protected `.knxproj` (AR08). No `Debug`: the
+/// body holds a secret. An empty string counts as no password, so a
+/// client that always sends the field gets `projectPasswordRequired`
+/// rather than a misleading `projectPasswordWrong`.
+#[derive(Deserialize)]
+struct ImportBody {
+    path: String,
+    #[serde(default, rename = "clientToken")]
+    client_token: Option<String>,
+    #[serde(default)]
+    password: Option<String>,
 }
 
 async fn import_project(
     State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
+    Json(body): Json<ImportBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
+    let password = body
+        .password
+        .filter(|password| !password.is_empty())
+        .map(knx_etsproj::ProjectPassword::new);
     tracked_load(
         state,
         crate::LoadKind::Import,
         path,
         body.client_token,
-        domain::open_project,
+        move |state, path, handle| {
+            domain::open_project_with_password(state, path, password.as_ref(), handle)
+        },
     )
     .await
 }
@@ -781,7 +806,9 @@ async fn open_native_project(
         crate::LoadKind::Open,
         path,
         body.client_token,
-        domain::open_native_project,
+        |state, path, handle| {
+            domain::open_native_project(state, path, handle).map_err(domain::LoadFailure::from)
+        },
     )
     .await
 }

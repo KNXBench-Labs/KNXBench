@@ -286,6 +286,7 @@ type ImportedOpaqueData = (
 fn import_and_project(
     path: &Path,
     product_db: Option<&knx_productdb::Connection>,
+    password: Option<&knx_etsproj::ProjectPassword>,
     progress: &LoadHandle,
 ) -> Result<
     (
@@ -297,8 +298,13 @@ fn import_and_project(
     AppError,
 > {
     let conn = knx_store::open_and_migrate_in_memory()?;
-    let imported =
-        knx_app::import_ets_project_observed(path, &conn, ImportOptions { product_db }, progress)?;
+    let imported = knx_app::import_ets_project_with_password(
+        path,
+        &conn,
+        ImportOptions { product_db },
+        password,
+        progress,
+    )?;
     progress.phase(LoadPhase::BuildProjectTree);
     let mut tree = knx_projection::build_project_tree(&imported.project);
     apply_report_counts(&mut tree, &imported.report);
@@ -323,7 +329,7 @@ fn import_and_project(
 /// whose counts must stay deterministic.
 pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
     let progress = detached_progress(crate::load_progress::LoadKind::Import, path);
-    let outcome = import_and_project(path, None, &progress).map(|(tree, ..)| tree);
+    let outcome = import_and_project(path, None, None, &progress).map(|(tree, ..)| tree);
     match &outcome {
         Ok(_) => progress.succeed(),
         Err(e) => progress.fail(e.to_string()),
@@ -363,15 +369,71 @@ pub fn open_project(
     path: &Path,
     progress: &LoadHandle,
 ) -> Result<ProjectTree, String> {
+    open_project_with_password(state, path, None, progress).map_err(|failure| failure.message)
+}
+
+/// A failed project load: the message every caller already shows, plus a
+/// stable `kind` when the client can do something specific about it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoadFailure {
+    pub message: String,
+    /// `Some` only for a refusal the client acts on rather than just
+    /// displaying: [`PASSWORD_REQUIRED`] (ask for the project password)
+    /// and [`PASSWORD_WRONG`] (ask again).
+    pub kind: Option<&'static str>,
+}
+
+impl From<String> for LoadFailure {
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            kind: None,
+        }
+    }
+}
+
+/// [`LoadFailure::kind`] of a protected `.knxproj` imported without a password.
+pub const PASSWORD_REQUIRED: &str = "projectPasswordRequired";
+/// [`LoadFailure::kind`] of a protected `.knxproj` imported with a wrong password.
+pub const PASSWORD_WRONG: &str = "projectPasswordWrong";
+
+fn load_failure_kind(error: &AppError) -> Option<&'static str> {
+    use knx_etsproj::{ContainerError, ImportFailure};
+    match error {
+        AppError::Import(ImportFailure::Container(ContainerError::PasswordProtected {
+            ..
+        })) => Some(PASSWORD_REQUIRED),
+        AppError::Import(ImportFailure::Container(ContainerError::WrongPassword { .. })) => {
+            Some(PASSWORD_WRONG)
+        }
+        _ => None,
+    }
+}
+
+/// [`open_project`] for a `.knxproj` that may be password-protected
+/// (KNOWN_LIMITATIONS §13). The password only reaches the container
+/// decryptor: it is not kept in `state`, and neither the returned failure,
+/// the session log nor the load-progress record carries it (container
+/// errors name the nested entry, never the password).
+pub fn open_project_with_password(
+    state: &AppState,
+    path: &Path,
+    password: Option<&knx_etsproj::ProjectPassword>,
+    progress: &LoadHandle,
+) -> Result<ProjectTree, LoadFailure> {
     let guard = state
         .product_db
         .as_ref()
         .map(|m| m.lock().expect("state mutex poisoned"));
-    let imported = import_and_project(path, guard.as_deref(), progress).map_err(|e| e.to_string());
+    let imported =
+        import_and_project(path, guard.as_deref(), password, progress).map_err(|e| LoadFailure {
+            message: e.to_string(),
+            kind: load_failure_kind(&e),
+        });
     drop(guard);
     let (tree, project, (opaque, manufacturer_refs), report) = match imported {
         Ok(v) => v,
-        Err(e) => {
+        Err(failure) => {
             state
                 .session_log
                 .lock()
@@ -380,12 +442,12 @@ pub fn open_project(
                     timestamp: session_log::now(),
                     severity: Severity::Error,
                     source: "import".to_string(),
-                    message: e.clone(),
+                    message: failure.message.clone(),
                     location: None,
                     diagnostic: None,
                     detail: None,
                 });
-            return Err(e);
+            return Err(failure);
         }
     };
     let tree = replace_project_state(
@@ -5917,6 +5979,7 @@ mod tests {
 
         let (_, without, _, _) = import_and_project(
             &reference_project_path(),
+            None,
             None,
             &detached_progress(crate::LoadKind::Import, &reference_project_path()),
         )

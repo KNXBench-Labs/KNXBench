@@ -1399,24 +1399,32 @@ one a given entry used.
   the ceiling ZipCrypto's design imposes, stated here rather than left
   implicit.
 
-**Impact.** The *container layer* can now decrypt a ZipCrypto-protected
-(ETS4/ETS5) project given its password — verified against synthetic
-fixtures, not a real export. **No import path reaches it yet.**
-`knx_etsproj::import` still calls `Container::open`, which refuses a
-protected project outright; there is no CLI flag, HTTP route or UI field
-that carries a password, and wiring one through is deliberately out of
-this change's scope. Stage 1 of a six-stage pipeline can open a protected
-project; the pipeline cannot.
+**Impact (updated 2026-10-04, AR08).** A ZipCrypto-protected (ETS4/ETS5)
+project now imports end to end through the library, the application
+service, `knx import --password-stdin` and `POST /api/project/import`
+(optional `password`); see IMPORT_EXPORT.md §2 for the entry paths and
+redaction tests. Verified against a synthetic fixture only, not a real
+export. The Web UI has no password dialog yet: the server's `422`
+`projectPasswordRequired`/`projectPasswordWrong` contract is handed to the
+UI owner. Still not covered: comparing against a protected file
+(`knx diff`, `POST /api/project/diff`) and ingesting products from a
+protected project (`knx products ingest`) take no password and refuse such
+a file by name.
 
-**A decrypted project also has no roundtrip claim.** The opaque
+**A decrypted project keeps no protection, and says so.** The opaque
 passthrough store (ADR-0006) snapshots `Container::entries()` and reads
 every entry back through `Container::read`, which cannot tell a decrypted
-entry from one that was never encrypted — and the original ZipCrypto
-ciphertext is not kept anywhere once decryption has run. A protected
-project exported through that store would come back out *unprotected*.
-`Container::was_decrypted()` exists so the import stage that eventually
-wires a password through can see this coming and report it; nothing calls
-it yet, because nothing yet decrypts anything outside the tests.
+entry from one that was never encrypted, and the original ZipCrypto
+ciphertext is not kept. The import report therefore carries an
+`unsupported` entry `project password protection (<P-xxxx>.zip, ZipCrypto)`
+whenever `Container::decrypted_payload()` is set: the project is kept
+unprotected from then on (memory, retained originals, saved `.knxdb`).
+There is no `.knxproj` export to re-protect it (ADR-0028).
+
+A wrong password that slips past the check byte and decrypts to an invalid
+deflate stream is reported as `WrongPassword`, like a CRC mismatch. The
+price: a damaged encrypted entry under the right password reads as a wrong
+password too, and the error message says so.
 
 An AES-protected (ETS6) project still cannot be imported at all — same as
 before this change, and for the same reason: refusing cleanly beats a
@@ -1437,10 +1445,11 @@ through blames the user's perfectly correct password instead.
   enabled, the decryption path is implemented the same way ZipCrypto's
   was, and a real password-protected ETS6 project is available to verify
   it against.
-* The import pipeline's inability to reach the decryption it now owns is
-  lifted when a password reaches `import()` — and, with it, an
-  `ImportReport` entry for a decrypted project, so the roundtrip gap
-  above is reported rather than discovered.
+* The pipeline gap is lifted (AR08, 2026-10-04): a password reaches
+  `import()` from the library, application, CLI and server, and a
+  decrypted import reports its lost protection. The Web password dialog
+  remains with the UI owner; `knx diff`/`products ingest` stay
+  password-less.
 
 ## 14. The project's default language is a placeholder
 

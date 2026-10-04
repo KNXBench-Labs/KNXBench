@@ -128,6 +128,63 @@ pub fn check_project_filename(path: &std::path::Path) -> Result<(), ImportFailur
     Ok(())
 }
 
+/// The password of a password-protected `.knxproj` (KNOWN_LIMITATIONS §13).
+///
+/// A wrapper so the secret cannot leak by accident: `Debug` prints a
+/// placeholder, there is no `Display`, `Clone` or serialization, and the
+/// text is only reachable through [`ProjectPassword::expose`], whose one
+/// caller hands it to the decryptor. It is never stored in a project,
+/// report, log or error.
+pub struct ProjectPassword(String);
+
+impl ProjectPassword {
+    pub fn new(password: impl Into<String>) -> Self {
+        Self(password.into())
+    }
+
+    /// The password text, for the decryptor only.
+    pub fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for ProjectPassword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ProjectPassword(<redacted>)")
+    }
+}
+
+/// [`import_knxproj_bytes_observed`] with an optional project password.
+/// `Some` opens the container through [`Container::open_with_password`],
+/// which decrypts a ZipCrypto (ETS4/ETS5) project part and behaves exactly
+/// like [`Container::open`] for an unprotected one; an AES (ETS6) part is
+/// still refused by name. `None` is the unchanged password-less import.
+pub fn import_knxproj_bytes_with(
+    bytes: Vec<u8>,
+    file_name: &str,
+    password: Option<&ProjectPassword>,
+    observer: &dyn ImportObserver,
+) -> Result<ImportOutcome, ImportFailure> {
+    import_knxproj_bytes_inner(bytes, file_name, password, observer)
+}
+
+/// [`import_knxproj_observed`] with an optional project password; see
+/// [`import_knxproj_bytes_with`].
+pub fn import_knxproj_with(
+    path: &std::path::Path,
+    password: Option<&ProjectPassword>,
+    observer: &dyn ImportObserver,
+) -> Result<ImportOutcome, ImportFailure> {
+    check_project_filename(path)?;
+    let bytes = std::fs::read(path).map_err(ImportFailure::Io)?;
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_string();
+    import_knxproj_bytes_inner(bytes, &file_name, password, observer)
+}
+
 /// Reads and imports a `.knxproj` file from disk.
 pub fn import_knxproj(path: &std::path::Path) -> Result<ImportOutcome, ImportFailure> {
     import_knxproj_observed(path, &())
@@ -140,14 +197,7 @@ pub fn import_knxproj_observed(
     path: &std::path::Path,
     observer: &dyn ImportObserver,
 ) -> Result<ImportOutcome, ImportFailure> {
-    check_project_filename(path)?;
-    let bytes = std::fs::read(path).map_err(ImportFailure::Io)?;
-    let file_name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default()
-        .to_string();
-    import_knxproj_bytes_observed(bytes, &file_name, observer)
+    import_knxproj_with(path, None, observer)
 }
 
 /// Imports a `.knxproj` archive already in memory, running every stage in
@@ -172,10 +222,23 @@ pub fn import_knxproj_bytes_observed(
     file_name: &str,
     observer: &dyn ImportObserver,
 ) -> Result<ImportOutcome, ImportFailure> {
+    import_knxproj_bytes_inner(bytes, file_name, None, observer)
+}
+
+fn import_knxproj_bytes_inner(
+    bytes: Vec<u8>,
+    file_name: &str,
+    password: Option<&ProjectPassword>,
+    observer: &dyn ImportObserver,
+) -> Result<ImportOutcome, ImportFailure> {
     check_project_filename(std::path::Path::new(file_name))?;
     let file_size = bytes.len() as u64;
     observer.stage(ImportStage::OpenContainer);
-    let mut container = Container::open(bytes).map_err(ImportFailure::Container)?;
+    let mut container = match password {
+        Some(password) => Container::open_with_password(bytes, password.expose()),
+        None => Container::open(bytes),
+    }
+    .map_err(ImportFailure::Container)?;
     // Checked here, first, and not left to surface however `detect` (which
     // also needs it internally, wrapped in its own `DetectError`) happens
     // to encounter it: a container with no project part at all is a
@@ -345,7 +408,7 @@ pub fn import_knxproj_bytes_observed(
         opaque_entries.push(opaque::from_retained_element(&info_path, raw));
     }
 
-    let import_report = report::build(
+    let mut import_report = report::build(
         file_name,
         file_size,
         &detected,
@@ -356,6 +419,21 @@ pub fn import_knxproj_bytes_observed(
         &opaque_entries,
         &manufacturer,
     );
+    // The project part was decrypted on the way in. Everything downstream
+    // (opaque store, native save) keeps plaintext and the ZipCrypto
+    // ciphertext is gone, so a project exported from this import would come
+    // back without its password. Said here, at import time, rather than
+    // discovered at export (KNOWN_LIMITATIONS §13).
+    if let Some(payload) = container.decrypted_payload() {
+        import_report.unsupported.push(report::UnsupportedFeature {
+            what: format!("project password protection ({payload}, ZipCrypto)"),
+            consequence: "the project part was decrypted for import and is kept \
+                          unprotected from here on (in memory, in the retained original \
+                          files and in a saved .knxdb); the password protection itself is \
+                          not preserved"
+                .to_string(),
+        });
+    }
 
     Ok(ImportOutcome {
         project: mapped.project,

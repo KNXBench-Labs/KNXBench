@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type {
   ComparisonImport,
+  DeviceChange,
   DeviceTable,
   EntityTable,
   GroupAddressFields,
@@ -420,6 +421,15 @@ function manyAddedGroupAddresses(count: number): ProjectDiffReport {
   };
 }
 
+function mixedGroupAddresses(added: number, removed: number): ProjectDiffReport {
+  const report = manyAddedGroupAddresses(added);
+  report.installations[0].groupAddresses.removed = Array.from({ length: removed }, (_, i) => [
+    { etsId: null, address: `2/2/${i}` },
+    { name: `Old ${i}`, central: false, unfiltered: false, range: null },
+  ]);
+  return report;
+}
+
 function entryItems(): HTMLLIElement[] {
   return Array.from(host!.querySelectorAll<HTMLLIElement>(".project-diff-entries > li"));
 }
@@ -590,37 +600,136 @@ describe("ProjectDiffPanel entity details", () => {
     root.unmount();
   });
 
-  it("limits a large table to one page and reveals more on request", async () => {
+  // KL-60: a large table is a bounded, scrollable window over every entry,
+  // with search and status filters instead of "Show more" paging.
+  const viewport = () => host!.querySelector<HTMLElement>(".project-diff-viewport");
+  const filterField = () => host!.querySelector<HTMLInputElement>('input[type="search"]');
+  async function typeFilter(value: string) {
+    const input = filterField()!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+  async function scrollTo(top: number) {
+    const element = viewport()!;
+    await act(async () => {
+      Object.defineProperty(element, "scrollTop", { configurable: true, writable: true, value: top });
+      element.dispatchEvent(new Event("scroll"));
+    });
+  }
+
+  it("renders a large table as a bounded window that scrolls through every entry", async () => {
     const { root } = await openReport(manyAddedGroupAddresses(3000));
-    expect(host!.textContent).toContain("Group addresses: 3000 added");
-    expect(entryItems()).toHaveLength(0);
-
     await click(toggle("Group addresses (3000)"));
-    expect(entryItems()).toHaveLength(50);
-    expect(host!.textContent).toContain("Showing 50 of 3000.");
-
-    const more = Array.from(host!.querySelectorAll("button")).find((b) =>
-      b.textContent?.startsWith("Show more"),
-    )!;
-    expect(more.textContent).toBe("Show more (50)");
-    await click(more);
-    expect(entryItems()).toHaveLength(100);
-    expect(document.activeElement).toBe(entryItems()[50]);
-    expect(entryItems()[50].textContent).toContain("1/1/50");
+    const first = entryItems();
+    expect(first.length).toBeGreaterThan(5);
+    expect(first.length).toBeLessThan(80);
+    expect(first[0].getAttribute("aria-posinset")).toBe("1");
+    expect(first[0].getAttribute("aria-setsize")).toBe("3000");
+    expect(host!.textContent).not.toContain("Show more");
+    await scrollTo(3000 * 40);
+    const last = entryItems();
+    expect(last.length).toBeLessThan(80);
+    expect(last.at(-1)!.getAttribute("aria-posinset")).toBe("3000");
+    expect(last.at(-1)!.textContent).toContain("1/1/2999");
     root.unmount();
   });
 
-  it("drops the show-more control after the last page and keeps focus on the list", async () => {
-    const { root } = await openReport(manyAddedGroupAddresses(60));
-    await click(toggle("Group addresses (60)"));
-    const more = Array.from(host!.querySelectorAll("button")).find((b) =>
-      b.textContent?.startsWith("Show more"),
-    )!;
-    expect(more.textContent).toBe("Show more (10)");
-    await click(more);
-    expect(entryItems()).toHaveLength(60);
-    expect(host!.textContent).not.toContain("Show more");
-    expect(document.activeElement).toBe(entryItems()[50]);
+  it("filters by text and by status and says how many entries match", async () => {
+    const { root } = await openReport(mixedGroupAddresses(200, 50));
+    await click(toggle("Group addresses (250)"));
+    expect(host!.textContent).toContain("250 of 250 entries shown");
+    await typeFilter("GA 19");
+    expect(host!.textContent).toContain("11 of 250 entries shown");
+    expect(entryItems().map((item) => item.textContent).every((text) => text?.includes("GA 19"))).toBe(true);
+    await typeFilter("");
+    const removed = Array.from(host!.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"))
+      .find((button) => button.textContent?.startsWith("removed"))!;
+    expect(removed.textContent).toBe("removed (50)");
+    await click(removed);
+    expect(removed.getAttribute("aria-pressed")).toBe("true");
+    expect(host!.textContent).toContain("50 of 250 entries shown");
+    expect(entryItems().every((item) => item.textContent?.includes("removed"))).toBe(true);
+    root.unmount();
+  });
+
+  it("remembers an opened nested table while its row is scrolled out of the window", async () => {
+    const left = changesReport.installations[0].devices.added[0][1];
+    const comObject = {
+      text: "Switch", description: null, dpt: null, read: null, write: null, transmit: null,
+      update: null, communication: null, readOnInit: null, links: [], moduleInstance: null,
+    };
+    const changed: DeviceChange[] = Array.from({ length: 200 }, (_, i) => ({
+      key: { etsId: `d${i}`, address: `1.1.${i}` },
+      matchedBy: "naturalKey" as const,
+      left,
+      right: left,
+      changedFields: [],
+      fieldChanges: [],
+      comObjects: {
+        added: [], changed: [], ambiguous: [],
+        removed: [[{ device: { etsId: `d${i}`, address: `1.1.${i}` }, number: 3 }, comObject]],
+      },
+      parameters: emptyTable(),
+    }));
+    const report: ProjectDiffReport = {
+      ...knxdbInput,
+      infoChanges: [],
+      installations: [{ ...emptyReport.installations[0], devices: { added: [], removed: [], ambiguous: [], changed } }],
+    };
+    const { root } = await openReport(report);
+    await click(toggle("Devices (200)"));
+    const firstRow = () => host!.querySelector<HTMLLIElement>('.project-diff-viewport li[aria-posinset="1"]');
+    await click(firstRow()!.querySelector<HTMLButtonElement>("button.project-diff-toggle")!);
+    expect(firstRow()!.textContent).toContain("Switch");
+    await scrollTo(200 * 40);
+    expect(firstRow()).toBeNull();
+    await scrollTo(0);
+    const nestedToggle = firstRow()!.querySelector<HTMLButtonElement>("button.project-diff-toggle")!;
+    expect(nestedToggle.getAttribute("aria-expanded")).toBe("true");
+    expect(firstRow()!.textContent).toContain("Switch");
+    root.unmount();
+  });
+
+  it("says so when nothing matches", async () => {
+    const { root } = await openReport(mixedGroupAddresses(30, 0));
+    await click(toggle("Group addresses (30)"));
+    await typeFilter("no such thing");
+    expect(entryItems()).toHaveLength(0);
+    expect(host!.textContent).toContain("No entry matches the filter.");
+    root.unmount();
+  });
+
+  it("clears a non-empty filter on the first Escape and closes the report only on the next", async () => {
+    const { root } = await openReport(mixedGroupAddresses(30, 0));
+    await click(toggle("Group addresses (30)"));
+    await typeFilter("GA 1");
+    filterField()!.focus();
+    await pressKey(filterField()!, "Escape");
+    expect(filterField()!.value).toBe("");
+    expect(host!.textContent).toContain("Comparison result");
+    expect(host!.textContent).toContain("30 of 30 entries shown");
+    await pressKey(filterField()!, "Escape");
+    expect(host!.textContent).not.toContain("Comparison result");
+    root.unmount();
+  });
+
+  it("keeps a small table as a plain list without a filter", async () => {
+    const { root } = await openReport(mixedGroupAddresses(8, 0));
+    await click(toggle("Group addresses (8)"));
+    expect(filterField()).toBeNull();
+    expect(viewport()).toBeNull();
+    expect(entryItems()).toHaveLength(8);
+    root.unmount();
+  });
+
+  it("labels the filter in German", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    const { root } = await openReport(mixedGroupAddresses(20, 5));
+    await click(toggle("Gruppenadressen (25)"));
+    expect(filterField()!.getAttribute("aria-label")).toBe("Einträge filtern");
+    expect(host!.textContent).toContain("25 von 25 Einträgen angezeigt");
     root.unmount();
   });
 });

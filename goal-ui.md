@@ -509,6 +509,8 @@ commissioning session holds the Web lock at the time of writing.
 | UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
 | UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
 | UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); web half done 2026-10-04 |
+| UA7 | `KL-13` (AR08) | Project-password dialog for protected ETS imports: ask on `422` `projectPasswordRequired`, ask again on `projectPasswordWrong`, password only in that request **[web]** | handed over by the alpha session 2026-10-04 20:58; web half done 2026-10-04 (`9bc36499`) |
+| UA8 | `KL-60` (AR11) | Diff view: virtualised long tables with search and status filter instead of 50-row paging; backend diff API unchanged **[web]** | user decision 2026-10-04 (AR11); done 2026-10-04 |
 
 Every package follows §2: RED first, mutation check per new guard, gates,
 docs, merge, push, handover, cleanup.

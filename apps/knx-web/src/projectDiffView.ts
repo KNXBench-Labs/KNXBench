@@ -20,8 +20,9 @@ import type {
 import type { MessageKey } from "./messages/en";
 import type { Translate } from "./i18n";
 
-/** How many entity rows a table shows before its "show more" control. */
-export const DIFF_PAGE_SIZE = 50;
+/** KL-60: a table with more entity rows than this gets a filter and a
+ * windowed scroll viewport instead of a plain list. */
+export const DIFF_FILTER_THRESHOLD = 20;
 
 export type EntryStatus = "added" | "removed" | "changed" | "ambiguous";
 
@@ -225,4 +226,20 @@ export function importDiagnosticsSummary(t: Translate, diagnostics: LogEntry[]):
   if (warnings > 0) parts.push(t("projectDiff.importWarnings", { count: warnings }));
   const total = t("projectDiff.importSummary", { count: diagnostics.length });
   return parts.length === 0 ? total : `${total} (${parts.join(", ")})`;
+}
+
+/** KL-60: the entries of one table that match a free-text query (key and
+ * name, case-insensitive) and, if any are chosen, one of the given statuses.
+ * Order is preserved; nested tables are not searched. */
+export function filterEntries(
+  entries: readonly DiffEntry[],
+  query: string,
+  statuses: ReadonlySet<EntryStatus>,
+): DiffEntry[] {
+  const needle = query.trim().toLocaleLowerCase();
+  return entries.filter(
+    (entry) =>
+      (statuses.size === 0 || statuses.has(entry.status)) &&
+      (needle === "" || `${entry.keyLabel} ${entry.detail ?? ""}`.toLocaleLowerCase().includes(needle)),
+  );
 }

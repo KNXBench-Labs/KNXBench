@@ -1,8 +1,8 @@
 /** Tests for the pure projection of a project diff into rendered entity rows. */
 import { describe, expect, it } from "vitest";
 import type { EntityTable, InstallationDiff } from "./api";
-import { installationTables } from "./projectDiffView";
-import type { KeyFormat } from "./projectDiffView";
+import { filterEntries, installationTables } from "./projectDiffView";
+import type { DiffEntry, EntryStatus, KeyFormat } from "./projectDiffView";
 
 function emptyTable<K, F>(): EntityTable<K, F> {
   return { added: [], removed: [], changed: [], ambiguous: [] };
@@ -105,5 +105,37 @@ describe("installationTables", () => {
       format,
     );
     expect(views.map((v) => v.entries[0].keyLabel)).toEqual(["1.2", "2048–4095", "<1/2/3>", "House › Ground floor"]);
+  });
+});
+
+// KL-60: the filter of a long entity table.
+function entry(id: string, status: EntryStatus, keyLabel: string, detail: string | null): DiffEntry {
+  return { id, status, keyLabel, detail, matchedBy: null, fieldChanges: [], ambiguity: null, nested: [] };
+}
+
+describe("filterEntries", () => {
+  const entries = [
+    entry("a", "added", "1/1/1", "Kitchen light"),
+    entry("b", "removed", "1/1/2", "Hall light"),
+    entry("c", "changed", "1.1.7", null),
+    entry("d", "ambiguous", "1/2/3", "Kitchen blind"),
+  ];
+  const ids = (list: DiffEntry[]) => list.map((e) => e.id);
+
+  it("keeps every entry, in order, when no filter is set", () => {
+    expect(ids(filterEntries(entries, "", new Set()))).toEqual(["a", "b", "c", "d"]);
+    expect(ids(filterEntries(entries, "   ", new Set()))).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("matches the key and the name, ignoring case and surrounding spaces", () => {
+    expect(ids(filterEntries(entries, " KITCHEN ", new Set()))).toEqual(["a", "d"]);
+    expect(ids(filterEntries(entries, "1.1.7", new Set()))).toEqual(["c"]);
+    expect(ids(filterEntries(entries, "1/1/", new Set()))).toEqual(["a", "b"]);
+  });
+
+  it("restricts to the chosen statuses and combines with the text", () => {
+    expect(ids(filterEntries(entries, "", new Set<EntryStatus>(["removed", "changed"])))).toEqual(["b", "c"]);
+    expect(ids(filterEntries(entries, "light", new Set<EntryStatus>(["added"])))).toEqual(["a"]);
+    expect(filterEntries(entries, "blind", new Set<EntryStatus>(["added"]))).toEqual([]);
   });
 });

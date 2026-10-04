@@ -1,5 +1,29 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — KL-60: the diff view's long tables filter and scroll instead of paging
+
+- `ProjectDiffDetails.tsx`: a table with more than 20 entries gets a
+  search field (key and name), status toggle buttons, a live match count
+  and a bounded scroll viewport rendering only rows near the visible area.
+  Up to 20 entries a table stays a plain list. "Show more" and
+  `DIFF_PAGE_SIZE` are gone. Window math lives in `virtualWindow.ts`
+  (pure, clamped, overscan). The filter `filterEntries` is in
+  `projectDiffView.ts`. Row heights are measured (re-measured via
+  `ResizeObserver`); rows above the view that grow shift `scrollTop`; a
+  list at its end stays there; End/Home jump instantly. Opened nested
+  tables survive their row scrolling out of the window (per-mount memory
+  keyed by table id). Escape in a typed filter clears it instead of
+  closing the report, a defect the in-session review found before the gate.
+- Evidence: RED first for the window (7 cases incl. a reachability
+  property), filter (3), panel (6) and table memory (2). Chromium
+  `e2e/diff-virtual.e2e.ts` on a synthetic 3,300-entry table with variable
+  row heights: under 120 DOM rows, every position reached by scrolling,
+  End/Home, anchor stability while scrolling up, filters. It fails 4/4
+  against the previous list. 14 mutants are caught (5 only in Chromium);
+  one memory mutant exposed an ineffective `useMemo([report])`, now
+  replaced by per-mount state with the remount contract tested. Backend
+  diff API unchanged.
+
 ## 2026-10-04 — AR08 Web half: the project-password dialog
 
 - Importing a ZipCrypto-protected ETS4/ETS5 project in the Web UI no longer

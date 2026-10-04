@@ -1128,3 +1128,92 @@ describe("Inspector — placement repair", () => {
     expect(keepButtons("Keep under this area")).toHaveLength(0);
   });
 });
+
+// UX-01: dropping a group address on a communication object's link row links
+// it once, in the direction chosen in that row (the keyboard path's choice).
+describe("Inspector — group address drop", () => {
+  class DropTransfer {
+    private readonly values = new Map<string, string>();
+    dropEffect = "none";
+    effectAllowed = "link";
+    get types(): string[] { return [...this.values.keys()]; }
+    setData(format: string, data: string) { this.values.set(format, data); }
+    getData(format: string) { return this.values.get(format) ?? ""; }
+  }
+
+  async function drag(target: HTMLElement, type: "dragover" | "drop" | "dragleave", transfer: DropTransfer) {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: transfer });
+    await act(async () => target.dispatchEvent(event));
+    return event;
+  }
+
+  async function linkRow(tree = linkTree()) {
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
+    return { row: host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!, onApplied };
+  }
+
+  function linkTree(): ProjectTree {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    return tree;
+  }
+
+  function carrying(id: string): DropTransfer {
+    const transfer = new DropTransfer();
+    transfer.setData("application/x-knxbench-group-address-id", id);
+    return transfer;
+  }
+
+  it("accepts a dragged group address and links it once with the row's direction", async () => {
+    const tree = linkTree();
+    apiMock.linkComObject.mockResolvedValueOnce(tree);
+    const { row, onApplied } = await linkRow(tree);
+    const over = await drag(row, "dragover", carrying("9"));
+    expect(over.defaultPrevented).toBe(true);
+    expect(row.getAttribute("data-drop-ready")).toBe("true");
+    await drag(row, "drop", carrying("9"));
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Send");
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+    expect(row.getAttribute("data-drop-ready")).toBeNull();
+  });
+
+  it("uses the direction already chosen in the row", async () => {
+    apiMock.linkComObject.mockResolvedValueOnce(linkTree());
+    const { row } = await linkRow();
+    const direction = row.querySelectorAll<HTMLSelectElement>("select")[1];
+    await act(async () => {
+      direction.value = "Receive";
+      direction.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await drag(row, "drop", carrying("9"));
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Receive");
+  });
+
+  it("refuses a group address this device cannot link, without a request", async () => {
+    const { row } = await linkRow();
+    await drag(row, "drop", carrying("77"));
+    expect(apiMock.linkComObject).not.toHaveBeenCalled();
+    expect(row.querySelector(".field-error")?.textContent)
+      .toBe("This group address cannot be linked to this device.");
+  });
+
+  it("shows the server's refusal of a dropped link", async () => {
+    apiMock.linkComObject.mockRejectedValueOnce(new Error("link already exists"));
+    const { row, onApplied } = await linkRow();
+    await drag(row, "drop", carrying("9"));
+    expect(row.querySelector(".field-error")?.textContent).toBe("link already exists");
+    expect(onApplied).not.toHaveBeenCalled();
+  });
+
+  it("ignores foreign drags such as a device", async () => {
+    const { row } = await linkRow();
+    const device = new DropTransfer();
+    device.setData("application/x-knxbench-device-id", "9");
+    const over = await drag(row, "dragover", device);
+    expect(over.defaultPrevented).toBe(false);
+    expect(row.getAttribute("data-drop-ready")).toBeNull();
+    await drag(row, "drop", device);
+    expect(apiMock.linkComObject).not.toHaveBeenCalled();
+  });
+});

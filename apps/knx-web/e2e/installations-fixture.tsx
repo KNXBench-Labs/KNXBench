@@ -9,6 +9,9 @@ import Inspector from "../src/Inspector";
 import ProjectExplorer from "../src/ProjectExplorer";
 import "../src/styles.css";
 
+// `?workspace` renders the device workspace (communication objects) too.
+const showWorkspace = new URLSearchParams(location.search).has("workspace");
+
 function Fixture() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ function Fixture() {
       <ProjectExplorer tree={tree} onTreeUpdate={setTree} onSummary={() => {}}
         onError={(e) => setError(api.errorMessage(e))} selection={selection}
         onSelect={setSelection} multiSelection={null} onItemClick={(_event, _kind, _id, item) => setSelection(item)} />
-      <Inspector propertiesOnly selection={selection} tree={tree} deviceDetail={detail}
+      <Inspector propertiesOnly={!showWorkspace} selection={selection} tree={tree} deviceDetail={detail}
         onApplied={setTree} onDeleted={setTree} />
     </main>
   );

@@ -4,7 +4,28 @@
 activity **metadata** from project data, product data, recovery images and bus
 success. This backend contract is additive; Web adoption belongs to its owner.
 
-## Web history candidate — 2026-10-04
+<a id="web-history-candidate--2026-10-04"></a>
+
+## Web history adoption — 2026-10-04
+
+The bounded client is accepted on upstream-integrated code `9fe69116` (base
+`4bc90aab`), with the [permanent receipt](evidence/commission-history-web-offline-2026-10-04.json).
+All nine stages passed on the same frozen1037 public inputs/279 Web inputs:
+ordinary workspace **3079 passed,0 failed,176 ignored** in160 result blocks,
+strict Clippy/fmt, all four intended-root policy checks, production Web build,
+**1761 Vitest tests in100 files**, and **8 intercepted Linux Chromium cases**.
+The176 ignored tests were not executed. No new private/live corpus acceptance
+is claimed. All50 guard controls compiled and failed at their named behavioral
+assertions in isolated public Web copies; canonical source was never mutated.
+A separate deliberate type error proved this file is covered by tsc, then was
+restored; it is not a51st behavioral mutant. In-session source/security review
+found no blocking issue; it is not an independent-model or native-package
+approval. Publication is recorded separately in the handover.
+
+This completes the bounded History Web implementation, not all-client adoption,
+caller/long-session lifecycle, offline recovery/abort/restore or whole Global
+Commissioning. The four owning Alpha IDs remainIN_PROGRESS. Historical local
+attempts below retain their actual outcomes and do not add to these totals.
 
 The reserved History client now reaches the existing diagnostics parent's
 History tab without an open project. It uses the existing authenticated GET
@@ -46,8 +67,9 @@ Chromium8/0/0, build0, workspace3028/0/176, fmt/Clippy/layering0, then refused
 exactly two overlong test headers. Anchors/corpus-policy did not start. Those
 headers are corrected; that failed receipt is not overall acceptance. The Web
 program advances to `0.1.0-alpha.4` under ADR0018 without dependency changes.
-Expanded compiled guard controls, renewed full gates, integration and publication
-remain pending. Prior counts do not certify this source delta or close broader
+Those earlier pending controls and integration gates are overtaken by the
+current acceptance above; publication is tracked separately. Prior counts do not
+certify a later source delta or close broader
 callers, other client surfaces, offline recovery or the full
 SAFE-03/AUDIT-01/Global Commissioning scope. No real KNX backend was contacted.
 

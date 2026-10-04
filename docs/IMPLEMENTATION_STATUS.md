@@ -1,5 +1,30 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — Bounded History Web adoption accepted offline
+
+Current integrated code9fe69116, upstream4bc90aab (including public topology
+repair), passed9/9 required stages on frozen1037 public/279 Web inputs.
+Workspace3079/0/176 over160 result blocks; ignored176 were not executed.
+Vitest1761/100 files, intercepted Chromium8, production build/strict Clippy/fmt
+and all four intended-root repository checks passed. Fifty compiled guard
+mutants failed at their named semantic assertions in isolated public copies;
+canonical source never mutated. Separate tsc error-control detected/restored.
+See [acceptance receipt](evidence/commission-history-web-offline-2026-10-04.json).
+In-session review has no blocking finding, not independent approval. Exact14
+Web paths remain byte-identical to the earlier parked candidate; dependency
+versions unchanged except program alpha4. Earlier failed browser/import-graph
+and header attempts remain rejected historical evidence, not erased receipts.
+
+The shared authenticated GET path exposes independent device/restart/cleanup/
+backup/intent meaning, strict whole-page admission, start-order cursor paging,
+refresh-from-start and stale-response refusal. No write/retry/restore control,
+raw private error, payload, host path or new bus contact follows. Publication
+and Web-reservation release are recorded separately in the handover. Broader
+caller/client and recovery/abort/restore software remains open; Global
+Commissioning stays partial and owning Alpha IDsIN_PROGRESS. Excluded external
+hardware/power-loss/vendor/ETS experiments remain user notices, not queued work.
+
+
 ## 2026-10-04 — Commissioning History Web candidate, not whole-track acceptance
 
 - Published Web reservation7234dd00 remains owned by the commissioning session.

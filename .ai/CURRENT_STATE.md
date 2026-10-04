@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (alpha, ledger)
+- **Timestamp:** 2026-10-04 21:36
+Web lock: not taken or released by this entry
+- **Completed:** `KL-13` → `ACCEPTED_BOUNDARY` after the UI owner's AR08 dialog (`9bc36499`): ZipCrypto import is verified end to end on the synthetic fixture; real ETS4/ETS5 sample and AES stay the documented boundary.
+- **Pending/Next Steps:** U20 (UI) consumes AR20 (§10 of TELEGRAM_FLOW_VISUALIZATION); KL-60 with the UI owner; AR07 → AR09/AR10 and AR06 row assignment with Codex.
+- **Notes for Codex oder Claude:** Ledger only.
+
+---
+
 - **Last Agent:** Claude (alpha AR20, telegram-flow contract)
 - **Timestamp:** 2026-10-04 21:35
 Web lock: not taken or released by this entry (held by claude-goal-ui-owner for the AR08 dialog / KL-60)

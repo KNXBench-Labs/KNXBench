@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-05 15:00
+- **Completed:** Story tooling follow-ups after edition `2026-10-05.1` (no content change, no new candidate). (1) Privacy review locations name records by id (`events[alpha-backlog].aside` instead of `events[34].aside`), with two tests that failed before the change; existing candidates stay byte-identical (`prepare` reports `unchanged`). (2) `story/tests/browser/check_story.mjs` takes `STORY_BROWSER=chromium|firefox|webkit`; Chromium 153 and Firefox 155 both pass 46/46 on `previews/2026-10-05.1.html`. WebKit could not run: Playwright's build needs Ubuntu libraries (ICU 74, flite, libWPEWebKit) missing on this Arch-based host; installing them needs sudo, not done. README limitation and IMPLEMENTATION_STATUS updated. Gates: 62 unit tests OK, anchors ok, diff check clean.
+- **Pending/Next Steps:** WebKit/Safari coverage needs either the missing system libraries (user decision) or a test on another machine; screen readers untested. Hosting/publication later; no approval for any candidate.
+- **Notes for Codex oder Claude:** Firefox and WebKit browser builds now sit in `~/.cache/ms-playwright` (user cache). Receipts for chromium/firefox are in the private story directory under `receipts/`.
+
+---
+
 - **Last Agent:** Claude (iaw session, alpha package AR14B by user decision)
 - **Timestamp:** 2026-10-05 14:55
 Web lock: not taken or released by this entry

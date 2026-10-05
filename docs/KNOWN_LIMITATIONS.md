@@ -2272,6 +2272,19 @@ Catalogue, device-product and master surfaces still fall back silently;
 showing the markers is the UI owner's decision. Trace:
 [research/backend-localization-paths.md](research/backend-localization-paths.md).
 
+**Update 2026-10-05 (AR10 slice 2b): no backend overlay hides its fallback
+any more.** The catalogue (`GET /api/catalog/items`: `nameLanguage`,
+`visibleDescriptionLanguage`, `sourceLanguage`), the device-detail product
+block (`product.catalog`: `product_text_language`,
+`catalog_item_name_language`, `application_name_language`, and the three
+`*_source_language` declared by `Product`, `CatalogItem` and
+`ApplicationProgram`) and the master readers (`text_language`; on the wire as
+the com-object `dpt_text_language`) now say which stored language answered or
+that the package's own text was kept. Additive; no text or fallback rule
+changed. Still open here: no web consumer shows the markers (UI owner), and
+the documentation report's communication-object text stays
+language-insensitive (above).
+
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
 
 **Limitation.** "KNXBench group-address CSV v1" (`crates/knx-csv`,
@@ -3713,6 +3726,15 @@ slice 1, branch `d10-master-translations`). `FunctionType`/
 sections, collision counting, frontend locale tags) stays open; see
 **D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
 "still open" list. Not scheduled.
+
+**Update 2026-10-05 (AR10 slice 2b): accepted boundary.** Every reader of
+these rows now names the stored language that answered, or reports that the
+package's own text was kept (see §37's update of the same day and
+[research/backend-localization-paths.md](research/backend-localization-paths.md)).
+What remains is stated above and accepted rather than scheduled: the eight
+unparsed `MasterData` sections carried no translation in any sampled package;
+collision counting belongs to §86; a bare locale tag from the frontend is the
+UI owner's choice, and the backend already matches one.
 
 ## 65. `--version` names a commit, never a working tree
 

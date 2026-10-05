@@ -14,7 +14,7 @@ pinned by a named test; **[V]** aggregate census of the local corpus.
 |---|---|---|
 | Project-wide language | none [D]: `ProjectInformation` declares `Name`, `GroupAddressStyle`, numbers, dates, `CodePage`, … but no language | Import stores the placeholder `en` (KNOWN_LIMITATIONS §14). |
 | Per-device initial-value language | `DeviceInstance/@InitialValueLanguage`, optional `xs:language` [D] | Absent from all three local reference projects (75 device instances) [V]. Not modelled; reported as an unknown attribute and retained, never promoted to a project language [T `project_language.rs`]. |
-| Program / catalogue / hardware default language | `ApplicationProgram/@DefaultLanguage` (and the `default_language` columns of `catalog_item`, `hardware`) | Stored verbatim [C]; read by **nothing** outside parsing and migration [C]. 991 occurrences in the product data embedded in the three local reference projects: `en-US` 912, `de-DE` 64, `en` 15 [V]. |
+| Program / catalogue / hardware default language | `ApplicationProgram/@DefaultLanguage` (and the `default_language` columns of `catalog_item`, `hardware`) | Stored verbatim [C]; read since AR10 slice 2 as the `sourceLanguage`/`*_source_language` markers of the parameter, catalogue and device-product responses, verbatim, never guessed [T]. 991 occurrences in the product data embedded in the three local reference projects: `en-US` 912, `de-DE` 64, `en` 15 [V]. |
 | Requested display language | `?language=` on parameter, device-detail and catalogue routes; the web Settings "Product data language" | User choice; `None` means the package's own text. |
 | New-project language | `POST /api/project/new` `language` (BCP-47 validated) | User choice. |
 
@@ -30,14 +30,15 @@ second language [C].
 |---|---|---|---|
 | Parameter panel text and enum labels | `parameter_views`, `parameter_type_enum_options` | Program | **Yes since AR10 slice 2a** — `text_language`/`name_language`/`enum_option_languages` name the stored language that answered, `None` on a fallback; the panel DTO adds `sourceLanguage` (`ApplicationProgram/@DefaultLanguage`) [T] |
 | Communication-object text/description | `com_object_view(s)` | Program | Yes — `text_translated`, `function_text_translated`, `visible_description_translated`; the server only overwrites product-layer text on a hit (§37) |
-| Catalogue browser | `catalog_items` | Catalog | **No** |
-| Device detail product block | `device_product` | Hardware, Catalog, Program | **No** |
-| Master vocabulary | `datapoint_types`, `function_types`, `function_points`, `space_usages` | Master | **No** |
+| Catalogue browser | `catalog_items` | Catalog | **Yes since AR10 slice 2b** — `nameLanguage`, `visibleDescriptionLanguage`, `sourceLanguage` (`catalog_items_matches_a_short_locale_request_by_prefix`, `catalog_items_with_a_language_returns_the_translated_name`) [T] |
+| Device detail product block | `device_product` | Hardware, Catalog, Program | **Yes since AR10 slice 2b** — `product_text_language`, `catalog_item_name_language`, `application_name_language` plus the three `*_source_language` (`device_product_names_the_language_that_answered_and_the_fallback`) [T] |
+| Master vocabulary | `datapoint_types`, `function_types`, `function_points`, `space_usages` | Master | **Yes since AR10 slice 2b** — `text_language` on every row; on the wire only as the com-object `dpt_text_language` (`the_dpt_text_names_the_language_that_answered`); the other three readers still have no route [T] |
 | Project text (`StringTable`) | `StringTable::resolve` | — | Never consulted: no production path inserts an entry, imports leave it empty [T] |
 
 Ambiguous prefix matches (`de` with both `de-AT` and `de-DE` stored) are
-resolved by the documented tiebreak; the caller is not told which stored
-language answered [C].
+resolved by the documented tiebreak; since AR10 slice 2 every overlay
+listed above names the stored language that answered, so the tiebreak is
+visible rather than silent [T].
 
 ## 3. Backend diagnostics and prose
 
@@ -55,7 +56,7 @@ server-composed prose stays English by the rule in KNOWN_LIMITATIONS §66 [C].
   used), and the package's declared `DefaultLanguage` for that untranslated
   text. Done for the parameter panel (slice 2a:
   `parameter_views_name_the_language_that_answered_and_expose_the_fallback`,
-  `parameter_panel_exposes_the_answering_language_and_the_fallback`); the
-  catalogue, device-product and master surfaces are next. Server DTOs only;
-  showing it is UI-owner work.
+  `parameter_panel_exposes_the_answering_language_and_the_fallback`) and the
+  catalogue, device-product and master readers (slice 2b). Server DTOs and
+  ts-rs bindings only; showing the markers is UI-owner work.
 - **§66** stays the documented rule; new strings follow it.

@@ -23,9 +23,13 @@ const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 
 const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
-<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationNumber="1" ApplicationVersion="1" MaskVersion="MV-0701">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationNumber="1" ApplicationVersion="1" MaskVersion="MV-0701" DefaultLanguage="en-US">
 <Static><ParameterTypes /><Parameters /><ParameterRefs /></Static>
-<Dynamic /></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+<Dynamic />
+<Languages><Language Identifier="de-DE"><TranslationUnit RefId="A-1">
+<TranslationElement RefId="A-1"><Translation AttributeName="Name" Text="Programm P" /></TranslationElement>
+</TranslationUnit></Language></Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
 fn temp_product_db() -> (tempfile::TempDir, knx_productdb::Connection) {
     let dir = tempfile::tempdir().unwrap();
@@ -99,6 +103,37 @@ async fn device_product_resolution_always_overwrites_the_projections_placeholder
     assert_eq!(product["catalog"]["product_text"], "Switch Actuator");
     assert_eq!(product["catalog"]["order_number"], "ORD-1");
     assert_eq!(product["catalog"]["application_name"], "P");
+    // AR10: no language requested, so no text claims to be a translation.
+    assert!(product["catalog"]["application_name_language"].is_null());
+    assert_eq!(product["catalog"]["application_source_language"], "en-US");
+}
+
+/// AR10: a requested language names the stored language that answered
+/// (`de` → `de-DE`); texts nobody translated stay the package's own and
+/// carry no language marker.
+#[tokio::test]
+async fn device_product_names_the_language_that_answered_and_the_fallback() {
+    let (_dir, products) = temp_product_db();
+    let state = Arc::new(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1"));
+    let app = knx_server::app(state, None);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1?language=de")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let catalog = &body_json(response).await["product"]["catalog"];
+    assert_eq!(catalog["application_name"], "Programm P");
+    assert_eq!(catalog["application_name_language"], "de-DE");
+    assert_eq!(catalog["application_source_language"], "en-US");
+    assert_eq!(catalog["product_text"], "Switch Actuator");
+    assert!(catalog["product_text_language"].is_null(), "fallback");
+    assert!(catalog["product_source_language"].is_null(), "undeclared");
 }
 
 /// No product database configured at all: refs are present, so the pure

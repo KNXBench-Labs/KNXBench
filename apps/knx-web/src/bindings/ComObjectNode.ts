@@ -3,44 +3,44 @@ import type { ComObjectActivation } from "./ComObjectActivation";
 import type { ComObjectChannel } from "./ComObjectChannel";
 import type { GroupLinkNode } from "./GroupLinkNode";
 
-export type ComObjectNode = { id: number, 
+export type ComObjectNode = { id: number,
 /**
  * From `_O-<n>` in the source `RefId`.
  */
-number: number, name: string | null, 
+number: number, name: string | null,
 /**
  * Formatted datapoint type reference (e.g. `"DPST-1-1"`, `"DPT-1"`),
  * `None` if never stated at any layer.
  */
-dpt: string | null, 
+dpt: string | null,
 /**
  * The layer `dpt` resolved from (`"Program"`, `"ProgramRef"`,
  * `"Instance"`, `"Inferred"`, `"UserEdit"`), `None` alongside `dpt:
  * None`.
  */
-dpt_layer: string | null, 
+dpt_layer: string | null,
 /**
  * Resolved through the project's string table, same as `name` — `None`
  * if never stated at any layer.
  */
-description: string | null, 
+description: string | null,
 /**
  * The layer `description` resolved from, `None` alongside
  * `description: None`.
  */
-description_layer: string | null, is_active: boolean, 
+description_layer: string | null, is_active: boolean,
 /**
  * Editable via `Command::SetComObjectFlag` (one flag at a time) —
  * see `ComFlagKind` in `knx-core`.
  */
-read: boolean, write: boolean, transmit: boolean, update: boolean, communication: boolean, 
+read: boolean, write: boolean, transmit: boolean, update: boolean, communication: boolean,
 /**
  * Read-on-Init, the sixth flag (§117). Flattened to `false` when no
  * layer stated it, exactly like its five neighbours — the projection
  * is the read model, not the place where "absent" and "false" are told
  * apart.
  */
-read_on_init: boolean, 
+read_on_init: boolean,
 /**
  * The `GroupLink`s already on this communication object —
  * `knx_core::Command::LinkComObject`/`UnlinkComObject` (2026-09-06)
@@ -80,6 +80,12 @@ program_dpt: string | null,
  * `program_dpt`. Server-only: [`build_device_detail`] leaves it `None`.
  */
 dpt_text: string | null,
+/**
+ * The stored language identifier that answered a requested display
+ * language for `dpt_text`; absent when `dpt_text` is the master data's
+ * own text (AR10). Server-only, like `dpt_text`.
+ */
+dpt_text_language?: string,
 /**
  * The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
  * the requested language when translated, module arguments of the

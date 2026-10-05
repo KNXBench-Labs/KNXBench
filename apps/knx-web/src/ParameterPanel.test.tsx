@@ -678,7 +678,7 @@ describe("ParameterPanel", () => {
     lang("G", { text: "Stufe", textLanguage: "de-DE" }, [{ value: "2", text: null, language: null }]),
   ];
   const badgeOf = (id: string) =>
-    host!.querySelector(`.parameter-field[data-ets-id="${id}"] .parameter-language-badge`);
+    host!.querySelector(`.parameter-field[data-ets-id="${id}"] .language-fallback-badge`);
 
   it("marks every label that fell back to the program's own text when a product language is selected", async () => {
     setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
@@ -686,7 +686,7 @@ describe("ParameterPanel", () => {
     const root = await renderPanel();
     expect(badgeOf("A")).toBeNull();
     expect(badgeOf("B")!.textContent).toBe("Untranslated (en-US)");
-    expect(badgeOf("B")!.getAttribute("title")).toBe("No de translation is stored; this is the program's own text.");
+    expect(badgeOf("B")!.getAttribute("title")).toBe("No de translation is stored; this is the original text.");
     expect(badgeOf("C")!.textContent).toBe("Options untranslated (en-US)");
     expect(badgeOf("D")).toBeNull();
     expect(badgeOf("E")).toBeNull();
@@ -700,7 +700,7 @@ describe("ParameterPanel", () => {
   it("marks nothing when no product language is selected", async () => {
     apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
     const root = await renderPanel();
-    expect(host!.querySelectorAll(".parameter-language-badge").length).toBe(0);
+    expect(host!.querySelectorAll(".language-fallback-badge").length).toBe(0);
     expect(host!.querySelector(".parameter-language-summary")).toBeNull();
     root.unmount();
   });
@@ -720,7 +720,7 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", [lang("A", { text: "Allgemein", textLanguage: "de-DE" })]));
     const root = await renderPanel();
     expect(host!.querySelector(".parameter-language-summary")).toBeNull();
-    expect(host!.querySelectorAll(".parameter-language-badge").length).toBe(0);
+    expect(host!.querySelectorAll(".language-fallback-badge").length).toBe(0);
     root.unmount();
   });
 

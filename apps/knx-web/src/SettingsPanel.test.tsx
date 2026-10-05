@@ -91,7 +91,7 @@ function Harness(props: { onClose: () => void; productLanguages?: readonly Produ
       <Reader />
       <SettingsPanel
         themes={THEMES}
-        activeThemeId="bitcoin-defi"
+        activeThemeId="cupertino"
         onSelectTheme={vi.fn()}
         motionStyles={MOTION_STYLES}
         activeMotionStyle={style}
@@ -204,7 +204,7 @@ describe("SettingsPanel", () => {
       root.render(
         <SettingsPanel
           themes={THEMES}
-          activeThemeId="bitcoin-defi"
+          activeThemeId="cupertino"
           onSelectTheme={vi.fn()}
           motionStyles={MOTION_STYLES}
           activeMotionStyle="apple"
@@ -778,8 +778,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
 
 /**
  * The accent control under a theme that declares no `[data-accent="…"]`
- * variations (ADR-0022: Cupertino, Neon Grid and Bitcoin DeFi treat the
- * accent as identity). The control is disabled there, and a disabled
+ * variations (ADR-0022: Cupertino treats the accent as identity). The control is disabled there, and a disabled
  * control that neither looks disabled nor says why is just a control that
  * ignores you.
  */
@@ -844,7 +843,7 @@ describe("SettingsPanel's accent control", () => {
   });
 
   it("is disabled under a theme whose accent is its identity", async () => {
-    const { root, select } = await renderWithTheme("neon-grid");
+    const { root, select } = await renderWithTheme("cupertino");
 
     expect(select.disabled).toBe(true);
 

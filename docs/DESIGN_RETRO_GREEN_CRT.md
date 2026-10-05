@@ -143,6 +143,13 @@ published, **not merged into main**; no dirty-root product synchronization.
 
 ### Import
 
+> **Update 2026-10-05 ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md)):** the
+> palette now ships with KNXBench — choose **Modern Retro Green CRT** in
+> **Settings → Appearance → Theme**; no import is needed. The file below is the
+> shipped source (admitted by `src/bundledThemes.ts`) and stays importable. There
+> is no preview step any more: an imported file is installed and selected at once.
+> The text below describes the original delivery.
+
 Requires the U14–U18 theme integration (verified baseline `e7f9db8e`, fetched
 `origin/main`), not the older dirty local root checkout inspected at task start.
 Open **Settings → Appearance**, import the `.knx-theme.json` file, inspect the

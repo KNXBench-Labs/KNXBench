@@ -19,7 +19,7 @@ afterEach(() => {
 
 it("defaults to system and migrates old light/dark preferences without losing their intent", () => {
   expect(loadThemeId(localStorage)).toBe("system");
-  for (const [stored, expected] of [["light", "porcelain"], ["dark", "graphite"], ["system", "system"], ["bitcoin-defi", "bitcoin-defi"], ["invalid", "system"]]) {
+  for (const [stored, expected] of [["light", "porcelain"], ["dark", "graphite"], ["system", "system"], ["cupertino", "cupertino"], ["bitcoin-defi", "system"], ["invalid", "system"]]) {
     localStorage.setItem("theme", stored);
     expect(loadThemeId(localStorage)).toBe(expected);
   }
@@ -79,7 +79,7 @@ it("follows the settings record when it arrives after the hooks have mounted", a
     json: () => Promise.resolve({
       schemaVersion: 1,
       status: "ok",
-      settings: { theme: "bitcoin-defi", accent: "rose", density: "comfortable" },
+      settings: { theme: "cupertino", accent: "rose", density: "comfortable" },
     }),
   } as Response)));
 
@@ -92,7 +92,7 @@ it("follows the settings record when it arrives after the hooks have mounted", a
 
   await act(async () => { await initSettings(); });
 
-  expect(document.documentElement.dataset.theme).toBe("bitcoin-defi");
+  expect(document.documentElement.dataset.theme).toBe("cupertino");
   expect(document.documentElement.dataset.accent).toBe("rose");
   expect(document.documentElement.dataset.density).toBe("comfortable");
   vi.unstubAllGlobals();

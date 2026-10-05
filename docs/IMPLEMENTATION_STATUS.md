@@ -9,6 +9,7 @@
   public `MAX_PACKAGE_INPUT_BYTES` mirrors the existing private bound.
 - Four real-binary sparse-file tests (+1 byte, 64 GiB, seeded DB byte-identical,
   exact limit reaches ZIP validation); RED shown, two compiled mutants killed.
+  Integrated public16 on 0533230b independently accepted: 16 exit0, Rust 3244/0/177 in 180 blocks, Web 2001, Chromium 131 plus probe 1, 886 frozen inputs, CLI knx 0.1.0-alpha.4+g0533230b. Three earlier attempts refused on Web tests (two group-address-drag race failures, one vitest worker crash), retained.
   Details: PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md. KL-151 remains IN_PROGRESS.
 
 ## 2026-10-05 — AR06X: actual raw-input guard contracts (local native evidence)

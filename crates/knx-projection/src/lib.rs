@@ -173,6 +173,12 @@ pub struct GroupAddressNode {
     /// reported, never settled by picking a winner. Entries are `DptRef`'s
     /// `Display` text (`"DPST-1-1"`, `"DPT-1"`), never the dotted
     /// `"1.001"` form, which nothing in this repository produces.
+    // ADR-0078 (2026-10-05): the values are now the address's *effective*
+    // type — its own declaration where it applies, a width conflict as two
+    // or more entries (see `effective_dpts`). The doc comment above is copied
+    // into the generated web binding, which the web-lock holder regenerates;
+    // it is left unchanged here so this package does not edit the locked
+    // tree. Hand-over: reword it to "effective type" when regenerating.
     pub dpts: Vec<String>,
     /// Every communication object linked to this address, in
     /// `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.
@@ -316,17 +322,9 @@ fn build_group_address_link_index(project: &Project) -> GroupAddressLinkIndex {
         links,
         dpts: dpts
             .into_iter()
-            .map(|(ga, stated)| {
-                let formatted = match knx_core::group_address_dpt_from(stated) {
-                    GroupAddressDpt::None => Vec::new(),
-                    GroupAddressDpt::Single(dpt) => vec![dpt.to_string()],
-                    GroupAddressDpt::Conflict(dpts) => {
-                        dpts.iter().map(|dpt| dpt.to_string()).collect()
-                    }
-                };
-                (ga, formatted)
-            })
+            .map(|(ga, stated)| (ga, knx_core::group_address_dpt_from(stated)))
             .collect(),
+        declarations_unlifted: project.info.unlifted_group_address_dpt_declarations > 0,
     }
 }
 
@@ -335,7 +333,9 @@ fn build_group_address_link_index(project: &Project) -> GroupAddressLinkIndex {
 /// empty entries.
 struct GroupAddressLinkIndex {
     links: HashMap<GroupAddressId, Vec<GroupAddressLinkNode>>,
-    dpts: HashMap<GroupAddressId, Vec<String>>,
+    /// What the linked objects state, per address (no `None` entries).
+    dpts: HashMap<GroupAddressId, GroupAddressDpt>,
+    declarations_unlifted: bool,
 }
 
 /// Resolves one `Override<Text>` through the project's string table in its
@@ -391,8 +391,29 @@ fn build_group_address_node(
         name: entry.name.clone(),
         address: entry.address.format(style),
         range: entry.range.map(|r| r.0),
-        dpts: index.dpts.get(&entry.id).cloned().unwrap_or_default(),
+        dpts: effective_dpts(entry, index),
         links: index.links.get(&entry.id).cloned().unwrap_or_default(),
+    }
+}
+
+/// `dpts` for one address: its effective type (ADR-0078), so the field
+/// reports exactly what the bus monitor decodes with.
+fn effective_dpts(entry: &GroupAddressEntry, index: &GroupAddressLinkIndex) -> Vec<String> {
+    let linked = index
+        .dpts
+        .get(&entry.id)
+        .cloned()
+        .unwrap_or(GroupAddressDpt::None);
+    match knx_core::group_address_type_from(
+        &entry.declared_dpt,
+        linked,
+        index.declarations_unlifted,
+    )
+    .effective()
+    {
+        GroupAddressDpt::None => Vec::new(),
+        GroupAddressDpt::Single(dpt) => vec![dpt.to_string()],
+        GroupAddressDpt::Conflict(dpts) => dpts.iter().map(|dpt| dpt.to_string()).collect(),
     }
 }
 
@@ -1220,6 +1241,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
         project.installations.push(inst);
         project
@@ -1377,6 +1399,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
         project.installations.push(inst);
 
@@ -1492,6 +1515,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: range.map(knx_core::GroupRangeId),
+            declared_dpt: Default::default(),
         }
     }
 
@@ -1599,6 +1623,61 @@ mod tests {
         let ga = &build_project_tree(&project).installations[0].group_addresses[0];
         assert_eq!(ga.dpts, vec!["DPST-5-1".to_string()]);
         assert_eq!(ga.links.len(), 2);
+    }
+
+    fn declared(main: u16, sub: u16) -> knx_core::Override<knx_core::DptRef> {
+        knx_core::Override::Value(knx_core::Resolved {
+            value: knx_core::DptRef {
+                main,
+                sub: Some(sub),
+            },
+            layer: knx_core::Layer::Instance,
+        })
+    }
+
+    #[test]
+    fn dpts_carry_the_declaration_and_a_width_conflict_as_two_entries() {
+        // ADR-0078: an unlinked address with a declaration shows it; a
+        // same-width linked difference follows the declaration; a width
+        // difference shows both sides.
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "Dimmer", None));
+        for (com, ga, dpt) in [(10, 8, (9, 4)), (11, 9, (5, 1))] {
+            project.devices.insert_com_object(linked_com_object(
+                com,
+                1,
+                2,
+                "obj",
+                Some(dpt),
+                &[(ga, knx_core::Direction::Send)],
+            ));
+        }
+        let mut inst = empty_installation();
+        for (id, address, dpt) in [
+            (7, "1/0/1", (1, 1)),
+            (8, "1/0/2", (9, 1)),
+            (9, "1/0/3", (1, 1)),
+        ] {
+            let mut entry = group_address(id, "ga", address, None);
+            entry.declared_dpt = declared(dpt.0, dpt.1);
+            inst.group_addresses.push(entry);
+        }
+        project.installations.push(inst);
+
+        let tree = build_project_tree(&project);
+        let dpts: Vec<_> = tree.installations[0]
+            .group_addresses
+            .iter()
+            .map(|ga| ga.dpts.clone())
+            .collect();
+        assert_eq!(
+            dpts,
+            vec![
+                vec!["DPST-1-1".to_string()],
+                vec!["DPST-9-1".to_string()],
+                vec!["DPST-1-1".to_string(), "DPST-5-1".to_string()],
+            ]
+        );
     }
 
     #[test]

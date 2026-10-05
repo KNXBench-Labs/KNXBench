@@ -63,6 +63,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
 
     let id2 = project.ids.next_group_address_id().unwrap();
@@ -76,6 +77,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
 
     let state = knx_server::AppState::default();

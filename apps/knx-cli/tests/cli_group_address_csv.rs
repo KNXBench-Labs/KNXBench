@@ -53,6 +53,7 @@ fn tiny_project() -> Project {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
 
     project

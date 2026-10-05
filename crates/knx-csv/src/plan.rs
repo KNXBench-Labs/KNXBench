@@ -438,6 +438,7 @@ fn plan_create(
         central: row.central.unwrap_or(false),
         unfiltered: row.unfiltered.unwrap_or(false),
         range,
+        declared_dpt: Default::default(),
     };
     commands.push(Command::CreateGroupAddress {
         entry,

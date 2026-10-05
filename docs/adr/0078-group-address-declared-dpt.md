@@ -1,7 +1,7 @@
 # ADR 0078: A group address keeps its declared DPT, and resolution reports it beside the linked objects instead of choosing silently
 
 Date: 2026-10-05
-Status: Accepted (design; implementation is the next AR09 package)
+Status: Accepted (implemented 2026-10-05, AR09)
 Session: alpha-release-goal, AR09 (`KL-61`)
 
 ## Context
@@ -46,16 +46,26 @@ Measured on 2026-10-05 with a read-only scan:
 - `Unser Zuhause` (schema 11 and the schema-23 re-export): **0 of 514**
   (unchanged from §61).
 
-### E3 — what the store already holds, and what it cannot tell
+### E3 — what the store already holds
 
-The attribute survives today as an `opaque_entry` row with `name =
-"DatapointType"` and its exact `bytes`. The row's `xpath` is the generic
-element path (`real_path` in `crates/knx-etsproj/src/parse/installation_v21.rs`
-joins element names only, without an `Id` predicate). Thirteen declarations
-in one installation therefore produce thirteen rows with the same `xpath`,
-and nothing in a row says which group address it belongs to. Pairing them by
-row order would be a guess. ADR-0020 allows a migration to re-derive only
-what the stored bytes determine, so an existing store cannot be lifted.
+The attribute survives today as an `opaque_entry` row: `kind =
+"RetainedAttribute"`, `name = "DatapointType"`, the exact value as `bytes`,
+and an `xpath` keyed to the element instance,
+`/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress[@Id='<ETS id>']`
+(`crates/knx-etsproj/src/xpath.rs`, `group_address`, in use since
+2026-09-20). The `group_address` table stores the same ETS id as
+`source_ets_id`, so a row can be attributed exactly. ADR-0020 allows a
+migration to re-derive what stored bytes determine, so these rows can be
+lifted.
+
+A store written by an import before the keyed xpaths existed holds the
+generic path without the `[@Id=…]` predicate. Those rows cannot be
+attributed to one address; pairing them by row order would be a guess.
+
+*Corrected 2026-10-05, same day:* the first published text of this ADR said
+no row carried element identity. That was read from the parser's generic
+`real_path` and missed the re-keying in `map.rs`; the keyed form above is
+what the importer actually stores.
 
 ## Decision
 
@@ -103,14 +113,16 @@ towards either side.
   keeps its exact text.
 - A new import takes the attribute into the model and no longer writes an
   opaque row for it, so the value is stored once.
-- `migrate_v9_to_v10` adds the columns with state `Absent` and **does not
-  lift** existing opaque rows (E3). It counts the `GroupAddress` /
-  `DatapointType` opaque rows per installation and records the count in
-  `schema_meta`. While that count is non-zero, the resolution outcome for an
-  `Absent` declaration in that installation is `DeclarationNotLifted`
-  instead of `Inferred`: the project shows that declarations exist in its
-  retained data and that a re-import from the source file is needed to use
-  them. The opaque rows stay untouched.
+- `migrate_v9_to_v10` lifts every `RetainedAttribute` / `DatapointType` row
+  whose `xpath` is exactly the keyed path of a stored group address (E3)
+  into that address's columns, parsing it as the importer does (`Value`,
+  `Empty` or `Malformed` with the exact text), and deletes the lifted row in
+  the same transaction. Rows without an exact match (the pre-keying form)
+  stay untouched and are counted in
+  `project_info.unlifted_group_address_dpt_declarations`. While that count
+  is non-zero, an `Absent` declaration resolves as `DeclarationNotLifted`
+  instead of `Inferred`: the project shows that unattributed declarations
+  exist and that a re-import from the source file is needed to use them.
 - Native save stays exact-or-refused (ADR-0074). A save/load roundtrip must
   return the identical `Override` in all four states.
 
@@ -119,9 +131,12 @@ towards either side.
 - Bus-monitor decoding and the CSV export's read-only `DatapointType` column
   use the effective DPT from D2. The CSV export writes nothing for
   `SizeConflict` and adds a warning, as it does for linked conflicts today.
-- The server API gains the declared value and the outcome as additive
-  fields. Displaying them in the web UI belongs to the UI owner and the
-  current web lock; this ADR does not change any UI.
+- The projection's existing `dpts` field carries the effective type, so
+  the web shows and fingerprints what the server decodes with, without a
+  web change. Additional API fields for the declared value and the outcome
+  would land in the generated web bindings, which belong to the current web
+  lock holder; the AR09 implementation therefore does not add them and hands
+  them, together with any display of the difference, to the UI owner.
 - The CSV *import* still never applies `DatapointType`
   (IMPORT_EXPORT.md); changing that is out of scope.
 
@@ -133,16 +148,18 @@ towards either side.
   of being decoded with either size.
 - One store migration. Older KNXBench builds cannot open v10 files, as with
   every earlier schema step.
-- Projects saved before v10 keep their declarations only as opaque data and
-  need a re-import to use them; the `DeclarationNotLifted` outcome says so.
+- Projects saved before v10 get their keyed declarations lifted by the
+  migration. Only stores from imports before the keyed xpaths keep
+  unattributed rows; the `DeclarationNotLifted` outcome says so.
 
 ## Test contract (before implementation is accepted)
 
 Explicit, inferred, same-width divergence, width conflict, missing, empty,
 malformed (several tokens, unknown form) and unsupported main types; the
 import report entry for `Malformed`; the v9→v10 migration from a store with
-the opaque rows (columns `Absent`, rows untouched, count recorded,
-`DeclarationNotLifted` reported); native save/load equality for all
+keyed opaque rows (lifted in all three non-absent states, rows deleted)
+and with unkeyed rows (left untouched, counted, `DeclarationNotLifted`
+reported); native save/load equality for all
 four `Override` states; codec refusal on `SizeConflict`; CSV export column
 and warning.
 
@@ -154,5 +171,5 @@ and warning.
   1-octet telegram with a 1-bit type when the project breaks the schema rule.
 - **Keep the attribute opaque and read it at resolution time.** Puts XML
   parsing in the resolver and leaves user edits impossible.
-- **Lift existing opaque rows by row order.** The rows carry no element
+- **Lift unkeyed opaque rows by row order.** Those rows carry no element
   identity (E3); a wrong pairing would assign a type to the wrong address.

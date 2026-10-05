@@ -465,6 +465,11 @@ Two rules that an over-strict model would get wrong:
 
 - **A group address without a datapoint type is normal, not an error** — 194 of
   514 in the reference project (RESEARCH §6.1).
+- **A group address may state its own type** (schema ≥21
+  `GroupAddress/@DatapointType`, `GroupAddressEntry::declared_dpt`, an
+  `Override<DptRef>`). It is weighed against the linked objects by
+  `resolve_group_address_type` and never filled by inference
+  ([ADR 0078](adr/0078-group-address-declared-dpt.md)). Store schema v10.
 - **A group address with no linked communication object at all is normal** —
   110 of 514.
 

@@ -105,6 +105,7 @@ fn project_with_group_address(ga_addr: &str, dpts: &[(u16, u16)]) -> Project {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         }],
         parameters: vec![],
     });

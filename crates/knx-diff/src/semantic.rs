@@ -401,6 +401,9 @@ pub struct GroupAddressFields {
     pub central: bool,
     pub unfiltered: bool,
     pub range: Option<GroupRangeKey>,
+    /// The address's own declared DPT (ADR-0078), by the same rule as a
+    /// communication object's `dpt`.
+    pub declared_dpt: Option<String>,
 }
 
 pub fn group_address_key(entry: &GroupAddressEntry, style: GroupAddressStyle) -> GroupAddressKey {
@@ -422,6 +425,7 @@ pub fn group_address_fields(
             .range
             .and_then(|id| ranges_by_id.get(&id))
             .map(|r| group_range_key(r)),
+        declared_dpt: semantic_dpt(&entry.declared_dpt),
     }
 }
 
@@ -429,7 +433,11 @@ pub fn group_address_changed_fields(
     left: &GroupAddressFields,
     right: &GroupAddressFields,
 ) -> Vec<&'static str> {
-    changed_fields!(left, right, [name, central, unfiltered, range])
+    changed_fields!(
+        left,
+        right,
+        [name, central, unfiltered, range, declared_dpt]
+    )
 }
 
 // ---------------------------------------------------------------------
@@ -689,7 +697,7 @@ impl FieldDiff for GroupAddressFields {
         field_changes!(
             self,
             right,
-            [name => fmt_plain, central => fmt_plain, unfiltered => fmt_plain, range => fmt_debug]
+            [name => fmt_plain, central => fmt_plain, unfiltered => fmt_plain, range => fmt_debug, declared_dpt => fmt_plain_string_opt]
         )
     }
 }
@@ -1345,15 +1353,17 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: None,
         };
         let right = GroupAddressFields {
             name: "Light off".into(),
             unfiltered: true,
+            declared_dpt: Some("DPST-1-1".into()),
             ..left.clone()
         };
         assert_eq!(
             group_address_changed_fields(&left, &right),
-            vec!["name", "unfiltered"]
+            vec!["name", "unfiltered", "declared_dpt"]
         );
     }
 

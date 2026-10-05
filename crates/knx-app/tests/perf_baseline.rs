@@ -217,6 +217,7 @@ fn build_group_addresses(ids: &mut IdGen) -> GroupSpace {
             central: false,
             unfiltered: false,
             range: Some(middle_id),
+            declared_dpt: Default::default(),
         });
         pool.push(id);
     }
@@ -508,6 +509,7 @@ fn build_synthetic_project() -> Project {
             last_modified: None,
             project_start: None,
             ets_schema_version: 11,
+            unlifted_group_address_dpt_declarations: 0,
         },
         installations: vec![installation],
         devices,

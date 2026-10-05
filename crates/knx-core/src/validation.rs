@@ -497,6 +497,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             }],
             parameters: vec![],
         };

@@ -214,6 +214,8 @@ pub struct SourceGroupAddress {
     pub address: Option<String>,
     pub central: Option<String>,
     pub unfiltered: Option<String>,
+    /// `@DatapointType`, schema ≥21 only (ADR-0078).
+    pub datapoint_type: Option<String>,
     pub other: Vec<RetainedAttribute>,
 }
 

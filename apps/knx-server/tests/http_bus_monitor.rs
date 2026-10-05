@@ -155,6 +155,7 @@ fn project_with_resolving_and_unresolving_group_addresses() -> knx_core::Project
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             },
             GroupAddressEntry {
                 id: GroupAddressId(2),
@@ -164,6 +165,7 @@ fn project_with_resolving_and_unresolving_group_addresses() -> knx_core::Project
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             },
         ],
         parameters: vec![],
@@ -562,6 +564,46 @@ async fn polling_returns_telegrams_decoded_against_the_open_project() {
         rows[1]["decoded"]["text"],
         "no DPT resolved for this group address"
     );
+}
+
+/// ADR-0078: an address with no linked object but its own declared DPT is
+/// decoded with that declaration instead of being reported as unresolved.
+#[tokio::test]
+async fn a_declared_group_address_dpt_decodes_an_otherwise_unresolved_address() {
+    let (tunnel, handle) = fake_tunnel();
+    let mut project = project_with_resolving_and_unresolving_group_addresses();
+    project.installations[0].group_addresses[1].declared_dpt =
+        knx_core::Override::Value(knx_core::Resolved {
+            value: knx_core::DptRef {
+                main: 1,
+                sub: Some(1),
+            },
+            layer: knx_core::Layer::Instance,
+        });
+    let state = knx_server::AppState {
+        connector: Box::new(FakeConnector::succeeding(tunnel)),
+        project: std::sync::Mutex::new(Some(project)),
+        ..Default::default()
+    };
+    let app = knx_server::app(Arc::new(state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    handle
+        .sender()
+        .send(group_value_write(2, GroupValue::Short(1)))
+        .unwrap();
+    let telegrams = poll_until_len(&app, 1).await;
+    let row = &telegrams["telegrams"][0];
+    assert_eq!(row["destination"], "0/0/2");
+    assert_eq!(row["decoded"]["kind"], "value");
+    assert_eq!(row["decoded"]["dpt"], "DPST-1-1");
+    assert_eq!(row["decoded"]["text"], "on");
 }
 
 async fn poll_until_len(app: &axum::Router, len: usize) -> Value {

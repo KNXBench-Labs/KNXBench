@@ -148,6 +148,7 @@ pub(crate) fn add_group_address(
             central: false,
             unfiltered: false,
             range,
+            declared_dpt: Default::default(),
         });
     ga_id
 }

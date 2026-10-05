@@ -426,6 +426,7 @@ export const messages: Record<MessageKey, string> = {
 
   "parameters.deviceScope": "Gerät",
   "parameters.moduleNumber": "Modul #{number}",
+  "parameters.readOnlyCaption": "Hier nicht bearbeitbar – siehe die Warnungen für den Grund.",
   "parameters.sharedReadOnlyCaption":
     "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",
@@ -480,6 +481,15 @@ export const messages: Record<MessageKey, string> = {
     "Ein Modulargument konnte nicht der Deklaration des Moduls zugeordnet werden und wurde ignoriert.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "Ein Modulargument verwendet eine Art, die diese Version nicht interpretiert, und wurde ignoriert.",
+  "parameters.diagnostic.unsupportedControlKind": "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet.",
+  "parameters.diagnostic.evaluationWorkBudgetExhausted": "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt.",
+  "parameters.diagnostic.parameterAccessReadOnly": "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar.",
+  "parameters.diagnostic.manufacturerCalculation": "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt.",
+  "parameters.diagnostic.writeAuthorityUnavailable": "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installieren Sie das Produkt neu, um sie zu erfassen.",
+  "parameters.noAccess.show.one": "{count} Feld ohne Benutzerzugriff anzeigen (Access None)",
+  "parameters.noAccess.show.other": "{count} Felder ohne Benutzerzugriff anzeigen (Access None)",
+  "parameters.noAccess.hide.one": "{count} Feld ohne Benutzerzugriff ausblenden (Access None)",
+  "parameters.noAccess.hide.other": "{count} Felder ohne Benutzerzugriff ausblenden (Access None)",
   "parameters.diagnostic.unresolvedTextPlaceholder":
     "Ein Textplatzhalter hatte kein passendes Modulargument und wurde unverändert belassen.",
 
@@ -1724,6 +1734,18 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.chooseDevice": "Gerät mit physikalischer Adresse wählen",
   "deviceDownload.gateway": "Gateway-Adresse",
   "deviceDownload.preparePlan": "Zeigen, was geschrieben würde",
+  "deviceDownload.scope.legend": "Was geschrieben wird",
+  "deviceDownload.scope.complete": "Vollständiger Download",
+  "deviceDownload.scope.parameters": "Nur Parameter",
+  "deviceDownload.scope.groupAddresses": "Nur Gruppenadressen",
+  "deviceDownload.scope.both": "Parameter und Gruppenadressen (partiell)",
+  "deviceDownload.partialScope.parameters": "Partieller Download: nur Parameter. Gruppenadresstabelle und Assoziationstabelle werden nicht geschrieben.",
+  "deviceDownload.partialScope.groupAddresses": "Partieller Download: nur Gruppenadressen. Applikationsprogramm und Parameter werden nicht geschrieben.",
+  "deviceDownload.partialScope.both": "Partieller Download: Parameter und Gruppenadressen. Das Applikationsprogramm wird vorher nicht entladen.",
+  "deviceDownload.partialCheck": "Vor dem Schreiben prüft der Download, dass das Gerät bereits dieses Applikationsprogramm trägt und jeder Teil geladen ist; sonst bricht er ab, ohne zu schreiben.",
+  "deviceDownload.notWrittenExplainer": "Applikations-Schreibvorgänge, die dieser partielle Download nicht ausführt (geschrieben werden nur absolute Daten- oder Stack-Segmente im EEPROM, KNX Configuration Procedures §3.9.2.4):",
+  "deviceDownload.notWrittenNone": "Kein weiterer Applikations-Schreibvorgang entfällt.",
+  "deviceDownload.notWrittenOctets": "Oktette",
   "deviceDownload.planTitle": "Plan: Was ins Gerät geladen würde",
   "deviceDownload.planNothingSent": "Es wurde nichts gesendet. So würde das Laden ins Gerät schreiben, vorbereitet aus dem Projekt in seinem jetzigen Stand; jede Projektänderung verwirft den Plan.",
   "deviceDownload.target": "Gerät",

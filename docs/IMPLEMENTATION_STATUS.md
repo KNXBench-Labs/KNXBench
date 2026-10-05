@@ -18,6 +18,40 @@
   an independent Python recount predicts exactly.
 - ADR-0080 marked Accepted (its gates were green at merge).
 
+## 2026-10-05 — Parameter panel adopts ADR-0080's write-authority reasons
+
+- `parameterAccessReadOnly`, `manufacturerCalculation` and
+  `writeAuthorityUnavailable` — and the older `unsupportedControlKind`
+  (ADR-0061) and `evaluationWorkBudgetExhausted` (ADR-0062), which also only
+  had the server's English fallback — join Web's `ParameterDiagnosticKind`
+  union and the English/German catalogues.
+- UI owner's presentation decision (ADR-0080 "UI presentation"): fields whose
+  effective access is `None` are folded per section behind a counting button
+  (`aria-expanded`), shown read-only on request, never dropped; `Read` fields
+  stay visible and read-only.
+- Follow-on fix: a disabled field's caption said "Shared across every
+  instantiation of this module" for every refused field; since ADR-0080
+  device-level fields are refused too, so they now read "Not editable here —
+  see the warnings for why." Module-scoped fields keep the shared caption.
+- Tests: 9 new `ParameterPanel.test.tsx` cases (5 translations in German, fold
+  with count/toggle/read-only, singular, no fold without `None`, caption by
+  scope), 8 RED first; 8/8 mutants. No server change.
+## 2026-10-05 — KL-142: the download tab asks what to write
+
+The Download to device tab offers *What to write* before the plan: Complete
+download (default), Parameters only, Group addresses only, Parameters and group
+addresses. A partial choice sends `partial: { parameters, groupAddresses }` to
+`POST /api/device-download/plan` (a complete one sends no `partial` member); the
+plan then names the partial scope, the device check before writing, and every
+`notWritten` application write (or that none is skipped), before the consent
+dialog. A refusal (422) is shown without a plan; changing the scope drops a
+shown plan; the radios lock while planning or downloading. Start, consent and
+phrase are unchanged — the server re-derives the same partial plan from
+`planId`. Tests: 10 new Vitest cases (panel + API body, RED first), 8/8
+mutants, `e2e/device-download-scope.e2e.ts` (2, RED on the previous panel).
+Mocked/intercepted only; no device contact. The comparison view still
+compares the complete plan only.
+
 ## 2026-10-05 — AR07: the manufacturer's "hands off" now means hands off (ADR-0080)
 
 - **Census.** Read-only, aggregate-only scan of 3,599 distinct application

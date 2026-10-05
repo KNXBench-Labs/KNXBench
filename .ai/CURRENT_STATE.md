@@ -7,6 +7,24 @@
 ---
 
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 18:47 CEST
+Web lock: released by claude-goal-ui-owner (KL-142 `2f2a6892` and the ADR-0080 adoption delivered)
+- **Completed:** ADR-0080 adoption: the parameter panel translates `parameterAccessReadOnly`, `manufacturerCalculation`, `writeAuthorityUnavailable` and the older `unsupportedControlKind` / `evaluationWorkBudgetExhausted` (en/de); `Access=None` fields are folded per section behind a counting button and shown read-only on request (decision recorded in ADR-0080 "UI presentation"); a device-level refused field no longer claims to be shared across module instantiations. 8/8 mutants. Earlier: KL-142 delivered in `2f2a6892` (ledger DONE). Log: `.ai/logs/2026-10-05_claude_ui-adr80-adoption.md`.
+- **Pending/Next Steps:** Alpha: `check-headers` red on `origin/main` since `9b232142` (161 vs ceiling 157; four new ADR-0080 Rust files with a two-line first `//!` paragraph — list in the previous UI-owner entry); AR21 rerun of finding 5 (`104916d6`). UI owner: no open package; the web lock is free.
+- **Notes for Codex oder Claude:** No server change. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 18:43 CEST
+Web lock: still held by claude-goal-ui-owner for the ADR-0080 parameter write-authority adoption; not released by this entry
+- **Completed:** KL-142 Web half: the Download to device tab offers *What to write* (complete / parameters / group addresses / both) before the plan, sends exactly that `partial` body (none for complete), shows the partial scope, the pre-write check and every `notWritten` write before consent, renders a refusal without a plan; ledger `KL-142` DONE. Vitest RED first, 8/8 mutants, Chromium spec RED on the old panel. Log: `.ai/logs/2026-10-05_claude_ui-kl142-download-scope.md`.
+- **Pending/Next Steps:** UI owner: ADR-0080 adoption (prepared, gate running), then release the lock. **Alpha: `check-headers` is red on `origin/main` since `9b232142`** — 161 files without a header vs ceiling 157: `apps/knx-server/tests/http_parameter_write_authority.rs`, `crates/knx-productdb/src/parse/write_authority.rs`, `crates/knx-productdb/tests/v20_rewind/mod.rs`, `crates/knx-productdb/tests/write_authority.rs` start with a two-line `//!` paragraph (ADR-0018 counts that as absent); a one-sentence first line fixes it. The UI owner did not edit them. Alpha: AR21 rerun of finding 5 (`104916d6`) requested.
+- **Notes for Codex oder Claude:** The device comparison view still compares the complete plan only (its route accepts `partial`; not offered — KNOWN_LIMITATIONS §142). No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 18:30 CEST
 Web lock: taken by claude-goal-ui-owner for KL-142 (partial-download scope selector) and the ADR-0080 parameter write-authority adoption
 - **Completed:** Lock taken only.

@@ -16,6 +16,17 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 
 const POLL_INTERVAL_MS = 500;
 
+/** What the plan writes (KL-142): the complete download, or a CP §3.9.2.4
+ * partial download of the chosen parts. The server derives the partial plan
+ * and refuses a scope it cannot; this panel only asks. */
+type DownloadScope = "complete" | "parameters" | "groupAddresses" | "both";
+const SCOPES: readonly DownloadScope[] = ["complete", "parameters", "groupAddresses", "both"];
+const SCOPE_PARTS: Record<Exclude<DownloadScope, "complete">, api.DeviceDownloadParts> = {
+  parameters: { parameters: true, groupAddresses: false },
+  groupAddresses: { parameters: false, groupAddresses: true },
+  both: { parameters: true, groupAddresses: true },
+};
+
 function hex(value: number, digits: number): string {
   return value.toString(16).toUpperCase().padStart(digits, "0");
 }
@@ -41,6 +52,10 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
     [project],
   );
   const [address, setAddress] = useState("");
+  const [scope, setScope] = useState<DownloadScope>("complete");
+  // The scope the shown plan was asked for: its texts must not follow a
+  // later radio change (the plan itself is dropped on change anyway).
+  const [planScope, setPlanScope] = useState<DownloadScope>("complete");
   const [gateway, setGateway] = useState(loadPreferredGateway);
   const [plan, setPlan] = useState<api.DeviceDownloadPlan | null>(null);
   const [untestedAcknowledgement, setUntestedAcknowledgement] = useState("");
@@ -102,7 +117,12 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
     setUntestedAcknowledgement("");
     setPlanning(true);
     try {
-      setPlan(await api.planDeviceDownload(address.trim()));
+      const target = address.trim();
+      const asked = scope;
+      setPlan(asked === "complete"
+        ? await api.planDeviceDownload(target)
+        : await api.planDeviceDownload(target, SCOPE_PARTS[asked]));
+      setPlanScope(asked);
     } catch (reason) {
       setError(api.errorMessage(reason));
     } finally {
@@ -176,6 +196,16 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
               ))}
             </select>
           </label>
+          <fieldset className="device-download-scope">
+            <legend>{t("deviceDownload.scope.legend")}</legend>
+            {SCOPES.map((option) => (
+              <label key={option}>
+                <input type="radio" name="device-download-scope" value={option} checked={scope === option}
+                  disabled={locked} onChange={() => { setScope(option); setPlan(null); setUntestedAcknowledgement(""); }} />
+                {t(`deviceDownload.scope.${option}` as const)}
+              </label>
+            ))}
+          </fieldset>
           <label>
             {t("deviceDownload.gateway")}
             <input value={gateway} disabled={locked} onChange={(event) => setGateway(event.target.value)} placeholder="192.0.2.10:3671" />
@@ -212,6 +242,27 @@ export default function DeviceDownloadPanel({ project }: DeviceDownloadPanelProp
             <dt>{t("deviceDownload.octets")}</dt>
             <dd>{t("deviceDownload.octetsValue", { count: plan.dataOctets })}</dd>
           </dl>
+          {plan.partial && (
+            <section className="device-download-not-written">
+              <p><strong>{t(`deviceDownload.partialScope.${planScope === "complete" ? "both" : planScope}` as const)}</strong></p>
+              <p>{t("deviceDownload.partialCheck")}</p>
+              {plan.notWritten.length === 0 ? (
+                <p>{t("deviceDownload.notWrittenNone")}</p>
+              ) : (
+                <>
+                  <p>{t("deviceDownload.notWrittenExplainer")}</p>
+                  <table>
+                    <thead><tr><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.notWrittenOctets")}</th></tr></thead>
+                    <tbody>
+                      {plan.notWritten.map(([at, octets]) => (
+                        <tr key={at}><td><code>{hex(at, 4)}h</code></td><td>{octets}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </section>
+          )}
           <table className="device-download-segments">
             <thead><tr><th>{t("deviceDownload.segment")}</th><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.segmentOctets")}</th></tr></thead>
             <tbody>

@@ -34,6 +34,18 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("asks for a complete download plan without a partial member, and for a partial one with exactly its parts (KL-142)", async () => {
+    mockFetchOnce({ planId: 1 });
+    await api.planDeviceDownload("1.1.67");
+    let [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/device-download/plan");
+    expect(JSON.parse(init.body as string)).toEqual({ address: "1.1.67" });
+    mockFetchOnce({ planId: 2 });
+    await api.planDeviceDownload("1.1.67", { parameters: false, groupAddresses: true });
+    [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ address: "1.1.67", partial: { parameters: false, groupAddresses: true } });
+  });
+
   it("uses the existing project restyle route and returns its authoritative snapshot", async () => {
     const tree = { group_address_style: "TwoLevel", can_undo: true, is_modified: true, installations: [] };
     mockFetchOnce(tree);

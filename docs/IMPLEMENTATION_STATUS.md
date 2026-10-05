@@ -11,7 +11,9 @@
   inputs/log/binary identities verified separately. Four fresh compiled lower/
   upper controls accepted with named semantic REDs; original snapshot compile
   refusal retained. Scoped package/docs9 passed: ProductDB 644/0/25 in 31 blocks;
-  includes native4/count2, not additive. Final integration/publication pending;
+  includes native4/count2, not additive. Fresh integrated public16 accepted
+  on2e188226: Rust3200/0/177/175, Web2001, Chromium131 plus separate probe1;
+  871 source hashes/logs and revision-stamped CLI checked. Final-docs/publication pending;
   scope in PRODUCT_ZIP_DECLARED_SIZE_CONTRACTS.md.
 
 ## 2026-10-05 — AR21 review: the flow view goes back for one more lap

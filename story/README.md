@@ -92,7 +92,7 @@ record naming the exact `story_sha256` of one candidate
 `approved_by`, `approved_at`). `release-check` only verifies that match; no
 deployment step exists. Any change after approval needs a new approval.
 
-## Source archaeology, edition 2026-10-04
+## Source archaeology, editions 2026-10-04 and 2026-10-05
 
 Pinned baseline: published history `origin/main` at
 `75ad9650351f80fd147d683f3a6aeb34ec0dfd64` (4 October 2026, 00:42 CEST), 1,909
@@ -112,17 +112,30 @@ Read locally, KNXBench-attributable only:
 - Paperclip: local database backups (25–27 September); only the issue, agent,
   goal, project and company tables. Secret and credential tables, `.env` files
   and run logs were not opened.
+- Personal chat exports (ChatGPT, claude.ai), added for edition `2026-10-05.1`:
+  provided by the user, kept in the git-ignored `.private/` folder and searched
+  locally by keyword. Only project conversations were opened, and only four
+  ChatGPT conversations (2 and 4–7 September) are used. Everything else stayed
+  private and is deliberately not mentioned.
 
 Not accessed: cloud agent sessions, the remote repository host, the ETS
 installation data and the protected manufacturer corpus.
 
 Findings that shaped the story:
 
-- **Earliest surviving prompt:** 2 September 2026, 13:50 CEST, in the folder then
-  named `KNX`: install tools to analyse the user's home ETS project and access
-  the bus. The **founding prompt** for the application followed at 14:23 CEST:
-  read the German strategy document and get going. The strategy document's own
-  origin is not in any available source.
+- **Earliest surviving project prompt:** 2 September 2026, 13:50 CEST, in the
+  folder then named `KNX`: install tools to analyse the user's home ETS project
+  and access the bus. The story deliberately starts here; anything earlier is
+  out of scope. The **founding prompt** for the application followed at
+  14:23 CEST: read the German strategy document and get going.
+- **Origin of the strategy (edition `2026-10-05.1`):** written in ChatGPT between
+  14:10 and 14:16 CEST the same day (prompt, session plan, Markdown summary,
+  CLAUDE.md). Whitespace-normalised similarity: strategy 98.7 % to the first
+  commit, CLAUDE.md 96.4 % to `fdcc5ab9` (15:12 CEST).
+- **Origin of the specification knowledge base:** a ChatGPT-guided extraction
+  pipeline with a local model via Ollama from 4 September, an audit of 2,232
+  results by 5 September, a clean restart as `knx-spec-kb` on 7 September and
+  Claude Code from 10 September.
 - The folder and product were renamed `KNX` → `KNXBench` on 5 September.
 - The early Git history was rewritten twice for privacy on 20 September and the
   remote recreated; commit hashes from before then differ from those the agents

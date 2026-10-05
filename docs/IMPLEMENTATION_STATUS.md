@@ -1,5 +1,15 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-06 — AR15 slice 2: counting what is left, and saying "10" out loud
+
+- LIMITATION_TRIAGE recounted by script: 119 heading lines = 108 limitations
+  + 11 signposts; 107 rated (K1 5, K2 30, K3 58, K4 14), §105 unrated.
+  New: §151/153/154/155/157; resolved to signposts: §149/150/152/156.
+- Scheme set 10–14, 20, exact 21/23 now stated consistently (COMPATIBILITY,
+  GAP_ANALYSIS_ETS, ROADMAP, KL §11, PRODUCT_DATABASE_CORPUS, manual).
+- Store schema 10 / ProductDB 21 in the architecture tour and implementation
+  status; ARCHITECTURE §8 and COMPATIBILITY point commissioning at KL §7.
+
 ## 2026-10-06 — AR15 slice 1: the manual stops saying "never" about downloads
 
 - `DOC-03` DONE: README, getting started, workflow §12, command line, FAQ,

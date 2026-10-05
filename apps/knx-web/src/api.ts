@@ -483,6 +483,12 @@ export interface CatalogItem {
   visibleDescription: string | null;
   productRefId: string | null;
   hardware2programRefId: string | null;
+  // AR10 slice 2b: the stored language that answered `name` /
+  // `visibleDescription` (`de-DE` for `de`), `null` for the package's own
+  // text, whose declared language is `sourceLanguage` (`null` if undeclared).
+  nameLanguage: string | null;
+  visibleDescriptionLanguage: string | null;
+  sourceLanguage: string | null;
 }
 
 export interface CatalogInstallMember {

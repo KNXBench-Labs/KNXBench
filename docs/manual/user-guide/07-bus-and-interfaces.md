@@ -215,14 +215,18 @@ send anything.
   movement and pulses at once; values, arrows and the Inspector stay. Freeze
   is then not needed and is greyed out.
 - On a very busy bus, many telegrams on the same path are drawn as one pulse
-  marked ×*n*, and more than 160 at once are counted rather than drawn. A
-  note above the map says so. Values and counts are always complete.
+  marked ×*n*, and more than 160 at once are counted rather than drawn. When
+  the map is full (1,000 nodes) or more telegrams arrive at once than the view
+  keeps for drawing, the telegrams it could not draw completely are counted
+  too. A note above the map says how many. Values and counts are always
+  complete.
 
-Movement costs processor time: on a busy bus, or on a slower computer, *Motion
-Off* keeps the view light and loses no information. With several hundred
-devices and around a thousand telegrams a second, movement keeps the
-processor fully busy and the window can react with a delay of a few tenths of
-a second; switch Motion Off for such a bus. See [known limitations
+Movement costs processor time, and what costs most is the size of the map,
+not the number of telegrams. On a small or medium map movement is light. Once
+the map holds several hundred devices, movement keeps the processor almost
+fully busy even when only a few telegrams a second arrive, and values can
+appear up to about a second late; switch *Motion Off* for such an
+installation. Motion Off loses no information. See [known limitations
 §154](../../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only).
 
 ## Sending a value

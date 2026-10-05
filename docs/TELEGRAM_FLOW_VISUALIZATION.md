@@ -1149,6 +1149,54 @@ cases are pinned by mutants), 9 mutants over `flowModel`/`flowAnimator`; gate
 in the delivery log. Awaiting the AR21 rerun. No hardware, no bus, no KNX
 socket.
 
+## 22. AR21 rerun of findings 6 and 7, and acceptance (Alpha, 2026-10-05)
+
+Measured here on `origin/main` `e6099fb7` (fix `6fa10eb8`), not taken over.
+
+**Findings 6 and 7 are fixed.** The §19/§20 probes, rerun as temporary
+Vitest cases (not committed), now give: A (partial refusal, 2 telegrams) →
+2 pulses, 2 not completely drawn, reduced; B (one partial telegram, then 30
+from a refused sender) → 31 not drawn, 0 bundled; D (2,100 fresh telegrams in
+one batch) → 2,048 bundled + 52 not drawn = 2,100. Two more probes: two
+admissions of 1,500 before one sync → 2,048 bundled + 952 not drawn = 3,000,
+and a second idle sync adds nothing; 2,100 telegrams while hidden, then one
+visible telegram → nothing counted for the hidden time, the new telegram
+pulses. Four own mutants (incomplete events ignored, ring overflow ignored,
+sequence baseline not reset on a new model, refused-sender event not
+recorded) each fail flow tests; files restored and byte-compared.
+
+**Gates (this revision).** Web build; Web Vitest 2,044 / 2,044 (116 files);
+flow Vitest 111 / 111; flow e2e ×3 42 / 42 and `group-address-drag` ×5
+10 / 10, network-less; Rust workspace, Clippy and the five repository checks
+in the closing gate (`.ai/logs/2026-10-05_claude_ar21-acceptance.md`).
+
+**Long-session and growth measurements** (production build, headless
+Chromium 152, Ryzen 7 5800X, network-less, `flow-load.load.ts` with two
+temporary scenarios that were not committed; one sample each, host load 8–14):
+
+| Scenario | Telegrams | Map at end | Main thread | Long tasks (count, total, max) | Value lag | Heap after GC (5 samples) |
+| --- | --- | --- | --- | --- | --- | --- |
+| long session, 60 devices, 10/s, 900 s | 9,027 | 59 nodes, 79 lines | 0.168 | 0 | 5–7 ms | 5.4, 5.5, 5.7, 6.0, 6.2 MiB |
+| edge growth, 500 devices, 1,250 groups, 2/s, 720 s | 1,462 | 502 nodes, 2,482 lines | 0.876 | 4,181, 391 s, 223 ms | 86 ms → 1.1 s | 9.3, 11.3, 13.2, 14.6, 15.1 MiB |
+
+- The small long session stays light. Its heap still rose by about 0.2 MiB
+  per three minutes after the capture had filled; 15 minutes neither show a
+  plateau nor prove a leak (linear extrapolation: about 3 MiB per hour).
+- **The cost of motion follows the size of the map, not the telegram rate.**
+  At only 2 telegrams/s, a map growing to 500 nodes and ~2,500 lines keeps
+  the main thread 88 % busy and values appear up to 1.1 s late. The earlier
+  wording tied the saturation to ~1,000 telegrams/s; the manual and §154 now
+  say that a large map needs Motion Off. Motion Off loses no information.
+
+**Acceptance.** All seven findings of §13–§20 are closed. The Alpha envelope
+is: motion is supported for small and medium maps (measured: up to ~230
+nodes in a 200/s burst, 69 % busy); for maps of several hundred nodes, or at
+the §7 load, Motion Off is the supported mode; Chromium only, no WebKitGTK,
+Orca or real-bus evidence (§154, accepted boundaries unchanged). A heap
+plateau over hours is not shown. `FLOW-01` is accepted for the Alpha on this
+envelope; the receipt for AR18's whole-product review is this section plus
+§13–§21 and the closing log. No hardware, no bus and no KNX socket were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

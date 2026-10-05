@@ -336,6 +336,18 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
   [§77](../KNOWN_LIMITATIONS.md#77-a-line-scan-covers-one-line-at-a-time-it-does-not-cross-couplers),
   [§78](../KNOWN_LIMITATIONS.md#78-a-line-scan-reports-other-knxnetip-tunnelling-endpoints-as-occupied-devices)
 
+### Movement in the flow view is heavy on large installations
+
+- **Affected:** the bus monitor's Flow view with Motion on.
+- **Limitation:** the cost of movement grows with the size of the map. With
+  several hundred devices it keeps the processor almost fully busy even at a
+  few telegrams a second, and values can appear up to about a second late.
+  There is no automatic switch. Checked in Chromium only; the packaged desktop
+  app and screen readers were not measured.
+- **Workaround:** switch *Motion Off* in the settings. Values, arrows, counts
+  and the Inspector stay; nothing is lost.
+- **Details:** [§154 the telegram-flow view](../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only)
+
 ### A running monitor keeps the group-address style it started with
 
 - **Resolved in T13:** changing the open project's group-address style refreshes

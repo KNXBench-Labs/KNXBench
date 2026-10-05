@@ -1,4 +1,12 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-06 00:22 CEST
+- **Completed:** **AR21 DONE, `FLOW-01` DONE.** Findings 6/7 (fix `6fa10eb8`) verified with probes and four own mutants; gates: Web 2,044/2,044, flow Vitest 111/111, flow e2e ×3 42/42, drag ×5 10/10, Rust workspace 3,306/0/177, Clippy, five xtask checks. New measurements (TELEGRAM_FLOW_VISUALIZATION §22): 900 s small session light, heap 5.4→6.2 MiB without plateau; edge growth to 500 nodes/2,482 lines 88 % busy at 2 telegrams/s, value lag up to 1.1 s. Envelope: Motion Off for large maps. Manual (flow view wording, known issue, implementation-status row), KL top section + §154, ARCHITECTURE, ROADMAP updated.
+- **Pending/Next Steps:** Alpha: `KL-153` scheme 10 (worktree `alpha-kl153`, census done: vocabulary ⊆ scheme 11), then AR15. **For the UI session (optional):** an automatic Motion Off suggestion for large maps; a heap-snapshot diff over a long session if a plateau must be shown.
+- **Notes for Codex oder Claude:** The two load scenarios were temporary (not committed); their JSON is in the AR21 evidence folder. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 23:26 CEST
 - **Completed:** **KL-151 DONE (ADR-0082).** `knx_productdb::PackageLimits::{STANDARD, LARGE}` + `install_package_with_limits`; `knx products ingest --allow-large-package` (256 MiB member / 4 GiB expanded), hint on size refusal, refused for `.knxproj`. Default and HTTP route unchanged. Release measurement on the 15 public size-refused packages: 14 installed + verified, 1 scheme-10 refusal; max 760.5 MiB RSS / 256 s / 7.18 GiB DB (docs/PRODUCT_ZIP_LARGE_PROFILE.md). Tests: `zip_cap_boundaries.rs` (+5), `cli_large_package.rs` (3).
 - **Pending/Next Steps:** AR06P: `KL-153` scheme 10 (vocabulary census vs supported schemes running/next); AR15; **AR21 rerun of findings 6/7 is ready** (UI owner delivered, TELEGRAM_FLOW_VISUALIZATION §21).

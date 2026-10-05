@@ -42,7 +42,7 @@ instead of disappearing off-screen. A narrow window stacks the panes as well.
 
 ## Theme
 
-Six entries, five of them real palettes:
+The **Theme** menu is the one place to choose a theme. It lists:
 
 | Entry | What it is |
 | --- | --- |
@@ -50,12 +50,37 @@ Six entries, five of them real palettes:
 | Porcelain | Light |
 | Graphite | Dark |
 | Cupertino | A light theme with its own fixed accent |
-| Neon Grid | A dark theme with its own fixed accent |
-| Bitcoin DeFi | A dark theme with its own fixed accent |
+| Modern Retro Green CRT | Shipped with KNXBench: a dark phosphor-green theme with its own fixed accent |
+| *your imported themes* | Every theme file you imported, by its name |
+
+A choice is saved immediately; to go back, pick the previous entry.
+
+Neon Grid and Bitcoin DeFi were removed on 2026-10-05. If one of them was your
+saved choice, KNXBench shows System and says under **Theme files** that the saved
+theme is not available; the saved value is left as it was until you pick another.
 
 **System** is not a palette of its own. It resolves to Porcelain when your desktop asks
 for a light appearance and Graphite when it asks for a dark one, and it re-resolves
 live — change your desktop's setting while KNXBench is open and the window follows.
+
+## Theme files
+
+Below the menu, **Theme files** handles `.knx-theme.json` files:
+
+- **Import theme file** checks the file and, if it is accepted, installs it and
+  selects it in one step. If a theme with the same ID is already installed, you are
+  asked before it is replaced; a rejected file changes nothing and says why.
+- **Export theme** saves the selected theme as a file (also for the shipped CRT
+  theme). **Remove** deletes the selected *imported* theme after a confirmation and
+  switches to System; shipped themes cannot be removed.
+- If stored theme data is damaged or from a newer version, it is listed with the
+  reason and **Export recovery data** saves it as it is. Nothing is deleted for you.
+
+Where they are stored is printed in the pane: in `settings.json` (entries
+`uiThemePacks` and `theme`) in the KNXBench data folder — for the desktop app
+`~/.local/share/com.knxbench.knxbench-labs`, for the server the folder set by
+`KNX_DATA_DIR` (`/data` in the Docker image). The shipped CRT theme lives inside the
+application and is not copied there.
 
 ## Accent color
 
@@ -65,8 +90,8 @@ The accent tints interactive elements only. Status colors — the red of an erro
 amber of a warning — never depend on it, because a color that means something must not
 change meaning when you pick a nicer purple.
 
-Three themes carry their own accent as part of their identity, and under those the
-control is disabled with the reason spelled out on screen: *"This theme keeps its own
+Cupertino and Modern Retro Green CRT carry their own accent as part of their
+identity (as can an imported theme), and under those the control is disabled with the reason spelled out on screen: *"This theme keeps its own
 accent; the accent setting has no effect here."*
 
 ## Density

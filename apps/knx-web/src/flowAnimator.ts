@@ -250,8 +250,10 @@ export class FlowAnimator {
     const bundles = new Map<string, Pulse>();
     const bundle = events.length > COALESCE_ABOVE;
     // Each telegram is counted once (AR21 finding 4): as not (completely)
-    // drawn when any of its lines found no free pulse, else, in a bundled
-    // batch, as drawn bundled. Lines per telegram are not telegrams.
+    // drawn when any of its lines found no free pulse — or when it has no
+    // line at all, because the model refused every target at its node limit
+    // (AR21 finding 5) — else, in a bundled batch, as drawn bundled. Lines
+    // per telegram are not telegrams.
     const incomplete = new Set<number>();
     const members = new Map<Pulse, number[]>();
     const add = (pulse: Pulse, telegrams: readonly number[]) => {
@@ -263,6 +265,11 @@ export class FlowAnimator {
       this.pulses.push(pulse);
     };
     events.forEach((event, index) => {
+      if (event.to.length === 0) {
+        incomplete.add(index);
+        this.metrics.reduced = true;
+        return;
+      }
       for (const to of event.to) {
         const pulse = { from: event.from, to, gaLabel: event.gaLabel, count: 1, start: now };
         if (!bundle) {
@@ -283,7 +290,6 @@ export class FlowAnimator {
     if (bundle) {
       this.metrics.reduced = true;
       for (const pulse of bundles.values()) add(pulse, members.get(pulse)!);
-      // Every event has at least one target (a group box when no member resolved).
       this.metrics.coalescedEvents += events.length - incomplete.size;
     }
     this.metrics.overCapacityEvents += incomplete.size;

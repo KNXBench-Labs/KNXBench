@@ -14,10 +14,77 @@
   refuses writes for effective access other than `ReadWrite`, for both sides
   of a calculation, and for unrecorded programs (fail closed), with three
   new warnings. Imported values are untouched.
-- **Found:** `KL-155` — unstored `Parameter`/`ParameterRef` attributes are
+- **Found:** `KL-156` — unstored `Parameter`/`ParameterRef` attributes are
   not reported (probe-confirmed). Next alpha package.
 - **UI owner:** adopt `parameterAccessReadOnly`, `manufacturerCalculation`,
   `writeAuthorityUnavailable`; decide how `access: "None"` fields look.
+## 2026-10-05 — Telegram flow: AR21 finding 5 corrected
+
+A telegram whose targets were all refused at the model's node limit carries
+`to: []` and has no line; the reduced-rendering note counted it as drawn
+bundled. `queuePulses` now counts it as not drawn and marks the rendering
+reduced (TELEGRAM_FLOW_VISUALIZATION §18; §16's "no third case" annotated).
+Two `flowAnimator` tests at a one-node limit, RED on the previous code; four
+mutants killed. `FLOW-01` stays IN_PROGRESS until the AR21 rerun.
+## 2026-10-05 — Tunnelling through Docker's bridge network (AR14B, `1fd1664a`)
+
+- `knx_net::TunnelReturnPath::RouteBack` sends the all-zero UDP Route Back HPAI
+  (Core v01.06.02 AS §8.6.2.2) in the `CONNECT_REQUEST` (control and data
+  endpoint), every `CONNECTIONSTATE_REQUEST` and the `DISCONNECT_REQUEST`;
+  the gateway answers to the packet's source, which survives Docker's NAT.
+- `knx-server` enables it with `KNX_TUNNEL_ROUTE_BACK=1`; the default keeps the
+  own address. The CLI is unchanged.
+- Evidence: four focused tests (RED first), 7/7 compiled mutants, workspace
+  3,273/0/177. Not verified: a live tunnel from a bridge container; other
+  gateways' Route Back support (KNOWN_LIMITATIONS §155).
+## 2026-10-05 — Themes: one dropdown, CRT shipped, storage location shown (ADR-0079)
+
+User decision: the preview cards in Settings › Appearance go ("Dropdown
+reicht"), Modern Retro Green CRT ships with the application, the pane states
+where themes are stored, Neon Grid and Bitcoin DeFi are removed.
+
+- **Dropdown only.** `ThemePackManager` no longer lists themes or previews
+  them; the `ThemePreview` plumbing (App → SettingsPanel → `useThemeId`) is
+  gone and `SettingsPanel` takes `manageThemes` instead. An import is admitted
+  as before and then installed *and selected* in one conditional write;
+  replacing an installed id still asks first. Export/Remove act on the selected
+  pack (Remove only for installed packs). Diagnostics and recovery export stay.
+- **Shipped CRT.** `src/bundledThemes.ts` admits
+  `themes/modern-retro-green-crt.knx-theme.json` through `parseThemePackText`
+  at build time. Selecting it stores only `theme`; it is never copied into
+  `uiThemePacks`. An installed pack with the same id wins and is listed once.
+- **Storage location** stated in the pane (en/de): `settings.json`
+  (`uiThemePacks`, `theme`) in the data folder — desktop
+  `~/.local/share/com.knxbench.knxbench-labs`, server `KNX_DATA_DIR` (Docker
+  `/data`). No API returns a host path (unchanged rule).
+- **Neon Grid / Bitcoin DeFi removed** from registry, stylesheet and the
+  `index.html` bootstrap list. A saved choice of either is kept, shown as
+  System and reported as an unavailable selection.
+- Tests: new `themeSettings.test.tsx` (10; written first, 8 of the first 9
+  RED on the previous code — the shadowing case passes trivially without a
+  shipped pack),
+  `ThemePackManager.integration.test.tsx` rewritten (23; preview-only cases
+  dropped, every write/consent/conflict/500/cache/late-file/out-of-order
+  guarantee kept), `themePreview.test.tsx` removed with its feature,
+  `e2e/theme-manager.e2e.ts` rewritten (12, incl. CRT selection + cold reload
+  in Chromium). 12 code mutants killed.
+
+## 2026-10-05 — Left-column splitters work again with a project loaded
+
+- User report: with a project open, the separators between the navigation
+  block, the Project Explorer and the diagnostics block did not resize
+  anything. Cause: the explorer had `flex: 1 1 auto`, so its whole tree
+  height entered the column's flex calculation and the column shrank both
+  blocks — including any height a splitter set — to make room (with 40
+  installations the navigation block was squeezed to ~37 px before anyone
+  touched it). The happy-dom unit tests could not see layout.
+- Fix (CSS only): the explorer takes `flex: 1 1 0` (only the space left over)
+  with a 72 px minimum matching the splitters' own minimum.
+- New Chromium test `e2e/workbench-splitters.e2e.ts` (full app, intercepted
+  API, 40 installations): drag down/up and keyboard change the rendered height
+  by exactly the dragged distance, and both blocks at maximum leave the
+  explorer visible. RED on the previous CSS (both directions), and with a
+  0 px explorer minimum (third case).
 
 ## 2026-10-05 — AR06 rows reconciled: seven TODOs find their place
 
@@ -1039,6 +1106,9 @@ See `PRODUCT_SCHEME_23_RESEARCH.md` for scope and refused-verifier provenance.
 - Follow-up the same day: the user reviewed `2026-10-04.2` without changes, and
   the built pages are now versioned in `story/previews/` (`build --preview`),
   guarded by a rebuild-equality test (53 unit tests).
+- Follow-up 2026-10-05: the browser check runs in Chromium and Firefox (46/46
+  each); WebKit is blocked on this host by missing Ubuntu libraries. Privacy
+  review locations now name records by id (`events[alpha-backlog].aside`).
 - Story motion update (user request, site only, no content change): scrolling
   back retracts later steps and refocuses the current chapter; looping signal
   pulses travel each visible connection (paused off screen); random headline

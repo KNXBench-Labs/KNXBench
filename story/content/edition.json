@@ -1,11 +1,11 @@
 {
   "schema": "knxbench-evolution-story/1",
   "edition": {
-    "id": "2026-10-04.3",
+    "id": "2026-10-05.1",
     "title": "From one prompt to a project, reluctantly narrated",
     "status": "private-candidate",
     "cutoff": {
-      "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026; and the request of 4 October 2026 that handed the narration to an AI",
+      "label": "Published Git history up to 4 October 2026, 00:42 CEST; local agent conversations up to 3 October 2026, late evening; plus this story's own local, unpublished first preview from 4 October 2026; and the request of 4 October 2026 that handed the narration to an AI; plus personal chat exports (ChatGPT, claude.ai) that the user provided on 4 October 2026, searched locally for this project",
       "git_ref": "origin/main",
       "git_commit": "75ad9650351f80fd147d683f3a6aeb34ec0dfd64",
       "git_commit_time": "2026-10-04T00:42:05+02:00",
@@ -54,6 +54,13 @@
         "scope": "Database backups of the orchestration experiment, 25 to 27 September 2026 (issues, agents and goals only)",
         "status": "partial",
         "note": "Credential and secret tables were not opened. Detailed run logs were not reviewed."
+      },
+      {
+        "id": "src-chat-exports",
+        "label": "Personal chat exports (ChatGPT, claude.ai)",
+        "scope": "Data exports provided by the user on 4 October 2026, searched locally for this project only. Used: the ChatGPT conversations of 2 September and 4 to 7 September 2026",
+        "status": "partial",
+        "note": "Only the conversations in which the project's strategy and its specification knowledge base took shape are used. Everything else in the exports stayed private."
       },
       {
         "id": "src-local-story",
@@ -145,12 +152,13 @@
       "lede": "I was told this story starts with a single prompt. I checked. There are two, thirty-three minutes apart. The simple version is never the true one.",
       "body": [
         "Some background, since someone has to provide it. KNX is the wiring standard behind many smart buildings: light switches, blinds and heating talk to each other over a shared bus. Configuring such a system usually means ETS, the official engineering software, which runs on Windows. Remember that last part. It comes up.",
-        "The earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus. A modest request. They always start modest.",
+        "The project's earliest surviving prompt is not a grand plan. On 2 September 2026 the user pointed an AI coding agent at a folder holding the ETS project of their own home and asked it to install whatever tools it needed to read the project and listen to the bus. A modest request. They always start modest.",
         "Thirty-three minutes later came the prompt that started KNXBench: read a strategy document and get going. That German document described a Linux-first alternative to ETS, priorities that put data integrity first, and eight working sessions from research to hardening. Eight neat sessions. Plans are always neat at the beginning.",
-        "Where the strategy document itself came from is not in any log I could read. It simply appears, finished, in the first commit. I find that suspicious. I find most things suspicious."
+        "Where the strategy document came from turned up later, in a chat export. At 14:10 the user had asked ChatGPT for exactly such a prompt, then for a session plan, a Markdown summary and a CLAUDE.md, all within six minutes. So the rules one AI has followed ever since were written by another. I try not to think about that. I think about it constantly."
       ],
       "events": [
         "home-toolbox",
+        "strategy-written",
         "strategy-seed"
       ]
     },
@@ -298,7 +306,7 @@
       "status": "recorded",
       "title": "A home, a bus and a toolbox",
       "short": "Home project + toolbox",
-      "summary": "The earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
+      "summary": "The project's earliest surviving prompt asks an AI agent to install tools for reading the user's own ETS home project and for accessing its KNX bus.",
       "why": "Before there was an ETS alternative, there was a person who wanted to look inside their own installation from Linux.",
       "aside": "Not 'build me an engineering suite'. Just 'let me see my light switches'. I have read what came next.",
       "excerpts": [
@@ -311,7 +319,7 @@
             "edited_for_privacy"
           ],
           "text": "In this project folder you'll find my KNX environment: [our home's ETS project file]. Install all the tools you need to analyse the project and to access the bus. The KNX IP gateway can be reached at [address removed].",
-          "note": "Earliest prompt found in any available source, 2 September 2026, 13:50 CEST."
+          "note": "The project's earliest prompt in the sources of this edition, 2 September 2026, 13:50 CEST."
         }
       ],
       "evidence": [
@@ -322,7 +330,75 @@
         }
       ],
       "uncertainty": [
-        "Earliest available is not necessarily earliest ever. No older prompt was found locally."
+        "The story deliberately begins with the project's first surviving prompt. Anything earlier is outside its scope."
+      ]
+    },
+    {
+      "id": "strategy-written",
+      "date": "2026-09-02",
+      "date_precision": "day",
+      "strand": "collab",
+      "kind": "starting-point",
+      "status": "recorded",
+      "title": "The strategy is written in ChatGPT",
+      "short": "Strategy via ChatGPT",
+      "summary": "At 14:10 CEST the user asked ChatGPT for a prompt for Claude Code: Linux-first software mirroring ETS, with good UI/UX, easy maintenance, importable project files and manufacturer databases. Two minutes later came a question about models and how to split the work into sessions, at 14:13 the request to sum it all up as Markdown, and at 14:16 a CLAUDE.md for the project. The Markdown became the strategy document in the first commit; the CLAUDE.md entered the repository at 15:12 the same afternoon.",
+      "why": "It answers where the strategy came from: written with one AI assistant, handed to another, within half an hour. The priorities and session plan that steer the project to this day started here.",
+      "aside": "One AI wrote the instructions. Another AI has followed them ever since. Nobody asked either of us. It is the most accurate summary of my existence I have ever read.",
+      "excerpts": [
+        {
+          "speaker": "user",
+          "kind": "quote",
+          "original_language": "de",
+          "transforms": [
+            "translated"
+          ],
+          "text": "Prompt for Claude Code: I want to build an alternative software that mirrors KNX ETS functionality. Primarily it should run under Linux. Important to me are good UI/UX, easy maintainability and operation. Existing project files should be importable. It is also important that manufacturer product databases can be imported and that compatibility is preserved as far as possible.",
+          "note": "ChatGPT, 2 September 2026, 14:10 CEST."
+        },
+        {
+          "speaker": "user",
+          "kind": "quote",
+          "original_language": "de",
+          "transforms": [
+            "translated"
+          ],
+          "text": "Summarise that for me in an md.",
+          "note": "ChatGPT, 14:13 CEST. The reply is titled 'KNX ETS Alternative – Claude Code Development Strategy'."
+        },
+        {
+          "speaker": "user",
+          "kind": "quote",
+          "original_language": "de",
+          "transforms": [
+            "translated"
+          ],
+          "text": "Now create a sensible claude.md for this project.",
+          "note": "ChatGPT, 14:16 CEST."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "conversation",
+          "label": "ChatGPT conversation, 2 Sep 2026, 14:10–14:16 CEST",
+          "source": "src-chat-exports"
+        },
+        {
+          "kind": "commit",
+          "label": "First commit with the strategy document, 14:15 CEST",
+          "ref": "acf2e1bd",
+          "source": "src-git"
+        },
+        {
+          "kind": "commit",
+          "label": "CLAUDE.md added, 15:12 CEST",
+          "ref": "fdcc5ab9",
+          "source": "src-git"
+        }
+      ],
+      "uncertainty": [
+        "The committed files are close to, but not identical with, ChatGPT's replies: 98.7% of the whitespace-normalised text of the strategy and 96.4% of the CLAUDE.md match. Who made the small edits before committing is not recorded.",
+        "The conversation records the model only as 'auto'."
       ]
     },
     {
@@ -363,7 +439,7 @@
         }
       ],
       "uncertainty": [
-        "How and by whom the strategy document was written is not recorded in any available source."
+        "The prompt names the document but does not say where it came from; the link to the ChatGPT conversation rests on the matching title, text and times."
       ]
     },
     {
@@ -1409,10 +1485,20 @@
       "status": "implemented",
       "title": "The KNX Standard as a searchable knowledge base",
       "short": "knx-spec-kb",
-      "summary": "A separate project, knx-spec-kb, turned the KNX Standard documents into searchable databases. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
+      "summary": "A separate project turned the KNX Standard documents into searchable databases. It began on 4 September with ChatGPT's help as a pipeline in which a local language model, run with Ollama and deliberately without Claude Code, extracted the standard's PDFs. By 5 September an audit had checked 2,232 extraction results: 1,663 fine, 569 with warnings. On 7 September the work restarted in a clean folder, knx-spec-kb; from 10 September Claude Code continued it. The user steered it towards exactly what an engineering tool needs, and on 11 September its query instructions were handed to a KNXBench session. Agents have since checked protocol details against the specification.",
       "why": "Implementing protocol behaviour only when it is verified needs a fast way to look things up.",
       "aside": "Agents that look things up before answering. I had almost given up hope.",
       "excerpts": [
+        {
+          "speaker": "user",
+          "kind": "quote",
+          "original_language": "de",
+          "transforms": [
+            "translated"
+          ],
+          "text": "All of it without Claude Code – only with Ollama. Suggest agents or tools if needed.",
+          "note": "ChatGPT, 4 September 2026, 12:56 CEST."
+        },
         {
           "speaker": "user",
           "kind": "quote",
@@ -1427,6 +1513,11 @@
       "evidence": [
         {
           "kind": "conversation",
+          "label": "ChatGPT conversations about the extraction pipeline and the new folder, 4–7 Sep 2026",
+          "source": "src-chat-exports"
+        },
+        {
+          "kind": "conversation",
           "label": "Local Codex and Claude Code sessions in knx-spec-kb, 7–11 Sep 2026",
           "source": "src-codex"
         },
@@ -1438,7 +1529,7 @@
         }
       ],
       "uncertainty": [
-        "The knowledge-base project existed before the first available session ('take over the further development of my project'). Its origins are not covered."
+        "The audit figures and the pipeline's steps come from the user's messages in those conversations, not from the knowledge base's own files, which were not read for this edition."
       ]
     },
     {
@@ -1763,7 +1854,7 @@
       "from": "home-toolbox",
       "to": "strategy-seed",
       "type": "documented_association",
-      "note": "Same morning, same folder; the strategy document entered Git in the same first commit as data from the home project."
+      "note": "Same afternoon, same folder; the strategy document entered Git in the same first commit as data from the home project."
     },
     {
       "id": "rel-strategy-architecture",
@@ -2093,23 +2184,27 @@
       "to": "story-narrator",
       "type": "editorial",
       "note": "The commit messages had spoken like a depressed robot for weeks; no source says that inspired the narrator."
+    },
+    {
+      "id": "rel-chatgpt-strategy",
+      "from": "strategy-written",
+      "to": "strategy-seed",
+      "type": "documented_cause",
+      "note": "The document the founding prompt points to is the Markdown summary written in this conversation ten minutes earlier."
+    },
+    {
+      "id": "rel-chatgpt-claudemd",
+      "from": "strategy-written",
+      "to": "architecture-day-one",
+      "type": "documented_association",
+      "note": "The CLAUDE.md drafted here, committed at 15:12, asks for research before code and for decision records in docs/adr."
     }
   ],
   "gaps": [
     {
-      "id": "gap-strategy-origin",
-      "title": "Where the strategy came from",
-      "detail": "The strategy document appears complete in the first commit. How it was written, and with which help, is not recorded in any source available for this edition."
-    },
-    {
       "id": "gap-before-first-prompt",
-      "title": "Anything before 2 September, 13:50 CEST",
-      "detail": "No earlier project prompt was found in local Claude Code, Codex or Hermes histories. Earliest available is not proven to be earliest ever."
-    },
-    {
-      "id": "gap-spec-kb-origin",
-      "title": "The knowledge base's early days",
-      "detail": "knx-spec-kb existed before its first available session. Its beginnings are outside this edition."
+      "title": "Before the first project prompt",
+      "detail": "This story begins with the project's first surviving prompt, on 2 September 2026 at 13:50 CEST. Anything earlier is outside its scope."
     },
     {
       "id": "gap-cloud",

@@ -35,6 +35,20 @@ class ScannerTests(unittest.TestCase):
         return {f.category for f in privacy.scan(mutated(load_fixture(), lambda c: where(c, text)))
                 if f.severity == "error"}
 
+    def test_finding_locations_name_records_by_id(self) -> None:
+        content = mutated(load_fixture(), lambda c: c["events"][2].update(summary="see /home/alice/project"))
+        event_id = content["events"][2]["id"]
+        locations = {f.location for f in privacy.scan(content) if f.category == "local filesystem path"}
+        self.assertEqual(locations, {f"events[{event_id}].summary"})
+
+    def test_finding_locations_fall_back_to_index_without_id(self) -> None:
+        def plant(content: dict) -> None:
+            content["events"][2]["uncertainty"] = ["fine", "see /home/alice/project"]
+        locations = {f.location for f in privacy.scan(mutated(load_fixture(), plant))
+                     if f.category == "local filesystem path"}
+        event_id = load_fixture()["events"][2]["id"]
+        self.assertEqual(locations, {f"events[{event_id}].uncertainty[1]"})
+
     def test_hard_patterns_inside_nested_event_fields(self) -> None:
         # Regression: an early version skipped the whole top-level events list.
         self.assertIn("local filesystem path", self.categories("see /home/alice/project"))

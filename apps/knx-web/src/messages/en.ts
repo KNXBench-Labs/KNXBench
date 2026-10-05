@@ -446,6 +446,15 @@ export const messages = {
   // `ParameterPanel.tsx`.
   "parameters.deviceScope": "Device",
   "parameters.moduleNumber": "Module #{number}",
+  "parameters.untranslated.label": "Untranslated ({source})",
+  "parameters.untranslated.labelUnknown": "Untranslated",
+  "parameters.untranslated.options": "Options untranslated ({source})",
+  "parameters.untranslated.optionsUnknown": "Options untranslated",
+  "parameters.untranslated.title": "No {language} translation is stored; this is the program's own text.",
+  "parameters.untranslated.summary.one": "{count} field is not fully translated into {language}; it shows the program's own text ({source}).",
+  "parameters.untranslated.summary.other": "{count} fields are not fully translated into {language}; they show the program's own text ({source}).",
+  "parameters.untranslated.summaryUnknown.one": "{count} field is not fully translated into {language}; it shows the program's own text.",
+  "parameters.untranslated.summaryUnknown.other": "{count} fields are not fully translated into {language}; they show the program's own text.",
   "parameters.readOnlyCaption": "Not editable here — see the warnings for why.",
   "parameters.sharedReadOnlyCaption":
     "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",

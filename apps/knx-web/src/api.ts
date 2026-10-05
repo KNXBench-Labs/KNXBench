@@ -1777,12 +1777,19 @@ export interface ModuleScope {
 export interface EnumOption {
   value: string;
   text: string | null;
+  /** AR10: the stored language that answered `text`; `null` = the package's own text. */
+  language: string | null;
 }
 
 export interface ParameterField {
   etsId: string;
   name: string | null;
+  // AR10 (`b6a94c24`): the stored language identifier whose translation
+  // `name`/`text` is (`de-DE` for a requested `de`); `null` when it is the
+  // package's own text, which is in the panel's `sourceLanguage`.
+  nameLanguage: string | null;
   text: string | null;
+  textLanguage: string | null;
   kind: string;
   value: string | null;
   valueSource: string;
@@ -1882,6 +1889,9 @@ export interface ParameterDiagnostic {
 // the same DTO — design D24's "same response, no second `GET`".
 export interface ParameterPanel {
   programId: string | null;
+  /** `ApplicationProgram/@DefaultLanguage`, verbatim (AR10): the language of
+   * every label whose language marker is `null`; `null` when undeclared. */
+  sourceLanguage: string | null;
   sections: ParameterSection[];
   stale: StaleParameter[];
   diagnostics: ParameterDiagnostic[];

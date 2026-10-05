@@ -46,6 +46,19 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
 // rule) — that happens when exactly one imported module instance is its
 // authority; every other case stays disabled with a caption naming the
 // read-only reason.
+/**
+ * AR10: which part of a field's visible text fell back to the program's own
+ * text. Only the label actually shown counts (`text` before `name`, see
+ * `ParameterFieldRow`); an option without a label shows its value, which no
+ * translation could change.
+ */
+export function untranslatedPart(field: ParameterField): "label" | "options" | null {
+  const shownLanguage = field.text !== null ? field.textLanguage : field.name !== null ? field.nameLanguage : undefined;
+  if (shownLanguage === null) return "label";
+  if (field.enumOptions.some((option) => option.text !== null && option.language === null)) return "options";
+  return null;
+}
+
 function ParameterFieldRow(props: {
   field: ParameterField;
   /** In a module instantiation's section, a disabled field is shared by
@@ -54,10 +67,11 @@ function ParameterFieldRow(props: {
   moduleScoped: boolean;
   deviceId: number;
   language: string | null;
+  sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
 }) {
-  const { field, moduleScoped, deviceId, language, onUpdated, onValueApplied } = props;
+  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -103,11 +117,23 @@ function ParameterFieldRow(props: {
   // unreachable behind the untranslated one that is always present — the
   // whole point of this slice. Do not "fix" this back.
   const label = field.text ?? field.name ?? field.etsId;
+  // No product language selected means the package's own text is exactly
+  // what was asked for, so nothing fell back.
+  const untranslated = language === null ? null : untranslatedPart(field);
 
   return (
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       {label}
       {field.access && <span className="provenance-badge">{field.access}</span>}
+      {untranslated && (
+        <span className="provenance-badge parameter-language-badge"
+          title={t("parameters.untranslated.title", { language: language ?? "" })}>
+          {sourceLanguage === null
+            ? t(untranslated === "label" ? "parameters.untranslated.labelUnknown" : "parameters.untranslated.optionsUnknown")
+            : t(untranslated === "label" ? "parameters.untranslated.label" : "parameters.untranslated.options",
+              { source: sourceLanguage })}
+        </span>
+      )}
       {field.kind === "Restriction" ? (
         <select
           value={value}
@@ -154,6 +180,25 @@ function ParameterFieldRow(props: {
       )}
       {error && <span className="field-error">{error}</span>}
     </label>
+  );
+}
+
+// AR10: one line naming how many fields show the program's own text
+// instead of the selected product language, including folded ones.
+function UntranslatedSummary(props: { panel: ParameterPanelDto; language: string | null }) {
+  const { panel, language } = props;
+  const t = useTranslate();
+  if (language === null) return null;
+  const count = panel.sections.reduce(
+    (sum, section) => sum + section.fields.filter((field) => untranslatedPart(field) !== null).length, 0);
+  if (count === 0) return null;
+  const plural = count === 1 ? "one" : "other";
+  return (
+    <p className="inspector-description parameter-language-summary">
+      {panel.sourceLanguage === null
+        ? t(`parameters.untranslated.summaryUnknown.${plural}` as const, { count, language })
+        : t(`parameters.untranslated.summary.${plural}` as const, { count, language, source: panel.sourceLanguage })}
+    </p>
   );
 }
 
@@ -224,10 +269,11 @@ function ParameterSectionView(props: {
   diagnostics: ParameterDiagnostic[];
   deviceId: number;
   language: string | null;
+  sourceLanguage: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
   onValueApplied: (tree: ProjectTree) => void;
 }) {
-  const { section, diagnostics, deviceId, language, onUpdated, onValueApplied } = props;
+  const { section, diagnostics, deviceId, language, sourceLanguage, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const ownDiagnostics = diagnostics.filter((d) => sameScope(d.scope, section.scope));
   // ADR-0080, UI owner's presentation decision: `Access` is the user's right
@@ -262,6 +308,7 @@ function ParameterSectionView(props: {
             moduleScoped={section.scope !== null}
             deviceId={deviceId}
             language={language}
+            sourceLanguage={sourceLanguage}
             onUpdated={onUpdated}
             onValueApplied={onValueApplied}
           />
@@ -390,6 +437,7 @@ export default function ParameterPanel(props: {
     <div className="parameter-panel">
       <h3>{t("parameters.title")}</h3>
       {panel.diagnostics.length > 0 && <DiagnosticsBanner diagnostics={panel.diagnostics} />}
+      <UntranslatedSummary panel={panel} language={language} />
       {panel.programId === null ? (
         <p className="inspector-description">{t("parameters.noProgram")}</p>
       ) : (
@@ -400,6 +448,7 @@ export default function ParameterPanel(props: {
             diagnostics={panel.diagnostics}
             deviceId={deviceId}
             language={language}
+            sourceLanguage={panel.sourceLanguage}
             onUpdated={setPanel}
             onValueApplied={onValueApplied}
           />

@@ -2268,8 +2268,12 @@ package's own text was kept (`None`); `GET/POST /api/device/{id}/parameters`
 carries this as `textLanguage`, `nameLanguage`, `enumOptions[].language` and
 the panel-level `sourceLanguage` (`ApplicationProgram/@DefaultLanguage`,
 verbatim, `null` when undeclared). No text, value or fallback rule changed.
-Catalogue, device-product and master surfaces still fall back silently;
-showing the markers is the UI owner's decision. Trace:
+Catalogue, device-product and master surfaces still fall back silently.
+The parameter panel shows the markers (UI owner, 2026-10-05): with a product
+language selected, a field whose shown label is the package's own text gets
+an "Untranslated (<sourceLanguage>)" badge, one whose label is translated
+but some option labels are not gets "Options untranslated", and a panel line
+counts them; with *Package default* nothing is marked. Trace:
 [research/backend-localization-paths.md](research/backend-localization-paths.md).
 
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability

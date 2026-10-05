@@ -31,7 +31,7 @@ the user write values the manufacturer does not let the user write:
 
 ## Found, not fixed here
 
-- `KL-155`: `Parameter`/`ParameterRef` attributes the parser does not store
+- `KL-156`: `Parameter`/`ParameterRef` attributes the parser does not store
   are not reported either (probe-confirmed). Next package.
 
 ## Handover to the UI owner

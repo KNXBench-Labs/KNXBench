@@ -78,3 +78,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0076](0076-one-ledger-is-the-status-of-record.md) | One ledger is the status of record for tracked source IDs | Accepted | 2026-10-04 |
 | [0077](0077-session-local-telegram-flow-view.md) | A session-local telegram-flow view is not physical topology | Accepted (implementation pending) | 2026-10-04 |
 | [0078](0078-group-address-declared-dpt.md) | A group address keeps its declared DPT; resolution reports it beside the linked objects | Accepted | 2026-10-05 |
+| [0080](0080-parameter-write-authority.md) | Parameter writes honour Access and leave manufacturer calculations alone | Proposed | 2026-10-05 |

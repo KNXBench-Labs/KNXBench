@@ -427,6 +427,16 @@ pub(crate) enum ParameterDiagnosticKindDto {
     ModuleArgumentNotBound,
     UnsupportedModuleArgumentKind,
     UnresolvedTextPlaceholder,
+    /// ADR-0080: the field's effective `Access` (`ParameterRef`'s, else
+    /// `Parameter`'s) is present and is not `ReadWrite`. Web's unknown-kind
+    /// English fallback applies until the UI owner adopts this token.
+    ParameterAccessReadOnly,
+    /// ADR-0080: a `ParameterCalculation` names the field; KNXBench does
+    /// not run manufacturer calculations, so it does not write either side.
+    ManufacturerCalculation,
+    /// ADR-0080: the product database holds no recorded write authority for
+    /// this program (a failed v20 backfill); every field is read-only.
+    WriteAuthorityUnavailable,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]

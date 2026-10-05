@@ -4,6 +4,7 @@
 //! `Channel/@Number` from unknown evidence, and checks v17 migration against a
 //! fresh install.
 mod v18_rewind;
+mod v20_rewind;
 
 use std::collections::HashMap;
 use std::io::{Cursor, Write};

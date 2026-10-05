@@ -1,5 +1,6 @@
 //! PDB-3 install evidence is measured at encounter/write time and survives retry.
 mod v16_rewind;
+mod v20_rewind;
 
 use std::io::{Cursor, Write};
 
@@ -279,6 +280,7 @@ fn v11_to_v12_collision_rolls_back_and_preserves_version_and_table() {
     let collision_sql = {
         let conn = Connection::open(&path).unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        v20_rewind::drop_v20_objects(&conn);
         conn.pragma_update(None, "user_version", 11).unwrap();
         conn.query_row(
             "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'package_install_report'",
@@ -773,6 +775,7 @@ fn a_master_file_without_uninterpreted_subtrees_measures_zero() {
 /// other row kept, so the v13 -> v14 rebuild runs against real v13 DDL.
 fn rewind_to_v13(conn: &Connection) {
     v16_rewind::rewind_to_v15(conn);
+    v20_rewind::drop_v20_objects(conn);
     conn.execute_batch(
         "CREATE TABLE package_install_count_v13 (
             package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
@@ -896,6 +899,7 @@ fn migrated_packages_are_unavailable_while_fresh_zeroes_are_measured() {
         // Simulate v11 in dependency order while FK enforcement stays on:
         // detail children first, then their report parent.
         v16_rewind::drop_baggage_inventory_tables(&conn);
+        v20_rewind::drop_v20_objects(&conn);
         conn.execute_batch(
             "DROP TABLE package_install_diagnostic;
              DROP TABLE package_install_unknown;

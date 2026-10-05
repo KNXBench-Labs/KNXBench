@@ -664,6 +664,12 @@ probe of the same instance scope predicts 281 / 280 / 280 / 95: the 280
 per-blob rows comprise 274 distinct blob/path keys and six recorded duplicates
 from reused blobs. Both row counts are explicitly pinned alongside the current
 v18 aggregate commitment; no raw product values or paths are published.
+Schema v20 ([ADR-0080](adr/0080-parameter-write-authority.md)) re-pinned it
+again: the v16-shaped projection, which now also leaves out the new
+`parameter_calculation_ref` table, stayed equal (no outcome, report total
+or pre-existing table count moved), and the new table holds 4,849 rows,
+exactly the number of distinct (program, calculation, side, ref) tuples an
+independent Python recount of the same scope predicts.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

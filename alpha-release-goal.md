@@ -449,7 +449,7 @@ remain; KL150 is still unchecked and R-MODULE-04 runtime remains separate.
 **Sources:** `KL-3`, `KL-146`, `PDB-01`, `PDB-02`, `PDB-03`, `PDB-05`, `R-DYNAMIC-01`, `R-MODULE-03`, `R-MODULE-04`.
 **Dependencies:** AR05/AR06. **Mode:** bounded offline research first.
 
-**Status:** `IN_PROGRESS`; fresh `alpha-parameter-semantics` from published
+**Status:** `DONE_SCOPED` 2026-10-05 (closing note after the checklist). History: `IN_PROGRESS`; fresh `alpha-parameter-semantics` from published
 AR06 receipt `0c3d6a8a`, 2026-10-02 17:14 CEST. Primary Condition_t constraint and actual
 controller-kind resolver traced in [parameter boundary](docs/PARAMETER_SEMANTICS_BOUNDARY.md).
 Baseline independently reconciled at 417/0/6 after correcting a source-string
@@ -659,12 +659,24 @@ Fresh queue now prioritizes AR06P KL-149 then coordinated KL-150; actual nested
 manufacturer evidence is a newly available prerequisite, not already validated.
 Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 
-- [ ] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
-- [ ] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
-- [ ] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.
-- [ ] Improve data/projection provenance for channel names and indeterminate activation without inventing missing manufacturer texts. Hand presentation changes to UI.
+- [x] Compare current handling with primary, available schema/specification evidence and existing packages; separate supported behavior, unexpanded Repeat, raw allocator/calculation data and unknown activation from actual correctness defects.
+- [x] Fix only semantics demonstrably established by those sources, with an ADR before any new domain/storage contract. Preserve opaque forms and warn on unsupported constructs; no guessed RepeatIndex, placement formula, DPT or visibility.
+- [x] Verify activation-budget/refusal behavior, nested/duplicate module identities and parameter validation; retain safe read-only behavior when evidence is insufficient.
+- [x] Improve data/projection provenance for channel names and indeterminate activation without inventing missing manufacturer texts. Hand presentation changes to UI.
 
 **Exit evidence:** research decisions and supported-semantics regressions or exact external blockers. ParameterCalculation scripts, Button handlers, DLLs and unknown vendor code are not executed; a complete Repeat/Allocator engine is not authorized merely because it appears in the inventory.
+
+**AR07 closed `DONE_SCOPED` 2026-10-05.** Census of 3,599 distinct programs
+and the ADR-0080 write-authority package
+([boundary](docs/PARAMETER_SEMANTICS_BOUNDARY.md#ar07-corpus-census-and-write-authority--2026-10-05),
+[ADR-0080](docs/adr/0080-parameter-write-authority.md)) complete the four
+items together with the earlier ADR-0061/0062/0063/0065/0066, Float-guard and
+`KL-150` receipts. Rows: `KL-3`, `KL-146`, `PDB-02`, `PDB-03`, `PDB-05`
+`ACCEPTED_BOUNDARY`; `PDB-01`, `R-DYNAMIC-01` `BLOCKED_EXTERNAL` (missing
+normative Repeat/AP-XSD evidence); `R-MODULE-03/04` stay `BLOCKED_EXTERNAL`
+with corrected missing input (rule, not sample). New `KL-155` (unreported
+`Parameter`/`ParameterRef` attributes) is the next alpha package. UI owner:
+adopt the three new diagnostic tokens.
 
 ### AR08 — Complete the safe data/application half of supported password import
 

@@ -14,6 +14,7 @@ use rusqlite::Connection;
 
 /// The v17 tables, gone before any v16-or-older shape is restored.
 fn drop_v17_tables(conn: &Connection) {
+    super::v20_rewind::drop_v20_objects(conn);
     conn.execute_batch(
         "DROP TABLE IF EXISTS source_identity;
          DROP TABLE IF EXISTS source_identity_scan;

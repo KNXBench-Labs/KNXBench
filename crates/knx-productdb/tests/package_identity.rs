@@ -5,6 +5,7 @@
 // and order-number queries.
 
 mod v17_rewind;
+mod v20_rewind;
 
 use std::collections::BTreeMap;
 use std::io::{Cursor, Write};

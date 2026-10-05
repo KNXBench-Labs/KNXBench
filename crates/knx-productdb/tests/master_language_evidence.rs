@@ -4,6 +4,8 @@
 //! exact unknown rows, original-byte retention and immutable install-time
 //! reports across reopen and retry; no manufacturer corpus or bus is needed.
 
+mod v20_rewind;
+
 use std::io::{Cursor, Write};
 
 use knx_productdb::report::UnknownKind;
@@ -331,6 +333,7 @@ fn a_valid_late_hardware_write_failure_rolls_back_master_language_evidence() {
 fn restore_v18_language_omission(conn: &knx_productdb::Connection) {
     // This fixture has only the formerly omitted Languages attributes:
     // reproduce a measured-zero snapshot, not an unavailable one.
+    v20_rewind::drop_v20_objects(conn);
     conn.execute_batch(
         "DELETE FROM ingest_unknown;
          DELETE FROM package_install_unknown;
@@ -365,7 +368,8 @@ fn v18_upgrade_rederives_source_fields_without_rewriting_the_measured_zero_insta
     assert_eq!(retry.facts, historical.facts);
     assert_eq!(retry.unknown, historical.unknown);
     assert_eq!(retry.translations, historical.translations);
-    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 19);
+    // The AR05 Languages rederivation is v19; v20 (ADR-0080) keeps it.
+    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 20);
 }
 
 #[test]

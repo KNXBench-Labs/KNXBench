@@ -10,6 +10,7 @@ use rusqlite::Connection;
 /// own helpers (which set `user_version` themselves).
 #[allow(dead_code)]
 pub fn drop_identity_tables(conn: &Connection) {
+    super::v20_rewind::drop_v20_objects(conn);
     conn.execute_batch(
         "DROP TABLE source_identity;
          DROP TABLE source_identity_scan;

@@ -72,10 +72,18 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// gain 226 rows. Full-value comparison preserves all prior unknowns and all
 /// other values except these exact fresh-install report/count increments.
 /// Migration separately preserves original historical install snapshots.
+/// Re-pinned for ADR-0080 (schema v20): the v16-shaped projection, which
+/// now also leaves out `parameter_calculation_ref`, is unchanged — no
+/// outcome, report total or pre-existing table count moved. The new table
+/// holds 4,849 rows (pinned below); an independent Python recount of the
+/// same Gira/MDT scope (110 files, 302 distinct program blobs, 273 program
+/// ids, 84 with calculations) predicts exactly 4,849 distinct
+/// (program, calculation, side, ref) tuples.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "6406a496cc2a2c91563b5c01fd0a4915b729f34a0f72a0391816ea32284b3656";
-/// Current v19 outcomes/counts projected without the four v17 tables and
-/// PDB-11 identity; historical v16 pin: c204acc8… (see Git history).
+    "5ecf9cd4405edcb5f5569032274626b773e41f41588f343d98f1ba5daab35b18";
+/// Current v20 outcomes/counts projected without the four v17 tables, the
+/// v20 table and PDB-11 identity (unchanged since v19); historical v16 pin:
+/// c204acc8… (see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
     "a2181d6526ac2c74164cfbb067a0999bc57aea45af0a304600eae18524a2f03e";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
@@ -85,6 +93,10 @@ const V17_TABLES: [&str; 4] = [
     "source_identity_scan",
     "source_producer",
 ];
+/// Tables schema v20 added (ADR-0080), also left out of the v16 projection:
+/// the projection must stay equal, i.e. the write-authority index moves no
+/// install outcome, report total or pre-existing table count.
+const V20_TABLES: [&str; 1] = ["parameter_calculation_ref"];
 
 fn configured_output() -> PathBuf {
     std::env::var_os("KNXBENCH_PRODUCT_MATRIX_OUTPUT")
@@ -722,6 +734,12 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
                 "v17 table {table} not counted"
             );
         }
+        for table in V20_TABLES {
+            assert!(
+                counts.remove(table).is_some(),
+                "v20 table {table} not counted"
+            );
+        }
         v16
     };
     let v16_commitment = baseline_commitment(&private_records, v16_projection);
@@ -765,6 +783,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "v16_projection_unchanged": v16_commitment == EXPECTED_V16_PROJECTION_COMMITMENT,
             "identity": matrix["pdb11_identity"],
             "v17_tables": V17_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
+            "v20_tables": V20_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
+            "baseline_commitment": matrix["aggregate_identity_and_outcome_commitment"].clone(),
         })
     );
     assert_eq!(
@@ -978,6 +998,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         ("source_identity", 1972),
         ("source_identity_scan", 528),
         ("source_producer", 629),
+        ("parameter_calculation_ref", 4849),
     ] {
         assert_eq!(
             matrix["shared_final_database_counts"][table], rows,

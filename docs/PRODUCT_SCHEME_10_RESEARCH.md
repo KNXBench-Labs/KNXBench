@@ -1,4 +1,4 @@
-# Product scheme 10: bounded research, no namespace admission
+# Product scheme 10: corpus evidence and admission (ADR-0083)
 
 ## Scope and status — 2026-10-04
 
@@ -79,6 +79,55 @@ semantics, KL-153 completion or Alpha completion follows from this checkpoint.
 
 Retrieved/discovered 2026-10-04. Official references below are confirmed
 through indexed descriptions only; no full article/specification review.
+
+## Corpus census and admission — 2026-10-05
+
+**Status update:** this section supersedes the "no admission" status above.
+Scheme 10 is admitted on the exact namespace through the strict path
+([ADR-0083](adr/0083-admit-exact-product-scheme-10.md)); no primary scheme-10
+specification was found, so the admission rests on the same observed-vocabulary
+standard that admitted schemes 12–14.
+
+**[V] Vocabulary census** (stdlib `zipfile` + `xml.etree.iterparse`, no
+extraction, network-less, read-only; only schema names and counts recorded).
+Over the 853 crawled files: 146 scheme-10 packages with 1,391 XML members
+(146 Master, 148 Catalog, 148 Hardware, 845 ApplicationProgram, 102
+Baggages, 2 other XML) and 395 scheme-11 packages with 2,783 members. No XML
+member failed to parse. Every typed scheme-10 member has the exact
+`project/10` root namespace; no element in a foreign namespace and no
+qualified attribute occurs (the only namespace-free elements are in the two
+non-KNX XML files).
+
+| Per member role | scheme 10 | not in scheme 11 | in scheme 11, not in 10 |
+|---|---|---|---|
+| element kinds | 176 | **0** | 29 |
+| element/attribute pairs | 438 | **0** | 95 |
+| parent/child pairs | 188 | **0** | 39 |
+
+**[V] Value census.** 244 attributes have a closed scheme-11 vocabulary (at
+most 8 distinct values) and also occur in scheme 10. 33 differ: 23 boolean
+flags spelled `false` where scheme 11 writes `0` (all xs:boolean; `bool_flag`
+reads both where a flag is typed, the others such as `Options`/`Legacy*` are
+stored verbatim), numeric fields
+with other numbers (catalog item numbers, load-control segment/pointer
+addresses), translation-unit `Version="0"`, and other plug-in handler names in
+`Extension/@EtsDataHandler`. `ComObjectRef/@ObjectSize` appears among the 33
+only because the census stopped collecting after 8 values; a direct count
+shows the same 17 values as scheme 11. Identifier attributes use scheme 11's structural forms
+(`M-…_A-…`, `_H-`, `_HP-`, `_CI-`, `_BG-`, `_CS-`); their differences are the
+manufacturer's own names inside those forms.
+
+**[T] Release CLI over the 146 scheme-10 files** (fresh database each,
+`knx products verify` after every install): 145 install with the standard
+profile, the one complete bundle with `--allow-large-package` (ADR-0082); 0
+verify failures; 77,434 unknown constructs reported in total (at most 32,057
+for one package). In one shared database in content-hash order: 83 installs
+and 63 "already known" (83 distinct contents among the 146 files), verify
+clean, 435 application programs, 26,731 communication objects, 183,379
+parameters and 775 recorded ID conflicts. All originals rehashed unchanged.
+
+**Not shown:** scheme-10 semantics where an equal name could mean something
+different, XSD defaults, signatures, download behaviour or ETS4 parity.
 
 ## Sources
 

@@ -131,10 +131,11 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 
 - **Affected:** product data for newer devices.
 - **Limitation:** a standalone `.knxprod` package installs at master-data
-  scheme 11, 12, 13, 14, 20 or exact-namespace 21. Schemes 12-14 and 21 are
-  covered by synthetic tests and a passing read-only corpus matrix, but that
-  proves KNXBench parser/persistence behavior rather than complete semantics or
-  ETS parity. The unobserved schemes 15-19/22 are not supported. Encrypted packages are refused
+  scheme 10 (ETS4 era), 11, 12, 13, 14, 20 or exact-namespace 21 and 23.
+  Schemes 10, 12-14, 21 and 23 are covered by synthetic tests and corpus
+  measurements, but that proves KNXBench parser/persistence behavior rather
+  than complete semantics or ETS parity. The unobserved schemes 15-19, 22 and
+  24 are not supported. Encrypted packages are refused
   permanently, by decision rather than by omission.
 - **Consequence:** packages at unmeasured schemes, encrypted packages and legacy
   formats cannot be installed directly; successful import at a supported scheme

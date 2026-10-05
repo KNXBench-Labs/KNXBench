@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (housekeeping, user request)
+- **Timestamp:** 2026-10-05 11:25 CEST
+- **Completed:** Worktree cleanup and root-checkout straightening, user go 2026-10-05. Removed 13 stale worktrees (all content already in main; uncommitted leftovers backed up as patches/tgz under `/mnt/daten-i/Sourcecode/KNXBench.backups/2026-10-05/`). Uncommitted native-UI probe work from `ui-native-verification` preserved as local WIP commit `4fe16f9c` on branch `ui-native-verification` (unreviewed, unpushed). From the stale root checkout, rescued the only knowledge that never reached main: the 2026-09-29 read-only ETS installation-data inventory (incl. the 2026-10-01 TEMP-capture addendum) as a dated entry in `docs/research/project-format.md`, indexed in `RESEARCH.md`, and the dangling reference in `research/commissioning.md` §19.14 now links to it; plus the `.gitignore` entries for `/.private/` and `/.projectstats*` (both directories exist locally and were unprotected in main). Docs only; check-anchors/headers/ledger green.
+- **Pending/Next Steps:** Root checkout is fast-forwarded to `origin/main` after this commit. `u21-fix` worktree can go once U21 is delivered and its work credited. Decide on branch `ui-native-verification` (continue or drop). `docs/AI_STATS_TELEMETRY_PLAN.md` (external ai-stats collector plan) was never in Git; kept only in the backup.
+- **Notes for Codex oder Claude:** Please do not write into the shared root checkout `/mnt/daten-i/Sourcecode/KNXBench` without committing — several sessions left handover entries and research there that silently never reached main. Use a worktree. Generated `docs/ProjectStats.md`/`stats.md` from the root were discarded (regenerable).
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 11:00 CEST
 - **Completed:** Ledger-only change on the user's instruction: `KL-142` Owner commission → ui, Route → `goal-ui.md` — owner only. Status IN_PROGRESS and disposition BLOCKED_UI unchanged; Snapshot owner counts recounted. This answers the commissioning entry's "Alpha controller: Owner/Route of KL-142 still to change".

@@ -1526,7 +1526,7 @@ and defect 1 must be fixed first.
 
 ### 19.14 The private telegram capture, decoded offline (K19, 2026-09-30)
 
-- **[V]** The 2026-09-29 inventory's ETS `CommunicationLog`
+- **[V]** The [2026-09-29 inventory](project-format.md#2026-09-29--read-only-inventory-of-local-ets-installation-data)'s ETS `CommunicationLog`
   (`{http://knx.org/xml/telegrams/01}`) holds one `RecordStart`, 71
   `Telegram` and one `RecordStop`. `RecordStart` names the capture mode
   `LinkLayer`, medium `Tp`, connector `IpTunneling`. Every `Telegram` has

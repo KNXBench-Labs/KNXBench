@@ -51,7 +51,7 @@ async function fixture(page: Page, installed = false) {
   });
   await page.goto("/e2e/theme-manager-fixture.html");
   await page.getByRole("button", { name: "Open settings", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Theme packs", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Theme files", exact: true })).toBeVisible();
   await expect(page.locator("#theme-pack-import")).toBeEnabled();
   return { pack, writes, requests, settings: () => settings,
     failWrite: () => { failNextWrite = true; },
@@ -70,21 +70,41 @@ async function fixture(page: Page, installed = false) {
     } };
 }
 
-async function importPack(page: Page, pack: ReturnType<typeof themePackFixture>) {
-  await page.locator("#theme-pack-import").setInputFiles({ name: "synthetic.knx-theme.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(pack)) });
-  await expect(page.locator("html")).toHaveAttribute("data-theme", pack.id);
+async function importPack(page: Page, pack: ReturnType<typeof themePackFixture>, name = "synthetic.knx-theme.json") {
+  // A user clicks the control to open the file chooser, so it holds focus;
+  // `setInputFiles` alone would not focus it.
+  await page.locator("#theme-pack-import").focus();
+  await page.locator("#theme-pack-import").setInputFiles({ name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(pack)) });
 }
+const themeSelect = (page: Page) => page.getByRole("combobox", { name: "Theme", exact: true });
+const CRT_ID = "user-modern-retro-green-crt";
 
-test("actual Appearance imports and cancels a draft under Strict Mode without writes", async ({ page }) => {
-  const { pack, writes, check } = await fixture(page);
-  await importPack(page, pack);
-  await expect(page.getByTestId("saved-selection")).toHaveText("graphite");
-  await expect(page.locator("html")).toHaveCSS("--knx-bg", pack.tokens["--knx-bg"]);
+test("the Theme dropdown is the only theme list: shipped CRT included, no preview cards, storage location shown", async ({ page }) => {
+  const { writes, check } = await fixture(page);
+  await expect(themeSelect(page).locator("option")).toHaveText(["System", "Porcelain", "Graphite", "Cupertino", "Modern Retro Green CRT"]);
+  await expect(page.getByRole("button", { name: /^Preview/ })).toHaveCount(0);
+  await expect(page.locator(".theme-manager-list")).toHaveCount(0);
+  await expect(page.locator("[data-theme-storage]")).toContainText("settings.json");
+  await expect(page.locator("[data-theme-storage]")).toContainText("~/.local/share/com.knxbench.knxbench-labs");
+  await expect(page.locator("[data-theme-storage]")).toContainText("KNX_DATA_DIR");
   expect(writes).toEqual([]);
-  await page.getByRole("button", { name: "Cancel preview", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
-  expect(await page.locator("html").evaluate((element) => (element as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
-  expect(writes).toEqual([]);
+  check();
+});
+
+test("choosing the shipped CRT theme stores only its id, paints its tokens and survives a cold reload", async ({ page }) => {
+  const { writes, settings, check } = await fixture(page);
+  await themeSelect(page).selectOption(CRT_ID);
+  await expect(page.getByTestId("saved-selection")).toHaveText(CRT_ID);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", CRT_ID);
+  await expect(page.locator("html")).toHaveCSS("--knx-bg", "#050505");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(5, 5, 5)");
+  expect(writes).toEqual([{ settings: { theme: CRT_ID }, expectedSettings: { theme: "graphite", uiThemePacks: {} } }]);
+  expect(settings().uiThemePacks).toEqual({});
+  await expect(page.getByRole("button", { name: "Remove Modern Retro Green CRT", exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("saved-selection")).toHaveText(CRT_ID);
+  await expect(page.locator("html")).toHaveCSS("--knx-bg", "#050505");
+  expect(writes).toHaveLength(1);
   check();
 });
 
@@ -92,50 +112,45 @@ test("actual Appearance rejects hostile file values without DOM effects or reque
   const { pack, writes, settings, check } = await fixture(page);
   const original = structuredClone(settings());
   pack.tokens["--knx-bg"] = 'url("https://invalid.example/synthetic-asset")';
-  await page.locator("#theme-pack-import").setInputFiles({ name: "hostile.knx-theme.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(pack)) });
+  await importPack(page, pack, "hostile.knx-theme.json");
   await expect(page.getByText("The theme file was rejected. The saved theme and installed packs have not changed.", { exact: true })).toBeVisible();
   await expect(page.getByText("The token value is outside the permitted syntax or bounds.", { exact: true })).toBeVisible();
   await expect(page.locator("[data-theme-diagnostic=invalidValue]")).toContainText("tokens.--knx-bg");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   expect(await page.locator("html").evaluate((root) => (root as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
-  await expect(page.getByRole("button", { name: "Apply theme", exact: true })).toHaveCount(0);
   expect(writes).toEqual([]);
   expect(settings()).toEqual(original);
   check();
 });
 
-test("explicit System reset keeps installed contents and responds to OS changes", async ({ page }) => {
-  const { pack, writes, settings, check } = await fixture(page, true);
-  await page.locator(`[data-theme-id="${pack.id}"]`).getByRole("button", { name: `Preview ${pack.name}`, exact: true }).click();
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
+test("importing installs and selects in one write; switching back to System keeps the pack and follows the OS", async ({ page }) => {
+  const { pack, writes, settings, check } = await fixture(page);
+  await importPack(page, pack);
   await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
-  const beforeReset = structuredClone(settings());
-  await page.getByRole("button", { name: "Use system theme", exact: true }).click();
-  await expect(page.getByTestId("saved-selection")).toHaveText("system");
   await expect(page.getByText("Theme saved.", { exact: true })).toBeVisible();
+  expect(writes).toEqual([{ settings: { theme: pack.id, uiThemePacks: { [pack.id]: pack } }, expectedSettings: { theme: "graphite", uiThemePacks: {} } }]);
+  const beforeReset = structuredClone(settings());
+  await themeSelect(page).selectOption("system");
+  await expect(page.getByTestId("saved-selection")).toHaveText("system");
   expect(settings()).toEqual({ ...beforeReset, theme: "system" });
   expect(writes[1]).toEqual({ settings: { theme: "system" }, expectedSettings: { theme: pack.id, uiThemePacks: { [pack.id]: pack } } });
-  expect(writes).toHaveLength(2);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "porcelain");
-  expect(settings()).toEqual({ ...beforeReset, theme: "system" });
   expect(writes).toHaveLength(2);
   check();
 });
 
-test("an uncertain HTTP500 Apply restores the last confirmed palette and never replays the write", async ({ page }) => {
+test("an uncertain HTTP500 import keeps the last confirmed palette and never replays the write", async ({ page }) => {
   const { pack, writes, requests, settings, failWrite, check } = await fixture(page);
   const original = structuredClone(settings());
-  await importPack(page, pack);
   const baselineRequests = requests.length;
   failWrite();
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
-  await expect(page.getByText("The theme could not be saved. Preview was cancelled; review the acknowledged settings before trying again.", { exact: true })).toBeVisible();
+  await importPack(page, pack);
+  await expect(page.getByText("The theme could not be saved. Nothing changed; review the saved settings before trying again.", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   expect(await page.locator("html").evaluate((root) => (root as HTMLElement).style.getPropertyValue("--knx-bg"))).toBe("");
-  await expect(page.getByRole("button", { name: "Apply theme", exact: true })).toHaveCount(0);
   await expect(page.getByText("Theme saved.", { exact: true })).toHaveCount(0);
   expect(settings()).toEqual(original);
   expect(writes).toHaveLength(1);
@@ -143,54 +158,24 @@ test("an uncertain HTTP500 Apply restores the last confirmed palette and never r
   check(0, 1);
 });
 
-test("replacement Escape cancels its draft and returns focus to the persistent import control", async ({ page }) => {
+test("replacement Escape cancels and returns focus to the persistent import control", async ({ page }) => {
   const { pack, writes, check } = await fixture(page, true);
   await importPack(page, pack);
-  const apply = page.getByRole("button", { name: "Apply theme", exact: true });
-  await apply.click();
   const confirmation = page.getByRole("dialog", { name: "Replace theme pack", exact: true });
   await expect(confirmation).toBeVisible();
-  const cancel = confirmation.getByRole("button", { name: "Cancel replacement", exact: true });
-  await expect(cancel).toBeFocused();
+  await expect(confirmation.getByRole("button", { name: "Cancel replacement", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(confirmation).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
-  await expect(apply).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   await expect(page.locator("#theme-pack-import")).toBeFocused();
   expect(writes).toEqual([]);
   check();
 });
 
-test("explicit Apply persists across cold reload and the actual download reimports exactly", async ({ page }) => {
-  const { pack, writes, settings, check } = await fixture(page);
-  await importPack(page, pack);
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
-  await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
-  expect(writes).toEqual([{ settings: { theme: pack.id, uiThemePacks: { [pack.id]: pack } }, expectedSettings: { theme: "graphite", uiThemePacks: {} } }]);
-  expect(settings().foreign).toEqual({ keep: ["synthetic", 7] });
-  await page.reload();
-  await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
-  await page.getByRole("button", { name: "Open settings", exact: true }).click();
-  const row = page.locator(`[data-theme-id="${pack.id}"]`);
-  await expect(row).toContainText("Selected (saved)");
-  const downloadEvent = page.waitForEvent("download");
-  await row.getByRole("button", { name: `Export ${pack.name}`, exact: true }).click();
-  const download = await downloadEvent;
-  expect(download.suggestedFilename()).toBe(`${pack.id}.knx-theme.json`);
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  const text = await readFile(path!, "utf8");
-  expect(text).toBe(canonicalJson(pack, 2) + "\n");
-  expect(parseThemePackText(text)).toEqual({ ok: true, pack });
-  expect(writes).toHaveLength(1);
-  check();
-});
-
-test("replacement confirmation traps keyboard focus and Escape never writes", async ({ page }) => {
+test("replacement confirmation traps keyboard focus and Enter on Cancel never writes", async ({ page }) => {
   const { pack, writes, check } = await fixture(page, true);
   await importPack(page, pack);
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Replace theme pack", exact: true });
   const cancel = dialog.getByRole("button", { name: "Cancel replacement", exact: true });
   const confirm = dialog.getByRole("button", { name: "Replace and apply", exact: true });
@@ -206,13 +191,33 @@ test("replacement confirmation traps keyboard focus and Escape never writes", as
   check();
 });
 
-test("confirmed active removal falls back to System and retains unrelated settings", async ({ page }) => {
-  const { pack, writes, settings, check } = await fixture(page, true);
-  const row = page.locator(`[data-theme-id="${pack.id}"]`);
-  await row.getByRole("button", { name: `Preview ${pack.name}`, exact: true }).click();
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
+test("an imported theme persists across cold reload and the actual download reimports exactly", async ({ page }) => {
+  const { pack, writes, settings, check } = await fixture(page);
+  await importPack(page, pack);
   await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
-  await row.getByRole("button", { name: `Remove ${pack.name}`, exact: true }).click();
+  expect(settings().foreign).toEqual({ keep: ["synthetic", 7] });
+  await page.reload();
+  await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
+  await page.getByRole("button", { name: "Open settings", exact: true }).click();
+  await expect(themeSelect(page)).toHaveValue(pack.id);
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: `Export ${pack.name}`, exact: true }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe(`${pack.id}.knx-theme.json`);
+  const path = await download.path();
+  expect(path).not.toBeNull();
+  const text = await readFile(path!, "utf8");
+  expect(text).toBe(canonicalJson(pack, 2) + "\n");
+  expect(parseThemePackText(text)).toEqual({ ok: true, pack });
+  expect(writes).toHaveLength(1);
+  check();
+});
+
+test("confirmed removal of the selected pack falls back to System and retains unrelated settings", async ({ page }) => {
+  const { pack, writes, settings, check } = await fixture(page, true);
+  await themeSelect(page).selectOption(pack.id);
+  await expect(page.getByTestId("saved-selection")).toHaveText(pack.id);
+  await page.getByRole("button", { name: `Remove ${pack.name}`, exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Remove theme pack", exact: true });
   await expect(dialog.getByRole("button", { name: "Cancel removal", exact: true })).toBeFocused();
   expect(writes).toHaveLength(1);
@@ -222,17 +227,16 @@ test("confirmed active removal falls back to System and retains unrelated settin
   expect(settings().accent).toBe("mint");
   expect(settings().density).toBe("compact");
   expect(settings().foreign).toEqual({ keep: ["synthetic", 7] });
-  await expect(row).toHaveCount(0);
+  await expect(themeSelect(page).locator(`option[value="${pack.id}"]`)).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "porcelain");
   check();
 });
 
-test("a conflicting Apply rolls back, then the existing peer refresh takes over without a second write", async ({ page }) => {
+test("a conflicting import rolls back, then the existing peer refresh takes over without a second write", async ({ page }) => {
   const { pack, writes, peer, check } = await fixture(page);
-  await importPack(page, pack);
   peer({ theme: "porcelain" });
-  await page.getByRole("button", { name: "Apply theme", exact: true }).click();
-  await expect(page.getByText("Theme settings changed elsewhere. Preview was cancelled without retrying the write.", { exact: true })).toBeVisible();
+  await importPack(page, pack);
+  await expect(page.getByText("Theme settings changed elsewhere. The write was not retried; the theme shown is the saved one.", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.getByTestId("saved-selection")).toHaveText("porcelain");
@@ -241,25 +245,22 @@ test("a conflicting Apply rolls back, then the existing peer refresh takes over 
   check(1);
 });
 
-test("management rows use the existing engineering tokens with wrapped actions", async ({ page }, testInfo) => {
+test("the theme file actions use the existing engineering tokens with wrapped actions", async ({ page }, testInfo) => {
   const { pack, check } = await fixture(page, true);
-  const list = page.locator(".theme-manager-list");
-  await expect(list).toHaveCSS("list-style-type", "none");
-  const row = page.locator(`[data-theme-id="${pack.id}"]`);
-  await expect(row).toHaveCSS("display", "grid");
-  await expect(row.locator(".theme-manager-actions")).toHaveCSS("flex-wrap", "wrap");
-  await row.scrollIntoViewIfNeeded();
+  await themeSelect(page).selectOption(pack.id);
+  const actions = page.locator(".theme-manager .theme-manager-actions");
+  await expect(actions).toHaveCSS("flex-wrap", "wrap");
+  await actions.scrollIntoViewIfNeeded();
   await testInfo.attach("Appearance desktop", { body: await page.screenshot(), contentType: "image/png" });
   check();
 });
 
 test("narrow Appearance remains scrollable and closing Settings restores its external opener", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const { pack, writes, check } = await fixture(page);
-  await importPack(page, pack);
-  const apply = page.getByRole("button", { name: "Apply theme", exact: true });
-  await apply.scrollIntoViewIfNeeded();
-  await expect(apply).toBeInViewport();
+  const { writes, check } = await fixture(page);
+  const hint = page.locator("[data-theme-storage]");
+  await hint.scrollIntoViewIfNeeded();
+  await expect(hint).toBeInViewport();
   expect(await page.locator("html").evaluate((root) => root.scrollWidth <= window.innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toHaveCount(0);

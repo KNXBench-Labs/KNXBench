@@ -312,6 +312,16 @@ write fallback IDs over it.
 
 ## Persistence, concurrency and preview
 
+> **Update 2026-10-05 ([ADR-0079](adr/0079-theme-choice-is-one-dropdown.md)):**
+> preview, the per-theme cards and the "Use system theme" button were removed on
+> the user's decision. The Theme dropdown is the only chooser; an import is
+> installed and selected in one conditional write; Export/Remove act on the
+> selected pack. Shipped packs (`apps/knx-web/themes/*.knx-theme.json`, admitted by
+> `src/bundledThemes.ts`) are selectable without being written into
+> `uiThemePacks`; an installed pack with the same id takes their place. Neon Grid
+> and Bitcoin DeFi are no longer built-in palettes. The preview paragraphs below
+> are historical.
+
 Store the pack map at `settings.uiThemePacks`; keep selected identity at
 `settings.theme`. Existing settings schema v1 already carries unknown values;
 no domain/project/manufacturer schema or settings migration is needed for

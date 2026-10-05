@@ -7,6 +7,24 @@ use std::path::{Path, PathBuf};
 // have a parent alias (a symlink or `child/..`). Never create a path to compare it.
 fn requested_location(directory: &Path, path: &Path) -> io::Result<PathBuf> {
     let requested = directory.join(path);
+    match std::fs::canonicalize(&requested) {
+        Ok(resolved) => return Ok(resolved),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+    // A dangling leaf link is not an independent missing destination. Opening
+    // its target later could alias a history file created after this admission.
+    match std::fs::symlink_metadata(&requested) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "activity history and input must be separate files; unresolved symbolic-link destination; not sent",
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
     let Some(name) = requested.file_name() else {
         return Ok(requested);
     };

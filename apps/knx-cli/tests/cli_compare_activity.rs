@@ -144,11 +144,37 @@ fn missing_history_parent_alias_is_refused_before_either_file_is_created() {
     }
 }
 
+#[test]
+#[cfg(unix)]
+fn missing_history_leaf_alias_is_refused_before_either_file_is_created() {
+    for alias_kind in ["input-leaf-symlink", "history-leaf-symlink"] {
+        missing_history_alias_case(alias_kind);
+    }
+}
+
 fn missing_history_alias_case(alias_kind: &str) {
     let dir = tempfile::tempdir().unwrap();
     let (project, _) = comparison_inputs(dir.path());
     let input = dir.path().join("uncreated-shared-store.sqlite");
+    let products = if alias_kind == "input-leaf-symlink" {
+        #[cfg(unix)]
+        {
+            let link = dir.path().join("products-link.sqlite");
+            std::os::unix::fs::symlink(&input, &link).unwrap();
+            link
+        }
+        #[cfg(not(unix))]
+        input.clone()
+    } else {
+        input.clone()
+    };
     let history = match alias_kind {
+        #[cfg(unix)]
+        "history-leaf-symlink" => {
+            let link = dir.path().join("history-link.sqlite");
+            std::os::unix::fs::symlink(&input, &link).unwrap();
+            link
+        }
         "parent-traversal" => {
             std::fs::create_dir(dir.path().join("child")).unwrap();
             dir.path().join("child/../uncreated-shared-store.sqlite")
@@ -172,7 +198,7 @@ fn missing_history_alias_case(alias_kind: &str) {
         .args(["device", "compare", "1.1.67", "--project"])
         .arg(&project)
         .arg("--product-db")
-        .arg(&input)
+        .arg(&products)
         .arg("--activity-history")
         .arg(&history)
         .arg("--gateway")

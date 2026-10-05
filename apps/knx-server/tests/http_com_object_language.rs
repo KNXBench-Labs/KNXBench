@@ -268,6 +268,60 @@ async fn a_requested_language_translates_a_program_layer_com_object() {
     assert_eq!(com["description"], "Schalterbeschreibung");
 }
 
+const MASTER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><MasterData><DatapointTypes>
+<DatapointType Id="DPT-1" Number="1" Name="1-bit"><DatapointSubtypes>
+<DatapointSubtype Id="DPST-1-1" Number="1" Name="switch" Text="Switch" />
+</DatapointSubtypes></DatapointType></DatapointTypes></MasterData>
+<Languages><Language Identifier="de-DE"><TranslationUnit RefId="DPST-1-1">
+<TranslationElement RefId="DPST-1-1"><Translation AttributeName="Text" Text="Schalten" /></TranslationElement>
+</TranslationUnit></Language></Languages></KNX>"#;
+
+// AR10: the datapoint-type text names the master-data language that
+// answered (`de` → `de-DE`), and carries no marker when it fell back.
+#[tokio::test]
+async fn the_dpt_text_names_the_language_that_answered() {
+    let (_dir, products) = temp_product_db(TRANSLATED_PROGRAM);
+    knx_productdb::ingest_master_data(&products, MASTER.as_bytes()).unwrap();
+    let state = Arc::new(state_with_com_object(
+        Some(products),
+        true,
+        program_layer("Switch"),
+        program_layer("Switch description"),
+    ));
+    {
+        let mut project = state.project.lock().unwrap();
+        let com = project
+            .as_mut()
+            .unwrap()
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap();
+        com.dpt = Override::Value(Resolved {
+            value: knx_core::DptRef {
+                main: 1,
+                sub: Some(1),
+            },
+            layer: Layer::Program,
+        });
+    }
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, detail) = get(app.clone(), "/api/device/1?language=de").await;
+    assert_eq!(status, StatusCode::OK);
+    let com = com_object(&detail);
+    assert_eq!(com["dpt_text"], "Schalten");
+    assert_eq!(com["dpt_text_language"], "de-DE");
+
+    let (_, detail) = get(app, "/api/device/1?language=fr-FR").await;
+    let com = com_object(&detail);
+    assert_eq!(com["dpt_text"], "Switch");
+    assert!(
+        com["dpt_text_language"].is_null(),
+        "fallback carries no marker"
+    );
+}
+
 // Test 3, the load-bearing one (Global Constraint 2): a communication
 // object whose `text` override sits at `Layer::Instance` keeps its
 // project-authored text verbatim even when the product database carries a

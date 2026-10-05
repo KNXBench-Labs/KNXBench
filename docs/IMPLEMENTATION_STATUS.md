@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR10 slice 2b: catalogue, product block and master data stop pretending to be bilingual
+
+- `catalog_items`, `device_product` and the master readers name the stored
+  language that answered (`de` → `de-DE`) or `None` for the package's own
+  text, plus the declared `DefaultLanguage` of each source element.
+- Wire: catalogue `nameLanguage`/`visibleDescriptionLanguage`/
+  `sourceLanguage`; device-detail `product.catalog.*_language` (optional,
+  ts-rs bindings regenerated); com-object `dpt_text_language`.
+- `KL-64` ACCEPTED_BOUNDARY; `KL-37` IN_PROGRESS (report com-object text,
+  UI consumption of the markers).
+
 ## 2026-10-05 — AR10 slice 2a: the parameter panel admits when it is speaking the package's language
 
 - `knx_productdb::query::parameter_views` reports, per text/name/enum label,

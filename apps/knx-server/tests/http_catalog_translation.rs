@@ -93,6 +93,9 @@ async fn catalog_items_with_a_language_returns_the_translated_name() {
     let items = body.as_array().unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["name"], "Umschaltaktor");
+    // AR10: which stored language answered, and the declared source.
+    assert_eq!(items[0]["nameLanguage"], "de-DE");
+    assert_eq!(items[0]["sourceLanguage"], "de-DE");
 }
 
 // The companion of the previous test: an absent `language` query parameter
@@ -109,4 +112,8 @@ async fn catalog_items_without_a_language_returns_the_stored_name() {
     let items = body.as_array().unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0]["name"], "Schaltaktor");
+    assert!(
+        items[0]["nameLanguage"].is_null(),
+        "AR10: own text, no marker"
+    );
 }

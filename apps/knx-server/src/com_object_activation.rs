@@ -334,6 +334,7 @@ mod tests {
             channel: None,
             program_dpt: None,
             dpt_text: None,
+            dpt_text_language: None,
             function_text: None,
         }
     }

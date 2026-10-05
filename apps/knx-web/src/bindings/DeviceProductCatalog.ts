@@ -10,30 +10,57 @@
  * its application program, for instance) is real, valid database state,
  * not an error — CLAUDE.md: never silently discard information.
  */
-export type DeviceProductCatalog = { manufacturer_id: string, 
+export type DeviceProductCatalog = { manufacturer_id: string,
 /**
  * `manufacturer.name` from the KNX master data (`knx_master.xml`).
  */
-manufacturer_name: string | null, 
+manufacturer_name: string | null,
 /**
  * `product.text` — the product's display name.
  */
-product_text: string | null, order_number: string | null, 
+product_text: string | null, order_number: string | null,
 /**
  * `hardware.name`. Never translated: unlike `product.text`, no
  * manufacturer package this project has ingested has ever placed a
  * `Hardware` element's own id inside a `Languages` block (see
  * `knx-productdb`'s `device_product` doc comment for the measurement).
  */
-hardware_name: string | null, hardware_version: string | null, hardware_serial_number: string | null, 
+hardware_name: string | null, hardware_version: string | null, hardware_serial_number: string | null,
 /**
  * `catalog_item.name` — `None` when this product/hardware pair is not
  * listed in any catalog section, which is valid: not every installed
  * product needs a catalog entry.
  */
-catalog_item_name: string | null, catalog_item_number: string | null, 
+catalog_item_name: string | null, catalog_item_number: string | null,
 /**
  * `application_program.id`, so the UI can cross-reference devices
  * sharing the same program without a second round trip.
  */
-application_program_id: string | null, application_name: string | null, application_number: string | null, application_version: string | null, mask_version: string | null, };
+application_program_id: string | null, application_name: string | null, application_number: string | null, application_version: string | null, mask_version: string | null,
+/**
+ * The stored language identifier that answered a requested display
+ * language for `product_text` (e.g. `de-DE` for `de`); absent when
+ * `product_text` is the package's own text (AR10).
+ */
+product_text_language?: string,
+/**
+ * As `product_text_language`, for `catalog_item_name`.
+ */
+catalog_item_name_language?: string,
+/**
+ * As `product_text_language`, for `application_name`.
+ */
+application_name_language?: string,
+/**
+ * `product.default_language`, verbatim: the declared language of the
+ * package's own `product_text`; absent when undeclared.
+ */
+product_source_language?: string,
+/**
+ * `catalog_item.default_language`, verbatim.
+ */
+catalog_item_source_language?: string,
+/**
+ * `application_program.default_language`, verbatim.
+ */
+application_source_language?: string, };

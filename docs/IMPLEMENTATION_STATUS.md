@@ -1,5 +1,19 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-04 — AR06W: bounded declared-byte admission contracts
+
+- Four public synthetic native contracts pass4/0/0, old count2 filtered: exact/
+  one-over64MiB member and256MiB advertised total, with nonempty seeded full-
+  value rollback checks. Exact declarations reach a precisely named decoded-
+  size mismatch; over declarations fail at the named typed resource boundary.
+- Physical fixtures <8KiB, not successful real64/256MiB payloads or memory
+  benchmarks. Production parser/constants unchanged. Baseline40/0/3 and121
+  inputs/log/binary identities verified separately. Four fresh compiled lower/
+  upper controls accepted with named semantic REDs; original snapshot compile
+  refusal retained. Scoped package/docs9 passed: ProductDB 644/0/25 in 31 blocks;
+  includes native4/count2, not additive. Final integration/publication pending;
+  scope in PRODUCT_ZIP_DECLARED_SIZE_CONTRACTS.md.
+
 ## 2026-10-04 — AR08: password-protected projects reach the importer
 
 - A ZipCrypto (ETS4/ETS5) protected `.knxproj` now imports through

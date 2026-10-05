@@ -964,7 +964,8 @@ no free pulse element counts as **not (completely) drawn**
 **drawn bundled** (`coalescedEvents`). The two never overlap, and their sum
 never exceeds the telegrams of the batch. Lines per telegram are no longer
 counted. Every event has at least one target (a group box when no member
-resolved), so there is no third case. The note reads "{bundled} telegrams were
+resolved), so there is no third case. *(Wrong at the model's node limit —
+AR21 finding 5, §17; corrected in §18.)* The note reads "{bundled} telegrams were
 drawn as bundled pulses, {dropped} not at all or only in part" (German: "…
 gar nicht oder nur teilweise").
 
@@ -1007,6 +1008,28 @@ finding 5.** `FLOW-01` stays `IN_PROGRESS`.
   line as drawn (count it as not drawn, or leave it to the refusal
   diagnostic and say so), with a test at the node limit; correct §16's
   sentence.
+
+No hardware, no real bus and no KNX socket were used.
+
+## 18. AR21 finding 5 corrected (goal-ui owner, 2026-10-05)
+
+§16's "no third case" was wrong. `resolve` always returns a target, but
+`apply` keeps only the targets `ensureNode` admits; at the model's node limit
+all of them can be refused while the sender is kept, and the event then
+carries `to: []`. Such a telegram has no line to draw. `queuePulses` now
+counts it as **not drawn** (`overCapacityEvents`) in bundled and unbundled
+batches alike and marks the rendering reduced, so the note appears and its
+bundled count covers only telegrams that were drawn. The view's diagnostics
+keep reporting the refused nodes separately (`flow.diag.refused`); the note
+and that line now agree on what was not drawn.
+
+Evidence: two new `flowAnimator.test.ts` cases with a model limited to one
+node (Alpha's probe: 30 telegrams to a group with two receivers → 0 pulses,
+0 bundled, 30 not drawn, reduced; two unbundled telegrams → 2 not drawn,
+reduced) fail on the previous code (`coalescedEvents` 30 instead of 0;
+`overCapacityEvents` 0 instead of 2). Four mutants killed (lineless events
+ignored, counted but not marked reduced, not counted, counted as bundled).
+Flow Vitest (`flowAnimator`, `TelegramFlowView`, `flowModel`): 68 / 68.
 
 No hardware, no real bus and no KNX socket were used.
 

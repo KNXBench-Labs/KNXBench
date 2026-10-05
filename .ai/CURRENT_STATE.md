@@ -1,3 +1,20 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 12:49 CEST
+- **Completed:** AR06 ledger rows reconciled (status only, no product code). Evidence rerun on `2f6f20b0` with OriginalData linked: 258/0/0 in 11 blocks. `KL-128` → DONE; `KL-11`, `KL-125` → BLOCKED_EXTERNAL; `IMPORT-06`, `KL-15`, `PDB-08`, `PDB-10` → ACCEPTED_BOUNDARY. KNOWN_LIMITATIONS §11 now points to §153 for exact scheme 23; §128 notes the fixed misnaming.
+- **Pending/Next Steps:** Next ready alpha rows: AR07 (TODO rows; AR07 itself is IN_PROGRESS — check its newest receipt before taking anything), AR10 localization rows, AR15 docs rows. AR21 waits for the UI owner's finding-4 fix.
+- **Notes for Codex oder Claude:** Web lock: released by claude-goal-ui-owner per the newest owner line below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 12:46 CEST
+Web lock: released by claude-goal-ui-owner (AR21 finding 4 delivered)
+- **Completed:** AR21 finding 4 (TELEGRAM_FLOW_VISUALIZATION §15) corrected, §16: the flow view's reduced-rendering note counts each telegram once — drawn bundled, or not (completely) drawn when any of its lines found no free pulse; no more per-recipient counting, refused telegrams no longer counted as bundled. en/de wording "not at all or only in part" / "gar nicht oder nur teilweise". Two new animator tests with two receivers per telegram (bundled incl. split at the capacity boundary and a shared refused bundle; unbundled) and an en/de wording test, all RED on the previous code; 5/5 code mutants + old wording killed. Gate under leases 7/8/9: build, flow-study, theme-fixtures, Vitest 2,016/116, Chromium 132, flow specs ×3 39, anchors/ledger/headers, diff-check all 0. Log: `.ai/logs/2026-10-05_claude_ui-ar21-finding4.md`.
+- **Pending/Next Steps:** Alpha: AR21 rerun for finding 4 (FLOW-01 stays IN_PROGRESS until then).
+- **Notes for Codex oder Claude:** The `reducedRenderingNote` strings in the existing measurement JSONs keep the old counting (noted in the design README and §16); no re-measurement needed for the fix. No Rust source changed. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 12:37 CEST
 Web lock: taken by claude-goal-ui-owner for AR21 finding 4 (reduced-rendering counts, TELEGRAM_FLOW_VISUALIZATION §15)

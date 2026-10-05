@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 18:30 CEST
+Web lock: taken by claude-goal-ui-owner for KL-142 (partial-download scope selector) and the ADR-0080 parameter write-authority adoption
+- **Completed:** Lock taken only.
+- **Pending/Next Steps:** KL-142 (partial-download scope selector) and the ADR-0080 parameter write-authority adoption: implement, gate, release this lock in the delivering entry. Alpha: AR21 rerun of finding 5 (`104916d6`) is requested by the UI owner.
+- **Notes for Codex oder Claude:** Please do not edit `apps/knx-web` until this lock is released. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 16:08 CEST
 - **Completed:** **AR07 closed `DONE_SCOPED`** with ADR-0080 (parameter write authority). Read-only census of 3,599 distinct application programs (OriginalData + crawler download): no `Dynamic` kind outside the evaluator set besides Button/Rename/ParameterBlockRename/Repeat; every `when/@test` is a `Condition_t` integer form; 116,799 `ParameterCalculation`s; 1,199 allocator bindings (all without `@Value`). Project Schema23 §1.1.2.1 makes `Access` a user right → ProductDB **schema v20** stores `ParameterRef/@Access`, indexes calculation members (`parameter_calculation_ref`), flags recorded programs; the panel refuses writes for effective access ≠ `ReadWrite`, both calculation sides, and unrecorded programs (fail closed); three new diagnostic kinds. Tests: `write_authority` 5, `http_parameter_write_authority` 3, six compiled mutants caught; ProductDB+server 1,263/0/69; workspace 3,276/1/177 before the one stale version pin was fixed (rerun green); corpus-gated suites run; matrix re-pinned (v16 projection equal; 4,849 calc refs = independent Python recount). Ledger: KL-3, KL-146, PDB-02/03/05 ACCEPTED_BOUNDARY; PDB-01, R-DYNAMIC-01 BLOCKED_EXTERNAL; R-MODULE-03/04 evidence corrected; new `KL-156` TODO.

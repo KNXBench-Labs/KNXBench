@@ -50,6 +50,9 @@ async function serve(page: Page, linkStatus: number) {
   await page.setViewportSize({ width: 1280, height: 1200 });
   await page.goto("/e2e/installations-fixture.html?workspace");
   await page.locator("button.tree-label", { hasText: "Kitchen actuator" }).click();
+  // The device detail loads asynchronously; `.all()` would otherwise snapshot
+  // zero summaries and leave the group closed.
+  await expect(page.locator(".com-object-groups summary").first()).toBeVisible();
   for (const summary of await page.locator(".com-object-groups summary").all()) await summary.click();
   const row = page.locator(".group-link-list .tree-new-row");
   await expect(row).toBeVisible();

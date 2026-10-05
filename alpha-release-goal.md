@@ -990,6 +990,14 @@ measurement recorded
 with finding 5 (telegrams without a line at the node limit counted as drawn)
 ([§17](docs/TELEGRAM_FLOW_VISUALIZATION.md#17-ar21-rerun-of-finding-4-alpha-2026-10-05)).
 
+**Rerun of finding 5 and recheck, 2026-10-05:** finding 5 fixed; returned with
+finding 6 (partially refused or sender-refused telegrams missing from the note,
+[§19](docs/TELEGRAM_FLOW_VISUALIZATION.md#19-ar21-rerun-of-finding-5-alpha-2026-10-05))
+and, on the user's recheck request, finding 7 (event-ring overflow counted but
+never shown,
+[§20](docs/TELEGRAM_FLOW_VISUALIZATION.md#20-ar21-recheck-on-request-alpha-2026-10-05)).
+Gates rerun green on the recheck revision.
+
 Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
 covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
 The alpha session does not reimplement the UI or take its lock for bookkeeping.

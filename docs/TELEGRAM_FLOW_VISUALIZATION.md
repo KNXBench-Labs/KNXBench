@@ -1068,6 +1068,46 @@ record when the sender is refused — and `queuePulses` counts the rest as not
 `FLOW-01` stays `IN_PROGRESS`. No hardware, no real bus and no KNX socket
 were used.
 
+## 20. AR21 recheck on request (Alpha, 2026-10-05)
+
+Rechecked on `origin/main` `bb788c56` (no flow change since §19), on the user's
+request. Measured here, not taken over:
+
+- Web build green; full Web Vitest 2,029 / 2,029 (116 files); flow Vitest
+  101 / 101 (7 files); flow e2e (`telegram-flow`, `-motion`, `-hub`) ×3
+  42 / 42 and `group-address-drag` ×5 10 / 10, both in a network-less
+  namespace. A first e2e attempt failed 42/42 and 10/10 only because the
+  probe's `TMPDIR` made Chromium's singleton socket path too long; rerun
+  with a short `TMPDIR`, not a product defect.
+- Two own mutants in `queuePulses` (finding 5 counted as bundled again;
+  `overCapacityEvents` never incremented) fail 2 and 5 flow tests; the file
+  was restored and byte-compared.
+- **Finding 6 (§19) is still open**, re-probed unchanged: telegrams drawn to
+  only part of their recipients, or from a refused sender, are counted
+  nowhere in the note (0 / 0 / false).
+
+**Finding 7 (MINOR, returned to the UI owner): event-ring overflow is counted
+but never shown.** The binding requirement says "Do not silently discard
+semantic events" (§1). `flowModel` keeps at most 2,048 pulse events and
+counts the overflow in `counters.eventsDropped`, but no view, note or
+diagnostic line reads that counter. Probe: 2,100 fresh telegrams in one batch
+→ 2,048 events, `eventsDropped` 52, the note says "2,048 telegrams were drawn
+as bundled pulses, 0 not at all or only in part". One monitor poll can carry
+up to 5,000 rows (`MAX_TELEGRAMS`), so this needs more than 2,048 telegrams
+observed within the 2 s pulse window of one poll — above the §7 load of
+1,000/s, or a burst. Counting them as not drawn in the note (or adding a
+diagnostic line) would close it.
+
+**Observation, not a finding:** rows already older than 2 s when admitted
+(e.g. after a main-thread stall of more than 2 s while visible) never become
+pulse events and are not counted in the note (probe: 30 rows aged 2.5 s → 0
+pulses, note absent). This is the documented "no replay of history" rule
+(U21 parts A and B, "Pulse events"); values, counts and edges still update. The
+owner may decide whether a visible stall should say so.
+
+`FLOW-01` stays `IN_PROGRESS` (findings 6 and 7). No hardware, no real bus
+and no KNX socket were used.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

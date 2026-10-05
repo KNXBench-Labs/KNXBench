@@ -46,3 +46,7 @@ kept beside the new ones.
 All other 28 rows match the spec width: 1 (1 bit), 2 (2), 3 (4), 4–6 (8),
 6.020 (8), 7–9 (16), 10–11 (24), 12–15 (32), 16 (112), 18 (8), 19 (64),
 20–21 (8), 22 (16), 23 (2), 25–26 (8), 27 (32), 29 (64), 30 (24).
+
+## Gates
+
+Integrated public16 on f3b4fd34 independently accepted: 16 exit0, Rust 3247/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+gf3b4fd34.

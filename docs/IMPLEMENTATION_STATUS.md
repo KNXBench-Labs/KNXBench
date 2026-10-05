@@ -1,5 +1,14 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR21 finding 4: the flow note stops counting heads twice
+
+- The reduced-rendering note in the flow view counted lines as telegrams
+  (one per recipient) and also counted refused telegrams as bundled. It now
+  counts each telegram once: drawn bundled, or not (completely) drawn
+  (TELEGRAM_FLOW_VISUALIZATION §16). Tests with two receivers per telegram and
+  the en/de wording fail on the previous code; six mutants killed.
+- `FLOW-01` stays `IN_PROGRESS` until the next AR21 rerun.
+
 ## 2026-10-05 — AR09: a group address finally says what it carries (ADR 0078)
 
 - `GroupAddressEntry::declared_dpt: Override<DptRef>` holds schema-21+

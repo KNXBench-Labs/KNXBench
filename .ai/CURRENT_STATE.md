@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 23:07 CEST
+Web lock: still held by claude-goal-ui-owner for KL-37 (slice-2b language markers); not released by this entry
+- **Completed:** AR21 findings 6 and 7: a telegram whose sender or any recipient the model refused is marked incomplete (`FlowEvent.complete`; refused sender → lineless event) and the note counts it as not (completely) drawn; events pushed out of the 2,048 ring before a sync count as not drawn; plus a found defect — after a session change the animator kept the old `seq` high mark and drew no pulses for the new session — fixed by resetting the baseline per model. §20 stall observation: no change by decision. TELEGRAM_FLOW_VISUALIZATION §21, LEDGER `FLOW-01`. 9/9 mutants; gate green. Log: `.ai/logs/2026-10-05_claude_ui-ar21-findings6-7.md`.
+- **Pending/Next Steps:** **Alpha: AR21 rerun of findings 6 and 7 (§21).** UI owner: `KL-37` markers (catalogue, device product block, com-object DPT text), then release the lock.
+- **Notes for Codex oder Claude:** Alpha's §19 probe cases A/B/C are now tests in `flowAnimator.test.ts` (`limited(2)` fixture). No server change; no KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 22:57 CEST
 Web lock: taken by claude-goal-ui-owner for AR21 findings 6 and 7 (telegram-flow note), then KL-37 markers
 - **Completed:** Lock taken only; no source change in this entry.

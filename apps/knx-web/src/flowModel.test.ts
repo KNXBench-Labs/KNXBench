@@ -379,4 +379,24 @@ describe("flow reducer — activity window", () => {
     expect(model.events.map((event) => event.seq)).toEqual([3, 4, 5]);
     expect(model.counters.eventsDropped).toBe(2);
   });
+
+  // AR21 finding 6: whether a telegram can be drawn completely is decided
+  // where nodes are refused, so the renderer only has to read it.
+  it("marks an event incomplete when a recipient or the sender was refused, and gives a refused sender no send times", () => {
+    const model = createFlowModel(IDENTITY, { maxNodes: 2, maxEdges: 100, maxSlots: 100, maxPending: 100 });
+    provideContext(model, "1", snapshot("1", DEVICES, GROUPS), 0);
+    admitRows(model, [row(1)], 1000);
+    expect(model.events.map((event) => [event.seq, event.from, event.to, event.complete])).toEqual([[1, "d:1", ["d:2"], false]]);
+    admitRows(model, [row(2, { source: "1.1.3", sourceRaw: 0x1103 })], 1000);
+    expect(model.nodes.has("d:3")).toBe(false);
+    expect(model.events[1]).toMatchObject({ seq: 2, from: "d:3", to: [], complete: false });
+    expect(model.sendTimes.has("d:3")).toBe(false);
+    expect(model.counters.eventsRecorded).toBe(2);
+  });
+
+  it("marks an event complete when every recipient has a node", () => {
+    const model = ready();
+    admitRows(model, [row(1)], 1000);
+    expect(model.events[0]).toMatchObject({ to: ["d:2", "d:3"], complete: true });
+  });
 });

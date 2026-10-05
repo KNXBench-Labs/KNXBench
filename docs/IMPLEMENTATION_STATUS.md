@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — KL-37: catalogue, product block and DPT text say when they fell back
+
+- New `src/languageFallback.tsx`: `fellBack(text, answered)` and
+  `LanguageFallbackBadge` — the parameter panel's badge, now shared; its
+  message keys moved from `parameters.untranslated.*` to `untranslated.*`, and
+  the tooltip says "the original text" because it no longer speaks only of
+  programs.
+- `CatalogItem` gains `nameLanguage`, `visibleDescriptionLanguage`,
+  `sourceLanguage`; the catalogue list marks name and description.
+- Inspector: product text, catalogue name and application name carry their
+  `*_language` / `*_source_language` markers; a communication object's DPT text
+  is marked without a source. Only with a product language selected.
+- Ledger `KL-37` → ACCEPTED_BOUNDARY (residue accepted in §37 by Alpha's slice
+  3; the waiting UI half delivered). Manual 09 updated.
+
 ## 2026-10-05 — Telegram-flow note counts refused and ring-dropped telegrams (AR21 findings 6, 7)
 
 - `flowModel`: `FlowEvent.complete` (false when the sender or any recipient

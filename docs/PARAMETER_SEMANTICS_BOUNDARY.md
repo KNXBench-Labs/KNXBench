@@ -200,8 +200,8 @@ invalid evidence. Both failed first attempts remain archived, not relabelled
 green. No original/private payload was opened or copied by these gates.
 
 The backend adds `unsupportedControlKind`, a warning and stable English fallback.
-Web's manual kind union and localized message catalogues remain owned by the UI
-track. Its existing unknown-kind fallback is the source-level compatibility
+Web's manual kind union and localized message catalogues are owned by the UI
+track, which adopted the token on 2026-10-05 (with ADR-0080's three tokens). Its existing unknown-kind fallback is the source-level compatibility
 path; browser rendering/localized adoption are not accepted here. No Web or
 generated-binding, native schema/migration or per-kind write-validator changes
 are included. Repeat/Allocator/scripts remain inert.

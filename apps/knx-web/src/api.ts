@@ -1841,7 +1841,14 @@ export type ParameterDiagnosticKind =
   | "moduleWithoutId"
   | "moduleArgumentNotBound"
   | "unsupportedModuleArgumentKind"
-  | "unresolvedTextPlaceholder";
+  | "unresolvedTextPlaceholder"
+  // ADR-0061 / ADR-0062, adopted with ADR-0080 by the UI owner (2026-10-05).
+  | "unsupportedControlKind"
+  | "evaluationWorkBudgetExhausted"
+  // ADR-0080: why a field is not writable.
+  | "parameterAccessReadOnly"
+  | "manufacturerCalculation"
+  | "writeAuthorityUnavailable";
 
 export interface ParameterDiagnostic {
   scope: ModuleScope | null;

@@ -125,6 +125,7 @@ fn project() -> knx_core::Project {
         central: false,
         unfiltered: false,
         range: None,
+        declared_dpt: Default::default(),
     };
     project.installations.push(Installation {
         id: InstallationId(1),

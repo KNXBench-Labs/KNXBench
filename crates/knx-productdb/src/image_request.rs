@@ -559,6 +559,7 @@ mod tests {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             }],
             parameters: vec![],
         });
@@ -763,6 +764,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
         object(&mut p, 10, 0, vec![send(1), send(2)]);
         assert!(matches!(
@@ -923,6 +925,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         });
         object(&mut p, 12, 1, vec![receive(2)]);
         object(&mut p, 10, 0, vec![receive(2), send(1)]);

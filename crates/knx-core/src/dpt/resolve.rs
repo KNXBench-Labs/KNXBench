@@ -13,7 +13,9 @@ use std::collections::HashMap;
 
 use crate::ids::GroupAddressId;
 use crate::project::Project;
+use crate::provenance::Override;
 
+use super::codec::format_width_bits;
 use super::DptRef;
 
 /// The datapoint type a group address resolves to, from the communication
@@ -91,8 +93,145 @@ pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> Group
     group_address_dpt_from(dpts)
 }
 
-/// Resolves every group address in `project` to its `GroupAddressDpt`,
-/// keyed on the raw 16-bit address a telegram actually carries.
+/// What a group address states about its own type, set beside what its
+/// linked communication objects state, and how the two were weighed
+/// (ADR-0078). Neither side is discarded: a caller can always show both.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroupAddressType {
+    /// `GroupAddress/@DatapointType`, exactly as the model holds it.
+    pub declared: Override<DptRef>,
+    /// What the linked communication objects state
+    /// ([`resolve_group_address_dpt`]).
+    pub linked: GroupAddressDpt,
+    pub outcome: GroupAddressTypeOutcome,
+}
+
+/// How [`group_address_type_from`] weighed a declaration against the
+/// linked objects. Project Schema23 §1.2.7 allows the two to differ in
+/// subtype but requires the same size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupAddressTypeOutcome {
+    /// The declaration applies; every linked object that states a type
+    /// states the same one, or none states any.
+    Declared,
+    /// The declaration applies; at least one linked object states a
+    /// different type of the same width. The difference stays visible in
+    /// `linked`.
+    DeclaredDiffersFromLinked,
+    /// The declaration and at least one linked object differ in width,
+    /// which the schema forbids. No type applies.
+    SizeConflict,
+    /// The declaration applies, but the width of the declared or a linked
+    /// type is unknown (variable length, or a main type outside the codec),
+    /// so the size rule could not be checked.
+    Unverifiable,
+    /// No declaration in the model, but the project's store holds
+    /// declarations it could not attribute to an address (ADR-0078 D3). The
+    /// linked objects' answer applies and may be incomplete.
+    DeclarationNotLifted,
+    /// No usable declaration; the linked objects' answer applies.
+    Inferred,
+}
+
+impl GroupAddressType {
+    /// The type a decoder or writer should use, in the existing
+    /// `GroupAddressDpt` shape. A `SizeConflict` is a `Conflict` naming the
+    /// declaration and every linked type, so callers that already refuse a
+    /// conflict refuse this one too.
+    pub fn effective(&self) -> GroupAddressDpt {
+        let declared = self.declared.value().map(|resolved| resolved.value);
+        match (self.outcome, declared) {
+            (
+                GroupAddressTypeOutcome::Declared
+                | GroupAddressTypeOutcome::DeclaredDiffersFromLinked
+                | GroupAddressTypeOutcome::Unverifiable,
+                Some(dpt),
+            ) => GroupAddressDpt::Single(dpt),
+            (GroupAddressTypeOutcome::SizeConflict, Some(dpt)) => {
+                let mut all = linked_list(&self.linked);
+                all.push(dpt);
+                group_address_dpt_from(all)
+            }
+            _ => self.linked.clone(),
+        }
+    }
+}
+
+fn linked_list(linked: &GroupAddressDpt) -> Vec<DptRef> {
+    match linked {
+        GroupAddressDpt::None => Vec::new(),
+        GroupAddressDpt::Single(dpt) => vec![*dpt],
+        GroupAddressDpt::Conflict(dpts) => dpts.clone(),
+    }
+}
+
+/// Weighs a group address's own declaration against what its linked
+/// objects state (ADR-0078 D2). `declarations_unlifted` is whether the
+/// project still holds declarations it could not attribute
+/// (`ProjectInfo::unlifted_group_address_dpt_declarations > 0`).
+///
+/// `pub` for the same reason as [`group_address_dpt_from`]: a caller that
+/// gathered the linked types its own way classifies by this one rule.
+pub fn group_address_type_from(
+    declared: &Override<DptRef>,
+    linked: GroupAddressDpt,
+    declarations_unlifted: bool,
+) -> GroupAddressType {
+    let outcome = match declared.value().map(|resolved| resolved.value) {
+        Some(dpt) => {
+            let others = linked_list(&linked);
+            let width = format_width_bits(dpt.main);
+            let mismatch = others.iter().any(|other| {
+                matches!((width, format_width_bits(other.main)), (Some(a), Some(b)) if a != b)
+            });
+            if mismatch {
+                GroupAddressTypeOutcome::SizeConflict
+            } else if !others.is_empty()
+                && (width.is_none()
+                    || others
+                        .iter()
+                        .any(|other| format_width_bits(other.main).is_none()))
+            {
+                GroupAddressTypeOutcome::Unverifiable
+            } else if others.iter().any(|other| *other != dpt) {
+                GroupAddressTypeOutcome::DeclaredDiffersFromLinked
+            } else {
+                GroupAddressTypeOutcome::Declared
+            }
+        }
+        None if matches!(declared, Override::Absent) && declarations_unlifted => {
+            GroupAddressTypeOutcome::DeclarationNotLifted
+        }
+        None => GroupAddressTypeOutcome::Inferred,
+    };
+    GroupAddressType {
+        declared: declared.clone(),
+        linked,
+        outcome,
+    }
+}
+
+/// Resolves `ga`'s declaration against its linked objects. An id that names
+/// no group address in `project` is treated as undeclared, matching
+/// [`resolve_group_address_dpt`]'s treatment of unknown ids.
+pub fn resolve_group_address_type(project: &Project, ga: GroupAddressId) -> GroupAddressType {
+    let absent = Override::Absent;
+    let declared = project
+        .installations
+        .iter()
+        .flat_map(|installation| &installation.group_addresses)
+        .find(|entry| entry.id == ga)
+        .map_or(&absent, |entry| &entry.declared_dpt);
+    group_address_type_from(
+        declared,
+        resolve_group_address_dpt(project, ga),
+        project.info.unlifted_group_address_dpt_declarations > 0,
+    )
+}
+
+/// Resolves every group address in `project` to its effective
+/// `GroupAddressDpt` ([`GroupAddressType::effective`], ADR-0078), keyed on
+/// the raw 16-bit address a telegram actually carries.
 ///
 /// Spec E4-D8 has a bus monitor resolve once at startup rather than per
 /// telegram; this is that one pass. The map holds an entry only for
@@ -108,10 +247,17 @@ pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> Group
 /// reported as ambiguous, not resolved by picking one installation over the
 /// other.
 pub fn resolve_project_group_address_dpts(project: &Project) -> HashMap<u16, GroupAddressDpt> {
+    let unlifted = project.info.unlifted_group_address_dpt_declarations > 0;
     let mut merged: HashMap<u16, Vec<DptRef>> = HashMap::new();
     for installation in &project.installations {
         for entry in &installation.group_addresses {
-            let dpts = match resolve_group_address_dpt(project, entry.id) {
+            let effective = group_address_type_from(
+                &entry.declared_dpt,
+                resolve_group_address_dpt(project, entry.id),
+                unlifted,
+            )
+            .effective();
+            let dpts = match effective {
                 GroupAddressDpt::None => continue,
                 GroupAddressDpt::Single(dpt) => vec![dpt],
                 GroupAddressDpt::Conflict(dpts) => dpts,
@@ -250,6 +396,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         }
     }
 
@@ -502,6 +649,163 @@ mod tests {
                 dpt(5, 1),
                 dpt(9, 1)
             ]))
+        );
+    }
+
+    // --- ADR-0078: declared group-address DPT against the linked objects ---
+
+    fn declared_entry(id: u32, raw: u16, declared: Override<DptRef>) -> GroupAddressEntry {
+        GroupAddressEntry {
+            declared_dpt: declared,
+            ..group_address_entry(id, raw)
+        }
+    }
+
+    fn outcome(declared: Override<DptRef>, linked: GroupAddressDpt) -> GroupAddressTypeOutcome {
+        group_address_type_from(&declared, linked, false).outcome
+    }
+
+    #[test]
+    fn a_declaration_with_nothing_linked_applies() {
+        let ty = group_address_type_from(&stated(9, 1), GroupAddressDpt::None, false);
+        assert_eq!(ty.outcome, GroupAddressTypeOutcome::Declared);
+        assert_eq!(ty.effective(), GroupAddressDpt::Single(dpt(9, 1)));
+    }
+
+    #[test]
+    fn a_declaration_matching_every_linked_object_applies() {
+        assert_eq!(
+            outcome(stated(9, 1), GroupAddressDpt::Single(dpt(9, 1))),
+            GroupAddressTypeOutcome::Declared
+        );
+    }
+
+    #[test]
+    fn a_same_width_difference_follows_the_declaration_and_keeps_the_linked_side() {
+        let linked = GroupAddressDpt::Conflict(vec![dpt(9, 1), dpt(9, 4)]);
+        let ty = group_address_type_from(&stated(9, 1), linked.clone(), false);
+        assert_eq!(
+            ty.outcome,
+            GroupAddressTypeOutcome::DeclaredDiffersFromLinked
+        );
+        assert_eq!(ty.linked, linked);
+        assert_eq!(ty.effective(), GroupAddressDpt::Single(dpt(9, 1)));
+    }
+
+    #[test]
+    fn a_width_conflict_resolves_to_no_type_and_names_both_sides() {
+        // Schema23 §1.2.7: "the sizes must match". 1.001 is 1 bit, 5.001 one
+        // octet; neither side may win.
+        let ty = group_address_type_from(&stated(1, 1), GroupAddressDpt::Single(dpt(5, 1)), false);
+        assert_eq!(ty.outcome, GroupAddressTypeOutcome::SizeConflict);
+        assert_eq!(
+            ty.effective(),
+            GroupAddressDpt::Conflict(vec![dpt(1, 1), dpt(5, 1)])
+        );
+    }
+
+    #[test]
+    fn a_width_conflict_wins_over_an_unknown_width_elsewhere() {
+        let linked = GroupAddressDpt::Conflict(vec![dpt(5, 1), dpt(24, 1)]);
+        assert_eq!(
+            outcome(stated(1, 1), linked),
+            GroupAddressTypeOutcome::SizeConflict
+        );
+    }
+
+    #[test]
+    fn an_unknown_width_on_either_side_is_unverifiable_not_a_pass() {
+        assert_eq!(
+            outcome(stated(24, 1), GroupAddressDpt::Single(dpt(16, 0))),
+            GroupAddressTypeOutcome::Unverifiable
+        );
+        assert_eq!(
+            outcome(stated(16, 0), GroupAddressDpt::Single(dpt(28, 1))),
+            GroupAddressTypeOutcome::Unverifiable
+        );
+        let ty = group_address_type_from(&stated(232, 600), GroupAddressDpt::None, false);
+        assert_eq!(ty.outcome, GroupAddressTypeOutcome::Declared);
+        assert_eq!(ty.effective(), GroupAddressDpt::Single(dpt(232, 600)));
+    }
+
+    #[test]
+    fn missing_empty_or_malformed_declarations_fall_back_to_the_linked_objects() {
+        let linked = GroupAddressDpt::Conflict(vec![dpt(1, 1), dpt(5, 1)]);
+        for declared in [
+            Override::Absent,
+            Override::Empty,
+            Override::Malformed("DPST-1-1 DPST-1-2".into()),
+        ] {
+            let ty = group_address_type_from(&declared, linked.clone(), false);
+            assert_eq!(ty.outcome, GroupAddressTypeOutcome::Inferred);
+            assert_eq!(ty.declared, declared, "the source declaration is kept");
+            assert_eq!(ty.effective(), linked);
+        }
+    }
+
+    #[test]
+    fn only_an_absent_declaration_reports_unlifted_store_data() {
+        assert_eq!(
+            group_address_type_from(&Override::Absent, GroupAddressDpt::None, true).outcome,
+            GroupAddressTypeOutcome::DeclarationNotLifted
+        );
+        assert_eq!(
+            group_address_type_from(&Override::Empty, GroupAddressDpt::None, true).outcome,
+            GroupAddressTypeOutcome::Inferred
+        );
+        assert_eq!(
+            group_address_type_from(&stated(1, 1), GroupAddressDpt::None, true).outcome,
+            GroupAddressTypeOutcome::Declared
+        );
+    }
+
+    #[test]
+    fn the_project_resolvers_use_the_declaration() {
+        let declared = GroupAddressId(1);
+        let conflicting = GroupAddressId(2);
+        let mut project = project_with(vec![
+            com_object(1, stated(9, 4), vec![send(declared)], true),
+            com_object(2, stated(5, 1), vec![send(conflicting)], true),
+        ]);
+        project.installations.push(installation(
+            0,
+            vec![
+                declared_entry(1, 0x0801, stated(9, 1)),
+                declared_entry(2, 0x0802, stated(1, 1)),
+            ],
+        ));
+        let ty = resolve_group_address_type(&project, declared);
+        assert_eq!(
+            ty.outcome,
+            GroupAddressTypeOutcome::DeclaredDiffersFromLinked
+        );
+        assert_eq!(
+            resolve_group_address_dpt(&project, declared),
+            GroupAddressDpt::Single(dpt(9, 4)),
+            "the inference-only function keeps its contract"
+        );
+        let map = resolve_project_group_address_dpts(&project);
+        assert_eq!(map[&0x0801], GroupAddressDpt::Single(dpt(9, 1)));
+        assert_eq!(
+            map[&0x0802],
+            GroupAddressDpt::Conflict(vec![dpt(1, 1), dpt(5, 1)])
+        );
+    }
+
+    #[test]
+    fn the_project_counter_switches_an_undeclared_address_to_not_lifted() {
+        let mut project = project_with(vec![]);
+        project
+            .installations
+            .push(installation(0, vec![group_address_entry(1, 0x0801)]));
+        assert_eq!(
+            resolve_group_address_type(&project, GroupAddressId(1)).outcome,
+            GroupAddressTypeOutcome::Inferred
+        );
+        project.info.unlifted_group_address_dpt_declarations = 3;
+        assert_eq!(
+            resolve_group_address_type(&project, GroupAddressId(1)).outcome,
+            GroupAddressTypeOutcome::DeclarationNotLifted
         );
     }
 }

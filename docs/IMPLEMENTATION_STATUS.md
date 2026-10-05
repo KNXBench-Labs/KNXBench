@@ -1,5 +1,27 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR09: a group address finally says what it carries (ADR 0078)
+
+- `GroupAddressEntry::declared_dpt: Override<DptRef>` holds schema-21+
+  `GroupAddress/@DatapointType` (absent/empty/value/malformed with exact
+  text and a map report entry); nothing is left as an opaque row.
+- `resolve_group_address_type` weighs it against the linked objects:
+  `Declared`, `DeclaredDiffersFromLinked` (same width), `SizeConflict`
+  (Schema23 §1.2.7 size rule broken → conflict, nothing decoded or written),
+  `Unverifiable`, `DeclarationNotLifted`, `Inferred`. Width from the new
+  `format_width_bits`, pinned against the DPT-AS width audit.
+  `resolve_group_address_dpt` stays inference-only.
+- Consumers on the effective type: project DPT map (bus monitor decode,
+  bus write, flow, CLI), projection `dpts`, CSV export column (new
+  size-difference warning), project diff and import-compare views.
+- Store schema v10: `group_address.dpt_state/value/layer`,
+  `project_info.unlifted_group_address_dpt_declarations`; `migrate_v9_to_v10`
+  lifts keyed opaque rows (schema ≥21 only) and counts unkeyed ones.
+- Tests: core resolver (10), width table, importer (2), store migration (3)
+  and round trips (2), projection, CSV, diff, bus-monitor decode; 9 compiled
+  mutants killed. Web display of the declared/linked detail and the binding
+  doc comment are handed to the UI owner (web lock).
+
 ## 2026-10-05 — AR09: parameter-only time periods say so before a write
 
 - Numeric range pass over main types 5–9, 12–14 and 29 against DPT-AS: format

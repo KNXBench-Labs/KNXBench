@@ -5,7 +5,9 @@
 //! as a field (DATA_MODEL §4/§9). The two names are deliberate and distinct.
 
 use crate::address::GroupAddress;
+use crate::dpt::DptRef;
 use crate::ids::{GroupAddressId, GroupRangeId, SourceRef};
+use crate::provenance::Override;
 
 /// A named span of group addresses, e.g. "Lighting".
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,9 +36,10 @@ impl GroupRange {
 /// ETS's `Central`/`Unfiltered` flags.
 ///
 /// A group address without a datapoint type is normal, not an error — 194
-/// of 514 in the reference project (DATA_MODEL §9); the datapoint type is
-/// not a field here at all, since it is a property of the linked
-/// communication objects, not of the address.
+/// of 514 in the reference project (DATA_MODEL §9). The type is usually a
+/// property of the linked communication objects; schema ≥21 projects may
+/// also state one on the address itself, kept in `declared_dpt` and weighed
+/// against the linked objects by `resolve_group_address_type` (ADR-0078).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupAddressEntry {
     pub id: GroupAddressId,
@@ -47,6 +50,9 @@ pub struct GroupAddressEntry {
     pub unfiltered: bool,
     /// The range it was imported under, if any.
     pub range: Option<GroupRangeId>,
+    /// `GroupAddress/@DatapointType` (schema ≥21) in its four source states
+    /// (ADR-0010, ADR-0078). Never filled by inference.
+    pub declared_dpt: Override<DptRef>,
 }
 
 #[cfg(test)]

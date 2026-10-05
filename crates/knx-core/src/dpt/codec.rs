@@ -164,6 +164,30 @@ const FORMAT_LEVEL_RULINGS: &[DptEncodingRuling] = &[FORMAT_LEVEL_VALIDATION_ONL
 const NULL_TERMINATION_RULINGS: &[DptEncodingRuling] = &[STRICT_NULL_TERMINATION];
 const SIGNED64_RULINGS: &[DptEncodingRuling] = &[SIGNED64_RANGE_TYPO_CORRECTED];
 
+/// The fixed payload width in bits of main type `main`'s DPT-AS format, or
+/// `None` for a variable-length format (24, 28) or a main type outside the
+/// thirty this codec implements.
+///
+/// Read from each section's `Format:` line and pinned against the spec in
+/// `tests/dpt_spec_width_audit.rs`. ADR-0078 uses it to apply Project
+/// Schema23's rule that a group address's declared type and its linked
+/// objects' types must have the same size.
+pub const fn format_width_bits(main: u16) -> Option<u32> {
+    match main {
+        1 => Some(1),
+        2 => Some(2),
+        3 => Some(4),
+        4..=6 | 17 | 18 | 20 | 21 | 25 | 26 => Some(8),
+        7..=9 | 22 => Some(16),
+        10 | 11 | 30 => Some(24),
+        12..=15 | 27 => Some(32),
+        16 => Some(112),
+        19 | 29 => Some(64),
+        23 => Some(2),
+        _ => None,
+    }
+}
+
 /// Returns every project ruling that can affect this DPT's wire codec.
 ///
 /// An empty slice means the codec has no known encoding judgment for that

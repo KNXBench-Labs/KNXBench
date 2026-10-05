@@ -140,6 +140,7 @@ fn project_with_write_dpt_outcomes() -> knx_core::Project {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             },
             GroupAddressEntry {
                 id: GroupAddressId(2),
@@ -149,6 +150,7 @@ fn project_with_write_dpt_outcomes() -> knx_core::Project {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             },
             GroupAddressEntry {
                 id: GroupAddressId(3),
@@ -158,6 +160,7 @@ fn project_with_write_dpt_outcomes() -> knx_core::Project {
                 central: false,
                 unfiltered: false,
                 range: None,
+                declared_dpt: Default::default(),
             },
         ],
         parameters: vec![],

@@ -104,11 +104,12 @@ pub fn upsert_group_address(
     position: i64,
     entry: &GroupAddressEntry,
 ) -> Result<(), StoreError> {
+    let dpt = crate::devices::encode_dpt(&entry.declared_dpt);
     conn.execute(
         "INSERT INTO group_address
              (id, installation_id, range_id, position, source_path, source_ets_id, name,
-              address, central, unfiltered)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+              address, central, unfiltered, dpt_state, dpt_value, dpt_layer)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
          ON CONFLICT(id) DO UPDATE SET
              installation_id = excluded.installation_id,
              range_id = excluded.range_id,
@@ -118,7 +119,10 @@ pub fn upsert_group_address(
              name = excluded.name,
              address = excluded.address,
              central = excluded.central,
-             unfiltered = excluded.unfiltered",
+             unfiltered = excluded.unfiltered,
+             dpt_state = excluded.dpt_state,
+             dpt_value = excluded.dpt_value,
+             dpt_layer = excluded.dpt_layer",
         params![
             entry.id.0,
             installation_id.0,
@@ -130,6 +134,9 @@ pub fn upsert_group_address(
             entry.address.raw(),
             entry.central,
             entry.unfiltered,
+            dpt.state,
+            dpt.value,
+            dpt.layer,
         ],
     )?;
     Ok(())
@@ -140,7 +147,8 @@ pub fn load_group_addresses(
     installation_id: InstallationId,
 ) -> Result<Vec<GroupAddressEntry>, StoreError> {
     let mut stmt = conn.prepare(
-        "SELECT id, range_id, source_path, source_ets_id, name, address, central, unfiltered
+        "SELECT id, range_id, source_path, source_ets_id, name, address, central, unfiltered,
+                dpt_state, dpt_value, dpt_layer
          FROM group_address WHERE installation_id = ?1 ORDER BY position",
     )?;
     let entries = stmt
@@ -156,6 +164,11 @@ pub fn load_group_addresses(
                 address: GroupAddress::from_raw(row.get(5)?),
                 central: row.get(6)?,
                 unfiltered: row.get(7)?,
+                declared_dpt: crate::devices::decode_dpt(
+                    &row.get::<_, String>(8)?,
+                    row.get(9)?,
+                    row.get(10)?,
+                ),
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -295,6 +308,7 @@ mod tests {
             central: false,
             unfiltered: false,
             range: None,
+            declared_dpt: Default::default(),
         };
         upsert_group_address(&conn, InstallationId(0), 0, &entry).unwrap();
         assert_eq!(
@@ -305,6 +319,51 @@ mod tests {
         assert_eq!(
             load_group_addresses(&conn, InstallationId(0)).unwrap(),
             vec![]
+        );
+    }
+
+    #[test]
+    fn a_group_address_declaration_round_trips_in_all_four_states() {
+        use knx_core::dpt::DptRef;
+        use knx_core::provenance::{Layer, Override, Resolved};
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let states = [
+            Override::Absent,
+            Override::Empty,
+            Override::Malformed("DPST-1-1 DPST-1-2".into()),
+            Override::Value(Resolved {
+                value: DptRef {
+                    main: 9,
+                    sub: Some(1),
+                },
+                layer: Layer::Instance,
+            }),
+            Override::Value(Resolved {
+                value: DptRef { main: 5, sub: None },
+                layer: Layer::UserEdit,
+            }),
+        ];
+        let entries: Vec<GroupAddressEntry> = states
+            .into_iter()
+            .enumerate()
+            .map(|(i, declared_dpt)| GroupAddressEntry {
+                id: GroupAddressId(i as u32 + 1),
+                source: source(),
+                name: format!("ga {i}"),
+                address: GroupAddress::from_raw(2048 + i as u16),
+                central: false,
+                unfiltered: false,
+                range: None,
+                declared_dpt,
+            })
+            .collect();
+        for (i, entry) in entries.iter().enumerate() {
+            upsert_group_address(&conn, InstallationId(0), i as i64, entry).unwrap();
+        }
+        assert_eq!(
+            load_group_addresses(&conn, InstallationId(0)).unwrap(),
+            entries
         );
     }
 
@@ -320,6 +379,7 @@ mod tests {
             central: true,
             unfiltered: true,
             range: None,
+            declared_dpt: Default::default(),
         };
         upsert_group_address(&conn, InstallationId(0), 0, &entry).unwrap();
         let loaded = load_group_addresses(&conn, InstallationId(0)).unwrap();

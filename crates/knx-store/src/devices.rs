@@ -294,11 +294,11 @@ fn layer_from_str(s: &str) -> Layer {
 /// One row of `com_object_override`, already string-encoded. Building this
 /// is what turns each `Override<T>` field into the four columns the table
 /// stores — the encoding side of the codec.
-struct OverrideRow {
-    state: &'static str,
-    value: Option<String>,
+pub(crate) struct OverrideRow {
+    pub(crate) state: &'static str,
+    pub(crate) value: Option<String>,
     text_kind: Option<&'static str>,
-    layer: Option<&'static str>,
+    pub(crate) layer: Option<&'static str>,
 }
 
 fn encode_text(t: &Override<Text>) -> OverrideRow {
@@ -361,7 +361,7 @@ fn decode_text(
     }
 }
 
-fn encode_dpt(d: &Override<DptRef>) -> OverrideRow {
+pub(crate) fn encode_dpt(d: &Override<DptRef>) -> OverrideRow {
     match d {
         Override::Absent => OverrideRow {
             state: "absent",
@@ -390,7 +390,11 @@ fn encode_dpt(d: &Override<DptRef>) -> OverrideRow {
     }
 }
 
-fn decode_dpt(state: &str, value: Option<String>, layer: Option<String>) -> Override<DptRef> {
+pub(crate) fn decode_dpt(
+    state: &str,
+    value: Option<String>,
+    layer: Option<String>,
+) -> Override<DptRef> {
     match state {
         "empty" => Override::Empty,
         "malformed" => Override::Malformed(value.expect("malformed state always carries a value")),

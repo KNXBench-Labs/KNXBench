@@ -67,6 +67,7 @@ fn project_with_ga_name(ga_name: &str) -> Project {
             central: false,
             unfiltered: false,
             range: Some(GroupRangeId(1)),
+            declared_dpt: Default::default(),
         });
 
     project

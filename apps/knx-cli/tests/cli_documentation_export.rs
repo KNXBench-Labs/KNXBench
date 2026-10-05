@@ -68,6 +68,7 @@ fn tiny_project() -> Project {
             central: false,
             unfiltered: false,
             range: Some(GroupRangeId(1)),
+            declared_dpt: Default::default(),
         });
 
     project

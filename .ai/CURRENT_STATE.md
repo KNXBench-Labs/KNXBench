@@ -1,3 +1,12 @@
+- **Last Agent:** codex (UI session)
+- **Timestamp:** 2026-10-05 07:14 CEST
+Web lock: held by claude-alpha for U21 corrections; not touched by this entry.
+- **Completed:** Checked freshly fetched main b3c341d5 against the UI goal, delivery ancestry, ledger and AR21 review. U17/U18 and UA deliveries are published; U21's implementation receipt was returned with three findings. Corrected the stale theme/flow overview in an isolated docs-only worktree and made the active correction owner explicit. Fresh compiled doc gates passed: anchors455/277, ledger186, headers521/157 ceiling157, whitespace. Kept the U21 section, 37 checked boxes, completion contract and ledger unchanged; complete earlier handover remains a byte-exact suffix. Live U21 todo is pending, not complete.
+- **Pending/Next Steps:** The alpha session already owns the active local-reheat, hub-readability and DnD-E2E corrections in u21-fix. Do not duplicate them. After the corrected receipt, lock release and actual AR21/integrated-gate verdict, reconcile final UI closure. No other implementation package in this goal is presently available without overlapping that active owner.
+- **Notes for Codex oder Claude:** Only goal overview and this audit's handover/log changed; no web source, root edit, product test or hardware contact. The holder owns the U21 status-line change and its AR21 watcher trigger; this audit leaves those bytes intact. Log: .ai/logs/2026-10-05_codex_ui-goal-reconciliation.md. Earlier handover entries preserved byte-exact.
+
+---
+
 - **Last Agent:** Claude (alpha session, U21 corrections from the AR21 review)
 - **Timestamp:** 2026-10-05 06:05
 Web lock: taken by claude-alpha for U21 corrections (AR21 findings 1–3)

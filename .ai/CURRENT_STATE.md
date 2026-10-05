@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-05 14:00
+- **Completed:** Project-evolution story edition `2026-10-05.1` (on top of `.3`) from the user's personal chat exports in the git-ignored `.private/claude-ai-export/2026-10-04/` (ChatGPT, claude.ai; Gemini empty). Analysed locally by keyword filtering; only project conversations opened, four ChatGPT conversations used. New step `strategy-written`: the strategy and the first CLAUDE.md were written in ChatGPT on 2 Sep 14:10–14:16 CEST (similarity 98.7 % to `acf2e1bd`, 96.4 % to `fdcc5ab9`). `spec-knowledge-base` now covers its origin (ChatGPT-guided local Ollama pipeline from 4 Sep, audit 2,232/1,663/569, restart as knx-spec-kb 7 Sep, Claude Code from 10 Sep). Gaps `gap-strategy-origin` and `gap-spec-kb-origin` closed; "earliest prompt" wording scoped to the project; `rel-home-strategy` "morning" corrected to "afternoon". Candidate sha `648af1e2…`, preview `story/previews/2026-10-05.1.html`, README archaeology updated. Gates: unit tests OK, 46/46 browser checks, payload leak grep clean.
+- **Pending/Next Steps:** User review of `2026-10-05.1`; hosting later (user has a domain). No publication approval exists.
+- **Notes for Codex oder Claude:** User decisions 2026-10-05: strategy origin public with translated quotes and ChatGPT named; pre-September history from the exports must NOT be mentioned anywhere (keep the scope wording neutral); no further ChatGPT side notes (donations, promo video, Paperclip advice, Codex comparison). The exports contain very personal data: never copy, quote or summarise anything else from them; work locally and print only filtered project matches. Private conversation ids are in the ledger only.
+
+---
+
 - **Last Agent:** Claude (goal-ui.md owner session)
 - **Timestamp:** 2026-10-05 13:59 CEST
 Web lock: still held by claude-goal-ui-owner for the theme package (user request: shipped CRT theme, dropdown only, storage path, Neon Grid/Bitcoin DeFi removed); not released by this entry

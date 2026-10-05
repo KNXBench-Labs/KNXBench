@@ -4314,9 +4314,11 @@ not scheduled as part of T17.
 `224.0.23.12:3671` and awaits a unicast response. Docker's default bridge
 does not provide the required multicast path; the documented Linux
 deployment uses host networking when discovery is needed. A manually entered
-numeric IPv4 endpoint remains the fallback and can work over unicast even
-when multicast discovery cannot. Host routing, firewall and gateway support
-still matter with host networking.
+numeric IPv4 endpoint works over unicast from the host or a host-network
+container; from a bridge container the tunnel gets no answer either
+([§155](#155-tunnelling-from-a-container-on-dockers-bridge-network-gets-no-answer),
+corrected 2026-10-05). Host routing, firewall and gateway support still
+matter with host networking.
 
 **Host cause resolved (2026-09-30, RESEARCH §20.1).** The host `ufw` had
 dropped the gateway's unicast UDP reply from *source* port 3671. The user
@@ -7713,3 +7715,32 @@ loop and the AR20 snapshot route. It is read-only.
   hub). No real-bus evidence, no native WebKitGTK run, no screen-reader
   check. Values and lines are hidden from assistive technology on purpose;
   the Inspector is the accessible path, and it has not been tried with Orca.
+
+## §155 Tunnelling from a container on Docker's bridge network gets no answer
+
+**Found 2026-10-05 (user report, measured).** The server in a container on
+Docker's default bridge network could not open a tunnel to a gateway on the
+LAN, although the host firewall was set up and the CLI on the host worked.
+
+**Cause.** `TunnelClient::connect` (`crates/knx-net/src/client.rs`) puts its
+own socket address into the `CONNECT_REQUEST`'s control and data endpoint
+HPAIs. In a bridge container that is the private bridge address
+(`172.17.0.x`). The gateway answers to the address in the HPAI, not to the
+packet's source, and that address does not exist on the LAN. Docker's NAT
+rewrites only the IP header. `[V]` A read-only `DESCRIPTION_REQUEST` probe
+(no tunnel, no bus frame) against one gateway: no answer from a bridge
+container with its own address in the HPAI; answers from the host, from a
+host-network container, and from a bridge container with the all-zero
+"Route Back" HPAI.
+
+**Standard.** `[D]` Core v01.06.02 AS §8.6.2.2 defines the UDP Route Back HPAI
+(address and port all zero) for NAT: the server answers to the address and
+port of the received IP packet. §8.4.3.4.3: if the control endpoint is Route
+Back, the data endpoint must be too.
+
+**Workaround.** Run the container with `--network host` (Linux Docker Engine),
+as the [installation guide](manual/getting-started/04-installation.md) now
+says. The published-port bridge form is for project work only.
+
+**Lifted when.** AR14B: an opt-in Route Back mode for tunnelling with offline
+tests of every HPAI the client sends; the host default stays unchanged.

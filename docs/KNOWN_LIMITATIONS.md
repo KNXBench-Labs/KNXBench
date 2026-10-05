@@ -1404,9 +1404,11 @@ project now imports end to end through the library, the application
 service, `knx import --password-stdin` and `POST /api/project/import`
 (optional `password`); see IMPORT_EXPORT.md §2 for the entry paths and
 redaction tests. Verified against a synthetic fixture only, not a real
-export. The Web UI has no password dialog yet: the server's `422`
-`projectPasswordRequired`/`projectPasswordWrong` contract is handed to the
-UI owner. Still not covered: comparing against a protected file
+export. Since 2026-10-04 the Web UI asks for the password when the import
+answers `422` `projectPasswordRequired` (or asks again on
+`projectPasswordWrong`). It retries the same import with the password in
+that request only and never stores or logs it; opening a `.knxdb` never
+asks. Cancel leaves no project and no error. Still not covered: comparing against a protected file
 (`knx diff`, `POST /api/project/diff`) and ingesting products from a
 protected project (`knx products ingest`) take no password and refuse such
 a file by name.
@@ -2311,6 +2313,10 @@ dedicated range-exchange contract named in §39. `Description`/`Comment`
 becoming available is tied to `GroupAddressEntry` gaining those fields in
 the domain model — no task currently schedules either.
 
+**Alpha decision (user, 2026-10-04, AR11).** Accepted boundary for the
+Alpha: derived columns stay read-only and there are no Description/Comment
+columns. No schema change before the release.
+
 <a id="41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user"></a>
 ## 41. German-locale separators are supported; unverified spreadsheet transformations remain
 
@@ -2740,7 +2746,7 @@ twice, once against each candidate.
 merge behavior additionally waits for §55. T15 does not pretend that
 running two unrelated two-way comparisons creates a three-way result.
 
-## 60. Project diff's web panel lists entities, but pages large tables
+## 60. Project diff's web panel lists entities, with filtered, virtualised long tables
 
 **Status.** Largely lifted (CT-1, 2026-09-28). `ProjectDiffPanel.tsx`
 keeps the grouped-count summary lines and adds, below them, one
@@ -2760,21 +2766,51 @@ is spelled out as a word and prefixed by a symbol (`+`, `−`, `~`, `?`);
 colour only reinforces it. English and German catalogues cover every new
 string. Escape still closes the report first, as before.
 
+**Long tables (KL-60, lifted 2026-10-04).** Up to 20 entries, a table
+stays a plain list. Above that it gets a search field (key and name, case-
+insensitive), status toggle buttons (`aria-pressed`, shown when more than
+one status occurs), a live match count (`role="status"`) and a bounded
+scroll viewport. The viewport renders only the rows near the visible area
+(`virtualWindow.ts`); every entry stays reachable by scrolling, and each
+rendered row carries `aria-posinset`/`aria-setsize`. Row heights are
+measured as rows render (re-measured via `ResizeObserver` when a nested
+table opens); unseen rows count with an estimate. Two corrections keep the
+view steady: growth of rows above the visible area is added to
+`scrollTop`, and a list at its end stays at its end. End/Home on the focused
+viewport jump instantly, because Chromium's smooth native jump stopped
+short once newly measured rows grew the list. Verified in Chromium on a
+synthetic 3,300-entry table with variable row heights
+(`e2e/diff-virtual.e2e.ts`): DOM stays under 120 rows, every position
+1…3,300 is reached by scrolling, End reaches the last row, and an anchor row
+moves by exactly the scrolled distance while rows above it are measured.
+
 **What remains.**
 
-- **Paging, not virtualisation.** A table renders 50 rows, then a
-  "Show more" control reveals 50 more at a time and moves focus to the
-  first new row. A user who expands a table of thousands and keeps
-  clicking will eventually render all of them in the DOM.
-- **No search or filter** inside the diff view, and no jump from a diff
-  row to the entity in the Project Explorer.
-- **Keyboard activation is verified structurally in Vitest.** happy-dom
-  does not synthesize a button's Enter/Space activation, so the tests
-  reproduce the browser's rule (an uncancelled Enter/Space keydown on a
-  focused `<button>` clicks it). No Playwright run covers the panel yet,
-  and no screen reader was used to check it.
+- **Search covers one table's own rows.** Nested tables (a changed
+  device's communication objects and parameters) are not searched from
+  the device table; they have their own filter once they exceed 20 rows.
+  There is no search across tables and no jump from a diff row to the
+  entity in the Project Explorer.
+- **Focus and Tab follow the rendered window.** A row that scrolls out of
+  the window unmounts, so focus inside it is lost; Tab walks only through
+  rendered rows, and the others are reached by scrolling the focused list
+  (arrows, Page Up/Down, Home/End). Escape clears a typed filter first and
+  closes the report only on an empty field.
+- **A nested table's filter text is per mount.** Expansion of nested
+  tables is remembered while their row scrolls out of the window (UI state
+  keyed by table id for the shown report); a typed nested filter is not.
+- **Keyboard activation of disclosures is verified structurally in
+  Vitest** (happy-dom does not synthesize a button's Enter/Space
+  activation, so the tests reproduce the browser's rule). The long-table
+  viewport's keyboard scrolling is verified in Chromium. No screen reader
+  was used to check the panel.
 - The panel never applies or merges a diff (§55) and has no three-way
   mode (§56). Raw `.knxproj` inputs are accepted since CT-6 (§57).
+
+**Alpha decision (user, 2026-10-04, AR11).** Paging is not accepted for
+the Alpha: the UI owner replaces it with virtualised tables plus search/
+filter inside the diff view before the Alpha. The backend diff API does
+not change for this. Delivered 2026-10-04 as described above.
 
 <a id="61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard"></a>
 
@@ -3931,6 +3967,9 @@ a `module_def_id` or equivalent scope marker, so the server could resolve
 a bare id's scope without first evaluating the tree it belongs to. Not
 scheduled.
 
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
+
 ## 71. A project imported before store schema 6 has no module-instance ids to write with
 
 **Limitation.** `migrate_v5_to_v6` (design D38) cannot invent a
@@ -4914,6 +4953,9 @@ it reproduces first-install's own answer only when no master blob in the
 database was ever installed by more than one package; the third install
 above was constructed specifically to violate that, to make the residual
 measurable rather than asserted.
+
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
 
 ## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file
 
@@ -6626,6 +6668,9 @@ bypasses, seal the agreed ID surface and add `check-project-mutation`, or
 after the user explicitly accepts the disclosed continued deferral. Neither
 decision is inferred here; until then this entry stays open.
 
+**Alpha decision (user, 2026-10-04).** Phases 3–5 stay deferred past the Alpha. Phases 1–2 and the AR02 exhaustion refusal are the Alpha boundary.
+
+
 ## §130 A gate binary can verify a directory that no longer exists
 
 **Status.** Resolved by AR01 (2026-10-01); historical heading/anchor retained.
@@ -6749,6 +6794,9 @@ vendor payloads, would trade integrity and safety for convenience.
 concrete feature (icon display, manual links) needs a payload and brings its
 own sandboxed viewer with tests.
 
+**Alpha decision (user, 2026-10-04).** Accepted as an Alpha boundary.
+
+
 ## §135 Package identity is recorded, not decided
 
 **Limitation.** Since PDB-11 (schema v17, ADR-0043) every element of the six
@@ -6800,6 +6848,10 @@ UI slice lets the user pick a winner per id.
 <a id="136-mask-0701h-bim-m112-devices-cannot-receive-an-application-download"></a>
 
 <a id="136-mask-0701h-bim-m112-devices-can-receive-an-application-download--lifted-the-restart-stays-unconfirmed"></a>
+
+**Alpha decision (user, 2026-10-04).** No version/pinning policy for the Alpha: first-installed winner with every candidate disclosed is the accepted boundary.
+
+
 ## §136 `0701h` download verified once; restart remains unconfirmed
 
 The earlier claim that mask `0701h` could not be downloaded is withdrawn.
@@ -7572,3 +7624,38 @@ accepted set (11, 12, 13, 14, 20, exact 21).
 - **Remaining boundary:** scheme10 stays refused until separately researched and
   tested. Exact23 now has bounded verified import/storage/report/replay support;
   unknown manufacturer semantics and full runtime compatibility remain unsupported.
+
+## 154. The telegram-flow view is checked and measured in Chromium only
+
+<a id="154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c"></a>
+
+<a id="154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"></a>
+
+**Status.** Introduced by U20 (2026-10-04); motion added by U21 parts A and B.
+The bus monitor's **Flow** view (`TelegramFlowView.tsx`, reducer
+`flowModel.ts`, animator `flowAnimator.ts`; rules in
+TELEGRAM_FLOW_VISUALIZATION §11 and §12) is fed by the monitor's own poll
+loop and the AR20 snapshot route. It is read-only.
+
+**What remains.**
+
+- **Configured, not received.** Lines to devices are project configuration.
+  Values at configured members are inferred from the group address, not read
+  back. This is the intended meaning and is stated in the view and the guide.
+- **One path per pair.** Several group addresses between the same two nodes
+  share one curved path; the label names two and counts the rest, and the
+  Inspector lists all.
+- **Load (measured, one machine).** On a Ryzen 7 5800X with headless
+  Chromium and the production build, motion keeps the main thread about 21 %
+  busy at 10 telegrams/s and about 69 % in a 200/s burst over 230 nodes;
+  Motion Off brings the burst to about 6 %. Values appear 10–20 ms after their
+  poll answer, up to about 150 ms in the burst with motion. Above 160
+  simultaneous pulses, telegrams are counted instead of drawn, and the view
+  says so. Slower hardware and the packaged WebKitGTK app were not measured
+  (docs/design/2026-10-04-telegram-flow-u21/).
+- **Evidence.** Unit tests (happy-dom, fake scheduler) and Chromium e2e with
+  intercepted synthetic traffic (`e2e/telegram-flow.e2e.ts`,
+  `e2e/telegram-flow-motion.e2e.ts`, frames and intervals counted in the
+  page). No real-bus evidence, no native WebKitGTK run, no screen-reader
+  check. Values and lines are hidden from assistive technology on purpose;
+  the Inspector is the accessible path, and it has not been tried with Orca.

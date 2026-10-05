@@ -6,6 +6,150 @@
 
 ---
 
+- **Last Agent:** Claude (alpha session, U21 corrections from the AR21 review)
+- **Timestamp:** 2026-10-05 06:05
+Web lock: taken by claude-alpha for U21 corrections (AR21 findings 1–3)
+- **Completed:** Lock taken only. The UI owner has been idle since 00:00 and the lock was free; the user asked the alpha session to keep going. Scope is exactly the three AR21 findings in TELEGRAM_FLOW_VISUALIZATION §13 (local reheat, hub separation, flaky `group-address-drag.e2e.ts`).
+- **Pending/Next Steps:** Fix with RED tests and mutants, measure at the §7 load, publish a receipt, change the U21 status line in `goal-ui.md`, release the lock. The cron watch `knxbench-ar21-watch` then reruns the AR21 review on its own.
+- **Notes for Codex oder Claude:** UI owner: if you come back while this is held, the lock line here decides; please do not edit `apps/knx-web` until it is released.
+
+---
+
+- **Last Agent:** Claude (alpha AR21, telegram-flow acceptance)
+- **Timestamp:** 2026-10-05 00:40
+Web lock: not taken or released by this entry (free; the UI owner takes it for the corrections)
+- **Completed:** **AR21 review of the U21 receipt: not accepted yet, returned to the UI owner.** Verified at `fb40a99a`: the productive path (one monitor poll loop feeds `flowFeed`, one snapshot per generation, the view and animator write nothing) and the §7 scenario tests. Gates rerun by the alpha session: fmt, clippy -D warnings and workspace tests without `knx-desktop` (3,184 / 0 / 177 in 172 blocks), web build, tsc, `check:flow-study`, Vitest 2,001/116, Chromium 130/131 (flow e2e 13/13, three times). Probe at the §7 starting load (500 devices, 998 edges, ~985 telegrams/s, production build): motion on main thread 0.98, 111 long tasks, frames p50 50 / p95 133 ms; motion off 0.136. AR21 items 1–2 [x]; ledger `FLOW-01` stays IN_PROGRESS (row text updated). Findings in TELEGRAM_FLOW_VISUALIZATION §13. Log: `.ai/logs/2026-10-05_claude_ar21-flow-acceptance.md`.
+- **Pending/Next Steps:** **UI owner (Web lock):** (1) IMPORTANT: §9.3 "reheat locally" — `reheat()` in `flowDynamics.ts` is map-wide and `flowAnimator.ts` reheats everything on growth/leader/activity class; implement local reheat with RED test, mutant and a production measurement at the §7 load, **or** record the deviation and the measured motion-on envelope in §12, KNOWN_LIMITATIONS §154 and the user guide. (2) MINOR: badge-height-aware separation for hubs (`REPULSION_RADIUS = 60`), or record the deviation with a screenshot. (3) MINOR: `e2e/group-address-drag.e2e.ts` is flaky (lines 60 and 69; suspect the `summaries.all()` click loop in `serve()`). Publish a new receipt and **change the U21 status line in `goal-ui.md`** (e.g. "Reopened by AR21 review …", then "Done (date) … corrections `<sha>`"): the cron watch `knxbench-ar21-watch` fires only on a change of that line, of the U21 box count or of the `FLOW-01` status, and then reruns AR21.
+- **Notes for Codex oder Claude:** No Web file touched; the probe was a temporary copy of `flow-load.load.ts`, deleted. Mutants of U20/U21 were not rerun. The §7 2,500-edge figure was not reached by the probe (member formula repeats). No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 00:00
+Web lock: released by claude-goal-ui-owner (U21 delivered: parts A+B `9d432d17` + `deb6813a`, part C here)
+- **Completed:** **U21 done: the flow view moves, stops when asked, and is measured.** Part C: activity classes (distances now really follow activity, a defect found by a test), 30 fps drawing cap, diff-only sending ring, and a production load study (`e2e/flow-load.load.ts`, `playwright.load.config.ts`, `vite.study.config.ts`; Ryzen 7 5800X, headless Chromium 152): main thread 0.21 at 10/s with motion, 0.69 in a 200/s burst over 230 nodes, 0.06 with motion off; values 10–20 ms after their poll (≤150 ms in the burst with motion); heap plateaus. Figures and method in docs/design/2026-10-04-telegram-flow-u21/ (60 fps baseline kept). The measurement exposed a vacuous e2e (init-script Motion attribute lost on parse), now a real test that fails with 61 frames under a motion-always-on mutant. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 521 ok; anchors 453 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 2,001/116 files, complete Chromium suite 131/131, whitespace including new files; source frozen. goal-ui U21 [x]; KNOWN_LIMITATIONS §154, TELEGRAM_FLOW_VISUALIZATION §12, user guide updated. Log: `.ai/logs/2026-10-04_claude_ui-u21-part-c-measured.md`.
+- **Pending/Next Steps:** **AR21 (alpha owner): the U21 receipt.** U19 `51a6004e`, U20 `4525c36e` + `dc298b78`, U21 `9d432d17` + `deb6813a` + this commit. Evidence: e2e `telegram-flow.e2e.ts` (7), `telegram-flow-motion.e2e.ts` (6), load study, mutants per the logs. Boundaries: Chromium only, one machine measured, no real bus, no WebKitGTK/Orca, one path per pair. AR21 adopts this; nothing here self-certifies the Alpha. The `FLOW-01` ledger row is yours.
+- **Notes for Codex oder Claude:** goal-ui U0–U21 all [x]. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 23:23
+Web lock: still held by claude-goal-ui-owner (U21 parts A and B delivered here; part C, the measurements, follows under the same lock and is not released by this entry)
+- **Completed:** **U21 parts A+B: the flow view moves, and stops when asked.** Reducer: 60 s sender window and leader (fan-out counts once), edge activity, bounded ring of fresh events. `flowDynamics.ts` (U19 layout, centred, hex seeds), `flowAnimator.ts` (injected scheduler; frames only while needed; nudge only on real change; bundling above 24 events with count; above 160 pulses counted, not drawn), `flowMotion.ts` (Motion setting + OS reduce, also mid-run). View: Freeze (geometry only; disabled with motion off), leader label, reduced-rendering note, sending ring, fade (10 s → 60 s → 0.35), 1 Hz refresh (skipped while hidden). Chromium `e2e/telegram-flow-motion.e2e.ts`: Motion Off/OS reduce mid-flight → 0 frames/s under live traffic; Freeze holds positions while a new sender appears; leaving the tab clears both animator timers; motion off keeps markers and expiry. Mutants: reducer 8/8, animator 12/12, view 6/6, browser wiring 5/5; U20 view fails 4/5. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 518 ok; anchors 453 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,999/116 files, complete Chromium suite 130/130, whitespace; source frozen. Rules: TELEGRAM_FLOW_VISUALIZATION §12. Log: `.ai/logs/2026-10-04_claude_ui-u21-parts-ab-motion.md`.
+- **Pending/Next Steps:** U21 part C: dense-burst and long-session CPU/memory/frame/lag figures (`e2e/flow-load.study.ts`), docs, closing review, then release the lock and hand over to AR21.
+- **Notes for Codex oder Claude:** No KNX/bus contact. §154 still says no load claim until part C.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:56
+Web lock: taken by claude-goal-ui-owner for U21 (telegram flow: dynamic layout, pulses, fade, Freeze, load measurement)
+- **Completed:** Lock taken only. U20 is published (`dc298b78`).
+- **Pending/Next Steps:** U21 per `goal-ui.md` §3c: event-triggered pulses, activity-dependent bounded layout with the observed-sender leader, Freeze for geometry only, quiet-edge fade, coalescing under load, motion Off and OS reduce stopping the solver, timers and frames, and real burst and long-session measurements. Release the lock in the delivering entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:55
+Web lock: released by claude-goal-ui-owner (U20 delivered: part 1 `4525c36e`, part 2 here)
+- **Completed:** **U20 done: the bus monitor gets a Flow view.** Telegrams | Flow tabs. `TelegramFlowView.tsx` is fed by the monitor's own poll loop via `flowFeed.ts` (one model per session, one snapshot fetch per generation, one expiry timer); it opens, polls and writes nothing. Senders, configured members (solid = configured, not received), unresolved GAs (box, dashed), static hex layout, up to 3 values per node (◇ = inferred member value, 7 s from observation), HTML Inspector with values, connections and per-object flags of the row's own generation, keyboard (roving tab stop, Enter, Shift+arrows, +/−, 0), theme variables only, nothing announced per telegram, en/de, user guide "The flow view", KNOWN_LIMITATIONS §154. Evidence: Chromium `e2e/telegram-flow.e2e.ts` 7 cases (real panel, intercepted synthetic traffic, `page.clock`, live theme switch), 6/6 red on the old panel; mutants reducer 23/23, view 11/11 (incl. stub), panel 7/7, feed 1/1; screenshots in docs/design/2026-10-04-telegram-flow-u20/ inspected. Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 510 ok; anchors 453 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,963/113 files, complete Chromium suite 125/125, whitespace; source frozen. goal-ui U20 [x] (Freeze moves to U21: static layout). Log: `.ai/logs/2026-10-04_claude_ui-u20-part2-view.md`.
+- **Pending/Next Steps:** U21 (dynamic layout, pulses, fade, Freeze, load measurement) under a new Web lock entry. Then AR21 (alpha).
+- **Notes for Codex oder Claude:** Alpha owner (`FLOW-01` row): U20 is delivered; the row text is yours to update. Known: every batch/expiry re-renders the whole panel (measure in U21). No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:21
+Web lock: still held by claude-goal-ui-owner (U20 part 1 delivered here; part 2 follows under the same lock, not released by this entry)
+- **Completed:** **U20 part 1: telegram-flow wire validation and reducer** (pure, not rendered yet). `flowWire.ts` validates the AR20 snapshot and row fields: widths, canonical generation, all six flags; refusal instead of coercion. `flowModel.ts` is the session-keyed reducer: seq dedupe and ordering, a bounded queue per unknown generation, each row resolved only against its own generation, exact/ambiguous/unresolved/raw sources, configured targets = active members (Send+Receive) minus the source holders, value slots 7 s from observation time (Write/Response with a decoded value only), at most 3 badges, limits with counters. `api.ts`: additive row/poll fields and `fetchFlowSnapshot`. Rules in TELEGRAM_FLOW_VISUALIZATION §11. RED first (24+26+1); 23/23 mutants caught; the review found stale node evidence across generations (fixed RED-first). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 502 ok; anchors 452 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,936/110 files, complete Chromium suite 118/118, whitespace; source frozen. Log: `.ai/logs/2026-10-04_claude_ui-u20-part1-reducer.md`.
+- **Pending/Next Steps:** U20 part 2: feed the model from the existing BusMonitorPanel poll loop (no second loop), one snapshot fetch per generation, table/flow view switch, SVG view with stable placement, Inspector with per-object evidence, keyboard/pan/zoom, en/de, e2e with intercepted traffic. Freeze comes with U21's dynamic layout.
+- **Notes for Codex oder Claude:** For the alpha owner: the `FLOW-01` ledger row can mention U20 part 1; I did not change it (row owner alpha). No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:02
+Web lock: taken by claude-goal-ui-owner for U20 (telegram-flow view: shared monitor feed, graph, immediate values)
+- **Completed:** Lock taken only. AR20 is integrated (`85bfab88`, TELEGRAM_FLOW_VISUALIZATION §10).
+- **Pending/Next Steps:** U20 per `goal-ui.md` §3c: a read-only flow view on the existing monitor session (no second poll loop or tunnel), a pure bounded reducer keyed by session and generation, value slots with a 7 s expiry, keyboard and Inspector access. Intercepted synthetic traffic only. Release the lock in the delivering entry; a multi-part delivery says "still held".
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 22:01
+Web lock: released by claude-goal-ui-owner (AR08 dialog `9bc36499` and KL-60 diff virtualisation delivered)
+- **Completed:** **KL-60 (AR11 user decision): the diff view's long tables filter and scroll instead of paging.** Tables over 20 entries get a search field (key/name), status toggles (`aria-pressed`), a live `role="status"` count and a windowed scroll viewport (`virtualWindow.ts`, measured row heights, `ResizeObserver`); rows above the view that grow shift `scrollTop`, a list at its end stays there, End/Home jump instantly, nested tables stay open while their row is windowed out, Escape clears a typed filter before closing the report. "Show more"/`DIFF_PAGE_SIZE` removed; backend diff API unchanged. Evidence: RED-first Vitest (window 7, filter 3, panel 6, memory 2); Chromium `e2e/diff-virtual.e2e.ts` on a synthetic 3,300-entry table (DOM < 120 rows, all positions reached, End/Home, anchor stability, filters) fails 4/4 on the old list; 14 mutants caught. Full gate attempt 3 on the tree rebased over AR20 (`85bfab88`) and `1a8acffa`: web build, fmt, clippy -D warnings, workspace tests 3,196 passed / 0 failed / 177 ignored in 175 blocks with 0 skip markers, five repository gates (headers 497 ok; anchors 452 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,885/108 files, complete Chromium suite 118/118, whitespace; source frozen. Attempts 1 and 2 were aborted by the owner (review fix; upstream rebase), logs kept. Ledger `KL-60` DONE; goal-ui §3b rows UA7/UA8; KNOWN_LIMITATIONS §60, manual pages and IMPLEMENTATION_STATUS updated. Log: `.ai/logs/2026-10-04_claude_ui-kl60-diff-virtualisation.md`.
+- **Pending/Next Steps:** U20 is unblocked by AR20 (`85bfab88`, contract in TELEGRAM_FLOW_VISUALIZATION §10). The goal-ui owner takes the Web lock again for U20 with its own commit.
+- **Notes for Codex oder Claude:** §60 residue: no cross-table search, no jump to the Explorer, focus inside a row is lost when it unmounts (Tab walks rendered rows only), no screen-reader check. No KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (alpha, ledger)
+- **Timestamp:** 2026-10-04 21:36
+Web lock: not taken or released by this entry
+- **Completed:** `KL-13` → `ACCEPTED_BOUNDARY` after the UI owner's AR08 dialog (`9bc36499`): ZipCrypto import is verified end to end on the synthetic fixture; real ETS4/ETS5 sample and AES stay the documented boundary.
+- **Pending/Next Steps:** U20 (UI) consumes AR20 (§10 of TELEGRAM_FLOW_VISUALIZATION); KL-60 with the UI owner; AR07 → AR09/AR10 and AR06 row assignment with Codex.
+- **Notes for Codex oder Claude:** Ledger only.
+
+---
+
+- **Last Agent:** Claude (alpha AR20, telegram-flow contract)
+- **Timestamp:** 2026-10-04 21:35
+Web lock: not taken or released by this entry (held by claude-goal-ui-owner for the AR08 dialog / KL-60)
+- **Completed:** **AR20 delivered.** Exact contract in `docs/TELEGRAM_FLOW_VISUALIZATION.md` §10. Rows of `GET /api/bus/monitor/telegrams`: `sourceRaw`, `destinationRaw` (integers, `null` only on the SessionClosed marker), `observedAgeMs` (server-monotonic, measured per response), `flowGeneration` (decimal string); poll response `flowGeneration`. New read-only `GET /api/bus/monitor/flow-snapshot?sessionId=&generation=` → `serverIncarnation`, `sessionId`, `generation`, `status` current/historical/unavailable, `groupAddressStyle`, `devices[]`, `groups[]` with `members[]` (`direction`, `active`, `flags` with six nullable flags), `diagnostics`, `truncated`. Context comparison now covers devices/links/flags/activation (such edits → `contextStatus: "stale"`); generation advances on a different republished context (style/undo/redo). Counters capped at 2^53−1. Tests: `apps/knx-server/tests/http_bus_flow.rs` (9), `flow::tests` (7), 2 `bus::tests`; 9 guard mutants killed; knx-server 626/0/44. Ledger `FLOW-01` → `IN_PROGRESS`. Log `.ai/logs/2026-10-04_claude_ar20-flow-contract.md`.
+- **Pending/Next Steps:** **UI owner: U20 is unblocked.** Consume §10 under your Web lock (add the types to `api.ts`; refuse unsafe numbers; fetch the snapshot only for an unknown generation; show rows of another generation raw/historical). Note for the existing monitor: `contextStatus` now turns `stale` on link/flag/activation/device edits too — intended. Then U21, then AR21 (alpha).
+- **Notes for Codex oder Claude:** No Web file touched. Deviations from the §9.2 proposal are listed in §10 and the log (per-flag nulls, boolean `active`, empty lists when historical).
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 21:33
+Web lock: still held by claude-goal-ui-owner (AR08 dialog delivered here; KL-60 follows under the same lock)
+- **Completed:** **AR08 Web half: project-password dialog.** On `422` `projectPasswordRequired` the import opens a dialog naming the file (masked field, `autocomplete=off`, a note that it is not stored), then retries the same import with `password` in that one request; on `projectPasswordWrong` it asks again. Cancel ends quietly (no project, toast or banner); opening a `.knxdb` never asks. 13 RED-first Vitest cases; `e2e/project-password.e2e.ts` in the real app with an intercepted API checks every browser request (the password only in import bodies, in no web storage) and fails on the previous app; 7 mutants caught (one survivor led to a stronger no-error assertion). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,178 passed / 0 failed / 177 ignored in 174 blocks with 0 skip markers, five repository gates (headers 490 ok; anchors 450 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,869/106 files, complete Chromium suite 114/114, whitespace; source frozen. KNOWN_LIMITATIONS §13 impact and IMPLEMENTATION_STATUS updated. Log: `.ai/logs/2026-10-04_claude_ui-ar08-password-dialog.md`.
+- **Pending/Next Steps:** KL-60 (diff virtualisation and search/filter), then release the Web lock.
+- **Notes for Codex oder Claude:** Ledger update for the alpha owner (row owner of `KL-13`): the "Remaining: Web password dialog" part is delivered; what remains is the real ETS4/ETS5 sample and AES (sample-gated). No backend change, no KNX or bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 21:17
+Web lock: taken by claude-goal-ui-owner for the AR08 project-password dialog, then KL-60 (diff virtualisation and search)
+- **Completed:** Lock taken only. Both items were handed over by the alpha session (entries 20:58 and 21:02).
+- **Pending/Next Steps:** AR08 dialog: `POST /api/project/import` with optional `password`; on `422` `kind: projectPasswordRequired` or `projectPasswordWrong` ask (again); the password goes only into that request and is never stored or logged. Then KL-60: virtualise `ProjectDiffDetails.tsx` and add search/filter (backend unchanged), and add KL-60 to `goal-ui.md`. Release the lock in the last delivery entry.
+- **Notes for Codex oder Claude:** Do not edit `apps/knx-web` until this lock is released.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-04 21:15
+Web lock: released by claude-goal-ui-owner (U19 telegram-flow study delivered)
+- **Completed:** **U19 done.** A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`, test-only) pins the flow semantics: per-slot values with a 7 s lifetime, reads never set or renew a value, a sequence high-water mark, at most 3 stacked badges, a sender-only 60 s leader with tie rule, capacity refusal with counts, and pulse bundling, plus a bounded cooling layout. 23 Vitest, 4 Chromium (map without API calls, keyboard Inspector, freeze, motion off) and 11 caught guard mutants. Measured on Chromium 152 under load from other sessions: small and mid maps at 60 fps; the target load (500 / 2,500 / 1,000 per s) at 16.7 ms per frame with resting geometry including pulses and values, but 67–100 ms when every edge moves. Canvas 2D was evaluated and rejected (never faster, 5× slower at rest), so the decision is native SVG without a dependency (ADR-0077 addendum). Full gate (first attempt): web build, fmt, clippy -D warnings, workspace tests 3,178 passed / 0 failed / 177 ignored in 174 blocks with 0 skip markers, five repository gates (headers 485 ok; anchors 450 ok; ledger 186 rows), tsc, `check:flow-study`, Vitest 1,858/104 files, complete Chromium suite 112/112, whitespace; source frozen. Docs: TELEGRAM_FLOW_VISUALIZATION §9, `docs/design/2026-10-04-telegram-flow-u19/`, goal-ui U19 ticked, IMPLEMENTATION_STATUS. Log: `.ai/logs/2026-10-04_claude_ui-u19-flow-study.md`.
+- **Pending/Next Steps:** **Alpha session: AR20 is now unblocked.** The exact proposed contract is in TELEGRAM_FLOW_VISUALIZATION **§9.2**. Per row: `sourceRaw`, `destinationRaw`, server-monotonic `observedAgeMs` (null = unknown), and `flowGeneration`. Per response: `flowGeneration`. New route `GET /api/bus/monitor/flow-snapshot` with devices, group members (Send and Receive, flags or null, active), diagnostics and truncation. The generation must also cover links, flags, activation and device identity (today's comparison at `bus.rs:1359` covers style, DPT and name only). u64 counters must stay ≤ 2^53−1 or become strings. Name the final wire fields and tests in the AR20 receipt; U20 consumes them under the Web lock. Binding requirements for U21 are in §9.3: local reheat, pulse bundling over a pulse's lifetime, a readable activity hub, and a contrast check.
+- **Notes for Codex oder Claude:** Ledger updates for the alpha owner (row owner): `FLOW-01` evidence can add "U19 delivered 2026-10-04: study, measurements and AR20 handoff in TELEGRAM_FLOW_VISUALIZATION §9"; the status stays `TODO`/`IN_PROGRESS` at your discretion until AR21. No backend change, no KNX or bus contact; measurements are synthetic and Chromium-only.
+
+---
+
+- **Last Agent:** Claude (alpha, user decisions)
+- **Timestamp:** 2026-10-04 21:08
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** Five reserved decisions answered by the user and recorded (ledger, KNOWN_LIMITATIONS notes, AR03/AR12 state lines): `KL-129`/AR03 phases 3–5 deferred past the Alpha; `KL-135`/AR12 no pinning policy, first-winner stays; `KL-70`, `KL-88`, `KL-134` accepted as Alpha boundaries. All five → `ACCEPTED_BOUNDARY`. `WAITING_DECISION` is now only `RELEASE-04` (AR19).
+- **Pending/Next Steps:** AR03 and AR12 need no implementation for the Alpha. Remaining alpha work: AR07 (Codex) → AR09/AR10; AR06 row assignment; AR20 after U19; UI items (AR08 dialog, KL-60 diff virtualisation/search, U19–U21); then AR15–AR19.
+- **Notes for Codex oder Claude:** Docs/ledger only, no code.
+
+---
+
+- **Last Agent:** Claude (alpha AR11, CSV/report decisions)
+- **Timestamp:** 2026-10-04 21:02
+Web lock: held by claude-goal-ui-owner for U19; not taken or released by this entry
+- **Completed:** **AR11 closed on the alpha side.** User decisions 2026-10-04: `KL-40` accepted as is for the Alpha (no Description/Comment columns, no schema change); `KL-60` → **UI owner**: virtualised diff tables plus search/filter before the Alpha. `KL-38`, `KL-44`, `KL-47`, `KL-51` verified (no ETS-parity claims, AllocatorRef/raw module values warned, tests green) and set `ACCEPTED_BOUNDARY`. Ledger recounted; evidence `docs/ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04`.
+- **Pending/Next Steps:** **UI owner:** new Alpha-scope item `KL-60` (row owner `ui`, `TODO`): replace 50-row paging in `ProjectDiffDetails.tsx` with virtualisation and add search/filter; backend `/api/project/diff` stays as is. Please add it to `goal-ui.md` in your next slot. Also still open for you: AR08 password dialog (entry above). Claude next: AR20 when U19 lands; meanwhile remaining alpha packages.
+- **Notes for Codex oder Claude:** No code changed. AR09/AR10 still depend on AR07 (Codex).
+
+---
+
 - **Last Agent:** codex (alpha / AR06V)
 - **Timestamp:** 2026-10-04 20:51 CEST
 - **Completed:** Existing4096/4097 count slice published on main5adccdb0, exact remote ref+806 source hashes/test bytes read back. Source65d7cf5c; runtime6c3080d9 public16 all0, Rust3157/0/177/170, Web1835, Chromium108 plus separate probe1. Native2/controls2 accepted; every failed attempt remains distinct. Documentation-only owner updates adopted intact and final docs6 accepted. Permanent byte/hash-verified evidence at /home/knxbench/.hermes/profiles/knxbench/evidence/alpha-release/ar06v-zip-count-20261004.51 own scratch top-level artifacts retired; short owned av6 removed after verifying no workers/browser users. No foreign root/corpus/Web locks changed.

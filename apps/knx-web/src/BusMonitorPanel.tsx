@@ -6,6 +6,8 @@ import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
 import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
+import { useFlowFeed } from "./flowFeed";
+import TelegramFlowView from "./TelegramFlowView";
 import {
   type ContextLock,
   forgetSessionContext,
@@ -197,6 +199,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const [stopSummary, setStopSummary] = useState<BusMonitorStopResponse | null>(null);
 
   const [capture, setCapture] = useState<{ rows: BusTelegramRow[]; pruned: number }>({ rows: [], pruned: 0 });
+  // U20: the flow view reads the same admitted batches as the table; this
+  // feed never polls. It keeps running while the table tab is shown, so
+  // switching views loses nothing.
+  const flowFeed = useFlowFeed((sessionId, generation) => api.fetchFlowSnapshot(sessionId, generation));
+  const [monitorView, setMonitorView] = useState<"table" | "flow">("table");
   const rows = capture.rows;
   const statistics = useMemo(() => calculateBusMonitorStatistics(rows), [rows]);
   const [paused, setPaused] = useState(false);
@@ -326,6 +333,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       sinceRef.current = response.nextSince;
       const adopted = appendCapturedRows([], response.telegrams);
       setCapture({ rows: adopted.rows, pruned: adopted.pruned });
+      flowFeed.admit({ sessionId: response.sessionId, serverIncarnation: response.serverIncarnation }, response.telegrams);
       setDroppedBefore(response.droppedBefore);
       setStatus(response.status);
       setEndedElsewhere(false);
@@ -450,6 +458,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         ) {
           sinceRef.current = 0;
           setCapture({ rows: [], pruned: 0 });
+          flowFeed.reset();
           setSelectedSequence(null);
           setNewRowThreshold(null);
           setDroppedBefore(0);
@@ -474,6 +483,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
             const appended = appendCapturedRows(previous.rows, response.telegrams);
             return { rows: appended.rows, pruned: previous.pruned + appended.pruned };
           });
+          flowFeed.admit(attached, response.telegrams);
         }
         // This tick's own batch only — never a running minimum kept across
         // ticks, or the marker would accumulate exactly the way it must not.
@@ -526,6 +536,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       const started = await api.startBusMonitor(validation.endpoint);
       sinceRef.current = 0;
       setCapture({ rows: [], pruned: 0 });
+      flowFeed.reset();
       setPaused(false);
       setSelectedSequence(null);
       setNewRowThreshold(null);
@@ -924,6 +935,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       )}
       {(session || rows.length > 0) && (
         <div className="bus-monitor-filters">
+          {monitorView === "table" && <>
           <input
             type="text"
             aria-label={t("busMonitor.filterLabel")}
@@ -941,6 +953,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               {service}
             </label>
           ))}
+          </>}
           {session && (
             <button type="button" className="bus-monitor-pause" onClick={() => setPaused((value) => !value)}>
               {t(paused ? "busMonitor.resume" : "busMonitor.pause")}
@@ -957,6 +970,37 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       {!session && rows.length > 0 && <p className="bus-monitor-retained" role="status">{t("busMonitor.retainedCapture")}</p>}
       {rows.length > 0 && <p className="bus-monitor-export-note">{t("busMonitor.exportNote")}</p>}
       {session && paused && <p className="bus-monitor-paused" role="status">{t("busMonitor.pausedNotice")}</p>}
+      {(session || rows.length > 0) && (
+        <div className="bus-monitor-views" role="tablist" aria-label={t("busMonitor.view.label")}>
+          {(["table", "flow"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              role="tab"
+              id={`monitorview-tab-${view}`}
+              aria-selected={monitorView === view}
+              aria-controls={monitorView === view ? `monitorview-panel-${view}` : undefined}
+              tabIndex={monitorView === view ? 0 : -1}
+              onClick={() => setMonitorView(view)}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                event.preventDefault();
+                const next = view === "table" ? "flow" : "table";
+                setMonitorView(next);
+                document.getElementById(`monitorview-tab-${next}`)?.focus();
+              }}
+            >
+              {t(view === "table" ? "busMonitor.view.table" : "busMonitor.view.flow")}
+            </button>
+          ))}
+        </div>
+      )}
+      {(session || rows.length > 0) && monitorView === "flow" && (
+        <div id="monitorview-panel-flow" role="tabpanel" aria-labelledby="monitorview-tab-flow">
+          <TelegramFlowView feed={flowFeed} />
+        </div>
+      )}
+      {monitorView === "table" && <div id="monitorview-panel-table" role="tabpanel" aria-labelledby="monitorview-tab-table">
       {rows.length > 0 && (
         <details className="bus-monitor-statistics">
           <summary>{t("busMonitor.stats.title")}</summary>
@@ -1073,6 +1117,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           </aside>
           </div>
         ))}
+      </div>}
     </div>
   );
 }

@@ -187,8 +187,11 @@ Open it with a click, Enter or Space to list every entity in it: its status in w
 (*added*, *removed*, *changed*, *ambiguous*), its key (a device's address, a group
 address, a building path…) and its name. A changed entity shows how it was matched
 and a *Field / Before / After* table; a changed device lists its changed
-communication objects and parameters underneath. Long tables show 50 entries at a
-time; **Show more** reveals the next 50.
+communication objects and parameters underneath. A table with more than 20 entries
+gets a search field (key or name), buttons to show only *added*, *removed*,
+*changed* or *ambiguous* entries, and a count such as *11 of 3300 entries shown*. Its
+entries scroll inside the table; Page Up/Down, Home and End work once the list
+has focus.
 
 Comparing does not change either project. The file you pick is read, compared and
 released; it never becomes the open project.

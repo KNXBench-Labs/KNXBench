@@ -205,6 +205,8 @@ and the mutation gate remain unimplemented. Activation question unanswered;
 `KL-129`/AR03 stay `WAITING_DECISION`, with no runtime test or acceptance claim
 from this docs-only audit. Continue independent AR04.
 
+**State 2026-10-04:** user decision: phases 3–5 deferred past the Alpha; phases 1–2 plus AR02 are the boundary. Ledger row `KL-129`.
+
 ### AR04 — Make storage guarantees match actual command coverage
 
 **Sources:** `DATA-02`, `KL-42`. **Dependencies:** AR02; coordinate any AR03 surface changes.
@@ -702,12 +704,14 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 **Sources:** `KL-38`, `KL-40`, `KL-44`, `KL-47`, `KL-51`, `KL-60`.
 **Dependencies:** AR06; AR07 for supported parameter output.
 
-- [ ] Reproduce current behavior and provide a bounded decision for the unaccepted §40 and §60 residues. Recommended default: derived counts stay read-only; add source-backed Description/Comment roundtrip only under an approved schema/CSV contract; retain explicit paging unless the UI owner adopts a measured alternative.
-- [ ] Obtain the reserved scope decision before calling either residue accepted or implementing a behavior change. Continue other packages while awaiting it.
-- [ ] Implement and test only the approved backend slice: malformed/duplicate CSV, address conflicts, atomic preview/apply, undo/redo, native roundtrip and no hidden lossy columns.
-- [ ] Keep raw module/AllocatorRef output explicitly warned where semantics are unknown. Document HTML/diff/custom-CSV scope without claiming ETS, ESF/OPC or layout parity.
+- [x] Reproduce current behavior and provide a bounded decision for the unaccepted §40 and §60 residues. Recommended default: derived counts stay read-only; add source-backed Description/Comment roundtrip only under an approved schema/CSV contract; retain explicit paging unless the UI owner adopts a measured alternative.
+- [x] Obtain the reserved scope decision before calling either residue accepted or implementing a behavior change. Continue other packages while awaiting it.
+- [x] Implement and test only the approved backend slice: malformed/duplicate CSV, address conflicts, atomic preview/apply, undo/redo, native roundtrip and no hidden lossy columns.
+- [x] Keep raw module/AllocatorRef output explicitly warned where semantics are unknown. Document HTML/diff/custom-CSV scope without claiming ETS, ESF/OPC or layout parity.
 
 **Exit evidence:** recorded decisions, approved slice tests and a UI handoff for any new display. DIN-26 CSV ranges, native PDF, prose catalog and diff application/correlation exclusions stay accepted, not reopened.
+
+**State 2026-10-04:** user decisions recorded: §40 accepted as is for the Alpha (no schema change), §60 handed to the UI owner (virtualisation plus search/filter before the Alpha). §38/§44/§47/§51 verified and accepted; no backend slice was approved, so none was built. Evidence: [ALPHA_READINESS](docs/ALPHA_READINESS.md#ar11-csvreport-decisions-2026-10-04); status in the ledger rows.
 
 ### AR12 — Resolve package-version policy before implementing selection
 
@@ -719,6 +723,8 @@ Existing broader AR07 checkboxes/matrix and whole Alpha remain open.
 - [ ] Hand user selection UI to its owner. A backend selector without its agreed consumer remains partial, not a delivered whole feature.
 
 **Exit evidence:** explicit policy and tests/owner receipt where activated. No speculative online catalog or firmware/device update.
+
+**State 2026-10-04:** user decision: continued deferral. First-installed winner with disclosed candidates is the Alpha boundary; nothing implemented. Ledger row `KL-135`.
 
 ### AR13 — Verify privacy and the actual deployment-security boundary
 
@@ -843,35 +849,35 @@ boundaries. No bus run.
 
 ### AR20 — Publish the read-only, session-bound telegram-flow contract
 
-**Open; implementation authorized by user decision 2026-10-04.** Source: new
+**Backend delivered 2026-10-04 (Claude); vertical feature open until U20/U21/AR21.** Source: new
 approved Alpha feature, [flow research](docs/TELEGRAM_FLOW_VISUALIZATION.md),
 [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
 **Dependencies:** U19's exact contract handoff and current monitor/project
 contracts. Ready independently of unrelated import/commissioning packages;
 required before U20 and final AR15–AR18 acceptance. No Web implementation here.
 
-- [ ] Trace current capture/rows/context/projection and all consumers against
+- [x] Trace current capture/rows/context/projection and all consumers against
   directly read KNX clauses; reuse application/service resolution and existing
   associations. Distinguish observed source from configured participant, flag
   handling and unresolved/ambiguous mappings; Send is not a receiver exclusion.
-- [ ] Implement the smallest pure read-only participant snapshot and service
+- [x] Implement the smallest pure read-only participant snapshot and service
   adapter: typed raw destination/source identity, per-object membership/evidence,
   existing decoded/raw states and reliable event age. Keep domain/core independent
   of UI and format; no new core graph, coordinates, project/product migration.
-- [ ] Bind evidence to server incarnation, monitor session and full flow context.
+- [x] Bind evidence to server incarnation, monitor session and full flow context.
   Extend exact comparison to relevant device/link/flag/activation facts;
   preserve atomic snapshots, cursor/drops/restarts and old-consumer compatibility.
   Do not remap retained events against an edited project or round unsafe counters.
-- [ ] Specify bounded response/model/age admission and visible unavailable,
+- [x] Specify bounded response/model/age admission and visible unavailable,
   historical, stale and overflow states. Capture repeats with distinct sequences
   are observed frames; duplicate poll delivery is not another event. No new
   tunnel, active probe, persistence, decryption, write API or UI-only inference.
-- [ ] Add RED/GREEN semantic/service regressions for Write/Read/Response,
+- [x] Add RED/GREEN semantic/service regressions for Write/Read/Response,
   no/multiple recipients, Send-associated receiving candidates, unknown flags,
   inactive/dangling objects, duplicate addresses/IDs, multiple installations,
   DPT conflict/error, individual/opaque services, link-only edits, delayed rows,
   session/server restart, invalid counters, bounded refusal and capture gaps.
-- [ ] Run actual owning-crate/integration/full gates and restored guard mutations;
+- [x] Run actual owning-crate/integration/full gates and restored guard mutations;
   document exact final wire fields/routes, revision and named tests in the U20
   handover. Coordinate bindings with the UI owner/Web lock; no alpha edits under
   the Web tree by stealth. A data-only receipt does not close the vertical feature.
@@ -879,16 +885,25 @@ required before U20 and final AR15–AR18 acceptance. No Web implementation here
 **Exit evidence:** integrated, version-compatible, read-only semantic contract
 and named regressions, consumed next by U20. No hardware or recipient-state proof.
 
+**State 2026-10-04:** contract, wire names and named tests in [TELEGRAM_FLOW_VISUALIZATION §10](docs/TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04); handed to U20 in the handover. Status: ledger row `FLOW-01`.
+
 ### AR21 — Accept the integrated telegram-flow Alpha feature
 
-**Open.** Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
+**Review 2026-10-05: returned to the UI owner with findings.** Receipt
+`9d432d17` + `deb6813a` + `fb40a99a` verified and gates rerun; two §9.3 binding
+requirements are neither met nor recorded as deviations, and the §7 starting
+load saturates the main thread with motion on
+([§13](docs/TELEGRAM_FLOW_VISUALIZATION.md#13-ar21-acceptance-review-alpha-2026-10-05)).
+`FLOW-01` stays `IN_PROGRESS`.
+
+Dependencies: integrated AR20 and U21's exact owner receipt, with U19/U20
 covered. Required before the finished AR15–AR18 acceptance and AR19 decision.
 The alpha session does not reimplement the UI or take its lock for bookkeeping.
 
-- [ ] Consume and verify both owners' exact integrated revisions/contracts/tests;
+- [x] Consume and verify both owners' exact integrated revisions/contracts/tests;
   confirm productive use of the existing monitor feed, not an isolated study or
   second connection. Check snapshot/sequence/age/flag semantics across layers.
-- [ ] Exercise the contract's synthetic end-to-end cases: immediate same-slot
+- [x] Exercise the contract's synthetic end-to-end cases: immediate same-slot
   values/7-second expiry, three badges plus Inspector, current-source leader,
   layout-only freeze, bidirectional/group-labelled pulses, persistent quiet
   edges, high-load coalescing versus actual loss, stale/restart and no-project

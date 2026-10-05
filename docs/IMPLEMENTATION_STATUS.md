@@ -14,6 +14,191 @@
   includes native4/count2, not additive. Final integration/publication pending;
   scope in PRODUCT_ZIP_DECLARED_SIZE_CONTRACTS.md.
 
+## 2026-10-05 — AR21 review: the flow view goes back for one more lap
+
+- The alpha session reviewed the integrated telegram-flow receipt (U19, AR20,
+  U20, U21 up to `fb40a99a`) and reran the gates itself: fmt, clippy
+  `-D warnings` and workspace tests without `knx-desktop` (3,184 / 0 / 177),
+  web build, tsc, `check:flow-study`, Vitest 2,001, Chromium 130 / 131.
+  The productive path (one monitor poll loop, one snapshot per generation,
+  no writes) and the §7 scenario tests hold.
+- Not accepted yet. Two §9.3 binding requirements for U21 (local reheat,
+  badge-height separation) are neither met nor recorded as deviations, and a
+  probe at the §7 starting load (500 devices, ~1,000 edges, ~985 telegrams/s)
+  keeps the main thread 98 % busy with motion on (13.6 % with motion off).
+  `group-address-drag.e2e.ts` is flaky. Details:
+  TELEGRAM_FLOW_VISUALIZATION §13. `FLOW-01` stays `IN_PROGRESS`.
+
+## 2026-10-04 — U21 part C: measured, then made lighter
+
+- Production load study (`e2e/flow-load.load.ts`, `playwright.load.config.ts`,
+  `vite.study.config.ts`): dense burst of 200 telegrams/s over 230 nodes with
+  motion on and off, and a 3-minute session at 10/s. It records main-thread
+  share, frames, long tasks, marker lag and heap after GC. The data path is
+  cheap (6 % with motion off); motion is the cost, and the profile showed it to
+  be mostly native SVG painting. Drawing is now capped at ~30 fps: 0.35 → 0.21
+  main thread in the session, 0.89 → 0.69 in the burst, no long task left; values
+  appear 10–20 ms after their poll, up to ~150 ms in the burst. The heap
+  plateaus. Figures and method: docs/design/2026-10-04-telegram-flow-u21/.
+- A test written for a nudge optimisation instead exposed a real defect:
+  distances did not follow activity after the first settle. Activity classes
+  now reheat on a class change (RED first; 2 mutants). The sending ring is
+  written only on change.
+- The measurement itself had to be repaired twice. An init-script Motion
+  attribute is lost on parse, so motion was not actually off and an e2e test
+  passed without testing anything; the fixture now takes `motion` like the
+  app's bootstrap, and the test checks the attribute and counts frames. Marker
+  values were also replaced by same-batch traffic. Only the production run is
+  published.
+
+## 2026-10-04 — U21 parts A and B: the flow view moves, and stops when asked
+
+- Reducer: 60 s sender window and leader (fan-out counts once; exact tie
+  keeps the leader), edge activity, bounded ring of fresh events.
+  `flowDynamics.ts` promotes the U19 layout (centred, seeded from the stable
+  hex slots). `flowAnimator.ts` runs solver and pulses through an injected
+  scheduler: it bundles more than 24 events per batch with their count,
+  counts beyond 160 pulses instead of drawing them, requests frames only
+  while needed and nudges only on real change. `flowMotion.ts` follows the
+  Motion setting and the OS reduce preference, including changes mid-run.
+  The view adds Freeze (geometry only), the leader label, a reduced-rendering
+  note, the sending ring, fading (10 s, then 60 s down to 0.35) and a 1 Hz
+  refresh that is skipped while hidden. Rules: TELEGRAM_FLOW_VISUALIZATION
+  §12. Load figures follow in part C.
+- Evidence: RED first for the reducer (7), motion (2), dynamics (9, ported
+  from U19 plus seeding and growth), animator (11, fake scheduler) and
+  fade/curve (3). View tests (4) were written after the code and covered by 6
+  mutants. Chromium `e2e/telegram-flow-motion.e2e.ts` (5) counts frames and
+  intervals in the page. Motion Off and OS reduce mid-flight leave 0 frames
+  in a second of live traffic. Freeze holds positions while a new sender
+  appears. Leaving the tab clears both animator timers. With motion off,
+  markers stay and values expire. The U20 view fails 4/5. Mutants: reducer
+  8/8, animator 12/12, view 6/6, browser wiring 5/5.
+
+## 2026-10-04 — U20 part 2: the bus monitor gets a Flow view
+
+- The bus monitor now has **Telegrams | Flow** tabs. The flow view
+  (`TelegramFlowView.tsx`) is fed by the monitor's own poll loop through
+  `flowFeed.ts` (one model per session, one snapshot fetch per generation,
+  one expiry timer); it opens nothing, polls nothing and writes nothing.
+  Senders, configured members (solid, "configured, not received") and
+  unresolved group addresses (box, dashed) sit on a static hex layout. Up to
+  three current values per node, with ◇ on inferred member values, 7 s from
+  observation. An HTML Inspector lists values, connections and per-object
+  flags from the row's own generation. Keyboard: roving tab stop in name
+  order, Enter selects, Shift+arrows pans, +/− zoom, 0 resets. Theme
+  variables only; nothing is announced per telegram. en/de. Guide: "The flow
+  view" in 07-bus-and-interfaces; residue KNOWN_LIMITATIONS §154.
+- Evidence: feed 6, layout 5, view 7 (written after the component, so RED was
+  shown against a stub: 7/7 failed), panel integration 8 (incl. reattach
+  without revived values, new session, loss notice) and model additions
+  (edge evidence, re-addressed device). The Chromium e2e
+  `e2e/telegram-flow.e2e.ts` (7 cases, real panel, intercepted synthetic
+  traffic, `page.clock` for expiry, live theme switch) fails 6/6 against the
+  previous panel. Mutants: reducer 23/23, view 11/11, panel 7/7 (two
+  survivors exposed missing reattach/new-session tests), feed 1/1. One feed
+  guard was removed as equivalent: a late reply can only reach its own model.
+  Screenshots in docs/design/2026-10-04-telegram-flow-u20/ were inspected;
+  they showed invisible lines in an unthemed fixture, arrowheads under text
+  and an overflowing flag table, all fixed.
+
+## 2026-10-04 — U20 part 1: the telegram-flow reducer and wire validation
+
+- `apps/knx-web/src/flowWire.ts` validates the AR20 snapshot and the new row
+  fields (widths, canonical generation, all six flags, known names) and
+  refuses everything else. `flowModel.ts` is the pure, session-keyed reducer:
+  sequence dedupe and ordering, a bounded queue per unknown generation,
+  resolution of every row against its own generation only, exact/ambiguous/
+  unresolved/raw sources, configured targets from active members, value slots
+  with 7 s from observation time, at most three badges, and bounded growth
+  with counters. `api.ts` gains the additive fields and `fetchFlowSnapshot`.
+  Rules: TELEGRAM_FLOW_VISUALIZATION §11. Nothing renders it yet (part 2).
+- Evidence: RED first for wire (24), reducer (26) and API (1). 23 guard
+  mutants were run: 21 caught at once, and the two survivors exposed test gaps,
+  which are now closed. The in-session review found stale node evidence across
+  generations (`Object.assign` kept old candidates); this was fixed RED-first.
+  The companion's import-graph guard lists `flowWire.ts` with its isolation proof.
+
+## 2026-10-04 — KL-60: the diff view's long tables filter and scroll instead of paging
+
+- `ProjectDiffDetails.tsx`: a table with more than 20 entries gets a
+  search field (key and name), status toggle buttons, a live match count
+  and a bounded scroll viewport rendering only rows near the visible area.
+  Up to 20 entries a table stays a plain list. "Show more" and
+  `DIFF_PAGE_SIZE` are gone. Window math lives in `virtualWindow.ts`
+  (pure, clamped, overscan). The filter `filterEntries` is in
+  `projectDiffView.ts`. Row heights are measured (re-measured via
+  `ResizeObserver`); rows above the view that grow shift `scrollTop`; a
+  list at its end stays there; End/Home jump instantly. Opened nested
+  tables survive their row scrolling out of the window (per-mount memory
+  keyed by table id). Escape in a typed filter clears it instead of
+  closing the report, a defect the in-session review found before the gate.
+- Evidence: RED first for the window (7 cases incl. a reachability
+  property), filter (3), panel (6) and table memory (2). Chromium
+  `e2e/diff-virtual.e2e.ts` on a synthetic 3,300-entry table with variable
+  row heights: under 120 DOM rows, every position reached by scrolling,
+  End/Home, anchor stability while scrolling up, filters. It fails 4/4
+  against the previous list. 14 mutants are caught (5 only in Chromium);
+  one memory mutant exposed an ineffective `useMemo([report])`, now
+  replaced by per-mount state with the remount contract tested. Backend
+  diff API unchanged.
+
+## 2026-10-04 — AR08 Web half: the project-password dialog
+
+- Importing a ZipCrypto-protected ETS4/ETS5 project in the Web UI no longer
+  ends in an error. On `422` `projectPasswordRequired` the app opens a
+  dialog naming the file. The field is masked and `autocomplete=off`, with a
+  note that the password is not stored. The app then retries **the same
+  import** with the password in that one request; on `projectPasswordWrong`
+  it asks again. Cancel ends quietly: no project, no toast, no failure
+  banner. Opening a `.knxdb` never asks. `projectPassword.ts` classifies the
+  refusal; the password lives only in the dialog field and the retry closure.
+- Evidence: 13 Vitest cases (api body, classification, dialog en/de, three
+  App flows), written RED first. `e2e/project-password.e2e.ts` runs the real
+  app with an intercepted API (required → wrong → right, and cancel) and
+  checks every browser request: the password appears only in import bodies,
+  and in neither `localStorage` nor `sessionStorage`. The e2e fails against
+  the previous app. 7 guard mutants are caught; one survived at first because
+  the unit test looked for a toast class that does not exist, and now checks
+  the visible text instead.
+
+## 2026-10-04 — AR20: the telegram-flow backend contract
+
+- Monitor rows gain `sourceRaw`, `destinationRaw`, server-monotonic
+  `observedAgeMs` and the `flowGeneration` they were decoded with; the poll
+  carries the current `flowGeneration`. Counters stay JavaScript-safe
+  (refusal and saturation at 2^53 − 1).
+- New read-only `GET /api/bus/monitor/flow-snapshot`: configured devices,
+  group members (Send/Receive, activation, six nullable flags), diagnostics
+  and truncation counts, bound to session and generation.
+- The session context comparison now covers devices, links, flags and
+  activation, so such edits show as `stale`.
+- Contract: [TELEGRAM_FLOW_VISUALIZATION §10](TELEGRAM_FLOW_VISUALIZATION.md#10-ar20-delivered-contract-alpha-2026-10-04).
+  Next: U20/U21 (UI), AR21.
+
+## 2026-10-04 — U19: telegram-flow study measured, AR20 handoff written
+
+- A visibly synthetic native-SVG study (`apps/knx-web/e2e/flow-study/`) covers
+  the flow semantics: per-slot values with a 7-second lifetime, reads without
+  a value, a sequence high-water mark, at most 3 badges, a sender-only 60-second
+  leader with tie rule, capacity refusal, pulse bundling, and a bounded,
+  cooling layout. 23 Vitest cases, 4 Chromium checks (map, keyboard Inspector,
+  freeze, motion off) and 11 guard mutants, all caught. One survivor was
+  initially equivalent; a test for a read row that carries a value made it
+  catchable.
+- Measurements (Chromium 152, Ryzen 7 5800X, under load from other sessions):
+  small and mid maps run at 60 fps. The target load (500 / 2,500 / 1,000 per
+  s) runs at 16.7 ms per frame with resting geometry, including pulses and live
+  values, but 67–100 ms while every edge moves. Canvas 2D was never better and
+  five times slower at rest, so the decision is native SVG without a dependency;
+  U21 must reheat locally and bundle pulses over their lifetime.
+- The exact AR20 proposal covers raw addresses, server-monotonic
+  `observedAgeMs`, a `flowGeneration` covering links, flags and activation,
+  and a bounded `flow-snapshot` route. It is in
+  [TELEGRAM_FLOW_VISUALIZATION §9](TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04),
+  with an ADR-0077 addendum. Nothing is wired to the monitor feed; U20 needs
+  AR20 first.
+
 ## 2026-10-04 — AR08: password-protected projects reach the importer
 
 - A ZipCrypto (ETS4/ETS5) protected `.knxproj` now imports through

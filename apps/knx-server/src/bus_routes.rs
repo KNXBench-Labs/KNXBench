@@ -52,6 +52,7 @@ pub fn bus_routes() -> Router<SharedState> {
         .route("/api/bus/monitor/start", post(start_monitor))
         .route("/api/bus/monitor/stop", post(stop_monitor))
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
+        .route("/api/bus/monitor/flow-snapshot", get(flow_snapshot))
         .route("/api/bus/write", post(write_value))
         .route("/api/bus/discover", post(discover_interfaces))
         .route("/api/bus/scan/estimate", post(estimate_scan))
@@ -745,6 +746,17 @@ struct TelegramRowDto {
     /// KNOWN_LIMITATIONS §147: Ctrl1/Ctrl2 as received; `null` on the
     /// closed-session marker.
     control: Option<ReceivedControlDto>,
+    /// AR20: unformatted sender address (0–65535); `null` on the marker.
+    source_raw: Option<u16>,
+    /// AR20: unformatted group address (0–65535); `null` on the marker.
+    destination_raw: Option<u16>,
+    /// AR20: milliseconds between admission and this response, on the
+    /// server's monotonic clock. Always present today; clients must still
+    /// treat `null` as "age unknown" (contract).
+    observed_age_ms: Option<u64>,
+    /// AR20: decimal string of the context generation the row was decoded
+    /// with; `null` on the marker.
+    flow_generation: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -767,9 +779,15 @@ impl From<&crate::bus::ReceivedControl> for ReceivedControlDto {
     }
 }
 
-impl From<&TelegramRow> for TelegramRowDto {
-    fn from(row: &TelegramRow) -> Self {
+impl TelegramRowDto {
+    /// `now` is the response instant every row's age is measured against.
+    fn at(row: &TelegramRow, now: std::time::Instant) -> Self {
+        let age = now.saturating_duration_since(row.observed_at).as_millis();
         Self {
+            source_raw: row.source_raw,
+            destination_raw: row.destination_raw,
+            observed_age_ms: Some(u64::try_from(age).unwrap_or(u64::MAX)),
+            flow_generation: row.flow_generation.map(|g| g.to_string()),
             seq: row.seq,
             timestamp: row.timestamp.clone(),
             source: row.source.clone(),
@@ -793,6 +811,8 @@ struct TelegramsResponse {
     status: &'static str,
     next_since: u64,
     dropped_before: u64,
+    /// AR20: decimal string of the session's current context generation.
+    flow_generation: String,
     telegrams: Vec<TelegramRowDto>,
 }
 
@@ -827,7 +847,11 @@ async fn poll_telegrams(
         ),
         Err(_) => ("unavailable", None),
     };
+    // Read before the buffer lock, never under it: the drain task holds
+    // the buffer while it reads the context.
+    let flow_generation = session.flow_generation().to_string();
     let buffer = buffer.lock().expect("bus session buffer poisoned");
+    let now = std::time::Instant::now();
     // `status`/`droppedBefore`/`telegrams` are all read from the same
     // locked `buffer` above, in one snapshot — never observed from two
     // different instants (design spec §4.3, `TelegramBuffer`'s own doc
@@ -848,17 +872,104 @@ async fn poll_telegrams(
             buffer.next_seq()
         },
         dropped_before: buffer.dropped_before(),
+        flow_generation,
         telegrams: if q.context_only {
             Vec::new()
         } else {
             buffer
                 .telegrams_since(since)
                 .iter()
-                .map(TelegramRowDto::from)
+                .map(|row| TelegramRowDto::at(row, now))
                 .collect()
         },
     };
     Ok(Json(response))
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/bus/monitor/flow-snapshot?sessionId=<n>&generation=<n>
+// ---------------------------------------------------------------------------
+
+/// Both optional and decimal; strings so a value beyond JavaScript's safe
+/// integers is refused here rather than rounded on the way in.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FlowSnapshotQuery {
+    session_id: Option<String>,
+    generation: Option<String>,
+}
+
+fn parse_decimal(name: &str, value: Option<&str>) -> Result<Option<u64>, ApiError> {
+    value
+        .map(|text| {
+            if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
+                return Err(ApiError::bad_request(format!(
+                    "{name} must be a non-negative decimal integer"
+                )));
+            }
+            text.parse::<u64>()
+                .map_err(|_| ApiError::bad_request(format!("{name} is out of range")))
+        })
+        .transpose()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FlowSnapshotResponse {
+    server_incarnation: String,
+    session_id: u64,
+    generation: String,
+    /// `"current"`: lists of `generation`, the session's current context.
+    /// `"historical"`: the requested session or generation is not current;
+    /// the server keeps no older snapshot, so the lists are empty.
+    /// `"unavailable"`: no project context; the lists are empty.
+    status: &'static str,
+    /// `"Free"`, `"TwoLevel"` or `"ThreeLevel"`; `null` without a project.
+    group_address_style: Option<String>,
+    #[serde(flatten)]
+    lists: crate::flow::FlowListsDto,
+}
+
+/// AR20: configured participants of the monitor session's interpretation
+/// context — configuration evidence, not observed delivery. Read-only and
+/// bounded ([`crate::flow::FLOW_LIMITS`]); takes no project lock and never
+/// touches the tunnel.
+async fn flow_snapshot(
+    State(state): State<SharedState>,
+    Query(q): Query<FlowSnapshotQuery>,
+) -> Result<Json<FlowSnapshotResponse>, ApiError> {
+    let requested_session = parse_decimal("sessionId", q.session_id.as_deref())?;
+    let requested_generation = parse_decimal("generation", q.generation.as_deref())?;
+    let guard = state.bus_session.lock().await;
+    let Some(session) = guard.as_ref() else {
+        return Err(ApiError::with_status(
+            StatusCode::NOT_FOUND,
+            "no monitor session is active",
+        ));
+    };
+    let session_id = session.id();
+    let (generation, style, participants) = session.flow_snapshot();
+    drop(guard);
+    let other_session = requested_session.is_some_and(|id| id != session_id);
+    let other_generation = requested_generation.is_some_and(|g| g != generation);
+    let (status, lists) = if other_session || other_generation {
+        ("historical", crate::flow::FlowListsDto::default())
+    } else if style.is_none() {
+        ("unavailable", crate::flow::FlowListsDto::default())
+    } else {
+        (
+            "current",
+            crate::flow::FlowListsDto::bounded(&participants, crate::flow::FLOW_LIMITS),
+        )
+    };
+    Ok(Json(FlowSnapshotResponse {
+        server_incarnation: state.server_incarnation.clone(),
+        session_id,
+        generation: requested_generation.unwrap_or(generation).to_string(),
+        status,
+        group_address_style: style.map(|s| format!("{s:?}")),
+        lists,
+    }))
 }
 
 // ---------------------------------------------------------------------------

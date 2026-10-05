@@ -257,6 +257,32 @@ describe("one editing workspace", () => {
     // History admission adds `activityHistory.ts` through the shared API:
     // pure validation only. The companion does not call the new history reader.
     // Keep the exact API and mutation inventories below unchanged.
+    //
+    // U20 adds `flowWire.ts` through the shared API: the pure validator of
+    // the AR20 flow snapshot and row fields. It imports nothing, calls no
+    // API and touches no project state; the snapshot route it validates is
+    // a read.
+    //
+    // U20 part 2 adds the flow view to the monitor panel: `flowModel.ts`
+    // and `flowLayout.ts` are pure (data in, data out), `flowFeed.ts` holds
+    // one model per session and calls only the snapshot reader it is given,
+    // and `TelegramFlowView.tsx` renders. None of them calls the API itself;
+    // the panel passes `fetchFlowSnapshot`, a read, which is the one new
+    // entry in the API inventory below. No mutation is added.
+    // U21 adds the motion modules: `flowDynamics.ts` (pure solver),
+    // `flowAnimator.ts` (frames and timers through an injected scheduler) and
+    // `flowMotion.ts` (reads the Motion setting and the OS preference). None
+    // touches the API or project state.
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts"]) {
+      const moduleGraph = valueImportGraph(module);
+      expect(apiCallsIn(moduleGraph)).toEqual([]);
+      expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
+      expect(moduleGraph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    }
+    const flowWireGraph = valueImportGraph("flowWire.ts");
+    expect([...flowWireGraph.keys()]).toEqual(["flowWire.ts"]);
+    expect(apiCallsIn(flowWireGraph)).toEqual([]);
+    expect(flowWireGraph.get("flowWire.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     const historyGraph = valueImportGraph("activityHistory.ts");
     expect([...historyGraph.keys()]).toEqual(["activityHistory.ts"]);
     expect(apiCallsIn(historyGraph)).toEqual([]);
@@ -269,6 +295,7 @@ describe("one editing workspace", () => {
       "HelpTip.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
+      "TelegramFlowView.tsx",
       "activityHistory.ts",
       "api.ts",
       "busContext.ts",
@@ -278,6 +305,13 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
+      "flowAnimator.ts",
+      "flowDynamics.ts",
+      "flowFeed.ts",
+      "flowLayout.ts",
+      "flowModel.ts",
+      "flowMotion.ts",
+      "flowWire.ts",
       "gaNotation.ts",
       "gatewayEndpoint.ts",
       "gatewayPreference.ts",
@@ -309,6 +343,7 @@ describe("one editing workspace", () => {
       "discoverBusInterfaces",
       "errorMessage",
       "errorStatus",
+      "fetchFlowSnapshot",
       "getSessionLog",
       "pollBusTelegrams",
       "startBusMonitor",

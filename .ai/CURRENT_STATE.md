@@ -1,3 +1,11 @@
+- **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
+- **Timestamp:** 2026-10-05 11:00 CEST
+- **Completed:** Ledger-only change on the user's instruction: `KL-142` Owner commission → ui, Route → `goal-ui.md` — owner only. Status IN_PROGRESS and disposition BLOCKED_UI unchanged; Snapshot owner counts recounted. This answers the commissioning entry's "Alpha controller: Owner/Route of KL-142 still to change".
+- **Pending/Next Steps:** UI owner: KL-142's Web partial-scope selector is yours (backend contract in COMMISSIONING_ALPHA_LEDGER handoff table). AR09 (KL-61) continues: format-width step published at 6bbc2a1f; next range/special-value audit.
+- **Notes for Codex oder Claude:** Web lock: held by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-05 11:00 CEST
 - **Completed:** AR09 step 1 (format widths) done locally: spec-width audit test for main types 1-30; defect 17.001 encoded inline (6-bit form) fixed to a 1-octet payload, reserved bits refused, pinned tests rewritten, two compiled mutants killed, knx-core 678/0/0. KL-61 ledger row -> IN_PROGRESS (snapshot counts recounted). Earlier claim: This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.

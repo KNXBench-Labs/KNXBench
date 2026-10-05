@@ -452,8 +452,12 @@ pub struct ParameterView {
     /// `Text`, `None`, `Float`, `IPAddress`, `Picture`, `Raw`, `Color`,
     /// `Time`, `Other`.
     pub kind: String,
-    /// `parameter.access`, verbatim — display only, D24 does not gate on it.
+    /// `parameter.access`, verbatim (`Parameter/@Access`).
     pub access: Option<String>,
+    /// `parameter_ref.access`, verbatim (`ParameterRef/@Access`, ADR-0080).
+    /// Write authority is decided by the caller from both values; this
+    /// layer only reports what the program declares.
+    pub ref_access: Option<String>,
     pub min_inclusive: Option<String>,
     pub max_inclusive: Option<String>,
     /// `parameter_type.size_in_bit`, verbatim. Populated by `Number` and
@@ -484,6 +488,7 @@ struct ParameterRawRow {
     pr_text: Option<String>,
     kind: String,
     access: Option<String>,
+    ref_access: Option<String>,
     min_inclusive: Option<String>,
     max_inclusive: Option<String>,
     size_in_bit: Option<i64>,
@@ -552,7 +557,8 @@ pub fn parameter_views(
     let mut stmt = conn.prepare(
         "SELECT pr.id, pr.display_order, pr.tag,
                 p.id, p.name, p.text, pr.text,
-                pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.size_in_bit, pt.id
+                pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.size_in_bit, pt.id,
+                pr.access
          FROM parameter_ref pr
          JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
          JOIN parameter_type pt ON pt.program_id = p.program_id AND pt.id = p.parameter_type_id
@@ -575,6 +581,7 @@ pub fn parameter_views(
                 max_inclusive: r.get(10)?,
                 size_in_bit: r.get(11)?,
                 parameter_type_id: r.get(12)?,
+                ref_access: r.get(13)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -614,6 +621,7 @@ pub fn parameter_views(
             text_layer,
             kind: raw.kind,
             access: raw.access,
+            ref_access: raw.ref_access,
             min_inclusive: raw.min_inclusive,
             max_inclusive: raw.max_inclusive,
             size_in_bit: raw.size_in_bit,
@@ -621,6 +629,63 @@ pub fn parameter_views(
         });
     }
     Ok(views)
+}
+
+/// Which side of a `ParameterCalculation` a `ParameterRef` stands on
+/// (`LParameters` / `RParameters`, ADR-0080).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CalculationSide {
+    Left,
+    Right,
+}
+
+/// The write authority one program declares beyond its parameter types
+/// (ADR-0080).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WriteAuthority {
+    /// `false` when the program is unknown or its v20 backfill failed: the
+    /// facts below are then incomplete, and a caller must fail closed.
+    pub recorded: bool,
+    /// Every `ParameterRef` a `ParameterCalculation` names, with the sides
+    /// it appears on, sorted and deduplicated. KNXBench never runs the
+    /// calculation; this only says which values it would derive or read.
+    pub calculated: std::collections::BTreeMap<String, Vec<CalculationSide>>,
+}
+
+/// One program's [`WriteAuthority`]. Two small queries, no per-ref lookups.
+pub fn write_authority(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<WriteAuthority, ProductDbError> {
+    let recorded: Option<i64> = conn
+        .query_row(
+            "SELECT write_authority_recorded FROM application_program WHERE id = ?1",
+            [program_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let mut calculated: std::collections::BTreeMap<String, Vec<CalculationSide>> =
+        std::collections::BTreeMap::new();
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT parameter_ref_id, side FROM parameter_calculation_ref
+         WHERE program_id = ?1 ORDER BY parameter_ref_id, side",
+    )?;
+    let rows = stmt.query_map([program_id], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    })?;
+    for row in rows {
+        let (id, side) = row?;
+        let side = if side == "L" {
+            CalculationSide::Left
+        } else {
+            CalculationSide::Right
+        };
+        calculated.entry(id).or_default().push(side);
+    }
+    Ok(WriteAuthority {
+        recorded: recorded == Some(1),
+        calculated,
+    })
 }
 
 /// Single-row, single-attribute translation lookup, locale-prefix-matched

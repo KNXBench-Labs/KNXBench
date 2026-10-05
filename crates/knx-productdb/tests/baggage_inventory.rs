@@ -4,6 +4,7 @@
 //! content, the inventory survives retry and tampering is rejected.
 
 mod v16_rewind;
+mod v20_rewind;
 
 use std::io::{Cursor, Write};
 

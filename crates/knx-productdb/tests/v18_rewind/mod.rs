@@ -50,6 +50,7 @@ fn retired_rows(conn: &Connection, sha: &str) -> Vec<Retired> {
 
 #[allow(dead_code)]
 pub fn rewind_to_v17(conn: &Connection) {
+    super::v20_rewind::drop_v20_objects(conn);
     let blobs: Vec<String> = conn
         .prepare("SELECT DISTINCT source_sha256 FROM application_program ORDER BY 1")
         .unwrap()

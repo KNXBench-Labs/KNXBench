@@ -49,3 +49,10 @@ Backup/
 
 # TypeScript incremental build state (tsc -b), never source
 *.tsbuildinfo
+
+# Private personal data (e.g. claude.ai account exports). Never versioned.
+/.private/
+
+# ProjectStats private local state
+/.projectstats.json
+/.projectstats/

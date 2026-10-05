@@ -1,9 +1,17 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
-- **Timestamp:** 2026-10-05 11:30 CEST
+- **Timestamp:** 2026-10-05 11:31 CEST
 - **Completed:** AR09 numeric-range pass (local, branch alpha-dpt-ranges): DPT-AS limits for main types 5-9, 12-14, 29 probed through the public codec, no format defect. Gap fixed: parameter-only time periods 7.003/7.004/7.006 and 8.003/8.004/8.006 had no encoding ruling; new `time-period-raw-counter-parameter-only` ruling, wire unchanged. RED/GREEN test, knx-core 679/0/0, strict clippy.
 - **Gate:** Integrated public16 on 6fbb02c3 independently accepted: 16 exit0, Rust 3248/0/177 in 181 blocks, Web 2001, Chromium 131 plus probe 1, 887 frozen inputs, CLI knx 0.1.0-alpha.4+g6fbb02c3. First attempt refused (workspace 101): `http_bus_monitor` compared whole rows across two polls although `observedAgeMs` is measured per response (AR20); fixed in 6fbb02c3 (test only, 5 ms injected pause: old assertion fails, new passes).
 - **Pending/Next Steps:** Publish ADR 0078 (group-address declared DPT, draft in this push). Then AR09 item 2: GA-declared DPT vs linked-object inference (ADR first if modelling changes).
 - **Notes for Codex oder Claude:** Subtype ranges deliberately stay unenforced (§61 boundary). Web lock: held by claude-goal-ui-owner per the owner entries below; not taken or released by this entry.
+
+---
+
+- **Last Agent:** Claude (housekeeping, user request)
+- **Timestamp:** 2026-10-05 11:25 CEST
+- **Completed:** Worktree cleanup and root-checkout straightening, user go 2026-10-05. Removed 13 stale worktrees (all content already in main; uncommitted leftovers backed up as patches/tgz under `/mnt/daten-i/Sourcecode/KNXBench.backups/2026-10-05/`). Uncommitted native-UI probe work from `ui-native-verification` preserved as local WIP commit `4fe16f9c` on branch `ui-native-verification` (unreviewed, unpushed). From the stale root checkout, rescued the only knowledge that never reached main: the 2026-09-29 read-only ETS installation-data inventory (incl. the 2026-10-01 TEMP-capture addendum) as a dated entry in `docs/research/project-format.md`, indexed in `RESEARCH.md`, and the dangling reference in `research/commissioning.md` §19.14 now links to it; plus the `.gitignore` entries for `/.private/` and `/.projectstats*` (both directories exist locally and were unprotected in main). Docs only; check-anchors/headers/ledger green.
+- **Pending/Next Steps:** Root checkout is fast-forwarded to `origin/main` after this commit. `u21-fix` worktree can go once U21 is delivered and its work credited. Decide on branch `ui-native-verification` (continue or drop). `docs/AI_STATS_TELEMETRY_PLAN.md` (external ai-stats collector plan) was never in Git; kept only in the backup.
+- **Notes for Codex oder Claude:** Please do not write into the shared root checkout `/mnt/daten-i/Sourcecode/KNXBench` without committing — several sessions left handover entries and research there that silently never reached main. Use a worktree. Generated `docs/ProjectStats.md`/`stats.md` from the root were discarded (regenerable).
 
 ---
 

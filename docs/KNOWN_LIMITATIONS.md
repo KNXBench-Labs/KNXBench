@@ -1088,6 +1088,13 @@ need arises. It is deliberately not built speculatively.
 
 ## 11. `.knxprod` support is evidenced for schemes 11, 12, 13, 14, 20, and exact-namespace 21
 
+**Update 2026-10-05 (AR06 row reconciliation).** Exact-namespace scheme 23
+now also has bounded standalone import/storage/report/replay support; see
+[§153](#153-master-data-schemes-10-and-23-are-refused-for-standalone-knxprod)
+and COMPATIBILITY.md. Statements below that list only 11/12/13/14/20/21 predate
+that package. Schemes 15–19/22 still need a sample (`KL-11` is
+`BLOCKED_EXTERNAL` in the ledger).
+
 **Limitation.** Manufacturer product files in the `.knxprod` container are
 readable, as a standalone package independent of any `.knxproj`, for master
 data schemes 11, 12, 13, 14, 20 and exact-namespace 21
@@ -6578,6 +6585,13 @@ first-installation-only gaps are tracked separately, for ISSUE-05/B10
 triage.
 
 ## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format
+
+**Update 2026-10-05 (AR06 row reconciliation).** The misnaming is fixed since
+AR06 (95e6bcb0): these filename extensions get a typed unsupported-legacy
+refusal before any archive parsing or destination creation, on the import,
+product and HTTP paths (tests named in the ledger row `KL-128`, now `DONE`).
+The text below describes the earlier behaviour; the missing legacy importer
+and its lifting condition are unchanged.
 
 **Limitation.** KNXBench cannot install a legacy ETS3-era product database
 (`.vd3`–`.vd5`) or a legacy project export (`.pr3`–`.pr5`). Both are ZIP

@@ -300,8 +300,8 @@ free; stop the monitor, scan or download first. Leaving this view does not
 cancel a read already in progress. The memory bytes can be private
 configuration data: do not share screenshots or logs of them casually.
 
-The UI does not yet offer the API's optional partial-download selection.
-The comparison is not a backup and does not prove that a later download will
+The comparison view does not offer the API's optional partial selection; it
+always compares the complete plan. The comparison is not a backup and does not prove that a later download will
 succeed. The UI tests use only a mocked local server, never a live device.
 
 ## Downloading to a device
@@ -313,7 +313,16 @@ changes, the project does not. Saving or exporting a project file is something e
 1. Open the project that contains the device, then **Bus monitor** in the navigation
    sidebar and its **Download to device** tab (German: **In Gerät laden**), beside the
    monitor and the line scan. Only devices that have an individual address are offered.
-2. Choose the device and the gateway, then **Show what would be written**. The plan
+2. Choose the device, **What to write** and the gateway, then **Show what would be
+   written**. *What to write* is **Complete download** (the default), or a partial
+   download (KNX Configuration Procedures §3.9.2.4) of **Parameters only**, **Group
+   addresses only** or **Parameters and group addresses**. A partial plan says which
+   parts it does not write and lists every application write it skips (only absolute
+   data or stack segments in EEPROM are written); before writing it checks that the
+   device already carries this application with every part loaded, and otherwise stops
+   without writing. If the server cannot derive the chosen partial download, it says why
+   and shows no plan; run the complete download instead. Changing the choice discards a
+   shown plan. The plan
    names the application program, the mask and manufacturer the device must report
    before the first write, the parameter values and group links taken from the project,
    every memory segment with the octets written, and every step. Nothing has been sent.

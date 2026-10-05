@@ -96,3 +96,14 @@ session, or authorize release publication.
 No new KNX core entity, project migration or commissioning package is needed.
 New traffic/model limits and inference uncertainty are user-visible. A static
 accessible view remains meaningful when all non-essential motion is disabled.
+
+## Addendum — U19 renderer and layout evaluation (2026-10-04)
+
+Measured, not assumed ([flow document §9.3](../TELEGRAM_FLOW_VISUALIZATION.md#93-measured-renderer-and-layout-evaluation)):
+the feature renders in **native SVG** with semantic HTML controls and an
+Inspector. It uses an own bounded O(nodes + edges) layout with cooling. Canvas
+2D was evaluated and rejected: it was never faster in the measured Chromium,
+and it was five times slower than SVG for a resting map at target size. No
+WebGL, worker or force-layout dependency is added. The measured bottleneck is
+moving geometry, so U21 must reheat locally and keep settled regions still.
+This does not change the decision above.

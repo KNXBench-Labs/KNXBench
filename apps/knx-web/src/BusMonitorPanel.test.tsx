@@ -20,6 +20,8 @@ const apiMock = vi.hoisted(() => ({
   // T25: the panel searches for interfaces on mount, so every test in
   // this file reaches this one whether it cares about discovery or not.
   discoverBusInterfaces: vi.fn(),
+  // U20: the flow view's participant snapshot (a read).
+  fetchFlowSnapshot: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -58,6 +60,8 @@ import { savePreferredGateway } from "./gatewayPreference";
 import { getSetting, initSettings, resetSettingsForTests, setSetting } from "./settingsStore";
 import { UI_LANGUAGE_STORAGE_KEY } from "./uiLanguage";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { snapshotJson } from "./flowTestFixtures";
+import { parseFlowSnapshot } from "./flowWire";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
 // `isConcurrentActEnvironment`) — `LogPanel.test.tsx` never needs it
@@ -1418,5 +1422,183 @@ describe("BusMonitorPanel and the shared session's context", () => {
       });
       expect(gatewayField().value).toBe("203.0.113.7");
     });
+  });
+});
+
+// U20: the telegram-flow view is fed by this panel's own poll loop.
+describe("BusMonitorPanel telegram flow", () => {
+  const LIGHT = 0x0801;
+
+  function flowRow(seq: number, overrides: Partial<BusTelegramRow> = {}): BusTelegramRow {
+    return row({
+      seq, source: "1.1.1", destination: "1/0/1", decoded: { kind: "value", dpt: "DPST-1-1", text: "On" },
+      sourceRaw: 0x1101, destinationRaw: LIGHT, observedAgeMs: 0, flowGeneration: "1", ...overrides,
+    });
+  }
+
+  function flowSnapshot() {
+    return parseFlowSnapshot(snapshotJson({
+      serverIncarnation: "process-a", sessionId: 1,
+      devices: [
+        { deviceId: 1, installationId: 1, name: "Switch", individualAddressRaw: 0x1101 },
+        { deviceId: 2, installationId: 1, name: "Dimmer", individualAddressRaw: 0x1102 },
+      ],
+      groups: [{
+        gaRaw: LIGHT, gaId: 10, installationId: 1, name: "Light", dpt: "1.001",
+        members: [1, 2].map((deviceId) => ({
+          deviceId, comObjectId: deviceId * 100, direction: deviceId === 1 ? "Send" : "Receive", active: true,
+          flags: { communication: true, read: null, write: true, transmit: null, update: null, readOnInit: null },
+        })),
+      }],
+    }));
+  }
+
+  beforeEach(() => {
+    // The flow clock is `performance.now()`; fake it with the timers.
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date", "performance"] });
+    apiMock.fetchFlowSnapshot.mockResolvedValue(flowSnapshot());
+  });
+
+  const tab = (label: string) => Array.from(host!.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((b) => b.textContent === label)!;
+  const flowNode = (label: string) => host!.querySelector<SVGGElement>(`g.flow-node[aria-label^="${label}."]`);
+  const tick = (ms = POLL_INTERVAL_MS) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+
+  // Answers by argument, not by call order: panels other tests left mounted
+  // also react to `connect()`'s context publication and poll, and a queue
+  // of one-shot answers would hand them this test's telegrams.
+  const server = { connected: false, sessionId: 1, rows: [] as BusTelegramRow[] };
+
+  async function connectWith(first: BusTelegramRow[]) {
+    Object.assign(server, { connected: false, sessionId: 1, rows: first });
+    apiMock.startBusMonitor.mockImplementation(async () => {
+      server.connected = true;
+      return { sessionId: server.sessionId, serverIncarnation: "process-a", assignedAddress: "1.1.250" };
+    });
+    apiMock.pollBusTelegrams.mockReset();
+    apiMock.pollBusTelegrams.mockImplementation(async (since: number) => {
+      if (!server.connected) throw notFoundError();
+      const telegrams = server.rows.filter((r) => r.seq >= since);
+      const nextSince = Math.max(since, ...server.rows.map((r) => r.seq + 1));
+      return telegramsResponse({ sessionId: server.sessionId, telegrams, nextSince, flowGeneration: "1" });
+    });
+    const root = await renderPanel();
+    await flushReattach();
+    await connect();
+    await tick(0);
+    return root;
+  }
+
+  it("draws the polled telegrams without a second poll loop and fetches each generation once", async () => {
+    const root = await connectWith([flowRow(1)]);
+    // The same two intervals with the table and then with the flow view:
+    // the flow view adds no request of its own. (Panels other tests left
+    // mounted poll too, so only the difference between the windows counts.)
+    const polls = () => apiMock.pollBusTelegrams.mock.calls.length;
+    let start = polls();
+    await tick();
+    await tick();
+    const withTable = polls() - start;
+    await act(async () => tab("Flow").click());
+    expect(tab("Flow").getAttribute("aria-selected")).toBe("true");
+    expect(flowNode("Switch")).not.toBeNull();
+    expect(flowNode("Dimmer")!.querySelector(".flow-badge-inferred")!.textContent).toBe("◇ 1/0/1 On");
+    start = polls();
+    await tick();
+    await tick();
+    expect(polls() - start).toBe(withTable);
+    expect(withTable).toBeGreaterThan(0);
+    // Fetched for (session 1, generation 1), and never again while the
+    // generation stays the same (once per feed: `flowFeed.test.tsx`).
+    expect(apiMock.fetchFlowSnapshot).toHaveBeenCalledWith(1, "1");
+    const fetches = apiMock.fetchFlowSnapshot.mock.calls.length;
+    await tick();
+    await tick();
+    expect(apiMock.fetchFlowSnapshot.mock.calls.length).toBe(fetches);
+    expect(host!.querySelector(".bus-monitor-table")).toBeNull();
+    expect(host!.querySelector('input[aria-label="Filter by destination or name"]')).toBeNull();
+    await act(async () => tab("Telegrams").click());
+    expect(host!.querySelector('input[aria-label="Filter by destination or name"]')).not.toBeNull();
+    root.unmount();
+  });
+
+  it("keeps the map across tab changes and expires a value seven seconds after it was observed", async () => {
+    const root = await connectWith([flowRow(1, { observedAgeMs: 500 })]);
+    await act(async () => tab("Flow").click());
+    await act(async () => tab("Telegrams").click());
+    expect(host!.querySelector(".bus-monitor-table")).not.toBeNull();
+    await act(async () => tab("Flow").click());
+    expect(flowNode("Dimmer")!.querySelector(".flow-badge")).not.toBeNull();
+    await tick(6_400);
+    expect(flowNode("Dimmer")!.querySelector(".flow-badge")).not.toBeNull();
+    await tick(200);
+    expect(flowNode("Dimmer")!.querySelector(".flow-badge")).toBeNull();
+    expect(flowNode("Dimmer")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("starts a new map when the server answers for another session", async () => {
+    const root = await connectWith([flowRow(1)]);
+    await act(async () => tab("Flow").click());
+    expect(flowNode("Switch")).not.toBeNull();
+    Object.assign(server, { sessionId: 2, rows: [] });
+    await tick();
+    expect(flowNode("Switch")).toBeNull();
+    expect(host!.textContent).toContain("No group telegrams observed");
+    root.unmount();
+  });
+
+  it("adopts a running session's backlog without reviving old values as current", async () => {
+    Object.assign(server, { connected: true, sessionId: 1, rows: [flowRow(1, { observedAgeMs: 30_000 })] });
+    apiMock.pollBusTelegrams.mockReset();
+    apiMock.pollBusTelegrams.mockImplementation(async (since: number) => telegramsResponse({
+      sessionId: 1, telegrams: server.rows.filter((r) => r.seq >= since), nextSince: 2, flowGeneration: "1",
+    }));
+    const root = await renderPanel();
+    await flushReattach();
+    await tick(0);
+    await act(async () => tab("Flow").click());
+    expect(flowNode("Switch")).not.toBeNull();
+    expect(flowNode("Dimmer")).not.toBeNull();
+    expect(host!.querySelector(".flow-badge")).toBeNull();
+    root.unmount();
+  });
+
+  it("shows an empty map for a new session that has not delivered telegrams yet", async () => {
+    const root = await connectWith([flowRow(1)]);
+    await act(async () => tab("Flow").click());
+    expect(flowNode("Switch")).not.toBeNull();
+    apiMock.stopBusMonitor.mockImplementation(async () => {
+      server.connected = false;
+      return { sessionId: 1, serverIncarnation: "process-a", telegramCount: 1, droppedCount: 0 };
+    });
+    await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+    Object.assign(server, { sessionId: 2, rows: [] });
+    await connect();
+    await tick(0);
+    await act(async () => tab("Flow").click());
+    expect(flowNode("Switch")).toBeNull();
+    expect(host!.textContent).toContain("No group telegrams observed");
+    root.unmount();
+  });
+
+  it("keeps the monitor's loss notice in view while the flow is shown", async () => {
+    const root = await connectWith([flowRow(1)]);
+    await act(async () => tab("Flow").click());
+    apiMock.pollBusTelegrams.mockImplementation(async (since: number) => telegramsResponse({
+      sessionId: 1, telegrams: server.rows.filter((r) => r.seq >= since), nextSince: 2, droppedBefore: 5, flowGeneration: "1",
+    }));
+    await tick();
+    expect(host!.querySelector(".bus-monitor-gap-notice")).not.toBeNull();
+    expect(flowNode("Switch")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("switches views with the arrow keys", async () => {
+    const root = await connectWith([flowRow(1)]);
+    await act(async () => { tab("Telegrams").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })); });
+    expect(tab("Flow").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("Flow"));
+    root.unmount();
   });
 });

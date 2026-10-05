@@ -8,6 +8,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { DocumentationOptions } from "./documentationOptions";
 import { notifySessionExpired } from "./session";
 import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type HistoryPage } from "./activityHistory";
+import { parseFlowSnapshot, type FlowSnapshot } from "./flowWire";
 
 /**
  * The three endpoints a login screen talks to (ADR-0026). Their own 401 is
@@ -85,10 +86,12 @@ function requestError(status: number, message: string, body: unknown = null): Er
  * `loadProgress.ts`'s `ownsOperation` is exact equality against it, not a
  * fact this module derives.
  */
-export function importProject(path: string, clientToken: string): Promise<ProjectTree> {
+export function importProject(path: string, clientToken: string, password?: string): Promise<ProjectTree> {
+  // AR08: a project password travels only in this request, only when one
+  // was entered. It is never logged, stored or echoed by the client.
   return request("/api/project/import", {
     method: "POST",
-    body: JSON.stringify({ path, clientToken }),
+    body: JSON.stringify({ path, clientToken, ...(password ? { password } : {}) }),
   });
 }
 
@@ -1264,6 +1267,13 @@ export interface BusTelegramRow {
   // Additive `TelegramRowDto::control`: older servers may omit the field.
   // `repeated` is null outside L_Data.ind; a session marker has null control.
   control?: { priority: string; repeated: boolean | null; hopCount: number } | null;
+  // Additive AR20 fields (TELEGRAM_FLOW_VISUALIZATION §10.1), absent on older
+  // servers. `null` source/destination/generation only on the session marker.
+  // Read through `flowWire.rowFlowFacts`, which refuses out-of-range values.
+  sourceRaw?: number | null;
+  destinationRaw?: number | null;
+  observedAgeMs?: number | null;
+  flowGeneration?: string | null;
 }
 
 // `StartResponse` (bus_routes.rs).
@@ -1303,6 +1313,8 @@ export interface BusMonitorTelegramsResponse {
   nextSince: number;
   droppedBefore: number;
   telegrams: BusTelegramRow[];
+  /** AR20: the session's current flow-context generation (decimal string). */
+  flowGeneration?: string;
 }
 
 // `WriteRequest`/`WriteResponse` (bus_routes.rs). `writeBusValue()` is
@@ -1418,6 +1430,14 @@ export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
 // remember that omitting it means "from the start."
 export function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
   return request(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
+}
+
+/** AR20: configured participants of one session generation, validated; read-only. */
+export async function fetchFlowSnapshot(sessionId: number, generation: string): Promise<FlowSnapshot> {
+  const body = await request<unknown>(
+    `/api/bus/monitor/flow-snapshot?sessionId=${sessionId}&generation=${encodeURIComponent(generation)}`,
+  );
+  return parseFlowSnapshot(body);
 }
 
 // `POST`, matching the route (`bus_routes.rs`'s `discover_interfaces`):

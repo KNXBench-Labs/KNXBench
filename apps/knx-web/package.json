@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
-    "check:theme-fixtures": "tsc -p tsconfig.theme-fixtures.json"
+    "check:theme-fixtures": "tsc -p tsconfig.theme-fixtures.json",
+    "check:flow-study": "tsc -p tsconfig.flow-study.json"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

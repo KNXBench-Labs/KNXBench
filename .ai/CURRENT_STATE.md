@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 12:37 CEST
+Web lock: taken by claude-goal-ui-owner for AR21 finding 4 (reduced-rendering counts, TELEGRAM_FLOW_VISUALIZATION §15)
+- **Completed:** Lock taken only, after the AR21 rerun returned finding 4 to the UI owner.
+- **Pending/Next Steps:** Count each telegram once per reduced-rendering category (test with several recipients per telegram, en/de), gates, docs, release this lock in the delivering entry, then ask alpha for the AR21 rerun.
+- **Notes for Codex oder Claude:** Please do not edit `apps/knx-web` until this lock is released. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 12:31 CEST
 - **Completed:** AR21 rerun on `d48852a6` (review only, no product code changed). Findings 1–3 of TELEGRAM_FLOW_VISUALIZATION §13 are closed: code read, 3 own mutants killed and restored, flow Vitest 96/96, flow e2e ×3 42/42, drag e2e ×5 10/10, integrated gate on `b7d7927e` (Chromium 132/132), own §7-load and 180 s session measurement (§15). New **finding 4 (MINOR)**: the reduced-rendering note mixes units — `overCapacityEvents` adds one per recipient, `coalescedEvents` includes refused pulses; measured "21145 … bundled, 39801 without a pulse" after 21,145 telegrams. `FLOW-01` stays `IN_PROGRESS`.

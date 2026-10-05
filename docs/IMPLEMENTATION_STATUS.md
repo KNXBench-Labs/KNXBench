@@ -13,7 +13,9 @@
   refusal retained. Scoped package/docs9 passed: ProductDB 644/0/25 in 31 blocks;
   includes native4/count2, not additive. Fresh integrated public16 accepted
   on2e188226: Rust3200/0/177/175, Web2001, Chromium131 plus separate probe1;
-  871 source hashes/logs and revision-stamped CLI checked. Final-docs/publication pending;
+  871 source hashes/logs and revision-stamped CLI checked. Final-docs6 passed;
+  declaration-only slice published/readback425f3407. Raw input/caller/resource
+  acceptance still open;
   scope in PRODUCT_ZIP_DECLARED_SIZE_CONTRACTS.md.
 
 ## 2026-10-05 — AR21 review: the flow view goes back for one more lap

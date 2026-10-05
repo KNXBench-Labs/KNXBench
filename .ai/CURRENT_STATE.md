@@ -1,10 +1,29 @@
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
-- **Timestamp:** 2026-10-05 22:05 CEST
+- **Timestamp:** 2026-10-05 22:12 CEST
 - **Completed:** **AR10 slice 2b.** `catalog_items`, `device_product`, `datapoint_type(s)`, `function_types`, `function_points`, `space_usages` expose the stored language that answered (`None` = package's own text) and the declared source languages; wire fields on `/api/catalog/items`, device-detail `product.catalog` (ts-rs bindings `DeviceProductCatalog.ts`, `ComObjectNode.ts` regenerated) and com-object `dpt_text_language`. `KL-64` → ACCEPTED_BOUNDARY, `KL-37` → IN_PROGRESS.
-- **Pending/Next Steps:** AR10: report communication-object text language (`KL-37` residue), `KL-66` decision; AR21 rerun of finding 5 (owner correction in TELEGRAM_FLOW_VISUALIZATION §18 is waiting). **UI owner:** show the new language markers (parameter panel, catalogue, product block, DPT text).
+- **Pending/Next Steps:** AR10: report communication-object text language (`KL-37` residue), `KL-66` decision; AR21 rerun of finding 5 (owner correction in TELEGRAM_FLOW_VISUALIZATION §18 is waiting). **UI owner:** show the slice-2b markers (catalogue, product block, DPT text) the way the parameter panel already does (`untranslatedPart`).
 - **Notes for Codex oder Claude:** `overlay_one`, `catalog_overlay`, `master_text_overlay` now return `OverlayHit { text, language }`. Run all five xtask checks before pushing. Web lock: unchanged per the newest owner line below; not taken or released by this entry.
 
 ---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 22:07 CEST
+Web lock: released by claude-goal-ui-owner (AR10 parameter-panel language markers delivered)
+- **Completed:** The parameter panel consumes AR10 slice 2a: with a product language selected, a field whose shown label is the program's own text is badged "Untranslated (en-US)" (no source named when the program declares none), a translated label with untranslated option labels "Options untranslated", and a panel line counts them; *Package default* marks nothing. en/de, manual 09, KNOWN_LIMITATIONS. 10/10 mutants; gate green incl. all five xtask checks. Log: `.ai/logs/2026-10-05_claude_ui-ar10-language-markers.md`.
+- **Pending/Next Steps:** Alpha: tick "UI owner: decide how the markers are shown" in `alpha-release-goal.md` (AR10 slice 2a) — decision recorded in KNOWN_LIMITATIONS' AR10 note; AR10 slice 2b (catalogue/device-product/master markers) → UI owner shows those the same way once the DTOs land; AR21 rerun of finding 5 (`104916d6`). UI owner: no open package; the web lock is free.
+- **Notes for Codex oder Claude:** `untranslatedPart(field)` in `ParameterPanel.tsx` is the single rule (shown label first, then labelled options); reuse it for slice 2b surfaces where the shape matches. No server change, no KNX/bus contact.
+
+---
+
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 22:00 CEST
+Web lock: taken by claude-goal-ui-owner for the AR10 parameter-panel language markers
+- **Completed:** Lock taken only; no source change in this entry.
+- **Pending/Next Steps:** UI owner: show `sourceLanguage` / `textLanguage` / `nameLanguage` / `enumOptions[].language` (AR10 slice 2a, `b6a94c24`) in the parameter panel when a product language is selected; release the lock with that delivery.
+- **Notes for Codex oder Claude:** Web-only consumer of the existing DTO; no server change planned.
+
+---
+
 
 - **Last Agent:** Claude (alpha-release-goal session, ledger owner `alpha`)
 - **Timestamp:** 2026-10-05 20:58 CEST

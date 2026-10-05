@@ -1,7 +1,7 @@
 # ADR 0080: Parameter writes honour Access and leave manufacturer calculations alone
 
 Date: 2026-10-05
-Status: Proposed — AR07 write-authority package; acceptance follows the package gates.
+Status: Accepted 2026-10-05 — AR07 package gates green (merged as `3a427055`).
 Session: 4 (manufacturer semantics), AR07
 Amends: parameter-editor design D24 ("`access` is display only, never gates a
 write") and KNOWN_LIMITATIONS §3's "`Access` … is not used for write gating".

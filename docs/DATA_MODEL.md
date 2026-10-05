@@ -545,6 +545,13 @@ but not interpreted in v1:
   backfills all three from the stored blobs; a blob that cannot be re-read
   leaves its programs unrecorded, which the parameter editor treats as
   read-only. The project model is unchanged.
+  **Schema v21 (2026-10-05, [ADR-0081](adr/0081-parameter-attributes-are-reported.md))**
+  has no DDL: `Parameter`/`ParameterRef` now report every attribute outside
+  their stored columns (`SuffixText`, `InitialValue`, a union member's
+  `Offset`/`BitOffset`, `ParameterRef/@Name`, …) in `ingest_unknown`, and
+  `migrate_v20_to_v21` adds those rows from the stored blobs and re-derives
+  measured install reports and `package.unknown_count`; a blob that cannot
+  be re-read is named and downgrades its reports to `unavailable`.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

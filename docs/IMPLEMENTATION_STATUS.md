@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR10 slice 1: where every language comes from (and where none does)
+
+- Trace of every language source and translated-text reader:
+  `docs/research/backend-localization-paths.md`. Findings: the project schema
+  has no project language; `ApplicationProgram/@DefaultLanguage` is stored
+  but read by nothing; only communication-object overlays tell the caller
+  whether a translation answered — parameter, catalogue, device-product and
+  master overlays fall back silently.
+- `KL-14` accepted as a boundary, pinned by `knx-etsproj/tests/project_language.rs`
+  (a device's `InitialValueLanguage` is reported, never promoted; imports
+  leave the string table empty). No production code changed.
+- Next: expose the overlay fallback on the silent surfaces (`KL-37`/`KL-64`).
+
 ## 2026-10-05 — KL-156: the install report finally admits what it skipped (ADR-0081)
 
 - `Parameter`/`ParameterRef` report every attribute outside their stored

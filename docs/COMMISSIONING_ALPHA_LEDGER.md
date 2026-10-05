@@ -187,6 +187,20 @@ copied from `apps/knx-server/src/device_download_routes.rs`.
 | KL-140 | None: no reset UI (accepted boundary). Optional: link the user notice from the commissioning view | — (no HTTP reset route exists; CLI reset fails closed before a tunnel, ADR-0058) | — |
 | UI-04 | Unchanged from the row above: adopt the activity history contract | `GET /api/bus/activity`, `GET /api/bus/history` | As in the UI-04 row |
 
+## Owner reconciliation (2026-10-05)
+
+The owner set the status of all 42 rows in the source-ID ledger. The
+user scope decision of 2026-10-04 removed new hardware, power-loss, vendor
+and ETS validation from this goal, so the 36 rows that waited only for that
+evidence or a recorded non-goal became `ACCEPTED_BOUNDARY` (11 hardware, 11
+reference, 10 verified-scope, 2 recorded-scope) or `LATER` (`KL-110`
+Powerline, `GAP-T30-04` differential download). `SAFE-03` and `DEBUG-01` are
+`ACCEPTED_BOUNDARY` (offline contracts closed; live and power-loss recovery out
+of scope), `AUDIT-01` is `DONE` at commissioning scope, `KL-140` was accepted
+on 2026-10-05. Open: `KL-142` and `UI-04`, both Web halves with the UI owner
+(handoff above). Every row keeps its safe fallback from the table above: an
+accepted boundary is a refusal or a bounded claim, not new support.
+
 ## Reconciliation check
 
 Parse the rows with owner `commission` in `docs/status/LEDGER.md` (until

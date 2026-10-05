@@ -274,15 +274,29 @@ pub enum FindSerial {
 
 /// `knx device find-serial (<serial> | --address <a.l.d>) --gateway <host:port>`.
 /// Read-only either way.
-pub fn parse_find_serial_args(args: &[String]) -> Result<(FindSerial, String), String> {
+pub struct FindSerialArgs {
+    pub query: FindSerial,
+    pub gateway: String,
+    pub activity_history: Option<String>,
+}
+
+pub fn parse_find_serial_args(args: &[String]) -> Result<FindSerialArgs, String> {
     let mut serial = None;
     let mut address = None;
     let mut gateway = None;
+    let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--gateway" => {
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
+                i += 2;
+            }
+            "--activity-history" => {
+                if activity_history.is_some() {
+                    return Err("give --activity-history only once".into());
+                }
+                activity_history = Some(crate::take_value(args, i + 1, "--activity-history")?);
                 i += 2;
             }
             "--address" => {
@@ -312,7 +326,11 @@ pub fn parse_find_serial_args(args: &[String]) -> Result<(FindSerial, String), S
         (Some(_), Some(_)) => return Err("give a serial number or --address, not both".to_string()),
     };
     let gateway = gateway.ok_or("find-serial asks the bus and needs --gateway <host:port>")?;
-    Ok((query, gateway))
+    Ok(FindSerialArgs {
+        query,
+        gateway,
+        activity_history,
+    })
 }
 
 /// Answers a [`FindSerial`] against `transport`, as the line to print.
@@ -556,11 +574,35 @@ mod tests {
     }
 
     #[test]
+    fn find_serial_accepts_explicit_activity_history_without_io() {
+        for question in [vec![SERIAL], vec!["--address", "1.1.67"]] {
+            let mut input = question;
+            input.extend([
+                "--gateway",
+                "192.0.2.1:3671",
+                "--activity-history",
+                "not-opened-history.sqlite",
+            ]);
+            let parsed = parse_find_serial_args(&args(&input))
+                .expect("find-serial must accept an explicit metadata history path");
+            assert_eq!(
+                parsed.activity_history.as_deref(),
+                Some("not-opened-history.sqlite")
+            );
+            assert_eq!(parsed.gateway, "192.0.2.1:3671");
+        }
+    }
+
+    #[test]
     fn find_serial_takes_exactly_one_question() {
-        let (query, _) =
-            parse_find_serial_args(&args(&[SERIAL, "--gateway", "192.0.2.1:3671"])).unwrap();
+        let FindSerialArgs {
+            query,
+            activity_history,
+            ..
+        } = parse_find_serial_args(&args(&[SERIAL, "--gateway", "192.0.2.1:3671"])).unwrap();
+        assert!(activity_history.is_none());
         assert_eq!(query, FindSerial::Address(SERIAL.parse().unwrap()));
-        let (query, _) = parse_find_serial_args(&args(&[
+        let FindSerialArgs { query, .. } = parse_find_serial_args(&args(&[
             "--address",
             "1.1.67",
             "--gateway",

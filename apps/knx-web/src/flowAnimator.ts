@@ -105,6 +105,10 @@ export class FlowAnimator {
   private readonly refreshId: number;
   private pulses: Pulse[] = [];
   private lastEventSeq = -1;
+  /** The model the event baseline belongs to, and how many of its events
+   * had been recorded at the last sync (AR21 finding 7). */
+  private eventSource: FlowModel | null = null;
+  private eventsRecordedSeen = 0;
   private edges: DynamicEdge[] = [];
   /** Activity class per directed pair, to see which pairs changed class. */
   private edgeClasses = new Map<string, number>();
@@ -172,12 +176,27 @@ export class FlowAnimator {
     reheatAround(this.layout, [...added, ...grown, ...this.leaderMoves(now)], this.edges, GROWTH_ALPHA);
     reheatAround(this.layout, [...reclassed, ...grownBadges], this.edges, NUDGE_ALPHA);
 
+    // A session change brings a new model whose sequence numbers start
+    // again; the old session's high mark must not hide its telegrams.
+    if (model !== this.eventSource) {
+      this.eventSource = model;
+      this.lastEventSeq = -1;
+      this.eventsRecordedSeen = 0;
+    }
     const fresh = model.events.filter((event) => event.seq > this.lastEventSeq);
     if (fresh.length > 0) this.lastEventSeq = fresh[fresh.length - 1].seq;
+    // Events recorded since the last sync that are no longer in the ring
+    // were pushed out before they could be drawn (AR21 finding 7).
+    const unseenDropped = model.counters.eventsRecorded - this.eventsRecordedSeen - fresh.length;
+    this.eventsRecordedSeen = model.counters.eventsRecorded;
     // A hidden page draws nothing, and what happened meanwhile is not
     // replayed on return: only events observed just now become pulses.
     if (this.motion && !this.scheduler.hidden()) {
       this.queuePulses(fresh.filter((event) => event.observedAtMs >= now - FRESH_EVENT_MS), now);
+      if (unseenDropped > 0) {
+        this.metrics.overCapacityEvents += unseenDropped;
+        this.metrics.reduced = true;
+      }
     }
     this.wake();
   }
@@ -250,10 +269,10 @@ export class FlowAnimator {
     const bundles = new Map<string, Pulse>();
     const bundle = events.length > COALESCE_ABOVE;
     // Each telegram is counted once (AR21 finding 4): as not (completely)
-    // drawn when any of its lines found no free pulse — or when it has no
-    // line at all, because the model refused every target at its node limit
-    // (AR21 finding 5) — else, in a bundled batch, as drawn bundled. Lines
-    // per telegram are not telegrams.
+    // drawn when any of its lines found no free pulse, when it has no line
+    // at all (AR21 finding 5), or when the model refused its sender or any
+    // recipient (finding 6) — else, in a bundled batch, as drawn bundled.
+    // Lines per telegram are not telegrams.
     const incomplete = new Set<number>();
     const members = new Map<Pulse, number[]>();
     const add = (pulse: Pulse, telegrams: readonly number[]) => {
@@ -265,6 +284,12 @@ export class FlowAnimator {
       this.pulses.push(pulse);
     };
     events.forEach((event, index) => {
+      // A refused sender or recipient (AR21 finding 6): what lines remain are
+      // drawn, but the telegram is not drawn completely.
+      if (!event.complete) {
+        incomplete.add(index);
+        this.metrics.reduced = true;
+      }
       if (event.to.length === 0) {
         incomplete.add(index);
         this.metrics.reduced = true;

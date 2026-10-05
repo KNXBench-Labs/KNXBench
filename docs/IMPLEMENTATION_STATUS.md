@@ -1,5 +1,18 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — Telegram-flow note counts refused and ring-dropped telegrams (AR21 findings 6, 7)
+
+- `flowModel`: `FlowEvent.complete` (false when the sender or any recipient
+  was refused at the node limit); a refused sender's telegram becomes a
+  lineless event without send times; `counters.eventsRecorded`.
+- `flowAnimator`: incomplete events count as not (completely) drawn — never as
+  bundled — while their remaining lines are drawn; events pushed out of the
+  ring before a sync are counted as not drawn (not while hidden, not ones
+  already drawn); the event baseline resets when the view gets a new model,
+  so a new session's telegrams pulse again (found while fixing finding 7).
+- Details and the §20 stall decision: TELEGRAM_FLOW_VISUALIZATION §21. Awaiting
+  the AR21 rerun.
+
 ## 2026-10-05 — AR10 slice 3: the German report finally says "Schalten"
 
 - New `knx_app::com_object_language` holds the communication-object

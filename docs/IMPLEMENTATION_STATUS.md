@@ -1,5 +1,20 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR06X: actual raw-input guard contracts (local native evidence)
+
+- Actual256MiB and +1-byte nonzero malformed buffers: typed inclusive/error-
+  fidelity and all-application-table values/BLOBs plus seed archive preserved.
+  Native raw2/full8 and two compiled exact semantic controls independently
+  checked on hashed working-tree inputs; productive parser/constants unchanged.
+- First control wrapper1 was a failure-inventory verifier false refusal; actual
+  metadata0/compile0/named native101 retained and accepted without replay.
+  Upper control ran separately. GNUtime127 and interrupted outer scoped-gate
+  timeout remain infrastructure observations, not product regression or passes.
+- Current scoped9 retry and later integrated/publication acceptance are pending.
+  This is not valid-large import/caller/streaming/resource-policy or Alpha
+  acceptance. Authoritative KL151 remains in status/LEDGER.md; evidence in
+  PRODUCT_ZIP_RAW_INPUT_CONTRACTS.md.
+
 ## 2026-10-04 — AR06W: bounded declared-byte admission contracts
 
 - Four public synthetic native contracts pass4/0/0, old count2 filtered: exact/

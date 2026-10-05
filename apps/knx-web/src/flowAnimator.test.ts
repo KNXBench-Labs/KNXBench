@@ -1,7 +1,7 @@
 /** U21: the animator stops frames and timers, freezes geometry only, bundles pulses. */
 import { describe, expect, it } from "vitest";
 import { COALESCE_ABOVE, FRAME_INTERVAL_MS, FlowAnimator, MAX_PULSES, MIN_DRAWN_MOVE, PULSE_MS, type AnimatorScheduler, type DrawnPulse } from "./flowAnimator";
-import { admitRows, createFlowModel, provideContext, type FlowModel, type FlowRowInput } from "./flowModel";
+import { admitRows, createFlowModel, DEFAULT_FLOW_LIMITS, provideContext, type FlowModel, type FlowRowInput } from "./flowModel";
 import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
 
@@ -203,6 +203,41 @@ describe("FlowAnimator", () => {
     animator.sync(m);
     expect(animator.metrics.overCapacityEvents).toBe(10);
     expect(animator.metrics.coalescedEvents).toBe(0);
+  });
+
+  // AR21 finding 5: at the model's node limit every target of a telegram can
+  // be refused while its sender is kept; such an event carries `to: []` and
+  // has no line to draw (TELEGRAM_FLOW_VISUALIZATION §17).
+  function atNodeLimit() {
+    const m = createFlowModel(SNAPSHOT_SESSION, { ...DEFAULT_FLOW_LIMITS, maxNodes: 1 });
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [1, 2, 3].map((id) => ({ deviceId: id, installationId: 1, name: `D${id}`, individualAddressRaw: 0x1100 + id })),
+      groups: [{ gaRaw: 0x0801, gaId: 1, installationId: 1, name: "G", dpt: null, members: [1, 2, 3].map(member) }],
+    })), 0);
+    return m;
+  }
+
+  it("counts a bundled telegram without any line as not drawn, never as drawn bundled", () => {
+    const { animator } = setup();
+    const m = atNodeLimit();
+    admitRows(m, Array.from({ length: 30 }, (_, i) => row(i + 1)), 0);
+    expect(m.counters.refusedNodes).toBeGreaterThan(0);
+    animator.sync(m);
+    expect(animator.activePulses()).toHaveLength(0);
+    expect(animator.metrics.coalescedEvents).toBe(0);
+    expect(animator.metrics.overCapacityEvents).toBe(30);
+    expect(animator.metrics.reduced).toBe(true);
+  });
+
+  it("counts an unbundled telegram without any line as not drawn and marks the rendering reduced", () => {
+    const { animator } = setup();
+    const m = atNodeLimit();
+    admitRows(m, [row(1), row(2)], 0);
+    animator.sync(m);
+    expect(animator.activePulses()).toHaveLength(0);
+    expect(animator.metrics.overCapacityEvents).toBe(2);
+    expect(animator.metrics.coalescedEvents).toBe(0);
+    expect(animator.metrics.reduced).toBe(true);
   });
 
   it("does not pulse while the page is hidden, nor replay that time on return", () => {

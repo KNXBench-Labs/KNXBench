@@ -1,5 +1,13 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — Telegram flow: AR21 finding 5 corrected
+
+A telegram whose targets were all refused at the model's node limit carries
+`to: []` and has no line; the reduced-rendering note counted it as drawn
+bundled. `queuePulses` now counts it as not drawn and marks the rendering
+reduced (TELEGRAM_FLOW_VISUALIZATION §18; §16's "no third case" annotated).
+Two `flowAnimator` tests at a one-node limit, RED on the previous code; four
+mutants killed. `FLOW-01` stays IN_PROGRESS until the AR21 rerun.
 ## 2026-10-05 — Tunnelling through Docker's bridge network (AR14B, `1fd1664a`)
 
 - `knx_net::TunnelReturnPath::RouteBack` sends the all-zero UDP Route Back HPAI

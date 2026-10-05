@@ -255,6 +255,19 @@ is no longer advertised. The legacy-format refusal itself remains intentional.
 - **Details:** [Commissioning history contract](../COMMISSIONING_ACTIVITY_HISTORY.md),
   [commissioning goal](../../goal-commission.md).
 
+### There is no address reset in the app
+
+- **Affected:** resetting a device's individual address to `15.15.255`.
+- **Limitation:** the app has no reset view and the server has no reset route.
+  The CLI command `knx device reset-address` shows its plan but refuses a
+  confirmed reset before opening any connection, because no complete backup of
+  every affected device exists. The project owner accepted this as a deliberate
+  unsupported boundary on 2026-10-05.
+- **Consequence:** reset the address with the manufacturer's tool or the
+  device's own procedure.
+- **Details:** [§140](../KNOWN_LIMITATIONS.md#140-the-individual-address-reset-needs-the-pressed-devices-named-and-its-restart-is-unconfirmed),
+  [ADR-0058](../adr/0058-individual-address-reset-requires-durable-recovery.md).
+
 ### Commissioning cannot program a device
 
 - **Affected:** everything a user would call "downloading to the bus".

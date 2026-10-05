@@ -509,6 +509,8 @@ commissioning session holds the Web lock at the time of writing.
 | UA4 | `MODEL-01` | Installation-scoped structure/move/link commands and installation rename **[web]** for the UI half | core/server half and web half done 2026-10-04 |
 | UA5 | `MODEL-02` | Explicit, undoable repair of ambiguous imported topology without guessing **[web]** for the UI half | core/store/server half and web half done 2026-10-04 |
 | UA6 | `UX-01` | Drag a group address onto a communication object (keyboard equivalent kept) **[web]** | no backend half needed (`POST /api/group-links`); web half done 2026-10-04 |
+| UA7 | `KL-13` (AR08) | Project-password dialog for protected ETS imports: ask on `422` `projectPasswordRequired`, ask again on `projectPasswordWrong`, password only in that request **[web]** | handed over by the alpha session 2026-10-04 20:58; web half done 2026-10-04 (`9bc36499`) |
+| UA8 | `KL-60` (AR11) | Diff view: virtualised long tables with search and status filter instead of 50-row paging; backend diff API unchanged **[web]** | user decision 2026-10-04 (AR11); done 2026-10-04 |
 
 Every package follows §2: RED first, mutation check per new guard, gates,
 docs, merge, push, handover, cleanup.
@@ -544,26 +546,28 @@ DPT decoding, completed settings/themes or commissioning.
 
 ### U19 — Resolve the flow contract and evaluated visual slice
 
-**Open; implementation authorized by the user on 2026-10-04.** Dependencies:
+**Done 2026-10-04 (goal-ui owner).** Evidence and the exact AR20 handoff:
+[TELEGRAM_FLOW_VISUALIZATION §9](docs/TELEGRAM_FLOW_VISUALIZATION.md#9-u19-resolution-goal-ui-owner-2026-10-04);
+study code under `apps/knx-web/e2e/flow-study/`. Originally: dependencies:
 latest owner/lock reconciliation and [ADR-0077](docs/adr/0077-session-local-telegram-flow-view.md).
 Use the Web lock if editing any Web sources, fixtures or generated bindings.
 
-- [ ] Inspect current monitor/session/context/projection/Inspector and primary
+- [x] Inspect current monitor/session/context/projection/Inspector and primary
   research; preserve observed versus configured versus ambiguous evidence.
   Send associations do not exclude receiving membership; no fabricated receipt.
-- [ ] Produce a bounded, visibly synthetic visual slice of direct devices,
+- [x] Produce a bounded, visibly synthetic visual slice of direct devices,
   unknown group nodes, group-address labels, directed pulses and separate value
   badges, using existing themes/motion. Record an actually rendered screenshot
   and keyboard/static fallback; do not claim a study is productive integration.
-- [ ] Evaluate native SVG first and a bounded layout approach. Record real
+- [x] Evaluate native SVG first and a bounded layout approach. Record real
   frame/lag/memory evidence for the specified workloads before selecting a
   solver/dependency/Canvas/worker. Specify readable resting edges, model/pulse
   limits, overflow disclosure, rolling window, damping and live tie behavior.
-- [ ] Freeze an exact handoff to AR20: session/context identities, typed raw
+- [x] Freeze an exact handoff to AR20: session/context identities, typed raw
   addresses, participant evidence/flags/activation, value/error states,
   observation age, cursor/drops, stale/restart handling and legacy fallback.
   Proposed fields/routes are not claimed existing; no parallel polling/tunnel.
-- [ ] Record resolved contract/tuning and reproducible test inputs in the flow
+- [x] Record resolved contract/tuning and reproducible test inputs in the flow
   document/ADR and handover to the alpha owner. Preserve current owner work and
   original native/Orca/live accepted boundaries, not a blanket new certification.
 
@@ -572,27 +576,31 @@ not a shipped graph or a hypothetical benchmark. Acquire no lock merely to plan.
 
 ### U20 — Integrate the shared monitor feed, graph and immediate values [web]
 
-**Open.** Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
+**Done (2026-10-04).** AR20 integrated (`85bfab88`, §10). Part 1 `4525c36e`
+(wire validation, reducer), part 2 in the delivering commit (feed, view,
+Inspector, keyboard, e2e); rules in TELEGRAM_FLOW_VISUALIZATION §11, residue in
+KNOWN_LIMITATIONS §154. *Freeze* moves to U21: U20's layout is static, so a
+freeze control would do nothing until U21 adds motion. Dependencies: U19 and **integrated AR20 contract/receipt**, with exact
 wire names and revision. Reuse one session/event controller with existing
 attachment/pause/cursor/context guards; do not implement another capture service.
 
-- [ ] Add a read-only Telegram flow view to the existing diagnostics/monitor
+- [x] Add a read-only Telegram flow view to the existing diagnostics/monitor
   navigation. Opening it does not connect/start/write; main/companion views
   share event/session handling and do not duplicate poll loops or tunnels.
-- [ ] Implement a pure, bounded session-keyed reducer and deterministic graph
+- [x] Implement a pure, bounded session-keyed reducer and deterministic graph
   identities. Display exact/unresolved/ambiguous sources, configured target
   endpoints, group labels and a loss/context/overflow legend. No first-match
   device selection, formatted-address guessing or current-project relabelling
   of historical rows; preserve per-object evidence in the Inspector.
-- [ ] Immediately update source and configured-target per-group value slots
+- [x] Immediately update source and configured-target per-group value slots
   from admitted value-bearing events, at most three current badges per device
   plus Inspector overflow. Expire at 7 seconds using trustworthy age/monotonic
   deadlines; newer same-slot sequences win. Reads/errors/old rows do not invent
   a value or renew stale TTL; pulse completion has no data-write authority.
-- [ ] Add keyboard selection/navigation/pan/zoom/freeze controls and semantic
+- [x] Add keyboard selection/navigation/pan/zoom/freeze controls and semantic
   HTML/Inspector access, focus/selection styling, localized explanations and
   no screen-reader event storm. Follow admitted built-in/System/imported themes.
-- [ ] Prove fake-clock expiry boundaries, multi-group/multi-source replacement,
+- [x] Prove fake-clock expiry boundaries, multi-group/multi-source replacement,
   duplicate poll delivery, delayed/out-of-order replies, capture loss, tab change,
   restart, no project, changed links/flags/addresses and historical reattachment
   with named RED/GREEN and restored behavioral guard controls.
@@ -602,24 +610,28 @@ intercepted synthetic traffic; no real bus, inferred receipt or new persistence.
 
 ### U21 — Make the nervous system dynamic, honest and bounded [web]
 
-**Open.** Dependency: U20. Keep data admission independent of solver/rendering.
+**Done (2026-10-04).** Parts A and B `9d432d17` (+ whitespace fix `deb6813a`),
+part C in the delivering commit (activity classes, 30 fps cap, production load
+figures in docs/design/2026-10-04-telegram-flow-u21/). Rules:
+TELEGRAM_FLOW_VISUALIZATION §12; residue: KNOWN_LIMITATIONS §154 (one path per
+pair, one machine measured, no WebKitGTK/Orca). Dependency: U20. Keep data admission independent of solver/rendering.
 
-- [ ] Add event-triggered directional traveling pulses, opposite-direction
+- [x] Add event-triggered directional traveling pulses, opposite-direction
   traffic, group-specific paths/labels and brief source feedback. Values stay
   immediate; no animation queue masquerades as physical bus timing or receipt.
-- [ ] Implement activity-dependent bounded distances, stable/damped layout and
+- [x] Implement activity-dependent bounded distances, stable/damped layout and
   the observed-sender leader in the labelled rolling window. Window expiry and
   ties are deterministic; fan-out counts once. Freeze fixes geometry only;
   values/counts/pulses stay live, and the current leader remains labelled.
-- [ ] Fade quiet edges only to a theme-readable resting line for the session.
+- [x] Fade quiet edges only to a theme-readable resting line for the session.
   Keep semantic graph membership independent of activity-window/value expiry.
   Coalesce high-load pulses with represented counts; visible capacity/loss
   diagnostics preserve existing edges, not silent eviction or complete-map claims.
-- [ ] Prove live theme changes, motion Off/OS-reduce changed mid-effect, hidden
+- [x] Prove live theme changes, motion Off/OS-reduce changed mid-effect, hidden
   tab/resume/unmount cleanup, static directional fallback and continued value
   expiry. Stop actual solver/timers/frames, not just CSS. Record real dense-burst
   and long-session CPU/memory/frame/lag results, including reduced rendering.
-- [ ] Run integrated UI/full gates and a separate in-session review; restore and
+- [x] Run integrated UI/full gates and a separate in-session review; restore and
   verify behavioral mutants, update focused docs/manual/limitations and publish
   the exact U21 receipt to the alpha owner for AR21. Keep evidence provenance
   and user-accepted native/Orca/live boundaries explicit; do not self-certify Alpha.

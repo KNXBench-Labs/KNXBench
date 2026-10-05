@@ -209,6 +209,24 @@ Retained: real ETS4/ETS5 protected export and AES (ETS6) stay sample-gated
 (COMPATIBILITY §3); `knx diff`, `POST /api/project/diff` and
 `knx products ingest` take no password (KNOWN_LIMITATIONS §13).
 
+## AR11 CSV/report decisions (2026-10-04)
+
+Checked on `44746183`. User decisions: `KL-40` accepted as is for the Alpha
+(derived CSV columns read-only, no Description/Comment, no schema change);
+`KL-60` handed to the UI owner (virtualised diff tables plus search/filter
+before the Alpha; backend API unchanged). No backend slice was approved, so
+none was built.
+
+| ID | Evidence |
+| --- | --- |
+| `KL-38` | No "ETS CSV" claim in Web catalogues, CLI or manual (repository grep); `knx-csv` 61 tests green |
+| `KL-44` | Rendered report says "not an ETS report" (`knx-report` test at `render.rs:1322`); 48 tests green |
+| `KL-47` | `unrenderable_parameter_kinds_and_allocator_refs_keep_raw_values_and_warn` and 2 more in `crates/knx-app/tests/documentation_composition.rs` green |
+| `KL-51` | `knx-diff` module doc and the manual call it a "KNXBench project diff", never an ETS comparison |
+
+All four stay sample- or semantics-gated as their KNOWN_LIMITATIONS
+sections say.
+
 ## AR13 privacy and deployment-security dossier
 
 Claude session, 2026-10-04, on user request alongside the Codex alpha
@@ -301,6 +319,12 @@ limitation. UI-03's device-checks boundary is also retained in the readiness
 section, not silently invented as a numbered issue.
 
 ## Decision and external-gate contracts
+
+**User decisions 2026-10-04:** `KL-129`/AR03 deferred past the Alpha
+(phases 1–2 plus AR02 are the boundary); `KL-135`/AR12 deferred
+(first-installed winner, candidates disclosed); `KL-70`, `KL-88`, `KL-134`
+accepted as Alpha boundaries; `KL-40` accepted, `KL-60` handed to the UI
+owner (AR11 section). Only `RELEASE-04` (AR19) still waits for a decision.
 
 | Gate / rows | Missing input and responsible owner | Safe fallback | Exact unblock condition |
 | --- | --- | --- | --- |

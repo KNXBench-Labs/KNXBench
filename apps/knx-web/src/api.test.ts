@@ -1,6 +1,7 @@
 /** Tests the browser API client's HTTP contracts. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api";
+import { snapshotJson } from "./flowTestFixtures";
 import { subscribeSessionExpired } from "./session";
 
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
@@ -134,6 +135,36 @@ describe("api", () => {
       ["/api/repair/device-placement", { deviceId: 42, keepUnassignedInstallationId: 2 }],
       ["/api/repair/line-owner", { lineId: 11, keepAreaId: 20 }],
     ]);
+  });
+
+  // AR08: the project password travels only in the import request that
+  // needs it, and only when one was entered.
+  it("sends a project password only when one is given", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-1");
+    let [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/import");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-1" });
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-2", "s3cret");
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-2", password: "s3cret" });
+    mockFetchOnce({ installations: [] });
+    await api.importProject("villa.knxproj", "token-3", "");
+    [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ path: "villa.knxproj", clientToken: "token-3" });
+  });
+
+  // U20: the flow snapshot is requested for one session and generation and
+  // validated before anything uses it.
+  it("fetches the flow snapshot of one session generation and validates it", async () => {
+    mockFetchOnce(snapshotJson({ sessionId: 7, generation: "18446744073709551615" }));
+    const snapshot = await api.fetchFlowSnapshot(7, "18446744073709551615");
+    const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/bus/monitor/flow-snapshot?sessionId=7&generation=18446744073709551615");
+    expect(snapshot.generation).toBe("18446744073709551615");
+    mockFetchOnce(snapshotJson({ generation: 3 }));
+    await expect(api.fetchFlowSnapshot(7, "3")).rejects.toThrow(/flow snapshot/);
   });
 
   it("renames an installation through PATCH /api/installations/{id}", async () => {

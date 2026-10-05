@@ -2816,6 +2816,8 @@ not change for this. Delivered 2026-10-04 as described above.
 
 ## 61. The DPT codec covers thirty main types with explicit input formats and disclosed encoding rulings
 
+**2026-10-05 (AR09): 17.001 is a 1-octet value on the wire.** A format-width audit against DPT-AS found that 17.001 DPT_SceneNumber ("1 octet: r2U6") was encoded in the 6-bit optimised A_GroupValue_Write form. It now uses its own data octet and refuses the inline form. All other main types matched the spec width. See [the audit](spec-audits/2026-10-05-dpt-format-widths.md). Ranges and special values are not yet re-audited, so this entry stays open.
+
 **Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29;
 extended 2026-09-13 and 2026-09-14, E4, twice) can decode and encode main types **1
 through 30 inclusive, with no gaps** — thirty main types, counted from

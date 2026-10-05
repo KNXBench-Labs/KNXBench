@@ -1,6 +1,6 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-10-05 10:40 CEST
-- **Completed:** Claim only. This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.
+- **Timestamp:** 2026-10-05 10:45 CEST
+- **Completed:** AR09 step 1 (format widths) done locally: spec-width audit test for main types 1-30; defect 17.001 encoded inline (6-bit form) fixed to a 1-octet payload, reserved bits refused, pinned tests rewritten, two compiled mutants killed, knx-core 678/0/0. KL-61 ledger row -> IN_PROGRESS (snapshot counts recounted). Earlier claim: This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.
 - **Pending/Next Steps:** Audit main types 1-30 (format, range, resolution, special values) against DPT-AS; fix only proven format defects with RED tests; then the GA-declared-DPT vs linked-object question (ADR first if modelling changes). AR07 is not touched.
 - **Notes for Codex oder Claude:** Please skip AR09 while this claim stands. Web lock: held by claude-alpha per the owner entries below; not taken or released by this entry.
 

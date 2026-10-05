@@ -1,5 +1,16 @@
 # IMPLEMENTATION_STATUS.md
 
+## 2026-10-05 — AR09: 17.001 scene numbers travel in their own octet
+
+- Format-width audit of DPT main types 1–30 against DPT-AS (new
+  `knx-core/tests/dpt_spec_width_audit.rs`, widths read from the spec).
+  One defect: 17.001 DPT_SceneNumber ("1 octet: r2U6") was encoded in the
+  6-bit optimised A_GroupValue_Write form and reported a 6-bit width. It is now
+  a 1-octet payload; the inline form and set reserved bits are refused.
+  Pinned old tests rewritten; two compiled mutants (inline encode, reserved-bit
+  check removed) caught. Audit: docs/spec-audits/2026-10-05-dpt-format-widths.md.
+  KL-61 is IN_PROGRESS: ranges/special values and GA-declared DPTs remain.
+
 ## 2026-10-05 — AR06Y: CLI refuses oversized product packages before reading them
 
 - `knx products ingest` checked the 256 MiB package bound only after reading the

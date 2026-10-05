@@ -2059,11 +2059,15 @@ fn encode_a14(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 //
 // 1 octet, `r2U6`: 2 reserved bits (must be 0) + 6-bit unsigned
 // `SceneNumber`, "Value binary encoded" (DPT-AS §3.18 table, 17.001
-// DPT_SceneNumber), range `[0...63]`. Six significant bits puts this at
-// the AL-AS §3.1.2/§3.1.3 inline-payload threshold (`GroupValue::Short`)
-// exactly, so `require_short` (already used for main types 1-3) applies
-// unchanged; a reserved bit set is the same "preceding bits shall be 0"
-// violation as elsewhere, so it is `InvalidData`.
+// DPT_SceneNumber), range `[0...63]`. The Format line is "1 octet", so the
+// group object carrying it is a 1-octet object (Resources §4.18.6.2.4.1.4
+// Table 88, Value Field Type 7) and its value travels in its own data
+// octet (AL-AS Figure 7), exactly like 18.001 and 26.001. The 6-bit
+// optimised A_GroupValue_Write form (AL-AS Figure 8) is for values whose
+// object is 6 bits or less; six *significant* bits inside a 1-octet format
+// do not qualify. (AR09, 2026-10-05, corrected an earlier ruling here that
+// encoded 17.001 inline as `GroupValue::Short`.) A set reserved bit is
+// `InvalidData`, as for 18.001's reserved bit.
 //
 // Ruling on the wire value vs. the human scene number (do not relitigate
 // — see the brief): DPT-AS §3.25 NOTE 16 recommends displaying
@@ -2083,7 +2087,10 @@ fn encode_a14(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // presentation decision, not this codec's.
 
 fn decode_scene(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
-    let raw = require_short(payload, dpt, 6)?;
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    if raw & 0b1100_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
     Ok(DptValue::Scene { number: raw })
 }
 
@@ -2099,7 +2106,7 @@ fn encode_scene(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
             value: trimmed.to_string(),
         });
     }
-    Ok(GroupValue::Short(n))
+    Ok(GroupValue::Bytes(vec![n]))
 }
 
 // ---------------------------------------------------------------------
@@ -4578,7 +4585,9 @@ mod tests {
         let d = dpt(17, Some(1));
         for (text, raw) in [("0", 0u8), ("63", 63u8), ("30", 30u8)] {
             let payload = encode(d, text).unwrap();
-            assert_eq!(payload, GroupValue::Short(raw));
+            // DPT-AS §3.18: "1 octet: r2U6" — a full data octet on the
+            // wire, never the 6-bit optimised A_GroupValue_Write form.
+            assert_eq!(payload, GroupValue::Bytes(vec![raw]));
             assert_eq!(
                 decode(d, &payload).unwrap(),
                 DptValue::Scene { number: raw }
@@ -4587,23 +4596,29 @@ mod tests {
     }
 
     #[test]
-    fn scene_accepted_in_both_the_inline_form_and_a_single_octet() {
+    fn scene_is_a_one_octet_value_and_the_inline_form_is_refused() {
         let d = dpt(17, Some(1));
-        assert_eq!(
-            decode(d, &GroupValue::Short(42)).unwrap(),
-            DptValue::Scene { number: 42 }
-        );
         assert_eq!(
             decode(d, &GroupValue::Bytes(vec![42])).unwrap(),
             DptValue::Scene { number: 42 }
         );
+        assert_eq!(
+            decode(d, &GroupValue::Short(42)),
+            Err(DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 8,
+                got: 6
+            })
+        );
     }
 
     #[test]
-    fn scene_decode_rejects_bits_above_the_six_significant_bits() {
+    fn scene_decode_rejects_set_reserved_bits() {
         let d = dpt(17, Some(1));
-        let err = decode(d, &GroupValue::Short(0b0100_0000)).unwrap_err();
-        assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+        for raw in [0b0100_0000u8, 0b1000_0000] {
+            let err = decode(d, &GroupValue::Bytes(vec![raw])).unwrap_err();
+            assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+        }
     }
 
     #[test]
@@ -4632,7 +4647,7 @@ mod tests {
             err,
             DptCodecError::WrongLength {
                 dpt: d,
-                expected_bits: 6,
+                expected_bits: 8,
                 got: 16
             }
         );

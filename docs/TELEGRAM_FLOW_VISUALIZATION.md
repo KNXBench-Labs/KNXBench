@@ -954,6 +954,33 @@ has several recipients per telegram, en/de.
 boundaries stay), and any KNX traffic measurement. No hardware, no real bus
 and no KNX socket were used.
 
+## 16. AR21 finding 4 corrected (goal-ui owner, 2026-10-05)
+
+The reduced-rendering note now counts telegrams, each exactly once (§15,
+finding 4). `queuePulses` in `flowAnimator.ts` remembers which telegrams each
+pulse (bundled or not) stands for. A telegram of which at least one line found
+no free pulse element counts as **not (completely) drawn**
+(`overCapacityEvents`); in a bundled batch, every other telegram counts as
+**drawn bundled** (`coalescedEvents`). The two never overlap, and their sum
+never exceeds the telegrams of the batch. Lines per telegram are no longer
+counted. Every event has at least one target (a group box when no member
+resolved), so there is no third case. The note reads "{bundled} telegrams were
+drawn as bundled pulses, {dropped} not at all or only in part" (German: "…
+gar nicht oder nur teilweise").
+
+Evidence: two new `flowAnimator.test.ts` cases with two receivers per
+telegram (bundled, with a telegram split at the capacity boundary and two
+telegrams sharing a refused bundle; unbundled, a full set of pulses refusing a
+later batch) fail on the previous code with 100 instead of 80 and 20 instead
+of 10; a wording test in `TelegramFlowView.test.tsx` checks the English and
+German note. Six mutants killed (revert of the old counting, untracked bundle
+members, refused telegrams counted as bundled, unbundled refusals not counted,
+refusals not counted at all, old message wording).
+
+The `reducedRenderingNote` strings in
+docs/design/2026-10-04-telegram-flow-u21/ were recorded with the earlier
+counting; their second number counts lines, not telegrams.
+
 ## Sources
 
 [4] https://d3js.org/d3-force/link

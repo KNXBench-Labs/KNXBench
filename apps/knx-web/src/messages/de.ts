@@ -603,7 +603,7 @@ export const messages: Record<MessageKey, string> = {
   "flow.motionOff": "Bewegung ist aus: Das Layout bleibt still und es werden keine Impulse gezeichnet. Werte, Richtungspfeile und der Inspector bleiben aktuell.",
   "flow.leader": "Aktivster Sender (letzte 60 s): {name}",
   "flow.noLeader": "Kein beobachteter Sender in den letzten 60 s.",
-  "flow.reduced": "Reduzierte Darstellung: {bundled} Telegramme wurden als gebündelte Impulse gezeichnet, {dropped} ohne Impuls. Werte und Zählungen sind vollständig.",
+  "flow.reduced": "Reduzierte Darstellung: {bundled} Telegramme wurden als gebündelte Impulse gezeichnet, {dropped} gar nicht oder nur teilweise. Werte und Zählungen sind vollständig.",
   "flow.keys": "Pfeile: nächster Knoten · Enter: Details · Umschalt+Pfeile: verschieben · + / −: zoomen · 0: zurücksetzen",
   "flow.summary": "Knoten: {nodes} · Verbindungen: {edges} (diese Sitzung)",
   "flow.graph": "Telegrammfluss-Graph",

@@ -7,6 +7,7 @@ import { flowNow, type FlowFeed } from "./flowFeed";
 import { admitRows, createFlowModel, provideContext, type FlowModel, type FlowRowInput } from "./flowModel";
 import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
+import { translateFor } from "./i18n";
 import TelegramFlowView from "./TelegramFlowView";
 import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
@@ -190,6 +191,15 @@ describe("TelegramFlowView motion", () => {
     await rerender(m, 2);
     expect(host!.querySelector(".flow-reduced")!.textContent).toContain("telegrams were drawn as bundled pulses");
     expect(host!.querySelector(".flow-reduced")!.textContent).toContain("Values and counts are complete.");
+  });
+
+  it("counts the reduced rendering in telegrams, in English and German (AR21 finding 4)", () => {
+    expect(translateFor("en", "flow.reduced", { bundled: 80, dropped: 20 })).toBe(
+      "Reduced rendering: 80 telegrams were drawn as bundled pulses, 20 not at all or only in part. Values and counts are complete.",
+    );
+    expect(translateFor("de", "flow.reduced", { bundled: 80, dropped: 20 })).toBe(
+      "Reduzierte Darstellung: 80 Telegramme wurden als gebündelte Impulse gezeichnet, 20 gar nicht oder nur teilweise. Werte und Zählungen sind vollständig.",
+    );
   });
 
   it("draws a fresh edge at full emphasis", async () => {

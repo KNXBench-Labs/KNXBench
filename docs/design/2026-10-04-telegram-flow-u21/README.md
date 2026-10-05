@@ -82,6 +82,10 @@ shift their targets, so the §7 load reaches ~2,500 distinct pairs instead of
 repeating ~1,000. For the U21 scenarios this adds two devices and changes the
 members of group 0 only. `FLOW_LOAD_FILE` names the output file.
 
+Their `reducedRenderingNote` strings use the counting before AR21 finding 4
+(TELEGRAM_FLOW_VISUALIZATION §16): the second number counts lines, not
+telegrams.
+
 Both AR21 files were measured on a host shared with other sessions (load
 average 16–21 on 16 threads), so they are not directly comparable with the
 U21 files above; compare before with after. Results and reading:

@@ -10,7 +10,32 @@ export const QUIET_AFTER_MS = 10_000;
 export const FADE_MS = 60_000;
 export const RESTING_OPACITY = 0.35;
 export const NODE_RADIUS = 22;
+/** Gap between a node and its name above or its value lines below. */
+export const TEXT_CLEARANCE = 16;
+/** Height of one value line below a node. */
+export const BADGE_LINE = 14;
+/** Half the width a name or value line usually takes (11 px monospace, about
+ * twelve characters). Longer names may still touch a neighbour's text. */
+const TEXT_HALF_WIDTH = 40;
+/** Cap height of the 11 px name above a node. */
+const LABEL_ASCENT = 10;
+/** How far below a value line's baseline its letters reach. */
+const BADGE_DESCENT = 4;
 const MAX_BEND = 60;
+
+/** The area a node's circle, name and value lines take, relative to its
+ * centre: what neighbours have to keep clear of (§9.3 hub readability). */
+export interface Footprint {
+  halfWidth: number;
+  top: number;
+  bottom: number;
+}
+
+export function nodeFootprint(badgeLines: number): Footprint {
+  const top = NODE_RADIUS + TEXT_CLEARANCE + LABEL_ASCENT;
+  const bottom = badgeLines > 0 ? NODE_RADIUS + TEXT_CLEARANCE + 10 + (badgeLines - 1) * BADGE_LINE + BADGE_DESCENT : NODE_RADIUS;
+  return { halfWidth: Math.max(NODE_RADIUS, TEXT_HALF_WIDTH), top, bottom };
+}
 
 export interface Point {
   x: number;

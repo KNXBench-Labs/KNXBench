@@ -397,7 +397,19 @@ async fn context_only_poll_does_not_return_buffered_rows_or_move_the_client_curs
     assert_eq!(paused["sessionId"], complete["sessionId"]);
     let resumed =
         body_json(call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await).await;
-    assert_eq!(resumed["telegrams"], complete["telegrams"]);
+    // `observedAgeMs` is measured per response (TELEGRAM_FLOW_VISUALIZATION
+    // §10), so a millisecond tick between the two polls changes it; the
+    // rows must otherwise be identical and the age may only grow.
+    let age = |body: &Value| body["telegrams"][0]["observedAgeMs"].as_u64().unwrap();
+    assert!(age(&resumed) >= age(&complete));
+    let without_age = |body: &Value| {
+        let mut rows = body["telegrams"].clone();
+        for row in rows.as_array_mut().unwrap() {
+            row.as_object_mut().unwrap().remove("observedAgeMs");
+        }
+        rows
+    };
+    assert_eq!(without_age(&resumed), without_age(&complete));
     assert_eq!(resumed["nextSince"], 1);
 }
 

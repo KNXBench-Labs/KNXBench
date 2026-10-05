@@ -7130,6 +7130,10 @@ the user approves a run.
 <a id="142-the-mask-070nh-partial-download-is-tested-in-the-simulator-only"></a>
 ## §142 Partial download: one verified device, product and UI boundaries remain
 
+**User decision 2026-10-05.** The Web scope selector is handed to the UI
+owner; the backend contract is in the
+[commissioning handoff](COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
+
 **Verified scope (2026-09-29/30; RESEARCH §19.15/§19.17).** On the MDT
 `1.1.67`, the `parameters`, `group-addresses` and `both` partial scopes
 completed with the same option-C image: respectively 394, 1022 and 1416
@@ -7202,6 +7206,11 @@ scope joins the allowlist with a test; the bus monitor shows the probe,
 the request, the answer and the device back where the table says.
 
 ## §140 The individual-address reset needs the pressed devices named, and its restart is unconfirmed
+
+**User decision 2026-10-05.** No HTTP route or UI for the reset will be built:
+the missing reset UI is an accepted, safely refused unsupported boundary, shown
+to users in the [manual](manual/known-issues.md#there-is-no-address-reset-in-the-app).
+Reopen only on a new decision.
 
 **Historical live run (2026-09-30, K13 on `1.1.67`).** MP §2.18
 `NM_IndividualAddress_Reset` is implemented in

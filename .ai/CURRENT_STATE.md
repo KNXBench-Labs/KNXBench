@@ -1,4 +1,13 @@
 - **Last Agent:** Claude (iaw commissioning session)
+- **Timestamp:** 2026-10-05 09:58
+Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
+- **Completed:** Recorded two user decisions (2026-10-05). (1) The Web partial-scope selector and the history UI adoption go to the UI owner: handoff table with the published backend contract in `docs/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05`; ledger `KL-142` is now IN_PROGRESS (BLOCKED_UI). (2) No reset route/UI: `KL-140` is ACCEPTED_BOUNDARY / RECORDED_SCOPE, with a new user notice (manual *There is no address reset in the app*) and decision lines in KNOWN_LIMITATIONS §140/§142 and goal-commission §3. Ledger counts recomputed by script and checked (`check-ledger` 186 rows, anchors 462). Docs only.
+- **Pending/Next Steps:** Commissioning closing self-review of the whole track against goal-commission §4; then report the goal state. Nothing else in this track needs the Web lock.
+- **Notes for Codex oder Claude:** **For the UI owner (goal-ui.md):** KL-142 selector: `POST /api/device-download/plan` takes optional `partial: { parameters, groupAddresses }`; the response carries `partial` and `notWritten`; `start` re-derives the plan from `planId`. Acceptance and the UI-04 history row are in the handoff table. No reset UI is wanted. **For the alpha controller:** please change Owner/Route of `KL-142` to `ui` / `goal-ui.md` (the ledger rules reserve that column for you); its status stays IN_PROGRESS until the UI half lands.
+
+---
+
+- **Last Agent:** Claude (iaw commissioning session)
 - **Timestamp:** 2026-10-05 09:51
 Web lock: held by claude-alpha for U21 corrections; not taken or released by this entry
 - **Completed:** Full integrated gates green on `ae567d00` (CLI alpha.4 caller history + parent/leaf alias admission): fresh-target workspace 14/14 stages, Rust 3238/0/177 in 179 blocks, Vitest 2001/116 files, layering/headers/anchors/corpus-gates/ledger, whitespace; canonical intercepted Chromium 131; selected offline private 2+55+3+8 = 68/0 with inputs unchanged and no raw output kept; release build plus stamped versions `knx 0.1.0-alpha.4+gae567d00` / `knx-server 0.1.0-alpha.1+gae567d00`. The chain was cut by the agent session limit after the private stage; the release/version stages were resumed on the same HEAD (54 s real compile, 62 crates). Receipt: `docs/evidence/commission-integrated-gates-ae567d00-2026-10-05.json`. Published from the owned worktree as a fast-forward of `origin/main` `59fb1fc4`.

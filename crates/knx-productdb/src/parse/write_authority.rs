@@ -1,3 +1,5 @@
+//! Records the write authority a program declares (ADR-0080).
+//!
 //! ADR-0080: the write authority a program declares, recorded beside the
 //! rows the static pass already wrote.
 //!

@@ -1,3 +1,5 @@
+//! The parameter panel refuses writes the program does not grant (ADR-0080).
+//!
 //! ADR-0080 at the HTTP surface: a field whose effective `Access` is not
 //! `ReadWrite`, or that a `ParameterCalculation` names, is shown read-only,
 //! a write to it is refused with 400 and changes nothing, and a program

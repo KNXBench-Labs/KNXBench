@@ -734,6 +734,14 @@ fallback (which stored language answered, or the package's declared
 `DefaultLanguage`) on the parameter, catalogue, device-product and master
 surfaces — `KL-37`/`KL-64`.
 
+**AR10 slice 2a, 2026-10-05:** parameter panel done — `textLanguage`,
+`nameLanguage`, `enumOptions[].language` and `sourceLanguage` expose which
+stored language answered or that the package's own text was kept
+(`parameter_views_name_the_language_that_answered_and_expose_the_fallback`,
+`parameter_panel_exposes_the_answering_language_and_the_fallback`). Catalogue,
+device-product and master surfaces remain (slice 2b). UI owner: decide how
+the markers are shown.
+
 ### AR11 — Resolve remaining CSV/report decisions and verify the selected backend scope
 
 **Sources:** `KL-38`, `KL-40`, `KL-44`, `KL-47`, `KL-51`, `KL-60`.

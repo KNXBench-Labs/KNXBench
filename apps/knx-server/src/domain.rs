@@ -1,3 +1,5 @@
+//! The server's domain operations behind the HTTP routes.
+
 // apps/knx-server/src/domain.rs
 //! Moved from `apps/knx-desktop/src-tauri/src/lib.rs` (the web/Docker
 //! deployment target, see the design doc linked from the plan this task
@@ -4084,6 +4086,7 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
     PanelAssembly {
         dto: crate::routes::ParameterPanelDto {
             program_id: None,
+            source_language: None,
             sections: vec![],
             stale: stale
                 .into_iter()
@@ -4330,6 +4333,10 @@ fn assemble_parameter_panel(
     // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
     let views = knx_productdb::query::parameter_views(&products, &program_id, language)
         .map_err(|e| e.to_string())?;
+    // AR10: the declared language of the untranslated texts, so a field
+    // whose `textLanguage` is `null` says what it fell back to.
+    let source_language = knx_productdb::query::program_default_language(&products, &program_id)
+        .map_err(|e| e.to_string())?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
     // ADR-0080: the declared write authority beyond the parameter types.
@@ -4556,7 +4563,9 @@ fn assemble_parameter_panel(
             fields.push(crate::routes::ParameterFieldDto {
                 ets_id: view.id.clone(),
                 name: view.name.clone(),
+                name_language: view.name_language.clone(),
                 text: view.text.clone(),
+                text_language: view.text_language.clone(),
                 kind: view.kind.clone(),
                 value,
                 value_source,
@@ -4566,9 +4575,11 @@ fn assemble_parameter_panel(
                 enum_options: view
                     .enum_options
                     .iter()
-                    .map(|(value, text)| crate::routes::EnumOptionDto {
+                    .enumerate()
+                    .map(|(i, (value, text))| crate::routes::EnumOptionDto {
                         value: value.clone(),
                         text: text.clone(),
+                        language: view.enum_option_languages.get(i).cloned().flatten(),
                     })
                     .collect(),
                 display_order: view.display_order,
@@ -4602,6 +4613,7 @@ fn assemble_parameter_panel(
     Ok(PanelAssembly {
         dto: crate::routes::ParameterPanelDto {
             program_id: Some(program_id.clone()),
+            source_language,
             sections,
             stale,
             diagnostics,
@@ -5751,8 +5763,10 @@ mod tests {
             display_order: None,
             tag: None,
             name: None,
+            name_language: None,
             text: None,
             text_layer: knx_productdb::query::ValueLayer::Program,
+            text_language: None,
             kind: kind.to_string(),
             access: None,
             ref_access: None,
@@ -5760,6 +5774,7 @@ mod tests {
             max_inclusive: None,
             size_in_bit: None,
             enum_options: Vec::new(),
+            enum_option_languages: Vec::new(),
         }
     }
 

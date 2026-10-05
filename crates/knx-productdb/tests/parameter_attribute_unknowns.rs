@@ -1,3 +1,5 @@
+//! `Parameter` and `ParameterRef` report every attribute they do not store (ADR-0081).
+//!
 //! KNOWN_LIMITATIONS §156 / ADR-0081: `Parameter` and `ParameterRef`
 //! report every attribute they do not store, at install and by the
 //! v20 -> v21 backfill, which must reproduce a fresh install.

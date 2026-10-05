@@ -1,3 +1,5 @@
+//! The product database records the write authority a program declares (ADR-0080).
+//!
 //! ADR-0080: the product database records the write authority a program
 //! declares — `ParameterRef/@Access` and which `ParameterRef`s a
 //! `ParameterCalculation` names — at install and by the v19 -> v20 backfill.

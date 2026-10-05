@@ -1,3 +1,5 @@
+//! HTTP routes and wire DTOs of the KNXBench server.
+
 use axum::extract::DefaultBodyLimit;
 use axum::extract::Multipart;
 use axum::extract::Path as AxumPath;
@@ -291,6 +293,10 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterPanelDto {
     pub(crate) program_id: Option<String>,
+    /// `ApplicationProgram/@DefaultLanguage`, verbatim (AR10): the language
+    /// a field's untranslated `name`/`text`/option label is in. `null` when
+    /// the program declares none — never guessed.
+    pub(crate) source_language: Option<String>,
     pub(crate) sections: Vec<ParameterSectionDto>,
     pub(crate) stale: Vec<StaleParameterDto>,
     pub(crate) diagnostics: Vec<ParameterDiagnosticDto>,
@@ -330,7 +336,13 @@ pub(crate) struct ModuleScopeDto {
 pub(crate) struct ParameterFieldDto {
     pub(crate) ets_id: String,
     pub(crate) name: Option<String>,
+    /// The stored language identifier whose translation `name` is (e.g.
+    /// `de-DE` for a requested `de`), `null` when `name` is the package's
+    /// own text — then it is in `sourceLanguage` (AR10).
+    pub(crate) name_language: Option<String>,
     pub(crate) text: Option<String>,
+    /// As `nameLanguage`, for `text`.
+    pub(crate) text_language: Option<String>,
     pub(crate) kind: String,
     pub(crate) value: Option<String>,
     pub(crate) value_source: String,
@@ -359,6 +371,8 @@ pub(crate) struct ParameterFieldDto {
 pub(crate) struct EnumOptionDto {
     pub(crate) value: String,
     pub(crate) text: Option<String>,
+    /// As `ParameterFieldDto.nameLanguage`, for this option's label.
+    pub(crate) language: Option<String>,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]

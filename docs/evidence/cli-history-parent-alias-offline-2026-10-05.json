@@ -1,0 +1,151 @@
+{
+  "scope": "local focused offline parent-path alias admission; no current integrated/browser/private/release/publication or whole-goal acceptance",
+  "source_base": "f7cb57eded510b8a1825e6831a8d84f73a01c380",
+  "source_files": {
+    "apps/knx-cli/src/activity_history_paths.rs": "76acd7a9ceae23a49f9bc6d4c18757b6d884d6401aedb2200d02bdd258140426",
+    "apps/knx-cli/tests/cli_compare_activity.rs": "cec5a265ad2cf736328c544b41cbcbd4dc2057b92ff8c5faeb40cf0193d8522d"
+  },
+  "hardware_contacts": false,
+  "web_source_edits": false,
+  "red": {
+    "accepted_red": true,
+    "exit": 101,
+    "log_sha256": "e6b9b10d0fe125923924f930a77f798200e0f2c42e7158749e319d3c0b854370"
+  },
+  "green": {
+    "scope": "CLI compare candidate focused GREEN; not whole integration/publication",
+    "accepted": true,
+    "stages": [
+      {
+        "stage": "format-cli",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e"
+      },
+      {
+        "stage": "fmt",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e"
+      },
+      {
+        "stage": "compare-unit",
+        "exit": 0,
+        "accepted": true,
+        "passed": 6,
+        "failed": 0,
+        "log_sha256": "c37b83b32613a1a4737d9de7a79cf0a0342d093b9f073915e06776659f3bb573"
+      },
+      {
+        "stage": "compare-entrypoints",
+        "exit": 0,
+        "accepted": true,
+        "passed": 7,
+        "failed": 0,
+        "log_sha256": "7c436c574972c0c4ebd41fd2ee5f6178ad369dd69a27794bf56c34f291d9771e"
+      },
+      {
+        "stage": "reader-regression",
+        "exit": 0,
+        "accepted": true,
+        "passed": 7,
+        "failed": 0,
+        "log_sha256": "ac64343ba3a6f4b20119ba342b18306f82fa7094eba6f591d815550939712f0a"
+      },
+      {
+        "stage": "cli-clippy",
+        "exit": 0,
+        "accepted": true,
+        "passed": 0,
+        "failed": 0,
+        "log_sha256": "9dbbfeb4d6b68fff14de933a39d6474834535632da32426fbfed8305761c0f96"
+      }
+    ]
+  },
+  "controls": {
+    "scope": "six focused offline compare source controls; no release acceptance",
+    "controls": [
+      {
+        "case": "alias-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "ce86bfddcbb2cd064e9020c3aaedccdae74f610123054a9b716bde4a04826341",
+          "fe37ce831b64a2188fd64455edfd863bce5b70fbc0362d85e9d1902f28f7ddd8",
+          "fb0068cee0646bbfdb45b8b9ec9514dc95375f8883d6f67ee43941a7e3fd5997"
+        ]
+      },
+      {
+        "case": "explicit-history-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "d6278a45b722dad1ae1daa2b347f65ab595822e91b6b2ea99380c42bc2df7c60",
+          "93cab8c6c475bf13f7af9acdcd9021f5fc91a814e97f2744f4165ba5dc9a4087",
+          "e7008c7487395534e74accc26052346b86da841e453bd91ddc9b5ceb7bf70112"
+        ]
+      },
+      {
+        "case": "durable-start-wiring",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "678073669ae095013f49cc77f462de17ec021eefd3b364613070ad7b5f6d397e",
+          "24a209c808348cac454724866fdd5a3eb91e1503bdf3c89a1904e3481a1b9143",
+          "91e86d4630ec80f4e6350f0943d97668bbb547c6c401ad81fdd2b271036d2f0d"
+        ]
+      },
+      {
+        "case": "duplicate-history-option",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "d8199aa90951ee6e0220d1b758aba58022a5147b29cdb084b2cced80838041e3",
+          "adfba821319040547952bfec48ed8b15cfbe447cc07b092651934ee758db0170",
+          "568662e021316847bd5b098733735b6589e2a964aef06f0af87a21191c4be889"
+        ]
+      },
+      {
+        "case": "missing-destination-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "7cbac9c4a97753cfd26ad8c4e34ee0007b89924edc28d3cf783b945918d96cba",
+          "6cd5bd0ba62bc7ca96bd4faca8bfa9117fcbf5faa36a0b86260ebd5171edc917",
+          "9821f7f4cf6e35f50b7b609373372d1336e1939f257a095854b9ee7b3c3d1a72"
+        ]
+      },
+      {
+        "case": "missing-parent-alias-admission",
+        "compile_exit": 0,
+        "inventory_exit": 0,
+        "runtime_exit": 101,
+        "intended_failure": true,
+        "log_hashes": [
+          "0e6e4e9d5158794c769b0845d0a263c358f258b16be090c2bf2b8b885b85a0b3",
+          "f8d89de5fb81c30fbe4f5f7a42686c3536f108fa4262c64846388bf68fecf33c",
+          "1a0c1d4d01577483a9eed78eabc84a9cc3d8c6459d0061d9ee512effa99ae5c2"
+        ]
+      }
+    ],
+    "source_restored": true,
+    "positive_exit": 0,
+    "parser_exit": 0,
+    "accepted": true
+  },
+  "limitation": "Admission-time path identity; no hostile filesystem replacement/race or crash guarantee."
+}

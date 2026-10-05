@@ -1,5 +1,94 @@
 # Commissioning activity history contract
 
+## Optional CLI compare history candidate — 2026-10-05
+
+`knx device compare` accepts `--activity-history <path>` in CLI
+`0.1.0-alpha.4`. Omission retains the unjournaled read-only command. Explicit
+history is admitted before project/product openers; input aliases, unavailable
+history and failed durable start refuse before the connector. The shared
+format-2 `deviceCompare` kind retains only operation metadata and target address,
+not gateway, file paths, product identifiers, names or compared octets.
+
+`Same` and `Different` are completed observations (`finished`); connector/read
+failure is `failed`. CLI comparison exit meanings remain 0/same, 2/different,
+1/not compared; an explicit journal failure is reported separately and returns
+failure without relabeling the witnessed observation. An interrupted process
+retains uncertainty, not proof of clean bus shutdown. Cleanup error reporting
+remains separate from the comparison result. History does not grant write
+authority and is not a recovery image.
+
+The shared input helper refuses identical requested history/product paths
+**before either file exists**, including destinations reached through existing
+parent symlinks or `child/..`. Existing final-file canonical and Unix hard-link
+identities are checked too. An unresolved leaf symbolic-link destination is
+explicitly refused before history creation rather than followed or repaired.
+This closes shared download/restore/compare admission findings without changing
+product storage. It remains admission-time protection, not a hostile filesystem
+replacement/race guarantee. [Later focused parent/leaf receipt](evidence/cli-history-leaf-alias-offline-2026-10-05.json)
+contains6 unit/8 entrypoint/7 reader positives and7 restored source controls;
+the earlier counts below retain their original historical scope.
+
+[Focused offline receipt](evidence/cli-compare-history-offline-2026-10-05.json):
+six compare unit tests, six CLI entrypoint tests (including six existing-alias
+variants), seven serial/service-control reader regressions, fmt and strict CLI
+Clippy pass. Five compiled source controls each register one exact test, fail at
+the intended runtime assertion, restore canonical bytes, then pass positive
+entrypoint/parser regressions. These are overlapping focused scopes, not totals
+to add to a workspace run. Initial synthetic-fixture/help-test setup failures and
+the compile-only missing-alias attempt are retained separately in the handover.
+
+The integration candidate remains unpublished. Current combined workspace,
+private/browser/release gates, complete long-session contracts and the
+Web-owner's partial-selector/reset/recovery surfaces are still separate work.
+No real KNX hardware, ETS, vendor or power-loss experiment was performed.
+
+
+## Shared Caller candidate — 2026-10-04
+
+The local candidate for [ADR-0075](adr/0075-shared-commissioning-activity-lifecycle.md)
+extracts the format-2 lifecycle to `knx-app::commissioning_activity`; the server
+is an adapter, not a second journal engine. CLI download, restore and
+service-control confirmed writes require `--activity-history <path>`.
+`knx-app` and `knx-cli` advance to `0.1.0-alpha.2` under ADR-0018.
+A fresh OS-random producer incarnation distinguishes separate CLI processes.
+Plan-only commands do not open the supplied activity database, and history is
+not a recovery image or a grant of write authority.
+
+The original backup is retained before possible-send intent is durably recorded;
+either failure refuses the mutation. Service-control retains the original
+`PID_SERVICE_CONTROL` and `PID_DEVICE_CONTROL` before Verify Mode. Memory
+restore remains limited to its existing same-shape memory backup contract.
+The tracked download helper returns written/restart separately from history
+recording and adapter cleanup; cleanup errors cannot erase a witnessed write.
+The untracked compatibility wrapper is compiled only for offline tests.
+
+Input existence and history/input identity admission precede every store opener.
+A regression reproduced actual byte changes to a **nonempty synthetic history**
+when the same file was supplied as the project. The fixed CLI refuses exact,
+canonical/symlink and Unix hard-link aliases while retaining the bytes and
+original row; the check also includes resolved product and operator-key paths.
+This is an admission-time check, not a hostile filesystem-replacement/race
+or non-Unix hard-link guarantee. Merely adding a missing-file check was not
+sufficient for existing inputs.
+
+Current focused offline evidence: CLI admission **9 passed/0 failed/0 ignored**;
+download helper **13 passed/0 failed/8 ignored**. Four source controls compiled,
+registered one selected test each and failed at the intended runtime assertion:
+intent refusal, backup before intent, restart classification and input identity.
+Canonical source was restored and both focused targets passed afterward.
+The earlier three-package run **850/0/85** and strict Clippy pass belong to the
+pre-latest-test source, not this final candidate. The renewed frozen local gate passed fmt, strict three-package Clippy and
+**853 package tests/0 failed/85 ignored**, over91 result blocks with unchanged
+code/configuration. Integrated workspace acceptance and publication are
+**not claimed**.
+The integrated public regression additionally covers18 variants across primary,
+product and operator-key paths for both callers; CLI9/0/0, with two compiled
+channel-wiring controls reaching named runtime failures, source restored and
+CLI9/0/0 afterward. This followup is not final workspace acceptance.
+Other read callers, long sessions, client surfaces and offline recovery still
+remain separate work. No device, bus, vendor or ETS was contacted.
+
+
 ## History Web delivery checkpoint — 2026-10-04
 
 The actual merged source `2057f86b` passed all nine required public stages:
@@ -214,6 +303,51 @@ The latest scoped evidence above supersedes these earlier snapshots without
 retroactively broadening them. Full branch review/closure/integrated acceptance
 and publication remain pending. See proposed
 [ADR-0067](adr/0067-download-lifecycle-preserves-uncertainty.md).
+
+## CLI serial-lookup read caller candidate
+
+The local CLI candidate accepts `--activity-history <path>` for both
+`device find-serial <serial>` and `device find-serial --address <a.l.d>`.
+Without this option the existing read-only command remains unjournaled; this
+is optional caller coverage, not complete global commissioning coverage.
+
+An explicitly selected history must pass storage admission and persist the
+`serialLookup` start before the tunnel adapter is opened. Unavailable history
+refuses the lookup without replacing foreign evidence. A witnessed lookup
+result records `finished` for either a match or a completed `Ok(None)` no-match
+observation (as the server does), and `failed` for a transport error. The existing
+CLI no-match output and exit1 remain unchanged; a tunnel connection failure records
+`failed`. A later metadata persistence failure is reported separately and
+causes a failing CLI exit without relabeling the observed lookup result.
+Existing disconnect-error output is retained; this read receipt does not
+certify successful tunnel cleanup or introduce download cleanup evidence.
+
+Format 2 requires `serialLookup.address` to be null, in **both** directions.
+The candidate preserves this closed contract rather than widening the schema
+or relabeling the operation. Serial values, gateway, history path, returned
+payload and transport exception text remain absent from the receipt. Reading
+a start left by process interruption through another incarnation projects
+`unknown`, `interrupted: true`, with no invented finish time. This is an
+offline process-interruption contract, not a power-loss recovery guarantee.
+
+A sibling admission review also found that existing service-control reads could
+continue after explicit history failure. A third compiled/listed/runtime RED
+confirmed the unwanted adapter request; that caller now checks storage admission
+and the persisted-start status before opening a tunnel. Its existing terminal
+metadata-warning and exit behavior remain unchanged; this is a startup fix, not
+a claim that all read callers have identical late-failure policy.
+
+Parser and caller tests each compiled, registered and failed at their intended
+runtime assertions before implementation. Loopback tests cover both lookup
+directions, pre-adapter persistence, interruption/privacy, explicit-history
+refusal with original evidence retained, duplicate-option refusal, terminal
+connection failure, completed no-match metadata and help text. The no-match case
+uses the actual CLI with a verified loopback handshake/ACK/disconnect sequence
+and no simulated device response; it first failed at the intended runtime state
+assertion before the correction. Current branch regression evidence belongs
+to the reader worktree; upstream integration, independent review, full gates
+and publication remain separate and pending. No Web source or protocol
+implementation is changed by this candidate.
 
 ## Read API
 

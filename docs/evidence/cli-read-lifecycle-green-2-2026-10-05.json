@@ -1,0 +1,109 @@
+{
+  "scope": "Uncommitted CLI read lifecycle candidate after sibling service-control admission review; branch-only offline gate",
+  "base_head": "9edad0a010cb6a8a8447571e6a0d39d8048b218c",
+  "production_commit": null,
+  "cli_version": "0.1.0-alpha.3",
+  "history_format": 2,
+  "kinds": [
+    "serialLookup",
+    "serviceControlRead"
+  ],
+  "serial_lookup_address_contract": "null in both directions",
+  "source_inputs": {
+    "Cargo.lock": "200b5ad3df699c36e7819d36ebc6ed55b9adcefac469c283ea8c51e23c498c75",
+    "apps/knx-cli/Cargo.toml": "f7b8ecc2d85bb76b967d4469a2f829a7c203bbfbc1e21ae899d0a8d04418c289",
+    "apps/knx-cli/src/main.rs": "09fd3d40753e8a9e060c5bfb458c2216996ada4faccc17371dfef11cd04b8934",
+    "apps/knx-cli/src/device_serial.rs": "26780d473be791fbd7a57f474f6e973097a58c832c41e4077936af29bef296b0",
+    "apps/knx-cli/tests/cli_read_activity.rs": "3c47439ca392ac372a8fc35e8bedf872e7264567c467d182407df697400f1dc0"
+  },
+  "full_source_manifest_commitment": "e99b1155ce6576e014d32181b7bd7ec796ab4764f7aa5f8b7ab9b8ad7db082f3",
+  "tdd": [
+    {
+      "phase": "parser-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "lifecycle-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "service-read-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    }
+  ],
+  "gate_stages": [
+    {
+      "name": "fmt",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_stable": true
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "e5ae45265197cd61bc42612d8e891ed5162dfaccd0609f55af3673f1f6a4df1f",
+      "source_stable": true
+    },
+    {
+      "name": "regressions",
+      "exit": 0,
+      "summaries": [
+        [
+          "103",
+          "0",
+          "8"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "6",
+          "0",
+          "0"
+        ]
+      ],
+      "log_sha256": "915421be6d1db15d913959c226cea110a4a70efae820a8fcb6b5f52a4e8b47b8",
+      "passed": 118,
+      "failed": 0,
+      "ignored": 8,
+      "expected_blocks_present": true,
+      "source_stable": true
+    },
+    {
+      "name": "version",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "a7d956ccd685edffde7819ab96fc76696fe9f52651dc5f777be432a8027ce18b",
+      "expected_version": true,
+      "source_stable": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "summaries": [],
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_stable": true
+    }
+  ],
+  "accepted_branch_gate": true,
+  "previous_serial_only_snapshot": "cli-serial-read-lifecycle-2026-10-05.json",
+  "private_corpus_acceptance": false,
+  "web_changes": false,
+  "hardware_contacts": false,
+  "full_integration_acceptance": false,
+  "independent_review": false,
+  "publication": false
+}

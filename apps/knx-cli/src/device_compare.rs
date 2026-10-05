@@ -37,6 +37,8 @@ pub struct CompareArgs {
     pub product_db: Option<String>,
     /// Compare only what a partial download would write.
     pub partial: Option<knx_core::commissioning::partial_memory_download::PartialDownloadParts>,
+    /// Optional persistent metadata; omission retains unjournaled legacy behavior.
+    pub activity_history: Option<String>,
     /// The gateway.
     pub gateway: std::net::SocketAddrV4,
 }
@@ -48,6 +50,7 @@ pub fn parse_compare_args(args: &[String]) -> Result<CompareArgs, String> {
     let mut product_db = None;
     let mut partial = None;
     let mut gateway = None;
+    let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -69,6 +72,13 @@ pub fn parse_compare_args(args: &[String]) -> Result<CompareArgs, String> {
             }
             "--gateway" => {
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
+                i += 1;
+            }
+            "--activity-history" => {
+                if activity_history.is_some() {
+                    return Err("give --activity-history only once".into());
+                }
+                activity_history = Some(crate::take_value(args, i + 1, "--activity-history")?);
                 i += 1;
             }
             flag if flag.starts_with("--") => {
@@ -93,6 +103,7 @@ pub fn parse_compare_args(args: &[String]) -> Result<CompareArgs, String> {
         project: project.ok_or("--project <path.knxdb> is required")?,
         product_db,
         partial,
+        activity_history,
         gateway,
     })
 }
@@ -320,6 +331,37 @@ mod tests {
 
     fn args(line: &str) -> Vec<String> {
         line.split_whitespace().map(String::from).collect()
+    }
+
+    #[test]
+    fn compare_accepts_optional_history_and_refuses_duplicate_or_missing_values() {
+        let baseline = args("1.1.67 --project p.knxdb --gateway 192.0.2.1:3671");
+        assert_eq!(
+            parse_compare_args(&baseline).unwrap().activity_history,
+            None
+        );
+        let mut tracked = baseline.clone();
+        tracked.extend(args("--activity-history history.sqlite"));
+        assert!(
+            parse_compare_args(&tracked).is_ok(),
+            "read-only comparison must accept an explicit persistent history"
+        );
+        assert_eq!(
+            parse_compare_args(&tracked)
+                .unwrap()
+                .activity_history
+                .as_deref(),
+            Some("history.sqlite")
+        );
+        tracked.extend(args("--activity-history another.sqlite"));
+        assert!(parse_compare_args(&tracked)
+            .unwrap_err()
+            .contains("give --activity-history only once"));
+        let mut missing = baseline;
+        missing.push("--activity-history".into());
+        assert!(parse_compare_args(&missing)
+            .unwrap_err()
+            .contains("--activity-history"));
     }
 
     #[test]

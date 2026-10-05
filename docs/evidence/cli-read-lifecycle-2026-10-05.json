@@ -1,0 +1,209 @@
+{
+  "scope": "Local CLI read lifecycle candidate after no-match semantics correction; offline source-hash-bound, not integrated or published",
+  "base_head": "9edad0a010cb6a8a8447571e6a0d39d8048b218c",
+  "production_commit": null,
+  "cli_version": "0.1.0-alpha.3",
+  "history_format": 2,
+  "kinds": [
+    "serialLookup",
+    "serviceControlRead"
+  ],
+  "serial_lookup_address_contract": "null in both directions",
+  "source_controls": {
+    "count": 3,
+    "controls": [
+      {
+        "id": "no-match-terminal",
+        "test": "a_completed_lookup_with_no_match_is_finished_not_a_transport_failure",
+        "canonical_restored": true,
+        "compile_exit": 0,
+        "list_exit": 0,
+        "registered": 1,
+        "runtime_exit": 101,
+        "intended_assertion": true,
+        "one_named_failed": true
+      },
+      {
+        "id": "pending-start",
+        "test": "find_serial_records_before_adapter_and_preserves_interruption_without_payload",
+        "canonical_restored": true,
+        "compile_exit": 0,
+        "list_exit": 0,
+        "registered": 1,
+        "runtime_exit": 101,
+        "intended_assertion": true,
+        "one_named_failed": true
+      },
+      {
+        "id": "service-read-admission",
+        "test": "explicit_service_control_read_history_failure_is_refused_before_adapter",
+        "canonical_restored": true,
+        "compile_exit": 0,
+        "list_exit": 0,
+        "registered": 1,
+        "runtime_exit": 101,
+        "intended_assertion": true,
+        "one_named_failed": true
+      }
+    ],
+    "canonical_tests": [
+      7,
+      0,
+      0
+    ],
+    "canonical_recompiled": true,
+    "accepted": true
+  },
+  "source_inputs": {
+    "Cargo.lock": "200b5ad3df699c36e7819d36ebc6ed55b9adcefac469c283ea8c51e23c498c75",
+    "apps/knx-cli/Cargo.toml": "f7b8ecc2d85bb76b967d4469a2f829a7c203bbfbc1e21ae899d0a8d04418c289",
+    "apps/knx-cli/src/main.rs": "09bbf79b785f828d2ee596fd31612f646817e930f3736797237f15fb4e3bae78",
+    "apps/knx-cli/src/device_serial.rs": "26780d473be791fbd7a57f474f6e973097a58c832c41e4077936af29bef296b0",
+    "apps/knx-cli/tests/cli_read_activity.rs": "de57c5acc1fbc33f49fe7f1c9740f5d21d447b7f81bd85c5bc0a84dcde812082"
+  },
+  "full_source_manifest_commitment": "1e4232ef0c547cde2cfaf6e09497329a05a1ea4f62de129a7aee69594d8e0059",
+  "tdd": [
+    {
+      "phase": "parser-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "lifecycle-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "service-read-red-1",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    },
+    {
+      "phase": "no-match-red-2",
+      "compile_exit": 0,
+      "registered": 1,
+      "runtime_exit": 101,
+      "accepted_red": true
+    }
+  ],
+  "gate_stages": [
+    {
+      "name": "fmt",
+      "exit": 0,
+      "namespace_verified": true,
+      "summaries": [],
+      "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e",
+      "source_stable": true
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "namespace_verified": true,
+      "summaries": [],
+      "log_sha256": "f69cd5333de1e9dbb1b8cb7cd5325bdaa40566d99f9bb825fd4ef3adc75460fa",
+      "source_stable": true
+    },
+    {
+      "name": "regressions",
+      "exit": 0,
+      "namespace_verified": true,
+      "summaries": [
+        [
+          "103",
+          "0",
+          "8"
+        ],
+        [
+          "9",
+          "0",
+          "0"
+        ],
+        [
+          "7",
+          "0",
+          "0"
+        ]
+      ],
+      "log_sha256": "cba28cc40f2273d7a26b3b39f724e037e4cf71739c09bc17abeef1ec771958cb",
+      "passed": 119,
+      "failed": 0,
+      "ignored": 8,
+      "expected_blocks_present": true,
+      "source_stable": true
+    },
+    {
+      "name": "version",
+      "exit": 0,
+      "namespace_verified": true,
+      "summaries": [],
+      "log_sha256": "acdb4aa04cef5593e55c4062a678b58470e4af3395e377f41810721278be3146",
+      "expected_version": true,
+      "source_stable": true
+    },
+    {
+      "name": "whitespace",
+      "exit": 0,
+      "namespace_verified": true,
+      "summaries": [],
+      "log_sha256": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e",
+      "source_stable": true
+    }
+  ],
+  "accepted_branch_gate": true,
+  "previous_serial_only_snapshot": "cli-serial-read-lifecycle-2026-10-05.json",
+  "private_corpus_acceptance": false,
+  "web_changes": false,
+  "hardware_contacts": false,
+  "full_integration_acceptance": false,
+  "independent_review": false,
+  "publication": false,
+  "previous_sibling_snapshot": "cli-read-lifecycle-green-2-2026-10-05.json",
+  "no_match_semantics": "Ok(None) is completed/finished metadata; existing CLI exit1 and no-answer output remain",
+  "rust_workspace_gate": {
+    "accepted": true,
+    "fresh_target": false,
+    "base_head": "9edad0a010cb6a8a8447571e6a0d39d8048b218c",
+    "stages": [
+      {
+        "name": "npm-ci",
+        "exit": 0,
+        "namespace_verified": true,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "result_blocks": 0,
+        "log_sha256": "83283987705ea704c697ed8dfaa3fb8cd10d8f5be2d51be659d38525f84ac39f",
+        "source_stable": true
+      },
+      {
+        "name": "web-build",
+        "exit": 0,
+        "namespace_verified": true,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "result_blocks": 0,
+        "log_sha256": "1cdd3a5bb1219e79daad38517a087b947bce529bb08ec641541e60b81a9f0001",
+        "source_stable": true
+      },
+      {
+        "name": "workspace",
+        "exit": 0,
+        "namespace_verified": true,
+        "passed": 3225,
+        "failed": 0,
+        "ignored": 177,
+        "result_blocks": 178,
+        "log_sha256": "ed5a1ecdecebf092d5ca1fea6dd1643f9990970274e4ff918712a92d974e6a6e",
+        "source_stable": true
+      }
+    ],
+    "source_manifest_commitment": "80c5be686fc7d20ff2285fea88dc9938d090bae73176795bfa3cb02df78247b8"
+  }
+}

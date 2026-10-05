@@ -1,6 +1,6 @@
 [package]
 name = "knx-app"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.3"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -14,6 +14,8 @@ knx-productdb.workspace = true
 knx-report.workspace = true
 knx-store.workspace = true
 chrono.workspace = true
+# Independent activity/run identity through the existing workspace OS randomness adapter.
+getrandom.workspace = true
 # Decodes `DeviceInstance/@SerialNumber` (xs:base64Binary) in `serial_number`.
 base64.workspace = true
 # `download_support` reads its shipped evidence file, `data/verified_downloads.json`.

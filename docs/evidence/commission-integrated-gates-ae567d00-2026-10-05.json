@@ -1,0 +1,91 @@
+{
+  "scope": "integrated gates on the commissioning caller/history candidate; offline only; self-review, not independent review; not whole-track or hardware acceptance",
+  "source_head": "ae567d006a6a112df70744b70f2eda11aced1c8a",
+  "workspace": {
+    "stages": [
+      "frontend-install",
+      "frontend-build",
+      "fmt",
+      "workspace-clippy",
+      "workspace-tests",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-corpus-gates",
+      "check-ledger",
+      "web-tests",
+      "cli-build",
+      "cli-version",
+      "whitespace"
+    ],
+    "all_exit_zero": true,
+    "rust": {
+      "passed": 3238,
+      "failed": 0,
+      "ignored": 177,
+      "result_blocks": 179
+    },
+    "vitest": {
+      "files": 116,
+      "tests": 2001
+    },
+    "log_sha256": {
+      "frontend-install": "cef0cf38d1a89c8ddf5b566fe116cce820d5ae15e1059d1e1760e67ba230a726",
+      "frontend-build": "27a2dea27bfb835545b76329a7ef610473ef134b1cdebc4951a1aec1617c6fc3",
+      "fmt": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e",
+      "workspace-clippy": "40d967bf77b09e48f72d19a935b4986c521156e7db314fc6dc5c4400eedcdb5a",
+      "workspace-tests": "033624a4209c4b87abd662ffd16761065bb6a07838d1bff3eead1569923e1b83",
+      "check-layering": "5b7d233ac2d40a4d0a72fb1147b608c121bac220f3d7bca001531c99ad3f011b",
+      "check-headers": "acdc3e51dbb77c7e03c2c8e8ba63db3feb3c460e80f77fcacc503faa854e9af9",
+      "check-anchors": "81b646fe79b16a1f5cf7fbf892d0eed32bcc66a32334326ae141c79de5ec54c3",
+      "check-corpus-gates": "10542d40de25f9adbc4e3dfb2076270f178d0cd3ea989e2e6bfc69b95b506207",
+      "check-ledger": "3796cdeb1256cc2587039389320377dc97bb9d0a9bebd0e6689b06b6138e57c8",
+      "web-tests": "5420cd51d981289b267670d365952d4537697988197e69fe10ce9cfae8a5374f",
+      "cli-build": "cc8fbc5dcecddcb19d4c37a8d960636d75cdde6b26ff126acbb34502714022a5",
+      "cli-version": "7850247207daf2c2adf4aabf699888ad023e74f851afb454f2992a2b83c8e5f8",
+      "whitespace": "a92a20cde7c61e0eb1c26177f0e810e86921435b6b26d1f7ab5f2e9f1d68d29e"
+    }
+  },
+  "browser": {
+    "chromium_passed": 131,
+    "origin": "canonical intercepted fixture server, own short TMP namespace",
+    "config_sha256": "9d6f1b709ff577e3b4a07b854ceb5e22f037fe08600c3966b6e7dbfc7b8c4ea3"
+  },
+  "selected_private_offline": {
+    "stages": {
+      "products": {
+        "registered": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "importer": {
+        "registered": 55,
+        "passed": 55,
+        "failed": 0
+      },
+      "native-roundtrip": {
+        "registered": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "cli-import": {
+        "registered": 8,
+        "passed": 8,
+        "failed": 0
+      }
+    },
+    "raw_output_retained": false,
+    "inputs_unchanged": true
+  },
+  "release": {
+    "cli": "knx 0.1.0-alpha.4+gae567d00",
+    "server": "knx-server 0.1.0-alpha.1+gae567d00",
+    "note": "chain interrupted by agent session limit after selected-private; release/version stages resumed separately on the same HEAD"
+  },
+  "historical_negatives": [
+    "integrated-browser-1: harness refused before any test at the Unix socket-path ceiling (infrastructure, not product)",
+    "f7cb57ed/efde6bf8 workspace receipts are bound to their own pre-fix trees"
+  ],
+  "hardware_contacts": false,
+  "web_source_edits": false
+}

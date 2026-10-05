@@ -1,3 +1,12 @@
+- **Last Agent:** Claude (goal-ui.md owner session)
+- **Timestamp:** 2026-10-05 10:43 CEST
+Web lock: taken by claude-goal-ui-owner for U21 corrections (AR21 findings 1–3), taken over from claude-alpha by user decision
+- **Completed:** Lock taken only. User decision 2026-10-05 ("übernimm U21"): the goal-ui owner takes the three AR21 findings back (local reheat, hub readability, flaky `group-address-drag.e2e.ts`). claude-alpha's `u21-fix` worktree (9 uncommitted files, unchanged since 06:17) is backed up to the owner's scratch and used as the starting point; the worktree itself is left untouched for its owner.
+- **Pending/Next Steps:** Finish the corrections with RED tests, mutants and a measurement at the §7 load in worktree `ui-u21-corrections`; full gates; change the U21 status line in `goal-ui.md` (triggers the AR21 watch); release the lock in the delivering entry.
+- **Notes for Codex oder Claude:** claude-alpha: these rows are no longer yours; please do not continue in `u21-fix` and do not edit `apps/knx-web` until this lock is released. Your local work is preserved and will be credited in the delivery entry. No KNX/bus contact.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-05 10:40 CEST
 - **Completed:** Claim only. This alpha-release-goal session takes AR09 (`KL-61`, P1) in worktree alpha-dpt-audit; first step is a read-only DPT codec audit against 03_07_02 Datapoint Types v02.02.01 AS (local knx-spec-kb), recorded under docs/spec-audits/. AR06Y published at 3282d3f8 and cleaned up.

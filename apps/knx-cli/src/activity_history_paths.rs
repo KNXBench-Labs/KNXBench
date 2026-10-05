@@ -1,23 +1,39 @@
 //! Keep the activity database separate from input files before any adapter opens them.
 
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+// Resolve existing parents as well as the final entry: a missing file can still
+// have a parent alias (a symlink or `child/..`). Never create a path to compare it.
+fn requested_location(directory: &Path, path: &Path) -> io::Result<PathBuf> {
+    let requested = directory.join(path);
+    let Some(name) = requested.file_name() else {
+        return Ok(requested);
+    };
+    let Some(parent) = requested.parent() else {
+        return Ok(requested);
+    };
+    match std::fs::canonicalize(parent) {
+        Ok(parent) => Ok(parent.join(name)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(requested),
+        Err(error) => Err(error),
+    }
+}
 
 /// Compare requested paths and existing identities without opening or reading files.
-/// Identical requested destinations are refused even when they do not exist yet.
-/// Unix includes hard-link identity; other platforms compare canonical paths only.
+/// Missing destinations are compared through their resolved existing parents.
+/// Unix also includes hard-link identity for existing files.
 /// This is admission-time protection, not a filesystem replacement/race guarantee.
 pub fn ensure_separate(history: &Path, inputs: &[&Path]) -> io::Result<()> {
     let directory = std::env::current_dir()?;
-    let requested_history = directory.join(history);
-    if inputs
-        .iter()
-        .any(|input| directory.join(input) == requested_history)
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "activity history and input must be separate files; not sent",
-        ));
+    let requested_history = requested_location(&directory, history)?;
+    for input in inputs {
+        if requested_location(&directory, input)? == requested_history {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "activity history and input must be separate files; not sent",
+            ));
+        }
     }
     let canonical_history = match std::fs::canonicalize(history) {
         Ok(path) => path,
